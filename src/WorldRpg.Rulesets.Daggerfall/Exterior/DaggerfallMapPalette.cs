@@ -15,6 +15,11 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// <param name="Variation">How far broad patches lighten or darken the ground, as a share either way.</param>
 /// <param name="WinterSnow">How much of open ground snow covers in winter, outside the deserts.</param>
 /// <param name="ShallowReach">How far out from land in metres the shallows run before the water is all deep.</param>
+/// <remarks>
+/// Close in, the land takes the art set's detail over its colours where the set has it: a tiling mottle of swells, woods and
+/// open ground, <see cref="DetailMetres"/> across, and its small relief, at <see cref="DetailRelief"/> of the normal map's
+/// strength.
+/// </remarks>
 internal sealed record DaggerfallMapPalette(
     IReadOnlyDictionary<int, DaggerfallMapGround> Climates,
     Vector3 Rock, Vector3 Snow, Vector3 Lush, Vector3 Beach, Vector3 Shallow, Vector3 Deep, Vector3 River,
@@ -38,6 +43,12 @@ internal sealed record DaggerfallMapPalette(
         },
         Srgb("#7c7366"), Srgb("#eef2f5"), Srgb("#3e5a29"), Srgb("#d6c69a"), Srgb("#3f93a8"), Srgb("#1b4a6e"), Srgb("#3a86a0"),
         .14f, .75f, 2_500);
+
+    /// <summary>How many map metres the land's detail spans before it repeats.</summary>
+    internal float DetailMetres { get; init; } = 1_600;
+
+    /// <summary>How strongly the detail's relief shades the land, as a share of its normal map's.</summary>
+    internal float DetailRelief { get; init; } = .6f;
 
     /// <summary>
     /// Open ground by its layers' weights (grass, earth, rock, and snow or a swamp's lush ground), in the climate's colours,
@@ -68,6 +79,8 @@ internal sealed record DaggerfallMapPalette(
         if (!float.IsFinite(Variation) || Variation is < 0 or >= 1) throw new InvalidOperationException($"Tuning '{name}.variation' must be a share from 0 up to 1.");
         if (!float.IsFinite(WinterSnow) || WinterSnow is < 0 or > 1) throw new InvalidOperationException($"Tuning '{name}.winterSnow' must be a share from 0 to 1.");
         if (!float.IsFinite(ShallowReach) || ShallowReach <= 0) throw new InvalidOperationException($"Tuning '{name}.shallowReach' must be a positive distance.");
+        if (!float.IsFinite(DetailMetres) || DetailMetres <= 0) throw new InvalidOperationException($"Tuning '{name}.detail.metres' must be a positive distance.");
+        if (!float.IsFinite(DetailRelief) || DetailRelief is < 0 or > 2) throw new InvalidOperationException($"Tuning '{name}.detail.relief' must be from 0 to 2.");
         return this;
     }
 
@@ -83,7 +96,10 @@ internal sealed record DaggerfallMapPalette(
             }),
             Colour("rock"), Colour("snow"), Colour("lush"), Colour("beach"), Colour("shallow"), Colour("deep"), Colour("river"),
             section.GetProperty("variation").GetSingle(), section.GetProperty("winterSnow").GetSingle(), section.GetProperty("shallowReach").GetSingle())
-            .Validate(name);
+        {
+            DetailMetres = section.GetProperty("detail").GetProperty("metres").GetSingle(),
+            DetailRelief = section.GetProperty("detail").GetProperty("relief").GetSingle(),
+        }.Validate(name);
     }
 
     /// <summary>An sRGB hex colour, #rrggbb, as linear RGB.</summary>

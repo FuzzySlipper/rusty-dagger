@@ -125,6 +125,9 @@ internal sealed partial class DaggerfallSession
                 LooseItems.Release();                                                             // Items: a held world lets go of what is carried
                 // The expedition map runs its own time over the held world, on this update's real seconds.
                 if (!elapsedSubmitted && Expedition.Running) AdvanceExpedition(facts.HostElapsedSeconds);   // Session: the map's list
+                // Its rain and snow fall on the same real seconds, for the list below to draw.
+                _overland.Fall(pixel => LocalWeather.State.Conditions(Expedition.Policy.Climate(pixel)),
+                    _tuning.Weather.Daylight(_time.Calendar, DaggerfallWeatherKind.Sunny), facts.HostElapsedSeconds);   // Travel
                 DeliverFacts();                                                                   // Session
                 PublishPresentation();                                                            // UiProjection
             }

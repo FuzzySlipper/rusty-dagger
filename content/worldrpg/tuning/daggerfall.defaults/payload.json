@@ -509,7 +509,13 @@
         },
         "rock": "#7c7366", "snow": "#eef2f5", "lush": "#3e5a29", "beach": "#d6c69a",
         "shallow": "#3f93a8", "deep": "#1b4a6e", "river": "#3a86a0",
-        "variation": 0.14, "winterSnow": 0.75, "shallowReach": 2500
+        "variation": 0.14, "winterSnow": 0.75, "shallowReach": 2500,
+        "detail": { "metres": 1600, "relief": 0.6 }
+      },
+      "fall": {
+        "rain": { "drops": 900, "seconds": 0.9, "speed": 0.45, "size": 0.035, "color": "#c8d2e0", "opacity": 0.6 },
+        "snow": { "drops": 700, "seconds": 3.2, "speed": 0.07, "size": 0.011, "color": "#ffffff", "opacity": 0.9 },
+        "drift": 0.05, "night": 0.45
       } },
     "bands": {
       "stageEveryHours": 2,

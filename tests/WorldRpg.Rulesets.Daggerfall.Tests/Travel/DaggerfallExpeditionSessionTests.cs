@@ -125,6 +125,51 @@ public sealed class DaggerfallExpeditionSessionTests
     }
 
     [Fact]
+    public void With_the_art_set_places_stand_as_their_kinds_models_the_land_takes_its_detail_and_rain_falls_on_the_map_until_it_closes()
+    {
+        using Fixture fixture = new(art: true);
+        DaggerfallTravelMapArt art = fixture.Art!.TravelMap!;
+        fixture.Step();
+        fixture.Session.LocalWeather.State.Force(DaggerfallWeatherKind.Rain);
+        fixture.Open();
+        fixture.Step();
+
+        // The origin is a city, which stands as the city's static mesh, read off the update, made once and shared by every
+        // city, each of its slots painted its colour.
+        DaggerfallTravelMapPlace city = art.Places[DaggerfallSiteKind.TownCity];
+        Assert.Single(fixture.Appearance.DeferredStaticMeshPaths, path => path == city.File.Path);
+        Appearance model = fixture.Appearance.StaticMeshByPath[city.File.Path];
+        Assert.Contains(fixture.Facts(), fact => fact.Layer == RenderLayer.Backdrop && ReferenceEquals(fact.Appearance, model));
+        MeshMaterialBinding[] paints = fixture.Appearance.StaticMeshMaterials[model];
+        Assert.Equal(city.Slots.Count, paints.Length);
+        Assert.All(paints, paint => Assert.Equal(city.Slots[(int)paint.MaterialSlot], fixture.Appearance.MaterialRequests[paint.Material].Color));
+        // The land's detail repeats every tuned stretch, its relief on its normal map; both are read as data.
+        MaterialRequest land = Assert.Single(fixture.Appearance.MaterialRequests.Values,
+            request => request.TextureScale == new Vector2(1 / DaggerfallTuning.Defaults.Expedition.Map.Ground.DetailMetres));
+        Assert.NotEqual(default, land.NormalMap);
+        Assert.Equal(DaggerfallTuning.Defaults.Expedition.Map.Ground.DetailRelief, land.NormalScale);
+        // Plain repeats: random tiling tripled its samples across a far view, a millisecond of the frame.
+        Assert.Equal(0, land.StochasticTiling);
+        Assert.Contains(fixture.Appearance.OpenResourceContentRequests, request => request.ColorSpace == TextureColorSpace.Linear
+            && TestContentReferences.PathOf(request.Content) == art.Detail.Path);
+
+        // Rain falls in the map's backdrop while it rains, the world held under it, as one batch: as much of the pool as
+        // rain falls hard.
+        SpriteBatchRequest rain = fixture.Appearance.BatchRequests[^1];
+        double expected = DaggerfallTuning.Defaults.Expedition.Map.Fall.Rain.Drops * DaggerfallTuning.Defaults.Weather.Falling[(int)DaggerfallWeatherKind.Rain];
+        Assert.InRange(rain.Instances.Length, expected * .85, expected * 1.15);
+        int drawn = fixture.Appearance.CreatedAppearances;
+        fixture.Step();
+        Assert.True(fixture.Appearance.CreatedAppearances > drawn, "Each update draws the drops where they have fallen to.");
+        // Leaving takes every drop away with the map.
+        fixture.Submit(new { action = "expedition-leave" });
+        int batches = fixture.Appearance.BatchRequests.Count;
+        fixture.Step();
+        Assert.Equal(batches, fixture.Appearance.BatchRequests.Count);
+        Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Backdrop);
+    }
+
+    [Fact]
     public void A_march_passes_its_true_time_through_the_calendar_and_spends_fatigue_minute_by_minute_with_no_recovery_before_leaving()
     {
         using Fixture fixture = new();
@@ -449,6 +494,7 @@ public sealed class DaggerfallExpeditionSessionTests
         private readonly bool encounter, bands;
         private ulong step = 1;
         internal DaggerfallSession Session { get; }
+        internal DaggerfallArtReplacements? Art { get; }
         internal SpatialFake Spatial { get; private set; } = null!;
         internal EngineContextFake Engine { get; private set; } = null!;
         internal AppearanceFake Appearance { get; private set; } = null!;
@@ -468,8 +514,11 @@ public sealed class DaggerfallExpeditionSessionTests
         internal DaggerfallTravelMapPixel Wild { get; }
 
         /// <param name="bands">The map's bands draw their lowest values (a published foe), as the hour's unseen encounters never come.</param>
-        internal Fixture(bool encounter = false, DaggerfallDefinitions? definitions = null, bool bands = false)
+        /// <param name="art">The session has the art set, the travel map's art among it.</param>
+        internal Fixture(bool encounter = false, DaggerfallDefinitions? definitions = null, bool bands = false, bool art = false)
         {
+            if (art) Art = DaggerfallArtReplacements.Read(TestContentFiles.Read(System.IO.Path.Combine(TestData.RepositoryRoot, "content",
+                "worldrpg/packs/daggerfall.art-replacements/payload.json")), "daggerfall.art-replacements");
             this.definitions = definitions ?? TestPayload.Definitions; this.encounter = encounter; this.bands = bands;
             var source = Inputs.Value.Profile;
             var sites = this.definitions.Locations.Records.Where(site => site.Exterior is not null && site.Kind == DaggerfallSiteKind.TownCity
@@ -501,7 +550,7 @@ public sealed class DaggerfallExpeditionSessionTests
                 Appearance = new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : bands ? TravelBandRandom.CreateBands() : LodgingRandom.Create());
             DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)));
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
-                { Profiles = profiles, Sky = sky };
+                { Profiles = profiles, Sky = sky, ArtReplacements = Art };
             return save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
         }
         internal DaggerfallSession Restore(RulesetSavePayload save) => Create(save);

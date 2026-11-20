@@ -1003,6 +1003,9 @@ public sealed class PublishedContentDeliveryTests
             section.GetProperty("treeSnow"),
             // The sea's shader, which the water sheets, the rivers and the far sea draw with, and its ripple and foam maps.
             .. new[] { "shader", "ripples", "foam" }.Select(file => section.GetProperty("sea").GetProperty(file)),
+            // The travel map's drops, its land's detail and relief, and its model for each kind of place.
+            .. new[] { "rain", "snow", "detail", "detailNormal" }.Select(file => section.GetProperty("travelMap").GetProperty(file)),
+            .. section.GetProperty("travelMap").GetProperty("places").EnumerateObject().Select(place => place.Value),
             .. section.GetProperty("models").EnumerateObject().SelectMany(model => model.Value.GetProperty("slots").EnumerateArray()
                 .Where(slot => slot.TryGetProperty("texture", out _)).SelectMany(slot => slot.TryGetProperty("drawn", out JsonElement drawn)
                     ? drawn.EnumerateObject().Select(other => other.Value).Prepend(slot.GetProperty("texture")) : [slot.GetProperty("texture")])

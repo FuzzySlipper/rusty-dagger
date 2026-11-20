@@ -1,6 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Heightfields;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -9,7 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// The travel map's land: the exterior ground (<see cref="DaggerfallHorizonGround.SampleMap"/>) as one heightfield in the
 /// backdrop, in far ground's frame of map metres at 1:1000, so the land, the sea, the coast and the rivers are where the
 /// world streams them. It is painted per vertex in the palette's climate colours over two plain materials, the water and
-/// the land. Its rings centre on the point the map is looked at: cells of a sixteenth of a map pixel within a few
+/// the land; close in, the land takes the art set's detail over those colours, a mottle and its small relief repeating every
+/// <see cref="DaggerfallMapPalette.DetailMetres"/>, filtered so it averages away to its tone farther out rather than
+/// sparkling. Its rings centre on the point the map is looked at: cells of a sixteenth of a map pixel within a few
 /// kilometres, coarse out to where the haze closes. It is made hidden the first time the player stands outdoors and
 /// streams then, so the map finds it standing when it opens, and a hidden heightfield keeps its tiles, so it shows again
 /// at once.
@@ -33,7 +36,9 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
     private readonly DaggerfallHorizonGround _ground;
     private readonly double _relief;
     private readonly DaggerfallMapPalette _palette;
+    private readonly DaggerfallTravelMapArt? _art;
     private Material? _water, _land;
+    private RenderResource? _detail, _detailRelief;
     private Heightfield? _field;
     private HeightfieldStreamer? _streamer;
     private bool _winter;
@@ -42,8 +47,10 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
 
     /// <param name="relief">How far land is raised above the sea, so ranges read from high above.</param>
     /// <param name="palette">The colours the land and the water are painted in.</param>
-    internal DaggerfallOverlandTerrain(IEngineContext engine, DaggerfallHorizonGround ground, double relief, DaggerfallMapPalette palette)
+    /// <param name="art">The art set's detail for the land, if it has it.</param>
+    internal DaggerfallOverlandTerrain(IEngineContext engine, DaggerfallHorizonGround ground, double relief, DaggerfallMapPalette palette, DaggerfallTravelMapArt? art)
     {
+        _art = art;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
         if (!double.IsFinite(relief) || relief <= 0) throw new ArgumentOutOfRangeException(nameof(relief));
@@ -66,8 +73,7 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
             _winter = winter;
             _water ??= _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), .3f,
                 new Color(1, 1, 1, 1), Vector3.Zero, 0, false));
-            _land ??= _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), .95f,
-                new Color(1, 1, 1, 1), Vector3.Zero, 0, false));
+            _land ??= _engine.Graphics.CreateMaterial(Land());
             _field = _engine.Heightfield.Create(new HeightfieldCreateRequest(TileCells, Rings, new HeightfieldMaterial[] { new(0, _water), new(1, _land) }, RenderLayer.Backdrop,
                 Vector3.Zero, Scale, HeightfieldFocus.At(x, z)));
             _streamer = new HeightfieldStreamer(_engine, _field, new Sampler(this), CommitsPerUpdate);
@@ -87,6 +93,26 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
 
         _engine.Heightfield.SetFocus(new HeightfieldFocusRequest(_field, HeightfieldFocus.At(x, z)));
         _streamer!.Update();
+    }
+
+    /// <summary>The land's material: plain, the vertices' colours alone, or with the art set's detail over them.</summary>
+    private MaterialRequest Land()
+    {
+        if (_art is null)
+            return new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), .95f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false);
+        // Both maps are data: the mottle multiplies the colours as it is, and mipmaps average it to its tone at a distance.
+        _detail = _engine.Graphics.OpenTexture(_engine.Content, _art.Detail.Path, _art.Detail.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
+            space: TextureColorSpace.Linear).Handle;
+        _detailRelief = _engine.Graphics.OpenTexture(_engine.Content, _art.DetailNormal.Path, _art.DetailNormal.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
+            space: TextureColorSpace.Linear).Handle;
+        return new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(_detail), .95f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false)
+        {
+            NormalMap = new RenderResourceReference(_detailRelief),
+            NormalScale = _palette.DetailRelief,
+            // Plain repeats: random offset tiles hid them, but tripled every sample across a far view seen at a grazing
+            // angle, a millisecond of the map's frame on a 9070.
+            TextureScale = new Vector2(1 / _palette.DetailMetres),
+        };
     }
 
     /// <summary>Stops drawing the land; it keeps its tiles and its focus.</summary>
@@ -128,6 +154,8 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
         Drop();
         _water?.Dispose();
         _land?.Dispose();
+        _detail?.Dispose();
+        _detailRelief?.Dispose();
     }
 
     private sealed class Sampler(DaggerfallOverlandTerrain terrain) : IHeightfieldSampler

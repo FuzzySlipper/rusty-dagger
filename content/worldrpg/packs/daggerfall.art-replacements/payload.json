@@ -127573,6 +127573,190 @@
      ]
     }
    }
+  },
+  "travelMap": {
+   "rain": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/rain.png",
+    "byteLength": 681,
+    "sha256": "77235e3c8455e8e168ac54eae33ddd72acb630811c8d696d25a63e05acea6b57"
+   },
+   "snow": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/snow.png",
+    "byteLength": 1784,
+    "sha256": "57d5678e670f74885270d3e12abaad89e0cf2b011abd493440d1be789b32f2fb"
+   },
+   "detail": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/detail.png",
+    "byteLength": 419441,
+    "sha256": "e564988d71fbb7f586d7ffc32b80cf71d959422685625352ef1771601b82ccfe"
+   },
+   "detailNormal": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/detail-normal.png",
+    "byteLength": 578568,
+    "sha256": "e9c55775ab8271dc03a477538ad08d74288f6f17fcdc082e5d3095446bf819b5"
+   },
+   "places": {
+    "city": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/city.rstatmsh",
+     "byteLength": 75548,
+     "sha256": "d0caa5f3bf0def1f14a606eb199d17244ecf8dea221092bc9ab3fea712d47f90",
+     "slots": [
+      "#8e8a82",
+      "#4a5262",
+      "#d8c8a4",
+      "#d8ad45",
+      "#a4492f",
+      "#9a7442"
+     ]
+    },
+    "town": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/town.rstatmsh",
+     "byteLength": 15813,
+     "sha256": "8cff2fbb5025454826876e24b840ff62092ad679e82d0f244fa5eefe2c95ca2b",
+     "slots": [
+      "#d8c8a4",
+      "#4a5262",
+      "#9a7442",
+      "#a4492f",
+      "#7a5a3a"
+     ]
+    },
+    "village": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/village.rstatmsh",
+     "byteLength": 9780,
+     "sha256": "60ce1afb704cbb42299d1f2fca03ebac4e44cf3eafdeee384608d3dab0a15cd0",
+     "slots": [
+      "#8e8a82",
+      "#d8c8a4",
+      "#a4492f",
+      "#9a7442",
+      "#7a5a3a"
+     ]
+    },
+    "farm": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/farm.rstatmsh",
+     "byteLength": 6401,
+     "sha256": "08f585658ba4ab9baae5305fabda346c537905a20bf05881f48d8e2c8f2b00de",
+     "slots": [
+      "#c8b26a",
+      "#7f9a46",
+      "#d8c8a4",
+      "#9a7442",
+      "#7a5a3a"
+     ]
+    },
+    "wealthy-home": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/wealthy-home.rstatmsh",
+     "byteLength": 14639,
+     "sha256": "774623f7f0926721932f61964bf8e4683b6b8c0dd96f30682c2a50856f6d5711",
+     "slots": [
+      "#3f5a2e",
+      "#d8c8a4",
+      "#4a5262"
+     ]
+    },
+    "poor-home": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/poor-home.rstatmsh",
+     "byteLength": 3227,
+     "sha256": "c67199d47a28beac7c4cf2971237466b2a31d36634bff911d857de9b77256a9a",
+     "slots": [
+      "#7a5a3a",
+      "#9a7442",
+      "#6a4a2c"
+     ]
+    },
+    "tavern": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/tavern.rstatmsh",
+     "byteLength": 5591,
+     "sha256": "87251cfa5eca7aa131e862cab9c1b97b4d0ffb8bd86342dbc8a8a784dc180955",
+     "slots": [
+      "#d8c8a4",
+      "#a4492f",
+      "#7a5a3a",
+      "#9a7442",
+      "#6a4a2c",
+      "#2c4fb0"
+     ]
+    },
+    "temple": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/temple.rstatmsh",
+     "byteLength": 8951,
+     "sha256": "ba58d202313d2d996d89ac72b3199b84ddb4fa0b03de2739259a8edee070338a",
+     "slots": [
+      "#8e8a82",
+      "#d8c8a4",
+      "#4a5262",
+      "#d8ad45"
+     ]
+    },
+    "cult": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/cult.rstatmsh",
+     "byteLength": 9587,
+     "sha256": "ac8485d3cb957c81b0c2c6b449a27ecc6981f2b3dee22fbc13531a9a8b54a6ba",
+     "slots": [
+      "#4c4846"
+     ]
+    },
+    "coven": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/coven.rstatmsh",
+     "byteLength": 9587,
+     "sha256": "8a31e94ddc736954ea01f87fe3fc439ad845d60aba44f58f46b59994d890fb9c",
+     "slots": [
+      "#5a3a64",
+      "#4c4846",
+      "#5e6b48"
+     ]
+    },
+    "labyrinth": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/labyrinth.rstatmsh",
+     "byteLength": 36183,
+     "sha256": "763dce5e6e759f30c94f449e2a64b4ee33a9fe77a7d441e4750309e45bfff0c8",
+     "slots": [
+      "#4c4846",
+      "#4a5262"
+     ]
+    },
+    "keep": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/keep.rstatmsh",
+     "byteLength": 15645,
+     "sha256": "19d0e943d782729f9fd00adf075cc836f8cec8f130125a74a280b7ef742468b2",
+     "slots": [
+      "#8e8a82",
+      "#6a4a2c",
+      "#2c4fb0"
+     ]
+    },
+    "ruin": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/ruin.rstatmsh",
+     "byteLength": 12637,
+     "sha256": "518ada0bae233a00b1baa274d7820e6ccaebc64e41119e7ffd766a682ced7f2d",
+     "slots": [
+      "#8e8a82",
+      "#5e6b48"
+     ]
+    },
+    "graveyard": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/graveyard.rstatmsh",
+     "byteLength": 29342,
+     "sha256": "9d85c78795e9cdc80d246a6d17d956d65ccb4ff88390bf4974b63442e64e2f4a",
+     "slots": [
+      "#6a4a2c",
+      "#cfc8b4",
+      "#8e8a82",
+      "#4a5262"
+     ]
+    },
+    "ship": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/places/ship.rstatmsh",
+     "byteLength": 3991,
+     "sha256": "f6495b99f5b0f52b40efddacbcb60667b30db0ce27c9761de44adad80536f078",
+     "slots": [
+      "#6a4a2c",
+      "#7a5a3a",
+      "#e8e0cc"
+     ]
+    }
+   }
   }
  }
 }

@@ -130,6 +130,28 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 internal sealed record DaggerfallSeaArt(DaggerfallArtFile Shader, DaggerfallArtFile Ripples, DaggerfallArtFile Foam);
 
 /// <summary>
+/// The travel map's art (#10950): the drops that fall on it in rain and snow (atlases of four frames from seen to faint),
+/// the detail its land takes close in (a mottle read as data and its relief as a normal map), and a small model for each
+/// kind of place, in house widths, standing on its origin.
+/// </summary>
+internal sealed record DaggerfallTravelMapArt(DaggerfallArtFile Rain, DaggerfallArtFile Snow, DaggerfallArtFile Detail, DaggerfallArtFile DetailNormal,
+    IReadOnlyDictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> Places)
+{
+    /// <summary>The kind of place each model in the art pack's <c>travelMap.places</c> stands for, by the name it is listed under.</summary>
+    internal static IReadOnlyDictionary<string, DaggerfallSiteKind> PlaceNames { get; } = new Dictionary<string, DaggerfallSiteKind>(StringComparer.Ordinal)
+    {
+        ["city"] = DaggerfallSiteKind.TownCity, ["town"] = DaggerfallSiteKind.TownHamlet, ["village"] = DaggerfallSiteKind.TownVillage,
+        ["farm"] = DaggerfallSiteKind.HomeFarms, ["wealthy-home"] = DaggerfallSiteKind.HomeWealthy, ["poor-home"] = DaggerfallSiteKind.HomePoor,
+        ["tavern"] = DaggerfallSiteKind.Tavern, ["temple"] = DaggerfallSiteKind.ReligionTemple, ["cult"] = DaggerfallSiteKind.ReligionCult,
+        ["coven"] = DaggerfallSiteKind.Coven, ["labyrinth"] = DaggerfallSiteKind.DungeonLabyrinth, ["keep"] = DaggerfallSiteKind.DungeonKeep,
+        ["ruin"] = DaggerfallSiteKind.DungeonRuin, ["graveyard"] = DaggerfallSiteKind.Graveyard, ["ship"] = DaggerfallSiteKind.HomeYourShips,
+    };
+}
+
+/// <summary>A kind of place's model on the travel map: an Engine static mesh and the linear colour each of its material slots is painted.</summary>
+internal sealed record DaggerfallTravelMapPlace(DaggerfallArtFile File, IReadOnlyList<Color> Slots);
+
+/// <summary>
 /// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, drawn at
 /// its own placed width in the world from its own width across (x), as the Engine admits it, or, hung from its sprite's top,
 /// at its placed height.
@@ -319,6 +341,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>What the sea and the rivers draw with: their waves, ripples and whitecaps, and the moons' and the low sun's paths on the water.</summary>
     internal DaggerfallSeaArt? Sea { get; private init; }
 
+    /// <summary>The travel map's drops, land detail and place models, when the set has them.</summary>
+    internal DaggerfallTravelMapArt? TravelMap { get; private init; }
+
     /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
 
@@ -417,6 +442,7 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<(int, int), DaggerfallTreeArt> trees = [];
         DaggerfallArtFile? treeSnow = null;
         DaggerfallSeaArt? sea = null;
+        DaggerfallTravelMapArt? travelMap = null;
         DaggerfallPeopleRig? peopleRig = null;
         DaggerfallSplatPeople? splatPeople = null;
         DaggerfallTitleScene? titleScene = null;
@@ -659,6 +685,19 @@ internal sealed class DaggerfallArtReplacements
             if (section.TryGetProperty("sea", out JsonElement seaArt))
                 sea = new(File(seaArt.GetProperty("shader"), "The sea's shader"), File(seaArt.GetProperty("ripples"), "The sea's ripple map"),
                     File(seaArt.GetProperty("foam"), "The sea's foam map"));
+            if (section.TryGetProperty("travelMap", out JsonElement mapArt))
+            {
+                Dictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> places = [];
+                foreach (JsonProperty place in mapArt.GetProperty("places").EnumerateObject())
+                    places.Add(DaggerfallTravelMapArt.PlaceNames.TryGetValue(place.Name, out DaggerfallSiteKind kind) ? kind
+                        : throw new InvalidOperationException($"Content pack '{packId}' models travel map place '{place.Name}', which is no kind of place."),
+                        new(File(place.Value, $"The travel map's {place.Name}"), [.. place.Value.GetProperty("slots").EnumerateArray().Select(slot =>
+                            Color.FromSrgbHex(int.Parse(slot.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))]));
+                if (places.Count != DaggerfallTravelMapArt.PlaceNames.Count)
+                    throw new InvalidOperationException($"Content pack '{packId}' models {places.Count} kinds of place for the travel map, not all {DaggerfallTravelMapArt.PlaceNames.Count}.");
+                travelMap = new(File(mapArt.GetProperty("rain"), "The travel map's rain"), File(mapArt.GetProperty("snow"), "The travel map's snow"),
+                    File(mapArt.GetProperty("detail"), "The travel map's detail"), File(mapArt.GetProperty("detailNormal"), "The travel map's detail relief"), places);
+            }
             if (section.TryGetProperty("trees", out JsonElement treeArt))
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
                 {
@@ -721,7 +760,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
-        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
+        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {

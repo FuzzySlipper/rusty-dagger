@@ -51,6 +51,9 @@ internal sealed record DaggerfallOverlandTuning(
     /// <summary>The colours the land and the water are painted in.</summary>
     internal DaggerfallMapPalette Ground { get; init; } = DaggerfallMapPalette.Default;
 
+    /// <summary>The rain and snow falling over the map where the world's weather has them fall.</summary>
+    internal DaggerfallOverlandFallTuning Fall { get; init; } = DaggerfallOverlandFallTuning.Default;
+
     internal DaggerfallOverlandTuning Validate()
     {
         Positive(Relief, "relief");
@@ -69,6 +72,7 @@ internal sealed record DaggerfallOverlandTuning(
             || !float.IsFinite(Moonlight.Cool) || Moonlight.Cool is < -1 or > 1)
             throw new InvalidOperationException("Expedition tuning 'map.moonlight' must be a colour, an intensity of 0 or more and a cooling from -1 to 1.");
         Ground.Validate("expedition.map.ground");
+        Fall.Validate();
         foreach (DaggerfallWeatherKind weather in Enum.GetValues<DaggerfallWeatherKind>())
             if (!Haze.TryGetValue(weather, out double haze) || !double.IsFinite(haze) || haze < 0)
                 throw new InvalidOperationException($"Expedition tuning 'map.haze.{weather.ToString().ToLowerInvariant()}' must be a haze of 0 or more.");
@@ -92,6 +96,7 @@ internal sealed record DaggerfallOverlandTuning(
         Moonlight = new(DaggerfallMapPalette.Srgb(section.GetProperty("moonlight").GetProperty("color").GetString()!),
             section.GetProperty("moonlight").GetProperty("intensity").GetSingle(), section.GetProperty("moonlight").GetProperty("cool").GetSingle()),
         Ground = DaggerfallMapPalette.Read(section.GetProperty("ground"), "expedition.map.ground"),
+        Fall = DaggerfallOverlandFallTuning.Read(section.GetProperty("fall")),
         Figure = section.GetProperty("figure").GetDouble(),
     }.Validate();
 

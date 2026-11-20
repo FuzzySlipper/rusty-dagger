@@ -86,12 +86,14 @@ internal sealed class DaggerfallHorizon : IDisposable
     private bool _disposed;
 
     /// <param name="seaArt">The art set's shader and maps for the sea and the rivers, if it has them.</param>
+    /// <param name="mapArt">The art set's detail for the travel map's land, if it has it.</param>
     /// <param name="mapRelief">How far the travel map raises land above the sea.</param>
     /// <param name="mapPalette">The colours the travel map's land and water are painted in.</param>
     internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers,
-        DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallSeaArt? seaArt, double mapRelief, DaggerfallMapPalette mapPalette)
+        DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallSeaArt? seaArt, double mapRelief, DaggerfallMapPalette mapPalette,
+        DaggerfallTravelMapArt? mapArt)
     {
-        Map = new(engine, ground, mapRelief, mapPalette);
+        Map = new(engine, ground, mapRelief, mapPalette, mapArt);
         _flora = flora ?? throw new ArgumentNullException(nameof(flora));
         _farForest = farForest ?? throw new ArgumentNullException(nameof(farForest));
         ArgumentNullException.ThrowIfNull(water);

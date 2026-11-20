@@ -4,9 +4,10 @@ using Rusty.Engine;
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
 /// <summary>
-/// The travel map's small models, made once in code: a house, a keep, a temple and a ruin for the places; a standard
-/// with its flag for the party and the bands; a disc for the dots of the sight ring and the route; a pin. Each stands on
-/// its origin, one unit wide, and faces flat-shaded, as a map's pieces do. Colours are the ruleset's look, not rules.
+/// The travel map's markers, made once in code: a standard with its flag for a figure the site has no sprite for and for
+/// where the party heads; a disc for the dots of the sight ring and the route; a pin. Each stands on its origin, one unit
+/// wide, and faces flat-shaded, as a map's pieces do. Colours are the ruleset's look, not rules. The places are the art
+/// set's models.
 /// </summary>
 internal sealed class DaggerfallOverlandModels : IDisposable
 {
@@ -16,16 +17,8 @@ internal sealed class DaggerfallOverlandModels : IDisposable
     internal DaggerfallOverlandModels(IEngineContext engine)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        Material plaster = Solid(.80f, .72f, .58f), thatch = Solid(.46f, .30f, .17f), stone = Solid(.50f, .50f, .52f),
-            slate = Solid(.24f, .25f, .30f), gold = Solid(.86f, .68f, .24f), dark = Solid(.20f, .18f, .19f), wood = Solid(.32f, .22f, .13f);
-        House = Building(.7f, .55f, plaster, thatch, spire: false);
-        Keep = Building(2.1f, .5f, stone, slate, spire: false, battlement: true);
-        Temple = Building(1.0f, 1.5f, plaster, gold, spire: true);
-        Shrine = Building(1.0f, 1.3f, dark, slate, spire: true);
-        Ruin = Building(.6f, .0f, dark, dark, spire: false, battlement: true);
-        Stone = Building(.45f, .15f, stone, stone, spire: true);
+        Material gold = Solid(.86f, .68f, .24f), wood = Solid(.32f, .22f, .13f);
         Pole = Mesh(Box(new(-.03f, 0, -.03f), new(.03f, 1, .03f)), wood);
-        Disc = Mesh(Disk(), Glow(1, 1, 1));
         Pin = Mesh(Diamond(), gold);
         Flags = new Dictionary<DaggerfallOverlandBanner, Appearance>
         {
@@ -45,14 +38,7 @@ internal sealed class DaggerfallOverlandModels : IDisposable
         };
     }
 
-    internal Appearance House { get; }
-    internal Appearance Keep { get; }
-    internal Appearance Temple { get; }
-    internal Appearance Shrine { get; }
-    internal Appearance Ruin { get; }
-    internal Appearance Stone { get; }
     internal Appearance Pole { get; }
-    internal Appearance Disc { get; }
     internal Appearance Pin { get; }
     internal IReadOnlyDictionary<DaggerfallOverlandBanner, Appearance> Flags { get; }
     internal IReadOnlyDictionary<DaggerfallOverlandDot, Appearance> Dots { get; }
@@ -69,14 +55,6 @@ internal sealed class DaggerfallOverlandModels : IDisposable
     /// <summary>A colour drawn as it is, unlit, so the ring and the route read by night as by day.</summary>
     private Material Glow(float r, float g, float b) => Own(_engine.Graphics.CreateMaterial(
         new MaterialRequest(Color.FromSrgb(r, g, b), default(RenderResourceReference), 1, new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { Unlit = true }));
-
-    /// <summary>Walls <paramref name="height"/> high under a roof <paramref name="roof"/> high: a gable, or a spire to a point.</summary>
-    private Appearance Building(float height, float roof, Material walls, Material top, bool spire, bool battlement = false)
-    {
-        Shape body = Box(new(-.5f, 0, -.5f), new(.5f, height, .5f));
-        Shape cap = battlement ? Battlement(height) : roof <= 0 ? Shape.Empty : spire ? Spire(height, roof) : Gable(height, roof);
-        return Mesh(body, walls, cap, top);
-    }
 
     private Appearance Flag(Material cloth) => Mesh(Box(new(.03f, .55f, -.01f), new(.58f, .97f, .01f)), cloth);
 
@@ -135,32 +113,6 @@ internal sealed class DaggerfallOverlandModels : IDisposable
             .. Quad(Corner(0, 0, 0), Corner(0, 0, 1), Corner(0, 1, 1), Corner(0, 1, 0)),
             .. Quad(Corner(0, 1, 1), Corner(1, 1, 1), Corner(1, 1, 0), Corner(0, 1, 0)),
         ]);
-    }
-
-    /// <summary>A pitched roof over a unit square, its ridge running along x and its eaves a little past the walls.</summary>
-    private static Shape Gable(float y, float rise)
-    {
-        const float eave = .58f;
-        Vector3 ridgeWest = new(-eave, y + rise, 0), ridgeEast = new(eave, y + rise, 0);
-        Vector3 nw = new(-eave, y, -eave), ne = new(eave, y, -eave), se = new(eave, y, eave), sw = new(-eave, y, eave);
-        return Shape.Of([.. Quad(sw, se, ridgeEast, ridgeWest), .. Quad(ne, nw, ridgeWest, ridgeEast), (se, ne, ridgeEast), (nw, sw, ridgeWest)]);
-    }
-
-    /// <summary>A roof rising to a point over a unit square.</summary>
-    private static Shape Spire(float y, float rise)
-    {
-        const float eave = .56f;
-        Vector3 top = new(0, y + rise, 0), nw = new(-eave, y, -eave), ne = new(eave, y, -eave), se = new(eave, y, eave), sw = new(-eave, y, eave);
-        return Shape.Of([(sw, se, top), (se, ne, top), (ne, nw, top), (nw, sw, top)]);
-    }
-
-    /// <summary>Four merlons on a keep's flat top.</summary>
-    private static Shape Battlement(float y)
-    {
-        Shape all = Shape.Empty;
-        foreach ((float x, float z) in new[] { (-.5f, -.5f), (.3f, -.5f), (.3f, .3f), (-.5f, .3f) })
-            all = all.Then(Box(new(x, y, z), new(x + .2f, y + .18f, z + .2f)));
-        return all;
     }
 
     /// <summary>A flat disc facing up, one unit across.</summary>
