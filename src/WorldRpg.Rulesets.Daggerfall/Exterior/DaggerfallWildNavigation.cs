@@ -61,8 +61,9 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
     /// One admitted update: indoors the grid is cleared; outdoors a finished derivation is taken up, and another asked
     /// for once the player has gone <see cref="DaggerfallWildNavigationTuning.MoveDistance"/> from the box's middle, or
     /// once <see cref="DaggerfallWildNavigationTuning.RefreshSeconds"/> have passed and collision has changed since. While
-    /// the player stands on the <paramref name="composition"/> grid, one is asked for only when a walker within the
-    /// radius stood off every grid since the last update and outside the box the grid has, if any; otherwise that stays.
+    /// the player stands on the <paramref name="composition"/> grid, one is asked for when a walker within the radius
+    /// stood off every grid since the last update outside the box the grid has, if any, and the one it has is refreshed
+    /// as outside.
     /// </summary>
     internal void Update(WorldPoint? player, bool outdoors, double seconds, ulong composition)
     {
@@ -86,32 +87,36 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
         _player = at;
         Vector3? wanted = _wanted;
         _wanted = null;
-        if (_onComposition)
+        _sinceSeconds += seconds;
+        if (_onComposition && !OnComposition(at, composition))
         {
-            if (OnComposition(at, composition))
-            {
-                if (wanted is { } walker && !Covers(walker)) Derive(at);
-                return;
-            }
             _onComposition = false;
             Derive(at);
             return;
         }
-        _sinceSeconds += seconds;
-        if (_centre is { } centre && Vector2.Distance(new(at.X, at.Z), new(centre.X, centre.Z)) < tuning.MoveDistance)
+        bool stale = Stale();
+        if (!_onComposition)
         {
-            if (_sinceSeconds < tuning.RefreshSeconds) return;
-            _sinceSeconds = 0;
-            // Nothing has streamed in or out since the last derivation: it would derive the same grid.
-            if (CollisionRevision == _collisionRevision) return;
-        }
-        if (OnComposition(at, composition))
-        {
+            bool moved = _centre is not { } centre || Vector2.Distance(new(at.X, at.Z), new(centre.X, centre.Z)) >= tuning.MoveDistance;
+            if (!moved && !stale) return;
+            if (!OnComposition(at, composition))
+            {
+                Derive(at);
+                return;
+            }
             _onComposition = true;
-            if (wanted is { } walker && !Covers(walker)) Derive(at);
-            return;
         }
-        Derive(at);
+        // On the location's grid: derived for a walker no grid takes beyond the box there is, and the one there is
+        // refreshed as collision changes, as outside.
+        if ((wanted is { } walker && !Covers(walker)) || (_published && stale)) Derive(at);
+    }
+
+    /// <summary>Whether the refresh is due and collision has streamed in or out since the last derivation.</summary>
+    private bool Stale()
+    {
+        if (_sinceSeconds < tuning.RefreshSeconds) return false;
+        _sinceSeconds = 0;
+        return CollisionRevision != _collisionRevision;
     }
 
     /// <summary>

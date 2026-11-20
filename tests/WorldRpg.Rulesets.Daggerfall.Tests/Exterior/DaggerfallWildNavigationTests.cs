@@ -234,6 +234,79 @@ public sealed class DaggerfallWildNavigationTests
         }
     }
 
+    [Fact]
+    public void A_wild_grid_derived_for_a_walker_while_the_player_stands_in_town_is_derived_again_once_more_ground_streams_in()
+    {
+        // The player stands on the location's grid (x and z -10..10) at x 9; the ground reaches only to x 12. A walker
+        // there asks for the wild grid. Then ground streams in beyond x 12 with a wall at x 14 across z -3..3, and a
+        // walker stands on it at x 15.5, inside the box of the grid derived before, which holds no cell there.
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
+        SpatialMovementSystem? movement = null;
+        try
+        {
+            WorldPoint player = new(9, 0, 0);
+            DaggerfallWildNavigation wild = null!;
+            ActorNavigationCoordinator navigation = null!;
+            using ActorsState actors = new();
+            actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+            host.Call(engine =>
+            {
+                movement = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
+                Mesh(engine, movement, 1, [new(-60, 0, -60), new(-60, 0, 60), new(12, 0, 60), new(12, 0, -60)], [new(0, 1, 2), new(0, 2, 3)]);
+                _ = engine.Spatial.ReplaceCollisionNavigation(new CollisionNavigationReplaceRequest(movement.Session,
+                    new Vector3(-10, -2, -10), new Vector3(10, 4, 10),
+                    engine.Spatial.DefaultCollisionNavigationConfig() with { GridId = Composition, CellSize = 1, Character = movement.CurrentController }));
+                wild = new(engine.Spatial, movement, Tuning);
+                navigation = new(engine.Spatial, movement.Session, actors.Store, movement.CurrentController,
+                    _ => CharacterStepEnvironment.Empty, () => wild.Grids(Composition), wild.WalkerOffEveryGrid);
+                wild.Update(player, outdoors: true, 1d / 60, Composition);
+                wild.WalkerOffEveryGrid(new Vector3(11, 0, 6));
+                wild.Update(player, outdoors: true, 1d / 60, Composition);
+                Assert.True(wild.Pending);
+            });
+            Installed(host, () => wild, player);
+            host.Call(engine => Mesh(engine, movement!, 3,
+            [
+                new(12, 0, -60), new(12, 0, 60), new(60, 0, 60), new(60, 0, -60),
+                new(13.8F, 0, -3), new(13.8F, 0, 3), new(13.8F, 3, 3), new(13.8F, 3, -3),
+                new(14.2F, 0, -3), new(14.2F, 0, 3), new(14.2F, 3, 3), new(14.2F, 3, -3),
+            ],
+            [
+                new(0, 1, 2), new(0, 2, 3),
+                new(4, 6, 5), new(4, 7, 6), new(8, 9, 10), new(8, 10, 11),
+                new(4, 5, 9), new(4, 9, 8), new(7, 11, 10), new(7, 10, 6),
+                new(4, 8, 11), new(4, 11, 7), new(5, 6, 10), new(5, 10, 9),
+            ]));
+            ActorState walker = actors.CreateActor(42, new EntityTypeId("test"), new StatsComponent(), new ActorPose(new WorldPoint(15.5F, 0, 0), 0), "health");
+            float widest = 0;
+            // Each update stands for a second, so the refresh comes round within the run.
+            for (int update = 0; update < 400 && Vector3.Distance(walker.Position.ToVector() with { Y = 0 }, player.ToVector()) > .6F; update++)
+            {
+                if (wild.Pending) Thread.Sleep(5);
+                host.Call(engine =>
+                {
+                    wild.Update(player, outdoors: true, 1, Composition);
+                    _ = navigation.Evaluate(walker, new ActorNavigationRequest(player, .25F, 4096));
+                });
+                widest = MathF.Max(widest, MathF.Abs(walker.Position.Z));
+            }
+            Assert.True(Vector3.Distance(walker.Position.ToVector() with { Y = 0 }, player.ToVector()) <= .6F, $"The walker stopped at {walker.Position}.");
+            Assert.True(widest > 3F, $"The walker went no wider than {widest} m, through the wall's 3 m half-width.");
+            Assert.Equal(2, wild.Derivations);
+        }
+        finally
+        {
+            host.Call(_ => movement?.Dispose());
+        }
+    }
+
+    /// <summary>One more mesh among the session's static collision.</summary>
+    private static void Mesh(IEngineContext engine, SpatialMovementSystem movement, ulong mesh, Vector3[] vertices, Triangle[] triangles) =>
+        _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(movement.Session,
+            new[] { new StaticMeshAsset(mesh, 0, (uint)vertices.Length, 0, (uint)triangles.Length) }, vertices, triangles,
+            new[] { new StaticMeshInstance(mesh + 1, mesh, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+            ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+
     /// <summary>Ground 120 m square about the origin, as one more mesh among the session's static collision.</summary>
     private static void Ground(IEngineContext engine, SpatialMovementSystem movement, ulong mesh)
     {
