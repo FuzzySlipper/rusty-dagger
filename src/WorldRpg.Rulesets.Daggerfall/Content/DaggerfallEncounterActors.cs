@@ -93,7 +93,7 @@ internal static class DaggerfallEncounterActors
             // EnemyBasics leaves some class mobiles (the City Watch) without a key; the donor's loot table
             // lookup then selects its all-zero "-" matrix, so the corpse carries no table loot.
             mobile.LootTableKey,
-            null, null, ClassEquippedMeleeAction, [], DaggerfallActorPresentationDefinition.None, GroundOnSpawn: true, Career: career.Id);
+            null, null, ClassEquippedMeleeAction, [], DaggerfallActorPresentationDefinition.None, Career: career.Id);
     }
 
     private static string Team(string source) => source switch

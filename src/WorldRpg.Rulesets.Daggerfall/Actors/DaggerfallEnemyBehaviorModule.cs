@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Rusty.Engine;
 using WorldRpg.Kit.Ai;
@@ -72,7 +73,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<long, PursuitPolicy>? movementPolicy = null,
         Func<long, bool>? canOpenDoors = null,
         Func<ActorState, bool>? openBlockedDoor = null, Func<long, bool>? questRestrained = null, Func<long, long, double, (double Reach, bool Ranged)?>? attackAtDistance = null,
-        ActorReactions? reactions = null, Func<long>? gameMinute = null)
+        ActorReactions? reactions = null, Func<long>? gameMinute = null, IActorSight? sight = null)
     {
         _gameMinute = gameMinute ?? (() => 0L);
         _reactions = reactions;
@@ -97,7 +98,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         double minimumFacingCosine = DaggerfallPerceptionQueryDefaults.MinimumFacingCosine;
         _pursuitTuning = new PursuitTuning(detectionDistance, minimumFacingCosine, admitted.ChaseSpeedUnitsPerSecond, admitted.NavigationMaximumVisited).Validate();
         _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionPaging.FirstPairCursor, DaggerfallPerceptionPaging.CompleteQueryPageSize).Validate();
-        _pursuit = new PursuitCoordinator<IProductFact>(new DaggerfallEnemyPerceptionService(perception, Filter), spatial, navigation, combat);
+        _pursuit = new PursuitCoordinator<IProductFact>(new DaggerfallEnemyPerceptionService(perception, Filter), spatial, navigation, combat, sight);
         _wander = new ActorWanderCoordinator(navigation);
     }
 

@@ -245,8 +245,7 @@ public sealed class EnemyCombatSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
-        DaggerfallTargetingPolicy policy = new(authored, DaggerfallTuning.Defaults.MeleeTargeting,
-            () => inputs);
+        DaggerfallTargetingPolicy policy = new(authored, DaggerfallTuning.Defaults.MeleeTargeting, TestSessions.Sight(authored, () => inputs));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -256,11 +255,11 @@ public sealed class EnemyCombatSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
         ActorState rat = session.State.Actors.Get(HoldActor(40));
-        Assert.True(authored[rat.DurableId].GroundOnSpawn);
+        Assert.True(definitions.Walks(authored[rat.DurableId]));
         Assert.Equal(rat.Position.ToVector().Y + inputs.ActorSprites[rat.DurableId].Size.Y * .5f,
             policy.AimPoint(rat).Y, 4);
         ActorState imp = session.State.Actors.Get(HoldActor(41));
-        Assert.False(authored[imp.DurableId].GroundOnSpawn);
+        Assert.False(definitions.Walks(authored[imp.DurableId]));
         Assert.Equal(imp.Position.ToVector(), policy.AimPoint(imp));
     }
 

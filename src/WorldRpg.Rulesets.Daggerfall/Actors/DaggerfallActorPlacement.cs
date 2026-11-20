@@ -45,8 +45,10 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions, Func<long, string?> foeTeam, Func<long, bool> isPacified,
     Func<long, bool> allowsFoeInfighting, Func<long, bool> restrained, Func<long, bool> joinsInfighting, Func<bool> infightingActive,
     SpatialMovementSystem spatial, IPerceptionService perception, IRandomService random,
-    Func<CharacterStepEnvironment> environment, double detectionDistance, float fieldOfViewYDegrees)
+    Func<CharacterStepEnvironment> environment, double detectionDistance, float fieldOfViewYDegrees, IActorSight? sight = null)
 {
+    private readonly IActorSight _sight = sight ?? PoseSight.Instance;
+
     // FoeSpawner's placement envelope, in normalized world metres.
     private const float SummonFloorDistance = 4f;
     internal const float SummonSeparation = 1.25f;
@@ -114,14 +116,18 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     internal IEnumerable<PerceptionPair> QueryEnemies(long observerId, WorldPoint origin, Vector3 forward,
         double radius, double facing, Func<DaggerfallActorDefinition, bool> eligible)
     {
+        // One query sights every foe along lines lifted evenly off the floor, by the watcher's own sight height
+        // (IActorSight.Line of the watcher with itself), so each distance and facing stays the poses'.
+        (Vector3 eye, _) = _sight.Line(observerId, origin, observerId, origin);
+        Vector3 lift = eye - origin.ToVector();
         PerceptionTarget[] targets = actors.All.Where(actor => actor.DurableId != observerId && !actor.IsDefeated
                 && isGameplayActive(actor.DurableId)
                 && definitions.TryGetValue(actor.DurableId, out var definition)
                 && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass && eligible(definition with { Team = foeTeam(actor.DurableId) }))
             .OrderBy(actor => actor.DurableId)
-            .Select(actor => new PerceptionTarget(checked((ulong)actor.DurableId), actor.Position.ToVector())).ToArray();
+            .Select(actor => new PerceptionTarget(checked((ulong)actor.DurableId), actor.Position.ToVector() + lift)).ToArray();
         PerceptionQueryRequest request = new(spatial.Session,
-            new[] { new PerceptionObserver(checked((ulong)observerId), origin.ToVector(), forward, radius, facing, 1d) },
+            new[] { new PerceptionObserver(checked((ulong)observerId), eye, forward, radius, facing, 1d) },
             targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, 64);
         PerceptionReadoutResult receipt;
         do

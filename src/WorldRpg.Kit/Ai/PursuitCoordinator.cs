@@ -215,13 +215,17 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
     private readonly SpatialMovementSystem _spatial;
     private readonly ActorNavigationCoordinator _navigation;
     private readonly IAttackCapabilities<TFact> _attacks;
+    private readonly IActorSight _sight;
 
+    /// <param name="sight">Where the pursuer looks from and the target is looked at; the poses themselves by default.</param>
     public PursuitCoordinator(
         IPerceptionService perception,
         SpatialMovementSystem spatial,
         ActorNavigationCoordinator navigation,
-        IAttackCapabilities<TFact> attacks)
+        IAttackCapabilities<TFact> attacks,
+        IActorSight? sight = null)
     {
+        _sight = sight ?? PoseSight.Instance;
         _perception = perception ?? throw new ArgumentNullException(nameof(perception));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
@@ -379,10 +383,11 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
         PursuitPerceptionOptions options)
     {
         Vector3 forward = ActorHeading.Forward(actor.HeadingYawRadians);
+        (Vector3 eye, Vector3 seen) = _sight.Line(actor.DurableId, actor.Position, target.DurableId, target.Position);
         return _perception.QueryVisibility(new PerceptionQueryRequest(
             _spatial.Session,
-            new PerceptionObserver[] { new(checked((ulong)actor.DurableId), actor.Position.ToVector(), forward, tuning.DetectionDistance, tuning.MinimumFacingCosine, 1d) },
-            new PerceptionTarget[] { new(checked((ulong)target.DurableId), target.Position.ToVector()) },
+            new PerceptionObserver[] { new(checked((ulong)actor.DurableId), eye, forward, tuning.DetectionDistance, tuning.MinimumFacingCosine, 1d) },
+            new PerceptionTarget[] { new(checked((ulong)target.DurableId), seen) },
             ReadOnlyMemory<SpatialEntityCollider>.Empty,
             options.Cursor,
             options.PageSize));

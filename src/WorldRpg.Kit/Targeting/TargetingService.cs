@@ -19,6 +19,8 @@ public interface ITargetingPolicy
 {
     bool IsValidTarget(ActorState actor);
     Vector3 AimPoint(ActorState actor);
+    /// <summary>Where the observer looks from, standing at <paramref name="origin"/>; the origin itself by default.</summary>
+    Vector3 EyePoint(long observer, WorldPoint origin) => origin.ToVector();
     double MaximumDistance(double? actionReach);
     double MinimumFacingCosine { get; }
 }
@@ -56,7 +58,7 @@ public sealed class TargetingService(IPerceptionService perception, SpatialMovem
         PerceptionTarget[] targets = actors.All.Where(IsValidTarget).OrderBy(a => a.DurableId)
             .Select(a => new PerceptionTarget(checked((ulong)a.DurableId), policy.AimPoint(a))).ToArray();
         PerceptionQueryRequest request = new(spatial.Session,
-            new[] { new PerceptionObserver(observer, origin.ToVector(), forward, policy.MaximumDistance(actionReach), policy.MinimumFacingCosine, 1d) },
+            new[] { new PerceptionObserver(observer, policy.EyePoint(actors.Player.DurableId, origin), forward, policy.MaximumDistance(actionReach), policy.MinimumFacingCosine, 1d) },
             targets, ReadOnlyMemory<SpatialEntityCollider>.Empty, 0, VisibilityPageSize);
         PerceptionReadoutResult receipt = perception.QueryVisibility(request);
         long? selected = receipt.Pairs.ToArray().Where(p => p.Observer == observer && p.Kind == PerceptionPairKind.Visible

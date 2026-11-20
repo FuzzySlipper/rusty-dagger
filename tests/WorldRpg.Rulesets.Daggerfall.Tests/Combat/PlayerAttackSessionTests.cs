@@ -143,7 +143,7 @@ public sealed class PlayerAttackSessionTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         authored[HoldActor(1)] = authored[HoldActor(1)] with { MinimumMaterial = "daedric" };
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, TestSessions.Sight(authored, () => inputs)));
         DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial);
 
         double staminaBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("stamina")).Current;
@@ -515,7 +515,7 @@ public sealed class PlayerAttackSessionTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, movement, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        TargetingService targeting = new(perception.Service, movement, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, TestSessions.Sight(authored, () => inputs)));
         perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         Assert.Equal(HoldActor(1), targeting.Select(session.State.PlayerControl.Position, ForwardLook().Forward, 2.25d));
 
@@ -550,7 +550,7 @@ public sealed class PlayerAttackSessionTests
                 placement => placement.EntityId,
                 placement => definitions.RequireActor(placement.ActorId));
             authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-            TargetingService targeting = new(perception.Service, sessionMovement, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+            TargetingService targeting = new(perception.Service, sessionMovement, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, TestSessions.Sight(authored, () => inputs)));
             perception.Receipt = Receipt(
                 new PerceptionPair(1, (ulong)HoldActor(39), 1d, .8d, PerceptionPairKind.Visible, 1d),
                 new PerceptionPair(1, (ulong)HoldActor(1), 1d, .8d, PerceptionPairKind.Visible, 1d),
@@ -571,12 +571,12 @@ public sealed class PlayerAttackSessionTests
         using SpatialMovementSystem movement = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         using ActorsState actors = ActorsWithNpc(HoldActor(1), HealthyMechanics(), new WorldPoint(0f, 0f, 1f));
         ActorState runtimeActor = actors.Get(HoldActor(1));
+        Dictionary<long, DaggerfallActorDefinition> skeleton = new() { [HoldActor(1)] = definitions.RequireActor(new DaggerfallActorId("skeletal-warrior")) };
         TargetingService runtimeTargeting = new(
             perception.Service,
             movement,
             actors,
-            new DaggerfallTargetingPolicy(new Dictionary<long, DaggerfallActorDefinition> { [HoldActor(1)] = definitions.RequireActor(new DaggerfallActorId("skeletal-warrior")) },
-            DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+            new DaggerfallTargetingPolicy(skeleton, DaggerfallTuning.Defaults.MeleeTargeting, TestSessions.Sight(skeleton, () => inputs)));
         perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 1d, .8d, PerceptionPairKind.Visible, 1d));
         Assert.NotEqual(new EntityId(checked((ulong)runtimeActor.DurableId)), runtimeActor.Actor.Entity);
         long? selected = runtimeTargeting.Select(
@@ -959,7 +959,7 @@ public sealed class PlayerAttackSessionTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, TestSessions.Sight(authored, () => inputs)));
         DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial);
         FactBuffer<IProductFact> facts = new();
 

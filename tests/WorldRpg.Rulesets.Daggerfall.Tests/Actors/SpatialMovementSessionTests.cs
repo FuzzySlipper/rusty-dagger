@@ -32,14 +32,14 @@ public sealed class SpatialMovementSessionTests
         foreach (AuthoredActor source in inputs.Project.Actors.Values)
         {
             WorldPoint actual = session.State.Actors.Get(source.EntityId).Position;
-            bool grounded = definitions.Actors[source.ActorId].GroundOnSpawn;
+            bool grounded = definitions.Walks(definitions.Actors[source.ActorId]);
             Assert.Equal(source.Position.Y + (grounded ? DaggerfallTuning.Defaults.EnemyBehavior.SpawnGroundProbeLift - 1f : 0f), actual.Y, precision: 4);
             Assert.Equal(source.Position.X, actual.X);
             Assert.Equal(source.Position.Z, actual.Z);
         }
         // Each grounded spawn probes once, as does each dungeon treasure pile resting on its floor and the new game's
         // player standing at its start.
-        Assert.Equal(session.DefinitionsByActor.Count(actor => actor.Key != 1 && actor.Value.GroundOnSpawn) + inputs.DungeonPopulation.Treasures.Count + 1,
+        Assert.Equal(session.DefinitionsByActor.Count(actor => actor.Key != 1 && definitions.Walks(actor.Value)) + inputs.DungeonPopulation.Treasures.Count + 1,
             spatial.FloorProbes.Count);
         Assert.All(spatial.FloorProbes, request => Assert.Equal(-Vector3.UnitY, request.Direction));
     }

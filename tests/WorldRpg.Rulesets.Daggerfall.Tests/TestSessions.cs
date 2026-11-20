@@ -658,6 +658,13 @@ internal static class TestSessions
         return actors;
     }
 
+    /// <summary>Daggerfall's sight over these actors and the site's sprites, with the player's eye and body as the session's.</summary>
+    internal static DaggerfallActorSight Sight(IReadOnlyDictionary<long, DaggerfallActorDefinition> authored, Func<DaggerfallSiteProfile> inputs) =>
+        new(authored, TestPayload.Definitions, inputs, (float)DaggerfallTuning.Defaults.Camera.EyeHeight, PlayerBodyMiddle);
+
+    /// <summary>Halfway up the Engine's default standing body, as the session's player sight takes it.</summary>
+    internal const float PlayerBodyMiddle = .9F;
+
     internal static StatsComponent HealthyMechanics()
     {
         Stat maximum = new(100);

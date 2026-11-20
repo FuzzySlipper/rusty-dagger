@@ -245,13 +245,15 @@ internal sealed partial class DaggerfallSession
             }
             if (saved is null)
             {
-                foreach (ActorState actor in actors.All.Where(actor => authored[actor.DurableId].GroundOnSpawn))
+                foreach (ActorState actor in actors.All.Where(actor => definitions.Walks(authored[actor.DurableId])))
                     _grounding.Ground(actor);
             }
             _camera = new FirstPersonCameraSystem(engine.CameraView, assembled.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
+            DaggerfallActorSight sight = new(authored, definitions, () => _sites.Projection.Inputs, (float)tuning.Camera.EyeHeight,
+                _spatial.CurrentController.Shape.StandingHeight * .5F, id => _sight.PersonHeight(id));
             TargetingService targeting = new(engine.Perception, _spatial, actors,
-                new DaggerfallTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs, npcs.IsGameplayActive, id => _sight.PersonHeight(id)));
+                new DaggerfallTargetingPolicy(authored, tuning.MeleeTargeting, sight, npcs.IsGameplayActive));
             CombatResolution combatRules = new();
             _combatResolution = combatRules;
             _vitality = new DaggerfallVitalityConsequences(combatRules);
@@ -362,7 +364,7 @@ internal sealed partial class DaggerfallSession
                 id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), id => quests.IsFoeRestrained(id),
                 id => quests.FoeRelationsFor(id)?.Infighting == true, () => quests.HasInfightingFoes, _spatial, engine.Perception, _random,
                 () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
-                (float)_tuning.Camera.FieldOfViewYDegrees);
+                (float)_tuning.Camera.FieldOfViewYDegrees, sight);
             _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, id => QuestFoes.Team(id),
                 id => _enemyBehavior!.IsPacified(id), () => _enemyBehavior!.LastPerception, effects, _locomotion,
                 () => State!.WeaponDrawn, () => _combat!.PlayerHoldsBow(), () => _time.Calendar.MinuteNumber, _random,
@@ -476,7 +478,7 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
                 openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance,
-                gameMinute: () => _time.Calendar.MinuteNumber);
+                gameMinute: () => _time.Calendar.MinuteNumber, sight: sight);
             HashSet<ulong> authoredEntityIds = DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
@@ -677,7 +679,8 @@ internal sealed partial class DaggerfallSession
                 State.Progression,
                 tuning.LootInteraction,
                 State.Character,
-                _actorIdentities);
+                _actorIdentities,
+                feet => sight.Eye(DaggerfallActorIdentity.PlayerEntityId, feet));
             _itemOwnership = new DaggerfallItemOwnership(State.Actors, State.InventoryStore, actor => _corpseLoot.Corpses[actor].Owner);
             _itemLifetime = new DaggerfallItemLifetime(State.Actors.Entities, State.InventoryStore, State.ItemInstances, _uniqueItems, _itemOwnership);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile, questItemExits);
@@ -1063,7 +1066,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallCharacterActions characterActions = _characterActions = new(_creation, State.Character, State.LevelUps, _controls, definitions.NewGame.QuickEntry,
                 () => _mode == ProductMode.Title && !_newGameInitialized, Presentation);
             _lootActions = new DaggerfallLootActions(_lootUi, _corpseLoot, _groundContainers, _facts, State.Encumbrance, definitions,
-                State.ItemInstances, State.Inventory, State.PlayerControl, _input, State.Quests.ItemClicked, PropertyLoot.Open, PropertyLoot.ObserveTake,
+                State.ItemInstances, State.Inventory, State.PlayerControl, State.Quests.ItemClicked, PropertyLoot.Open, PropertyLoot.ObserveTake,
                 Presentation);
             EconomyPanels = new DaggerfallEconomyPanels(Banking, State.Bank, MerchantTrade, RoomRental, State.Tavern, State.SkillTraining, Holdings,
                 State.Inventory, State.Wagon, _inventoryUi, definitions, () => _dialogue, CurrentInteriorBuilding, TransportAccess, RequestPanel,

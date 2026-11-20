@@ -191,7 +191,7 @@ internal sealed class DaggerfallActorRoster
             _definitionsByActor.Add(durableId, spawnedDefinition);
             _dynamicActors.Add(durableId, spawnedDefinition.Id);
             registered = true;
-            if (definition.GroundOnSpawn) _grounding.Ground(actor);
+            if (_definitions.Walks(definition)) _grounding.Ground(actor);
             return durableId;
         }
         catch
@@ -488,7 +488,7 @@ internal sealed class DaggerfallActorRoster
             ActorState actor = DaggerfallActorFactory.CreateAuthoredActor(_random, _mechanics, _definitions, _actors, _inventoryStore,
                 _actorInventories.ItemDefinitions, _itemInstances, placement, prior);
             if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
-            else if (definition.GroundOnSpawn) _grounding.Ground(actor);
+            else if (_definitions.Walks(definition)) _grounding.Ground(actor);
             _definitionsByActor.Add(actor.DurableId, definition);
             if (restoreAuthoredAppearance && definition.MobileId is int authoredMobile)
             {
@@ -704,7 +704,8 @@ internal sealed class DaggerfallActorRoster
 
 /// <summary>
 /// Settles a placed or spawned actor onto the floor below its authored marker through the Engine's
-/// own spatial ray query.
+/// own spatial ray query. Every actor whose mobile walks is settled (<see cref="DaggerfallDefinitions.Walks"/>);
+/// flyers, spectres and swimmers keep the height they were placed at.
 /// </summary>
 internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, SpatialMovementSystem spatial, float probeLift, double probeDistance)
 {

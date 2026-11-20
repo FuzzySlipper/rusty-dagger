@@ -9,8 +9,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 internal sealed class DaggerfallTargetingPolicy(IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
-    DaggerfallMeleeTargetingTuning tuning, Func<DaggerfallSiteProfile> currentInputs,
-    Func<long, bool>? actorGameplayActive = null, Func<long, double?>? personSightHeight = null) : ITargetingPolicy
+    DaggerfallMeleeTargetingTuning tuning, DaggerfallActorSight sight, Func<long, bool>? actorGameplayActive = null) : ITargetingPolicy
 {
     private readonly Func<long, bool> _actorGameplayActive = actorGameplayActive ?? (_ => true);
 
@@ -19,24 +18,11 @@ internal sealed class DaggerfallTargetingPolicy(IReadOnlyDictionary<long, Dagger
         && definition.Kind != DaggerfallActorKinds.StaticNpc
         && _actorGameplayActive(actor.DurableId);
     public double MinimumFacingCosine => tuning.MinimumFacingCosine;
-    public Vector3 AimPoint(ActorState actor)
-    {
-        Vector3 basePosition = actor.Position.ToVector();
-        DaggerfallActorDefinition definition = definitions[actor.DurableId];
-        if (definition.Kind == DaggerfallActorKinds.Civilian && personSightHeight?.Invoke(actor.DurableId) is double sight)
-            return basePosition + Vector3.UnitY * (float)sight;
-        if (!definition.GroundOnSpawn) return basePosition;
 
-        // Grounded actor poses name the sprite base at the floor contact. A visibility ray to that
-        // contact can hit the floor itself, so use the visible body's midpoint while retaining the
-        // Engine's normal cover query.
-        DaggerfallSiteProfile inputs = currentInputs();
-        NormalizedActorSprite sprite = inputs.ActorSprites.TryGetValue(actor.DurableId, out NormalizedActorSprite? placed)
-            ? placed
-            : definition.MobileId is int mobileId && inputs.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? mobile)
-                ? mobile : throw new InvalidOperationException($"Grounded actor {actor.DurableId} has no admitted sprite size.");
-        return basePosition + Vector3.UnitY * (sprite.Size.Y * .5f);
-    }
+    // A visibility ray to a walker's floor contact can hit the floor itself, so the player looks from its eye at the
+    // body's middle, while the Engine's normal cover query stands.
+    public Vector3 AimPoint(ActorState actor) => sight.Body(actor.DurableId, actor.Position);
+    public Vector3 EyePoint(long observer, WorldPoint origin) => sight.Eye(observer, origin);
     public double MaximumDistance(double? actionReach)
     {
         if (actionReach is not double reach) return tuning.MaximumDistance;

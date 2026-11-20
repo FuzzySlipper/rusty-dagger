@@ -44,7 +44,7 @@ internal static class CombatCollaborators
         spatial = new SpatialMovementSystem(fake.Service, new ContentFake(releases),
             null, DaggerfallTuning.Defaults.Spatial);
         return new TargetingService(PerceptionFake.Create().Service, spatial, actors,
-            new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+            new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, TestSessions.Sight(authored, () => inputs)));
     }
 
     /// <summary>An actor's inventory and equipment over its own Engine inventory store, as the actor factory attaches them.</summary>

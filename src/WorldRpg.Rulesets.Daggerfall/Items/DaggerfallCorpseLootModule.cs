@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -36,6 +37,13 @@ internal sealed class DaggerfallCorpseLootModule
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly ProgressionState _progression;
     private readonly DaggerfallLootInteractionTuning _tuning;
+    /// <summary>Where the player looks from, standing at the given feet.</summary>
+    private readonly Func<WorldPoint, Vector3> _playerEye;
+
+    /// <summary>
+    /// How far above where a corpse lies the player sights it: a ray to its floor contact itself can strike the floor.
+    /// </summary>
+    private const float CorpseSightLift = .25F;
     private readonly DaggerfallCharacterState _character;
     private readonly DaggerfallLootPopulation _population;
     private readonly CorpseLootCoordinator _corpseLoot;
@@ -58,8 +66,10 @@ internal sealed class DaggerfallCorpseLootModule
         ProgressionState progression,
         DaggerfallLootInteractionTuning tuning,
         DaggerfallCharacterState character,
-        DurableIdentityAllocator? identities = null)
+        DurableIdentityAllocator? identities = null,
+        Func<WorldPoint, Vector3>? playerEye = null)
     {
+        _playerEye = playerEye ?? (feet => feet.ToVector());
         _perception = perception ?? throw new ArgumentNullException(nameof(perception));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _containers = containers ?? throw new ArgumentNullException(nameof(containers));
@@ -244,8 +254,8 @@ internal sealed class DaggerfallCorpseLootModule
 
         PerceptionQueryRequest request = new(
             _spatial.Session,
-            new PerceptionObserver[] { new((ulong)DaggerfallActorIdentity.PlayerEntityId, position.ToVector(), look.Forward, _tuning.MaximumDistance, _tuning.MinimumFacingCosine, 1d) },
-            eligible.Select(value => new PerceptionTarget((ulong)value.Actor.DurableId, value.Actor.Position.ToVector())).ToArray(),
+            new PerceptionObserver[] { new((ulong)DaggerfallActorIdentity.PlayerEntityId, _playerEye(position), look.Forward, _tuning.MaximumDistance, _tuning.MinimumFacingCosine, 1d) },
+            eligible.Select(value => new PerceptionTarget((ulong)value.Actor.DurableId, value.Actor.Position.ToVector() + Vector3.UnitY * CorpseSightLift)).ToArray(),
             ReadOnlyMemory<SpatialEntityCollider>.Empty,
             DaggerfallPerceptionPaging.FirstPairCursor,
             DaggerfallPerceptionPaging.CompleteQueryPageSize);
@@ -281,6 +291,18 @@ internal sealed class DaggerfallCorpseLootModule
         return facts.Length == 0
             ? new PendingCorpseLoot(actorId, corpse, [], IsEmpty: true)
             : new PendingCorpseLoot(actorId, corpse, facts, IsEmpty: false);
+    }
+
+    /// <summary>
+    /// The loot of a corpse already open, for a take: the corpse must still be there and the player still within
+    /// reach of it, with no fresh look, so a slight turn or a rise of the floor between them does not close it.
+    /// </summary>
+    internal PendingCorpseLoot? PrepareOpenLoot(PlayerControlState player, long actorId)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        return player.Position is WorldPoint position && _actors.TryGet(actorId, out ActorState corpse)
+            && Vector3.Distance(position.ToVector(), corpse.Position.ToVector()) <= _tuning.MaximumDistance
+                ? PrepareResolvedLoot(actorId) : null;
     }
 
     /// <summary>

@@ -295,7 +295,6 @@ internal static class DaggerfallActorFactory
             ActionId: null,
             Loadout: [],
             Presentation: DaggerfallActorPresentationDefinition.None,
-            GroundOnSpawn: false,
             Race: null,
             Career: null);
     }

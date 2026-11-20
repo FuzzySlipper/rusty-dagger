@@ -21,7 +21,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallLootActions(DaggerfallLootPresentation loot, DaggerfallCorpseLootModule corpseLoot,
     DaggerfallGroundContainers ground, FactBuffer<IProductFact> facts, DaggerfallEncumbrancePolicy encumbrance,
     DaggerfallDefinitions definitions, DaggerfallItemInstances instances, MechanicsInventoryCoordinator inventory,
-    PlayerControlState player, PlayerInputSystem input, Func<DaggerfallItemInstanceMetadata, bool> questItemTaken,
+    PlayerControlState player, Func<DaggerfallItemInstanceMetadata, bool> questItemTaken,
     Func<long, bool?> stockContainer, Action<DaggerfallGroundContainer, InventoryContainerTransferReceipt, string, ulong> observePropertyTake,
     PresentationState presentation)
 {
@@ -84,7 +84,7 @@ internal sealed class DaggerfallLootActions(DaggerfallLootPresentation loot, Dag
             if (report) presentation.SetOutcome(loot.Message);
             return;
         }
-        if (loot.PrepareTake(action, player, input.ResolveCurrentLook(player)) is { } take)
+        if (loot.PrepareTake(action, player) is { } take)
         {
             var questItem = take.Selection is { } selection ? QuestItem(DaggerfallItemOwner.Corpse(take.ActorId), selection) : null;
             var result = corpseLoot.TryCommitLoot(take, facts);

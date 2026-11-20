@@ -123,7 +123,7 @@ internal sealed record DaggerfallLocationSet(
     int RegionGaps,
     int Regions);
 
-internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, bool GroundOnSpawn = false, string? Race = null, string? Career = null)
+internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, string? Race = null, string? Career = null)
 {
 }
 
@@ -427,6 +427,10 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
         replaced.Books = books;
         return replaced;
     }
+    /// <summary>Whether an actor walks on the floor, as its mobile does; one with no mobile does not.</summary>
+    internal bool Walks(DaggerfallActorDefinition actor) =>
+        actor.MobileId is int mobile && Mobiles.Mobiles.TryGetValue(mobile, out DaggerfallMobileDefinition? definition) && definition.Walks;
+
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 
     /// <summary>The native template behind an authored or template-backed item.</summary>

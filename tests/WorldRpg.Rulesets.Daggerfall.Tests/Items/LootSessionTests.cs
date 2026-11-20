@@ -143,27 +143,30 @@ public sealed class LootSessionTests
         InventoryItemPresentation gold = opened.Items.Single(item => item.Key == DaggerfallInventoryPresentation.StackKey(testStack));
         ulong goldBefore = ulong.Parse(gold.Quantity);
         DaggerfallPlayerUiAction take = new("loot-take", opened.Revision, gold.Key, Container: opened.Container);
-        Assert.Null(panel.PrepareTake(take with { Container = "other" }, player, ForwardLook()));
+        Assert.Null(panel.PrepareTake(take with { Container = "other" }, player));
         Assert.Equal(beforeOpen, world.Revision);
+        // Once open, a take asks no fresh look: a slight turn or a rise of the floor that hides the body from a new
+        // look (here every look comes back occluded) leaves it open, while stepping out of reach closes it.
         perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Occluded, 0d));
-        Assert.Null(panel.PrepareTake(take, player, ForwardLook()));
+        PlayerControlState away = new(new WorldPoint(0, 0, 40), 0, 0);
+        Assert.Null(panel.PrepareTake(take, away));
+        Assert.Contains("within reach", panel.Message);
         Assert.Equal(beforeOpen, world.Revision);
-        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
-        PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(panel.PrepareTake(take, player, ForwardLook()));
+        PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(panel.PrepareTake(take, player));
         FactBuffer<IProductFact> facts = new();
         panel.Complete(loot.TryCommitLoot(pending, facts));
         Assert.Equal(1UL, containers.Read(playerOwner).Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
         Assert.Equal(goldBefore - 1, containers.Read(loot.Corpses[HoldActor(1)].Owner).Stacks.Single(stack => stack.Id == testStack).Quantity);
         Assert.True(loot.Corpses[HoldActor(1)].IsInteractable);
         ulong afterTake = world.Revision;
-        Assert.Null(panel.PrepareTake(take, player, ForwardLook()));
+        Assert.Null(panel.PrepareTake(take, player));
         Assert.Equal(afterTake, world.Revision);
         Assert.Contains("changed", panel.Message);
         while (panel.Read() is { Empty: false } current)
         {
             InventoryItemPresentation next = current.Items[0];
             PendingCorpseLoot one = Assert.IsType<PendingCorpseLoot>(panel.PrepareTake(
-                new("loot-take", current.Revision, next.Key, Container: current.Container), player, ForwardLook()));
+                new("loot-take", current.Revision, next.Key, Container: current.Container), player));
             panel.Complete(loot.TryCommitLoot(one, facts));
         }
         Assert.False(loot.Corpses[HoldActor(1)].IsInteractable);

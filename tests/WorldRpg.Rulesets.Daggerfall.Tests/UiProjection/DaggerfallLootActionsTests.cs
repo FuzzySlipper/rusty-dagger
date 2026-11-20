@@ -62,10 +62,8 @@ public sealed class DaggerfallLootActionsTests : IDisposable
         DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
         StatsComponent stats = new DaggerfallMechanicsState().CreateStats(playerDefinition,
             DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00")));
-        DaggerfallTuning tuning = DaggerfallTuning.Defaults;
         _actions = new(_loot, null!, _ground, new FactBuffer<IProductFact>(), new DaggerfallEncumbrancePolicy(_inventory, stats), definitions,
             instances, _inventory, new PlayerControlState(null, 0f, 0f),
-            new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput),
             _ => true, _ => _stock, (_, _, definition, quantity) => _observed.Add((definition, quantity)), _presentation);
     }
 

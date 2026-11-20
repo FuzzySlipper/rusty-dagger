@@ -142,15 +142,15 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         ? "Item taken."
         : $"Cannot take that item. {detail}";
 
-    internal PendingCorpseLoot? PrepareTake(DaggerfallPlayerUiAction action, PlayerControlState player, LookReceipt look)
+    internal PendingCorpseLoot? PrepareTake(DaggerfallPlayerUiAction action, PlayerControlState player)
     {
         LootPresentation? current = Read();
         if (current is null || action.Container != current.Container || action.Revision != current.Revision)
         { Message = "Loot changed. Choose the item again."; return null; }
         InventoryItemPresentation? item = current.Items.SingleOrDefault(item => item.Key == action.Item);
         if (item is null) { Message = "That item is no longer in this container."; return null; }
-        PendingCorpseLoot? prepared = loot.PrepareLoot(player, look, _actor);
-        if (prepared is null) { Message = "This loot is no longer visible within reach."; return null; }
+        PendingCorpseLoot? prepared = loot.PrepareOpenLoot(player, _actor!.Value);
+        if (prepared is null) { Message = "This loot is no longer within reach."; return null; }
         InventoryView contents = loot.ReadContents(_actor!.Value)!;
         ulong quantity = action.Amount ?? 1;
         ulong? unique = item.Key.StartsWith("unique:", StringComparison.Ordinal)

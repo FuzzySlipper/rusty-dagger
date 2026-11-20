@@ -1052,13 +1052,7 @@ internal static partial class DaggerfallBaseContent
             if (mobileId is < 0 or > 100_000) diagnostics.Add($"Actor '{id.Value}' mobileId is outside the supported range.");
             if (actionId is not null && !actions.ContainsKey(actionId)) diagnostics.Add($"Actor '{id.Value}' refers to missing action '{actionId}'.");
             DaggerfallActorPresentationDefinition presentation = ReadActorPresentation(actor, id, diagnostics);
-            bool groundOnSpawn = false;
-            if (actor.TryGetProperty("groundOnSpawn", out JsonElement grounding))
-            {
-                if (grounding.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) diagnostics.Add($"Actor '{id.Value}' groundOnSpawn must be boolean.");
-                else groundOnSpawn = grounding.GetBoolean();
-            }
-            DaggerfallActorDefinition definition = new(id, Text(actor, "kind", diagnostics), stats, health, new(DaggerfallMechanicsIds.Health, id.Value == "player" ? DaggerfallMechanicsIds.Stamina : null), rewards, armor, mobileId, OptionalInteger(actor, "hitPointsPerLevel", diagnostics), attacks, OptionalText(actor, "team", diagnostics), OptionalText(actor, "minMetalToHit", diagnostics), OptionalText(actor, "lootTableKey", diagnostics), OptionalInteger(actor, "level", diagnostics), OptionalInteger(actor, "weight", diagnostics), actionId, ReadLoadout(actor, items, diagnostics), presentation, groundOnSpawn, OptionalText(actor, "race", diagnostics), OptionalText(actor, "career", diagnostics));
+            DaggerfallActorDefinition definition = new(id, Text(actor, "kind", diagnostics), stats, health, new(DaggerfallMechanicsIds.Health, id.Value == "player" ? DaggerfallMechanicsIds.Stamina : null), rewards, armor, mobileId, OptionalInteger(actor, "hitPointsPerLevel", diagnostics), attacks, OptionalText(actor, "team", diagnostics), OptionalText(actor, "minMetalToHit", diagnostics), OptionalText(actor, "lootTableKey", diagnostics), OptionalInteger(actor, "level", diagnostics), OptionalInteger(actor, "weight", diagnostics), actionId, ReadLoadout(actor, items, diagnostics), presentation, OptionalText(actor, "race", diagnostics), OptionalText(actor, "career", diagnostics));
             if (!actors.TryAdd(id, definition)) diagnostics.Add($"Duplicate actor definition '{id.Value}'.");
         }
         if (actors.Count == 0) diagnostics.Add("Base payload must define at least one actor.");
