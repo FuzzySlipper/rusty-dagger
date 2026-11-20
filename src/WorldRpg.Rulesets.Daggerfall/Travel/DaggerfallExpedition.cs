@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -68,10 +69,29 @@ internal interface IDaggerfallExpeditionSurroundings
 
     /// <summary>Rolls one hour's unseen encounter at the party's pixel; true when a foe was selected, waiting to be met.</summary>
     bool EncounterArrives(DaggerfallTravelMapPixel pixel, bool atLocation, long minute);
+
+    /// <summary>A keyed draw for the map's bands, from <c>minimum</c> to <c>maximum</c> inclusive.</summary>
+    int Roll(string key, int minimum, int maximum);
+
+    /// <summary>The player's level, which a band's table entry is drawn against.</summary>
+    int PlayerLevel { get; }
+
+    /// <summary>The party's sight's named input, a later scouting skill's share from 0 to 1.</summary>
+    double Scouting { get; }
+
+    /// <summary>The input against a band's sight: the player's stealth as a share from 0 to 1.</summary>
+    double Concealment { get; }
+
+    /// <summary>A band is met at the party's pixel: its members are kept for the profile Enter puts the player in, staged so.</summary>
+    void MeetBand(DaggerfallExpeditionBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging);
 }
 
 /// <summary>Where Enter puts the player: the party's pixel, the location standing there if any, and the pixel the party came from.</summary>
 internal sealed record DaggerfallExpeditionEntry(DaggerfallTravelMapPixel Pixel, DaggerfallSiteRecord? Location, DaggerfallTravelMapPixel CameFrom);
+
+/// <summary>A band the map shows: where it is, what it looks like, and whether it has seen the party.</summary>
+internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, double Heading, DaggerfallBandKind Kind, string Name,
+    bool Camp, bool Spotted, double Distance);
 
 /// <summary>A point on the map the party may head for or the player may pin: a pixel, and the place there when one was chosen.</summary>
 internal sealed record DaggerfallExpeditionMark([property: JsonRequired] DaggerfallTravelMapPixel Pixel, DaggerfallSiteId? Place);
@@ -175,10 +195,15 @@ internal sealed class DaggerfallExpedition
     private string? _message;
     private (long NpcId, Func<bool> Available, DaggerfallSiteId? Place)? _teleport;
     private string? _held;
+    private readonly DaggerfallExpeditionBands _bands;
+    private DaggerfallExpeditionBand? _bandAhead;
     private DaggerfallTravelDestination[] _found = [];
 
+    /// <param name="tables">The classic encounter tables bands are staged from; none stages no band.</param>
+    /// <param name="mobiles">The foes the tables name.</param>
     internal DaggerfallExpedition(DaggerfallTravelPolicy policy, DaggerfallSiteContext sites, DaggerfallExpeditionTuning tuning,
-        IDaggerfallExpeditionSurroundings world, DaggerfallExpeditionSave? saved = null)
+        IDaggerfallExpeditionSurroundings world, DaggerfallExpeditionSave? saved = null, DaggerfallEncounterSet? tables = null,
+        DaggerfallMobileCatalogSet? mobiles = null)
     {
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _sites = sites ?? throw new ArgumentNullException(nameof(sites));
@@ -186,6 +211,9 @@ internal sealed class DaggerfallExpedition
         _world = world ?? throw new ArgumentNullException(nameof(world));
         foreach (DaggerfallSiteRecord site in sites.Records)
             if (site.Exterior is not null) _locations.TryAdd(new(site.MapPixelX, site.MapPixelY), site);
+        _bands = new DaggerfallExpeditionBands(policy, tables ?? new DaggerfallEncounterSet([]),
+            mobiles ?? new DaggerfallMobileCatalogSet(new Dictionary<int, DaggerfallMobileDefinition>(), new Dictionary<string, DaggerfallMobileDefinition>()),
+            _tuning.Bands, _locations.ContainsKey);
         if (saved is { Open: true }) Restore(saved.Validate());
         else if (saved is not null) RestoreClosed(saved);
     }
@@ -280,6 +308,8 @@ internal sealed class DaggerfallExpedition
     /// <summary>The map closes: the player left it, entered the world, or the game left play.</summary>
     internal void Close()
     {
+        _bands.Clear();
+        _bandAhead = null;
         _open = false;
         _teleport = null;
         _held = null;
@@ -344,7 +374,8 @@ internal sealed class DaggerfallExpedition
             _message = "The party is already there.";
             return;
         }
-        SetLeg(new(_party, new(pixel, place), 0, 0));
+        SteerAway();
+        Reroute(new(pixel, place));
         _mode = _pace;
         _message = null;
         if (_speed == 0) _speed = 1;
@@ -354,6 +385,7 @@ internal sealed class DaggerfallExpedition
     internal void Stop()
     {
         if (Refused() is { } refusal) { _message = refusal; return; }
+        SteerAway();
         _leg = null;
         _route = [];
         _message = null;
@@ -559,6 +591,7 @@ internal sealed class DaggerfallExpedition
                 Pause(_world.Defeated ? null : "Exhausted, you drop where you stand.");
                 break;
             }
+            if (BandsStop(applied, after)) break;
             if (Arrived()) break;
             if (after.MinuteNumber / DaggerfallCalendar.MinutesPerHour != before.MinuteNumber / DaggerfallCalendar.MinutesPerHour
                 && _ship == DaggerfallExpeditionShip.None && !_policy.IsOcean(_party)
@@ -583,6 +616,13 @@ internal sealed class DaggerfallExpedition
         if (!_open || _teleport is not null) return null;
         if (_held is not null) { _message = _held; return null; }
         if (_policy.IsOcean(_party)) { _message = "There is no land here. Make for the shore first."; return null; }
+        if (_bandAhead is { } band)
+        {
+            // The band the party came upon unseen is met as it stood: camped, or on its way.
+            _world.MeetBand(band, _party, band.Camp ? DaggerfallEncounterStaging.Camp : DaggerfallEncounterStaging.Travelling);
+            _bands.Remove(band);
+            _bandAhead = null;
+        }
         return new(_party, LocationHere, _cameFrom);
     }
 
@@ -631,8 +671,117 @@ internal sealed class DaggerfallExpedition
         _lodging = saved.Lodging;
     }
 
+    /// <summary>How far the party sees now, in map pixels.</summary>
+    internal double PartySight => _bands.PartySight(SightConditions());
+
+    /// <summary>How far a band sees the party now, in map pixels.</summary>
+    internal double BandSight => _bands.BandSight(SightConditions());
+
+    /// <summary>The bands within the party's sight, nearest first, as the map draws them.</summary>
+    internal IReadOnlyList<DaggerfallExpeditionBandView> SeenBands => _open && _teleport is null
+        ? [.. _bands.Seen(Position, PartySight).Select(View)] : [];
+
+    /// <summary>Every band staged around the party, seen or not, for a developer.</summary>
+    internal IReadOnlyList<DaggerfallExpeditionBandView> AllBands => [.. _bands.All.Select(View)];
+
+    /// <summary>The band the party has come upon unseen and stands beside, if any.</summary>
+    internal DaggerfallExpeditionBandView? BandAhead => _bandAhead is { } band ? View(band) : null;
+
+    /// <summary>
+    /// Stages one band for a developer, a distance (pixels) and bearing (degrees clockwise from north) from the party,
+    /// camped or wandering. Null when one was staged, else why not.
+    /// </summary>
+    internal string? StageBand(double distance, double bearing, bool camp)
+    {
+        if (!_open || _teleport is not null || _held is not null) return "Open the travel map outdoors first.";
+        return _bands.StageAt(_world.Calendar.ToAbsoluteSeconds(), Position, _world.PlayerLevel, _world.Roll, distance, bearing, camp).Refusal;
+    }
+
+    private DaggerfallExpeditionBandView View(DaggerfallExpeditionBand band)
+    {
+        (double x, double y) = Position;
+        return new(band.Id, band.X, band.Y, band.Heading, band.Kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y));
+    }
+
+    private DaggerfallBandSightConditions SightConditions()
+    {
+        int climate = _policy.Climate(_party);
+        return new(_mode, !_world.Calendar.IsDay, _world.Weather(climate), climate, _world.Scouting, _world.Concealment);
+    }
+
+    /// <summary>
+    /// The bands' part of a stretch: they move and look, and the map stops when one it can see sets off after the party,
+    /// when one catches the party (only Enter goes on), or when the party comes upon one unseen (Enter, or another way).
+    /// At sea no band reaches the party.
+    /// </summary>
+    private bool BandsStop(long seconds, DaggerfallCalendar after)
+    {
+        if (_policy.IsOcean(_party)) return false;
+        double partySight = PartySight;
+        if (_bands.Step(seconds, after.ToAbsoluteSeconds(), Position, SightConditions(), _world.PlayerLevel, _world.Roll) is not { } found)
+            return false;
+        DaggerfallExpeditionBand band = found.Band;
+        bool many = band.Size > 1;
+        switch (found.Kind)
+        {
+            case DaggerfallBandEventKind.Spotted when !band.Camp && band.Distance(Position.X, Position.Y) <= partySight:
+                Pause($"{band.Name} {(many ? "have" : "has")} seen you and {(many ? "give" : "gives")} chase!");
+                return true;
+            case DaggerfallBandEventKind.Caught:
+                _world.MeetBand(band, _party, DaggerfallEncounterStaging.Caught);
+                _bands.Remove(band);
+                _bandAhead = null;
+                _encounterWaiting = true;
+                Pause($"{band.Name} {(many ? "catch" : "catches")} up with you! Enter to fight.");
+                return true;
+            case DaggerfallBandEventKind.CameUpon:
+                _bandAhead = band;
+                Pause($"You come upon {band.Name}{(band.Camp ? ", camped by the way" : "")}. Enter to fight, or choose another way.");
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>Choosing another way past a band come upon unseen leaves it be until the party has drawn off.</summary>
+    private void SteerAway()
+    {
+        if (_bandAhead is not { } band) return;
+        band.Passed = true;
+        _bandAhead = null;
+    }
+
     private string? Refused() => _held ?? (_teleport is not null ? "Choose where the guild should teleport you."
         : _encounterWaiting ? "Something approaches. Enter to meet it." : null);
+
+    /// <summary>
+    /// Heads a new way from where the party stands. Midway between two pixels it goes on along the new way from that
+    /// spot when the way passes either of them; otherwise it starts from the nearer one.
+    /// </summary>
+    private void Reroute(DaggerfallExpeditionMark destination)
+    {
+        if (_leg is not { Progress: > 0 } leg || Next() is not { } ahead)
+        {
+            SetLeg(new(_party, destination, 0, 0));
+            return;
+        }
+        if (DaggerfallTravelPolicy.Path(_party, destination.Pixel) is [var first, ..] && first == ahead)
+        {
+            SetLeg(new(_party, destination, 0, leg.Progress));
+            return;
+        }
+        DaggerfallTravelMapPixel behind = _party;
+        if (DaggerfallTravelPolicy.Path(ahead, destination.Pixel) is [var back, ..] && back == behind)
+        {
+            // Turning back: the party stands between the same two pixels, now counted from the one ahead.
+            _cameFrom = behind;
+            _party = ahead;
+            SetLeg(new(ahead, destination, 0, 1 - leg.Progress));
+            return;
+        }
+        if (leg.Progress >= .5) { _cameFrom = behind; _party = ahead; }
+        SetLeg(new(_party, destination, 0, 0));
+    }
 
     private void SetLeg(DaggerfallExpeditionLeg leg)
     {

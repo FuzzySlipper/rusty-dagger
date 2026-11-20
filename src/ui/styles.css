@@ -477,6 +477,12 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-atlas-destination { border: 2px solid #7a1f12; border-radius: 50%; background: rgb(242 230 196 / .6); }
 .dagger-atlas-pin { border: 2px solid #f2e6c4; border-radius: 50% 50% 50% 0; background: #2c5a8a; transform: translate(-50%, -100%) rotate(-45deg); }
 .dagger-atlas-key-pin { background: #2c5a8a; border-color: #f2e6c4; }
+/* A band: a dark token with its kind's figure, ringed brown in camp and red once it gives chase. */
+.dagger-atlas-band { width: 1.6rem; height: 1.6rem; z-index: 3; display: grid; place-items: center; border-radius: 50%;
+  background: #2a170a; border: 2px solid #c9a35a; box-shadow: 0 0 0 1px #000; }
+.dagger-atlas-band svg { width: 1.2rem; height: 1.2rem; }
+.dagger-atlas-band[data-camp="true"] { border-color: #8a5a2a; border-style: dashed; }
+.dagger-atlas-band[data-spotted="true"] { border-color: #e04a2a; box-shadow: 0 0 0 1px #000, 0 0 .5rem #e04a2a; }
 .dagger-atlas-centre { position: absolute; left: 50%; top: 50%; width: 1.4rem; height: 1.4rem; transform: translate(-50%, -50%); pointer-events: none; display: none;
   border: 2px solid #ffe077; border-radius: 50%; box-shadow: 0 0 0 1px #2a170a; }
 .dagger-atlas.is-centred .dagger-atlas-centre { display: block; }

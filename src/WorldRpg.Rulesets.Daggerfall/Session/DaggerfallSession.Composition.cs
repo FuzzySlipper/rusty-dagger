@@ -371,7 +371,8 @@ internal sealed partial class DaggerfallSession
                 () => actors.Player.Progression.Level, () => State!.Swimming.IsSwimming, () => State!.Transport.OnShip, () => _activeProfileKey,
                 () => _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) ? site : null,
                 () => { DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell(); return (cell.X, cell.Y); },
-                () => _exterior.LocationAtPlayer() is not null, () => _latestUpdateGeneration, (definition, pose, level) => SpawnActor(definition, pose, level));
+                () => _exterior.LocationAtPlayer() is not null, () => _latestUpdateGeneration, (definition, pose, level) => SpawnActor(definition, pose, level),
+                id => actors.TryGet(id, out var actor) && actor is not null ? actor.Pose : null, id => _enemyBehavior!.Provoke(id, _time.Calendar.MinuteNumber));
             _nearbySpawn = new DaggerfallNearbySpawn(definitions.Actors, mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile), _placement,
                 assembled.PlayerControl, (actor, pose) => SpawnActor(actor, pose),
                 id => { _enemyBehavior!.MakeHostile(id); _enemyBehavior.Provoke(id, _time.Calendar.MinuteNumber); }, line => Presentation.SetOutcome(line));
@@ -596,7 +597,8 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallExteriorWorldBounds(definitions.Terrain.Width, definitions.Terrain.Height),
                 activeProfile: () => _activeProfileKey,
                 exteriorCell: () => _exterior.CurrentExteriorCell());
-            Expedition = new DaggerfallExpedition(travelPolicy, _site, tuning.Expedition, this, saved?.Expedition);
+            Expedition = new DaggerfallExpedition(travelPolicy, _site, tuning.Expedition, this, saved?.Expedition, definitions.Encounters,
+                definitions.Mobiles);
             Banking = new DaggerfallBanking(State.Bank, State.Currency, State.Loans, State.Services, State.Social, definitions.Factions,
                 State.Progression, definitions.BuildingNames.RegionName,
                 inventorySuppressed: () => State.RacialOverrides.Current?.SuppressInventory == true,
@@ -1144,6 +1146,7 @@ internal sealed partial class DaggerfallSession
                 InputReadout,
                 heldWorkbench,
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
+                new DaggerfallExpeditionBandReadout(Expedition),
             ];                                                                                     // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,

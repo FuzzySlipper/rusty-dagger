@@ -489,7 +489,35 @@
     "lodging": { "city": 30, "hamlet": 20, "village": 10, "tavern": 10 },
     "shipHire": 100,
     "portReach": 2,
-    "lowFatigue": 0.2
+    "lowFatigue": 0.2,
+    "bands": {
+      "stageEveryHours": 2,
+      "stageChance": 40,
+      "maximumBands": 4,
+      "lifetimeHours": 24,
+      "stageDistance": [2.5, 5],
+      "size": [1, 3],
+      "campShare": 40,
+      "wanderSpeed": 0.25,
+      "pursueSpeed": 0.8,
+      "meetDistance": 0.35,
+      "partySight": {
+        "base": 3,
+        "mode": { "cautious": 1, "reckless": 0.75, "halt": 1, "camp": 0.8 },
+        "night": 0.5,
+        "weather": { "sunny": 1, "cloudy": 1, "overcast": 0.9, "fog": 0.4, "rain": 0.75, "thunder": 0.6, "snow": 0.7 },
+        "climate": [1.3, 1.2, 0.7, 0.8, 1, 0.85],
+        "inputWeight": 1
+      },
+      "bandSight": {
+        "base": 1.6,
+        "mode": { "cautious": 0.8, "reckless": 1.4, "halt": 0.7, "camp": 1.3 },
+        "night": 0.6,
+        "weather": { "sunny": 1, "cloudy": 1, "overcast": 0.9, "fog": 0.5, "rain": 0.8, "thunder": 0.7, "snow": 0.75 },
+        "climate": [1.2, 1.1, 0.7, 0.8, 1, 0.85],
+        "inputWeight": 0.5
+      }
+    }
   },
   "hazards": {
     "burningFlats": [

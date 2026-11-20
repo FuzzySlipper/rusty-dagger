@@ -462,7 +462,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     /// <summary>
     /// The expedition map: the atlas with the party and where it heads, and the panels about it. Positions are world-map
-    /// pixels (the party's between two of them as it walks); labels and refusals are the ruleset's words.
+    /// pixels (the party's between two of them as it walks); labels and refusals are the ruleset's words. Only the bands
+    /// within the party's sight are sent.
     /// </summary>
     private uint Expedition(UiValueBuilder builder, DaggerfallExpeditionView view)
     {
@@ -503,7 +504,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("found", builder.Array(view.Found.Select(place => builder.Object(
                 ("region", builder.Number(place.Id.Region)), ("index", builder.Number(place.Id.Index)),
                 ("name", builder.String(place.Name)), ("kind", builder.String(DaggerfallSiteKinds.Label(place.Kind))),
-                ("x", builder.Number(place.MapPixel.X)), ("y", builder.Number(place.MapPixel.Y)))).ToArray())));
+                ("x", builder.Number(place.MapPixel.X)), ("y", builder.Number(place.MapPixel.Y)))).ToArray())),
+            ("sight", builder.Number(view.Sight)),
+            ("bands", builder.Array(view.Bands.Select(band => builder.Object(
+                ("name", builder.String(band.Name)), ("kind", builder.String(band.Kind.ToString().ToLowerInvariant())),
+                ("x", builder.Number(band.X)), ("y", builder.Number(band.Y)),
+                ("camp", builder.Boolean(band.Camp)), ("spotted", builder.Boolean(band.Spotted)))).ToArray())));
     }
 
     private static uint Property(UiValueBuilder builder, DaggerfallPropertyView property) => builder.Object(

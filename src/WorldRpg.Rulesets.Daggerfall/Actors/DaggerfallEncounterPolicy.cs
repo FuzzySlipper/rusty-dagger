@@ -47,13 +47,28 @@ internal static class DaggerfallEncounterPolicy
         int chance = Draw(draw, "chance", 0, denominator - 1);
         if (chance != 0)
             return DaggerfallEncounterChoice.None(request.Context, "source-chance-missed", chance, denominator);
+        return Pick(encounters, request, draw) with { ChanceRoll = chance, ChanceDenominator = denominator };
+    }
 
+    /// <summary>
+    /// The table's foe for a request, without the source's spawn chance: what a band on the expedition map is staged
+    /// from, the expedition owning when one appears.
+    /// </summary>
+    internal static DaggerfallEncounterChoice Pick(
+        DaggerfallEncounterSet encounters,
+        DaggerfallEncounterRequest request,
+        Func<string, int, int, int> draw)
+    {
+        ArgumentNullException.ThrowIfNull(encounters);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(draw);
+        request.Validate();
         int table = TableFor(request);
         int percentile = Draw(draw, "level-band", 1, 100);
         (int minimum, int maximum) = LevelBand(percentile, request.PlayerLevel);
         int index = Draw(draw, "table-entry", minimum, maximum);
         int mobile = encounters.Tables[table][index];
-        return new DaggerfallEncounterChoice(request.Context, table, index, mobile, percentile, chance, denominator, null);
+        return new DaggerfallEncounterChoice(request.Context, table, index, mobile, percentile, null, null, null);
     }
 
     internal static int TableFor(DaggerfallEncounterRequest request)

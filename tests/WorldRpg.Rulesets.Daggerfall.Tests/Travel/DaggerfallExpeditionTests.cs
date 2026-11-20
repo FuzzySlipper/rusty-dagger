@@ -1,5 +1,6 @@
 using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -249,6 +250,137 @@ public sealed class DaggerfallExpeditionTests
     }
 
     [Fact]
+    public void A_new_way_chosen_midway_between_pixels_goes_on_from_where_the_party_stands()
+    {
+        (DaggerfallExpedition expedition, _) = Create();
+        expedition.Begin(new(2, 2), false);
+        expedition.SetDestination(new(4, 2), null);
+        expedition.SetSpeed(1);
+        while (expedition.Position.X < 2.8) expedition.Advance(.25);
+        (double x, double y) = expedition.Position;
+
+        // Further on the same way, and back the way it came, the party stands where it stood.
+        expedition.SetDestination(new(5, 2), null);
+        Assert.Equal((x, y), expedition.Position);
+        expedition.SetDestination(new(1, 2), null);
+        Assert.Equal(x, expedition.Position.X, 9);
+        Assert.Equal(new DaggerfallTravelMapPixel(3, 2), expedition.Party);
+        expedition.Advance(.25);
+        Assert.True(expedition.Position.X < x);
+
+        // A way past neither starts from the nearer pixel.
+        expedition.SetDestination(new(2, 4), null);
+        Assert.Equal((2.5, 2.5), expedition.Position);
+    }
+
+    [Fact]
+    public void Bands_are_staged_from_the_tables_every_few_hours_and_shown_only_within_the_partys_sight()
+    {
+        // Every keyed draw but the bearing takes its lowest value: the staging chance passes, the band stands the nearest
+        // staging distance due east, alone, in camp.
+        static int East(string key, int minimum, int maximum) => key.EndsWith(":bearing", StringComparison.Ordinal) ? 90 : minimum;
+        (DaggerfallExpedition expedition, World world) = Create(world => world.Draw = East, bands: true);
+        expedition.Begin(new(2, 2), false);
+        expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        expedition.SetSpeed(Fastest);
+        Run(expedition, 2.1d / 6);
+        DaggerfallExpeditionBandView band = Assert.Single(expedition.AllBands);
+        Assert.True(band.Camp);
+        (double partyX, double partyY) = expedition.Position;
+        Assert.Equal((partyX + 2.5, partyY), (band.X, band.Y));
+        Assert.False(string.IsNullOrWhiteSpace(band.Name));
+        // By day the party sees 3 pixels, times its halt (1) and the woodlands (0.85): the band 2.5 off is seen.
+        Assert.Equal(3 * .85, expedition.PartySight, 6);
+        Assert.Equal(band.Id, Assert.Single(expedition.SeenBands).Id);
+
+        // At night the party sees half as far, and the band drops out of sight though it is still there.
+        (DaggerfallExpedition dark, _) = Create(world => { world.Calendar = At(hour: 21); world.Draw = East; }, bands: true);
+        dark.Begin(new(2, 2), false);
+        dark.SetMode(DaggerfallExpeditionMode.Halt);
+        dark.SetSpeed(Fastest);
+        Run(dark, 2.1d / 6);
+        Assert.Single(dark.AllBands);
+        Assert.Empty(dark.SeenBands);
+        Assert.Equal(3 * .85 * .5, dark.PartySight, 6);
+
+        // A band's sight of the party grows with a reckless march and shrinks with concealment.
+        double cautious = expedition.BandSight;
+        expedition.SetMode(DaggerfallExpeditionMode.Reckless);
+        Assert.True(expedition.BandSight > cautious);
+        world.Concealment = 1;
+        Assert.Equal(expedition.BandSight, 1.6 * 1.4 * .85 * .5, 6);
+        // Scouting widens the party's own.
+        world.Scouting = 1;
+        Assert.Equal(3 * .75 * .85 * 2, expedition.PartySight, 6);
+    }
+
+    [Fact]
+    public void A_wandering_band_that_spots_the_party_gives_chase_and_catching_it_leaves_only_a_fight()
+    {
+        (DaggerfallExpedition expedition, World world) = Create(bands: true);
+        expedition.Begin(new(2, 2), false);
+        Assert.Null(expedition.StageBand(.9, 90, camp: false));
+        expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        expedition.SetSpeed(Fastest);
+        Run(expedition, 1);
+        Assert.EndsWith("seen you and gives chase!", expedition.Message);
+        Assert.True(Assert.Single(expedition.SeenBands).Spotted);
+
+        expedition.SetSpeed(Fastest);
+        Run(expedition, 1);
+        Assert.EndsWith("catches up with you! Enter to fight.", expedition.Message);
+        Assert.True(expedition.EncounterWaiting);
+        (DaggerfallExpeditionBand met, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) = Assert.Single(world.Met);
+        Assert.Equal((new DaggerfallTravelMapPixel(2, 2), DaggerfallEncounterStaging.Caught), (pixel, staging));
+        Assert.Empty(expedition.AllBands);
+        expedition.SetDestination(new(4, 2), null);
+        Assert.Null(expedition.Destination);
+    }
+
+    [Fact]
+    public void Coming_upon_an_unseen_camp_offers_a_fight_or_another_way_and_steering_away_leaves_it_be()
+    {
+        // Fully concealed at night, the party walks east into a camp that never sees it.
+        static void Unseen(World world) { world.Concealment = 1; world.Calendar = At(hour: 21); }
+        (DaggerfallExpedition expedition, World world) = Create(Unseen, bands: true);
+        expedition.Begin(new(2, 2), false);
+        Assert.Null(expedition.StageBand(1.2, 90, camp: true));
+        expedition.SetDestination(new(4, 2), null);
+        expedition.SetSpeed(Fastest);
+        Run(expedition, 2);
+        Assert.StartsWith("You come upon ", expedition.Message);
+        Assert.EndsWith(", camped by the way. Enter to fight, or choose another way.", expedition.Message);
+        Assert.NotNull(expedition.BandAhead);
+        Assert.False(expedition.EncounterWaiting);
+
+        // Another way: the camp is left be, and the party walks on past it.
+        expedition.SetDestination(new(4, 3), null);
+        Assert.Null(expedition.BandAhead);
+        expedition.SetSpeed(Fastest);
+        Run(expedition, 4);
+        Assert.Equal(new DaggerfallTravelMapPixel(4, 3), expedition.Party);
+        Assert.Empty(world.Met);
+
+        // Entering beside one met unseen fights it as it stood: camped.
+        (DaggerfallExpedition again, World other) = Create(Unseen, bands: true);
+        again.Begin(new(2, 2), false);
+        again.StageBand(1.2, 90, camp: true);
+        again.SetDestination(new(4, 2), null);
+        again.SetSpeed(Fastest);
+        Run(again, 2);
+        Assert.NotNull(again.Entry());
+        Assert.Equal(DaggerfallEncounterStaging.Camp, Assert.Single(other.Met).Staging);
+        Assert.Empty(again.AllBands);
+
+        // Closing the map clears its bands.
+        again.Begin(new(2, 2), false);
+        Assert.Null(again.StageBand(1.2, 270, camp: true));
+        Assert.Single(again.AllBands);
+        again.Close();
+        Assert.Empty(again.AllBands);
+    }
+
+    [Fact]
     public void A_save_on_the_map_keeps_the_party_leg_mode_pin_ship_and_lodging_and_resumes_paused()
     {
         (DaggerfallExpedition expedition, World world) = Create();
@@ -360,11 +492,14 @@ public sealed class DaggerfallExpeditionTests
     private static DaggerfallCalendar At(int hour) =>
         DaggerfallCalendar.FromAbsoluteSeconds(DaggerfallCalendar.Start.ToAbsoluteSeconds() + hour * 3600L);
 
-    private static (DaggerfallExpedition Expedition, World World) Create(Action<World>? setup = null)
+    private static (DaggerfallExpedition Expedition, World World) Create(Action<World>? setup = null, bool bands = false)
     {
         World world = new();
         setup?.Invoke(world);
-        return (new DaggerfallExpedition(Policy(), Sites(), DaggerfallExpeditionTuning.Default, world), world);
+        return (bands
+            ? new DaggerfallExpedition(Policy(), Sites(), DaggerfallExpeditionTuning.Default, world, null, TestPayload.Definitions.Encounters,
+                TestPayload.Definitions.Mobiles)
+            : new DaggerfallExpedition(Policy(), Sites(), DaggerfallExpeditionTuning.Default, world), world);
     }
 
     private static DaggerfallTravelPolicy Policy() => new(Sites(), Grids(), DaggerfallTuning.Defaults.Transport);
@@ -417,6 +552,14 @@ public sealed class DaggerfallExpeditionTests
         public bool Exhausted { get; set; }
         public bool Defeated { get; set; }
         public bool HeldElsewhere { get; set; }
+        public Func<string, int, int, int> Draw { get; set; } = (_, minimum, _) => minimum;
+        public int PlayerLevel => 1;
+        public double Scouting { get; set; }
+        public double Concealment { get; set; }
+        public List<(DaggerfallExpeditionBand Band, DaggerfallTravelMapPixel Pixel, DaggerfallEncounterStaging Staging)> Met { get; } = [];
+        public int Roll(string key, int minimum, int maximum) => Draw(key, minimum, maximum);
+        public void MeetBand(DaggerfallExpeditionBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) =>
+            Met.Add((band, pixel, staging));
         public bool HoldAfterStretch { get; set; }
         public Func<DaggerfallTravelMapPixel, bool, long, bool> Encounter { get; set; } = (_, _, _) => false;
         public List<DaggerfallExpeditionStretch> Stretches { get; } = [];

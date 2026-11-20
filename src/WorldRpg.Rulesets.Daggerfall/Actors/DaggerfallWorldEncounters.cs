@@ -22,10 +22,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="atLocation">Whether the player stands at a location (a town or dungeon's grounds) outdoors.</param>
 /// <param name="generation">The latest admitted update's generation, if any.</param>
 /// <param name="spawn">Spawns a definition at a pose with a level and returns its durable identity.</param>
+/// <param name="actorPose">Where a live actor stands, or null when it is gone.</param>
+/// <param name="provoke">Sets an enemy on the player at once, as a band that caught the party is.</param>
 internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encounters, DaggerfallActorPlacement placement,
     DaggerfallDefinitions definitions, PlayerControlState player, Func<int> playerLevel, Func<bool> swimming, Func<bool> onShip,
     Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteRecord?> activeSite, Func<(int X, int Y)> exteriorCell,
-    Func<bool> atLocation, Func<ulong?> generation, Func<string, ActorPose, int, long> spawn)
+    Func<bool> atLocation, Func<ulong?> generation, Func<string, ActorPose, int, long> spawn, Func<long, ActorPose?> actorPose,
+    Action<long> provoke)
 {
     /// <summary>
     /// Catches up each elapsed minute and stops at its first selected spawn, as the donor does. Ordinary play reaches
@@ -104,6 +107,21 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
     }
 
     /// <summary>
+    /// Queues a band met on the expedition map for the profile it will be met in: one member per head, each the foe its
+    /// table gave, staged as the band stood.
+    /// </summary>
+    internal void QueueBand(DaggerfallEncounterRequest request, DaggerfallEncounterChoice choice, DaggerfallEncounterBand band, int size,
+        string profile)
+    {
+        WorldPoint pose = player.Position
+            ?? throw new InvalidOperationException("Daggerfall cannot queue a band without a player position.");
+        ulong? admitted = generation();
+        ulong latest = admitted is > 0 ? admitted.Value : 1UL;
+        for (int member = 0; member < size; member++)
+            encounters.Stage(request, choice, band, latest, profile, new ActorPose(pose, player.YawRadians));
+    }
+
+    /// <summary>
     /// Places one selected encounter around the player at the donor's distances, or leaves it pending for the next step
     /// when no floor and clearance were found, as the donor's spawner retries each frame.
     /// </summary>
@@ -111,11 +129,43 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
     {
         if (player.Position is not WorldPoint standing) return null;
         DaggerfallEncounterContext context = pending.Request.Context;
-        if (!placement.TrySpawnPose($"generation:{pending.Generation}:sequence:{pending.Sequence}:step:{simulationStep}",
-                "daggerfall.encounter.placement", standing, DaggerfallEncounterPolicy.MinimumSpawnDistance(context),
-                DaggerfallEncounterPolicy.MaximumSpawnDistance, out ActorPose pose,
+        string operation = $"generation:{pending.Generation}:sequence:{pending.Sequence}:step:{simulationStep}";
+        ActorPose? first = pending.Band is { } band ? FirstOfBand(pending, band) : null;
+        ActorPose pose;
+        if (first is { } leader)
+        {
+            // A band's later members stand beside the first placed, as it was staged on the map.
+            if (!placement.TrySpawnPose(operation, "daggerfall.encounter.band", leader.Position, BandSpacing.Minimum, BandSpacing.Maximum,
+                    out pose, SpawnDirection.Any))
+                return null;
+        }
+        else if (!placement.TrySpawnPose(operation, "daggerfall.encounter.placement", standing, DaggerfallEncounterPolicy.MinimumSpawnDistance(context),
+                DaggerfallEncounterPolicy.MaximumSpawnDistance, out pose,
                 DaggerfallEncounterPolicy.PlacesOutsideView(context) ? SpawnDirection.BesideView : SpawnDirection.Any))
             return null;
-        return spawn(pending.ActorDefinition!, pose, pending.Request.PlayerLevel);
+        pose = pending.Band switch
+        {
+            // Camped, the band faces in toward its first member; the first faces the way the band was facing.
+            { Staging: DaggerfallEncounterStaging.Camp } when first is { } centre => Facing(pose, centre.Position),
+            { Staging: DaggerfallEncounterStaging.Camp or DaggerfallEncounterStaging.Travelling } staged => new ActorPose(pose.Position, staged.HeadingYawRadians),
+            _ => pose,
+        };
+        long actor = spawn(pending.ActorDefinition!, pose, pending.Request.PlayerLevel);
+        if (pending.Band is { Staging: DaggerfallEncounterStaging.Caught }) provoke(actor);
+        return actor;
+    }
+
+    /// <summary>How far a band's members stand from its first, in metres.</summary>
+    private static (float Minimum, float Maximum) BandSpacing => (1.5f, 3.5f);
+
+    private ActorPose? FirstOfBand(DaggerfallEncounterResolution pending, DaggerfallEncounterBand band) => encounters.Resolved
+        .Where(other => other.Band?.Id == band.Id && other.Generation == pending.Generation && other.SpawnedActorId is not null)
+        .Select(other => actorPose(other.SpawnedActorId!.Value)).FirstOrDefault(found => found is not null);
+
+    private static ActorPose Facing(ActorPose pose, WorldPoint target)
+    {
+        System.Numerics.Vector3 toward = target.ToVector() - pose.Position.ToVector();
+        toward.Y = 0F;
+        return toward.LengthSquared() < .0001F ? pose : new ActorPose(pose.Position, ActorHeading.Yaw(System.Numerics.Vector3.Normalize(toward)));
     }
 }

@@ -51,6 +51,28 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
     }
 
     /// <summary>
+    /// Admits one member of a band met on the expedition map: the foe its table gave when it was staged, kept for the
+    /// profile the player enters, where it is placed with its band as it was staged.
+    /// </summary>
+    internal DaggerfallEncounterResolution Stage(DaggerfallEncounterRequest request, DaggerfallEncounterChoice choice,
+        DaggerfallEncounterBand band, ulong generation, string profileId, ActorPose pose)
+    {
+        request.Validate();
+        ArgumentNullException.ThrowIfNull(choice);
+        ArgumentNullException.ThrowIfNull(band);
+        if (generation == 0) throw new ArgumentOutOfRangeException(nameof(generation));
+        ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
+        DaggerfallMobileDefinition mobile = choice.MobileId is int id && _definitions.Mobiles.Mobiles.TryGetValue(id, out DaggerfallMobileDefinition? found)
+            ? found : throw new InvalidOperationException($"A band names unpublished mobile {choice.MobileId}.");
+        DaggerfallActorId actor = DaggerfallEncounterActors.ActorFor(mobile);
+        _ = _definitions.RequireActor(actor);
+        DaggerfallEncounterResolution result = new(generation, checked((ulong)_resolved.Count + 1UL), profileId, request, choice, actor.Value, pose,
+            SpawnedActorId: null) { Band = band };
+        _resolved.Add(result);
+        return result;
+    }
+
+    /// <summary>
     /// Offers each pending selection of the active profile to <paramref name="spawn"/>, which places and
     /// creates its actor or returns null when no placement was found this step. Like the donor's foe
     /// spawner, a pending selection is offered again on every later step until it is placed.
@@ -156,9 +178,12 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
             return;
         }
 
+        // A band from the expedition map was picked from its table without the source's spawn chance.
+        bool chanceKept = value.Band is null
+            ? choice.ChanceRoll is 0 && choice.ChanceDenominator == DaggerfallEncounterPolicy.DenominatorFor(value.Request.Context)
+            : choice.ChanceRoll is null && choice.ChanceDenominator is null;
         if (choice.Reason is not null || choice.Table is not int table || choice.Entry is not int entry
-            || choice.LevelPercentile is not int percentile || choice.ChanceRoll is not 0
-            || choice.ChanceDenominator != DaggerfallEncounterPolicy.DenominatorFor(value.Request.Context))
+            || choice.LevelPercentile is not int percentile || !chanceKept)
             throw new ArgumentException("A saved selected encounter must retain its complete canonical selection facts.");
         if (table != DaggerfallEncounterPolicy.TableFor(value.Request) || entry is < 0 or >= 20)
             throw new ArgumentException("A saved encounter table choice does not match its request.");
@@ -218,6 +243,9 @@ internal sealed record DaggerfallEncounterResolution(
     ActorPose Pose,
     long? SpawnedActorId)
 {
+    /// <summary>The band from the expedition map this member belongs to, or null for an ordinary encounter.</summary>
+    public DaggerfallEncounterBand? Band { get; init; }
+
     internal void Validate()
     {
         if (Generation == 0 || Sequence == 0) throw new ArgumentOutOfRangeException(nameof(Generation));
@@ -251,3 +279,20 @@ internal sealed record DaggerfallEncounterRuntimeSave(DaggerfallEncounterResolut
         }
     }
 }
+
+/// <summary>How a band met on the expedition map stands when the player enters among it.</summary>
+internal enum DaggerfallEncounterStaging
+{
+    /// <summary>It caught the party: placed as an encounter is, and already set on the player.</summary>
+    Caught,
+
+    /// <summary>Camped: its members together, facing one another.</summary>
+    Camp,
+
+    /// <summary>On the move: its members in file, facing their way.</summary>
+    Travelling,
+}
+
+/// <summary>A band's identity among the resolutions it became, how it was staged, and the way it faced (radians).</summary>
+internal sealed record DaggerfallEncounterBand(int Id, DaggerfallEncounterStaging Staging, float HeadingYawRadians);
+

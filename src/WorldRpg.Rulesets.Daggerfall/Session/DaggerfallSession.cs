@@ -412,6 +412,23 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallExpeditionSurroundings.Collapse(bool inWater) => Collapse(inWater, enemiesNearby: false);
 
+    int IDaggerfallExpeditionSurroundings.Roll(string key, int minimum, int maximum) => checked((int)_random.DrawKeyed(
+        new KeyedRngRequest(0, "daggerfall.expedition.bands", key, minimum, maximum)).Value);
+    int IDaggerfallExpeditionSurroundings.PlayerLevel => State.Actors.Player.Progression.Level;
+    // No scouting skill exists yet: the party's sight takes none of it.
+    double IDaggerfallExpeditionSurroundings.Scouting => 0;
+    double IDaggerfallExpeditionSurroundings.Concealment =>
+        Math.Clamp(State.Actors.Player.Stats.GetStat(StatId.Parse("stealth")).ValueInt / 100d, 0, 1);
+
+    void IDaggerfallExpeditionSurroundings.MeetBand(DaggerfallExpeditionBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging)
+    {
+        // The band faces as it went on the map: north is -Z and east +X.
+        double radians = band.Heading * Math.PI / 180;
+        float yaw = ActorHeading.Yaw(new Vector3((float)Math.Sin(radians), 0F, (float)-Math.Cos(radians)));
+        WorldEncounters.QueueBand(band.Request, band.Choice, new(band.Id, staging, yaw), band.Size,
+            DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId);   // Actors
+    }
+
     bool IDaggerfallExpeditionSurroundings.EncounterArrives(DaggerfallTravelMapPixel pixel, bool atLocation, long minute) =>
         WorldEncounters.Overland(minute, _definitions.Grids.ClimateAtWorldPixel(pixel.X, pixel.Y).Value, atLocation) is { } request
         && WorldEncounters.Queue(request, DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId)

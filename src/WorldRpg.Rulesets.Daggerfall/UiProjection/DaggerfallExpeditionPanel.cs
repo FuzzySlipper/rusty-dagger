@@ -17,7 +17,8 @@ internal readonly record struct DaggerfallExpeditionVital(double Current, double
 /// <summary>
 /// What the expedition map shows: the atlas with the party, where it heads and the pin; the time, weather and land; how
 /// the party goes, at what speed and how long the leg has left; the ship, the lodging, the player's vitals; what Enter or
-/// Leave does now; a waiting encounter, a guild teleport's choice; the map's line and the last Find.
+/// Leave does now; a waiting encounter, a guild teleport's choice; the map's line and the last Find; how far the party
+/// sees, and the bands within it.
 /// </summary>
 internal sealed record DaggerfallExpeditionView(
     DaggerfallTravelMapView Map,
@@ -31,7 +32,8 @@ internal sealed record DaggerfallExpeditionView(
     DaggerfallExpeditionVital Health, DaggerfallExpeditionVital Fatigue, DaggerfallExpeditionVital Magicka,
     bool CanLeave, bool CanEnter, string EnterLabel,
     bool EncounterWaiting, bool Teleporting, string? TeleportPlace,
-    string? Message, IReadOnlyList<DaggerfallTravelDestination> Found);
+    string? Message, IReadOnlyList<DaggerfallTravelDestination> Found,
+    double Sight, IReadOnlyList<DaggerfallExpeditionBandView> Bands);
 
 /// <summary>
 /// The travel panel's and the expedition map's actions: the map opened, run at a speed, a mode, a destination, a stop, a
@@ -115,7 +117,8 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             expedition.CanLeave, expedition.Teleporting ? teleport is not null : !atSea && expedition.Held is null,
             expedition.Teleporting ? "Teleport" : here is not null && expedition.Known(here.Id) ? $"Enter {here.Name}" : "Enter",
             expedition.EncounterWaiting, expedition.Teleporting, teleport?.Name,
-            expedition.Message, expedition.Found);
+            expedition.Message, expedition.Found,
+            expedition.PartySight, [.. expedition.SeenBands]);
     }
 
     /// <summary>A mount chosen, or a ship boarded or left, in the travel panel.</summary>

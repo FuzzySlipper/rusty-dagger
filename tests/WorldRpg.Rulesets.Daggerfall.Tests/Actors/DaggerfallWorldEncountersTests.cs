@@ -25,7 +25,8 @@ public sealed class DaggerfallWorldEncountersTests
             Cell = (Site.MapPixelX, Site.MapPixelY);
             Runtime = new DaggerfallEncounterRuntime(definitions, RandomMinimum.Create());
             Encounters = new DaggerfallWorldEncounters(Runtime, null!, definitions, Player, () => 4, () => Swimming, () => false,
-                () => Profile, () => Site, () => Cell, () => AtLocation, () => Generation, (_, _, _) => throw new InvalidOperationException("No spawn here."));
+                () => Profile, () => Site, () => Cell, () => AtLocation, () => Generation, (_, _, _) => throw new InvalidOperationException("No spawn here."),
+                _ => null, _ => { });
         }
 
         internal DaggerfallSiteRecord Site { get; }
@@ -86,7 +87,7 @@ public sealed class DaggerfallWorldEncountersTests
 
         // With nowhere to stand, nothing is queued or placed.
         DaggerfallWorldEncounters nowhere = new(stage.Runtime, null!, TestPayload.Definitions, new PlayerControlState(null, 0f, 0f), () => 4,
-            () => false, () => false, () => stage.Profile, () => stage.Site, () => stage.Cell, () => false, () => null, (_, _, _) => 0);
+            () => false, () => false, () => stage.Profile, () => stage.Site, () => stage.Cell, () => false, () => null, (_, _, _) => 0, _ => null, _ => { });
         Assert.Throws<InvalidOperationException>(() => nowhere.Queue(stage.Encounters.Request(Night, resting: false)!));
         Assert.Null(nowhere.Place(first, 1));
     }

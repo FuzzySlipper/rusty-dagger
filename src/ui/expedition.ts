@@ -1,4 +1,4 @@
-import { isTravelMap, mountAtlas, type AtlasMarks, type TravelMapProjection } from './atlas.js';
+import { isTravelMap, mountAtlas, type AtlasBand, type AtlasMarks, type TravelMapProjection } from './atlas.js';
 import { button } from './host.js';
 import { redraw } from './redraw.js';
 
@@ -13,12 +13,18 @@ export interface ExpeditionFoundProjection {
   readonly region: number; readonly index: number; readonly name: string; readonly kind: string; readonly x: number; readonly y: number;
 }
 
+/** A band within the party's sight: what it is and how many, where it stands, and whether it camps or has seen the party. */
+export interface ExpeditionBandProjection {
+  readonly name: string; readonly kind: string; readonly x: number; readonly y: number; readonly camp: boolean; readonly spotted: boolean;
+}
+
 export type ExpeditionMode = 'cautious' | 'reckless' | 'halt' | 'camp';
 
 /**
  * The expedition map as the ruleset publishes it: the atlas, the party between pixels and where it heads, the pin, how
  * it goes and how fast time runs, the land, weather and hour, the ship, lodging and vitals, what Leave and Enter do,
- * a waiting encounter or a guild teleport's choice, the map's line and the last Find.
+ * a waiting encounter or a guild teleport's choice, the map's line and the last Find, and how far the party sees with
+ * the bands within it.
  */
 export interface ExpeditionProjection {
   readonly map: TravelMapProjection;
@@ -51,6 +57,8 @@ export interface ExpeditionProjection {
   readonly teleportPlace: string | null;
   readonly message: string | null;
   readonly found: readonly ExpeditionFoundProjection[];
+  readonly sight: number;
+  readonly bands: readonly ExpeditionBandProjection[];
 }
 
 export type ExpeditionAction =
@@ -68,7 +76,7 @@ export function isExpeditionProjection(value: unknown): value is ExpeditionProje
   const party = record.party as Record<string, unknown> | null;
   return isTravelMap(record.map) && typeof party === 'object' && party !== null && Number.isFinite(party.x) && Number.isFinite(party.y)
     && typeof record.mode === 'string' && Number.isInteger(record.speed) && Number.isInteger(record.speeds)
-    && typeof record.enterLabel === 'string' && Array.isArray(record.found);
+    && typeof record.enterLabel === 'string' && Array.isArray(record.found) && Number.isFinite(record.sight) && Array.isArray(record.bands);
 }
 
 const MODES: readonly { readonly mode: ExpeditionMode; readonly label: string; readonly tooltip: string }[] = [
@@ -330,6 +338,11 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       party: { x: view.party.x, y: view.party.y, label: 'Your party', heading: view.party.heading },
       destination: view.destination ? { x: view.destination.x + .5, y: view.destination.y + .5, label: view.destination.name ?? 'Destination' } : null,
       pin: view.pin ? { x: view.pin.x + .5, y: view.pin.y + .5, label: view.pin.name ? `Pin: ${view.pin.name}` : 'Pin' } : null,
+      sight: view.sight,
+      bands: view.bands.map((band): AtlasBand => ({
+        x: band.x, y: band.y, kind: band.kind, camp: band.camp, spotted: band.spotted,
+        label: `${band.name}${band.spotted ? ', giving chase' : band.camp ? ', camped' : ''}`,
+      })),
     };
     const route = view.destination ? { fromX: view.party.x, fromY: view.party.y, toX: view.destination.x, toY: view.destination.y } : null;
     atlas.update(view.map, '', route, marks);

@@ -3500,7 +3500,7 @@ function expedition(map, overrides = {}) {
     weather: 'rain', land: 'Woodlands', here: 'Daggerfall', lodging: 30, remaining: null, transport: 'foot',
     health: { current: 40, maximum: 60 }, fatigue: { current: 3000, maximum: 6400 }, magicka: { current: 10, maximum: 20 },
     canLeave: true, canEnter: true, enterLabel: 'Enter Daggerfall', encounter: false, teleport: false, teleportPlace: null,
-    message: null, found: [], ...overrides,
+    message: null, found: [], sight: 3, bands: [], ...overrides,
   };
 }
 
@@ -3586,6 +3586,17 @@ test('the expedition map draws the atlas tiles in view, asks for the ones it lac
     assert.equal(atlas.querySelectorAll('.dagger-atlas-route line').length, 1);
     assert.equal(atlas.querySelector('.dagger-atlas-destination').getAttribute('aria-label'), 'Charing');
     assert.ok(atlas.querySelector('.dagger-atlas-pin'));
+    // The bands within the party's sight are tokens of their kind, inside a ring as far as it sees.
+    f.publish({ expedition: expedition(map, { bands: [
+      { name: '3 Orcs', kind: 'monsters', x: 209, y: 213.5, camp: true, spotted: false },
+      { name: 'Highwayman', kind: 'bandits', x: 206, y: 212, camp: false, spotted: true },
+    ] }) });
+    const bands = [...atlas.querySelectorAll('.dagger-atlas-band')];
+    assert.deepEqual(bands.map(band => [band.dataset.kind, band.dataset.camp, band.dataset.spotted, band.getAttribute('aria-label')]), [
+      ['monsters', 'true', 'false', '3 Orcs, camped'], ['bandits', 'false', 'true', 'Highwayman, giving chase'],
+    ]);
+    assert.ok(bands.every(band => band.querySelector('svg path')?.getAttribute('d')));
+    assert.equal(atlas.querySelectorAll('.dagger-atlas-route circle').length, 1);
     // The classic art set draws the classic world image instead, under the same places.
     const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
     f.publish({ expedition: expedition(snapshot.expedition.map) });

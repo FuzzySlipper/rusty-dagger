@@ -1737,7 +1737,9 @@
     "teleport": false,
     "teleportPlace": null,
     "message": "Leave the building or dungeon before travelling.",
-    "found": []
+    "found": [],
+    "sight": 1.275,
+    "bands": []
   },
   "inventory": {
     "revision": "832:1:558:0::classic",

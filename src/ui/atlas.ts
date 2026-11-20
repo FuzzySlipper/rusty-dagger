@@ -64,8 +64,26 @@ export interface AtlasRoute { readonly fromX: number; readonly fromY: number; re
 /** A mark over the map at a world-map point: the party (with its heading), where it heads, or the pin. */
 export interface AtlasMark { readonly x: number; readonly y: number; readonly label: string; readonly heading?: number | null }
 
-/** The marks an expedition draws over the map, each at its world-map point; a missing one is not drawn. */
-export interface AtlasMarks { readonly party?: AtlasMark | null; readonly destination?: AtlasMark | null; readonly pin?: AtlasMark | null }
+/** A band on the expedition map: a token showing its kind, camped or wandering, and whether it gives chase. */
+export interface AtlasBand extends AtlasMark { readonly kind: string; readonly camp: boolean; readonly spotted: boolean }
+
+/**
+ * The marks an expedition draws over the map, each at its world-map point; a missing one is not drawn. The party's
+ * sight is a ring of that many world-map pixels around it.
+ */
+export interface AtlasMarks {
+  readonly party?: AtlasMark | null; readonly destination?: AtlasMark | null; readonly pin?: AtlasMark | null;
+  readonly sight?: number | null; readonly bands?: readonly AtlasBand[];
+}
+
+/** Each band kind's token, drawn in a 24-unit square: a hooded bandit, a traveller with a staff, a beast's head, a skull, a horned head. */
+const BAND_GLYPHS: Readonly<Record<string, string>> = {
+  bandits: 'M12 3a5 5 0 0 0-5 5v3L4 21h16l-3-10V8a5 5 0 0 0-5-5zm-2 7h4v2h-4z',
+  travellers: 'M11 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM7 21l1.5-10h5L15 21zM17 4h1.5v17H17z',
+  beasts: 'M4 3l4.5 5h7L20 3l-1 9-7 8-7-8zm5 8v1.5h2V11zm4 0v1.5h2V11z',
+  undead: 'M12 3a7 7 0 0 0-7 7c0 2.6 1.3 4.2 3 5.3V20h8v-4.7c1.7-1.1 3-2.7 3-5.3a7 7 0 0 0-7-7zm-3 6h2.5v3H9zm3.5 0H15v3h-2.5z',
+  monsters: 'M5 3c.5 3 2 5 4 5.5h6C17 8 18.5 6 19 3l1 7c0 6-3.5 10-8 10S4 16 4 10zm4 8v2h2v-2zm4 0v2h2v-2z',
+};
 
 export function isTravelMap(value: unknown): value is TravelMapProjection {
   if (typeof value !== 'object' || value === null) return false;
@@ -429,14 +447,41 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
         button.addEventListener('click', event => choose(place.region, place.index, event.detail === 0));
         marks.append(button);
       }
+    routeLayer.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    if (overlay.party && overlay.sight) {
+      // How far the party sees: the bands inside the ring are the ones shown.
+      const [px, py] = toScreen(overlay.party.x, overlay.party.y);
+      const ring = document.createElementNS(SVG, 'circle');
+      for (const [name, value] of [['cx', px], ['cy', py], ['r', overlay.sight * scale]] as const) ring.setAttribute(name, String(value));
+      for (const [name, value] of [['fill', 'rgb(242 230 196 / .08)'], ['stroke', '#f2e6c4'], ['stroke-width', '1.5'], ['stroke-dasharray', '3 4'], ['stroke-opacity', '.7']] as const) ring.setAttribute(name, value);
+      routeLayer.append(ring);
+    }
     if (route) {
       const [x1, y1] = toScreen(route.fromX, route.fromY), [x2, y2] = toScreen(route.toX + .5, route.toY + .5);
-      routeLayer.setAttribute('viewBox', `0 0 ${width} ${height}`);
       const line = document.createElementNS(SVG, 'line');
       for (const [name, value] of [['x1', x1], ['y1', y1], ['x2', x2], ['y2', y2]] as const) line.setAttribute(name, String(value));
       // The window's Servo draws SVG from its markup alone, without the page's stylesheet.
       for (const [name, value] of [['stroke', '#7a1f12'], ['stroke-width', '2.5'], ['stroke-dasharray', '7 5'], ['stroke-linecap', 'round']] as const) line.setAttribute(name, value);
       routeLayer.append(line);
+    }
+    for (const band of overlay.bands ?? []) {
+      if (!inView(band.x, band.y)) continue;
+      const node = marker('dagger-atlas-band', band.x, band.y, null, band.label);
+      node.setAttribute('role', 'img');
+      node.setAttribute('aria-label', band.label);
+      node.dataset.kind = band.kind;
+      node.dataset.camp = String(band.camp);
+      node.dataset.spotted = String(band.spotted);
+      const glyph = document.createElementNS(SVG, 'svg');
+      glyph.setAttribute('viewBox', '0 0 24 24');
+      glyph.setAttribute('aria-hidden', 'true');
+      const path = document.createElementNS(SVG, 'path');
+      path.setAttribute('d', BAND_GLYPHS[band.kind] ?? BAND_GLYPHS.monsters);
+      path.setAttribute('fill', '#f2e6c4');
+      path.setAttribute('fill-rule', 'evenodd');
+      glyph.append(path);
+      node.append(glyph);
+      marks.append(node);
     }
     for (const [kind, mark] of [['destination', overlay.destination], ['pin', overlay.pin]] as const) {
       if (!mark) continue;

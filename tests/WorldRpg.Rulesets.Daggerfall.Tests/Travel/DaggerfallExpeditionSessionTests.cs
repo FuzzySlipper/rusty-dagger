@@ -1,3 +1,4 @@
+using Rusty.Engine.Debugging;
 using System.Numerics;
 using System.Text.Json;
 using System.Reflection;
@@ -200,6 +201,47 @@ public sealed class DaggerfallExpeditionSessionTests
     }
 
     [Fact]
+    public void A_band_that_catches_the_party_is_queued_head_by_head_and_placed_beside_its_first_when_entered()
+    {
+        using Fixture fixture = new(bands: true);
+        fixture.Open();
+        fixture.Go(fixture.Wild);
+        fixture.RunUntilStopped();
+        // The developer stages it and reads it back: a wanderer close by that has not yet seen the party.
+        DaggerfallExpeditionBandReadout readout = new(fixture.Session.Expedition);
+        Assert.False(readout.StageBand(.3, 90, "sideways").Succeeded);
+        DebugCommandResult staged = readout.StageBand(.3, 90, "wander");
+        Assert.True(staged.Succeeded, staged.Message);
+        using (JsonDocument bands = JsonDocument.Parse(staged.Message))
+        {
+            // Nearest first: the walk out may have staged another farther off.
+            JsonElement only = bands.RootElement.GetProperty("bands")[0];
+            Assert.Equal((false, false, true), (only.GetProperty("camp").GetBoolean(), only.GetProperty("spotted").GetBoolean(), only.GetProperty("seen").GetBoolean()));
+            Assert.Equal(.3, only.GetProperty("distance").GetDouble(), 2);
+        }
+        fixture.Submit(new { action = "expedition-speed", speed = 3 });
+        fixture.RunUntilStopped();
+        Assert.EndsWith("Enter to fight.", fixture.Session.Expedition.Message);
+        Assert.True(fixture.Session.Expedition.EncounterWaiting);
+        DaggerfallEncounterResolution[] band = [.. DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved
+            .Where(resolution => resolution.Band is not null)];
+        Assert.NotEmpty(band);
+        Assert.All(band, member => Assert.Equal(DaggerfallEncounterStaging.Caught, member.Band!.Staging));
+        Assert.Single(band.Select(member => member.Band!.Id).Distinct());
+        DaggerfallSiteRecord host = fixture.Session.Expedition.HostAt(fixture.Session.Expedition.Party);
+        Assert.All(band, member => Assert.Equal(DaggerfallWorldProfileIds.Exterior(host.Id).LogicalId, member.ProfileId));
+
+        // A save while it waits keeps the band's members and how they were staged.
+        using (DaggerfallSession reloaded = fixture.Restore(fixture.Session.CaptureSave()))
+            Assert.Equal(band.Select(member => member.Band), DaggerfallSavePayload.Read(reloaded.CaptureSave()).Encounters.Resolved
+                .Where(member => member.Band is not null).Select(member => member.Band));
+
+        fixture.Submit(new { action = "expedition-enter" });
+        Assert.False(fixture.Session.Expedition.Open);
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(host.Id), fixture.Session.Sites.ActiveProfile);
+    }
+
+    [Fact]
     public void A_save_on_the_map_reopens_it_paused_with_the_party_its_leg_mode_and_pin()
     {
         using Fixture fixture = new();
@@ -344,7 +386,7 @@ public sealed class DaggerfallExpeditionSessionTests
         private readonly DaggerfallDefinitions definitions;
         private readonly List<string> releases = [];
         private readonly DaggerfallSiteProfiles profiles;
-        private readonly bool encounter;
+        private readonly bool encounter, bands;
         private ulong step = 1;
         internal DaggerfallSession Session { get; }
         internal SpatialFake Spatial { get; private set; } = null!;
@@ -362,9 +404,10 @@ public sealed class DaggerfallExpeditionSessionTests
         /// <summary>A land pixel beside the origin with no location of its own, whose nearest location is the origin.</summary>
         internal DaggerfallTravelMapPixel Wild { get; }
 
-        internal Fixture(bool encounter = false, DaggerfallDefinitions? definitions = null)
+        /// <param name="bands">The map's bands draw their lowest values (a published foe), as the hour's unseen encounters never come.</param>
+        internal Fixture(bool encounter = false, DaggerfallDefinitions? definitions = null, bool bands = false)
         {
-            this.definitions = definitions ?? TestPayload.Definitions; this.encounter = encounter;
+            this.definitions = definitions ?? TestPayload.Definitions; this.encounter = encounter; this.bands = bands;
             var source = Inputs.Value.Profile;
             var sites = this.definitions.Locations.Records.Where(site => site.Exterior is not null && site.Kind == DaggerfallSiteKind.TownCity
                 && this.definitions.Grids.ClimateAtWorldPixel(site.MapPixelX, site.MapPixelY).Value is >= 224 and <= 232).ToArray();
@@ -392,7 +435,7 @@ public sealed class DaggerfallExpeditionSessionTests
             PopulateTerrainContent(content, Origin); PopulateTerrainContent(content, Destination);
             Spatial = SpatialFake.Create(Origin.Geometry.Spatial[0].Sha256, releases);
             var engine = Engine = EngineContextFake.Create(content, Spatial.Service,
-                new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : LodgingRandom.Create());
+                new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : bands ? TravelBandRandom.CreateBands() : LodgingRandom.Create());
             DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)));
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
                 { Profiles = profiles, Sky = sky };
@@ -501,10 +544,23 @@ internal sealed class NoWorld : IDaggerfallExpeditionSurroundings
     public bool Exhausted => false;
     public bool Defeated => false;
     public bool HeldElsewhere => false;
+    public int Roll(string key, int minimum, int maximum) => minimum;
+    public int PlayerLevel => 1;
+    public double Scouting => 0;
+    public double Concealment => 0;
+    public void MeetBand(DaggerfallExpeditionBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) { }
     public long Pass(DaggerfallExpeditionStretch stretch) => 0;
     public void RecoverCampHour(bool sheltered) { }
     public void Collapse(bool inWater) { }
     public bool EncounterArrives(DaggerfallTravelMapPixel pixel, bool atLocation, long minute) => false;
+}
+
+internal class TravelBandRandom : LodgingRandom
+{
+    internal static IRandomService CreateBands() => DispatchProxy.Create<IRandomService, TravelBandRandom>();
+    protected override object? Invoke(MethodInfo? method, object?[]? arguments) =>
+        method?.Name == nameof(IRandomService.DrawKeyed) && arguments![0] is KeyedRngRequest { Scope: "daggerfall.expedition.bands" } request
+            ? new KeyedRngReceipt(request.Minimum) : base.Invoke(method, arguments);
 }
 
 internal class TravelEncounterRandom : LodgingRandom
