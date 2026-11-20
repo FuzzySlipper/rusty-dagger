@@ -31,13 +31,32 @@ public sealed class DaggerfallLooseItemsTests
             int updates = room.StepUntilAsleep(1);
 
             DaggerfallLooseItemReadout item = room.Read(1);
-            // The Engine sleeps a body still for two seconds, whatever the item (rusty-engine #10945 asks for sooner).
-            Assert.True(updates < 120, $"It took {updates} updates to sleep.");
+            Assert.True(updates < 45, $"It took {updates} updates to sleep.");
             Assert.InRange(item.Foot.Y, -.02f, .02f);
             Assert.True(item.Foot.X > .1f, $"It fell straight down to {item.Foot}.");
             Assert.Equal(item.Foot, room.Piles[1].Foot);
             Upright(item);
         });
+    }
+
+    [Fact]
+    public void A_dropped_item_sleeps_by_the_tunings_thresholds_sooner_than_by_the_Engines_own()
+    {
+        int Sleeps(DaggerfallLooseItemTuning tuning)
+        {
+            int updates = 0;
+            Run(room =>
+            {
+                room.Add(1, new(0, .9f, 1), 1);
+                room.Items.Drop(1, new(1.5f, 0, 0));
+                updates = room.StepUntilAsleep(1);
+            }, tuning);
+            return updates;
+        }
+
+        // 0 keeps the Engine's own: 0.1 m/s for half a second.
+        int engine = Sleeps(Tuning with { SleepSpeed = 0, SleepSeconds = 0 }), tuned = Sleeps(Tuning);
+        Assert.True(tuned < engine, $"Tuned it slept after {tuned} updates, by the Engine's own after {engine}.");
     }
 
     [Fact]
@@ -317,13 +336,13 @@ public sealed class DaggerfallLooseItemsTests
     private static void Upright(DaggerfallLooseItemReadout item) =>
         Assert.True(MathF.Abs(Quaternion.Dot(item.Turn, Quaternion.Identity)) > .9999f, $"It turned to {item.Turn}.");
 
-    private static void Run(Action<Room> test)
+    private static void Run(Action<Room> test, DaggerfallLooseItemTuning? tuning = null)
     {
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
         host.Call(engine =>
         {
             using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, new SpatialTuning(.5d, 8, 8, 1, new CharacterControllerTuning()));
-            using DaggerfallLooseItems items = new(engine.Dynamics, Tuning);
+            using DaggerfallLooseItems items = new(engine.Dynamics, tuning ?? Tuning);
             Room room = new(engine, spatial, items);
             room.Build();
             test(room);

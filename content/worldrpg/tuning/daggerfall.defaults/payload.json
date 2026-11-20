@@ -1048,6 +1048,7 @@
     "friction": 1.2,
     "restitution": 0,
     "linearDamping": 0.5,
+    "sleep": { "linearSpeed": 0.2, "seconds": 0.3 },
     "minimumKilograms": 0.1,
     "dropHeight": 0.9,
     "dropSpeed": 1.5,

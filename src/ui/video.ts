@@ -17,23 +17,6 @@ export interface VideoSettings {
   dispose(): void;
 }
 
-/**
- * The window's Servo leaves `HTMLOutputElement.htmlFor` out, and the Engine panel names each range row's control
- * through it, so the panel stopped at its first range row and drew no row at all (rusty-engine #10932). Until a pair
- * with that fix is pinned, Servo's outputs get an `htmlFor` whose `add` writes the `for` attribute it stands for.
- */
-function lendOutputsHtmlFor(view: (Window & typeof globalThis) | null): void {
-  const outputs = view?.HTMLOutputElement?.prototype;
-  if (!outputs || 'htmlFor' in outputs) return;
-  Object.defineProperty(outputs, 'htmlFor', {
-    configurable: true,
-    get(this: HTMLOutputElement) {
-      const output = this;
-      return { add: (...ids: string[]) => output.setAttribute('for', [...(output.getAttribute('for') ?? '').split(/\s+/).filter(Boolean), ...ids].join(' ')) };
-    },
-  });
-}
-
 /** The Engine's Advanced switches: renderer diagnostics, not choices a player makes. */
 const HIDDEN = ['clusteredLighting', 'gpuCulling', 'occlusionCulling'];
 
@@ -91,10 +74,7 @@ export function mountVideoSettings(root: HTMLElement, send: (action: ControlActi
   return {
     show() {
       if (panel) void panel.then(mounted => mounted.refresh());
-      else {
-        lendOutputsHtmlFor(root.ownerDocument.defaultView);
-        panel = mountVideoOptions(root, { hide: HIDDEN, productOptions: options() });
-      }
+      else panel = mountVideoOptions(root, { hide: HIDDEN, productOptions: options() });
     },
     update(next, nextLamps, nextRelief) {
       const changed = JSON.stringify([next ?? null, nextLamps ?? null, nextRelief ?? null]) !== JSON.stringify([ground, lamps, relief]);

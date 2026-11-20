@@ -748,6 +748,9 @@ public sealed class WorldRpgProductSaveLoadTests
         internal void Put(string key, byte[] payload) => _values[("1", key)] = new(1, payload.ToArray());
 
         public PersistenceStore OpenStore(PersistenceOpenRequest request) => new(new PersistenceStoreHandle(1), static () => { });
+        // Every save here is written as it is asked for, so none is queued or fails later.
+        public PersistenceSaveReadout ReadSaves(PersistenceStore store) => default;
+        public ReadOnlyMemory<byte> ReadSaveFailure(PersistenceStore store) => ReadOnlyMemory<byte>.Empty;
         public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
         {
             if (ThrowOnNextSave)

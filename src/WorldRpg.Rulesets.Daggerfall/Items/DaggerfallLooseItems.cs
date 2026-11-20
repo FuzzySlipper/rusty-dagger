@@ -26,8 +26,8 @@ internal readonly record struct DaggerfallLooseItemReadout(long Id, Vector3 Foot
 /// Loose items (dropped, or placed by a quest) as Engine Dynamics bodies near the player. Each is an upright box as wide and
 /// deep as its billboard is wide and as tall as it is tall, its rotation locked so the billboard always stands over it,
 /// weighing what its pile weighs, with the tuning's high friction and damping, so a pile stays put rather than creeping. A
-/// dropped item falls and settles; one the player comes near is made asleep where it rests. Bodies sleep by the Engine's
-/// own thresholds, the same for every body, until it lets an item's be set (rusty-engine #10945). The player may carry one
+/// dropped item falls and settles; one the player comes near is made asleep where it rests. An item sleeps by the tuning's
+/// thresholds, sooner than the Engine's other bodies, so a slow creep stops rather than carrying it off. The player may carry one
 /// in front of the eye, driven toward where it is held by impulses on its own body, so it still collides and pushes the
 /// others, and drop or throw it. Nothing here is saved: the piles keep where each came to rest, and a body is made again,
 /// asleep, from that.
@@ -233,7 +233,8 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
     }
 
     private DynamicsBodyProperties Properties(float mass, Vector3 velocity, bool sleeping) => new(mass, default, velocity, Vector3.Zero, Upright,
-        tuning.LinearDamping, 0, 1, tuning.Friction, tuning.Restitution, ItemGroup, uint.MaxValue, true, sleeping, true);
+        tuning.LinearDamping, 0, 1, tuning.Friction, tuning.Restitution, ItemGroup, uint.MaxValue, true, sleeping, true,
+        new DynamicsSleepThresholds(tuning.SleepSpeed, tuning.SleepSeconds));
 
     /// <summary>Weighs every body's pile again once any pile's contents changed, as part of one is taken.</summary>
     private void Weigh(DaggerfallLooseItemSite site)

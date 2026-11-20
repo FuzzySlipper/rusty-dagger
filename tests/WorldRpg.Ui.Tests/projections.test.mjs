@@ -2922,25 +2922,6 @@ test('Settings shows the Engine video options beside the controls, mounted once 
   assert.equal(panel.disposed, true, 'Closing the UI removes the panel.');
 });
 
-test('Settings lends the window a range row output its htmlFor, which Servo leaves out and the Engine panel calls', () => {
-  const f = fixture();
-  const outputs = window.HTMLOutputElement.prototype;
-  const own = Object.getOwnPropertyDescriptor(outputs, 'htmlFor');
-  delete outputs.htmlFor;
-  try {
-    assert.equal('htmlFor' in outputs, false, 'Servo-shaped: no htmlFor on an output.');
-    f.root.querySelector('[data-action="settings"]').click();
-    // What the Engine panel does for each range row.
-    const output = document.createElement('output');
-    output.htmlFor.add('rusty-video-options-1-engine-renderScale');
-    assert.equal(output.getAttribute('for'), 'rusty-video-options-1-engine-renderScale');
-  } finally {
-    delete outputs.htmlFor;
-    if (own) Object.defineProperty(outputs, 'htmlFor', own);
-    f.dispose();
-  }
-});
-
 test('a long menu panel draws its own scrollbar, which follows the scroll, drags with the mouse and pages from its track', () => {
   const f = fixture();
   try {

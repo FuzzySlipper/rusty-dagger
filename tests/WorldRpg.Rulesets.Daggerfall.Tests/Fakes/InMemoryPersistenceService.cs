@@ -35,6 +35,9 @@ internal sealed class InMemoryPersistenceService : IPersistenceService
 
     private string Scope(PersistenceStore store) => _stores.TryGetValue(store.Handle.Value, out string? scope)
         ? scope : throw new InvalidOperationException($"Persistence store {store.Handle.Value} is not open.");
+    // Every save here is written as it is asked for, so none is queued or fails later.
+    public PersistenceSaveReadout ReadSaves(PersistenceStore store) => default;
+    public ReadOnlyMemory<byte> ReadSaveFailure(PersistenceStore store) => ReadOnlyMemory<byte>.Empty;
     public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
     {
         (string Scope, string Key) key = (Scope(request.Store), request.Key);

@@ -35,6 +35,7 @@ public sealed class LooseItemSessionTests
         Assert.Equal(new AxisLocks(false, false, false, true, true, true), body.AxisLocks);
         Assert.False(body.Sleeping);
         Assert.Equal(DaggerfallTuning.Defaults.LooseItems.Friction, body.Friction);
+        Assert.Equal(new DynamicsSleepThresholds(DaggerfallTuning.Defaults.LooseItems.SleepSpeed, DaggerfallTuning.Defaults.LooseItems.SleepSeconds), body.Sleep);
         Assert.Equal(DaggerfallTuning.Defaults.LooseItems.DropSpeed, body.LinearVelocity.Length(), 4);
         Assert.Equal(0, body.LinearVelocity.Y);
         Assert.Equal(made.Body.HalfExtents.X, made.Body.HalfExtents.Z);

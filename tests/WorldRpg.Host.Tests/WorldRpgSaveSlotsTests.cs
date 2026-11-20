@@ -245,6 +245,9 @@ public sealed class WorldRpgSaveSlotsTests
             _scopes.Add(handle, request.Scope);
             return new(new PersistenceStoreHandle(handle), () => _scopes.Remove(handle));
         }
+        // Every save here is written as it is asked for, so none is queued or fails later.
+        public PersistenceSaveReadout ReadSaves(PersistenceStore store) => default;
+        public ReadOnlyMemory<byte> ReadSaveFailure(PersistenceStore store) => ReadOnlyMemory<byte>.Empty;
         public PersistenceSaveReceipt Save(PersistenceSaveRequest request)
         {
             SaveFault fault = _faultKey is null || _faultKey == request.Key ? _nextSaveFault : SaveFault.None;
