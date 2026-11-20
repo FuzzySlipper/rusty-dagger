@@ -98,7 +98,7 @@ function fixture() {
   const mounted = mountProductUi(root, {
     // A controller with no device: the test speaks the Engine's interface observations directly.
     input: { subscribe(observer) { observe = observer; return () => { observe = null; }; } },
-    ui: { setInteractionMode(mode) {modes.push(mode);}, focusGameplay() {focuses.push(modes.at(-1));},
+    ui: { setInteractionMode(mode) {modes.push(mode);}, interactionMode: () => modes.at(-1), focusGameplay() {focuses.push(modes.at(-1));},
       scale: () => uiScale, setScale(value) { uiScale = value; scales.push(value); } },
     projection: { subscribe(callback) { receive = callback; return () => {}; } },
     intents: { claim(_intent, value) { actions.push(value.data); } },
@@ -1236,6 +1236,19 @@ test('the developer key opens the developer tools only when the host serves live
     assert.equal(menu.open, false);
     assert.equal(developer.shells.at(-1).isOpen, true);
     developer.shells.at(-1).close();
+    assert.equal(f.modes.at(-1), 'gameplay');
+
+    // Whatever left the Engine's view in interface without this page asking, leaving the Escape menu puts play
+    // back in gameplay and takes the lock again.
+    f.modes.push('interface');
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(menu.open, true);
+    const focusesBeforeLeaving = f.focuses.length;
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(menu.open, false);
+    assert.equal(f.modes.at(-1), 'gameplay');
+    assert.equal(f.focuses.at(-1), 'gameplay');
+    assert.ok(f.focuses.length > focusesBeforeLeaving, 'Leaving the menu takes gameplay focus, and with it the lock.');
   } finally { developer.liveDebug = false; f.dispose(); }
 });
 
@@ -2234,19 +2247,11 @@ test('the title screen offers the games the product publishes and sends the one 
     assert.equal(cycler.querySelector('output').textContent, 'Classic Daggerfall');
     cycler.querySelector('[aria-label="Next game"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'bundle-select', key: 'daggerfall.town-start' });
-    // Choosing restarts the session behind the title, which hides the choice for a moment; the step
-    // the player pressed takes focus again when it returns, so a second press steps again.
+    // Stepping only records the choice: the next snapshot names it current and the step keeps focus.
     cycler.querySelector('[aria-label="Next game"]').focus();
-    f.publish({ mode: 'title', bundles: null });
-    // The step takes focus without scrolling the title, which would lift the painting and hide the game's name.
-    const focusing = [];
-    const focus = HTMLElement.prototype.focus;
-    HTMLElement.prototype.focus = function (options) { focusing.push([this.getAttribute('aria-label'), options]); return focus.call(this, options); };
-    try {
-      f.publish({ mode: 'title', bundles: { current: 'daggerfall.town-start', options: [
-        { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.town-start', title: 'Developer: Charing town start' }] } });
-    } finally { HTMLElement.prototype.focus = focus; }
-    assert.deepEqual(focusing, [['Next game', { preventScroll: true }]]);
+    f.publish({ mode: 'title', bundles: { current: 'daggerfall.town-start', options: [
+      { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.town-start', title: 'Developer: Charing town start' }] } });
+    assert.equal(select().parentElement.hidden, false);
     assert.equal(select().querySelector('[data-cycler="Game"] output').textContent, 'Developer: Charing town start');
     assert.equal(document.activeElement, select().querySelector('[aria-label="Next game"]'));
     // Moving away is not undone by the next snapshot.
@@ -2879,6 +2884,63 @@ test('Settings shows the Engine video options beside the controls, mounted once 
   } finally { f.dispose(); }
   await Promise.resolve(); await Promise.resolve();
   assert.equal(panel.disposed, true, 'Closing the UI removes the panel.');
+});
+
+test('Settings lends the window a range row output its htmlFor, which Servo leaves out and the Engine panel calls', () => {
+  const f = fixture();
+  const outputs = window.HTMLOutputElement.prototype;
+  const own = Object.getOwnPropertyDescriptor(outputs, 'htmlFor');
+  delete outputs.htmlFor;
+  try {
+    assert.equal('htmlFor' in outputs, false, 'Servo-shaped: no htmlFor on an output.');
+    f.root.querySelector('[data-action="settings"]').click();
+    // What the Engine panel does for each range row.
+    const output = document.createElement('output');
+    output.htmlFor.add('rusty-video-options-1-engine-renderScale');
+    assert.equal(output.getAttribute('for'), 'rusty-video-options-1-engine-renderScale');
+  } finally {
+    delete outputs.htmlFor;
+    if (own) Object.defineProperty(outputs, 'htmlFor', own);
+    f.dispose();
+  }
+});
+
+test('a long menu panel draws its own scrollbar, which follows the scroll, drags with the mouse and pages from its track', () => {
+  const f = fixture();
+  try {
+    const menu = f.root.querySelector('.dagger-menu');
+    // The DOM here lays nothing out: the menu is 400 pixels tall over 1600 of Settings.
+    let top = 0;
+    Object.defineProperty(menu, 'clientHeight', { configurable: true, get: () => 400 });
+    Object.defineProperty(menu, 'scrollHeight', { configurable: true, get: () => 1600 });
+    Object.defineProperty(menu, 'scrollTop', { configurable: true, get: () => top, set: value => { top = Math.max(0, Math.min(1200, value)); } });
+    f.root.querySelector('[data-action="settings"]').click();
+    const bar = menu.querySelector('.dagger-scrollbar');
+    const thumb = bar.querySelector('.dagger-scrollbar-thumb');
+    assert.equal(bar.hidden, false);
+    assert.equal(bar.getAttribute('aria-hidden'), 'true', 'Keyed navigation never stops on it.');
+    assert.equal(thumb.style.height, '100px', 'The thumb is the share in view.');
+    // Whatever scrolls the menu (the wheel, focus moving by keys or pad), the bar follows.
+    menu.scrollTop = 600; menu.dispatchEvent(new window.Event('scroll'));
+    assert.equal(bar.style.transform, 'translateY(600px)', 'The track stays in view.');
+    assert.equal(thumb.style.transform, 'translateY(150px)');
+    // Dragging the thumb a quarter of its free travel scrolls a quarter of the content's.
+    const pointer = (type, target, clientY) => target.dispatchEvent(Object.assign(new window.MouseEvent(type, { bubbles: true, cancelable: true, clientY, button: 0 }), { pointerId: 1 }));
+    pointer('pointerdown', thumb, 200);
+    pointer('pointermove', thumb, 275);
+    assert.equal(menu.scrollTop, 900);
+    pointer('pointerup', thumb, 275);
+    pointer('pointermove', thumb, 400);
+    assert.equal(menu.scrollTop, 900, 'Released, the thumb no longer drags.');
+    // A click on the track above the thumb pages up.
+    thumb.getBoundingClientRect = () => ({ top: 225, bottom: 325 });
+    pointer('pointerdown', bar, 10);
+    assert.equal(menu.scrollTop, 540);
+    // A panel that fits shows no bar.
+    Object.defineProperty(menu, 'scrollHeight', { configurable: true, get: () => 400 });
+    f.publish({});
+    assert.equal(bar.hidden, true);
+  } finally { f.dispose(); }
 });
 
 test('Settings offers lamp shadows beside the shadow budget and sends the whole choice on each change', async () => {
@@ -3728,6 +3790,19 @@ test('dungeon map notes are added at the player, edited and removed through the 
     assert.equal(f.root.querySelector('.dagger-map-buildings').textContent.match(/Remove note/g).length, 1);
     f.publish({ map: { ...map, kind: 'city', region: 17, location: 45, canAddNote: false, labels: [] } });
     assert.equal(form.hidden, true);
+  } finally { f.dispose(); }
+});
+
+test('a place with no map says which place, as the product names it', () => {
+  const f = fixture();
+  try {
+    f.publish({ map: null, mapAbsence: null }); f.root.querySelector('[data-action="map"]').click();
+    const status = f.root.querySelector('.dagger-map-status');
+    // Waiting for the map just asked for says nothing it does not know.
+    assert.equal(status.textContent, '');
+    f.publish({ map: null, mapAbsence: 'There is no map of the wilderness.' });
+    assert.equal(status.textContent, 'There is no map of the wilderness.');
+    assert.equal(f.root.querySelector('.dagger-map-view').hidden, true);
   } finally { f.dispose(); }
 });
 

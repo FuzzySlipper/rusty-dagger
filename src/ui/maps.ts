@@ -64,7 +64,8 @@ const POINT_REACH = 8;
  * its `display` attribute, and hover and clicks find the point from the pointer's position.
  */
 export function mountMap(root: HTMLElement, send: (action: MapAction) => void, travel: () => void): {
-  update(value: MapProjection | null): void;
+  /** The map to draw, or, with none, what the product says the player's place lacks. */
+  update(value: MapProjection | null, absence?: string | null): void;
   /** The triggers or Page Up and Down: zoom out (-1) or in (1). */
   zoom(direction: -1 | 1): void;
   dispose(): void;
@@ -104,6 +105,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     noteText.value = '';
   });
   let drawn = '';
+  let absent = '';
   let current: MapProjection | null = null, identity = '', centerX = 0, centerZ = 0, zoom = 1, rotation = 0, playerUp = false;
   let panning = false;
   let hovered: SVGElement | null = null;
@@ -185,7 +187,7 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
     drawn = '';
     points.clear(); hovered = null;
     viewport.replaceChildren(); buildings.replaceChildren(); legend.replaceChildren();
-    if (!current) { status.textContent = 'No map is available in this interior.'; return; }
+    if (!current) { status.textContent = absent; return; }
     const value = current;
     const slice = Number(level.value), every = showAll();
     for (const area of value.areas) {
@@ -366,7 +368,9 @@ export function mountMap(root: HTMLElement, send: (action: MapAction) => void, t
   controls.append(levelLabel, allLabel, namesLabel);
   shell.append(heading, status, view, legend, controls, target, noteForm, buildings); root.append(shell);
   return {
-    update(value): void {
+    update(value, absence): void {
+      // The product says what has no map; until it does, the panel is waiting for the map it asked for.
+      absent = absence ?? '';
       current = value; controls.hidden = buildings.hidden = legend.hidden = value === null; view.hidden = value === null;
       heading.textContent = value ? `${value.name} map` : 'Map';
       if (value && identity !== `${value.kind}:${value.id}`) {

@@ -370,6 +370,26 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     [Fact]
+    public void Beginning_under_a_chosen_game_switches_to_it_and_begins_there()
+    {
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(new InMemoryPersistenceService()), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession title = ruleset.RequireCurrent();
+
+        title.ArmBundleRequest(new GameBundleId("test.second"), GameBundleStart.Begin);
+        product.Update(Update(1));
+        // The title stays up while the chosen game opens; Begin is done in that game, not this one.
+        Assert.Equal(ProductMode.Title, product.Mode);
+        FinishLoading(product, 2);
+
+        LoadTestSession switched = ruleset.RequireCurrent();
+        Assert.NotSame(title, switched);
+        Assert.Equal(new GameBundleId("test.second"), switched.Bundles!.Current);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+    }
+
+    [Fact]
     public void A_bundle_choice_outside_the_entry_screen_or_for_an_unoffered_bundle_is_refused()
     {
         InMemoryPersistenceService persistence = new();
@@ -489,24 +509,26 @@ public sealed class WorldRpgProductSaveLoadTests
         public SaveDescription DescribeSave() => new($"Hero {SaveValue}", SaveValue, "Test town", "Day one", SaveValue * 60d);
 
         private SaveSlotRequest? _saveSlotRequest;
-        private GameBundleId? _bundleRequest;
+        private GameBundleRequest? _bundleRequest;
 
         internal GameBundleChoices? Bundles { get; private set; }
 
         internal string? BundleOutcome { get; private set; }
 
-        internal void ArmBundleRequest(GameBundleId bundle) => _bundleRequest = bundle;
+        internal void ArmBundleRequest(GameBundleId bundle, GameBundleStart start = GameBundleStart.CreateCharacter) => _bundleRequest = new(bundle, start);
 
         public void ReportBundles(GameBundleChoices choices) => Bundles = choices;
 
-        public GameBundleId? TakeBundleRequest()
+        public GameBundleRequest? TakeBundleRequest()
         {
-            GameBundleId? request = _bundleRequest;
+            GameBundleRequest? request = _bundleRequest;
             _bundleRequest = null;
             return request;
         }
 
         public void ReportBundleOutcome(string message) => BundleOutcome = message;
+
+        public bool StartChosen(GameBundleStart start) => start == GameBundleStart.Begin;
         private string? _playerPreferencesSave;
 
         internal bool ThrowOnDispose { get; set; }

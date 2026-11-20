@@ -49,6 +49,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private IReadOnlyList<GameBundleSummary>? _bundleOptions;
     private ProductStateStore<string>? _bundleChoice;
     private string? _bundleNotice;
+    // What the player pressed to start under a game chosen at the entry screen, done once that game runs.
+    private GameBundleStart? _bundleStart;
     private readonly List<ProductModeChange> _modeHistory = [];
     private WorldRpgSaveSlots? _saveSlots;
     private ProductStateStore<string>? _playerPreferences;
@@ -372,18 +374,24 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     }
 
     /// <summary>
-    /// Switches the game bundle the player chose at the entry screen: the chosen bundle is resolved, a fresh
-    /// entry-screen session replaces the running one under it, and the choice is remembered for the next start.
+    /// Switches to the game bundle the player chose at the entry screen when they start a game under it: the chosen
+    /// bundle is resolved, a fresh entry-screen session replaces the running one under it, the choice is remembered
+    /// for the next start, and the start the player pressed is left for <see cref="TakeBundleStart"/> to do there.
     /// </summary>
     private void HonorBundleRequest()
     {
-        if (_session is not IGameBundleChoiceSession choosing || choosing.TakeBundleRequest() is not { } requested) return;
+        if (_session is not IGameBundleChoiceSession choosing || choosing.TakeBundleRequest() is not { } request) return;
         if (_mode != ProductMode.Title)
         {
             choosing.ReportBundleOutcome("The game can be changed only from the title screen.");
             return;
         }
-        if (requested == Composition.Bundle.Id) return;
+        GameBundleId requested = request.Bundle;
+        if (requested == Composition.Bundle.Id)
+        {
+            _bundleStart = request.Start;
+            return;
+        }
         if (!BundleOptions().Any(option => option.Id == requested))
         {
             choosing.ReportBundleOutcome($"The game '{requested.Value}' is not available.");
@@ -399,12 +407,24 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
                 (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(_context, _explicitRuleset, requested, _installed);
                 opened = (composition, selected, selected.CreateSession(SessionContext(composition)));
             }),
-            new("Opening the title", () => AdoptBundle(requested, opened!.Value)),
+            new("Opening the title", () =>
+            {
+                AdoptBundle(requested, opened!.Value);
+                _bundleStart = request.Start;
+            }),
         ], error =>
         {
             opened?.Session.Dispose();
             choosing.ReportBundleOutcome($"The game '{title}' could not be opened: {error.Message}");
         });
+    }
+
+    /// <summary>The start the player pressed under a chosen game, once that game runs: taken once, after its loading.</summary>
+    private GameBundleStart? TakeBundleStart()
+    {
+        GameBundleStart? start = _bundleStart;
+        _bundleStart = null;
+        return start;
     }
 
     /// <summary>
@@ -730,7 +750,10 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // action is. Applying the mode first would put the session into ordinary play in time to act on
         // the very slice that only asked for play, and to report the request it cannot interpret as an
         // unrecognized action. The transition publishes the presentation it changed.
-        if (begin) BeginFromEntryScreen();
+        // A start pressed under a game chosen at the entry screen is made by that game's session once it runs, as its own
+        // Begin or Create character would be; the Host then begins when the session says it may.
+        bool chosenBegins = TakeBundleStart() is { } chosen && _session is IGameBundleChoiceSession choosing && choosing.StartChosen(chosen);
+        if (begin || chosenBegins) BeginFromEntryScreen();
         if (_mode == ProductMode.Title
             && _session is IEntryScreenStartupSession startup
             && startup.TakeEntryReadyForPlay())

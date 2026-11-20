@@ -112,6 +112,8 @@ export interface DaggerHud {
   readonly property?: PropertyProjection | null;
   readonly travel?: TravelProjection | null;
   readonly map?: MapProjection | null;
+  /** What the open map panel says when the player's place has no map; null while it shows one. */
+  readonly mapAbsence?: string | null;
   readonly quests?: QuestPresentation;
   readonly notebook?: NotebookProjection;
   /** The look the camera uses; `heading` is the ruleset's compass word for the yaw. */

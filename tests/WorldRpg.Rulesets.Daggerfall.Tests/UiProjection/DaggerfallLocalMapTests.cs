@@ -18,10 +18,12 @@ public sealed class DaggerfallLocalMapTests
     {
         using SocietyStage stage = new();
         DaggerfallLocalMap map = Map(stage, new PresentationState("Ready", 5d));
-        Assert.Null(map.ReadOpen());
+        Assert.Null(map.ReadOpen(out string? absence));
+        Assert.Null(absence);
         map.SetOpen(true);
-        // The stage's player has no position, so there is nothing to draw and no profile is read.
-        Assert.Null(map.ReadOpen());
+        // The stage's player has no position, so there is nothing to draw, no profile is read and no place is named.
+        Assert.Null(map.ReadOpen(out absence));
+        Assert.Null(absence);
         Assert.Null(map.Read());
     }
 

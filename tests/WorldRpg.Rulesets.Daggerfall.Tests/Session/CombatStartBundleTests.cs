@@ -74,6 +74,10 @@ public sealed class CombatStartBundleTests
             Assert.True(senses.HasEncounteredPlayer);
         }
 
+        // The hold has its map from the first step.
+        product.Update(new ProductUpdate(OuterUpdate(5), [Ui("""{"action":"map-open","open":true}""")]));
+        Assert.Equal("dungeon", engine.PublishedNested("map", "kind"));
+
         // A save made here loads like any other: the same warrior, armed, and the same foes where they stood.
         ResolvedGameComposition composition = Resolve(FullContent(root), new GameBundleId(Bundle)).RequireComposition();
         ContentFake resumedContent = new(releases);

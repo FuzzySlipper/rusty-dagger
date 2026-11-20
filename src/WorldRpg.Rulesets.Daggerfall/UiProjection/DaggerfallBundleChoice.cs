@@ -4,20 +4,23 @@ using WorldRpg.Kit.Presentation;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The games the Host offers at the entry screen and the one the player chose there, for the Host to switch to.
-/// A new game that has begun its opening belongs to the game it was created under, so the choice is open only on
-/// the title screen and before then.
+/// The games the Host offers at the entry screen and the one the player chose there. Stepping the choice only
+/// records it; starting a game (Begin, or Create character) under a choice other than the running game asks the Host
+/// to switch to it and start there. A new game that has begun its opening belongs to the game it was created under,
+/// so the choice is open only on the title screen and before then.
 /// </summary>
 internal sealed class DaggerfallBundleChoice(PresentationState presentation)
 {
-    private GameBundleId? _request;
+    private GameBundleChoices? _offered;
+    private GameBundleId? _chosen;
+    private GameBundleRequest? _request;
 
-    /// <summary>The games the Host offers, for the HUD to list; none until the Host reports them.</summary>
-    internal GameBundleChoices? Offered { get; private set; }
+    /// <summary>The games the Host offers, the chosen one current, for the HUD to list; none until the Host reports them.</summary>
+    internal GameBundleChoices? Offered => _offered is { } offered && _chosen is { } chosen ? offered with { Current = chosen } : _offered;
 
-    internal void Report(GameBundleChoices choices) => Offered = choices ?? throw new ArgumentNullException(nameof(choices));
+    internal void Report(GameBundleChoices choices) => _offered = choices ?? throw new ArgumentNullException(nameof(choices));
 
-    /// <summary>Asks for another game, or says why it cannot be changed now.</summary>
+    /// <summary>Records the game the player chose, or says why it cannot be changed now.</summary>
     internal void Choose(string key, ProductMode mode, bool newGameBegun)
     {
         if (mode != ProductMode.Title || newGameBegun)
@@ -25,13 +28,25 @@ internal sealed class DaggerfallBundleChoice(PresentationState presentation)
             presentation.SetOutcome("The game can be changed only from the title screen.");
             return;
         }
-        _request = new GameBundleId(key);
+        GameBundleId chosen = new(key);
+        _chosen = chosen == _offered?.Current ? null : chosen;
     }
 
-    /// <summary>Takes the game the player chose, once.</summary>
-    internal GameBundleId? Take()
+    /// <summary>
+    /// Asks the Host for the chosen game, to start it as the player just did, when one other than the running game is
+    /// chosen. False when the running game is the choice, so the start is this session's own.
+    /// </summary>
+    internal bool StartUnderChoice(GameBundleStart start)
     {
-        GameBundleId? request = _request;
+        if (_chosen is not { } chosen) return false;
+        _request = new(chosen, start);
+        return true;
+    }
+
+    /// <summary>Takes the game the player chose and started, once.</summary>
+    internal GameBundleRequest? Take()
+    {
+        GameBundleRequest? request = _request;
         _request = null;
         return request;
     }

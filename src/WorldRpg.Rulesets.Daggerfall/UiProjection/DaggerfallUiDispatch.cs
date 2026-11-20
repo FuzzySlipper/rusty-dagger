@@ -35,11 +35,13 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     /// <param name="ToggleWeapon">Readies or sheathes the weapon.</param>
     /// <param name="RequestPanel">Asks the DOM for a panel, refused for the inventory in a form that suppresses it.</param>
     /// <param name="RequestSaveSlot">Leaves a save-slot request for the Host to take.</param>
-    /// <param name="ChooseBundle">Asks the Host for another game at the entry screen.</param>
+    /// <param name="ChooseBundle">Records the game chosen at the entry screen.</param>
+    /// <param name="StartUnderChosenBundle">Asks the Host for the chosen game, to start it there, when it is not the running one.</param>
     /// <param name="SetMenuOpen">Opens or closes the game menu over the world.</param>
     /// <param name="HoldsWorldOpen">Whether something open holds the world still.</param>
     internal sealed record SessionCalls(Action<string, string> ChooseLegal, Action<string, bool> AnswerQuestOffer, Action ToggleWeapon,
-        Action<string> RequestPanel, Action<SaveSlotRequest> RequestSaveSlot, Action<string> ChooseBundle, Action<bool> SetMenuOpen,
+        Action<string> RequestPanel, Action<SaveSlotRequest> RequestSaveSlot, Action<string> ChooseBundle,
+        Func<GameBundleStart, bool> StartUnderChosenBundle, Action<bool> SetMenuOpen,
         Func<bool> HoldsWorldOpen);
 
     /// <summary>
@@ -59,7 +61,8 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             presentation.SetOutcome("Commit or cancel character choices before beginning play.");
             return false;
         }
-        return parsed.Contains(DaggerfallUiActionKind.Begin);
+        // Begin under a game other than the running one is the Host's to start, once it has switched to that game.
+        return parsed.Contains(DaggerfallUiActionKind.Begin) && !session.StartUnderChosenBundle(GameBundleStart.Begin);
     }
 
     /// <summary>Takes this update's parsed UI actions: the entry-screen check's parse when it read these events.</summary>
@@ -181,6 +184,8 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.ControlsRebindButton:
             case DaggerfallUiActionKind.ControlsVolume:
             case DaggerfallUiActionKind.ControlsReset: characterActions.ChangeControls(action); break;
+            // Creating a character under another game opens creation there, once the Host has switched to it.
+            case DaggerfallUiActionKind.CharacterBegin when session.StartUnderChosenBundle(GameBundleStart.CreateCharacter): break;
             case DaggerfallUiActionKind.CharacterClassQuestions:
             case DaggerfallUiActionKind.CharacterClassAnswer:
             case DaggerfallUiActionKind.CharacterClassBack:

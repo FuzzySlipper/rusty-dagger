@@ -166,5 +166,9 @@ public sealed class TownStartBundleTests
         Assert.Equal(exterior.ProfileKey, game.Sites.ActiveProfile);
         Assert.Empty(game.State.Quests.All);
         Assert.Equal(12, DaggerfallSavePayload.Read(game.CaptureSave()).Calendar.Hour);
+
+        product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"map-open","open":true}""")]));
+        // The cemetery is a site with an exterior, so its map is the site's own.
+        Assert.Equal("city", engine.PublishedNested("map", "kind"));
     }
 }

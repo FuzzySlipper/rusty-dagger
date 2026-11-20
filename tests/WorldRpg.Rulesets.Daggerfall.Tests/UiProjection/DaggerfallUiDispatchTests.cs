@@ -35,6 +35,7 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
                 RequestPanel: panel => _calls.Add($"panel {panel}"),
                 RequestSaveSlot: request => _calls.Add($"slot {request.Operation}"),
                 ChooseBundle: bundle => _calls.Add($"bundle {bundle}"),
+                StartUnderChosenBundle: _ => false,
                 SetMenuOpen: open => _calls.Add($"menu {open}"),
                 HoldsWorldOpen: () => false),
             _presentation, _refusals);

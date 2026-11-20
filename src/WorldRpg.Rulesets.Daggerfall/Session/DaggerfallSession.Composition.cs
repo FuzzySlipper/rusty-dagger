@@ -1067,7 +1067,7 @@ internal sealed partial class DaggerfallSession
                 () => { _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard(); });
             LocalMap = new DaggerfallLocalMap(State.PlayerControl, _site, State.DungeonDiscoveries, () => _sites.Projection.Inputs,
                 () => _sites.ActiveProfile, point => _exterior.ExteriorSitePosition(point), Presentation);
-            DaggerfallCharacterActions characterActions = new(_creation, State.Character, State.LevelUps, _controls, definitions.NewGame.QuickEntry,
+            DaggerfallCharacterActions characterActions = _characterActions = new(_creation, State.Character, State.LevelUps, _controls, definitions.NewGame.QuickEntry,
                 () => _mode == ProductMode.Title && !_newGameInitialized, Presentation);
             _lootActions = new DaggerfallLootActions(_lootUi, _corpseLoot, _groundContainers, _facts, State.Encumbrance, definitions,
                 State.ItemInstances, State.Inventory, State.PlayerControl, _input, State.Quests.ItemClicked, PropertyLoot.Open, PropertyLoot.ObserveTake,
@@ -1091,7 +1091,7 @@ internal sealed partial class DaggerfallSession
                 State.Variables, _input, _hud, _inventoryUi, _lootUi, characterActions, LocalMap, ActivationPanel, Spellbook, makers, SummoningPanel,
                 EconomyPanels, travelPanel, RestPanel, textActions, _lootActions, _deathScreen,
                 new DaggerfallUiDispatch.SessionCalls(ChooseLegal, AnswerQuestOffer, ToggleWeapon, RequestPanel,
-                    request => _saveSlotRequest = request, key => _bundleChoice.Choose(key, _mode, _newGameInitialized), open => _interactions.SetMenuOpen(open), () => _interactions.HoldsWorldOpen),
+                    request => _saveSlotRequest = request, key => _bundleChoice.Choose(key, _mode, _newGameInitialized), _bundleChoice.StartUnderChoice, open => _interactions.SetMenuOpen(open), () => _interactions.HoldsWorldOpen),
                 Presentation, InputRefusals);
             InputReadout = new DaggerfallInputReadout(PlayerAttack, State.Actors, _guard, Casting, definitions, () => _appearance.DrawnHeld,
                 () => State.WeaponDrawn, InputRefusals);                                                  // UiProjection

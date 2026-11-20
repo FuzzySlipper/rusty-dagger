@@ -188,6 +188,21 @@
   border-image: var(--skin-stone-scroll-thumb) var(--skin-stone-scroll-thumb-slice) fill / var(--skin-stone-scroll-thumb-width) stretch;
 }
 [data-skin] .dagger-hud ::-webkit-scrollbar-thumb { background: transparent; }
+/* The drawn scrollbar (scrollbar.ts), for the window's Servo, which draws none: the same groove and handle. */
+.dagger-hud .dagger-scrollbar {
+  background: #14130f;
+  border-style: solid;
+  border-width: var(--skin-stone-scroll-track-width, 0);
+  border-image: var(--skin-stone-scroll-track) var(--skin-stone-scroll-track-slice) fill / var(--skin-stone-scroll-track-width) stretch;
+}
+.dagger-hud .dagger-scrollbar-thumb {
+  background: #b08c4a;
+  border-style: solid;
+  border-width: var(--skin-stone-scroll-thumb-width, 0);
+  border-image: var(--skin-stone-scroll-thumb) var(--skin-stone-scroll-thumb-slice) fill / var(--skin-stone-scroll-thumb-width) stretch;
+}
+[data-skin] .dagger-hud .dagger-scrollbar-thumb { background: transparent; }
+.dagger-hud .dagger-scrollbar-thumb:hover, .dagger-hud .dagger-scrollbar-thumb.is-dragging { filter: brightness(1.25); }
 
 /* Icons: a kit icon before a control's label, chosen by the control's semantic hook. */
 .dagger-hud [data-icon]::before {

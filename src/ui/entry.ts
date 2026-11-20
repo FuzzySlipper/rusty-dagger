@@ -50,10 +50,8 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const bundleLabel = document.createElement('span'); bundleLabel.textContent = 'Game';
   const bundleChoice = document.createElement('div'); bundleChoice.dataset.testid = 'entry-bundle';
   bundle.append(bundleLabel, bundleChoice); root.append(bundle);
+  // Stepping only records the choice; the chosen game opens when Begin or Create character is pressed.
   let bundleCycler: Cycler | null = null;
-  // Choosing a game restarts the session behind the title, which hides the choice for a moment; the
-  // step the player was pressing takes focus again when it returns, so a second press steps again.
-  let bundleStep: string | null = null;
   // The game choice and the two buttons stack in one column at the foot of the screen, so the
   // choice can never cover a button however tall the skin draws them.
   const actions = document.createElement('div'); actions.className = 'dagger-entry-actions';
@@ -142,9 +140,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     load.hidden = creating || blocked !== null || slots.length === 0;
     if (load.hidden) { saved.hidden = true; load.setAttribute('aria-expanded', 'false'); }
     redraw(saved, JSON.stringify(slots), () => saved.replaceChildren(...slots.map(entry => slotRow(entry, false))));
-    const hideBundle = creating || blocked !== null || bundles === null || bundles.options.length < 2;
-    if (hideBundle && !bundle.hidden && bundle.contains(document.activeElement)) bundleStep = document.activeElement?.getAttribute('aria-label') ?? null;
-    bundle.hidden = hideBundle;
+    bundle.hidden = creating || blocked !== null || bundles === null || bundles.options.length < 2;
     if (bundles !== null) {
       const current = bundles;
       redraw(bundleChoice, JSON.stringify(current.options), () => {
@@ -154,13 +150,6 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
       });
       bundleCycler?.set(current.current);
     }
-    if (!bundle.hidden && bundleStep !== null) {
-      const step = Array.from(bundle.querySelectorAll<HTMLButtonElement>('button')).find(button => button.getAttribute('aria-label') === bundleStep);
-      // The title never scrolls to show the step: it is already in view, and a scroll would lift the painting and its name.
-      step?.focus({ preventScroll: true });
-      bundleStep = null;
-    }
-    if (creating) bundleStep = null;
     const primary = screenForMode(mode ?? TITLE_MODE)!;
     showScreen(screen, primary);
     const titleArt = titleScene();

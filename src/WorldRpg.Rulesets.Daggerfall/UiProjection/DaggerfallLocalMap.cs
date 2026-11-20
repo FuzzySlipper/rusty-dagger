@@ -16,19 +16,35 @@ internal sealed class DaggerfallLocalMap(PlayerControlState player, DaggerfallSi
 {
     private bool _open;
 
-    /// <summary>The map the HUD draws while the panel is open.</summary>
-    internal DaggerfallMapPresentation? ReadOpen() => _open ? Read() : null;
+    /// <summary>
+    /// The map the HUD draws while the panel is open, and when there is none, what the panel says instead: the place
+    /// the player is in has no map (the wilderness, a site with no town, a place whose map was not imported).
+    /// </summary>
+    internal DaggerfallMapPresentation? ReadOpen(out string? absence)
+    {
+        absence = null;
+        return _open ? Read(out absence) : null;
+    }
 
     internal void SetOpen(bool open) => _open = open;
 
-    internal DaggerfallMapPresentation? Read()
+    internal DaggerfallMapPresentation? Read() => Read(out _);
+
+    private DaggerfallMapPresentation? Read(out string? absence)
     {
+        absence = null;
         if (player.Position is not WorldPoint position) return null;
         DaggerfallSiteProfile inputs = profile();
         if (inputs.ProfileKind is (DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior) && discoveries.TryGetValue(active(), out var discovery))
             return DaggerfallMapProjection.Dungeon(inputs, discovery, position, player.YawRadians, site.ActiveSite?.Name);
         if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && site.ActiveSite?.Exterior is not null && site.Blocks is not null)
             return DaggerfallMapProjection.City(site, exteriorSitePosition(position), player.YawRadians);
+        absence = inputs.ProfileKind switch
+        {
+            DaggerfallWorldProfileKind.Dungeon => "There is no map of this dungeon.",
+            DaggerfallWorldProfileKind.Interior => "There is no map of this building.",
+            _ => site.ActiveSite is { } here ? $"There is no map of {here.Name}." : "There is no map of the wilderness.",
+        };
         return null;
     }
 

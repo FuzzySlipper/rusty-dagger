@@ -559,14 +559,34 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         PublishPresentation();
     }
 
-    /// <summary>Takes the game the player chose at the entry screen, for the Host to switch to.</summary>
-    public GameBundleId? TakeBundleRequest() => _bundleChoice.Take();
+    /// <summary>Takes the game the player chose and started at the entry screen, for the Host to switch to.</summary>
+    public GameBundleRequest? TakeBundleRequest() => _bundleChoice.Take();
 
     /// <summary>Presents why the Host did not switch to the chosen game.</summary>
     public void ReportBundleOutcome(string message)
     {
         Presentation.SetOutcome(message);
         PublishPresentation();
+    }
+
+    /// <summary>The character choices' actions, which make the entry screen's starts.</summary>
+    private readonly DaggerfallCharacterActions _characterActions = null!;
+
+    /// <summary>
+    /// Makes the start pressed under the game chosen at the entry screen, now that this session runs it: Begin as this
+    /// session's own Begin makes it (a quick-entry game commits its quick-start character first), Create character by
+    /// opening creation.
+    /// </summary>
+    public bool StartChosen(GameBundleStart start)
+    {
+        if (start == GameBundleStart.CreateCharacter)
+        {
+            OpenCharacterCreation();
+            PublishPresentation();
+            return false;
+        }
+        _characterActions.Begin();
+        return true;
     }
 
     /// <summary>Stores Host-owned save metadata for the next ordinary HUD projection.</summary>

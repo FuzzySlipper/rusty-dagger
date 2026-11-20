@@ -547,23 +547,43 @@ public interface ISaveRequestingGameSession : IGameSession
 
 /// <summary>
 /// Optional session seam for choosing the game bundle at the entry screen. The Host offers the bundles that
-/// compose and names the current one; the session presents them, takes the player's choice, and presents the
-/// outcome. Only the Host switches: it resolves the chosen bundle and replaces the entry-screen session.
+/// compose and names the current one; the session presents them and holds the player's choice, which costs
+/// nothing to change, until the player starts a game under it, and then asks for it. Only the Host switches: it
+/// resolves the chosen bundle, replaces the entry-screen session, and starts what the player asked for in it.
 /// </summary>
 public interface IGameBundleChoiceSession : IGameSession
 {
     /// <summary>Delivers the bundles the player may choose and the one this session runs under.</summary>
     void ReportBundles(GameBundleChoices choices);
 
-    /// <summary>Takes the bundle the player chose, if any, since the last take.</summary>
-    GameBundleId? TakeBundleRequest();
+    /// <summary>Takes the bundle the player chose and started a game under, if any, since the last take.</summary>
+    GameBundleRequest? TakeBundleRequest();
 
     /// <summary>Presents why a requested bundle was not switched to.</summary>
     void ReportBundleOutcome(string message);
+
+    /// <summary>
+    /// Makes, in the session the Host switched to, the start the player pressed under the game before, as this session's
+    /// own action would make it; true when the Host is to begin now.
+    /// </summary>
+    bool StartChosen(GameBundleStart start);
 }
 
 /// <summary>The bundles a player may choose at the entry screen, and the current one.</summary>
 public sealed record GameBundleChoices(GameBundleId Current, IReadOnlyList<GameBundleSummary> Options);
+
+/// <summary>A bundle chosen at the entry screen and how the player started a game under it.</summary>
+public sealed record GameBundleRequest(GameBundleId Bundle, GameBundleStart Start);
+
+/// <summary>What the player pressed to start a game under a chosen bundle, for the Host to do again in its session.</summary>
+public enum GameBundleStart
+{
+    /// <summary>The entry screen's Begin.</summary>
+    Begin,
+
+    /// <summary>Opens character creation.</summary>
+    CreateCharacter,
+}
 
 /// <summary>The named operation a ruleset asks the Host's ordinary save-slot owner to perform.</summary>
 public enum SaveSlotOperation

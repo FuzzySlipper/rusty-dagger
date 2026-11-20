@@ -19,6 +19,7 @@ import { renderSpells, spellAction } from './spells.js';
 import { isTransportProjection, mountTransport } from './transport.js';
 import { mountTravel, isTravelProjection } from './travel.js';
 import { mountVideoSettings } from './video.js';
+import { mountScrollbar } from './scrollbar.js';
 
 type Panel = 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'save-slots' | 'settings' | 'help';
 
@@ -84,6 +85,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const menuTitle = shell.querySelector<HTMLElement>('#dagger-menu-title')!;
   const home = shell.querySelector<HTMLElement>('.dagger-menu-home')!;
   const panel = shell.querySelector<HTMLElement>('.dagger-menu-panel')!;
+  // A long panel (Settings above all) shows where it is on a bar of its own: the window draws no scrollbar.
+  const scrollbar = mountScrollbar(menu);
   const diagnostics = shell.querySelector<HTMLElement>('.dagger-composition')!;
   const composition = shell.querySelector<HTMLDListElement>('.dagger-composition dl')!;
   // Unresolved text symbols are developer diagnostics: they are listed in the composition
@@ -196,6 +199,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     menu.dataset.size = 'narrow';
     home.hidden = false;
     panel.hidden = true;
+    scrollbar.update();
     menuTitle.textContent = 'Game menu';
     const returnAction = previous === 'save-slots' ? (saveSlotMode === 'save' ? 'save-game' : 'load-game') : previous ?? 'resume';
     home.querySelector<HTMLButtonElement>(`[data-action="${returnAction}"]`)?.focus();
@@ -270,6 +274,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     controlsRoot.hidden = action !== 'settings';
     videoRoot.hidden = action !== 'settings';
     if (action === 'settings') videoView.show();
+    scrollbar.update();
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     for (const name of ['inventory', 'character', 'spells', 'map', 'transport', 'rest', 'journal', 'loot'] as const)
       menu.classList.toggle(`has-${name}`, action === name);
@@ -455,7 +460,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       inventoryView.updateWagon(isTransportProjection(value.transport) ? value.transport.wagon : null);
       transportView.update(isTransportProjection(value.transport) ? value.transport : null);
       lastMap = value.map;
-      mapView.update(isMapProjection(value.map) ? value.map : null);
+      mapView.update(isMapProjection(value.map) ? value.map : null, value.mapAbsence);
       travelView.update(isTravelProjection(value.travel) ? value.travel : null);
       if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
       journalView.update(value.quests?.journal, value.notebook);
@@ -545,6 +550,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       activationMode.disabled = value.mode !== 'playing' && value.mode !== 'modal';
       if (isSaveSlots(value.saveSlots)) { saveSlots = value.saveSlots; redrawSaveSlots(); }
       redraw(composition, JSON.stringify(value.composition), () => composition.replaceChildren(...diagnosticRows(value.composition)));
+      if (menu.open) scrollbar.update();
     },
     refreshArt() {
       // The panels memo their own state revision, so art that arrived after the state it draws has to
@@ -556,6 +562,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     },
     dispose() {
       reportMap(false);
+      scrollbar.dispose();
       controlsView.dispose();
       videoView.dispose();
       inventoryView.dispose();

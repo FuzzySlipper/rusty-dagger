@@ -41,7 +41,10 @@ export function mountInteraction(context: RustyApplicationUiContext, options: In
   const sync = (focus = false): void => {
     const next = wanted() ? 'interface' : 'gameplay';
     const resuming = next === 'gameplay' && mode === 'interface';
-    if (next !== mode) { mode = next; context.ui.setInteractionMode(next); }
+    mode = next;
+    // Decided against the Engine's own mode, not the last one asked for: a mode the host holds that this owner did not
+    // set (a developer pane, a lost window) is put right by the next decision, so leaving any surface recovers the lock.
+    if (context.ui.interactionMode() !== next) context.ui.setInteractionMode(next);
     if (next === 'gameplay' && (focus || resuming)) context.ui.focusGameplay();
   };
 

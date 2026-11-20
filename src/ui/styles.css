@@ -111,6 +111,13 @@ body, dialog { font-family: var(--font-body); }
 .dagger-menu-toggle, .dagger-menu-home button, .dagger-menu-panel > button { padding: .2rem 1.125rem; font: 700 .8rem var(--font-label); pointer-events: auto; }
 .dagger-menu { width: var(--panel-narrow); max-height: var(--panel-height); overflow: auto; padding: 1.5rem; pointer-events: auto; }
 .dagger-menu[data-size="wide"] { width: var(--panel-wide); height: var(--panel-height); }
+/* The menu draws its own scrollbar in its right padding (scrollbar.ts), so a browser's own stays hidden. */
+.dagger-menu { scrollbar-width: none; }
+.dagger-menu::-webkit-scrollbar { display: none; }
+.dagger-scrollbar { position: absolute; top: 0; right: .375rem; width: .75rem; box-sizing: border-box; pointer-events: auto; touch-action: none; z-index: 1; }
+.dagger-scrollbar[hidden] { display: none; }
+.dagger-scrollbar-thumb { position: absolute; top: 0; left: 0; right: 0; box-sizing: border-box; cursor: grab; }
+.dagger-scrollbar-thumb.is-dragging { cursor: grabbing; }
 .dagger-menu { --dagger-scrim: rgb(0 0 0 / .65); }
 .dagger-menu h1 { margin: 0 0 1.25rem; font-size: 1.5rem; }
 .dagger-menu-home { display: grid; gap: .625rem; }

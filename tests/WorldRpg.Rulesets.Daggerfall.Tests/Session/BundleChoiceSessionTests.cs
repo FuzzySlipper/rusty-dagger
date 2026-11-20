@@ -13,7 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class BundleChoiceSessionTests
 {
     [Fact]
-    public void The_title_screen_switches_to_another_game_and_a_quick_started_game_runs_under_it()
+    public void Stepping_the_game_choice_only_records_it_and_creating_a_character_switches_to_it_and_a_quick_started_game_runs_under_it()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallSiteProfile inputs = ReadInputs(root);
@@ -30,18 +30,27 @@ public sealed class BundleChoiceSessionTests
 
         // The entry screen offers every committed game by its authored title.
         Assert.Equal("daggerfall.classic", engine.PublishedNested("bundles", "current"));
-        Assert.Equal("Classic Daggerfall", Option(engine, 0));
-        Assert.Equal("Developer: Charing town start", Option(engine, 1));
-        Assert.Equal("Developer: wilderness start", Option(engine, 2));
-        Assert.Equal("Second game", Option(engine, 3));
+        Assert.Equal(["Classic Daggerfall", "Developer: combat start", "Developer: Charing market closed", "Developer: Charing town start",
+            "Developer: wilderness start", "Second game"], Enumerable.Range(0, 6).Select(index => Option(engine, index)));
 
+        // Stepping the choice is cheap: the title keeps its session, loads nothing, and shows the chosen game.
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.town-start"}""")]));
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
+        Assert.Null(product.Loading);
+        Assert.Same(classic, RunningSession(product));
+        Assert.Equal("test.second", engine.PublishedNested("bundles", "current"));
+
+        // Creating a character starts the chosen game, and creation opens there.
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"character-begin"}""")]));
+        Assert.Null(classic.State.Character.Pending);
         FinishLoading(product, 1);
 
         DaggerfallSession second = RunningSession(product);
         Assert.NotSame(classic, second);
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Equal("test.second", engine.PublishedNested("bundles", "current"));
+        Assert.NotNull(second.State.Character.Pending);
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"character-quick-start","name":"","race":"breton","gender":"male","faceIndex":0,"reflexes":2,"career":"class16"}""")]));
         FinishLoading(product, 2);
@@ -53,6 +62,36 @@ public sealed class BundleChoiceSessionTests
         game.State.WeaponDrawn = true;
         product.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "block")]));
         Assert.True(game.PlayerGuardRaised);
+    }
+
+    [Fact]
+    public void Begin_under_the_chosen_combat_start_switches_to_it_and_starts_play_at_once()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), new TestDaggerfallRuleset(videosEnabled: true),
+            new GameBundleId("daggerfall.classic"));
+        product.Start();
+        DaggerfallSession classic = RunningSession(product);
+
+        product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.combat-start"}""")]));
+        Assert.Same(classic, RunningSession(product));
+        product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"begin"}""")]));
+        // The classic title neither begins nor opens creation: the combat start does its own Begin.
+        Assert.Null(classic.State.Character.Pending);
+        // The update after the chosen game opens begins it, its new game built on the same loading screen's next work.
+        FinishLoading(product, 2);
+
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        DaggerfallSession game = RunningSession(product);
+        Assert.Equal(DaggerfallWorldProfileIds.Dungeon(PrivateersHold), game.Sites.ActiveProfile);
+        Assert.Equal("class16", game.State.Character.Capture().CareerId);
     }
 
     [Fact]
@@ -75,6 +114,7 @@ public sealed class BundleChoiceSessionTests
         {
             product.Start();
             product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
+            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"character-begin"}""")]));
             FinishLoading(product, 1);
             Assert.Equal("test.second", first.PublishedNested("bundles", "current"));
         }

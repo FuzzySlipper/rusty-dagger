@@ -45,6 +45,8 @@ internal sealed record DaggerfallHudFrame(
 {
     internal bool ActionDrivenTime { get; init; }
     internal bool TimeHeld { get; init; }
+    /// <summary>What the open map panel says where the player's place has no map; null while it shows one or is closed.</summary>
+    internal string? MapAbsence { get; init; }
     /// <summary>The weapon the player holds, drawn or sheathed.</summary>
     internal DaggerfallWeaponView? Weapon { get; init; }
     /// <summary>What use would do to the aimed target, while playing.</summary>
@@ -334,7 +336,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("days", builder.Number(lodging.Days)), ("price", builder.Number(lodging.Price)),
             ("remainingHours", builder.Number(lodging.RemainingHours)), ("canBook", builder.Boolean(lodging.CanBook)),
             ("maximumDays", builder.Number(DaggerfallLodgingState.MaximumDays))))];
-        fields = [.. fields, ("map", map is null ? builder.Null() : DaggerfallMapProjection.Wire(builder, map))];
+        fields = [.. fields, ("map", map is null ? builder.Null() : DaggerfallMapProjection.Wire(builder, map)),
+            ("mapAbsence", frame.MapAbsence is { } absence ? builder.String(absence) : builder.Null())];
         if (travel is not null) fields = [.. fields, ("travel", Travel(builder, travel))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take

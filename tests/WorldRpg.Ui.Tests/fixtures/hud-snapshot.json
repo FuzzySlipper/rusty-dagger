@@ -1045,6 +1045,7 @@
   },
   "lodging": null,
   "map": null,
+  "mapAbsence": null,
   "travel": {
     "guildTeleport": false,
     "destinations": [],
