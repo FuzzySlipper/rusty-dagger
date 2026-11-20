@@ -10,6 +10,14 @@ internal readonly record struct DaggerfallLooseItem(long Id, Vector3 Foot, Vecto
 /// <summary>The player's hand as loose items meet it: where the eye is, which way it looks, and the player's Strength.</summary>
 internal readonly record struct DaggerfallLooseItemHand(Vector3 Eye, Vector3 Forward, int Strength);
 
+/// <summary>
+/// The site loose items lie in, as the session binds it: its collision, what a pile weighs, whether the collision about a
+/// point is in the scene (so a body made there has a floor), whether an item's box can move from one point to another
+/// without meeting collision, where a moved pile's foot now stands, and how far from its middle the player's body reaches.
+/// </summary>
+internal sealed record DaggerfallLooseItemSite(SpatialSession Collision, Func<long, float> Kilograms, Func<Vector3, bool> Collides,
+    Func<Vector3, Vector3, Vector3, bool> Reaches, Action<long, Vector3> Moved, float PlayerRadius);
+
 /// <summary>One loose item's body as a developer reads it.</summary>
 internal readonly record struct DaggerfallLooseItemReadout(long Id, Vector3 Foot, Quaternion Turn, Vector3 Velocity, bool Sleeping, float Kilograms, Vector3 Size, bool Carried);
 
@@ -35,6 +43,8 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
     private const float LostFall = 30f;
     // A pile this far from its body was moved by its owner (a quest placing it again): its body is made again there.
     private const float Placed = .05f;
+    // How many rings about the drop point items dropped together may be let go on.
+    private const int DropRings = 4;
     private static readonly AxisLocks Upright = new(false, false, false, true, true, true);
 
     private readonly DaggerfallLooseItemTuning tuning = tuning.Validate();
@@ -135,15 +145,11 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
     /// <summary>
     /// World seconds admitted: lets go of the bodies whose piles went or lie far off, makes bodies for the items near the
     /// player where the collision under them stands, drives the carried item, steps the bodies while any moves, and tells
-    /// <paramref name="moved"/> where each moved pile's foot now stands.
+    /// the site where each moved pile's foot now stands.
     /// </summary>
-    /// <param name="collision">The site's collision, which the bodies land on and strike.</param>
     /// <param name="items">The loose items in the active site.</param>
     /// <param name="feet">Where the player's feet stand.</param>
-    /// <param name="kilograms">What a pile weighs, read as its body is made.</param>
-    /// <param name="collides">Whether the collision about a point is in the scene, so a body made there has a floor to land on.</param>
-    internal void Step(float elapsed, SpatialSession collision, IReadOnlyList<DaggerfallLooseItem> items, Vector3 feet,
-        DaggerfallLooseItemHand hand, Func<long, float> kilograms, Func<Vector3, bool> collides, Action<long, Vector3> moved)
+    internal void Step(float elapsed, DaggerfallLooseItemSite site, IReadOnlyList<DaggerfallLooseItem> items, Vector3 feet, DaggerfallLooseItemHand hand)
     {
         player = feet;
         Dictionary<long, DaggerfallLooseItem> here = items.ToDictionary(item => item.Id);
@@ -166,8 +172,8 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
         }
         foreach (DaggerfallLooseItem item in items)
             if (item.Size is Vector2 size && !bodies.ContainsKey(item.Id) && Vector3.Distance(item.Foot, feet) <= tuning.ActivationRadius
-                && collides(item.Foot + Vector3.UnitY * Half(size).Y))
-                Create(item.Id, item.Foot, size, kilograms(item.Id));
+                && site.Collides(item.Foot + Vector3.UnitY * Half(size).Y))
+                Create(item.Id, item.Foot, size, site);
         if (Carried is long carried && !bodies.ContainsKey(carried)) Carried = null;
         if (world is null || elapsed <= 0) return;
         if (Carried is long holding) Drive(bodies[holding], hand, elapsed);
@@ -177,12 +183,12 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
         uint steps = (uint)Math.Max(1, MathF.Ceiling(elapsed * tuning.StepsPerSecond));
         long[] ids = [.. bodies.Keys];
         // Bound again each step, the world meets a door opened since; the Engine skips the bind while nothing changed.
-        dynamics.BindWorldCollision(new(world, collision));
+        dynamics.BindWorldCollision(new(world, site.Collision));
         DynamicsStepAndReadResult result = dynamics.StepAndRead(new(world, elapsed / steps, steps, actions.ToArray(),
             ids.Select(id => bodies[id].Handle).ToArray()));
         actions.Clear();
         ReadOnlySpan<DynamicsBodyFact> facts = result.Bodies.Span;
-        for (int index = 0; index < ids.Length; index++) Settle(ids[index], bodies[ids[index]], facts[index].Readout, moved);
+        for (int index = 0; index < ids.Length; index++) Settle(ids[index], bodies[ids[index]], facts[index].Readout, site.Moved);
         costs.Enqueue(Stopwatch.GetElapsedTime(start).TotalMilliseconds);
         while (costs.Count > 600) costs.Dequeue();
     }
@@ -190,17 +196,45 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
     private static Vector3 Half(Vector2 size) =>
         new(Math.Max(size.X / 2, MinimumHalfExtent), Math.Max(size.Y / 2, MinimumHalfExtent), Math.Max(size.X / 2, MinimumHalfExtent));
 
-    private void Create(long id, Vector3 foot, Vector2 size, float kilograms)
+    private void Create(long id, Vector3 foot, Vector2 size, DaggerfallLooseItemSite site)
     {
         world ??= dynamics.CreateWorld(new DynamicsWorldConfig(new Vector3(0, -9.81f, 0)));
         Vector3 half = Half(size);
         Vector3 centre = foot + Vector3.UnitY * half.Y;
-        float mass = Math.Max(kilograms, tuning.MinimumKilograms);
+        if (dropped.ContainsKey(id))
+        {
+            // Items dropped together are let go side by side, not inside one another; one with no room yet waits for the
+            // others to fall clear.
+            if (Clear(centre, half, site) is not Vector3 clear) return;
+            if (clear != centre) site.Moved(id, clear - Vector3.UnitY * half.Y);
+            centre = clear;
+        }
+        float mass = Math.Max(site.Kilograms(id), tuning.MinimumKilograms);
         bool awake = dropped.Remove(id, out Vector3 velocity) | woken.Remove(id);
         DynamicsBody handle = dynamics.CreateCuboidBody(new(world, new DynamicsCuboidBodyConfig(new Transform(centre, Quaternion.Identity, Vector3.One), half,
             new DynamicsBodyProperties(mass, default, velocity, Vector3.Zero, Upright, tuning.LinearDamping, 0, 1, tuning.Friction, tuning.Restitution,
                 ItemGroup, uint.MaxValue, true, !awake, true))));
         bodies.Add(id, new Body(handle, half, mass, size, centre, !awake) { Velocity = velocity });
+    }
+
+    /// <summary>
+    /// Where a dropped item is let go clear of the bodies already made: the drop point, else the first free place on rings
+    /// about it, the first outside the player's body, that the item could move to from the drop point without meeting the
+    /// site's collision, or null while there is none.
+    /// </summary>
+    private Vector3? Clear(Vector3 centre, Vector3 half, DaggerfallLooseItemSite site)
+    {
+        bool Free(Vector3 at) => !bodies.Values.Any(body => MathF.Abs(body.Centre.X - at.X) < body.Half.X + half.X
+            && MathF.Abs(body.Centre.Y - at.Y) < body.Half.Y + half.Y && MathF.Abs(body.Centre.Z - at.Z) < body.Half.Z + half.Z);
+        if (Free(centre)) return centre;
+        for (int ring = 1; ring <= DropRings; ring++)
+            for (int step = 0; step < 8 * ring; step++)
+            {
+                float angle = step * MathF.PI / (4 * ring), radius = site.PlayerRadius + half.X + (ring - 1) * (2 * half.X + .05f) + .05f;
+                Vector3 at = centre + new Vector3(MathF.Cos(angle) * radius, 0, MathF.Sin(angle) * radius);
+                if (Free(at) && site.Reaches(centre, at, half)) return at;
+            }
+        return null;
     }
 
     private void Remove(long id)
@@ -260,7 +294,7 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
         .Select(entry => new DaggerfallLooseItemReadout(entry.Key, entry.Value.Centre - Vector3.UnitY * entry.Value.Half.Y, entry.Value.Turn, entry.Value.Velocity,
             entry.Value.Sleeping, entry.Value.Mass, entry.Value.Half * 2, Carried == entry.Key))];
 
-    /// <summary>How many loose items have bodies, how many are awake, what stepping them costs, and the nearest few.</summary>
+    /// <summary>How many loose items have bodies, how many are awake and how many dropped wait for room, what stepping them costs, and the nearest few.</summary>
     internal string Describe()
     {
         IReadOnlyList<DaggerfallLooseItemReadout> read = Read();
@@ -269,7 +303,8 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
         string nearest = string.Join("; ", read.Take(5).Select(item => $"pile {item.Id} {(item.Carried ? "carried" : item.Sleeping ? "asleep" : "awake")} at "
             + $"<{item.Foot.X:0.00}, {item.Foot.Y:0.00}, {item.Foot.Z:0.00}> moving {item.Velocity.Length():0.00} m/s, {item.Kilograms:0.##} kg, "
             + $"{item.Size.X:0.00} by {item.Size.Y:0.00} m"));
-        return $"{read.Count} loose items have bodies, {read.Count(item => !item.Sleeping)} awake{(Carried is long id ? $", pile {id} carried" : "")}; {cost}."
+        return $"{read.Count} loose items have bodies, {read.Count(item => !item.Sleeping)} awake{(Carried is long id ? $", pile {id} carried" : "")}"
+            + $"{(dropped.Count > 0 ? $", {dropped.Count} dropped waiting for room" : "")}; {cost}."
             + (nearest.Length == 0 ? "" : $" Nearest the player: {nearest}.");
     }
 

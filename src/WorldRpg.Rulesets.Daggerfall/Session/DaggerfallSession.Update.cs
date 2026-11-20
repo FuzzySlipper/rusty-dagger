@@ -1255,11 +1255,12 @@ internal sealed partial class DaggerfallSession
         List<DaggerfallLooseItem> items = [];
         foreach (DaggerfallGroundContainer pile in _groundContainers.Loose)                      // Items
             items.Add(new(pile.Id, pile.Position.ToVector(), _appearance.GroundSize(pile.Id)));  // Scene: the billboard it is drawn as
-        LooseItems.Step((float)(facts.FixedDeltaSeconds * facts.AdmittedStepCount), _spatial.Session, items, feet.ToVector(),
-            Hand(_input.ResolveCurrentLook(State.PlayerControl)),
+        LooseItems.Step((float)(facts.FixedDeltaSeconds * facts.AdmittedStepCount), new(_spatial.Session,
             id => (float)_groundContainers.Kilograms(id, item => _definitions.RequireItem(new DaggerfallItemId(item))),
             point => _exterior.CollisionUnknownAt(point) is null,
-            (id, foot) => _groundContainers.Move(id, WorldPoint.From(foot)));                     // Items, with Exterior's collision
+            (from, to, half) => !_spatial.CastCapsule(from, Math.Max(0, half.Y - half.X), half.X, to - from, ReadOnlyMemory<SpatialEntityCollider>.Empty).Present,
+            (id, foot) => _groundContainers.Move(id, WorldPoint.From(foot)), _spatial.CurrentController.Shape.Radius),
+            items, feet.ToVector(), Hand(_input.ResolveCurrentLook(State.PlayerControl)));          // Items, with Exterior's collision and Character's spatial queries
         if (LooseItems.TakeNotice() is { } notice) Presentation.SetOutcome(notice);               // UiProjection
     }
 

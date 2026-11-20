@@ -18,6 +18,8 @@ public sealed class DaggerfallLooseItemsTests
     private const float Update = 1f / 30;
     private static readonly Vector2 Billboard = new(.4f, .3f);
     private static readonly DaggerfallLooseItemTuning Tuning = DaggerfallLooseItemTuning.Default;
+    private const float Wall = -1.5f;
+    private const float PlayerRadius = .35f;
 
     [Fact]
     public void A_dropped_item_falls_ahead_settles_upright_on_the_floor_and_sleeps()
@@ -184,6 +186,61 @@ public sealed class DaggerfallLooseItemsTests
     }
 
     [Fact]
+    public void Items_dropped_together_are_let_go_side_by_side_and_settle_on_the_floor_not_in_a_tower()
+    {
+        Run(room =>
+        {
+            for (long id = 1; id <= 6; id++)
+            {
+                room.Add(id, new(0, .9f, 1), 1);
+                room.Items.Drop(id, new(0, 0, 1.5f));
+            }
+            for (long id = 1; id <= 6; id++) room.StepUntilAsleep(id);
+
+            Assert.All(room.Items.Read(), item => Assert.InRange(item.Foot.Y, -.02f, .02f));
+            Assert.All(room.Items.Read(), Upright);
+            // None lands inside the player's body: the first, let go where the player stands, is tossed out of it.
+            Assert.DoesNotContain(room.Items.Read(), item => new Vector2(item.Foot.X, item.Foot.Z - 1).Length() < PlayerRadius);
+        });
+    }
+
+    [Fact]
+    public void More_items_dropped_together_than_there_is_room_for_wait_and_fall_after_the_others_rather_than_stacking()
+    {
+        Run(room =>
+        {
+            // The wall a metre aside closes half the rings about the drop point.
+            for (long id = 1; id <= 40; id++)
+            {
+                room.Add(id, new(-.5f, .9f, 1), 1);
+                room.Items.Drop(id, new(0, 0, 1.5f));
+            }
+            room.Step(1);
+            Assert.True(room.Items.Read().Count < 40, "Every item was made at once.");
+            room.Step(600);
+
+            Assert.Equal(40, room.Items.Read().Count);
+            Assert.All(room.Items.Read(), item => Assert.True(item.Foot.Y < .35f, $"Pile {item.Id} rests at {item.Foot}, on a tower."));
+        });
+    }
+
+    [Fact]
+    public void Items_dropped_together_beside_a_wall_are_never_let_go_beyond_it()
+    {
+        Run(room =>
+        {
+            for (long id = 1; id <= 12; id++)
+            {
+                room.Add(id, new(-1, .9f, 1), 1);
+                room.Items.Drop(id, Vector3.Zero);
+            }
+            for (long id = 1; id <= 12; id++) room.StepUntilAsleep(id);
+
+            Assert.All(room.Items.Read(), item => Assert.True(item.Foot.X - item.Size.X / 2 > Wall - .01f, $"Pile {item.Id} lies beyond the wall at {item.Foot}."));
+        });
+    }
+
+    [Fact]
     public void A_pile_placed_anew_by_its_owner_has_its_body_made_again_there()
     {
         Run(room =>
@@ -206,17 +263,18 @@ public sealed class DaggerfallLooseItemsTests
         host.Call(engine =>
         {
             using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, new SpatialTuning(.5d, 8, 8, 1, new CharacterControllerTuning()));
-            // A floor 40 m square at height 0, faced both ways.
-            engine.Spatial.ReplaceCollision(new(spatial.Session, new StaticMeshAsset[] { new(1, 0, 4, 0, 4) },
-                new Vector3[] { new(-20, 0, -20), new(20, 0, -20), new(20, 0, 20), new(-20, 0, 20) },
-                new Triangle[] { new(0, 2, 1), new(0, 3, 2), new(0, 1, 2), new(0, 2, 3) },
+            // A floor 40 m square at height 0, and a wall 3 m high along x = -1.5, each faced both ways.
+            engine.Spatial.ReplaceCollision(new(spatial.Session, new StaticMeshAsset[] { new(1, 0, 8, 0, 8) },
+                new Vector3[] { new(-20, 0, -20), new(20, 0, -20), new(20, 0, 20), new(-20, 0, 20),
+                    new(Wall, 0, -20), new(Wall, 3, -20), new(Wall, 3, 20), new(Wall, 0, 20) },
+                new Triangle[] { new(0, 2, 1), new(0, 3, 2), new(0, 1, 2), new(0, 2, 3), new(4, 6, 5), new(4, 7, 6), new(4, 5, 6), new(4, 6, 7) },
                 new StaticMeshInstance[] { new(1, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) }));
             using DaggerfallLooseItems items = new(engine.Dynamics, Tuning);
-            test(new Room(spatial.Session, items));
+            test(new Room(spatial, items));
         });
     }
 
-    private sealed class Room(SpatialSession session, DaggerfallLooseItems items)
+    private sealed class Room(SpatialMovementSystem spatial, DaggerfallLooseItems items)
     {
         internal DaggerfallLooseItems Items { get; } = items;
         internal Dictionary<long, (Vector3 Foot, float Kilograms)> Piles { get; } = [];
@@ -228,9 +286,10 @@ public sealed class DaggerfallLooseItemsTests
         internal void Step(int updates, DaggerfallLooseItemHand? hand = null)
         {
             for (int update = 0; update < updates; update++)
-                Items.Step(Update, session, [.. Piles.Select(pile => new DaggerfallLooseItem(pile.Key, pile.Value.Foot, Billboard))], Vector3.Zero,
-                    hand ?? new(new(0, 1.6f, 0), Vector3.UnitZ, 50), id => Piles[id].Kilograms, _ => true,
-                    (id, foot) => Piles[id] = (foot, Piles[id].Kilograms));
+                Items.Step(Update, new(spatial.Session, id => Piles[id].Kilograms, _ => true,
+                        (from, to, half) => !spatial.CastCapsule(from, Math.Max(0, half.Y - half.X), half.X, to - from, ReadOnlyMemory<SpatialEntityCollider>.Empty).Present,
+                        (id, foot) => Piles[id] = (foot, Piles[id].Kilograms), PlayerRadius),
+                    [.. Piles.Select(pile => new DaggerfallLooseItem(pile.Key, pile.Value.Foot, Billboard))], Vector3.Zero, hand ?? new(new(0, 1.6f, 0), Vector3.UnitZ, 50));
         }
 
         /// <summary>Steps until the pile's body sleeps, up to ten seconds, and answers how many updates it took.</summary>
