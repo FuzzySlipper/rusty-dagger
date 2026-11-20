@@ -116,9 +116,10 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             presentation.SetOutcome(DaggerfallRacialOverrideView.InventoryRefusal);
             return;
         }
+        // The court admits its answer, the saves, and the UI's report of a press it kept from play, which changes nothing.
         if (law.ModalOpen && action.Kind is not (DaggerfallUiActionKind.LegalChoice or DaggerfallUiActionKind.SaveGame
             or DaggerfallUiActionKind.LoadGame or DaggerfallUiActionKind.SaveSlots or DaggerfallUiActionKind.SaveSlot
-            or DaggerfallUiActionKind.LoadSlot))
+            or DaggerfallUiActionKind.LoadSlot or DaggerfallUiActionKind.InputClaimed))
         {
             if (act is not null) refusals.Dropped(act, "the court waits for an answer");
             return;

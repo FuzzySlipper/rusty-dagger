@@ -63,18 +63,18 @@ internal sealed class DaggerfallSpellRelease(DaggerfallCasting casting, Daggerfa
             if (ReadyPlayerSpell(_lastPlayerSpell).Outcome is var readied && readied != DaggerfallCastOutcome.Ready)
             {
                 report(readied);
-                refused?.Invoke(Refusal(readied));
+                refused?.Invoke(Refusal(readied) ?? readied.ToString());
                 return false;
             }
         }
         if (casting.ReleaseRefusal(player) is not { } refusal) return true;
         report(refusal);
-        refused?.Invoke(Refusal(refusal));
+        refused?.Invoke(Refusal(refusal) ?? refusal.ToString());
         return false;
     }
 
-    // A cast refusal as the input readout words it.
-    private static string Refusal(DaggerfallCastOutcome outcome) => outcome switch
+    // A cast refusal as the input readout words it, or null for an outcome that is no refusal (a release, a delivery).
+    private static string? Refusal(DaggerfallCastOutcome outcome) => outcome switch
     {
         DaggerfallCastOutcome.InsufficientMagicka => "not enough magicka",
         DaggerfallCastOutcome.Silenced => "silenced",
@@ -82,16 +82,20 @@ internal sealed class DaggerfallSpellRelease(DaggerfallCasting casting, Daggerfa
         DaggerfallCastOutcome.UnknownSpell or DaggerfallCastOutcome.SourceUnavailable => "spell not available",
         DaggerfallCastOutcome.UnsupportedEffect => "spell has unavailable effects",
         DaggerfallCastOutcome.InvalidTarget or DaggerfallCastOutcome.TargetUnavailable => "no valid target",
-        _ => outcome.ToString(),
+        _ => null,
     };
 
     /// <summary>The cast's windup is over: the ready spell leaves the left hand along the view.</summary>
     /// <param name="report">How a cast outcome is told to the player.</param>
-    internal void Release(Vector3 direction, bool harmsCivilians, Action<DaggerfallCastOutcome> report)
+    /// <param name="refused">Why a cast that got past readiness was refused as it let go (no valid touch target, silenced in its
+    /// wind-up), in the input readout's words.</param>
+    internal void Release(Vector3 direction, bool harmsCivilians, Action<DaggerfallCastOutcome> report, Action<string>? refused = null)
     {
         long player = actors.Player.DurableId;
         DaggerfallReadySpell? ready = casting.ReadyFor(player);
-        report(ReleaseReadySpell(player, direction, harmsCivilians).Outcome);
+        DaggerfallCastOutcome released = ReleaseReadySpell(player, direction, harmsCivilians).Outcome;
+        report(released);
+        if (Refusal(released) is { } reason) refused?.Invoke(reason);
         // The spell the player set active stays ready for the next cast; what an item readied was good for one.
         if (ready is { Source: DaggerfallCastSource.Spell } chosen && casting.ReadyFor(player) is null && character.KnownSpells.Contains(chosen.SpellKey))
             casting.RestoreReadySpell(chosen with { Cost = casting.AvailableSpellCost(player, chosen.SpellKey) ?? chosen.Cost });

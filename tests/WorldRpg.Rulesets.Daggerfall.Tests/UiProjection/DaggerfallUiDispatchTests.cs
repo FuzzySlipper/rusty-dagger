@@ -86,6 +86,24 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
     }
 
     [Fact]
+    public void A_press_the_ui_kept_from_play_is_reported_while_the_court_holds_the_player()
+    {
+        _stage.Crime.RecordIncident(_stage.Reported("theft:1"));
+        _stage.Law.Arrest(_stage.Law.Current!);
+        Assert.True(_stage.Law.ModalOpen);
+
+        DaggerfallUiInput claim = _dispatch.Take([Ui("""{"action":"input-claimed","item":"kick","key":"modal screen"}""")]);
+        Admit(claim.ActionAt(0), DaggerfallUiPhases.Modal);
+        Assert.Equal("Kick dropped: the modal screen has the cursor", _refusals.Latest.ToString());
+        _refusals.Age(4.9);
+        Assert.Equal("Kick dropped: the modal screen has the cursor", _refusals.Latest.ToString());
+        // The court still admits nothing else.
+        Admit(new DaggerfallPlayerUiAction("weapon-toggle"), DaggerfallUiPhases.Modal);
+        Assert.Equal("Weapon toggle dropped: the court waits for an answer", _refusals.Latest.ToString());
+        Assert.Empty(_calls);
+    }
+
+    [Fact]
     public void A_wire_no_rule_names_is_reported_as_unrecognized()
     {
         DaggerfallUiInput input = _dispatch.Take([Ui("""{"action":"spellinfo","key":"spell:1"}""")]);

@@ -179,7 +179,7 @@ internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, Dagg
 
     void IDaggerfallPlayerAttacks.Impact()
     {
-        if (_attack == DaggerfallAttackIds.Cast) { spellRelease.Release(look().Forward, _harmsCivilians, reportCast); return; }
+        if (_attack == DaggerfallAttackIds.Cast) { spellRelease.Release(look().Forward, _harmsCivilians, reportCast, reason => refusals.Refused("Cast", reason)); return; }
         if (actors.Player.Actor.Get<AttackState>().Pending is not { } pending) return;
         _impacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, pending.Request.TargetId ?? 0,
             pending.Request.Generation, pending.Request.SimulationStep, Expired: false));

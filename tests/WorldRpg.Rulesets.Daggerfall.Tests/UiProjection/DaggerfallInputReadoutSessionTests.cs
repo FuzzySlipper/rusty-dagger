@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
@@ -136,5 +137,32 @@ public sealed class DaggerfallInputReadoutSessionTests : IDisposable
         Run([Ui("""{"action":"spell-cast"}""")]);
         Run([]);
         Assert.Equal("Cast refused: not enough magicka", Refusal());
+    }
+
+    [Fact]
+    public void A_cast_readiness_admitted_is_refused_as_it_lets_go_when_silence_lands_in_its_wind_up()
+    {
+        TurnOn();
+        string spell = TestPayload.Definitions.Magic.Spells.Values.Where(candidate => !candidate.IsCustom && !candidate.Name.StartsWith('!'))
+            .Select(candidate => candidate.Key).First(key =>
+            {
+                _session.State.Character.LearnSpell(key);
+                return _session.SpellRelease.ReadyPlayerSpell(key).Outcome == DaggerfallCastOutcome.Ready;
+            });
+        Run([Ui("""{"action":"spell-cast"}""")]);
+        Run([]);
+        Assert.Contains("cast wind-up", State());
+        Assert.Null(Refusal());
+
+        // Silence lands on the player between readiness and release.
+        _session.State.Effects.Start(new("silence-in-wind-up", "silence", "spell.foreign", HoldActor(1), DaggerfallActorIdentity.PlayerEntityId,
+            "silence", "Magic", null, 1, 10, JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(
+                new DaggerfallSpellEffectDefinition("effect", 19, -1, 10, 0, 1, 100, 0, 1, 0, 0, 0, 0, 1), 1, 0, 100),
+                DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
+        Assert.True(_session.State.Effects.MagicDefenseFor(DaggerfallActorIdentity.PlayerEntityId).BlocksCasting);
+        for (int update = 0; update < 120 && Refusal() is null; update++) Run([]);
+        Assert.Equal("Cast refused: silenced", Refusal());
+        // Silence keeps the spell ready and charges nothing.
+        Assert.Equal(spell, _session.Casting.ReadyFor(DaggerfallActorIdentity.PlayerEntityId)!.SpellKey);
     }
 }
