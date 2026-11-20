@@ -424,7 +424,7 @@ internal sealed partial class DaggerfallSession
             WildNavigation = new DaggerfallWildNavigation(engine.Spatial, _spatial, tuning.WildNavigation);
             ActorNavigationCoordinator navigation = new(engine.Spatial, _spatial.Session, actors.Store, _spatial.CurrentController,
                 actor => _exterior.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)),
-                () => WildNavigation.Grids(_sites.Projection.Inputs.Geometry.NavigationGridId));
+                () => WildNavigation.Grids(_sites.Projection.Inputs.Geometry.NavigationGridId), WildNavigation.WalkerOffEveryGrid);
             Navigation = navigation;
             _reactions = new ActorReactions(navigation);
             Traps = new DaggerfallTraps(_tuning.Hazards, actors, _reactions, () => assembled.PlayerControl.Position,

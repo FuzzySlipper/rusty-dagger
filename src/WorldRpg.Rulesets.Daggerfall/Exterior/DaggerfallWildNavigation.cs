@@ -11,8 +11,9 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// stands in its way. It stands beside the location's composed grid on its own id (rusty-engine #10942): a walker's step
 /// tries the location's grid first and this one after (<see cref="Grids"/>). It is derived on Engine workers off the
 /// update, again once the player has gone far enough from the box's middle, or after a while once collision has
-/// changed since (the ground streams in behind the player), and cleared indoors. None is derived while the player
-/// stands on the location's own grid, which carries the walkers about it there.
+/// changed since (the ground streams in behind the player), and cleared indoors. While the player stands on the
+/// location's own grid, which carries the walkers about it there, one is derived only when a walker near the player
+/// stands off every grid the walkers have (<see cref="WalkerOffEveryGrid"/>).
 /// </summary>
 internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialMovementSystem movement, DaggerfallWildNavigationTuning tuning)
 {
@@ -28,6 +29,7 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
     private bool _published;
     private bool _onComposition;
     private ulong _collisionRevision;
+    private Vector3? _player, _wanted;
     private readonly ulong[] _both = new ulong[2], _composition = new ulong[1];
 
     /// <summary>The receipt of the derivation the grid holds now, with its cost; null before the first is installed.</summary>
@@ -59,7 +61,8 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
     /// One admitted update: indoors the grid is cleared; outdoors a finished derivation is taken up, and another asked
     /// for once the player has gone <see cref="DaggerfallWildNavigationTuning.MoveDistance"/> from the box's middle, or
     /// once <see cref="DaggerfallWildNavigationTuning.RefreshSeconds"/> have passed and collision has changed since. While
-    /// the player stands on the <paramref name="composition"/> grid none is asked for; the one it has, if any, stays.
+    /// the player stands on the <paramref name="composition"/> grid, one is asked for only when a walker within the
+    /// radius stood off every grid since the last update and outside the box the grid has, if any; otherwise that stays.
     /// </summary>
     internal void Update(WorldPoint? player, bool outdoors, double seconds, ulong composition)
     {
@@ -80,9 +83,16 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
             }
         }
         Vector3 at = feet.ToVector();
+        _player = at;
+        Vector3? wanted = _wanted;
+        _wanted = null;
         if (_onComposition)
         {
-            if (OnComposition(at, composition)) return;
+            if (OnComposition(at, composition))
+            {
+                if (wanted is { } walker && !Covers(walker)) Derive(at);
+                return;
+            }
             _onComposition = false;
             Derive(at);
             return;
@@ -98,10 +108,24 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
         if (OnComposition(at, composition))
         {
             _onComposition = true;
+            if (wanted is { } walker && !Covers(walker)) Derive(at);
             return;
         }
         Derive(at);
     }
+
+    /// <summary>
+    /// A walker stood at <paramref name="at"/> off every grid and walked straight: one within the radius of the player
+    /// asks for the wild grid about the player even while the player stands on the location's grid.
+    /// </summary>
+    internal void WalkerOffEveryGrid(Vector3 at)
+    {
+        if (_player is { } player && Vector2.Distance(new(at.X, at.Z), new(player.X, player.Z)) <= tuning.Radius) _wanted = at;
+    }
+
+    /// <summary>Whether the box the grid has, or is being derived over, reaches a point (a cell in from its edge).</summary>
+    private bool Covers(Vector3 point) => (_published || _pending) && _centre is { } centre
+        && MathF.Abs(point.X - centre.X) < tuning.Radius - tuning.CellSize && MathF.Abs(point.Z - centre.Z) < tuning.Radius - tuning.CellSize;
 
     private ulong CollisionRevision => spatial.ReadProjection(new(movement.Session)).CollisionRevision;
 
@@ -140,6 +164,7 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
     {
         if (_published || _pending) spatial.ClearNavigation(new NavigationClearRequest(movement.Session, GridId));
         _published = _pending = _onComposition = false;
+        _player = _wanted = null;
         _centre = null;
         _sinceSeconds = 0;
         Installed = null;

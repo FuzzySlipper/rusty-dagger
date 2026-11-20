@@ -1,6 +1,9 @@
 using System.Numerics;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
 using Rusty.Engine.Testing;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -158,6 +161,72 @@ public sealed class DaggerfallWildNavigationTests
                 wild.Update(new WorldPoint(20, 0, 0), outdoors: true, 61, Composition);
                 Assert.True(wild.Pending);
             });
+        }
+        finally
+        {
+            host.Call(_ => movement?.Dispose());
+        }
+    }
+
+    [Fact]
+    public void A_walker_off_the_locations_grid_near_a_player_on_it_has_the_wild_grid_derived_and_paths_around_a_wall_to_the_player()
+    {
+        // The location's grid holds x and z from -10 to 10; the player stands on it at x 9, a walker outside it at x 15,
+        // with a wall 6 m wide across the way at x 12. With no grid under it the walker would walk straight into the wall.
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
+        SpatialMovementSystem? movement = null;
+        try
+        {
+            host.Call(engine =>
+            {
+                movement = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
+                Vector3[] vertices =
+                [
+                    new(-60, 0, -60), new(-60, 0, 60), new(60, 0, 60), new(60, 0, -60),
+                    new(11.8F, 0, -3), new(11.8F, 0, 3), new(11.8F, 3, 3), new(11.8F, 3, -3),
+                    new(12.2F, 0, -3), new(12.2F, 0, 3), new(12.2F, 3, 3), new(12.2F, 3, -3),
+                ];
+                Triangle[] triangles =
+                [
+                    new(0, 1, 2), new(0, 2, 3),
+                    new(4, 6, 5), new(4, 7, 6), new(8, 9, 10), new(8, 10, 11),
+                    new(4, 5, 9), new(4, 9, 8), new(7, 11, 10), new(7, 10, 6),
+                    new(4, 8, 11), new(4, 11, 7), new(5, 6, 10), new(5, 10, 9),
+                ];
+                _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(movement.Session,
+                    new[] { new StaticMeshAsset(1, 0, (uint)vertices.Length, 0, (uint)triangles.Length) }, vertices, triangles,
+                    new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+                    ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+                _ = engine.Spatial.ReplaceCollisionNavigation(new CollisionNavigationReplaceRequest(movement.Session,
+                    new Vector3(-10, -2, -10), new Vector3(10, 4, 10),
+                    engine.Spatial.DefaultCollisionNavigationConfig() with { GridId = Composition, CellSize = 1, Character = movement.CurrentController }));
+            });
+            using ActorsState actors = new();
+            actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+            ActorState walker = actors.CreateActor(42, new EntityTypeId("test"), new StatsComponent(), new ActorPose(new WorldPoint(15, 0, 0), 0), "health");
+            WorldPoint player = new(9, 0, 0);
+            DaggerfallWildNavigation wild = null!;
+            ActorNavigationCoordinator navigation = null!;
+            host.Call(engine =>
+            {
+                wild = new(engine.Spatial, movement!, Tuning);
+                navigation = new(engine.Spatial, movement!.Session, actors.Store, movement.CurrentController,
+                    _ => CharacterStepEnvironment.Empty, () => wild.Grids(Composition), wild.WalkerOffEveryGrid);
+            });
+            float widest = 0;
+            for (int update = 0; update < 400 && Vector3.Distance(walker.Position.ToVector() with { Y = 0 }, player.ToVector()) > .6F; update++)
+            {
+                if (wild.Pending) Thread.Sleep(5);
+                host.Call(engine =>
+                {
+                    wild.Update(player, outdoors: true, 1d / 60, Composition);
+                    _ = navigation.Evaluate(walker, new ActorNavigationRequest(player, .25F, 4096));
+                });
+                widest = MathF.Max(widest, MathF.Abs(walker.Position.Z));
+            }
+            Assert.True(Vector3.Distance(walker.Position.ToVector() with { Y = 0 }, player.ToVector()) <= .6F, $"The walker stopped at {walker.Position}.");
+            Assert.True(widest > 3F, $"The walker went no wider than {widest} m, through the wall's 3 m half-width.");
+            Assert.Equal(1, wild.Derivations);
         }
         finally
         {

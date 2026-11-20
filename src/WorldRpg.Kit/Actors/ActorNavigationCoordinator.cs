@@ -68,6 +68,7 @@ public sealed class ActorNavigationCoordinator
     private readonly CharacterControllerConfig _characterControllerConfig;
     private readonly Func<ActorState, CharacterStepEnvironment>? _environmentProvider;
     private readonly Func<IReadOnlyList<ulong>> _grids;
+    private readonly Action<Vector3>? _offEveryGrid;
     // The grid each actor's last step went by, or none when it walked straight (Route).
     private readonly Dictionary<EntityId, ulong?> _routes = [];
     // Where each actor crosses from the grid that holds it to one that holds its goal (none when no crossing was found),
@@ -81,11 +82,14 @@ public sealed class ActorNavigationCoordinator
     /// The navigation grids a walker's step tries, in order: the first that can take its start and reach its goal
     /// carries it. None names no grid, so the Engine reads the grid published last.
     /// </param>
+    /// <param name="offEveryGrid">Told where a walker stands when no grid takes its start and it walks straight instead.</param>
     public ActorNavigationCoordinator(ISpatialService spatial, SpatialSession session,
         EntityStore? actors = null, CharacterControllerConfig? characterControllerConfig = null,
-        Func<ActorState, CharacterStepEnvironment>? environmentProvider = null, Func<IReadOnlyList<ulong>>? grids = null)
+        Func<ActorState, CharacterStepEnvironment>? environmentProvider = null, Func<IReadOnlyList<ulong>>? grids = null,
+        Action<Vector3>? offEveryGrid = null)
     {
         _grids = grids ?? (static () => [0UL]);
+        _offEveryGrid = offEveryGrid;
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _useCharacterController = actors is not null;
@@ -135,6 +139,7 @@ public sealed class ActorNavigationCoordinator
         if (first is null && _useCharacterController)
         {
             _routes[actor.Actor.Entity] = null;
+            _offEveryGrid?.Invoke(before.Position.ToVector());
             return EvaluateCharacterStep(actor, request);
         }
         // No one grid holds both ends: the grid that took the start carries the walker to where it overlaps one that
