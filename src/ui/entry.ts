@@ -1,6 +1,6 @@
 import { cssUrl, drawnScreen, fitPixelArt, image, showScreen, titleScene } from './art.js';
 import { button, type Send } from './host.js';
-import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry, type Unavailable } from './projection.js';
+import { isBundles, isQuit, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry, type Unavailable } from './projection.js';
 import { createCycler, type Cycler } from './cycler.js';
 import { invalidate, redraw } from './redraw.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
@@ -62,7 +62,10 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   load.setAttribute('aria-expanded', 'false');
   const saved = document.createElement('ol'); saved.className = 'dagger-entry-saves dagger-save-slots-list dagger-frame'; saved.hidden = true;
   saved.setAttribute('aria-label', 'Saved games');
-  buttons.append(resume, begin, create, load);
+  // Quit ends the game as closing the window does; nothing is in progress at the title to lose.
+  const quit = button('Quit'); quit.className = 'dagger-entry-quit'; quit.dataset.testid = 'entry-quit';
+  quit.addEventListener('click', () => send({ action: 'quit-game' }));
+  buttons.append(resume, begin, create, load, quit);
   // When no game can be played (the Daggerfall data is not imported, unreadable or stale), the title says
   // why and what fixes it, in place of everything that would start one.
   const unavailable = document.createElement('section'); unavailable.className = 'dagger-entry-unavailable dagger-frame';
@@ -100,6 +103,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   let pickScreens: readonly string[] = [];
   let bundles: BundleProjection | null = null;
   let blocked: Unavailable | null = null;
+  let quits = false;
 
   const draw = (): void => {
     root.hidden = !title;
@@ -139,6 +143,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     resume.hidden = creating || blocked !== null || slots.length === 0;
     load.hidden = creating || blocked !== null || slots.length === 0;
     if (load.hidden) { saved.hidden = true; load.setAttribute('aria-expanded', 'false'); }
+    quit.hidden = creating || !quits;
     redraw(saved, JSON.stringify(slots), () => saved.replaceChildren(...slots.map(entry => slotRow(entry, false))));
     bundle.hidden = creating || blocked !== null || bundles === null || bundles.options.length < 2;
     if (bundles !== null) {
@@ -191,6 +196,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
       pickScreens = value.pickScreens ?? [];
       bundles = isBundles(value.bundles) ? value.bundles : null;
       blocked = value.unavailable ?? null;
+      quits = isQuit(value.quit);
       outcome.textContent = value.lastOutcome;
       draw();
     },

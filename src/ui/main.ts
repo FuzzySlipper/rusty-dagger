@@ -17,6 +17,8 @@ import { mountLoading } from './loading.js';
 import { mountMenu } from './menu.js';
 import { mountNavigation } from './navigation.js';
 import { mountScale } from './scale.js';
+import { mountRangeInput } from './range.js';
+import { mountSelectList } from './select-list.js';
 import { applySkin } from './skin.js';
 import { isHud, isSaveSlots, type SaveSlotProjection } from './projection.js';
 import { renderQuestMessages } from './quests.js';
@@ -47,6 +49,10 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const send = sender(context);
   const confirmPrompt = mountConfirm(shell);
   const ask = confirmPrompt.ask;
+  // Every select opens the game's own list, not the window's popup.
+  const selectList = mountSelectList(shell, () => navigation.refresh());
+  // Every range slider takes a press, a drag and the arrows, which the window's Servo leaves out.
+  const rangeInput = mountRangeInput(document);
   const tooltips = mountTooltips(shell);
 
   let dead = false;
@@ -146,6 +152,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const surfaces = [
     // The loading screen sits above everything and has no back: the product closes it when the work is done.
     navigation.register({ name: 'loading', root: loading.dialog, layer: 110, isOpen: loading.open, initialFocus: loading.initialFocus }),
+    navigation.register({ name: 'select-list', root: selectList.dialog, layer: 105, isOpen: selectList.isOpen, back: selectList.close }),
     navigation.register({ name: 'confirm', root: confirmPrompt.dialog, layer: 100, isOpen: confirmPrompt.open, back: confirmPrompt.cancel }),
     navigation.register({ name: 'radial', root: radial.root, layer: 95, isOpen: radial.isOpen, back: radial.close }),
     // A tutorial page holds the world over play; Back reads on.
@@ -272,6 +279,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   }) ?? (() => {});
 
   return { dispose: () => {
+    selectList.dispose();
+    rangeInput.dispose();
     tooltips.dispose();
     scale.dispose();
     for (const unregister of surfaces) unregister();

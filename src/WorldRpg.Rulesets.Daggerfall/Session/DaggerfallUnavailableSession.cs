@@ -14,13 +14,15 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// It publishes the HUD contract the DOM reads everywhere else, with the title mode and the problems, and no
 /// world, character or art: the art is itself derived from the data that is missing.
 /// </remarks>
-internal sealed class DaggerfallUnavailableSession : IInstalledContentImportSession
+internal sealed class DaggerfallUnavailableSession : IInstalledContentImportSession, IQuitRequestingGameSession
 {
     private readonly UiStream _hud;
     private readonly IUiService _ui;
     private readonly IReadOnlyList<string> _problems;
     private readonly InstalledContentImporter? _import;
     private bool _reopen;
+    private bool _quitAvailable;
+    private bool _quitRequested;
 
     internal DaggerfallUnavailableSession(GameUnavailableContext context)
     {
@@ -49,14 +51,32 @@ internal sealed class DaggerfallUnavailableSession : IInstalledContentImportSess
     /// </summary>
     public ProductUpdateResult Update(ProductUpdate update)
     {
-        if (_import is null) return ProductUpdateResult.None;
         DaggerfallUiInput input = DaggerfallUiInput.Parse(update.Input);
+        // Quit leaves a screen with nothing to play, as closing the window does; there is no game to lose.
+        if (_quitAvailable && input.Contains(DaggerfallUiActionKind.Quit)) _quitRequested = true;
+        if (_import is null) return ProductUpdateResult.None;
         if (input.Contains(DaggerfallUiActionKind.ContentImport)) _import.Start();
         if (input.Contains(DaggerfallUiActionKind.ContentImportCancel)) _import.Cancel();
         bool acted = input.ContainsAny(DaggerfallUiActionKind.ContentImport, DaggerfallUiActionKind.ContentImportCancel);
         if (_import.Follow() || acted) Publish();
         if (_import.State == InstalledContentImportState.Installed) _reopen = true;
         return ProductUpdateResult.None;
+    }
+
+    public void ReportQuitAvailable(bool available)
+    {
+        _quitAvailable = available;
+        Publish();
+    }
+
+    /// <summary>Nothing is played here, so nothing is ever unsaved.</summary>
+    public void ReportKept() { }
+
+    public bool TakeQuitRequest()
+    {
+        bool requested = _quitRequested;
+        _quitRequested = false;
+        return requested;
     }
 
     public bool TakeReopenRequest()
@@ -74,6 +94,7 @@ internal sealed class DaggerfallUnavailableSession : IInstalledContentImportSess
             ("lastOutcome", builder.String(string.Empty)),
             ("messages", builder.Array([])),
             ("mode", builder.String("title")),
+            ("quit", _quitAvailable ? builder.Object(("unsaved", builder.Boolean(false))) : builder.Null()),
             ("composition", builder.Object(
                 ("bundle", builder.String(string.Empty)),
                 ("ruleset", builder.String(DaggerfallRuleset.Identity.Value)),

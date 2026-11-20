@@ -69,6 +69,8 @@ internal sealed record DaggerfallHudFrame(
     internal IReadOnlyList<DaggerfallRadialCommand> Radial { get; init; } = [];
     /// <summary>The developer's input readout while it is on, or null.</summary>
     internal DaggerfallInputReadoutView? Readout { get; init; }
+    /// <summary>Quit as the menus show it, or null where the product cannot quit.</summary>
+    internal DaggerfallQuitView? Quit { get; init; }
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -239,6 +241,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("cinematic", cinematicSource is null ? builder.Null() : builder.Object(
                 ("source", builder.String(cinematicSource)), ("skipLabel", builder.String("Skip")))),
             // The games the entry screen offers, while a new game can still choose one; absent otherwise.
+            // Quit, where the product can quit: whether the game in progress has been played since it was kept.
+            ("quit", frame.Quit is { } quit ? builder.Object(("unsaved", builder.Boolean(quit.Unsaved))) : builder.Null()),
             ("bundles", bundles is null ? builder.Null() : builder.Object(
                 ("current", builder.String(bundles.Current.Value)),
                 ("options", builder.Array(bundles.Options.Select(option => builder.Object(

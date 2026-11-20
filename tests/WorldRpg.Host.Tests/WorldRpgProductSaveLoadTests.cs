@@ -103,6 +103,70 @@ public sealed class WorldRpgProductSaveLoadTests
     }
 
     [Fact]
+    public void Quit_is_offered_where_the_window_can_close_and_ends_the_product_as_closing_it_does()
+    {
+        IHostService window = WindowHost(exitAvailable: true);
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(new InMemoryPersistenceService(), window), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession session = ruleset.RequireCurrent();
+        Assert.True(session.QuitAvailable);
+        Assert.Equal(1, session.Kept);
+
+        product.Update(Update(1));
+        Assert.Equal(0, Exits(window));
+        session.QuitArmed = true;
+        product.Update(Update(2));
+        Assert.Equal(1, Exits(window));
+    }
+
+    [Fact]
+    public void A_streamed_product_offers_no_quit_and_drops_one_asked_anyway()
+    {
+        IHostService streamed = WindowHost(exitAvailable: false);
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(new InMemoryPersistenceService(), streamed), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession session = ruleset.RequireCurrent();
+        Assert.False(session.QuitAvailable);
+
+        session.QuitArmed = true;
+        product.Update(Update(1));
+        Assert.Equal(0, Exits(streamed));
+        Assert.Same(session, ruleset.RequireCurrent());
+    }
+
+    [Fact]
+    public void A_written_save_or_a_loaded_game_is_kept_for_quit_and_a_failed_save_is_not()
+    {
+        InMemoryPersistenceService persistence = new();
+        LoadTestRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(persistence, WindowHost(exitAvailable: true)), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+        LoadTestSession session = ruleset.RequireCurrent();
+        Assert.Equal(1, session.Kept);
+
+        session.ArmSlotRequest(new(SaveSlotOperation.QuickSave));
+        product.Update(Update(1));
+        Assert.Equal(2, session.Kept);
+        session.ArmSlotRequest(new(SaveSlotOperation.Save, Label: "Named"));
+        product.Update(Update(2));
+        Assert.Equal(3, session.Kept);
+
+        persistence.ThrowOnNextSave = true;
+        session.ArmSlotRequest(new(SaveSlotOperation.QuickSave));
+        product.Update(Update(3));
+        Assert.Equal(3, session.Kept);
+
+        session.ArmSlotRequest(new(SaveSlotOperation.QuickLoad));
+        product.Update(Update(4));
+        FinishLoading(product, 4);
+        LoadTestSession restored = Assert.IsType<LoadTestSession>(ruleset.Replacement);
+        Assert.Equal(1, restored.Kept);
+        Assert.True(restored.QuitAvailable);
+    }
+
+    [Fact]
     public void Named_slot_load_and_catalog_failures_keep_the_live_session_and_publish_diagnostics()
     {
         InMemoryPersistenceService persistence = new();
@@ -444,8 +508,8 @@ public sealed class WorldRpgProductSaveLoadTests
         Assert.Null(product.Loading);
     }
 
-    private static ProductCreateContext Context(IPersistenceService persistence) =>
-        new(Engine(persistence), Content(), EmptyInput());
+    private static ProductCreateContext Context(IPersistenceService persistence, IHostService? host = null) =>
+        new(Engine(persistence, host), Content(), EmptyInput());
 
     private static ProductContent Content(bool second = true) => new(new ReadOnlyMemory<ProductContentFile>(
     [
@@ -463,11 +527,40 @@ public sealed class WorldRpgProductSaveLoadTests
         new InputContext("test"u8.ToArray()),
         Array.Empty<ProductInputDescriptor>(), Array.Empty<ProductInputMapping>());
 
-    private static IEngineContext Engine(IPersistenceService persistence)
+    private static IEngineContext Engine(IPersistenceService persistence, IHostService? host = null)
     {
         IEngineContext context = DispatchProxy.Create<IEngineContext, PersistenceContextProxy>();
         ((PersistenceContextProxy)(object)context).PersistenceService = persistence;
+        ((PersistenceContextProxy)(object)context).HostService = host ?? WindowHost(exitAvailable: false);
         return context;
+    }
+
+    /// <summary>The Engine's host: whether the product has a window a quit can close, and the exits asked of it.</summary>
+    private static IHostService WindowHost(bool exitAvailable)
+    {
+        IHostService host = DispatchProxy.Create<IHostService, WindowHostProxy>();
+        ((WindowHostProxy)(object)host).ExitAvailable = exitAvailable;
+        return host;
+    }
+
+    private static int Exits(IHostService host) => ((WindowHostProxy)(object)host).Exits;
+
+    private class WindowHostProxy : DispatchProxy
+    {
+        internal bool ExitAvailable { get; set; }
+        internal int Exits { get; private set; }
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            switch (targetMethod?.Name)
+            {
+                case "Read": return new HostReadout(ExitAvailable);
+                case "RequestExit":
+                    if (!ExitAvailable) throw new InvalidOperationException("A streamed product has no window to close.");
+                    Exits++;
+                    return null;
+                default: throw new NotSupportedException($"Unexpected host member '{targetMethod?.Name}'.");
+            }
+        }
     }
 
     private sealed class LoadTestRuleset : ISaveableGameRuleset
@@ -503,8 +596,24 @@ public sealed class WorldRpgProductSaveLoadTests
         }
     }
 
-    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession, IPlayerPreferencesSession, IGameBundleChoiceSession, ISaveDescribingGameSession
+    private sealed class LoadTestSession : ISaveableGameSession, ISaveRequestingGameSession, IModeAwareGameSession, IPlayerPreferencesSession, IGameBundleChoiceSession, ISaveDescribingGameSession, IQuitRequestingGameSession
     {
+        /// <summary>Whether the Host offered Quit, and how often it said the game as it stands is kept.</summary>
+        internal bool? QuitAvailable { get; private set; }
+        internal int Kept { get; private set; }
+        internal bool QuitArmed { get; set; }
+
+        public void ReportQuitAvailable(bool available) => QuitAvailable = available;
+
+        public void ReportKept() => Kept++;
+
+        public bool TakeQuitRequest()
+        {
+            bool armed = QuitArmed;
+            QuitArmed = false;
+            return armed;
+        }
+
         /// <summary>Describes the game by its save value, so a test can tell which description a slot kept.</summary>
         public SaveDescription DescribeSave() => new($"Hero {SaveValue}", SaveValue, "Test town", "Day one", SaveValue * 60d);
 
@@ -619,9 +728,11 @@ public sealed class WorldRpgProductSaveLoadTests
     private class PersistenceContextProxy : DispatchProxy
     {
         internal IPersistenceService? PersistenceService { get; set; }
+        internal IHostService? HostService { get; set; }
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name switch
         {
             "get_Persistence" => PersistenceService,
+            "get_Host" => HostService,
             _ => throw new NotSupportedException($"Unexpected Engine service member '{targetMethod?.Name}'."),
         };
     }

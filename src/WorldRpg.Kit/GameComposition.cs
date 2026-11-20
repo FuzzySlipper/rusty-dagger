@@ -546,6 +546,24 @@ public interface ISaveRequestingGameSession : IGameSession
 }
 
 /// <summary>
+/// Optional session seam for quitting the game from its own menus, as closing the window does. The Host says whether
+/// the product can quit at all (only a product with its own window can) and when the game as it stands is kept; the
+/// session presents Quit, with whether the game in progress has been played since it was kept, which the player is
+/// asked to confirm, and asks. Only the Host ends the process.
+/// </summary>
+public interface IQuitRequestingGameSession : IGameSession
+{
+    /// <summary>Delivers whether Quit is offered: true only where quitting can close the product's window.</summary>
+    void ReportQuitAvailable(bool available);
+
+    /// <summary>The game as it stands now is kept: the Host has just saved it, or the session has just begun or been loaded.</summary>
+    void ReportKept();
+
+    /// <summary>Takes the player's quit, if they asked since the last take.</summary>
+    bool TakeQuitRequest();
+}
+
+/// <summary>
 /// Optional session seam for choosing the game bundle at the entry screen. The Host offers the bundles that
 /// compose and names the current one; the session presents them and holds the player's choice, which costs
 /// nothing to change, until the player starts a game under it, and then asks for it. Only the Host switches: it

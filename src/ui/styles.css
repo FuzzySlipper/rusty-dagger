@@ -17,6 +17,10 @@ body, dialog { font-family: var(--font-body); }
 :root { --dagger-cursor: default; --dagger-cursor-pointer: pointer; --dagger-cursor-grab: grabbing; }
 :root, :root *, [data-rusty-application-renderer] { cursor: var(--dagger-cursor); }
 :root :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]) { cursor: text; }
+/* The game's menus and HUD are not a page: holding the mouse over them selects no text. Fields the player types in
+   (names, notes, Find) keep their selection. */
+.dagger-hud, .dagger-hud * { -webkit-user-select: none; user-select: none; }
+.dagger-hud :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; }
 * { box-sizing: border-box; }
 
 .dagger-hud {
@@ -96,7 +100,7 @@ body, dialog { font-family: var(--font-body); }
 .dagger-title-scene-flame { background: radial-gradient(circle, rgb(255 200 110 / .32) 0, rgb(255 150 60 / .1) 40%, rgb(255 140 50 / 0) 70%); }
 .dagger-entry-actions { position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: .625rem; }
 .dagger-entry-buttons { display: flex; gap: .75rem; }
-.dagger-entry-begin, .dagger-entry-create, .dagger-entry-continue, .dagger-entry-load { padding: .5rem 1.375rem; font: inherit; }
+.dagger-entry-begin, .dagger-entry-create, .dagger-entry-continue, .dagger-entry-load, .dagger-entry-quit { padding: .5rem 1.375rem; font: inherit; }
 .dagger-composition { position: absolute; right: 1.5rem; top: 1.375rem; max-width: min(42rem, calc(100vw - 3rem)); padding: .625rem .75rem; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); font: .7rem ui-monospace, monospace; }
 .dagger-composition > strong { color: #d9bf80; text-transform: uppercase; letter-spacing: .08em; }
 .dagger-composition dl { margin: .5rem 0 0; display: grid; gap: .25rem; }

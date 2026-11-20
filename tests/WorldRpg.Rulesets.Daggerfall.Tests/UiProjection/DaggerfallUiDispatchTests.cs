@@ -37,6 +37,7 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
                 ChooseBundle: bundle => _calls.Add($"bundle {bundle}"),
                 StartUnderChosenBundle: _ => false,
                 SetMenuOpen: open => _calls.Add($"menu {open}"),
+                RequestQuit: () => _calls.Add("quit"),
                 HoldsWorldOpen: () => false),
             _presentation, _refusals);
     }

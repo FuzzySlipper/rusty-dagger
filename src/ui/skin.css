@@ -298,3 +298,17 @@
 }
 .dagger-hud select:is(:hover, :focus), .keyed-navigation .dagger-hud select:focus { border-color: var(--brass-bright); outline: 1px solid var(--brass-bright); }
 .dagger-hud select option { background: var(--plate); color: var(--ink); }
+/* A select's list (select-list.ts): the plate's brass edge and ground, opened under its control. It is placed by
+   script, so it takes no dialog margin, and it dims nothing behind it. */
+.dagger-select-list {
+  position: fixed; inset: auto; margin: 0; padding: .25rem 0; overflow-y: auto; max-width: calc(100vw - 1rem);
+  border: 1px solid var(--brass-bright); border-radius: 0; background: var(--plate); color: var(--ink);
+  font: .85rem var(--font-label); box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .6);
+}
+.dagger-select-option { padding: .3rem .75rem; white-space: nowrap; cursor: var(--dagger-cursor-pointer); }
+.dagger-select-option[aria-selected="true"] { color: var(--brass-bright); }
+.dagger-select-option:is(:hover, :focus) { outline: none; background: rgb(244 217 131 / .2); }
+.dagger-hud .dagger-select-option:is(:focus-visible, :where(.keyed-navigation) :focus) { outline: 1px solid var(--brass-bright); outline-offset: -1px; }
+.keyed-navigation .dagger-select-option:hover:not(:focus) { background: none; }
+.dagger-select-option[aria-disabled="true"] { color: var(--ink-dim); cursor: var(--dagger-cursor); }
+.dagger-select-group { padding: .3rem .75rem .1rem; color: var(--ink-dim); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }

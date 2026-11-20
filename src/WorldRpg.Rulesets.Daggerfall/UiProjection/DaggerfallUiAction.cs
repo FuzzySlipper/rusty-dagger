@@ -43,6 +43,7 @@ internal enum DaggerfallUiActionKind
     LootClose, LootTake, LootTakeAll,
     SaveGame, LoadGame, SaveSlots, SaveSlot, LoadSlot, DeleteSlot, BundleSelect,
     DeathNewGame, DeathLoadGame, DeathQuit,
+    Quit,
     ContentImport, ContentImportCancel,
 }
 
@@ -278,6 +279,8 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.DeathNewGame, DaggerfallDeathPresentation.NewGameAction, DaggerfallUiPhases.Dead, Unrecognized),
         new(DaggerfallUiActionKind.DeathLoadGame, DaggerfallDeathPresentation.LoadGameAction, DaggerfallUiPhases.Dead, Unrecognized),
         new(DaggerfallUiActionKind.DeathQuit, DaggerfallDeathPresentation.QuitAction, DaggerfallUiPhases.Dead, Unrecognized),
+        // Quit ends the product from the title screen, the game menu or the death screen alike.
+        new(DaggerfallUiActionKind.Quit, "quit-game", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
         // The entry screen's import, which only the unavailable session acts on: a game that runs has its content.
         new(DaggerfallUiActionKind.ContentImport, "content-import", DaggerfallUiPhases.Held),
         new(DaggerfallUiActionKind.ContentImportCancel, "content-import-cancel", DaggerfallUiPhases.Held),
@@ -608,7 +611,7 @@ internal static class DaggerfallUiAction
                     return fields.IsSubsetOf(["action", "key", "confirm"])
                         && !string.IsNullOrWhiteSpace(key)
                         ? new(action, Key: key, Confirm: confirm) : null;
-                case DaggerfallUiActionKind.DeathNewGame or DaggerfallUiActionKind.DeathQuit:
+                case DaggerfallUiActionKind.DeathNewGame or DaggerfallUiActionKind.DeathQuit or DaggerfallUiActionKind.Quit:
                     return fields.SetEquals(["action"]) ? new(action) : null;
                 case DaggerfallUiActionKind.DeathLoadGame:
                     return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)

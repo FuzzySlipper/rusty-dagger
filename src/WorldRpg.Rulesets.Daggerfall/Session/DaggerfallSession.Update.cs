@@ -567,7 +567,8 @@ internal sealed partial class DaggerfallSession
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);   // Magic
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);     // Magic
         _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);    // Scene
-        HudFrames.Publish(new DaggerfallHudSession(_mode, _newGameInitialized, LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _bundleChoice.Offered));   // UiProjection
+        HudFrames.Publish(new DaggerfallHudSession(_mode, _newGameInitialized, LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _bundleChoice.Offered,
+            _quit.View(_mode, _playSeconds)));   // UiProjection
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition

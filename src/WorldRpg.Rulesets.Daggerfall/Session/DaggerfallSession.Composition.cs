@@ -158,6 +158,7 @@ internal sealed partial class DaggerfallSession
                 DaggerfallOutcomePresentation.MaximumMessages, DaggerfallOutcomePresentation.SubsequentMessageLifetimeSeconds);
             _deathScreen = new DaggerfallDeathScreen(Presentation, ReportPlayerDefeatOutcome);
             _bundleChoice = new DaggerfallBundleChoice(Presentation);
+            _quit = new DaggerfallQuit(Presentation);                                                // UiProjection
             _modeLine = new DaggerfallModeLine(Presentation);
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
@@ -1097,7 +1098,7 @@ internal sealed partial class DaggerfallSession
                 State.Variables, _input, _hud, _inventoryUi, _lootUi, characterActions, LocalMap, ActivationPanel, Spellbook, makers, SummoningPanel,
                 EconomyPanels, travelPanel, RestPanel, textActions, _lootActions, _deathScreen,
                 new DaggerfallUiDispatch.SessionCalls(ChooseLegal, AnswerQuestOffer, ToggleWeapon, RequestPanel,
-                    request => _saveSlotRequest = request, key => _bundleChoice.Choose(key, _mode, _newGameInitialized), _bundleChoice.StartUnderChoice, open => _interactions.SetMenuOpen(open), () => _interactions.HoldsWorldOpen),
+                    request => _saveSlotRequest = request, key => _bundleChoice.Choose(key, _mode, _newGameInitialized), _bundleChoice.StartUnderChoice, open => _interactions.SetMenuOpen(open), _quit.Request, () => _interactions.HoldsWorldOpen),
                 Presentation, InputRefusals);
             InputReadout = new DaggerfallInputReadout(PlayerAttack, State.Actors, _guard, Casting, definitions, () => _appearance.DrawnHeld,
                 () => State.WeaponDrawn, InputRefusals);                                                  // UiProjection

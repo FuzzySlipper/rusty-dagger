@@ -37,7 +37,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession,
+internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession, IQuitRequestingGameSession,
     IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
     IDaggerfallMusicPlace
 {
@@ -568,6 +568,26 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         Presentation.SetOutcome(message);
         PublishPresentation();
     }
+
+    /// <summary>Quit: whether the product can quit, when the game was last kept, and the player's request.</summary>
+    private readonly DaggerfallQuit _quit;
+
+    /// <summary>Whether the product can quit, for the next HUD projection.</summary>
+    public void ReportQuitAvailable(bool available)
+    {
+        _quit.ReportAvailable(available);
+        PublishPresentation();
+    }
+
+    /// <summary>The game as it stands is kept: a quit now loses no play.</summary>
+    public void ReportKept()
+    {
+        _quit.Kept(_playSeconds);
+        PublishPresentation();
+    }
+
+    /// <summary>Takes the player's quit for the Host to end the product.</summary>
+    public bool TakeQuitRequest() => _quit.Take();
 
     /// <summary>The character choices' actions, which make the entry screen's starts.</summary>
     private readonly DaggerfallCharacterActions _characterActions = null!;

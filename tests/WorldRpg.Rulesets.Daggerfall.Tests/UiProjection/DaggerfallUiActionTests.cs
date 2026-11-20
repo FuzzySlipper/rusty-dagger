@@ -114,6 +114,8 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"death-load-game\"}", false)]
     [InlineData("{\"action\":\"death-load-game\",\"key\":\"  \"}", false)]
     [InlineData("{\"action\":\"death-new-game\",\"key\":\"slot-1\"}", false)]
+    [InlineData("{\"action\":\"quit-game\"}", true)]
+    [InlineData("{\"action\":\"quit-game\",\"confirm\":true}", false)]
     public void Death_outcome_actions_require_the_exact_choice_shape(string json, bool accepted)
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 

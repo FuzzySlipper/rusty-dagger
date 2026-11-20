@@ -163,6 +163,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // when the ruleset declares one, is offered there.
         IGameSession unavailable = installedRuleset!.CreateUnavailableSession(new GameUnavailableContext(context.Engine, problems,
             installedRuleset.InstalledContent.FirstOrDefault(requirement => requirement.Required && requirement.Import is not null)));
+        OfferQuit(unavailable);
         try { unavailable.PublishInitial(); }
         catch { unavailable.Dispose(); DisposeInstalled(); throw; }
         return unavailable;
@@ -184,6 +185,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             ApplyPlayerPreferences(session);
             RefreshSaveSlots();
             OfferBundles(session);
+            OfferQuit(session);
             session.PublishInitial();
             return session;
         }
@@ -360,6 +362,30 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     {
         if (session is not IGameBundleChoiceSession choosing) return;
         choosing.ReportBundles(new GameBundleChoices(Composition.Bundle.Id, BundleOptions()));
+    }
+
+    /// <summary>
+    /// Tells a session that presents Quit whether the product can quit, which only one with its own window can, and that
+    /// the game it starts with is kept: begun, loaded or the title, nothing has been played since.
+    /// </summary>
+    private void OfferQuit(IGameSession session)
+    {
+        if (session is not IQuitRequestingGameSession quitting) return;
+        quitting.ReportQuitAvailable(_context.Engine.Host.Read().ExitAvailable);
+        quitting.ReportKept();
+    }
+
+    /// <summary>
+    /// Ends the product as closing its window does, when the player quit from the game's menus; true when it is ending.
+    /// The session has asked the player to confirm a game played since it was kept. Where there is no window to close,
+    /// Quit was never offered, and a quit asked anyway is dropped.
+    /// </summary>
+    private bool HonorQuitRequest()
+    {
+        if (_session is not IQuitRequestingGameSession quitting || !quitting.TakeQuitRequest()
+            || !_context.Engine.Host.Read().ExitAvailable) return false;
+        _context.Engine.Host.RequestExit();
+        return true;
     }
 
     /// <summary>
@@ -687,6 +713,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         {
             ApplyPlayerPreferences(replacement);
             OfferBundles(replacement);
+            OfferQuit(replacement);
         }
         catch
         {
@@ -743,6 +770,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         HonorPlayerDefeatOutcomeRequests();
         HonorSaveRequests();
         HonorBundleRequest();
+        if (HonorQuitRequest()) return result;
 
         // The entry screen's own action leaves that mode after the session has run, not before: the
         // session is still in the entry-screen mode for that update, so it interprets no gameplay input
@@ -1003,6 +1031,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
         WorldRpgSaveSlotEntry entry = SaveSlots.SaveSlot(key, request.Label.Trim(), saveable.CaptureSave(),
             description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
+        (_session as IQuitRequestingGameSession)?.ReportKept();
         requesting.ReportSaveOutcome($"Saved '{entry.Label}' (revision {entry.Revision}).");
         RefreshSaveSlots(requesting);
     }
@@ -1019,6 +1048,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
         _ = SaveSlots.SaveSlot(QuickSaveKey, QuickSaveLabel, saveable.CaptureSave(),
             description: (saveable as ISaveDescribingGameSession)?.DescribeSave());
+        (_session as IQuitRequestingGameSession)?.ReportKept();
         requesting.ReportSaveOutcome("Quick saved.");
         RefreshSaveSlots(requesting);
     }

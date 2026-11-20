@@ -16,7 +16,8 @@ import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
  * Back as a cancellable `dagger-back` event, and moves focus or steps back only when nothing claimed it.
  *
  * A focused `<select>` or number field takes left and right as a change of its value, so a
- * controller can operate the choices and amounts game UI still draws with native controls.
+ * controller can operate the choices and amounts game UI still draws with native controls; accept
+ * on a select opens its list (`select-list.ts`).
  */
 export interface NavigationSurface {
   /** Diagnostic name; also the `data-nav-surface` the root carries. */
@@ -271,7 +272,6 @@ export function mountNavigation(shell: HTMLElement, context: RustyApplicationUiC
     if (button === CONTROLLER.accept && top) {
       const active = document.activeElement instanceof HTMLElement && top.root.contains(document.activeElement) ? document.activeElement : null;
       if (!active || !active.matches(FOCUSABLE)) { move('down'); return; }
-      if (active instanceof HTMLSelectElement) return;
       if (active.matches(TEXT_ENTRY)) {
         if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) options.editText?.(active);
         return;

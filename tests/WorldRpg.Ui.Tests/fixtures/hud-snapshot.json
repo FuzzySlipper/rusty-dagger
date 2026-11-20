@@ -295,6 +295,7 @@
   "effects": [],
   "panelRequest": null,
   "cinematic": null,
+  "quit": null,
   "bundles": null,
   "saveSlots": {
     "entries": [],

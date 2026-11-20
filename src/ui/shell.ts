@@ -91,6 +91,9 @@ const SHELL_MARKUP = `
           <p>Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.</p>
           <p>The world pauses while this menu is open.</p>
         </section>
+        <section class="dagger-menu-group" aria-label="Quit" hidden>
+          <button data-action="quit-game">Quit game</button>
+        </section>
         <details class="dagger-menu-developer">
           <summary>Developer tools</summary>
           <p>Diagnostics for developers, not part of the game.</p>

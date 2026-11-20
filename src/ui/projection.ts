@@ -18,6 +18,9 @@ export interface UiAction { readonly action: string; readonly [field: string]: s
 
 export interface BundleProjection { readonly current: string; readonly options: readonly { readonly id: string; readonly title: string }[]; }
 
+/** Quit, where the product can quit (it has its own window): whether the game in progress has been played since it was last kept. */
+export interface QuitProjection { readonly unsaved: boolean; }
+
 /** The entry screen's import of the missing content: where it is, what to say, and the tool's recent output. */
 export interface ContentImport {
   readonly state: 'idle' | 'choosing' | 'running' | 'installed' | 'failed';
@@ -88,6 +91,8 @@ export interface DaggerHud {
   readonly unavailable?: Unavailable | null;
   /** The games the entry screen offers while a new game can still choose one; absent or null otherwise. */
   readonly bundles?: BundleProjection | null;
+  /** Quit, where the product can quit; absent or null where it cannot (a streamed game has no window to close). */
+  readonly quit?: QuitProjection | null;
   readonly controls?: ControlsProjection;
   readonly timeControl?: { readonly enabled: boolean; readonly held: boolean };
   /** The host's loading screen while slow work runs (`loading.ts`), or null. */
@@ -459,6 +464,10 @@ export function isBundles(value: unknown): value is BundleProjection {
   return typeof value === 'object' && value !== null && 'current' in value && typeof value.current === 'string'
     && 'options' in value && Array.isArray(value.options) && value.options.every(option => typeof option === 'object' && option !== null
       && 'id' in option && typeof option.id === 'string' && 'title' in option && typeof option.title === 'string');
+}
+
+export function isQuit(value: unknown): value is QuitProjection {
+  return typeof value === 'object' && value !== null && 'unsaved' in value && typeof value.unsaved === 'boolean';
 }
 
 export function isSaveSlots(value: unknown): value is SaveSlotProjection {

@@ -9,7 +9,7 @@ import { mountJournal } from './journal.js';
 import { mountLodging, isLodgingProjection } from './lodging.js';
 import { mountLoot, type LootProjection } from './loot.js';
 import { mountMap, isMapProjection } from './maps.js';
-import { diagnosticRows, formatRestHours, isRestProjection, isSaveSlots, type DaggerHud, type SaveSlotProjection, type SpellbookProjection } from './projection.js';
+import { diagnosticRows, formatRestHours, isQuit, isRestProjection, isSaveSlots, type DaggerHud, type QuitProjection, type SaveSlotProjection, type SpellbookProjection } from './projection.js';
 import { mountProperty } from './property.js';
 import { createStepper } from './stepper.js';
 import { redraw } from './redraw.js';
@@ -242,6 +242,15 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       onAccept: () => { send({ action: 'load-game' }); loadRequested = true; },
       onCancel: () => { if (openedToAsk && menu.open) closeMenu(); } });
   };
+  // Quit ends the game as closing the window does. A game played since it was last saved asks first, over the menu.
+  let quit: QuitProjection | null = null;
+  const quitGroup = home.querySelector<HTMLElement>('[aria-label="Quit"]')!;
+  const askQuit = (): void => {
+    if (quit === null) return;
+    if (!quit.unsaved) { send({ action: 'quit-game' }); return; }
+    ask({ message: 'Quit without saving? Everything since your last save is lost.', accept: 'Quit',
+      onAccept: () => send({ action: 'quit-game' }) });
+  };
   const dismiss = (): void => {
     if (host.isDead()) return;
     if (activePanel !== null) showHome();
@@ -346,6 +355,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     else if (action === 'quick-save') send({ action: 'save-game' });
     else if (action === 'quick-load') askQuickLoad();
     else if (action === 'load-game') showSaveSlots('load');
+    else if (action === 'quit-game') askQuit();
     // The notebook key and an opened book ask for the journal on their own page.
     else if (action === 'notebook' || action === 'book') { showPanel('journal'); journalView.select(action === 'book' ? 'book' : 'notes'); }
     else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'help') showPanel(action);
@@ -447,6 +457,8 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     togglePanel,
     captureButton(button) { return activePanel === 'settings' && controlsView.captureButton(button); },
     update(value, dead, spellbook, diagnosticText) {
+      quit = isQuit(value.quit) ? value.quit : null;
+      quitGroup.hidden = quit === null;
       renderSpells(spellsRoot, spellbook, value.controls, send);
       panelBindings = (value.controls?.bindings ?? []).filter(row => HOTKEY_ACTIONS[row.id] !== undefined)
         .map(row => ({ panel: HOTKEY_ACTIONS[row.id]!, keys: row.keys }));

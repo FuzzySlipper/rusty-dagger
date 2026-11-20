@@ -5394,3 +5394,163 @@ test('action-driven time toggle reflects the product preference and held status'
     assert.deepEqual(f.actions.at(-1), { action: 'action-driven-time', enabled: false });
   } finally { f.dispose(); }
 });
+
+test('a select opens the game\'s own list under it, never the window\'s popup, and a click, a key or the pad chooses', () => {
+  const f = fixture();
+  try {
+    const modes = [{ id: 'grab', label: 'Grab' }, { id: 'info', label: 'Information' }, { id: 'talk', label: 'Talk' }];
+    f.publish({ activation: { mode: 'info', label: 'Information', modes, message: '', applied: false } });
+    f.pressEscape();
+    const select = f.root.querySelector('.dagger-activation-mode');
+    const list = f.root.querySelector('dialog.dagger-select-list');
+    const rows = () => [...list.querySelectorAll('[role="option"]')];
+    const press = (target, type = 'pointerdown') => {
+      const event = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, detail: 1 });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    // A press opens the list, and the mouse event that follows the same press neither closes it nor reaches the select.
+    assert.equal(press(select), true, 'The press never reaches the window\'s own popup.');
+    assert.equal(press(select, 'mousedown'), true);
+    assert.equal(list.open, true);
+    assert.deepEqual(rows().map(row => row.textContent), ['Grab', 'Information', 'Talk']);
+    assert.equal(rows()[1].getAttribute('aria-selected'), 'true');
+    assert.equal(document.activeElement, rows()[1], 'The current choice takes focus.');
+    // A click on the select itself, the press that would run the window's popup, is cancelled.
+    assert.equal(press(select, 'click'), true);
+    rows()[2].click();
+    assert.equal(list.open, false);
+    assert.equal(select.value, 'talk');
+    assert.deepEqual(f.actions.at(-1), { action: 'activation-mode', mode: 'talk' });
+    assert.equal(document.activeElement, select, 'Focus goes back to the select.');
+    // Enter opens it; Escape closes it with the choice unchanged, and the menu stays open beneath.
+    const count = f.actions.length;
+    select.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', key: 'Enter', bubbles: true, cancelable: true }));
+    assert.equal(list.open, true);
+    f.pressEscape();
+    assert.equal(list.open, false);
+    assert.equal(f.root.querySelector('.dagger-menu').open, true);
+    assert.equal(f.actions.length, count);
+    // A press outside closes it unchanged.
+    press(select);
+    press(f.root.querySelector('#dagger-menu-title'));
+    assert.equal(list.open, false);
+    assert.equal(f.actions.length, count);
+    // The pad's accept opens it, its directions move through the options and accept chooses.
+    select.focus();
+    f.pad('button-0');
+    assert.equal(list.open, true);
+    assert.equal(document.activeElement, rows()[2]);
+    f.pad('button-12');
+    assert.equal(document.activeElement, rows()[1]);
+    f.pad('button-0');
+    assert.equal(list.open, false);
+    assert.deepEqual(f.actions.at(-1), { action: 'activation-mode', mode: 'info' });
+    // Choosing the option already chosen closes the list and sends nothing.
+    const after = f.actions.length;
+    select.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', key: 'Enter', bubbles: true, cancelable: true }));
+    assert.equal(list.open, false);
+    assert.equal(f.actions.length, after);
+  } finally { f.dispose(); }
+});
+
+test('a select\'s list closes with the menu that holds it, and names its groups without making them choices', () => {
+  const f = fixture();
+  try {
+    f.publish({});
+    f.pressEscape();
+    const select = document.createElement('select');
+    const group = document.createElement('optgroup'); group.label = 'Powers';
+    group.append(new Option('Cast when used', 'cast'), new Option('Strikes', 'strike'));
+    const off = new Option('Unavailable', 'off'); off.disabled = true;
+    select.append(group, off);
+    f.root.querySelector('.dagger-menu-home').append(select);
+    const list = f.root.querySelector('dialog.dagger-select-list');
+    select.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }));
+    assert.equal(list.querySelector('.dagger-select-group').textContent, 'Powers');
+    assert.deepEqual([...list.querySelectorAll('[role="option"]')].map(row => [row.textContent, row.getAttribute('aria-disabled')]),
+      [['Cast when used', null], ['Strikes', null], ['Unavailable', 'true']]);
+    f.root.querySelector('.dagger-menu').close();
+    f.root.querySelector('.dagger-menu').dispatchEvent(new Event('close'));
+    assert.equal(list.open, false);
+  } finally { f.dispose(); }
+});
+
+test('a range slider follows a press and a drag, and the arrows step it: input as it moves, change when it settles', () => {
+  const f = fixture();
+  try {
+    f.publish({});
+    f.pressEscape();
+    // As the Engine's video panel draws a range row: it applies on change and shows the value on input.
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.min = '0'; slider.max = '2'; slider.step = '0.5'; slider.value = '1';
+    slider.getBoundingClientRect = () => ({ left: 100, right: 300, top: 0, bottom: 20, width: 200, height: 20, x: 100, y: 0 });
+    f.root.querySelector('.dagger-menu-home').append(slider);
+    const heard = [];
+    slider.addEventListener('input', () => heard.push(['input', slider.value]));
+    slider.addEventListener('change', () => heard.push(['change', slider.value]));
+    const mouse = (type, clientX, buttons = 1) => {
+      const event = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX });
+      slider.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    assert.equal(mouse('mousedown', 300), true, 'The press neither selects text nor waits on a handling the window lacks.');
+    assert.equal(document.activeElement, slider);
+    mouse('mousemove', 150);
+    mouse('mousemove', 160);
+    mouse('mouseup', 160, 0);
+    assert.deepEqual(heard, [['input', '2'], ['input', '0.5'], ['change', '0.5']]);
+    heard.length = 0;
+    slider.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight', key: 'ArrowRight', bubbles: true, cancelable: true }));
+    slider.dispatchEvent(new KeyboardEvent('keydown', { code: 'End', key: 'End', bubbles: true, cancelable: true }));
+    assert.deepEqual(heard, [['input', '1'], ['change', '1'], ['input', '2'], ['change', '2']]);
+    // A release outside the window ends the drag at the next move: nothing follows the pointer after it.
+    heard.length = 0;
+    mouse('mousedown', 100);
+    mouse('mousemove', 200, 0);
+    mouse('mousemove', 300, 0);
+    assert.deepEqual(heard, [['input', '0'], ['change', '0']]);
+    // A press that is not on a slider is left alone.
+    const elsewhere = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
+    f.root.querySelector('#dagger-menu-title').dispatchEvent(elsewhere);
+    assert.equal(elsewhere.defaultPrevented, false);
+  } finally { f.dispose(); }
+});
+
+test('the menus and the HUD select no text, while fields the player types in keep their selection', async () => {
+  const css = await readFile(new URL('../../src/ui/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.dagger-hud, \.dagger-hud \* \{ -webkit-user-select: none; user-select: none; \}/);
+  assert.match(css, /\.dagger-hud :is\(input:not\(\[type="range"\]\):not\(\[type="checkbox"\]\):not\(\[type="radio"\]\), textarea, \[contenteditable="true"\]\) \{ -webkit-user-select: text; user-select: text; \}/);
+});
+
+test('Quit asks first in the game menu when the game was played since it was kept, quits at once from the title, and shows only where the product can quit', () => {
+  const f = fixture();
+  try {
+    const group = f.root.querySelector('.dagger-menu-home [aria-label="Quit"]');
+    const titleQuit = f.root.querySelector('[data-testid="entry-quit"]');
+    f.publish({ mode: 'title' });
+    assert.equal(titleQuit.hidden, true, 'A product with no window of its own (a streamed game) offers no Quit.');
+    f.publish({ mode: 'title', quit: { unsaved: false } });
+    assert.equal(titleQuit.hidden, false);
+    titleQuit.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quit-game' });
+    f.publish({ mode: 'playing', quit: { unsaved: false } });
+    f.pressEscape();
+    assert.equal(group.hidden, false);
+    group.querySelector('[data-action="quit-game"]').click();
+    assert.equal(f.root.querySelector('.dagger-confirm').open, false, 'A game kept as it stands quits without asking.');
+    assert.deepEqual(f.actions.at(-1), { action: 'quit-game' });
+    f.publish({ mode: 'modal', quit: { unsaved: true } });
+    const count = f.actions.length;
+    group.querySelector('[data-action="quit-game"]').click();
+    assert.match(f.root.querySelector('.dagger-confirm').textContent, /Quit without saving\? Everything since your last save is lost\./);
+    f.answer(false);
+    assert.equal(f.actions.length, count);
+    group.querySelector('[data-action="quit-game"]').click();
+    f.answer(true);
+    assert.deepEqual(f.actions.at(-1), { action: 'quit-game' });
+    f.publish({ mode: 'modal', quit: null });
+    assert.equal(group.hidden, true);
+  } finally { f.dispose(); }
+});

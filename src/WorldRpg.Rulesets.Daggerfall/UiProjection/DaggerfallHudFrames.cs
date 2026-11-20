@@ -22,8 +22,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="SaveSlots">The Host's save slots.</param>
 /// <param name="SaveSlotDiagnostic">The Host's word on its save slots.</param>
 /// <param name="Bundles">The games the Host offers at the entry screen.</param>
+/// <param name="Quit">Quit as the menus show it, or null where the product cannot quit.</param>
 internal readonly record struct DaggerfallHudSession(ProductMode Mode, bool NewGameInitialized, DaggerfallPanelRequest? PanelRequest,
-    IReadOnlyList<SaveSlotSummary> SaveSlots, string? SaveSlotDiagnostic, GameBundleChoices? Bundles);
+    IReadOnlyList<SaveSlotSummary> SaveSlots, string? SaveSlotDiagnostic, GameBundleChoices? Bundles, DaggerfallQuitView? Quit);
 
 /// <summary>
 /// The HUD frame: every panel's projection read in one place and published to the DOM, once per publication. It also
@@ -103,6 +104,7 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
             TutorialRunning = tutorial.Running,
             Tutorial = tutorial.View,
             Readout = readout.Read(),
+            Quit = session.Quit,
         });
     }
 

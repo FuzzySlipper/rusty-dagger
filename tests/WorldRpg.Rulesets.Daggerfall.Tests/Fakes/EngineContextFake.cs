@@ -71,6 +71,8 @@ internal class EngineContextFake : DispatchProxy
     private IRandomService random = null!;
     private IUiService ui = null!;
     private IPersistenceService persistence = null!;
+    /// <summary>The Engine's host: whether a quit can close the product's window (none, as when streamed, until a test says), and the exits asked.</summary>
+    internal HostFake Host { get; } = HostFake.Create();
     internal PresentationRecorder Particles { get; } = PresentationRecorder.Create();
     internal AnimationRecorder Animation { get; } = AnimationRecorder.Create();
     internal TweenRecorder Tween { get; } = TweenRecorder.Create();
@@ -168,8 +170,37 @@ internal class EngineContextFake : DispatchProxy
         "get_PartsRigs" => PartsRigs.Service,
         "get_Dynamics" => Dynamics.Service,
         "get_ContentSource" => contentSource,
+        "get_Host" => Host.Service,
         _ => throw new NotSupportedException(method?.Name),
     };
+
+    internal class HostFake : DispatchProxy
+    {
+        internal IHostService Service { get; private set; } = null!;
+        internal bool ExitAvailable { get; set; }
+        internal int Exits { get; private set; }
+
+        internal static HostFake Create()
+        {
+            IHostService service = Create<IHostService, HostFake>();
+            HostFake fake = (HostFake)(object)service;
+            fake.Service = service;
+            return fake;
+        }
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            switch (method?.Name)
+            {
+                case "Read": return new HostReadout(ExitAvailable);
+                case "RequestExit":
+                    if (!ExitAvailable) throw new InvalidOperationException("A product with no window of its own cannot exit.");
+                    Exits++;
+                    return null;
+                default: throw new NotSupportedException(method?.Name);
+            }
+        }
+    }
 
     /// <summary>A heightfield that asks for no tiles: nothing here draws, and every readout is empty.</summary>
     private class HeightfieldServiceFake : DispatchProxy

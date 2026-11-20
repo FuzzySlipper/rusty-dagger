@@ -38,10 +38,11 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     /// <param name="ChooseBundle">Records the game chosen at the entry screen.</param>
     /// <param name="StartUnderChosenBundle">Asks the Host for the chosen game, to start it there, when it is not the running one.</param>
     /// <param name="SetMenuOpen">Opens or closes the game menu over the world.</param>
+    /// <param name="RequestQuit">Leaves the player's quit for the Host to take.</param>
     /// <param name="HoldsWorldOpen">Whether something open holds the world still.</param>
     internal sealed record SessionCalls(Action<string, string> ChooseLegal, Action<string, bool> AnswerQuestOffer, Action ToggleWeapon,
         Action<string> RequestPanel, Action<SaveSlotRequest> RequestSaveSlot, Action<string> ChooseBundle,
-        Func<GameBundleStart, bool> StartUnderChosenBundle, Action<bool> SetMenuOpen,
+        Func<GameBundleStart, bool> StartUnderChosenBundle, Action<bool> SetMenuOpen, Action RequestQuit,
         Func<bool> HoldsWorldOpen);
 
     /// <summary>
@@ -306,6 +307,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.DeathNewGame:
             case DaggerfallUiActionKind.DeathLoadGame:
             case DaggerfallUiActionKind.DeathQuit: death.Choose(action); break;
+            case DaggerfallUiActionKind.Quit: session.RequestQuit(); break;
             default: throw new InvalidOperationException($"Admitted UI action '{action.Kind}' has no dispatch.");
         }
     }

@@ -11,6 +11,7 @@ On top of the root `AGENTS.md` and the Engine's game-UI rules.
 ## The window
 
 - Servo: no `::backdrop` (dim with `--dagger-scrim`), no `:has()`; focus rings also match `.keyed-navigation :focus`.
+- Use native `<select>` and range inputs: every select opens `select-list.ts`'s skinned list, never Servo's popup, and `range.ts` gives ranges the press, drag and arrows Servo leaves out. Menus and the HUD select no text; text fields do.
 - Inline SVG: paint, `display` and `font-family` in attributes, no `vector-effect`, hover and focus state set by script; pointer events reach only the `<svg>`.
 - Never `alert`, `confirm`, `prompt`, `title` for information, `window.open`, `target="_blank"`, native file or colour pickers, or native HTML5 drag.
 
