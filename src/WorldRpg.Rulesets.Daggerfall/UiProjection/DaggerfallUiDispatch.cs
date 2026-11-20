@@ -39,11 +39,12 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     /// <param name="StartUnderChosenBundle">Asks the Host for the chosen game, to start it there, when it is not the running one.</param>
     /// <param name="SetMenuOpen">Opens or closes the game menu over the world.</param>
     /// <param name="RequestQuit">Leaves the player's quit for the Host to take.</param>
+    /// <param name="Applied">Hears each action applied, which may leave the game changed since it was kept.</param>
     /// <param name="HoldsWorldOpen">Whether something open holds the world still.</param>
     internal sealed record SessionCalls(Action<string, string> ChooseLegal, Action<string, bool> AnswerQuestOffer, Action ToggleWeapon,
         Action<string> RequestPanel, Action<SaveSlotRequest> RequestSaveSlot, Action<string> ChooseBundle,
         Func<GameBundleStart, bool> StartUnderChosenBundle, Action<bool> SetMenuOpen, Action RequestQuit,
-        Func<bool> HoldsWorldOpen);
+        Action<DaggerfallUiActionKind> Applied, Func<bool> HoldsWorldOpen);
 
     /// <summary>
     /// The parse the entry-screen check made of this update's input, reused by the update itself so
@@ -129,6 +130,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             return;
         }
         Apply(action, firstStep, opensInteraction, ref elapsedSubmitted);
+        session.Applied(action.Kind);
         // These immediate UI actions may arrive while no world step is due. Spend a step when
         // play resumes; reading panels, preparing spells and editing preferences remain free.
         if (action.Kind is DaggerfallUiActionKind.SpellCast or DaggerfallUiActionKind.InventoryUse

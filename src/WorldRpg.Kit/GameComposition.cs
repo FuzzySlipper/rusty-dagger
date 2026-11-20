@@ -548,8 +548,8 @@ public interface ISaveRequestingGameSession : IGameSession
 /// <summary>
 /// Optional session seam for quitting the game from its own menus, as closing the window does. The Host says whether
 /// the product can quit at all (only a product with its own window can) and when the game as it stands is kept; the
-/// session presents Quit, with whether the game in progress has been played since it was kept, which the player is
-/// asked to confirm, and asks. Only the Host ends the process.
+/// session presents Quit, with whether the game in progress has changed since it was kept (played on, or acted on
+/// while the world is held), which the player is asked to confirm, and asks. Only the Host ends the process.
 /// </summary>
 public interface IQuitRequestingGameSession : IGameSession
 {

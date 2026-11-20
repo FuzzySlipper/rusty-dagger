@@ -366,7 +366,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     /// <summary>
     /// Tells a session that presents Quit whether the product can quit, which only one with its own window can, and that
-    /// the game it starts with is kept: begun, loaded or the title, nothing has been played since.
+    /// the game it starts with is kept: begun, loaded or the title, nothing has changed since.
     /// </summary>
     private void OfferQuit(IGameSession session)
     {
@@ -377,7 +377,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
     /// <summary>
     /// Ends the product as closing its window does, when the player quit from the game's menus; true when it is ending.
-    /// The session has asked the player to confirm a game played since it was kept. Where there is no window to close,
+    /// The session has asked the player to confirm a game changed since it was kept. Where there is no window to close,
     /// Quit was never offered, and a quit asked anyway is dropped.
     /// </summary>
     private bool HonorQuitRequest()

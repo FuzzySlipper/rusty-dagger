@@ -11,7 +11,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class QuitSessionTests
 {
     [Fact]
-    public void Quit_where_the_window_can_close_says_when_play_since_the_last_save_would_be_lost_and_ends_the_product()
+    public void Quit_where_the_window_can_close_says_when_changes_since_the_last_save_would_be_lost_held_world_or_not_and_ends_the_product()
     {
         (WorldRpgProduct product, EngineContextFake engine) = Start(exitAvailable: true);
         using WorldRpgProduct running = product;
@@ -22,15 +22,26 @@ public sealed class QuitSessionTests
         Assert.NotEqual(ProductMode.Title, product.Mode);
         Assert.False(Unsaved(engine), "A game just begun has nothing to lose.");
 
-        for (ulong step = 2; step < 6; step++) product.Update(new ProductUpdate(OuterUpdate(step), []));
-        Assert.True(Unsaved(engine), "Play since the game began would be lost.");
-
-        product.Update(new ProductUpdate(OuterUpdate(6), [Ui("""{"action":"save-game"}""")]));
+        product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"save-game"}""")]));
         Assert.Equal("Quick saved.", engine.PublishedField("lastOutcome"));
         Assert.False(Unsaved(engine), "A save keeps the game as it stands.");
+        for (ulong step = 3; step < 7; step++) product.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.True(Unsaved(engine), "Play since the save would be lost.");
 
+        // The menu holds the world, so no play time passes, but a note written there is still lost to a quit.
+        product.Update(new ProductUpdate(OuterUpdate(7), [Ui("""{"action":"menu","open":true}""")]));
+        Assert.Equal(ProductMode.Modal, product.Mode);
+        product.Update(new ProductUpdate(OuterUpdate(8), [Ui("""{"action":"save-game"}""")]));
+        for (ulong step = 9; step < 12; step++) product.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.False(Unsaved(engine), "Saved in the menu, and the held world passes no play time.");
+        string revision = engine.PublishedNested("notebook", "revision")!;
+        product.Update(new ProductUpdate(OuterUpdate(12), [Ui($$"""{"action":"notebook-add","revision":"{{revision}}","text":"Ask the smith."}""")]));
+        Assert.True(Unsaved(engine), "A note written while the menu holds the world is unsaved.");
+
+        product.Update(new ProductUpdate(OuterUpdate(13), [Ui("""{"action":"save-game"}""")]));
+        Assert.False(Unsaved(engine));
         Assert.Equal(0, engine.Host.Exits);
-        product.Update(new ProductUpdate(OuterUpdate(7), [Ui("""{"action":"quit-game"}""")]));
+        product.Update(new ProductUpdate(OuterUpdate(14), [Ui("""{"action":"quit-game"}""")]));
         Assert.Equal(1, engine.Host.Exits);
     }
 

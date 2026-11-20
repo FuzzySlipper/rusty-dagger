@@ -1,5 +1,6 @@
 using WorldRpg.Kit;
 using WorldRpg.Kit.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -28,6 +29,16 @@ public sealed class DaggerfallQuitTests
         Assert.Equal(new DaggerfallQuitView(false), quit.View(ProductMode.Dead, 10.5));
         quit.Kept(10.5);
         Assert.Equal(new DaggerfallQuitView(false), quit.View(ProductMode.Playing, 10.5));
+
+        // While the menu holds the world no play time passes, yet an action can still change the game: a note written.
+        quit.Applied(DaggerfallUiActionKind.Menu);
+        quit.Applied(DaggerfallUiActionKind.NotebookPage);
+        quit.Applied(DaggerfallUiActionKind.ControlsVolume);
+        Assert.Equal(new DaggerfallQuitView(false), quit.View(ProductMode.Modal, 10.5));
+        quit.Applied(DaggerfallUiActionKind.NotebookAdd);
+        Assert.Equal(new DaggerfallQuitView(true), quit.View(ProductMode.Modal, 10.5));
+        quit.Kept(10.5);
+        Assert.Equal(new DaggerfallQuitView(false), quit.View(ProductMode.Modal, 10.5));
 
         quit.Request();
         Assert.True(quit.Take());

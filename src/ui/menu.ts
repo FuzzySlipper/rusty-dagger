@@ -254,7 +254,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       onAccept: () => { send({ action: 'load-game' }); loadRequested = true; },
       onCancel: () => { if (openedToAsk && menu.open) closeMenu(); } });
   };
-  // Quit ends the game as closing the window does. A game played since it was last saved asks first, over the menu.
+  // Quit ends the game as closing the window does. A game changed since it was last saved asks first, over the menu.
   let quit: QuitProjection | null = null;
   const quitGroup = home.querySelector<HTMLElement>('[aria-label="Quit"]')!;
   const askQuit = (): void => {

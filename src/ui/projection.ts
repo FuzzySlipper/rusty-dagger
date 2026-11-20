@@ -18,7 +18,7 @@ export interface UiAction { readonly action: string; readonly [field: string]: s
 
 export interface BundleProjection { readonly current: string; readonly options: readonly { readonly id: string; readonly title: string }[]; }
 
-/** Quit, where the product can quit (it has its own window): whether the game in progress has been played since it was last kept. */
+/** Quit, where the product can quit (it has its own window): whether the game in progress has changed since it was last kept. */
 export interface QuitProjection { readonly unsaved: boolean; }
 
 /** The entry screen's import of the missing content: where it is, what to say, and the tool's recent output. */
