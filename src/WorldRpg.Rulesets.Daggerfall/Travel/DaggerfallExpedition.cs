@@ -51,6 +51,12 @@ internal interface IDaggerfallExpeditionSurroundings
 
     bool Defeated { get; }
 
+    /// <summary>
+    /// Something besides the map holds the world (the game menu, a question waiting for an answer, another screen, a
+    /// host pause): the map's time stands still behind it, as the world's does.
+    /// </summary>
+    bool HeldElsewhere { get; }
+
     /// <summary>Passes one stretch through the one calendar with the activity's per-minute rules; the seconds it applied.</summary>
     long Pass(DaggerfallExpeditionStretch stretch);
 
@@ -518,11 +524,14 @@ internal sealed class DaggerfallExpedition
     internal long Advance(double realSeconds)
     {
         if (!Running || !double.IsFinite(realSeconds) || realSeconds <= 0) return 0;
+        if (_world.HeldElsewhere) { _owed = 0; return 0; }
         // A long frame does not leap: the map gives it at most a quarter second's time.
         _owed += Math.Min(realSeconds, LongestFrame) * _tuning.TimeScales[_speed - 1] * DaggerfallCalendar.SecondsPerMinute;
         long passed = 0;
         while (_owed >= 1 && Running)
         {
+            // A stretch can raise a question (a quest's message, an offer): the rest of the frame's time waits for it.
+            if (_world.HeldElsewhere) { _owed = 0; break; }
             if (_world.Defeated) { Pause(null); break; }
             if (_mode == DaggerfallExpeditionMode.Camp && !PayLodging()) break;
             DaggerfallCalendar before = _world.Calendar;
@@ -543,7 +552,8 @@ internal sealed class DaggerfallExpedition
             if (_world.Defeated) { Pause(null); break; }
             if (_world.Exhausted)
             {
-                _world.Collapse(Swimming);
+                // The water drowns the party the stretch was swimming in, though its pixel is still the shore it left.
+                _world.Collapse(activity == DaggerfallExpeditionActivity.Swimming);
                 _leg = null; _route = [];
                 if (!_world.Defeated) _mode = DaggerfallExpeditionMode.Halt;
                 Pause(_world.Defeated ? null : "Exhausted, you drop where you stand.");

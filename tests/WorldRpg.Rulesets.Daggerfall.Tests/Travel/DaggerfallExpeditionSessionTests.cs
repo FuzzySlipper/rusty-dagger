@@ -223,6 +223,29 @@ public sealed class DaggerfallExpeditionSessionTests
     }
 
     [Fact]
+    public void The_game_menu_over_a_running_map_holds_its_time_fatigue_and_party_until_it_closes()
+    {
+        using Fixture fixture = new();
+        fixture.Open();
+        fixture.Go(fixture.Step2);
+        fixture.Step();
+        fixture.Submit(new { action = "menu", open = true });
+        long held = fixture.Now;
+        (double, double) position = fixture.Session.Expedition.Position;
+        double fatigue = fixture.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
+        for (int update = 0; update < 30; update++) fixture.Step();
+        Assert.Equal(held, fixture.Now);
+        Assert.Equal(position, fixture.Session.Expedition.Position);
+        Assert.Equal(fatigue, fixture.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current);
+        Assert.True(fixture.Session.Expedition.Running);
+
+        fixture.Submit(new { action = "menu", open = false });
+        for (int update = 0; update < 5; update++) fixture.Step();
+        Assert.True(fixture.Now > held);
+        Assert.NotEqual(position, fixture.Session.Expedition.Position);
+    }
+
+    [Fact]
     public void Knightly_rank_six_grants_free_passage_on_a_hired_ship()
     {
         using Fixture fixture = new();
@@ -450,6 +473,7 @@ internal sealed class NoWorld : IDaggerfallExpeditionSurroundings
     public double FatigueShare => 1;
     public bool Exhausted => false;
     public bool Defeated => false;
+    public bool HeldElsewhere => false;
     public long Pass(DaggerfallExpeditionStretch stretch) => 0;
     public void RecoverCampHour(bool sheltered) { }
     public void Collapse(bool inWater) { }

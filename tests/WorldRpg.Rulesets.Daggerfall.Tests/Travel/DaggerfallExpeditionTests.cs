@@ -214,6 +214,41 @@ public sealed class DaggerfallExpeditionTests
     }
 
     [Fact]
+    public void Exhaustion_wading_out_from_the_shore_drowns_the_party_though_its_pixel_is_still_land()
+    {
+        (DaggerfallExpedition expedition, World world) = Create(world => { world.FatigueShare = .3; world.DrainPerHour = 2; world.ExhaustAtZero = true; });
+        expedition.Begin(new(7, 1), false);
+        expedition.SetDestination(new(9, 1), null);
+        expedition.SetSpeed(Fastest);
+        Run(expedition, 1);
+        // Still on the shore's pixel, minutes into a swim of over four hours: the water takes the party.
+        Assert.Equal(new DaggerfallTravelMapPixel(7, 1), expedition.Party);
+        Assert.Equal([true], world.Collapses);
+    }
+
+    [Fact]
+    public void The_map_stands_still_while_something_else_holds_the_world_even_one_raised_by_a_stretch()
+    {
+        (DaggerfallExpedition expedition, World world) = Create(world => world.HeldElsewhere = true);
+        expedition.Begin(new(1, 1), false);
+        expedition.SetDestination(new(4, 1), null);
+        expedition.SetSpeed(Fastest);
+        Run(expedition, 1);
+        Assert.Empty(world.Stretches);
+        Assert.True(expedition.Running);
+
+        // A stretch that raises a question (a quest's message) leaves the rest of the frame's time unspent.
+        world.HeldElsewhere = false;
+        world.HoldAfterStretch = true;
+        expedition.Advance(.25);
+        Assert.Single(world.Stretches);
+        world.HoldAfterStretch = false;
+        world.HeldElsewhere = false;
+        expedition.Advance(.25);
+        Assert.True(world.Stretches.Count > 1);
+    }
+
+    [Fact]
     public void A_save_on_the_map_keeps_the_party_leg_mode_pin_ship_and_lodging_and_resumes_paused()
     {
         (DaggerfallExpedition expedition, World world) = Create();
@@ -381,6 +416,8 @@ public sealed class DaggerfallExpeditionTests
         public bool ExhaustAtZero { get; set; }
         public bool Exhausted { get; set; }
         public bool Defeated { get; set; }
+        public bool HeldElsewhere { get; set; }
+        public bool HoldAfterStretch { get; set; }
         public Func<DaggerfallTravelMapPixel, bool, long, bool> Encounter { get; set; } = (_, _, _) => false;
         public List<DaggerfallExpeditionStretch> Stretches { get; } = [];
         public List<bool> CampHours { get; } = [];
@@ -403,6 +440,7 @@ public sealed class DaggerfallExpeditionTests
             if (stretch.Activity is DaggerfallExpeditionActivity.Marching or DaggerfallExpeditionActivity.Swimming)
                 FatigueShare = Math.Max(0, FatigueShare - DrainPerHour * stretch.FatigueFactor * stretch.Seconds / 3600);
             if (ExhaustAtZero && FatigueShare <= 0) Exhausted = true;
+            if (HoldAfterStretch) HeldElsewhere = true;
             return stretch.Seconds;
         }
 
