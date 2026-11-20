@@ -190,6 +190,35 @@ public sealed class DaggerfallEnemyMagicSessionTests
     }
 
     [Fact]
+    public void A_spell_admitted_out_of_strike_reach_closes_the_action_door_for_the_rest_of_the_catch_up_window()
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long imp = session.SpawnActor("imp", new ActorPose(playerPosition with { Z = playerPosition.Z - 10f }, 0f), level: 1);
+        session.State.Actors.Get(imp).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)imp), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        fixture.Spatial.FloorHit = _ => default;
+        session.EnemyBehavior.Trace.Follow(imp);
+
+        session.Update(new ProductUpdate(OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 }, []));
+
+        Assert.Single(session.Casting.PendingRangedFlights);
+        DaggerfallDecisionRecord[] decisions = [.. session.EnemyBehavior.Trace.Recent.Where(record => record.Gates[0].Policy != "delivery")];
+        // The cast at step 3 is ten metres off, beyond any strike, so the physical chain refuses it as ineligible.
+        DaggerfallDecisionRecord cast = Assert.Single(decisions, record => record.FirstStep == 3);
+        DaggerfallDecisionGate physical = Assert.Single(cast.Gates, gate => gate.Policy == "attack" && gate.Gate == "physical");
+        Assert.NotEqual("spell-took-action", physical.Reason);
+        // Steps 4 and 5 of the same Engine update find the door closed.
+        Assert.All(decisions.Where(record => record.FirstStep > 3), record =>
+            Assert.Contains(record.Gates, gate => gate is { Policy: "spell", Gate: "action", Outcome: DaggerfallGateOutcome.Refused, Reason: "action-taken-this-update" }));
+        Assert.Equal(5UL, decisions[^1].LastStep);
+    }
+
+    [Fact]
     public void Late_batch_enemy_release_is_aged_only_from_its_admitted_step()
     {
         using Fixture fixture = new();

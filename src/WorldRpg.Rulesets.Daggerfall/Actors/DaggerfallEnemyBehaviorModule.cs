@@ -373,10 +373,15 @@ internal sealed class DaggerfallEnemyBehaviorModule
             targetRateOfApproach, !actionAlreadyAdmitted, Lane(actor, target.Value), generation, simulationStep, deltaSeconds), _gates);
         bool magicAdmitted = !actionAlreadyAdmitted && choice.Spell is { } spell && _cast!(spell, generation, simulationStep, _gates);
         bool struck = false;
-        // The donor chooses a single action: a successful spell selection owns this action
-        // window and vetoes the delayed physical swing that pursuit would otherwise admit.
+        // The donor chooses a single action: an admitted spell owns this update's action window,
+        // whether or not a strike was chosen or could be, and vetoes the delayed physical swing.
         // If magic declined or could not be admitted, the same attack owner receives the one
         // physical admission after the spell decision has had its chance.
+        if (magicAdmitted)
+        {
+            _admittedActions.Add(actor.DurableId);
+            _combat.InterruptPendingAttack(actor.DurableId, generation);
+        }
         if (!choice.Strike)
             _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, "not-chosen"));
         else if (!pursuit.AttackEligible)
@@ -384,11 +389,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         else if (actionAlreadyAdmitted)
             _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, "action-taken-this-update"));
         else if (magicAdmitted)
-        {
             _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, "spell-took-action"));
-            _admittedActions.Add(actor.DurableId);
-            _combat.InterruptPendingAttack(actor.DurableId, generation);
-        }
         // An enemy that is still swinging or recovering simply waits: its pacing is not a refused
         // request, and reporting it as one would put the enemy's cooldown on the player's line.
         else if (!_combat.IsReady(actor.DurableId, generation, simulationStep))
