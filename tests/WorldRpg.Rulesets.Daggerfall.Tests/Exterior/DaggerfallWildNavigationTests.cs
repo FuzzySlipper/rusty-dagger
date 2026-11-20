@@ -46,6 +46,14 @@ public sealed class DaggerfallWildNavigationTests
                 NavigationGridInfo grid = Assert.Single(engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(movement!.Session)).ToArray(),
                     value => value.GridId == DaggerfallWildNavigation.GridId);
                 Assert.InRange(grid.MaxX - grid.MinX, 14, 18);
+                // A walker chases the player's centre, a standing body's half height above the floor: it stands on the grid.
+                NavigationStepResult toCentre = engine.Spatial.EvaluateNavigationStep(new NavigationStepRequest(movement.Session,
+                    new Vector3(-3, 0, 0), new Vector3(3, .93F, 0), 1F, 4096, DaggerfallWildNavigation.GridId));
+                Assert.Equal(NavigationPathOutcome.Reached, toCentre.Outcome);
+                // Open ground is crossed on the diagonal: six cells across and six along take six steps, not twelve.
+                NavigationStepResult diagonal = engine.Spatial.EvaluateNavigationStep(new NavigationStepRequest(movement.Session,
+                    new Vector3(-3, 0, -3), new Vector3(3, 0, 3), 1F, 4096, DaggerfallWildNavigation.GridId));
+                Assert.InRange(diagonal.Path.Length, 6, 8);
                 // Within the move distance nothing is derived again; past it, the grid follows the player.
                 wild.Update(new WorldPoint(3, 0, 0), outdoors: true, 1d / 60);
                 Assert.False(wild.Pending);

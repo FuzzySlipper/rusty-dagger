@@ -18,6 +18,9 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
     /// <summary>The wild grid's id, beside a location's composed grid on its own.</summary>
     internal const ulong GridId = 2;
 
+    /// <summary>How far past a standing body's centre a point may lie above the floor and still stand on the grid, in metres.</summary>
+    private const double CentreMargin = .25;
+
     private Vector3? _centre;
     private double _sinceSeconds;
     private bool _pending;
@@ -86,12 +89,17 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
         float floor = MathF.Floor(feet.Y / tuning.VerticalReach) * tuning.VerticalReach;
         Vector3 min = new(feet.X - tuning.Radius, floor - tuning.VerticalReach, feet.Z - tuning.Radius);
         Vector3 max = new(feet.X + tuning.Radius, floor + 2 * tuning.VerticalReach, feet.Z + tuning.Radius);
+        CharacterControllerConfig character = movement.CurrentController;
         CollisionNavigationConfig config = spatial.DefaultCollisionNavigationConfig() with
         {
             GridId = GridId,
             CellSize = tuning.CellSize,
             MaximumCells = tuning.Cells,
-            Character = movement.CurrentController,
+            Character = character,
+            // Open ground is crossed on the diagonal too, not in a staircase of straight steps.
+            DiagonalNeighbors = true,
+            // A walker chases the player's centre, half its standing body above its feet: that point stands on the grid.
+            SnapAbove = character.Shape.StandingHeight * .5 + character.Shape.ContactSkin + CentreMargin,
         };
         _ = spatial.ReplaceCollisionNavigation(new CollisionNavigationReplaceRequest(movement.Session, min, max, config, Deferred: true));
         _pending = true;
