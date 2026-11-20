@@ -241,6 +241,66 @@ public sealed class DaggerfallLooseItemsTests
     }
 
     [Fact]
+    public void An_item_resting_on_one_taken_away_falls_to_the_floor_and_sleeps_with_nothing_else_moving()
+    {
+        Run(room =>
+        {
+            room.Add(1, new(0, 0, 1), 1);
+            room.Add(2, new(0, .9f, 1), 1);
+            room.Items.Drop(2, Vector3.Zero);
+            room.StepUntilAsleep(2);
+            room.StepUntilAsleep(1);
+            Assert.InRange(room.Read(2).Foot.Y, .28f, .32f);
+
+            room.Take(1);
+            room.Step(1);
+            room.StepUntilAsleep(2);
+            Assert.InRange(room.Read(2).Foot.Y, -.02f, .02f);
+        });
+    }
+
+    [Fact]
+    public void An_item_asleep_on_collision_that_goes_falls_to_the_floor()
+    {
+        Run(room =>
+        {
+            room.Build(new Vector2(-.5f, .5f));
+            room.Add(1, new(0, 1.2f, 1), 1);
+            room.Items.Drop(1, Vector3.Zero);
+            room.StepUntilAsleep(1);
+            Assert.InRange(room.Read(1).Foot.Y, .48f, .52f);
+
+            // A door swings away or a platform sinks: the site's collision changes under it.
+            room.Build();
+            room.Step(1);
+            room.StepUntilAsleep(1);
+            Assert.InRange(room.Read(1).Foot.Y, -.02f, .02f);
+        });
+    }
+
+    [Fact]
+    public void Part_of_a_pile_taken_weighs_its_body_again_for_the_grab_and_the_throw()
+    {
+        Run(room =>
+        {
+            room.Add(1, new(0, 0, 1), 30);
+            room.Step(1);
+            DaggerfallLooseItemHand hand = new(new(0, 1.6f, 0), Vector3.UnitZ, 50);
+            Assert.Equal("That is too heavy to lift.", room.Items.Grab(1, hand));
+
+            room.Add(1, room.Piles[1].Foot, 2);
+            room.Step(1);
+            Assert.Equal(2f, room.Read(1).Kilograms);
+            Assert.Null(room.Items.Grab(1, hand));
+            room.Step(20, hand);
+            Assert.True(room.Items.Throw(hand));
+            room.Step(1, hand);
+            // 10 N·s from Strength 50 sends 2 kg off at 5 m/s, where the old 30 kg would have gone at a third of one.
+            Assert.InRange(room.Read(1).Velocity.Z, 3.5f, 6f);
+        });
+    }
+
+    [Fact]
     public void A_pile_placed_anew_by_its_owner_has_its_body_made_again_there()
     {
         Run(room =>
@@ -263,30 +323,60 @@ public sealed class DaggerfallLooseItemsTests
         host.Call(engine =>
         {
             using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, new SpatialTuning(.5d, 8, 8, 1, new CharacterControllerTuning()));
-            // A floor 40 m square at height 0, and a wall 3 m high along x = -1.5, each faced both ways.
-            engine.Spatial.ReplaceCollision(new(spatial.Session, new StaticMeshAsset[] { new(1, 0, 8, 0, 8) },
-                new Vector3[] { new(-20, 0, -20), new(20, 0, -20), new(20, 0, 20), new(-20, 0, 20),
-                    new(Wall, 0, -20), new(Wall, 3, -20), new(Wall, 3, 20), new(Wall, 0, 20) },
-                new Triangle[] { new(0, 2, 1), new(0, 3, 2), new(0, 1, 2), new(0, 2, 3), new(4, 6, 5), new(4, 7, 6), new(4, 5, 6), new(4, 6, 7) },
-                new StaticMeshInstance[] { new(1, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) }));
             using DaggerfallLooseItems items = new(engine.Dynamics, Tuning);
-            test(new Room(spatial, items));
+            Room room = new(engine, spatial, items);
+            room.Build();
+            test(room);
         });
     }
 
-    private sealed class Room(SpatialMovementSystem spatial, DaggerfallLooseItems items)
+    private sealed class Room(IEngineContext engine, SpatialMovementSystem spatial, DaggerfallLooseItems items)
     {
+        private ulong contents;
+
         internal DaggerfallLooseItems Items { get; } = items;
         internal Dictionary<long, (Vector3 Foot, float Kilograms)> Piles { get; } = [];
 
-        internal void Add(long id, Vector3 foot, float kilograms) => Piles[id] = (foot, kilograms);
+        /// <summary>
+        /// The room's collision: a floor 40 m square at height 0, a wall 3 m high along x = -1.5 and, when given, a platform
+        /// half a metre up over the square from <paramref name="platform"/> one metre across, each faced both ways.
+        /// </summary>
+        internal void Build(Vector2? platform = null)
+        {
+            List<Vector3> vertices = [new(-20, 0, -20), new(20, 0, -20), new(20, 0, 20), new(-20, 0, 20),
+                new(Wall, 0, -20), new(Wall, 3, -20), new(Wall, 3, 20), new(Wall, 0, 20)];
+            if (platform is Vector2 at)
+                vertices.AddRange([new(at.X, .5f, at.Y), new(at.X + 1, .5f, at.Y), new(at.X + 1, .5f, at.Y + 1), new(at.X, .5f, at.Y + 1)]);
+            List<Triangle> triangles = [];
+            for (uint quad = 0; quad < vertices.Count / 4; quad++)
+            {
+                uint first = quad * 4;
+                triangles.AddRange([new(first, first + 2, first + 1), new(first, first + 3, first + 2), new(first, first + 1, first + 2), new(first, first + 2, first + 3)]);
+            }
+            engine.Spatial.ReplaceCollision(new(spatial.Session, new StaticMeshAsset[] { new(1, 0, (uint)vertices.Count, 0, (uint)triangles.Count) },
+                vertices.ToArray(), triangles.ToArray(), new StaticMeshInstance[] { new(1, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) }));
+        }
+
+        /// <summary>Places or changes a pile, as a drop, a quest or a take from it does.</summary>
+        internal void Add(long id, Vector3 foot, float kilograms)
+        {
+            Piles[id] = (foot, kilograms);
+            contents++;
+        }
+
+        /// <summary>Takes a whole pile.</summary>
+        internal void Take(long id)
+        {
+            Piles.Remove(id);
+            contents++;
+        }
 
         internal DaggerfallLooseItemReadout Read(long id) => Items.Read().Single(item => item.Id == id);
 
         internal void Step(int updates, DaggerfallLooseItemHand? hand = null)
         {
             for (int update = 0; update < updates; update++)
-                Items.Step(Update, new(spatial.Session, id => Piles[id].Kilograms, _ => true,
+                Items.Step(Update, new(spatial.Session, engine.Spatial.ReadProjection(new(spatial.Session)).CollisionRevision, id => Piles[id].Kilograms, contents, _ => true,
                         (from, to, half) => !spatial.CastCapsule(from, Math.Max(0, half.Y - half.X), half.X, to - from, ReadOnlyMemory<SpatialEntityCollider>.Empty).Present,
                         (id, foot) => Piles[id] = (foot, Piles[id].Kilograms), PlayerRadius),
                     [.. Piles.Select(pile => new DaggerfallLooseItem(pile.Key, pile.Value.Foot, Billboard))], Vector3.Zero, hand ?? new(new(0, 1.6f, 0), Vector3.UnitZ, 50));

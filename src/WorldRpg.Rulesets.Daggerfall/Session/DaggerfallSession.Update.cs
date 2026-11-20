@@ -1256,7 +1256,8 @@ internal sealed partial class DaggerfallSession
         foreach (DaggerfallGroundContainer pile in _groundContainers.Loose)                      // Items
             items.Add(new(pile.Id, pile.Position.ToVector(), _appearance.GroundSize(pile.Id)));  // Scene: the billboard it is drawn as
         LooseItems.Step((float)(facts.FixedDeltaSeconds * facts.AdmittedStepCount), new(_spatial.Session,
-            id => (float)_groundContainers.Kilograms(id, item => _definitions.RequireItem(new DaggerfallItemId(item))),
+            _engine.Spatial.ReadProjection(new(_spatial.Session)).CollisionRevision,
+            id => (float)_groundContainers.Kilograms(id, item => _definitions.RequireItem(new DaggerfallItemId(item))), State.InventoryStore.Revision,
             point => _exterior.CollisionUnknownAt(point) is null,
             (from, to, half) => !_spatial.CastCapsule(from, Math.Max(0, half.Y - half.X), half.X, to - from, ReadOnlyMemory<SpatialEntityCollider>.Empty).Present,
             (id, foot) => _groundContainers.Move(id, WorldPoint.From(foot)), _spatial.CurrentController.Shape.Radius),

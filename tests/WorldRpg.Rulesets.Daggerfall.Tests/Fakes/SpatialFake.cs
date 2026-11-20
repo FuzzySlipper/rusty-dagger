@@ -140,6 +140,8 @@ internal class SpatialFake : DispatchProxy
         nameof(ISpatialService.ReadHeightfieldColliderRequests) => ReadOnlyMemory<HeightfieldTileRequest>.Empty,
         nameof(ISpatialService.SetHeightfieldColliderFocuses) => SetHeightfieldColliderFocuses((HeightfieldColliderFocusRequest)arguments![0]!),
         nameof(ISpatialService.ReadContentArtifact) => Read(),
+        // Loose items read the collision's version each update; it never changes here.
+        nameof(ISpatialService.ReadProjection) => default(SpatialProjectionReadout),
         nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
         // These general session tests have no authored trigger contact. Action trigger
         // edge behavior is exercised by its dedicated Spatial fake.

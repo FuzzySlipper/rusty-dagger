@@ -11,12 +11,13 @@ internal readonly record struct DaggerfallLooseItem(long Id, Vector3 Foot, Vecto
 internal readonly record struct DaggerfallLooseItemHand(Vector3 Eye, Vector3 Forward, int Strength);
 
 /// <summary>
-/// The site loose items lie in, as the session binds it: its collision, what a pile weighs, whether the collision about a
-/// point is in the scene (so a body made there has a floor), whether an item's box can move from one point to another
-/// without meeting collision, where a moved pile's foot now stands, and how far from its middle the player's body reaches.
+/// The site loose items lie in, as the session binds it: its collision and the version of it now, what a pile weighs and
+/// the revision of every pile's contents, whether the collision about a point is in the scene (so a body made there has a
+/// floor), whether an item's box can move from one point to another without meeting collision, where a moved pile's foot
+/// now stands, and how far from its middle the player's body reaches.
 /// </summary>
-internal sealed record DaggerfallLooseItemSite(SpatialSession Collision, Func<long, float> Kilograms, Func<Vector3, bool> Collides,
-    Func<Vector3, Vector3, Vector3, bool> Reaches, Action<long, Vector3> Moved, float PlayerRadius);
+internal sealed record DaggerfallLooseItemSite(SpatialSession Collision, ulong CollisionVersion, Func<long, float> Kilograms, ulong ContentsRevision,
+    Func<Vector3, bool> Collides, Func<Vector3, Vector3, Vector3, bool> Reaches, Action<long, Vector3> Moved, float PlayerRadius);
 
 /// <summary>One loose item's body as a developer reads it.</summary>
 internal readonly record struct DaggerfallLooseItemReadout(long Id, Vector3 Foot, Quaternion Turn, Vector3 Velocity, bool Sleeping, float Kilograms, Vector3 Size, bool Carried);
@@ -45,6 +46,8 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
     private const float Placed = .05f;
     // How many rings about the drop point items dropped together may be let go on.
     private const int DropRings = 4;
+    // How near another body counts as touching one that is removed, in metres.
+    private const float Touching = .05f;
     private static readonly AxisLocks Upright = new(false, false, false, true, true, true);
 
     private readonly DaggerfallLooseItemTuning tuning = tuning.Validate();
@@ -53,6 +56,11 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
     private readonly HashSet<long> woken = [];
     private readonly Dictionary<long, Vector3> dropped = [];
     private readonly List<DynamicsAction> actions = [];
+    // Bodies that touched one just removed, to be woken so the Engine settles them without it.
+    private readonly HashSet<long> unsupported = [];
+    // The pile contents the bodies were weighed at, and the collision the world was last stepped against.
+    private ulong? weighed;
+    private ulong? stepped;
     private readonly Queue<double> costs = new();
     private DynamicsWorld? world;
     private Vector3 held;
@@ -62,7 +70,7 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
     {
         internal DynamicsBody Handle { get; } = handle;
         internal Vector3 Half { get; } = half;
-        internal float Mass { get; } = mass;
+        internal float Mass { get; set; } = mass;
         /// <summary>The billboard size it was made for.</summary>
         internal Vector2 Size { get; } = size;
         internal Vector3 Centre { get; set; } = centre;
@@ -138,6 +146,8 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
         bodies.Clear();
         actions.Clear();
         Carried = null;
+        unsupported.Clear();
+        stepped = null;
         world?.Dispose();
         world = null;
     }
@@ -162,7 +172,7 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
                 if (!body.Sleeping) woken.Add(id);
                 Remove(id);
             }
-            else if (id != Carried && body.Sleeping && Vector3.Distance(item.Foot, feet) > tuning.ActivationRadius + RetireMargin) Remove(id);
+            else if (id != Carried && body.Sleeping && Vector3.Distance(item.Foot, feet) > tuning.ActivationRadius + RetireMargin) Remove(id, unsupporting: false);
             else if (Vector3.Distance(item.Foot, body.Centre - Vector3.UnitY * body.Half.Y) > Placed) Remove(id);
         }
         foreach (long gone in dropped.Keys.Concat(woken).Where(id => !here.ContainsKey(id)).ToArray())
@@ -175,9 +185,15 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
                 && site.Collides(item.Foot + Vector3.UnitY * Half(size).Y))
                 Create(item.Id, item.Foot, size, site);
         if (Carried is long carried && !bodies.ContainsKey(carried)) Carried = null;
+        if (weighed != site.ContentsRevision) Weigh(site);
         if (world is null || elapsed <= 0) return;
         if (Carried is long holding) Drive(bodies[holding], hand, elapsed);
-        if (actions.Count == 0 && bodies.Values.All(body => body.Sleeping)) return;
+        foreach (long id in unsupported)
+            if (bodies.TryGetValue(id, out Body? body)) actions.Add(new(body.Handle, Vector3.Zero, Vector3.Zero, Vector3.Zero, Vector3.Zero, true));
+        unsupported.Clear();
+        // While every body sleeps and nothing touched them or the collision under them, there is nothing to step.
+        if (actions.Count == 0 && stepped == site.CollisionVersion && bodies.Values.All(body => body.Sleeping)) return;
+        stepped = site.CollisionVersion;
 
         long start = Stopwatch.GetTimestamp();
         uint steps = (uint)Math.Max(1, MathF.Ceiling(elapsed * tuning.StepsPerSecond));
@@ -212,9 +228,24 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
         float mass = Math.Max(site.Kilograms(id), tuning.MinimumKilograms);
         bool awake = dropped.Remove(id, out Vector3 velocity) | woken.Remove(id);
         DynamicsBody handle = dynamics.CreateCuboidBody(new(world, new DynamicsCuboidBodyConfig(new Transform(centre, Quaternion.Identity, Vector3.One), half,
-            new DynamicsBodyProperties(mass, default, velocity, Vector3.Zero, Upright, tuning.LinearDamping, 0, 1, tuning.Friction, tuning.Restitution,
-                ItemGroup, uint.MaxValue, true, !awake, true))));
+            Properties(mass, velocity, !awake))));
         bodies.Add(id, new Body(handle, half, mass, size, centre, !awake) { Velocity = velocity });
+    }
+
+    private DynamicsBodyProperties Properties(float mass, Vector3 velocity, bool sleeping) => new(mass, default, velocity, Vector3.Zero, Upright,
+        tuning.LinearDamping, 0, 1, tuning.Friction, tuning.Restitution, ItemGroup, uint.MaxValue, true, sleeping, true);
+
+    /// <summary>Weighs every body's pile again once any pile's contents changed, as part of one is taken.</summary>
+    private void Weigh(DaggerfallLooseItemSite site)
+    {
+        weighed = site.ContentsRevision;
+        foreach ((long id, Body body) in bodies)
+        {
+            float mass = Math.Max(site.Kilograms(id), tuning.MinimumKilograms);
+            if (MathF.Abs(mass - body.Mass) < 1e-4f) continue;
+            body.Mass = mass;
+            dynamics.UpdateBody(new(body.Handle, Properties(mass, body.Velocity, body.Sleeping)));
+        }
     }
 
     /// <summary>
@@ -237,11 +268,21 @@ internal sealed class DaggerfallLooseItems(IDynamicsService dynamics, Daggerfall
         return null;
     }
 
-    private void Remove(long id)
+    /// <summary>
+    /// Lets go of a pile's body. One taken or remade (<paramref name="unsupporting"/>) leaves the bodies it touched to be
+    /// woken, so one resting on it falls.
+    /// </summary>
+    private void Remove(long id, bool unsupporting = true)
     {
         bodies.Remove(id, out Body? body);
         body!.Handle.Dispose();
         if (Carried == id) Carried = null;
+        if (!unsupporting) return;
+        foreach ((long other, Body near) in bodies)
+            if (MathF.Abs(near.Centre.X - body.Centre.X) <= near.Half.X + body.Half.X + Touching
+                && MathF.Abs(near.Centre.Y - body.Centre.Y) <= near.Half.Y + body.Half.Y + Touching
+                && MathF.Abs(near.Centre.Z - body.Centre.Z) <= near.Half.Z + body.Half.Z + Touching)
+                unsupported.Add(other);
     }
 
     /// <summary>Moves the carried item toward where it is held, closing the gap at the tuning's pace, its weight borne.</summary>
