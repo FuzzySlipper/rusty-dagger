@@ -132,6 +132,64 @@ public sealed class DaggerfallEnemyMagicSessionTests
         Assert.Single(session.Casting.PendingRangedFlights, flight => flight.CasterId == imp);
     }
 
+    /// <summary>
+    /// A room with a floor at the casters' feet and, between caster and player, perhaps a pillar: the Engine's capsule
+    /// queries meet the floor when the capsule dips below it and the pillar when its sweep passes within reach of it.
+    /// A lane swept along the floor is never clear; one swept at chest height is, unless the pillar stands in it.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_ground_casters_lane_runs_at_chest_height_clear_over_the_floor_and_held_by_a_pillar(bool pillar)
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long caster = session.SpawnActor("imp", new ActorPose(playerPosition with { Z = playerPosition.Z - 10f }, 0f), level: 1);
+        session.State.Actors.Get(caster).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        fixture.Perception.Receipt = Receipt(new PerceptionPair(
+            checked((ulong)caster), checked((ulong)DaggerfallActorIdentity.PlayerEntityId), 10d, 1d,
+            PerceptionPairKind.Visible, 1d));
+        float floor = playerPosition.Y;
+        // The pillar stands halfway between where the caster was placed and the player.
+        Vector3 placed = session.State.Actors.Get(caster).Position.ToVector();
+        Vector2 column = new((placed.X + playerPosition.X) / 2f, (placed.Z + playerPosition.Z) / 2f);
+        SpatialHit Room(SpatialCapsuleQueryRequest request)
+        {
+            Vector3 start = request.Center, end = request.Center + request.Translation;
+            float reach = (float)(request.Radius + request.HalfHeight);
+            if (MathF.Min(start.Y, end.Y) - reach < floor)
+                return new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Point = start with { Y = floor } };
+            Vector2 a = new(start.X, start.Z), b = new(end.X, end.Z), along = b - a;
+            float t = along.LengthSquared() > 0f ? Math.Clamp(Vector2.Dot(column - a, along) / along.LengthSquared(), 0f, 1f) : 0f;
+            return pillar && Vector2.Distance(a + along * t, column) <= .3f + (float)request.Radius
+                ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Point = new(column.X, start.Y, column.Y) }
+                : default;
+        }
+        fixture.Spatial.OverlapHit = Room;
+        fixture.Spatial.CapsuleCastHit = Room;
+        // The caster stands where it was placed, so its lane runs through the pillar's spot.
+        fixture.Spatial.KeepPosition = true;
+        fixture.Spatial.FloorHit = _ => default;
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        if (pillar)
+        {
+            // Behind the pillar the bolt is held: no spell, no magicka spent, and the caster closes in instead.
+            Assert.DoesNotContain(caster, session.LastEnemySpell);
+            Assert.Empty(session.Casting.PendingRangedFlights);
+            Assert.Equal(EnemyBehaviorState.Chase, session.EnemyBehavior.LastEvidence[caster].State);
+            return;
+        }
+        Assert.Equal(DaggerfallCastOutcome.Released, session.LastEnemySpell[caster].Outcome);
+        Assert.Single(session.Casting.PendingRangedFlights);
+        // The bolt leaves the caster's chest and flies level at the player's.
+        DaggerfallDungeonSpellFlightView bolt = Assert.Single(session.SpellFlights.Views());
+        Assert.Equal(floor + DaggerfallContactBody.ChestHeight, bolt.Position.Y, 3);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

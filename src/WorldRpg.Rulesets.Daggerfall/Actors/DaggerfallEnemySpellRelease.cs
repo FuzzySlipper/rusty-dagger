@@ -29,8 +29,9 @@ internal sealed class DaggerfallEnemySpellRelease(DaggerfallCasting casting, Dag
         DaggerfallCastResult ready = casting.Ready(attempt.ActorId, attempt.SpellKey);
         if (ready.Outcome != DaggerfallCastOutcome.Ready) return ready;
         Vector3 origin = attempt.Origin.ToVector();
+        // A missile leaves the caster's chest, an arm's length along its aim, as its lane was swept.
         if (attempt.Target is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
-            origin += attempt.Direction * DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
+            origin += Vector3.UnitY * DaggerfallContactBody.ChestHeight + attempt.Direction * DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
         // The behavior admitted its target in touch reach; touch delivery decides whom the touch reaches.
         DaggerfallTouchReach reach = attempt.Target == DaggerfallSpellTarget.ByTouch
             ? touch(new(attempt.ActorId, origin + Vector3.UnitY * (DaggerfallContactBody.Envelope.Height * DaggerfallContactBody.EyeFraction), attempt.Direction, attempt.TargetId))
@@ -51,14 +52,16 @@ internal sealed class DaggerfallEnemySpellRelease(DaggerfallCasting casting, Dag
     /// <summary>
     /// Applies the donor's ranged admission boundary through the one Engine spatial owner: whether a missile from
     /// <paramref name="casterId"/> standing at <paramref name="origin"/> would reach <paramref name="target"/>. The
-    /// projectile starts at the authored arm distance, checks its radius at that origin, then sweeps to the target.
-    /// Only the target aimed at is an allowed hit; static cover and any other actor, the player included, reject the
-    /// action before readiness or magicka deduction.
+    /// projectile starts at the authored arm distance from the caster's chest, checks its radius at that origin, then
+    /// sweeps to the target's chest; both stand on their feet, so the lane runs clear of the floor between them. Only
+    /// the target aimed at is an allowed hit; static cover and any other actor, the player included, reject the action
+    /// before readiness or magicka deduction.
     /// </summary>
     internal bool LaneClear(long casterId, WorldPoint origin, PursuitTarget target)
     {
-        Vector3 from = origin.ToVector();
-        Vector3 aim = target.Position.ToVector();
+        Vector3 chest = Vector3.UnitY * DaggerfallContactBody.ChestHeight;
+        Vector3 from = origin.ToVector() + chest;
+        Vector3 aim = target.Position.ToVector() + chest;
         Vector3 delta = aim - from;
         if (!DaggerfallSpellTargets.ValidDirection(delta)) return false;
         float distance = delta.Length();
