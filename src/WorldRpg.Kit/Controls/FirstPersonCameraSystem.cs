@@ -83,6 +83,12 @@ public sealed class FirstPersonCameraSystem : IDisposable
         _cameraView.UpdateCamera(new CameraUpdateRequest(_camera, Descriptor(_player, eyeHeightOffset)));
     }
 
+    /// <summary>Makes this camera the active one again, after another view (a map, say) held the screen.</summary>
+    public void Activate()
+    {
+        if (!_disposed) _cameraView.SetActiveCamera(_camera);
+    }
+
     /// <summary>Knocks the view by these angles, on top of the look. The player's aim never moves.</summary>
     public void Punch(double pitchDegrees, double yawDegrees)
     {

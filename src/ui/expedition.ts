@@ -1,6 +1,9 @@
-import { isTravelMap, mountAtlas, type AtlasBand, type AtlasMarks, type TravelMapProjection } from './atlas.js';
 import { button } from './host.js';
+import { BACK_EVENT, DIRECTION_EVENT, type Direction } from './navigation.js';
 import { redraw } from './redraw.js';
+
+/** The name the page anchors the travel map's view under, where the ruleset's map camera draws. */
+export const TRAVEL_MAP_ANCHOR = 'travel-map';
 
 /** A point on the expedition map, and the place there when the ruleset names one. */
 export interface ExpeditionMarkProjection { readonly x: number; readonly y: number; readonly name: string | null }
@@ -18,17 +21,20 @@ export interface ExpeditionBandProjection {
   readonly name: string; readonly kind: string; readonly x: number; readonly y: number; readonly camp: boolean; readonly spotted: boolean;
 }
 
+/** A name over the travel map, where the view puts it: across and down the view from its top left, 0 to 1. */
+export interface ExpeditionLabelProjection { readonly name: string; readonly kind: string; readonly across: number; readonly down: number }
+
 export type ExpeditionMode = 'cautious' | 'reckless' | 'halt' | 'camp';
 
 /**
- * The expedition map as the ruleset publishes it: the atlas, the party between pixels and where it heads, the pin, how
- * it goes and how fast time runs, the land, weather and hour, the ship, lodging and vitals, what Leave and Enter do,
- * a waiting encounter or a guild teleport's choice, the map's line and the last Find, and how far the party sees with
- * the bands within it.
+ * The expedition's travel map as the ruleset publishes it about the world the Engine draws: the names over it and the
+ * way its view faces, where the party heads, the pin, how it goes and how fast time runs, the land, weather and hour,
+ * the ship, lodging and vitals, what Leave and Enter do, a waiting encounter or a guild teleport's choice, the map's
+ * line and the last Find, and the bands within the party's sight, which the map draws and the panel lists.
  */
 export interface ExpeditionProjection {
-  readonly map: TravelMapProjection;
-  readonly party: { readonly x: number; readonly y: number; readonly heading: number | null };
+  readonly labels: readonly ExpeditionLabelProjection[];
+  readonly view: { readonly heading: number; readonly following: boolean };
   readonly destination: ExpeditionMarkProjection | null;
   readonly pin: ExpeditionMarkProjection | null;
   readonly mode: ExpeditionMode;
@@ -57,26 +63,28 @@ export interface ExpeditionProjection {
   readonly teleportPlace: string | null;
   readonly message: string | null;
   readonly found: readonly ExpeditionFoundProjection[];
-  readonly sight: number;
   readonly bands: readonly ExpeditionBandProjection[];
 }
 
 export type ExpeditionAction =
-  | { readonly action: 'expedition-open' | 'expedition-places' | 'expedition-stop' | 'expedition-ship' | 'expedition-leave' | 'expedition-enter' }
+  | { readonly action: 'expedition-open' | 'expedition-stop' | 'expedition-ship' | 'expedition-leave' | 'expedition-enter' | 'expedition-follow' }
   | { readonly action: 'expedition-speed'; readonly speed: number }
   | { readonly action: 'expedition-mode'; readonly mode: ExpeditionMode }
   | { readonly action: 'expedition-go' | 'expedition-pin'; readonly x: number; readonly y: number; readonly region?: number; readonly index?: number }
   | { readonly action: 'expedition-pin' }
   | { readonly action: 'expedition-find'; readonly text: string }
-  | { readonly action: 'atlas-tiles'; readonly tiles: readonly [number, number, number][] };
+  | { readonly action: 'expedition-look'; readonly x: number; readonly y: number }
+  | { readonly action: 'expedition-go-at' | 'expedition-pin-at'; readonly point: readonly [number, number] }
+  /** Moves the view: [turn degrees clockwise, tilt degrees steeper, right and forward in eye distances, zoom steps nearer]. */
+  | { readonly action: 'expedition-view'; readonly view: readonly [number, number, number, number, number] };
 
 export function isExpeditionProjection(value: unknown): value is ExpeditionProjection {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
-  const party = record.party as Record<string, unknown> | null;
-  return isTravelMap(record.map) && typeof party === 'object' && party !== null && Number.isFinite(party.x) && Number.isFinite(party.y)
+  const view = record.view as Record<string, unknown> | null;
+  return Array.isArray(record.labels) && typeof view === 'object' && view !== null && Number.isFinite(view.heading)
     && typeof record.mode === 'string' && Number.isInteger(record.speed) && Number.isInteger(record.speeds)
-    && typeof record.enterLabel === 'string' && Array.isArray(record.found) && Number.isFinite(record.sight) && Array.isArray(record.bands);
+    && typeof record.enterLabel === 'string' && Array.isArray(record.found) && Array.isArray(record.bands);
 }
 
 const MODES: readonly { readonly mode: ExpeditionMode; readonly label: string; readonly tooltip: string }[] = [
@@ -94,13 +102,25 @@ const WEATHER: Readonly<Record<string, string>> = {
   sunny: 'Clear', cloudy: 'Cloudy', overcast: 'Overcast', fog: 'Fog', rain: 'Rain', thunder: 'Thunderstorm', snow: 'Snow',
 };
 
+/** How far one step of the keys or the pad moves the view: a quarter of an eye distance, fifteen degrees, five of tilt. */
+const PAN_STEP = .25, TURN_STEP = 15, TILT_STEP = 5;
+/** How far a drag across the whole view moves it: the land under the pointer stays about under it. */
+const DRAG_PAN = .9, DRAG_TURN = 180, DRAG_TILT = 60;
+/** A press that moves less than this many pixels is a click. */
+const CLICK_SLOP = 5;
+
 /**
- * The expedition map: the party crosses the atlas while time runs. Click the land to set out, or choose a place; the
- * top bar shows the hour and weather and sets the speed, the side panel finds and pins places and boards ships, and the
- * bottom bar chooses how the party goes, shows its vitals and leaves the map, on foot from where it stands. The camera
- * follows the party until the view is moved by hand; I'm at follows it again.
+ * The expedition's travel map: the party crosses the land the Engine draws while time runs. The ruleset's map camera
+ * draws into the view between the bars; the page only says where the view is and sends what the pointer, the keys and
+ * the pad ask of it. A click sets out for the land under the pointer (Alt or the secondary button pins it), a drag
+ * pans the land, a secondary drag turns and tilts it and the wheel zooms; the view's own buttons turn, tilt and zoom,
+ * and, focused, the keys pan, turn, tilt and zoom it, or accepting it lets the pad's directions pan it. The top bar
+ * shows the hour and weather and sets the speed, the side panel finds and pins places, opens the world map and boards
+ * ships, and the bottom bar chooses how the party goes, shows its vitals and leaves the map. The view follows the
+ * party until it is moved by hand; I'm at follows it again.
  */
-export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionAction) => void, openMenu: () => void): {
+export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionAction) => void, openMenu: () => void,
+  anchor: (name: string, element: Element) => () => void, openWorldMap: () => void): {
   readonly root: HTMLElement;
   update(value: ExpeditionProjection | null): void;
   isOpen(): boolean;
@@ -110,18 +130,17 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   page(direction: -1 | 1): void;
   pageHint(): string | null;
   initialFocus(): HTMLElement | null;
-  refreshArt(): void;
   dispose(): void;
 } {
   const root = document.createElement('section');
-  root.className = 'dagger-expedition dagger-frame';
+  root.className = 'dagger-expedition';
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-label', 'Travel map');
   root.hidden = true;
 
   // The top bar: the hour and weather, and how fast time runs.
   const top = document.createElement('header');
-  top.className = 'dagger-expedition-top dagger-panel';
+  top.className = 'dagger-expedition-top dagger-frame';
   const clock = document.createElement('p');
   clock.className = 'dagger-expedition-clock';
   const speeds = document.createElement('div');
@@ -130,9 +149,42 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   speeds.setAttribute('aria-label', 'Time');
   top.append(clock, speeds);
 
-  // The side panel: Find, I'm at, the ship and the pin.
+  // The view: where the map camera draws, the names over the land, and the view's own controls.
+  const view = document.createElement('div');
+  view.className = 'dagger-expedition-view';
+  view.tabIndex = 0;
+  view.setAttribute('role', 'application');
+  const labels = document.createElement('div');
+  labels.className = 'dagger-expedition-labels';
+  labels.setAttribute('aria-hidden', 'true');
+  const crosshair = document.createElement('div');
+  crosshair.className = 'dagger-expedition-crosshair';
+  crosshair.setAttribute('aria-hidden', 'true');
+  const hint = document.createElement('p');
+  hint.className = 'dagger-expedition-hint';
+  const controls = document.createElement('div');
+  controls.className = 'dagger-expedition-view-controls';
+  controls.setAttribute('role', 'group');
+  controls.setAttribute('aria-label', 'View');
+  const viewButton = (text: string, label: string, move: readonly [number, number, number, number, number]): HTMLButtonElement => {
+    const control = button(text);
+    control.setAttribute('aria-label', label);
+    control.dataset.tooltip = label;
+    control.addEventListener('click', () => claim({ action: 'expedition-view', view: move }));
+    return control;
+  };
+  const compass = document.createElement('span');
+  compass.className = 'dagger-expedition-compass';
+  compass.setAttribute('aria-hidden', 'true');
+  compass.textContent = 'N';
+  controls.append(viewButton('⟲', 'Turn the view left', [-TURN_STEP, 0, 0, 0, 0]), compass, viewButton('⟳', 'Turn the view right', [TURN_STEP, 0, 0, 0, 0]),
+    viewButton('▲', 'Look down more steeply', [0, TILT_STEP, 0, 0, 0]), viewButton('▼', 'Look out more level', [0, -TILT_STEP, 0, 0, 0]),
+    viewButton('+', 'Zoom in', [0, 0, 0, 0, 1]), viewButton('−', 'Zoom out', [0, 0, 0, 0, -1]));
+  view.append(labels, crosshair, controls, hint);
+
+  // The side panel: Find, I'm at, the world map, the ship and the pin.
   const side = document.createElement('aside');
-  side.className = 'dagger-expedition-side dagger-panel';
+  side.className = 'dagger-expedition-side dagger-frame';
   const findForm = document.createElement('form');
   findForm.className = 'dagger-expedition-find';
   const findText = document.createElement('input');
@@ -150,28 +202,36 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   found.setAttribute('aria-label', 'Places found');
   const imAt = button("I'm at");
   imAt.dataset.tooltip = 'Centre on the party and follow it.';
+  const worldMap = button('World map');
+  worldMap.dataset.tooltip = 'Browse the atlas of the Iliac Bay, find and pin places, and travel to them.';
   const centreGo = button('Go to centre');
-  centreGo.dataset.tooltip = 'Set out for the middle of the map, where the view is centred.';
+  centreGo.dataset.tooltip = 'Set out for the land under the middle of the view.';
   const ship = button('Board ship');
   const pinHeading = document.createElement('h3');
   pinHeading.textContent = 'Pin';
   const pinLabel = document.createElement('p');
   pinLabel.className = 'dagger-expedition-pin-label';
   const setPin = button('Set pin');
-  setPin.dataset.tooltip = 'Pin where the party heads, or the middle of the map.';
+  setPin.dataset.tooltip = 'Pin where the party heads, or the land under the middle of the view.';
   const goToPin = button('Go to');
-  goToPin.dataset.tooltip = 'Centre the map on the pin.';
+  goToPin.dataset.tooltip = 'Look at the pin.';
   const travelToPin = button('Travel');
   travelToPin.dataset.tooltip = 'Set out for the pin.';
   const clearPin = button('Clear');
   const pinButtons = document.createElement('div');
   pinButtons.className = 'dagger-expedition-pin';
   pinButtons.append(setPin, goToPin, travelToPin, clearPin);
-  side.append(findForm, found, imAt, centreGo, ship, pinHeading, pinLabel, pinButtons);
+  const sightHeading = document.createElement('h3');
+  sightHeading.textContent = 'In sight';
+  const inSight = document.createElement('div');
+  inSight.className = 'dagger-expedition-in-sight';
+  inSight.setAttribute('role', 'group');
+  inSight.setAttribute('aria-label', 'Bands in sight');
+  side.append(findForm, found, imAt, worldMap, centreGo, ship, pinHeading, pinLabel, pinButtons, sightHeading, inSight);
 
   // The bottom bar: how the party goes, its vitals, the line, and leaving.
   const bottom = document.createElement('footer');
-  bottom.className = 'dagger-expedition-bottom dagger-panel';
+  bottom.className = 'dagger-expedition-bottom dagger-frame';
   const modes = document.createElement('div');
   modes.className = 'dagger-expedition-modes';
   modes.setAttribute('role', 'group');
@@ -199,45 +259,119 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   bottom.append(modes, vitals, status, exits);
 
   let current: ExpeditionProjection | null = null;
-  let following = true;
-  const atlas = mountAtlas(tiles => claim({ action: 'atlas-tiles', tiles }),
-    (region, index) => {
-      const place = atlas.place(`${region}:${index}`);
-      if (place) claim({ action: 'expedition-go', x: place.x, y: place.y, region, index });
-    },
-    () => claim({ action: 'expedition-places' }),
-    { pick: (x, y) => claim({ action: 'expedition-go', x, y }), panned: () => { following = false; } });
   const body = document.createElement('div');
   body.className = 'dagger-expedition-body';
-  body.append(atlas.element, side);
+  body.append(view, side);
   root.append(top, body, bottom);
   // Over the HUD and under every dialog (the menu, a quest's question, a confirmation): the window's Servo has no top
   // layer, so a dialog stays above the map only by coming after it.
   const firstDialog = parent.querySelector('dialog');
   if (firstDialog) firstDialog.before(root); else parent.append(root);
+  // The map camera draws where the view stands on the page, following it on every layout.
+  const unanchor = anchor(TRAVEL_MAP_ANCHOR, view);
+
+  const move = (turn: number, tilt: number, right: number, forward: number, zoom: number): void => {
+    const clamp = (value: number, limit: number): number => Math.max(-limit, Math.min(limit, value));
+    claim({ action: 'expedition-view', view: [clamp(turn, 180), clamp(tilt, 90), clamp(right, 4), clamp(forward, 4), clamp(zoom, 8)] });
+  };
+  /** A point of the view, across and down from its top left, 0 to 1. */
+  const pointOf = (event: { readonly clientX: number; readonly clientY: number }): [number, number] => {
+    const box = view.getBoundingClientRect();
+    const fit = (value: number): number => Math.max(0, Math.min(1, value));
+    return [fit(box.width > 0 ? (event.clientX - box.left) / box.width : .5), fit(box.height > 0 ? (event.clientY - box.top) / box.height : .5)];
+  };
+
+  // The pointer: a click sets out or pins, a drag pans, a secondary drag turns and tilts, the wheel zooms.
+  let press: { x: number; y: number; button: number; moved: boolean; pointer: number } | null = null;
+  view.addEventListener('pointerdown', event => {
+    if ((event.target as HTMLElement).closest('button')) return;
+    press = { x: event.clientX, y: event.clientY, button: event.button, moved: false, pointer: event.pointerId };
+    view.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  });
+  view.addEventListener('pointermove', event => {
+    if (!press) return;
+    const dx = event.clientX - press.x, dy = event.clientY - press.y;
+    if (!press.moved && Math.hypot(dx, dy) < CLICK_SLOP) return;
+    press.moved = true;
+    const box = view.getBoundingClientRect();
+    const width = Math.max(box.width, 1), height = Math.max(box.height, 1);
+    if (press.button === 2) move(dx / width * DRAG_TURN, dy / height * DRAG_TILT, 0, 0, 0);
+    else move(0, 0, -dx / height * DRAG_PAN, dy / height * DRAG_PAN, 0);
+    press.x = event.clientX;
+    press.y = event.clientY;
+  });
+  const endPress = (event: PointerEvent): void => {
+    const ended = press;
+    press = null;
+    if (!ended || ended.moved || event.type === 'pointercancel') return;
+    if (ended.button === 2 || event.altKey) claim({ action: 'expedition-pin-at', point: pointOf(event) });
+    else if (ended.button === 0) claim({ action: 'expedition-go-at', point: pointOf(event) });
+  };
+  view.addEventListener('pointerup', endPress);
+  view.addEventListener('pointercancel', endPress);
+  view.addEventListener('contextmenu', event => event.preventDefault());
+  view.addEventListener('wheel', event => {
+    event.preventDefault();
+    move(0, 0, 0, 0, event.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
+
+  // The keys and the pad, on the focused view: WASD pan, Q and E turn, R and F tilt, + and - zoom. Accepting it lets the
+  // arrows and the pad's directions pan it, until accept or Back; otherwise they move focus, as everywhere.
+  let panning = false;
+  const setPanning = (on: boolean): void => {
+    panning = on;
+    view.classList.toggle('is-panning', on);
+    view.setAttribute('aria-pressed', String(on));
+    view.setAttribute('aria-label', on ? 'Travel map, moving the view' : 'Travel map');
+    hint.textContent = on ? 'Directions pan · triggers or Page Up and Down zoom · accept or Back to stop'
+      : 'Click to set out · Alt or right click to pin · drag to pan · right drag to turn · wheel to zoom';
+  };
+  setPanning(false);
+  const pan = (direction: Direction): void => {
+    const [right, forward] = direction === 'left' ? [-PAN_STEP, 0] : direction === 'right' ? [PAN_STEP, 0] : direction === 'up' ? [0, PAN_STEP] : [0, -PAN_STEP];
+    move(0, 0, right, forward, 0);
+  };
+  view.addEventListener(DIRECTION_EVENT, event => {
+    if (!panning || document.activeElement !== view) return;
+    event.preventDefault();
+    pan((event as CustomEvent<Direction>).detail);
+  });
+  view.addEventListener(BACK_EVENT, event => {
+    if (!panning || document.activeElement !== view) return;
+    event.preventDefault();
+    setPanning(false);
+  });
+  // A controller's accept clicks the focused control; a mouse click on the view is a choice of land, not a request to pan.
+  view.addEventListener('click', event => { if (event.target === view && event.detail === 0) setPanning(!panning); });
+  const KEYS: Readonly<Record<string, () => void>> = {
+    KeyW: () => pan('up'), KeyS: () => pan('down'), KeyA: () => pan('left'), KeyD: () => pan('right'),
+    KeyQ: () => move(-TURN_STEP, 0, 0, 0, 0), KeyE: () => move(TURN_STEP, 0, 0, 0, 0),
+    KeyR: () => move(0, TILT_STEP, 0, 0, 0), KeyF: () => move(0, -TILT_STEP, 0, 0, 0),
+    Equal: () => move(0, 0, 0, 0, 1), NumpadAdd: () => move(0, 0, 0, 0, 1), Minus: () => move(0, 0, 0, 0, -1), NumpadSubtract: () => move(0, 0, 0, 0, -1),
+  };
+  view.addEventListener('keydown', event => {
+    if (event.target !== view) return;
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setPanning(!panning); return; }
+    const key = KEYS[event.code];
+    if (key) { event.preventDefault(); key(); }
+  });
+  view.addEventListener('blur', () => setPanning(false));
 
   findForm.addEventListener('submit', event => {
     event.preventDefault();
     claim({ action: 'expedition-find', text: findText.value });
   });
-  imAt.addEventListener('click', () => {
-    following = true;
-    if (current) atlas.centre(current.party.x, current.party.y);
-  });
-  centreGo.addEventListener('click', () => {
-    const [x, y] = atlas.centrePixel();
-    claim({ action: 'expedition-go', x, y });
-  });
+  imAt.addEventListener('click', () => claim({ action: 'expedition-follow' }));
+  worldMap.addEventListener('click', openWorldMap);
+  centreGo.addEventListener('click', () => claim({ action: 'expedition-go-at', point: [.5, .5] }));
   ship.addEventListener('click', () => claim({ action: 'expedition-ship' }));
   setPin.addEventListener('click', () => {
     const destination = current?.destination;
-    const [x, y] = destination ? [destination.x, destination.y] : atlas.centrePixel();
-    claim({ action: 'expedition-pin', x, y });
+    claim(destination ? { action: 'expedition-pin', x: destination.x, y: destination.y } : { action: 'expedition-pin-at', point: [.5, .5] });
   });
   goToPin.addEventListener('click', () => {
-    if (!current?.pin) return;
-    following = false;
-    atlas.centre(current.pin.x + .5, current.pin.y + .5);
+    if (current?.pin) claim({ action: 'expedition-look', x: current.pin.x, y: current.pin.y });
   });
   travelToPin.addEventListener('click', () => {
     const pin = current?.pin;
@@ -267,96 +401,113 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
     return bar;
   };
 
-  const journeyLine = (view: ExpeditionProjection): string => {
-    if (view.teleport) return view.teleportPlace ? `The guild will teleport you to ${view.teleportPlace}.` : 'Choose a place you know for the guild to teleport you.';
-    const where = view.here ? `At ${view.here}` : view.swimming ? 'In the water' : `In the ${view.land.toLowerCase()}`;
-    const aboard = view.ship === 'owned' ? ', aboard your ship' : view.ship === 'hired' ? ', aboard a hired ship'
-      : view.swimming ? '' : `, ${TRANSPORT[view.transport] ?? 'on foot'}`;
-    const going = view.destination === null ? ''
-      : view.mode === 'halt' ? ' · halted' : view.mode === 'camp' ? '' : ` · heading for ${view.destination.name ?? 'the marked spot'}`
-        + (view.remaining ? `, about ${view.remaining} away` : '');
-    const camp = view.mode === 'camp' ? view.lodging !== null ? ` · lodging, ${view.lodging} gold a night` : ' · in camp' : '';
+  const journeyLine = (state: ExpeditionProjection): string => {
+    if (state.teleport) return state.teleportPlace ? `The guild will teleport you to ${state.teleportPlace}.` : 'Choose a place you know for the guild to teleport you.';
+    const where = state.here ? `At ${state.here}` : state.swimming ? 'In the water' : `In the ${state.land.toLowerCase()}`;
+    const aboard = state.ship === 'owned' ? ', aboard your ship' : state.ship === 'hired' ? ', aboard a hired ship'
+      : state.swimming ? '' : `, ${TRANSPORT[state.transport] ?? 'on foot'}`;
+    const going = state.destination === null ? ''
+      : state.mode === 'halt' ? ' · halted' : state.mode === 'camp' ? '' : ` · heading for ${state.destination.name ?? 'the marked spot'}`
+        + (state.remaining ? `, about ${state.remaining} away` : '');
+    const camp = state.mode === 'camp' ? state.lodging !== null ? ` · lodging, ${state.lodging} gold a night` : ' · in camp' : '';
     return `${where}${aboard}${going}${camp}.`;
   };
 
-  const render = (view: ExpeditionProjection): void => {
-    clock.textContent = `${view.time} on ${view.date} · ${WEATHER[view.weather] ?? view.weather}`;
-    redraw(speeds, JSON.stringify([view.speed, view.speeds, view.teleport, view.encounter]), () => {
+  const render = (state: ExpeditionProjection): void => {
+    clock.textContent = `${state.time} on ${state.date} · ${WEATHER[state.weather] ?? state.weather}`;
+    redraw(speeds, JSON.stringify([state.speed, state.speeds, state.teleport, state.encounter]), () => {
       speeds.replaceChildren();
-      for (let speed = 0; speed <= view.speeds; speed++) {
+      for (let speed = 0; speed <= state.speeds; speed++) {
         const control = button(SPEEDS[speed] ?? `Speed ${speed}`);
         control.dataset.speed = String(speed);
-        control.setAttribute('aria-pressed', String(view.speed === speed));
-        control.disabled = view.teleport || (view.encounter && speed > 0);
+        control.setAttribute('aria-pressed', String(state.speed === speed));
+        control.disabled = state.teleport || (state.encounter && speed > 0);
         control.addEventListener('click', () => claim({ action: 'expedition-speed', speed }));
         speeds.append(control);
       }
     });
-    redraw(modes, JSON.stringify([view.mode, view.lodging, view.swimming, view.teleport, view.encounter]), () => {
+    redraw(modes, JSON.stringify([state.mode, state.lodging, state.swimming, state.teleport, state.encounter]), () => {
       modes.replaceChildren();
       for (const entry of MODES) {
-        const control = button(entry.mode === 'camp' && view.lodging !== null ? `Camp · ${view.lodging} gold` : entry.label);
+        const control = button(entry.mode === 'camp' && state.lodging !== null ? `Camp · ${state.lodging} gold` : entry.label);
         control.dataset.mode = entry.mode;
         control.dataset.tooltip = entry.tooltip;
-        control.setAttribute('aria-pressed', String(view.mode === entry.mode));
-        control.disabled = view.teleport || view.encounter || (entry.mode === 'camp' && view.swimming);
+        control.setAttribute('aria-pressed', String(state.mode === entry.mode));
+        control.disabled = state.teleport || state.encounter || (entry.mode === 'camp' && state.swimming);
         control.addEventListener('click', () => claim({ action: 'expedition-mode', mode: entry.mode }));
         modes.append(control);
       }
     });
-    redraw(vitals, JSON.stringify([view.health, view.fatigue, view.magicka].map(value => [Math.round(value.current), Math.round(value.maximum)])), () =>
-      vitals.replaceChildren(vital('Health', view.health), vital('Fatigue', view.fatigue), vital('Magicka', view.magicka)));
-    redraw(found, JSON.stringify(view.found), () => {
+    redraw(vitals, JSON.stringify([state.health, state.fatigue, state.magicka].map(value => [Math.round(value.current), Math.round(value.maximum)])), () =>
+      vitals.replaceChildren(vital('Health', state.health), vital('Fatigue', state.fatigue), vital('Magicka', state.magicka)));
+    redraw(found, JSON.stringify(state.found), () => {
       found.replaceChildren();
-      for (const place of view.found.slice(0, 8)) {
+      // A few: the world map lists more, and the panel keeps room for the pin and the bands in sight.
+      for (const place of state.found.slice(0, 4)) {
         const control = button(`${place.name} · ${place.kind}`);
         control.dataset.region = String(place.region);
         control.dataset.index = String(place.index);
         control.addEventListener('click', () => {
-          following = false;
-          atlas.centre(place.x + .5, place.y + .5);
+          claim({ action: 'expedition-look', x: place.x, y: place.y });
           claim({ action: 'expedition-pin', x: place.x, y: place.y, region: place.region, index: place.index });
         });
         found.append(control);
       }
     });
-    journey.textContent = journeyLine(view);
-    message.textContent = view.message ?? '';
-    root.dataset.encounter = String(view.encounter);
-    ship.textContent = view.ship === 'none' ? view.shipFare > 0 ? `Board ship · ${view.shipFare} gold` : 'Board ship' : 'Go ashore';
-    ship.disabled = view.teleport || view.encounter || (view.ship === 'none' && !view.canBoard);
-    ship.dataset.tooltip = view.ship === 'none' ? 'Board a ship at a port near the sea.' : 'Leave the ship where it has landed.';
-    pinLabel.textContent = view.pin ? view.pin.name ?? `The marked spot (${view.pin.x}, ${view.pin.y})` : 'No pin set.';
-    goToPin.disabled = travelToPin.disabled = clearPin.disabled = view.pin === null;
-    travelToPin.disabled ||= view.teleport || view.encounter;
-    centreGo.disabled = view.encounter;
-    leave.textContent = view.teleport ? 'Cancel' : 'Close map';
-    leave.hidden = !view.canLeave;
-    enter.textContent = view.enterLabel;
-    enter.disabled = !view.canEnter;
-    const marks: AtlasMarks = {
-      party: { x: view.party.x, y: view.party.y, label: 'Your party', heading: view.party.heading },
-      destination: view.destination ? { x: view.destination.x + .5, y: view.destination.y + .5, label: view.destination.name ?? 'Destination' } : null,
-      pin: view.pin ? { x: view.pin.x + .5, y: view.pin.y + .5, label: view.pin.name ? `Pin: ${view.pin.name}` : 'Pin' } : null,
-      sight: view.sight,
-      bands: view.bands.map((band): AtlasBand => ({
-        x: band.x, y: band.y, kind: band.kind, camp: band.camp, spotted: band.spotted,
-        label: `${band.name}${band.spotted ? ', giving chase' : band.camp ? ', camped' : ''}`,
-      })),
-    };
-    const route = view.destination ? { fromX: view.party.x, fromY: view.party.y, toX: view.destination.x, toY: view.destination.y } : null;
-    atlas.update(view.map, '', route, marks);
-    if (following) atlas.follow(view.party.x, view.party.y);
+    // The bands the party sees, each looked at by choosing it: the map draws them, and keys and the pad reach them here.
+    redraw(inSight, JSON.stringify(state.bands.map(band => [band.name, band.kind, band.camp, band.spotted, Math.floor(band.x), Math.floor(band.y)])), () => {
+      inSight.replaceChildren();
+      if (state.bands.length === 0) {
+        const none = document.createElement('p');
+        none.className = 'dagger-expedition-none';
+        none.textContent = 'No one in sight.';
+        inSight.append(none);
+      }
+      for (const band of state.bands) {
+        const control = button(`${band.name}${band.spotted ? ' · giving chase' : band.camp ? ' · camped' : ''}`);
+        control.dataset.kind = band.kind;
+        control.dataset.spotted = String(band.spotted);
+        control.dataset.tooltip = 'Look at them.';
+        control.addEventListener('click', () => claim({ action: 'expedition-look', x: Math.floor(band.x), y: Math.floor(band.y) }));
+        inSight.append(control);
+      }
+    });
+    journey.textContent = journeyLine(state);
+    message.textContent = state.message ?? '';
+    root.dataset.encounter = String(state.encounter);
+    ship.textContent = state.ship === 'none' ? state.shipFare > 0 ? `Board ship · ${state.shipFare} gold` : 'Board ship' : 'Go ashore';
+    ship.disabled = state.teleport || state.encounter || (state.ship === 'none' && !state.canBoard);
+    ship.dataset.tooltip = state.ship === 'none' ? 'Board a ship at a port near the sea.' : 'Leave the ship where it has landed.';
+    pinLabel.textContent = state.pin ? state.pin.name ?? `The marked spot (${state.pin.x}, ${state.pin.y})` : 'No pin set.';
+    goToPin.disabled = travelToPin.disabled = clearPin.disabled = state.pin === null;
+    travelToPin.disabled ||= state.teleport || state.encounter;
+    centreGo.disabled = state.encounter;
+    leave.textContent = state.teleport ? 'Cancel' : 'Close map';
+    leave.hidden = !state.canLeave;
+    enter.textContent = state.enterLabel;
+    enter.disabled = !state.canEnter;
+    imAt.setAttribute('aria-pressed', String(state.view.following));
+    compass.style.transform = `rotate(${-state.view.heading}deg)`;
+    redraw(labels, JSON.stringify(state.labels.map(label => [label.name, label.kind, Math.round(label.across * 1000), Math.round(label.down * 1000)])), () => {
+      labels.replaceChildren();
+      for (const label of state.labels) {
+        const tag = document.createElement('span');
+        tag.className = 'dagger-expedition-label';
+        tag.dataset.kind = label.kind;
+        tag.textContent = label.name;
+        tag.style.left = `${label.across * 100}%`;
+        tag.style.top = `${label.down * 100}%`;
+        labels.append(tag);
+      }
+    });
   };
 
   return {
     root,
     update(value): void {
-      const opened = current === null && value !== null;
       current = value;
       root.hidden = value === null;
-      if (value === null) { atlas.update(null, '', null); following = true; return; }
-      if (opened) following = true;
+      if (value === null) { setPanning(false); return; }
       render(value);
     },
     isOpen: () => current !== null,
@@ -364,10 +515,9 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       if (current?.canLeave) claim({ action: 'expedition-leave' });
       else if (current) openMenu();
     },
-    page(direction): void { atlas.zoom(direction); },
+    page(direction): void { move(0, 0, 0, 0, direction); },
     pageHint: () => current ? 'Zoom' : null,
-    initialFocus: () => current?.canEnter && !current.canLeave ? enter : atlas.element,
-    refreshArt(): void { atlas.refreshArt(); },
-    dispose(): void { root.remove(); },
+    initialFocus: () => current?.canEnter && !current.canLeave ? enter : view,
+    dispose(): void { unanchor(); root.remove(); },
   };
 }

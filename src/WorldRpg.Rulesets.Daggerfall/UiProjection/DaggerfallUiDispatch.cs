@@ -263,7 +263,16 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.ExpeditionPin:
             case DaggerfallUiActionKind.ExpeditionFind:
             case DaggerfallUiActionKind.ExpeditionShip:
-            case DaggerfallUiActionKind.ExpeditionLeave: travel.Change(action); break;
+            case DaggerfallUiActionKind.ExpeditionLeave:
+            case DaggerfallUiActionKind.ExpeditionView:
+            case DaggerfallUiActionKind.ExpeditionFollow:
+            case DaggerfallUiActionKind.ExpeditionLook:
+            case DaggerfallUiActionKind.ExpeditionGoAt:
+            case DaggerfallUiActionKind.ExpeditionPinAt: travel.Change(action); break;
+            case DaggerfallUiActionKind.WorldMap:
+            case DaggerfallUiActionKind.WorldMapFind:
+            case DaggerfallUiActionKind.WorldMapPin:
+            case DaggerfallUiActionKind.WorldMapTravel: travel.ChangeWorldMap(action); break;
             // One rest per input slice: explicit elapsed time is applied once.
             case DaggerfallUiActionKind.LodgingQuote:
             case DaggerfallUiActionKind.LodgingBook: economy.ChangeLodging(action); break;

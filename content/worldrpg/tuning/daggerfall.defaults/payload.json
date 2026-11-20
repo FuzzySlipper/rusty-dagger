@@ -490,6 +490,8 @@
     "shipHire": 100,
     "portReach": 2,
     "lowFatigue": 0.2,
+    "map": { "relief": 4, "fieldOfView": 40, "tilt": [30, 82, 55], "distance": [2500, 60000, 12000], "token": 420, "house": 140,
+      "haze": { "sunny": 0.000006, "cloudy": 0.000007, "overcast": 0.00001, "fog": 0.00006, "rain": 0.00002, "thunder": 0.000025, "snow": 0.000025 } },
     "bands": {
       "stageEveryHours": 2,
       "stageChance": 40,

@@ -39,7 +39,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
     /// panoramas are classic art's alone, and a player's data leaves them out.</param>
     internal void Update(DaggerfallSiteProfile inputs, Vector3 worldOffset, DaggerfallSiteLighting lighting, DaggerfallSiteAppearance appearance,
         DaggerfallSkyTime sky, float daylight, float sunlight, int climate, DaggerfallWeatherConditions conditions, int variant, Vector3 player, bool sheltered,
-        double seconds, bool playing, float? horizonFog, bool cleared)
+        double seconds, bool playing, float? horizonFog, bool cleared, float? mapHaze = null)
     {
         DaggerfallWeatherKind weather = conditions.Kind;
         var zones = inputs.AmbientZones.Where(zone => zone.Contains(player - worldOffset)).ToArray();
@@ -71,7 +71,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         }
         air = (air * MathF.Max(daylight, _horizon.NightAir)) + new Vector3(_ambient.FlashIntensity * _horizon.FlashAir);
         Color airColor = new(air.X, air.Y, air.Z, 1);
-        _engine.CameraView.SetFog(Fog(inputs.ProfileKind, weather, horizonFog, closed ? airColor : null));
+        _engine.CameraView.SetFog(Fog(inputs.ProfileKind, weather, horizonFog, closed ? airColor : null, mapHaze));
         if (closed) _engine.CameraView.SetBackgroundColor(new(airColor));
         _closed = closed;
         Vector2 wind = Blowing(conditions);
@@ -226,8 +226,10 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         { _sky[id].Dispose(); _sky.Remove(id); }
     }
 
-    private FogRequest Fog(DaggerfallWorldProfileKind kind, DaggerfallWeatherKind weather, float? horizonFog, Color? air)
+    /// <param name="mapHaze">The travel map's haze while it is open, which its land is seen through wherever the player stands.</param>
+    private FogRequest Fog(DaggerfallWorldProfileKind kind, DaggerfallWeatherKind weather, float? horizonFog, Color? air, float? mapHaze)
     {
+        if (mapHaze is { } map) return new(FogMode.Exponential, Color.FromSrgb(_skyColor.R, _skyColor.G, _skyColor.B), 0, 0, map);
         if (kind != DaggerfallWorldProfileKind.Exterior)
             return new(FogMode.Exponential, new Color(0,0,0,1), 0, 0,
                 kind == DaggerfallWorldProfileKind.Dungeon ? _tuning.DungeonFogDensity : _tuning.InteriorFogDensity);

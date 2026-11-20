@@ -43,6 +43,8 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallCalendar? Calendar = null, IReadOnlyList<DaggerfallActiveEffectView>? Effects = null, string? CinematicSource = null, DaggerfallBreathRead? Breath = null,
     GameBundleChoices? Bundles = null)
 {
+    /// <summary>The world map, while the page shows it.</summary>
+    internal DaggerfallWorldMapView? WorldMap { get; init; }
     internal bool ActionDrivenTime { get; init; }
     internal bool TimeHeld { get; init; }
     /// <summary>What the open map panel says where the player's place has no map; null while it shows one or is closed.</summary>
@@ -342,7 +344,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("maximumDays", builder.Number(DaggerfallLodgingState.MaximumDays))))];
         fields = [.. fields, ("map", map is null ? builder.Null() : DaggerfallMapProjection.Wire(builder, map)),
             ("mapAbsence", frame.MapAbsence is { } absence ? builder.String(absence) : builder.Null())];
-        fields = [.. fields, ("expedition", expedition is null ? builder.Null() : Expedition(builder, expedition))];
+        fields = [.. fields, ("expedition", expedition is null ? builder.Null() : Expedition(builder, expedition)),
+            ("worldMap", frame.WorldMap is { } world ? WorldMap(builder, world) : builder.Null())];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
@@ -460,22 +463,44 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// <summary>Sends the travel map's places on the next snapshot, because the page opened the map or lost them.</summary>
     internal void RequestTravelPlaces() => _travelPlacesSent = null;
 
+    private static uint Mark(UiValueBuilder builder, DaggerfallExpeditionMark? mark, string? name) => mark is null ? builder.Null() : builder.Object(
+        ("x", builder.Number(mark.Pixel.X)), ("y", builder.Number(mark.Pixel.Y)),
+        ("name", name is null ? builder.Null() : builder.String(name)));
+
+    private static uint Found(UiValueBuilder builder, IReadOnlyList<DaggerfallTravelDestination> found) => builder.Array(found.Select(place => builder.Object(
+        ("region", builder.Number(place.Id.Region)), ("index", builder.Number(place.Id.Index)),
+        ("name", builder.String(place.Name)), ("kind", builder.String(DaggerfallSiteKinds.Label(place.Kind))),
+        ("x", builder.Number(place.MapPixel.X)), ("y", builder.Number(place.MapPixel.Y)))).ToArray());
+
     /// <summary>
-    /// The expedition map: the atlas with the party and where it heads, and the panels about it. Positions are world-map
-    /// pixels (the party's between two of them as it walks); labels and refusals are the ruleset's words. Only the bands
-    /// within the party's sight are sent.
+    /// The world map: the atlas with where the party or the player stands, where the party heads, the pin and the last
+    /// Find, in world-map pixels; whether the party is out, and whether Travel there can set it going.
     /// </summary>
-    private uint Expedition(UiValueBuilder builder, DaggerfallExpeditionView view)
+    private uint WorldMap(UiValueBuilder builder, DaggerfallWorldMapView view) => builder.Object(
+        ("map", TravelMap(builder, view.Map)),
+        ("party", builder.Object(("x", builder.Number(view.PartyX)), ("y", builder.Number(view.PartyY)))),
+        ("destination", Mark(builder, view.Destination, view.DestinationName)),
+        ("pin", Mark(builder, view.Pin, view.PinName)),
+        ("found", Found(builder, view.Found)),
+        ("travelling", builder.Boolean(view.Travelling)),
+        ("canTravel", builder.Boolean(view.CanTravel)));
+
+    /// <summary>
+    /// The expedition's travel map: the names over the world the Engine draws, each where the view puts it (across and
+    /// down its view, 0 to 1), the way the view faces and whether it follows the party, and the panels about it. Positions
+    /// are world-map pixels (the party's between two of them as it walks); labels and refusals are the ruleset's words.
+    /// Only the bands within the party's sight are sent.
+    /// </summary>
+    private static uint Expedition(UiValueBuilder builder, DaggerfallExpeditionView view)
     {
-        uint Mark(DaggerfallExpeditionMark? mark, string? name) => mark is null ? builder.Null() : builder.Object(
-            ("x", builder.Number(mark.Pixel.X)), ("y", builder.Number(mark.Pixel.Y)),
-            ("name", name is null ? builder.Null() : builder.String(name)));
+        uint Mark(DaggerfallExpeditionMark? mark, string? name) => DaggerfallHudProjection.Mark(builder, mark, name);
         uint Vital(DaggerfallExpeditionVital vital) => builder.Object(
             ("current", builder.Number(vital.Current)), ("maximum", builder.Number(vital.Maximum)));
         return builder.Object(
-            ("map", TravelMap(builder, view.Map)),
-            ("party", builder.Object(("x", builder.Number(view.PartyX)), ("y", builder.Number(view.PartyY)),
-                ("heading", view.Heading is double heading ? builder.Number(heading) : builder.Null()))),
+            ("labels", builder.Array(view.Labels.Select(label => builder.Object(
+                ("name", builder.String(label.Name)), ("kind", builder.String(label.Kind)),
+                ("across", builder.Number(label.Across)), ("down", builder.Number(label.Down)))).ToArray())),
+            ("view", builder.Object(("heading", builder.Number(view.ViewHeading)), ("following", builder.Boolean(view.Following)))),
             ("destination", Mark(view.Destination, view.DestinationName)),
             ("pin", Mark(view.Pin, view.PinName)),
             ("mode", builder.String(view.Mode.ToString().ToLowerInvariant())),
@@ -501,11 +526,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("teleport", builder.Boolean(view.Teleporting)),
             ("teleportPlace", view.TeleportPlace is null ? builder.Null() : builder.String(view.TeleportPlace)),
             ("message", view.Message is null ? builder.Null() : builder.String(view.Message)),
-            ("found", builder.Array(view.Found.Select(place => builder.Object(
-                ("region", builder.Number(place.Id.Region)), ("index", builder.Number(place.Id.Index)),
-                ("name", builder.String(place.Name)), ("kind", builder.String(DaggerfallSiteKinds.Label(place.Kind))),
-                ("x", builder.Number(place.MapPixel.X)), ("y", builder.Number(place.MapPixel.Y)))).ToArray())),
-            ("sight", builder.Number(view.Sight)),
+            ("found", Found(builder, view.Found)),
             ("bands", builder.Array(view.Bands.Select(band => builder.Object(
                 ("name", builder.String(band.Name)), ("kind", builder.String(band.Kind.ToString().ToLowerInvariant())),
                 ("x", builder.Number(band.X)), ("y", builder.Number(band.Y)),

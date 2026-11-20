@@ -445,11 +445,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     /// <summary>Publishes the active ground-container projection through the same Engine snapshot as actors.</summary>
     /// <param name="groundLook">How a ground pile of one kind of item stands as that item, or null for the treasure pile.</param>
+    /// <param name="travelMap">The travel map's parts in the backdrop while it is open; its camera shows no held arms.</param>
     internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
         IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null,
         Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null,
         IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null, Func<long, bool>? actorActive = null,
-        Func<long, DaggerfallGroundItemLook?>? groundLook = null)
+        Func<long, DaggerfallGroundItemLook?>? groundLook = null, IReadOnlyList<AppearanceFact>? travelMap = null)
     {
         if (disposed || drawnByActiveSnapshot) return;
         if (surfacesRefreshed != drawRefreshedEffects() || surfacesStrength != reliefStrength()) ApplySurfaces();
@@ -493,7 +494,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                         rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
             }
         }
+        int held = facts.Count;
         AppendViewmodelFacts(facts, viewmodel);
+        if (travelMap is not null)
+        {
+            // The arms stay in the scene, where their tweens and playback run on, but draw nowhere while the map is open.
+            for (int index = held; index < facts.Count; index++) facts[index] = facts[index] with { Visible = false };
+            facts.AddRange(travelMap);
+        }
         appendSnapshotFacts?.Invoke(facts);
         peopleRigs()?.Publishing();
         appearance.PublishSnapshot([.. facts]);

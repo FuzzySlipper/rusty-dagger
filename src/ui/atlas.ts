@@ -271,7 +271,7 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
     element.setAttribute('aria-label', on ? 'Travel map, panning' : 'Travel map');
     element.classList.toggle('is-centred', on);
     hint.textContent = on ? 'Directions pan · triggers or Page Up and Down zoom · accept or Back to stop'
-      : pointing.pick ? 'Click to set out · drag to pan · wheel to zoom · accept to pan with keys or a controller'
+      : pointing.pick ? 'Click to pin · drag to pan · wheel to zoom · accept to pan with keys or a controller'
         : 'Drag to pan · wheel to zoom · accept to pan with keys or a controller';
   };
   setPanning(false);

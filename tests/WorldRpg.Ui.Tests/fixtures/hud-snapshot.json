@@ -1048,6 +1048,58 @@
   "map": null,
   "mapAbsence": null,
   "expedition": {
+    "labels": [
+      {
+        "name": "Your party",
+        "kind": "party",
+        "across": 0.5,
+        "down": 0.5
+      }
+    ],
+    "view": {
+      "heading": 0,
+      "following": true
+    },
+    "destination": null,
+    "pin": null,
+    "mode": "cautious",
+    "speed": 0,
+    "speeds": 3,
+    "ship": "none",
+    "swimming": false,
+    "canBoard": false,
+    "shipFare": 100,
+    "date": "Sundas the 1st of Midyear, 3E405",
+    "time": "00:00",
+    "weather": "sunny",
+    "land": "Woodlands",
+    "here": null,
+    "lodging": null,
+    "remaining": null,
+    "transport": "foot",
+    "health": {
+      "current": 31,
+      "maximum": 31
+    },
+    "fatigue": {
+      "current": 0,
+      "maximum": 87
+    },
+    "magicka": {
+      "current": 100,
+      "maximum": 120
+    },
+    "canLeave": true,
+    "canEnter": false,
+    "enterLabel": "Enter",
+    "encounter": false,
+    "teleport": false,
+    "teleportPlace": null,
+    "message": "Leave the building or dungeon before travelling.",
+    "found": [],
+    "bands": []
+  },
+  "worldMap": {
     "map": {
       "worldWidth": 1000,
       "worldHeight": 500,
@@ -1698,48 +1750,13 @@
     },
     "party": {
       "x": 109.5,
-      "y": 158.5,
-      "heading": null
+      "y": 158.5
     },
     "destination": null,
     "pin": null,
-    "mode": "cautious",
-    "speed": 0,
-    "speeds": 3,
-    "ship": "none",
-    "swimming": false,
-    "canBoard": false,
-    "shipFare": 100,
-    "date": "Sundas the 1st of Midyear, 3E405",
-    "time": "00:00",
-    "weather": "sunny",
-    "land": "Woodlands",
-    "here": null,
-    "lodging": null,
-    "remaining": null,
-    "transport": "foot",
-    "health": {
-      "current": 31,
-      "maximum": 31
-    },
-    "fatigue": {
-      "current": 0,
-      "maximum": 87
-    },
-    "magicka": {
-      "current": 100,
-      "maximum": 120
-    },
-    "canLeave": true,
-    "canEnter": false,
-    "enterLabel": "Enter",
-    "encounter": false,
-    "teleport": false,
-    "teleportPlace": null,
-    "message": "Leave the building or dungeon before travelling.",
     "found": [],
-    "sight": 1.275,
-    "bands": []
+    "travelling": true,
+    "canTravel": false
   },
   "inventory": {
     "revision": "832:1:558:0::classic",

@@ -32,20 +32,37 @@ public sealed class DaggerfallExpeditionSessionTests
         Assert.True(fixture.Session.Expedition.Open);
         Assert.Equal(fixture.OriginPixel, fixture.Session.Expedition.Party);
         Dictionary<string, object?> expedition = fixture.Expedition()!;
-        Dictionary<string, object?> party = Assert.IsType<Dictionary<string, object?>>(expedition["party"]);
-        Assert.Equal((fixture.OriginPixel.X + .5, fixture.OriginPixel.Y + .5), (Convert.ToDouble(party["x"]), Convert.ToDouble(party["y"])));
+        Assert.Equal((fixture.OriginPixel.X + .5, fixture.OriginPixel.Y + .5), fixture.Session.Expedition.Position);
         Assert.Equal(("cautious", 0, 3), ((string?)expedition["mode"], Convert.ToInt32(expedition["speed"]), Convert.ToInt32(expedition["speeds"])));
         Assert.True((bool)expedition["canLeave"]!);
         Assert.Equal($"Enter {fixture.Session.Site.ActiveSite!.Name}", expedition["enterLabel"]);
 
-        // The places travel once for each revision, and again when the page asks for them.
-        Dictionary<string, object?> Map() => Assert.IsType<Dictionary<string, object?>>(fixture.Expedition()!["map"]);
+        // The travel map is a world the Engine draws, not the atlas: it publishes the names over it and its view.
+        Assert.False(expedition.ContainsKey("map"));
+        Assert.IsType<object?[]>(expedition["labels"]);
+        Assert.True((bool)Assert.IsType<Dictionary<string, object?>>(expedition["view"])["following"]!);
+
+        // The atlas is the world map, which the page shows over the travel map and which holds its time; its places
+        // travel once for each revision, and again when the page asks for them.
+        Assert.Null(fixture.WorldMap());
+        fixture.Submit(new { action = "world-map", open = true });
+        Dictionary<string, object?> Map() => Assert.IsType<Dictionary<string, object?>>(fixture.WorldMap()!["map"]);
         object?[] places = Assert.IsType<object?[]>(Map()["places"]);
         Assert.NotEmpty(places);
+        Assert.True((bool)fixture.WorldMap()!["travelling"]!);
         fixture.Step();
         Assert.False(Map().ContainsKey("places"));
         fixture.Submit(new { action = "expedition-places" });
         Assert.Equal(places.Length, Assert.IsType<object?[]>(Map()["places"]).Length);
+        // Set going under it, the party stands still until it closes.
+        fixture.Go(fixture.Step1);
+        long held = fixture.Now;
+        fixture.Step(); fixture.Step();
+        Assert.Equal(held, fixture.Now);
+        Assert.Equal(fixture.OriginPixel, fixture.Session.Expedition.Party);
+        fixture.Submit(new { action = "expedition-stop" });
+        fixture.Submit(new { action = "world-map", open = false });
+        Assert.Null(fixture.WorldMap());
 
         // Leaving with the party where the body stands just closes the map.
         fixture.Submit(new { action = "expedition-leave" });
@@ -62,6 +79,46 @@ public sealed class DaggerfallExpeditionSessionTests
             Assert.False(fixture.Session.Expedition.Open);
             fixture.Session.ApplyProductMode(ProductMode.Playing);
         }
+    }
+
+    [Fact]
+    public void The_travel_map_draws_its_land_under_its_own_camera_and_the_player_camera_and_far_ground_return_when_it_closes()
+    {
+        using Fixture fixture = new();
+        fixture.Step();
+        ulong player = fixture.Engine.ActiveCamera!.Value;
+        Assert.True(fixture.Engine.HeightfieldVisible);
+        // Outdoors the map's land streams hidden about the player, ready for the map to open.
+        Assert.False(fixture.Engine.MapLandVisible);
+
+        fixture.Open();
+        ulong map = fixture.Engine.ActiveCamera!.Value;
+        Assert.NotEqual(player, map);
+        Assert.Equal("travel-map", fixture.Engine.CameraAnchors[map]);
+        Assert.True(fixture.Engine.MapLandVisible);
+        Assert.False(fixture.Engine.HeightfieldVisible, "Far ground leaves the backdrop to the map's land.");
+        // The map's parts stand in the backdrop: the places about the party, its standard and its sight.
+        AppearanceFact[] parts = [.. fixture.Facts().Where(fact => fact.Layer == RenderLayer.Backdrop)];
+        Assert.NotEmpty(parts);
+        // Its camera shows none of the held arms, which stay in the scene for their playback.
+        Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Viewmodel && fact.Visible);
+
+        // The view turns, zooms and pans, which stops it following the party; I'm at follows it again.
+        fixture.Submit(new { action = "expedition-view", view = new[] { 30.0, 0, .5, 0, 2 } });
+        Dictionary<string, object?> View() => Assert.IsType<Dictionary<string, object?>>(fixture.Expedition()!["view"]);
+        Assert.Equal(30, Convert.ToDouble(View()["heading"]));
+        Assert.False((bool)View()["following"]!);
+        fixture.Submit(new { action = "expedition-follow" });
+        Assert.True((bool)View()["following"]!);
+        // A point of the view the land does not answer (the fake draws none) sets nothing out.
+        fixture.Submit(new { action = "expedition-go-at", point = new[] { .5, .5 } });
+        Assert.Null(fixture.Session.Expedition.Destination);
+
+        fixture.Submit(new { action = "expedition-leave" });
+        Assert.Equal(player, fixture.Engine.ActiveCamera);
+        Assert.False(fixture.Engine.MapLandVisible);
+        Assert.True(fixture.Engine.HeightfieldVisible);
+        Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Backdrop);
     }
 
     [Fact]
@@ -391,6 +448,9 @@ public sealed class DaggerfallExpeditionSessionTests
         internal DaggerfallSession Session { get; }
         internal SpatialFake Spatial { get; private set; } = null!;
         internal EngineContextFake Engine { get; private set; } = null!;
+        internal AppearanceFake Appearance { get; private set; } = null!;
+        /// <summary>The last appearance snapshot published.</summary>
+        internal AppearanceFact[] Facts() => Appearance.Snapshots[^1];
         internal DaggerfallSiteProfile Origin { get; }
         internal DaggerfallSiteProfile Destination { get; }
         internal long Now => Absolute(Session.CaptureSave());
@@ -435,7 +495,7 @@ public sealed class DaggerfallExpeditionSessionTests
             PopulateTerrainContent(content, Origin); PopulateTerrainContent(content, Destination);
             Spatial = SpatialFake.Create(Origin.Geometry.Spatial[0].Sha256, releases);
             var engine = Engine = EngineContextFake.Create(content, Spatial.Service,
-                new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : bands ? TravelBandRandom.CreateBands() : LodgingRandom.Create());
+                Appearance = new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : bands ? TravelBandRandom.CreateBands() : LodgingRandom.Create());
             DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)));
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
                 { Profiles = profiles, Sky = sky };
@@ -483,6 +543,10 @@ public sealed class DaggerfallExpeditionSessionTests
             for (int update = 0; update < 50_000 && Now < end && Session.Expedition.Running; update++) Step();
             Assert.True(Now >= end, "The map stopped before its time had passed.");
         }
+
+        /// <summary>The world map the snapshot publishes, or null while the page does not show it.</summary>
+        internal Dictionary<string, object?>? WorldMap() =>
+            Engine.Published() is Dictionary<string, object?> snapshot ? snapshot["worldMap"] as Dictionary<string, object?> : null;
 
         /// <summary>The expedition the snapshot publishes, or null while the map is closed.</summary>
         internal Dictionary<string, object?>? Expedition() =>

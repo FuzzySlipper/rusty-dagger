@@ -89,6 +89,10 @@ internal class EngineContextFake : DispatchProxy
     internal IReadOnlyList<AtmosphereRequest> Atmospheres => ((CameraServiceFake)(object)camera).Atmospheres;
     internal IReadOnlyList<StarsRequest> Stars => ((CameraServiceFake)(object)camera).Stars;
     internal IReadOnlyList<MoonRequest> Moons => ((CameraServiceFake)(object)camera).Moons;
+    /// <summary>The page element each camera's views follow, as the last anchoring left them.</summary>
+    internal IReadOnlyDictionary<ulong, string> CameraAnchors => ((CameraServiceFake)(object)camera).Anchors;
+    /// <summary>Whether the travel map's land has been made and draws, as the last call left it.</summary>
+    internal bool MapLandVisible => ((HeightfieldServiceFake)(object)heightfield).MapVisible;
     private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
     private readonly IVegetationService vegetation = ServiceProxy<IVegetationService, VegetationServiceFake>.Create();
     /// <summary>Whether refreshed flora's field has been made and draws, as the last call left it.</summary>
@@ -205,7 +209,10 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>A heightfield that asks for no tiles: nothing here draws, and every readout is empty.</summary>
     private class HeightfieldServiceFake : DispatchProxy
     {
-        private const ulong Near = 1, Far = 2;
+        private const ulong Near = 1, Far = 2, Map = 3;
+
+        /// <summary>Whether the travel map's land, in the backdrop beside far ground, has been made and stands.</summary>
+        internal bool MapVisible { get; private set; }
 
         /// <summary>Whether far ground, in the backdrop, stands.</summary>
         internal bool Visible { get; private set; } = true;
@@ -220,11 +227,17 @@ internal class EngineContextFake : DispatchProxy
             {
                 HeightfieldVisibilityRequest request = (HeightfieldVisibilityRequest)arguments![0]!;
                 if (request.Heightfield.Handle.Value == Near) NearVisible = request.Visible;
+                else if (request.Heightfield.Handle.Value == Map) MapVisible = request.Visible;
                 else Visible = request.Visible;
             }
             if (method?.Name == nameof(IHeightfieldService.Create))
             {
                 HeightfieldCreateRequest request = (HeightfieldCreateRequest)arguments![0]!;
+                if (request.Rings.Span[0].CellSize == WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallOverlandTerrain.FineCellMetres)
+                {
+                    MapVisible = true;
+                    return new Heightfield(new HeightfieldHandle(Map), () => { });
+                }
                 if (request.Layer == RenderLayer.Scene) NearVisible = true;
                 else FarFocus = request.Focus;
                 return new Heightfield(new HeightfieldHandle(request.Layer == RenderLayer.Scene ? Near : Far), () => { });
@@ -390,6 +403,9 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.SetStars) => SetStars((StarsRequest)arguments![0]!),
                 nameof(ICameraViewService.SetMoon) => SetMoon((MoonRequest)arguments![0]!),
                 nameof(ICameraViewService.ReplaceCamera) => ReplaceCamera(((CameraUpdateRequest)arguments![0]!).Camera.Handle.Value),
+                nameof(ICameraViewService.SetViewportAnchor) => Anchor((CameraViewportAnchorRequest)arguments![0]!),
+                nameof(ICameraViewService.ReadViewportAnchor) => default(CameraViewportAnchorReadout),
+                nameof(ICameraViewService.ReadSurface) => default(CameraSurfaceReadout),
                 _ => throw new NotSupportedException(method?.Name),
             };
         }
@@ -398,6 +414,9 @@ internal class EngineContextFake : DispatchProxy
         private object? SetBlend(SkyBackgroundBlendRequest request) {SkyBlends.Add(request); return null;}
         private object? SetFog(FogRequest request) { Fogs.Add(request); return null; }
         private object? LinkBackdrop(bool linked) { BackdropLinked = linked; return null; }
+        /// <summary>Each camera's views and the page element they follow, as the last anchoring left them.</summary>
+        internal Dictionary<ulong, string> Anchors { get; } = [];
+        private object? Anchor(CameraViewportAnchorRequest request) { Anchors[request.Camera.Handle.Value] = request.Anchor; return null; }
         private object? SetClouds(CloudsRequest request) { Clouds.Add(request); return null; }
         private object? SetStars(StarsRequest request) { Stars.Add(request); return null; }
         private object? SetMoon(MoonRequest request) { Moons.Add(request); return null; }

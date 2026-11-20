@@ -92,6 +92,13 @@ internal static class DaggerfallPresentationObjectIds
     /// <summary>The ground cover's shells about the player, past every identity the sea's sheets and rivers take.</summary>
     internal const ulong GroundCover = GameplayEnd | (1UL << 41);
 
+    /// <summary>The travel map's parts in the backdrop, counted afresh each update, past every identity the sea's sheets, rivers and ground cover take.</summary>
+    internal static ulong TravelMap(ulong part) => part < TravelMapBit
+        ? GameplayEnd | TravelMapBit | part
+        : throw new InvalidOperationException("The travel map has more parts than its identity range.");
+
+    private const ulong TravelMapBit = 1UL << 43;
+
     /// <summary>A map pixel's river water, in the half of the sea's band no map pixel reaches.</summary>
     internal static ulong River(int x, int y)
     {

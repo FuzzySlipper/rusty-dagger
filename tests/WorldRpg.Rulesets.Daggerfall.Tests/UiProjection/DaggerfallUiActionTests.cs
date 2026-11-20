@@ -250,6 +250,18 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"expedition-go\",\"x\":1000,\"y\":240}", false)]
     [InlineData("{\"action\":\"expedition-go\",\"x\":-1,\"y\":240}", false)]
     [InlineData("{\"action\":\"expedition-pin\"}", true)]
+    [InlineData("{\"action\":\"expedition-view\",\"view\":[-15,5,0.5,-0.5,-2]}", true)]
+    [InlineData("{\"action\":\"expedition-view\",\"view\":[0,0,0,0]}", false)]
+    [InlineData("{\"action\":\"expedition-view\",\"view\":[0,0,9,0,0]}", false)]
+    [InlineData("{\"action\":\"expedition-follow\"}", true)]
+    [InlineData("{\"action\":\"expedition-look\",\"x\":120,\"y\":240}", true)]
+    [InlineData("{\"action\":\"expedition-go-at\",\"point\":[0.25,1]}", true)]
+    [InlineData("{\"action\":\"expedition-go-at\",\"point\":[1.5,0.5]}", false)]
+    [InlineData("{\"action\":\"expedition-pin-at\",\"point\":[0.5]}", false)]
+    [InlineData("{\"action\":\"world-map\",\"open\":false}", true)]
+    [InlineData("{\"action\":\"world-map-pin\"}", true)]
+    [InlineData("{\"action\":\"world-map-travel\"}", false)]
+    [InlineData("{\"action\":\"world-map-travel\",\"x\":120,\"y\":240,\"region\":17,\"index\":3}", true)]
     [InlineData("{\"action\":\"expedition-speed\",\"speed\":2}", true)]
     [InlineData("{\"action\":\"expedition-speed\"}", false)]
     [InlineData("{\"action\":\"expedition-mode\",\"mode\":\"camp\"}", true)]
@@ -351,6 +363,14 @@ public sealed class DaggerfallUiActionTests
         [DaggerfallUiActionKind.ExpeditionMode] = "\"mode\":\"reckless\"",
         [DaggerfallUiActionKind.ExpeditionGo] = "\"x\":120,\"y\":240,\"region\":17,\"index\":3",
         [DaggerfallUiActionKind.ExpeditionPin] = "\"x\":120,\"y\":240",
+        [DaggerfallUiActionKind.ExpeditionView] = "\"view\":[15,0,0.25,0,1]",
+        [DaggerfallUiActionKind.ExpeditionLook] = "\"x\":120,\"y\":240",
+        [DaggerfallUiActionKind.ExpeditionGoAt] = "\"point\":[0.5,0.25]",
+        [DaggerfallUiActionKind.ExpeditionPinAt] = "\"point\":[0.5,0.25]",
+        [DaggerfallUiActionKind.WorldMap] = "\"open\":true",
+        [DaggerfallUiActionKind.WorldMapFind] = "\"text\":\"Daggerfall\"",
+        [DaggerfallUiActionKind.WorldMapPin] = "\"x\":120,\"y\":240,\"region\":17,\"index\":3",
+        [DaggerfallUiActionKind.WorldMapTravel] = "\"x\":120,\"y\":240",
         [DaggerfallUiActionKind.AtlasTiles] = "\"tiles\":[[0,1,1]]",
         [DaggerfallUiActionKind.LodgingQuote] = "\"key\":\"room:1\",\"days\":2",
         [DaggerfallUiActionKind.LodgingBook] = "\"key\":\"room:1\",\"days\":2,\"amount\":0",

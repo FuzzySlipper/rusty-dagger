@@ -755,7 +755,7 @@ internal sealed partial class DaggerfallSession
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => Banking.ActiveRegion is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => Law.ModalOpen,
-                tutorialOpen: () => _tutorial.Shown, expeditionOpen: () => Expedition.Open);
+                tutorialOpen: () => _tutorial.Shown, expeditionOpen: () => Expedition.Open, worldMapOpen: () => _travelPanel?.WorldMapOpen == true);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             itemInstances.Transferred += questItemExits.Moved;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
@@ -940,8 +940,10 @@ internal sealed partial class DaggerfallSession
             _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers,
                 new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
                 new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
-                composition.ArtReplacements?.Sea);
+                composition.ArtReplacements?.Sea, tuning.Expedition.Map.Relief);
             partiallyConstructed.Add(_horizon);
+            _overland = new DaggerfallOverlandMap(engine, _horizon.Map, tuning.Expedition.Map, Expedition.Policy.AllDestinations(), _camera.Activate);
+            partiallyConstructed.Add(_overland);
             _exterior.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
             if (composition.ArtReplacements?.GroundCover is { } cover)
                 _horizon.UseGroundCover(cover, tuning.GroundCover, DaggerfallGroundCover.TuftGrounds(definitions.Grids.Climate.Values),
@@ -1063,10 +1065,10 @@ internal sealed partial class DaggerfallSession
             EconomyPanels = new DaggerfallEconomyPanels(Banking, State.Bank, MerchantTrade, RoomRental, State.Tavern, State.SkillTraining, Holdings,
                 State.Inventory, State.Wagon, _inventoryUi, definitions, () => _dialogue, CurrentInteriorBuilding, TransportAccess, RequestPanel,
                 destination => TryTransitionTo(destination), Presentation);
-            DaggerfallExpeditionPanel travelPanel = new(Expedition, travelPolicy, this, State.Actors, definitions.BuildingNames.RegionNames,
+            DaggerfallExpeditionPanel travelPanel = _travelPanel = new(Expedition, travelPolicy, this, State.Actors, definitions.BuildingNames.RegionNames,
                 definitions.WorldNames, _atlasTiles, () => _classicArt, State.Transport, State.Wagon, State.Inventory, _inventoryUi,
                 _hud.RequestTravelPlaces, TransportAccess, OpenExpedition, EnterExpedition, BoardPropertyShip, LeavePropertyShip,
-                ApplyTransportChange, Presentation);
+                ApplyTransportChange, Presentation, _overland, MapPosition.Position);
             DaggerfallServiceCounter counter = new(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
             DaggerfallMakerPanels makers = new(_itemMaker, _potionMaker, definitions, counter, Presentation);
             SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, counter,

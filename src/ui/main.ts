@@ -28,6 +28,7 @@ import { mountShell } from './shell.js';
 import { isSpellbookProjection } from './spells.js';
 import { mountTooltips } from './tooltip.js';
 import { isExpeditionProjection, mountExpedition } from './expedition.js';
+import { isWorldMapProjection, mountWorldMap } from './world-map.js';
 
 export { isHud } from './projection.js';
 export { isSummoningProjection, renderSummoning } from './crafting.js';
@@ -129,25 +130,27 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // Diagnostic UI, mounted beside the game's shell so the game's skin and modal surfaces never shape it.
   const developer = mountDeveloperTools(root, context, { onChange: () => sync(true) });
   const menu = mountMenu(shell, { send, ask, sync, isDead: () => dead, register: surface => navigation.register(surface), uiScale: scale.current,
-    openDeveloper: () => { if (!developer.isOpen()) void developer.toggle(); } });
+    openDeveloper: () => { if (!developer.isOpen()) void developer.toggle(); }, openWorldMap: () => worldMap.open() });
   const radial = mountRadial(shell, { send, runMenuAction: action => menu.runAction(action), sync });
   let radialRevision: string | null = null;
   const tutorial = mountTutorial(shell, send);
   const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
   const dialogue = mountDialogue(shell, send, ask);
-  const expedition = mountExpedition(shell, send, () => menu.open());
+  // The travel map's view is where the ruleset's map camera draws; the world map comes after it, so it stacks over it.
+  const expedition = mountExpedition(shell, send, () => menu.open(), (name, element) => context.viewport.anchor(name, element), () => worldMap.open());
+  const worldMap = mountWorldMap(shell, send);
 
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
   const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
   interaction.needsCursor(() => loading.open() || menu.dialog.open || radial.isOpen() || tutorial.isOpen() || dialogue.window.open || dialogue.summoningOffer.open
-    || expedition.isOpen() || developer.isOpen());
+    || expedition.isOpen() || worldMap.isOpen() || developer.isOpen());
   // While the developer's input readout is on, a world act pressed while a surface holds the cursor is told to it.
   let projectedMode = '';
   const inputClaims = mountInputClaims(send, () => interaction.mode() !== 'interface' ? null
     : loading.open() ? 'loading screen' : developer.isOpen() ? 'developer tools' : menu.dialog.open ? 'menu' : radial.isOpen() ? 'radial'
     : tutorial.isOpen() ? 'tutorial' : dialogue.window.open ? 'conversation' : dialogue.summoningOffer.open ? 'summoning offer'
-    : expedition.isOpen() ? 'travel map'
+    : worldMap.isOpen() ? 'world map' : expedition.isOpen() ? 'travel map'
     : projectedMode === 'playing' ? 'prompt' : `${projectedMode} screen`);
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
   // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
@@ -167,6 +170,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     navigation.register({ name: 'legal', root: choices.legal, layer: 70, isOpen: () => !choices.legal.hidden }),
     navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !dead && !questsOverTalk.open }),
     navigation.register({ name: 'quests-over-talk', root: questsOverTalk, layer: 60, isOpen: () => questsOverTalk.open }),
+    // The world map holds the world, over the travel map it may be opened from; Back closes it.
+    navigation.register({ name: 'world-map', root: worldMap.root, layer: 56, isOpen: worldMap.isOpen, back: worldMap.back,
+      page: worldMap.page, pageHint: worldMap.pageHint, initialFocus: worldMap.initialFocus }),
     // The travel map holds the world; a quest's question or the menu comes up over it, Back leaves it when it can.
     navigation.register({ name: 'expedition', root: expedition.root, layer: 55, isOpen: expedition.isOpen, back: expedition.back,
       page: expedition.page, pageHint: expedition.pageHint, initialFocus: expedition.initialFocus }),
@@ -194,7 +200,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     death.refreshArt();
     entry.refreshArt();
     menu.refreshArt();
-    expedition.refreshArt();
+    worldMap.refreshArt();
   };
 
   const unsubscribe = context.projection?.subscribe((projection) => {
@@ -269,6 +275,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     useGlints(isGlints(value.inventory?.glints) ? value.inventory.glints : null);
     dialogue.update(value, dead, spellbook);
     expedition.update(!dead && isExpeditionProjection(value.expedition) ? value.expedition : null);
+    worldMap.update(!dead && isWorldMapProjection(value.worldMap) ? value.worldMap : null);
     questAnswerRequired = Boolean(value.quests?.offer || value.quests?.pending
       || value.quests?.deliveries.some(message => message.delivery === 'popup' || message.delivery === 'letter'));
     const overTalk = questAnswerRequired && !dead && dialogue.window.open;
@@ -297,6 +304,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     interaction.dispose();
     unsubscribe();
     hud.dispose();
+    expedition.dispose();
+    worldMap.dispose();
     menu.dispose();
     radial.dispose();
     tutorial.dispose();

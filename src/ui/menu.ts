@@ -76,6 +76,8 @@ export interface MenuHost {
   readonly openDeveloper: () => void;
   /** The interface scale in use, which Settings shows beside the player's choice. */
   readonly uiScale: () => number;
+  /** Opens the world map, a screen of its own over the world. */
+  readonly openWorldMap: () => void;
 }
 
 export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
@@ -117,10 +119,12 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const travelHeading = document.createElement('h3');
   travelHeading.textContent = 'Travel';
   const travelNote = document.createElement('p');
-  travelNote.textContent = 'Set out across the Iliac Bay on the travel map: time passes as your party goes.';
+  travelNote.textContent = 'Set out across the Iliac Bay on the travel map: time passes as your party goes. The world map shows the whole bay, to find and pin places.';
   const travelOpen = button('Open the travel map');
   travelOpen.dataset.action = 'travel-map';
-  travelStrip.append(travelHeading, travelNote, travelOpen);
+  const worldOpen = button('Open the world map');
+  worldOpen.dataset.action = 'world-map';
+  travelStrip.append(travelHeading, travelNote, travelOpen, worldOpen);
   transportRoot.prepend(travelStrip);
   const openTravelMap = (): void => {
     send({ action: 'expedition-open' });
@@ -371,6 +375,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'help') showPanel(action);
     else if (action === 'debug') { closeMenu(); host.openDeveloper(); }
     else if (action === 'travel-map') openTravelMap();
+    else if (action === 'world-map') { closeMenu(); host.openWorldMap(); }
   };
   const onClick = (event: MouseEvent): void => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>('button');

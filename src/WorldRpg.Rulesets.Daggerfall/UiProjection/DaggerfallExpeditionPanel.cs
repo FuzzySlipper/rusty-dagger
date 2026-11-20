@@ -15,14 +15,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal readonly record struct DaggerfallExpeditionVital(double Current, double Maximum);
 
 /// <summary>
-/// What the expedition map shows: the atlas with the party, where it heads and the pin; the time, weather and land; how
+/// What the expedition's travel map shows about the world the Engine draws: the names over it and the way its view
+/// faces and whether it follows the party; where the party heads and the pin; the time, weather and land; how
 /// the party goes, at what speed and how long the leg has left; the ship, the lodging, the player's vitals; what Enter or
-/// Leave does now; a waiting encounter, a guild teleport's choice; the map's line and the last Find; how far the party
-/// sees, and the bands within it.
+/// Leave does now; a waiting encounter, a guild teleport's choice; the map's line and the last Find; and the bands
+/// within the party's sight.
 /// </summary>
 internal sealed record DaggerfallExpeditionView(
-    DaggerfallTravelMapView Map,
-    double PartyX, double PartyY, double? Heading,
+    IReadOnlyList<DaggerfallOverlandLabel> Labels, double ViewHeading, bool Following,
     DaggerfallExpeditionMark? Destination, string? DestinationName,
     DaggerfallExpeditionMark? Pin, string? PinName,
     DaggerfallExpeditionMode Mode, int Speed, int Speeds,
@@ -33,7 +33,17 @@ internal sealed record DaggerfallExpeditionView(
     bool CanLeave, bool CanEnter, string EnterLabel,
     bool EncounterWaiting, bool Teleporting, string? TeleportPlace,
     string? Message, IReadOnlyList<DaggerfallTravelDestination> Found,
-    double Sight, IReadOnlyList<DaggerfallExpeditionBandView> Bands);
+    IReadOnlyList<DaggerfallExpeditionBandView> Bands);
+
+/// <summary>
+/// The world map: the atlas to browse, with where the party or the player stands, where the party heads, the pin and the
+/// last Find; whether the party is out on the travel map, and whether Travel there can set it going.
+/// </summary>
+internal sealed record DaggerfallWorldMapView(
+    DaggerfallTravelMapView Map, double PartyX, double PartyY,
+    DaggerfallExpeditionMark? Destination, string? DestinationName,
+    DaggerfallExpeditionMark? Pin, string? PinName,
+    IReadOnlyList<DaggerfallTravelDestination> Found, bool Travelling, bool CanTravel);
 
 /// <summary>
 /// The travel panel's and the expedition map's actions: the map opened, run at a speed, a mode, a destination, a stop, a
@@ -47,15 +57,22 @@ internal sealed record DaggerfallExpeditionView(
 /// <param name="boardShip">Session: boarding the owned ship's list.</param>
 /// <param name="leaveShip">Session: leaving the ship's list.</param>
 /// <param name="applyTransportChange">Session: what a change of transport does across domains.</param>
+/// <param name="overland">The travel map the Engine draws, whose view the map's actions move and point into.</param>
+/// <param name="playerPixel">The world-map pixel the player stands on, which the world map shows while the party is not out.</param>
 internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition, DaggerfallTravelPolicy policy,
     IDaggerfallExpeditionSurroundings world, ActorsState actors, IReadOnlyList<string> regionNames, DaggerfallWorldNames worldNames,
     DaggerfallAtlasTiles? atlasTiles, Func<bool> classicArt, DaggerfallTransportPolicy transport,
     DaggerfallWagonStorage wagon, MechanicsInventoryCoordinator inventory, DaggerfallInventoryPresentation inventoryUi,
     Action requestTravelPlaces, Func<DaggerfallTransportAccessContext> transportAccess, Action openExpedition, Action enterExpedition,
     Func<DaggerfallTransportActionResult> boardShip, Func<DaggerfallTransportActionResult> leaveShip,
-    Action<DaggerfallTransportActionResult> applyTransportChange, PresentationState presentation)
+    Action<DaggerfallTransportActionResult> applyTransportChange, PresentationState presentation,
+    DaggerfallOverlandMap overland, Func<DaggerfallTravelMapPixel> playerPixel)
 {
     private DaggerfallTravelMap? _map;
+    private bool _worldMapOpen;
+
+    /// <summary>Whether the page shows the world map, as it reports: it holds the world, and the travel map's time with it.</summary>
+    internal bool WorldMapOpen => _worldMapOpen;
 
     internal void Open() => openExpedition();
 
@@ -87,25 +104,77 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             case DaggerfallUiActionKind.ExpeditionShip: _ = expedition.ToggleShip(); break;
             case DaggerfallUiActionKind.ExpeditionLeave: _ = expedition.Leave(); break;
             case DaggerfallUiActionKind.ExpeditionEnter: enterExpedition(); break;
+            case DaggerfallUiActionKind.ExpeditionView:
+                IReadOnlyList<double> move = action.View!;
+                overland.View.Move(move[0], move[1], move[2], move[3], move[4]);
+                break;
+            case DaggerfallUiActionKind.ExpeditionFollow: overland.View.Follow(); break;
+            case DaggerfallUiActionKind.ExpeditionLook:
+                (double lookX, double lookZ) = DaggerfallOverlandView.Metres(action.X!.Value + .5, action.Y!.Value + .5);
+                overland.View.Look(lookX, lookZ);
+                break;
+            case DaggerfallUiActionKind.ExpeditionGoAt:
+            case DaggerfallUiActionKind.ExpeditionPinAt:
+                if (overland.Pick(action.Point![0], action.Point[1]) is not { } pixel) { presentation.SetOutcome("Choose a point on the land."); break; }
+                DaggerfallSiteId? there = expedition.LocationAt(pixel) is { } site && expedition.Known(site.Id) ? site.Id : null;
+                if (action.Kind == DaggerfallUiActionKind.ExpeditionGoAt) expedition.SetDestination(pixel, there);
+                else expedition.SetPin(pixel, there);
+                break;
             default: throw new InvalidOperationException("Parsed expedition action is not supported.");
         }
+    }
+
+    /// <summary>
+    /// The world map's actions: the page shows or hides it; a Find; a pin set or cleared; and Travel there, which sets the
+    /// party going for the point, opening the travel map first when it is closed.
+    /// </summary>
+    internal void ChangeWorldMap(DaggerfallPlayerUiAction action)
+    {
+        switch (action.Kind)
+        {
+            case DaggerfallUiActionKind.WorldMap:
+                if (action.Open && !_worldMapOpen) requestTravelPlaces();
+                _worldMapOpen = action.Open;
+                break;
+            case DaggerfallUiActionKind.WorldMapFind: expedition.Find(action.Text, regionNames); break;
+            case DaggerfallUiActionKind.WorldMapPin:
+                if (action.X is int x && action.Y is int y) expedition.SetPin(new(x, y), Place(action));
+                else expedition.ClearPin();
+                break;
+            case DaggerfallUiActionKind.WorldMapTravel:
+                if (!expedition.Open) openExpedition();
+                if (!expedition.Open) break;
+                if (expedition.Held is { } held) { presentation.SetOutcome(held); break; }
+                expedition.SetDestination(new(action.X!.Value, action.Y!.Value), Place(action));
+                break;
+            default: throw new InvalidOperationException("Parsed world map action is not supported.");
+        }
+    }
+
+    /// <summary>What the world map shows now, or null while the page does not show it.</summary>
+    internal DaggerfallWorldMapView? ReadWorldMap()
+    {
+        if (!_worldMapOpen) return null;
+        (double x, double y) = expedition.Open ? expedition.Position : (playerPixel().X + .5, playerPixel().Y + .5);
+        DaggerfallTravelMapPixel party = new((int)Math.Floor(x), (int)Math.Floor(y));
+        _map ??= new DaggerfallTravelMap(policy.AllDestinations());
+        DaggerfallTravelMapView map = _map.Read(policy.SupportedDestinations(), regionNames, party, expedition.Open ? expedition.Heading : null,
+            classicArt() ? null : atlasTiles, worldNames);
+        return new(map, x, y, expedition.Destination, Name(expedition.Destination), expedition.Pin, Name(expedition.Pin), expedition.Found,
+            expedition.Open, !expedition.Open || (expedition.Held is null && !expedition.EncounterWaiting));
     }
 
     /// <summary>What the expedition map shows now, or null while it is closed.</summary>
     internal DaggerfallExpeditionView? Read()
     {
         if (!expedition.Open) return null;
-        IReadOnlyList<DaggerfallTravelDestination> known = policy.SupportedDestinations();
-        _map ??= new DaggerfallTravelMap(policy.AllDestinations());
         DaggerfallTravelMapPixel party = expedition.Party;
-        DaggerfallTravelMapView map = _map.Read(known, regionNames, party, expedition.Heading, classicArt() ? null : atlasTiles, worldNames);
-        (double x, double y) = expedition.Position;
         DaggerfallCalendar calendar = world.Calendar;
         DaggerfallSiteRecord? here = expedition.LocationHere;
-        DaggerfallTravelDestination? teleport = expedition.TeleportPlace is { } chosen ? known.FirstOrDefault(place => place.Id == chosen) : null;
+        DaggerfallTravelDestination? teleport = expedition.TeleportPlace is { } chosen ? policy.SupportedDestinations().FirstOrDefault(place => place.Id == chosen) : null;
         bool atSea = policy.IsOcean(party);
         StatsComponent stats = actors.Player.Stats;
-        return new(map, x, y, expedition.Heading,
+        return new(overland.Labels, overland.View.Heading, overland.View.Following,
             expedition.Destination, Name(expedition.Destination), expedition.Pin, Name(expedition.Pin),
             expedition.Mode, expedition.Speed, expedition.Tuning.Speeds,
             expedition.Ship, expedition.Swimming, expedition.Ship == DaggerfallExpeditionShip.None && !atSea && expedition.NearPort(),
@@ -117,8 +186,7 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             expedition.CanLeave, expedition.Teleporting ? teleport is not null : !atSea && expedition.Held is null,
             expedition.Teleporting ? "Teleport" : here is not null && expedition.Known(here.Id) ? $"Enter {here.Name}" : "Enter",
             expedition.EncounterWaiting, expedition.Teleporting, teleport?.Name,
-            expedition.Message, expedition.Found,
-            expedition.PartySight, [.. expedition.SeenBands]);
+            expedition.Message, expedition.Found, [.. expedition.SeenBands]);
     }
 
     /// <summary>A mount chosen, or a ship boarded or left, in the travel panel.</summary>

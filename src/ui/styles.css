@@ -444,13 +444,46 @@ dialog.dagger-quests:not([open]) { display: none; }
  * The expedition map: a screen of its own over the held world. The atlas fills the middle, the hour and the speeds sit
  * above it, Find, the ship and the pin beside it, and how the party goes, its vitals and the way off the map below.
  */
-.dagger-expedition { position: fixed; inset: 1rem; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .5rem; padding: .75rem; }
+/* The travel map: its bars and side panel are stone; between them the view is left open, where the map camera draws. */
+.dagger-expedition { position: fixed; inset: .5rem; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .5rem; }
 .dagger-expedition[hidden] { display: none; }
+.dagger-expedition .dagger-frame { box-shadow: 0 .25rem 1rem rgb(0 0 0 / .45); }
+.dagger-expedition-view { position: relative; min-height: 0; border: 1px solid var(--brass); outline-offset: -3px; overflow: hidden; cursor: crosshair; touch-action: none; }
+.dagger-expedition-view.is-panning { cursor: move; box-shadow: inset 0 0 0 2px #dfc987; }
+.dagger-expedition-labels { position: absolute; inset: 0; pointer-events: none; }
+.dagger-expedition-label { position: absolute; transform: translate(-50%, -100%); padding: .05rem .4rem; border-radius: .2rem; white-space: nowrap;
+  background: rgb(18 12 6 / .62); color: #f2e3ba; font: 700 .85rem var(--font-label); letter-spacing: .03em; text-shadow: 0 1px 2px #000; }
+.dagger-expedition-label[data-kind="party"] { color: #b9d2ff; transform: translate(-50%, 40%); }
+.dagger-expedition-label[data-kind="band"], .dagger-expedition-label[data-kind="camp"] { color: #ffd2a0; font-size: .78rem; }
+.dagger-expedition-label[data-kind="chase"] { color: #ff9a6a; font-size: .78rem; }
+.dagger-expedition-crosshair { position: absolute; left: 50%; top: 50%; width: .9rem; height: .9rem; margin: -.45rem 0 0 -.45rem; pointer-events: none;
+  border: 1px solid rgb(242 227 186 / .55); border-radius: 50%; }
+.dagger-expedition-view-controls { position: absolute; right: .5rem; top: .5rem; display: flex; gap: .25rem; align-items: center; }
+.dagger-expedition-view-controls button { min-width: 2.2rem; padding: .15rem .4rem; }
+.dagger-expedition-compass { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; border: 1px solid var(--brass);
+  background: rgb(18 12 6 / .62); color: #f2e3ba; font: 700 .8rem var(--font-label); }
+.dagger-expedition-hint { position: absolute; left: .5rem; bottom: .4rem; margin: 0; padding: .1rem .4rem; background: rgb(18 12 6 / .55); color: #e6d6ad;
+  font-size: .8rem; pointer-events: none; }
 .dagger-expedition-top, .dagger-expedition-bottom { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; padding: .4rem .75rem; }
 .dagger-expedition-clock { margin: 0; flex: 1 1 auto; font: 700 1.15rem var(--font-label); letter-spacing: .04em; }
 .dagger-expedition-speeds, .dagger-expedition-modes { display: flex; gap: .3rem; }
 .dagger-expedition-body { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: .5rem; min-height: 0; }
-.dagger-expedition-body .dagger-atlas { height: 100%; min-height: 0; }
+.dagger-world-map { position: fixed; inset: 1rem; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: .5rem; padding: .75rem; }
+.dagger-world-map[hidden] { display: none; }
+.dagger-world-map-header { display: flex; gap: 1rem; align-items: center; }
+.dagger-world-map-header h2 { margin: 0; }
+.dagger-world-map-status { flex: 1 1 auto; margin: 0; color: #f2e3ba; }
+.dagger-world-map-body { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: .5rem; min-height: 0; }
+.dagger-world-map-body .dagger-atlas { height: 100%; min-height: 0; }
+.dagger-world-map-side { display: flex; flex-direction: column; gap: .45rem; padding: .6rem; overflow: auto; }
+.dagger-world-map-side h3 { margin: .4rem 0 0; }
+.dagger-world-map-find { display: flex; gap: .3rem; }
+.dagger-world-map-find input { flex: 1 1 auto; min-width: 0; }
+.dagger-world-map-found { display: grid; gap: .2rem; }
+.dagger-world-map-found button { text-align: left; font-size: .85rem; }
+.dagger-world-map-pin { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .3rem; }
+.dagger-world-map-pin-label { margin: 0; color: #dfc987; font-size: .9rem; }
+.dagger-world-map-travel { margin-top: auto; }
 .dagger-expedition-side { display: flex; flex-direction: column; gap: .45rem; padding: .6rem; overflow: auto; }
 .dagger-expedition-side h3 { margin: .4rem 0 0; }
 .dagger-expedition-find { display: flex; gap: .3rem; }
@@ -459,6 +492,10 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-expedition-found button { text-align: left; font-size: .85rem; }
 .dagger-expedition-pin { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; }
 .dagger-expedition-pin-label { margin: 0; color: #dfc987; font-size: .9rem; }
+.dagger-expedition-in-sight { display: grid; gap: .2rem; }
+.dagger-expedition-in-sight button { text-align: left; font-size: .85rem; }
+.dagger-expedition-in-sight button[data-spotted="true"] { color: #ff9a6a; }
+.dagger-expedition-none { margin: 0; color: #cdbb8e; font-size: .85rem; font-style: italic; }
 .dagger-expedition-vitals { display: flex; gap: .3rem; height: 3rem; }
 .dagger-expedition-vital { position: relative; width: .8rem; height: 100%; border: 1px solid #2a170a; background: rgb(0 0 0 / .45); }
 .dagger-expedition-vital > span { position: absolute; left: 0; right: 0; bottom: 0; }

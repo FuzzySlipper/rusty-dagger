@@ -10,6 +10,7 @@ import type { MapProjection } from './maps.js';
 import type { NotebookProjection } from './notebook.js';
 import type { PropertyProjection } from './property.js';
 import type { ExpeditionProjection } from './expedition.js';
+import type { WorldMapProjection } from './world-map.js';
 import type { HelpPage, TutorialOffer, TutorialPage } from './help.js';
 
 /** The HUD snapshot the ruleset publishes and the semantic actions the UI sends back. */
@@ -115,8 +116,10 @@ export interface DaggerHud {
   readonly tutorial?: TutorialOffer & { readonly page: TutorialPage | null };
   readonly transport?: TransportProjection | null;
   readonly property?: PropertyProjection | null;
-  /** The expedition map, while it is open. */
+  /** The expedition's travel map, while it is open. */
   readonly expedition?: ExpeditionProjection | null;
+  /** The world map, while the page shows it. */
+  readonly worldMap?: WorldMapProjection | null;
   readonly map?: MapProjection | null;
   /** What the open map panel says when the player's place has no map; null while it shows one. */
   readonly mapAbsence?: string | null;

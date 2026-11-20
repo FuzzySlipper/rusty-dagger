@@ -12,7 +12,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     string? Note = null, string? Text = null, int? Page = null, int? Destination = null,
     string? Tone = null, string? Topic = null, int? Hours = null, int? Region = null, int? Days = null,
     int? X = null, int? Y = null, int? Index = null, int? Speed = null, bool Open = false, int? Question = null, int? Answer = null, float? Sensitivity = null, bool? Invert = null, bool? Enabled = null, float? Scale = null,
-    IReadOnlyList<DaggerfallAtlasTileRequest>? Tiles = null)
+    IReadOnlyList<DaggerfallAtlasTileRequest>? Tiles = null, IReadOnlyList<double>? View = null, IReadOnlyList<double>? Point = null)
 {
     /// <summary>The typed action the wire name names; resolved once when the action is built.</summary>
     internal DaggerfallUiActionKind Kind { get; } = DaggerfallUiAction.KindOf(Action);
@@ -32,7 +32,8 @@ internal enum DaggerfallUiActionKind
     TransportSelect, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
     ExpeditionOpen, ExpeditionPlaces, ExpeditionSpeed, ExpeditionMode, ExpeditionGo, ExpeditionStop, ExpeditionPin, ExpeditionFind,
-    ExpeditionShip, ExpeditionLeave, ExpeditionEnter, AtlasTiles, MapOpen, MapBuilding,
+    ExpeditionShip, ExpeditionLeave, ExpeditionEnter, ExpeditionView, ExpeditionFollow, ExpeditionLook, ExpeditionGoAt, ExpeditionPinAt,
+    WorldMap, WorldMapFind, WorldMapPin, WorldMapTravel, AtlasTiles, MapOpen, MapBuilding,
     Rest, LodgingQuote, LodgingBook,
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss, QuestOfferAnswer,
@@ -243,6 +244,15 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.ExpeditionShip, "expedition-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ExpeditionLeave, "expedition-leave", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.ExpeditionEnter, "expedition-enter", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.ExpeditionView, "expedition-view", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.ExpeditionFollow, "expedition-follow", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.ExpeditionLook, "expedition-look", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.ExpeditionGoAt, "expedition-go-at", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.ExpeditionPinAt, "expedition-pin-at", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.WorldMap, "world-map", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.WorldMapFind, "world-map-find", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.WorldMapPin, "world-map-pin", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.WorldMapTravel, "world-map-travel", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.AtlasTiles, "atlas-tiles", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingQuote, "lodging-quote", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.LodgingBook, "lodging-book", DaggerfallUiPhases.Interaction),
@@ -324,9 +334,21 @@ internal static class DaggerfallUiAction
             bool confirm = false, open = false;
             int? questChoice = null, classQuestion = null, classAnswer = null;
             List<DaggerfallAtlasTileRequest>? tiles = null;
+            double[]? view = null, point = null;
             foreach (JsonProperty property in root.EnumerateObject())
             {
                 if (!fields.Add(property.Name)) return null;
+                if (property.Name is "view" or "point")
+                {
+                    // The travel map's view moves [turn, tilt, right, forward, zoom], or a point of it [across, down].
+                    int count = property.Name == "view" ? 5 : 2;
+                    if (property.Value.ValueKind != JsonValueKind.Array || property.Value.GetArrayLength() != count) return null;
+                    double[] numbers = new double[count];
+                    for (int at = 0; at < count; at++)
+                        if (!property.Value[at].TryGetDouble(out numbers[at]) || !double.IsFinite(numbers[at])) return null;
+                    if (property.Name == "view") view = numbers; else point = numbers;
+                    continue;
+                }
                 if (property.Name is "x" or "y" or "index" or "speed")
                 {
                     if (!property.Value.TryGetInt32(out int number) || number < 0) return null;
@@ -553,7 +575,26 @@ internal static class DaggerfallUiAction
                     return (fields.SetEquals(["action", "x", "y"]) || fields.SetEquals(["action", "x", "y", "region", "index"]) && region is >= 0)
                         && x is < Travel.DaggerfallTravelMapPixel.Width && y is < Travel.DaggerfallTravelMapPixel.Height
                         ? new(action, X: x, Y: y, Region: region, Index: index) : null;
+                // A view's move is bounded: a turn or tilt within a half turn, a pan within a few eye distances, a few zoom steps.
+                case DaggerfallUiActionKind.ExpeditionView:
+                    return fields.SetEquals(["action", "view"]) && view is [var turn, var tilt, var right, var forward, var zoom]
+                        && Math.Abs(turn) <= 180 && Math.Abs(tilt) <= 90 && Math.Abs(right) <= 4 && Math.Abs(forward) <= 4 && Math.Abs(zoom) <= 8
+                        ? new(action, View: view) : null;
+                case DaggerfallUiActionKind.ExpeditionLook:
+                    return fields.SetEquals(["action", "x", "y"]) && x is < Travel.DaggerfallTravelMapPixel.Width && y is < Travel.DaggerfallTravelMapPixel.Height
+                        ? new(action, X: x, Y: y) : null;
+                case DaggerfallUiActionKind.ExpeditionGoAt or DaggerfallUiActionKind.ExpeditionPinAt:
+                    return fields.SetEquals(["action", "point"]) && point is [>= 0 and <= 1, >= 0 and <= 1] ? new(action, Point: point) : null;
+                case DaggerfallUiActionKind.WorldMap: return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
+                case DaggerfallUiActionKind.WorldMapFind:
+                    return fields.SetEquals(["action", "text"]) && text is { Length: <= 80 } ? new(action, Text: text) : null;
+                case DaggerfallUiActionKind.WorldMapPin or DaggerfallUiActionKind.WorldMapTravel:
+                    if (rule.Kind == DaggerfallUiActionKind.WorldMapPin && fields.SetEquals(["action"])) return new(action);
+                    return (fields.SetEquals(["action", "x", "y"]) || fields.SetEquals(["action", "x", "y", "region", "index"]) && region is >= 0)
+                        && x is < Travel.DaggerfallTravelMapPixel.Width && y is < Travel.DaggerfallTravelMapPixel.Height
+                        ? new(action, X: x, Y: y, Region: region, Index: index) : null;
                 case DaggerfallUiActionKind.ExpeditionOpen or DaggerfallUiActionKind.ExpeditionPlaces or DaggerfallUiActionKind.ExpeditionStop
+                    or DaggerfallUiActionKind.ExpeditionFollow
                     or DaggerfallUiActionKind.ExpeditionShip or DaggerfallUiActionKind.ExpeditionLeave or DaggerfallUiActionKind.ExpeditionEnter:
                     return fields.SetEquals(["action"]) ? new(action) : null;
                 case DaggerfallUiActionKind.AtlasTiles: return fields.SetEquals(["action", "tiles"]) && tiles is not null ? new(action, Tiles: tiles) : null;

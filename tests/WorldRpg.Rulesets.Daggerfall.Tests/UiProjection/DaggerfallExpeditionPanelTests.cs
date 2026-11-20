@@ -28,7 +28,7 @@ public sealed class DaggerfallExpeditionPanelTests : IDisposable
             () => _lists.Add("open"), () => _lists.Add("enter"),
             () => { _lists.Add("board"); return DaggerfallTransportActionResult.Accepted(DaggerfallTransportMode.Foot, true, "Boarded."); },
             () => { _lists.Add("leave"); return DaggerfallTransportActionResult.Accepted(DaggerfallTransportMode.Foot, false, "Left the ship."); },
-            result => _lists.Add($"change {result.Message}"), _presentation);
+            result => _lists.Add($"change {result.Message}"), _presentation, null!, () => new(0, 0));
     }
 
     [Fact]
@@ -53,6 +53,20 @@ public sealed class DaggerfallExpeditionPanelTests : IDisposable
 
         _panel.ChangeWagon(new DaggerfallPlayerUiAction("wagon-put", "stale", Item: "stack:x", Amount: 1));
         Assert.Equal("Inventory changed. Choose the item again.", _presentation.LastOutcome);
+    }
+
+    [Fact]
+    public void The_world_map_shows_only_while_the_page_reports_it_and_asks_for_its_places_as_it_opens()
+    {
+        Assert.False(_panel.WorldMapOpen);
+        Assert.Null(_panel.ReadWorldMap());
+        _panel.ChangeWorldMap(new DaggerfallPlayerUiAction("world-map", Open: true));
+        Assert.True(_panel.WorldMapOpen);
+        Assert.Equal(["places"], _lists);
+        _panel.ChangeWorldMap(new DaggerfallPlayerUiAction("world-map", Open: true));
+        Assert.Equal(["places"], _lists);
+        _panel.ChangeWorldMap(new DaggerfallPlayerUiAction("world-map", Open: false));
+        Assert.False(_panel.WorldMapOpen);
     }
 
     public void Dispose() => _fixture.Dispose();

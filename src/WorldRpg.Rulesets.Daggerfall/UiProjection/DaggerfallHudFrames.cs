@@ -93,6 +93,7 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
             Map: map.ReadOpen(out string? mapAbsence), Legal: law.View, CreateItem: createItem.View, Teleport: teleport.View, Dispel: dispel.View, Identify: identify.View, Spells: spellbook.Read(), Detectors: detectors.Read())
         {
             ActionDrivenTime = controls.ActionDrivenTime, TimeHeld = playerTime.Held, MapAbsence = mapAbsence,
+            WorldMap = expedition.ReadWorldMap(),
             Weapon = new DaggerfallWeaponView(weaponDrawn(),
                 inventory.Items.FirstOrDefault(item => item.EquippedSlots.Contains("right-hand"))?.Label ?? "Bare hands"),
             Prompt = Prompt(session),

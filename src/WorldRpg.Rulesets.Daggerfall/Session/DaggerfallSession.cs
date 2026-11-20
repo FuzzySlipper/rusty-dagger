@@ -148,6 +148,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallMusic Music { get; }
     private readonly DaggerfallWeatherPresentation _weatherPresentation;
     private readonly DaggerfallHorizon _horizon;
+    /// <summary>The expedition's travel map as a world the Engine draws.</summary>
+    private readonly DaggerfallOverlandMap _overland;
+    /// <summary>The travel panel, whose world map the page reports open or closed.</summary>
+    private DaggerfallExpeditionPanel? _travelPanel;
 
     /// <summary>Whether river water about the player is still being built, a few map pixels an update.</summary>
     internal bool RiverWaterBuilding => _horizon.RiversBuilding;
@@ -692,7 +696,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // The hanging pieces' ragdolls hold the site appearance's instances, so they go before the projection.
         try { _hanging?.Dispose(); }                                                              // Scene
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.Interiors.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _overland, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.Interiors.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _exterior.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

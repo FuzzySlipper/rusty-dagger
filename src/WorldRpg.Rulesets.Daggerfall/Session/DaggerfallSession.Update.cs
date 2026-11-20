@@ -592,12 +592,26 @@ internal sealed partial class DaggerfallSession
         if (State.PlayerControl.Position is { } eyeFeet)
             _viewLight.Update(() => _exterior.ViewLight(eyeFeet.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight));   // Scene, Exterior
         foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);   // Scene
+        ShowOverland();                                                                           // Travel: the travel map, below
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
             State.Effects.PerceptionFor, NpcProjection.Views(), spellFlights, State.Npcs.IsGameplayActive,
-            id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null);   // Scene
+            id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null, _overland.Facts);   // Scene
         _overlays.Publish();                                                                      // Developer
+    }
+
+    /// <summary>
+    /// The travel map's list for a publication: while the expedition is open its world stands under the map's camera at
+    /// the player's eye, and once it closes the player's camera is active again. The weather's list, after it, leaves
+    /// the backdrop to the map's land while it shows.
+    /// </summary>
+    private void ShowOverland()
+    {
+        if (Expedition.Open && State.PlayerControl.Position is { } feet)
+            _overland.Show(Expedition, feet.ToVector() + (Vector3.UnitY * _tuning.Camera.EyeHeight),
+                _time.Calendar.Season == DaggerfallSeason.Winter, _horizon.Materials(_exterior.GroundLayers));   // Travel
+        else _overland.Close();                                                                  // Travel
     }
 
     /// <summary>
@@ -815,6 +829,10 @@ internal sealed partial class DaggerfallSession
                 _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull, DaggerfallMoons.LitBySlot(_time.Calendar.Sky),
                 LocalWeather.Conditions, _time.AbsoluteGameSeconds / (DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour), LocalWeather.Current is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
                 !_classicArt, _exterior.GroundLayers, _exterior.FloraLook);                        // Exterior
+            // The travel map's land streams hidden about the player, so it stands when the map opens.
+            DaggerfallTravelMapPixel here = MapPosition.Position();                               // Travel
+            (double mapX, double mapZ) = DaggerfallOverlandView.Metres(here.X + .5, here.Y + .5);
+            _overland.Prepare(mapX, mapZ, _time.Calendar.Season == DaggerfallSeason.Winter, _horizon.Materials(_exterior.GroundLayers));   // Travel
         }
         else _horizon.Hide();                                                                     // Exterior
         DaggerfallSiteProjection site = _sites.Projection;
@@ -822,7 +840,8 @@ internal sealed partial class DaggerfallSession
         _weatherPresentation.Update(site.Inputs, site.WorldOffset, site.Lighting, site.Appearance, _time.Calendar.Sky,
             _tuning.Weather.Daylight(_time.Calendar, conditions.Kind), _tuning.Weather.Sunlight(_time.Calendar.Season, conditions.Kind),
             LocalWeather.Climate, conditions,
-            LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity, !_classicArt); // Scene
+            LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity, !_classicArt,
+            _overland.Open ? (float)_tuning.Expedition.Map.Haze[LocalWeather.State.ForClimate(Expedition.Policy.Climate(Expedition.Party))] : null); // Scene
     }
 
     /// <summary>

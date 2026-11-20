@@ -177,6 +177,45 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>
+    /// The travel map's ground: far ground's heights and paint, without the horizon's lift and sink, its land raised above
+    /// the sea by <paramref name="relief"/> so ranges read from high above. The sea, the coast and the river channels are
+    /// where far ground and the walked ground have them, from the same function.
+    /// </summary>
+    internal void SampleMap(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double relief, bool winter)
+    {
+        GroundMaterials materials = Materials;
+        int heightSide = tile.HeightSide, side = tile.Side;
+        double[] ground = new double[heightSide * heightSide];
+        Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
+        for (int j = -1; j <= side; j++)
+        for (int i = -1; i <= side; i++)
+        {
+            double x = tile.SampleX(i), z = tile.SampleZ(j);
+            double height = Ground(x, z, tile.CellSize * 2, windows);
+            ground[((j + 1) * heightSide) + i + 1] = height;
+            samples.SetHeight(i, j, (float)MapHeight(height, relief));
+        }
+
+        for (int j = 0; j < side; j++)
+        for (int i = 0; i < side; i++)
+        {
+            double x = tile.SampleX(i), z = tile.SampleZ(j), height = ground[((j + 1) * heightSide) + i + 1];
+            Draw(samples, i, j, height <= OceanMetres + SeaMarginMetres || InChannel(x, z, tile.CellSize * 2) ? new(materials.Sea, new(1, 0, 0, 0))
+                : PaintOpen(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize) * _groundTuning.RockFromSlope / _tuning.RockFromSlope, winter, materials,
+                    MapNoiseScale));
+        }
+    }
+
+    /// <summary>The travel map's ground noise in broad patches, as fields seen from far above, rather than the walked ground's speckle.</summary>
+    private const int MapNoiseScale = 32;
+
+    /// <summary>The travel map's ground at a point, sampled as its cells of <paramref name="cellMetres"/> are, for what stands on it.</summary>
+    internal double MapGround(double x, double z, double relief, double cellMetres) => MapHeight(Ground(x, z, cellMetres * 2, []), relief);
+
+    /// <summary>A height as the travel map draws it: the sea flat at its surface, land above it raised by <paramref name="relief"/>.</summary>
+    private static double MapHeight(double height, double relief) => OceanMetres + (Math.Max(height - OceanMetres, 0) * relief);
+
+    /// <summary>
     /// The far forest's ground, in far ground's own frame (map metres): far ground's lifted and sunk heights, so copies stand
     /// on its triangles; each point's climate's nature archive, counted from the first; and flora's cover there.
     /// </summary>
@@ -479,10 +518,12 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>A vertex of open ground, by the same noise, slope and height wherever it is drawn.</summary>
-    internal Paint PaintOpen(double x, double z, double height, float slope, bool winter, GroundMaterials materials)
+    /// <param name="noiseScale">How many walked vertices one step of the ground's noise spans: 1 as the walked ground has it;
+    /// more where the ground is seen from far above, whose cells would catch the noise only as speckle.</param>
+    internal Paint PaintOpen(double x, double z, double height, float slope, bool winter, GroundMaterials materials, int noiseScale = 1)
     {
         ArchiveMaterials ground = Archive(x, z, winter, materials);
-        (int vertexX, int vertexZ) = ((int)Math.Round(x / Spacing), (int)Math.Round(z / Spacing));
+        (int vertexX, int vertexZ) = ((int)Math.Round(x / Spacing / noiseScale), (int)Math.Round(z / Spacing / noiseScale));
         float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(vertexX, 64_000 - vertexZ);
         System.Numerics.Vector4 weights = DaggerfallGroundBlend.Weights(_groundTuning, noise, slope, (float)height, ground.NoiseStone);
         if (!ground.HasLush || weights.W > 0) return new(ground.Open, weights);
