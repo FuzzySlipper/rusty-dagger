@@ -310,10 +310,11 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             Stand(models.Pole, x, z, token, part: part);
             Stand(models.Flags[banner], x, z, token);
         }
-        // A figure stands as its mobile's billboard, as tall as a standard, or as a standard where the site has no sprite for it.
+        // A figure stands as its mobile's billboard, sized in screen pixels so the party and the bands read the same at
+        // every zoom, or as a standard where the site has no sprite for it. Its transform takes no scale.
         void Figure(int? mobile, DaggerfallOverlandBanner banner, double x, double z, ulong? part = null)
         {
-            if (mobile is int id && Billboard(id) is var (look, height)) Stand(look, x, z, token / height, part: part);
+            if (mobile is int id && Billboard(id) is { } look) Stand(look, x, z, 1 / DaggerfallOverlandTerrain.Scale, part: part);
             else Standard(banner, x, z, part);
         }
         void Label(string name, string kind, double x, double z, float above)
@@ -335,7 +336,9 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             // The nearest places come first, so a wide view leaves out only the farthest.
             if (_facts.Count >= MostPlaceParts) break;
             StandPlace(models, place, x, z, (look, px, pz, scale, turn, sink) => Stand(look, px, pz, scale, turn, sink));
-            if (known && (close || Named.Contains(place.Kind))) Label(place.Name, DaggerfallSiteKinds.Label(place.Kind), x, z, (float)(_tuning.House * 2.6));
+            // The party's own place is named under its figure instead, which would stand behind this name.
+            if (known && (close || Named.Contains(place.Kind)) && place.MapPixel != expedition.Party)
+                Label(place.Name, DaggerfallSiteKinds.Label(place.Kind), x, z, (float)(_tuning.House * 2.6));
         }
 
         // The party's sight, its standard, the way it goes and where it heads.
@@ -362,7 +365,9 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             Stand(models.Pin, pinX, pinZ, token * .7f);
         }
         Figure(_partyMobile(), DaggerfallOverlandBanner.Party, partyX, partyZ, PartyPart);
-        Label("Your party", "party", partyX, partyZ, 0);
+        // Figures are a fixed height on the screen, so their names stand at their feet and the page sets them clear of the figure.
+        string? here = expedition.LocationHere is { } site && expedition.Known(site.Id) ? site.Name : null;
+        Label(here is null ? "Your party" : $"Your party · {here}", "party", partyX, partyZ, 0);
 
         // The bands the party sees, a spotted one ringed in red.
         foreach (DaggerfallExpeditionBandView band in expedition.SeenBands)
@@ -370,15 +375,16 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             (double x, double z) = DaggerfallOverlandView.Metres(band.X, band.Y);
             Figure(band.Mobile, Banner(band.Kind), x, z);
             if (band.Spotted) Stand(models.Dots[DaggerfallOverlandDot.Spotted], x, z, token * .6f, sink: -2);
-            Label(band.Name, band.Camp ? "camp" : band.Spotted ? "chase" : "band", x, z, token * 1.1f);
+            Label(band.Name, band.Camp ? "camp" : band.Spotted ? "chase" : "band", x, z, 0);
         }
     }
 
     /// <summary>
-    /// A mobile's billboard as the world's actors draw it, facing the camera in its resting frame, and its height in
-    /// metres; made the first time it is drawn and kept, or none where the site publishes no sprite for it.
+    /// A mobile's billboard as the world's actors draw it, facing the camera in its resting frame, a tuned height in screen
+    /// pixels at every zoom; made the first time it is drawn and kept, or none where the site publishes no sprite for it.
+    /// Like a token on a map it draws over the places and the land, so a party standing in a town is never lost among its roofs.
     /// </summary>
-    private (Appearance Look, float Height)? Billboard(int mobile)
+    private Appearance? Billboard(int mobile)
     {
         if (!_billboards.TryGetValue(mobile, out var made))
         {
@@ -388,13 +394,15 @@ internal sealed class DaggerfallOverlandMap : IDisposable
                 RenderResource texture = _engine.Graphics.OpenTexture(_engine.Content, sprite.TexturePath, sprite.TextureSha256).Handle;
                 SpriteAtlas atlas = _engine.Graphics.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture, SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth,
                     sprite.AtlasHeight, [.. sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height, frame.DisplaySize))])));
+                float height = (float)_tuning.Figure;
                 Appearance look = _engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId,
-                    sprite.Pivot, sprite.Size, _facing, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1, 1, 1, 1)));
+                    sprite.Pivot, new Vector2(height * sprite.Size.X / sprite.Size.Y, height), _facing, SpriteSizeMode.Pixel, 0, SpriteDepthPolicy.DepthTestOff,
+                    new Color(1, 1, 1, 1)));
                 made = (atlas, look, texture);
             }
             _billboards[mobile] = made;
         }
-        return made is var (_, appearance, _) && _sprite(mobile) is { } drawn ? (appearance, drawn.Size.Y) : null;
+        return made is var (_, appearance, _) ? appearance : null;
     }
 
     /// <summary>A place's model: a cluster of houses by its size, a keep, a temple, a ruin or a graveyard's stones.</summary>

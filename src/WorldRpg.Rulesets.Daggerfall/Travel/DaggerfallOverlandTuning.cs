@@ -13,8 +13,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Travel;
 /// <param name="FieldOfView">The map camera's vertical field of view.</param>
 /// <param name="Tilt">The lowest and highest tilt the view takes, and the one it opens at.</param>
 /// <param name="Distance">The nearest and farthest the eye stands from the point it looks at, and where it opens.</param>
-/// <param name="Token">How tall the party's and a band's standard stands, at the opening distance; it grows with the
-/// distance's square root, so a far view still finds them.</param>
+/// <param name="Token">How tall a standard stands (where a site has no figure for it), at the opening distance; it grows
+/// with the distance's square root, so a far view still finds it.</param>
 /// <param name="House">How wide a house of a place's model stands at the opening distance: places are drawn far larger
 /// than life, as on a map, and grow farther out as the standards do.</param>
 /// <param name="Haze">The haze the land is seen through in each weather where the party is, per metre as the world's fog:
@@ -45,6 +45,9 @@ internal sealed record DaggerfallOverlandTuning(
     /// <summary>The light that lights the map's land alone at night, at the dark of night: dim and blue, never black.</summary>
     internal DaggerfallOverlandMoonlight Moonlight { get; init; } = new(new(.55f, .68f, 1f), 1f, -.12f);
 
+    /// <summary>How tall the party's and a band's figure stands on the screen, in CSS pixels, at every zoom.</summary>
+    internal double Figure { get; init; } = 64;
+
     /// <summary>The colours the land and the water are painted in.</summary>
     internal DaggerfallMapPalette Ground { get; init; } = DaggerfallMapPalette.Default;
 
@@ -59,6 +62,7 @@ internal sealed record DaggerfallOverlandTuning(
         Positive(Distance.Least, "distance");
         Positive(Token, "token");
         Positive(House, "house");
+        Positive(Figure, "figure");
         Grading.Validate();
         Wet.Validate();
         if (!float.IsFinite(Moonlight.Intensity) || Moonlight.Intensity < 0 || !float.IsFinite(Moonlight.Color.X + Moonlight.Color.Y + Moonlight.Color.Z)
@@ -88,6 +92,7 @@ internal sealed record DaggerfallOverlandTuning(
         Moonlight = new(DaggerfallMapPalette.Srgb(section.GetProperty("moonlight").GetProperty("color").GetString()!),
             section.GetProperty("moonlight").GetProperty("intensity").GetSingle(), section.GetProperty("moonlight").GetProperty("cool").GetSingle()),
         Ground = DaggerfallMapPalette.Read(section.GetProperty("ground"), "expedition.map.ground"),
+        Figure = section.GetProperty("figure").GetDouble(),
     }.Validate();
 
     private static void Positive(double value, string name)

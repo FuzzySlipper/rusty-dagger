@@ -494,7 +494,7 @@
     "shipHire": 100,
     "portReach": 2,
     "lowFatigue": 0.2,
-    "map": { "relief": 4, "fieldOfView": 40, "tilt": [30, 82, 55], "distance": [2500, 60000, 12000], "token": 420, "house": 140,
+    "map": { "relief": 4, "fieldOfView": 40, "tilt": [30, 82, 55], "distance": [2500, 60000, 12000], "token": 420, "house": 140, "figure": 64,
       "haze": { "sunny": 0.0000025, "cloudy": 0.000003, "overcast": 0.000005, "fog": 0.00004, "rain": 0.000012, "thunder": 0.000016, "snow": 0.000016 },
       "grading": { "temperature": 0, "contrast": 0.15, "saturation": 0.12 },
       "wet": { "temperature": -0.06, "contrast": -0.05, "saturation": -0.22 },
