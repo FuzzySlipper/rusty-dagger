@@ -139,6 +139,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private DaggerfallActivationModule? _activation => Activation.Module;
     // Where a body or a person is sighted for use.
     private readonly DaggerfallActivationSight _sight = null!;
+    /// <summary>The wild grid walkers path on outdoors, past a location's own navigation.</summary>
+    internal DaggerfallWildNavigation WildNavigation { get; } = null!;
+    /// <summary>Every walker's navigation step: the location's grid, the wild grid, then a straight walk.</summary>
+    internal ActorNavigationCoordinator Navigation { get; } = null!;
 
     /// <summary>Where entering through an exterior door lands inside its building.</summary>
     private DaggerfallSiteAnchor BuildingLanding(DaggerfallSiteProfile inside, DaggerfallRdbDoorId door) =>

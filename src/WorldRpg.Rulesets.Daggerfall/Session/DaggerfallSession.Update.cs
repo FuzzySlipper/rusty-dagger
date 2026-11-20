@@ -494,6 +494,8 @@ internal sealed partial class DaggerfallSession
         if (Law.ModalOpen) return;
         _reactions.Step(State.Actors, update.DeltaSeconds, ThrownLanding);                       // Actors
         _hazards.Step(update.DeltaSeconds);                                                       // Combat
+        WildNavigation.Update(State.PlayerControl.Position,
+            _sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior, update.DeltaSeconds);    // Exterior: the wild grid walkers path on
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);   // Actors
         // Enemy attack-start facts must reach presentation before the post-enemy actions below.
         // A hit marker is consumed by the outer admitted update after this simulation step; if

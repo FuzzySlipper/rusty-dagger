@@ -1057,6 +1057,13 @@
     "cage": { "radius": 0.03, "mass": 0.4, "endRadius": 0.45, "endMass": 18, "swing": 0.8, "twist": 0.3, "jointDamping": 0.05, "linearDamping": 0.15, "angularDamping": 0.6 },
     "lantern": { "radius": 0.02, "mass": 0.12, "endRadius": 0.12, "endMass": 2, "swing": 0.6, "twist": 0.3, "jointDamping": 0.02, "linearDamping": 0.1, "angularDamping": 0.3 }
   },
+  "wildNavigation": {
+    "radius": 96,
+    "cellSize": 1,
+    "moveDistance": 32,
+    "refreshSeconds": 10,
+    "verticalReach": 32
+  },
   "looseItems": {
     "activationRadius": 16,
     "stepsPerSecond": 60,

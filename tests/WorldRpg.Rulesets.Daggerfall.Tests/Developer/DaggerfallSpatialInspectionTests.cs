@@ -12,7 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallSpatialInspectionTests
 {
     private readonly DaggerfallSpatialInspection _inspection = new(null!, null!, null!, new PlayerControlState(null, 0f, 0f), null!, null!,
-        null!, null!, () => null, () => null, null!);
+        null!, null!, () => null, () => null, null!, null!);
 
     [Fact]
     public void Arguments_out_of_range_are_refused_before_collision_is_read()

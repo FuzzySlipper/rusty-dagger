@@ -7,6 +7,7 @@ using Rusty.Engine.Interaction;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -22,7 +23,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="step">The latest admitted simulation step, or null before one.</param>
 internal sealed class DaggerfallSpatialInspection(IEngineContext engine, SpatialMovementSystem spatial, DaggerfallSiteCrossing sites,
     PlayerControlState player, PlayerInputSystem input, ActorsState actors, DaggerfallActivation activation, DaggerfallPlayerControls controls,
-    Func<ulong?> generation, Func<ulong?> step, DaggerfallDebugOverlays overlays) : IPlaytestNavigationCommands
+    Func<ulong?> generation, Func<ulong?> step, DaggerfallDebugOverlays overlays, DaggerfallWildNavigation wild) : IPlaytestNavigationCommands
 {
     /// <summary>How far below its start a floor is searched for.</summary>
     private const float FloorSearchMetres = 16F;
@@ -97,16 +98,78 @@ internal sealed class DaggerfallSpatialInspection(IEngineContext engine, Spatial
             DaggerfallPlaytestJsonContext.Default.PlaytestFloor));
     }
 
+    private IReadOnlyList<ulong> Grids() => wild.Grids(sites.Projection.Inputs.Geometry.NavigationGridId);
+
+    public DebugCommandResult SetWild(string state)
+    {
+        if (state is not ("on" or "off")) return DaggerfallDeveloperReplies.Refused("navigation.wild takes on or off.");
+        wild.Enabled = state == "on";
+        return DebugCommandResult.Success(wild.Enabled
+            ? "The wild grid is derived about the player outdoors."
+            : "No wild grid: walkers past a location's own grid walk straight for their target.");
+    }
+
+    public DebugCommandResult ReadGrids() => DaggerfallDeveloperReplies.Json(w =>
+    {
+        w.WriteStartObject();
+        w.WriteStartArray("order");
+        foreach (ulong id in Grids()) w.WriteNumberValue(id);
+        w.WriteEndArray();
+        w.WriteStartArray("grids");
+        foreach (NavigationGridInfo grid in engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(spatial.Session)).Span)
+        {
+            w.WriteStartObject();
+            w.WriteNumber("id", grid.GridId);
+            w.WriteString("kind", grid.Kind.ToString());
+            w.WriteBoolean("latest", grid.Latest);
+            w.WriteNumber("cells", grid.WalkableCellCount);
+            w.WriteNumber("cellSize", grid.CellSize);
+            w.WriteNumber("minX", grid.MinX); w.WriteNumber("maxX", grid.MaxX);
+            w.WriteNumber("minZ", grid.MinZ); w.WriteNumber("maxZ", grid.MaxZ);
+            w.WriteEndObject();
+        }
+        w.WriteEndArray();
+        w.WriteStartObject("wild");
+        w.WriteNumber("id", DaggerfallWildNavigation.GridId);
+        w.WriteBoolean("enabled", wild.Enabled);
+        if (wild.Centre is { } centre) DaggerfallDeveloperReplies.Vector(w, "centre", centre); else w.WriteNull("centre");
+        w.WriteBoolean("pending", wild.Pending);
+        w.WriteNumber("derivations", wild.Derivations);
+        w.WriteNumber("radius", wild.Tuning.Radius);
+        if (wild.Installed is { } installed)
+        {
+            w.WriteStartObject("installed");
+            w.WriteNumber("walkableCells", installed.WalkableCellCount);
+            w.WriteNumber("derivedColumns", installed.DerivedColumnCount);
+            w.WriteNumber("edgeTests", installed.EdgeTestCount);
+            w.WriteNumber("derivationMilliseconds", installed.DerivationMicroseconds / 1000d);
+            w.WriteNumber("components", installed.ComponentCount);
+            w.WriteEndObject();
+        }
+        else w.WriteNull("installed");
+        w.WriteEndObject();
+        w.WriteEndObject();
+    });
+
     public DebugCommandResult ReadRoute(double x, double y, double z)
     {
         if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z))
             return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "Route goal must be finite.");
         Vector3 from = PlayerFeet(), goal = new((float)x, (float)y, (float)z);
+        // As a walker's step does: the first grid that takes the start and reaches the goal, else the first that takes it.
+        NavigationGridInfo[] published = engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(spatial.Session)).ToArray();
+        NavigationStepResult result = default;
         NavigationGridInfo? grid = null;
-        foreach (NavigationGridInfo published in engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(spatial.Session)).Span)
-            if (published.Latest) grid = published;
-        NavigationStepResult result = engine.Spatial.EvaluateNavigationStep(new NavigationStepRequest(spatial.Session, from, goal,
-            RouteStepMetres, RouteVisitedCells));
+        (NavigationStepResult Result, NavigationGridInfo? Grid)? first = null;
+        foreach (ulong id in Grids())
+        {
+            result = engine.Spatial.EvaluateNavigationStep(new NavigationStepRequest(spatial.Session, from, goal, RouteStepMetres, RouteVisitedCells, id));
+            grid = published.FirstOrDefault(value => value.GridId == id) is { GridId: > 0 } found ? found : null;
+            if (result.Outcome is NavigationPathOutcome.StartNotWalkable or NavigationPathOutcome.ProjectionUnavailable) continue;
+            first ??= (result, grid);
+            if (result.Outcome != NavigationPathOutcome.GoalNotWalkable) { first = (result, grid); break; }
+        }
+        if (first is { } taken) (result, grid) = taken;
         // The result is borrowed until the next Spatial call, and the goal's floor is one.
         PlanarNavCell[] path = result.Path.ToArray();
         NavigationPathEdge[] edges = result.Edges.ToArray();

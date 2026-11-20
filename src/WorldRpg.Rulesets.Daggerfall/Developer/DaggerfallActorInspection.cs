@@ -227,6 +227,7 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             w.WriteString("decided", evidence.State.ToString());
             if (evidence.Target is { } target) w.WriteNumber("target", target.DurableId); else w.WriteNull("target");
             if (evidence.Navigation is { } navigation) w.WriteString("navigation", navigation.Outcome.ToString());
+            if (evidence.Route is { } route) w.WriteString("route", route);
         }
         if (behavior.LastPerception.TryGetValue(id, out DaggerfallEnemyPerceptionDecision? perception))
         {

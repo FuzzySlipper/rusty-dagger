@@ -120,6 +120,21 @@ internal class SpatialFake : DispatchProxy
         return fake;
     }
 
+    /// <summary>The collision-derived grids asked for, the wild grid's among them.</summary>
+    internal List<CollisionNavigationReplaceRequest> CollisionNavigationRequests { get; } = [];
+    /// <summary>The grids cleared by id.</summary>
+    internal List<ulong> ClearedNavigation { get; } = [];
+    private CollisionNavigationReplaceReceipt DeriveCollisionNavigation(CollisionNavigationReplaceRequest request)
+    {
+        CollisionNavigationRequests.Add(request);
+        return default;
+    }
+    private object? ClearNavigation(NavigationClearRequest request)
+    {
+        ClearedNavigation.Add(request.GridId);
+        return null;
+    }
+
     protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
     {
         nameof(ISpatialService.CreateSession) => CreateSession(),
@@ -154,6 +169,11 @@ internal class SpatialFake : DispatchProxy
         // actor's pose intact instead of reporting a bogus waypoint.
         nameof(ISpatialService.EvaluateNavigationStep) => Navigate((NavigationStepRequest)arguments![0]!),
         nameof(ISpatialService.ReadNavigationGrids) => new ReadOnlyMemory<NavigationGridInfo>(NavigationGrids),
+        // The wild grid outdoors: its derivations are recorded and stand installed at once; nothing routes on them here.
+        nameof(ISpatialService.DefaultCollisionNavigationConfig) => default(CollisionNavigationConfig) with { GridId = 1, CellSize = 1, ChunkSize = 16, MaximumCells = 65_536 },
+        nameof(ISpatialService.ReplaceCollisionNavigation) => DeriveCollisionNavigation((CollisionNavigationReplaceRequest)arguments![0]!),
+        nameof(ISpatialService.ReadCollisionNavigation) => new CollisionNavigationReadout(false, false, default),
+        nameof(ISpatialService.ClearNavigation) => ClearNavigation((NavigationClearRequest)arguments![0]!),
         nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
         _ => throw new NotSupportedException(method?.Name),
     };

@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.World;
 using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
@@ -49,6 +50,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallSplatPeopleTuning SplatPeople { get; init; } = DaggerfallSplatPeopleTuning.Default;
     internal DaggerfallHangingTuning Hanging { get; init; } = DaggerfallHangingTuning.Default;
     internal DaggerfallLooseItemTuning LooseItems { get; init; } = DaggerfallLooseItemTuning.Default;
+    internal DaggerfallWildNavigationTuning WildNavigation { get; init; } = DaggerfallWildNavigationTuning.Default;
     /// <summary>What a site's projection and the exterior world read of these.</summary>
     internal DaggerfallSiteTuning Site => new(PresentationAudio, Flats, SiteLighting, WorldOrigin, Ground);
     internal DaggerfallFloraTuning Flora { get; init; } = DaggerfallFloraTuning.Default;
@@ -163,6 +165,7 @@ internal sealed record DaggerfallTuning(
             SplatPeople = DaggerfallSplatPeopleTuning.Read(root.GetProperty("splatPeople")),
             Hanging = DaggerfallHangingTuning.Read(root.GetProperty("hanging")),
             LooseItems = DaggerfallLooseItemTuning.Read(root.GetProperty("looseItems")),
+            WildNavigation = DaggerfallWildNavigationTuning.Read(root.GetProperty("wildNavigation")),
             Flora = DaggerfallFloraTuning.Read(root.GetProperty("flora")),
             GroundCover = DaggerfallGroundCoverTuning.Read(root.GetProperty("groundCover")),
             SurfaceRelief = DaggerfallSurfaceReliefTuning.Read(root.GetProperty("surfaceRelief")),

@@ -36,6 +36,12 @@ public interface IPlaytestNavigationCommands : IDebugCommandModule
 
     [DebugCommand("navigation.route", Description = "Read the Engine's navigation route from the player's feet to scene-local feet X Y Z over the navigation actors walk: outcome, turning waypoints with their floors, and the floor at the goal. Nothing moves.")]
     DebugCommandResult ReadRoute(double x, double y, double z);
+
+    [DebugCommand("navigation.grids", Description = "Read the navigation grids the session holds (each grid's kind, cells, cell size and the columns it covers), the order walkers try them in, and the wild grid about the player: where it is centred, whether a derivation is running, and the last one's cells and cost.")]
+    DebugCommandResult ReadGrids();
+
+    [DebugCommand("navigation.wild", Description = "Developer: derive the wild navigation grid about the player outdoors (on, the default) or clear it so walkers past a location's own grid walk straight for their target (off), for this run; to compare its cost.")]
+    DebugCommandResult SetWild(string state);
 }
 
 /// <summary>A point in a playtest reply, in scene-local metres.</summary>

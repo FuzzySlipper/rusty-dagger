@@ -28,6 +28,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly Func<long, PursuitTarget?> _selectTarget;
     private readonly Func<long, bool> _questRestrained;
     private readonly ActorsState _actors;
+    private readonly ActorNavigationCoordinator _navigation;
     private readonly PursuitCoordinator<IProductFact> _pursuit;
     private readonly Func<long, long, DaggerfallEnemyPerceptionContext?> _contextProvider;
     private readonly Action<DaggerfallSkillUse> _recordSkillUse;
@@ -100,6 +101,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         _perceptionOptions = new PursuitPerceptionOptions(DaggerfallPerceptionPaging.FirstPairCursor, DaggerfallPerceptionPaging.CompleteQueryPageSize).Validate();
         _pursuit = new PursuitCoordinator<IProductFact>(new DaggerfallEnemyPerceptionService(perception, Filter), spatial, navigation, combat, sight);
         _wander = new ActorWanderCoordinator(navigation);
+        _navigation = navigation;
     }
 
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEvidence { get; private set; } = new Dictionary<long, EnemyBehaviorEvidence>();
@@ -356,7 +358,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
         {
             facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, previous, current, generation, simulationStep));
         }
-        evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation) { Target = target });
+        string? route = pursuit.Navigation is null || !_navigation.TryRoute(actor.Actor.Entity, out ulong? grid) ? null
+            : grid is ulong id ? $"grid:{id}" : "straight-line";
+        // A walker off every grid walks straight for its target: the trace says so.
+        if (route == "straight-line") _gates?.Add(new("navigation", "route", DaggerfallGateOutcome.Chose, "straight-line:off-every-grid"));
+        evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation) { Target = target, Route = route });
         double targetRateOfApproach = 0d;
         PerceptionPair? observed = pursuit.Visibility?.Pairs.ToArray()
             .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
@@ -639,4 +645,7 @@ internal sealed record EnemyBehaviorEvidence(long ActorId, EnemyBehaviorState St
 {
     /// <summary>Who the creature pursued in this decision: the player, an ally's foe, or none.</summary>
     internal PursuitTarget? Target { get; init; }
+
+    /// <summary>How its step went: <c>grid:N</c> by navigation grid N, <c>straight-line</c> off every grid, or null with no step.</summary>
+    internal string? Route { get; init; }
 }

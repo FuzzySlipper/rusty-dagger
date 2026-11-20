@@ -67,12 +67,20 @@ public sealed class ActorNavigationCoordinator
     private readonly HashSet<EntityId> _heldInCollision = [];
     private readonly CharacterControllerConfig _characterControllerConfig;
     private readonly Func<ActorState, CharacterStepEnvironment>? _environmentProvider;
+    private readonly Func<IReadOnlyList<ulong>> _grids;
+    // The grid each actor's last step went by, or none when it walked straight (Route).
+    private readonly Dictionary<EntityId, ulong?> _routes = [];
 
     /// <summary>The supplied session remains owned by its spatial composition system.</summary>
+    /// <param name="grids">
+    /// The navigation grids a walker's step tries, in order: the first that can take its start and reach its goal
+    /// carries it. None names no grid, so the Engine reads the grid published last.
+    /// </param>
     public ActorNavigationCoordinator(ISpatialService spatial, SpatialSession session,
         EntityStore? actors = null, CharacterControllerConfig? characterControllerConfig = null,
-        Func<ActorState, CharacterStepEnvironment>? environmentProvider = null)
+        Func<ActorState, CharacterStepEnvironment>? environmentProvider = null, Func<IReadOnlyList<ulong>>? grids = null)
     {
+        _grids = grids ?? (static () => [0UL]);
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _useCharacterController = actors is not null;
@@ -84,10 +92,12 @@ public sealed class ActorNavigationCoordinator
     /// Evaluates one Engine-owned navigation step. Only an explicit Reached
     /// outcome changes product pose; every other Engine fact leaves it intact,
     /// but for a body the Engine cannot free, which is stood clear if it can
-    /// be (<see cref="CharacterPenetration"/>). A walker the navigation cannot
-    /// start from (off every grid, as in ground no navigation covers, above its
-    /// floor, or with no navigation published at all) walks straight for the target under the Engine character
-    /// controller instead, which owns its collision, gravity and steps.
+    /// be (<see cref="CharacterPenetration"/>). A walker's step tries each grid in
+    /// turn, going on to the next when one cannot take its start or reach its goal,
+    /// as a route from the wilds into a town's own grid does; one no grid can start
+    /// from (off every grid, above its floor, or with no navigation published at
+    /// all) walks straight for the target under the Engine character controller
+    /// instead, which owns its collision, gravity and steps.
     /// </summary>
     public NavigationStepResult Evaluate(ActorState actor, ActorNavigationRequest request)
     {
@@ -98,15 +108,33 @@ public sealed class ActorNavigationCoordinator
             return EvaluateCharacterStep(actor, request);
 
         ActorPose before = actor.Pose;
-        NavigationStepResult receipt = _spatial.EvaluateNavigationStep(new NavigationStepRequest(
-            _session,
-            before.Position.ToVector(),
-            request.Target.ToVector(),
-            request.MaximumStepUnits,
-            request.MaximumVisited));
+        NavigationStepResult? first = null;
+        ulong? carried = null, firstGrid = null;
+        NavigationStepResult receipt = default;
+        foreach (ulong grid in _grids())
+        {
+            receipt = _spatial.EvaluateNavigationStep(new NavigationStepRequest(
+                _session,
+                before.Position.ToVector(),
+                request.Target.ToVector(),
+                request.MaximumStepUnits,
+                request.MaximumVisited,
+                grid));
+            if (receipt.Outcome is NavigationPathOutcome.StartNotWalkable or NavigationPathOutcome.ProjectionUnavailable) continue;
+            if (first is null) (first, firstGrid) = (receipt, grid);
+            if (receipt.Outcome == NavigationPathOutcome.GoalNotWalkable) continue;
+            carried = grid;
+            break;
+        }
 
-        if (receipt.Outcome is NavigationPathOutcome.StartNotWalkable or NavigationPathOutcome.ProjectionUnavailable && _useCharacterController)
+        if (first is null && _useCharacterController)
+        {
+            _routes[actor.Actor.Entity] = null;
             return EvaluateCharacterStep(actor, request);
+        }
+        // A goal no grid holds is answered by the first grid that took the start.
+        if (carried is null && first is { } held) receipt = held;
+        _routes[actor.Actor.Entity] = carried ?? firstGrid;
 
         if (receipt.Outcome == NavigationPathOutcome.Reached)
         {
@@ -115,6 +143,12 @@ public sealed class ActorNavigationCoordinator
 
         return receipt;
     }
+
+    /// <summary>
+    /// The grid an actor's last ground step went by, or null when it walked straight for its target off every grid;
+    /// false when it has taken no ground step.
+    /// </summary>
+    public bool TryRoute(EntityId actor, out ulong? grid) => _routes.TryGetValue(actor, out grid);
 
     /// <summary>
     /// Runs an actor's accepted target intent through the Engine character controller. The

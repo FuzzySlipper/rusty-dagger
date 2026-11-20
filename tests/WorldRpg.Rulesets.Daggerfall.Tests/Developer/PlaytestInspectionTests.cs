@@ -101,18 +101,21 @@ public sealed class PlaytestInspectionTests
             Assert.Contains("outside the resident exterior window", far.RootElement.GetProperty("detail").GetString());
         }
 
-        spatial.NavigationGrids = [new(7, NavigationProjectionKind.HostWalkableCells, true, 100, 1, 1, .5, .3f, 1.8f, -100, 100, -100, 100)];
+        // The route tries the grids walkers do, the location's composed grid first.
+        ulong composed = session.Sites.Projection.Inputs.Geometry.NavigationGridId;
+        spatial.NavigationGrids = [new(composed, NavigationProjectionKind.HostWalkableCells, true, 100, 1, 1, .5, .3f, 1.8f, -100, 100, -100, 100)];
         PlanarNavCell[] path = [new(0, 20, 0), new(1, 20, 0), new(2, 20, 0), new(2, 20, 1)];
         spatial.NavigationResult = request => new(path, path.Select(_ => new NavigationPathEdge(NavigationEdgeKind.Walk)).ToArray(),
             NavigationPathOutcome.Reached, new Vector3(.75f, 10, .25f), path[1], NavigationEdgeKind.Walk, 0, 1, 9, 1, 1, 1, false, default, default);
         using JsonDocument route = JsonDocument.Parse(navigation.ReadRoute(1.25, 10, .75).Message);
         NavigationStepRequest asked = spatial.NavigationRequests[^1];
         Assert.Equal(new Vector3(1.25f, 10, .75f), asked.Target);
+        Assert.Equal(composed, asked.GridId);
         Assert.Equal(player.X, asked.From.X);
         Assert.True(asked.From.Y < player.Y, "A route starts from the feet, below the character centre.");
         JsonElement reply = route.RootElement;
         Assert.Equal("Reached", reply.GetProperty("outcome").GetString());
-        Assert.Equal(7UL, reply.GetProperty("gridId").GetUInt64());
+        Assert.Equal(composed, reply.GetProperty("gridId").GetUInt64());
         Assert.Equal(4, reply.GetProperty("pathCells").GetInt32());
         Assert.Equal("floor", reply.GetProperty("goalFloor").GetProperty("status").GetString());
         JsonElement[] waypoints = [.. reply.GetProperty("waypoints").EnumerateArray()];

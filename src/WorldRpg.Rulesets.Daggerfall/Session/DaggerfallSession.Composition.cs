@@ -421,8 +421,11 @@ internal sealed partial class DaggerfallSession
             _condition = new DaggerfallPlayerCondition(_vitality, _tuning.Attacks.Stamina, _tuning.Rest, _random, DaggerfallRandomKey.Seed);
             _condition.Stamina.Refresh(actors.Player.Stats);
             _touch = new DaggerfallContactTouch(new(_contact, _spatial, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion)), _tuning.Contact);
+            WildNavigation = new DaggerfallWildNavigation(engine.Spatial, _spatial, tuning.WildNavigation);
             ActorNavigationCoordinator navigation = new(engine.Spatial, _spatial.Session, actors.Store, _spatial.CurrentController,
-                actor => _exterior.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)));
+                actor => _exterior.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)),
+                () => WildNavigation.Grids(_sites.Projection.Inputs.Geometry.NavigationGridId));
+            Navigation = navigation;
             _reactions = new ActorReactions(navigation);
             Traps = new DaggerfallTraps(_tuning.Hazards, actors, _reactions, () => assembled.PlayerControl.Position,
                 () => _sites.Projection.Inputs.DungeonActions, point => _sites.Interiors.ActionTriggers.ContactActionsAt(point),
@@ -1109,7 +1112,7 @@ internal sealed partial class DaggerfallSession
                 _roster, _senses, _enemyBehavior, _combat, PlayerAttack, _spatial, _sites, Activation, Entrance, () => _dialogue,
                 tuning.LootInteraction.MaximumDistance);                                          // Developer
             DaggerfallSpatialInspection spatialInspection = new(engine, _spatial, _sites, State.PlayerControl, _input, State.Actors, Activation,
-                _controls, () => _latestUpdateGeneration, () => _latestSimulationStep, _overlays);    // Developer
+                _controls, () => _latestUpdateGeneration, () => _latestSimulationStep, _overlays, WildNavigation);    // Developer
             _playtest = new DaggerfallPlaytestState(_controls, () => _mode, State.Actors, State.Effects, _combat, () => State.WeaponDrawn, PlayerAttack,
                 State.Kit.AttackExecution, State.Kit.Targeting, () => _latestUpdateGeneration, () => _latestSimulationStep, State.Encumbrance,
                 State.PlayerControl, _input, _camera, Presentation, Activation, ActivationPanel, _lootUi, _roster, _senses, _enemyBehavior, _reactions,
