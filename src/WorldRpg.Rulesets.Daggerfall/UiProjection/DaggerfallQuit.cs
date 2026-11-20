@@ -16,7 +16,7 @@ internal sealed record DaggerfallQuitView(bool Unsaved);
 internal sealed class DaggerfallQuit(PresentationState presentation)
 {
     /// <summary>
-    /// The player actions that change nothing a save holds: reading and asking (inspecting, quotes, the expedition map's places and search, pages, art),
+    /// The player actions that change nothing a save holds: reading and asking (inspecting, quotes, the expedition map's places, pages, art; the map's Find pins its match, which is saved),
     /// opening the menu or a map, the saves and Quit themselves, the title's choices, and the settings, which the
     /// Host keeps apart from the game. Any other action applied may have changed the game.
     /// </summary>
@@ -25,7 +25,7 @@ internal sealed class DaggerfallQuit(PresentationState presentation)
         DaggerfallUiActionKind.Begin, DaggerfallUiActionKind.BundleSelect, DaggerfallUiActionKind.ArtRequest,
         DaggerfallUiActionKind.SpellInfo, DaggerfallUiActionKind.Menu, DaggerfallUiActionKind.InputClaimed,
         DaggerfallUiActionKind.MapOpen, DaggerfallUiActionKind.ExpeditionOpen, DaggerfallUiActionKind.ExpeditionPlaces,
-        DaggerfallUiActionKind.ExpeditionFind, DaggerfallUiActionKind.AtlasTiles, DaggerfallUiActionKind.LodgingQuote,
+        DaggerfallUiActionKind.AtlasTiles, DaggerfallUiActionKind.LodgingQuote,
         DaggerfallUiActionKind.MerchantQuote, DaggerfallUiActionKind.InventoryInspect, DaggerfallUiActionKind.NotebookPage,
         DaggerfallUiActionKind.BankOpen,
         DaggerfallUiActionKind.SaveGame, DaggerfallUiActionKind.LoadGame, DaggerfallUiActionKind.SaveSlots,

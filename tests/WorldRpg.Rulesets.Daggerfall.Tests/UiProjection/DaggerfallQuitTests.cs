@@ -39,6 +39,11 @@ public sealed class DaggerfallQuitTests
         Assert.Equal(new DaggerfallQuitView(true), quit.View(ProductMode.Modal, 10.5));
         quit.Kept(10.5);
         Assert.Equal(new DaggerfallQuitView(false), quit.View(ProductMode.Modal, 10.5));
+        // The expedition map's places are only read; its Find pins the best match, which a save keeps.
+        quit.Applied(DaggerfallUiActionKind.ExpeditionPlaces);
+        Assert.Equal(new DaggerfallQuitView(false), quit.View(ProductMode.Modal, 10.5));
+        quit.Applied(DaggerfallUiActionKind.ExpeditionFind);
+        Assert.Equal(new DaggerfallQuitView(true), quit.View(ProductMode.Modal, 10.5));
 
         quit.Request();
         Assert.True(quit.Take());
