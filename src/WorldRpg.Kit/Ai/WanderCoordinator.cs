@@ -60,6 +60,16 @@ public sealed class WanderMemoryComponent
     /// </summary>
     public IReadOnlyList<WorldPoint>? Route { get; private set; }
 
+    /// <summary>The share of the wander policy's speed the actor walks at: 1 unless something chose its own pace for it.</summary>
+    public float Pace { get; private set; } = 1f;
+
+    /// <summary>Walks the actor at <paramref name="pace"/> of the wander policy's speed from its next step.</summary>
+    public void SetPace(float pace)
+    {
+        if (!float.IsFinite(pace) || pace <= 0f) throw new ArgumentOutOfRangeException(nameof(pace), pace, "An actor walks at a pace above 0.");
+        Pace = pace;
+    }
+
     /// <summary>Follows <paramref name="route"/> from its first point, the actor's next waypoint chosen afresh.</summary>
     public void Stage(IReadOnlyList<WorldPoint> route)
     {
@@ -202,7 +212,7 @@ public sealed class ActorWanderCoordinator
         WorldPoint target = memory.Target!.Value;
         NavigationStepResult navigation = _navigation.Evaluate(actor, new ActorNavigationRequest(
             target,
-            checked(policy.MovementSpeedUnitsPerSecond * deltaSeconds),
+            checked(policy.MovementSpeedUnitsPerSecond * memory.Pace * deltaSeconds),
             policy.NavigationMaximumVisited,
             policy.NavigationMode,
             deltaSeconds));

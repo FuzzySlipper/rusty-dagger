@@ -20,7 +20,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// figure is in use at a time. people.spawn stands a few walkers in front of the player as a gsplat character of their
 /// own, whatever the rest are drawn as. The rig crowd is made on its first use, and a gsplat character is opened on its
 /// first use and kept for the session. It shows a spawned walker as its character and the rest as the crowd in use, and
-/// settles every crowd it made, so one put aside lets go of its walkers.
+/// settles every crowd it made, so one put aside lets go of its walkers. A character in a long skirt walks the gentle
+/// clip with its skirt pushed open by the legs; people.splat-pace says whether its walk plays up to the walkers' pace
+/// (the default) or the walkers people.spawn stands as it walk at the clip's own.
 /// </summary>
 /// <param name="rig">The art set's people rig, or null when it carries none.</param>
 /// <param name="splats">The art set's gsplat townspeople, or null when it carries none.</param>
@@ -48,6 +50,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
 
     /// <summary>Spawned walkers stand this far apart, in the first of these rows ahead that has clear ground.</summary>
     private const float SpawnSpacing = 1.5F;
+    private static readonly Transform Unplaced = new(Vector3.Zero, Quaternion.Identity, Vector3.One);
     private static readonly float[] SpawnRows = [4F, 5.5F, 7F, 8.5F];
 
     private readonly Dictionary<string, (RenderResource Body, Appearance Appearance, SplatFigure Figure)> characters = new(StringComparer.Ordinal);
@@ -58,6 +61,11 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     /// <summary>The characters that would not open, said once each; walkers wearing their art draw their sprites.</summary>
     private readonly HashSet<string> broken = new(StringComparer.Ordinal);
     private bool unclothed;
+    private RenderResource? gentle;
+    /// <summary>Whether walkers people.spawn stands in a long skirt walk at its gentle clip's own pace, not the walkers'.</summary>
+    private bool slow;
+    /// <summary>The character each walker people.spawn stands is drawn as, by actor.</summary>
+    private readonly Dictionary<long, string> spawnedAs = [];
     private PartsRigCrowd? rigCrowd;
     private SplatCrowd? splatCrowd;
 
@@ -88,6 +96,9 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         rigCrowd?.Publishing();
         splatCrowd?.Publishing();
     }
+
+    /// <summary>Counts the drawn time of an admitted update toward the next settle, which moves the gsplat people's skirts on by it.</summary>
+    internal void Advance(float seconds) => splatCrowd?.Advance(seconds);
 
     public void Settle()
     {
@@ -142,6 +153,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         {
             int released = splatCrowd?.Assigned.Count ?? 0;
             foreach (long actor in splatCrowd?.Assigned.Keys.ToArray() ?? []) splatCrowd!.Assign(actor, null);
+            foreach (long actor in spawnedAs.Keys) Pace(actor, 1F);
+            spawnedAs.Clear();
             return DebugCommandResult.Success($"{released} spawned walkers draw as the rest do again.");
         }
         if (count is < 1 or > 16) return DaggerfallDeveloperReplies.Refused("people.spawn takes a COUNT of 1 to 16.");
@@ -158,7 +171,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         foreach (float metres in SpawnRows)
             if ((placed = stage.Place(count, metres, (count - 1) * SpawnSpacing, crossing: false, spawned, out walkers)).Succeeded) break;
         if (!placed.Succeeded) return placed;
-        foreach (ActorState walker in walkers) splatCrowd!.Assign(walker.DurableId, figure);
+        foreach (ActorState walker in walkers) Stand(walker.DurableId, character);
         return DebugCommandResult.Success($"{count} walking {(count == 1 ? "person stands" : "people stand")} in front of the player as gsplat {figure.Name}, until people.unstage.");
     }
 
@@ -172,6 +185,16 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         return DebugCommandResult.Success(grid == 0
             ? $"Gsplat people draw smooth, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}."
             : $"Gsplat people draw on a {grid}-pixel grid, blocks where they cover {coverage:0.##}, {(look.OwnPalette ? "in their own palette" : "in their own colours")}, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}.");
+    }
+
+    public DebugCommandResult SplatPace(string pace)
+    {
+        if (pace is not ("clip" or "slow")) return DaggerfallDeveloperReplies.Refused("people.splat-pace takes clip or slow.");
+        slow = pace == "slow";
+        foreach ((long actor, string character) in spawnedAs) Stand(actor, character);
+        return DebugCommandResult.Success(slow
+            ? "Spawned gsplat people in a long skirt walk at their gentle walk's own pace, slower than the rest."
+            : "Gsplat people in a long skirt walk at the walkers' pace, their gentle walk played faster to keep up.");
     }
 
     public DebugCommandResult SplatShadow(string caster)
@@ -201,7 +224,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         // The walkers' instances and rigs go before the characters they draw, and the characters before their clips.
         foreach (IDisposable? owned in new IDisposable?[] { rigCrowd, splatCrowd }
             .Concat(characters.Values.SelectMany(opened => new IDisposable[] { opened.Appearance, opened.Body }))
-            .Concat(clips is { } packs ? [packs.Walk, packs.Idle] : []))
+            .Concat(clips is { } packs ? [packs.Walk, packs.Idle] : [])
+            .Append(gentle))
         {
             try { owned?.Dispose(); }
             catch (Exception exception) { (failures ??= []).Add(exception); }
@@ -211,6 +235,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         rigCrowd = null;
         splatCrowd = null;
         Crowd = null;
+        gentle = null;
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
@@ -231,9 +256,10 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private void LetGo()
     {
         letGo = false;
-        HashSet<SplatFigure> spawned = [.. splatCrowd?.Assigned.Values ?? []];
+        // A walker spawned at the slow pace draws its character's figure at another walk rate: the appearance is what it holds.
+        HashSet<Appearance> spawned = [.. splatCrowd?.Assigned.Values.Select(figure => figure.Appearance) ?? []];
         List<Exception>? failures = null;
-        foreach ((string id, var opened) in characters.Where(opened => !spawned.Contains(opened.Value.Figure)).ToArray())
+        foreach ((string id, var opened) in characters.Where(opened => !spawned.Contains(opened.Value.Appearance)).ToArray())
         {
             characters.Remove(id);
             foreach (IDisposable owned in new IDisposable[] { opened.Appearance, opened.Body })
@@ -245,11 +271,12 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (characters.Count == 0 && clips is { } packs)
         {
             clips = null;
-            foreach (IDisposable pack in new IDisposable[] { packs.Walk, packs.Idle })
+            foreach (IDisposable? pack in new IDisposable?[] { packs.Walk, packs.Idle, gentle })
             {
-                try { pack.Dispose(); }
+                try { pack?.Dispose(); }
                 catch (Exception exception) { (failures ??= []).Add(exception); }
             }
+            gentle = null;
         }
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
@@ -295,8 +322,29 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     }
 
     /// <summary>
+    /// Draws spawned walker <paramref name="actor"/> as <paramref name="character"/>: one in a long skirt walking slow goes
+    /// at its gentle walk's own pace, which then plays as authored; every other at the walkers' pace.
+    /// </summary>
+    private void Stand(long actor, string character)
+    {
+        DaggerfallSplatPerson person = splats!.Characters[character];
+        SplatFigure figure = characters[character].Figure;
+        bool slowly = slow && person.Skirt is not null;
+        Splats().Assign(actor, slowly ? figure with { WalkRate = 1F } : figure);
+        Pace(actor, slowly ? person.Skirt!.GentleSpeed / walkerSpeed : 1F);
+        spawnedAs[actor] = character;
+    }
+
+    private void Pace(long actor, float pace)
+    {
+        if (actors.All.FirstOrDefault(state => state.DurableId == actor) is { } walker) walker.Wander.SetPace(pace);
+    }
+
+
+    /// <summary>
     /// Character <paramref name="id"/>, opened on its first use: its body with the walk and idle bound by joint names and
-    /// fitted to its legs, drawn lit.
+    /// fitted to its legs, drawn lit. One in a long skirt binds the gentle walk too and walks it, its skirt fitted to its
+    /// rig as it stands at rest.
     /// </summary>
     private SplatFigure Open(DaggerfallSplatPeople art, string id, DaggerfallSplatPerson person)
     {
@@ -312,18 +360,31 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         Appearance? appearance = null;
         try
         {
-            foreach (RenderResource pack in new[] { clips.Value.Walk, clips.Value.Idle })
+            if (person.Skirt is not null && gentle is null)
+            {
+                using ContentReference softened = Reference(art.Gentle);
+                gentle = engine.OpenAnimationClipPackFromContent(new(softened));
+            }
+            foreach (RenderResource pack in person.Skirt is null ? new[] { clips.Value.Walk, clips.Value.Idle } : [clips.Value.Walk, clips.Value.Idle, gentle!])
                 engine.AssociateAnimationClipPackByJointNames(new(body, pack, art.Producer, art.License));
             // The walk's pelvis carries its travel forward (+z); the walker moves itself, so the walk keeps only its sway.
             engine.FitAnimationClipTranslation(new(body, clips.Value.Walk, DaggerfallSplatPeople.WalkClip, art.Joint,
                 new(person.Walk.Scale, person.Walk.Scale, 0F), new(0F, person.Walk.Lift, 0F)));
+            if (person.Skirt is { } skirt)
+                engine.FitAnimationClipTranslation(new(body, gentle!, DaggerfallSplatPeople.GentleClip, art.Joint,
+                    new(skirt.Gentle.Scale, skirt.Gentle.Scale, 0F), new(0F, skirt.Gentle.Lift, 0F)));
             engine.FitAnimationClipTranslation(new(body, clips.Value.Idle, DaggerfallSplatPeople.IdleClip, art.Joint,
                 new(person.Idle.Scale), new(0F, person.Idle.Lift, 0F)));
             AnimationClipInfo[] bound = engine.ReadClips(body).ToArray();
-            string walkClip = ClipId(bound, DaggerfallSplatPeople.WalkClip), idleClip = ClipId(bound, DaggerfallSplatPeople.IdleClip);
+            string walkClip = ClipId(bound, person.Skirt is null ? DaggerfallSplatPeople.WalkClip : DaggerfallSplatPeople.GentleClip),
+                idleClip = ClipId(bound, DaggerfallSplatPeople.IdleClip);
+            SplatSkirtRig? skirtRig = person.Skirt is { } worn
+                ? SplatSkirtRig.Resolve(worn.Rest, engine.ReadJoints(body).Span, engine.SampleModelJointPose(new(body, "", 0, "", 0, 0, false, Unplaced)).Span)
+                : null;
             appearance = engine.CreateAnimatedMeshAppearance(new(body));
             Finish(appearance, person);
-            SplatFigure figure = new($"{id} ({person.Name})", appearance, walkClip, idleClip, walkerSpeed / person.WalkSpeed, tuning.CrossfadeSeconds);
+            SplatFigure figure = new($"{id} ({person.Name})", appearance, walkClip, idleClip, walkerSpeed / (person.Skirt?.GentleSpeed ?? person.WalkSpeed),
+                tuning.CrossfadeSeconds, skirtRig);
             characters.Add(id, (body, appearance, figure));
             return figure;
         }

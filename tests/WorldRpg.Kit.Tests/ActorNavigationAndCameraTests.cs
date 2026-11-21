@@ -297,6 +297,29 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     [Fact]
+    public void A_wander_walks_at_its_own_pace_of_the_policy_speed()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(11), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), 0f));
+        ActorState actor = actors.Get(42);
+        actor.Stats.AddTrack(TrackId.Parse("health"), new Track(new Stat(100), 100));
+        actor.Actor.Add(new WanderMemoryComponent());
+        ActorWanderCoordinator wander = new(new ActorNavigationCoordinator(spatial.Service, session));
+        WanderPolicy policy = new(1.3f, 2.5f, 0f, 8, 2, ActorNavigationMode.Swimming);
+        actor.Wander.Stage([new WorldPoint(4f, 0f, 0f)]);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(.1f, 0f, 0f));
+
+        _ = wander.Update(actor, actor.Wander, policy, 1, .1f);
+        Assert.Equal(.13f, spatial.Requests[^1].MaxStepUnits, 5);
+        // A walker drawn in a long skirt goes at its gentle walk's own pace.
+        actor.Wander.SetPace(1.15f / 1.3f);
+        _ = wander.Update(actor, actor.Wander, policy, 2, .1f);
+        Assert.Equal(.115f, spatial.Requests[^1].MaxStepUnits, 5);
+        Assert.Throws<ArgumentOutOfRangeException>(() => actor.Wander.SetPace(0f));
+    }
+
+    [Fact]
     public void Camera_viewpoint_equals_the_exact_position_in_its_engine_descriptor()
     {
         CameraDouble camera = CameraDouble.Create();

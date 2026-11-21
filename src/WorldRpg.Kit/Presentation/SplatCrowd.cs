@@ -5,9 +5,11 @@ namespace WorldRpg.Kit.Presentation;
 /// <summary>
 /// A Gaussian-splat character walkers are drawn as: its animated appearance (in metres, standing on y = 0 and facing +z),
 /// which every walker draws as an instance of; the ids of its <paramref name="Walk"/> and <paramref name="Idle"/> clips;
-/// the rate its walk plays at so its stride keeps pace with a walker; and the crossfade between the two.
+/// the rate its walk plays at so its stride keeps pace with a walker; the crossfade between the two; and its long skirt on
+/// joints of its own, which the legs push open, or null.
 /// </summary>
-public sealed record SplatFigure(string Name, Appearance Appearance, string Walk, string Idle, float WalkRate, float CrossfadeSeconds);
+public sealed record SplatFigure(string Name, Appearance Appearance, string Walk, string Idle, float WalkRate, float CrossfadeSeconds,
+    SplatSkirtRig? Skirt = null);
 
 /// <summary>
 /// Draws walkers as <see cref="SplatFigure"/>s, at their own size: one assigned to a walker (<see cref="Assign"/>),
@@ -16,13 +18,17 @@ public sealed record SplatFigure(string Name, Appearance Appearance, string Walk
 /// instance of the figure's appearance, playing its walk while it walks and its idle otherwise. The figure's
 /// appearance and clips belong to whoever made it. An object holds one instance, so a walker that changes figure has
 /// its instance replaced, and one a snapshot leaves out has its instance released before that snapshot is published:
-/// the Engine refuses a pose for an object that now shows a sprite.
+/// the Engine refuses a pose for an object that now shows a sprite. A figure with a skirt has each walker's skirt
+/// driven on its own sheet: each settle moves it on by the time <see cref="Advance"/> gave since the last, from where the
+/// walker's clips put its legs as that settle is drawn, and places the skirt joints over the clips.
 /// </summary>
 public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, IDisposable
 {
     private readonly Dictionary<ulong, Walker> shown = [];
     private readonly HashSet<ulong> seen = [];
     private readonly Dictionary<long, SplatFigure> assigned = [];
+    private static readonly Transform Unplaced = new(System.Numerics.Vector3.Zero, System.Numerics.Quaternion.Identity, System.Numerics.Vector3.One);
+    private float seconds;
     private bool disposed;
 
     /// <summary>The figure walkers are drawn as, or null while they show their own art.</summary>
@@ -59,6 +65,13 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
         Own = figures;
     }
 
+    /// <summary>Counts <paramref name="elapsed"/> seconds of drawn time toward the next settle, which moves the skirts on by them.</summary>
+    public void Advance(float elapsed)
+    {
+        if (!float.IsFinite(elapsed) || elapsed < 0) throw new ArgumentOutOfRangeException(nameof(elapsed), elapsed, "Drawn time advances by 0 or more seconds.");
+        seconds += elapsed;
+    }
+
     public Appearance? Show(ulong id, long actor, float heightMetres, bool walking)
     {
         if (disposed || (assigned.TryGetValue(actor, out SplatFigure? given) ? given : Figure ?? Own?.Invoke(actor)) is not { } figure) return null;
@@ -70,6 +83,7 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
             walker.Instance = Engine.ReplaceInstance(walker.Instance, new(figure.Appearance, id));
             walker.Figure = figure;
             walker.Played = null;
+            walker.Skirt = null;
         }
         walker.Wanted = walking ? figure.Walk : figure.Idle;
         return figure.Appearance;
@@ -101,6 +115,29 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
                 !fades, fades ? walker.Figure.CrossfadeSeconds : 0F, fades, 0F));
             walker.Played = walker.Wanted;
         }
+        DriveSkirts();
+    }
+
+    /// <summary>
+    /// Moves every shown skirt on by the time since the last settle. The legs are read from the Engine and the joints placed
+    /// on this update; the sheets between, which read nothing else, step side by side on the thread pool.
+    /// </summary>
+    private void DriveSkirts()
+    {
+        float elapsed = seconds;
+        seconds = 0;
+        List<(Walker Walker, JointPose[] Pose)> driven = [];
+        foreach (Walker walker in shown.Values)
+        {
+            if (walker.Figure.Skirt is not { } skirt || walker.Skirt is not null && elapsed == 0) continue;
+            walker.Skirt ??= skirt.Sheet();
+            driven.Add((walker, Engine.SampleJointPose(AnimationPoseSampleRequest.OfCurrentPlayback(walker.Instance, Unplaced, applyPoseControls: false)).ToArray()));
+        }
+        JointOverride[][] placed = new JointOverride[driven.Count][];
+        if (driven.Count > 1) Parallel.For(0, driven.Count, index => placed[index] = driven[index].Walker.Skirt!.Step(elapsed, driven[index].Pose));
+        else if (driven.Count == 1) placed[0] = driven[0].Walker.Skirt!.Step(elapsed, driven[0].Pose);
+        for (int index = 0; index < driven.Count; index++)
+            Engine.SetPose(new(driven[index].Walker.Instance, ReadOnlyMemory<TwoBoneIk>.Empty, placed[index]));
     }
 
     public void Dispose()
@@ -128,5 +165,7 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
         /// <summary>The clip the latest snapshot asked for, and the one played; null before the first play.</summary>
         internal string Wanted { get; set; } = string.Empty;
         internal string? Played { get; set; }
+        /// <summary>The walker's skirt, from its first settle as a figure with one.</summary>
+        internal SplatSkirtSheet? Skirt { get; set; }
     }
 }

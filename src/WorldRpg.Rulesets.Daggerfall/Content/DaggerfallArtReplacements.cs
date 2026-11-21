@@ -98,15 +98,15 @@ internal sealed record DaggerfallPeopleRigDirection(string Label, float Angle, s
 
 /// <summary>
 /// The gsplat townspeople walking people draw as: PINOC's Mixamo Walking and Standing Idle as clip packs
-/// (<paramref name="Walk"/>, <paramref name="Idle"/>, whose clips are named <c>walk</c> and <c>idle</c>), the top joint
-/// their pelvis fits move, the producer and licence the packs are associated under, and the characters by
-/// asset-pipeline id.
+/// (<paramref name="Walk"/>, <paramref name="Idle"/>, whose clips are named <c>walk</c> and <c>idle</c>), the softened
+/// Walking that long skirts walk (<paramref name="Gentle"/>, clip <c>gentle</c>), the top joint their pelvis fits move,
+/// the producer and licence the packs are associated under, and the characters by asset-pipeline id.
 /// </summary>
-internal sealed record DaggerfallSplatPeople(DaggerfallArtFile Walk, DaggerfallArtFile Idle, string Joint, string Producer, string License,
-    IReadOnlyDictionary<string, DaggerfallSplatPerson> Characters)
+internal sealed record DaggerfallSplatPeople(DaggerfallArtFile Walk, DaggerfallArtFile Idle, DaggerfallArtFile Gentle, string Joint, string Producer,
+    string License, IReadOnlyDictionary<string, DaggerfallSplatPerson> Characters)
 {
     /// <summary>The clip each pack carries.</summary>
-    internal const string WalkClip = "walk", IdleClip = "idle";
+    internal const string WalkClip = "walk", IdleClip = "idle", GentleClip = "gentle";
 
     /// <summary>The character that draws each classic townsperson archive, by its id.</summary>
     internal IReadOnlyDictionary<int, string> ByArchive { get; } = Characters.ToDictionary(character => character.Value.Archive, character => character.Key);
@@ -115,11 +115,17 @@ internal sealed record DaggerfallSplatPeople(DaggerfallArtFile Walk, DaggerfallA
 /// <summary>
 /// One gsplat character: what asset-pipeline calls it, the classic townsperson art it draws (a texture archive, which
 /// walkers wearing it draw as this character), its skinned-splat GLB (metres, standing on y = 0, facing +z), the
-/// pelvis fit of each clip to its legs, the speed its fitted walk travels, in metres a second, and the colours of its
-/// own paint a pixel finish may snap to.
+/// pelvis fit of each clip to its legs, the speed its fitted walk travels, in metres a second, the colours of its
+/// own paint a pixel finish may snap to, and its long skirt, or null.
 /// </summary>
 internal sealed record DaggerfallSplatPerson(string Name, int Archive, DaggerfallArtFile Body, DaggerfallSplatClipFit Walk, DaggerfallSplatClipFit Idle, float WalkSpeed,
-    IReadOnlyList<Color> Palette);
+    IReadOnlyList<Color> Palette, DaggerfallSplatSkirt? Skirt = null);
+
+/// <summary>
+/// A long skirt on joints of its own, which the legs push open (<paramref name="Rest"/>); a character wearing one walks
+/// the gentle clip, fitted to its legs by <paramref name="Gentle"/>, which travels <paramref name="GentleSpeed"/> metres a second.
+/// </summary>
+internal sealed record DaggerfallSplatSkirt(SplatSkirt Rest, DaggerfallSplatClipFit Gentle, float GentleSpeed);
 
 /// <summary>A clip's pelvis fit: the top joint's translation t becomes (<paramref name="Scale"/> t.x, <paramref name="Lift"/> + <paramref name="Scale"/> t.y, <paramref name="Scale"/> t.z).</summary>
 internal sealed record DaggerfallSplatClipFit(float Scale, float Lift);
@@ -796,11 +802,12 @@ internal sealed class DaggerfallArtReplacements
                     File(character.Value.GetProperty("body"), $"Splat person {character.Name}'s body"),
                     Fit(walk), Fit(character.Value.GetProperty("idle")), walk.GetProperty("speed").GetSingle(),
                     [.. character.Value.GetProperty("palette").EnumerateArray().Select(colour => Color.FromSrgbHex(
-                        int.Parse(colour.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))]);
+                        int.Parse(colour.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))],
+                    Skirt(character.Name, character.Value));
                 if (person.Palette.Count is 0 or > 256)
                     throw new InvalidOperationException($"Content pack '{packId}' gives splat person {character.Name} {person.Palette.Count} palette colours, not 1 to 256.");
-                if (!float.IsFinite(person.WalkSpeed) || person.WalkSpeed <= 0
-                    || new[] { person.Walk, person.Idle }.Any(fit => !float.IsFinite(fit.Scale) || fit.Scale <= 0 || !float.IsFinite(fit.Lift)))
+                if (!float.IsFinite(person.WalkSpeed) || person.WalkSpeed <= 0 || person.Skirt is { GentleSpeed: not > 0 }
+                    || new[] { person.Walk, person.Idle, person.Skirt?.Gentle ?? person.Walk }.Any(fit => !float.IsFinite(fit.Scale) || fit.Scale <= 0 || !float.IsFinite(fit.Lift)))
                     throw new InvalidOperationException($"Content pack '{packId}' fits splat person {character.Name}'s clips by a scale that is not positive or walks them at {person.WalkSpeed} m/s.");
                 return person;
             }, StringComparer.Ordinal);
@@ -810,9 +817,49 @@ internal sealed class DaggerfallArtReplacements
             if (characters.GroupBy(character => character.Value.Archive).FirstOrDefault(archive => archive.Count() > 1) is { } shared)
                 throw new InvalidOperationException($"Content pack '{packId}' gives townsperson archive {shared.Key} to splat people {string.Join(" and ", shared.Select(character => character.Key))}.");
             return new(File(clips.GetProperty("walk"), "The splat people's walk"), File(clips.GetProperty("idle"), "The splat people's idle"),
-                splats.GetProperty("joint").GetString()!, splats.GetProperty("producer").GetString()!, splats.GetProperty("license").GetString()!, characters);
+                File(clips.GetProperty("gentle"), "The splat people's gentle walk"), splats.GetProperty("joint").GetString()!,
+                splats.GetProperty("producer").GetString()!, splats.GetProperty("license").GetString()!, characters);
 
             static DaggerfallSplatClipFit Fit(JsonElement fit) => new(fit.GetProperty("k").GetSingle(), fit.GetProperty("A").GetSingle());
+
+            // A long skirt on joints of its own, as asset-pipeline's rig laid it out: a cloth sheet on two tiers, or a ring on one.
+            DaggerfallSplatSkirt? Skirt(string id, JsonElement character)
+            {
+                if (!character.TryGetProperty("skirt", out JsonElement skirt)) return null;
+                JsonElement legs = skirt.GetProperty("legs");
+                string[] left = Names(legs.GetProperty("left")), right = Names(legs.GetProperty("right"));
+                if (left.Length != 3 || right.Length != 3)
+                    throw new InvalidOperationException($"Content pack '{packId}' gives splat person {id}'s skirt legs of {left.Length} and {right.Length} joints, not hip, knee and ankle.");
+                SplatSkirtLegs pushers = new(left[0], left[1], left[2], right[0], right[1], right[2]);
+                string hips = skirt.GetProperty("hips").GetString()!;
+                Vector2 centre = new(skirt.GetProperty("centre")[0].GetSingle(), skirt.GetProperty("centre")[1].GetSingle());
+                SplatSkirt rest;
+                try
+                {
+                    rest = skirt.GetProperty("tiers").GetInt32() switch
+                    {
+                        2 => new SplatClothSkirt(hips, pushers, centre, skirt.GetProperty("columns").GetInt32(), skirt.GetProperty("rows").GetInt32(),
+                            Points(skirt.GetProperty("grid")), [.. skirt.GetProperty("boneColumns").EnumerateArray().Select(column => column.GetInt32())],
+                            Names(skirt.GetProperty("upper")), Names(skirt.GetProperty("lower")), skirt.GetProperty("slit").GetBoolean()),
+                        1 => new SplatRingSkirt(hips, pushers, centre, skirt.GetProperty("top").GetSingle(), skirt.GetProperty("hem").GetSingle(),
+                            Names(skirt.GetProperty("joints")), Floats(skirt.GetProperty("theta")), Points(skirt.GetProperty("pivots")),
+                            Floats(skirt.GetProperty("heights")), [.. skirt.GetProperty("reach").EnumerateArray().Select(Floats)]),
+                        int tiers => throw new ArgumentException($"A skirt hangs on one tier of joints or two, not {tiers}."),
+                    };
+                    rest.Validate();
+                }
+                catch (ArgumentException refused)
+                {
+                    throw new InvalidOperationException($"Content pack '{packId}' states splat person {id}'s skirt wrongly: {refused.Message}", refused);
+                }
+                JsonElement gentle = character.TryGetProperty("gentle", out JsonElement fitted) ? fitted
+                    : throw new InvalidOperationException($"Content pack '{packId}' gives splat person {id} a skirt but no fit of the gentle walk it walks.");
+                return new(rest, Fit(gentle), gentle.GetProperty("speed").GetSingle());
+
+                static string[] Names(JsonElement names) => [.. names.EnumerateArray().Select(name => name.GetString()!)];
+                static float[] Floats(JsonElement values) => [.. values.EnumerateArray().Select(value => value.GetSingle())];
+                static Vector3[] Points(JsonElement points) => [.. points.EnumerateArray().Select(point => new Vector3(point[0].GetSingle(), point[1].GetSingle(), point[2].GetSingle()))];
+            }
         }
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)

@@ -62,6 +62,8 @@ internal sealed partial class DaggerfallSession
         ProductUpdateFacts facts = update.Facts;
         ReadOnlySpan<ProductInputEvent> input = update.Input;
         foreach (var appearance in _sites.Appearances) appearance.BeginAdmittedUpdate();         // Scene
+        if (double.IsFinite(facts.FixedDeltaSeconds) && facts.FixedDeltaSeconds > 0)
+            _people?.Advance((float)(facts.FixedDeltaSeconds * facts.AdmittedStepCount));         // Developer
         _enemyBehavior.BeginAdmittedUpdate();                                                     // Actors
         InputRefusals.Age(facts.HostElapsedSeconds);                                              // Character
 

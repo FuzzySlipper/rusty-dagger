@@ -7,13 +7,19 @@ writes into content/worldrpg/packs/daggerfall.art-replacements/media/splat-peopl
 
   ID.glb          each character's skinned-splat GLB, as asset-pipeline wrote it
   clips/walk.glb  PINOC's Mixamo Walking as a clip pack: its skeleton, skin and one clip named walk, without the
-  clips/idle.glb  X Bot mesh it is exported with; and Standing Idle the same, named idle. The two exports name their
-                  clips alike (Armature.001|Scene), and one character carries both packs, so each takes its own name.
+  clips/idle.glb  X Bot mesh it is exported with; Standing Idle the same, named idle; and gentle, asset-pipeline's
+  clips/gentle.glb softened Walking (gentle_glb.py, 0.75), which long skirts walk. The exports name their clips alike
+                  (Armature.001|Scene), and one character carries several packs, so each takes its own name. The
+                  Engine binds a pack by joint names only when it names every joint of the character, so each pack
+                  also names the skirt joints the characters carry, under their own parents with no channels.
 
 and states artReplacements.splatPeople in payload.json: the clips, the joint the fits move (the top joint, Hips), and
 per character its name, the classic townsperson archive it draws (each walker wearing that art draws as it), its body, the pelvis fit of each clip (k and A: Hips at (k x, A + k y, k z)) with the speed
 the fitted walk travels, and its palette: PALETTE sRGB colours k-means picks from its own Gaussians, weighted by
-opacity, which a pixel finish can snap its blocks to. Rerun it when asset-pipeline marks another character ready or refits one.
+opacity, which a pixel finish can snap its blocks to. A character with a long skirt on joints of its own (its GLB's
+asset.extras.skirt, from asset-pipeline's skirt_bones.py rig) walks the gentle clip, with its fit and speed, and states
+its skirt: two tiers as the cloth sheet's columns, rows, rest grid and bone columns, one tier as the ring's joints,
+directions, pivots and reach by height. Rerun it when asset-pipeline marks another character ready or refits one.
 
     authoring/tools/people/splat-people.py [--characters DIR] [--clips DIR]
 """
@@ -33,7 +39,10 @@ MEDIA = PACK / 'media/splat-people'
 CHARACTERS = ROOT / 'local/art/generated/people/dagger-characters'
 CLIPS = Path('/data/assets/splat-characters/pinoc-clips/mixamo')
 # Each pack's clip, by the name the game plays it under, from the PINOC Mixamo export it is cut from.
-PACKS = {'walk': 'walking.glb', 'idle': 'standing-idle.glb'}
+PACKS = {'walk': 'walking.glb', 'idle': 'standing-idle.glb', 'gentle': 'walking-gentle.glb'}
+# The packs every character binds; a skirted one binds GENTLE too, and walks it.
+BODY_PACKS = ('walk', 'idle')
+GENTLE = 'gentle'
 TOP_JOINT = 'mixamorig:Hips'
 PALETTE = 32
 
@@ -55,32 +64,65 @@ def write_glb(path, gltf, binary):
                      + struct.pack('<II', len(text), 0x4E4F534A) + text + struct.pack('<II', len(binary), 0x004E4942) + binary)
 
 
-def clip_pack(source, name, out):
-    """The export's skeleton, skin and one clip, renamed name: nodes keep their order, meshes and their data go."""
+def skin_joints(path):
+    """A GLB's skin joints, by name, each with its parent's name (None at the top)."""
+    gltf, _ = read_glb(path)
+    parent = {child: index for index, node in enumerate(gltf['nodes']) for child in node.get('children', [])}
+    named = lambda index: gltf['nodes'][index].get('name')   # noqa: E731
+    return {named(j): (named(parent[j]) if j in parent else None) for j in gltf['skins'][0]['joints']}
+
+
+def clip_pack(source, name, out, extra):
+    """The export's skeleton, skin and one clip, renamed name: nodes keep their order, meshes and their data go. Each
+    joint of extra (name: parent name) the export lacks joins its skin under its parent, unmoved and without channels."""
     gltf, binary = read_glb(source)
     if len(gltf.get('animations', [])) != 1:
         raise SystemExit(f'{source} carries {len(gltf.get("animations", []))} clips, not one')
+    if len(gltf['skins']) != 1:
+        raise SystemExit(f'{source} carries {len(gltf["skins"])} skins, not one')
     animation = gltf['animations'][0]
-    skins = gltf['skins']
-    kept = sorted({sampler[key] for sampler in animation['samplers'] for key in ('input', 'output')}
-                  | {skin['inverseBindMatrices'] for skin in skins})
+    skin = gltf['skins'][0]
     accessors, views, data = [], [], bytearray()
-    for index in kept:
+
+    def add(block, accessor):
+        nonlocal data
+        data += b'\0' * (-len(data) % 4)
+        views.append({'buffer': 0, 'byteOffset': len(data), 'byteLength': len(block)})
+        data += block
+        accessors.append(accessor | {'bufferView': len(views) - 1})
+        return len(accessors) - 1
+
+    def block(index):
         accessor = dict(gltf['accessors'][index])
         view = gltf['bufferViews'][accessor.pop('bufferView')]
         if 'byteStride' in view:
             raise SystemExit(f'{source} interleaves accessor {index}')
-        data += b'\0' * (-len(data) % 4)
-        views.append({'buffer': 0, 'byteOffset': len(data), 'byteLength': view['byteLength']})
-        data += binary[view.get('byteOffset', 0):view.get('byteOffset', 0) + view['byteLength']]
-        accessors.append(accessor | {'bufferView': len(views) - 1})
-    remap = {old: new for new, old in enumerate(kept)}
+        return binary[view.get('byteOffset', 0):view.get('byteOffset', 0) + view['byteLength']], accessor
+
+    remap = {index: add(*block(index)) for index in sorted({sampler[key] for sampler in animation['samplers'] for key in ('input', 'output')})}
     nodes = [{key: value for key, value in node.items() if key not in ('mesh', 'skin')} for node in gltf['nodes']]
+    joints, at = list(skin['joints']), {node.get('name'): index for index, node in enumerate(nodes)}
+    binds, ibm = block(skin['inverseBindMatrices'])
+    binds = list(np.frombuffer(binds, '<f4', 16 * ibm['count'], ibm.get('byteOffset', 0)).reshape(-1, 16))
+    pending = {joint: parent for joint, parent in extra.items() if joint not in at}
+    while pending:
+        ready = [joint for joint, parent in pending.items() if parent in at]
+        if not ready:
+            raise SystemExit(f'{source} has no parent for {sorted(pending)}')
+        for joint in ready:
+            parent = at[pending.pop(joint)]
+            nodes.append({'name': joint})
+            at[joint] = len(nodes) - 1
+            nodes[parent]['children'] = nodes[parent].get('children', []) + [at[joint]]
+            # Unmoved under its parent, it binds where its parent does.
+            binds.append(binds[joints.index(parent)])
+            joints.append(at[joint])
+    inverse = add(np.array(binds, '<f4').tobytes(), {'componentType': 5126, 'count': len(joints), 'type': 'MAT4'})
     scene_nodes = [index for index in gltf['scenes'][gltf.get('scene', 0)]['nodes'] if 'mesh' not in gltf['nodes'][index]]
     pack = {
         'asset': {'version': '2.0', 'generator': 'rusty-dagger authoring/tools/people/splat-people.py'},
         'scene': 0, 'scenes': [{'nodes': scene_nodes}], 'nodes': nodes,
-        'skins': [skin | {'inverseBindMatrices': remap[skin['inverseBindMatrices']]} for skin in skins],
+        'skins': [skin | {'joints': joints, 'inverseBindMatrices': inverse}],
         'animations': [{'name': name, 'channels': animation['channels'],
                         'samplers': [sampler | {'input': remap[sampler['input']], 'output': remap[sampler['output']]}
                                      for sampler in animation['samplers']]}],
@@ -115,35 +157,62 @@ def entry(path):
     return {'path': path.relative_to(ROOT / 'content').as_posix(), 'byteLength': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
 
 
+def skirt(body):
+    """The long skirt a body's GLB carries on joints of its own (asset.extras.skirt), as the payload states it, or None."""
+    rest = read_glb(body)[0]['asset'].get('extras', {}).get('skirt')
+    if rest is None:
+        return None
+    legs = {'left': rest['legs']['Left'], 'right': rest['legs']['Right']}
+    rounded = lambda values: [round(value, 6) for value in values]   # noqa: E731
+    if rest.get('tiers') == 2:
+        return {'tiers': 2, 'hips': rest['hips'], 'legs': legs, 'centre': rounded(rest['centre']),
+                'columns': rest['nu'], 'rows': rest['nv'], 'grid': [rounded(point) for column in rest['grid0'] for point in column],
+                'boneColumns': rest['bone_cols'], 'upper': rest['joints'][0::2], 'lower': rest['joints'][1::2], 'slit': rest['mode'] == 'slit'}
+    return {'tiers': 1, 'hips': rest['hips'], 'legs': legs, 'centre': rounded(rest['centre']), 'top': round(rest['top'], 6),
+            'hem': round(rest['hem'], 6), 'joints': rest['joints'], 'theta': rounded(rest['theta']),
+            'pivots': [rounded(point) for point in rest['pivots']], 'heights': rounded(rest['ys']), 'reach': [rounded(column) for column in rest['rad']]}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--characters', type=Path, default=os.environ.get('DAGGER_CHAR_ROOT') or CHARACTERS,
                         help="character stage root containing ready.json")
-    parser.add_argument('--clips', type=Path, default=CLIPS, help="PINOC's Mixamo exports of Walking and Standing Idle")
+    parser.add_argument('--clips', type=Path, default=CLIPS, help="PINOC's Mixamo exports of Walking, its gentle copy and Standing Idle")
     args = parser.parse_args()
     ready_list = json.loads((args.characters / 'ready.json').read_text())['ready']
+    bodies, fits, skirts, extra = {}, {}, {}, {}
+    for ready in ready_list:
+        body = bodies[ready['id']] = args.characters / ready['engine_glb']
+        fits[ready['id']] = json.loads(body.with_name(f'{ready["id"]}-clip-fit.json').read_text())['clips']
+        skirts[ready['id']] = skirt(body)
+        packs = BODY_PACKS + ((GENTLE,) if skirts[ready['id']] else ())
+        if any(fits[ready['id']].get(name, {}).get('path') != PACKS[name] for name in packs):
+            raise SystemExit(f'{ready["id"]} was not fitted to {", ".join(PACKS[name] for name in packs)}')
+        for joint, parent in skin_joints(body).items():
+            if extra.setdefault(joint, parent) != parent:
+                raise SystemExit(f'{ready["id"]} hangs {joint} from {parent}, and another character from {extra[joint]}')
     if MEDIA.exists():
         shutil.rmtree(MEDIA)
     (MEDIA / 'clips').mkdir(parents=True)
     clips = {}
     for name, file in PACKS.items():
-        clip_pack(args.clips / file, name, MEDIA / 'clips' / f'{name}.glb')
+        clip_pack(args.clips / file, name, MEDIA / 'clips' / f'{name}.glb', extra)
         clips[name] = entry(MEDIA / 'clips' / f'{name}.glb')
     characters = {}
     for ready in ready_list:
-        body = args.characters / ready['engine_glb']
-        fit = json.loads(body.with_name(f'{ready["id"]}-clip-fit.json').read_text())['clips']
-        if {fit[name]['path'] for name in PACKS} != set(PACKS.values()):
-            raise SystemExit(f'{ready["id"]} was fitted to {sorted(fit[name]["path"] for name in PACKS)}, not {sorted(PACKS.values())}')
-        shutil.copyfile(body, MEDIA / f'{ready["id"]}.glb')
-        characters[ready['id']] = {
+        cid, fit = ready['id'], fits[ready['id']]
+        shutil.copyfile(bodies[cid], MEDIA / f'{cid}.glb')
+        characters[cid] = {
             'name': ready['name'],
-            'archive': int(ready['id'].split('-')[0]),  # the stage names a character ARCHIVE or ARCHIVE-VARIANT
-            'body': entry(MEDIA / f'{ready["id"]}.glb'),
+            'archive': int(cid.split('-')[0]),  # the stage names a character ARCHIVE or ARCHIVE-VARIANT
+            'body': entry(MEDIA / f'{cid}.glb'),
             'walk': {'k': fit['walk']['k'], 'A': fit['walk']['A'], 'speed': round(fit['walk']['fitted']['speed_m_s'], 4)},
             'idle': {'k': fit['idle']['k'], 'A': fit['idle']['A']},
-            'palette': palette(MEDIA / f'{ready["id"]}.glb'),
+            'palette': palette(MEDIA / f'{cid}.glb'),
         }
+        if skirts[cid]:
+            characters[cid] |= {'gentle': {'k': fit[GENTLE]['k'], 'A': fit[GENTLE]['A'], 'speed': round(fit[GENTLE]['fitted']['speed_m_s'], 4)},
+                                'skirt': skirts[cid]}
     payload_path = PACK / 'payload.json'
     payload = json.loads(payload_path.read_text())
     payload['artReplacements']['splatPeople'] = {
@@ -151,7 +220,8 @@ def main():
         'producer': 'PINOC library (Viggle), Mixamo rig', 'license': 'PINOC library clip',
         'characters': characters}
     payload_path.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + '\n')
-    print(f'wrote {len(characters)} characters and the walk and idle packs, and stated artReplacements.splatPeople')
+    print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted) and the {", ".join(PACKS)} packs, '
+          'and stated artReplacements.splatPeople')
 
 
 if __name__ == '__main__':

@@ -23,6 +23,9 @@ public interface IDeveloperPeopleCommands : IDebugCommandModule
     [DebugCommand("people.splat-look", Description = "Developer: draw the gsplat people lit on a pixel grid of GRID screen pixels (0 smooth), a block drawn where they cover COVERAGE of it, snapped to their own palette (own) or not (none), posed POSERATE times a second (0 every frame), for this run; the tuning's splatPeople holds the shipped look.")]
     DebugCommandResult SplatLook(int grid, double coverage, string palette, double poseRate);
 
+    [DebugCommand("people.splat-pace", Description = "Developer: walkers drawn in a long skirt play their gentle walk faster to keep the walkers' pace (clip), or the ones people.spawn stands walk slower, at the gentle walk's own pace (slow), for this run.")]
+    DebugCommandResult SplatPace(string pace);
+
     [DebugCommand("people.splat-shadow", Description = "Developer: cast the gsplat people into the sun's shadow as none, ellipsoids (one a joint) or splats (their own silhouette), for this run; the tuning's splatPeople holds the shipped caster.")]
     DebugCommandResult SplatShadow(string caster);
 }

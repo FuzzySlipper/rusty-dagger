@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Reflection;
 using Rusty.Engine;
 using WorldRpg.Kit.Presentation;
@@ -136,6 +137,59 @@ public sealed class SplatCrowdTests
         Assert.Null(crowd.Show(9, 5, 1.7F, walking: true));
     }
 
+    [Fact]
+    public void A_skirted_walker_places_its_skirt_from_the_legs_it_is_drawn_with_each_settle_that_time_moved()
+    {
+        AnimationRecorder engine = AnimationRecorder.Create();
+        using SplatCrowd crowd = new(() => engine.Service);
+        SplatFigure skirted = Figure("456", 1) with { Skirt = Skirt(out JointPose[] rest) };
+        engine.Pose = rest;
+        crowd.Use(skirted);
+        crowd.Show(4, 4, 1.7F, walking: true);
+        crowd.Show(5, 5, 1.7F, walking: false);
+        Publish(crowd);
+        // Its first settle hangs each skirt at rest from the clip as it is drawn now, its own controls left out: every
+        // walker's legs are read, then their sheets step together, then each is placed.
+        Assert.Equal(["instance 1 of 1 on 4", "instance 2 of 1 on 5", "play 1 walk speed 0.9 restart fade 0", "play 2 idle speed 1 restart fade 0",
+            "sample 1 now without controls", "sample 2 now without controls", "pose 1 places 3 in Model", "pose 2 places 3 in Model"], engine.Calls);
+        crowd.Show(4, 4, 1.7F, walking: true);
+        Publish(crowd);
+        Assert.Equal("release 2", engine.Calls[^1]);
+        engine.Calls.Clear();
+
+        // A settle that drew no new time leaves the skirt as it was; one that did moves it on.
+        crowd.Show(4, 4, 1.7F, walking: true);
+        Publish(crowd);
+        Assert.Empty(engine.Calls);
+        crowd.Advance(1F / 60);
+        crowd.Show(4, 4, 1.7F, walking: true);
+        Publish(crowd);
+        Assert.Equal(["sample 1 now without controls", "pose 1 places 3 in Model"], engine.Calls);
+        Assert.Throws<ArgumentOutOfRangeException>(() => crowd.Advance(-1));
+
+        // A figure without a skirt draws its walkers from their clips alone.
+        engine.Calls.Clear();
+        crowd.Use(Figure("385", 2));
+        crowd.Advance(1F / 60);
+        crowd.Show(4, 4, 1.7F, walking: true);
+        Publish(crowd);
+        Assert.Equal(["replace 1 with instance 3 of 2 on 4", "play 3 walk speed 0.9 restart fade 0"], engine.Calls);
+    }
+
+    /// <summary>A three-column ring skirt under the hips, on a rig of its legs and the skirt.</summary>
+    private static SplatSkirtRig Skirt(out JointPose[] rest)
+    {
+        SplatSkirtLegs legs = new("LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot");
+        (string Name, Vector3 At)[] named = [("Hips", new(0, 1, 0)), ("LeftUpLeg", new(.09F, .95F, 0)), ("LeftLeg", new(.09F, .5F, 0)), ("LeftFoot", new(.09F, .08F, 0)),
+            ("RightUpLeg", new(-.09F, .95F, 0)), ("RightLeg", new(-.09F, .5F, 0)), ("RightFoot", new(-.09F, .08F, 0)),
+            ("Skirt0", new(0, .95F, .25F)), ("Skirt1", new(.22F, .95F, -.12F)), ("Skirt2", new(-.22F, .95F, -.12F))];
+        rest = [.. named.Select(joint => new JointPose(new(joint.At, Quaternion.Identity, Vector3.One), new(joint.At, Quaternion.Identity, Vector3.One)))];
+        float[] theta = [0, MathF.Tau / 3, 2 * MathF.Tau / 3];
+        SplatRingSkirt ring = new("Hips", legs, Vector2.Zero, .95F, .2F, ["Skirt0", "Skirt1", "Skirt2"], theta, [.. named.Skip(7).Select(joint => joint.At)],
+            [.95F, .2F], [[.25F, .3F], [.25F, .3F], [.25F, .3F]]);
+        return SplatSkirtRig.Resolve(ring, [.. named.Select(joint => new AnimationJointInfo(joint.Name, 0))], rest);
+    }
+
     /// <summary>What the site appearance does with the snapshot the crowd showed walkers in.</summary>
     private static void Publish(SplatCrowd crowd)
     {
@@ -151,6 +205,8 @@ public sealed class SplatCrowdTests
     {
         internal List<string> Calls { get; } = [];
         internal IAnimationService Service { get; private set; } = null!;
+        /// <summary>The joints every instance is sampled in.</summary>
+        internal JointPose[] Pose { get; set; } = [];
         private ulong instances;
 
         internal static AnimationRecorder Create()
@@ -174,6 +230,14 @@ public sealed class SplatCrowdTests
                     AnimationPlaybackRequest play = (AnimationPlaybackRequest)args![0]!;
                     Assert.Equal((AnimationPlaybackKind.Play, AnimationLoopMode.Repeat, 1F), (play.Kind, play.LoopMode, play.Weight));
                     Calls.Add($"play {play.Instance.Handle.Value} {play.Clip} speed {play.Speed:0.##}{(play.Restart ? " restart" : "")} fade {(play.HasFade ? play.FadeSeconds : 0):0.##}");
+                    return null;
+                case nameof(IAnimationService.SampleJointPose):
+                    AnimationPoseSampleRequest sample = (AnimationPoseSampleRequest)args![0]!;
+                    Calls.Add($"sample {sample.Instance.Handle.Value}{(sample.UseCurrentPlayback ? " now" : "")}{(sample.ApplyPoseControls ? "" : " without controls")}");
+                    return new ReadOnlyMemory<JointPose>(Pose);
+                case nameof(IAnimationService.SetPose):
+                    AnimationPoseRequest pose = (AnimationPoseRequest)args![0]!;
+                    Calls.Add($"pose {pose.Instance.Handle.Value} places {pose.Overrides.Length} in {string.Join(",", pose.Overrides.ToArray().Select(o => o.Space).Distinct())}");
                     return null;
                 default:
                     throw new NotSupportedException(method?.Name);
