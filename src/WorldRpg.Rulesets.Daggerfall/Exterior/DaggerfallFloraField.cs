@@ -35,6 +35,8 @@ internal sealed class DaggerfallFloraField : IDisposable
     private readonly IReadOnlyDictionary<int, float> _archiveDensity;
     private readonly (float TownShare, double TownRamp)? _grass;
     private bool _treeMeshes;
+    /// <summary>Whether mesh records stand as bodies near the player; a developer may turn them off to compare their cost.</summary>
+    private bool _bodies = true;
     /// <summary>The whole's density for this run, which a developer may change.</summary>
     private float _density;
     private Func<int, int, DaggerfallFloraLook?>? _looks;
@@ -292,9 +294,9 @@ internal sealed class DaggerfallFloraField : IDisposable
             // A tree in the round casts its shade; a billboard can cast none.
             CastsShadows = grown.Mesh,
             // A tree's trunk or a rock's bulk stops bodies near the player, so walkers path round it; a sprite has no body.
-            ColliderRadius = grown.Body?.Radius ?? 0,
-            ColliderHeight = grown.Body?.Height ?? 0,
-            ColliderReach = grown.Body is null ? 0 : _tuning.ColliderReach,
+            ColliderRadius = _bodies ? grown.Body?.Radius ?? 0 : 0,
+            ColliderHeight = _bodies ? grown.Body?.Height ?? 0 : 0,
+            ColliderReach = _bodies && grown.Body is not null ? _tuning.ColliderReach : 0,
         });
     }
 
@@ -405,6 +407,16 @@ internal sealed class DaggerfallFloraField : IDisposable
     private RenderResource? _snowShader;
     /// <summary>How many of the leaf texture's texels a drift of snow spans.</summary>
     private const float SnowClumpTexels = 12;
+
+    /// <summary>Has mesh records stand as bodies, or none, for a developer to compare their cost; each layer is set again as it grows.</summary>
+    internal void UseBodies(bool bodies)
+    {
+        if (_bodies == bodies) return;
+        _bodies = bodies;
+        if (_field is null) return;
+        foreach ((uint layer, Grown grown) in _layers)
+            if (grown.Mesh) Set((int)(layer / 32), layer, grown);
+    }
 
     /// <summary>Grows records with tree meshes as the meshes, or as their sprites, for a developer to compare them.</summary>
     internal void UseTreeMeshes(bool meshes)

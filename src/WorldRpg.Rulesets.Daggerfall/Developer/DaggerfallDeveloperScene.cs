@@ -134,6 +134,13 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         return DebugCommandResult.Success($"Trees grow as {kind}s.");
     }
 
+    public DebugCommandResult TreeBodies(string state)
+    {
+        if (state is not ("on" or "off")) return Refused("Tree bodies are on or off.");
+        horizon.UseTreeBodies(state == "on");
+        return DebugCommandResult.Success($"Tree bodies are {state}.");
+    }
+
     public DebugCommandResult ClassicArt(string state)
     {
         if (state is not ("on" or "off")) return Refused("Classic art is on or off.");

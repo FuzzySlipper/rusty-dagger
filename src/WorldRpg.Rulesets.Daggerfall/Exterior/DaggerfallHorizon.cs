@@ -460,6 +460,9 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>Grows trees with meshes as meshes or as their sprites for this run.</summary>
     internal void UseTreeMeshes(bool meshes) => _flora.UseTreeMeshes(meshes);
 
+    /// <summary>Has trees' trunks and rocks stand as bodies near the player, or none, for this run.</summary>
+    internal void UseTreeBodies(bool bodies) => _flora.UseBodies(bodies);
+
     /// <summary>Grows the nature the drawn locations place among the flora, where its record grows as a mesh.</summary>
     internal void PlaceNature(IReadOnlyList<DaggerfallPlacedNature> placed) => _flora.Place(placed);
 

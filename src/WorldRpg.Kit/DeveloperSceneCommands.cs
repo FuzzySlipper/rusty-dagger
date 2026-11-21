@@ -59,6 +59,9 @@ public interface IDeveloperSceneCommands : IDebugCommandModule
     [DebugCommand("world.trees", Description = "Developer: grow trees that have meshes as KIND for this run: mesh or sprite.")]
     DebugCommandResult Trees(string kind);
 
+    [DebugCommand("world.tree-bodies", Description = "Developer: trees' trunks and rocks stand as bodies near the player (on, the default) or bodies pass through them (off), for this run; to compare their cost.")]
+    DebugCommandResult TreeBodies(string state);
+
     [DebugCommand("world.groundcover", Description = "Developer: draw only these KINDS of ground cover for this run: grass, relief and tufts, separated by commas, or all or none.")]
     DebugCommandResult GroundCover(string kinds);
 }

@@ -138,6 +138,11 @@ public sealed class DaggerfallFloraFieldTests
         Assert.Equal((1F, DaggerfallFloraTuning.Default.ColliderReach), (rock.ColliderHeight, rock.ColliderReach));
         VegetationLayerRequest bush = Last(engine, 504, 7);
         Assert.Equal((0F, 0F, 0F), (bush.ColliderRadius, bush.ColliderHeight, bush.ColliderReach));
+        // `world.tree-bodies off` sets the rock's layer again with no body, and on gives it back.
+        field.UseBodies(false);
+        Assert.Equal(0F, Last(engine, 504, 3).ColliderRadius);
+        field.UseBodies(true);
+        Assert.Equal(2F / 3, Last(engine, 504, 3).ColliderRadius, 1e-5F);
     }
 
     /// <summary>
