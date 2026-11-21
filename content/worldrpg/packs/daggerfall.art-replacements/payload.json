@@ -113319,9 +113319,9 @@
    "500-30": {
     "mesh": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tiered-broadleaf-p30-rainforest.prop-mesh.json",
-     "byteLength": 178628,
-     "sha256": "01cf2fcc9e2a31e329a44ba7396bedea8ab7f474e30e8ce7e9f644795a850f28",
-     "height": 1.019585
+     "byteLength": 199617,
+     "sha256": "6d742ca4ce3212e06f2a925c3f83fcb2c2d706d4a4186ba607dfaf018f4cabbf",
+     "height": 1.036149
     },
     "placement": {
      "height": 17.650768,
@@ -113338,8 +113338,8 @@
     },
     "leaves": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-30-leaves.png",
-     "byteLength": 90915,
-     "sha256": "2a111440fbcd767c37deab23215407eddaa40d123b203987f972c03c43d99986"
+     "byteLength": 139139,
+     "sha256": "d69528dc08f81e4ebb5d8b8e9cc57d7731eb6715b8b356963e95068b76c62d6c"
     }
    },
    "500-4": {

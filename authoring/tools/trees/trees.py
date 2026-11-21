@@ -12,7 +12,7 @@ sprites outline theirs.
 
 Archive 500's palms have their own connected stems, root flares and folded fronds in rainforest_palms.py.
 Its other bespoke trees are shaped in rainforest_trees.py. Archive 501 shares matching paintings' meshes
-at its own placement; subtropical_trees.py builds its distinct spiky palms and mossy snag.
+at its own placement. Its distinct spiky palms and mossy snag are shaped in subtropical_trees.py.
 Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
 The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
