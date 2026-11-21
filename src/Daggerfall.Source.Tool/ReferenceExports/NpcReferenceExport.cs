@@ -217,7 +217,7 @@ internal static class NpcReferenceExport
                     break;
             }
             string[] matching = [.. characterLinks.Keys.Where(key => key == $"{archive:000}" || key.StartsWith($"{archive:000}-", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
-            var links = matching.Select(key => new NpcLink($"Asset-pipeline {key}",
+            var links = matching.Select(key => new NpcLink($"Character pipeline {key}",
                 Path.GetRelativePath(Path.Combine(export.Root, id), characterLinks[key]).Replace('\\', '/')));
             string[] aliases = sourceId == id ? [alias, .. matching] : [alias, sourceId, .. matching];
             entries.Add(new(id, source.Name, kind, art, [], facts, [.. links], aliases));

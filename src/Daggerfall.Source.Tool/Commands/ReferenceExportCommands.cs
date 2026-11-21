@@ -62,8 +62,11 @@ internal static class ReferenceExportCommands
         [Arena2, Base, Output, CommandOption.Optional("--characters", "CHARACTER_OUTPUT_DIR"),
             CommandOption.Staged("--merges", "NPC_MERGES", "src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceMerges.json")], args =>
     {
+        const string localCharacters = "local/art/generated/people/dagger-characters";
+        string characters = args.Optional("--characters") ?? Environment.GetEnvironmentVariable("DAGGER_CHAR_ROOT")
+            ?? (Directory.Exists(localCharacters) ? localCharacters : "../asset-pipeline/outputs/dagger-characters");
         NpcReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2, args["--base"],
-            args.Optional("--characters") ?? "../asset-pipeline/outputs/dagger-characters",
+            characters,
             args.Optional("--output") ?? "local/art/reference/npc", args["--merges"]);
         return 0;
     }, Program.Tool);

@@ -127882,6 +127882,57 @@
       "#33727b"
      ]
     },
+    "384-C": {
+     "name": "yellow and grey striped tunic and kilt",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/384-C.glb",
+      "byteLength": 1093816,
+      "sha256": "2f004e05462ea4f5f45c94331bbfa65d0e1650d374f5a33694a679f00bc1d590"
+     },
+     "walk": {
+      "k": 0.7873,
+      "A": 0.1608,
+      "speed": 1.4236
+     },
+     "idle": {
+      "k": 0.8694,
+      "A": 0.0856
+     },
+     "palette": [
+      "#f1b886",
+      "#bc5d0c",
+      "#fdcf0f",
+      "#44424e",
+      "#b0aca7",
+      "#442215",
+      "#25439d",
+      "#e98a1a",
+      "#65656f",
+      "#07185b",
+      "#8c8483",
+      "#cd9165",
+      "#210202",
+      "#b77243",
+      "#03092c",
+      "#fafaf0",
+      "#110001",
+      "#8b5234",
+      "#f1a74d",
+      "#282536",
+      "#241317",
+      "#bed1e4",
+      "#708fbe",
+      "#3a0602",
+      "#fae9ac",
+      "#fdde63",
+      "#01020f",
+      "#dd1523",
+      "#863006",
+      "#663624",
+      "#600c03",
+      "#000000"
+     ]
+    },
     "385": {
      "name": "townsman: teal tunic, orange hood, striped hose",
      "body": {
@@ -128137,6 +128188,57 @@
       "#030234"
      ]
     },
+    "390-B": {
+     "name": "teal and pale blue tunic, chequered hose",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/390-B.glb",
+      "byteLength": 1091364,
+      "sha256": "1d16bc1a992d38a36c2fb0180a20c10962f73653cf3f66e843d35a1c97ce0dff"
+     },
+     "walk": {
+      "k": 0.784,
+      "A": 0.1723,
+      "speed": 1.4176
+     },
+     "idle": {
+      "k": 0.8644,
+      "A": 0.1113
+     },
+     "palette": [
+      "#49a0b5",
+      "#303841",
+      "#e79f26",
+      "#8f9ca2",
+      "#090e8c",
+      "#021026",
+      "#4e2516",
+      "#b71d89",
+      "#44525b",
+      "#1e5664",
+      "#70838b",
+      "#ae7047",
+      "#f5c28a",
+      "#6c3b27",
+      "#170101",
+      "#cf2303",
+      "#0b3d4c",
+      "#154b04",
+      "#9ab4bf",
+      "#5a676e",
+      "#6f1d03",
+      "#010411",
+      "#915524",
+      "#000000",
+      "#b9c5d2",
+      "#0d252f",
+      "#f7f8f0",
+      "#2a0803",
+      "#347588",
+      "#bbe8f1",
+      "#d4946a",
+      "#450b03"
+     ]
+    },
     "391": {
      "name": "green tunic, blue-green hood collar, blue hose",
      "body": {
@@ -128341,6 +128443,57 @@
       "#edb388"
      ]
     },
+    "395": {
+     "name": "cream cape and wrap skirt, yellow sash",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/395.glb",
+      "byteLength": 964320,
+      "sha256": "ed0c3b4375aa11bd70029f3a418d28a5cd998a4d723e17c7f569878d81df415a"
+     },
+     "walk": {
+      "k": 0.8183,
+      "A": 0.156,
+      "speed": 1.4796
+     },
+     "idle": {
+      "k": 0.9077,
+      "A": 0.0847
+     },
+     "palette": [
+      "#e2c9a3",
+      "#f5fbf3",
+      "#d9b183",
+      "#030c24",
+      "#6d5340",
+      "#846a52",
+      "#180301",
+      "#800b0b",
+      "#f1e2bf",
+      "#08144f",
+      "#b59a7a",
+      "#524237",
+      "#254a6e",
+      "#5c0704",
+      "#a6643d",
+      "#2a0401",
+      "#056100",
+      "#421e07",
+      "#01020f",
+      "#281e20",
+      "#eca81f",
+      "#974b12",
+      "#8bc9e8",
+      "#69351a",
+      "#442d24",
+      "#9d8062",
+      "#010000",
+      "#ca835b",
+      "#5884a9",
+      "#e92f2b",
+      "#3e0201",
+      "#b40f16"
+     ]
+    },
     "396": {
      "name": "orange halter dress",
      "body": {
@@ -128392,6 +128545,261 @@
       "#000000"
      ]
     },
+    "397-B": {
+     "name": "397 bare body (for the separate shawl layer)",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/397-B.glb",
+      "byteLength": 965992,
+      "sha256": "7f0bdd8a304e25393098bf0720f216bb70bcd1c6c829bc92d3c1db4ed07ec3b3"
+     },
+     "walk": {
+      "k": 0.8449,
+      "A": 0.1702,
+      "speed": 1.5278
+     },
+     "idle": {
+      "k": 0.9438,
+      "A": 0.0774
+     },
+     "palette": [
+      "#f1bf9e",
+      "#f1f3eb",
+      "#444b41",
+      "#a752c9",
+      "#afb9a0",
+      "#280502",
+      "#1c4a4e",
+      "#04202b",
+      "#353b32",
+      "#5a2e21",
+      "#7cb2bc",
+      "#1a1c17",
+      "#575e53",
+      "#868d7b",
+      "#d8916d",
+      "#ba724f",
+      "#430501",
+      "#9c583a",
+      "#3c1d14",
+      "#97a18d",
+      "#030c12",
+      "#707566",
+      "#210c78",
+      "#c1d6cb",
+      "#618f95",
+      "#170101",
+      "#691b03",
+      "#232d29",
+      "#7c3e2a",
+      "#4d7177",
+      "#c12f0b",
+      "#000000"
+     ]
+    },
+    "398": {
+     "name": "teal hood, blue skirt with a flame hem",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/398.glb",
+      "byteLength": 918980,
+      "sha256": "13ff2f2e9bfce2cece75438f41ed664fdb821348c2309d5ca51ea52a0274d4df"
+     },
+     "walk": {
+      "k": 0.8202,
+      "A": 0.178,
+      "speed": 1.483
+     },
+     "idle": {
+      "k": 0.9155,
+      "A": 0.0899
+     },
+     "palette": [
+      "#162b3a",
+      "#000118",
+      "#b87e69",
+      "#020c5a",
+      "#420401",
+      "#00010f",
+      "#223d4e",
+      "#3d1e0f",
+      "#01063a",
+      "#6590a5",
+      "#692203",
+      "#1117cb",
+      "#39516a",
+      "#066f81",
+      "#260803",
+      "#000108",
+      "#031f7e",
+      "#98c1cb",
+      "#27bfe2",
+      "#b61604",
+      "#08212c",
+      "#010225",
+      "#563226",
+      "#140100",
+      "#b16826",
+      "#804b24",
+      "#f1cb77",
+      "#03161c",
+      "#000000",
+      "#de9b2e",
+      "#e1f2ec",
+      "#4c6c86"
+     ]
+    },
+    "451": {
+     "name": "green hood, plaid skirt, green gloves",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/451.glb",
+      "byteLength": 1025676,
+      "sha256": "f8422ccf128a491117d8e7c554df6e35c0aa24266f4799ccd92da8f6a30bd22c"
+     },
+     "walk": {
+      "k": 0.799,
+      "A": 0.1609,
+      "speed": 1.4448
+     },
+     "idle": {
+      "k": 0.8848,
+      "A": 0.0917
+     },
+     "palette": [
+      "#303b28",
+      "#5d9aa0",
+      "#6a0207",
+      "#406e6f",
+      "#010325",
+      "#a09c66",
+      "#450509",
+      "#aa1273",
+      "#097f56",
+      "#62251d",
+      "#96d6cf",
+      "#dc1b0d",
+      "#0a4a40",
+      "#2b0406",
+      "#83452d",
+      "#010514",
+      "#6e7a47",
+      "#f7ebc6",
+      "#040243",
+      "#4b5937",
+      "#170103",
+      "#94060c",
+      "#04016d",
+      "#0b2620",
+      "#05c098",
+      "#e9b37f",
+      "#af5f41",
+      "#1006a8",
+      "#00000a",
+      "#e88138",
+      "#036306",
+      "#000000"
+     ]
+    },
+    "452-B": {
+     "name": "452 bare body (for the separate cloak layer)",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/452-B.glb",
+      "byteLength": 967468,
+      "sha256": "90799718f7bb01da02122da7d9dd24552d455e7dd890cc26624033785e5082be"
+     },
+     "walk": {
+      "k": 0.8348,
+      "A": 0.1498,
+      "speed": 1.5095
+     },
+     "idle": {
+      "k": 0.9158,
+      "A": 0.0877
+     },
+     "palette": [
+      "#3f0101",
+      "#11029a",
+      "#8a878a",
+      "#f1f4f3",
+      "#990602",
+      "#042538",
+      "#216e83",
+      "#454148",
+      "#2d0901",
+      "#190100",
+      "#411c05",
+      "#56dced",
+      "#d2941c",
+      "#0d0101",
+      "#d4d2d1",
+      "#e1a782",
+      "#acabae",
+      "#9d5e3c",
+      "#c18264",
+      "#3599b1",
+      "#905116",
+      "#610302",
+      "#e22e12",
+      "#30282e",
+      "#605a5e",
+      "#612b10",
+      "#144a5a",
+      "#020a1d",
+      "#230000",
+      "#747276",
+      "#000000",
+      "#743b21"
+     ]
+    },
+    "453": {
+     "name": "orange bodice, rust-red skirt",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/453.glb",
+      "byteLength": 962632,
+      "sha256": "519450aee2f54dce3aaf3d268847371c5e6749ff89fb9bd38ebad17e12ebd35e"
+     },
+     "walk": {
+      "k": 0.8316,
+      "A": 0.1677,
+      "speed": 1.5038
+     },
+     "idle": {
+      "k": 0.9225,
+      "A": 0.0841
+     },
+     "palette": [
+      "#096a08",
+      "#e26639",
+      "#0c0000",
+      "#3d6771",
+      "#071a2b",
+      "#df110f",
+      "#eed295",
+      "#6e2912",
+      "#460302",
+      "#010615",
+      "#b95427",
+      "#674326",
+      "#160100",
+      "#f9f8d6",
+      "#610603",
+      "#294e55",
+      "#220201",
+      "#f1c858",
+      "#76c4d5",
+      "#92381e",
+      "#da982b",
+      "#aa7a48",
+      "#d39e6f",
+      "#17343c",
+      "#4c8c9d",
+      "#300201",
+      "#875c36",
+      "#8f0a04",
+      "#361809",
+      "#4e2715",
+      "#000000",
+      "#170686"
+     ]
+    },
     "454": {
      "name": "rust jacket, blue skirt",
      "body": {
@@ -128441,6 +128849,108 @@
       "#a5cfef",
       "#300401",
       "#000000"
+     ]
+    },
+    "455": {
+     "name": "rust hood, laced bodice, rust skirt",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/455.glb",
+      "byteLength": 1090216,
+      "sha256": "9c6af6a1f4cf02a6a06f416c3eef59cc4dae1270b995d75108c9e7761c20ca45"
+     },
+     "walk": {
+      "k": 0.7985,
+      "A": 0.166,
+      "speed": 1.4438
+     },
+     "idle": {
+      "k": 0.8867,
+      "A": 0.0838
+     },
+     "palette": [
+      "#3c7f8f",
+      "#a85330",
+      "#520403",
+      "#eee4df",
+      "#956659",
+      "#814630",
+      "#3b1a16",
+      "#d27241",
+      "#350402",
+      "#1e02ac",
+      "#653429",
+      "#751105",
+      "#ecb040",
+      "#02031b",
+      "#143b46",
+      "#f0c69a",
+      "#210201",
+      "#e82f0d",
+      "#a70414",
+      "#d0907b",
+      "#040932",
+      "#050166",
+      "#a14b05",
+      "#47545c",
+      "#205d02",
+      "#4d2523",
+      "#150205",
+      "#00000c",
+      "#271117",
+      "#0b0001",
+      "#000000",
+      "#69b4c9"
+     ]
+    },
+    "456": {
+     "name": "bell sleeves, half-chequered skirt",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/456.glb",
+      "byteLength": 876492,
+      "sha256": "1e2822d6150198c8049cd010a4669cb77660f4b90afd47fbd8ff28e62305b4c6"
+     },
+     "walk": {
+      "k": 0.8509,
+      "A": 0.1465,
+      "speed": 1.5387
+     },
+     "idle": {
+      "k": 0.9325,
+      "A": 0.0882
+     },
+     "palette": [
+      "#e3ab7c",
+      "#7f4d2c",
+      "#2a4968",
+      "#c88b57",
+      "#490701",
+      "#5d5b5e",
+      "#948e90",
+      "#9b5009",
+      "#7a7374",
+      "#0d2c55",
+      "#310101",
+      "#493e3c",
+      "#031435",
+      "#1f0201",
+      "#7f0e07",
+      "#f7dd99",
+      "#f6f4ef",
+      "#010622",
+      "#175801",
+      "#693812",
+      "#df9608",
+      "#416a9b",
+      "#b5aeaf",
+      "#a5693e",
+      "#000113",
+      "#100100",
+      "#dad1cc",
+      "#302429",
+      "#331605",
+      "#512507",
+      "#000000",
+      "#509fd3"
      ]
     }
    }

@@ -59,7 +59,7 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   `python3 scripts/apply-npc-merges.py ~/Downloads` on the repo host, or pass the directory or individual files you copied.
   It updates `NpcReferenceMerges.json`, rebuilds the chart, and removes processed candidates after the rebuild succeeds.
   Refresh the viewer to see the result. A candidate that conflicts with an earlier merge stays in place for review.
-  `--characters DIR` relocates the optional links to the asset-pipeline character outputs.
+  `--characters DIR` or `DAGGER_CHAR_ROOT` relocates the optional links to the generated character stages.
 - `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared
   against `--baseline` (default `local/art/reference/daggerfall-mobile-idle-unmirrored-r01`).
 - `tools/ui/export.py` writes the screens and portraits from an import's staging, so run the import first.
@@ -144,6 +144,11 @@ writes its own comparison in `local/art/review/flora/trials/506-11/`.
 
 ## Animated people
 
+- The splat stages and approval manifest live under `local/art/generated/people/dagger-characters/`. To run the
+  asset-pipeline `dagger-char` tools on this tree, set `DAGGER_CHAR_ROOT="$PWD/local/art/generated/people/dagger-characters"`
+  from the Rusty Dagger root. Keep the existing character IDs and numbered stage directories.
+- Run `python3 authoring/tools/people/splat-people.py` to publish the ready skinned-splat GLBs, clip fits and shared
+  walk and idle clips to the art pack's `media/splat-people/`. Commit that directory and the pack's `payload.json` together.
 - Fix a part that goes wrong by changing what is generated or how it is rigged, never by repainting the part.
 - Don't run the Krea retro pass again on a rig source: the face and held objects drift.
 - Record each figure's rig source in `specs/people/rig/<figure>.json`: input, models, sampler, seeds, the full prompt.

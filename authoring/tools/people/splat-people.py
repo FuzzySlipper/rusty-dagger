@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """splat-people: the gsplat townspeople that `people.splat` draws every walker as, and the art pack's `splatPeople` section.
 
-Takes asset-pipeline's ready dagger characters (outputs/dagger-characters/ready.json: 09-game approved by Patch, each with
+Takes the ready Dagger characters (local/art/generated/people/dagger-characters/ready.json: 09-game approved by Patch, each with
 the Engine's skinned-splat GLB on the 22 Mixamo body bones and its fit to PINOC's Mixamo Walking and Standing Idle) and
 writes into content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/:
 
@@ -20,6 +20,7 @@ opacity, which a pixel finish can snap its blocks to. Rerun it when asset-pipeli
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import struct
 from pathlib import Path
@@ -29,7 +30,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[3]
 PACK = ROOT / 'content/worldrpg/packs/daggerfall.art-replacements'
 MEDIA = PACK / 'media/splat-people'
-CHARACTERS = ROOT.parent / 'asset-pipeline/outputs/dagger-characters'
+CHARACTERS = ROOT / 'local/art/generated/people/dagger-characters'
 CLIPS = Path('/data/assets/splat-characters/pinoc-clips/mixamo')
 # Each pack's clip, by the name the game plays it under, from the PINOC Mixamo export it is cut from.
 PACKS = {'walk': 'walking.glb', 'idle': 'standing-idle.glb'}
@@ -116,7 +117,8 @@ def entry(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('--characters', type=Path, default=CHARACTERS, help="asset-pipeline's outputs/dagger-characters")
+    parser.add_argument('--characters', type=Path, default=os.environ.get('DAGGER_CHAR_ROOT') or CHARACTERS,
+                        help="character stage root containing ready.json")
     parser.add_argument('--clips', type=Path, default=CLIPS, help="PINOC's Mixamo exports of Walking and Standing Idle")
     args = parser.parse_args()
     ready_list = json.loads((args.characters / 'ready.json').read_text())['ready']

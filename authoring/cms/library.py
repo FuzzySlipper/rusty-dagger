@@ -12,6 +12,8 @@ DEFAULT_CONCEPTS = REPO / "local/authoring/concepts"
 DEFAULT_REVIEWS = REPO / "local/authoring/reviews.sqlite3"
 DEFAULT_NPCS = REPO / "local/art/reference/npc"
 DEFAULT_MERGES = REPO / "src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceMerges.json"
+DEFAULT_CHARACTERS = REPO / "local/art/generated/people/dagger-characters"
+STAGE_MOUNT = "/generated/people/dagger-characters/"
 
 
 def read_json(path, default):
@@ -49,6 +51,7 @@ class Library:
             "/media/npc/": self.npcs,
             "/media/classic/": self.mobiles,
             "/media/flora/": self.flora,
+            STAGE_MOUNT: self.characters,
             "/asset-pipeline/outputs/dagger-characters/": self.characters,
             "/media/turnarounds/": self.turnarounds,
         }

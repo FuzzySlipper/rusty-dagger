@@ -14,7 +14,7 @@ shows its URL. Use `den-serve restart rusty-dagger-authoring -repo "$PWD/authori
 ## Review and link records
 
 The CMS reads the NPC and classic mobile reference exports, the flora review catalog,
-and character stages from the adjacent asset-pipeline checkout. It discovers villager variants from NPC aliases.
+and the character stages in `local/art/generated/people/dagger-characters/`. It discovers villager variants from NPC aliases.
 Use **Link pipeline** on a character to add a relationship, then **Set as canonical** or **Set as final** to select
 a depiction. These decisions are stored by stable ID in [links.json](links.json). Pipeline approvals stay in
 the character stage files. A single approved front or game-ready output is shown by default when available.
@@ -49,8 +49,8 @@ python3 authoring/cms/review_cli.py set flora 500-12 --mark --note "Check this r
 python3 authoring/cms/review_cli.py list pipeline-assets --prefix 452/01-concept/ --rating bad
 ```
 
-Put migrated character folders under `authoring/characters/`, or set `DAGGER_CHAR_ROOT` to another stage root.
-Keep the same character IDs and relative paths so the CMS can find their reviews.
+Set `DAGGER_CHAR_ROOT` to use a different character stage root. Keep the same character IDs and relative paths
+so the CMS can find their reviews.
 
 ## Concept art
 

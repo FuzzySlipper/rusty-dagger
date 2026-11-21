@@ -15,7 +15,9 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from catalog import Catalog, assigned
 from concepts import MEDIA, ConceptStore
-from library import CMS, DEFAULT_CONCEPTS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library, read_json
+from library import (
+    CMS, DEFAULT_CHARACTERS, DEFAULT_CONCEPTS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library, read_json,
+)
 from pipelines import STAGES, stage_row
 from review_media import revision, stage_assets, stage_info
 from reviews import ReviewStore, Reviews
@@ -292,9 +294,9 @@ def main():
     parser.add_argument("--reviews", type=Path, default=DEFAULT_REVIEWS)
     parser.add_argument("--concept-root", type=Path, default=DEFAULT_CONCEPTS)
     parser.add_argument("--characters", type=Path, default=os.getenv("DAGGER_CHAR_ROOT"),
-                        help="character stage root, such as authoring/characters after moving the assets")
+                        help="override the repo-local character stage root")
     args = parser.parse_args()
-    character_root = args.characters or REPO / "authoring/characters"
+    character_root = args.characters or DEFAULT_CHARACTERS
     library = Library(args.npc_root.resolve(), args.asset_pipeline.resolve(),
                       character_root.resolve() if args.characters or character_root.is_dir() else None)
     Handler.workspace = Workspace(library, args.links.resolve(), args.npc_merges.resolve(),

@@ -1,8 +1,7 @@
 """Read character stage records and the confirmed runtime exports they refer to."""
 
-from library import asset_url, file_link, read_json
+from library import STAGE_MOUNT, asset_url, file_link, read_json
 
-STAGE_MOUNT = "/asset-pipeline/outputs/dagger-characters/"
 STAGES = {
     "00-brief": "Brief", "01-concept": "Concept", "02-guide": "Scaffold", "03-clip": "Animation",
     "04-cutouts": "Cutouts", "05-cameras": "Cameras", "06-first-fit": "First fit", "07-refine": "Refinement",
