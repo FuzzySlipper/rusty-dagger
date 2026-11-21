@@ -42,10 +42,11 @@ def main():
     add = commands.add_parser("add", help="submit a batch using a JSON manifest")
     add.add_argument("subject")
     add.add_argument("manifest", type=Path)
-    listing = commands.add_parser("list", help="show candidates and current approval")
+    listing = commands.add_parser("list", help="show candidates and front and back approvals")
     listing.add_argument("subject")
-    approved = commands.add_parser("approved", help="retrieve the single approved concept and its generation details")
+    approved = commands.add_parser("approved", help="retrieve the approved front or back and its generation details")
     approved.add_argument("subject")
+    approved.add_argument("--view", choices=("front", "back"), default="front")
     approved.add_argument("--image", type=Path, help="save the approved image to this path")
     args = parser.parse_args()
     origin = args.url.rstrip("/")
@@ -53,9 +54,11 @@ def main():
     try:
         result = add_batch(origin, path, args.manifest) if args.command == "add" else request(origin, path)
         if args.command == "approved":
-            result = result["approved"]
+            result = result["approvals"][args.view] if "approvals" in result else (
+                result["approved"] if args.view == "front" else None
+            )
             if result is None:
-                raise ValueError(f"{args.subject} has no single approved concept.")
+                raise ValueError(f"{args.subject} has no approved {args.view} concept.")
             if args.image:
                 with urlopen(origin + result["url"], timeout=60) as response:
                     args.image.write_bytes(response.read())

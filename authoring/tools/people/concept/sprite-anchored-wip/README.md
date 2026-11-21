@@ -43,6 +43,9 @@ python3 authoring/tools/people/concept/back_ph3.py \
   --out local/art/generated/studies/people-concept/128-back
 ```
 
+Submit the back candidates to the same [CMS concept stage](../../../../cms/README.md#concept-art) and select
+**Approve as back**. Retrieve it with `concept_cli.py approved mobile-128 --view back`.
+
 ## Earlier History (2026-11-08)
 
 - Crew thread `den-01M6ZZ734GS6PM7AM72KF87451`, section 3 (`mobile-30` Vampire Ancient, `mobile-140` Monk, `mobile-1` Imp, `mobile-2` Spriggan).

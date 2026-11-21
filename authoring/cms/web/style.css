@@ -146,6 +146,7 @@ button[data-mark][aria-pressed="true"] { color: var(--accent); border-color: var
 .asset-review h2 { font-size: 1.08rem; }
 .asset-review .record-review button { font-size: .87rem; padding: 3px 7px; }
 
+.concept-approvals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; }
 .concept-selection { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
 .selected-photo { display: block; width: 150px; height: 138px; padding: 3px; }
 .selected-photo img { display: block; width: 100%; height: 100%; object-fit: contain; }

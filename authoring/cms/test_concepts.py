@@ -34,6 +34,54 @@ class ConceptTests(TestCase):
         self.assertEqual(len(reopened["candidates"]), 2)
         self.assertEqual(len(list(self.store.images.iterdir())), 2)
 
+    def test_legacy_approvals_migrate_to_front_with_original_date_and_details(self):
+        front = self.submit("Front A")
+        date = "2026-11-21T10:20:00+00:00"
+        with self.store.connection() as db:
+            db.execute("DROP TABLE approvals")
+            db.execute("""
+                CREATE TABLE approvals (
+                    subject TEXT PRIMARY KEY, candidate TEXT NOT NULL REFERENCES candidates(id),
+                    approved_at TEXT NOT NULL
+                )
+                """)
+            db.execute("INSERT INTO approvals VALUES (?, ?, ?)", ("npc-381", front["id"], date))
+        stage = ConceptStore(self.root).stage("npc-381")
+        self.assertEqual(stage["approvals"]["front"], front | {"approvedAt": date})
+        self.assertEqual(stage["approved"], stage["approvals"]["front"])
+        self.assertIsNone(stage["approvals"]["back"])
+        self.assertEqual(ConceptStore(self.root).stage("npc-381"), stage)
+
+    def test_replacing_back_keeps_front_and_preserves_both_views_metadata(self):
+        front = self.submit("Front A")
+        first_back = self.submit("Back A", seed=2)
+        second_back = self.submit("Back B", seed=3)
+        self.store.approve("npc-381", (), front["id"])
+        self.store.approve("npc-381", (), first_back["id"], "back")
+        self.store.approve("npc-381", (), second_back["id"], "back")
+        stage = ConceptStore(self.root).stage("npc-381")
+        self.assertEqual(stage["approved"]["id"], front["id"])
+        self.assertEqual(stage["approvals"]["front"]["details"], front["details"])
+        self.assertEqual(stage["approvals"]["back"]["id"], second_back["id"])
+        self.assertEqual(stage["approvals"]["back"]["details"], second_back["details"])
+        self.assertEqual(len(stage["candidates"]), 3)
+
+    def test_resolving_a_merged_front_conflict_keeps_the_inherited_back(self):
+        first = self.submit("Front A", subject="npc-382")
+        second = self.submit("Front B", subject="npc-383")
+        back = self.submit("Back A", subject="npc-382")
+        self.store.approve("npc-382", (), first["id"])
+        self.store.approve("npc-383", (), second["id"])
+        self.store.approve("npc-382", (), back["id"], "back")
+        aliases = ("npc-382", "npc-383")
+        stage = self.store.stage("npc-381", aliases)
+        self.assertEqual(stage["conflicts"], ["front"])
+        self.assertEqual(stage["approvals"]["back"]["id"], back["id"])
+        resolved = self.store.approve("npc-381", aliases, first["id"])
+        self.assertEqual(resolved["conflicts"], [])
+        self.assertEqual(resolved["approved"]["id"], first["id"])
+        self.assertEqual(resolved["approvals"]["back"]["id"], back["id"])
+
     def test_retry_keeps_original_and_cannot_change_approved_provenance(self):
         row = self.submit("Front A")
         self.store.approve("npc-381", (), row["id"])

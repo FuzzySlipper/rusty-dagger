@@ -1,4 +1,4 @@
-"""Immutable concept submissions and the one approved image for a character."""
+"""Immutable concept submissions and approved front and back views."""
 
 import base64
 from contextlib import closing, contextmanager
@@ -11,6 +11,7 @@ from uuid import uuid4
 from library import asset_url
 
 MEDIA = "/media/concepts/"
+VIEWS = ("front", "back")
 IMAGE_FORMATS = {
     ".png": lambda image: image.startswith(b"\x89PNG\r\n\x1a\n"),
     ".jpg": lambda image: image.startswith(b"\xff\xd8\xff"),
@@ -29,17 +30,31 @@ class ConceptStore:
         self.images.mkdir(parents=True, exist_ok=True)
         self.database = root / "concepts.sqlite3"
         with self.connection() as db:
-            db.executescript("""
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("""
                 CREATE TABLE IF NOT EXISTS candidates (
                     id TEXT PRIMARY KEY, subject TEXT NOT NULL, batch TEXT NOT NULL, name TEXT NOT NULL,
                     file TEXT NOT NULL, details TEXT NOT NULL, created TEXT NOT NULL,
                     UNIQUE (subject, batch, name)
-                );
-                CREATE TABLE IF NOT EXISTS approvals (
-                    subject TEXT PRIMARY KEY, candidate TEXT NOT NULL REFERENCES candidates(id),
-                    approved_at TEXT NOT NULL
-                );
+                )
                 """)
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(approvals)")}
+            legacy = "subject" in columns and "view" not in columns
+            if legacy:
+                db.execute("ALTER TABLE approvals RENAME TO front_approvals")
+            db.execute("""
+                CREATE TABLE IF NOT EXISTS approvals (
+                    subject TEXT NOT NULL, view TEXT NOT NULL CHECK(view IN ('front', 'back')),
+                    candidate TEXT NOT NULL REFERENCES candidates(id), approved_at TEXT NOT NULL,
+                    PRIMARY KEY (subject, view)
+                )
+                """)
+            if legacy:
+                db.execute("""
+                    INSERT INTO approvals (subject, view, candidate, approved_at)
+                    SELECT subject, 'front', candidate, approved_at FROM front_approvals
+                    """)
+                db.execute("DROP TABLE front_approvals")
 
     @contextmanager
     def connection(self):
@@ -97,31 +112,41 @@ class ConceptStore:
         subjects = (subject, *aliases)
         placeholders = ", ".join("?" for _ in subjects)
         with self.connection() as db:
+            db.execute("BEGIN")
             rows = db.execute(f"SELECT * FROM candidates WHERE subject IN ({placeholders}) ORDER BY created, id", subjects)
             candidates = [self.candidate(row) for row in rows]
             approvals = db.execute(f"SELECT * FROM approvals WHERE subject IN ({placeholders})", subjects).fetchall()
-        choices = {row["candidate"] for row in approvals}
-        selected = next((row for row in approvals if row["subject"] == subject), None)
-        if selected is None and len(choices) == 1:
-            selected = approvals[0]
-        approved = next((candidate for candidate in candidates if selected and candidate["id"] == selected["candidate"]), None)
-        if approved:
-            approved = approved | {"approvedAt": selected["approved_at"]}
-        return {"id": subject, "candidates": candidates, "approved": approved, "conflict": selected is None and len(choices) > 1}
+        images = {candidate["id"]: candidate for candidate in candidates}
+        selected_views = {}
+        conflicts = []
+        for view in VIEWS:
+            view_approvals = [row for row in approvals if row["view"] == view]
+            selected = next((row for row in view_approvals if row["subject"] == subject), None)
+            if selected is None and view_approvals:
+                if len({row["candidate"] for row in view_approvals}) == 1:
+                    selected = view_approvals[0]
+                else:
+                    conflicts.append(view)
+            candidate = images.get(selected["candidate"]) if selected else None
+            selected_views[view] = candidate | {"approvedAt": selected["approved_at"]} if candidate else None
+        return {"id": subject, "candidates": candidates, "approvals": selected_views, "conflicts": conflicts,
+                "approved": selected_views["front"], "conflict": "front" in conflicts}
 
-    def approve(self, subject, aliases, candidate):
+    def approve(self, subject, aliases, candidate, view="front"):
         if not isinstance(candidate, str):
             raise ValueError("Choose one candidate to approve.")
+        if view not in VIEWS:
+            raise ValueError("Choose front or back for the approval.")
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT subject, file FROM candidates WHERE id = ?", (candidate,)).fetchone()
             if not row or row["subject"] not in (subject, *aliases) or not (self.images / row["file"]).is_file():
                 raise ValueError("Choose a candidate image from this character.")
-            db.executemany("DELETE FROM approvals WHERE subject = ?", ((alias,) for alias in aliases))
+            db.executemany("DELETE FROM approvals WHERE subject = ? AND view = ?", ((alias, view) for alias in aliases))
             db.execute("""
-                INSERT INTO approvals(subject, candidate, approved_at) VALUES (?, ?, ?)
-                ON CONFLICT(subject) DO UPDATE SET candidate = excluded.candidate, approved_at = excluded.approved_at
-                """, (subject, candidate, now()))
+                INSERT INTO approvals(subject, view, candidate, approved_at) VALUES (?, ?, ?, ?)
+                ON CONFLICT(subject, view) DO UPDATE SET candidate = excluded.candidate, approved_at = excluded.approved_at
+                """, (subject, view, candidate, now()))
         return self.stage(subject, aliases)
 
     @staticmethod

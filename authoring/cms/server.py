@@ -70,7 +70,7 @@ class Workspace:
             return self.concept_store.submit(id, body)
         if not isinstance(body, dict):
             raise ValueError("Choose one candidate to approve.")
-        return self.concept_store.approve(id, aliases, body.get("candidate")) | {"name": name}
+        return self.concept_store.approve(id, aliases, body.get("candidate"), body.get("view", "front")) | {"name": name}
 
     def reviews(self):
         aliases = read_json(self.library.npcs / "manifest.json", {}).get("aliases", {})

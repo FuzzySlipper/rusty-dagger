@@ -1,4 +1,9 @@
+const viewLabels = { front: 'Front', back: 'Back' };
+
 export function showConcepts(root, stage, request, escape, status = '') {
+  const views = stage.approvals ? Object.keys(viewLabels) : ['front'];
+  const approvals = stage.approvals ?? { front: stage.approved };
+  const conflicts = stage.conflicts ?? (stage.conflict ? ['front'] : []);
   const batches = new Map();
   for (const item of stage.candidates) {
     if (!batches.has(item.batch)) batches.set(item.batch, []);
@@ -16,17 +21,24 @@ export function showConcepts(root, stage, request, escape, status = '') {
       <button class="concept-card" type="button" data-inspect="${item.id}">
         <span class="concept-photo">${photo(item)}</span>
         ${caption(item)}<span class="candidate-prompt">${escape(item.details.prompt)}</span>
-        ${item.id === stage.approved?.id ? '<span class="chip approved">Approved</span>' : ''}
+        ${views.filter(view => item.id === approvals[view]?.id)
+          .map(view => `<span class="chip approved">${viewLabels[view]} approved</span>`).join('')}
       </button>`).join('')}</div></section>`).join('');
-  const approval = stage.approved ? `<div class="concept-selection">
-    <button type="button" class="selected-photo" data-inspect="${stage.approved.id}" aria-label="Inspect approved concept">${photo(stage.approved)}</button>
-    <div><span class="chip approved">Approved</span> ${caption(stage.approved)}
-      <p class="muted">${escape(stage.approved.batch)} · Selected for the next stage</p></div></div>` :
-    `<p class="empty">${stage.conflict ? 'Choose one of the concepts from the merged records.' : 'Open a candidate to approve it for the next stage.'}</p>`;
+  const selections = views.map(view => {
+    const item = approvals[view];
+    const label = viewLabels[view];
+    const message = conflicts.includes(view) ? `Choose the ${view} from the merged records.` : `Choose a ${view} from the candidates.`;
+    return `<section class="panel"><h2>Approved ${view}</h2>
+      ${item ? `<div class="concept-selection">
+        <button type="button" class="selected-photo" data-inspect="${item.id}" aria-label="Inspect approved ${view}">
+        ${photo(item)}</button>
+        <div>${caption(item)}<p class="muted">${escape(item.batch)} · ${label} reference</p></div></div>` :
+      `<p class="empty">${message}</p>`}</section>`;
+  }).join('');
   root.innerHTML = `<div id="concept-stage"><a class="breadcrumb" href="#character/${encodeURIComponent(stage.id)}">Character record</a>
     <header class="page-heading"><div><h1>Concept art</h1><p>${escape(stage.name)} · <code>${escape(stage.id)}</code></p></div></header>
-    <section class="panel"><h2>Selected concept</h2>${approval}
-    ${status ? `<p class="concept-status" role="status">${escape(status)}</p>` : ''}</section>
+    <div class="concept-approvals">${selections}</div>
+    ${status ? `<p class="concept-status" role="status">${escape(status)}</p>` : ''}
     ${groups || '<p class="empty">No concept candidates have been submitted yet.</p>'}
     <dialog id="concept-inspector" aria-labelledby="inspection-name"><div id="inspection"></div></dialog></div>`;
 
@@ -37,7 +49,6 @@ export function showConcepts(root, stage, request, escape, status = '') {
 
   function display() {
     const item = stage.candidates[index];
-    const approved = item.id === stage.approved?.id;
     const extra = Object.fromEntries(Object.entries(item.details).filter(([key]) => !['prompt', 'seed', 'model'].includes(key)));
     inspection.innerHTML = `
       <header class="inspection-bar"><div><h2 id="inspection-name">${escape(item.name)}</h2><span class="muted">${escape(item.batch)}</span></div>
@@ -46,8 +57,13 @@ export function showConcepts(root, stage, request, escape, status = '') {
       <button type="button" data-step="1" ${index + 1 === stage.candidates.length ? 'disabled' : ''}>Next</button>
       <button type="button" data-inspect-close autofocus>Close</button></div></header>
       <div class="inspection-body"><div class="inspection-image">${photo(item, false)}</div>
-        <aside class="inspection-details"><div class="actions"><button type="button" class="primary" data-approve ${approved ? 'disabled' : ''}>
-        ${approved ? 'Approved' : 'Approve this concept'}</button><a href="${escape(item.url)}" target="_blank" rel="noopener">Original image</a></div>
+        <aside class="inspection-details"><div class="actions">
+        ${views.map(view => {
+          const approved = item.id === approvals[view]?.id;
+          return `<button type="button" class="primary" data-approve="${view}" ${approved ? 'disabled' : ''}>
+            ${approved ? `${viewLabels[view]} approved` : `Approve as ${view}`}</button>`;
+        }).join('')}
+        <a href="${escape(item.url)}" target="_blank" rel="noopener">Original image</a></div>
         <p id="inspection-status" role="status"></p>
         <h3>Generation details</h3><p>${seedLabel(item)}${item.details.model ? ` · ${escape(item.details.model)}` : ''}</p>
         <h3>Prompt</h3><pre>${escape(item.details.prompt)}</pre>
@@ -57,20 +73,22 @@ export function showConcepts(root, stage, request, escape, status = '') {
 
   async function approve(button) {
     const item = stage.candidates[index];
+    const view = button.dataset.approve;
     const message = inspection.querySelector('#inspection-status');
-    button.disabled = true;
+    const actions = [...inspection.querySelectorAll('[data-approve]:enabled, [data-step]:enabled')];
+    for (const action of actions) action.disabled = true;
     message.textContent = 'Saving approval…';
     try {
       const next = await request(`/api/concepts/${encodeURIComponent(stage.id)}/approve`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidate: item.id }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ candidate: item.id, view }),
       });
       if (page.isConnected) {
         dialog.close();
-        showConcepts(root, next, request, escape, `${item.name} approved.`);
+        showConcepts(root, next, request, escape, `${item.name} approved as the ${view} concept.`);
         window.scrollTo(0, 0);
       }
     } catch (error) {
-      button.disabled = false;
+      for (const action of actions) action.disabled = false;
       message.textContent = error.message;
     }
   }

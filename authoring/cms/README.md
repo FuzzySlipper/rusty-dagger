@@ -58,8 +58,9 @@ Use the [people concept recipes](../tools/people/concept/README.md) to prepare c
 costume briefs, and generate front or back candidates.
 
 Open **Concept art** from an NPC or mobile record. Candidates are grouped by batch. Open one to inspect the original
-image and its generation details, then choose **Approve this concept** to set the single concept for the next stage.
-The character page uses that approved image for its canonical depiction. Previous candidates remain available.
+image and its generation details, then choose **Approve as front** or **Approve as back**. Each view has one
+approval. The character page uses the front as its canonical depiction. Both approvals appear on the concept
+art page. Previous candidates remain available.
 
 Submit existing local generation outputs with `python3 authoring/cms/concept_cli.py add npc-381 batch.json`.
 The manifest uses a batch name and distinct candidate names within that batch. Paths are relative to the manifest.
@@ -76,9 +77,16 @@ The manifest uses a batch name and distinct candidate names within that batch. P
 ```
 
 Use `null` if the generator supplies no seed. Other fields, including negative prompts, samplers, and graph settings,
-are saved with the candidate. Re-running the same submission keeps its existing candidate ID. Run
-`python3 authoring/cms/concept_cli.py approved npc-381 --image /tmp/npc-381-concept.png` to retrieve the approved
-bytes and their metadata for downstream work. Pass `--url` before the command when submitting from another machine.
+are saved with the candidate. Re-running the same submission keeps its existing candidate ID. The `approved`
+command defaults to the front and returns the selected image's generation metadata. Pass `--image` to save
+its original bytes for downstream work.
+
+```sh
+python3 authoring/cms/concept_cli.py approved npc-381 --image /tmp/npc-381-front.png
+python3 authoring/cms/concept_cli.py approved npc-381 --view back --image /tmp/npc-381-back.png
+```
+
+Pass `--url` before the command when accessing the CMS from another machine.
 Images and approvals live under `local/authoring/concepts/` on the CMS host.
 
 ## Add a page
