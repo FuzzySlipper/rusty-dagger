@@ -77,13 +77,39 @@ def make_slate_canvas(sprite_png: Path, out_png: Path, width: int, height: int) 
     return out_png
 
 
-def build_prompts(brief: str, pronoun: str, hooded_shadow: bool) -> tuple[str, str]:
+def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False) -> tuple[str, str]:
     pos = "his" if pronoun == "He" else ("her" if pronoun == "She" else "its")
     face_q = (
         "If wearing a hood, paint a real shadowed face inside the deep hood—brow and eyes recessed in dark-umber shadow while "
         "nose, cheekbones and jaw remain clearly sculpted in muted warm tones (never an empty black void). "
         if hooded_shadow else ""
     )
+    if style_only:
+        qwen_p = (
+            "Task: Redraw a very small classic fantasy RPG sprite as newly illustrated high resolution art. "
+            "Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\n"
+            "Input image: exact composition, pose, silhouette, props and colour-blocking reference. Faithfully preserve the "
+            "classic sprite's exact pose, gesture, proportions, silhouette, held objects, companions and major colour regions—"
+            f"do not change the pose into a turnaround stance or remove elements. {face_q}\n\n"
+            f"Subject: {brief.rstrip('.')}.\n\n"
+            "Style: ART DIRECTION — VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\n"
+            "Draw the subject as an accomplished pen-and-ink dark-fantasy illustration in the tradition of Akihiko Yoshida "
+            "(Vagrant Story) and classic tabletop RPG manuals, finished with opaque muted gouache washes. Build a confident underlying "
+            "ink drawing with crisp seams, dark-umber contours, fine directional crosshatching inside folds and shadows, and opaque "
+            "local colour washes preserving the sprite's exact colour relationships without glossy 3D shading.\n\n"
+            "Presentation: Isolated subject matching the classic sprite's silhouette and framing on a perfectly flat solid dark "
+            "slate grey background, RGB 48,52,59. No floor, no scenery, no cast shadow, no border."
+        )
+        krea_p = (
+            "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+            "Drawn and painted as a vivid, punchy 1990s PC fantasy role-playing game illustration: confident dark-umber pen-and-ink "
+            "contour lines, fine crosshatching inside folds and shadows, and opaque matte gouache colour planes (4 to 6 painted "
+            f"value groups per material). {face_q}"
+            "Plain flat dark slate-grey background, RGB 48,52,59, no floor, no scenery, no border.\n\n"
+            f"Subject: {brief.rstrip('.')}. Faithfully preserve the pose, composition, props and silhouette of the input image."
+        )
+        return qwen_p, krea_p
+
     stance = (
         f"Shown full-length as the front view of a costume fitting or character turnaround sheet, in a symmetrical neutral "
         f"standing A-pose facing directly forward, feet slightly apart with both shoes/feet whole. Both arms are held out at a "
@@ -123,6 +149,7 @@ def main():
     ap.add_argument("--brief", default="", help="Override costume brief text")
     ap.add_argument("--pronoun", choices=["He", "She", "It"], default="He")
     ap.add_argument("--hooded-shadow", action="store_true", help="Keep brow/eyes shadowed inside deep hood without pitch-black void")
+    ap.add_argument("--style-only", action="store_true", help="Direct high-res style transfer preserving the sprite's exact pose, props, and composition (no wide-A turnaround or overhead-lighting prep)")
     ap.add_argument("--seeds", default="42201,42202,42203")
     ap.add_argument("--denoise", type=float, default=0.38, help="Stage 2 Krea2 New B denoise (0.38=grittier ink, 0.46=more Brom/Elmore)")
     ap.add_argument("--width", type=int, default=832)
@@ -145,7 +172,7 @@ def main():
     canvas = make_slate_canvas(args.sprite.resolve(), out / f"sprite_{args.width}x{args.height}.png", args.width, args.height)
     up_spr = comfy_upload(args.comfy, canvas, f"sa-{args.id}-{canvas.name}")
 
-    qwen_p, krea_p = build_prompts(brief, pronoun, args.hooded_shadow)
+    qwen_p, krea_p = build_prompts(brief, pronoun, args.hooded_shadow, style_only=args.style_only)
     wf2 = json.loads(WF_TEMPLATE.read_text())
 
     s1_keys = ["1_load_sprite", "2_qwen_unet", "3_qwen_clip", "4_qwen_vae", "5_qwen_cache",

@@ -28,6 +28,14 @@ python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py 128 \
   --seeds 42201,42202,42203 --denoise 0.38
 ```
 
+For non-rigged / non-splat sprites (e.g. Daedric Princes shown only as 2D summoning apparitions), pass `--style-only` (and `--width 1024 --height 1024` for square sprites) to skip the wide-A turnaround stance and overhead lighting prep while keeping the flat `#30343b` slate ground for later cutout:
+
+```sh
+python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py npc-001 \
+  --sprite local/art/reference/npc/art/sprite/texture-175-record-002-frame-001-source.png \
+  --style-only --width 1024 --height 1024 --seeds 101,102,103,104,105,106 --denoise 0.38 --brief "..."
+```
+
 ## Matching Back View (`../back_ph3.py` — MiniMax H3 Image `p-h3-image_w4a8`)
 
 Use **MiniMax H3 Image (`p-h3-image_w4a8`)** directly from the approved `front.png` with a short 4-sentence prompt (~`4.6 s` warm, single-stage, zero style drift):
