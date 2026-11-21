@@ -26,6 +26,24 @@ local/art/  (ignored, beside the other working files in local/; see the README)
 (accepted) the art pack, `content/worldrpg/packs/daggerfall.art-replacements/`. Never commit anything from
 `local/art`.
 
+## LAN authoring workspace
+
+From the repository root, start the CMS with:
+
+```sh
+den-serve up rusty-dagger-authoring -repo "$PWD/authoring/cms"
+```
+
+Open the printed LAN URL. The CMS reads the NPC and classic mobile reference exports, the flora review catalog,
+and character stages from the adjacent asset-pipeline checkout. It discovers villager variants from NPC aliases.
+Use **Link pipeline** on a character to add a relationship, then **Set as canonical** or **Set as final** to select
+a depiction. These decisions are stored by stable ID in `authoring/cms/links.json`. Pipeline approvals stay in
+the character stage files. A single approved front or game-ready output is shown by default when available.
+
+**NPC compare & merge** opens the existing comparison viewer. Choose the keeper and click **Apply merge** to update
+the same ledger and rebuild the reference pages from the host. Workbench review links open the native
+media and ratings. The Flora pages use the Engine-rendered review images from the existing flora exporter.
+
 ## Reference exports
 
 ```sh

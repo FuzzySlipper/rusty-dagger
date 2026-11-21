@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Rusty Dagger Authoring</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview"><span class="monogram" aria-hidden="true">RD</span><span>Rusty Dagger<small>Authoring workspace</small></span></a>
+      <nav class="navigation" aria-label="Workspace">
+        <a href="#overview" data-page="overview">Overview</a>
+        <a href="#npcs" data-page="npcs">NPCs</a>
+        <a href="#mobiles" data-page="mobiles">Classic mobiles</a>
+        <a href="#pipelines" data-page="pipelines">Character stages</a>
+        <a href="#flora" data-page="flora">Flora</a>
+      </nav>
+      <a class="external" href="/media/npc/">NPC compare &amp; merge</a>
+    </aside>
+    <main class="workspace">
+      <header class="topbar">
+        <form id="asset-search" role="search">
+          <label class="visually-hidden" for="query">Find any asset</label>
+          <input id="query" name="query" type="search" autocomplete="off" placeholder="Find any asset by ID or name">
+          <button type="submit">Search</button>
+        </form>
+      </header>
+      <div id="content" aria-live="polite"><p>Loading catalog…</p></div>
+    </main>
+  </div>
+</body>
+</html>

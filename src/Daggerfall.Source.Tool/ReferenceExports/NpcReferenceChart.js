@@ -10,6 +10,9 @@ const comparisonCount = document.querySelector('#comparison-count');
 const mergeTools = document.querySelector('#merge-tools');
 const mergeKeeper = document.querySelector('#merge-keeper');
 const mergeStatus = document.querySelector('#merge-status');
+const mergeButton = document.querySelector('#mark-merge');
+const mergeEndpoint = document.body.dataset.mergeEndpoint;
+if (mergeEndpoint) mergeButton.textContent = 'Apply merge';
 const facets = ['kind', 'costume', 'color', 'prop', 'pose'].map(key => [key, document.getElementById(key)]);
 const splitTags = value => value ? value.split('|') : [];
 const accessories = new Set(['belt', 'boots', 'jewelry', 'gloves', 'bare feet']);
@@ -140,10 +143,26 @@ function toggle(card) {
   updateComparison();
 }
 
-function markMerge() {
+async function markMerge() {
   const keep = mergeKeeper.value;
   const merge = Array.from(selected, card => card.id).filter(id => id !== keep);
   if (!keep || !merge.length) return;
+  if (mergeEndpoint) {
+    mergeButton.disabled = true;
+    mergeStatus.textContent = `Merging into ${keep} and rebuilding the chart…`;
+    try {
+      const response = await fetch(mergeEndpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keep, merge }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      window.location.reload();
+    } catch (error) {
+      mergeStatus.textContent = error.message;
+      mergeButton.disabled = false;
+    }
+    return;
+  }
   const stamp = new Date().toISOString().replace(/[-:.]/g, '');
   const filename = `npc-merge-${stamp}-${keep}.json`;
   const url = URL.createObjectURL(new Blob([JSON.stringify({ keep, merge }, null, 2) + '\n'], { type: 'application/json' }));
@@ -157,7 +176,7 @@ function markMerge() {
   mergeStatus.textContent = `Download requested for ${keep}`;
 }
 
-document.querySelector('#mark-merge').addEventListener('click', markMerge);
+mergeButton.addEventListener('click', markMerge);
 for (const card of cards) card.button.addEventListener('click', () => toggle(card));
 document.querySelector('#clear-comparison').addEventListener('click', () => {
   selected.clear();
