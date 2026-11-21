@@ -8,6 +8,7 @@ from urllib.parse import quote
 CMS = Path(__file__).resolve().parent
 REPO = CMS.parents[1]
 BASE_PAYLOAD = REPO / "content/worldrpg/packs/daggerfall.base/payload.json"
+DEFAULT_CONCEPTS = REPO / "local/authoring/concepts"
 DEFAULT_REVIEWS = REPO / "local/authoring/reviews.sqlite3"
 DEFAULT_NPCS = REPO / "local/art/reference/npc"
 DEFAULT_MERGES = REPO / "src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceMerges.json"

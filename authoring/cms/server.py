@@ -14,7 +14,8 @@ from threading import Lock
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from catalog import Catalog, assigned
-from library import CMS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library, read_json
+from concepts import MEDIA, ConceptStore
+from library import CMS, DEFAULT_CONCEPTS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library, read_json
 from pipelines import STAGES, stage_row
 from review_media import revision, stage_assets, stage_info
 from reviews import ReviewStore, Reviews
@@ -23,22 +24,71 @@ WEB = CMS / "web"
 
 
 class Workspace:
-    def __init__(self, library, links, merges, review_store=None):
+    def __init__(self, library, links, merges, review_store=None, concept_store=None):
         self.library = library
         self.links = links
         self.merges = merges
         self.review_store = review_store
+        self.concept_store = concept_store
         self.link_lock = Lock()
 
     def catalog(self):
         return Catalog(self.library, read_json(self.links, {}))
+
+    def concept_subject(self, catalog, key):
+        id = key if key in catalog.npcs or key in catalog.mobiles else catalog.aliases.get(key, key)
+        row = catalog.npcs.get(id) or catalog.mobiles.get(id)
+        if not row:
+            return None
+        aliases = tuple(old for old, target in catalog.aliases.items()
+                        if target == id and old.startswith("npc-") and old != id)
+        return id, row["name"], aliases
+
+    def character(self, key):
+        catalog = self.catalog()
+        subject = catalog.get(key)
+        if subject and self.concept_store:
+            id, _, aliases = self.concept_subject(catalog, subject["id"])
+            stage = self.concept_store.stage(id, aliases)
+            subject["conceptStage"] = {"count": len(stage["candidates"]), "approved": stage["approved"],
+                                      "conflict": stage["conflict"]}
+        return subject
+
+    def concept_stage(self, key):
+        subject = self.concept_subject(self.catalog(), key)
+        if subject:
+            id, name, aliases = subject
+            return self.concept_store.stage(id, aliases) | {"name": name}
+        return None
+
+    def concept_action(self, key, action, body):
+        subject = self.concept_subject(self.catalog(), key)
+        if not subject:
+            raise ValueError("Unknown character.")
+        id, name, aliases = subject
+        if action == "candidates":
+            return self.concept_store.submit(id, body)
+        if not isinstance(body, dict):
+            raise ValueError("Choose one candidate to approve.")
+        return self.concept_store.approve(id, aliases, body.get("candidate")) | {"name": name}
 
     def reviews(self):
         aliases = read_json(self.library.npcs / "manifest.json", {}).get("aliases", {})
         return Reviews(self.review_store, aliases, lambda category, id: revision(self.library, category, id))
 
     def overview(self):
-        return self.catalog().overview() | {"reviews": self.reviews().list()}
+        catalog = self.catalog()
+        concepts = {}
+        if self.concept_store:
+            for key in self.concept_store.subjects():
+                subject = self.concept_subject(catalog, key)
+                if subject:
+                    id, name, aliases = subject
+                    if id not in concepts:
+                        stage = self.concept_store.stage(id, aliases)
+                        concepts[id] = {"id": id, "name": name, "count": len(stage["candidates"]),
+                                        "approved": stage["approved"]["name"] if stage["approved"] else None}
+        return catalog.overview() | {"reviews": self.reviews().list(), "conceptStages": list(concepts.values())}
 
     def stage_review(self, pipeline, stage):
         info = stage_info(self.library, pipeline, stage)
@@ -102,7 +152,7 @@ class Workspace:
                 json.dump(links, file, indent=2, sort_keys=True)
                 file.write("\n")
             Path(file.name).replace(self.links)
-            return self.catalog().get(identity)
+            return self.character(identity)
 
     def merge_npcs(self, candidate):
         with TemporaryDirectory(prefix="dagger-authoring-merge-") as directory:
@@ -137,7 +187,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         path = unquote(urlsplit(path).path)
-        for mount, root in self.workspace.library.mounts.items():
+        mounts = self.workspace.library.mounts | {MEDIA: self.workspace.concept_store.images}
+        for mount, root in mounts.items():
             if path.startswith(mount):
                 file = (root / path.removeprefix(mount)).resolve()
                 return str(file if file.is_relative_to(root.resolve()) else WEB / "missing")
@@ -172,8 +223,12 @@ class Handler(SimpleHTTPRequestHandler):
                 review = self.workspace.stage_review(*self.review_key(path, "/api/stage-review/"))
                 self.json_response(review or {"error": "Stage not found."},
                                    HTTPStatus.OK if review else HTTPStatus.NOT_FOUND)
+            elif path.startswith("/api/concepts/"):
+                stage = self.workspace.concept_stage(unquote(path.removeprefix("/api/concepts/")))
+                self.json_response(stage or {"error": "Character not found."},
+                                   HTTPStatus.OK if stage else HTTPStatus.NOT_FOUND)
             elif path.startswith("/api/characters/"):
-                subject = self.workspace.catalog().get(unquote(path.removeprefix("/api/characters/")))
+                subject = self.workspace.character(unquote(path.removeprefix("/api/characters/")))
                 self.json_response(subject or {"error": "Character not found."},
                                    HTTPStatus.OK if subject else HTTPStatus.NOT_FOUND)
             elif path.startswith("/api/pipelines/"):
@@ -204,7 +259,10 @@ class Handler(SimpleHTTPRequestHandler):
                     raise ValueError("Provide a category.")
                 self.json_response({"cleared": self.workspace.review_store.clear_marks(category)})
                 return
-            if path.startswith("/api/reviews/"):
+            if path.startswith("/api/concepts/") and path.endswith(("/candidates", "/approve")):
+                subject, operation = self.review_key(path, "/api/concepts/")
+                action = lambda body: self.workspace.concept_action(subject, operation, body)
+            elif path.startswith("/api/reviews/"):
                 category, id = self.review_key(path, "/api/reviews/")
                 action = lambda body: self.workspace.reviews().patch(category, id, body)
             elif path == "/api/npcs/merge":
@@ -232,6 +290,7 @@ def main():
     parser.add_argument("--npc-merges", type=Path, default=DEFAULT_MERGES)
     parser.add_argument("--links", type=Path, default=CMS / "links.json")
     parser.add_argument("--reviews", type=Path, default=DEFAULT_REVIEWS)
+    parser.add_argument("--concept-root", type=Path, default=DEFAULT_CONCEPTS)
     parser.add_argument("--characters", type=Path, default=os.getenv("DAGGER_CHAR_ROOT"),
                         help="character stage root, such as authoring/characters after moving the assets")
     args = parser.parse_args()
@@ -239,7 +298,7 @@ def main():
     library = Library(args.npc_root.resolve(), args.asset_pipeline.resolve(),
                       character_root.resolve() if args.characters or character_root.is_dir() else None)
     Handler.workspace = Workspace(library, args.links.resolve(), args.npc_merges.resolve(),
-                                  ReviewStore(args.reviews.resolve()))
+                                  ReviewStore(args.reviews.resolve()), ConceptStore(args.concept_root.resolve()))
     with ThreadingHTTPServer((args.host, args.port), Handler) as server:
         print(f"Rusty Dagger Authoring at http://{args.host}:{server.server_port}", flush=True)
         server.serve_forever()

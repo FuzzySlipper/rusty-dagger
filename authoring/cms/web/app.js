@@ -1,3 +1,4 @@
+import { showConcepts } from './concepts.js';
 import { installReviewActions, loadReviews, markedCount, reviewBadge, reviewFor, reviewPanel, tileReview } from './reviews.js';
 
 const content = document.querySelector('#content');
@@ -61,8 +62,14 @@ function overview() {
     <td>${chip(row.state)} ${reviewBadge(reviewFor('pipeline-stages', `${row.pipeline}/${row.id}`))}</td><td>${escape(row.note)}</td>
     <td>${link(stageUrl(row.pipeline, row.id), 'Review in CMS')}</td></tr>`).join('');
   const pending = catalog.review.filter(row => !reviewFor('pipeline-stages', `${row.pipeline}/${row.id}`).rating).length;
+  const concepts = catalog.conceptStages ?? [];
+  const conceptReview = concepts.length ? `<section class="panel"><div class="section-heading"><h2>Concept art</h2>
+    <span class="muted">${concepts.filter(row => !row.approved).length} awaiting a selection</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Character</th><th>Candidates</th><th>Selected concept</th></tr></thead>
+    <tbody>${concepts.map(row => `<tr><td>${link(`#concepts/${key(row.id)}`, row.name)} <code>${escape(row.id)}</code></td>
+      <td>${row.count}</td><td>${escape(row.approved || 'Awaiting selection')}</td></tr>`).join('')}</tbody></table></div></section>` : '';
   return title('Authoring overview', '', link('/media/npc/', 'Compare & merge NPCs', 'button primary')) +
-    `<div class="collections">${counts}</div><section class="panel"><div class="section-heading"><h2>Stage reviews</h2>
+    `<div class="collections">${counts}</div>${conceptReview}<section class="panel"><div class="section-heading"><h2>Stage reviews</h2>
     <span class="muted">${pending} awaiting a CMS rating</span></div>${reviews ? `
     <div class="table-wrap"><table><thead><tr><th>Character</th><th>Stage</th><th>State</th><th>Note</th><th>Review</th></tr></thead>
     <tbody>${reviews}</tbody></table></div>` : empty('No character stages are waiting for review.')}</section>`;
@@ -175,9 +182,10 @@ function stageTable(pipeline) {
 function pipelineDetails(pipeline, subject) {
   const concept = pipeline.concepts.map(art => {
     const selected = subject?.concept?.pipeline === art.pipeline && subject.concept.path === art.path;
+    const hasConceptApproval = subject?.conceptStage?.approved || subject?.conceptStage?.conflict;
     const status = art.approved ? 'Approved in pipeline' : art.recorded ? 'Recorded candidate' : 'Present on disk';
     return `<figure>${link(art.url, spriteLabel(art.name), 'source-link')}${sprite(art.url, art.name)}
-      <figcaption>${escape(status)} ${subject ? (selected ? chip('Current concept') : pick('concept', art, 'Set as canonical')) : ''}</figcaption></figure>`;
+      <figcaption>${escape(status)}  ${subject && !hasConceptApproval ? (selected ? chip('Current concept') : pick('concept', art, 'Set as canonical')) : ''}</figcaption></figure>`;
   }).join('');
   const final = pipeline.final;
   const finalSelected = subject?.final?.pipeline === final?.pipeline && subject?.final;
@@ -205,22 +213,26 @@ function paintPanel(name, art, fallback, pixel = false) {
 }
 
 function characterDetail(subject) {
-  const art = subject.concept;
+  const selectedConcept = subject.conceptStage?.approved;
+  const art = subject.conceptStage?.conflict ? null : subject.concept;
   const final = subject.final;
-  const candidate = !subject.explicitConcept && subject.conceptChoices.find(item => item.name === 'Front concept');
+  const candidate = !subject.explicitConcept && !subject.conceptStage?.conflict && subject.conceptChoices.find(item => item.name === 'Front concept');
   const classic = subject.classic && { url: subject.classic, link: subject.classicUrl, caption: 'Classic source' };
   const linked = new Set(subject.pipelineIds);
   const options = catalog.pipelines.filter(pipeline => !linked.has(pipeline.id));
   const linkForm = options.length ? `<form id="link-pipeline"><label>Character pipeline
     <select name="pipeline">${options.map(row => `<option value="${escape(row.id)}">${escape(row.id)} · ${escape(row.name)}</option>`).join('')}</select>
     </label><button class="primary" type="submit">Link pipeline</button></form>` : '';
-  const depiction = art ? { url: art.url, caption: art.name,
+  const depiction = selectedConcept ? { url: selectedConcept.url, caption: selectedConcept.name,
+    note: `${selectedConcept.batch} · Approved in concept stage` }
+    : art ? { url: art.url, caption: art.name,
     note: `${art.pipeline} · ${subject.explicitConcept ? 'Selected here' : 'Approved in pipeline'}`,
     action: subject.explicitConcept ? '<button type="button" data-clear="concept">Use pipeline default</button>' : '' }
     : candidate ? { url: candidate.url, caption: candidate.name, note: `${candidate.pipeline} · ${subject.conflicts.includes('concept') ? 'Choose between merged references' : 'Available reference'}`,
       action: pick('concept', candidate, 'Set as canonical') } : null;
   const conceptPanel = paintPanel('Canonical depiction', depiction,
-    subject.explicitConcept ? 'The saved concept is unavailable.' : 'Choose a concept from a linked pipeline.');
+    subject.conceptStage?.conflict ? 'Choose one concept from the merged records.' :
+    subject.explicitConcept ? 'The saved concept is unavailable.' : 'Choose a concept from the concept stage or a linked pipeline.');
   const finalPanel = `<article class="panel depiction final"><h2>Final representation</h2>${final ? `
     <strong>${escape(final.name)}</strong><p>Ready for game testing · ${escape(final.pipeline)}</p>
     <div class="actions">${link(final.url, 'Open final asset', 'button primary')}${link(final.playable, 'Playable manifest')}
@@ -229,7 +241,8 @@ function characterDetail(subject) {
       'Choose a game-ready output from the merged pipelines.' : 'A game-ready output has yet to be selected.')}</article>`;
   const game = subject.game;
   content.innerHTML = `<a class="breadcrumb" href="#${subject.id.startsWith('npc-') ? 'npcs' : 'mobiles'}">Character catalog</a>` +
-    title(subject.name, `${subject.id} · ${subject.kind}`) +
+    title(subject.name, `${subject.id} · ${subject.kind}`,
+      link(`#concepts/${key(subject.id)}`, `Concept art${subject.conceptStage?.count ? ` · ${subject.conceptStage.count}` : ''}`, 'button primary')) +
     (subject.brief?.brief ? `<p class="brief">${escape(subject.brief.brief)}</p>` : '') +
     `<div class="depictions">${paintPanel('Classic depiction', classic, 'Classic sprite export unavailable.', true)}
       ${conceptPanel}${finalPanel}</div>
@@ -315,7 +328,7 @@ async function render() {
   let id;
   try {
     id = decodeURIComponent(encoded);
-    const section = page === 'character' ? (id.startsWith('npc-') ? 'npcs' : 'mobiles') :
+    const section = ['character', 'concepts'].includes(page) ? (id.startsWith('npc-') ? 'npcs' : 'mobiles') :
       ['pipeline', 'review'].includes(page) ? 'pipelines' : page;
     for (const element of document.querySelectorAll('[data-page]'))
       element.toggleAttribute('aria-current', element.dataset.page === section);
@@ -325,6 +338,9 @@ async function render() {
     if (page === 'character' && id) {
       const subject = await request(`/api/characters/${key(id)}`);
       if (view === currentView) characterDetail(subject);
+    } else if (page === 'concepts' && id) {
+      const stage = await request(`/api/concepts/${key(id)}`);
+      if (view === currentView) showConcepts(content, stage, request, escape);
     } else if (page === 'pipeline' && id) {
       const row = catalog.pipelines.find(row => row.id === id);
       if (!row) throw new Error('Character pipeline not found.');

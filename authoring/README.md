@@ -61,6 +61,32 @@ python3 authoring/cms/review_cli.py list pipeline-assets --prefix 452/01-concept
 Put migrated character folders under `authoring/characters/`, or set `DAGGER_CHAR_ROOT` to another stage root.
 Keep the same character IDs and relative paths so the CMS can find their reviews.
 
+### Concept art
+
+Open **Concept art** from an NPC or mobile record. Candidates are grouped by batch. Open one to inspect the original
+image and its generation details, then choose **Approve this concept** to set the single concept for the next stage.
+The character page uses that approved image for its canonical depiction. Previous candidates remain available.
+
+Submit existing local generation outputs with `python3 authoring/cms/concept_cli.py add npc-381 batch.json`.
+The manifest uses a batch name and distinct candidate names within that batch. Paths are relative to the manifest.
+
+```json
+{
+  "batch": "tunic-study",
+  "defaults": { "model": "local-model", "steps": 25 },
+  "candidates": [
+    { "image": "front-a.png", "prompt": "Exact generation prompt", "seed": 8031 },
+    { "image": "front-b.png", "prompt": "Exact revised prompt", "seed": 8032 }
+  ]
+}
+```
+
+Use `null` if the generator supplies no seed. Other fields, including negative prompts, samplers, and graph settings,
+are saved with the candidate. Re-running the same submission keeps its existing candidate ID. Run
+`python3 authoring/cms/concept_cli.py approved npc-381 --image /tmp/npc-381-concept.png` to retrieve the approved
+bytes and their metadata for downstream work. Pass `--url` before the command when submitting from another machine.
+Images and approvals live under `local/authoring/concepts/` on the CMS host.
+
 ## Reference exports
 
 ```sh
