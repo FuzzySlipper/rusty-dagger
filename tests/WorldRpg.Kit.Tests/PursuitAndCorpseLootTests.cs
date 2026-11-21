@@ -99,12 +99,15 @@ public sealed class PursuitAndCorpseLootTests
     }
 
     /// <summary>
-    /// A chase up a slope over the real Engine's derived grid (#10948): the target stands 2 m above the walker, so a goal at
-    /// the walker's own height lies under the floor there, on no walkable cell, and the walker was blocked. Asked at the
-    /// floor under the target, it walks up to it.
+    /// A chase along a slope over the real Engine's derived grid (#10953): uphill the target stands 2 m above the walker, so a
+    /// goal at the walker's own height lies under the floor there, on no walkable cell, and the walker was blocked; asked at
+    /// the floor under the target, it walks up to it. Downhill a goal at the walker's height stands 2 m above the target's
+    /// floor, past what the grid takes for standing on it, and is asked at that floor too.
     /// </summary>
-    [Fact]
-    public void A_ground_walker_chases_a_target_up_a_slope_on_a_derived_grid()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_ground_walker_chases_a_target_along_a_slope_on_a_derived_grid(bool uphill)
     {
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
         host.Call(engine =>
@@ -122,8 +125,8 @@ public sealed class PursuitAndCorpseLootTests
                 engine.Spatial.DefaultCollisionNavigationConfig() with { GridId = grid, CellSize = 1, Character = movement.CurrentController }));
             using ActorsState actors = new();
             actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health");
-            ActorState actor = actors.CreateActor(42, new EntityTypeId("enemy"), Stats(), new ActorPose(new WorldPoint(0, 1, 10), 0), "health");
-            WorldPoint target = new(0, 3, -10);
+            (WorldPoint start, WorldPoint target) = uphill ? (new WorldPoint(0, 1, 10), new WorldPoint(0, 3, -10)) : (new WorldPoint(0, 3, -10), new WorldPoint(0, 1, 10));
+            ActorState actor = actors.CreateActor(42, new EntityTypeId("enemy"), Stats(), new ActorPose(start, 0), "health");
             var perception = PerceptionDouble.Create();
             perception.Pairs = new[] { new PerceptionPair(42, 1, 20d, 1d, PerceptionPairKind.Visible, 20d) };
             var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
@@ -134,7 +137,7 @@ public sealed class PursuitAndCorpseLootTests
             {
                 PursuitEvidence evidence = pursuit.Update(actor, memory, new(1, target), new(64, -1, 4, 8192), new(0, 8), 1, step, .1f,
                     new FactBuffer<TestFact>(), new PursuitPolicy(EmitTargetLost: false));
-                Assert.NotEqual(PursuitState.Blocked, evidence.Current);
+                Assert.True(evidence.Current != PursuitState.Blocked, $"Blocked at step {step}, at {actor.Position}: {evidence.Navigation?.Outcome}.");
             }
             Assert.True(Vector2.Distance(new(actor.Position.X, actor.Position.Z), new(target.X, target.Z)) <= 2f, $"The walker stopped at {actor.Position}.");
         });
@@ -379,6 +382,8 @@ public sealed class PursuitAndCorpseLootTests
             nameof(ISpatialService.CreateSession) => new SpatialSession(new SpatialSessionHandle(1), static () => { }),
             nameof(ISpatialService.ReplaceContentArtifact) => new SpatialContentArtifactReplaceReceipt(),
             nameof(ISpatialService.EvaluateNavigationStep) => Evaluate((NavigationStepRequest)arguments![0]!),
+            // No floor anywhere: a ground goal keeps the walker's height.
+            nameof(ISpatialService.CastRay) => default(SpatialHit),
             _ => throw new NotSupportedException(method?.Name),
         };
 

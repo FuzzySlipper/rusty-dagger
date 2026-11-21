@@ -380,16 +380,15 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
     private const float GoalFloorLift = .25f, GoalFloorSearch = 16f;
 
     /// <summary>
-    /// The height a ground walker's goal is asked at: its own, while the destination stands no higher, so a goal on the
-    /// level or downhill finds the floor below it. A destination above it (a target uphill, or levitating) is asked at the
-    /// floor under it, since a goal below the floor there stands on no walkable cell and the walker would be blocked; with
-    /// no floor within reach below it, at its own height.
+    /// The height a ground walker's goal is asked at: the floor a short ray finds under the destination. A goal at the
+    /// walker's own height lies under that floor when the target stands even a little uphill, or far above it downhill,
+    /// and stands on no walkable cell either way, so the walker would be blocked. With no floor within reach below the
+    /// destination, the walker's own height.
     /// </summary>
     private float GoalHeight(WorldPoint actor, WorldPoint destination)
     {
-        if (destination.Y <= actor.Y) return actor.Y;
         SpatialHit floor = _spatial.CastRay(destination.ToVector() + (Vector3.UnitY * GoalFloorLift), -Vector3.UnitY, GoalFloorLift + GoalFloorSearch);
-        return floor.Present ? floor.Point.Y : destination.Y;
+        return floor.Present ? floor.Point.Y : actor.Y;
     }
 
     private PerceptionReadoutResult QueryVisibility(
