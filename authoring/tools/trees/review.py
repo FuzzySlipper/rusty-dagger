@@ -10,6 +10,7 @@ import io
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -180,8 +181,9 @@ def main():
                 height, centre, triangles = framing(directory, flat, tree)
                 frame = draw(host["url"].rstrip("/"), key, height, centre)
                 store_frame(frame, key, bool(tree), Path(rendered))
-                form = Path(art["trees"][key]["mesh"]["path"]).name.partition(".")[0].partition("-p")[0] if tree else ""
-                if form.startswith("rock-"):
+                form = Path(art["trees"][key]["mesh"]["path"]).name.split(".")[0] if tree else ""
+                form = re.split(r"-p[0-9]+(?:-|$)", form, maxsplit=1)[0]
+                if re.fullmatch(r"rock-[0-9a-f]+", form):
                     form = "rock"
                 records[key] = dict(key=key, climate=CLIMATES[flat["replaces"]["archive"] - 500], form=form,
                                     height=tree["placement"]["height"] if tree else flat["placement"]["size"]["height"], triangles=triangles)

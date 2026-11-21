@@ -130,14 +130,14 @@ def skirt_colours(tile, rgba, rows):
     return Image.fromarray(art)
 
 
-def frond_atlas(rgba, palm, rng):
+def frond_atlas(rgba, rng, skirt_rows=()):
     """Paint broad overlapping leaflets, with open notches toward their tips and a solid central rib."""
     pixels = rgba[rgba[..., 3] > 128, :3].astype(float)
     green = pixels[(pixels[:, 1] > pixels[:, 0] * 1.04) & (pixels[:, 1] > pixels[:, 2] * 1.12)]
     ochre = pixels[(pixels[:, 0] > pixels[:, 1] * 1.2) & (pixels[:, 1] > pixels[:, 2] * 1.22)]
     atlas = Image.new("RGBA", (192, 128))
     for cell in range(3):
-        dry = cell == 2 and palm.skirt > 0
+        dry = cell == 2 and bool(skirt_rows)
         # Shaded lower fronds keep the deep values painted beneath the green crown.
         shares = [.04, .12, .25, .45, .68, .88] if cell == 0 else [.12, .32, .52, .70, .88, .97]
         ramp = colour_ramp(ochre if dry else green, shares)
@@ -170,7 +170,7 @@ def frond_atlas(rgba, palm, rng):
                     draw.polygon([(32, y + 10), elbow, tip, (32 + width * sign * .58, y - 2)], fill=ramp[max(0, shade - 2)])
             draw.polygon([(30, 126), (30, 37), (28, 15), (32, 2), (36, 14), (34, 38), (33, 126)], fill=ramp[3])
         if dry:
-            tile = skirt_colours(tile, rgba, palm.skirt_rows)
+            tile = skirt_colours(tile, rgba, skirt_rows)
         atlas.paste(tile, (cell * 64, 0))
     return atlas
 
@@ -243,4 +243,4 @@ def build(record, rgba):
                   palm.skirt * (.73 if short else 1.02) * rng.uniform(.89, 1.08),
                   palm.frond_width * .72, rng.uniform(-.03, .03), 2, hanging=True)
     top = max(leaves["positions"][1::3])
-    return {"height": top, "parts": [bark, leaves]}, bark_wrap(rgba, palm), frond_atlas(rgba, palm, rng)
+    return {"height": top, "parts": [bark, leaves]}, bark_wrap(rgba, palm), frond_atlas(rgba, rng, palm.skirt_rows)

@@ -39,6 +39,27 @@ class Meshes(unittest.TestCase):
                 covered = max(covered, high)
             self.assertGreater(covered, .72, f"500-{record} trunk ends below the crown")
 
+    def test_rainforest_replacements_have_indexed_support_from_the_foot_into_the_leaves(self):
+        art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]
+        for record in (3, 13, 16, 18, 21, 25, 27):
+            with self.subTest(record=record):
+                entry = art[f"500-{record}"]
+                mesh = json.loads((trees.CONTENT / entry["mesh"]["path"]).read_bytes())
+                spans = []
+                for part in mesh["parts"]:
+                    heights = np.array(part["positions"][1::3]) / mesh["height"]
+                    triangles = heights[np.array(part["indices"]).reshape(-1, 3)]
+                    if part["role"] == "leaves":
+                        lowest_leaf = triangles.min()
+                    else:
+                        # The tree on stone is supported by the boulder as well as its roots.
+                        spans.extend(zip(triangles.min(1), triangles.max(1)))
+                supported = 0
+                for low, high in sorted(spans):
+                    self.assertLessEqual(low, supported + 1e-6)
+                    supported = max(supported, high)
+                self.assertGreater(supported, lowest_leaf)
+
     def test_the_winter_rock_painted_with_pockets_is_built_whole_on_its_foot(self):
         flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["flats"] if f["replaces"] == {"archive": 507, "record": 4})
         rgba = trees.frame(flat)

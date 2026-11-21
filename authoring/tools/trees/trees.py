@@ -11,7 +11,8 @@ light and dark; leaves lean toward the darks, which lit cards lose, and each lea
 sprites outline theirs.
 
 Archive 500's palms have their own connected stems, root flares and folded fronds in rainforest_palms.py.
-Build them with trees.py --key 500-12 --key 500-14 --key 500-15.
+Its vine, buttress, tufted, rock-rooted and blue-fruited trees are shaped in rainforest_trees.py.
+Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
 The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
 manner: the slender bare trees are rusty-craftsurvive's dead tree as above; the great gnarled trunks and the fallen logs
@@ -41,6 +42,7 @@ from scipy import ndimage, stats
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "rocks"))
 import rocks  # noqa: E402
 import rainforest_palms
+import rainforest_trees
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -49,7 +51,7 @@ PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 CRAFTSURVIVE = rocks.CRAFTSURVIVE / "content/game"
 
 # The trees with meshes, by nature archive and record: every big tree of every climate but the few whose shapes are their
-# own (the swamps' vine-wrapped and bulb-trunked plants, the desert's cacti, the rainforest's mossy hollow tree), which stay
+# own (the swamps' vine-wrapped and bulb-trunked plants, the desert's cacti, some rainforest undergrowth), which stay
 # sprites, as do bushes and small plants. Each names the rusty-craftsurvive tree drawn for it by form: conifers a fir or
 # pine, layered flat-topped trees a cork oak, round crowns a beech or chestnut, palms a palm, slender bare trees the dead
 # tree; a winter set's tree is its summer one's, in its snowy colours. Variants (p1 to p3) differ from record to record, so
@@ -61,7 +63,8 @@ GNARLED, LOGS = rocks.GNARLED, rocks.LOGS_FORM
 BOULDERS, SLAB, CAIRN = rocks.BOULDERS, rocks.SLAB, rocks.CAIRN
 ROCKS = (BOULDERS, SLAB, CAIRN)
 FORMS = {
-    500: {12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3), 30: (CHESTNUT, 1)},
+    500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
+          12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3), 30: (CHESTNUT, 1)},
     501: {11: (PALM, 1), 12: (PALM, 2), 13: (PALM, 3), 16: (PALM, 1), 30: (PALM, 2)},
     502: {13: (CORK, 1), 16: (CORK, 2), 17: (CORK, 3), 18: (CHESTNUT, 2)},
     503: {5: (CORK, 2), 11: (DEAD, 1), 13: (PALM, 1)},
@@ -311,14 +314,18 @@ def tree(flat, archive, record, species, variant, folder, old=None, recompute=Fa
     if species in ROCKS:
         return rock(flat, rgba, archive, record, species, variant, folder, old, recompute)
     m = measures(rgba)
-    if archive == 500 and record in rainforest_palms.PALMS:
+    if archive == 500 and (record in rainforest_palms.PALMS or record in rainforest_trees.FORMS):
         name = f"tree-{archive}-{record}"
-        mesh_name = f"palm-p{variant}-rainforest.prop-mesh.json"
-        mesh, bark, leaves = rainforest_palms.build(record, rgba)
+        mesh_name = f"{species}-p{variant}-rainforest.prop-mesh.json"
+        if record in rainforest_palms.PALMS:
+            mesh, bark, leaves = rainforest_palms.build(record, rgba)
+            images = {"bark": bark, "leaves": leaves}
+        else:
+            mesh, images = rainforest_trees.build(record, rgba)
         write_mesh(folder / mesh_name, mesh)
         entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
                  "placement": placement(flat, rgba, m, old, recompute)}
-        for role, image in (("bark", bark), ("leaves", leaves)):
+        for role, image in images.items():
             filename = f"{name}-{role}.png"
             image.save(folder / filename)
             entry[role] = publish(filename, folder / filename)
