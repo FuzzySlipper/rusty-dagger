@@ -56,6 +56,7 @@ import mountain_trees
 import winter_mountain
 import haunted_trees
 import winter_haunted
+import mountain_woods
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -79,7 +80,8 @@ REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", su
                   502: ("swamp", swamp_trees), 503: ("desert", desert_trees),
                   504: ("woodland", woodland_trees), 505: ("winter-woodland", winter_woodland),
                   506: ("mountain", mountain_trees), 507: ("winter-mountain", winter_mountain),
-                  508: ("haunted", haunted_trees), 509: ("winter-haunted", winter_haunted)}
+                  508: ("haunted", haunted_trees), 509: ("winter-haunted", winter_haunted),
+                  510: ("mountain-woods", mountain_woods)}
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
           12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
@@ -92,7 +94,7 @@ FORMS = {
     507: {**{r: (form, r) for r, form in winter_mountain.FORMS.items()}, 24: (DEAD, 1)},
     508: {**{r: (form, r) for r, form in haunted_trees.FORMS.items()}, 24: (DEAD, 1)},
     509: {**{r: (form, r) for r, form in winter_haunted.FORMS.items()}, 24: (DEAD, 1)},
-    510: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 15: (CORK, 1), 24: (DEAD, 1), 25: (PINE, 2), 30: (PINE, 1)},
+    510: {**{r: (form, r) for r, form in mountain_woods.FORMS.items()}, 24: (DEAD, 1)},
     511: {11: (FIR, 2), 13: (FIR, 1), 24: (DEAD, 1), 25: (PINE, 2)},
 }
 # These flats share paintings with other nature records. Reuse their authored media
@@ -101,7 +103,8 @@ SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
                 "501-15": "500-13", "501-17": "500-3", "501-24": "501-19", "501-31": "500-21",
                 "502-12": "500-18", "502-18": "500-30", "502-19": "501-19", "506-10": "501-20",
                 **{f"507-{r}": f"505-{r}" for r in (10, 13, 14, 15, 16, 25)},
-                "508-10": "501-20", "508-15": "506-15", "509-10": "505-10", "509-15": "505-15"}
+                "508-10": "501-20", "508-15": "506-15", "509-10": "505-10", "509-15": "505-15",
+                "510-10": "501-20", **{f"510-{r}": f"506-{r}" for r in (5, 11, 12, 13, 15, 25, 30)}}
 DEAD_WOOD_AND_ROCKS = {
     500: {4: (SLAB, 1), 17: (SLAB, 1), 31: (BOULDERS, 4)},
     501: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (BOULDERS, 3), 6: (BOULDERS, 3), 23: (BOULDERS, 3)},
@@ -120,7 +123,7 @@ DEAD_WOOD_AND_ROCKS = {
           19: (GNARLED, 1), 20: (GNARLED, 2), 25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)},
     509: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 5: (SLAB, 1), 6: (SLAB, 1), 16: (DEAD, 3), 17: (DEAD, 1), 18: (DEAD, 2),
           19: (GNARLED, 1), 20: (GNARLED, 2), 25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)},
-    510: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 14: (SLAB, 1), 16: (GNARLED, 3), 17: (SLAB, 1), 18: (SLAB, 1),
+    510: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 14: (SLAB, 1), 17: (SLAB, 1), 18: (SLAB, 1),
           19: (GNARLED, 1), 20: (GNARLED, 2), 27: (SLAB, 1), 28: (SLAB, 1), 31: (DEAD, 1)},
     511: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 14: (SLAB, 1), 16: (GNARLED, 3), 17: (SLAB, 1), 18: (SLAB, 1),
           19: (GNARLED, 1), 20: (GNARLED, 2), 27: (SLAB, 1), 28: (SLAB, 1), 31: (DEAD, 1)},
