@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from catalog import Catalog
+from concepts import ConceptStore
 from library import Library
 from server import Workspace
 
@@ -62,6 +63,26 @@ class CatalogTests(TestCase):
         self.assertIsNone(catalog.get("mobile-128")["concept"])
         self.assertFalse(catalog.get("mobile-128")["conceptChoices"][0]["approved"])
         self.assertTrue(catalog.get("npc-381")["concept"]["approved"])
+
+    def test_concept_stage_keeps_the_classic_reference_after_approval(self):
+        manifest = self.library.npcs / "manifest.json"
+        chart = json.loads(manifest.read_text())
+        chart["entries"][0]["image"] = "villager.png"
+        self.write(manifest, chart)
+        image = self.library.npcs / "art/villager.png"
+        image.parent.mkdir()
+        image.touch()
+        self.workspace.concept_store = ConceptStore(self.root / "concepts")
+        candidate = self.workspace.concept_action("npc-381", "candidates", {
+            "name": "Front", "batch": "Outfit", "filename": "front.png",
+            "image": "iVBORw0KGgo=", "details": {"prompt": "A tunic", "seed": 1},
+        })
+
+        stage = self.workspace.concept_stage("381-A")
+        approved = self.workspace.concept_action("npc-381", "approve", {"candidate": candidate["id"]})
+        for response in (stage, approved):
+            self.assertEqual(response["classic"], "/media/npc/art/villager.png")
+            self.assertEqual(response["classicUrl"], "/media/npc/npc-381/index.html")
 
     def test_saves_explicit_choice_from_an_attached_pipeline(self):
         choice = {"pipeline": "381-A", "path": "01-concept/approved/front.png"}

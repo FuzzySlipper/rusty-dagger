@@ -44,35 +44,37 @@ class Workspace:
             return None
         aliases = tuple(old for old, target in catalog.aliases.items()
                         if target == id and old.startswith("npc-") and old != id)
-        return id, row["name"], aliases
+        subject = catalog.summary(id, row, id in catalog.mobiles)
+        return {key: subject[key] for key in ("id", "name", "classic", "classicUrl")}, aliases
 
     def character(self, key):
         catalog = self.catalog()
         subject = catalog.get(key)
         if subject and self.concept_store:
-            id, _, aliases = self.concept_subject(catalog, subject["id"])
-            stage = self.concept_store.stage(id, aliases)
+            _, aliases = self.concept_subject(catalog, subject["id"])
+            stage = self.concept_store.stage(subject["id"], aliases)
             subject["conceptStage"] = {"count": len(stage["candidates"]), "approved": stage["approved"],
                                       "conflict": stage["conflict"]}
         return subject
 
     def concept_stage(self, key):
-        subject = self.concept_subject(self.catalog(), key)
-        if subject:
-            id, name, aliases = subject
-            return self.concept_store.stage(id, aliases) | {"name": name}
+        resolved = self.concept_subject(self.catalog(), key)
+        if resolved:
+            subject, aliases = resolved
+            return self.concept_store.stage(subject["id"], aliases) | subject
         return None
 
     def concept_action(self, key, action, body):
-        subject = self.concept_subject(self.catalog(), key)
-        if not subject:
+        resolved = self.concept_subject(self.catalog(), key)
+        if not resolved:
             raise ValueError("Unknown character.")
-        id, name, aliases = subject
+        subject, aliases = resolved
+        id = subject["id"]
         if action == "candidates":
             return self.concept_store.submit(id, body)
         if not isinstance(body, dict):
             raise ValueError("Choose one candidate to approve.")
-        return self.concept_store.approve(id, aliases, body.get("candidate"), body.get("view", "front")) | {"name": name}
+        return self.concept_store.approve(id, aliases, body.get("candidate"), body.get("view", "front")) | subject
 
     def reviews(self):
         aliases = read_json(self.library.npcs / "manifest.json", {}).get("aliases", {})
@@ -83,12 +85,13 @@ class Workspace:
         concepts = {}
         if self.concept_store:
             for key in self.concept_store.subjects():
-                subject = self.concept_subject(catalog, key)
-                if subject:
-                    id, name, aliases = subject
+                resolved = self.concept_subject(catalog, key)
+                if resolved:
+                    subject, aliases = resolved
+                    id = subject["id"]
                     if id not in concepts:
                         stage = self.concept_store.stage(id, aliases)
-                        concepts[id] = {"id": id, "name": name, "count": len(stage["candidates"]),
+                        concepts[id] = {"id": id, "name": subject["name"], "count": len(stage["candidates"]),
                                         "approved": stage["approved"]["name"] if stage["approved"] else None}
         return catalog.overview() | {"reviews": self.reviews().list(), "conceptStages": list(concepts.values())}
 

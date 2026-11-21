@@ -14,6 +14,11 @@ export function showConcepts(root, stage, request, escape, status = '') {
   const seedLabel = item => item.details.seed === null ? 'Seed unavailable' : `Seed ${escape(item.details.seed)}`;
   const caption = item => `<span class="candidate-title">${escape(item.name)}</span>
     <span class="candidate-data">${seedLabel(item)}${item.details.model ? ` · ${escape(item.details.model)}` : ''}</span>`;
+  const classic = stage.classic ? `<div class="concept-selection">
+    <a class="preview pixel classic-photo" href="${escape(stage.classic)}" target="_blank" rel="noopener">
+      <img src="${escape(stage.classic)}" alt="Classic depiction of ${escape(stage.name)}"></a>
+    <a href="${escape(stage.classicUrl)}" target="_blank" rel="noopener">Classic source</a>
+    </div>` : '';
   const groups = [...batches].map(([batch, items]) => `
     <section class="concept-batch"><div class="section-heading"><h2>${escape(batch)}</h2><small>${items.length}
       ${items.length === 1 ? 'candidate' : 'candidates'}</small></div>
@@ -37,7 +42,8 @@ export function showConcepts(root, stage, request, escape, status = '') {
   }).join('');
   root.innerHTML = `<div id="concept-stage"><a class="breadcrumb" href="#character/${encodeURIComponent(stage.id)}">Character record</a>
     <header class="page-heading"><div><h1>Concept art</h1><p>${escape(stage.name)} · <code>${escape(stage.id)}</code></p></div></header>
-    <div class="concept-approvals">${selections}</div>
+    <div class="concept-approvals">${classic ? `<section class="panel"><h2>Classic depiction</h2>${classic}</section>` : ''}
+    ${selections}</div>
     ${status ? `<p class="concept-status" role="status">${escape(status)}</p>` : ''}
     ${groups || '<p class="empty">No concept candidates have been submitted yet.</p>'}
     <dialog id="concept-inspector" aria-labelledby="inspection-name"><div id="inspection"></div></dialog></div>`;
@@ -65,6 +71,7 @@ export function showConcepts(root, stage, request, escape, status = '') {
         }).join('')}
         <a href="${escape(item.url)}" target="_blank" rel="noopener">Original image</a></div>
         <p id="inspection-status" role="status"></p>
+        ${classic ? `<h3>Classic depiction</h3>${classic}` : ''}
         <h3>Generation details</h3><p>${seedLabel(item)}${item.details.model ? ` · ${escape(item.details.model)}` : ''}</p>
         <h3>Prompt</h3><pre>${escape(item.details.prompt)}</pre>
         ${Object.keys(extra).length ? `<h3>Additional settings</h3><pre>${escape(JSON.stringify(extra, null, 2))}</pre>` : ''}
