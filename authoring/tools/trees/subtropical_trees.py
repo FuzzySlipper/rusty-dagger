@@ -96,15 +96,15 @@ FRONDS = {
 }
 
 
-def palm_atlas(tree, record):
+def palm_atlas(tree, traces, *, feathered=False):
     """Straighten painted fronds into atlas cells. The folded 3D blades put the arch back.
     Keep the deep shadows, torn outer leaflets and open spaces visible in the painting."""
     h, w = tree.pixels.shape[:2]
-    if record == 30:
+    if feathered:
         atlas = frond_atlas(tree.pixels.astype(float), tree.rng, (.342, .515)).resize((192, 96), Image.Resampling.NEAREST)
     else:
         atlas = blade_atlas(tree, feathered=False)
-    for cell, trace in enumerate(FRONDS[record]):
+    for cell, trace in enumerate(traces):
         knots = np.array(trace)
         spine = knots[:, :2] * [w-1, h-1]
         length = np.r_[0, np.cumsum(np.linalg.norm(np.diff(spine, axis=0), axis=1))]
@@ -126,7 +126,7 @@ def palm_atlas(tree, record):
         u = np.linspace(-1, 1, 64)
         core = np.abs(u)[None, :] < .62*np.sin(np.linspace(0, math.pi, 96))[:, None] + .14
         tile[..., 3] *= painted | core
-        paint_share = .30 if record == 30 and cell == 1 else .58
+        paint_share = .30 if feathered and cell == 1 else .58
         tile[..., :3] = np.rint(paint_share*colour + (1-paint_share)*tile[..., :3]).astype(np.uint8)
         atlas.paste(Image.fromarray(tile), (cell*64, 0))
     return atlas
@@ -194,7 +194,7 @@ def spiky_palm(tree, record):
         drop = .20 if lean and i == 1 else tree.rng.uniform(.055, .105)
         centres = [hub, hub + ray*.075 - [0, .035, 0], hub + ray*.085 - [0, drop, 0]]
         tree.tube(centres, [.028, .035, .007], 5, cap=True, wrap_height=top)
-    texture = palm_atlas(tree, record)
+    texture = palm_atlas(tree, FRONDS[record])
     shoots(tree, record, texture)
     return texture
 
@@ -351,7 +351,7 @@ def small_palm(tree, record):
     spiky_fan(tree, hub, 9 if tall else 7, ((.22,.18),(.49,.075),(.45,-.36)), .084 if tall else .066, 0)
     spiky_fan(tree, hub, 8 if tall else 6, ((.14,.22),(.39,.34),(.54,.025)), .061 if tall else .054, 1)
     spiky_fan(tree, hub, 6 if tall else 5, ((.04,.18),(.10,.42),(.32,.44)), .033, 2)
-    texture = palm_atlas(tree, record)
+    texture = palm_atlas(tree, FRONDS[record])
     spear = np.array(texture.crop((64,0,128,96)))
     if not tall:
         # Sun-dried spear tips on 28 carry the tawny paint at the top of its flat.
@@ -382,7 +382,7 @@ def arched_palm(tree):
         az = i*math.tau/7
         frond(tree.leaves, hub, az, .070, .018, tree.rng.uniform(.10,.22), .050,
               tree.rng.uniform(-.02,.02), 2, hanging=True)
-    return palm_atlas(tree, 30)
+    return palm_atlas(tree, FRONDS[30], feathered=True)
 
 
 def build(record, rgba):

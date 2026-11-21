@@ -13,7 +13,7 @@ sprites outline theirs.
 Archive 500's palms have their own connected stems, root flares and folded fronds in rainforest_palms.py.
 Its other bespoke trees are shaped in rainforest_trees.py. Archive 501 shares matching paintings' meshes
 at its own placement. Its distinct shapes are in subtropical_trees.py. Archive 502's rooted broadleaves
-and snags are in swamp_trees.py.
+and snags are in swamp_trees.py. The desert trees of archive 503 are shaped in desert_trees.py.
 Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
 The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
@@ -47,6 +47,7 @@ import rainforest_palms
 import rainforest_trees
 import subtropical_trees
 import swamp_trees
+import desert_trees
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -67,13 +68,13 @@ GNARLED, LOGS = rocks.GNARLED, rocks.LOGS_FORM
 BOULDERS, SLAB, CAIRN = rocks.BOULDERS, rocks.SLAB, rocks.CAIRN
 ROCKS = (BOULDERS, SLAB, CAIRN)
 REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", subtropical_trees),
-                  502: ("swamp", swamp_trees)}
+                  502: ("swamp", swamp_trees), 503: ("desert", desert_trees)}
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
           12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
     501: {r: (form, r) for r, form in subtropical_trees.FORMS.items()},
     502: {r: (form, r) for r, form in swamp_trees.FORMS.items()},
-    503: {5: (CORK, 2), 11: (DEAD, 1), 13: (PALM, 1)},
+    503: {**{r: (form, r) for r, form in desert_trees.FORMS.items()}, 11: (DEAD, 1)},
     504: {11: (CORK, 1), 12: (CORK, 3), 13: (FIR, 1), 14: (CORK, 2), 15: (CORK, 1), 16: (BEECH, 3), 17: (BEECH, 1),
           18: (CHESTNUT, 1), 24: (DEAD, 1), 25: (PINE, 2)},
     505: {11: (CORK, 1), 12: (CORK, 3), 13: (FIR, 1), 14: (CORK, 2), 16: (BEECH, 3), 17: (BEECH, 1),
