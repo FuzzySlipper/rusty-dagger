@@ -77,13 +77,15 @@ CROWN = ((.500, .105, -.014, .155, .124, .137), (.400, .173, .038, .170, .105, .
 class CarvedBark:
     """Unroll each limb along its own rings. Even the back of a twisted root
     gets continuous grain across its circumference, with no change of chart."""
-    def __init__(self, tree):
+    def __init__(self, tree, wood=None):
         self.tree = tree
         pixels = tree.pixels
-        self.wood = np.array(filled(pixels, pixels[..., 3] > 128))
+        if wood is None:
+            wood = pixels[..., 3] > 128
+        self.wood = np.array(filled(pixels, wood))
         self.distance = distance_transform_edt(pixels[..., 3] <= 128)
         self.tiles = []
-        colours = pixels[pixels[..., 3] > 128, :3].astype(float)
+        colours = pixels[wood, :3].astype(float)
         self.ramp = np.array(colour_ramp(colours, [.03, .12, .26, .43, .60, .76, .90, .98]))
 
     def map_rings(self, rings, centres, start):
