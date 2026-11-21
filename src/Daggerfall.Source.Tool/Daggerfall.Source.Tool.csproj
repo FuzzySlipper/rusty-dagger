@@ -20,6 +20,7 @@
     <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
     <!-- The developer commands' attributes, which debug-commands lists. -->
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
+    <EmbeddedResource Include="ReferenceExports/NpcReferenceIds.txt" LogicalName="NpcReferenceIds.txt" />
     <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
     <Using Include="Daggerfall.Import.Tool" />
   </ItemGroup>

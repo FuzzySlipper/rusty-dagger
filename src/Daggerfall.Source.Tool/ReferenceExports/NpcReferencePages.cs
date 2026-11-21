@@ -9,14 +9,16 @@ internal static class NpcReferencePages
     public static void Write(ReferenceExport export, NpcReferenceWorld world, IReadOnlyDictionary<int, ClassicFaction> factions,
         IReadOnlyList<NpcEntry> entries)
     {
-        NpcEntry[] cards = [.. entries.OrderBy(entry => CardOrder(entry.Kind))
-            .ThenBy(entry => entry.Kind == "Named NPC" ? entry.Name : entry.Id, StringComparer.OrdinalIgnoreCase)];
+        NpcEntry[] cards = [.. entries.OrderBy(entry => entry.Id, StringComparer.Ordinal)];
+        var aliases = entries.SelectMany(entry => entry.Aliases.Select(alias => (alias, entry.Id)))
+            .GroupBy(item => item.alias).ToDictionary(group => group.Key, group => group.Select(item => item.Id).Distinct().ToArray());
         foreach (NpcEntry entry in entries) WriteDetail(export, world, factions, entry);
 
         export.WriteJson("manifest.json", new
         {
-            entries = cards.Select(entry => new { entry.Id, entry.Name, entry.Kind, entry.Aliases, entry.ShowInChart, image = entry.Thumbnail?.File }),
-            aliases = entries.SelectMany(entry => entry.Aliases.Select(alias => (alias, entry.Id))).ToDictionary(item => item.alias, item => item.Id),
+            entries = cards.Select(entry => new { entry.Id, entry.Name, entry.Kind, entry.Aliases, image = entry.Thumbnail?.File }),
+            aliases = aliases.Where(pair => pair.Value.Length == 1).ToDictionary(pair => pair.Key, pair => pair.Value[0]),
+            sharedAliases = aliases.Where(pair => pair.Value.Length > 1).ToDictionary(pair => pair.Key, pair => pair.Value),
         });
         File.WriteAllText(Path.Combine(export.Root, "style.css"), Style);
         File.WriteAllText(Path.Combine(export.Root, "filter.js"), Filter);
@@ -28,15 +30,13 @@ internal static class NpcReferencePages
           """);
         foreach (string kind in cards.Select(entry => entry.Kind).Distinct())
             page.Append($"<option>{H(kind)}</option>");
-        int visible = cards.Count(entry => entry.ShowInChart);
-        page.Append($"</select></label><output id=\"count\" aria-live=\"polite\">{Count(visible, "reference")}</output></div></header><main>");
+        page.Append($"</select></label><output id=\"count\" aria-live=\"polite\">{Count(cards.Length, "reference")}</output></div></header><main>");
         page.Append("<ul id=\"chart\" class=\"chart\">");
         foreach (NpcEntry entry in cards)
         {
             string haystack = string.Join(' ', new[] { entry.Id, entry.Name }.Concat(entry.Aliases));
-            string exactOnly = entry.ShowInChart ? "" : $""" hidden data-exact="{H(string.Join(' ', entry.Aliases.Prepend(entry.Id)))}" """;
             page.Append($"""
-              <li data-search="{H(haystack.ToLowerInvariant())}" data-kind="{H(entry.Kind)}"{exactOnly}>
+              <li data-id="{H(entry.Id)}" data-search="{H(haystack.ToLowerInvariant())}" data-kind="{H(entry.Kind)}">
               <a class="card" href="{H(entry.Id)}/index.html">
               {Picture(entry.Thumbnail, "", "")}
               <span class="card-name">{H(entry.Name)}</span><code>{H(entry.Id)}</code>
@@ -45,7 +45,7 @@ internal static class NpcReferencePages
         }
         page.Append("</ul><p id=\"empty\" hidden>No matching NPCs.</p></main><script src=\"filter.js\"></script></body></html>");
         File.WriteAllText(Path.Combine(export.Root, "index.html"), page.ToString());
-        Console.WriteLine($"Daggerfall NPC reference: {visible} cards, {entries.Count} detail pages → {export.Root}");
+        Console.WriteLine($"Daggerfall NPC reference: {cards.Length} cards, {entries.Count} detail pages → {export.Root}");
     }
 
     private static void WriteDetail(ReferenceExport export, NpcReferenceWorld world, IReadOnlyDictionary<int, ClassicFaction> factions, NpcEntry entry)
@@ -104,6 +104,8 @@ internal static class NpcReferencePages
         }
 
         page.Append("<section><h2>Original art</h2>");
+        if (entry.Aliases.Length > 0)
+            page.Append($"<p>Source references · {H(string.Join(", ", entry.Aliases))}</p>");
         foreach (NpcArt group in entry.Art.Where(art => art.Frames.Count > 0).OrderBy(art => art.Frames[0].Role == "portrait" ? 0 : 1))
         {
             page.Append($"<h3>{H(group.Label)}{(group.Frames.Count > 1 ? $" <small>· {group.Frames.Count} images</small>" : "")}</h3><ul class=\"frames\">");
@@ -136,11 +138,6 @@ internal static class NpcReferencePages
     private static string Picture(ReferenceImage? image, string prefix, string label) => image is { } frame
         ? $"<span class=\"picture\"><img src=\"{H(prefix)}art/{H(frame.File)}\" alt=\"{H(label)}\" loading=\"lazy\" decoding=\"async\"></span>"
         : "<span class=\"picture\">No image</span>";
-
-    private static int CardOrder(string kind) => kind switch
-    {
-        "Wandering townsfolk" => 0, "Wandering guard" => 1, "Named NPC" => 2, "Animated billboard" => 3, "Billboard" => 4, _ => 5,
-    };
 
     private static string H(string value) => WebUtility.HtmlEncode(value);
 
@@ -209,15 +206,18 @@ internal static class NpcReferencePages
       const count = document.querySelector('#count');
       const empty = document.querySelector('#empty');
       const cards = [...document.querySelectorAll('#chart > li')];
+      const ids = new Set(cards.map(card => card.dataset.id));
 
       function filter() {
         const query = search.value.toLowerCase().trim();
+        const number = /^(?:npc-)?([0-9]{3})$/.exec(query);
+        const exactId = number && ids.has(`npc-${number[1]}`) ? `npc-${number[1]}` : null;
         const words = query.split(/\s+/);
         let shown = 0;
         for (const card of cards) {
           const matchesKind = !kind.value || kind.value === card.dataset.kind;
-          const matchesSearch = card.dataset.exact
-            ? card.dataset.exact.split(' ').includes(query)
+          const matchesSearch = exactId
+            ? card.dataset.id === exactId
             : words.every(word => card.dataset.search.includes(word));
           card.hidden = !matchesKind || !matchesSearch;
           if (!card.hidden) shown++;

@@ -39,9 +39,10 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - `--arena2 DIR` relocates the source (default `local/inputs/arena2`); `export-items --inputs DIR` relocates the
   importer's item tables (default `src/Daggerfall.Import.Tool/inputs`).
 - `export-npc` builds the unified NPC chart in `local/art/reference/npc/`. Open `index.html` directly.
-  It keeps the outfit number for wandering sprites (`npc-452` also resolves in search as `mobile-452`),
-  uses the classic packed flat ID for `npc-flat-*`, and uses the faction ID for `npc-faction-*`.
-  Use the old archive-record form (for example, `182-34`) to look up a particular billboard.
+  [NpcReferenceIds.txt](../src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceIds.txt) fixes the three-digit assignments
+  and groups alternate animations. Keep assigned numbers when editing the list, and leave retired numbers reserved.
+  Named NPCs use 001–100, billboards 101–380, and portraits without a known sprite 400–450. Wandering NPCs keep their
+  original three-digit numbers. Search accepts old references such as `mobile-452`, `npc-flat-23355`, or `182-59`.
   `--characters DIR` relocates the optional links to the asset-pipeline character outputs.
 - `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared
   against `--baseline` (default `local/art/reference/daggerfall-mobile-idle-unmirrored-r01`).
