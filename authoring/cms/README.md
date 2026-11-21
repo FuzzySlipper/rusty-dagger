@@ -54,6 +54,9 @@ Keep the same character IDs and relative paths so the CMS can find their reviews
 
 ## Concept art
 
+Use the [people concept recipes](../tools/people/concept/README.md) to prepare classic reference sheets, write
+costume briefs, and generate front or back candidates.
+
 Open **Concept art** from an NPC or mobile record. Candidates are grouped by batch. Open one to inspect the original
 image and its generation details, then choose **Approve this concept** to set the single concept for the next stage.
 The character page uses that approved image for its canonical depiction. Previous candidates remain available.

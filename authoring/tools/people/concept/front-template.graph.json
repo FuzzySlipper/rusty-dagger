@@ -1,0 +1,133 @@
+{
+ "unet": {
+  "class_type": "UNETLoader",
+  "inputs": {
+   "unet_name": "krea2_turbo_fp8_scaled.safetensors",
+   "weight_dtype": "default"
+  }
+ },
+ "clip": {
+  "class_type": "CLIPLoader",
+  "inputs": {
+   "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+   "type": "krea2",
+   "device": "default"
+  }
+ },
+ "vae": {
+  "class_type": "VAELoader",
+  "inputs": {
+   "vae_name": "qwen_image_vae.safetensors"
+  }
+ },
+ "latent": {
+  "class_type": "EmptyLatentImage",
+  "inputs": {
+   "width": 832,
+   "height": 1216,
+   "batch_size": 1
+  }
+ },
+ "text": {
+  "class_type": "CLIPTextEncode",
+  "inputs": {
+   "clip": [
+    "clip",
+    0
+   ],
+   "text": "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration. A medieval European townswoman in her twenties with long blonde hair, in a white blouse with wide bell sleeves, a long skirt whose one side is blue and the other a black-and-white chequer, with a brown hem, and rust leather shoes. Full length, the whole figure visible with room around it, shown as the front view of a costume fitting or character turnaround sheet, in a symmetrical neutral standing pose facing the viewer, feet a little apart with both shoes whole. Her arms hang relaxed and slightly away from her body, with a clear gap of background between each arm and her waist, hands open and empty. Against a plain flat dark slate-grey background, RGB 48,52,59, with no floor, scenery, cast shadow, canvas frame, border, lettering or other people. Soft light from directly overhead lights both sides of his body equally. She is the only person in the picture. Natural adult proportions.\n\nDrawn and painted as a vivid, punchy 1990s PC fantasy role-playing game character sheet: confident dark-umber pen-and-ink contour lines, fine crosshatching only inside the folds of the cloth and under overhangs, the same on both sides of the figure, and opaque matte gouache colour planes (4 to 6 distinct painted value groups per material). Keep the face and eyes well-lit, expressive and clearly readable in warm shaded skin tones\u2014do not obscure the eyes or face in pitch-black shadow, and avoid glossy photorealistic airbrushing."
+  }
+ },
+ "negative": {
+  "class_type": "ConditioningZeroOut",
+  "inputs": {
+   "conditioning": [
+    "text",
+    0
+   ]
+  }
+ },
+ "lora0": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "model": [
+    "unet",
+    0
+   ],
+   "lora_name": "fantasy-illustration/brom-gothic-fantasy.safetensors",
+   "strength_model": 0.35
+  }
+ },
+ "lora1": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "model": [
+    "lora0",
+    0
+   ],
+   "lora_name": "fantasy-illustration/elmore-tabletop-cover.safetensors",
+   "strength_model": 0.45
+  }
+ },
+ "lora2": {
+  "class_type": "LoraLoaderModelOnly",
+  "inputs": {
+   "model": [
+    "lora1",
+    0
+   ],
+   "lora_name": "Retro_Dark_Fantasy_Illustration_krea2_3352765_epoch_8.safetensors",
+   "strength_model": 0.45
+  }
+ },
+ "sample": {
+  "class_type": "KSampler",
+  "inputs": {
+   "model": [
+    "lora2",
+    0
+   ],
+   "positive": [
+    "text",
+    0
+   ],
+   "negative": [
+    "negative",
+    0
+   ],
+   "latent_image": [
+    "latent",
+    0
+   ],
+   "seed": 1,
+   "steps": 8,
+   "cfg": 1.0,
+   "sampler_name": "euler",
+   "scheduler": "simple",
+   "denoise": 1.0
+  }
+ },
+ "decode": {
+  "class_type": "VAEDecode",
+  "inputs": {
+   "samples": [
+    "sample",
+    0
+   ],
+   "vae": [
+    "vae",
+    0
+   ]
+  }
+ },
+ "save": {
+  "class_type": "SaveImage",
+  "inputs": {
+   "images": [
+    "decode",
+    0
+   ],
+   "filename_prefix": "lora-training"
+  }
+ }
+}

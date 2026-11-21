@@ -1,0 +1,320 @@
+{
+  "1_load_sprite": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "reference.png"
+    },
+    "_meta": {
+      "title": "1. Load Upscaled Sprite on Slate Canvas (1024x1024)"
+    }
+  },
+  "2_qwen_unet": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "qwen_image_2.1_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "2. [Stage 1] Load Qwen-Image 2.1 UNET"
+    }
+  },
+  "3_qwen_clip": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "_meta": {
+      "title": "3. [Stage 1] Load Qwen3VL 8B CLIP"
+    }
+  },
+  "4_qwen_vae": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    },
+    "_meta": {
+      "title": "4. [Stage 1] Load Qwen 2.1 VAE"
+    }
+  },
+  "5_qwen_cache": {
+    "class_type": "QwenImage21Cache",
+    "inputs": {
+      "model": [
+        "2_qwen_unet",
+        0
+      ],
+      "device": "auto",
+      "dtype": "default"
+    },
+    "_meta": {
+      "title": "5. [Stage 1] Qwen Cache"
+    }
+  },
+  "6_qwen_prompt": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "clip": [
+        "3_qwen_clip",
+        0
+      ],
+      "vae": [
+        "4_qwen_vae",
+        0
+      ],
+      "prompt": "Task: Redraw a very small classic fantasy RPG character sprite as newly illustrated high resolution art. Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\nInput image: content reference only. Preserve this character's identity, silhouette, orientation, relative dimensions and major colour regions. Replace the pixel rendering with the treatment below.\n\nSubject and composition: A muscular fantasy warrior (Monk 140) standing facing the viewer in a heroic ready stance. He wears a rounded open-faced silver-steel barbute/nasal helmet with a central vertical ridge and curved cheek guards framing a stern tan face with dark shadowed eye sockets. Large rounded silver-steel pauldrons cover both shoulders, joined across the collarbones by a silver gorget trim that forms a downward triangle at the upper chest. His torso is encased in a sculpted charcoal-black muscle cuirass with defined pectoral and abdominal planes. His muscular bare upper arms (biceps and elbows) are warm tan skin, with dark charcoal-steel vambraces (bracers) strapped to both forearms. Around his waist is a dark brown leather belt with an oval silver buckle, from which hangs a forest-green cloth loincloth tabard with vertical folds between his thighs. His legs are clad in dark grey-silver diamond-mesh chainmail chausses (leggings), and he wears striking bright cyan-turquoise calf-high leather boots with thick rolled-over cuffs below the knees.\n\nStyle: ART DIRECTION \u2014 VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\nDraw the character as an accomplished pen-and-ink dark-fantasy character sheet in the tradition of Akihiko Yoshida (Vagrant Story) and classic tabletop RPG manuals, finished with opaque muted gouache washes. Build a confident underlying ink drawing with purposeful angular plane changes, crisp costume seams, and clear overlap of garments and armor. Establish three line scales in dark umber and black ink: bold occlusion contours and deep shadow pools in recesses; medium structural lines for folds, plates, belts and straps; and fine directional crosshatching that wraps around curved forms, musculature, and cloth drapery transitions. Over the ink drawing, lay flat-to-painted opaque local colour washes that preserve the source sprite's exact colour relationships without airbrushed gradients or glossy 3D shading.\n\nPresentation: One isolated full-length character on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no ground shadow, no background texture and no cast shadow outside the figure.",
+      "negative_prompt": "",
+      "resolution": 1024,
+      "images.image_1": [
+        "1_load_sprite",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "6. [Stage 1] Qwen-Edit InkWash Prompt + Sprite Ref"
+    }
+  },
+  "7_qwen_latent": {
+    "class_type": "EmptyLatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "_meta": {
+      "title": "7. [Stage 1] 1024x1024 Latent"
+    }
+  },
+  "8_qwen_sampler": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "5_qwen_cache",
+        0
+      ],
+      "positive": [
+        "6_qwen_prompt",
+        0
+      ],
+      "negative": [
+        "6_qwen_prompt",
+        1
+      ],
+      "latent_image": [
+        "7_qwen_latent",
+        0
+      ],
+      "seed": 42101,
+      "steps": 25,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    },
+    "_meta": {
+      "title": "8. [Stage 1] Qwen KSampler (25 steps)"
+    }
+  },
+  "9_qwen_decode": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8_qwen_sampler",
+        0
+      ],
+      "vae": [
+        "4_qwen_vae",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "9. [Stage 1] Decode Stage 1 InkWash Base"
+    }
+  },
+  "10_save_stage1": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9_qwen_decode",
+        0
+      ],
+      "filename_prefix": "stage1-qwen-inkwash"
+    },
+    "_meta": {
+      "title": "10. [Stage 1] Save Intermediate InkWash Image"
+    }
+  },
+  "11_krea_unet": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "krea2_turbo_fp8_scaled.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "11. [Stage 2] Load Krea 2 Turbo UNET"
+    }
+  },
+  "12_krea_clip": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "_meta": {
+      "title": "12. [Stage 2] Load Krea CLIP"
+    }
+  },
+  "13_krea_vae": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "_meta": {
+      "title": "13. [Stage 2] Load Krea VAE"
+    }
+  },
+  "14_lora_brom": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "11_krea_unet",
+        0
+      ],
+      "lora_name": "fantasy-illustration/brom-gothic-fantasy.safetensors",
+      "strength_model": 0.35
+    },
+    "_meta": {
+      "title": "14. [Stage 2] LoRA 1: Brom (0.35)"
+    }
+  },
+  "15_lora_elmore": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "14_lora_brom",
+        0
+      ],
+      "lora_name": "fantasy-illustration/elmore-tabletop-cover.safetensors",
+      "strength_model": 0.45
+    },
+    "_meta": {
+      "title": "15. [Stage 2] LoRA 2: Elmore (0.45)"
+    }
+  },
+  "16_lora_retroink": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "15_lora_elmore",
+        0
+      ],
+      "lora_name": "Retro_Dark_Fantasy_Illustration_krea2_3352765_epoch_8.safetensors",
+      "strength_model": 0.45
+    },
+    "_meta": {
+      "title": "16. [Stage 2] LoRA 3: RetroInk (0.45)"
+    }
+  },
+  "17_krea_encode": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "9_qwen_decode",
+        0
+      ],
+      "vae": [
+        "13_krea_vae",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "17. [Stage 2] Encode Stage 1 Output for Krea i2i"
+    }
+  },
+  "18_krea_prompt": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "12_krea_clip",
+        0
+      ],
+      "text": "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\nART DIRECTION \u2014 PUNCHY 1990s PC FANTASY RPG ILLUSTRATION, CRISP INK AND VIVID PAINTED PLANES\n\nDraw the character as a vivid, punchy 1990s PC fantasy role-playing game character illustration with confident dark-umber ink linework, directional crosshatching, and rich, slightly lurid hand-painted gouache colour planes. Keep the graphic punch, tactile surface wear, riveted metal bevels, and crisp cloth folds, but keep shadow regions open and legible so the character works in bright taverns and sunlit streets as well as dungeons.\n\nLIGHTING AND FACE READABILITY (NO CRUSHED BLACKS)\nUse a clear upper-left key light with warm, colourful middle tones and rich dark-umber or slate-indigo form shadows rather than pitch-black ink fills. Faces under helmets or brows must remain clearly readable: show stern eyes, nose bridge, cheekbones and expression in warm shaded skin tones rather than obscuring the face in solid black shadow.\n\nSubject and composition: A muscular fantasy warrior (Monk 140) standing facing the viewer in a heroic ready stance. He wears a rounded open-faced silver-steel barbute/nasal helmet with a central vertical ridge and curved cheek guards framing a stern tan face with dark shadowed eye sockets. Large rounded silver-steel pauldrons cover both shoulders, joined across the collarbones by a silver gorget trim that forms a downward triangle at the upper chest. His torso is encased in a sculpted charcoal-black muscle cuirass with defined pectoral and abdominal planes. His muscular bare upper arms (biceps and elbows) are warm tan skin, with dark charcoal-steel vambraces (bracers) strapped to both forearms. Around his waist is a dark brown leather belt with an oval silver buckle, from which hangs a forest-green cloth loincloth tabard with vertical folds between his thighs. His legs are clad in dark grey-silver diamond-mesh chainmail chausses (leggings), and he wears striking bright cyan-turquoise calf-high leather boots with thick rolled-over cuffs below the knees."
+    },
+    "_meta": {
+      "title": "18. [Stage 2] New B Style + Subject Prompt"
+    }
+  },
+  "19_krea_zero_neg": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "18_krea_prompt",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "19. [Stage 2] Zero Negative"
+    }
+  },
+  "20_krea_sampler": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "16_lora_retroink",
+        0
+      ],
+      "positive": [
+        "18_krea_prompt",
+        0
+      ],
+      "negative": [
+        "19_krea_zero_neg",
+        0
+      ],
+      "latent_image": [
+        "17_krea_encode",
+        0
+      ],
+      "seed": 42101,
+      "steps": 8,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.32
+    },
+    "_meta": {
+      "title": "20. [Stage 2] Krea New B KSampler (d=0.32, 8 steps)"
+    }
+  },
+  "21_krea_decode": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "20_krea_sampler",
+        0
+      ],
+      "vae": [
+        "13_krea_vae",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "21. [Stage 2] Decode Final New B Concept"
+    }
+  },
+  "22_save_final": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "21_krea_decode",
+        0
+      ],
+      "filename_prefix": "stage2-new-b-final"
+    },
+    "_meta": {
+      "title": "22. [Stage 2] Save Final New B Concept"
+    }
+  }
+}

@@ -1,0 +1,220 @@
+{
+ "about": "Costume briefs: one neutral describing sentence per classic townsperson texture (describe.md). The 24 below were written on 2026-11-08 from the classic frames, and every villager front was drawn from them. Add a new character here before drawing it.",
+ "classic_root": "local/art/reference/daggerfall-remaining-directional-unmirrored-r01/townspeople",
+ "region_phrases": {
+  "redguard": [
+   "A dark-skinned townsman of a hot desert kingdom",
+   "A dark-skinned townswoman of a hot desert kingdom"
+  ],
+  "nord": [
+   "A northern townsman",
+   "A northern townswoman"
+  ],
+  "breton": [
+   "A medieval European townsman",
+   "A medieval European townswoman"
+  ]
+ },
+ "briefs": {
+  "381": {
+   "texture": 381,
+   "classic": "texture-381-redguard-male-outfit-1",
+   "pronoun": "He",
+   "brief": "A dark-skinned townsman of a hot desert kingdom, in his thirties, heavy-set, with short black curly hair, in a loose white linen tunic to mid-thigh with short sleeves, its hem cut in a red and orange zigzag band, a narrow belt with a small green cloth pouch, bare legs and plain tan leather slippers",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "382": {
+   "texture": 382,
+   "classic": "texture-382-redguard-male-outfit-2",
+   "pronoun": "He",
+   "brief": "A dark-skinned townsman of a hot desert kingdom, in his fifties, broad and strong, with grey-streaked black hair and a short beard, bare-chested, in a white linen wrap kilt to the knee with a ragged hem, a belt with a small green cloth pouch, steel bracers on both wrists and tan leather sandals",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "383": {
+   "texture": 383,
+   "classic": "texture-383-redguard-male-outfit-3",
+   "pronoun": "He",
+   "brief": "A dark-skinned townsman of a hot desert kingdom, young and lean, with short black hair, in a teal short-sleeved tunic to mid-thigh whose sleeves and hem are edged with a yellow zigzag band, a grey cloth belt with a small green pouch, bare legs and plain tan leather slippers",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "384": {
+   "texture": 384,
+   "classic": "texture-384-redguard-male-outfit-4",
+   "pronoun": "He",
+   "brief": "A dark-skinned townsman of a hot desert kingdom, in his twenties, muscular, with long black hair tied back, bare-chested, in a knee-length kilt of broad yellow and grey vertical stripes with a black waistband, and tall tan suede boots with turned-down cuffs",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "385": {
+   "texture": 385,
+   "classic": "texture-385-breton-male-outfit-1",
+   "pronoun": "He",
+   "brief": "A medieval European townsman in his forties with red-brown hair and a full beard, in a teal long-sleeved tunic to mid-thigh with a yellow zigzag hem, an orange hood worn down as a collar with a dagged edge, a brown belt with a leather pouch, black-and-white striped hose and green leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "386": {
+   "texture": 386,
+   "classic": "texture-386-breton-male-outfit-2",
+   "pronoun": "He",
+   "brief": "A medieval European townsman in his thirties with short brown hair, clean-shaven, in a sleeveless teal tunic to the knee with a pale blue shoulder mantle, bare arms, a belt with a small green cloth pouch and tall green leather boots",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "387": {
+   "texture": 387,
+   "classic": "texture-387-nord-male-outfit-1",
+   "pronoun": "He",
+   "brief": "A burly northern townsman in his forties with blond hair and a full blond beard, in a green short-sleeved tunic, a knee-length kilt of yellow and purple plaid, brown leather gloves and tall brown boots with fur cuffs",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "388": {
+   "texture": 388,
+   "classic": "texture-388-nord-male-outfit-2",
+   "pronoun": "He",
+   "brief": "A northern townsman in his thirties with a weathered face, in a green hood worn up with a dagged edge over his shoulders, an orange short-sleeved tunic to the knee, a belt with a leather pouch, black-and-white striped hose and tan leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "389": {
+   "texture": 389,
+   "classic": "texture-389-nord-male-outfit-3",
+   "pronoun": "He",
+   "brief": "A northern townsman in his forties with a black beard, in a green hood worn up with a dagged edge, a teal long-sleeved tunic whose lower half is pale blue with a ragged hem, a belt with a small green pouch, black-and-white striped hose and brown leather boots",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "390": {
+   "texture": 390,
+   "classic": "texture-390-nord-male-outfit-4",
+   "pronoun": "He",
+   "brief": "A northern townsman in his fifties with black hair and a full black beard, in a teal long-sleeved tunic whose lower half is pale blue with a ragged hem, a belt with a small green pouch, hose in a yellow and brown chequer, and tan leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "391": {
+   "texture": 391,
+   "classic": "texture-391-breton-male-outfit-3",
+   "pronoun": "He",
+   "brief": "A young medieval European townsman with short wavy blond hair, clean-shaven, of ordinary build, in a green wool tunic hanging to mid-thigh with short sleeves, a blue-green hood worn down as a collar around his shoulders with a dagged edge, a narrow brown leather belt with a small leather pouch at his right hip, blue hose and plain brown leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "392": {
+   "texture": 392,
+   "classic": "texture-392-nord-female-outfit-1",
+   "pronoun": "She",
+   "brief": "A northern townswoman in her twenties with long blonde hair under a small blue hood, in a light blue gown with long bell sleeves, a red band across the hips, the skirt grey below with a red band near the hem, falling to her ankles, and red leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "393": {
+   "texture": 393,
+   "classic": "texture-393-nord-female-outfit-2",
+   "pronoun": "She",
+   "brief": "A northern townswoman in her thirties in a blue hood worn up, a brown laced leather bodice over a blue blouse, a long skirt of blue and yellow vertical stripes to her ankles, a belt with a leather pouch and brown leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "394": {
+   "texture": 394,
+   "classic": "texture-394-breton-male-outfit-4",
+   "pronoun": "He",
+   "brief": "A medieval European townsman in his forties with black hair and a full black beard, in a long rust-orange robe to the ankles with short sleeves, a green hood worn down as a dagged collar, a belt with a leather pouch and tan leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "395": {
+   "texture": 395,
+   "classic": "texture-395-redguard-female-outfit-1",
+   "pronoun": "She",
+   "brief": "A dark-skinned townswoman of a hot desert kingdom, in her twenties, slender, with black hair pinned up, in a short cream cape lined in red, a cream sleeveless bodice, a broad yellow sash with a round brass buckle, a long cream wrap skirt lined in red that falls open at the front over her legs, and cream shoes with red ankle wraps",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "396": {
+   "texture": 396,
+   "classic": "texture-396-redguard-female-outfit-2",
+   "pronoun": "She",
+   "brief": "A dark-skinned townswoman of a hot desert kingdom, in her twenties, with black hair pinned up, in a long orange halter-neck dress slit at the side to the knee, a dark leather belt with a silver buckle, and yellow-green slippers",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "397": {
+   "texture": 397,
+   "classic": "texture-397-redguard-female-outfit-3",
+   "pronoun": "She",
+   "brief": "A dark-skinned townswoman of a hot desert kingdom, in her thirties, sturdy, in a cream hood worn up, a teal short-sleeved blouse, a red belt with a leather pouch, a long pale sea-green skirt with a ragged dagged hem at mid-calf, and plain light sandals",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "398": {
+   "texture": 398,
+   "classic": "texture-398-redguard-female-outfit-4",
+   "pronoun": "She",
+   "brief": "A dark-skinned townswoman of a hot desert kingdom, in her thirties, in a teal hood lined in yellow worn up, a teal short-sleeved blouse, a yellow sash with a leather pouch, a long blue skirt whose hem is a band of yellow flame shapes, and blue slippers",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "451": {
+   "texture": 451,
+   "classic": "texture-451-nord-female-outfit-3",
+   "pronoun": "She",
+   "brief": "A northern townswoman in her forties in a green hood lined in orange worn up, a teal blouse with a yellow bodice front, a long skirt of green and red plaid to her ankles, green gloves, a belt with a leather pouch and brown leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "452": {
+   "texture": 452,
+   "classic": "texture-452-nord-female-outfit-4",
+   "pronoun": "She",
+   "brief": "A northern townswoman in her twenties in a teal hooded cloak worn up and hanging down her back, a white long-sleeved gown with a yellow belt, the skirt rust-brown below a yellow zigzag band, falling to mid-calf, rust stockings and white shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "453": {
+   "texture": 453,
+   "classic": "texture-453-breton-female-outfit-1",
+   "pronoun": "She",
+   "brief": "A medieval European townswoman in her twenties with long wavy blonde hair, in an orange bodice with puffed yellow sleeves, a dark belt with a round buckle, a long rust-red skirt with a teal pointed panel at the hem, and yellow shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "454": {
+   "texture": 454,
+   "classic": "texture-454-breton-female-outfit-2",
+   "pronoun": "She",
+   "brief": "A medieval European townswoman in her thirties with blonde hair pulled back, in a rust-red short-sleeved jacket, a long blue skirt to her ankles with a yellow hem, a belt with a leather pouch and brown leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "455": {
+   "texture": 455,
+   "classic": "texture-455-breton-female-outfit-3",
+   "pronoun": "She",
+   "brief": "A medieval European townswoman in her thirties in a rust-red hood edged in yellow worn up, a teal blouse under a brown laced bodice, a long rust-brown skirt with a yellow hem, a belt with a leather pouch and brown leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "456": {
+   "texture": 456,
+   "classic": "texture-456-breton-female-outfit-4",
+   "pronoun": "She",
+   "brief": "A medieval European townswoman in her twenties with long blonde hair, in a white blouse with wide bell sleeves, a long skirt whose one side is blue and the other a black-and-white chequer, with a brown hem, and rust leather shoes",
+   "uncertainty": "",
+   "source": "rusty-dagger local/evidence/10670-townsperson/cast/gen.py CAST (2026-11-08)"
+  },
+  "128": {
+   "texture": null,
+   "classic": "references/dagger-character/mobile-128/source",
+   "pronoun": "He",
+   "brief": "A medieval European mage in his late thirties, lean, with a weathered face and short dark beard, in a short teal hood worn up with no cape, a plain teal short-sleeved robe with soft cowl folds at the neckline falling straight to his ankles, bare muscular forearms, olive-green leather gauntlet gloves to mid-forearm, a dark leather belt with a round brown drawstring pouch at his right hip and a square flap leather pouch at his left hip, and plain tan leather shoes",
+   "uncertainty": "Face is deep in shadow in the classic sprite (short dark beard/weathered features inferred); classic sprite carries a wooden orb-topped staff in his right hand, omitted here so the character turnaround stays empty-handed for rigging and the staff can attach separately.",
+   "source": "antigravity from references/dagger-character/mobile-128/source (2026-11-20)"
+  }
+ }
+}
