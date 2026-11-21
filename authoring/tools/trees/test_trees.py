@@ -40,11 +40,13 @@ class Meshes(unittest.TestCase):
                 covered = max(covered, high)
             self.assertGreater(covered, crown, f"{key} trunk ends below the crown")
 
-    def test_rainforest_replacements_have_indexed_support_from_the_foot_into_the_leaves(self):
+    def test_tropical_replacements_have_indexed_support_from_the_foot_into_the_leaves(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]
-        for record in (3, 13, 16, 18, 21, 25, 27):
-            with self.subTest(record=record):
-                entry = art[f"500-{record}"]
+        keys = ["500-3", "500-13", "500-16", "500-18", "500-21", "500-25", "500-27",
+                "501-20", "501-27", "501-28", "501-30"]
+        for key in keys:
+            with self.subTest(key=key):
+                entry = art[key]
                 mesh = json.loads((trees.CONTENT / entry["mesh"]["path"]).read_bytes())
                 spans = []
                 for part in mesh["parts"]:

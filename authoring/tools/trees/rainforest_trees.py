@@ -276,15 +276,16 @@ class Tree:
             uv.append(np.stack([(index % 8 + across)/8, np.full_like(ring, index//8 + .55 - .55*y)], axis=-1))
         add_grid(self.leaves, np.array(rows), uv, seam=True)
 
-    def crown(self, attachment, x, y, width, height, depth=0):
-        origin = self.stem_at(attachment)
+    def crown(self, attachment, x, y, width, height, depth=0, *, origin=None, limb_scale=1):
+        if origin is None:
+            origin = self.stem_at(attachment)
         centre = self.point(x, y, depth)
         large = width > .30
         count = 5 if large else 2
         offset = self.rng.uniform(0, math.tau)
         fork = centre - [0, height*.40, 0]
         elbow = origin + (fork - origin) * .58 - [0, height*.15, 0]
-        self.tube([origin, elbow, fork], [min(.053, width*.22), min(.036, width*.15), .022], 6)
+        self.tube([origin, elbow, fork], np.array([min(.053, width*.22), min(.036, width*.15), .022]) * limb_scale, 6)
         if large:
             self.crown_core(centre, width, height)
         for i in range(count + 1):
@@ -293,7 +294,7 @@ class Tree:
             core = i == count
             node = centre + (0 if core else .54 * width) * radial
             node[1] += height * (.19 if core else self.rng.uniform(-.29, .20))
-            self.tube([fork, node], [min(.030, width*.13), .009], 5)
+            self.tube([fork, node], np.array([min(.030, width*.13), .009]) * limb_scale, 5)
             self.leaf_cluster(node, width * self.aspect * .61, height * 1.09, angle)
 
 

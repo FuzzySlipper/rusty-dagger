@@ -67,7 +67,7 @@ ROCKS = (BOULDERS, SLAB, CAIRN)
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
           12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
-    501: {**{r: (form, r) for r, form in subtropical_trees.FORMS.items()}, 30: (PALM, 2)},
+    501: {r: (form, r) for r, form in subtropical_trees.FORMS.items()},
     502: {13: (CORK, 1), 16: (CORK, 2), 17: (CORK, 3), 18: (CHESTNUT, 2)},
     503: {5: (CORK, 2), 11: (DEAD, 1), 13: (PALM, 1)},
     504: {11: (CORK, 1), 12: (CORK, 3), 13: (FIR, 1), 14: (CORK, 2), 15: (CORK, 1), 16: (BEECH, 3), 17: (BEECH, 1),
@@ -82,10 +82,10 @@ FORMS = {
     510: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 15: (CORK, 1), 24: (DEAD, 1), 25: (PINE, 2), 30: (PINE, 1)},
     511: {11: (FIR, 2), 13: (FIR, 1), 24: (DEAD, 1), 25: (PINE, 2)},
 }
-# These subtropical flats share the rainforest paintings. Reuse their authored media
+# These subtropical flats share paintings with other nature records. Reuse their authored media
 # while placing every record at its own size, including when a source is rebuilt by key.
 SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
-                "501-15": "500-13", "501-17": "500-3"}
+                "501-15": "500-13", "501-17": "500-3", "501-24": "501-19", "501-31": "500-21"}
 DEAD_WOOD_AND_ROCKS = {
     500: {4: (SLAB, 1), 17: (SLAB, 1), 31: (BOULDERS, 4)},
     501: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (BOULDERS, 3), 6: (BOULDERS, 3), 23: (BOULDERS, 3)},
