@@ -42,9 +42,12 @@ public sealed class NatureMeshArtTests
             1, 2, 0, null, null, Stone: new DaggerfallArtFile("trees/rock-stone.png", DaggerfallContentHash.Parse(Hash, "stone")));
         Material stone = new(new MaterialHandle(7), () => { });
 
-        MeshResourceCreateRequest request = DaggerfallTreeMesh.Read(content, art, null, null, stone);
+        (MeshResourceCreateRequest request, DaggerfallNatureBody? body) = DaggerfallTreeMesh.Read(content, art, null, null, stone);
         Assert.Equal(stone, Assert.Single(request.Bindings.ToArray()).Material);
         Assert.Equal(2F, request.Positions.Span[2].Y);
+        // Drawn 2 m tall, the face cut a third of the way up crosses at 0 and 4/3 m from the axis: the body is the farther.
+        Assert.Equal(2F, body!.Value.Height);
+        Assert.Equal(4F / 3, body.Value.Radius, 1e-5F);
 
         byte[] bark = Encoding.UTF8.GetBytes("""{"height": 1, "parts": [""" + part.Replace("ROLE", "bark", StringComparison.Ordinal) + "]}");
         content.Add("trees/rock.prop-mesh.json", bark);

@@ -1115,7 +1115,8 @@
     "farScale": 1.6,
     "farTreeMetres": 6,
     "treeMeshes": true,
-    "treeImpostorHeights": 12
+    "treeImpostorHeights": 12,
+    "colliderReach": 128
   },
   "groundCover": {
     "shellLayers": 8,

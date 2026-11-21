@@ -291,6 +291,10 @@ internal sealed class DaggerfallFloraField : IDisposable
                 + (grown.Mesh ? _placed.Count(nature => Layer(nature.Summer.Archive, nature.Summer.Record) == layer || Layer(nature.Winter.Archive, nature.Winter.Record) == layer) : 0)),
             // A tree in the round casts its shade; a billboard can cast none.
             CastsShadows = grown.Mesh,
+            // A tree's trunk or a rock's bulk stops bodies near the player, so walkers path round it; a sprite has no body.
+            ColliderRadius = grown.Body?.Radius ?? 0,
+            ColliderHeight = grown.Body?.Height ?? 0,
+            ColliderReach = grown.Body is null ? 0 : _tuning.ColliderReach,
         });
     }
 
@@ -305,8 +309,11 @@ internal sealed class DaggerfallFloraField : IDisposable
     /// <summary>How far a tree's leaf cards circle in the wind at unit strength, times their vertex alpha, as rusty-craftsurvive's do.</summary>
     private const float LeafFlutter = .12f;
 
-    /// <summary>A record as a layer grows it: what draws, what it holds, its height, which sets its reach, and whether it is a mesh.</summary>
-    private sealed record Grown(Appearance Look, IDisposable[] Owned, float Height, bool Mesh);
+    /// <summary>
+    /// A record as a layer grows it: what draws, what it holds, its height, which sets its reach, whether it is a mesh, and
+    /// the body a mesh stands as near the player, if any.
+    /// </summary>
+    private sealed record Grown(Appearance Look, IDisposable[] Owned, float Height, bool Mesh, DaggerfallNatureBody? Body = null);
 
     private Grown Sprite(DaggerfallFloraLook look)
     {
@@ -364,13 +371,14 @@ internal sealed class DaggerfallFloraField : IDisposable
                 }, tree, look));
                 owned.Add(leafMaterial);
             }
-            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, barkMaterial, leafMaterial, stoneMaterial));
+            (MeshResourceCreateRequest read, DaggerfallNatureBody? body) = DaggerfallTreeMesh.Read(_engine.Content, tree, barkMaterial, leafMaterial, stoneMaterial);
+            MeshResource mesh = _engine.Graphics.CreateMeshResource(read);
             owned.Add(mesh);
             Appearance appearance = _engine.Graphics.CreateMeshAppearance(mesh);
             owned.Add(appearance);
             // Held last-made first, so the appearance goes before its mesh and the mesh before its materials.
             owned.Reverse();
-            return new(appearance, [.. owned], look.Size.Y, true);
+            return new(appearance, [.. owned], look.Size.Y, true, body);
         }
         catch
         {
@@ -413,7 +421,7 @@ internal sealed class DaggerfallFloraField : IDisposable
         VegetationReadout read = _engine.Vegetation.Read(_field);
         string archives = string.Join(",", _grown.Order().Select(index => DaggerfallNatureArchives.First + index));
         return string.Create(System.Globalization.CultureInfo.InvariantCulture,
-            $"{(read.Visible ? "shown" : "hidden")}, archives [{archives}] in {_layers.Count} layers, {read.Tiles} tiles ({read.PendingTiles} waiting), {read.Instances} copies in {read.Patches} patches, {read.OverBudget} over budget");
+            $"{(read.Visible ? "shown" : "hidden")}, archives [{archives}] in {_layers.Count} layers, {read.Tiles} tiles ({read.PendingTiles} waiting), {read.Instances} copies in {read.Patches} patches, {read.OverBudget} over budget, {read.Colliders} standing as bodies");
     }
 
     /// <summary>

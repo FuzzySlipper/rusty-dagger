@@ -10,15 +10,25 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// each with positions, normals, uvs, colours (alpha the share a vertex flutters) and triangles, drawn at the height and
 /// foot its art states in metres. Its normals are taken as written, which authoring holds to unit
 /// length (trees.py refuses any other by name): normalizing one of no length here made it no number at all, which the
-/// Engine refuses, faulting the update that grew the mesh (#10871).
+/// Engine refuses, faulting the update that grew the mesh (#10871). It reads the body the mesh stands as in collision too
+/// (<see cref="DaggerfallNatureBody"/>).
 /// </summary>
 internal static class DaggerfallTreeMesh
 {
+    /// <summary>How high above its foot a trunk is cut to measure it, in metres: above the root flare, below the branches.</summary>
+    private const float TrunkCut = .6F;
+    /// <summary>How far up its height a rock is cut to measure it: through its bulk, below where it narrows to its top.</summary>
+    private const float RockCut = 1F / 3;
+    /// <summary>A tree shorter than this is a shrub, which bodies push through.</summary>
+    private const float ShrubMetres = 2.2F;
+    /// <summary>A rock lower than this is a pebble, which bodies step over without a body of its own.</summary>
+    private const float PebbleMetres = .3F;
+
     /// <param name="bark">The bark's material, none for a rock.</param>
     /// <param name="leaves">The leaves' material, none for a bare tree.</param>
     /// <param name="stone">The stone's material, none for a tree.</param>
-    internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, Material? bark, Material? leaves,
-        Material? stone = null)
+    internal static (MeshResourceCreateRequest Mesh, DaggerfallNatureBody? Body) Read(IContentService content, DaggerfallTreeArt art, Material? bark,
+        Material? leaves, Material? stone = null)
     {
         using ContentReference reference = content.ResolveReference(new ContentResolveRequest(art.Mesh.Path, art.Mesh.Sha256));
         using JsonDocument document = JsonDocument.Parse(ReadAll(content, reference));
@@ -30,6 +40,7 @@ internal static class DaggerfallTreeMesh
         List<uint> indices = [];
         List<MeshGroup> groups = [];
         List<MeshMaterialBinding> bindings = [];
+        List<(Vector3, Vector3, Vector3)> barkFaces = [], stoneFaces = [];
         foreach (JsonElement part in document.RootElement.GetProperty("parts").EnumerateArray())
         {
             string role = part.GetProperty("role").GetString()!;
@@ -41,6 +52,7 @@ internal static class DaggerfallTreeMesh
                 _ => throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has a part of role '{role}', which is neither bark, leaves nor stone."),
             };
             uint first = (uint)positions.Count, start = (uint)indices.Count;
+            List<(Vector3, Vector3, Vector3)>? measured = role switch { "bark" => barkFaces, "stone" => stoneFaces, _ => null };
             float[] p = Floats(part, "positions"), n = Floats(part, "normals"), uv = Floats(part, "uvs"), c = Floats(part, "colors");
             for (int i = 0; i < p.Length / 3; i++)
             {
@@ -51,13 +63,52 @@ internal static class DaggerfallTreeMesh
             }
 
             foreach (JsonElement index in part.GetProperty("indices").EnumerateArray()) indices.Add(first + index.GetUInt32());
+            for (int i = (int)start; measured is not null && i + 2 < indices.Count; i += 3)
+                measured.Add((positions[(int)indices[i]], positions[(int)indices[i + 1]], positions[(int)indices[i + 2]]));
             uint slot = (uint)bindings.Count;
             groups.Add(new MeshGroup(slot, start, (uint)indices.Count - start));
             bindings.Add(new MeshMaterialBinding(slot, material));
         }
 
-        return new MeshResourceCreateRequest(positions.ToArray(), normals.ToArray(), uvs.ToArray(), colours.ToArray(), indices.ToArray(),
-            groups.ToArray(), bindings.ToArray(), ReadOnlyMemory<Vector4>.Empty);
+        return (new MeshResourceCreateRequest(positions.ToArray(), normals.ToArray(), uvs.ToArray(), colours.ToArray(), indices.ToArray(),
+            groups.ToArray(), bindings.ToArray(), ReadOnlyMemory<Vector4>.Empty), Body(art, barkFaces, stoneFaces));
+    }
+
+    /// <summary>
+    /// The body a nature mesh stands as, about its foot: a rock's as tall as its stone, a tree's as tall as the tree, each
+    /// as wide as the middle of where its stone or bark crosses the cut (<see cref="RockCut"/>, <see cref="TrunkCut"/>) lies
+    /// from its foot. None for a shrub, a pebble, or a mesh nothing of which crosses the cut.
+    /// </summary>
+    internal static DaggerfallNatureBody? Body(DaggerfallTreeArt art, IReadOnlyList<(Vector3, Vector3, Vector3)> bark,
+        IReadOnlyList<(Vector3, Vector3, Vector3)> stone)
+    {
+        if (stone.Count > 0)
+        {
+            float top = stone.Max(face => MathF.Max(face.Item1.Y, MathF.Max(face.Item2.Y, face.Item3.Y)));
+            return top < PebbleMetres ? null : Cut(stone, top * RockCut) is { } rock ? new DaggerfallNatureBody(rock, top) : null;
+        }
+        return art.Height < ShrubMetres ? null : Cut(bark, TrunkCut) is { } trunk ? new DaggerfallNatureBody(trunk, art.Height) : null;
+    }
+
+    /// <summary>The middle distance from the foot's axis at which the faces' edges cross a height, or none where none does.</summary>
+    private static float? Cut(IReadOnlyList<(Vector3, Vector3, Vector3)> faces, float height)
+    {
+        List<float> across = [];
+        void Edge(Vector3 a, Vector3 b)
+        {
+            if ((a.Y - height) * (b.Y - height) >= 0) return;
+            Vector3 at = Vector3.Lerp(a, b, (height - a.Y) / (b.Y - a.Y));
+            across.Add(MathF.Sqrt((at.X * at.X) + (at.Z * at.Z)));
+        }
+        foreach ((Vector3 a, Vector3 b, Vector3 c) in faces)
+        {
+            Edge(a, b);
+            Edge(b, c);
+            Edge(c, a);
+        }
+        if (across.Count == 0) return null;
+        across.Sort();
+        return across[across.Count / 2];
     }
 
     /// <summary>The Engine serves an admitted read a mebibyte at a time, so a mesh larger than that is read in parts.</summary>
@@ -79,3 +130,6 @@ internal static class DaggerfallTreeMesh
 
     private static float[] Floats(JsonElement part, string name) => [.. part.GetProperty(name).EnumerateArray().Select(value => value.GetSingle())];
 }
+
+/// <summary>The upright cylinder a nature mesh stands as in collision, about its foot, in metres at the drawn size.</summary>
+internal readonly record struct DaggerfallNatureBody(float Radius, float Height);

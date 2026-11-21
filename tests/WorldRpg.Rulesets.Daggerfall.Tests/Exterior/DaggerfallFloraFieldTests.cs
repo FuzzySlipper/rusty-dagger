@@ -3,7 +3,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
 using Rusty.Engine.Testing;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -15,7 +18,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// Nature a location places grows in the flora field where its record grows as a mesh (#10728): a copy of its record's own
 /// layer, standing where the location placed it, in its season's record, counted in the layer's budget, while a record the
-/// field draws as a sprite is left to the location.
+/// field draws as a sprite is left to the location. A tree's trunk and a rock's bulk stand as bodies near the player
+/// (#10948), so walkers are stopped by them and the wild grid paths round them.
 /// </summary>
 public sealed class DaggerfallFloraFieldTests
 {
@@ -120,6 +124,144 @@ public sealed class DaggerfallFloraFieldTests
         float[] normals = [.. mesh.RootElement.GetProperty("parts")[0].GetProperty("normals").EnumerateArray().Select(value => value.GetSingle())];
         Assert.All(normals.Chunk(3), n => Assert.InRange(new Vector3(n[0], n[1], n[2]).Length(), .999F, 1.001F));
     }
+
+    [Fact]
+    public void A_mesh_record_s_layer_collides_as_its_body_near_the_player_and_a_sprite_s_does_not()
+    {
+        EngineContextFake engine = Engine();
+        using DaggerfallFloraField field = new(engine.Context, Ground(), DaggerfallFloraTuning.Default, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+        field.Place([new((Frame.MapX * Cell) + 120, 31, (Frame.MapY * Cell) + 140, (504, 3), (505, 3))]);
+        Show(field, winter: false);
+        // The rock's one face rises 1 m from its foot; cut a third of the way up, its edges cross at 0 and 2/3 m from the axis.
+        VegetationLayerRequest rock = Last(engine, 504, 3);
+        Assert.Equal(2F / 3, rock.ColliderRadius, 1e-5F);
+        Assert.Equal((1F, DaggerfallFloraTuning.Default.ColliderReach), (rock.ColliderHeight, rock.ColliderReach));
+        VegetationLayerRequest bush = Last(engine, 504, 7);
+        Assert.Equal((0F, 0F, 0F), (bush.ColliderRadius, bush.ColliderHeight, bush.ColliderReach));
+    }
+
+    /// <summary>
+    /// Charing's winter tree (507-16, 14.5 m tall on a trunk about 0.48 m round) and rock (507-4, 2 m tall, about 0.43 m round its
+    /// bulk), placed by a location and grown from the art pack as it ships in the real Engine: each stops a walker going
+    /// straight at it, and the wild grid about the player, derived from the session's collision with no change of its own,
+    /// takes a walker round the tree to the far side.
+    /// </summary>
+    [Fact]
+    public void Charing_s_tree_and_rock_stop_a_walker_and_the_wild_grid_paths_round_them()
+    {
+        (int, int) tree = (507, 16), rock = (507, 4);
+        // Everything stands on the flora's own ground, whose height its layers' reach is measured from.
+        DaggerfallHorizonGround ground = Ground(230);
+        float height = (float)ground.WalkedGrid(Frame.MapX * Cell, Frame.MapY * Cell, 1, 1)[4];
+        Vector3 treeAt = new(.5F, height, .5F), rockAt = new(20.5F, height, .5F);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(
+            File.ReadAllBytes(Path.Combine(Content, "worldrpg", "packs", "daggerfall.art-replacements", "payload.json")), "daggerfall.art-replacements");
+        Dictionary<(int, int), DaggerfallFloraLook> looks = [];
+        Dictionary<string, ReadOnlyMemory<byte>> served = [];
+        foreach ((int, int) record in new[] { tree, rock })
+        {
+            DaggerfallTreeArt mesh = art.Trees[record];
+            DaggerfallArtFlat flat = art.Flats[record];
+            foreach (DaggerfallArtFile file in new[] { mesh.Mesh, flat.File, mesh.Bark, mesh.Leaves, mesh.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>())
+                served[file.Path] = File.ReadAllBytes(Path.Combine(Content, file.Path));
+            looks[record] = new(flat.File, Vector2.Zero, Vector2.One, new Vector2(1, mesh.Height), new Vector2(.5F, 0)) { Tree = mesh, TreeSnow = art.TreeSnow };
+        }
+        DaggerfallPlacedNature Placed(Vector3 at, (int Archive, int Record) record) =>
+            new((Frame.MapX * Cell) + at.X, at.Y, (Frame.MapY * Cell) + at.Z, (record.Archive - 1, record.Record), record);
+
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = served });
+        SpatialMovementSystem? movement = null;
+        DaggerfallFloraField? field = null;
+        DaggerfallWildNavigation? wild = null;
+        try
+        {
+            host.Call(engine =>
+            {
+                movement = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
+                Vector3[] floor = [new(-60, height, -60), new(-60, height, 60), new(60, height, 60), new(60, height, -60)];
+                _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(movement.Session,
+                    new[] { new StaticMeshAsset(1, 0, 4, 0, 2) }, floor, new Triangle[] { new(0, 1, 2), new(0, 2, 3) },
+                    new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+                    ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+                // Only what the location places grows, so the two stand alone.
+                field = new(engine, ground, DaggerfallFloraTuning.Default with { Density = 0 }, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+                field.Place([Placed(treeAt, tree), Placed(rockAt, rock)]);
+            });
+            // Calls go by while the field samples its tiles, places the copies and their bodies are admitted.
+            bool Standing(Vector3 at, float above) =>
+                movement!.CastRay(at + (Vector3.UnitY * 30), -Vector3.UnitY, 40) is { Present: true } hit && hit.Point.Y > at.Y + above;
+            for (int call = 0; call < 2_000 && !host.Call(_ =>
+            {
+                field!.Show(movement!.Session, Frame, new Vector3(0, height, 0), winter: true, (archive, record) => looks.GetValueOrDefault((archive, record)));
+                return Standing(treeAt, 10) && Standing(rockAt, 1.5F);
+            }); call++)
+                Thread.Sleep(5);
+            host.Call(engine =>
+            {
+                Assert.True(Standing(treeAt, 10), "The tree never stood as a body.");
+                Assert.True(Standing(rockAt, 1.5F), $"The rock never stood as a body: {field!.Readout()}, ray {movement!.CastRay(rockAt + (Vector3.UnitY * 30), -Vector3.UnitY, 40).Point}.");
+                // Its trunk, not its crown: a ray down beside the trunk, under the branches, reaches the floor.
+                Assert.False(Standing(treeAt + new Vector3(1.2F, 0, 0), .5F), "The tree stood as a body past its trunk.");
+                // Off every grid a walker goes straight at each, and stops short of it.
+                using ActorsState actors = new();
+                actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+                foreach ((Vector3 at, long id) in new[] { (treeAt, 42L), (rockAt, 43L) })
+                {
+                    ActorState walker = Walker(actors, id, at + new Vector3(0, 0, 6));
+                    ActorNavigationCoordinator straight = new(engine.Spatial, movement!.Session, actors.Store, movement.CurrentController,
+                        _ => CharacterStepEnvironment.Empty, () => [Composition]);
+                    for (int step = 0; step < 200; step++)
+                        straight.Evaluate(walker, new ActorNavigationRequest(WorldPoint.From(at - new Vector3(0, 0, 6)), .25F, 4096));
+                    Assert.True(walker.Position.Z > at.Z + .4F, $"The walker passed through what stands at {at} to {walker.Position}.");
+                }
+                wild = new(engine.Spatial, movement!, WildTuning);
+                wild.Update(WorldPoint.From(treeAt), outdoors: true, 1d / 60, Composition);
+            });
+            for (int call = 0; call < 400 && wild!.Pending; call++)
+            {
+                Thread.Sleep(5);
+                host.Call(_ => wild.Update(WorldPoint.From(treeAt), outdoors: true, 1d / 60, Composition));
+            }
+            Assert.False(wild!.Pending, "The wild grid never installed.");
+            host.Call(engine =>
+            {
+                // On the wild grid a walker goes round the tree to the far side.
+                using ActorsState actors = new();
+                actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+                Vector3 goal = treeAt - new Vector3(0, 0, 6);
+                ActorState walker = Walker(actors, 44, treeAt + new Vector3(0, 0, 6));
+                ActorNavigationCoordinator navigation = new(engine.Spatial, movement!.Session, actors.Store, movement.CurrentController,
+                    _ => CharacterStepEnvironment.Empty, () => wild.Grids(Composition));
+                float widest = 0;
+                for (int step = 0; step < 400 && Vector2.Distance(new(walker.Position.X, walker.Position.Z), new(goal.X, goal.Z)) > .6F; step++)
+                {
+                    navigation.Evaluate(walker, new ActorNavigationRequest(WorldPoint.From(goal), .25F, 4096));
+                    if (MathF.Abs(walker.Position.Z - treeAt.Z) < 1) widest = MathF.Max(widest, MathF.Abs(walker.Position.X - treeAt.X));
+                }
+                Assert.True(Vector2.Distance(new(walker.Position.X, walker.Position.Z), new(goal.X, goal.Z)) <= .6F, $"The walker stopped at {walker.Position}.");
+                Assert.True(widest > .48F, $"The walker passed the tree no wider than {widest} m from its axis, inside its trunk.");
+                Assert.True(navigation.TryRoute(walker.Actor.Entity, out ulong? grid));
+                Assert.Equal(DaggerfallWildNavigation.GridId, grid);
+            });
+        }
+        finally
+        {
+            host.Call(_ =>
+            {
+                field?.Dispose();
+                movement?.Dispose();
+            });
+        }
+    }
+
+    /// <summary>The location's own grid, which the test publishes none of.</summary>
+    private const ulong Composition = 1;
+
+    /// <summary>The wild grid 16 m about the player in 1 m cells.</summary>
+    private static readonly DaggerfallWildNavigationTuning WildTuning = new(16F, 1F, 4F, 60d, 8F);
+
+    private static ActorState Walker(ActorsState actors, long id, Vector3 at) =>
+        actors.CreateActor(id, new EntityTypeId("test"), new StatsComponent(), new ActorPose(WorldPoint.From(at), 0), "health");
 
     private static readonly string Content = Path.Combine(TestData.RepositoryRoot, "content");
 

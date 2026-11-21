@@ -25,10 +25,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="TreeMeshes">Whether a record with a refreshed tree mesh grows as the mesh rather than its sprite.</param>
 /// <param name="TreeImpostorHeights">How far from the eye a tree mesh gives way to a card the renderer bakes of it, in the
 /// tree's own heights: the card holds 64 texels a view, so it should take over only once the tree stands about that tall on screen.</param>
+/// <param name="ColliderReach">How near the player a tree mesh's trunk or a rock mesh's bulk stands as a body, in metres: the wild
+/// grid's radius and a margin, for its walkers path round them. The Engine adds whole flora tiles within it, so it costs the
+/// colliders of a few tiles.</param>
 internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<string, float> ClimateDensity, float GrassChance, float DirtChance, float StoneChance, float DesertShare,
-    float ReachPerMetre, float Reach, float Fade, float SlopeLimitDegrees, float FarReach, float FarShare, float FarScale, float FarTreeMetres, bool TreeMeshes, float TreeImpostorHeights)
+    float ReachPerMetre, float Reach, float Fade, float SlopeLimitDegrees, float FarReach, float FarShare, float FarScale, float FarTreeMetres, bool TreeMeshes, float TreeImpostorHeights,
+    float ColliderReach)
 {
-    internal static DaggerfallFloraTuning Default { get; } = new(3, new Dictionary<string, float>(), .9f, .2f, .05f, .25f, 400, 3_200, 600, 50, 8_192, .2f, 1.6f, 6, true, 12);
+    internal static DaggerfallFloraTuning Default { get; } = new(3, new Dictionary<string, float>(), .9f, .2f, .05f, .25f, 400, 3_200, 600, 50, 8_192, .2f, 1.6f, 6, true, 12, 128);
 
     internal DaggerfallFloraTuning Validate()
     {
@@ -43,6 +47,7 @@ internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<
             || !float.IsFinite(FarScale) || FarScale <= 0 || !float.IsFinite(FarTreeMetres) || FarTreeMetres < 0)
             throw new ArgumentException("The far forest reaches past near flora, at a share of its density from 0 to 1, a positive scale and a height of 0 or more.");
         if (!float.IsFinite(TreeImpostorHeights) || TreeImpostorHeights <= 0) throw new ArgumentException("Tree meshes give way to their cards some distance out.");
+        if (!float.IsFinite(ColliderReach) || ColliderReach <= 0) throw new ArgumentException("Trees and rocks stand as bodies some way about the player.");
         return this;
     }
 
@@ -72,5 +77,5 @@ internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<
         e.GetProperty("stoneChance").GetSingle(), e.GetProperty("desertShare").GetSingle(), e.GetProperty("reachPerMetre").GetSingle(),
         e.GetProperty("reach").GetSingle(), e.GetProperty("fade").GetSingle(), e.GetProperty("slopeLimitDegrees").GetSingle(),
         e.GetProperty("farReach").GetSingle(), e.GetProperty("farShare").GetSingle(), e.GetProperty("farScale").GetSingle(), e.GetProperty("farTreeMetres").GetSingle(),
-        e.GetProperty("treeMeshes").GetBoolean(), e.GetProperty("treeImpostorHeights").GetSingle()).Validate();
+        e.GetProperty("treeMeshes").GetBoolean(), e.GetProperty("treeImpostorHeights").GetSingle(), e.GetProperty("colliderReach").GetSingle()).Validate();
 }
