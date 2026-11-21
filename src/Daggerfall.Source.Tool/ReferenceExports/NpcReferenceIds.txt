@@ -1,4 +1,4 @@
-# Stable NPC number followed by the primary classic key and any additional sprite records.
+# Stable NPC number followed by its primary classic key, alternate art keys and previous NPC IDs.
 # Reserve retired numbers. Adding or consolidating an entry must not renumber existing NPCs.
 
 # 001–100 Named characters
@@ -177,8 +177,8 @@
 196 npc-flat-23355 npc-flat-23867 npc-flat-23868 npc-flat-42766
 197 npc-flat-23424
 198 npc-flat-23425
-199 npc-flat-23426
-200 npc-flat-23427
+199 npc-flat-23426 npc-flat-42767 npc-flat-44307 npc-flat-45708 npc-321 npc-337 npc-345
+200 npc-flat-23427 npc-flat-42768 npc-flat-44308 npc-flat-45709 npc-322 npc-338 npc-346
 201 npc-flat-23428
 202 npc-flat-23429
 203 npc-flat-23430
@@ -236,8 +236,8 @@
 255 npc-flat-23811
 256 npc-flat-23812
 257 npc-flat-23813
-258 npc-flat-23814
-259 npc-flat-23815
+258 npc-flat-23814 npc-flat-42758 npc-flat-44291 npc-316 npc-326
+259 npc-flat-23815 npc-flat-42755 npc-315
 260 npc-flat-23816
 261 npc-flat-23817
 262 npc-flat-23818
@@ -292,19 +292,13 @@
 311 npc-flat-25224
 312 npc-flat-25225
 313 npc-flat-25226
-314 npc-flat-42754
-315 npc-flat-42755
-316 npc-flat-42758
+314 npc-flat-42754 npc-flat-44290 npc-325
 317 npc-flat-42759
 318 npc-flat-42761
 319 npc-flat-42762
 320 npc-flat-42765
-321 npc-flat-42767
-322 npc-flat-42768
 323 npc-flat-42772
 324 npc-flat-44289
-325 npc-flat-44290
-326 npc-flat-44291
 327 npc-flat-44292
 328 npc-flat-44293
 329 npc-flat-44294
@@ -315,16 +309,12 @@
 334 npc-flat-44301
 335 npc-flat-44302
 336 npc-flat-44303
-337 npc-flat-44307
-338 npc-flat-44308
 339 npc-flat-45698
 340 npc-flat-45700
 341 npc-flat-45701
 342 npc-flat-45702
 343 npc-flat-45706
 344 npc-flat-45707
-345 npc-flat-45708
-346 npc-flat-45709
 347 npc-flat-45710
 
 # 381–399 Wandering townsfolk and guard
@@ -353,18 +343,7 @@
 401 npc-child-001
 402 npc-child-002
 403 npc-child-003
-404 npc-child-face-000
-405 npc-child-face-001
-406 npc-child-face-002
-407 npc-child-face-003
-408 npc-child-face-004
-409 npc-child-face-005
-410 npc-child-face-006
-411 npc-child-face-007
-412 npc-child-face-008
-413 npc-child-face-009
-414 npc-child-face-010
-415 npc-child-face-011
+# 404–415 retired. The stock factions do not select the CHLD00I0.RCI dialogue bank.
 416 npc-face-004
 417 npc-face-010
 418 npc-face-011

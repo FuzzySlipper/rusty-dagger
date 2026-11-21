@@ -106,7 +106,7 @@ internal static class NpcReferencePages
         page.Append("<section><h2>Original art</h2>");
         if (entry.Aliases.Length > 0)
             page.Append($"<p>Source references · {H(string.Join(", ", entry.Aliases))}</p>");
-        foreach (NpcArt group in entry.Art.Where(art => art.Frames.Count > 0).OrderBy(art => art.Frames[0].Role == "portrait" ? 0 : 1))
+        foreach (NpcArt group in entry.Art.Where(art => !art.Identical && art.Frames.Count > 0).OrderBy(art => art.Frames[0].Role == "portrait" ? 0 : 1))
         {
             page.Append($"<h3>{H(group.Label)}{(group.Frames.Count > 1 ? $" <small>· {group.Frames.Count} images</small>" : "")}</h3><ul class=\"frames\">");
             foreach (ReferenceImage frame in group.Frames)
@@ -211,8 +211,9 @@ internal static class NpcReferencePages
       function filter() {
         const query = search.value.toLowerCase().trim();
         const number = /^(?:npc-)?([0-9]{3})$/.exec(query);
-        const exactId = number && ids.has(`npc-${number[1]}`) ? `npc-${number[1]}` : null;
-        const words = query.split(/\s+/);
+        const npcId = number ? `npc-${number[1]}` : query;
+        const exactId = ids.has(npcId) ? npcId : null;
+        const words = npcId.split(/\s+/);
         let shown = 0;
         for (const card of cards) {
           const matchesKind = !kind.value || kind.value === card.dataset.kind;
