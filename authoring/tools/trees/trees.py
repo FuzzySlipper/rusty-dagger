@@ -12,7 +12,8 @@ sprites outline theirs.
 
 Archive 500's palms have their own connected stems, root flares and folded fronds in rainforest_palms.py.
 Its other bespoke trees are shaped in rainforest_trees.py. Archive 501 shares matching paintings' meshes
-at its own placement. Its distinct spiky palms and mossy snag are shaped in subtropical_trees.py.
+at its own placement. Its distinct shapes are in subtropical_trees.py. Archive 502's rooted broadleaves
+and snags are in swamp_trees.py.
 Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
 The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
@@ -45,6 +46,7 @@ import rocks  # noqa: E402
 import rainforest_palms
 import rainforest_trees
 import subtropical_trees
+import swamp_trees
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -53,7 +55,7 @@ PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 CRAFTSURVIVE = rocks.CRAFTSURVIVE / "content/game"
 
 # The trees with meshes, by nature archive and record: every big tree of every climate but the few whose shapes are their
-# own (the swamps' vine-wrapped and bulb-trunked plants, the desert's cacti, some rainforest undergrowth), which stay
+# own (the desert's cacti and some rainforest undergrowth), which stay
 # sprites, as do bushes and small plants. Each names the rusty-craftsurvive tree drawn for it by form: conifers a fir or
 # pine, layered flat-topped trees a cork oak, round crowns a beech or chestnut, palms a palm, slender bare trees the dead
 # tree; a winter set's tree is its summer one's, in its snowy colours. Variants (p1 to p3) differ from record to record, so
@@ -64,11 +66,13 @@ FIR, PINE, CORK, BEECH, CHESTNUT, PALM, DEAD = "fir", "pine", "cork-oak", "beech
 GNARLED, LOGS = rocks.GNARLED, rocks.LOGS_FORM
 BOULDERS, SLAB, CAIRN = rocks.BOULDERS, rocks.SLAB, rocks.CAIRN
 ROCKS = (BOULDERS, SLAB, CAIRN)
+REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", subtropical_trees),
+                  502: ("swamp", swamp_trees)}
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
           12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
     501: {r: (form, r) for r, form in subtropical_trees.FORMS.items()},
-    502: {13: (CORK, 1), 16: (CORK, 2), 17: (CORK, 3), 18: (CHESTNUT, 2)},
+    502: {r: (form, r) for r, form in swamp_trees.FORMS.items()},
     503: {5: (CORK, 2), 11: (DEAD, 1), 13: (PALM, 1)},
     504: {11: (CORK, 1), 12: (CORK, 3), 13: (FIR, 1), 14: (CORK, 2), 15: (CORK, 1), 16: (BEECH, 3), 17: (BEECH, 1),
           18: (CHESTNUT, 1), 24: (DEAD, 1), 25: (PINE, 2)},
@@ -82,10 +86,11 @@ FORMS = {
     510: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 15: (CORK, 1), 24: (DEAD, 1), 25: (PINE, 2), 30: (PINE, 1)},
     511: {11: (FIR, 2), 13: (FIR, 1), 24: (DEAD, 1), 25: (PINE, 2)},
 }
-# These subtropical flats share paintings with other nature records. Reuse their authored media
+# These flats share paintings with other nature records. Reuse their authored media
 # while placing every record at its own size, including when a source is rebuilt by key.
 SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
-                "501-15": "500-13", "501-17": "500-3", "501-24": "501-19", "501-31": "500-21"}
+                "501-15": "500-13", "501-17": "500-3", "501-24": "501-19", "501-31": "500-21",
+                "502-12": "500-18", "502-18": "500-30", "502-19": "501-19"}
 DEAD_WOOD_AND_ROCKS = {
     500: {4: (SLAB, 1), 17: (SLAB, 1), 31: (BOULDERS, 4)},
     501: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (BOULDERS, 3), 6: (BOULDERS, 3), 23: (BOULDERS, 3)},
@@ -326,18 +331,17 @@ def tree(flat, archive, record, species, variant, folder, old=None, recompute=Fa
     if species in ROCKS:
         return rock(flat, rgba, archive, record, species, variant, folder, old, recompute)
     m = measures(rgba)
-    rainforest = archive == 500 and (record in rainforest_palms.PALMS or record in rainforest_trees.FORMS)
-    if rainforest or (archive == 501 and record in subtropical_trees.FORMS):
+    palm = archive == 500 and record in rainforest_palms.PALMS
+    regional = REGIONAL_TREES.get(archive)
+    if regional and (palm or record in regional[1].FORMS):
+        climate, recipes = regional
         name = f"tree-{archive}-{record}"
-        climate = "rainforest" if rainforest else "subtropical"
         mesh_name = f"{species}-p{variant}-{climate}.prop-mesh.json"
-        if not rainforest:
-            mesh, images = subtropical_trees.build(record, rgba)
-        elif record in rainforest_palms.PALMS:
+        if palm:
             mesh, bark, leaves = rainforest_palms.build(record, rgba)
             images = {"bark": bark, "leaves": leaves}
         else:
-            mesh, images = rainforest_trees.build(record, rgba)
+            mesh, images = recipes.build(record, rgba)
         write_mesh(folder / mesh_name, mesh)
         entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
                  "placement": placement(flat, rgba, m, old, recompute)}

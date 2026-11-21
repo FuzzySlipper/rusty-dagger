@@ -40,10 +40,11 @@ class Meshes(unittest.TestCase):
                 covered = max(covered, high)
             self.assertGreater(covered, crown, f"{key} trunk ends below the crown")
 
-    def test_tropical_replacements_have_indexed_support_from_the_foot_into_the_leaves(self):
+    def test_tree_replacements_have_indexed_support_from_the_foot_into_the_leaves(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]
         keys = ["500-3", "500-13", "500-16", "500-18", "500-21", "500-25", "500-27",
-                "501-20", "501-27", "501-28", "501-30"]
+                "501-20", "501-27", "501-28", "501-30",
+                "502-13", "502-16", "502-17", "502-24", "502-25"]
         for key in keys:
             with self.subTest(key=key):
                 entry = art[key]
@@ -63,7 +64,7 @@ class Meshes(unittest.TestCase):
                     supported = max(supported, high)
                 self.assertGreater(supported, lowest_leaf)
 
-    def test_subtropical_twins_use_the_same_media_but_their_own_placement(self):
+    def test_matching_paintings_use_the_same_media_but_their_own_placement(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]
         flats = {f"{f['replaces']['archive']}-{f['replaces']['record']}": f for f in art["flats"]}
         for key, source in trees.SHARED_TREES.items():
