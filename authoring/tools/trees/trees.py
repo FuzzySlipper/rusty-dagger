@@ -10,6 +10,9 @@ from its trunk (leaving out its darkest, the outline), so the tree wears the pai
 light and dark; leaves lean toward the darks, which lit cards lose, and each leaf's edge is darkened a step, as the
 sprites outline theirs.
 
+Archive 500's palms have their own connected stems, root flares and folded fronds in rainforest_palms.py.
+Build them with trees.py --key 500-12 --key 500-14 --key 500-15.
+
 The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
 manner: the slender bare trees are rusty-craftsurvive's dead tree as above; the great gnarled trunks and the fallen logs
 are its branch skeleton built old and heaped, their bark painted as a tree's; a rock is shaped to its sprite's outline and
@@ -37,6 +40,7 @@ from scipy import ndimage, stats
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "rocks"))
 import rocks  # noqa: E402
+import rainforest_palms
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -307,6 +311,18 @@ def tree(flat, archive, record, species, variant, folder, old=None, recompute=Fa
     if species in ROCKS:
         return rock(flat, rgba, archive, record, species, variant, folder, old, recompute)
     m = measures(rgba)
+    if archive == 500 and record in rainforest_palms.PALMS:
+        name = f"tree-{archive}-{record}"
+        mesh_name = f"palm-p{variant}-rainforest.prop-mesh.json"
+        mesh, bark, leaves = rainforest_palms.build(record, rgba)
+        write_mesh(folder / mesh_name, mesh)
+        entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
+                 "placement": placement(flat, rgba, m, old, recompute)}
+        for role, image in (("bark", bark), ("leaves", leaves)):
+            filename = f"{name}-{role}.png"
+            image.save(folder / filename)
+            entry[role] = publish(filename, folder / filename)
+        return entry
     crown, trunk, snow = palette(rgba, m)
     if species in (GNARLED, LOGS):
         # Drawn as wide for its height as its sprite, so a mesh serves only sprites of the same shape.

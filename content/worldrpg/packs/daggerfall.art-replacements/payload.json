@@ -113240,20 +113240,10 @@
   "trees": {
    "500-12": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/palm-p1-from-0.prop-mesh.json",
-     "byteLength": 19682,
-     "sha256": "f1a5d6d59d901bfe245adf5c920957e8380d4eece650c1a8cc54695af7f0ba5f",
-     "height": 9.0
-    },
-    "leaves": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-12-leaves.png",
-     "byteLength": 8601,
-     "sha256": "121c511fa8b49eb95990a1c6edc4e8c8afcd08ce8ea6ff1e393c89d9abad881f"
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-12-bark.png",
-     "byteLength": 431,
-     "sha256": "04ca9cd0c88a32dc68a4c0c59dad7f8550c902cc932a8f2366d73b285992eb0d"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/palm-p1-rainforest.prop-mesh.json",
+     "byteLength": 39803,
+     "sha256": "d99e8ea32eef889c82741ffc63afb8083d56fc526e79d7dba5b500566c82009c",
+     "height": 1.006231
     },
     "placement": {
      "height": 8.337356,
@@ -113262,24 +113252,24 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-12-bark.png",
+     "byteLength": 10054,
+     "sha256": "8a2cd7bc67d72d7d2f3990cd35f02cc2e7fb38cb349c73e4b0c482004a9137dd"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-12-leaves.png",
+     "byteLength": 5819,
+     "sha256": "303a1c2080ad996f6ba359ad35844a9c5f46030ead33045b0b4224d2bbf183af"
     }
    },
    "500-14": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/palm-p2-from-3.7.prop-mesh.json",
-     "byteLength": 21951,
-     "sha256": "ed7e1bc6bb99fd9887aee18a3fc601b0c789cc3d349508d75697bc8a60d298b9",
-     "height": 9.0
-    },
-    "leaves": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-14-leaves.png",
-     "byteLength": 8475,
-     "sha256": "f58ccd32ca4a90796fa2df6e65072428191725ecf0c6e3c9196c00e992b59fc2"
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-14-bark.png",
-     "byteLength": 398,
-     "sha256": "655054579b401a004fb6e9a0f9a697b0d62b7b761470ab3aa702b2db376a350f"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/palm-p2-rainforest.prop-mesh.json",
+     "byteLength": 43724,
+     "sha256": "d38044de5a4887fdba1775148afe72cb41998b1c5b1950005e3a4ac9fe430024",
+     "height": 0.968298
     },
     "placement": {
      "height": 7.585819,
@@ -113288,24 +113278,24 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-14-bark.png",
+     "byteLength": 7494,
+     "sha256": "bd765fd7952f20abfc523238497f087f992a471b36842c5de8979ec300d65ed5"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-14-leaves.png",
+     "byteLength": 5907,
+     "sha256": "061075b432e3df250b6471510dbcfb278e6568d4bb4da17e731fcaf14e912d06"
     }
    },
    "500-15": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/palm-p3-from-5.prop-mesh.json",
-     "byteLength": 19444,
-     "sha256": "33c40d0cd9e2145ac2ac181b53d7b6534353708cc5f4de00744e108ea4b230a5",
-     "height": 9.0
-    },
-    "leaves": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-15-leaves.png",
-     "byteLength": 8460,
-     "sha256": "e3a3ea8e2010f8246a8b45e230117fe5608028a54f1940239dc9875f568ef26e"
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-15-bark.png",
-     "byteLength": 402,
-     "sha256": "c21e6941d2bb4e13fa56c104a945ef3ebb2c261aa36d42faea90ad92ade76874"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/palm-p3-rainforest.prop-mesh.json",
+     "byteLength": 43665,
+     "sha256": "3476cf0ea165520a8fbddbf18f00b834dc1b0da117f5677d860af92ebe10d46e",
+     "height": 1.043805
     },
     "placement": {
      "height": 15.425208,
@@ -113314,6 +113304,16 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-15-bark.png",
+     "byteLength": 6665,
+     "sha256": "de8e31d51f35ecdd6e36bf9a9e4dddd44a2e3c51d637282d4f93084c6cc8ddb5"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-500-15-leaves.png",
+     "byteLength": 4872,
+     "sha256": "3a680fbedc80fb177ab8f15830011c0f2159525455842566aadce73eddba38ea"
     }
    },
    "500-30": {
