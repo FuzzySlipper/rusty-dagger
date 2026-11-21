@@ -14,7 +14,7 @@ Archive 500's palms have their own connected stems, root flares and folded frond
 Its other bespoke trees are shaped in rainforest_trees.py. Archive 501 shares matching paintings' meshes
 at its own placement. Its distinct shapes are in subtropical_trees.py. Archive 502's rooted broadleaves
 and snags are in swamp_trees.py, the desert trees in desert_trees.py and the summer woodland trees in woodland_trees.py.
-Mountain conifers and their summer broadleaf variants are in mountain_trees.py.
+Mountain conifers and their summer broadleaf variants are in mountain_trees.py, with the snowy mountain recipes in winter_mountain.py.
 Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
 The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
@@ -52,6 +52,7 @@ import desert_trees
 import woodland_trees
 import winter_woodland
 import mountain_trees
+import winter_mountain
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -74,7 +75,7 @@ ROCKS = (BOULDERS, SLAB, CAIRN)
 REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", subtropical_trees),
                   502: ("swamp", swamp_trees), 503: ("desert", desert_trees),
                   504: ("woodland", woodland_trees), 505: ("winter-woodland", winter_woodland),
-                  506: ("mountain", mountain_trees)}
+                  506: ("mountain", mountain_trees), 507: ("winter-mountain", winter_mountain)}
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
           12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
@@ -84,7 +85,7 @@ FORMS = {
     504: {**{r: (form, r) for r, form in woodland_trees.FORMS.items()}, 24: (DEAD, 1)},
     505: {**{r: (form, r) for r, form in winter_woodland.FORMS.items()}, 24: (DEAD, 1)},
     506: {**{r: (form, r) for r, form in mountain_trees.FORMS.items()}, 24: (DEAD, 1)},
-    507: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 14: (CORK, 2), 16: (BEECH, 3), 24: (DEAD, 1), 25: (PINE, 2)},
+    507: {**{r: (form, r) for r, form in winter_mountain.FORMS.items()}, 24: (DEAD, 1)},
     508: {13: (CHESTNUT, 3), 15: (CORK, 1), 24: (DEAD, 1)},
     509: {24: (DEAD, 1)},
     510: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 15: (CORK, 1), 24: (DEAD, 1), 25: (PINE, 2), 30: (PINE, 1)},
@@ -94,7 +95,8 @@ FORMS = {
 # while placing every record at its own size, including when a source is rebuilt by key.
 SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
                 "501-15": "500-13", "501-17": "500-3", "501-24": "501-19", "501-31": "500-21",
-                "502-12": "500-18", "502-18": "500-30", "502-19": "501-19", "506-10": "501-20"}
+                "502-12": "500-18", "502-18": "500-30", "502-19": "501-19", "506-10": "501-20",
+                **{f"507-{r}": f"505-{r}" for r in (10, 13, 14, 15, 16, 25)}}
 DEAD_WOOD_AND_ROCKS = {
     500: {4: (SLAB, 1), 17: (SLAB, 1), 31: (BOULDERS, 4)},
     501: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (BOULDERS, 3), 6: (BOULDERS, 3), 23: (BOULDERS, 3)},

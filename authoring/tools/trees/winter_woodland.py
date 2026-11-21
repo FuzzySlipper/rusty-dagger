@@ -110,19 +110,18 @@ def close_leaf_ring(tree, ring, direction, slot, v):
 
 
 class WinterBoughs:
-    def __init__(self, tree, record):
+    def __init__(self, tree, *, skirt, broad=False, brown=False):
         self.tree = tree
         self.powder = snow_texture(tree)
         snow = snow_mask(tree.pixels)
         rgb = tree.pixels[..., :3].astype(float)
         solid = tree.pixels[..., 3] > 128
-        if record == 17:
+        if brown:
             leaf = solid & ~snow
         else:
             green = (rgb[..., 1] >= rgb[..., 0]*.97) & (rgb[..., 1] >= rgb[..., 2]*.96) & solid & ~snow
             leaf = solid & ~snow & (distance_transform_edt(~green) < 2.1)
-        limit = .84 if record in (11, 13, 25) else .80 if record == 18 else .66
-        leaf[round(len(leaf)*limit):] = False
+        leaf[round(len(leaf)*skirt):] = False
         # Beyond the leaf edge, continue real brushstrokes instead of stretching
         # one nearest pixel into a streak across an entire card.
         interior = np.array(filled(tree.pixels, leaf))
@@ -138,7 +137,7 @@ class WinterBoughs:
         interior[far] = interior[ty[far], tx[far]]
         self.leaf_paint = Image.fromarray(interior)
         self.snow = snow
-        self.record = record
+        self.broad = broad
         painted = tree.pixels.copy()
         painted[..., 3] = 255*(leaf | snow)
         self.painted = Image.fromarray(painted)
@@ -152,7 +151,7 @@ class WinterBoughs:
         tree = self.tree
         centre = tree.point(x, down, z)
         az = tree.rng.uniform(0, math.tau)
-        broad = self.record in (12, 16, 17, 18)
+        broad = self.broad
         rx = tree.aspect*radius*(1.26 if broad else 1.08)
         rz = rx*tree.rng.uniform(.70, .95)
         height *= 1.27 if broad else 1.00
@@ -367,6 +366,23 @@ def snowy_grove(tree):
     return stone, bark, Image.fromarray(rock)
 
 
+def bark_chart(tree, band, projected):
+    pixels = tree.pixels
+    # Snow on the shaft keeps its painted placement. Snow on a horizontal
+    # twig has its own upper ridge; strip it from the repeating grain there.
+    bark = summer.bark_texture(tree, band, projected)
+    rgb = pixels[..., :3].astype(float)
+    wood = (pixels[..., 3] > 128)&~snow_mask(pixels)&(rgb[..., 0] >= rgb[..., 1]*.98)
+    dry = np.array(filled(pixels, wood))
+    dry[..., 3] = pixels[..., 3]
+    tree.pixels = dry
+    wrapped = trunk_paint(tree, (96, 160), band).astype(np.uint8)
+    wrapped[..., 3] = 255
+    bark.paste(Image.fromarray(wrapped), (0, 0))
+    tree.pixels = pixels
+    return bark
+
+
 def build(record, rgba):
     if record == 15:
         return winter_oak.build(rgba)
@@ -386,7 +402,8 @@ def build(record, rgba):
             pts = [tree.stem_at(attach)]+[tree.point(x, y, z) for x, y, z, _ in trace]
             radii = [trace[0][3]*1.17]+[r for _, _, _, r in trace]
             snow_strip(tree, pts, radii, strips)
-    paint = WinterBoughs(tree, record)
+    skirt = .84 if record in (11, 13, 25) else .80 if record == 18 else .66
+    paint = WinterBoughs(tree, skirt=skirt, broad=record in (12, 16, 17, 18), brown=record == 17)
     if record == 25:
         laden_spruce(tree, paint)
     else:
@@ -402,20 +419,7 @@ def build(record, rgba):
         summer.limb(tree, [tree.stem_at(.110), tree.stem_at(.062), tip], [.012, .009, .003], 5)
         paint.grow(.489, .049, -.012, .082, .051, .33)
     if record != 10:
-        pixels = tree.pixels
-        # Snow on the shaft keeps its painted placement. Snow on a horizontal
-        # twig has its own upper ridge; strip it from the repeating grain there.
-        band = summer.BARK_BANDS[record]
-        bark = summer.bark_texture(tree, band, projected)
-        rgb = pixels[..., :3].astype(float)
-        wood = (pixels[..., 3] > 128)&~snow_mask(pixels)&(rgb[..., 0] >= rgb[..., 1]*.98)
-        dry = np.array(filled(pixels, wood))
-        dry[..., 3] = pixels[..., 3]
-        tree.pixels = dry
-        wrapped = trunk_paint(tree, (96, 160), band).astype(np.uint8)
-        wrapped[..., 3] = 255
-        bark.paste(Image.fromarray(wrapped), (0, 0))
-        tree.pixels = pixels
+        bark = bark_chart(tree, summer.BARK_BANDS[record], projected)
     images["bark"] = add_bark_snow(tree, bark, strips)
     images["leaves"] = tree.cluster_atlas()
     return {"height":max(max(p["positions"][1::3]) for p in parts), "parts":parts}, images

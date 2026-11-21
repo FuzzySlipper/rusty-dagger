@@ -57,7 +57,7 @@ BARK_BAND = {5:(.864, .965), 11:(.877, .963), 12:(.870, .962), 13:(.815, .958),
              25:(.835, .961), 30:(.855, .954)}
 
 
-def bough_profile(tree, down, width, direction, drop, gap):
+def bough_profile(tree, down, width, direction, drop, gap, *, snowy=False):
     """Sample a whole side bough, at its painted scale. Leave transparent
     space above the upper shoots and between the long tips below them."""
     pixels = tree.pixels
@@ -69,10 +69,14 @@ def bough_profile(tree, down, width, direction, drop, gap):
     centre = down+drop*(along-.67)
     high = centre-gap*.61
     low = centre+gap*.67
+    if snowy:
+        high = np.maximum(high, 0)
     y = np.rint((high+v*(low-high))*(h-1)).astype(int).clip(0, h-1)
     tile = pixels[y, x].copy()
     rgb = tile[..., :3].astype(float)
     leaf = (rgb[..., 1] >= rgb[..., 0]*.96) & (rgb[..., 1] >= rgb[..., 2]*.94)
+    if snowy:
+        leaf |= (rgb.min(2) > 128) & (np.ptp(rgb, axis=2) < 65)
     paint = (tile[..., 3] > 128)&(leaf | (along < .35))
     light = rgb@[.21, .72, .07]
     lo, hi = np.quantile(light[paint], [.15, .82]) if paint.any() else (0, 1)
@@ -128,15 +132,14 @@ def shelf_pine(tree, record):
     return atlas
 
 
-def skirted_fir(tree, record):
-    tiers = WHORLS[record]
+def skirted_fir(tree, tiers, slope, *, snowy=False):
     for tier, (down, left, right, count) in enumerate(tiers):
         neighbour = tiers[tier-1] if tier else tiers[1]
         gap = max(abs(down-neighbour[0]), .041)
         base = len(tree.patches)
         profiles = []
         for direction, width in ((-1, left), (1, right)):
-            tile, high, low = bough_profile(tree, down, width, direction, DROP[record]*width, gap)
+            tile, high, low = bough_profile(tree, down, width, direction, slope*width, gap, snowy=snowy)
             tree.patches.append(tile)
             profiles.append((high, low))
 
@@ -150,6 +153,8 @@ def skirted_fir(tree, record):
             variant = int(ray[0] >= 0)
             high, low = profiles[variant]
             shift = tree.rng.uniform(-.022, .022)*min(1, width/.18)
+            if snowy:
+                shift *= .52
             axis = tree.stem_at(max(.012, (high[0]+low[0])*.50+shift))
             bend = tree.rng.uniform(-.19, .19)
             # Mirror the painted side over an arch in depth. Each branch
@@ -158,7 +163,7 @@ def skirted_fir(tree, record):
                 rows, uv = [], []
                 for t in (0, .29, .56, .79, 1):
                     col = round(t*63)
-                    top = high[col]+shift
+                    top = max(.002, high[col]+shift) if snowy else high[col]+shift
                     depth = max(.012, low[col]-high[col])
                     ridge = axis+ray*t*length+side*bend*length*t*t
                     ridge[1] = 1-top
@@ -221,7 +226,7 @@ def build(record, rgba):
             ray = np.array([math.cos(a), 0, math.sin(a)])*tree.aspect
             woodland.limb(tree, [hub, hub+ray*.079+[0, lift, 0], hub+ray*.129+[0, lift+.009, 0]],
                           [.014, .009, .003], 4)
-    leaves = skirted_fir(tree, record) if record in DROP else shelf_pine(tree, record)
+    leaves = skirted_fir(tree, WHORLS[record], DROP[record]) if record in DROP else shelf_pine(tree, record)
     return {"height":max(max(p["positions"][1::3]) for p in (tree.bark, tree.leaves)),
             "parts":[tree.bark, tree.leaves]}, {"bark":woodland.bark_texture(tree, BARK_BAND[record], projected),
                                               "leaves":leaves}
