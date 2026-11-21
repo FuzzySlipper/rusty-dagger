@@ -137,7 +137,7 @@ def limb(tree, points, radii, sides=6):
     tree.tube(points, radii, sides, cap=True, wrap_height=1)
 
 
-def branchwork(tree, record):
+def branchwork(tree, record, *, arms=None):
     stem = [tree.point(x, y, z) for x, y, z, r in tree.stem]
     tree.tube(stem, tree.stem[:, 3], 9, cap=True)
     if record == 12:
@@ -154,7 +154,7 @@ def branchwork(tree, record):
             tree.tube(points, radii, 5, cap=True)
     projected = len(tree.bark["uvs"])
     anchors = list(stem)
-    for attach, trace in ARMS.get(record, ()):
+    for attach, trace in (ARMS.get(record, ()) if arms is None else arms):
         points = [tree.stem_at(attach)] + [tree.point(x, y, z) for x, y, z, r in trace]
         limb(tree, points, [trace[0][3]*1.17]+[r for x, y, z, r in trace])
         anchors.extend(points[1:])

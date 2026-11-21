@@ -49,6 +49,7 @@ import subtropical_trees
 import swamp_trees
 import desert_trees
 import woodland_trees
+import winter_woodland
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -70,7 +71,7 @@ BOULDERS, SLAB, CAIRN = rocks.BOULDERS, rocks.SLAB, rocks.CAIRN
 ROCKS = (BOULDERS, SLAB, CAIRN)
 REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", subtropical_trees),
                   502: ("swamp", swamp_trees), 503: ("desert", desert_trees),
-                  504: ("woodland", woodland_trees)}
+                  504: ("woodland", woodland_trees), 505: ("winter-woodland", winter_woodland)}
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
           12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
@@ -78,8 +79,7 @@ FORMS = {
     502: {r: (form, r) for r, form in swamp_trees.FORMS.items()},
     503: {**{r: (form, r) for r, form in desert_trees.FORMS.items()}, 11: (DEAD, 1)},
     504: {**{r: (form, r) for r, form in woodland_trees.FORMS.items()}, 24: (DEAD, 1)},
-    505: {11: (CORK, 1), 12: (CORK, 3), 13: (FIR, 1), 14: (CORK, 2), 16: (BEECH, 3), 17: (BEECH, 1),
-          18: (CHESTNUT, 1), 24: (DEAD, 1), 25: (PINE, 2)},
+    505: {**{r: (form, r) for r, form in winter_woodland.FORMS.items()}, 24: (DEAD, 1)},
     506: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 14: (CORK, 2), 15: (CORK, 1), 16: (BEECH, 3), 24: (DEAD, 1),
           25: (PINE, 2), 30: (PINE, 1)},
     507: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 14: (CORK, 2), 16: (BEECH, 3), 24: (DEAD, 1), 25: (PINE, 2)},
