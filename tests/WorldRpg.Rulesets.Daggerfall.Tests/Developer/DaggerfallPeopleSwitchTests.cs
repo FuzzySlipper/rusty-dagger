@@ -375,7 +375,7 @@ public sealed class DaggerfallPeopleSwitchTests
     }
 
     [Fact]
-    public void A_character_in_a_long_skirt_walks_the_gentle_clip_with_its_skirt_on_its_rig_and_spawned_walkers_can_take_its_own_pace()
+    public void A_character_in_a_long_skirt_walks_the_gentle_clip_with_its_skirt_on_its_rig_at_the_pace_the_tuning_gives()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
         animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2), new("gentle", "gentle", 1.03F, true, 3)];
@@ -398,37 +398,41 @@ public sealed class DaggerfallPeopleSwitchTests
 
         Assert.True(people.Splat("456").Succeeded);
         SplatFigure figure = Assert.IsType<SplatCrowd>(people.Crowd).Figure!;
-        // She binds the gentle walk beside the walk and idle, fitted to her legs, and walks it at the walkers' pace.
+        // She binds the gentle walk beside the walk and idle, fitted to her legs, and by the tuning walks it as authored.
         Assert.Equal([splats.Walk.Path, splats.Idle.Path, splats.Gentle.Path], animation.OpenedPackPaths);
         Assert.Equal(3, animation.JointNameBindings.Count);
         AnimationClipTranslationFitRequest fit = Assert.Single(animation.Fits, fit => fit.Clip == "gentle");
         Assert.Equal((new System.Numerics.Vector3(person.Skirt.Gentle.Scale, person.Skirt.Gentle.Scale, 0), new System.Numerics.Vector3(0, person.Skirt.Gentle.Lift, 0)),
             (fit.Scale, fit.Offset));
         Assert.Equal(("gentle", "idle"), (figure.Walk, figure.Idle));
-        Assert.Equal(WalkerSpeed / person.Skirt.GentleSpeed, figure.WalkRate, 5);
+        Assert.Equal(1F, figure.WalkRate, 5);
         Assert.Same(skirt, figure.Skirt!.Skirt);
         // A skirt drives from where it was bound: the first step at rest places each joint where it stands.
         JointOverride[] placed = figure.Skirt.Sheet().Step(0, animation.ModelPose(new(System.Numerics.Vector3.Zero, System.Numerics.Quaternion.Identity, System.Numerics.Vector3.One)).Span);
         Assert.Equal(16, placed.Length);
         Assert.All(placed, joint => Assert.True(System.Numerics.Vector3.Distance(animation.Rest[(int)joint.Joint], joint.Translation) < 1e-4F));
 
-        // Spawned in her, a walker keeps the walkers' pace until people.splat-pace slow walks her at her gentle walk's own.
-        Assert.True(people.Spawn("456", 1).Succeeded);
-        Assert.Equal(1F, walker.Wander.Pace);
-        Assert.Equal("people.splat-pace takes clip or slow.", people.SplatPace("fast").Message);
-        Assert.True(people.SplatPace("slow").Succeeded);
+        // A walker drawn as her goes at her gentle walk's own pace, slower than the rest.
+        Assert.Same(figure.Appearance, people.Show(100, walker.DurableId, 1.7F, walking: true));
         Assert.Equal(person.Skirt.GentleSpeed / WalkerSpeed, walker.Wander.Pace, 5);
-        SplatFigure own = Assert.IsType<SplatCrowd>(people.Crowd).Assigned[walker.DurableId];
-        Assert.Equal((1F, figure.Appearance), (own.WalkRate, own.Appearance));
+
+        // people.splat-pace clip plays her walk faster to keep the walkers' pace, for the run, wherever she is drawn.
+        Assert.Equal("people.splat-pace takes slow or clip.", people.SplatPace("fast").Message);
+        Assert.True(people.Spawn("456", 1).Succeeded);
         Assert.True(people.SplatPace("clip").Succeeded);
-        Assert.Equal((1F, figure), (walker.Wander.Pace, Assert.IsType<SplatCrowd>(people.Crowd).Assigned[walker.DurableId]));
+        SplatCrowd crowd = Assert.IsType<SplatCrowd>(people.Crowd);
+        Assert.Equal(WalkerSpeed / person.Skirt.GentleSpeed, crowd.Figure!.WalkRate, 5);
+        Assert.Same(crowd.Figure, crowd.Assigned[walker.DurableId]);
+        people.Show(100, walker.DurableId, 1.7F, walking: true);
+        Assert.Equal(1F, walker.Wander.Pace);
         Assert.True(people.SplatPace("slow").Succeeded);
-        // people.splat off keeps her open for the walker drawn at the slow pace.
+        people.Show(100, walker.DurableId, 1.7F, walking: true);
+        Assert.Equal(person.Skirt.GentleSpeed / WalkerSpeed, walker.Wander.Pace, 5);
+
+        // Drawn as her sprite again, she walks at the walkers' pace; her character stays open for the spawned walker.
         Assert.True(people.Splat("off").Succeeded);
-        people.Publishing();
-        people.Settle();
-        Assert.Equal(0, animation.ReleasedAppearances);
         Assert.True(people.Spawn("off", 0).Succeeded);
+        Assert.Null(people.Show(100, walker.DurableId, 1.7F, walking: true));
         Assert.Equal(1F, walker.Wander.Pace);
     }
 

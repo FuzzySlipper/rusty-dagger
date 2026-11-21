@@ -21,8 +21,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// own, whatever the rest are drawn as. The rig crowd is made on its first use, and a gsplat character is opened on its
 /// first use and kept for the session. It shows a spawned walker as its character and the rest as the crowd in use, and
 /// settles every crowd it made, so one put aside lets go of its walkers. A character in a long skirt walks the gentle
-/// clip with its skirt pushed open by the legs; people.splat-pace says whether its walk plays up to the walkers' pace
-/// (the default) or the walkers people.spawn stands as it walk at the clip's own.
+/// clip with its skirt pushed open by the legs: by the tuning (or people.splat-pace for the run) every walker drawn as
+/// one walks at that clip's own pace, slower than the rest, or the clip plays faster to keep the walkers' pace.
 /// </summary>
 /// <param name="rig">The art set's people rig, or null when it carries none.</param>
 /// <param name="splats">The art set's gsplat townspeople, or null when it carries none.</param>
@@ -62,10 +62,10 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private readonly HashSet<string> broken = new(StringComparer.Ordinal);
     private bool unclothed;
     private RenderResource? gentle;
-    /// <summary>Whether walkers people.spawn stands in a long skirt walk at its gentle clip's own pace, not the walkers'.</summary>
-    private bool slow;
-    /// <summary>The character each walker people.spawn stands is drawn as, by actor.</summary>
-    private readonly Dictionary<long, string> spawnedAs = [];
+    /// <summary>Whether walkers drawn in a long skirt walk at its gentle clip's own pace, not the walkers': the tuning's until people.splat-pace.</summary>
+    private bool slow = tuning.SkirtsSlow;
+    /// <summary>The share of the walkers' speed each character's walkers move at, by its appearance.</summary>
+    private readonly Dictionary<Appearance, float> paces = [];
     private PartsRigCrowd? rigCrowd;
     private SplatCrowd? splatCrowd;
 
@@ -88,7 +88,10 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     {
         if (yielded) return null;
         if (own) Crowd ??= Splats();
-        return splatCrowd?.Show(id, actor, heightMetres, walking) ?? (Crowd == splatCrowd ? null : Crowd?.Show(id, actor, heightMetres, walking));
+        Appearance? character = splatCrowd?.Show(id, actor, heightMetres, walking);
+        // A walker drawn in a long skirt goes at the pace its walk is played at; every other at the walkers' own.
+        Pace(actor, character is not null && paces.TryGetValue(character, out float pace) ? pace : 1F);
+        return character ?? (Crowd == splatCrowd ? null : Crowd?.Show(id, actor, heightMetres, walking));
     }
 
     public void Publishing()
@@ -153,8 +156,6 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         {
             int released = splatCrowd?.Assigned.Count ?? 0;
             foreach (long actor in splatCrowd?.Assigned.Keys.ToArray() ?? []) splatCrowd!.Assign(actor, null);
-            foreach (long actor in spawnedAs.Keys) Pace(actor, 1F);
-            spawnedAs.Clear();
             return DebugCommandResult.Success($"{released} spawned walkers draw as the rest do again.");
         }
         if (count is < 1 or > 16) return DaggerfallDeveloperReplies.Refused("people.spawn takes a COUNT of 1 to 16.");
@@ -171,7 +172,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         foreach (float metres in SpawnRows)
             if ((placed = stage.Place(count, metres, (count - 1) * SpawnSpacing, crossing: false, spawned, out walkers)).Succeeded) break;
         if (!placed.Succeeded) return placed;
-        foreach (ActorState walker in walkers) Stand(walker.DurableId, character);
+        foreach (ActorState walker in walkers) splatCrowd.Assign(walker.DurableId, figure);
         return DebugCommandResult.Success($"{count} walking {(count == 1 ? "person stands" : "people stand")} in front of the player as gsplat {figure.Name}, until people.unstage.");
     }
 
@@ -189,11 +190,20 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
 
     public DebugCommandResult SplatPace(string pace)
     {
-        if (pace is not ("clip" or "slow")) return DaggerfallDeveloperReplies.Refused("people.splat-pace takes clip or slow.");
-        slow = pace == "slow";
-        foreach ((long actor, string character) in spawnedAs) Stand(actor, character);
+        if (DaggerfallSplatPeopleTuning.Slow(pace) is not { } walksSlow) return DaggerfallDeveloperReplies.Refused("people.splat-pace takes slow or clip.");
+        slow = walksSlow;
+        // Each character's walk plays at the new rate: its figure is replaced wherever it is drawn.
+        foreach ((string id, var opened) in characters.ToArray())
+        {
+            SplatFigure figure = opened.Figure with { WalkRate = WalkRate(splats!.Characters[id]) };
+            characters[id] = opened with { Figure = figure };
+            paces[opened.Appearance] = Pace(splats.Characters[id]);
+            if (splatCrowd?.Figure?.Appearance == opened.Appearance) splatCrowd.Use(figure);
+            foreach ((long actor, SplatFigure given) in splatCrowd?.Assigned.ToArray() ?? [])
+                if (given.Appearance == opened.Appearance) splatCrowd!.Assign(actor, figure);
+        }
         return DebugCommandResult.Success(slow
-            ? "Spawned gsplat people in a long skirt walk at their gentle walk's own pace, slower than the rest."
+            ? "Gsplat people in a long skirt walk at their gentle walk's own pace, slower than the rest."
             : "Gsplat people in a long skirt walk at the walkers' pace, their gentle walk played faster to keep up.");
     }
 
@@ -231,6 +241,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
         characters.Clear();
+        paces.Clear();
         clips = null;
         rigCrowd = null;
         splatCrowd = null;
@@ -256,12 +267,12 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private void LetGo()
     {
         letGo = false;
-        // A walker spawned at the slow pace draws its character's figure at another walk rate: the appearance is what it holds.
-        HashSet<Appearance> spawned = [.. splatCrowd?.Assigned.Values.Select(figure => figure.Appearance) ?? []];
+        HashSet<SplatFigure> spawned = [.. splatCrowd?.Assigned.Values ?? []];
         List<Exception>? failures = null;
-        foreach ((string id, var opened) in characters.Where(opened => !spawned.Contains(opened.Value.Appearance)).ToArray())
+        foreach ((string id, var opened) in characters.Where(opened => !spawned.Contains(opened.Value.Figure)).ToArray())
         {
             characters.Remove(id);
+            paces.Remove(opened.Appearance);
             foreach (IDisposable owned in new IDisposable[] { opened.Appearance, opened.Body })
             {
                 try { owned.Dispose(); }
@@ -321,24 +332,16 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         }
     }
 
-    /// <summary>
-    /// Draws spawned walker <paramref name="actor"/> as <paramref name="character"/>: one in a long skirt walking slow goes
-    /// at its gentle walk's own pace, which then plays as authored; every other at the walkers' pace.
-    /// </summary>
-    private void Stand(long actor, string character)
-    {
-        DaggerfallSplatPerson person = splats!.Characters[character];
-        SplatFigure figure = characters[character].Figure;
-        bool slowly = slow && person.Skirt is not null;
-        Splats().Assign(actor, slowly ? figure with { WalkRate = 1F } : figure);
-        Pace(actor, slowly ? person.Skirt!.GentleSpeed / walkerSpeed : 1F);
-        spawnedAs[actor] = character;
-    }
-
     private void Pace(long actor, float pace)
     {
-        if (actors.All.FirstOrDefault(state => state.DurableId == actor) is { } walker) walker.Wander.SetPace(pace);
+        if (actors.TryGet(actor, out ActorState walker) && walker.Wander.Pace != pace) walker.Wander.SetPace(pace);
     }
+
+    /// <summary>The share of the walkers' speed <paramref name="person"/>'s walkers move at: a long skirt's gentle walk's own when it walks slow.</summary>
+    private float Pace(DaggerfallSplatPerson person) => slow && person.Skirt is { } skirt ? skirt.GentleSpeed / walkerSpeed : 1F;
+
+    /// <summary>The rate <paramref name="person"/>'s walk plays at so its stride keeps pace with its walkers.</summary>
+    private float WalkRate(DaggerfallSplatPerson person) => walkerSpeed * Pace(person) / (person.Skirt?.GentleSpeed ?? person.WalkSpeed);
 
 
     /// <summary>
@@ -383,8 +386,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
                 : null;
             appearance = engine.CreateAnimatedMeshAppearance(new(body));
             Finish(appearance, person);
-            SplatFigure figure = new($"{id} ({person.Name})", appearance, walkClip, idleClip, walkerSpeed / (person.Skirt?.GentleSpeed ?? person.WalkSpeed),
-                tuning.CrossfadeSeconds, skirtRig);
+            SplatFigure figure = new($"{id} ({person.Name})", appearance, walkClip, idleClip, WalkRate(person), tuning.CrossfadeSeconds, skirtRig);
+            paces[appearance] = Pace(person);
             characters.Add(id, (body, appearance, figure));
             return figure;
         }

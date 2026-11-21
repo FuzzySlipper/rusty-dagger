@@ -1051,7 +1051,8 @@
     "poseRate": 0,
     "lightFloor": 0.15,
     "crossfadeSeconds": 0.25,
-    "shadowCaster": "ellipsoids"
+    "shadowCaster": "ellipsoids",
+    "skirtedPace": "slow"
   },
   "hanging": {
     "activationRadius": 4,
