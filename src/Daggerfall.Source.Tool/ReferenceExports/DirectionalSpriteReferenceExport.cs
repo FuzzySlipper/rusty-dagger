@@ -7,7 +7,7 @@ namespace Daggerfall.Source.Tool.ReferenceExports;
 /// <summary>Original directional character archives outside an existing mobile-reference export.</summary>
 internal static class DirectionalSpriteReferenceExport
 {
-    private static readonly string[] Directions = ["front", "front-right", "right", "back-right", "back"];
+    internal static IReadOnlyList<string> Directions { get; } = ["front", "front-right", "right", "back-right", "back"];
     private static readonly int[] StaticPeopleArchives = [175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 186, 197, 334, 346, 357];
 
     internal sealed record Source(int Archive, string Name, string Family, string? DisplayRace = null,

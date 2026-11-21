@@ -23,6 +23,8 @@ internal static class PeopleReferenceExport
 
     private static readonly int[] Townspeople = [.. Enumerable.Range(381, 18), .. Enumerable.Range(451, 6)];
 
+    internal static IEnumerable<int> StaticArchives => Static.Keys;
+
     public static void Run(string arena2, string output)
     {
         ReferenceExport export = new(arena2, output);

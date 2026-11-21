@@ -7,10 +7,11 @@ internal static class ReferenceExportCommands
 {
     private static readonly CommandOption Arena2 = CommandOption.Optional("--arena2", "SOURCE_DIR");
     private static readonly CommandOption Output = CommandOption.Optional("--output", "NEW_EXPORT_DIR");
+    private static readonly CommandOption Base = CommandOption.Staged("--base", "BASE_PAYLOAD", "content/worldrpg/packs/daggerfall.base/payload.json");
     private static readonly CommandOption[] ItemOptions =
     [
         Arena2,
-        CommandOption.Staged("--base", "BASE_PAYLOAD", "content/worldrpg/packs/daggerfall.base/payload.json"),
+        Base,
         Output,
     ];
 
@@ -54,6 +55,15 @@ internal static class ReferenceExportCommands
     {
         PeopleReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
             args.Optional("--output") ?? "local/art/reference/people");
+        return 0;
+    }, Program.Tool);
+
+    public static ToolCommand Npc { get; } = new("export-npc",
+        [Arena2, Base, Output, CommandOption.Optional("--characters", "CHARACTER_OUTPUT_DIR")], args =>
+    {
+        NpcReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2, args["--base"],
+            args.Optional("--characters") ?? "../asset-pipeline/outputs/dagger-characters",
+            args.Optional("--output") ?? "local/art/reference/npc");
         return 0;
     }, Program.Tool);
 

@@ -38,6 +38,11 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - `--output DIR` writes somewhere else. Use a fresh directory for a new export: existing ones are kept experiments.
 - `--arena2 DIR` relocates the source (default `local/inputs/arena2`); `export-items --inputs DIR` relocates the
   importer's item tables (default `src/Daggerfall.Import.Tool/inputs`).
+- `export-npc` builds the unified NPC chart in `local/art/reference/npc/`. Open `index.html` directly.
+  It keeps the outfit number for wandering sprites (`npc-452` also resolves in search as `mobile-452`),
+  uses the classic packed flat ID for `npc-flat-*`, and uses the faction ID for `npc-faction-*`.
+  Use the old archive-record form (for example, `182-34`) to look up a particular billboard.
+  `--characters DIR` relocates the optional links to the asset-pipeline character outputs.
 - `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared
   against `--baseline` (default `local/art/reference/daggerfall-mobile-idle-unmirrored-r01`).
 - `tools/ui/export.py` writes the screens and portraits from an import's staging, so run the import first.

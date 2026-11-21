@@ -26,6 +26,7 @@ internal static class Program
         ReferenceExportCommands.Surfaces,
         ReferenceExportCommands.Flats,
         ReferenceExportCommands.People,
+        ReferenceExportCommands.Npc,
         ReferenceExportCommands.Terrain,
         ReferenceExportCommands.DirectionalSprites,
         // The developer commands and their descriptions, read from the Kit's compiled attributes.
