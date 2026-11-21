@@ -139,7 +139,7 @@
 162 npc-flat-23321
 163 npc-flat-23322
 164 npc-flat-23323
-165 npc-flat-23324
+165 npc-flat-23324 npc-flat-23837 npc-281
 166 npc-flat-23325
 167 npc-flat-23326
 168 npc-flat-23327
@@ -167,9 +167,9 @@
 190 npc-flat-23349 npc-flat-23862 npc-flat-42764
 191 npc-flat-23350
 192 npc-flat-23351
-193 npc-flat-23352
-194 npc-flat-23353
-195 npc-flat-23354
+193 npc-flat-23352 npc-flat-23864 npc-flat-44298 npc-332 npc-301
+194 npc-flat-23353 npc-flat-23865 npc-302 npc-flat-45706 npc-343
+195 npc-flat-23354 npc-flat-23866 npc-303 npc-flat-45707 npc-344
 196 npc-flat-23355 npc-flat-23867 npc-flat-23868 npc-flat-42766
 197 npc-flat-23424
 198 npc-flat-23425
@@ -255,7 +255,6 @@
 278 npc-flat-23834
 279 npc-flat-23835 npc-flat-44297 npc-331
 280 npc-flat-23836
-281 npc-flat-23837
 282 npc-flat-23838
 283 npc-flat-23839
 284 npc-flat-23840
@@ -271,12 +270,9 @@
 295 npc-flat-23851
 296 npc-flat-23852
 297 npc-flat-23853
-298 npc-flat-23854
+298 npc-flat-23854 npc-flat-42762 npc-319
 299 npc-flat-23855
 300 npc-flat-23863
-301 npc-flat-23864 npc-flat-44298 npc-332
-302 npc-flat-23865
-303 npc-flat-23866
 304 npc-flat-25216
 305 npc-flat-25217
 306 npc-flat-25218
@@ -290,7 +286,6 @@
 314 npc-flat-42754 npc-flat-44290 npc-325
 317 npc-flat-42759
 318 npc-flat-42761
-319 npc-flat-42762
 320 npc-flat-42765
 323 npc-flat-42772
 324 npc-flat-44289
@@ -306,8 +301,6 @@
 340 npc-flat-45700
 341 npc-flat-45701
 342 npc-flat-45702
-343 npc-flat-45706
-344 npc-flat-45707
 347 npc-flat-45710
 
 # 381–399 Wandering townsfolk and guard

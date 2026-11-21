@@ -1,8 +1,11 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Daggerfall.Import.Arena2;
 
 namespace Daggerfall.Source.Tool.ReferenceExports;
+
+internal sealed record NpcBrief(string Brief, string[] Costume, string[] Colors, string[] Props, string[] Pose);
 
 internal static class NpcReferencePages
 {
@@ -10,45 +13,82 @@ internal static class NpcReferencePages
         IReadOnlyList<NpcEntry> entries)
     {
         NpcEntry[] cards = [.. entries.OrderBy(entry => entry.Id, StringComparer.Ordinal)];
-        var aliases = entries.SelectMany(entry => entry.Aliases.Select(alias => (alias, entry.Id)))
+        using Stream briefsResource = typeof(NpcReferencePages).Assembly.GetManifestResourceStream("NpcReferenceBriefs.json")!;
+        var briefs = JsonSerializer.Deserialize<Dictionary<string, NpcBrief>>(briefsResource, ReferenceExport.Json)!;
+        var chartBriefs = cards.Where(entry => briefs.ContainsKey(entry.Id)).ToDictionary(entry => entry.Id, entry => briefs[entry.Id]);
+        var aliases = cards.SelectMany(entry => entry.Aliases.Select(alias => (alias, entry.Id)))
             .GroupBy(item => item.alias).ToDictionary(group => group.Key, group => group.Select(item => item.Id).Distinct().ToArray());
-        foreach (NpcEntry entry in entries) WriteDetail(export, world, factions, entry);
+        foreach (NpcEntry entry in cards)
+        {
+            NpcBrief? brief = chartBriefs.GetValueOrDefault(entry.Id);
+            if (brief is null) export.Warn($"{entry.Id} has no catalog brief.");
+            WriteDetail(export, world, factions, entry, brief);
+        }
 
+        export.WriteJson("briefs.json", chartBriefs);
         export.WriteJson("manifest.json", new
         {
             entries = cards.Select(entry => new { entry.Id, entry.Name, entry.Kind, entry.Aliases, image = entry.Thumbnail?.File }),
             aliases = aliases.Where(pair => pair.Value.Length == 1).ToDictionary(pair => pair.Key, pair => pair.Value[0]),
             sharedAliases = aliases.Where(pair => pair.Value.Length > 1).ToDictionary(pair => pair.Key, pair => pair.Value),
+            briefs = "briefs.json",
         });
+        using Stream script = typeof(NpcReferencePages).Assembly.GetManifestResourceStream("NpcReferenceChart.js")!;
+        using (Stream file = File.Create(Path.Combine(export.Root, "filter.js"))) script.CopyTo(file);
         File.WriteAllText(Path.Combine(export.Root, "style.css"), Style);
-        File.WriteAllText(Path.Combine(export.Root, "filter.js"), Filter);
         StringBuilder page = Page("Daggerfall NPC Reference", "");
         page.Append("""
           <header><h1>Daggerfall NPC Reference</h1>
-          <div class="tools"><label>Find an NPC<input id="search" type="search" placeholder="Name or reference ID" autocomplete="off"></label>
-          <label>Type<select id="kind"><option value="">All NPCs</option>
+          <div class="tools"><label>Find an NPC<input id="search" type="search" placeholder="ID, name, or costume detail" autocomplete="off"></label>
           """);
-        foreach (string kind in cards.Select(entry => entry.Kind).Distinct())
-            page.Append($"<option>{H(kind)}</option>");
-        page.Append($"</select></label><output id=\"count\" aria-live=\"polite\">{Count(cards.Length, "reference")}</output></div></header><main>");
-        page.Append("<ul id=\"chart\" class=\"chart\">");
+        WriteFilter(page, "kind", "Type", "All NPCs", cards.Select(entry => entry.Kind));
+        WriteFilter(page, "costume", "Costume", "Any costume", chartBriefs.Values.SelectMany(brief => brief.Costume));
+        WriteFilter(page, "color", "Color", "Any color", chartBriefs.Values.SelectMany(brief => brief.Colors));
+        WriteFilter(page, "prop", "Prop", "Any prop", chartBriefs.Values.SelectMany(brief => brief.Props));
+        WriteFilter(page, "pose", "Pose", "Any pose", chartBriefs.Values.SelectMany(brief => brief.Pose));
+        page.Append($"""
+          </div>
+          <div class="results-bar"><output id="count" aria-live="polite">{Count(cards.Length, "reference")}</output>
+          <div id="similar" hidden><span id="similar-label"></span> <button type="button" id="clear-similar">Clear similarity</button></div>
+          </div></header><main>
+          <section id="comparison" aria-labelledby="comparison-heading" hidden>
+          <div class="comparison-bar"><h2 id="comparison-heading">Compare costumes</h2>
+          <output id="comparison-count" aria-live="polite"></output><button type="button" id="clear-comparison">Clear comparison</button></div>
+          <ul id="comparison-list"></ul></section>
+          <ul id="chart" class="chart">
+          """);
         foreach (NpcEntry entry in cards)
         {
-            string haystack = string.Join(' ', new[] { entry.Id, entry.Name }.Concat(entry.Aliases));
+            NpcBrief? brief = chartBriefs.GetValueOrDefault(entry.Id);
+            string costume = string.Join('|', brief?.Costume ?? []);
+            string color = string.Join('|', brief?.Colors ?? []);
+            string prop = string.Join('|', brief?.Props ?? []);
+            string pose = string.Join('|', brief?.Pose ?? []);
+            string haystack = string.Join(' ', new[] { entry.Id, entry.Name, brief?.Brief ?? "", costume, color, prop }.Concat(entry.Aliases));
             page.Append($"""
-              <li data-id="{H(entry.Id)}" data-search="{H(haystack.ToLowerInvariant())}" data-kind="{H(entry.Kind)}">
+              <li data-id="{H(entry.Id)}" data-name="{H(entry.Name)}" data-kind="{H(entry.Kind)}"
+                  data-search="{H(haystack.ToLowerInvariant())}" data-brief="{H(brief?.Brief ?? "")}"
+                  data-costume="{H(costume)}" data-color="{H(color)}" data-prop="{H(prop)}" data-pose="{H(pose)}">
               <a class="card" href="{H(entry.Id)}/index.html">
               {Picture(entry.Thumbnail, "", "")}
               <span class="card-name">{H(entry.Name)}</span><code>{H(entry.Id)}</code>
-              </a></li>
+              </a><button class="compare-toggle" type="button" aria-label="Compare {H(entry.Id)}" aria-pressed="false">Compare</button></li>
               """);
         }
-        page.Append("</ul><p id=\"empty\" hidden>No matching NPCs.</p></main><script src=\"filter.js\"></script></body></html>");
+        page.Append("</ul><p id=\"empty\" hidden>No matching NPCs.</p><footer><a href=\"briefs.json\">Briefs JSON</a></footer></main><script src=\"filter.js\"></script></body></html>");
         File.WriteAllText(Path.Combine(export.Root, "index.html"), page.ToString());
-        Console.WriteLine($"Daggerfall NPC reference: {cards.Length} cards, {entries.Count} detail pages → {export.Root}");
+        Console.WriteLine($"Daggerfall NPC reference: {cards.Length} cards, {chartBriefs.Count} briefs → {export.Root}");
     }
 
-    private static void WriteDetail(ReferenceExport export, NpcReferenceWorld world, IReadOnlyDictionary<int, ClassicFaction> factions, NpcEntry entry)
+    private static void WriteFilter(StringBuilder page, string id, string label, string empty, IEnumerable<string> values)
+    {
+        page.Append($"<label>{H(label)}<select id=\"{H(id)}\"><option value=\"\">{H(empty)}</option>");
+        foreach (string value in values.Distinct().Order(StringComparer.OrdinalIgnoreCase))
+            page.Append($"<option value=\"{H(value)}\">{H(value)}</option>");
+        page.Append("</select></label>");
+    }
+
+    private static void WriteDetail(ReferenceExport export, NpcReferenceWorld world, IReadOnlyDictionary<int, ClassicFaction> factions, NpcEntry entry, NpcBrief? brief)
     {
         string directory = Path.Combine(export.Root, entry.Id);
         Directory.CreateDirectory(directory);
@@ -58,6 +98,15 @@ internal static class NpcReferencePages
           <h1>{H(entry.Name)}</h1><p class="identity"><code>{H(entry.Id)}</code> · {H(entry.Kind)}</p>
           </header><main>
           """);
+        if (brief is not null)
+        {
+            page.Append($"<section class=\"brief\"><h2>Costume brief</h2><p>{H(brief.Brief)}</p><dl>");
+            WriteBriefTags(page, "Costume", brief.Costume);
+            WriteBriefTags(page, "Colors", brief.Colors);
+            WriteBriefTags(page, "Props", brief.Props);
+            WriteBriefTags(page, "Pose", brief.Pose);
+            page.Append("</dl></section>");
+        }
         if (entry.Facts.Count > 0)
         {
             page.Append("<dl>");
@@ -127,9 +176,14 @@ internal static class NpcReferencePages
         File.WriteAllText(Path.Combine(directory, "index.html"), page.ToString());
         export.WriteJson($"{entry.Id}/manifest.json", new
         {
-            entry.Id, entry.Name, entry.Kind, entry.Facts, entry.Aliases, entry.Art, entry.Placements,
+            entry.Id, entry.Name, entry.Kind, entry.Facts, entry.Aliases, entry.Art, entry.Placements, brief,
             artRoot = "../art/",
         });
+    }
+
+    private static void WriteBriefTags(StringBuilder page, string label, string[] values)
+    {
+        if (values.Length > 0) page.Append($"<div><dt>{H(label)}</dt><dd>{H(string.Join(", ", values))}</dd></div>");
     }
 
     private static string FactionLabel(IReadOnlyDictionary<int, ClassicFaction> factions, int id) =>
@@ -170,15 +224,32 @@ internal static class NpcReferencePages
       h3 { margin: 16px 0 8px; font-size: 1rem; }
       small, code, output, figcaption, dt, main p { color: var(--dim); }
       a { color: var(--gold); }
-      a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+      a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
       .tools { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
       .tools label { display: grid; gap: 4px; color: var(--dim); font-size: .85rem; }
       input, select { font: inherit; font-size: 1rem; min-height: 42px; width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel); color: var(--ink); }
       input { width: min(310px, 82vw); }
-      output { min-height: 33px; }
+      .results-bar, .comparison-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+      .results-bar { margin-top: 10px; }
+      button { font: inherit; cursor: pointer; color: var(--ink); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 4px 9px; }
+      button:hover, button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+      button:disabled { cursor: default; opacity: .55; }
+      #comparison { position: sticky; top: 8px; z-index: 1; margin-bottom: 18px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: #24211e; box-shadow: 0 5px 18px #150f0b; }
+      .comparison-bar { margin-bottom: 8px; }
+      .comparison-bar h2 { font-size: 1.2rem; margin: 0; }
+      .comparison-bar button { margin-left: auto; }
+      #comparison-list { display: flex; overflow-x: auto; list-style: none; gap: 10px; margin: 0; padding: 0 0 2px; }
+      #comparison-list li { flex: 1 0 min(200px, calc(50% - 6px)); max-width: 360px; min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 4px; }
+      #comparison-list .picture { height: clamp(88px, 16vh, 155px); margin-bottom: 5px; }
+      #comparison-list p { margin: 6px 0; font-size: .85rem; }
+      .comparison-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+      .brief { max-width: 880px; margin-bottom: 22px; }
+      .brief p { color: var(--ink); margin: 8px 0 12px; }
       .chart, .frames, .links { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
       .chart { grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); }
-      .card { display: flex; flex-direction: column; height: 100%; gap: 4px; text-decoration: none; padding: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+      .chart > li:not([hidden]) { display: flex; flex-direction: column; }
+      .card { display: flex; flex: 1; flex-direction: column; gap: 4px; text-decoration: none; padding: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px 6px 0 0; }
+      .compare-toggle { border-top: 0; border-radius: 0 0 6px 6px; font-size: .78rem; }
       .card:hover { border-color: var(--gold); background: #322c26; }
       .card-name { color: var(--ink); font-size: .88rem; line-height: 1.2; overflow-wrap: anywhere; }
       .card code { font-size: .73rem; margin-top: auto; padding-top: 3px; }
@@ -202,35 +273,4 @@ internal static class NpcReferencePages
       footer { border-top: 1px solid var(--border); display: flex; gap: 16px; margin-top: 28px; padding-top: 12px; }
       """;
 
-    private const string Filter = """
-      const search = document.querySelector('#search');
-      const kind = document.querySelector('#kind');
-      const count = document.querySelector('#count');
-      const empty = document.querySelector('#empty');
-      const cards = [...document.querySelectorAll('#chart > li')];
-      const ids = new Set(cards.map(card => card.dataset.id));
-
-      function filter() {
-        const query = search.value.toLowerCase().trim();
-        const number = /^(?:npc-)?([0-9]{3})$/.exec(query);
-        const npcId = number ? `npc-${number[1]}` : query;
-        const exactId = ids.has(npcId) ? npcId : null;
-        const words = npcId.split(/\s+/);
-        let shown = 0;
-        for (const card of cards) {
-          const matchesKind = !kind.value || kind.value === card.dataset.kind;
-          const matchesSearch = exactId
-            ? card.dataset.id === exactId
-            : words.every(word => card.dataset.search.includes(word));
-          card.hidden = !matchesKind || !matchesSearch;
-          if (!card.hidden) shown++;
-        }
-        count.textContent = `${shown} ${shown === 1 ? 'reference' : 'references'}`;
-        empty.hidden = shown !== 0;
-      }
-
-      search.addEventListener('input', filter);
-      kind.addEventListener('change', filter);
-      window.addEventListener('pageshow', filter);
-      """;
 }

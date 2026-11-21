@@ -21,6 +21,8 @@
     <!-- The developer commands' attributes, which debug-commands lists. -->
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
     <EmbeddedResource Include="ReferenceExports/NpcReferenceIds.txt" LogicalName="NpcReferenceIds.txt" />
+    <EmbeddedResource Include="ReferenceExports/NpcReferenceBriefs.json" LogicalName="NpcReferenceBriefs.json" />
+    <EmbeddedResource Include="ReferenceExports/NpcReferenceChart.js" LogicalName="NpcReferenceChart.js" />
     <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
     <Using Include="Daggerfall.Import.Tool" />
   </ItemGroup>

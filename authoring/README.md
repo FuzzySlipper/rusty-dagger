@@ -45,6 +45,9 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   Keep assigned numbers when editing the list, and leave retired numbers reserved.
   Named NPCs use 001–100 and billboards use 101–380. IDs 400–450 are reserved for portraits. Wandering NPCs keep their
   original three-digit numbers. Search accepts old references such as `mobile-452`, `npc-flat-23355`, or `182-59`.
+  [NpcReferenceBriefs.json](../src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceBriefs.json) keeps the neutral
+  description and costume, color, prop and pose tags by NPC ID. Keep pose separate from the brief. In the chart, combine
+  costume filters, use **Compare** to select cards, and choose **Find similar** to rank matches by costume, color and props.
   `--characters DIR` relocates the optional links to the asset-pipeline character outputs.
 - `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared
   against `--baseline` (default `local/art/reference/daggerfall-mobile-idle-unmirrored-r01`).
