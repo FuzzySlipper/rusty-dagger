@@ -7,6 +7,9 @@ const similarLabel = document.querySelector('#similar-label');
 const comparison = document.querySelector('#comparison');
 const comparisonList = document.querySelector('#comparison-list');
 const comparisonCount = document.querySelector('#comparison-count');
+const mergeTools = document.querySelector('#merge-tools');
+const mergeKeeper = document.querySelector('#merge-keeper');
+const mergeStatus = document.querySelector('#merge-status');
 const facets = ['kind', 'costume', 'color', 'prop', 'pose'].map(key => [key, document.getElementById(key)]);
 const splitTags = value => value ? value.split('|') : [];
 const accessories = new Set(['belt', 'boots', 'jewelry', 'gloves', 'bare feet']);
@@ -124,6 +127,11 @@ function updateComparison() {
   comparisonList.replaceChildren(...Array.from(selected, comparisonItem));
   comparisonCount.textContent = `${selected.size} of ${comparisonLimit} selected`;
   comparison.hidden = !selected.size;
+  mergeTools.hidden = selected.size < 2;
+  const previousKeeper = mergeKeeper.value;
+  mergeKeeper.replaceChildren(...Array.from(selected, card => new Option(`${card.id} · ${card.name}`, card.id)));
+  if (Array.from(selected).some(card => card.id === previousKeeper)) mergeKeeper.value = previousKeeper;
+  mergeStatus.textContent = '';
 }
 
 function toggle(card) {
@@ -132,6 +140,24 @@ function toggle(card) {
   updateComparison();
 }
 
+function markMerge() {
+  const keep = mergeKeeper.value;
+  const merge = Array.from(selected, card => card.id).filter(id => id !== keep);
+  if (!keep || !merge.length) return;
+  const stamp = new Date().toISOString().replace(/[-:.]/g, '');
+  const filename = `npc-merge-${stamp}-${keep}.json`;
+  const url = URL.createObjectURL(new Blob([JSON.stringify({ keep, merge }, null, 2) + '\n'], { type: 'application/json' }));
+  const link = node('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  mergeStatus.textContent = `Download requested for ${keep}`;
+}
+
+document.querySelector('#mark-merge').addEventListener('click', markMerge);
 for (const card of cards) card.button.addEventListener('click', () => toggle(card));
 document.querySelector('#clear-comparison').addEventListener('click', () => {
   selected.clear();

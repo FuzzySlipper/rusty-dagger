@@ -59,11 +59,12 @@ internal static class ReferenceExportCommands
     }, Program.Tool);
 
     public static ToolCommand Npc { get; } = new("export-npc",
-        [Arena2, Base, Output, CommandOption.Optional("--characters", "CHARACTER_OUTPUT_DIR")], args =>
+        [Arena2, Base, Output, CommandOption.Optional("--characters", "CHARACTER_OUTPUT_DIR"),
+            CommandOption.Staged("--merges", "NPC_MERGES", "src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceMerges.json")], args =>
     {
         NpcReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2, args["--base"],
             args.Optional("--characters") ?? "../asset-pipeline/outputs/dagger-characters",
-            args.Optional("--output") ?? "local/art/reference/npc");
+            args.Optional("--output") ?? "local/art/reference/npc", args["--merges"]);
         return 0;
     }, Program.Tool);
 

@@ -15,14 +15,15 @@ internal static class NpcReferencePages
         NpcEntry[] cards = [.. entries.OrderBy(entry => entry.Id, StringComparer.Ordinal)];
         using Stream briefsResource = typeof(NpcReferencePages).Assembly.GetManifestResourceStream("NpcReferenceBriefs.json")!;
         var briefs = JsonSerializer.Deserialize<Dictionary<string, NpcBrief>>(briefsResource, ReferenceExport.Json)!;
-        var chartBriefs = cards.Where(entry => briefs.ContainsKey(entry.Id)).ToDictionary(entry => entry.Id, entry => briefs[entry.Id]);
+        var chartBriefs = cards.Select(entry => (entry.Id, Brief: MergeBriefs(entry, briefs)))
+            .Where(entry => entry.Brief is not null).ToDictionary(entry => entry.Id, entry => entry.Brief!);
         var aliases = cards.SelectMany(entry => entry.Aliases.Select(alias => (alias, entry.Id)))
             .GroupBy(item => item.alias).ToDictionary(group => group.Key, group => group.Select(item => item.Id).Distinct().ToArray());
         foreach (NpcEntry entry in cards)
         {
             NpcBrief? brief = chartBriefs.GetValueOrDefault(entry.Id);
             if (brief is null) export.Warn($"{entry.Id} has no catalog brief.");
-            WriteDetail(export, world, factions, entry, brief);
+            WriteDetail(export, world, factions, entry, brief, briefs);
         }
 
         export.WriteJson("briefs.json", chartBriefs);
@@ -54,7 +55,11 @@ internal static class NpcReferencePages
           <section id="comparison" aria-labelledby="comparison-heading" hidden>
           <div class="comparison-bar"><h2 id="comparison-heading">Compare costumes</h2>
           <output id="comparison-count" aria-live="polite"></output><button type="button" id="clear-comparison">Clear comparison</button></div>
-          <ul id="comparison-list"></ul></section>
+          <ul id="comparison-list"></ul>
+          <div id="merge-tools" class="comparison-bar" hidden>
+          <label>Keep NPC <select id="merge-keeper"></select></label>
+          <button type="button" id="mark-merge">Mark merge</button>
+          <output id="merge-status" aria-live="polite"></output></div></section>
           <ul id="chart" class="chart">
           """);
         foreach (NpcEntry entry in cards)
@@ -64,7 +69,8 @@ internal static class NpcReferencePages
             string color = string.Join('|', brief?.Colors ?? []);
             string prop = string.Join('|', brief?.Props ?? []);
             string pose = string.Join('|', brief?.Pose ?? []);
-            string haystack = string.Join(' ', new[] { entry.Id, entry.Name, brief?.Brief ?? "", costume, color, prop }.Concat(entry.Aliases));
+            string haystack = string.Join(' ', new[] { entry.Id, entry.Name, brief?.Brief ?? "", costume, color, prop }
+                .Concat(entry.Aliases).Concat((entry.Merged ?? []).Select(member => member.Name)));
             page.Append($"""
               <li data-id="{H(entry.Id)}" data-name="{H(entry.Name)}" data-kind="{H(entry.Kind)}"
                   data-search="{H(haystack.ToLowerInvariant())}" data-brief="{H(brief?.Brief ?? "")}"
@@ -88,7 +94,20 @@ internal static class NpcReferencePages
         page.Append("</select></label>");
     }
 
-    private static void WriteDetail(ReferenceExport export, NpcReferenceWorld world, IReadOnlyDictionary<int, ClassicFaction> factions, NpcEntry entry, NpcBrief? brief)
+    private static NpcBrief? MergeBriefs(NpcEntry entry, IReadOnlyDictionary<string, NpcBrief> briefs)
+    {
+        NpcBrief[] members = [.. (entry.Merged ?? []).Prepend(entry).Select(member => briefs.GetValueOrDefault(member.Id)).OfType<NpcBrief>()];
+        return members.FirstOrDefault() is { } keeper ? keeper with
+        {
+            Costume = [.. members.SelectMany(brief => brief.Costume).Distinct()],
+            Colors = [.. members.SelectMany(brief => brief.Colors).Distinct()],
+            Props = [.. members.SelectMany(brief => brief.Props).Distinct()],
+            Pose = [.. members.SelectMany(brief => brief.Pose).Distinct()],
+        } : null;
+    }
+
+    private static void WriteDetail(ReferenceExport export, NpcReferenceWorld world, IReadOnlyDictionary<int, ClassicFaction> factions,
+        NpcEntry entry, NpcBrief? brief, IReadOnlyDictionary<string, NpcBrief> briefs)
     {
         string directory = Path.Combine(export.Root, entry.Id);
         Directory.CreateDirectory(directory);
@@ -154,6 +173,21 @@ internal static class NpcReferencePages
             page.Append("</section>");
         }
 
+        if (entry.Merged is { Count: > 0 } merged)
+        {
+            page.Append("<section><h2>Merged references</h2>");
+            foreach (NpcEntry member in merged)
+            {
+                page.Append($"<details><summary>{H(member.Id)} · {H(member.Name)}</summary>");
+                if (briefs.GetValueOrDefault(member.Id) is { } original) page.Append($"<p>{H(original.Brief)}</p>");
+                page.Append("<dl>");
+                foreach ((string label, string value) in member.Facts)
+                    WriteBriefTags(page, label, [value]);
+                page.Append("</dl></details>");
+            }
+            page.Append("</section>");
+        }
+
         page.Append("<section><h2>Original art</h2>");
         if (entry.Aliases.Length > 0)
             page.Append($"<p>Source references · {H(string.Join(", ", entry.Aliases))}</p>");
@@ -177,6 +211,7 @@ internal static class NpcReferencePages
         export.WriteJson($"{entry.Id}/manifest.json", new
         {
             entry.Id, entry.Name, entry.Kind, entry.Facts, entry.Aliases, entry.Art, entry.Placements, brief,
+            merged = (entry.Merged ?? []).Select(member => new { member.Id, member.Name, member.Kind, member.Facts, brief = briefs.GetValueOrDefault(member.Id) }),
             artRoot = "../art/",
         });
     }
@@ -229,7 +264,7 @@ internal static class NpcReferencePages
       .tools label { display: grid; gap: 4px; color: var(--dim); font-size: .85rem; }
       input, select { font: inherit; font-size: 1rem; min-height: 42px; width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel); color: var(--ink); }
       input { width: min(310px, 82vw); }
-      .results-bar, .comparison-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+      .results-bar, .comparison-bar:not([hidden]) { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
       .results-bar { margin-top: 10px; }
       button { font: inherit; cursor: pointer; color: var(--ink); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 4px 9px; }
       button:hover, button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
@@ -237,7 +272,9 @@ internal static class NpcReferencePages
       #comparison { position: sticky; top: 8px; z-index: 1; margin-bottom: 18px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: #24211e; box-shadow: 0 5px 18px #150f0b; }
       .comparison-bar { margin-bottom: 8px; }
       .comparison-bar h2 { font-size: 1.2rem; margin: 0; }
-      .comparison-bar button { margin-left: auto; }
+      #clear-comparison { margin-left: auto; }
+      #merge-tools:not([hidden]) { margin-top: 8px; margin-bottom: 0; }
+      #merge-tools select { width: auto; min-height: 32px; margin-left: 4px; }
       #comparison-list { display: flex; overflow-x: auto; list-style: none; gap: 10px; margin: 0; padding: 0 0 2px; }
       #comparison-list li { flex: 1 0 min(200px, calc(50% - 6px)); max-width: 360px; min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 4px; }
       #comparison-list .picture { height: clamp(88px, 16vh, 155px); margin-bottom: 5px; }

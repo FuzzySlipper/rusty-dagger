@@ -7,7 +7,7 @@ internal sealed record NpcArt(string Label, IReadOnlyList<ReferenceImage> Frames
 internal sealed record NpcLink(string Label, string Href);
 internal sealed record NpcEntry(string Id, string Name, string Kind, IReadOnlyList<NpcArt> Art,
     IReadOnlyList<NpcPlacement> Placements, IReadOnlyDictionary<string, string> Facts, IReadOnlyList<NpcLink> Links,
-    string[] Aliases)
+    string[] Aliases, IReadOnlyList<NpcEntry>? Merged = null)
 {
     public ReferenceImage? Thumbnail => Art.SelectMany(art => art.Frames).FirstOrDefault();
 }
@@ -43,7 +43,7 @@ internal static class NpcReferenceExport
 
     private sealed record FlatCaption(string Caption, string Gender, int Face);
 
-    public static void Run(string arena2, string basePayload, string characters, string output)
+    public static void Run(string arena2, string basePayload, string characters, string output, string merges)
     {
         IReadOnlyDictionary<string, NpcReferenceId> ids = NpcReferenceIds.Read();
         ReferenceExport export = new(arena2, output);
@@ -223,7 +223,7 @@ internal static class NpcReferenceExport
             entries.Add(new(id, source.Name, kind, art, [], facts, [.. links], aliases));
         }
 
-        NpcReferencePages.Write(export, world, factions, entries);
+        NpcReferencePages.Write(export, world, factions, NpcReferenceMerges.Apply(export, entries, merges));
 
         string? FindId(string source)
         {
@@ -233,7 +233,7 @@ internal static class NpcReferenceExport
         }
     }
 
-    private static bool SameFrames(string root, NpcArt first, NpcArt second) =>
+    internal static bool SameFrames(string root, NpcArt first, NpcArt second) =>
         first.Frames.Count == second.Frames.Count && first.Frames.Zip(second.Frames).All(pair =>
             File.ReadAllBytes(Path.Combine(root, "art", pair.First.File)).AsSpan()
                 .SequenceEqual(File.ReadAllBytes(Path.Combine(root, "art", pair.Second.File))));

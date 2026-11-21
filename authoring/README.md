@@ -48,6 +48,11 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   [NpcReferenceBriefs.json](../src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceBriefs.json) keeps the neutral
   description and costume, color, prop and pose tags by NPC ID. Keep pose separate from the brief. In the chart, combine
   costume filters, use **Compare** to select cards, and choose **Find similar** to rank matches by costume, color and props.
+  To record a merge, select at least two cards with **Compare**, choose **Keep NPC**, and click **Mark merge**. Copy the
+  downloaded `npc-merge-*.json` files to the repo host if you viewed the chart on another machine. Run
+  `python3 scripts/apply-npc-merges.py ~/Downloads` on the repo host, or pass the directory or individual files you copied.
+  It updates `NpcReferenceMerges.json`, rebuilds the chart, and removes processed candidates after the rebuild succeeds.
+  Refresh the viewer to see the result. A candidate that conflicts with an earlier merge stays in place for review.
   `--characters DIR` relocates the optional links to the asset-pipeline character outputs.
 - `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared
   against `--baseline` (default `local/art/reference/daggerfall-mobile-idle-unmirrored-r01`).
