@@ -123,9 +123,8 @@ def wood_path(tree, centres, radii, sides, *, turn=0):
         tree.bark["normals"][start*3:] = (normals@rot).round(6).ravel().tolist()
 
 
-def build(rgba):
-    # Use the actual painted foot as the pivot for the body and its texture projection.
-    tree = Tree(15, rgba, ((.49, 1, 0, .08), (.5, .6, 0, .05)))
+def traced_limbs(tree, *, draw=wood_path, spread_forks=False):
+    """Sweep connected wood through the painted strokes, rooted at the actual foot."""
     h, w = tree.pixels.shape[:2]
     paths, radius = trace_bare(tree.pixels)
     root = paths[0][0]
@@ -133,6 +132,7 @@ def build(rgba):
     joint = {path[0] for path in paths[1:]}
     depth = np.zeros(h*w)
     anchors = []
+    side_forks = [0, 0]
     for i, path in enumerate(paths):
         yy, xx = np.divmod(path, w)
         steps = np.r_[0, np.cumsum(np.hypot(np.diff(xx), np.diff(yy)))]
@@ -142,6 +142,12 @@ def build(rgba):
         # Most of the principal trunk stays in profile. Each new fork turns
         # towards or away from it, while the thin ends keep their silhouette.
         direction = .18 if i == 0 else (.70 if i%2 else -.69)*(.84+.28*math.sin(i*2.4))
+        if spread_forks and i:
+            # Alternate near and far branches on each side of a lopsided tree.
+            # Its numerous left-hand forks would otherwise all lie in one plane.
+            side = int(xx[-1] > xx[0])
+            direction = (.72 if side_forks[side]%2 == 0 else -.72)*(.85+.24*math.cos(i))
+            side_forks[side] += 1
         depth[path] = depth[path[0]]+length*direction+.049*np.sin(length*8+i)*np.minimum(length*4, 1)
         smoothed = ndimage.median_filter(radius[yy, xx], size=3)
         # Keep each attachment exactly, as well as corners along winding thin twigs.
@@ -158,20 +164,26 @@ def build(rgba):
             centres.insert(0, tree.point(tree.foot_x, 1.004, 0))
             radii.insert(0, radii[0]*1.04)
         sides = 6 if max(radii) > .035 else 4
-        wood_path(tree, centres, radii, sides)
+        draw(tree, centres, radii, sides)
         # Secondary boughs reach into the near and far quadrants,
         # keeping the long bare crown open from a quarter turn as well.
-        if .45 < yy[0]/h < .69 and steps[-1] > .23*h and i < 12:
+        if not spread_forks and .45 < yy[0]/h < .69 and steps[-1] > .23*h and i < 12:
             turn = 1.55 if xx[-1] > xx[0] else -1.62
-            wood_path(tree, centres, [r*.76 for r in radii], sides, turn=turn)
+            draw(tree, centres, [r*.76 for r in radii], sides, turn=turn)
         anchors.extend(centres)
+    return np.array(anchors)
+
+
+def build(rgba):
+    tree = Tree(15, rgba, ((.49, 1, 0, .08), (.5, .6, 0, .05)))
+    anchors = traced_limbs(tree)
+    h, w = tree.pixels.shape[:2]
     # Dished cutouts carry the two dark clusters of leaves still clinging to
     # the forks. Their little patches of white belong to the original painting.
     image = Image.fromarray(tree.pixels)
     for x, y, rx, ry in ((.245, .273, .103, .052), (.654, .169, .121, .059), (.723, .174, .063, .039)):
         needle = tree.point(x, y, 0)
-        pts = np.array(anchors)
-        nearest = pts[np.argmin(np.linalg.norm(pts[:, :2]-needle[:2], axis=1))]
+        nearest = anchors[np.argmin(np.linalg.norm(anchors[:, :2]-needle[:2], axis=1))]
         centre = tree.point(x, y, nearest[2]/tree.aspect)
         box = (round((x-rx)*w), round((y-ry)*h), round((x+rx)*w), round((y+ry)*h))
         patch = image.crop(box).resize((64, 56), Image.Resampling.NEAREST)

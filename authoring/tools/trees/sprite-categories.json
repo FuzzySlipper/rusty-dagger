@@ -46,7 +46,6 @@
     "Other plants": [7, 8, 9, 22, 26, 29, 30, 31]
   },
   "508": {
-    "Trees": [10],
     "Bushes": [2, 27, 28],
     "Rocks": [12],
     "Deadwood": [9],
@@ -56,7 +55,6 @@
     "Other scenery": [11]
   },
   "509": {
-    "Trees": [10, 13, 15],
     "Bushes": [2, 27, 28],
     "Rocks": [12],
     "Deadwood": [9],

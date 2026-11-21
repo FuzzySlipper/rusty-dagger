@@ -173,12 +173,12 @@ def branchwork(tree, record, *, arms=None):
     return np.array(anchors), projected
 
 
-def foliage(tree, record, skirt):
+def foliage(tree, record, skirt, *, autumn=False):
     rgb = tree.pixels[..., :3].astype(float)
     solid = tree.pixels[..., 3]>128
     green = (rgb[..., 1] >= rgb[..., 0]*1.02) & (rgb[..., 1] >= rgb[..., 2]*.96)
     green &= solid
-    if record == 17:
+    if record == 17 or autumn:
         keep = solid.copy()
     else:
         # Orange sunlit tips and the small red fruit sit among the green paint.
@@ -239,9 +239,9 @@ CROWN_TIPS = {
 
 class Boughs:
     """A painted, shaded interior and cutout sprays for each bough, drawn in one leaf material."""
-    def __init__(self, tree, record, skirt):
+    def __init__(self, tree, record, skirt, *, autumn=False):
         self.tree = tree
-        self.paint, mask = foliage(tree, record, skirt)
+        self.paint, mask = foliage(tree, record, skirt, autumn=autumn)
         interior = np.array(filled(tree.pixels, mask))
         # A side or top projection can land outside the painted outline.
         # Continue the neighbouring leaf pattern there at the original scale.

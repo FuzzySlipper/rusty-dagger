@@ -40,7 +40,7 @@ class Meshes(unittest.TestCase):
                 covered = max(covered, high)
             self.assertGreater(covered, crown, f"{key} trunk ends below the crown")
 
-    def test_tree_replacements_have_indexed_support_from_the_foot_into_the_leaves(self):
+    def test_tree_replacements_have_indexed_support_from_foot_to_crown(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]
         keys = ["500-3", "500-13", "500-16", "500-18", "500-21", "500-25", "500-27",
                 "501-20", "501-27", "501-28", "501-30",
@@ -48,11 +48,12 @@ class Meshes(unittest.TestCase):
                 *(f"504-{r}" for r in trees.woodland_trees.FORMS),
                 *(f"505-{r}" for r in trees.winter_woodland.FORMS),
                 *(f"506-{r}" for r in trees.mountain_trees.FORMS),
-                *(f"507-{r}" for r in trees.winter_mountain.FORMS)]
+                *(f"507-{r}" for r in trees.winter_mountain.FORMS), "508-13", "509-13"]
         for key in keys:
             with self.subTest(key=key):
                 entry = art[key]
                 mesh = json.loads((trees.CONTENT / entry["mesh"]["path"]).read_bytes())
+                lowest_leaf = None
                 spans = []
                 for part in mesh["parts"]:
                     heights = np.array(part["positions"][1::3]) / mesh["height"]
@@ -66,7 +67,10 @@ class Meshes(unittest.TestCase):
                 for low, high in sorted(spans):
                     self.assertLessEqual(low, supported + 1e-6)
                     supported = max(supported, high)
-                self.assertGreater(supported, lowest_leaf)
+                if lowest_leaf is None:
+                    self.assertAlmostEqual(supported, 1)
+                else:
+                    self.assertGreater(supported, lowest_leaf)
 
     def test_matching_paintings_use_the_same_media_but_their_own_placement(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]
