@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RustyEngineProductEntryType>FloraPreview.Studio</RustyEngineProductEntryType>
+    <RustyEngineProductId>dagger-flora-preview</RustyEngineProductId>
+    <RustyEngineProductTitle>Daggerfall Flora Preview</RustyEngineProductTitle>
+    <RustyEngineProductDefaultWorldLights>disabled</RustyEngineProductDefaultWorldLights>
+    <RustyEngineProductContentRoot>$(FloraPreviewContent)</RustyEngineProductContentRoot>
+    <RustyEngineProductUiRoot>$(MSBuildProjectDirectory)/ui</RustyEngineProductUiRoot>
+    <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../src/WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj" />
+    <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flora · Daggerfall art review</title>
+<style>
+:root {color-scheme:dark; font:16px "Segoe UI",system-ui,sans-serif; background:#151917; color:#e7eae3; --line:#374039; --muted:#b1b9ae; --green:#d4e7a4}
+* {box-sizing:border-box}
+body {margin:0}
+header {padding:1.25rem 2rem; border-bottom:1px solid var(--line); display:flex; gap:1rem; align-items:baseline}
+header strong {font:1.5rem Georgia,serif} header span, small, label, figcaption, #meta, #count {color:var(--muted)}
+main {display:grid; grid-template-columns:18rem minmax(0,1fr); max-width:1800px; margin:auto}
+aside {padding:1.3rem 1rem; border-right:1px solid var(--line); display:grid; align-content:start; gap:.7rem}
+label {font-size:.85rem; display:grid; gap:.35rem}
+input,select,button {font:inherit; color:inherit; background:#202621; border:1px solid var(--line); border-radius:5px; padding:.5rem .7rem}
+button {cursor:pointer} button:hover, a:hover {color:var(--green)}
+button:disabled {opacity:.4; cursor:default}
+button[aria-pressed=true], button[aria-current=true] {color:var(--green); background:#30392a; border-color:#73815a}
+#list {position:relative;overflow:auto; max-height:calc(100vh - 22rem); min-height:9rem; display:grid; gap:.25rem}
+#list button {display:flex; justify-content:space-between; align-items:center; gap:.4rem; text-align:left; font-size:.9rem}
+#list img {width:3rem;height:2.5rem;border-radius:2px;object-fit:cover}
+#list span {margin-left:auto;color:var(--muted); text-transform:capitalize}
+section {padding:clamp(1rem,2.7vw,3.2rem); min-width:0}
+h1 {margin:0; font:clamp(1.8rem,3.3vw,3.7rem) Georgia,serif; font-weight:400}
+.tools,nav,.title {display:flex; gap:.45rem; align-items:center; flex-wrap:wrap}
+.title {justify-content:space-between}
+#meta {margin:.55rem 0 1.8rem; font-variant-numeric:tabular-nums}
+.views {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem}
+figure {margin:0} figcaption {margin-bottom:.5rem}
+figure img {display:block; width:100%; height:auto; border-radius:5px}
+.tools {margin-top:1rem}
+.tools {align-items:flex-start}
+.tools span {margin-right:.3rem; padding-top:.5rem; color:var(--muted)}
+.tools button {display:grid;gap:.35rem;justify-items:center;padding:.3rem;font-size:.8rem}
+.tools img {width:clamp(4.5rem,7vw,7.5rem);border-radius:2px}
+#empty {color:var(--muted)}
+[hidden] {display:none!important}
+@media(max-width:850px) {main {grid-template-columns:1fr} aside {border-right:0;border-bottom:1px solid var(--line); grid-template-columns:repeat(2,minmax(0,1fr))} #count,#list {grid-column:1/-1} #list {min-height:0;max-height:7rem;grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media(max-width:550px) {.views {grid-template-columns:1fr} header {padding:1rem}}
+</style></head>
+<body><header><strong>Flora</strong><span>Daggerfall art review</span></header>
+<main><aside aria-label="Catalogue">
+<label>Find a record or species<input id="search" type="search" placeholder="506-11, fir, cork oak…"></label>
+<label>Climate<select id="climate"><option value="">All climates</option></select></label>
+<label>Representation<select id="kind"><option value="mesh">Mesh replacements</option><option value="sprite">Sprite only</option><option value="all">All flora</option></select></label>
+<small id="count" aria-live="polite"></small><div id="list"></div></aside>
+<section><p id="empty" hidden>No matching records.</p><article id="detail">
+<div class="title"><h1 id="title"></h1><nav aria-label="Records"><button id="prev">Previous</button><button id="next">Next</button></nav></div>
+<p id="meta"></p><div class="views">
+<figure><figcaption>Refreshed sprite</figcaption><a id="spriteLink" target="_blank" rel="noopener"><img id="sprite" width="960" height="540" alt=""></a></figure>
+<figure id="meshFigure"><figcaption id="meshCaption"></figcaption><a id="meshLink" target="_blank" rel="noopener"><img id="mesh" width="960" height="540" alt=""></a></figure></div>
+<div class="tools" id="angles" aria-label="Mesh angle"><span>Mesh angle</span><button data-angle="front">0°</button><button data-angle="side">90°</button><button data-angle="rear">225°</button></div>
+</article></section></main>
+<script>
+const records = /*RECORDS*/[];
+const el = id => document.getElementById(id);
+const search = el("search"), climate = el("climate"), kind = el("kind");
+const angles = [...document.querySelectorAll("[data-angle]")];
+const nameOf = row => row.form.replaceAll("-", " ") || "sprite";
+const first = records.find(row => row.key === (location.hash.slice(1) || "506-14")) || records.find(row => row.form) || records[0];
+let key = first?.key, angle = "front", matches = [];
+if (first && !first.form) kind.value = "sprite";
+for (const value of new Set(records.map(row => row.climate))) climate.add(new Option(value, value));
+function show(row) {
+  key = row.key;
+  history.replaceState(null, "", "#" + key);
+  const name = nameOf(row);
+  el("title").textContent = key + " · " + name[0].toUpperCase() + name.slice(1);
+  el("meta").textContent = [row.climate, row.height.toFixed(2) + " m", row.form ? row.triangles.toLocaleString() + " triangles" : "Sprite only"].join("  ·  ");
+  for (const button of el("list").children) button.setAttribute("aria-current", String(button.value === key));
+  const list = el("list"), selected = list.querySelector('[aria-current="true"]');
+  if (selected.offsetTop < list.scrollTop) list.scrollTop = selected.offsetTop;
+  else if (selected.offsetTop + selected.offsetHeight > list.scrollTop + list.clientHeight)
+    list.scrollTop = selected.offsetTop + selected.offsetHeight - list.clientHeight;
+  el("prev").disabled = matches[0] === row;
+  el("next").disabled = matches.at(-1) === row;
+  function picture(id, view, alt) {
+    el(id).alt = alt;
+    el(id).src = el(id + "Link").href = "images/" + key + "-" + view + ".webp";
+  }
+  picture("sprite", "sprite", key + " refreshed sprite");
+  el("meshFigure").hidden = el("angles").hidden = !row.form;
+  if (row.form) {
+    const label = angles.find(b => b.dataset.angle === angle).textContent;
+    el("meshCaption").textContent = "Mesh · " + label;
+    picture("mesh", angle, key + " mesh at " + label);
+    for (const button of angles) {
+      button.setAttribute("aria-pressed", String(button.dataset.angle === angle));
+      button.querySelector("img").src = "images/" + key + "-" + button.dataset.angle + ".webp";
+    }
+  }
+}
+function filter() {
+  const query = search.value.trim().toLowerCase().replaceAll("-", " ");
+  matches = records.filter(row => (!climate.value || row.climate === climate.value) &&
+    (kind.value === "all" || Boolean(row.form) === (kind.value === "mesh")) &&
+    (row.key.replace("-", " ") + " " + nameOf(row) + " " + row.climate.toLowerCase()).includes(query));
+  el("count").textContent = matches.length + (matches.length === 1 ? " record" : " records");
+  el("list").replaceChildren(...matches.map(row => {
+    const b = document.createElement("button"), name = document.createElement("span");
+    const thumb = document.createElement("img");
+    thumb.loading = "lazy"; thumb.alt = ""; thumb.src = "images/" + row.key + "-sprite.webp";
+    name.textContent = nameOf(row); b.value = row.key; b.append(thumb, row.key, name);
+    b.onclick = () => show(row); return b;
+  }));
+  el("empty").hidden = !!matches.length;
+  el("detail").hidden = !matches.length;
+  if (matches.length) show(matches.find(row => row.key === key) || matches[0]);
+}
+function step(by) {
+  const row = matches[matches.findIndex(row => row.key === key) + by];
+  if (row) show(row);
+}
+el("prev").onclick = () => step(-1);
+el("next").onclick = () => step(1);
+for (const b of angles) {
+  const thumbnail = document.createElement("img");
+  thumbnail.alt = "";
+  b.prepend(thumbnail);
+  b.onclick = () => { angle = b.dataset.angle; show(matches.find(row => row.key === key)); };
+}
+window.addEventListener("hashchange", () => {
+  const row = records.find(entry => entry.key === location.hash.slice(1));
+  if (!row) return;
+  key = row.key;
+  if (!matches.includes(row)) { search.value = climate.value = ""; kind.value = row.form ? "mesh" : "sprite"; }
+  filter();
+});
+search.oninput = climate.onchange = kind.onchange = filter;
+filter();
+</script></body></html>

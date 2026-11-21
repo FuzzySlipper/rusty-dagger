@@ -108,6 +108,15 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   then the importer revision moves, and the change lands as an importer change (README, Game data): `route.py data`
   first, through the seat.
 
+## Flora review
+
+Run `python3 authoring/tools/trees/review.py` to build `local/art/review/flora/index.html`, or append record keys
+such as `506-11 507-11` to refresh only those entries. Open the page directly. The pinned Rusty pair draws the
+wilderness sprite and three mesh angles at one scale under fixed light. Search by record, climate or form.
+To try unpublished art, run `python3 authoring/tools/trees/review.py 506-11 --mesh /path/to/fir.prop-mesh.json`.
+Optional `--leaves`, `--bark` and `--stone` take texture files. The trial uses the record's placement and
+writes its own comparison in `local/art/review/flora/trials/506-11/`.
+
 ## Weapon models
 
 - The icon wins over the classic first-person frame.
