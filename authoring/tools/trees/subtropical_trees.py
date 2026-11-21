@@ -236,7 +236,7 @@ def snag(tree):
     tree.root_flare(.37, 7, shoulder=.76)
 
 
-def rock_grove(tree):
+def rock_grove(tree, *, moss_line=.23):
     """Two stems grow between several moss-capped stones, with low, separate pads of leaves."""
     left = [(.46,.835,.036,.048), (.32,.832,.065,.078), (.22,.765,.080,.049),
             (.158,.703,.065,.034), (.150,.627,.042,.030), (.205,.540,.034,.017)]
@@ -266,10 +266,10 @@ def rock_grove(tree):
         tree.crown(*crown, limb_scale=.57)
     tree.crown(.63,.185,.493,.184,.070,.04, origin=left_fork[0], limb_scale=.57)
 
-    return mossy_stones(tree)
+    return mossy_stones(tree, moss_line)
 
 
-def mossy_stones(tree):
+def mossy_stones(tree, moss_line):
     stone = part("stone")
     # Wrap each boulder in its own cracked facets using the stone and moss ramps from the painting.
     pixels = tree.pixels
@@ -287,7 +287,7 @@ def mossy_stones(tree):
         tones, lichen = stone_steps(50120 + index)
         v, u = np.indices(tones.shape) / len(tones)
         # The stone facets break through the moss in patches on the shoulder.
-        edge = .23 + .16*np.cos(math.tau*u + index*1.7) + .65*(lichen-.5)
+        edge = moss_line + .16*np.cos(math.tau*u + index*1.7) + .65*(lichen-.5)
         steps = np.clip(tones + (v < .19) - (v > .76), 0, 4)
         colours = np.where((v < edge)[...,None], moss_ramp[tones], stone_ramp[steps])
         tile = Image.fromarray(colours.astype(np.uint8)).resize((64,48), Image.Resampling.NEAREST)
