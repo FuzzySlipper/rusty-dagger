@@ -91,6 +91,7 @@ internal static class NpcReferenceExport
             .ToLookup(value => value.Id, value => value.Flat);
         foreach (ClassicFaction faction in factions.Values.Where(IsNamedPerson).OrderBy(faction => faction.Name, StringComparer.OrdinalIgnoreCase))
         {
+            if (faction.Id == 304) continue; // Skakmat's portrait is left over from cut content.
             string sourceId = FactionId(faction);
             if (FindId(sourceId) is not { } id) continue;
             NpcFlat[] flats = [.. namedFlats[faction.Id].OrderBy(flat => flat.Number)];

@@ -21,7 +21,7 @@
 017 npc-faction-301
 018 npc-faction-302
 019 npc-faction-303
-020 npc-faction-304
+# 020 retired. Skakmat (npc-faction-304) is cut content.
 021 npc-faction-305
 022 npc-faction-351
 023 npc-faction-352
