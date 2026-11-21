@@ -119,6 +119,29 @@ def store_frame(frame, key, has_mesh, output):
         tile.save(output / f"{key}-{name}.webp", lossless=True, method=1)
 
 
+def publish_page(output, records, trial=False):
+    # Mesh forms are assigned by the tree recipes. The sprite-only records have climate
+    # archives but no shared subject tags, so the review groups those by the painted subject.
+    groups = json.loads((HERE / "sprite-categories.json").read_bytes())
+    sprites = {f"{archive}-{number}": category for archive, categories in groups.items()
+               for category, numbers in categories.items() for number in numbers}
+    for key, row in records.items():
+        form = row["form"]
+        if form == "rock":
+            row["category"] = "Rocks"
+        elif form in ("logs", "gnarled", "dead"):
+            row["category"] = "Deadwood"
+        else:
+            row["category"] = "Trees" if form else sprites.get(key, "Unclassified")
+
+    page = (HERE / "review.html").read_text().replace("/*RECORDS*/[]", json.dumps(list(records.values())))
+    if trial:
+        page = page.replace("Daggerfall art review</span>", "Daggerfall art review · Candidate</span>")
+    (output / "index.html").write_text(page)
+    (output / "catalogue.json").write_text(json.dumps(records, indent=1))
+    print(output / "index.html")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("keys", nargs="*", metavar="ARCHIVE-RECORD")
@@ -173,12 +196,7 @@ def main():
     if catalogue.exists():
         records = json.loads(catalogue.read_bytes()) | records
     records = {key: records[key] for key in flats if key in records}
-    catalogue.write_text(json.dumps(records, indent=1))
-    page = (HERE / "review.html").read_text().replace("/*RECORDS*/[]", json.dumps(list(records.values())))
-    if candidates:
-        page = page.replace("Daggerfall art review</span>", "Daggerfall art review · Candidate</span>")
-    (output / "index.html").write_text(page)
-    print(output / "index.html")
+    publish_page(output, records, trial=bool(candidates))
 
 
 if __name__ == "__main__":

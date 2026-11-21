@@ -35,14 +35,32 @@ figure img {display:block; width:100%; height:auto; border-radius:5px}
 [hidden] {display:none!important}
 @media(max-width:850px) {main {grid-template-columns:1fr} aside {border-right:0;border-bottom:1px solid var(--line); grid-template-columns:repeat(2,minmax(0,1fr))} #count,#list {grid-column:1/-1} #list {min-height:0;max-height:7rem;grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media(max-width:550px) {.views {grid-template-columns:1fr} header {padding:1rem}}
+#back {margin-bottom:1.4rem}
+#jump {display:grid;gap:.2rem}
+#jump button {display:flex;justify-content:space-between;background:transparent;border-color:transparent;text-align:left}
+#jump button:hover {background:#202622}
+@media(min-width:851px) {aside {position:sticky;top:0;align-self:start}}
+.card img {max-height:9rem;object-fit:contain;background:#858d94}
+#groups h2 {margin:2rem 0 .7rem;font:1.65rem Georgia,serif}
+#groups h2 small {font:.85rem system-ui}
+.cards {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,18rem),1fr));gap:.7rem}
+.card {display:block;text-align:left;padding:.55rem;background:#202622}
+.card strong {font-size:.98rem}
+.pair {display:flex;gap:.25rem;margin-top:.45rem}
+.plate {display:grid;flex:1;min-width:0;gap:.15rem;font-size:.75rem;color:var(--muted)}
+.plate img {width:100%;height:auto;border-radius:3px}
+#list {max-height:calc(100vh - 26rem)}
+@media(max-width:850px) {#list {max-height:7rem}}
 </style></head>
 <body><header><strong>Flora</strong><span>Daggerfall art review</span></header>
 <main><aside aria-label="Catalogue">
 <label>Find a record or species<input id="search" type="search" placeholder="506-11, fir, cork oak…"></label>
 <label>Climate<select id="climate"><option value="">All climates</option></select></label>
-<label>Representation<select id="kind"><option value="mesh">Mesh replacements</option><option value="sprite">Sprite only</option><option value="all">All flora</option></select></label>
-<small id="count" aria-live="polite"></small><div id="list"></div></aside>
-<section><p id="empty" hidden>No matching records.</p><article id="detail">
+<label>Category<select id="category"><option value="">All categories</option></select></label>
+<label>Representation<select id="kind"><option value="all">All flora</option><option value="mesh">Mesh replacements</option><option value="sprite">Sprite only</option></select></label>
+<small id="count" aria-live="polite"></small><nav id="jump" aria-label="Jump to category"></nav><div id="list"></div></aside>
+<section><div id="overview"><h1>Flora catalogue</h1><div id="groups"></div></div>
+<p id="empty" hidden>No matching records.</p><article id="detail" hidden><button id="back">← Catalogue</button>
 <div class="title"><h1 id="title"></h1><nav aria-label="Records"><button id="prev">Previous</button><button id="next">Next</button></nav></div>
 <p id="meta"></p><div class="views">
 <figure><figcaption>Refreshed sprite</figcaption><a id="spriteLink" target="_blank" rel="noopener"><img id="sprite" width="960" height="540" alt=""></a></figure>
@@ -54,19 +72,28 @@ const records = /*RECORDS*/[];
 const el = id => document.getElementById(id);
 const search = el("search"), climate = el("climate"), kind = el("kind");
 const angles = [...document.querySelectorAll("[data-angle]")];
-const nameOf = row => row.form.replaceAll("-", " ") || "sprite";
-const first = records.find(row => row.key === (location.hash.slice(1) || "506-14")) || records.find(row => row.form) || records[0];
-let key = first?.key, angle = "front", matches = [];
-if (first && !first.form) kind.value = "sprite";
+const category = el("category"), list = el("list");
+const categories = ["Trees", "Rocks", "Bushes", "Deadwood", "Flowers", "Cacti", "Fungi", "Other plants", "Other scenery", "Unclassified"];
+const nameOf = row => row.form.replaceAll("-", " ") || row.category;
+const first = records.length === 1 ? records[0].key : "";
+let key = location.hash.slice(1) || first, angle = "front", matches = [], catalogueY = 0;
+for (const value of categories.filter(name => records.some(row => row.category === name))) category.add(new Option(value, value));
 for (const value of new Set(records.map(row => row.climate))) climate.add(new Option(value, value));
-function show(row) {
+
+function choose(row) {
+  if (!el("overview").hidden) catalogueY = window.scrollY;
+  history.pushState(null, "", "#" + row.key);
   key = row.key;
-  history.replaceState(null, "", "#" + key);
+  render();
+  window.scrollTo(0, 0);
+}
+
+function show(row) {
   const name = nameOf(row);
   el("title").textContent = key + " · " + name[0].toUpperCase() + name.slice(1);
   el("meta").textContent = [row.climate, row.height.toFixed(2) + " m", row.form ? row.triangles.toLocaleString() + " triangles" : "Sprite only"].join("  ·  ");
   for (const button of el("list").children) button.setAttribute("aria-current", String(button.value === key));
-  const list = el("list"), selected = list.querySelector('[aria-current="true"]');
+  const selected = list.querySelector('[aria-current="true"]');
   if (selected.offsetTop < list.scrollTop) list.scrollTop = selected.offsetTop;
   else if (selected.offsetTop + selected.offsetHeight > list.scrollTop + list.clientHeight)
     list.scrollTop = selected.offsetTop + selected.offsetHeight - list.clientHeight;
@@ -88,26 +115,58 @@ function show(row) {
     }
   }
 }
-function filter() {
+function gallery() {
+  el("groups").replaceChildren();
+  el("jump").replaceChildren();
+  for (const group of categories) {
+    const rows = matches.filter(row => row.category === group);
+    if (!rows.length) continue;
+    const heading = document.createElement("h2"), count = document.createElement("small"), cards = document.createElement("div");
+    count.textContent = rows.length; heading.append(group + " ", count); cards.className = "cards";
+    const jump = document.createElement("button");
+    jump.append(group, count.cloneNode(true));
+    jump.onclick = () => heading.scrollIntoView({block:"start"});
+    el("jump").append(jump);
+    for (const row of rows) {
+      const button = document.createElement("button"), title = document.createElement("strong"), pair = document.createElement("div");
+      button.className = "card"; button.onclick = () => choose(row); pair.className = "pair";
+      title.textContent = row.key + " · " + (row.form ? nameOf(row) : row.climate);
+      for (const view of row.form ? ["sprite", "front"] : ["sprite"]) {
+        const plate = document.createElement("span"), image = document.createElement("img");
+        plate.className = "plate"; image.loading = "lazy"; image.width = 960; image.height = 540;
+        image.alt = ""; image.src = "images/" + row.key + "-" + view + ".webp";
+        plate.append(image, view === "front" ? "Mesh" : "Sprite");
+        pair.append(plate);
+      }
+      button.append(title, pair); cards.append(button);
+    }
+    el("groups").append(heading, cards);
+  }
+}
+
+function render() {
   const query = search.value.trim().toLowerCase().replaceAll("-", " ");
-  matches = records.filter(row => (!climate.value || row.climate === climate.value) &&
+  matches = records.filter(row => (!climate.value || row.climate === climate.value) && (!category.value || row.category === category.value) &&
     (kind.value === "all" || Boolean(row.form) === (kind.value === "mesh")) &&
-    (row.key.replace("-", " ") + " " + nameOf(row) + " " + row.climate.toLowerCase()).includes(query));
+    (row.key.replace("-", " ") + " " + nameOf(row).toLowerCase() + " " + row.category.toLowerCase() + " " + row.climate.toLowerCase()).includes(query));
   el("count").textContent = matches.length + (matches.length === 1 ? " record" : " records");
+  const selected = matches.find(row => row.key === key);
+  el("empty").hidden = !!matches.length;
+  el("detail").hidden = list.hidden = !selected;
+  el("overview").hidden = el("jump").hidden = !matches.length || !!selected;
+  if (!selected) { gallery(); return; }
   el("list").replaceChildren(...matches.map(row => {
     const b = document.createElement("button"), name = document.createElement("span");
     const thumb = document.createElement("img");
     thumb.loading = "lazy"; thumb.alt = ""; thumb.src = "images/" + row.key + "-sprite.webp";
     name.textContent = nameOf(row); b.value = row.key; b.append(thumb, row.key, name);
-    b.onclick = () => show(row); return b;
+    b.onclick = () => choose(row); return b;
   }));
-  el("empty").hidden = !!matches.length;
-  el("detail").hidden = !matches.length;
-  if (matches.length) show(matches.find(row => row.key === key) || matches[0]);
+  show(selected);
 }
 function step(by) {
   const row = matches[matches.findIndex(row => row.key === key) + by];
-  if (row) show(row);
+  if (row) choose(row);
 }
 el("prev").onclick = () => step(-1);
 el("next").onclick = () => step(1);
@@ -117,13 +176,19 @@ for (const b of angles) {
   b.prepend(thumbnail);
   b.onclick = () => { angle = b.dataset.angle; show(matches.find(row => row.key === key)); };
 }
+function overview() {
+  key = "";
+  if (location.hash) history.pushState(null, "", location.pathname + location.search);
+  render();
+}
+el("back").onclick = () => { overview(); window.scrollTo(0, catalogueY); };
 window.addEventListener("hashchange", () => {
-  const row = records.find(entry => entry.key === location.hash.slice(1));
-  if (!row) return;
-  key = row.key;
-  if (!matches.includes(row)) { search.value = climate.value = ""; kind.value = row.form ? "mesh" : "sprite"; }
-  filter();
+  key = location.hash.slice(1);
+  if (key && !matches.some(row => row.key === key)) {
+    search.value = climate.value = category.value = ""; kind.value = "all";
+  }
+  render();
 });
-search.oninput = climate.onchange = kind.onchange = filter;
-filter();
+search.oninput = climate.onchange = kind.onchange = category.onchange = () => { overview(); window.scrollTo(0, 0); };
+render();
 </script></body></html>

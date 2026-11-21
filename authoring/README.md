@@ -112,7 +112,9 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 
 Run `python3 authoring/tools/trees/review.py` to build `local/art/review/flora/index.html`, or append record keys
 such as `506-11 507-11` to refresh only those entries. Open the page directly. The pinned Rusty pair draws the
-wilderness sprite and three mesh angles at one scale under fixed light. Search by record, climate or form.
+wilderness sprite and three mesh angles at one scale under fixed light. Browse all records grouped by subject,
+filter by climate or representation, or open a card to compare its mesh angles. The review takes mesh categories
+from their authored forms and sprite-only subjects from `tools/trees/sprite-categories.json`.
 To try unpublished art, run `python3 authoring/tools/trees/review.py 506-11 --mesh /path/to/fir.prop-mesh.json`.
 Optional `--leaves`, `--bark` and `--stone` take texture files. The trial uses the record's placement and
 writes its own comparison in `local/art/review/flora/trials/506-11/`.

@@ -1,0 +1,88 @@
+{
+  "500": {
+    "Trees": [3, 13, 16, 18, 21, 25, 27],
+    "Flowers": [2, 6, 19, 20, 22],
+    "Other plants": [1, 5, 7, 8, 9, 10, 11, 23, 24, 26],
+    "Other scenery": [28, 29]
+  },
+  "501": {
+    "Trees": [1, 15, 17, 19, 20, 24, 27, 28, 31],
+    "Rocks": [10],
+    "Flowers": [25, 26],
+    "Fungi": [22],
+    "Other plants": [2, 7, 8, 9, 14, 18, 21, 29]
+  },
+  "502": {
+    "Trees": [12, 19, 24, 25],
+    "Deadwood": [9],
+    "Other plants": [1, 7, 8, 14, 20, 21, 23, 26, 27, 28, 29, 31],
+    "Other scenery": [2, 3, 22]
+  },
+  "503": {
+    "Trees": [23],
+    "Deadwood": [1, 6, 10],
+    "Cacti": [14, 15, 16],
+    "Flowers": [9, 31],
+    "Other plants": [7, 8, 17, 25, 26, 27, 29],
+    "Bushes": [24]
+  },
+  "504": {
+    "Trees": [10],
+    "Bushes": [1, 27, 28],
+    "Flowers": [2, 21],
+    "Fungi": [23],
+    "Other plants": [7, 8, 9, 22, 26, 29]
+  },
+  "505": {
+    "Trees": [10, 15],
+    "Bushes": [1, 27, 28],
+    "Flowers": [2, 21],
+    "Fungi": [23],
+    "Other plants": [7, 8, 9, 22, 26, 29]
+  },
+  "506": {
+    "Trees": [5, 10],
+    "Bushes": [9, 27],
+    "Flowers": [2, 21],
+    "Other plants": [7, 8, 22, 23, 26, 29, 31]
+  },
+  "507": {
+    "Trees": [5, 10, 15, 23],
+    "Deadwood": [2],
+    "Bushes": [27],
+    "Flowers": [21],
+    "Other plants": [7, 8, 9, 22, 26, 29, 30, 31]
+  },
+  "508": {
+    "Trees": [10],
+    "Bushes": [2, 27, 28],
+    "Rocks": [12],
+    "Deadwood": [9],
+    "Flowers": [21],
+    "Fungi": [22, 23],
+    "Other plants": [7, 8, 14, 26, 29],
+    "Other scenery": [11]
+  },
+  "509": {
+    "Trees": [10, 13, 15],
+    "Bushes": [2, 27, 28],
+    "Rocks": [12],
+    "Deadwood": [9],
+    "Flowers": [21],
+    "Fungi": [22, 23],
+    "Other plants": [7, 8, 14, 26, 29],
+    "Other scenery": [11]
+  },
+  "510": {
+    "Trees": [5, 10, 21],
+    "Flowers": [2],
+    "Other plants": [7, 8, 22, 23, 26, 29],
+    "Bushes": [9]
+  },
+  "511": {
+    "Trees": [5, 10, 15, 21, 23],
+    "Rocks": [12],
+    "Deadwood": [2],
+    "Other plants": [7, 8, 9, 22, 26, 29, 30]
+  }
+}
