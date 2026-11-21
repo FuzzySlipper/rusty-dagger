@@ -9,10 +9,16 @@ internal sealed record NpcBrief(string Brief, string[] Costume, string[] Colors,
 
 internal static class NpcReferencePages
 {
+    private static readonly Dictionary<string, (string Source, int Record, int Frame)> PreferredDepictions = new()
+    {
+        ["npc-010"] = ("arena2/TEXTURE.175", 1, 0),
+    };
+
     public static void Write(ReferenceExport export, NpcReferenceWorld world, IReadOnlyDictionary<int, ClassicFaction> factions,
         IReadOnlyList<NpcEntry> entries)
     {
-        NpcEntry[] cards = [.. entries.OrderBy(entry => entry.Id, StringComparer.Ordinal)];
+        NpcEntry[] cards = [.. entries.OrderBy(entry => entry.Id, StringComparer.Ordinal)
+            .Select(entry => PreferDepiction(export, entry))];
         using Stream briefsResource = typeof(NpcReferencePages).Assembly.GetManifestResourceStream("NpcReferenceBriefs.json")!;
         var briefs = JsonSerializer.Deserialize<Dictionary<string, NpcBrief>>(briefsResource, ReferenceExport.Json)!;
         var chartBriefs = cards.Select(entry => (entry.Id, Brief: MergeBriefs(entry, briefs)))
@@ -84,6 +90,23 @@ internal static class NpcReferencePages
         page.Append("</ul><p id=\"empty\" hidden>No matching NPCs.</p><footer><a href=\"briefs.json\">Briefs JSON</a></footer></main><script src=\"filter.js\"></script></body></html>");
         File.WriteAllText(Path.Combine(export.Root, "index.html"), page.ToString());
         Console.WriteLine($"Daggerfall NPC reference: {cards.Length} cards, {chartBriefs.Count} briefs → {export.Root}");
+    }
+
+    private static NpcEntry PreferDepiction(ReferenceExport export, NpcEntry entry)
+    {
+        if (!PreferredDepictions.TryGetValue(entry.Id, out var preferred)) return entry;
+        ReferenceImage? image = entry.Art.SelectMany(group => group.Frames)
+            .FirstOrDefault(frame => (frame.Source, frame.Record, frame.Frame) == preferred);
+        if (image is null)
+        {
+            export.Warn($"{entry.Id} is missing its preferred depiction from {preferred.Source}, record {preferred.Record}, frame {preferred.Frame}.");
+            return entry;
+        }
+        return entry with
+        {
+            PreferredImage = image,
+            Art = [.. entry.Art.OrderByDescending(group => group.Frames.Contains(image))],
+        };
     }
 
     private static void WriteFilter(StringBuilder page, string id, string label, string empty, IEnumerable<string> values)
@@ -211,6 +234,7 @@ internal static class NpcReferencePages
         export.WriteJson($"{entry.Id}/manifest.json", new
         {
             entry.Id, entry.Name, entry.Kind, entry.Facts, entry.Aliases, entry.Art, entry.Placements, brief,
+            image = entry.Thumbnail?.File,
             merged = (entry.Merged ?? []).Select(member => new { member.Id, member.Name, member.Kind, member.Facts, brief = briefs.GetValueOrDefault(member.Id) }),
             artRoot = "../art/",
         });

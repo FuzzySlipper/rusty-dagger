@@ -7,9 +7,9 @@ internal sealed record NpcArt(string Label, IReadOnlyList<ReferenceImage> Frames
 internal sealed record NpcLink(string Label, string Href);
 internal sealed record NpcEntry(string Id, string Name, string Kind, IReadOnlyList<NpcArt> Art,
     IReadOnlyList<NpcPlacement> Placements, IReadOnlyDictionary<string, string> Facts, IReadOnlyList<NpcLink> Links,
-    string[] Aliases, IReadOnlyList<NpcEntry>? Merged = null)
+    string[] Aliases, IReadOnlyList<NpcEntry>? Merged = null, ReferenceImage? PreferredImage = null)
 {
-    public ReferenceImage? Thumbnail => Art.SelectMany(art => art.Frames).FirstOrDefault();
+    public ReferenceImage? Thumbnail => PreferredImage ?? Art.SelectMany(art => art.Frames).FirstOrDefault();
 }
 
 internal static class NpcReferenceExport
