@@ -16,7 +16,6 @@ internal static class NpcReferenceExport
 {
     private const string SpecialFaces = "FACES.CIF";
     private const string CommonFaces = "TFAC00I0.RCI";
-    private const string ChildFaces = "KIDS00I0.CIF";
     private const int PlaceholderFace = 410;
     private const int PortraitSide = 64;
     private const int PortraitCellBytes = PortraitSide * PortraitSide;
@@ -26,6 +25,13 @@ internal static class NpcReferenceExport
 
     // The retained figure from the noble test archive has no world placement.
     private static readonly NpcFlat TestNoblewoman = new(185, 1);
+
+    // These records share an NPC identity but place different poses in the world.
+    private static readonly Dictionary<NpcFlat, string> SpritePoses = new()
+    {
+        [new(176, 0)] = "Kneeling", [new(176, 1)] = "Standing",
+        [new(178, 2)] = "Kneeling", [new(178, 3)] = "Standing",
+    };
 
     // Daggerfall Unity's MobilePersonNPC face banks, matched to MobilePersonBillboard's outfits.
     private static readonly Dictionary<int, int> FaceStarts = new()
@@ -68,7 +74,9 @@ internal static class NpcReferenceExport
                 continue;
             }
             IReadOnlyList<ReferenceImage> images = export.TextureImages("art", "sprite", flat.Archive, flat.Record);
-            if (images.Count > 0) spriteArt.Add(flat, new(images.Count == 1 ? "Billboard sprite" : "Billboard animation", images));
+            string label = images.Count == 1 ? "Billboard sprite" : "Billboard animation";
+            if (SpritePoses.TryGetValue(flat, out string? pose)) label = $"{pose} · {label}";
+            if (images.Count > 0) spriteArt.Add(flat, new(label, images));
         }
 
         var portraits = new PortraitBank(export);
@@ -81,7 +89,6 @@ internal static class NpcReferenceExport
             .ToLookup(value => value.Flat, value => value.Faction);
         var namedFlats = namedByFlat.SelectMany(group => group.Select(faction => (faction.Id, Flat: group.Key)))
             .ToLookup(value => value.Id, value => value.Flat);
-        HashSet<int> namedSpecialFaces = [];
         foreach (ClassicFaction faction in factions.Values.Where(IsNamedPerson).OrderBy(faction => faction.Name, StringComparer.OrdinalIgnoreCase))
         {
             string sourceId = FactionId(faction);
@@ -90,10 +97,7 @@ internal static class NpcReferenceExport
             List<NpcArt> art = [.. flats.Select(flat => spriteArt[flat])];
             string portraitSource = faction.Face <= 60 ? SpecialFaces : CommonFaces;
             if (faction.Face >= 0 && portraits.Get(portraitSource, faction.Face) is { } portrait)
-            {
                 art.Add(new("Dialogue portrait", [portrait]));
-                if (portraitSource == SpecialFaces) namedSpecialFaces.Add(faction.Face);
-            }
             if (art.Count == 0) continue;
 
             Dictionary<string, string> facts = new()
@@ -118,7 +122,8 @@ internal static class NpcReferenceExport
             NpcFlat flat = sources[0];
             NpcArt sprite = spriteArt[flat];
             ClassicFaction[] named = [.. sources.SelectMany(source => namedByFlat[source]).DistinctBy(faction => faction.Id)];
-            NpcPlacement[] uses = [.. sources.SelectMany(source => placements[source])];
+            NpcPlacement[] uses = [.. sources.SelectMany(source => placements[source])
+                .Select(use => use with { Pose = SpritePoses.GetValueOrDefault(use.Flat) })];
             ClassicFaction[] genericFactions = [.. sources.SelectMany(source => factionFlats[source])
                 .Concat(uses.Select(use => factions.GetValueOrDefault(use.Faction)).OfType<ClassicFaction>())
                 .Where(faction => !IsNamedPerson(faction) && faction.Id != 0).DistinctBy(faction => faction.Id).OrderBy(faction => faction.Name, StringComparer.Ordinal)];
@@ -129,11 +134,13 @@ internal static class NpcReferenceExport
                 uses.All(use => named.Any(faction => faction.Id == use.Faction))) continue;
             if (FindId(group.Key) is not { } id) continue;
 
+            NpcReferenceId reference = ids[group.Key];
             List<NpcArt> art = [sprite];
             foreach (NpcFlat source in sources.Skip(1))
             {
                 NpcArt variant = spriteArt[source];
-                string label = variant.Frames.Count == 1 ? "Alternate billboard" : "Alternate animation";
+                string label = SpritePoses.ContainsKey(source) ? variant.Label :
+                    variant.Frames.Count == 1 ? "Alternate billboard" : "Alternate animation";
                 art.Add(variant with
                 {
                     Label = $"{label} · {source.Archive:000}-{source.Record}",
@@ -143,7 +150,6 @@ internal static class NpcReferenceExport
 
             Dictionary<string, string> facts = new();
             string kind = art.Any(animation => animation.Frames.Count > 1) ? "Animated billboard" : "Billboard";
-            string name = flat == TestNoblewoman ? "Noblewoman" : kind;
             FlatCaption[] sourceCaptions = [.. sources.Select(source => captions.GetValueOrDefault(source)).OfType<FlatCaption>()];
             if (sourceCaptions.Length > 0)
             {
@@ -153,13 +159,30 @@ internal static class NpcReferenceExport
                     .Where(face => face >= 0 && face != PlaceholderFace).Select(face => portraits.Get(CommonFaces, face)).OfType<ReferenceImage>()];
                 if (faces.Length > 0) art.Add(new(faces.Length == 1 ? "Flat’s dialogue portrait" : "Flats’ dialogue portraits", faces));
             }
+            List<int> filedFaces = [];
+            foreach (string portraitSource in reference.PortraitSources)
+            {
+                if (!int.TryParse(portraitSource.AsSpan("npc-face-".Length), out int record))
+                {
+                    export.Warn($"{id} has an invalid portrait key '{portraitSource}'.");
+                    continue;
+                }
+                if (portraits.Get(SpecialFaces, record) is not { } face) continue;
+                string label = art.Any(item => item.Frames[0].Role == "portrait") ? "Alternate faction portrait" : "Faction portrait";
+                art.Add(new(label, [face]));
+                filedFaces.Add(record);
+            }
+            if (filedFaces.Count > 0)
+                facts["Portrait faction records"] = string.Join(", ", factions.Values.Where(faction => filedFaces.Contains(faction.Face))
+                    .Select(faction => $"{faction.Name} (#{faction.Id})"));
             if (genericFactions.Length > 0) facts["Factions using this sprite"] = string.Join(", ", genericFactions.Select(faction => faction.Name));
             if (uses.Length == 0) facts["World placements"] = "No fixed block placements found for this sprite.";
 
             var related = named.Where(faction => ids.ContainsKey(FactionId(faction)))
                 .Select(faction => new NpcLink(faction.Name, $"../{ids[FactionId(faction)].Id}/index.html"));
-            entries.Add(new(id, sourceCaptions.FirstOrDefault()?.Caption ?? (named.Length == 1 ? named[0].Name : name), kind, art, uses, facts,
-                [.. related], [.. ids[group.Key].Aliases, .. sources.SelectMany(FlatAliases)]));
+            string name = reference.Name ?? sourceCaptions.FirstOrDefault()?.Caption ?? (named.Length == 1 ? named[0].Name : kind);
+            entries.Add(new(id, name, kind, art, uses, facts,
+                [.. related], [.. reference.Aliases, .. reference.PortraitSources, .. sources.SelectMany(FlatAliases)]));
         }
 
         var characterLinks = ReadCharacterLinks(characters);
@@ -200,29 +223,6 @@ internal static class NpcReferenceExport
             entries.Add(new(id, source.Name, kind, art, [], facts, [.. links], aliases));
         }
 
-        foreach (ReferenceImage face in portraits.Range(SpecialFaces))
-        {
-            string sourceId = $"npc-face-{face.Record:000}";
-            if (namedSpecialFaces.Contains(face.Record) || FindId(sourceId) is not { } id) continue;
-
-            ClassicFaction[] declared = [.. factions.Values.Where(faction => faction.Face == face.Record)];
-            string name = declared.FirstOrDefault()?.Name ?? "Special dialogue portrait";
-            Dictionary<string, string> facts = new();
-            if (declared.Length > 0)
-            {
-                facts["Filed faction associations"] = string.Join(", ", declared.Select(faction => $"{faction.Name} (#{faction.Id})"));
-                facts["Classic dialogue"] = "This bank is selected for individual NPCs. These associations are filed on other faction types.";
-            }
-            var links = declared.SelectMany(faction => faction.Flats).Where(flat => flat > 0).Select(NpcFlat.Decode)
-                .Where(flat => spriteArt.ContainsKey(flat) && ids.ContainsKey(flat.Id)).Select(flat => ids[flat.Id].Id)
-                .Distinct().Select(link => new NpcLink($"Filed billboard {link}", $"../{link}/index.html"));
-            entries.Add(new(id, name, "Faction portrait", [new("Faction portrait", [face])], [], facts, [.. links], [sourceId]));
-        }
-
-        foreach (ReferenceImage face in portraits.Range(ChildFaces))
-            AddPortrait($"npc-child-{face.Record:000}", (face.Record % 2 == 0 ? "Boy" : "Girl") + " escort", "Child portrait",
-                "Escort portrait", "One of four portraits for child escorts. The quest supplies the identity.", face);
-
         NpcReferencePages.Write(export, world, factions, entries);
 
         string? FindId(string source)
@@ -230,13 +230,6 @@ internal static class NpcReferenceExport
             if (ids.TryGetValue(source, out NpcReferenceId? reference)) return reference.Id;
             export.Warn($"No NPC number reserved for {source}. Add an entry to NpcReferenceIds.txt to include it.");
             return null;
-        }
-
-        void AddPortrait(string source, string name, string kind, string label, string worldUse, ReferenceImage face)
-        {
-            if (FindId(source) is { } id)
-                entries.Add(new(id, name, kind, [new(label, [face])], [],
-                    new Dictionary<string, string> { ["World use"] = worldUse }, [], [source]));
         }
     }
 
@@ -309,12 +302,10 @@ internal static class NpcReferenceExport
     {
         private readonly Dictionary<string, byte[]> raw = new(StringComparer.Ordinal);
         private readonly Dictionary<(string File, int Record), ReferenceImage> images = [];
-        private IReadOnlyList<IndexedImg>? children;
 
-        public IEnumerable<ReferenceImage> Range(string file, int start = 0, int? count = null)
+        public IEnumerable<ReferenceImage> Range(string file, int start, int count)
         {
-            int length = count ?? Count(file);
-            for (int index = start; index < start + length; index++)
+            for (int index = start; index < start + count; index++)
                 if (Get(file, index) is { } image) yield return image;
         }
 
@@ -327,18 +318,14 @@ internal static class NpcReferenceExport
                 return null;
             }
 
-            IndexedImg? child = file == ChildFaces ? Children[record] : null;
-            int width = child?.Width ?? PortraitSide, height = child?.Height ?? PortraitSide;
-            ReadOnlySpan<byte> pixels = child is not null ? child.Pixels.Span : Raw(file).AsSpan(record * PortraitCellBytes, PortraitCellBytes);
+            ReadOnlySpan<byte> pixels = Raw(file).AsSpan(record * PortraitCellBytes, PortraitCellBytes);
             image = export.Rgba("art", $"portrait/{file.ToLowerInvariant()}-{record:000}.png", "portrait", $"arena2/{file}", record, 0,
-                width, height, child?.XOffset ?? 0, child?.YOffset ?? 0,
-                export.Palette.ToRgbaBytes(pixels, PaletteAlphaMode.IndexZeroTransparent), ["source"]);
+                PortraitSide, PortraitSide, 0, 0, export.Palette.ToRgbaBytes(pixels, PaletteAlphaMode.IndexZeroTransparent), ["source"]);
             images.Add((file, record), image);
             return image;
         }
 
-        private int Count(string file) => file == ChildFaces ? Children.Count : Raw(file).Length / PortraitCellBytes;
-        private IReadOnlyList<IndexedImg> Children => children ??= ImgDecoder.DecodeRecordSequence(Raw(ChildFaces), $"arena2/{ChildFaces}");
+        private int Count(string file) => Raw(file).Length / PortraitCellBytes;
         private byte[] Raw(string file)
         {
             if (!raw.TryGetValue(file, out byte[]? bytes)) raw[file] = bytes = export.Read(file);

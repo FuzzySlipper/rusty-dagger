@@ -41,8 +41,9 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - `export-npc` builds the unified NPC chart in `local/art/reference/npc/`. Open `index.html` directly.
   [NpcReferenceIds.txt](../src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceIds.txt) fixes the three-digit assignments
   and groups alternate art. When merging entries, put their source keys and previous NPC IDs on the surviving line.
+  Add an `npc-face-*` key for a faction portrait and append `| Display Name` to override the source caption.
   Keep assigned numbers when editing the list, and leave retired numbers reserved.
-  Named NPCs use 001–100, billboards 101–380, and portraits without a known sprite 400–450. Wandering NPCs keep their
+  Named NPCs use 001–100 and billboards use 101–380. IDs 400–450 are reserved for portraits. Wandering NPCs keep their
   original three-digit numbers. Search accepts old references such as `mobile-452`, `npc-flat-23355`, or `182-59`.
   `--characters DIR` relocates the optional links to the asset-pipeline character outputs.
 - `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared

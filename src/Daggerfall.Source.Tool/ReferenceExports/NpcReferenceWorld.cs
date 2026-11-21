@@ -14,7 +14,7 @@ internal readonly record struct NpcFlat(int Archive, int Record)
 
 internal enum NpcSetting { Exterior, Interior, Dungeon }
 
-internal sealed record NpcPlacement(NpcFlat Flat, string Block, NpcSetting Setting, int Faction);
+internal sealed record NpcPlacement(NpcFlat Flat, string Block, NpcSetting Setting, int Faction, string? Pose = null);
 internal sealed record NpcLocation(int Region, int Index, string Name);
 
 /// <summary>Joins source block placements to the locations that use those blocks.</summary>

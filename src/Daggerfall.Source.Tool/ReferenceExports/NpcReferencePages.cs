@@ -76,12 +76,14 @@ internal static class NpcReferencePages
         if (entry.Placements.Count > 0)
         {
             page.Append("<section><h2>World placements</h2><p>Locations use one or more blocks containing this reference. A block can be reused in multiple locations.</p>");
-            foreach (var group in entry.Placements.GroupBy(use => use.Setting).OrderBy(group => group.Key))
+            foreach (var group in entry.Placements.GroupBy(use => (use.Setting, use.Pose))
+                .OrderBy(group => group.Key.Setting).ThenBy(group => group.Key.Pose, StringComparer.Ordinal))
             {
                 string[] blocks = [.. group.Select(use => use.Block).Distinct().Order(StringComparer.Ordinal)];
                 var locations = world.Locations(blocks).GroupBy(location => world.Region(location.Region)).ToArray();
                 int locationCount = locations.Sum(region => region.Count());
-                string setting = group.Key == NpcSetting.Dungeon ? "Dungeon or palace interior" : group.Key.ToString();
+                string setting = group.Key.Setting == NpcSetting.Dungeon ? "Dungeon or palace interior" : group.Key.Setting.ToString();
+                if (group.Key.Pose is { } pose) setting += $" · {pose}";
                 string title = $"{setting} · {Count(locationCount, "location")}";
                 page.Append($"<details{(locationCount <= 12 ? " open" : "")}><summary>{H(title)}</summary>");
                 foreach (var region in locations)

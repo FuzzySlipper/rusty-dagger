@@ -1,4 +1,4 @@
-# Stable NPC number followed by its primary classic key, alternate art keys and previous NPC IDs.
+# Stable NPC number followed by its primary classic key, alternate art keys and previous NPC IDs. An optional | supplies the display name.
 # Reserve retired numbers. Adding or consolidating an entry must not renumber existing NPCs.
 
 # 001–100 Named characters
@@ -81,10 +81,8 @@
 # 101–380 Billboards
 101 npc-flat-22401
 102 npc-flat-22414
-103 npc-flat-22528
-104 npc-flat-22529
-105 npc-flat-22530
-106 npc-flat-22531
+103 npc-flat-22528 npc-flat-22529 npc-face-011 npc-104 npc-418
+105 npc-flat-22530 npc-flat-22531 npc-106
 107 npc-flat-22532
 108 npc-flat-22533
 109 npc-flat-22656
@@ -95,11 +93,9 @@
 114 npc-flat-22661
 115 npc-flat-22784
 116 npc-flat-22785
-117 npc-flat-22786
-118 npc-flat-22787
+117 npc-flat-22786 npc-flat-22787 npc-118
 119 npc-flat-22788
-120 npc-flat-22789
-121 npc-flat-22790
+120 npc-flat-22789 npc-flat-22790 npc-121
 122 npc-flat-22912
 123 npc-flat-22913
 124 npc-flat-22914
@@ -230,7 +226,7 @@
 249 npc-flat-23584
 250 npc-flat-23585
 251 npc-flat-23586
-252 npc-flat-23681
+252 npc-flat-23681 npc-face-010 npc-417 | Faerie Queen
 253 npc-flat-23809
 254 npc-flat-23810
 255 npc-flat-23811
@@ -257,7 +253,7 @@
 276 npc-flat-23832
 277 npc-flat-23833
 278 npc-flat-23834
-279 npc-flat-23835
+279 npc-flat-23835 npc-flat-44297 npc-331
 280 npc-flat-23836
 281 npc-flat-23837
 282 npc-flat-23838
@@ -271,7 +267,6 @@
 290 npc-flat-23846
 291 npc-flat-23847
 292 npc-flat-23848
-293 npc-flat-23849
 294 npc-flat-23850
 295 npc-flat-23851
 296 npc-flat-23852
@@ -279,7 +274,7 @@
 298 npc-flat-23854
 299 npc-flat-23855
 300 npc-flat-23863
-301 npc-flat-23864
+301 npc-flat-23864 npc-flat-44298 npc-332
 302 npc-flat-23865
 303 npc-flat-23866
 304 npc-flat-25216
@@ -303,11 +298,9 @@
 328 npc-flat-44293
 329 npc-flat-44294
 330 npc-flat-44296
-331 npc-flat-44297
-332 npc-flat-44298
 333 npc-flat-44300
 334 npc-flat-44301
-335 npc-flat-44302
+335 npc-flat-44302 npc-flat-23849 npc-face-004 npc-293 npc-416 | The Archmagister
 336 npc-flat-44303
 339 npc-flat-45698
 340 npc-flat-45700
@@ -338,15 +331,9 @@
 398 npc-398
 399 npc-399
 
-# 400–450 Portraits without a known sprite
-400 npc-child-000
-401 npc-child-001
-402 npc-child-002
-403 npc-child-003
+# 400–450 reserved for portraits without a known sprite.
+# 400–403 retired. Child escorts share portraits and have no separate entries in this chart.
 # 404–415 retired. The stock factions do not select the CHLD00I0.RCI dialogue bank.
-416 npc-face-004
-417 npc-face-010
-418 npc-face-011
 
 # 451–456 Wandering townsfolk
 451 npc-451
