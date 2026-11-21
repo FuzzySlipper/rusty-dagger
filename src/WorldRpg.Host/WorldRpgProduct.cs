@@ -431,6 +431,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             new($"Reading {title}", () =>
             {
                 (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(_context, _explicitRuleset, requested, _installed);
+                YieldToReplacement();
                 opened = (composition, selected, selected.CreateSession(SessionContext(composition)));
             }),
             new("Opening the title", () =>
@@ -601,7 +602,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         IGameSession? created = null;
         return
         [
-            new("Building the world", () => created = creation.CreateNewGame()),
+            new("Building the world", () =>
+            {
+                YieldToReplacement();
+                created = creation.CreateNewGame();
+            }),
             new("Entering the world", () =>
             {
                 ReplaceSession(created!, ProductMode.Title, "the product initialized the committed character");
@@ -672,6 +677,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
+        YieldToReplacement();
         IGameSession replacement = Ruleset.CreateSession(SessionContext(Composition));
         ReplaceSession(replacement, replacement is ICharacterCreationSession ? ProductMode.Title : ProductMode.Playing,
             "the product replaced its session");
@@ -696,9 +702,17 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
             return;
         }
 
+        YieldToReplacement();
         ReplaceSession(Ruleset.CreateSession(SessionContext(Composition)),
             ProductMode.Title, "the product quit to the title");
     }
+
+    /// <summary>
+    /// Asks the running session to let go of the Engine state bound to its presentation objects before a replacement
+    /// is built, since the replacement publishes those objects while it still runs. A replacement that then fails
+    /// leaves it running without that state.
+    /// </summary>
+    private void YieldToReplacement() => (_session as IPresentationYieldingSession)?.YieldPresentation();
 
     /// <summary>
     /// The one session replacement: the replacement receives the player's preferences and publishes,
@@ -1135,7 +1149,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // restored and adopted on the updates after. A save that fails to restore leaves this game running and says why.
         IGameSession? restored = null;
         _loading.Start("Loading the saved game", [
-            new("Restoring the saved world", () => restored = saveable.CreateSession(SessionContext(Composition), payload)),
+            new("Restoring the saved world", () =>
+            {
+                YieldToReplacement();
+                restored = saveable.CreateSession(SessionContext(Composition), payload);
+            }),
             new("Entering the world", () => AdoptLoadedGame(requesting, restored!), AwaitArrivalGround),
         ], error => requesting.ReportSaveOutcome($"Load failed: {error.Message}"));
     }

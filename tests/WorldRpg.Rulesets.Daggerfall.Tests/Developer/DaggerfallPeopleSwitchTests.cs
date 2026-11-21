@@ -26,7 +26,7 @@ public sealed class DaggerfallPeopleSwitchTests
         using DaggerfallPeopleSwitch people = Switch(art, rigs, AnimationRecorder.Create());
 
         // Off before any use answers, and makes no crowd.
-        Assert.Equal("Walking people show their own art again.", people.Rig("off").Message);
+        Assert.Equal("Walking people draw their sprites.", people.Rig("off").Message);
         Assert.Null(people.Crowd);
 
         var unknown = people.Rig("6");
@@ -57,7 +57,7 @@ public sealed class DaggerfallPeopleSwitchTests
 
         var unknown = people.Splat("999");
         Assert.False(unknown.Succeeded);
-        Assert.Equal($"The art set has no gsplat character '999'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, or off.", unknown.Message);
+        Assert.Equal($"The art set has no gsplat character '999'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, own or off.", unknown.Message);
         Assert.Null(people.Crowd);
 
         DaggerfallSplatPerson townsman = splats.Characters["385"];
@@ -137,8 +137,13 @@ public sealed class DaggerfallPeopleSwitchTests
     public void An_art_set_without_a_people_rig_or_gsplat_people_refuses_them()
     {
         using ActorsState actors = new();
+        List<string> warnings = [];
         using DaggerfallPeopleSwitch people = new(null, null, () => PartsRigsRecorder.Create().Service, () => AnimationRecorder.Create().Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors));
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, () => true, warnings.Add);
+        // Walkers draw their sprites, and nothing is said: there are no characters to miss.
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        Assert.Null(people.Crowd);
+        Assert.Empty(warnings);
         var refused = people.Rig("4");
         Assert.False(refused.Succeeded);
         Assert.Equal("The art set carries no people rig.", refused.Message);
@@ -147,6 +152,7 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Equal("The art set carries no gsplat townspeople.", noSplats.Message);
         Assert.True(people.Rig("off").Succeeded);
         Assert.True(people.Splat("off").Succeeded);
+        Assert.Equal("The art set carries no gsplat townspeople.", people.Splat("own").Message);
         Assert.Equal("The art set carries no gsplat townspeople.", people.Spawn("385", 1).Message);
     }
 
@@ -164,8 +170,9 @@ public sealed class DaggerfallPeopleSwitchTests
             civilian.Stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(new Rusty.Engine.Mechanics.Stat(1), 1));
             civilian.Actor.Add(new WorldRpg.Kit.Ai.WanderMemoryComponent());
         }
+        // These walkers wear no townsperson art, so the crowd draws them as their sprites.
         using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors));
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, () => true, _ => { });
 
         var spawned = people.Spawn("454", 2);
         Assert.True(spawned.Succeeded, spawned.Message);
@@ -189,11 +196,133 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Null(people.Show(100, 10, 1.7F, walking: false));
     }
 
+    [Fact]
+    public void Each_walker_draws_by_default_as_the_character_of_its_townsperson_art_and_off_draws_their_sprites()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        List<string> warnings = [];
+        bool refreshed = true;
+        // Walkers 10 and 14 wear townsperson art 385, 11 wears 386, 12 wears art without a character, 13 none at all.
+        Dictionary<long, int?> worn = new() { [10] = 385, [11] = 386, [12] = 999, [13] = null, [14] = 385 };
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386, 999, 385], id => worn[id],
+            () => refreshed, warnings.Add);
+
+        // Nothing opens before a walker is drawn.
+        Assert.Null(people.Crowd);
+        Assert.Empty(animation.OpenedPaths);
+
+        Appearance townsman = people.Show(100, 10, 1.7F, walking: true)!;
+        Appearance other = people.Show(101, 11, 1.7F, walking: false)!;
+        Assert.Same(townsman, people.Show(104, 14, 1.7F, walking: true));
+        Assert.NotSame(townsman, other);
+        // Each character opens once, the one of the walker's art: 386 is drawn by 386-C.
+        Assert.Equal([splats.Characters["385"].Body.Path, splats.Characters["386-C"].Body.Path], animation.OpenedPaths);
+        Assert.Equal([townsman, other], animation.Splats.Select(look => look.Appearance));
+        Assert.IsType<SplatCrowd>(people.Crowd);
+
+        // Art without a character, and a walker wearing none, draw their sprites, each said once.
+        Assert.Null(people.Show(102, 12, 1.7F, walking: true));
+        Assert.Null(people.Show(103, 13, 1.7F, walking: true));
+        Assert.Null(people.Show(103, 13, 1.7F, walking: true));
+        Assert.Equal(["Townsperson art 999 has no gsplat character; walkers wearing it draw their sprites.",
+            "A walker wears no classic townsperson art (its race has none), so it draws its sprite."], warnings);
+
+        // While the classic art draws, so do the walkers.
+        refreshed = false;
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        refreshed = true;
+
+        // people.splat ID draws them all as one character, and own as their own again.
+        Assert.True(people.Splat("454").Succeeded);
+        Appearance one = animation.Splats[^1].Appearance;
+        Assert.Same(one, people.Show(101, 11, 1.7F, walking: false));
+        Assert.Equal("Walking people draw as the gsplat characters of their townsperson art, lit; 0 walk here now.", people.Splat("own").Message);
+        Assert.Same(other, people.Show(101, 11, 1.7F, walking: false));
+
+        // Off draws their sprites, and the rig takes over from them too, until own.
+        Assert.True(people.Splat("off").Succeeded);
+        Assert.Null(people.Crowd);
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        Assert.True(people.Splat("own").Succeeded);
+        Assert.Same(townsman, people.Show(100, 10, 1.7F, walking: true));
+        Assert.Equal(3, animation.OpenedPaths.Count);
+    }
+
+    [Fact]
+    public void A_session_that_yields_to_its_replacement_lets_go_of_its_walkers_and_characters_and_draws_sprites()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, () => true, _ => { });
+        Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
+        people.Publishing();
+        people.Settle();
+        Assert.Equal(1, animation.Instances);
+
+        // The replacement publishes the same walkers' objects, so the next snapshot draws their sprites and lets their
+        // instances go before it is published; the figure, whose body the replacement binds again, goes after it.
+        people.Yield();
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        people.Publishing();
+        Assert.Equal(1, animation.ReleasedInstances);
+        Assert.Equal(0, animation.ReleasedAppearances);
+        people.Settle();
+        people.Dispose();
+        Assert.Equal(1, animation.ReleasedAppearances);
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        Assert.Equal(1, animation.Instances);
+    }
+
+    [Fact]
+    public void A_character_that_will_not_open_leaves_its_walkers_their_sprites_said_once()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = [new("walk", "walk", 1.03F, true, 1)];
+        List<string> warnings = [];
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, () => true, warnings.Add);
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        Assert.Null(people.Show(101, 11, 1.7F, walking: true));
+        Assert.Equal(["Gsplat character 385 would not open, so walkers wearing townsperson art 385 draw their sprites: " +
+            "Gsplat character 385 carries no clip 'idle' after its clip packs were bound; it has walk."], warnings);
+        Assert.Single(animation.OpenedPaths);
+        Assert.Empty(animation.Created);
+    }
+
+    [Fact]
+    public void Every_classic_townsperson_has_one_character_in_the_art_set()
+    {
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        // Classic Daggerfall dresses a Breton, Redguard or Nord walker in one of four archives a gender.
+        DaggerfallRaceDefinition[] towns = [.. definitions.Catalogs.Races.Where(race => race.Townspeople.Count != 0)];
+        Assert.Equal(["breton", "redguard", "nord"], towns.Select(race => race.Id));
+        int[] archives = [.. towns.SelectMany(race => race.Townspeople.Values.SelectMany(worn => worn))];
+        Assert.All(towns.SelectMany(race => race.Townspeople.Values), worn => Assert.Equal(4, worn.Count));
+        Assert.Equal(24, archives.Distinct().Count());
+        // Each has its character, and no character draws art nobody wears.
+        Assert.Equal(archives.Order(), splats.ByArchive.Keys.Order());
+        Assert.Equal("386-C", splats.ByArchive[386]);
+        Assert.Equal("397-B", splats.ByArchive[397]);
+        // A walker wears the one its seed picks.
+        DaggerfallRaceDefinition breton = towns[0];
+        Assert.Equal([385, 386, 391, 394, 385], new[] { 0, 1, 2, 3, 4 }.Select(seed => breton.Townsperson("Male", seed)));
+        Assert.Equal(456, breton.Townsperson("Female", 65535));
+        Assert.Null(definitions.Catalogs.Races.Single(race => race.Id == "khajiit").Townsperson("Male", 0));
+    }
+
     private static DaggerfallPeopleSwitch Switch(DaggerfallArtReplacements art, PartsRigsRecorder rigs, AnimationRecorder animation)
     {
         ActorsState actors = new();
         return new(art.PeopleRig, art.SplatPeople, () => rigs.Service, () => animation.Service, () => new ContentFake([]), WalkerSpeed,
-            DaggerfallSplatPeopleTuning.Default, actors, Stage(actors));
+            DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, () => true, _ => { });
     }
 
     /// <summary>Staging on flat ground at the player's feet, where any spot is clear but one a staged walker already stands on.</summary>

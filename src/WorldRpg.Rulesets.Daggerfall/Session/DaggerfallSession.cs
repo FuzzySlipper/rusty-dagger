@@ -39,7 +39,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession, IQuitRequestingGameSession,
     IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallExpeditionSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
-    IDaggerfallMusicPlace
+    IDaggerfallMusicPlace, IPresentationYieldingSession
 {
     private readonly IRandomService _random;
     private readonly IEngineContext _engine;
@@ -262,6 +262,17 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         PublishPresentation();
     }
     public void ApplyPlayerPreferences(string? serialized) => _controls.ApplyPreferences(serialized);
+
+    /// <summary>
+    /// The walkers' figures bind animation instances to the walkers' objects, which a replacement publishes too, and hold
+    /// the characters' bodies it binds again: a snapshot of their sprites lets the instances go, then the figures go.
+    /// </summary>
+    public void YieldPresentation()
+    {
+        _people.Yield();                                                                          // Developer
+        PublishPresentation();                                                                    // UiProjection
+        _people.Dispose();                                                                        // Developer
+    }
     internal bool ActionDrivenPlay => _controls.ActionDrivenTime;
     private readonly World.DaggerfallSiteContext _site;
 

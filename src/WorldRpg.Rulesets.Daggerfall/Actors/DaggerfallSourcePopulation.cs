@@ -165,6 +165,14 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         && npcs.IsGameplayActive(actorId) && npc.Profile == activeProfile());
 
     /// <summary>
+    /// The classic townsperson art walker <paramref name="actorId"/> wears, as classic Daggerfall dresses a townsperson:
+    /// one of its race's archives for its gender, chosen by its stable name seed; null for one its race gives none.
+    /// </summary>
+    internal int? Townsperson(long actorId) => npcs.TryGet(actorId, out DaggerfallNpc? npc)
+        && definitions.Catalogs.TryGetRace(npc.Appearance.Race, out DaggerfallRaceDefinition race)
+        ? race.Townsperson(npc.Appearance.Gender, npc.Appearance.NameSeed) : null;
+
+    /// <summary>
     /// Advances only admitted source civilians. Enemy pursuit never owns this actor family; the
     /// wander coordinator records explicit idle, seeking, moving, blocked, unloaded, and dead
     /// states while Engine remains the movement authority.

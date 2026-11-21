@@ -431,7 +431,7 @@ public sealed class DaggerfallPopulationSessionTests
 
         Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("385").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(3), []));
-        Appearance character = Assert.Single(animation.Splats).Appearance;
+        Appearance character = Drawn(animation, fixture.Composition.ArtReplacements!.SplatPeople!, "385");
         AppearanceFact[] snapshot = fixture.Appearance.Snapshots[^1];
         foreach (ActorState civilian in civilians)
         {
@@ -458,6 +458,58 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.NotSame(character, own.Appearance);
         Assert.Equal(civilians.Length, releasedAtPublish);
     }
+
+    [Fact]
+    public void A_walking_civilian_draws_by_default_as_the_gsplat_character_of_its_townsperson_art_and_off_draws_its_sprite()
+    {
+        DaggerfallArtReplacements art = DaggerfallPeopleSwitchTests.Art();
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create(art);
+        DaggerfallSession session = fixture.Session;
+        AnimationRecorder animation = fixture.Engine.Animation;
+        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        ActorState[] civilians = [.. session.State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)];
+        Assert.NotEmpty(civilians);
+
+        AppearanceFact[] snapshot = fixture.Appearance.Snapshots[^1];
+        Dictionary<long, Appearance> worn = [];
+        foreach (ActorState civilian in civilians)
+        {
+            // With no command given, each wears the character of the classic townsperson art its race and gender dress it in.
+            DaggerfallNpcAppearance look = session.State.Npcs.Require(civilian.DurableId).Appearance;
+            Assert.True(TestPayload.Definitions.Catalogs.TryGetRace(look.Race, out DaggerfallRaceDefinition race));
+            int archive = Assert.IsType<int>(race.Townsperson(look.Gender, look.NameSeed));
+            Appearance character = Drawn(animation, art.SplatPeople!, art.SplatPeople!.ByArchive[archive]);
+            AppearanceFact fact = Assert.Single(snapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor"));
+            Assert.Same(character, fact.Appearance);
+            Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, fact.Transform.Rotation), ActorHeading.Forward(civilian.HeadingYawRadians)) < 1e-4F);
+            worn[civilian.DurableId] = character;
+        }
+
+        // Off draws their sprites, their instances gone by the time that snapshot is published.
+        int released = animation.ReleasedInstances;
+        int? releasedAtPublish = null;
+        fixture.Appearance.OnPublish = _ => releasedAtPublish ??= animation.ReleasedInstances - released;
+        Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("off").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(4), []));
+        Assert.Equal(civilians.Length, releasedAtPublish);
+        foreach (ActorState civilian in civilians)
+            Assert.NotSame(worn[civilian.DurableId], fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor")).Appearance);
+
+        // Own dresses them in their characters again, opened once.
+        int opened = animation.OpenedPaths.Count;
+        Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("own").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(5), []));
+        foreach (ActorState civilian in civilians)
+            Assert.Same(worn[civilian.DurableId], fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor")).Appearance);
+        Assert.Equal(opened, animation.OpenedPaths.Count);
+    }
+
+    /// <summary>The appearance gsplat character <paramref name="id"/> was opened as.</summary>
+    private static Appearance Drawn(AnimationRecorder animation, DaggerfallSplatPeople splats, string id) =>
+        animation.Splats[animation.OpenedPaths.IndexOf(splats.Characters[id].Body.Path)].Appearance;
 
     private static int PopulationTextureOpens(AppearanceFake appearance) =>
         appearance.OpenedResourcePaths.Count(path => path == "sprite/population.png");

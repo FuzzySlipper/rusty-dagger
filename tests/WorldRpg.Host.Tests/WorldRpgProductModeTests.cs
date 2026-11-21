@@ -229,6 +229,19 @@ public sealed class WorldRpgProductModeTests
     }
 
     [Fact]
+    public void The_running_session_yields_its_presentation_before_a_replacement_is_built()
+    {
+        ModeRecordingRuleset ruleset = new();
+        using WorldRpgProduct product = Product(ruleset);
+        StartInPlay(product);
+        // A replacement publishes the walkers' objects while the running session still runs, so that one lets go first.
+        product.Restart();
+        Assert.Equal(1, ruleset.Replaced!.YieldedAtCreated);
+        product.QuitToTitle();
+        Assert.Equal(2, ruleset.Replaced!.YieldedAtCreated);
+    }
+
+    [Fact]
     public void Quit_retires_the_session_and_puts_the_replacement_at_the_title()
     {
         ModeRecordingRuleset ruleset = new();
@@ -648,8 +661,14 @@ public sealed class WorldRpgProductModeTests
         public IGameSession CreateNewGame() => _ruleset.CreateNewGame();
     }
 
-    private class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IWorldInteractionScene
+    private class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IWorldInteractionScene,
+        IPresentationYieldingSession
     {
+        /// <summary>How many sessions the ruleset had built when this one yielded its presentation, or null while it has not.</summary>
+        internal int? YieldedAtCreated { get; private set; }
+
+        public void YieldPresentation() => YieldedAtCreated = owner.Created;
+
         private readonly int _identity = owner.Created;
         private DebugCommandResult Stamp() => DebugCommandResult.Success(_identity.ToString());
         public IReadOnlyList<IDebugCommandModule> DebugCommands =>

@@ -11,10 +11,10 @@ namespace WorldRpg.Kit;
 /// </summary>
 public interface IDeveloperPeopleCommands : IDebugCommandModule
 {
-    [DebugCommand("people.rig", Description = "Developer: draw every walking person as the parts-rig test figure seen from SET directions (4 or 8), walking while they walk; off draws their own art again.")]
+    [DebugCommand("people.rig", Description = "Developer: draw every walking person as the parts-rig test figure seen from SET directions (4 or 8), walking while they walk; off draws their sprites.")]
     DebugCommandResult Rig(string set);
 
-    [DebugCommand("people.splat", Description = "Developer: draw every walking person as gsplat character ID, lit, walking while they walk and idling when they stop; off draws their own art again.")]
+    [DebugCommand("people.splat", Description = "Developer: draw every walking person as gsplat character ID, lit, walking while they walk and idling when they stop; own draws each as the character of their classic townsperson art (the default); off draws their sprites.")]
     DebugCommandResult Splat(string character);
 
     [DebugCommand("people.spawn", Description = "Developer: stand the COUNT nearest walking people in front of the player as gsplat character ID, whatever the rest are drawn as, until people.unstage; off draws them as the rest again.")]

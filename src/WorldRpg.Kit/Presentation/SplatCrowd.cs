@@ -10,8 +10,9 @@ namespace WorldRpg.Kit.Presentation;
 public sealed record SplatFigure(string Name, Appearance Appearance, string Walk, string Idle, float WalkRate, float CrossfadeSeconds);
 
 /// <summary>
-/// Draws walkers as <see cref="SplatFigure"/>s, at their own size: the crowd's figure, or one assigned to a walker
-/// (<see cref="Assign"/>), which it draws as that figure whether or not the crowd uses one. Each walker shown in a snapshot is an animation
+/// Draws walkers as <see cref="SplatFigure"/>s, at their own size: one assigned to a walker (<see cref="Assign"/>),
+/// which it draws as that figure whether or not the crowd uses one, else the crowd's figure, else the walker's own
+/// (<see cref="UseOwn"/>). Each walker shown in a snapshot is an animation
 /// instance of the figure's appearance, playing its walk while it walks and its idle otherwise. The figure's
 /// appearance and clips belong to whoever made it. An object holds one instance, so a walker that changes figure has
 /// its instance replaced, and one a snapshot leaves out has its instance released before that snapshot is published:
@@ -29,6 +30,9 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
 
     /// <summary>How many walkers the last settled snapshot drew as the figure.</summary>
     public int Count => shown.Count;
+
+    /// <summary>Each walker's own figure, by actor, drawn where the crowd uses none; null (or a null figure) shows its own art.</summary>
+    public Func<long, SplatFigure?>? Own { get; private set; }
 
     /// <summary>The walkers drawn as a figure of their own, by actor.</summary>
     public IReadOnlyDictionary<long, SplatFigure> Assigned => assigned;
@@ -48,9 +52,16 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
         Figure = figure;
     }
 
+    /// <summary>Draws each walker as its own figure from the next snapshot where the crowd uses none, or (null) as its own art again.</summary>
+    public void UseOwn(Func<long, SplatFigure?>? figures)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        Own = figures;
+    }
+
     public Appearance? Show(ulong id, long actor, float heightMetres, bool walking)
     {
-        if (disposed || (assigned.TryGetValue(actor, out SplatFigure? own) ? own : Figure) is not { } figure) return null;
+        if (disposed || (assigned.TryGetValue(actor, out SplatFigure? given) ? given : Figure ?? Own?.Invoke(actor)) is not { } figure) return null;
         seen.Add(id);
         if (!shown.TryGetValue(id, out Walker? walker))
             shown[id] = walker = new(figure, Engine.CreateInstance(new(figure.Appearance, id)));

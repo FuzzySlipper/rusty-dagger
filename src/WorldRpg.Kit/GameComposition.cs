@@ -387,6 +387,16 @@ public interface IGameSession : IDisposable
     IReadOnlyList<IDebugCommandModule> DebugCommands => [];
 }
 
+/// <summary>
+/// Optional seam for a session that binds Engine state to the presentation objects it publishes, such as an animation
+/// instance on a walker's object. A replacement publishes those same objects while this session still runs, so the
+/// host asks this one to let go of that state before it builds the replacement; from then on it draws without it.
+/// </summary>
+public interface IPresentationYieldingSession
+{
+    void YieldPresentation();
+}
+
 /// <summary>Optional entry flow that constructs a fresh session from committed character choices.</summary>
 public interface ICharacterCreationSession
 {

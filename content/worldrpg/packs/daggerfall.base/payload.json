@@ -6012,9 +6012,9 @@
       {"id": "magic", "index": 4}
     ],
     "races": [
-      {"id": "breton", "donorRaceId": 1, "resistanceFlags": 2, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0},
-      {"id": "redguard", "donorRaceId": 2, "resistanceFlags": 0, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0},
-      {"id": "nord", "donorRaceId": 3, "resistanceFlags": 16, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0},
+      {"id": "breton", "donorRaceId": 1, "resistanceFlags": 2, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0, "townspeople": {"male": [385, 386, 391, 394], "female": [453, 454, 455, 456]}},
+      {"id": "redguard", "donorRaceId": 2, "resistanceFlags": 0, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0, "townspeople": {"male": [381, 382, 383, 384], "female": [395, 396, 397, 398]}},
+      {"id": "nord", "donorRaceId": 3, "resistanceFlags": 16, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0, "townspeople": {"male": [387, 388, 389, 390], "female": [392, 393, 451, 452]}},
       {"id": "dark-elf", "donorRaceId": 4, "resistanceFlags": 0, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0},
       {"id": "high-elf", "donorRaceId": 5, "resistanceFlags": 0, "immunityFlags": 1, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0},
       {"id": "wood-elf", "donorRaceId": 6, "resistanceFlags": 0, "immunityFlags": 0, "lowToleranceFlags": 0, "criticalWeaknessFlags": 0},

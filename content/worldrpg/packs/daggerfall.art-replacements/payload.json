@@ -127839,6 +127839,7 @@
    "characters": {
     "381": {
      "name": "white linen tunic, red-orange zigzag hem",
+     "archive": 381,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/381.glb",
       "byteLength": 1090144,
@@ -127890,6 +127891,7 @@
     },
     "382": {
      "name": "bare-chested, white wrap kilt, steel bracers",
+     "archive": 382,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/382.glb",
       "byteLength": 1092532,
@@ -127941,6 +127943,7 @@
     },
     "383-A": {
      "name": "teal tunic, yellow zigzag bands",
+     "archive": 383,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/383-A.glb",
       "byteLength": 1091180,
@@ -127992,6 +127995,7 @@
     },
     "384-C": {
      "name": "yellow and grey striped tunic and kilt",
+     "archive": 384,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/384-C.glb",
       "byteLength": 1093816,
@@ -128043,6 +128047,7 @@
     },
     "385": {
      "name": "townsman: teal tunic, orange hood, striped hose",
+     "archive": 385,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/385.glb",
       "byteLength": 1096384,
@@ -128094,6 +128099,7 @@
     },
     "386-C": {
      "name": "sleeveless teal tunic, pale blue mantle",
+     "archive": 386,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/386-C.glb",
       "byteLength": 1094380,
@@ -128145,6 +128151,7 @@
     },
     "387-A": {
      "name": "green tunic, yellow-purple plaid kilt, fur-cuffed boots",
+     "archive": 387,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/387-A.glb",
       "byteLength": 1091524,
@@ -128196,6 +128203,7 @@
     },
     "388": {
      "name": "green hood, orange tunic, striped hose",
+     "archive": 388,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/388.glb",
       "byteLength": 1033356,
@@ -128247,6 +128255,7 @@
     },
     "389": {
      "name": "green hood, teal and pale blue tunic, striped hose",
+     "archive": 389,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/389.glb",
       "byteLength": 1026956,
@@ -128298,6 +128307,7 @@
     },
     "390-B": {
      "name": "teal and pale blue tunic, chequered hose",
+     "archive": 390,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/390-B.glb",
       "byteLength": 1091364,
@@ -128349,6 +128359,7 @@
     },
     "391": {
      "name": "green tunic, blue-green hood collar, blue hose",
+     "archive": 391,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/391.glb",
       "byteLength": 1093268,
@@ -128400,6 +128411,7 @@
     },
     "392": {
      "name": "light blue gown, red hip band",
+     "archive": 392,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/392.glb",
       "byteLength": 1090772,
@@ -128451,6 +128463,7 @@
     },
     "393": {
      "name": "blue hood, laced bodice, striped skirt",
+     "archive": 393,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/393.glb",
       "byteLength": 1092864,
@@ -128502,6 +128515,7 @@
     },
     "394": {
      "name": "rust-orange robe, green hood collar",
+     "archive": 394,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/394.glb",
       "byteLength": 1086812,
@@ -128553,6 +128567,7 @@
     },
     "395": {
      "name": "cream cape and wrap skirt, yellow sash",
+     "archive": 395,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/395.glb",
       "byteLength": 964320,
@@ -128604,6 +128619,7 @@
     },
     "396": {
      "name": "orange halter dress",
+     "archive": 396,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/396.glb",
       "byteLength": 1092520,
@@ -128655,6 +128671,7 @@
     },
     "397-B": {
      "name": "397 bare body (for the separate shawl layer)",
+     "archive": 397,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/397-B.glb",
       "byteLength": 965992,
@@ -128706,6 +128723,7 @@
     },
     "398": {
      "name": "teal hood, blue skirt with a flame hem",
+     "archive": 398,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/398.glb",
       "byteLength": 918980,
@@ -128757,6 +128775,7 @@
     },
     "451": {
      "name": "green hood, plaid skirt, green gloves",
+     "archive": 451,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/451.glb",
       "byteLength": 1025676,
@@ -128808,6 +128827,7 @@
     },
     "452-B": {
      "name": "452 bare body (for the separate cloak layer)",
+     "archive": 452,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/452-B.glb",
       "byteLength": 967468,
@@ -128859,6 +128879,7 @@
     },
     "453": {
      "name": "orange bodice, rust-red skirt",
+     "archive": 453,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/453.glb",
       "byteLength": 962632,
@@ -128910,6 +128931,7 @@
     },
     "454": {
      "name": "rust jacket, blue skirt",
+     "archive": 454,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/454.glb",
       "byteLength": 1091696,
@@ -128961,6 +128983,7 @@
     },
     "455": {
      "name": "rust hood, laced bodice, rust skirt",
+     "archive": 455,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/455.glb",
       "byteLength": 1090216,
@@ -129012,6 +129035,7 @@
     },
     "456": {
      "name": "bell sleeves, half-chequered skirt",
+     "archive": 456,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/456.glb",
       "byteLength": 876492,

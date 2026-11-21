@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""splat-people: the gsplat townspeople that `people.splat` draws every walker as, and the art pack's `splatPeople` section.
+"""splat-people: the gsplat townspeople every town walker draws as, and the art pack's `splatPeople` section.
 
 Takes the ready Dagger characters (local/art/generated/people/dagger-characters/ready.json: 09-game approved by Patch, each with
 the Engine's skinned-splat GLB on the 22 Mixamo body bones and its fit to PINOC's Mixamo Walking and Standing Idle) and
@@ -11,7 +11,7 @@ writes into content/worldrpg/packs/daggerfall.art-replacements/media/splat-peopl
                   clips alike (Armature.001|Scene), and one character carries both packs, so each takes its own name.
 
 and states artReplacements.splatPeople in payload.json: the clips, the joint the fits move (the top joint, Hips), and
-per character its name, body, the pelvis fit of each clip (k and A: Hips at (k x, A + k y, k z)) with the speed
+per character its name, the classic townsperson archive it draws (each walker wearing that art draws as it), its body, the pelvis fit of each clip (k and A: Hips at (k x, A + k y, k z)) with the speed
 the fitted walk travels, and its palette: PALETTE sRGB colours k-means picks from its own Gaussians, weighted by
 opacity, which a pixel finish can snap its blocks to. Rerun it when asset-pipeline marks another character ready or refits one.
 
@@ -137,7 +137,9 @@ def main():
             raise SystemExit(f'{ready["id"]} was fitted to {sorted(fit[name]["path"] for name in PACKS)}, not {sorted(PACKS.values())}')
         shutil.copyfile(body, MEDIA / f'{ready["id"]}.glb')
         characters[ready['id']] = {
-            'name': ready['name'], 'body': entry(MEDIA / f'{ready["id"]}.glb'),
+            'name': ready['name'],
+            'archive': int(ready['id'].split('-')[0]),  # the stage names a character ARCHIVE or ARCHIVE-VARIANT
+            'body': entry(MEDIA / f'{ready["id"]}.glb'),
             'walk': {'k': fit['walk']['k'], 'A': fit['walk']['A'], 'speed': round(fit['walk']['fitted']['speed_m_s'], 4)},
             'idle': {'k': fit['idle']['k'], 'A': fit['idle']['A']},
             'palette': palette(MEDIA / f'{ready["id"]}.glb'),

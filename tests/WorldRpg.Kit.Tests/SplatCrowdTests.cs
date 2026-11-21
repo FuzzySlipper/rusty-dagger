@@ -112,6 +112,30 @@ public sealed class SplatCrowdTests
         Assert.Empty(crowd.Assigned);
     }
 
+    [Fact]
+    public void Each_walker_draws_as_its_own_figure_where_the_crowd_uses_none()
+    {
+        AnimationRecorder engine = AnimationRecorder.Create();
+        using SplatCrowd crowd = new(() => engine.Service);
+        SplatFigure townsman = Figure("385", 1), townswoman = Figure("453", 2), spawned = Figure("454", 3);
+        crowd.UseOwn(actor => actor switch { 5 => townsman, 6 => townswoman, _ => null });
+        crowd.Assign(7, spawned);
+
+        // Each walker is its own figure, one with none shows its own art, and an assigned one stays assigned.
+        Assert.Same(townsman.Appearance, crowd.Show(9, 5, 1.7F, walking: true));
+        Assert.Same(townswoman.Appearance, crowd.Show(10, 6, 1.7F, walking: true));
+        Assert.Null(crowd.Show(11, 8, 1.7F, walking: true));
+        Assert.Same(spawned.Appearance, crowd.Show(12, 7, 1.7F, walking: true));
+        // The crowd's figure takes over from their own while it is used.
+        SplatFigure everyone = Figure("390-B", 4);
+        crowd.Use(everyone);
+        Assert.Same(everyone.Appearance, crowd.Show(9, 5, 1.7F, walking: true));
+        crowd.Use(null);
+        Assert.Same(townsman.Appearance, crowd.Show(9, 5, 1.7F, walking: true));
+        crowd.UseOwn(null);
+        Assert.Null(crowd.Show(9, 5, 1.7F, walking: true));
+    }
+
     /// <summary>What the site appearance does with the snapshot the crowd showed walkers in.</summary>
     private static void Publish(SplatCrowd crowd)
     {

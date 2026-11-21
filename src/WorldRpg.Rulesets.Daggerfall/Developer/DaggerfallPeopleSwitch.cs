@@ -11,13 +11,15 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The developer switches that draw every walking townsperson as one figure, through every site appearance, and back
-/// to their own art: people.rig as the art set's parts-rig test figure (<see cref="DaggerfallPeopleRig"/>) in one of
-/// its view sets, people.splat as one of its gsplat characters (<see cref="DaggerfallSplatPeople"/>), drawn in the
-/// tuning's look until people.splat-look changes it for the run. One figure is in use at a time. people.spawn stands a
-/// few walkers in front of the player as a gsplat character of their own, whatever the rest are drawn as. Each crowd is
-/// made on its first use, and a gsplat character is opened on its first use and kept for the session. Site appearances
-/// draw walkers through this switch: it shows a spawned walker as its character and the rest as the crowd in use, and
+/// How walking townspeople draw, through every site appearance. By default each draws as the art set's gsplat character
+/// (<see cref="DaggerfallSplatPeople"/>) of its classic townsperson art, while the refreshed art draws; a walker whose
+/// art has no character draws its sprite, said once as a warning. The developer switches draw every walker as one
+/// figure instead and back: people.rig as the art set's parts-rig test figure (<see cref="DaggerfallPeopleRig"/>) in one
+/// of its view sets, people.splat ID as one gsplat character, people.splat own as their own characters again, and off
+/// as their sprites. The gsplat people draw in the tuning's look until people.splat-look changes it for the run. One
+/// figure is in use at a time. people.spawn stands a few walkers in front of the player as a gsplat character of their
+/// own, whatever the rest are drawn as. The rig crowd is made on its first use, and a gsplat character is opened on its
+/// first use and kept for the session. It shows a spawned walker as its character and the rest as the crowd in use, and
 /// settles every crowd it made, so one put aside lets go of its walkers.
 /// </summary>
 /// <param name="rig">The art set's people rig, or null when it carries none.</param>
@@ -29,9 +31,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="tuning">How the gsplat people draw.</param>
 /// <param name="actors">The actors, counted for who walks here now.</param>
 /// <param name="stage">The staging people.spawn stands its walkers with.</param>
+/// <param name="townspeople">Every classic townsperson archive a walker may wear, each of which should have a character.</param>
+/// <param name="townsperson">The classic townsperson archive a walker wears, by actor; null when it wears none.</param>
+/// <param name="refreshed">Whether the refreshed art draws; while the classic art does, walkers draw their sprites.</param>
+/// <param name="warn">Says what the walkers draw that the art set did not mean them to.</param>
 internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, DaggerfallSplatPeople? splats, Func<IPartsRigsService> partsRigs,
     Func<IAnimationService> animation, Func<IContentService> content, float walkerSpeed, DaggerfallSplatPeopleTuning tuning, ActorsState actors,
-    DaggerfallPeopleStage stage) : IWalkerCrowd, IDisposable, IDeveloperPeopleCommands
+    DaggerfallPeopleStage stage, IReadOnlyCollection<int> townspeople, Func<long, int?> townsperson, Func<bool> refreshed, Action<string> warn)
+    : IWalkerCrowd, IDisposable, IDeveloperPeopleCommands
 {
     /// <summary>The rig pages are painted far finer than a classic person's pixels, so they are sampled smooth.</summary>
     private const TextureFilter Filter = TextureFilter.Linear;
@@ -48,14 +55,27 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow) look =
         (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster);
     private (RenderResource Walk, RenderResource Idle)? clips;
+    /// <summary>The characters that would not open, said once each; walkers wearing their art draw their sprites.</summary>
+    private readonly HashSet<string> broken = new(StringComparer.Ordinal);
+    private bool unclothed;
     private PartsRigCrowd? rigCrowd;
     private SplatCrowd? splatCrowd;
 
-    /// <summary>The crowd walking people are drawn as, or null while they show their own art.</summary>
+    /// <summary>Whether walkers draw as the characters of their own townsperson art: the default, until people.rig or people.splat off.</summary>
+    private bool own = splats is not null;
+
+    /// <summary>Whether this session has given way to its replacement: its walkers draw their sprites from then on.</summary>
+    private bool yielded;
+
+    /// <summary>The crowd walking people are drawn as, or null while they show their sprites.</summary>
     internal IWalkerCrowd? Crowd { get; private set; }
 
-    public Appearance? Show(ulong id, long actor, float heightMetres, bool walking) =>
-        splatCrowd?.Show(id, actor, heightMetres, walking) ?? (Crowd == splatCrowd ? null : Crowd?.Show(id, actor, heightMetres, walking));
+    public Appearance? Show(ulong id, long actor, float heightMetres, bool walking)
+    {
+        if (yielded) return null;
+        if (own) Crowd ??= Splats();
+        return splatCrowd?.Show(id, actor, heightMetres, walking) ?? (Crowd == splatCrowd ? null : Crowd?.Show(id, actor, heightMetres, walking));
+    }
 
     public void Publishing()
     {
@@ -78,21 +98,33 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         PartsRigFigure figure = rig.Figure(set, Filter, Material);
         (rigCrowd ??= new(partsRigs)).Use(figure);
         splatCrowd?.Use(null);
+        own = false;
         Crowd = rigCrowd;
-        return DebugCommandResult.Success($"Walking people draw as {rig.Name} seen from {figure.Views.Count} directions; {Walking()} walk here now.");
+        return DebugCommandResult.Success($"Walking people draw as {rig.Name} seen from {figure.Views.Count} directions; {Walking().Length} walk here now.");
     }
 
     public DebugCommandResult Splat(string character)
     {
         if (character == "off") return Off();
         if (splats is null) return DaggerfallDeveloperReplies.Refused("The art set carries no gsplat townspeople.");
+        if (character == "own")
+        {
+            rigCrowd?.Use(null);
+            own = true;
+            Splats().Use(null);
+            Crowd = splatCrowd;
+            ActorState[] walking = Walking();
+            int sprites = walking.Count(walker => townsperson(walker.DurableId) is not { } archive || !splats.ByArchive.ContainsKey(archive));
+            return DebugCommandResult.Success($"Walking people draw as the gsplat characters of their townsperson art, lit; {walking.Length} walk here now" +
+                (sprites == 0 ? "." : $", {sprites} of them as sprites, wearing art without a character."));
+        }
         if (!splats.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
-            return DaggerfallDeveloperReplies.Refused($"The art set has no gsplat character '{character}'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, or off.");
+            return DaggerfallDeveloperReplies.Refused($"The art set has no gsplat character '{character}'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, own or off.");
         SplatFigure figure = Open(splats, character, person);
-        (splatCrowd ??= new(animation)).Use(figure);
+        Splats().Use(figure);
         rigCrowd?.Use(null);
         Crowd = splatCrowd;
-        return DebugCommandResult.Success($"Walking people draw as gsplat {figure.Name}, lit; {Walking()} walk here now.");
+        return DebugCommandResult.Success($"Walking people draw as gsplat {figure.Name}, lit; {Walking().Length} walk here now.");
     }
 
     public DebugCommandResult Spawn(string character, int count)
@@ -108,15 +140,15 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (!splats.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
             return DaggerfallDeveloperReplies.Refused($"The art set has no gsplat character '{character}'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, or off.");
         SplatFigure figure = Open(splats, character, person);
-        splatCrowd ??= new(animation);
-        HashSet<long> spawned = [.. splatCrowd.Assigned.Keys];
+        Splats();
+        HashSet<long> spawned = [.. splatCrowd!.Assigned.Keys];
         DebugCommandResult placed = default!;
         ActorState[] walkers = [];
         // A row already full of spawned walkers is not clear ground, so later spawns stand further back.
         foreach (float metres in SpawnRows)
             if ((placed = stage.Place(count, metres, (count - 1) * SpawnSpacing, crossing: false, spawned, out walkers)).Succeeded) break;
         if (!placed.Succeeded) return placed;
-        foreach (ActorState walker in walkers) splatCrowd.Assign(walker.DurableId, figure);
+        foreach (ActorState walker in walkers) splatCrowd!.Assign(walker.DurableId, figure);
         return DebugCommandResult.Success($"{count} walking {(count == 1 ? "person stands" : "people stand")} in front of the player as gsplat {figure.Name}, until people.unstage.");
     }
 
@@ -146,6 +178,13 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         });
     }
 
+    /// <summary>
+    /// Gives way to another session that will publish the same walkers' objects: from the next snapshot the walkers draw
+    /// their sprites, so its publishing lets go of their instances (one left on an object that session shows as a sprite
+    /// faults the Engine). Disposing after that snapshot lets go of the figures, whose bodies that session binds again.
+    /// </summary>
+    internal void Yield() => yielded = true;
+
     public void Dispose()
     {
         List<Exception>? failures = null;
@@ -159,6 +198,9 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         }
         characters.Clear();
         clips = null;
+        rigCrowd = null;
+        splatCrowd = null;
+        Crowd = null;
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
@@ -166,11 +208,50 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     {
         rigCrowd?.Use(null);
         splatCrowd?.Use(null);
+        own = false;
         Crowd = null;
-        return DebugCommandResult.Success("Walking people show their own art again.");
+        return DebugCommandResult.Success("Walking people draw their sprites.");
     }
 
-    private int Walking() => actors.All.Count(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian && actor.Wander.State != WanderState.Unloaded);
+    private ActorState[] Walking() => [.. actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian && actor.Wander.State != WanderState.Unloaded)];
+
+    /// <summary>
+    /// The gsplat crowd, made on its first use, drawing each walker as its own character while <see cref="own"/>. As it is
+    /// made it says which townsperson art has no character.
+    /// </summary>
+    private SplatCrowd Splats()
+    {
+        if (splatCrowd is not null) return splatCrowd;
+        int[] missing = [.. townspeople.Where(archive => !splats!.ByArchive.ContainsKey(archive)).Distinct().Order()];
+        if (missing.Length != 0)
+            warn($"Townsperson art {string.Join(", ", missing)} has no gsplat character; walkers wearing it draw their sprites.");
+        splatCrowd = new(animation);
+        splatCrowd.UseOwn(Own);
+        return splatCrowd;
+    }
+
+    /// <summary>
+    /// Walker <paramref name="actor"/>'s own character, opened on its first use, while walkers draw as their own and the
+    /// refreshed art draws; null (its sprite) when its art has no character or the character would not open.
+    /// </summary>
+    private SplatFigure? Own(long actor)
+    {
+        if (!own || !refreshed()) return null;
+        if (townsperson(actor) is not { } archive)
+        {
+            if (!unclothed) warn("A walker wears no classic townsperson art (its race has none), so it draws its sprite.");
+            unclothed = true;
+            return null;
+        }
+        if (!splats!.ByArchive.TryGetValue(archive, out string? id) || broken.Contains(id)) return null;
+        try { return Open(splats, id, splats.Characters[id]); }
+        catch (Exception exception)
+        {
+            broken.Add(id);
+            warn($"Gsplat character {id} would not open, so walkers wearing townsperson art {archive} draw their sprites: {exception.Message}");
+            return null;
+        }
+    }
 
     /// <summary>
     /// Character <paramref name="id"/>, opened on its first use: its body with the walk and idle bound by joint names and

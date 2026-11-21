@@ -10,6 +10,20 @@ internal sealed record DaggerfallRaceDefinition(string Id, int DonorRaceId)
     internal int ImmunityFlags { get; init; }
     internal int LowToleranceFlags { get; init; }
     internal int CriticalWeaknessFlags { get; init; }
+
+    /// <summary>
+    /// The classic townsperson art a wandering townsperson of this race wears, by gender (<c>Male</c>, <c>Female</c>):
+    /// the texture archives classic Daggerfall picks from, empty for a race that never walks a town.
+    /// </summary>
+    internal IReadOnlyDictionary<string, IReadOnlyList<int>> Townspeople { get; init; } = new Dictionary<string, IReadOnlyList<int>>();
+
+    /// <summary>
+    /// The archive of the classic townsperson art a <paramref name="gender"/> walker of this race wears, chosen among the
+    /// race's by its stable <paramref name="seed"/>; null when the race has none for that gender.
+    /// </summary>
+    internal int? Townsperson(string gender, int seed) => Townspeople.TryGetValue(gender, out IReadOnlyList<int>? archives) && archives.Count != 0
+        ? archives[(int)((uint)seed % (uint)archives.Count)] : null;
+
     internal DaggerfallDiseaseCareerTolerance Tolerance(int effectFlag) => DaggerfallCareerTolerances.Tolerance(
         ResistanceFlags, ImmunityFlags, LowToleranceFlags, CriticalWeaknessFlags, effectFlag);
 }

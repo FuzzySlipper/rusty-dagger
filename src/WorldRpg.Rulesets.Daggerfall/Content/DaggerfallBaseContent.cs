@@ -2999,6 +2999,13 @@ internal static partial class DaggerfallBaseContent
             {
                 ResistanceFlags = Integer(race, "resistanceFlags", diagnostics), ImmunityFlags = Integer(race, "immunityFlags", diagnostics),
                 LowToleranceFlags = Integer(race, "lowToleranceFlags", diagnostics), CriticalWeaknessFlags = Integer(race, "criticalWeaknessFlags", diagnostics),
+                Townspeople = race.TryGetProperty("townspeople", out JsonElement townspeople)
+                    ? new Dictionary<string, IReadOnlyList<int>>(StringComparer.Ordinal)
+                    {
+                        ["Male"] = [.. Array(townspeople, "male", diagnostics).Select(archive => archive.GetInt32())],
+                        ["Female"] = [.. Array(townspeople, "female", diagnostics).Select(archive => archive.GetInt32())],
+                    }
+                    : new Dictionary<string, IReadOnlyList<int>>(),
             };
             if (((definition.ResistanceFlags | definition.ImmunityFlags | definition.LowToleranceFlags | definition.CriticalWeaknessFlags) & ~127) != 0)
                 diagnostics.Add($"Race '{definition.Id}' carries unknown effect flag bits.");
