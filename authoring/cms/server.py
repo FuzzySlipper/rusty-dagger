@@ -6,27 +6,50 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import sqlite3
 from pathlib import Path
 import subprocess
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from threading import Lock
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from catalog import Catalog, assigned
-from library import CMS, DEFAULT_MERGES, DEFAULT_NPCS, REPO, Library, read_json
+from library import CMS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library, read_json
+from pipelines import STAGES, stage_row
+from review_media import revision, stage_assets, stage_info
+from reviews import ReviewStore, Reviews
 
 WEB = CMS / "web"
 
 
 class Workspace:
-    def __init__(self, library, links, merges):
+    def __init__(self, library, links, merges, review_store=None):
         self.library = library
         self.links = links
         self.merges = merges
+        self.review_store = review_store
         self.link_lock = Lock()
 
     def catalog(self):
         return Catalog(self.library, read_json(self.links, {}))
+
+    def reviews(self):
+        aliases = read_json(self.library.npcs / "manifest.json", {}).get("aliases", {})
+        return Reviews(self.review_store, aliases, lambda category, id: revision(self.library, category, id))
+
+    def overview(self):
+        return self.catalog().overview() | {"reviews": self.reviews().list()}
+
+    def stage_review(self, pipeline, stage):
+        info = stage_info(self.library, pipeline, stage)
+        if not info:
+            return None
+        character, state = info
+        return {
+            "pipeline": pipeline, "character": character.get("name", pipeline),
+            "stage": stage_row(stage, STAGES[stage], state) | {"revision": state.get("updated") or "unrecorded"},
+            "assets": stage_assets(self.library, pipeline, stage, state),
+        }
 
     def update_links(self, key, body):
         if not isinstance(body, dict):
@@ -121,13 +144,34 @@ class Handler(SimpleHTTPRequestHandler):
         file = (WEB / path.lstrip("/")).resolve()
         return str(file if file.is_relative_to(WEB) else WEB / "missing")
 
+    def review_key(self, path, prefix):
+        category, sep, id = path.removeprefix(prefix).partition("/")
+        if not sep or not category or not id:
+            raise ValueError("Provide a category and record ID.")
+        return unquote(category), unquote(id)
+
     def do_GET(self):
-        path = urlsplit(self.path).path
+        url = urlsplit(self.path)
+        path = url.path
         try:
             if path == "/health":
                 self.json_response({"service": "Rusty Dagger Authoring"})
             elif path == "/api/catalog":
-                self.json_response(self.workspace.catalog().overview())
+                self.json_response(self.workspace.overview())
+            elif path == "/api/reviews":
+                fields = parse_qs(url.query)
+                select = lambda key: fields.get(key, [None])[0]
+                rows = self.workspace.reviews().list(select("category"))
+                self.json_response([row for row in rows
+                                    if (select("marked") != "1" or row["marked"])
+                                    and (not select("rating") or row["rating"] == select("rating"))
+                                    and (not select("prefix") or row["id"].startswith(select("prefix")))])
+            elif path.startswith("/api/reviews/"):
+                self.json_response(self.workspace.reviews().item(*self.review_key(path, "/api/reviews/")))
+            elif path.startswith("/api/stage-review/"):
+                review = self.workspace.stage_review(*self.review_key(path, "/api/stage-review/"))
+                self.json_response(review or {"error": "Stage not found."},
+                                   HTTPStatus.OK if review else HTTPStatus.NOT_FOUND)
             elif path.startswith("/api/characters/"):
                 subject = self.workspace.catalog().get(unquote(path.removeprefix("/api/characters/")))
                 self.json_response(subject or {"error": "Character not found."},
@@ -148,13 +192,22 @@ class Handler(SimpleHTTPRequestHandler):
                 super().do_GET()
         except FileNotFoundError:
             self.send_error(HTTPStatus.NOT_FOUND)
-        except (OSError, ValueError) as error:
+        except (OSError, ValueError, sqlite3.Error) as error:
             self.json_response({"error": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def do_POST(self):
         path = urlsplit(self.path).path
         try:
-            if path == "/api/npcs/merge":
+            if path.startswith("/api/marks/") and path.endswith("/clear"):
+                category = unquote(path.removeprefix("/api/marks/").removesuffix("/clear"))
+                if not category:
+                    raise ValueError("Provide a category.")
+                self.json_response({"cleared": self.workspace.review_store.clear_marks(category)})
+                return
+            if path.startswith("/api/reviews/"):
+                category, id = self.review_key(path, "/api/reviews/")
+                action = lambda body: self.workspace.reviews().patch(category, id, body)
+            elif path == "/api/npcs/merge":
                 action = self.workspace.merge_npcs
             elif path.startswith("/api/characters/") and path.endswith("/links"):
                 key = unquote(path.removeprefix("/api/characters/").removesuffix("/links"))
@@ -166,7 +219,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.json_response(action(body))
         except (KeyError, ValueError) as error:
             self.json_response({"error": str(error)}, HTTPStatus.BAD_REQUEST)
-        except OSError as error:
+        except (OSError, sqlite3.Error) as error:
             self.json_response({"error": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
@@ -178,9 +231,15 @@ def main():
     parser.add_argument("--npc-root", type=Path, default=DEFAULT_NPCS)
     parser.add_argument("--npc-merges", type=Path, default=DEFAULT_MERGES)
     parser.add_argument("--links", type=Path, default=CMS / "links.json")
+    parser.add_argument("--reviews", type=Path, default=DEFAULT_REVIEWS)
+    parser.add_argument("--characters", type=Path, default=os.getenv("DAGGER_CHAR_ROOT"),
+                        help="character stage root, such as authoring/characters after moving the assets")
     args = parser.parse_args()
-    Handler.workspace = Workspace(Library(args.npc_root.resolve(), args.asset_pipeline.resolve()),
-                                  args.links.resolve(), args.npc_merges.resolve())
+    character_root = args.characters or REPO / "authoring/characters"
+    library = Library(args.npc_root.resolve(), args.asset_pipeline.resolve(),
+                      character_root.resolve() if args.characters or character_root.is_dir() else None)
+    Handler.workspace = Workspace(library, args.links.resolve(), args.npc_merges.resolve(),
+                                  ReviewStore(args.reviews.resolve()))
     with ThreadingHTTPServer((args.host, args.port), Handler) as server:
         print(f"Rusty Dagger Authoring at http://{args.host}:{server.server_port}", flush=True)
         server.serve_forever()

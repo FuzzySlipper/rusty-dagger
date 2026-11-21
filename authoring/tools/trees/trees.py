@@ -11,7 +11,8 @@ light and dark; leaves lean toward the darks, which lit cards lose, and each lea
 sprites outline theirs.
 
 Archive 500's palms have their own connected stems, root flares and folded fronds in rainforest_palms.py.
-Its vine, buttress, tufted, rock-rooted and blue-fruited trees are shaped in rainforest_trees.py.
+Its other bespoke trees are shaped in rainforest_trees.py. Archive 501 shares matching paintings' meshes
+at its own placement; subtropical_trees.py builds its distinct spiky palms and mossy snag.
 Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
 The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
@@ -43,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "rocks"))
 import rocks  # noqa: E402
 import rainforest_palms
 import rainforest_trees
+import subtropical_trees
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
@@ -64,8 +66,8 @@ BOULDERS, SLAB, CAIRN = rocks.BOULDERS, rocks.SLAB, rocks.CAIRN
 ROCKS = (BOULDERS, SLAB, CAIRN)
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
-          12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3), 30: (CHESTNUT, 1)},
-    501: {11: (PALM, 1), 12: (PALM, 2), 13: (PALM, 3), 16: (PALM, 1), 30: (PALM, 2)},
+          12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
+    501: {**{r: (form, r) for r, form in subtropical_trees.FORMS.items()}, 30: (PALM, 2)},
     502: {13: (CORK, 1), 16: (CORK, 2), 17: (CORK, 3), 18: (CHESTNUT, 2)},
     503: {5: (CORK, 2), 11: (DEAD, 1), 13: (PALM, 1)},
     504: {11: (CORK, 1), 12: (CORK, 3), 13: (FIR, 1), 14: (CORK, 2), 15: (CORK, 1), 16: (BEECH, 3), 17: (BEECH, 1),
@@ -80,6 +82,10 @@ FORMS = {
     510: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 15: (CORK, 1), 24: (DEAD, 1), 25: (PINE, 2), 30: (PINE, 1)},
     511: {11: (FIR, 2), 13: (FIR, 1), 24: (DEAD, 1), 25: (PINE, 2)},
 }
+# These subtropical flats share the rainforest paintings. Reuse their authored media
+# while placing every record at its own size, including when a source is rebuilt by key.
+SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
+                "501-15": "500-13", "501-17": "500-3"}
 DEAD_WOOD_AND_ROCKS = {
     500: {4: (SLAB, 1), 17: (SLAB, 1), 31: (BOULDERS, 4)},
     501: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (BOULDERS, 3), 6: (BOULDERS, 3), 23: (BOULDERS, 3)},
@@ -292,6 +298,12 @@ def placement(flat, rgba, m, old, recompute=False):
             "from": {name: marks.get(name, "art") if name in given else "art" for name in measured}}
 
 
+def shared_tree(source, flat, old=None, recompute=False):
+    """The same authored mesh and materials, standing at the receiving record's own height and foot."""
+    rgba = frame(flat)
+    return {**source, "placement": placement(flat, rgba, measures(rgba), old, recompute)}
+
+
 def rock(flat, rgba, archive, record, form, stones, folder, old, recompute):
     """One rock's mesh, shaped to its sprite's outline, and its stone in the sprite's colours, with the snow it carries."""
     m = measures(rgba)
@@ -314,10 +326,14 @@ def tree(flat, archive, record, species, variant, folder, old=None, recompute=Fa
     if species in ROCKS:
         return rock(flat, rgba, archive, record, species, variant, folder, old, recompute)
     m = measures(rgba)
-    if archive == 500 and (record in rainforest_palms.PALMS or record in rainforest_trees.FORMS):
+    rainforest = archive == 500 and (record in rainforest_palms.PALMS or record in rainforest_trees.FORMS)
+    if rainforest or (archive == 501 and record in subtropical_trees.FORMS):
         name = f"tree-{archive}-{record}"
-        mesh_name = f"{species}-p{variant}-rainforest.prop-mesh.json"
-        if record in rainforest_palms.PALMS:
+        climate = "rainforest" if rainforest else "subtropical"
+        mesh_name = f"{species}-p{variant}-{climate}.prop-mesh.json"
+        if not rainforest:
+            mesh, images = subtropical_trees.build(record, rgba)
+        elif record in rainforest_palms.PALMS:
             mesh, bark, leaves = rainforest_palms.build(record, rgba)
             images = {"bark": bark, "leaves": leaves}
         else:
@@ -376,7 +392,7 @@ def main():
     flats = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["flats"]}
     folder = CONTENT / MEDIA
     wanted = {f"{archive}-{record}": (archive, record, form) for archive, forms in FORMS.items() for record, form in forms.items()}
-    if unknown := [key for key in keys if key not in wanted]:
+    if unknown := [key for key in keys if key not in wanted and key not in SHARED_TREES]:
         raise SystemExit(f"no tree is made for {', '.join(unknown)}")
     # The shader that lays the winter trees' snow on their leaves, written by hand beside them.
     snow = (folder / "snow.wgsl").read_text()
@@ -385,13 +401,24 @@ def main():
     # not at CRAFTSURVIVE, a mesh refused) leaves the trees as they were rather than deleted.
     with tempfile.TemporaryDirectory() as built:
         built = Path(built)
-        for key in keys or wanted:
+        build_keys = [key for key in keys if key in wanted] if keys else list(wanted)
+        for key in keys:
+            source = SHARED_TREES.get(key)
+            if source and source not in trees and source not in build_keys:
+                build_keys.append(source)
+        for key in build_keys:
             archive, record, (species, variant) = wanted[key]
             trees[key] = tree(flats[(archive, record)], archive, record, species, variant, built, payload["artReplacements"]["trees"].get(key), bool({"all", key} & recompute))
+        shared = [key for key, source in SHARED_TREES.items() if not keys or key in keys or source in build_keys]
+        for key in shared:
+            archive, record = map(int, key.split("-"))
+            flat = flats[archive, record]
+            old = payload["artReplacements"]["trees"].get(key)
+            trees[key] = shared_tree(trees[SHARED_TREES[key]], flat, old, bool({"all", key} & recompute))
         if keys:
             # A file another entry names too (a rock several climates share) changes under it unless that entry is rebuilt.
             written = {f"{MEDIA}/{file.name}" for file in built.iterdir()}
-            if sharing := sorted(key for key, entry in trees.items() if key not in keys and written & set(paths(entry))):
+            if sharing := sorted(key for key, entry in trees.items() if key not in build_keys and key not in shared and written & set(paths(entry))):
                 raise SystemExit(f"{', '.join(keys)} write files that {', '.join(sharing)} also name: give those keys too")
         else:
             (built / "snow.wgsl").write_text(snow)
@@ -404,7 +431,7 @@ def main():
             shutil.copyfile(file, folder / file.name)
     payload["artReplacements"]["trees"] = trees
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
-    print(f"{len(keys) or len(trees)} trees, {len(list(folder.glob('*.prop-mesh.json')))} meshes")
+    print(f"{len(build_keys) + len(shared)} trees, {len(list(folder.glob('*.prop-mesh.json')))} meshes")
 
 if __name__ == "__main__":
     main()

@@ -24,20 +24,21 @@ class Meshes(unittest.TestCase):
         trees.write_mesh(folder / "rock.prop-mesh.json", {"height": 1, "parts": [{"role": "stone", "normals": [0, 1, 0, 1, 0, 0]}]})
         self.assertTrue((folder / "rock.prop-mesh.json").exists())
 
-    def test_rainforest_palms_keep_the_whole_stem_between_soil_and_crown(self):
+    def test_palm_trunks_keep_the_whole_stem_between_soil_and_crown(self):
         # 500-15 had unused vertices throughout its gap. Only indexed bark can bridge it.
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]
-        for record in (12, 14, 15):
-            entry = art[f"500-{record}"]
+        for key, crown in (("500-12", .72), ("500-14", .72), ("500-15", .72),
+                           ("501-11", .48), ("501-13", .72), ("501-16", .48)):
+            entry = art[key]
             mesh = json.loads((trees.CONTENT / entry["mesh"]["path"]).read_bytes())
             bark = next(part for part in mesh["parts"] if part["role"] == "bark")
             heights = np.array(bark["positions"][1::3]) / mesh["height"]
             faces = heights[np.array(bark["indices"]).reshape(-1, 3)]
             covered = 0
             for low, high in sorted(zip(faces.min(1), faces.max(1))):
-                self.assertLessEqual(low, covered + 1e-6, f"500-{record} bark gap from {covered} to {low}")
+                self.assertLessEqual(low, covered + 1e-6, f"{key} bark gap from {covered} to {low}")
                 covered = max(covered, high)
-            self.assertGreater(covered, .72, f"500-{record} trunk ends below the crown")
+            self.assertGreater(covered, crown, f"{key} trunk ends below the crown")
 
     def test_rainforest_replacements_have_indexed_support_from_the_foot_into_the_leaves(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]
@@ -59,6 +60,19 @@ class Meshes(unittest.TestCase):
                     self.assertLessEqual(low, supported + 1e-6)
                     supported = max(supported, high)
                 self.assertGreater(supported, lowest_leaf)
+
+    def test_subtropical_twins_use_the_same_media_but_their_own_placement(self):
+        art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]
+        flats = {f"{f['replaces']['archive']}-{f['replaces']['record']}": f for f in art["flats"]}
+        for key, source in trees.SHARED_TREES.items():
+            with self.subTest(key=key):
+                instance = art["trees"][key]
+                original = art["trees"][source]
+                self.assertEqual({k: v for k, v in original.items() if k != "placement"},
+                                 {k: v for k, v in instance.items() if k != "placement"})
+                self.assertEqual(trees.shared_tree(original, flats[key], instance), instance)
+                hand = {"placement": {"height": 7.25, "foot": .1, "from": {"height": "hand", "foot": "hand"}}}
+                self.assertEqual(trees.shared_tree(original, flats[key], hand)["placement"], hand["placement"])
 
     def test_the_winter_rock_painted_with_pockets_is_built_whole_on_its_foot(self):
         flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["flats"] if f["replaces"] == {"archive": 507, "record": 4})

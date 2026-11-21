@@ -44,6 +44,23 @@ the character stage files. A single approved front or game-ready output is shown
 the same ledger and rebuild the reference pages from the host. Workbench review links open the native
 media and ratings. The Flora pages use the Engine-rendered review images from the existing flora exporter.
 
+Use **Mark** on a card or detail page, **Marked only** to browse the selection, and **Clear all marks** to reset that
+catalog. Ratings and notes stay with the record when marks are cleared. **Review in CMS** opens locally filed
+images and clips, with ratings and notes on each asset and on the stage. Use the saved stage decisions when
+applying production changes through the existing character tools.
+
+Review data is keyed by category and ID in `local/authoring/reviews.sqlite3`. Use the CLI on the CMS host, or
+pass `--url` with its LAN URL from another machine:
+
+```sh
+python3 authoring/cms/review_cli.py marked flora --ids
+python3 authoring/cms/review_cli.py get npcs npc-381
+python3 authoring/cms/review_cli.py list pipeline-assets --prefix 452/01-concept/ --rating bad
+```
+
+Put migrated character folders under `authoring/characters/`, or set `DAGGER_CHAR_ROOT` to another stage root.
+Keep the same character IDs and relative paths so the CMS can find their reviews.
+
 ## Reference exports
 
 ```sh

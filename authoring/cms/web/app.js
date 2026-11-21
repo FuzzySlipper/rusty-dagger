@@ -1,3 +1,5 @@
+import { installReviewActions, loadReviews, markedCount, reviewBadge, reviewFor, reviewPanel, tileReview } from './reviews.js';
+
 const content = document.querySelector('#content');
 const queryInput = document.querySelector('#query');
 const stateNames = {
@@ -19,6 +21,7 @@ const sprite = (url, alt, isPixel = false) => `<div class="preview${isPixel ? ' 
 const empty = message => `<p class="empty">${escape(message)}</p>`;
 const subjectUrl = id => `#character/${key(id)}`;
 const pipelineUrl = id => `#pipeline/${key(id)}`;
+const stageUrl = (id, stage) => `#review/${key(id)}/${key(stage)}`;
 const factList = facts => `<dl class="facts">${Object.entries(facts).map(([name, value]) =>
   `<div><dt>${escape(name)}</dt><dd>${escape(typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value)}</dd></div>`
 ).join('')}</dl>`;
@@ -26,12 +29,18 @@ const factList = facts => `<dl class="facts">${Object.entries(facts).map(([name,
 let catalog;
 let currentView = 0;
 let actionStatus = '';
+let refreshReviewList = () => {};
 
 async function request(path, options) {
   const response = await fetch(path, options);
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
   return data;
+}
+
+async function refreshCatalog() {
+  catalog = await request('/api/catalog');
+  loadReviews(catalog.reviews);
 }
 
 function sections() {
@@ -49,30 +58,38 @@ function overview() {
   const reviews = catalog.review.map(row => `
     <tr><td>${link(pipelineUrl(row.pipeline), row.character)} <code>${escape(row.pipeline)}</code></td>
     <td>${escape(row.name)}</td>
-    <td>${chip(row.state)}</td><td>${escape(row.note)}</td>
-    <td>${link(row.reviewUrl, 'Workbench review') || link(pipelineUrl(row.pipeline), 'Open stages')}</td></tr>`).join('');
+    <td>${chip(row.state)} ${reviewBadge(reviewFor('pipeline-stages', `${row.pipeline}/${row.id}`))}</td><td>${escape(row.note)}</td>
+    <td>${link(stageUrl(row.pipeline, row.id), 'Review in CMS')}</td></tr>`).join('');
+  const pending = catalog.review.filter(row => !reviewFor('pipeline-stages', `${row.pipeline}/${row.id}`).rating).length;
   return title('Authoring overview', '', link('/media/npc/', 'Compare & merge NPCs', 'button primary')) +
-    `<div class="collections">${counts}</div><section class="panel"><div class="section-heading"><h2>Needs review</h2>
-    <span class="muted">${catalog.review.length} stages</span></div>${reviews ? `
+    `<div class="collections">${counts}</div><section class="panel"><div class="section-heading"><h2>Stage reviews</h2>
+    <span class="muted">${pending} awaiting a CMS rating</span></div>${reviews ? `
     <div class="table-wrap"><table><thead><tr><th>Character</th><th>Stage</th><th>State</th><th>Note</th><th>Review</th></tr></thead>
     <tbody>${reviews}</tbody></table></div>` : empty('No character stages are waiting for review.')}</section>`;
 }
 
+function card(category, id, url, preview, name, status, pixel = false) {
+  return `<article class="tile"><a class="tile-link" href="${url}">${sprite(preview, '', pixel)}
+    <div class="tile-info"><code>${escape(id)}</code><strong>${escape(name)}</strong><small>${escape(status)}</small></div></a>
+    ${tileReview(category, id, escape)}</article>`;
+}
+
+function characterCategory(id) {
+  return id.startsWith('npc-') ? 'npcs' : 'mobiles';
+}
+
 function characterCard(row) {
   const status = row.pipelineIds.length ? `${row.pipelineIds.length} linked pipeline${row.pipelineIds.length === 1 ? '' : 's'}` : row.kind;
-  return `<a class="tile" href="${subjectUrl(row.id)}">${sprite(row.classic, '', true)}
-    <div class="tile-info"><code>${escape(row.id)}</code><strong>${escape(row.name)}</strong><small>${escape(status)}</small></div></a>`;
+  return card(characterCategory(row.id), row.id, subjectUrl(row.id), row.classic, row.name, status, true);
 }
 
 function pipelineCard(row) {
   const status = row.final ? 'Ready for game testing' : row.stages.find(stage => ['needs-Patch', 'needs-check'].includes(stage.state))?.name;
-  return `<a class="tile" href="${pipelineUrl(row.id)}">${sprite(row.thumbnail, '')}
-    <div class="tile-info"><code>${escape(row.id)}</code><strong>${escape(row.name)}</strong><small>${escape(status || 'Character stages')}</small></div></a>`;
+  return card('pipelines', row.id, pipelineUrl(row.id), row.thumbnail, row.name, status || 'Character stages');
 }
 
 function floraCard(row) {
-  return `<a class="tile" href="#flora/${key(row.key)}">${sprite(row.views.front || row.views.sprite, '')}
-    <div class="tile-info"><code>${escape(row.key)}</code><strong>${escape(row.form || row.category)}</strong><small>${escape(row.climate)}</small></div></a>`;
+  return card('flora', row.key, `#flora/${key(row.key)}`, row.views.front || row.views.sprite, row.form || row.category, row.climate);
 }
 
 function listing(page, items = catalog[page], term = '') {
@@ -83,18 +100,41 @@ function listing(page, items = catalog[page], term = '') {
   const controls = `<div class="filters"><label>Filter <input type="search" id="filter" value="${escape(term)}" placeholder="ID, name, or description"></label>
     ${labels.length > 1 ? `<label>${page === 'flora' ? 'Climate' : 'Type'} <select id="facet"><option value="">All</option>
     ${labels.map(value => `<option>${escape(value)}</option>`).join('')}</select></label>` : ''}
-    <output id="results" aria-live="polite"></output></div>`;
+    <label>Rating <select id="rating-filter"><option value="">All ratings</option><option value="good">Good</option>
+      <option value="maybe">Maybe</option><option value="bad">Bad</option><option value="unrated">Unrated</option></select></label>
+    <label class="mark-filter"><input type="checkbox" id="marked-filter"> Marked only</label>
+    <output id="results" aria-live="polite"></output></div>
+    <div class="mark-bar"><span id="marked-count"></span><button type="button" data-clear-marks="${page}">Clear all marks</button>
+      <output id="mark-status" role="status"></output></div>`;
   content.innerHTML = title(label, '', page === 'npcs' ? link('/media/npc/', 'Compare & merge NPCs', 'button primary') : '') +
     controls + '<div id="tiles" class="tiles"></div>';
   const filter = document.querySelector('#filter');
   const facet = document.querySelector('#facet');
+  const rating = document.querySelector('#rating-filter');
+  const marked = document.querySelector('#marked-filter');
+  const clear = document.querySelector('[data-clear-marks]');
+  function showCount() {
+    const count = markedCount(page);
+    document.querySelector('#marked-count').textContent = `${count} marked`;
+    clear.disabled = count === 0;
+  }
   function show() {
-    const matching = match(items, filter.value).filter(row => !facet?.value || row[field] === facet.value);
+    const matching = match(items, filter.value).filter(row => {
+      const saved = reviewFor(page, row.id ?? row.key);
+      return (!facet?.value || row[field] === facet.value) && (!marked.checked || saved.marked) &&
+        (!rating.value || (rating.value === 'unrated' ? !saved.rating : saved.rating === rating.value));
+    });
     document.querySelector('#tiles').innerHTML = matching.length ? matching.map(card).join('') : empty('No matching records.');
-    document.querySelector('#results').textContent = `${matching.length} records`;
+    document.querySelector('#results').textContent = `${matching.length} ${matching.length === 1 ? 'record' : 'records'}`;
+    showCount();
   }
   filter.addEventListener('input', show);
-  facet?.addEventListener('change', show);
+  for (const control of [facet, rating, marked]) control?.addEventListener('change', show);
+  refreshReviewList = category => {
+    if (category !== page) return;
+    if (marked.checked || rating.value) show();
+    else showCount();
+  };
   show();
 }
 
@@ -129,7 +169,7 @@ function stageTable(pipeline) {
   return `<div class="table-wrap"><table><thead><tr><th>Stage</th><th>State</th><th>Selection or note</th><th>Review</th></tr></thead>
     <tbody>${pipeline.stages.map(row => `<tr><td>${escape(row.name)}</td><td>${chip(row.state)}</td>
     <td>${escape([row.selection.join(', '), row.note].filter(Boolean).join(' · '))}</td>
-    <td>${link(row.reviewUrl, 'Open review')}</td></tr>`).join('')}</tbody></table></div>`;
+    <td>${link(stageUrl(pipeline.id, row.id), 'Review in CMS')} ${reviewBadge(reviewFor('pipeline-stages', `${pipeline.id}/${row.id}`))}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function pipelineDetails(pipeline, subject) {
@@ -193,6 +233,7 @@ function characterDetail(subject) {
     (subject.brief?.brief ? `<p class="brief">${escape(subject.brief.brief)}</p>` : '') +
     `<div class="depictions">${paintPanel('Classic depiction', classic, 'Classic sprite export unavailable.', true)}
       ${conceptPanel}${finalPanel}</div>
+    ${reviewPanel(characterCategory(subject.id), subject.id, escape)}
     <section class="panel"><div class="section-heading"><h2>Game data</h2>${link(game.url, 'Source record')}</div>
     ${factList(game.placementCount === undefined ? game.facts : { ...game.facts, 'Source placements': game.placementCount })}
     ${game.record ? `<details><summary>Mobile definition</summary><pre>${escape(JSON.stringify(game.record, null, 2))}</pre></details>` : ''}</section>
@@ -217,7 +258,7 @@ function bindLinks(subject) {
       const result = await request(`/api/characters/${key(subject.id)}/links`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(change),
       });
-      catalog = await request('/api/catalog');
+      await refreshCatalog();
       if (window.location.hash === subjectUrl(subject.id)) {
         actionStatus = 'Saved.';
         characterDetail(result);
@@ -249,21 +290,37 @@ function floraDetail(row) {
   return '<a class="breadcrumb" href="#flora">Flora catalog</a>' +
     title(row.form || row.category, `${row.key} · ${row.climate}`, link('/media/flora/', 'Original flora review', 'button')) +
     factList({ Category: row.category, Height: `${Number(row.height).toFixed(2)} m`, Triangles: row.triangles }) +
-    `<div class="flora-views">${views || empty('Render assets are unavailable.')}</div>`;
+    `<div class="flora-views">${views || empty('Render assets are unavailable.')}</div>` +
+    reviewPanel('flora', row.key, escape);
+}
+
+function stageReview(detail) {
+  const { pipeline, character, stage, assets } = detail;
+  const media = assets.map(asset => `<article class="asset-review">
+    ${asset.media === 'image' ? sprite(asset.url, asset.name) : asset.media === 'video' ?
+      `<video controls preload="metadata" src="${escape(asset.url)}"></video>` : ''}
+    <div class="asset-name">${link(asset.url, asset.name)}</div>
+    ${reviewPanel('pipeline-assets', asset.id, escape, 'Asset review', asset.revision)}</article>`).join('');
+  return `<a class="breadcrumb" href="${pipelineUrl(pipeline)}">Character stages</a>` +
+    title(`${stage.name} review`, `${character} · ${pipeline}`) +
+    `<div class="review-stage-bar">${chip(stage.state)} ${escape(stage.note)} ${link(stage.reviewUrl, 'Earlier Workbench batch')}</div>` +
+    reviewPanel('pipeline-stages', `${pipeline}/${stage.id}`, escape, 'Stage decision', stage.revision) +
+    '<h2>Stage assets</h2>' + (media ? `<div class="asset-reviews">${media}</div>` : empty('No local media is filed for this stage.'));
 }
 
 async function render() {
   const view = ++currentView;
-  const [page = 'overview', encoded = ''] = location.hash.slice(1).split('/');
+  refreshReviewList = () => {};
+  const [page = 'overview', encoded = '', stage = ''] = location.hash.slice(1).split('/');
   let id;
   try {
     id = decodeURIComponent(encoded);
     const section = page === 'character' ? (id.startsWith('npc-') ? 'npcs' : 'mobiles') :
-      page === 'pipeline' ? 'pipelines' : page;
+      ['pipeline', 'review'].includes(page) ? 'pipelines' : page;
     for (const element of document.querySelectorAll('[data-page]'))
       element.toggleAttribute('aria-current', element.dataset.page === section);
     window.scrollTo(0, 0);
-    if (!catalog) catalog = await request('/api/catalog');
+    await refreshCatalog();
     if (view !== currentView) return;
     if (page === 'character' && id) {
       const subject = await request(`/api/characters/${key(id)}`);
@@ -275,7 +332,10 @@ async function render() {
       if (view !== currentView) return;
       content.innerHTML = title(row.name, row.id) +
         `<div class="actions">${row.subjects.map(subject => link(subjectUrl(subject), subject, 'button')).join('')}</div>` +
-        pipelineDetails(pipeline, null);
+        reviewPanel('pipelines', row.id, escape) + pipelineDetails(pipeline, null);
+    } else if (page === 'review' && id && stage) {
+      const detail = await request(`/api/stage-review/${key(id)}/${stage}`);
+      if (view === currentView) content.innerHTML = stageReview(detail);
     } else if (page === 'flora' && id) {
       const row = catalog.flora.find(row => row.key === id);
       if (!row) throw new Error('Flora record not found.');
@@ -297,5 +357,6 @@ document.querySelector('#asset-search').addEventListener('submit', event => {
   const term = queryInput.value.trim();
   if (term) location.hash = `search/${key(term)}`;
 });
+installReviewActions(content, request, category => refreshReviewList(category));
 window.addEventListener('hashchange', render);
 render();

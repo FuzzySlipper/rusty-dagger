@@ -114,3 +114,34 @@ pre { overflow: auto; max-height: 340px; padding: 10px; background: var(--bg); }
 @media (max-width: 470px) {
   .depictions, .flora-views { grid-template-columns: 1fr; }
 }
+
+.tile { display: flex; flex-direction: column; }
+.tile-link { display: block; flex: 1; color: inherit; text-decoration: none; }
+.tile-review, .mark-bar, .rating-bar, .review-stage-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+}
+.tile-review { border-top: 1px solid var(--line); padding: 6px 2px 1px; font-size: .8rem; }
+.tile-review button { font-size: .8rem; min-height: 28px; padding: 2px 8px; }
+.tile-review output:empty { display: none; }
+.mark-bar { margin: -5px 0 16px; color: var(--muted); }
+.filters .mark-filter { display: flex; align-items: center; align-self: center; gap: 6px; padding: 20px 2px 4px; }
+.mark-filter input { min-height: 0; accent-color: var(--accent); }
+button[data-mark][aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: #392e23; }
+.review-good { color: #d1f0d7; background: #224533; }
+.review-maybe { color: #f6d9a2; background: #493a24; }
+.review-bad { color: #ffb5ac; background: #4a2925; }
+.rating-bar button[aria-pressed="true"] { border-color: currentColor; }
+.record-review .rating-bar { margin-bottom: 10px; }
+.record-review label { display: block; margin-bottom: 6px; color: var(--muted); font-size: .89rem; }
+.record-review textarea { display: block; width: 100%; margin-top: 3px; padding: 7px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; }
+.record-review output, .mark-bar output { color: var(--accent); padding-left: 5px; }
+.record-review details { margin-top: 8px; }
+.review-stage-bar { color: var(--muted); margin-bottom: 12px; gap: 8px 15px; }
+.asset-reviews { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: 12px; margin-top: 8px; }
+.asset-review { background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 10px; min-width: 0; }
+.asset-review .preview { height: 260px; }
+.asset-review video { width: 100%; max-height: 260px; background: var(--bg); border-radius: 5px; display: block; }
+.asset-name { margin: 7px 0; font-weight: 600; overflow-wrap: anywhere; }
+.asset-review .record-review { margin: 0; padding: 8px; }
+.asset-review h2 { font-size: 1.08rem; }
+.asset-review .record-review button { font-size: .87rem; padding: 3px 7px; }

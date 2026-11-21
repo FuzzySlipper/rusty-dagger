@@ -14,7 +14,7 @@ from rainforest_palms import add_grid, colour_ramp, frond_atlas, part
 
 
 FORMS = {3: "vine-tree", 13: "vine-tree", 16: "tufted-tree", 18: "buttress-tree",
-         21: "blue-fruited-palm", 25: "rock-rooted-tree", 27: "blue-fruited-palm"}
+         21: "blue-fruited-palm", 25: "rock-rooted-tree", 27: "blue-fruited-palm", 30: "tiered-broadleaf"}
 
 # x, y, z, radius. The first ring is buried, the last reaches inside the crown.
 STEMS = {
@@ -36,6 +36,8 @@ STEMS = {
     27: ((.64, 1, 0, .095), (.61, .88, .012, .065), (.58, .76, -.025, .048), (.48, .64, -.057, .046),
          (.45, .56, -.070, .040), (.48, .49, -.052, .035), (.53, .41, 0, .035), (.58, .31, .035, .034),
          (.58, .21, 0, .042)),
+    30: ((.51, 1, 0, .20), (.52, .91, .015, .159), (.51, .81, .035, .122), (.49, .67, .032, .101),
+         (.49, .54, .019, .09), (.47, .40, -.006, .071), (.50, .28, -.02, .050), (.49, .12, 0, .020)),
 }
 
 # Each crown has an attachment on the stem, a centre, and horizontal/vertical radii.
@@ -47,6 +49,11 @@ CROWNS = {
          (.48, .24, .405, .17, .072, -.22), (.42, .75, .37, .18, .084, .22)),
     25: ((.46, .47, .16, .46, .16), (.42, .74, .305, .235, .08, -.12),
          (.54, .75, .465, .225, .108, .07), (.62, .43, .494, .195, .101, .15)),
+    30: ((.25, .50, .084, .23, .091, -.035), (.31, .33, .17, .245, .094, .18),
+         (.36, .69, .208, .23, .10, -.22), (.43, .24, .325, .254, .095, -.24),
+         (.45, .76, .36, .237, .101, .23), (.51, .24, .469, .23, .076, .25),
+         (.51, .75, .485, .204, .075, -.29), (.62, .35, .594, .131, .050, -.02),
+         (.59, .675, .547, .135, .055, .16)),
 }
 
 
@@ -64,12 +71,12 @@ def filled(pixels, valid):
 
 
 class Tree:
-    def __init__(self, record, rgba):
+    def __init__(self, record, rgba, stem=None):
         image = Image.fromarray(rgba.astype(np.uint8))
         self.pixels = np.asarray(image.crop(image.getbbox()))
         h, w = self.pixels.shape[:2]
         self.aspect = w / h
-        self.stem = np.array(STEMS[record])
+        self.stem = np.array(STEMS[record] if stem is None else stem)
         self.foot_x = self.stem[0, 0]
         self.rng = np.random.default_rng(record)
         self.bark, self.leaves = part("bark"), part("leaves")
@@ -126,7 +133,7 @@ class Tree:
         for i in range(len(rim)):
             out["indices"].extend([start, start + 1 + (i+1) % len(rim), start + 1 + i])
 
-    def tube(self, centres, radii, sides, *, cap=False, root_grain=False):
+    def tube(self, centres, radii, sides, *, cap=False, root_grain=False, wrap_height=None):
         """Transport the ring frame along the branch, including around sideways bends."""
         centres = np.array(centres)
         tangent = np.gradient(centres, axis=0)
@@ -140,7 +147,12 @@ class Tree:
             ring = np.cos(angles) * axis + np.sin(angles) * np.cross(axis, direction)
             rows.append(p + ring * radius * self.aspect)
         grid = np.array(rows)
-        if root_grain:
+        if wrap_height is not None:
+            uv = np.zeros((*grid.shape[:2], 2))
+            uv[..., 0] = angles[:, 0] / math.tau
+            uv[..., 1] = np.clip(1 - grid[..., 1] / wrap_height, .002, .998)
+            add_grid(self.bark, grid, uv, seam=True)
+        elif root_grain:
             # Roots on rock need bark all around, including where the front painting
             # shows bare stone. Carry the exposed trunk grain down the root.
             uv = []
@@ -168,17 +180,20 @@ class Tree:
                     centres.append(self.point(.51 + rx * math.cos(az), down, -.025 + .79 * rx * math.sin(az)))
                 self.tube(centres, [.058, .054, .041, .030, .019, .005], 5, root_grain=True)
             return
-        spread = {3: .45, 13: .34, 16: .36, 18: .41, 21: .20, 27: .20}[record]
+        spread = {3: .45, 13: .34, 16: .36, 18: .41, 21: .20, 27: .20, 30: .45}[record]
         count = 4 if record in (21, 27) else 7
+        self.root_flare(spread, count, shoulder=.69 if record == 30 else .81)
+
+    def root_flare(self, spread, count, shoulder=.81, wrap_height=None):
         for i in range(count):
             angle = math.tau * (i + self.rng.uniform(-.20, .20)) / count
             ray = np.array([math.cos(angle), 0, math.sin(angle)]) * self.aspect
             length = spread * self.rng.uniform(.80, 1.12)
-            start = self.stem_at(.81)
+            start = self.stem_at(shoulder)
             foot = self.point(self.foot_x, 1, 0)
             centres = [start, self.stem_at(.90) + ray * length * .34,
                        foot + ray * length * .64 + [0, .035, 0], foot + ray * length]
-            self.tube(centres, np.linspace(.034 if count == 4 else .055, .008, len(centres)), 4)
+            self.tube(centres, np.linspace(.034 if count == 4 else .055, .008, len(centres)), 4, wrap_height=wrap_height)
 
     def vine(self, record):
         # A secondary strand winds in and out of sight around the bending centreline.
@@ -387,7 +402,7 @@ def build(record, rgba):
     tree.roots(record)
     parts = [tree.bark, tree.leaves]
     wood = tree.pixels[..., 3] > 128
-    if record in (18, 25):
+    if record in (18, 25, 30):
         rgb = tree.pixels[..., :3].astype(float)
         brown = wood & (rgb[..., 0] > rgb[..., 1]) & (rgb[..., 1] >= rgb[..., 2])
         wood &= brown | ((distance_transform_edt(~brown) <= 2) & (rgb.max(axis=2) < 47))

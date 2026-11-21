@@ -8,6 +8,7 @@ from urllib.parse import quote
 CMS = Path(__file__).resolve().parent
 REPO = CMS.parents[1]
 BASE_PAYLOAD = REPO / "content/worldrpg/packs/daggerfall.base/payload.json"
+DEFAULT_REVIEWS = REPO / "local/authoring/reviews.sqlite3"
 DEFAULT_NPCS = REPO / "local/art/reference/npc"
 DEFAULT_MERGES = REPO / "src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceMerges.json"
 
@@ -23,6 +24,7 @@ def read_json(path, default):
 class Library:
     npcs: Path
     pipeline: Path
+    character_root: Path | None = None
 
     @property
     def mobiles(self):
@@ -34,7 +36,7 @@ class Library:
 
     @property
     def characters(self):
-        return self.pipeline / "outputs/dagger-characters"
+        return self.character_root or self.pipeline / "outputs/dagger-characters"
 
     @property
     def turnarounds(self):
