@@ -317,7 +317,7 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
             {
                 WorldPoint destination = fleeing ? policy.Destination!.Value : search ?? target.Position;
                 WorldPoint navigationTarget = policy.NavigationMode is ActorNavigationMode.Ground or ActorNavigationMode.WaterWalking
-                    ? new WorldPoint(destination.X, actor.Position.Y, destination.Z) : destination;
+                    ? new WorldPoint(destination.X, fleeing ? actor.Position.Y : GoalHeight(actor.Position, destination), destination.Z) : destination;
                 if (desired == PursuitState.Retreat)
                 {
                     Vector3 away = actor.Position.ToVector() - target.Position.ToVector();
@@ -374,6 +374,22 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
         else
             _attacks.InterruptPendingAttack(actor.DurableId, generation);
         return new PursuitEvidence(previous, desired, visibility, navigation) { AttackEligible = attackEligible };
+    }
+
+    /// <summary>How far above a ground goal its floor is looked for, and how far below.</summary>
+    private const float GoalFloorLift = .25f, GoalFloorSearch = 16f;
+
+    /// <summary>
+    /// The height a ground walker's goal is asked at: its own, while the destination stands no higher, so a goal on the
+    /// level or downhill finds the floor below it. A destination above it (a target uphill, or levitating) is asked at the
+    /// floor under it, since a goal below the floor there stands on no walkable cell and the walker would be blocked; with
+    /// no floor within reach below it, at its own height.
+    /// </summary>
+    private float GoalHeight(WorldPoint actor, WorldPoint destination)
+    {
+        if (destination.Y <= actor.Y) return actor.Y;
+        SpatialHit floor = _spatial.CastRay(destination.ToVector() + (Vector3.UnitY * GoalFloorLift), -Vector3.UnitY, GoalFloorLift + GoalFloorSearch);
+        return floor.Present ? floor.Point.Y : destination.Y;
     }
 
     private PerceptionReadoutResult QueryVisibility(

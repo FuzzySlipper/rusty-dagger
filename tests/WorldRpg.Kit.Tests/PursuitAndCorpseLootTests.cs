@@ -3,6 +3,7 @@ using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using Rusty.Engine.Testing;
 using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
@@ -95,6 +96,48 @@ public sealed class PursuitAndCorpseLootTests
             new(64, 0, 2, 8), new(0, 8), 1, 1, .1f, new FactBuffer<TestFact>(),
             new PursuitPolicy(CanRetreat: true, RetreatDistance: 2.5f));
         Assert.Equal(PursuitState.Chase, evidence.Current);
+    }
+
+    /// <summary>
+    /// A chase up a slope over the real Engine's derived grid (#10948): the target stands 2 m above the walker, so a goal at
+    /// the walker's own height lies under the floor there, on no walkable cell, and the walker was blocked. Asked at the
+    /// floor under the target, it walks up to it.
+    /// </summary>
+    [Fact]
+    public void A_ground_walker_chases_a_target_up_a_slope_on_a_derived_grid()
+    {
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
+        host.Call(engine =>
+        {
+            using SpatialMovementSystem movement = new(engine.Spatial, engine.Content, null, new SpatialTuning(.5d, 8, 8, 1, new CharacterControllerTuning()));
+            // A slope rising 1 m for every 10 m toward -z.
+            Vector3[] slope = [new(-20, 0, 20), new(20, 0, 20), new(20, 4, -20), new(-20, 4, -20)];
+            _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(movement.Session,
+                new[] { new StaticMeshAsset(1, 0, 4, 0, 2) }, slope, new Triangle[] { new(0, 2, 1), new(0, 3, 2) },
+                new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+                ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+            const ulong grid = 2;
+            _ = engine.Spatial.ReplaceCollisionNavigation(new CollisionNavigationReplaceRequest(movement.Session,
+                new Vector3(-16, -2, -16), new Vector3(16, 8, 16),
+                engine.Spatial.DefaultCollisionNavigationConfig() with { GridId = grid, CellSize = 1, Character = movement.CurrentController }));
+            using ActorsState actors = new();
+            actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health");
+            ActorState actor = actors.CreateActor(42, new EntityTypeId("enemy"), Stats(), new ActorPose(new WorldPoint(0, 1, 10), 0), "health");
+            WorldPoint target = new(0, 3, -10);
+            var perception = PerceptionDouble.Create();
+            perception.Pairs = new[] { new PerceptionPair(42, 1, 20d, 1d, PerceptionPairKind.Visible, 20d) };
+            var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
+                new ActorNavigationCoordinator(engine.Spatial, movement.Session, actors.Store, movement.CurrentController,
+                    _ => CharacterStepEnvironment.Empty, () => [grid]), new RecordingAttacks(1.5d));
+            PursuitMemoryComponent memory = new();
+            for (ulong step = 1; step <= 400 && Vector2.Distance(new(actor.Position.X, actor.Position.Z), new(target.X, target.Z)) > 2f; step++)
+            {
+                PursuitEvidence evidence = pursuit.Update(actor, memory, new(1, target), new(64, -1, 4, 8192), new(0, 8), 1, step, .1f,
+                    new FactBuffer<TestFact>(), new PursuitPolicy(EmitTargetLost: false));
+                Assert.NotEqual(PursuitState.Blocked, evidence.Current);
+            }
+            Assert.True(Vector2.Distance(new(actor.Position.X, actor.Position.Z), new(target.X, target.Z)) <= 2f, $"The walker stopped at {actor.Position}.");
+        });
     }
 
     [Fact]
