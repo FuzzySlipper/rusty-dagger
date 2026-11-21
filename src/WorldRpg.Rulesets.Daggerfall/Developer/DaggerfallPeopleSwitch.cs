@@ -67,6 +67,12 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     /// <summary>Whether this session has given way to its replacement: its walkers draw their sprites from then on.</summary>
     private bool yielded;
 
+    /// <summary>
+    /// Whether the characters no walker draws go once the next snapshot is accepted: open characters cost the Engine's
+    /// splat pass even when none is shown, so the sprites cost only what sprites cost.
+    /// </summary>
+    private bool letGo;
+
     /// <summary>The crowd walking people are drawn as, or null while they show their sprites.</summary>
     internal IWalkerCrowd? Crowd { get; private set; }
 
@@ -87,6 +93,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     {
         rigCrowd?.Settle();
         splatCrowd?.Settle();
+        if (letGo) LetGo();
     }
 
     public DebugCommandResult Rig(string set)
@@ -99,6 +106,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         (rigCrowd ??= new(partsRigs)).Use(figure);
         splatCrowd?.Use(null);
         own = false;
+        letGo = true;
         Crowd = rigCrowd;
         return DebugCommandResult.Success($"Walking people draw as {rig.Name} seen from {figure.Views.Count} directions; {Walking().Length} walk here now.");
     }
@@ -107,6 +115,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     {
         if (character == "off") return Off();
         if (splats is null) return DaggerfallDeveloperReplies.Refused("The art set carries no gsplat townspeople.");
+        letGo = false;
         if (character == "own")
         {
             rigCrowd?.Use(null);
@@ -139,6 +148,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (splats is null) return DaggerfallDeveloperReplies.Refused("The art set carries no gsplat townspeople.");
         if (!splats.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
             return DaggerfallDeveloperReplies.Refused($"The art set has no gsplat character '{character}'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, or off.");
+        letGo = false;
         SplatFigure figure = Open(splats, character, person);
         Splats();
         HashSet<long> spawned = [.. splatCrowd!.Assigned.Keys];
@@ -209,8 +219,39 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         rigCrowd?.Use(null);
         splatCrowd?.Use(null);
         own = false;
+        letGo = true;
         Crowd = null;
         return DebugCommandResult.Success("Walking people draw their sprites.");
+    }
+
+    /// <summary>
+    /// Lets go of the characters no spawned walker draws, now that the accepted snapshot shows none of them (the Engine
+    /// refuses to destroy an appearance a published snapshot still draws), and of the clips once no character is open.
+    /// </summary>
+    private void LetGo()
+    {
+        letGo = false;
+        HashSet<SplatFigure> spawned = [.. splatCrowd?.Assigned.Values ?? []];
+        List<Exception>? failures = null;
+        foreach ((string id, var opened) in characters.Where(opened => !spawned.Contains(opened.Value.Figure)).ToArray())
+        {
+            characters.Remove(id);
+            foreach (IDisposable owned in new IDisposable[] { opened.Appearance, opened.Body })
+            {
+                try { owned.Dispose(); }
+                catch (Exception exception) { (failures ??= []).Add(exception); }
+            }
+        }
+        if (characters.Count == 0 && clips is { } packs)
+        {
+            clips = null;
+            foreach (IDisposable pack in new IDisposable[] { packs.Walk, packs.Idle })
+            {
+                try { pack.Dispose(); }
+                catch (Exception exception) { (failures ??= []).Add(exception); }
+            }
+        }
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
     private ActorState[] Walking() => [.. actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian && actor.Wander.State != WanderState.Unloaded)];

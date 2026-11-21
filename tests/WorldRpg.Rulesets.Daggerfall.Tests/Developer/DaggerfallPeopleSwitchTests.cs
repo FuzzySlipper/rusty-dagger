@@ -189,8 +189,12 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Equal(new System.Numerics.Vector3(0, 0, -5.5F), actors.Get(12).Position.ToVector());
         Assert.Equal("people.spawn takes a COUNT of 1 to 16.", people.Spawn("454", 17).Message);
 
-        // They stay their character under people.splat off, until spawn off.
+        // They stay their character under people.splat off, which keeps it open for them, until spawn off.
         Assert.True(people.Splat("off").Succeeded);
+        Assert.Same(character, people.Show(100, 10, 1.7F, walking: false));
+        people.Publishing();
+        people.Settle();
+        Assert.Equal(0, animation.ReleasedAppearances);
         Assert.Same(character, people.Show(100, 10, 1.7F, walking: false));
         Assert.Equal("3 spawned walkers draw as the rest do again.", people.Spawn("off", 0).Message);
         Assert.Null(people.Show(100, 10, 1.7F, walking: false));
@@ -277,6 +281,37 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Equal(1, animation.ReleasedAppearances);
         Assert.Null(people.Show(100, 10, 1.7F, walking: true));
         Assert.Equal(1, animation.Instances);
+    }
+
+    [Fact]
+    public void Off_lets_go_of_the_characters_once_the_snapshot_without_them_is_accepted_so_sprites_cost_what_sprites_cost()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        Dictionary<long, int?> worn = new() { [10] = 385, [11] = 386 };
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386], id => worn[id], () => true, _ => { });
+        Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
+        Assert.NotNull(people.Show(101, 11, 1.7F, walking: true));
+        people.Publishing();
+        people.Settle();
+
+        // The snapshot after off draws their sprites and lets their instances go before it is published; the characters
+        // it no longer draws go once it is accepted, since the Engine refuses to destroy an appearance a snapshot draws.
+        Assert.True(people.Splat("off").Succeeded);
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        Assert.Null(people.Show(101, 11, 1.7F, walking: true));
+        people.Publishing();
+        Assert.Equal((2, 0), (animation.ReleasedInstances, animation.ReleasedAppearances));
+        people.Settle();
+        Assert.Equal(2, animation.ReleasedAppearances);
+
+        // Own opens them, and their clips, again.
+        Assert.True(people.Splat("own").Succeeded);
+        Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
+        Assert.Equal(3, animation.OpenedPaths.Count);
+        Assert.Equal(4, animation.OpenedPackPaths.Count);
     }
 
     [Fact]

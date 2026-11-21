@@ -498,18 +498,26 @@ public sealed class DaggerfallPopulationSessionTests
         foreach (ActorState civilian in civilians)
             Assert.NotSame(worn[civilian.DurableId], fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor")).Appearance);
 
-        // Own dresses them in their characters again, opened once.
-        int opened = animation.OpenedPaths.Count;
+        // That snapshot accepted, the characters it no longer draws are let go, so the sprites cost what sprites cost.
+        Assert.Equal(worn.Values.Distinct().Count(), animation.ReleasedAppearances);
+
+        // Own dresses them in their characters again, opened anew.
         Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("own").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(5), []));
         foreach (ActorState civilian in civilians)
-            Assert.Same(worn[civilian.DurableId], fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor")).Appearance);
-        Assert.Equal(opened, animation.OpenedPaths.Count);
+        {
+            DaggerfallNpcAppearance look = session.State.Npcs.Require(civilian.DurableId).Appearance;
+            Assert.True(TestPayload.Definitions.Catalogs.TryGetRace(look.Race, out DaggerfallRaceDefinition race));
+            string character = art.SplatPeople!.ByArchive[race.Townsperson(look.Gender, look.NameSeed)!.Value];
+            AppearanceFact fact = fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor"));
+            Assert.Same(Drawn(animation, art.SplatPeople!, character), fact.Appearance);
+            Assert.NotSame(worn[civilian.DurableId], fact.Appearance);
+        }
     }
 
-    /// <summary>The appearance gsplat character <paramref name="id"/> was opened as.</summary>
+    /// <summary>The appearance gsplat character <paramref name="id"/> was last opened as.</summary>
     private static Appearance Drawn(AnimationRecorder animation, DaggerfallSplatPeople splats, string id) =>
-        animation.Splats[animation.OpenedPaths.IndexOf(splats.Characters[id].Body.Path)].Appearance;
+        animation.Splats[animation.OpenedPaths.LastIndexOf(splats.Characters[id].Body.Path)].Appearance;
 
     private static int PopulationTextureOpens(AppearanceFake appearance) =>
         appearance.OpenedResourcePaths.Count(path => path == "sprite/population.png");
