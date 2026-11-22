@@ -16,6 +16,9 @@ DEFAULT_PROMPT_BASE = (
     "Edit <Picture 1> to show the exact same character viewed straight from behind, turned 180 degrees away from the viewer. "
     "Keep the exact same standing pose, scale, framing, flat slate-grey background, lighting, and inked gouache painting style. "
     "{extra}"
+    "{hands}"
+)
+HANDS_SENTENCE = (
     "Both hands match the reverse of <Picture 1>'s relaxed open pose, showing the smooth backs of both hands "
     "(palms facing away) with five clear, naturally proportioned fingers and the thumb along the outer upper edge on each hand."
 )
@@ -64,6 +67,7 @@ def main():
     ap.add_argument("--front", required=True, type=Path, help="Approved front painting (e.g. 832x1216)")
     ap.add_argument("--out", required=True, type=Path, help="Output directory for back candidates")
     ap.add_argument("--extra", default="", help="Optional 1-sentence back costume note (e.g. 'The short teal hood covers the back of his head with no cape.')")
+    ap.add_argument("--omit-hands", action="store_true", help="Omit the open-A-pose dorsal-hands sentence (for cloaked/static poses whose hands are hidden in front)")
     ap.add_argument("--seeds", default="612001,612002,612003,612004,612005,612006")
     ap.add_argument("--width", type=int, default=832)
     ap.add_argument("--height", type=int, default=1216)
@@ -73,7 +77,8 @@ def main():
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     extra = (args.extra.strip() + " ") if args.extra.strip() else ""
-    prompt = DEFAULT_PROMPT_BASE.format(extra=extra)
+    hands = "" if args.omit_hands else HANDS_SENTENCE
+    prompt = DEFAULT_PROMPT_BASE.format(extra=extra, hands=hands).strip()
     (out / "back.prompt.txt").write_text(prompt + "\n")
 
     up_front = comfy_upload(args.comfy, args.front.resolve(), f"back-ph3-{out.name}-front.png")
