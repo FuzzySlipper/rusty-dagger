@@ -84,7 +84,7 @@ internal sealed partial class DaggerfallSiteAppearance
             worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Size, mesh.Glow, hangs));
         }
         foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
-        foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);
+        foreach (DecorationVisual decoration in decorations) AttachDecorationMesh(decoration);
         UseSurfaceArt(art);
     }
 
@@ -107,16 +107,16 @@ internal sealed partial class DaggerfallSiteAppearance
     /// Gives a placed decoration whose sprite has a refreshed mesh its own appearance of that mesh, whose glowing slots
     /// shine at the lamps' level as a refreshed lamp's emission map does.
     /// </summary>
-    private void AttachDecorationMesh(DecorationVisual flat)
+    private void AttachDecorationMesh(DecorationVisual decoration)
     {
-        if (flat.Mesh is not null || WorldMesh(flat.Definition.Source) is not { } mesh) return;
-        (flat.Mesh, flat.MeshScale, IReadOnlyList<uint> glow) = mesh;
+        if (decoration.Mesh is not null || WorldMesh(decoration.Definition.Source) is not { } mesh) return;
+        (decoration.Mesh, decoration.MeshScale, IReadOnlyList<uint> glow) = mesh;
         // A hanging mesh hangs from its sprite's top, so it is drawn at its sprite's height rather than its width.
-        if (worldMeshes[flat.Definition.Source] is { Hangs: { } hangs } hanging)
-            (flat.Hangs, flat.Model, flat.MeshScale) = (hangs, hanging.Model, hanging.Size.Y / hangs.Height);
+        if (worldMeshes[decoration.Definition.Source] is { Hangs: { } hangs } hanging)
+            (decoration.Hangs, decoration.Model, decoration.MeshScale) = (hangs, hanging.Model, hanging.Size.Y / hangs.Height);
         if (glow.Count == 0) return;
-        glowingMeshes.Add((flat.Mesh, glow));
-        LightMesh(flat.Mesh, glow);
+        glowingMeshes.Add((decoration.Mesh, glow));
+        LightMesh(decoration.Mesh, glow);
     }
 
     /// <summary>Gives a standing person the set has art for a refreshed sprite, at the art's own size, on its own base.</summary>

@@ -58,11 +58,11 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         if (existing is not null && existing.DisplayName is null) retainNpcName?.Invoke(existing.DurableId, name);
         int face = Draw(key + "/hud-face", 0, 9); // Person.AssignHUDFace ignores the source face option.
         int? clan = faction.Type == 6 ? RegionClan(region).Id : null;
-        DaggerfallFactionFlatDefinition? flat = faction.FlatVisuals.Count > (gender == "Female" ? 1 : 0)
-            ? faction.FlatVisuals[gender == "Female" ? 1 : 0] : null;
-        var visualFlat = individual ? faction.FlatVisuals.FirstOrDefault() : flat;
+        DaggerfallFactionSpriteDefinition? sprite = faction.SpriteVisuals.Count > (gender == "Female" ? 1 : 0)
+            ? faction.SpriteVisuals[gender == "Female" ? 1 : 0] : null;
+        var visualSprite = individual ? faction.SpriteVisuals.FirstOrDefault() : sprite;
         DaggerfallNpcAppearance? appearance = existing?.Appearance
-            ?? (visualFlat is null ? null : new(race, gender, visualFlat.Archive, visualFlat.Record, seed, factionId));
+            ?? (visualSprite is null ? null : new(race, gender, visualSprite.Archive, visualSprite.Record, seed, factionId));
         var home = places?.AllocatePersonHome(instance.InstanceId, declaration, individual, questor,
             current.CurrentProfile ?? throw new NotSupportedException("Person home allocation requires the actual current profile."), current.Interior,
             parentResources ?? [], activeResources ?? []);
@@ -72,18 +72,18 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         {
             SelectedPerson = selection,
             Text = new(Name: name, NameTwo: home?.Text?.Name, NameThree: home?.Text?.NameThree, NameFour: home?.Text?.NameFour,
-                Details: FlatDetails(flat, race),
+                Details: SpriteDetails(sprite, race),
                 Faction: questor && instance.FactionId != 0 ? RequireFaction(instance.FactionId).Name : faction.Name,
                 NpcVampireClan: clan is int id ? ClanName(id) : null),
         };
     }
 
-    private string FlatDetails(DaggerfallFactionFlatDefinition? flat, string race)
+    private string SpriteDetails(DaggerfallFactionSpriteDefinition? sprite, string race)
     {
-        if (flat is { } visual)
+        if (sprite is { } visual)
         {
             if (definitions.Factions.NpcCaptions.Count == 0)
-                throw new NotSupportedException("Person details require the published NPC flat-caption catalog.");
+                throw new NotSupportedException("Person details require the published NPC caption catalog.");
             if (definitions.Factions.NpcCaptions.TryGetValue((visual.Archive, visual.Record), out var caption))
                 return caption;
         }

@@ -95,15 +95,15 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
                 [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, .5F), new Vector2(3F, 6F));
         DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
             new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
-        string flats = string.Join(",", Enumerable.Range(1, 31).Append(41).Select(record => $$$"""
-            {"replaces": {"archive": 504, "record": {{{record}}}}, "path": "refreshed/flats/504-{{{record}}}.png", "byteLength": 1,
+        string scenery = string.Join(",", Enumerable.Range(1, 31).Append(41).Select(record => $$$"""
+            {"replaces": {"archive": 504, "record": {{{record}}}}, "path": "refreshed/scenery/504-{{{record}}}.png", "byteLength": 1,
              "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 64, "height": 64,
              "frames": [{"x": 0, "y": 0, "width": 64, "height": 64}], "placement": {"size": {"width": 5, "height": 10}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25} } }
             """));
-        for (int record = 1; record <= 31; record++) graphics.Content.Add($"refreshed/flats/504-{record}.png", TestSessions.Hash);
-        graphics.Content.Add("refreshed/flats/504-41.png", TestSessions.Hash);
+        for (int record = 1; record <= 31; record++) graphics.Content.Add($"refreshed/scenery/504-{record}.png", TestSessions.Hash);
+        graphics.Content.Add("refreshed/scenery/504-41.png", TestSessions.Hash);
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
-            $$$"""{"artReplacements": {"images": [], "scenery": [{{{flats}}}]}}"""), "test.art");
+            $$$"""{"artReplacements": {"images": [], "scenery": [{{{scenery}}}]}}"""), "test.art");
         bool refreshed = false;
         using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
         appearance.UseArt(art, () => refreshed);
@@ -128,9 +128,9 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         {
             Assert.Equal(new Vector2(3F, 6F), request.Size);
             Assert.Equal(SpriteLightingMode.Synthetic, request.Material.Lighting);
-            // Nature takes the camera's heading and leans in the wind by whole texels, as the flats tuning says.
-            Assert.Equal(DaggerfallFlatsTuning.Default.Nature, request.Billboard);
-            Assert.Equal(DaggerfallFlatsTuning.Default.FloraWindBend, request.Material.WindBend);
+            // Nature takes the camera's heading and leans in the wind by whole texels, as the sprites tuning says.
+            Assert.Equal(DaggerfallSpritesTuning.Default.Nature, request.Billboard);
+            Assert.Equal(DaggerfallSpritesTuning.Default.FloraWindBend, request.Material.WindBend);
             Assert.True(request.Material.WindWholeTexels);
         });
 
@@ -141,7 +141,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         Assert.Equal(0, appearance.ActiveNatureBatchCount);
         Assert.Equal(batches, graphics.BatchRequests.Count);
         DaggerfallFloraLook look = appearance.FloraLook(504, 1)!;
-        Assert.Equal("refreshed/flats/504-1.png", look.Image.Path);
+        Assert.Equal("refreshed/scenery/504-1.png", look.Image.Path);
         Assert.Equal(new Vector2(5F, 10F), look.Size);
         Assert.Equal(new Vector2(.5F, .25F), look.Pivot);
         Assert.Equal((Vector2.Zero, Vector2.One), (look.UvMin, look.UvMax));
@@ -213,7 +213,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
             Assert.All(request.Instances.ToArray(), instance => Assert.Equal((1F, 7U), (instance.Scale, instance.FrameId)));
             Assert.Equal(new Vector2(records[index], 2F * records[index]), request.Size);
             Assert.Equal(new Vector2(.5F, 0F), request.Pivot);
-            Assert.Equal(DaggerfallFlatsTuning.Default.Nature, request.Billboard);
+            Assert.Equal(DaggerfallSpritesTuning.Default.Nature, request.Billboard);
             Assert.Equal(SpriteDepthPolicy.Default, request.Depth);
         }
         Assert.All(graphics.AtlasTextures, path => Assert.StartsWith("sprite/texture-504-", path));

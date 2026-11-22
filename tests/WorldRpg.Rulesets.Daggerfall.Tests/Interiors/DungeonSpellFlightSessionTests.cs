@@ -279,7 +279,7 @@ public sealed class DungeonSpellFlightSessionTests
                 Magnitude: 0,
                 NextObjectOffset: -1,
                 NextActionId: null,
-                IsFlat: true,
+                IsSprite: true,
                 SoundIndex: soundIndex,
                 SourcePosition: player - Vector3.UnitZ * 60f,
                 RawIndex: soundIndex);

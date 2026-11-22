@@ -27,16 +27,16 @@ PACK = CONTENT / "worldrpg/packs/daggerfall.art-replacements"
 TUNING = CONTENT / "worldrpg/tuning/daggerfall.defaults/payload.json"
 OUTPUT = ROOT / "local/art/review/flora"
 PROJECT = HERE / "preview/FloraPreview.csproj"
-# The nature archives' order, as in the flats reference export.
+# The nature archives' order, as in the scenery reference export.
 CLIMATES = ("Rainforest", "Subtropical", "Swamp", "Desert", "Temperate woodland", "Temperate woodland · snow",
             "Woodland hills", "Woodland hills · snow", "Haunted woodlands", "Haunted woodlands · snow",
             "Mountains", "Mountains · snow")
 
 
-def framing(directory, flat, tree):
+def framing(directory, sprite, tree):
     """Fit all views to one scale, including the painted frame's foot and the actual mesh vertices."""
-    size = flat["placement"]["size"]
-    foot = flat["placement"]["foot"]
+    size = sprite["placement"]["size"]
+    foot = sprite["placement"]["foot"]
     low = -size["height"] * foot["y"]
     high = low + size["height"]
     radius = size["width"] * max(foot["x"], 1 - foot["x"])
@@ -55,10 +55,10 @@ def framing(directory, flat, tree):
     return 1.10 * max(high - low, 2 * radius * 9 / 16), (high + low) / 2, triangles
 
 
-def classic_reference(directory, flat):
+def classic_reference(directory, sprite):
     # Patch chose the original depictions as mesh references.
-    # Stage the exported original privately, at the flat's painted size and foot.
-    a, r = flat["replaces"]["archive"], flat["replaces"]["record"]
+    # Stage the exported original privately, at the sprite's painted size and foot.
+    a, r = sprite["replaces"]["archive"], sprite["replaces"]["record"]
     if (a, r) not in ((500, 4), (500, 31), (502, 4), (502, 11), (503, 1)):
         return False
     name = f"texture-{a}-record-{r:03}-frame-000-source.png"
@@ -66,7 +66,7 @@ def classic_reference(directory, flat):
     if source is None:
         print(f"{a}-{r}: {name} missing from export-scenery; showing the refreshed sprite")
         return False
-    path = directory / flat["path"]
+    path = directory / sprite["path"]
     with Image.open(path) as refreshed, Image.open(source) as classic:
         original = classic.convert("RGBA")
         original = original.crop(original.getbbox())
@@ -77,13 +77,13 @@ def classic_reference(directory, flat):
         image.paste(original, ((left+right-original.width)//2,bottom-original.height))
     image.save(path)
     data = path.read_bytes()
-    flat.update(byteLength=len(data), sha256=hashlib.sha256(data).hexdigest())
+    sprite.update(byteLength=len(data), sha256=hashlib.sha256(data).hexdigest())
     return True
 
 
-def stage(directory, flats, trees, snow, candidates):
+def stage(directory, sprites, trees, snow, candidates):
     """Stage only the inputs the requested records draw, at their content-relative paths."""
-    files = {flat["path"] for flat in flats}
+    files = {sprite["path"] for sprite in sprites}
     for tree in trees.values():
         files.update(tree[role]["path"] for role in ("mesh", "leaves", "bark", "stone") if role in tree)
     files.add(snow["path"])
@@ -91,7 +91,7 @@ def stage(directory, flats, trees, snow, candidates):
         dest = directory / path
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(CONTENT / path, dest)
-    originals = {f"{f['replaces']['archive']}-{f['replaces']['record']}" for f in flats if classic_reference(directory, f)}
+    originals = {f"{f['replaces']['archive']}-{f['replaces']['record']}" for f in sprites if classic_reference(directory, f)}
     if candidates:
         # Engine content references select bytes by path and digest. Describe the trial bytes in
         # this private stage so a trial never resolves the shipped texture or a previous mesh.
@@ -108,9 +108,9 @@ def stage(directory, flats, trees, snow, candidates):
             if role in ("stone", "leaves") and "snow" in tree:
                 with Image.open(dest) as texture:
                     tree["snow"]["texels"] = texture.width
-    payload = {"images": [], "scenery": flats, "trees": trees, "treeSnow": snow}
+    payload = {"images": [], "scenery": sprites, "trees": trees, "treeSnow": snow}
     (directory / "flora.json").write_text(json.dumps({"artReplacements": payload}))
-    (directory / "flats-tuning.json").write_text(json.dumps(json.loads(TUNING.read_bytes())["flats"]))
+    (directory / "sprites-tuning.json").write_text(json.dumps(json.loads(TUNING.read_bytes())["sprites"]))
     Image.new("RGBA", (8, 4), (133, 141, 148, 255)).save(directory / "background.png")
     return originals
 
@@ -184,15 +184,15 @@ def main():
     args = parser.parse_args()
     candidates = {role: getattr(args, role) for role in roles if getattr(args, role)}
     art = json.loads((PACK / "payload.json").read_bytes())["artReplacements"]
-    flats = {}
-    for flat in art["scenery"]:
-        archive, record = flat["replaces"]["archive"], flat["replaces"]["record"]
+    sprites = {}
+    for sprite in art["scenery"]:
+        archive, record = sprite["replaces"]["archive"], sprite["replaces"]["record"]
         if 500 <= archive <= 511:
-            flats[f"{archive}-{record}"] = flat
-    unknown = set(args.keys) - flats.keys()
+            sprites[f"{archive}-{record}"] = sprite
+    unknown = set(args.keys) - sprites.keys()
     if unknown:
-        parser.error(f"No nature flat for {', '.join(sorted(unknown))}")
-    keys = list(dict.fromkeys(args.keys or flats))
+        parser.error(f"No nature sprite for {', '.join(sorted(unknown))}")
+    keys = list(dict.fromkeys(args.keys or sprites))
     if candidates and (len(keys) != 1 or keys[0] not in art["trees"]):
         parser.error("Choose one mesh record to give the candidate its sprite, placement and materials.")
     output = OUTPUT / "trials" / keys[0] if candidates else OUTPUT
@@ -202,23 +202,23 @@ def main():
     with tempfile.TemporaryDirectory(prefix="flora-preview-") as tmp, tempfile.TemporaryDirectory(dir=output) as rendered:
         directory = Path(tmp)
         trees = {k: dict(art["trees"][k]) for k in keys if k in art["trees"]}
-        originals = stage(directory, [flats[key] for key in keys], trees, art["treeSnow"], candidates)
+        originals = stage(directory, [sprites[key] for key in keys], trees, art["treeSnow"], candidates)
         start = subprocess.run(["rusty", "dev", "start", "--project", str(PROJECT), "--live-debug"],
                                cwd=ROOT, env={**os.environ, "FloraPreviewContent": tmp}, stdout=subprocess.PIPE, text=True, check=True)
         host = json.loads(start.stdout)
         try:
             for index, key in enumerate(keys, 1):
-                flat = flats[key]
+                sprite = sprites[key]
                 tree = trees.get(key)
-                height, centre, triangles = framing(directory, flat, tree)
+                height, centre, triangles = framing(directory, sprite, tree)
                 frame = draw(host["url"].rstrip("/"), key, height, centre)
                 store_frame(frame, key, bool(tree), Path(rendered))
                 form = Path(art["trees"][key]["mesh"]["path"]).name.split(".")[0] if tree else ""
                 form = re.split(r"-p[0-9]+(?:-|$)", form, maxsplit=1)[0]
                 if re.fullmatch(r"rock-[0-9a-f]+", form):
                     form = "rock"
-                records[key] = dict(key=key, climate=CLIMATES[flat["replaces"]["archive"] - 500], form=form,
-                                    height=tree["placement"]["height"] if tree else flat["placement"]["size"]["height"], triangles=triangles)
+                records[key] = dict(key=key, climate=CLIMATES[sprite["replaces"]["archive"] - 500], form=form,
+                                    height=tree["placement"]["height"] if tree else sprite["placement"]["size"]["height"], triangles=triangles)
                 if key in originals:
                     records[key]["classicReference"] = True
                 if index == 1 or index % 25 == 0:
@@ -231,7 +231,7 @@ def main():
             image.replace(images / image.name)
     if catalogue.exists():
         records = json.loads(catalogue.read_bytes()) | records
-    records = {key: records[key] for key in flats if key in records}
+    records = {key: records[key] for key in sprites if key in records}
     publish_page(output, records, trial=bool(candidates))
 
 

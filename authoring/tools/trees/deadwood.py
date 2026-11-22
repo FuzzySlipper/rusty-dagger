@@ -71,7 +71,7 @@ def solid_cap(tree, ring, direction, slot):
 
 def cactus(rgba):
     tree = Tree(1, rgba, ((.58,1,0,.07),(.43,.58,.02,.16)))
-    # The classic flat has two entire pads. The large one leans left, and its
+    # The classic sprite has two entire pads. The large one leans left, and its
     # thickness is greatest near the middle, leaving a narrow but solid edge.
     pads = ((.575,1.003,0,-.30,.99,.350,.120,.07),(.603,.925,.015,.205,.422,.177,.099,-.87))
     spines = []

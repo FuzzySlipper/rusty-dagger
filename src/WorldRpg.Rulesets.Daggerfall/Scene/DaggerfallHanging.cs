@@ -9,9 +9,9 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// A hanging mesh the active site draws in place of a placed flat: its decoration's id, its record (<c>ARCHIVE-RECORD</c>),
+/// A hanging mesh the active site draws in place of a placed sprite: its decoration's id, its record (<c>ARCHIVE-RECORD</c>),
 /// what it is, the appearance and object it is drawn as, its model, the bodies its rig names and how high it hangs from in
-/// its model's metres, where it stands (its foot, turned and scaled), the flat's own position, and the site light its flat
+/// its model's metres, where it stands (its foot, turned and scaled), the sprite's own position, and the site light its sprite
 /// sheds, if any.
 /// </summary>
 internal sealed record DaggerfallHangingPiece(string Id, string Name, DaggerfallHangingKind Kind, Appearance Look, ulong ObjectId,
@@ -96,7 +96,7 @@ internal sealed class DaggerfallHanging : IDisposable
         internal Vector3? LampAt { get; set; }
     }
 
-    /// <param name="lamps">The site's authored lights, among which each lantern finds the one its flat sheds.</param>
+    /// <param name="lamps">The site's authored lights, among which each lantern finds the one its sprite sheds.</param>
     /// <param name="report">Says, once each, which pieces cannot hang clear of what is around them and so stay at rest.</param>
     internal DaggerfallHanging(IDynamicsService dynamics, IAnimationService animation, SpatialMovementSystem spatial, DaggerfallSiteAppearance site,
         DaggerfallSiteLighting lighting, IReadOnlyList<DaggerfallSiteLight> lamps, DaggerfallHangingTuning tuning, Action<string> report)

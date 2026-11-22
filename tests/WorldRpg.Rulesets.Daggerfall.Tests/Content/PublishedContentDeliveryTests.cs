@@ -926,7 +926,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.NotEmpty(art.Meshes);
         Assert.All(art.Meshes.Keys, key => Assert.Contains($"sprite/texture-{key.Archive}-{key.Record}", sprites));
 
-        // Every item image a dropped item can stand as has a world PNG, crunched as a world flat is at two pixels to a
+        // Every item image a dropped item can stand as has a world PNG, crunched as a world sprite is at two pixels to a
         // classic world pixel of 2.5 cm: an icon is its stated ground height tall, a worn item's doll rect is in doll
         // units of 1 cm, 0.4 of a classic pixel. A worn item's dye mask has one the same size.
         DaggerfallArtReplacement[] items = [.. art.All.Where(replacement => replacement.Replaces.StartsWith("item.", StringComparison.Ordinal)
@@ -953,19 +953,19 @@ public sealed class PublishedContentDeliveryTests
             Assert.Equal((file.surface.Width, file.surface.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
         });
 
-        // Refreshed flats stand in for classic records, each an 8-bit RGBA atlas of its stated size; a flat that gives light
+        // Refreshed scenery stands in for classic records, each an 8-bit RGBA atlas of its stated size; a sprite that gives light
         // carries an emission map of the same layout.
-        JsonElement[] flats = [.. section.GetProperty("scenery").EnumerateArray()];
-        Assert.NotEmpty(flats);
-        Assert.Equal(flats.Length, art.Scenery.Count);
-        Assert.Contains(art.Scenery.Values, flat => flat.Emission is not null);
-        Assert.All(art.Scenery.Values, flat =>
+        JsonElement[] scenery = [.. section.GetProperty("scenery").EnumerateArray()];
+        Assert.NotEmpty(scenery);
+        Assert.Equal(scenery.Length, art.Scenery.Count);
+        Assert.Contains(art.Scenery.Values, sprite => sprite.Emission is not null);
+        Assert.All(art.Scenery.Values, sprite =>
         {
-            foreach (DaggerfallArtFile file in new[] { flat.File, flat.Emission }.OfType<DaggerfallArtFile>())
+            foreach (DaggerfallArtFile file in new[] { sprite.File, sprite.Emission }.OfType<DaggerfallArtFile>())
             {
                 ReadOnlySpan<byte> png = content.ReadBytes(file.Path).Span;
                 Assert.Equal([8, 6, 0, 0, 0], png[24..29].ToArray());
-                Assert.Equal((flat.Width, flat.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
+                Assert.Equal((sprite.Width, sprite.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
             }
         });
 
@@ -993,7 +993,7 @@ public sealed class PublishedContentDeliveryTests
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
             .. surfaces.Where(surface => surface.TryGetProperty("glass", out _)).Select(surface => surface.GetProperty("glass")),
-            .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
+            .. scenery, .. scenery.Where(sprite => sprite.TryGetProperty("emission", out _)).Select(sprite => sprite.GetProperty("emission")),
             .. people.DistinctBy(person => person.GetProperty("path").GetString()),
             .. new[] { "shell", "shader", "tuft", "surfaceShader" }.Select(file => section.GetProperty("groundCover").GetProperty(file)),
             .. section.GetProperty("groundCover").GetProperty("relief").EnumerateObject().Select(relief => relief.Value),

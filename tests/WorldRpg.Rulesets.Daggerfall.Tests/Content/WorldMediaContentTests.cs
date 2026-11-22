@@ -225,20 +225,20 @@ public sealed class WorldMediaContentTests
     public void The_assembled_hold_knows_its_burning_lamps_from_the_import()
     {
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
-        DaggerfallSiteDecoration[] torches = [.. inputs.Decorations.Where(flat => flat.Source == (210, 17))];
-        DaggerfallSiteDecoration[] extinguished = [.. inputs.Decorations.Where(flat => flat.Source == (210, 12))];
+        DaggerfallSiteDecoration[] torches = [.. inputs.Decorations.Where(decoration => decoration.Source == (210, 17))];
+        DaggerfallSiteDecoration[] extinguished = [.. inputs.Decorations.Where(decoration => decoration.Source == (210, 12))];
         Assert.NotEmpty(torches);
         Assert.NotEmpty(extinguished);
-        Assert.All(torches, flat => Assert.True(flat.Lamp));
-        Assert.All(extinguished, flat => Assert.False(flat.Lamp));
-        Assert.DoesNotContain(inputs.Decorations, flat => flat.Lamp && flat.Source.Archive != 210);
-        // Each flat names the light it sheds as its block was placed, among the hold's lights, and no two name one light.
-        string[] named = [.. inputs.Decorations.Select(flat => flat.Light).OfType<string>()];
+        Assert.All(torches, decoration => Assert.True(decoration.Lamp));
+        Assert.All(extinguished, decoration => Assert.False(decoration.Lamp));
+        Assert.DoesNotContain(inputs.Decorations, decoration => decoration.Lamp && decoration.Source.Archive != 210);
+        // Each decoration names the light it sheds as its block was placed, among the hold's lights, and no two name one light.
+        string[] named = [.. inputs.Decorations.Select(decoration => decoration.Light).OfType<string>()];
         Assert.NotEmpty(named);
         Assert.Subset(inputs.Lights.Select(light => light.Id).ToHashSet(StringComparer.Ordinal), named.ToHashSet(StringComparer.Ordinal));
         Assert.Equal(named.Length, named.Distinct(StringComparer.Ordinal).Count());
         Assert.Contains(named, light => light.StartsWith("light/", StringComparison.Ordinal));
-        Assert.DoesNotContain(extinguished, flat => flat.Light is not null);
+        Assert.DoesNotContain(extinguished, decoration => decoration.Light is not null);
     }
 
     [Fact]

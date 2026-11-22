@@ -489,7 +489,7 @@ def main():
     t.add_argument("study", type=Path, help="study whose inputs/ give each source sprite and placement")
     t.add_argument("run", type=Path, help="post-process run directory holding images/<id>/<variant>.png")
     t.add_argument("--variant", default="bp-broad-half", choices=list(VARIANTS))
-    t.add_argument("--spec", type=Path, help="world flats: open ground enclosed inside the object, keep its body, and fill all of it for an item marked `solid`")
+    t.add_argument("--spec", type=Path, help="world scenery: open ground enclosed inside the object, keep its body, and fill all of it for an item marked `solid`")
     t.add_argument("--out", type=Path, required=True, help="directory for <id>.png (created if absent)")
     t.set_defaults(func=cutouts)
     c = sub.add_parser("compare", help="side-by-side sheets across run outputs")

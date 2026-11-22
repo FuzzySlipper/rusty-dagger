@@ -4,17 +4,18 @@ using Daggerfall.Import.Normalization;
 
 namespace Daggerfall.Source.Tool.ReferenceExports;
 
-internal readonly record struct NpcFlat(int Archive, int Record)
+internal readonly record struct NpcSprite(int Archive, int Record)
 {
     // FactionFile and FlatsFile both address an archive/record pair with this packed number.
     public int Number => (Archive << 7) + Record;
+    // The classic key, kept as the NPC chart's source id and alias that review data is filed under.
     public string Id => $"npc-flat-{Number}";
-    public static NpcFlat Decode(int number) => new(number >> 7, number & 127);
+    public static NpcSprite Decode(int number) => new(number >> 7, number & 127);
 }
 
 internal enum NpcSetting { Exterior, Interior, Dungeon }
 
-internal sealed record NpcPlacement(NpcFlat Flat, string Block, NpcSetting Setting, int Faction, string? Pose = null);
+internal sealed record NpcPlacement(NpcSprite Sprite, string Block, NpcSetting Setting, int Faction, string? Pose = null);
 internal sealed record NpcLocation(int Region, int Index, string Name);
 
 /// <summary>Joins source block placements to the locations that use those blocks.</summary>
@@ -78,9 +79,9 @@ internal sealed class NpcReferenceWorld
     }
 
     public static IEnumerable<NpcPlacement> ReadPlacements(ReferenceExport export, IReadOnlySet<int> peopleArchives,
-        IReadOnlySet<NpcFlat> listedFlats)
+        IReadOnlySet<NpcSprite> listedSprites)
     {
-        bool Listed(NpcFlat flat) => peopleArchives.Contains(flat.Archive) || listedFlats.Contains(flat);
+        bool Listed(NpcSprite sprite) => peopleArchives.Contains(sprite.Archive) || listedSprites.Contains(sprite);
 
         foreach (BlockRecord block in BlockRecordInventoryReader.Read(export.Read("BLOCKS.BSA"), "arena2/BLOCKS.BSA").Records)
         {
@@ -93,7 +94,7 @@ internal sealed class NpcReferenceWorld
                 }
                 foreach (RmbFlatPlacement flat in rmb.MiscFlats)
                 {
-                    NpcFlat source = new(flat.TextureArchive, flat.TextureRecord);
+                    NpcSprite source = new(flat.TextureArchive, flat.TextureRecord);
                     if (Listed(source)) yield return new(source, block.SourceKey, NpcSetting.Exterior, flat.FactionId);
                 }
             }
@@ -108,7 +109,7 @@ internal sealed class NpcReferenceWorld
                     yield return new(new(person.TextureArchive, person.TextureRecord), block.SourceKey, setting, person.FactionId);
                 foreach (RmbFlatPlacement flat in half.Flats)
                 {
-                    NpcFlat source = new(flat.TextureArchive, flat.TextureRecord);
+                    NpcSprite source = new(flat.TextureArchive, flat.TextureRecord);
                     if (Listed(source)) yield return new(source, block.SourceKey, setting, flat.FactionId);
                 }
             }

@@ -326,7 +326,7 @@ public sealed class DaggerfallHangingTests
             DaggerfallHangingActor near = new(1, new Vector3(5, 0, 6), .25F, 1.8F);
             int before = site.Graphics.LightUpdates.Count;
             hanging.Step(.1F, [near], true);
-            // At rest the lantern leaves its light alone: the site's lighting flickers the light its flat names, not the
+            // At rest the lantern leaves its light alone: the site's lighting flickers the light its sprite names, not the
             // block's nearer one, where it was authored, casting.
             Assert.Equal(before, site.Graphics.LightUpdates.Count);
             lighting.Flicker(new Vector3(5, 1.6F, 6), .1);
@@ -366,7 +366,7 @@ public sealed class DaggerfallHangingTests
     [Fact]
     public void A_lantern_carries_the_block_light_that_stands_for_it()
     {
-        // The import let the block's light record, which outreaches the lantern's own, stand for it, and its flat names that light.
+        // The import let the block's light record, which outreaches the lantern's own, stand for it, and its sprite names that light.
         Site site = Compose(lantern: true, light: Site.Nearer.Id);
         using (site)
         {
@@ -411,7 +411,7 @@ public sealed class DaggerfallHangingTests
         internal required ActorsState Actors { get; init; }
         internal required EngineContextFake Engine { get; init; }
 
-        // The lantern's own light, half a metre above its flat as the importer places an interior lamp, and a block's light
+        // The lantern's own light, half a metre above its sprite as the importer places an interior lamp, and a block's light
         // hung nearer it.
         internal static readonly DaggerfallSiteLight Lamp = new("light-flat/block/0/0/1", new WorldPoint(4, 2.6F, 6), 10, 1.4F, Vector3.One);
         internal static readonly DaggerfallSiteLight Nearer = new("light/block/0/0/9", new WorldPoint(4, 2.1F, 6), 10, 1.4F, Vector3.One);

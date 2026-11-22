@@ -111,7 +111,7 @@ internal static class DaggerfallDungeonHazardActions
                     Diagnostic: $"Dungeon Hurt21 action '{action.Id}' preserved the donor sporadic activation gate at count {context.ActivationCount}."));
         }
 
-        // DFU's AddAction receives soundID_and_index from the RDB model/flat SoundIndex field.
+        // DFU's AddAction receives soundID_and_index from the RDB model or sprite record's SoundIndex field.
         // The normalized runtime calls that retained byte SoundIndex; an importer that exposes
         // the donor name may pass ActionIndex explicitly, but Axis is never a substitute.
         int index = context.ActionIndex ?? action.SoundIndex;
@@ -163,10 +163,10 @@ internal static class DaggerfallDungeonHazardActions
             return missing!;
         if (Negated(action, context, combat) is { } turned) return turned;
 
-        // DFU uses Magnitude only for flat records and ActionAxisRawValue otherwise. Axis is the
+        // DFU uses Magnitude only for sprite records and ActionAxisRawValue otherwise. Axis is the
         // normalized retained byte for that latter source field. Level is clamped to one exactly
         // as PlayerEntity.Level was in the donor action delegate.
-        int parameter = action.IsFlat ? action.Magnitude : action.Axis;
+        int parameter = action.IsSprite ? action.Magnitude : action.Axis;
         int damage = checked(parameter * Math.Max(context.TargetLevel, 1));
         return ApplyHealth(action, context, combat, health!, damage);
     }
@@ -180,7 +180,7 @@ internal static class DaggerfallDungeonHazardActions
             return Rejected(action, $"Dungeon DrainMagicka action '{action.Id}' target actor has no '{MagickaTrack.Value}' track.");
         }
 
-        int parameter = action.IsFlat ? action.Magnitude : action.Axis;
+        int parameter = action.IsSprite ? action.Magnitude : action.Axis;
         double requested = Math.Max(1, parameter);
         double available = Math.Max(0d, magicka.Current - magicka.Minimum);
         double requestedApplied = Math.Min(requested, available);

@@ -245,7 +245,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
         Magnitude: 0,
         NextObjectOffset: -1,
         NextActionId: null,
-        IsFlat: true,
+        IsSprite: true,
         SourcePosition: Vector3.Zero);
 
     private static DaggerfallSiteProfile Inputs(string logicalProfileId, DaggerfallDungeonActionDefinition action) => new(

@@ -182,7 +182,7 @@ class WorldMesh(unittest.TestCase):
 
 
 class Placements(unittest.TestCase):
-    """A flat and a person state their own placement, taken from the original once and kept after."""
+    """A scenery sprite and a person state their own placement, taken from the original once and kept after."""
     CLASSIC = {"x": .25, "y": .5, "width": .5, "height": .25}
 
     def setUp(self):
@@ -192,23 +192,23 @@ class Placements(unittest.TestCase):
             (210, 4): {"worldSize": {"x": 1, "y": 2}, "pivot": {"x": .5, "y": 0}, "playback": None}})
         self.addCleanup(promote.KEPT.clear)
 
-    def test_a_flat_takes_its_size_pivot_foot_and_rate_from_the_classic_frame_in_its_atlas_frame(self):
-        placement = promote.flat_placement(210, 3, self.CLASSIC, 3)
+    def test_a_scenery_sprite_takes_its_size_pivot_foot_and_rate_from_the_classic_frame_in_its_atlas_frame(self):
+        placement = promote.sprite_placement(210, 3, self.CLASSIC, 3)
         self.assertEqual({"size": {"width": 4, "height": 12}, "pivot": {"x": .5, "y": .375}, "foot": {"x": .5, "y": .25}, "framesPerSecond": 5}, placement)
         # A person has no rate, and stands on the middle of its atlas frame's bottom.
-        self.assertEqual({"x": .5, "y": 0}, promote.flat_placement(210, 3, self.CLASSIC, 3, person=True)["foot"])
-        self.assertNotIn("framesPerSecond", promote.flat_placement(210, 3, self.CLASSIC, 3, person=True))
+        self.assertEqual({"x": .5, "y": 0}, promote.sprite_placement(210, 3, self.CLASSIC, 3, person=True)["foot"])
+        self.assertNotIn("framesPerSecond", promote.sprite_placement(210, 3, self.CLASSIC, 3, person=True))
         with self.assertRaisesRegex(SystemExit, "no playback"):
-            promote.flat_placement(210, 4, self.CLASSIC, 2)
+            promote.sprite_placement(210, 4, self.CLASSIC, 2)
 
     def test_a_promotion_keeps_the_values_an_entry_has_and_a_recompute_takes_them_again(self):
         kept = {"size": {"width": 9, "height": 9}, "pivot": {"x": 0, "y": 0}, "foot": {"x": 0, "y": 0}, "from": {"size": "hand", "pivot": "original", "foot": "original"}}
         promote.KEPT["scenery.210.4"] = kept
         names = ["size", "pivot", "foot"]
-        self.assertIs(kept, promote.own("scenery.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1)))
+        self.assertIs(kept, promote.own("scenery.210.4", names, lambda: promote.sprite_placement(210, 4, self.CLASSIC, 1)))
         promote.RECOMPUTE.add("scenery.210.4")
         self.addCleanup(promote.RECOMPUTE.clear)
-        again = promote.own("scenery.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1))
+        again = promote.own("scenery.210.4", names, lambda: promote.sprite_placement(210, 4, self.CLASSIC, 1))
         self.assertEqual(8, again["size"]["height"])   # the classic 2 m over the .25 of the frame it takes
         self.assertEqual({"size": "original", "pivot": "original", "foot": "original"}, again["from"])
 

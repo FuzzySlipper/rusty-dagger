@@ -7,7 +7,7 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
 /// <summary>The appearances used by both wilderness placement and the isolated flora review.</summary>
-internal sealed class DaggerfallFloraArt(IEngineContext engine, DaggerfallFlatsTuning flats)
+internal sealed class DaggerfallFloraArt(IEngineContext engine, DaggerfallSpritesTuning sprites)
 {
     /// <summary>How far a tree's leaf cards circle in the wind at unit strength, times their vertex alpha, as rusty-craftsurvive's do.</summary>
     private const float LeafFlutter = .12f;
@@ -18,7 +18,7 @@ internal sealed class DaggerfallFloraArt(IEngineContext engine, DaggerfallFlatsT
         try
         {
             VegetationSprite sprite = new(engine, new RenderResourceReference(image), look.UvMin, look.UvMax, look.Size, look.Pivot,
-                flats.Flora(DaggerfallSiteAppearance.LitSprite), flats.Nature);
+                sprites.Flora(DaggerfallSiteAppearance.LitSprite), sprites.Nature);
             return new(sprite.Look, [sprite, image], look.Size.Y, false);
         }
         catch
@@ -43,7 +43,7 @@ internal sealed class DaggerfallFloraArt(IEngineContext engine, DaggerfallFlatsT
                 RenderResource bark = engine.Graphics.OpenTexture(engine.Content, barkArt.Path, barkArt.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
                 owned.Add(bark);
                 barkMaterial = engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(bark), .95f,
-                    new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { WindBend = flats.FloraWindBend });
+                    new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { WindBend = sprites.FloraWindBend });
                 owned.Add(barkMaterial);
             }
             Material? stoneMaterial = null;
@@ -64,7 +64,7 @@ internal sealed class DaggerfallFloraArt(IEngineContext engine, DaggerfallFlatsT
                 leafMaterial = engine.Graphics.CreateMaterial(Snowed(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
                     new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
                 {
-                    AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = flats.FloraWindBend, WindFlutter = LeafFlutter,
+                    AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = sprites.FloraWindBend, WindFlutter = LeafFlutter,
                 }, tree, look));
                 owned.Add(leafMaterial);
             }

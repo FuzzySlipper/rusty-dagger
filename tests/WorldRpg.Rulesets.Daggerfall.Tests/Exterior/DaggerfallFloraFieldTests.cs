@@ -33,7 +33,7 @@ public sealed class DaggerfallFloraFieldTests
     {
         EngineContextFake engine = Engine();
         // Grown at no density, a layer's budget is what the locations place in it, so placed copies are drawn however thin the wild growth.
-        using DaggerfallFloraField field = new(engine.Context, Ground(), DaggerfallFloraTuning.Default with { Density = 0 }, DaggerfallFlatsTuning.Default,
+        using DaggerfallFloraField field = new(engine.Context, Ground(), DaggerfallFloraTuning.Default with { Density = 0 }, DaggerfallSpritesTuning.Default,
             new Dictionary<int, float>());
         (double x, double z) = ((Frame.MapX * Cell) + 120.2, (Frame.MapY * Cell) + 140.3);
         // One rock as the town placed it, and again as measured from another frame a hair away; and a bush.
@@ -84,7 +84,7 @@ public sealed class DaggerfallFloraFieldTests
     public void A_field_hidden_or_growing_sprites_leaves_placed_nature_to_its_location()
     {
         EngineContextFake engine = Engine();
-        using DaggerfallFloraField field = new(engine.Context, Ground(), DaggerfallFloraTuning.Default, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+        using DaggerfallFloraField field = new(engine.Context, Ground(), DaggerfallFloraTuning.Default, DaggerfallSpritesTuning.Default, new Dictionary<int, float>());
         field.Place([new((Frame.MapX * Cell) + 120, 31, (Frame.MapY * Cell) + 140, (504, 3), (505, 3))]);
         Assert.False(field.GrowsPlaced((504, 3)));
 
@@ -129,7 +129,7 @@ public sealed class DaggerfallFloraFieldTests
     public void A_mesh_record_s_layer_collides_as_its_body_near_the_player_and_a_sprite_s_does_not()
     {
         EngineContextFake engine = Engine();
-        using DaggerfallFloraField field = new(engine.Context, Ground(), DaggerfallFloraTuning.Default, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+        using DaggerfallFloraField field = new(engine.Context, Ground(), DaggerfallFloraTuning.Default, DaggerfallSpritesTuning.Default, new Dictionary<int, float>());
         field.Place([new((Frame.MapX * Cell) + 120, 31, (Frame.MapY * Cell) + 140, (504, 3), (505, 3))]);
         Show(field, winter: false);
         // The rock's one face rises 1 m from its foot; cut a third of the way up, its edges cross at 0 and 2/3 m from the axis.
@@ -166,10 +166,10 @@ public sealed class DaggerfallFloraFieldTests
         foreach ((int, int) record in new[] { tree, rock })
         {
             DaggerfallTreeArt mesh = art.Trees[record];
-            DaggerfallArtSprite flat = art.Scenery[record];
-            foreach (DaggerfallArtFile file in new[] { mesh.Mesh, flat.File, mesh.Bark, mesh.Leaves, mesh.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>())
+            DaggerfallArtSprite sprite = art.Scenery[record];
+            foreach (DaggerfallArtFile file in new[] { mesh.Mesh, sprite.File, mesh.Bark, mesh.Leaves, mesh.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>())
                 served[file.Path] = File.ReadAllBytes(Path.Combine(Content, file.Path));
-            looks[record] = new(flat.File, Vector2.Zero, Vector2.One, new Vector2(1, mesh.Height), new Vector2(.5F, 0)) { Tree = mesh, TreeSnow = art.TreeSnow };
+            looks[record] = new(sprite.File, Vector2.Zero, Vector2.One, new Vector2(1, mesh.Height), new Vector2(.5F, 0)) { Tree = mesh, TreeSnow = art.TreeSnow };
         }
         DaggerfallPlacedNature Placed(Vector3 at, (int Archive, int Record) record) =>
             new((Frame.MapX * Cell) + at.X, at.Y, (Frame.MapY * Cell) + at.Z, (record.Archive - 1, record.Record), record);
@@ -189,7 +189,7 @@ public sealed class DaggerfallFloraFieldTests
                     new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
                     ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
                 // Only what the location places grows, so the two stand alone.
-                field = new(engine, ground, DaggerfallFloraTuning.Default with { Density = 0 }, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+                field = new(engine, ground, DaggerfallFloraTuning.Default with { Density = 0 }, DaggerfallSpritesTuning.Default, new Dictionary<int, float>());
                 field.Place([Placed(treeAt, tree), Placed(rockAt, rock)]);
             });
             // Calls go by while the field samples its tiles, places the copies and their bodies are admitted.
@@ -276,16 +276,16 @@ public sealed class DaggerfallFloraFieldTests
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(
             File.ReadAllBytes(Path.Combine(Content, "worldrpg", "packs", "daggerfall.art-replacements", "payload.json")), "daggerfall.art-replacements");
         DaggerfallTreeArt tree = art.Trees[record];
-        DaggerfallArtSprite flat = art.Scenery[record];
-        DaggerfallArtFile[] files = [tree.Mesh, flat.File, .. new[] { tree.Bark, tree.Leaves, tree.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>()];
+        DaggerfallArtSprite sprite = art.Scenery[record];
+        DaggerfallArtFile[] files = [tree.Mesh, sprite.File, .. new[] { tree.Bark, tree.Leaves, tree.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>()];
         Dictionary<string, ReadOnlyMemory<byte>> served = files.ToDictionary(file => file.Path, file => (ReadOnlyMemory<byte>)File.ReadAllBytes(Path.Combine(Content, file.Path)));
-        DaggerfallFloraLook look = new(flat.File, Vector2.Zero, Vector2.One, size, new Vector2(.5F, 0)) { Tree = tree, TreeSnow = art.TreeSnow };
+        DaggerfallFloraLook look = new(sprite.File, Vector2.Zero, Vector2.One, size, new Vector2(.5F, 0)) { Tree = tree, TreeSnow = art.TreeSnow };
 
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = served });
         host.Call(engine =>
         {
             using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
-            using DaggerfallFloraField field = new(engine, Ground(climate), DaggerfallFloraTuning.Default, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+            using DaggerfallFloraField field = new(engine, Ground(climate), DaggerfallFloraTuning.Default, DaggerfallSpritesTuning.Default, new Dictionary<int, float>());
             field.Show(spatial.Session, Frame, new Vector3(100, 0, 100), winter, (archive, number) => (archive, number) == record ? look : null);
             Assert.True(field.GrowsPlaced(record));
         });

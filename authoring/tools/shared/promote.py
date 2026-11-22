@@ -69,18 +69,18 @@ its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py)
 The `terrain` area does the same into `surfaces` for the ground tiles, from local/art/generated/terrain (tools/terrain/ground.py). A
 record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
-The `flats` area promotes the world's placed sprites that are not people, its nature, props and animals (`scenery`): each record in local/art/reference/scenery/usage.csv
+The `scenery` area promotes the world's placed sprites that are not people, its nature, props and animals (`scenery`): each record in local/art/reference/scenery/usage.csv
 whose every frame has an accepted final becomes one PNG atlas, as an effect does, with its own placement: a frame's size in
 metres, its pivot and its foot (fractions of the frame, from its left and bottom: where the sprite hangs from its position, and
-where it stands on the ground), and for several frames the rate they play at, in order. The game draws the flat from these
-alone, and so a nature flat, whose tree meshes (`trees`, tools/trees) state their height and foot in metres at the flat's own size.
+where it stands on the ground), and for several frames the rate they play at, in order. The game draws the sprite from these
+alone, and so a nature sprite, whose tree meshes (`trees`, tools/trees) state their height and foot in metres at the sprite's own size.
 A record an item also draws takes its accepted `items` final unless the area has its own.
 
 The `people` area promotes the placed static people (`people`): each record in local/art/reference/people/usage.csv with a placement
 becomes a one-frame atlas of its standing figure, the only frame a static person shows, crunched at PEOPLE_CRUNCH pixels to
 a classic pixel on the whole of ART_PAL, whose small accents a smaller palette loses. Records with the same frame share the
 atlas of whichever has an accepted final, since only one of them was painted. A record without one stays classic. The game
-draws each at its own size (`placement`, as a flat's), standing on the atlas's own base (its `foot`).
+draws each at its own size (`placement`, as a scenery sprite's), standing on the atlas's own base (its `foot`).
 
 The `people-rig` area exports the walking test figure (`peopleRig`) from a Workbench directional rig publication
 (PEOPLE_RIG, or $PEOPLE_RIG): each view's compiled model and the pages beside it go to people-rigs/FIGURE/VIEW/ as
@@ -106,7 +106,7 @@ A held weapon's layer leaves a gap where the doll's hand holds it; its whole ima
 is published beside it as its `icon`, which the inventory, shops and the ground draw instead.
 
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
-each also has a `world` PNG, crunched as a world flat is at GROUND_CRUNCH pixels to a classic world pixel (an icon's
+each also has a `world` PNG, crunched as a world sprite is at GROUND_CRUNCH pixels to a classic world pixel (an icon's
 classic pixels are the treasure pile's, a worn image's DOLL_UNIT to its doll unit), and a worn image's dye mask a `world`
 PNG the same size as the image's, clear wherever it is. The menus draw the smooth webp images. An item icon's placement
 states its height on the ground in metres (`ground`), as a worn image stands at its doll rect's height. The clothed
@@ -120,7 +120,7 @@ id is what it replaces (an effect or image), or `scenery.ARCHIVE.RECORD`, `perso
 
 Every area promotes the same way (promote_area). Its units are what an entry replaces, keyed as the area keys them: an
 art key (paper-doll, worn, spells, ui, surfaces, terrain), an item's media id (items), an effect's media id, a sprite
-mesh's ARCHIVE-RECORD and `effectGlow` (effects), a classic record `texture-AAA-record-RRR` (flats, people), an ARCH3D
+mesh's ARCHIVE-RECORD and `effectGlow` (effects), a classic record `texture-AAA-record-RRR` (scenery, people), an ARCH3D
 record id (models) or the rig figure (people-rig); each unit draws finals, which ledger/AREA-notes.json must mark
 `accepted`. Only the shared checkout holds every final (local/art/generated is ignored), so:
 
@@ -133,7 +133,7 @@ record id (models) or the rig figure (people-rig); each unit draws finals, which
   - Every file is written to a staging folder first and moves into content, and the payload is written, only once every
     area named has built, so a refused run changes nothing.
 
-The import must have run (local/build/import/staging); effects, flats and people also read local/art/reference, and a
+The import must have run (local/build/import/staging); effects, scenery and people also read local/art/reference, and a
 paper-doll or worn final without its rect sidecar is refused.
 
     promote.py --area worn --key texture-235-record-000-frame-000
@@ -208,7 +208,7 @@ WORLD_EFFECTS = {
        for kind, folder, record in (("missile", "projectile", 0), ("impact", "impact", 1))},
 }
 CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the classic frame filled (run.py)
-GROUND_CRUNCH = 2                # a dropped item's pixels to a classic world pixel, as a world flat's
+GROUND_CRUNCH = 2                # a dropped item's pixels to a classic world pixel, as a world sprite's
 WORLD_PIXEL = .025               # a classic world pixel in metres
 DOLL_UNIT = .01 / WORLD_PIXEL    # a paper-doll unit (1 cm on the body) in classic world pixels
 # The classic ground-container billboards, whose first stands every dropped item's classic image at its scale.
@@ -216,12 +216,12 @@ DUNGEON_MANIFEST = REPOSITORY / "local/build/import/staging/worldrpg/imports/sha
 TREASURE = 216
 WAIST = 40                       # the doll row, from the classic clothed body's top, the donor splits it at
 # Where a placement value came from: taken from the classic original at promotion, or set by hand (--set). A tree's, which
-# trees.py measures from the refreshed art against its flat's own size, are marked `art` there.
+# trees.py measures from the refreshed art against its sprite's own size, are marked `art` there.
 ORIGINAL, HAND = "original", "hand"
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
-FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
+SCENERY_CRUNCH = float(os.environ.get("SCENERY_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
 PEOPLE_CRUNCH = 3   # a person's pixels to a classic pixel
-# The flats that give light, as Daggerfall Unity's emissive list names them, each with an emission map cut from its own art.
+# The scenery that gives light, as Daggerfall Unity's emissive list names them, each with an emission map cut from its own art.
 # 210-8 is the one blue glass; every other record glows warm.
 GLOWING = {(190, 3), (190, 4), (190, 5), (200, 7), (200, 8), (200, 9), (200, 10), (202, 2), (208, 2),
            *((210, record) for record in (0, 1, 2, 3, 4, 5, 6, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29))}
@@ -310,7 +310,7 @@ def world_png(image, target):
 
 
 def world_image(image, height, doll=False):
-    """An item's ground image, crunched as a world flat is: GROUND_CRUNCH pixels to a classic world pixel, for an image
+    """An item's ground image, crunched as a world sprite is: GROUND_CRUNCH pixels to a classic world pixel, for an image
     `height` classic world pixels tall (an icon), or with `doll`, doll units tall (a worn image)."""
     k = GROUND_CRUNCH * (DOLL_UNIT if doll else 1) * height / image.height
     return reduce.crunch_sprites([image], (max(1, round(image.width * k)), max(1, round(image.height * k))))[0]
@@ -369,13 +369,13 @@ def billboard(archive, record):
     return BILLBOARDS[archive, record]
 
 
-def flat_placement(archive, record, classic, frames, person=False):
-    """A flat's or person's own placement, from where the classic frame sits in the atlas frame (`classic`, fractions of the
+def sprite_placement(archive, record, classic, frames, person=False):
+    """A scenery sprite's or person's own placement, from where the classic frame sits in the atlas frame (`classic`, fractions of the
     frame, top-down): the classic world size grows by the share that frame takes, and the classic pivot, and the point at the
     foot's middle (`foot`), move into the frame (fractions from its left and bottom). A person stands on the art's own base: a
     painted hem or foot can reach below the classic frame, so its foot is the classic frame's middle mapped into the atlas frame,
     on the atlas frame's bottom row (y 0). An atlas of
-    several frames states the rate the classic plays at, which only a flat plays."""
+    several frames states the rate the classic plays at, which only scenery plays."""
     sprite = billboard(archive, record)
     into = lambda x, y: {"x": round(classic["x"] + x * classic["width"], 6),
                          "y": round(1 - classic["y"] - classic["height"] + y * classic["height"], 6)}
@@ -726,12 +726,12 @@ HANGING = [(213, 7), (213, 8), (213, 9), (213, 10), (100, 20), (100, 21), (211, 
 # The sprite meshes: each final in local/art/generated/effects and the classic TEXTURE records it stands in for, each
 # built across its sprite's width. Naming a final here is what accepts it.
 WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
-                # rocks.py's placed flats (#10849): the fallen logs towns lay about, and the dungeons' stalagmites.
+                # rocks.py's placed props (#10849): the fallen logs towns lay about, and the dungeons' stalagmites.
                 ("logs-213-11.glb", [(213, 11)]), ("logs-213-12.glb", [(213, 12)]),
                 *((f"stalagmite-300-{record}.glb", [(300, record)]) for record in range(6, 16)),
-                # the barrel flat streets, houses and dungeons place (#10848), staves painted from its refreshed flat
+                # the barrel sprite streets, houses and dungeons place (#10848), staves painted from its refreshed sprite
                 ("barrel-205-0.glb", [(205, 0)]),
-                # the common street flats (#10852), in metres at their sprites' size: the lamp posts and the haystack
+                # the common street props (#10852), in metres at their sprites' size: the lamp posts and the haystack
                 # lathed from their refreshed sprites and the well built from parts measured off its sprite (lamps.py,
                 # well.py in the task's evidence); the pumps from H3 orbits of their sprites and the fountains from
                 # their sprites, through Pixal3D; and #10851's cart 41214 for the handcart
@@ -740,7 +740,7 @@ WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 ("well.glb", [(212, 0)]), ("haystack.glb", [(212, 1)]), ("fountain-spire.glb", [(212, 2)]),
                 ("fountain-column.glb", [(212, 3)]), ("pump-green.glb", [(212, 8)]), ("pump-iron.glb", [(212, 9)]),
                 ("handcart.glb", [(205, 27)]),
-                # the remaining town flats (#10869): the woodpiles stacked from rocks.py's logs; the signposts, posts and
+                # the remaining town props (#10869): the woodpiles stacked from rocks.py's logs; the signposts, posts and
                 # cages built from parts measured off their sprites (town_flats.py in the task's evidence)
                 ("woodpile-212-11.glb", [(212, 11)]), ("woodpile-212-12.glb", [(212, 12)]),
                 ("signpost-ivy.glb", [(212, 4)]), ("signpost.glb", [(212, 5)]), ("fingerpost.glb", [(212, 6)]),
@@ -881,27 +881,27 @@ def surface_units(area):
 
 
 def glow_of(archive, record):
-    """How to cut a flat's emission map from a tile, for a flat that gives light."""
+    """How to cut a sprite's emission map from a tile, for one that gives light."""
     if (archive, record) in GLOWING:
         return lambda tile: reduce.glow(tile, cool=(archive, record) in COOL_GLOW)
     return None
 
 
-def flat_units():
-    """The `flats` area's units, by classic record (`texture-AAA-record-RRR`): every placed record with classic frames,
-    each frame drawn from its `flats` final, or, for a record an item also draws and the area has no accepted final of
+def scenery_units():
+    """The `scenery` area's units, by classic record (`texture-AAA-record-RRR`): every placed record with classic frames,
+    each frame drawn from its `scenery` final, or, for a record an item also draws and the area has no accepted final of
     its own for, its `items` final."""
-    notes = {area: ledger(area) for area in ("flats", "items")}
+    notes = {area: ledger(area) for area in ("scenery", "items")}
 
     def final(key):
-        own_final = notes["flats"].get(key, {}).get("status") == "accepted" or notes["items"].get(key, {}).get("status") != "accepted"
-        return generated("flats" if own_final else "items", key)
+        own_final = notes["scenery"].get(key, {}).get("status") == "accepted" or notes["items"].get(key, {}).get("status") != "accepted"
+        return generated("scenery" if own_final else "items", key)
 
     def build(archive, record, stem, sources, finals):
         entry = {"replaces": {"archive": archive, "record": record},
-                 **frame_atlas(stem, sources, [final.path for final in finals], f"{MEDIA}/scenery/{stem}.png", crunch=FLAT_CRUNCH,
+                 **frame_atlas(stem, sources, [final.path for final in finals], f"{MEDIA}/scenery/{stem}.png", crunch=SCENERY_CRUNCH,
                                glow=glow_of(archive, record))}
-        return [("scenery", with_placement(f"scenery.{archive}.{record}", entry, lambda classic: flat_placement(archive, record, classic, len(entry["frames"]))))]
+        return [("scenery", with_placement(f"scenery.{archive}.{record}", entry, lambda classic: sprite_placement(archive, record, classic, len(entry["frames"]))))]
     units = {}
     for row in csv.DictReader(open(ART / "reference/scenery/usage.csv")):
         archive, record = int(row["archive"]), int(row["record"])
@@ -936,7 +936,7 @@ def people_units():
             atlases[stem] = frame_atlas(stem, [source], [ART / "generated/people" / f"{stem}-frame-000.png"], f"{MEDIA}/people/{stem}.png",
                                         crunch=PEOPLE_CRUNCH, colours=None)
         entry = {"replaces": {"archive": archive, "record": record}, **atlases[stem]}
-        return [("people", with_placement(f"person.{archive}.{record}", entry, lambda classic: flat_placement(archive, record, classic, 1, person=True)))]
+        return [("people", with_placement(f"person.{archive}.{record}", entry, lambda classic: sprite_placement(archive, record, classic, 1, person=True)))]
     return {stem: Unit([generated("people", f"{by[0]}-frame-000")], lambda archive=archive, record=record, by=by: build(archive, record, *by))
             for archive, record, stem, source, frame in placed_people for by in [painted.get(frame, (stem, source))]}
 
@@ -1024,7 +1024,7 @@ AREAS = {
                                   "effectGlow": (ONE, "effectGlow")}, effect_units),
     "surfaces": Area(["surfaces"], {"surfaces": stem}, lambda: surface_units("surfaces")),
     "terrain": Area(["terrain"], {"surfaces": stem}, lambda: surface_units("terrain")),
-    "flats": Area(["scenery"], {"scenery": record_stem}, flat_units),
+    "scenery": Area(["scenery"], {"scenery": record_stem}, scenery_units),
     "people": Area(["people"], {"people": record_stem}, people_units),
     "people-rig": Area(["people-rigs"], {"peopleRig": (ONE, PEOPLE_RIG_FIGURE)}, lambda: {PEOPLE_RIG_FIGURE: Unit([], lambda: [("peopleRig", people_rig())])}),
     "ui": Area(["ui"], {"images": stem}, ui_units),

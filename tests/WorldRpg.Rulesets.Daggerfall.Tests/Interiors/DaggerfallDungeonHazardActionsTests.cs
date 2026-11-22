@@ -96,7 +96,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
     [InlineData((byte)0x19, false, (byte)5, (ushort)99, 3, 15)]
     public void Hurt22_through_25_preserve_flat_and_raw_axis_parameter_shapes(
         byte flag,
-        bool isFlat,
+        bool isSprite,
         byte axis,
         ushort magnitude,
         int level,
@@ -107,7 +107,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         Actor target = ActorWithVitals(entities, 2, health: 100, magicka: 20);
 
         DaggerfallDungeonHazardActionResult result = DaggerfallDungeonHazardActions.Execute(
-            Action($"hurt-{flag}", (DaggerfallDungeonActionFlag)flag, axis, magnitude, isFlat),
+            Action($"hurt-{flag}", (DaggerfallDungeonActionFlag)flag, axis, magnitude, isSprite),
             Context(source, target, level, activationCount: 1),
             new CombatResolution(),
             FixedRandom.Create(1).Service)!;
@@ -129,7 +129,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         target.Add(contributions);
 
         DaggerfallDungeonHazardActionResult mitigated = DaggerfallDungeonHazardActions.Execute(
-            Action("hurt22", DaggerfallDungeonActionFlag.Hurt22, magnitude: 8, isFlat: true),
+            Action("hurt22", DaggerfallDungeonActionFlag.Hurt22, magnitude: 8, isSprite: true),
             Context(source, target, targetLevel: 1, activationCount: 1),
             new CombatResolution(),
             FixedRandom.Create(1).Service)!;
@@ -139,7 +139,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         Assert.Equal(5, Health(target).ValueInt);
 
         DaggerfallDungeonHazardActionResult lethal = DaggerfallDungeonHazardActions.Execute(
-            Action("hurt22-lethal", DaggerfallDungeonActionFlag.Hurt22, magnitude: 8, isFlat: true),
+            Action("hurt22-lethal", DaggerfallDungeonActionFlag.Hurt22, magnitude: 8, isSprite: true),
             Context(source, target, targetLevel: 1, activationCount: 2),
             new CombatResolution(),
             FixedRandom.Create(1).Service)!;
@@ -150,7 +150,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         Assert.Equal(0, Health(target).ValueInt);
 
         DaggerfallDungeonHazardActionResult noSecondDeath = DaggerfallDungeonHazardActions.Execute(
-            Action("hurt22-after-death", DaggerfallDungeonActionFlag.Hurt22, magnitude: 8, isFlat: true),
+            Action("hurt22-after-death", DaggerfallDungeonActionFlag.Hurt22, magnitude: 8, isSprite: true),
             Context(source, target, targetLevel: 1, activationCount: 3),
             new CombatResolution(),
             FixedRandom.Create(1).Service)!;
@@ -164,7 +164,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
     [InlineData(true, (byte)9, (ushort)5, 3, 0, 3)]
     [InlineData(false, (byte)2, (ushort)99, 3, 1, 2)]
     public void DrainMagicka_uses_flat_or_axis_parameter_and_saturates_the_guarded_track(
-        bool isFlat,
+        bool isSprite,
         byte axis,
         ushort magnitude,
         int startingMagicka,
@@ -176,7 +176,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         Actor target = ActorWithVitals(entities, 2, health: 100, magicka: startingMagicka);
 
         DaggerfallDungeonHazardActionResult result = DaggerfallDungeonHazardActions.Execute(
-            Action("drain", DaggerfallDungeonActionFlag.DrainMagicka, axis, magnitude, isFlat),
+            Action("drain", DaggerfallDungeonActionFlag.DrainMagicka, axis, magnitude, isSprite),
             Context(source, target, targetLevel: 1, activationCount: 1),
             new CombatResolution(),
             FixedRandom.Create(1).Service)!;
@@ -194,7 +194,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         Actor target = ActorWithVitals(entities, 2, health: 100, magicka: 0);
 
         DaggerfallDungeonHazardActionResult result = DaggerfallDungeonHazardActions.Execute(
-            Action("drain-zero", DaggerfallDungeonActionFlag.DrainMagicka, magnitude: 5, isFlat: true),
+            Action("drain-zero", DaggerfallDungeonActionFlag.DrainMagicka, magnitude: 5, isSprite: true),
             Context(source, target, targetLevel: 1, activationCount: 1),
             new CombatResolution(),
             FixedRandom.Create(1).Service)!;
@@ -212,7 +212,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         Actor target = ActorWithVitals(entities, 2, health: 100, magicka: 20);
         CombatResolution combat = new();
         FixedRandom random = FixedRandom.Create(1);
-        DaggerfallDungeonActionDefinition action = Action("cooldown-hurt", DaggerfallDungeonActionFlag.Hurt22, magnitude: 2, isFlat: true)
+        DaggerfallDungeonActionDefinition action = Action("cooldown-hurt", DaggerfallDungeonActionFlag.Hurt22, magnitude: 2, isSprite: true)
             with { CooldownSeconds = 2d };
         ulong familyActivations = 0;
         DaggerfallDungeonActionGraph graph = new(
@@ -286,10 +286,10 @@ public sealed class DaggerfallDungeonHazardActionsTests
         DaggerfallDungeonActionFlag flag,
         byte axis = 0,
         ushort magnitude = 0,
-        bool isFlat = false,
+        bool isSprite = false,
         byte soundIndex = 0) =>
         new(id, 1, (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)flag, axis, 0, magnitude, -1, null,
-            IsFlat: isFlat, SoundIndex: soundIndex);
+            IsSprite: isSprite, SoundIndex: soundIndex);
 
     private static Actor ActorWithVitals(EntityDirectory entities, long id, double health, double magicka)
     {

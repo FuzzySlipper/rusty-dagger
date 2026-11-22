@@ -14,8 +14,8 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// </summary>
 internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
 {
-    private const float FlatHorizontalRadius = .75f;
-    private const float FlatVerticalRadius = 1.5f;
+    private const float SpriteHorizontalRadius = .75f;
+    private const float SpriteVerticalRadius = 1.5f;
     private static readonly EntityTypeId TriggerType = new("daggerfall.dungeon-action-trigger");
 
     private readonly EntityDirectory _entities;
@@ -156,7 +156,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         return false;
     }
 
-    /// <summary>Reads the admitted Engine pose for a flat action, including an exterior rebase.</summary>
+    /// <summary>Reads the admitted Engine pose for a sprite action, including an exterior rebase.</summary>
     internal bool TryGetTransform(string actionId, out Transform transform)
     {
         ThrowIfDisposed();
@@ -360,7 +360,7 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
         DaggerfallDungeonMapContent? map,
         out Bounds bounds)
     {
-        if (action.IsFlat)
+        if (action.IsSprite)
         {
             if (action.SourcePosition is not Vector3 source)
             {
@@ -368,8 +368,8 @@ internal sealed class DaggerfallDungeonActionTriggerRuntime : IDisposable
                 return false;
             }
             bounds = new Bounds(
-                source - new Vector3(FlatHorizontalRadius, FlatVerticalRadius, FlatHorizontalRadius),
-                source + new Vector3(FlatHorizontalRadius, FlatVerticalRadius, FlatHorizontalRadius));
+                source - new Vector3(SpriteHorizontalRadius, SpriteVerticalRadius, SpriteHorizontalRadius),
+                source + new Vector3(SpriteHorizontalRadius, SpriteVerticalRadius, SpriteHorizontalRadius));
             return true;
         }
 

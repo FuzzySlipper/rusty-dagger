@@ -81,7 +81,7 @@ public sealed class AssembledSiteProfileTests
     [Theory]
     [InlineData("SHRIAA00.RMB", true)]
     [InlineData("S0000070.RDB", false)]
-    public void Real_source_static_flats_are_admitted_by_location_assembly(string block, bool exterior)
+    public void Real_source_static_npcs_are_admitted_by_location_assembly(string block, bool exterior)
     {
         var location = TestPayload.Definitions.Locations.Records.First(site => exterior
             ? site.Exterior?.Blocks.Any(value => value.SourceName == block) == true

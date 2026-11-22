@@ -46,7 +46,7 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
         HashSet<string> replaced = [.. ReplacedSiteFiles(site, art), .. ReplacedNatureFiles(site, art), Candle(site, art)];
         foreach (string path in replaced.Concat(ReplacedUiImages(art).Values)) content.Remove(path);
         using DaggerfallSession session = Start(content, site, art, out _, out _);
-        // The Light spell's candle burns in its refreshed flat.
+        // The Light spell's candle burns in its refreshed sprite.
         session.Sites.Projection.Appearance.UpdateMagicCandle(Vector3.Zero);
         for (ulong step = 1; step <= 3; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
         Assert.Empty(content.Opened.Intersect(replaced));
@@ -94,7 +94,7 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
         // Outdoors, the nature the resident cells place too, each sprite at most once for the terrain and once for the site
         // where it also places that record as a decoration: what the switch built is what classic art draws.
         Assert.Equal(nature.Count > 0, content.Opened.Any(nature.Contains));
-        HashSet<string> placed = [.. site.Decorations.SelectMany(flat => new[] { flat.Summer.TexturePath, flat.Winter.TexturePath })];
+        HashSet<string> placed = [.. site.Decorations.SelectMany(decoration => new[] { decoration.Summer.TexturePath, decoration.Winter.TexturePath })];
         Assert.All(content.Opened.Where(nature.Contains).GroupBy(path => path), opens => Assert.InRange(opens.Count(), 1, placed.Contains(opens.Key) ? 2 : 1));
         Assert.True(session.Commands<IDeveloperSceneCommands>().ClassicArt("off").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(3), []));
@@ -221,10 +221,10 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
                 if (state.ModelId is { } id && remodels.ContainsKey(id)) yield return state.Visual.Path;
         foreach (DaggerfallDungeonActionModelDefinition model in site.DungeonActionModels)
             if (model.ModelId is { } id && remodels.ContainsKey(id)) yield return model.Visual.Path;
-        foreach (DaggerfallSiteDecoration flat in site.Decorations)
+        foreach (DaggerfallSiteDecoration decoration in site.Decorations)
         {
-            if (Replaced(flat.Source)) yield return flat.Summer.TexturePath;
-            if (Replaced(flat.WinterSource)) yield return flat.Winter.TexturePath;
+            if (Replaced(decoration.Source)) yield return decoration.Summer.TexturePath;
+            if (Replaced(decoration.WinterSource)) yield return decoration.Winter.TexturePath;
         }
         foreach (NormalizedActorSprite sprite in site.ActorSprites.Values.SelectMany(sprite => sprite.Female is { } female ? [sprite, female] : new[] { sprite }))
         {
@@ -234,7 +234,7 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
         foreach (NormalizedClassicEffect effect in site.ClassicPresentation.Effects)
             if (art.Effects.ContainsKey(effect.MediaId)) yield return effect.TexturePath;
 
-        // A decoration is replaced by a refreshed flat, or by a mesh unless it hangs: the test's animation reads no joints,
+        // A decoration is replaced by a refreshed sprite, or by a mesh unless it hangs: the test's animation reads no joints,
         // so a hanging mesh's rig is refused and its sprite drawn in its place.
         bool Replaced((int Archive, int Record) source) => art.Scenery.ContainsKey(source)
             || art.Meshes.TryGetValue(source, out DaggerfallArtMesh? mesh) && mesh.Hangs is null;
@@ -277,7 +277,7 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
 
     /// <summary>What a site draws from a file, for a failure's message.</summary>
     private static string Holder(DaggerfallSiteProfile site, string path) =>
-        string.Join(",", site.Decorations.Where(flat => flat.Summer.TexturePath == path || flat.Winter.TexturePath == path).Select(flat => $"decoration {flat.Source}/{flat.WinterSource}")
+        string.Join(",", site.Decorations.Where(decoration => decoration.Summer.TexturePath == path || decoration.Winter.TexturePath == path).Select(decoration => $"decoration {decoration.Source}/{decoration.WinterSource}")
             .Concat(site.ActorSprites.Where(pair => pair.Value.TexturePath == path).Select(pair => $"actor {pair.Key}")));
 
     private void Report(string site, ContentFake content, HashSet<string> replaced, string[] delivered, DaggerfallArtReplacements art)

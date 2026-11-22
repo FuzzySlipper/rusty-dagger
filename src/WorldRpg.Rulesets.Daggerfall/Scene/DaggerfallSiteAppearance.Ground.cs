@@ -11,7 +11,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// Ground piles: dropped items and treasure. As in the classic, a pile stands as one of the treasure archive's piles,
 /// which one fixed by the container's identity as the classic picks one at random when the pile is made. With
 /// refreshed art, a pile of one item or one stack stands as that item instead, in its metal or dye, at its own height,
-/// and a pile of several stands as its treasure pile's refreshed flat where the set redraws it, on its own foot. A classic
+/// and a pile of several stands as its treasure pile's refreshed sprite where the set redraws it, on its own foot. A classic
 /// pile is opened only when it is drawn.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
@@ -61,23 +61,23 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>The treasure pile a container stands as: a spread of its identity over the published piles, so it keeps its pile across saves.</summary>
     private int TreasurePile(long id) => (int)((ulong)id * 0x9E3779B97F4A7C15UL % (ulong)groundContainerSprites.Count);
 
-    /// <summary>The refreshed flat a treasure pile is drawn as while refreshed art is drawn, or null where it stays classic.</summary>
+    /// <summary>The refreshed sprite a treasure pile is drawn as while refreshed art is drawn, or null where it stays classic.</summary>
     private DaggerfallArtSprite? RefreshedPile(int index) => drawRefreshedEffects() && groundContainerSprites[index].Source is { } source
         ? surfaceArt?.Scenery.GetValueOrDefault(source) : null;
 
     /// <summary>
-    /// A treasure pile's billboard: its refreshed flat standing on its own foot, or the classic pile lifted by its pivot's
+    /// A treasure pile's billboard: its refreshed sprite standing on its own foot, or the classic pile lifted by its pivot's
     /// share of its height so it stands on the floor whatever pivot the source publishes, as the donor lifts dropped
     /// containers by half their height.
     /// </summary>
     private (Appearance, float, Vector2) CreateTreasurePile((int Index, bool Refreshed) pile)
     {
         if (pile.Refreshed && RefreshedPile(pile.Index) is { } art)
-            return (appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(RefreshedPileAtlas(art), 0, art.Foot, art.Size, flats.Items,
+            return (appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(RefreshedPileAtlas(art), 0, art.Foot, art.Size, sprites.Items,
                 SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), LitSprite)), 0F, art.Size);
         NormalizedBillboardSprite sprite = groundContainerSprites[pile.Index];
         Appearance visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(ClassicTreasureAtlas(pile.Index),
-            sprite.InitialFrameId, sprite.Pivot, sprite.Size, flats.Items, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
+            sprite.InitialFrameId, sprite.Pivot, sprite.Size, sprites.Items, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
             new Color(1F, 1F, 1F, 1F), LitSprite));
         return (visual, sprite.Pivot.Y * sprite.Size.Y, sprite.Size);
     }
@@ -96,13 +96,13 @@ internal sealed partial class DaggerfallSiteAppearance
         return atlas;
     }
 
-    /// <summary>A treasure pile's refreshed flat's atlas, opened once for the site.</summary>
+    /// <summary>A treasure pile's refreshed sprite's atlas, opened once for the site.</summary>
     private SpriteAtlas RefreshedPileAtlas(DaggerfallArtSprite art)
     {
         if (groundItemAtlases.TryGetValue(art.File.Path, out SpriteAtlas? opened)) return opened;
         RenderResourceInfo texture = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
         ownedResources.Add(texture.Handle);
-        SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, RefreshedFlatFrames(art)));
+        SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, RefreshedSpriteFrames(art)));
         atlases.Add(atlas);
         groundItemAtlases.Add(art.File.Path, atlas);
         return atlas;
@@ -119,7 +119,7 @@ internal sealed partial class DaggerfallSiteAppearance
         SpriteAtlas atlas = GroundItemAtlas(look.Image);
         RenderResource? mask = look.Mask is { } image ? GroundItemMask(image) : null;
         Color tint = look.Color is { } color ? Linear(color, look.Brightness) : new Color(1F, 1F, 1F, 1F);
-        SpriteFromAtlasRequest request = new(atlas, 0, new Vector2(.5F, 0F), size, flats.Items, SpriteSizeMode.World, 0,
+        SpriteFromAtlasRequest request = new(atlas, 0, new Vector2(.5F, 0F), size, sprites.Items, SpriteSizeMode.World, 0,
             SpriteDepthPolicy.Default, tint, LitSprite);
         if (mask is not null) request = request with { Material = LitSprite with { TintMask = new RenderResourceReference(mask) } };
         return (appearance.CreateSpriteFromAtlas(request), 0F, size);

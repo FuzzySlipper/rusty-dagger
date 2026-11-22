@@ -17,7 +17,7 @@ internal static class DaggerfallExteriorPopulation
         var factions = definitions.Factions.Factions.Values;
         // The people of the location's own region, as the donor's GetPeopleOfCurrentRegion finds them; a region with none
         // (the player's ships) has no wandering townsfolk, never another region's.
-        var people = factions.Where(faction => faction.Type == 15 && faction.Region == location.Id.Region && faction.Flats.Count != 0)
+        var people = factions.Where(faction => faction.Type == 15 && faction.Region == location.Id.Region && faction.Sprites.Count != 0)
             .OrderBy(faction => faction.Id).FirstOrDefault();
         if (people is null || location.Exterior is not { } exterior) return [];
         var blocks = exterior.Blocks.ToDictionary(block => (block.X, block.Y));
@@ -36,9 +36,9 @@ internal static class DaggerfallExteriorPopulation
             float x = block.X * blockSide + (sourceX * automapSide + automapSide / 2) * (cellSize / automapSide);
             float z = block.Y * blockSide + (sourceY * automapSide + automapSide / 2) * (cellSize / automapSide);
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
-            int flat = people.Flats[index % people.Flats.Count];
-            result.Add(new(id, new WorldPoint(x, 0f, -z), flat >> 7, flat & 0x7f, people.Id,
-                (byte)(index % people.Flats.Count == 1 ? 0x20 : 0), StableSeed(id)));
+            int sprite = people.Sprites[index % people.Sprites.Count];
+            result.Add(new(id, new WorldPoint(x, 0f, -z), sprite >> 7, sprite & 0x7f, people.Id,
+                (byte)(index % people.Sprites.Count == 1 ? 0x20 : 0), StableSeed(id)));
         }
         return result;
     }

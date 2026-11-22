@@ -95,21 +95,21 @@ class Meshes(unittest.TestCase):
 
     def test_matching_paintings_use_the_same_media_but_their_own_placement(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]
-        flats = {f"{f['replaces']['archive']}-{f['replaces']['record']}": f for f in art["scenery"]}
+        sprites = {f"{f['replaces']['archive']}-{f['replaces']['record']}": f for f in art["scenery"]}
         for key, source in trees.SHARED_TREES.items():
             with self.subTest(key=key):
                 instance = art["trees"][key]
                 original = art["trees"][source]
                 self.assertEqual({k: v for k, v in original.items() if k != "placement"},
                                  {k: v for k, v in instance.items() if k != "placement"})
-                self.assertEqual(trees.shared_tree(original, flats[key], instance), instance)
+                self.assertEqual(trees.shared_tree(original, sprites[key], instance), instance)
                 hand = {"placement": {"height": 7.25, "foot": .1, "from": {"height": "hand", "foot": "hand"}}}
-                self.assertEqual(trees.shared_tree(original, flats[key], hand)["placement"], hand["placement"])
+                self.assertEqual(trees.shared_tree(original, sprites[key], hand)["placement"], hand["placement"])
 
     def test_the_winter_rock_painted_with_pockets_is_built_whole_on_its_foot(self):
-        flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["scenery"] if f["replaces"] == {"archive": 507, "record": 4})
-        rgba = trees.frame(flat)
-        mesh, _ = trees.fieldstones.build("507-4", rgba, flat["placement"]["size"]["height"])
+        sprite = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["scenery"] if f["replaces"] == {"archive": 507, "record": 4})
+        rgba = trees.frame(sprite)
+        mesh, _ = trees.fieldstones.build("507-4", rgba, sprite["placement"]["size"]["height"])
         part = mesh["parts"][0]
         normals = np.array(part["normals"]).reshape(-1, 3)
         self.assertTrue(np.allclose(np.linalg.norm(normals, axis=1), 1, atol=1e-3))
@@ -118,9 +118,9 @@ class Meshes(unittest.TestCase):
 
     def test_a_rock_painted_with_a_pocket_stands_in_its_sprite_s_proportions(self):
         # 506-3's sprite is an arch: shaped round its opening, the rock stood squat at 55% of the sprite's height (#10874).
-        flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["scenery"] if f["replaces"] == {"archive": 506, "record": 3})
-        rgba = trees.frame(flat)
-        mesh, _ = trees.fieldstones.build("506-3", rgba, flat["placement"]["size"]["height"])
+        sprite = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["scenery"] if f["replaces"] == {"archive": 506, "record": 3})
+        rgba = trees.frame(sprite)
+        mesh, _ = trees.fieldstones.build("506-3", rgba, sprite["placement"]["size"]["height"])
         positions = np.array(mesh["parts"][0]["positions"]).reshape(-1, 3)
         solid = rocks.outline(rgba.astype(np.uint8))
         self.assertAlmostEqual((positions[:, 0].max() - positions[:, 0].min()) / mesh["height"], solid.shape[1] / solid.shape[0], delta=.1)
@@ -139,23 +139,23 @@ class Meshes(unittest.TestCase):
 
 class Placement(unittest.TestCase):
     """A tree's placement is its own once written: a rebuild keeps it however its values were set, and only --recompute measures again."""
-    FLAT = {"placement": {"size": {"height": 4.0}}}
+    SPRITE = {"placement": {"size": {"height": 4.0}}}
     RGBA = np.zeros((100, 10, 4))
     MEASURED = {"height": 90, "foot": 98}   # a sprite 100 rows tall drawing 90 of them, its foot on row 98
 
-    def test_a_new_tree_measures_its_height_and_foot_at_its_flats_size_and_marks_them_art(self):
-        self.assertEqual({"height": 3.6, "foot": .04, "from": {"height": "art", "foot": "art"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, None))
+    def test_a_new_tree_measures_its_height_and_foot_at_its_sprites_size_and_marks_them_art(self):
+        self.assertEqual({"height": 3.6, "foot": .04, "from": {"height": "art", "foot": "art"}}, trees.placement(self.SPRITE, self.RGBA, self.MEASURED, None))
 
     def test_a_rebuild_keeps_every_value_the_payload_holds_whatever_set_it_and_fills_only_a_missing_one(self):
         old = {"placement": {"height": 7.0, "foot": 1.0, "from": {"height": "art", "foot": "hand"}}}
-        # The sprite and its flat have changed since: nothing moves.
-        self.assertEqual({"height": 7.0, "foot": 1.0, "from": {"height": "art", "foot": "hand"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, old))
+        # The sprite and its painting have changed since: nothing moves.
+        self.assertEqual({"height": 7.0, "foot": 1.0, "from": {"height": "art", "foot": "hand"}}, trees.placement(self.SPRITE, self.RGBA, self.MEASURED, old))
         partial = {"placement": {"height": 7.0, "from": {"height": "original"}}}
-        self.assertEqual({"height": 7.0, "foot": .04, "from": {"height": "original", "foot": "art"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, partial))
+        self.assertEqual({"height": 7.0, "foot": .04, "from": {"height": "original", "foot": "art"}}, trees.placement(self.SPRITE, self.RGBA, self.MEASURED, partial))
 
     def test_recompute_measures_every_value_again(self):
         old = {"placement": {"height": 7.0, "foot": 1.0, "from": {"height": "art", "foot": "hand"}}}
-        self.assertEqual({"height": 3.6, "foot": .04, "from": {"height": "art", "foot": "art"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, old, recompute=True))
+        self.assertEqual({"height": 3.6, "foot": .04, "from": {"height": "art", "foot": "art"}}, trees.placement(self.SPRITE, self.RGBA, self.MEASURED, old, recompute=True))
 
 
 if __name__ == "__main__":

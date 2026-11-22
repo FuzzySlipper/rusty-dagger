@@ -14,7 +14,7 @@ internal enum DaggerfallRegionFactionDisposition
     Unclaimed,
 }
 
-internal sealed record DaggerfallFactionFlatDefinition(int Id, int Archive, int Record);
+internal sealed record DaggerfallFactionSpriteDefinition(int Id, int Archive, int Record);
 
 /// <summary>One published faction: its filed identity, relations and bindings.</summary>
 /// <param name="Id">The faction's identity.</param>
@@ -33,7 +33,7 @@ internal sealed record DaggerfallFactionFlatDefinition(int Id, int Archive, int 
 /// <param name="AllyDisposition">Whether every ally is a published faction.</param>
 /// <param name="Enemies">The filed enemy identities, in file order.</param>
 /// <param name="EnemyDisposition">Whether every enemy is a published faction.</param>
-/// <param name="Flats">The filed face flats.</param>
+/// <param name="Sprites">The filed sprites its people draw as, each archive and record packed as <c>archive &lt;&lt; 7 | record</c>.</param>
 /// <param name="Face">The filed face value.</param>
 /// <param name="Race">The filed race value.</param>
 /// <param name="SocialGroup">The filed social group.</param>
@@ -63,7 +63,7 @@ internal sealed record DaggerfallFactionDefinition(
     DaggerfallFactionLinkDisposition AllyDisposition,
     IReadOnlyList<int> Enemies,
     DaggerfallFactionLinkDisposition EnemyDisposition,
-    IReadOnlyList<int> Flats,
+    IReadOnlyList<int> Sprites,
     int Face,
     int Race,
     int SocialGroup,
@@ -77,7 +77,7 @@ internal sealed record DaggerfallFactionDefinition(
     int Vampire,
     int Rank)
 {
-    internal IReadOnlyList<DaggerfallFactionFlatDefinition> FlatVisuals { get; init; } = [];
+    internal IReadOnlyList<DaggerfallFactionSpriteDefinition> SpriteVisuals { get; init; } = [];
 }
 
 /// <summary>One politic region with the factions that claim it.</summary>

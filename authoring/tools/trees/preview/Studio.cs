@@ -24,11 +24,11 @@ public sealed class Studio : IEngineProduct, IDebugCommandModuleSource, IDebugCo
     public Studio(ProductCreateContext context)
     {
         engine = context.Engine;
-        using JsonDocument tuning = JsonDocument.Parse(context.Content.ReadFile("flats-tuning.json").Bytes);
-        var flats = DaggerfallFlatsTuning.Read(tuning.RootElement);
-        terrain = new(engine.Content, engine.Graphics, flats: flats);
+        using JsonDocument tuning = JsonDocument.Parse(context.Content.ReadFile("sprites-tuning.json").Bytes);
+        var sprites = DaggerfallSpritesTuning.Read(tuning.RootElement);
+        terrain = new(engine.Content, engine.Graphics, sprites: sprites);
         terrain.UseArt(DaggerfallArtReplacements.Read(context.Content.ReadFile("flora.json").Bytes, "daggerfall.art-replacements"), () => true);
-        art = new(engine, flats);
+        art = new(engine, sprites);
         camera = engine.CameraView.CreateCamera(CameraFor(10));
         engine.CameraView.SetActiveCamera(camera);
         sun = Light(1, LightKind.Directional, 2.4f, Vector3.Normalize(new Vector3(.5f, -.8f, -.6f)));

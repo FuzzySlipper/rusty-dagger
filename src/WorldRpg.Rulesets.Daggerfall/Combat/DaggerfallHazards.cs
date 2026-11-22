@@ -18,7 +18,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 /// <param name="playerPosition">Where the player stands now, if anywhere.</param>
 /// <param name="toProfile">A point of the live world in the loaded site's own frame, where its fires are placed.</param>
-/// <param name="siteInputs">The loaded site's content, whose burning flats are the fires.</param>
+/// <param name="siteInputs">The loaded site's content, whose burning props are the fires.</param>
 /// <param name="harm">How a hazard's health damage is applied.</param>
 /// <param name="forgetLanded">Forgets which traps the bodies no longer held have sprung, once a step.</param>
 /// <param name="springTraps">Springs the hurt traps a thrown body at a point (in the site's frame) touches.</param>
@@ -60,7 +60,7 @@ internal sealed class DaggerfallHazards(DaggerfallHazardTuning tuning, ActorsSta
         DaggerfallSiteProfile inputs = siteInputs();
         if (ReferenceEquals(inputs, _fireInputs)) return _fireSpots;
         _fireInputs = inputs;
-        return _fireSpots = [.. inputs.Decorations.Where(flat => tuning.BurningFlats.Contains(flat.Source)).Select(flat => flat.Position.ToVector())];
+        return _fireSpots = [.. inputs.Decorations.Where(decoration => tuning.BurningProps.Contains(decoration.Source)).Select(decoration => decoration.Position.ToVector())];
     }
 
     /// <summary>The share of a fire that gets through a body's resistance; a negative resistance is a weakness.</summary>

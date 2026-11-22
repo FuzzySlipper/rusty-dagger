@@ -6,7 +6,7 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// A flat, a person or a tree of the art pack carries its own placement, and one that lacks a value its kind needs is
+/// A scenery sprite, a person or a tree of the art pack carries its own placement, and one that lacks a value its kind needs is
 /// refused by name when the pack is read: nothing falls back to the classic art's size, pivot, frames or rate.
 /// </summary>
 public sealed class ArtPlacementTests

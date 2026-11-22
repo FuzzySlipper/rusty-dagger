@@ -159,7 +159,7 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc)
     {
         ArgumentNullException.ThrowIfNull(npc);
-        // Classic flats also carry faction ids absent from FACTION.TXT. Preserve that source
+        // Classic sprite placements also carry faction ids absent from FACTION.TXT. Preserve that source
         // identity, but give people without a catalog faction a neutral social baseline.
         return !_catalog.Factions.ContainsKey(npc.Appearance.FactionId)
             ? new(npc.Appearance.FactionId, 0, 0) : ReactionForFaction(npc.Appearance.FactionId);

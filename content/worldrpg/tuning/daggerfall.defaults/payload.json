@@ -547,7 +547,7 @@
     }
   },
   "hazards": {
-    "burningFlats": [
+    "burningProps": [
       [
         210,
         0
@@ -1038,7 +1038,7 @@
     "snowFullMetres": 2200,
     "rockHoldsSnow": 0.3
   },
-  "flats": {
+  "sprites": {
     "nature": "heading",
     "decorations": "heading",
     "actors": "heading",

@@ -24,7 +24,7 @@ public sealed class DaggerfallExteriorPopulationTests
     {
         DaggerfallSiteRecord town = Town(region, name);
         DaggerfallFactionDefinition people = Assert.Single(TestPayload.Definitions.Factions.Factions.Values,
-            faction => faction.Type == 15 && faction.Region == region && faction.Flats.Count != 0);
+            faction => faction.Type == 15 && faction.Region == region && faction.Sprites.Count != 0);
 
         IReadOnlyList<DaggerfallPopulationPlacement> placed = DaggerfallExteriorPopulation.Create(TestPayload.Definitions, town, AllClear(town));
 
@@ -32,7 +32,7 @@ public sealed class DaggerfallExteriorPopulationTests
         Assert.All(placed, placement =>
         {
             Assert.Equal(people.Id, placement.FactionId);
-            Assert.Contains((placement.BillboardArchive << 7) | placement.BillboardRecord, people.Flats);
+            Assert.Contains((placement.BillboardArchive << 7) | placement.BillboardRecord, people.Sprites);
         });
     }
 

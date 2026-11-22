@@ -320,8 +320,8 @@ internal sealed class DaggerfallDungeonActions(
         out DaggerfallActionCastSource source)
     {
         Vector3? origin = action.SourcePosition;
-        if (origin is Vector3 flat && triggers.TryGetTransform(action.Id, out Transform triggerTransform))
-            origin = flat + triggerTransform.Translation;
+        if (origin is Vector3 offset && triggers.TryGetTransform(action.Id, out Transform triggerTransform))
+            origin = offset + triggerTransform.Translation;
         if (origin is null && motion().TryGetTransform(action.Id, out Transform transform))
             origin = transform.Translation;
         if (origin is null && action.DoorId is string doorId)

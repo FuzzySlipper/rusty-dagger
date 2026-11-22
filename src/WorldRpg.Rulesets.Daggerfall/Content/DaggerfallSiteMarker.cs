@@ -30,7 +30,7 @@ internal sealed record DaggerfallSiteMarker(
         if (!Enum.IsDefined(Kind)) throw new ArgumentOutOfRangeException(nameof(Kind));
         if (Kind is DaggerfallSiteMarkerKind.QuestSpawn or DaggerfallSiteMarkerKind.QuestItem
             && (string.IsNullOrWhiteSpace(SourceKey) || SourceOrdinal is null or < 0 || BuildingIndex is < 0))
-            throw new ArgumentException("A quest marker requires its source block and flat ordinal.");
+            throw new ArgumentException("A quest marker requires its source block and marker ordinal.");
         if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
             throw new ArgumentOutOfRangeException(nameof(Position));
 

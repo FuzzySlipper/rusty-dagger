@@ -354,7 +354,7 @@ def small_palm(tree, record):
     texture = palm_atlas(tree, FRONDS[record])
     spear = np.array(texture.crop((64,0,128,96)))
     if not tall:
-        # Sun-dried spear tips on 28 carry the tawny paint at the top of its flat.
+        # Sun-dried spear tips on 28 carry the tawny paint at the top of its sprite.
         top_paint = tree.pixels[:round(len(tree.pixels)*.38)].astype(float)
         warm = top_paint[(top_paint[...,3]>128) & (top_paint[...,0] > top_paint[...,1]*1.10), :3]
         if len(warm):

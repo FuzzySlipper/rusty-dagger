@@ -16,7 +16,7 @@ public sealed class DungeonTrapSessionTests
     private static readonly long Enemy = HoldActor(1);
 
     private static DaggerfallDungeonActionDefinition Action(DaggerfallDungeonActionFlag flag) =>
-        new("trap", 1, (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)flag, 0, 0, 2, -1, null, IsFlat: true);
+        new("trap", 1, (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)flag, 0, 0, 2, -1, null, IsSprite: true);
 
     private static double Health(DaggerfallSession session) => session.State.Actors.Get(Enemy).Stats.GetTrack(TrackId.Parse("health")).Current;
 
@@ -87,7 +87,7 @@ public sealed class DungeonTrapSessionTests
         (DaggerfallSession session, _, _) = VisibleEnemySession(releases, out SpatialFake spatial, distance: 30d);
         using DaggerfallSession disposable = session;
         spatial.KeepPosition = true;
-        Vector3 fire = session.Sites.Projection.Inputs.Decorations.First(flat => flat.Source == (210, 1)).Position.ToVector();
+        Vector3 fire = session.Sites.Projection.Inputs.Decorations.First(decoration => decoration.Source == (210, 1)).Position.ToVector();
         ActorState enemy = session.State.Actors.Get(Enemy);
         Rusty.Engine.Mechanics.StatsComponent stats = player ? session.State.Actors.Player.Stats : enemy.Stats;
         stats.GetStat(StatId.Parse("resistance-fire")).BaseValue = resistance;

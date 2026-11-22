@@ -72,8 +72,8 @@ internal static class DaggerfallQuestPlacements
 
     /// <summary>
     /// A place's quest markers of one kind in the order a source marker index addresses: a dungeon's block by block
-    /// in the location's own layout order, each block's flats in record order (EnumerateDungeonQuestMarkers); a
-    /// building's flats in record order (EnumerateBuildingQuestMarkers). Profiles draw blocks in grid order, so
+    /// in the location's own layout order, each block's markers in record order (EnumerateDungeonQuestMarkers); a
+    /// building's markers in record order (EnumerateBuildingQuestMarkers). Profiles draw blocks in grid order, so
     /// the layout order is restored here rather than assumed.
     /// </summary>
     internal static DaggerfallSiteMarker[] SourceOrder(DaggerfallSiteProfile profile, DaggerfallSiteRecord site, DaggerfallSiteMarkerKind kind)

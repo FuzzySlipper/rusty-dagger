@@ -92,7 +92,7 @@ def thumb(src, dst, size, nearest):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--area", default="items", choices=["items", "worn", "paper-doll", "spells", "effects", "flats", "people", "ui"])
+    ap.add_argument("--area", default="items", choices=["items", "worn", "paper-doll", "spells", "effects", "scenery", "people", "ui"])
     ap.add_argument("--studies", default=str(ART / "generated/studies"))
     args = ap.parse_args()
     area = args.area

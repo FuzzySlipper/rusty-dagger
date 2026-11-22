@@ -31,7 +31,7 @@ internal sealed class DaggerfallFarForest : IDisposable
     private readonly IEngineContext _engine;
     private readonly DaggerfallHorizonGround _ground;
     private readonly DaggerfallFloraTuning _tuning;
-    private readonly DaggerfallFlatsTuning _flats;
+    private readonly DaggerfallSpritesTuning _sprites;
     private readonly IReadOnlyDictionary<int, float> _archiveDensity;
     private readonly Dictionary<uint, (VegetationSprite Sprite, RenderResource Image)> _layers = [];
     private readonly HashSet<int> _grown = [];
@@ -42,13 +42,13 @@ internal sealed class DaggerfallFarForest : IDisposable
     /// <summary>The nature archives the workers have found ground of, a bit each from the first.</summary>
     private int _found;
 
-    internal DaggerfallFarForest(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraTuning tuning, DaggerfallFlatsTuning flats,
+    internal DaggerfallFarForest(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraTuning tuning, DaggerfallSpritesTuning sprites,
         IReadOnlyDictionary<int, float> archiveDensity)
     {
         _engine = engine;
         _ground = ground;
         _tuning = tuning;
-        _flats = flats;
+        _sprites = sprites;
         _archiveDensity = archiveDensity;
     }
 
@@ -137,7 +137,7 @@ internal sealed class DaggerfallFarForest : IDisposable
                 try
                 {
                     grown = (new VegetationSprite(_engine, new RenderResourceReference(image), look.UvMin, look.UvMax, look.Size, look.Pivot,
-                        _flats.Flora(DaggerfallSiteAppearance.LitSprite), _flats.Nature), image);
+                        _sprites.Flora(DaggerfallSiteAppearance.LitSprite), _sprites.Nature), image);
                 }
                 catch
                 {

@@ -160,15 +160,15 @@ public sealed class DaggerfallDungeonActionGraphTests
     }
 
     [Fact]
-    public void Flat_source_action_dispatches_direct_and_attack_events_by_admitted_identity()
+    public void Sprite_source_action_dispatches_direct_and_attack_events_by_admitted_identity()
     {
-        DaggerfallDungeonActionDefinition flat = new(
+        DaggerfallDungeonActionDefinition sprite = new(
             "action/block/flat-4", 4, 8, 0x1F, 0, 0, 0, -1, null,
-            IsFlat: true);
-        DaggerfallDungeonActionGraph graph = Create(flat);
+            IsSprite: true);
+        DaggerfallDungeonActionGraph graph = Create(sprite);
 
-        DaggerfallDungeonActionDispatch direct = graph.Trigger(flat.Id, DaggerfallDungeonActionEvent.Direct);
-        DaggerfallDungeonActionDispatch attack = graph.Trigger(flat.Id, DaggerfallDungeonActionEvent.Attack);
+        DaggerfallDungeonActionDispatch direct = graph.Trigger(sprite.Id, DaggerfallDungeonActionEvent.Direct);
+        DaggerfallDungeonActionDispatch attack = graph.Trigger(sprite.Id, DaggerfallDungeonActionEvent.Attack);
 
         Assert.Equal(DaggerfallDungeonActionOutcome.Applied, direct.Executions.Single().Outcome);
         Assert.True(attack.Executions.Single().Outcome is DaggerfallDungeonActionOutcome.Applied

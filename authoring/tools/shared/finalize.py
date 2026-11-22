@@ -32,7 +32,7 @@ for i in spec["items"]:
     shutil.copyfile(Path(a.cutout) / (i["id"] + ".png"), target)
     for kept in (target.parent / "pre-matte" / target.name, target.parent / "pre-matte" / f"{target.stem}-mask.png"):
         kept.unlink(missing_ok=True)   # matte.py starts from what it kept, which this final replaces
-    if a.area in ("flats", "people"):
+    if a.area in ("scenery", "people"):
         subprocess.run([sys.executable, Path(__file__).with_name("despeckle.py"), target], check=True)
     if a.area in DOLL_AREAS:
         given = json.load(open(a.study / "inputs" / i["id"] / "input.json"))

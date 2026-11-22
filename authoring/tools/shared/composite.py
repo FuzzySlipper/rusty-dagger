@@ -1,5 +1,5 @@
 """Animated frames: keep frame 0's converted body, take only what moves from frame k's conversion.
-    composite.py SPEC STUDY CUTOUTS [AREA]    AREA defaults to items; a flats frame 0 may be an accepted items final.
+    composite.py SPEC STUDY CUTOUTS [AREA]    AREA defaults to items; a scenery frame 0 may be an accepted items final.
     An item's optional `hold` lists source-pixel boxes [x0,y0,x1,y1] where frame 0 stands even though the source differs."""
 import json,re,sys
 from pathlib import Path

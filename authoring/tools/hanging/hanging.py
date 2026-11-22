@@ -2,7 +2,7 @@
 
     blender -b -P authoring/tools/hanging/hanging.py -- [ARCHIVE-RECORD ...]
 
-Each piece stands in for one placed flat through the art pack's `meshes` (promote.py's WORLD_MESHES, `--area effects
+Each piece stands in for one placed sprite through the art pack's `meshes` (promote.py's WORLD_MESHES, `--area effects
 --key A-R`). It is built at its sprite's world size, its origin at the sprite's foot and its anchor at the sprite's top;
 the game draws a hanging mesh at its sprite's height from the floor its sprite stands on, so it hangs from the same point
 as the sprite, however wide it is. Finals go to local/art/generated/effects/hanging-A-R.glb.
@@ -60,8 +60,8 @@ def sizes():
 SIZES = sizes()
 
 
-def flat(key):
-    """The refreshed flat of a record: its first frame as an RGBA array (top row first) and where the classic frame lies in it."""
+def refreshed(key):
+    """The refreshed sprite of a record: its first frame as an RGBA array (top row first) and where the classic frame lies in it."""
     payload = json.loads((PACK / "payload.json").read_text())
     entry = next(e for e in payload["artReplacements"]["scenery"] if (e["replaces"]["archive"], e["replaces"]["record"]) == key)
     image = bpy.data.images.load(str(PACK.parent.parent.parent / entry["path"]))
@@ -241,7 +241,7 @@ def root(key):
     """The refreshed art on two crossed planes, the classic frame's part of it across the sprite's size, bending along
     ROOT_BODIES bodies: each vertex weighs on the body at its height, blending into the next over the lower half."""
     w, h = SIZES[key]
-    image, _, (fx, fy, fw, fh), classic = flat(key)
+    image, _, (fx, fy, fw, fh), classic = refreshed(key)
     # UVs of the classic frame inside the atlas (v up from the bottom).
     u0, u1 = fx + classic["x"] * fw, fx + (classic["x"] + classic["width"]) * fw
     v1 = 1 - (fy + classic["y"] * fh)
@@ -305,7 +305,7 @@ def strand(bm, rig, owners, x, top, length, gauge, end, parent, prefix, ring_wid
 
 def chain(key):
     w, h = SIZES[key]
-    _, pixels, _, _ = flat(key)
+    _, pixels, _, _ = refreshed(key)
     mid, dark, light = palette(pixels)
     bm = bmesh.new()
     owners = {}
@@ -338,7 +338,7 @@ def cage(key):
     """A short chain from a hook, then the cage: a dome of bars to a collar, bands at its shoulder, middle and foot, and
     a floor plate; the bands and floor take the sprite's rust."""
     w, h = SIZES[key]
-    _, pixels, _, _ = flat(key)
+    _, pixels, _, _ = refreshed(key)
     mid, dark, light = palette(pixels)
     rgb = pixels[pixels[..., 3] > .5][:, :3]
     rust = np.median(rgb[(rgb[:, 0] > rgb[:, 2] * 1.4) & (rgb[:, 0] > .25)], axis=0) if ((rgb[:, 0] > rgb[:, 2] * 1.4) & (rgb[:, 0] > .25)).sum() > 20 else np.array([.45, .2, .1])
@@ -403,7 +403,7 @@ def lantern(key):
     """A chain of small links skinned to bodies LANTERN_SEGMENT apart, then the lantern where the sprite paints it:
     its glass wears the sprite's glass, lit, inside an iron cap, straps and foot."""
     w, h = SIZES[key]
-    image, pixels, (fx, fy, fw, fh), classic = flat(key)
+    image, pixels, (fx, fy, fw, fh), classic = refreshed(key)
     mid, dark, light = palette(pixels)
     alpha = pixels[..., 3] > .5
     widths = alpha.sum(axis=1)
@@ -495,7 +495,7 @@ def lantern(key):
 def build(key):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     if key not in HANGS:
-        raise SystemExit(f"{key[0]}-{key[1]} is not a hanging flat this builds.")
+        raise SystemExit(f"{key[0]}-{key[1]} is not a hanging sprite this builds.")
     if key in ROOTS:
         root(key)
     elif key in CHAINS:

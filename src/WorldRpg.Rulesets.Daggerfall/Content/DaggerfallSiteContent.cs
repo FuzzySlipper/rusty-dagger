@@ -206,7 +206,7 @@ internal static partial class DaggerfallSiteContent
                 int nextObjectOffset = DaggerfallBaseContent.Integer(action, "nextObjectOffset", diagnostics);
                 string? nextActionId = OptionalNullableText(action, "nextActionId", diagnostics);
                 string? doorId = OptionalNullableText(action, "doorId", diagnostics);
-                bool isFlat = OptionalBoolean(action, "isFlat", false, diagnostics);
+                bool isSprite = OptionalBoolean(action, "isFlat", false, diagnostics); // the import names an action on a sprite record isFlat
                 byte soundIndex = Byte(action, "soundIndex", diagnostics);
                 byte rawIndex = action.TryGetProperty("rawIndex", out _)
                     ? Byte(action, "rawIndex", diagnostics)
@@ -238,7 +238,7 @@ internal static partial class DaggerfallSiteContent
                     nextObjectOffset,
                     nextActionId,
                     doorId,
-                    isFlat,
+                    isSprite,
                     SoundIndex: soundIndex,
                     SourcePosition: sourcePosition,
                     RawIndex: rawIndex,

@@ -19,7 +19,7 @@ public sealed class DaggerfallTrapsTests
     private const long Body = 12;
 
     private static DaggerfallDungeonActionDefinition Action(string id, DaggerfallDungeonActionFlag flag, string? next = null) =>
-        new(id, 1, (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)flag, 0, 0, 2, -1, next, IsFlat: true);
+        new(id, 1, (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)flag, 0, 0, 2, -1, next, IsSprite: true);
 
     private sealed class Stage : IDisposable
     {

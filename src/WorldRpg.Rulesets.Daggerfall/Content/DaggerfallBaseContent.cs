@@ -2211,7 +2211,7 @@ internal static partial class DaggerfallBaseContent
 
             List<int> allies = [.. Array(faction, "allies", diagnostics).Select(ally => ally.GetInt32())];
             List<int> enemies = [.. Array(faction, "enemies", diagnostics).Select(enemy => enemy.GetInt32())];
-            List<int> flats = [.. Array(faction, "flats", diagnostics).Select(flat => flat.GetInt32())];
+            List<int> sprites = [.. Array(faction, "sprites", diagnostics).Select(sprite => sprite.GetInt32())];
             string allyName = Text(faction, "allyDisposition", diagnostics);
             string enemyName = Text(faction, "enemyDisposition", diagnostics);
             if (!TryReadName(allyName, out DaggerfallFactionLinkDisposition allyDisposition)
@@ -2221,23 +2221,23 @@ internal static partial class DaggerfallBaseContent
                 continue;
             }
 
-            DaggerfallFactionFlatDefinition[] visuals = faction.TryGetProperty("flatVisuals", out var visualRows)
-                ? [.. visualRows.EnumerateArray().Select(value => new DaggerfallFactionFlatDefinition(
+            DaggerfallFactionSpriteDefinition[] visuals = faction.TryGetProperty("spriteVisuals", out var visualRows)
+                ? [.. visualRows.EnumerateArray().Select(value => new DaggerfallFactionSpriteDefinition(
                     Integer(value, "id", diagnostics), Integer(value, "archive", diagnostics), Integer(value, "record", diagnostics)))] : [];
             if (visuals.Any(value => value.Id < 0 || value.Archive < 0 || value.Record is < 0 or > 127)
-                || visuals.Length != 0 && !visuals.Select(value => value.Id).SequenceEqual(flats))
+                || visuals.Length != 0 && !visuals.Select(value => value.Id).SequenceEqual(sprites))
                 diagnostics.Add($"Faction {id} has malformed normalized billboard addresses.");
 
             if (!factions.TryAdd(id, new DaggerfallFactionDefinition(
                 id, filedId, name, parent, parentDisposition, children, type, typeName, region,
                 Integer(faction, "power", diagnostics), Integer(faction, "flags", diagnostics), Integer(faction, "ruler", diagnostics),
-                allies, allyDisposition, enemies, enemyDisposition, flats,
+                allies, allyDisposition, enemies, enemyDisposition, sprites,
                 Integer(faction, "face", diagnostics), Integer(faction, "race", diagnostics),
                 Integer(faction, "socialGroup", diagnostics), OptionalText(faction, "socialGroupName") ?? string.Empty,
                 Integer(faction, "guildGroup", diagnostics), OptionalText(faction, "guildGroupName") ?? string.Empty,
                 Integer(faction, "reputation", diagnostics), Integer(faction, "summon", diagnostics),
                 Integer(faction, "minimumFame", diagnostics), Integer(faction, "maximumFame", diagnostics),
-                Integer(faction, "vampire", diagnostics), Integer(faction, "rank", diagnostics)) { FlatVisuals = visuals }))
+                Integer(faction, "vampire", diagnostics), Integer(faction, "rank", diagnostics)) { SpriteVisuals = visuals }))
             {
                 diagnostics.Add($"Faction catalog names faction {id} twice, so one of them is unreachable.");
             }
@@ -2319,7 +2319,7 @@ internal static partial class DaggerfallBaseContent
                 string caption = Text(row, "caption", diagnostics);
                 if (archive < 0 || record is < 0 or > 127 || string.IsNullOrWhiteSpace(caption)
                     || !npcCaptions.TryAdd((archive, record), caption))
-                    diagnostics.Add($"NPC caption has malformed or duplicate flat address {archive}/{record}.");
+                    diagnostics.Add($"NPC caption has malformed or duplicate sprite address {archive}/{record}.");
             }
         return new DaggerfallFactionsSet(
             new ReadOnlyDictionary<int, DaggerfallFactionDefinition>(factions),

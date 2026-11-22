@@ -16,8 +16,8 @@ The nature rocks in fieldstones.py are clusters of solid stones, with moss, snow
 The bushes use bushes.py, and the standing and fallen deadwood use deadwood.py.
 
 The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so each entry's `placement` states that height in
-metres, with how high its foot stands: the shares of the sprite's frame measured here, at its flat's own size
-(`placement.size.height` of the flat in the payload), so a flat is promoted before its tree. A rebuilt tree keeps the
+metres, with how high its foot stands: the shares of the sprite's frame measured here, at its scenery sprite's own size
+(`placement.size.height` of its `scenery` entry in the payload), so a sprite is promoted before its tree. A rebuilt tree keeps the
 placement the payload holds, whatever set it (promote.py --set marks one `hand`); `--recompute KEY` (or `all`) measures it again.
 It takes each mesh's normals as written, so a mesh with one not of unit length or not finite is refused here by name (the Engine refuses a non-finite one, faulting the update that grows it; #10871).
 
@@ -78,7 +78,7 @@ FORMS = {
     510: {r: (form, r) for r, form in mountain_woods.FORMS.items()},
     511: {r: (form, r) for r, form in winter_mountain_woods.FORMS.items()},
 }
-# These flats share paintings with other nature records. Reuse their authored media
+# These records share paintings with other nature records. Reuse their authored media
 # while placing every record at its own size, including when a source is rebuilt by key.
 SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
                 "501-15": "500-13", "501-17": "500-3", "501-24": "501-19", "501-31": "500-21",
@@ -102,9 +102,9 @@ for key, form in bushes.FORMS.items():
     FORMS[archive][record] = (form, record)
 
 
-def frame(flat):
-    image = Image.open(CONTENT / flat["path"]).convert("RGBA")
-    f = flat["frames"][0]
+def frame(sprite):
+    image = Image.open(CONTENT / sprite["path"]).convert("RGBA")
+    f = sprite["frames"][0]
     return np.asarray(image.crop((f["x"], f["y"], f["x"] + f["width"], f["y"] + f["height"])), np.float64)
 
 
@@ -131,12 +131,12 @@ def publish(name, path):
     return {"path": f"{MEDIA}/{name}", "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def placement(flat, rgba, m, old, recompute=False):
+def placement(sprite, rgba, m, old, recompute=False):
     """A tree's own placement: the sprite's drawn height and where its foot stands, as shares of its frame height, in metres
-    at its flat's own size. An entry the payload already places keeps every value it has, whatever its provenance, and takes
-    only a missing one from this measure, so a rebuilt tree, a redone flat or a changed sprite does not resize or lift it;
+    at its scenery sprite's own size. An entry the payload already places keeps every value it has, whatever its provenance, and takes
+    only a missing one from this measure, so a rebuilt tree, a redone painting or a changed sprite does not resize or lift it;
     `recompute` (--recompute) measures them all again, each marked `art`."""
-    h, metres = rgba.shape[0], flat["placement"]["size"]["height"]
+    h, metres = rgba.shape[0], sprite["placement"]["size"]["height"]
     measured = {"height": round(m["height"] / h * metres, 6), "foot": round((h - 1 - m["foot"]) / h * metres, 6)}
     kept = {} if recompute else (old or {}).get("placement", {})
     given = {name: kept[name] for name in measured if name in kept}
@@ -145,14 +145,14 @@ def placement(flat, rgba, m, old, recompute=False):
             "from": {name: marks.get(name, "art") if name in given else "art" for name in measured}}
 
 
-def shared_tree(source, flat, old=None, recompute=False):
+def shared_tree(source, sprite, old=None, recompute=False):
     """The same authored mesh and materials, standing at the receiving record's own height and foot."""
-    rgba = frame(flat)
-    return {**source, "placement": placement(flat, rgba, measures(rgba), old, recompute)}
+    rgba = frame(sprite)
+    return {**source, "placement": placement(sprite, rgba, measures(rgba), old, recompute)}
 
 
-def rock(flat, rgba, key, folder, old, recompute):
-    placed = placement(flat, rgba, measures(rgba), old, recompute)
+def rock(sprite, rgba, key, folder, old, recompute):
+    placed = placement(sprite, rgba, measures(rgba), old, recompute)
     mesh, atlas = fieldstones.build(key, rgba, placed["height"])
     # Summer and winter share the same sculpt. A changed sculpt gets its own
     # path so a scoped rebuild cannot replace geometry another skin still uses.
@@ -168,11 +168,11 @@ def rock(flat, rgba, key, folder, old, recompute):
     return entry
 
 
-def tree(flat, archive, record, species, variant, folder, old=None, recompute=False):
+def tree(sprite, archive, record, species, variant, folder, old=None, recompute=False):
     """Build and publish one nature mesh with its painted materials."""
-    rgba = frame(flat)
+    rgba = frame(sprite)
     if species == "rock":
-        return rock(flat, rgba, f"{archive}-{record}", folder, old, recompute)
+        return rock(sprite, rgba, f"{archive}-{record}", folder, old, recompute)
     m = measures(rgba)
     climate, recipes = REGIONAL_TREES[archive]
     key = f"{archive}-{record}"
@@ -188,7 +188,7 @@ def tree(flat, archive, record, species, variant, folder, old=None, recompute=Fa
     mesh_name = f"{species}-p{variant}-{climate}.prop-mesh.json"
     write_mesh(folder / mesh_name, mesh)
     entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
-             "placement": placement(flat, rgba, m, old, recompute)}
+             "placement": placement(sprite, rgba, m, old, recompute)}
     for role, image in images.items():
         filename = f"tree-{key}-{role}.png"
         image.save(folder / filename)
@@ -210,7 +210,7 @@ def main():
     args = ap.parse_args()
     keys, recompute = args.key, set(args.recompute)
     payload = json.loads(PAYLOAD.read_text())
-    flats = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["scenery"]}
+    sprites = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["scenery"]}
     folder = CONTENT / MEDIA
     wanted = {f"{archive}-{record}": (archive, record, form) for archive, forms in FORMS.items() for record, form in forms.items()}
     if unknown := [key for key in keys if key not in wanted and key not in SHARED_TREES]:
@@ -228,13 +228,13 @@ def main():
                 build_keys.append(source)
         for key in build_keys:
             archive, record, (species, variant) = wanted[key]
-            trees[key] = tree(flats[(archive, record)], archive, record, species, variant, built, payload["artReplacements"]["trees"].get(key), bool({"all", key} & recompute))
+            trees[key] = tree(sprites[(archive, record)], archive, record, species, variant, built, payload["artReplacements"]["trees"].get(key), bool({"all", key} & recompute))
         shared = [key for key, source in SHARED_TREES.items() if not keys or key in keys or source in build_keys]
         for key in shared:
             archive, record = map(int, key.split("-"))
-            flat = flats[archive, record]
+            sprite = sprites[archive, record]
             old = payload["artReplacements"]["trees"].get(key)
-            trees[key] = shared_tree(trees[SHARED_TREES[key]], flat, old, bool({"all", key} & recompute))
+            trees[key] = shared_tree(trees[SHARED_TREES[key]], sprite, old, bool({"all", key} & recompute))
         if keys:
             # A file another entry names too (a rock several climates share) changes under it unless that entry is rebuilt.
             written = {f"{MEDIA}/{file.name}" for file in built.iterdir()

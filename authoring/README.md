@@ -11,10 +11,10 @@ Each tool's usage is in its own header.
 authoring/
   cms/      LAN catalog, concept art, and review tools
   tools/    shared/ (what every 2D area runs: batches, cut-out, finals, matte, ledger, promote), paper-doll/ (bodies,
-            heads, worn layers, doll preview), flats/, surfaces/, terrain/, groundcover/, trees/, rocks/ (rocks, logs and
-            dead trees, models and flats), hanging/ (the roots, chains, cage and lanterns that swing), ui/ (screen
+            heads, worn layers, doll preview), scenery/, surfaces/, terrain/, groundcover/, trees/, rocks/ (rocks, logs and
+            dead trees, models and placed props), hanging/ (the roots, chains, cage and lanterns that swing), ui/ (screen
             export, UI art kit), weapons/, mounts/, fp-arms/ (first-person.rpak), music/ (music.rpak)
-  specs/    tracked contract specs: items, worn, paper-doll, spells, effects, flats, people, ui, weapons
+  specs/    tracked contract specs: items, worn, paper-doll, spells, effects, scenery, people, ui, weapons
   ledger/   <area>-notes.json: status and notes per image key, the only hand-edited tracking input
 
 local/art/  (ignored, beside the other working files in local/; see the README)
@@ -77,7 +77,7 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - An ambiguous subject ends its `uncertainty` with exactly `This is a guess for owner review.`: the ledger keys on
   that sentence.
 - Frames 1+ of an animated sprite go through a `frames-*` batch.
-- Gore becomes clean gothic bones in the same outline; plain blood smears stay. Check a `flat_specs.py` caption
+- Gore becomes clean gothic bones in the same outline; plain blood smears stay. Check a `scenery_specs.py` caption
   against the classic before accepting its final.
 - An edited source goes under `local/art/generated/source-edits/NAME/` in the same layout; run the batch with `SOURCE=` at it.
 - Paper doll: `landmarks.py check` on bodies and heads before dressing or promoting. `heads.py`, then `skin.py`,
@@ -92,11 +92,11 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - `promote.py` takes only finals the ledger marks `accepted`. From a task worktree, promote your own finals with
   `--key` (an art key, a record, an item, an effect or a sprite mesh's `ARCHIVE-RECORD`): it replaces those entries
   and keeps the rest. Only the shared checkout holds every final, so a whole-area run anywhere else refuses rather than
-  drop what it lacks. The import must have run; effects, flats and people also read `local/art/reference`, which a
+  drop what it lacks. The import must have run; effects, scenery and people also read `local/art/reference`, which a
   worktree links from the main checkout.
-- Effects, item icons, the clothed bodies, flats, people, sprite meshes and trees carry their own `placement` (an effect's size in metres,
-  pivot, frames, rate and loop; an icon's ground height in metres; a body's waist row; a flat's or person's size, pivot and
-  foot, and a flat's rate; a sprite mesh's world size in metres; a spell tile's aspect; a tree's height and foot in metres, measured by `trees.py` at its flat's size, so promote the flat first; a rebuilt tree keeps its placement, and `trees.py --recompute A-R` measures it again). A new entry takes it from the classic once;
+- Effects, item icons, the clothed bodies, scenery, people, sprite meshes and trees carry their own `placement` (an effect's size in metres,
+  pivot, frames, rate and loop; an icon's ground height in metres; a body's waist row; a scenery sprite's or person's size, pivot and
+  foot, and a scenery sprite's rate; a sprite mesh's world size in metres; a spell tile's aspect; a tree's height and foot in metres, measured by `trees.py` at its sprite's size, so promote the sprite first; a rebuilt tree keeps its placement, and `trees.py --recompute A-R` measures it again). A new entry takes it from the classic once;
   after that, promotion keeps what the payload holds, so promote with `main` first. A redone effect with other frames
   is refused until its `sequence` fits: set it with `--set ID NAME VALUE` (a JSON value, marked set by hand), or
   take every value from the classic again with `--recompute ID`. Promotion says when new art kept an old placement.

@@ -25,7 +25,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private bool _refreshedDrawn;
     private IAuthoredContentService? _authored;
     private DaggerfallGroundTuning _ground = DaggerfallGroundTuning.Default;
-    private readonly DaggerfallFlatsTuning _flats;
+    private readonly DaggerfallSpritesTuning _sprites;
     private DaggerfallGroundBlendSettings _blend;
     private readonly Dictionary<int, DaggerfallGroundLayers> _groundLayers = [];
     private readonly List<DaggerfallGroundLayers> _retiredLayers = [];
@@ -34,16 +34,16 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     private bool _disposed;
 
     internal DaggerfallExteriorTerrainAppearance(IContentService content, IGraphicsService graphics, DaggerfallSiteProfile? profile = null,
-        DaggerfallFlatsTuning? flats = null)
+        DaggerfallSpritesTuning? sprites = null)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _graphics = graphics ?? throw new ArgumentNullException(nameof(graphics));
         _profile = profile;
-        _flats = flats ?? DaggerfallFlatsTuning.Default;
+        _sprites = sprites ?? DaggerfallSpritesTuning.Default;
     }
 
     /// <summary>
-    /// Takes the art set: ground layers wear its surfaces whatever the run draws, and nature draws in its flats
+    /// Takes the art set: ground layers wear its surfaces whatever the run draws, and nature draws in its scenery
     /// whenever <paramref name="refreshed"/> answers that the run does not draw classic art.
     /// </summary>
     internal void UseArt(DaggerfallArtReplacements art, Func<bool> refreshed)
@@ -332,11 +332,11 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                     instances,
                     NatureFoot,
                     sprite.Size,
-                    _flats.Nature,
+                    _sprites.Nature,
                     0,
                     SpriteDepthPolicy.Default,
                     new Color(1F, 1F, 1F, 1F),
-                    _flats.Flora(DaggerfallSiteAppearance.LitSprite)));
+                    _sprites.Flora(DaggerfallSiteAppearance.LitSprite)));
                 batches.Add(new(objectId, key, appearance, instances.Length));
             }
         }

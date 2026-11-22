@@ -69,7 +69,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     /// flattened ground keeps, and how far beyond it the cover rises back to full. Such a field's cover is the ground's
     /// grass, in towns too, rather than the donor's chance, which keeps out of every clearing.
     /// </param>
-    internal DaggerfallFloraField(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraTuning tuning, DaggerfallFlatsTuning flats,
+    internal DaggerfallFloraField(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallFloraTuning tuning, DaggerfallSpritesTuning sprites,
         IReadOnlyDictionary<int, float> archiveDensity, (float TownShare, double TownRamp)? grass = null)
     {
         _grass = grass;
@@ -79,7 +79,7 @@ internal sealed class DaggerfallFloraField : IDisposable
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
-        _art = new(engine, flats ?? throw new ArgumentNullException(nameof(flats)));
+        _art = new(engine, sprites ?? throw new ArgumentNullException(nameof(sprites)));
     }
 
     /// <summary>

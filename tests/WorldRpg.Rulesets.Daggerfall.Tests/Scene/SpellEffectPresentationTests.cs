@@ -245,7 +245,7 @@ public sealed class SpellEffectPresentationTests
         AnimationRecorder animation = AnimationRecorder.Create();
         animation.MeshInfo = new(new(-1.075F, 0, -.6F), new(1.075F, .4F, .6F), 0, 0, 0);
         NormalizedBillboardSprite bones = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(2F, .725F));
-        DaggerfallSiteDecoration pile = new("flat-1", new WorldPoint(4, .5F, 6), false, bones, bones, (380, 4), (380, 4), Lamp: false);
+        DaggerfallSiteDecoration pile = new("decoration-1", new WorldPoint(4, .5F, 6), false, bones, bones, (380, 4), (380, 4), Lamp: false);
         var (presentation, graphics, _) = Compose(() => refreshed, animation: animation, decorations: [pile]);
         using DaggerfallSiteAppearance owned = presentation;
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
@@ -265,11 +265,11 @@ public sealed class SpellEffectPresentationTests
     }
 
     [Fact]
-    public void A_placed_flat_draws_its_refreshed_sprite_in_refreshed_art_and_its_classic_one_otherwise()
+    public void A_placed_decoration_draws_its_refreshed_sprite_in_refreshed_art_and_its_classic_one_otherwise()
     {
         bool refreshed = true;
         NormalizedBillboardSprite well = new("sprite/well.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(2F, 3F));
-        DaggerfallSiteDecoration placed = new("flat-1", new WorldPoint(4, .5F, 6), true, well, well, (212, 0), (212, 0), Lamp: false);
+        DaggerfallSiteDecoration placed = new("decoration-1", new WorldPoint(4, .5F, 6), true, well, well, (212, 0), (212, 0), Lamp: false);
         var (presentation, graphics, _) = Compose(() => refreshed, decorations: [placed]);
         using DaggerfallSiteAppearance owned = presentation;
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
@@ -284,7 +284,7 @@ public sealed class SpellEffectPresentationTests
     }
 
     [Fact]
-    public void A_refreshed_flat_is_drawn_at_its_own_size_pivot_frames_and_rate_whatever_its_classic_sprite_states()
+    public void A_refreshed_sprite_is_drawn_at_its_own_size_pivot_frames_and_rate_whatever_its_classic_sprite_states()
     {
         // The classic torch is one frame at another size, pivot and frame number, with no rate: nothing of it places the art.
         NormalizedBillboardSprite classic = new("sprite/torch.png", Hash, 8, 8, [new NormalizedAtlasFrame(5, 0, 0, 8, 8)], 5, new Vector2(.5F, 1F), new Vector2(9F, 9F));
@@ -337,8 +337,8 @@ public sealed class SpellEffectPresentationTests
     {
         NormalizedBillboardSprite tree = new("sprite/tree.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), new Vector2(3F, 6F));
         NormalizedBillboardSprite well = new("sprite/well.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(2F, 3F));
-        DaggerfallSiteDecoration placed = new("flat-1", new WorldPoint(4, 2, 6), true, tree, tree, (504, 3), (505, 3), Lamp: false);
-        DaggerfallSiteDecoration street = new("flat-2", new WorldPoint(9, .5F, 6), false, well, well, (212, 0), (212, 0), Lamp: false);
+        DaggerfallSiteDecoration placed = new("decoration-1", new WorldPoint(4, 2, 6), true, tree, tree, (504, 3), (505, 3), Lamp: false);
+        DaggerfallSiteDecoration street = new("decoration-2", new WorldPoint(9, .5F, 6), false, well, well, (212, 0), (212, 0), Lamp: false);
         var (presentation, graphics, _) = Compose(() => true, decorations: [placed, street]);
         using DaggerfallSiteAppearance owned = presentation;
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
@@ -370,7 +370,7 @@ public sealed class SpellEffectPresentationTests
     {
         AnimationRecorder animation = AnimationRecorder.Create();
         NormalizedBillboardSprite lamp = new("sprite/lamp.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), new Vector2(.7F, 3.8F));
-        DaggerfallSiteDecoration post = new("flat-1", new WorldPoint(4, 0, 6), true, lamp, lamp, (210, 28), (210, 28), Lamp: true);
+        DaggerfallSiteDecoration post = new("decoration-1", new WorldPoint(4, 0, 6), true, lamp, lamp, (210, 28), (210, 28), Lamp: true);
         var (presentation, _, _) = Compose(() => true, animation: animation, decorations: [post]);
         using DaggerfallSiteAppearance owned = presentation;
         Appearance mesh = Assert.Single(animation.Created);
@@ -395,7 +395,7 @@ public sealed class SpellEffectPresentationTests
         // A site resumed at night places its lamps after the level was set, which no later change repeats.
         AnimationRecorder animation = AnimationRecorder.Create();
         NormalizedBillboardSprite lamp = new("sprite/lamp.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), new Vector2(.7F, 3.8F));
-        DaggerfallSiteDecoration post = new("flat-1", new WorldPoint(4, 0, 6), true, lamp, lamp, (210, 28), (210, 28), Lamp: true);
+        DaggerfallSiteDecoration post = new("decoration-1", new WorldPoint(4, 0, 6), true, lamp, lamp, (210, 28), (210, 28), Lamp: true);
         var (presentation, _, _) = Compose(() => true, animation: animation, decorations: [post], lampLevel: 2.5F);
         using DaggerfallSiteAppearance owned = presentation;
 

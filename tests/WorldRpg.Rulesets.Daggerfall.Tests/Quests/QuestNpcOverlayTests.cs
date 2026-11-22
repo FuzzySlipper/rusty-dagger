@@ -201,11 +201,11 @@ public sealed class QuestNpcOverlayTests
 
     internal static long Giver(SanguineRoseSessionTests.Fixture f, DaggerfallDefinitions definitions, int? factionId = null, string gender = "Male")
     {
-        var faction = definitions.Factions.Factions.Values.First(value => (factionId is null ? value.Type != 0 && value.Type != 4 && value.Id != 514 : value.Id == factionId) && value.FlatVisuals.Count > 0
-            && f.Inputs.BillboardSprites.ContainsKey((value.FlatVisuals[0].Archive, value.FlatVisuals[0].Record)));
-        var flat = faction.FlatVisuals[0];
+        var faction = definitions.Factions.Factions.Values.First(value => (factionId is null ? value.Type != 0 && value.Type != 4 && value.Id != 514 : value.Id == factionId) && value.SpriteVisuals.Count > 0
+            && f.Inputs.BillboardSprites.ContainsKey((value.SpriteVisuals[0].Archive, value.SpriteVisuals[0].Record)));
+        var sprite = faction.SpriteVisuals[0];
         var site = definitions.Locations.Records.Single(value => value.Id == f.Inputs.Site);
-        long id = f.Session.State.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", gender, flat.Archive, flat.Record, 17, faction.Id), "quest giver", ["talk"]);
+        long id = f.Session.State.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", gender, sprite.Archive, sprite.Record, 17, faction.Id), "quest giver", ["talk"]);
         f.Session.State.Npcs.SetDisplayName(id, "Existing Giver");
         f.Session.Civilians.Materialize(id, new(new(2, 3, 4), .25f));
         f.Session.State.Npcs.Bind(id, f.Inputs.ProfileKey);

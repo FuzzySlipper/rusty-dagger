@@ -152,7 +152,7 @@ for winter, summer, cover in (
     original = PAINTINGS[summer]
     PAINTINGS[winter] = P(original.layout, original.finish, .10*original.moss, cover)
 
-# Identical paintings share every mesh and material, at the receiving flat's own placement.
+# Identical paintings share every mesh and material, at the receiving sprite's own placement.
 SHARED = {"502-11":"500-31", "501-23":"501-6", "508-12":"501-10", "510-27":"508-1", "511-27":"509-1",
           **{f"510-{r}": f"506-{r}" for r in (1,3,4,6,17,18,28)},
           **{f"511-{r}": f"507-{r}" for r in (1,3,4,6,17,18,28)},

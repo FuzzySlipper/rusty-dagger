@@ -1714,7 +1714,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
     /// <summary>Opens the classic nature sprites the resident cells place, for a developer's switch to classic art.</summary>
     internal void BuildClassicNature() => _exteriorTerrainAppearance?.BuildClassic();
 
-    /// <summary>Layers ground in the refreshed art set's surfaces, and draws nature in its flats while <paramref name="refreshed"/> answers they are drawn.</summary>
+    /// <summary>Layers ground in the refreshed art set's surfaces, and draws nature in its scenery while <paramref name="refreshed"/> answers they are drawn.</summary>
     internal void UseGroundArt(DaggerfallArtReplacements art, Func<bool> refreshed)
     {
         _groundArt = (art, refreshed);
@@ -1723,7 +1723,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
 
     private DaggerfallExteriorTerrainAppearance NewTerrainAppearance()
     {
-        DaggerfallExteriorTerrainAppearance appearance = new(_engine.Content, _engine.Graphics, Projection.Inputs, _tuning.Flats);
+        DaggerfallExteriorTerrainAppearance appearance = new(_engine.Content, _engine.Graphics, Projection.Inputs, _tuning.Sprites);
         if (_groundArt is var (art, refreshed)) appearance.UseArt(art, refreshed);
         appearance.UseBlend(_engine.AuthoredContent, _tuning.Ground, _groundBlend);
         return appearance;

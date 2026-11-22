@@ -47,7 +47,7 @@ public sealed class DaggerfallHazardsTests
         public void Dispose() => Actors.Dispose();
     }
 
-    private static Vector3 Campfire => CombatCollaborators.Profile.Value.Decorations.First(flat => flat.Source == (210, 1)).Position.ToVector();
+    private static Vector3 Campfire => CombatCollaborators.Profile.Value.Decorations.First(decoration => decoration.Source == (210, 1)).Position.ToVector();
     private static readonly Vector3 Away = new(40f, 0f, 40f);
 
     [Fact]

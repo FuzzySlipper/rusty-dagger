@@ -112,7 +112,7 @@ public sealed class DaggerfallFiresTests
     [InlineData(210, 6, false)] // Torches are decoration.
     [InlineData(210, 17, false)]
     public void Only_campfires_and_braziers_burn(int archive, int record, bool burns) =>
-        Assert.Equal(burns, Tuning.BurningFlats.Contains((archive, record)));
+        Assert.Equal(burns, Tuning.BurningProps.Contains((archive, record)));
 
     [Fact]
     public void The_payload_states_the_code_defaults()
@@ -120,7 +120,7 @@ public sealed class DaggerfallFiresTests
         using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/tuning/daggerfall.defaults/payload.json")));
         DaggerfallHazardTuning loaded = DaggerfallHazardTuning.Read(payload.RootElement.GetProperty("hazards"));
 
-        Assert.True(Tuning.BurningFlats.SetEquals(loaded.BurningFlats));
-        Assert.Equal(Tuning with { BurningFlats = loaded.BurningFlats }, loaded);
+        Assert.True(Tuning.BurningProps.SetEquals(loaded.BurningProps));
+        Assert.Equal(Tuning with { BurningProps = loaded.BurningProps }, loaded);
     }
 }

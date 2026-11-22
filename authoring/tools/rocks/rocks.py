@@ -25,7 +25,7 @@ to 41 in deserts and 341 in temperate towns), so a rock matches the town's stone
 identity, which the location draws. Finals go to local/art/generated/models/ID.glb in the classic's frame, for
 `promote.py --area models --key ID`.
 
-Nature flats: trees.py draws the piles from fieldstones.py and the deadwood from trees/deadwood.py. Placed flats (`placed`): the decoration flats blocks place, as GLBs in
+Nature sprites: trees.py draws the piles from fieldstones.py and the deadwood from trees/deadwood.py. Placed props (`placed`): the decoration sprites blocks place, as GLBs in
 local/art/generated/effects/ for the art pack's `meshes` (promote.py's WORLD_MESHES, `--area effects --key A-R`), each
 built across its sprite's width, which the game draws it at from the GLB's own width.
 
@@ -754,7 +754,7 @@ def log_model(number):
     print(f"{number}: log, {sum(len(p) for _, _, _, p, _, _ in primitives) // 3} triangles (classic {len(triangles)})")
 
 
-# ---- nature flats ---------------------------------------------------------------------------------------------------
+# ---- nature sprites -------------------------------------------------------------------------------------------------
 
 SPIRE = "spire"
 # Of a nature rock's height, the share sunk under the ground, so it sits in it rather than on it.
@@ -902,7 +902,7 @@ def logs(seed, aspect):
 
 
 WOODPILE = "woodpile"
-# A stacked woodpile, as the town flats 212-11 and 212-12 paint theirs: split logs a little over a metre long, side by
+# A stacked woodpile, as the town props 212-11 and 212-12 paint theirs: split logs a little over a metre long, side by
 # side in rows of PILE_ROWS from the ground up, each row in the hollows of the one below and the logs' ends ragged; the
 # stack is turned PILE_TURN degrees so its sawn ends face the viewer's right and its long side the left, as the sprites
 # draw it. The logs are generate-flora.py's tubes and caps, as the heaped logs above are, lying at LOG_SINK.
@@ -954,9 +954,9 @@ def woodpile(seed):
     return {role: tuple(np.array(values) for values in part) for role, part in parts.items()}
 
 
-# ---- placed flats ---------------------------------------------------------------------------------------------------
+# ---- placed props ---------------------------------------------------------------------------------------------------
 
-# The decoration flats blocks place that are rock or deadwood, drawn as meshes in the sprites' place (the art pack's
+# The decoration sprites blocks place that are rock or deadwood, drawn as meshes in the sprites' place (the art pack's
 # `meshes` section, scaled to each sprite's width): the fallen logs towns lay about, the woodpiles stacked in their
 # streets, and the dungeons' stalagmites.
 PLACED = {(213, 11): (LOGS_FORM, 1), (213, 12): (LOGS_FORM, 2), (212, 11): (WOODPILE, 1), (212, 12): (WOODPILE, 2),
@@ -965,14 +965,14 @@ PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 
 
 def sprite(archive, record):
-    """A flat's refreshed sprite, its first frame, whose colours a mesh standing in for it is painted in, as trees.py paints
+    """A placed record's refreshed sprite, its first frame, whose colours a mesh standing in for it is painted in, as trees.py paints
     the mesh trees."""
-    flats = json.loads(PAYLOAD.read_text())["artReplacements"]["scenery"]
-    flat = next((f for f in flats if (f["replaces"]["archive"], f["replaces"]["record"]) == (archive, record)), None)
-    if flat is None:
+    scenery = json.loads(PAYLOAD.read_text())["artReplacements"]["scenery"]
+    entry = next((f for f in scenery if (f["replaces"]["archive"], f["replaces"]["record"]) == (archive, record)), None)
+    if entry is None:
         raise SystemExit(f"{archive}-{record}: the art pack has no refreshed sprite to paint it from")
-    f = flat["frames"][0]
-    image = Image.open(CONTENT / flat["path"]).convert("RGBA")
+    f = entry["frames"][0]
+    image = Image.open(CONTENT / entry["path"]).convert("RGBA")
     return np.asarray(image.crop((f["x"], f["y"], f["x"] + f["width"], f["y"] + f["height"])))
 
 
@@ -991,7 +991,7 @@ def bark_colours(rgba):
 
 
 def placed(archive, record):
-    """A placed flat's mesh as a GLB, which the game draws at its sprite's width from the GLB's own width across (x)."""
+    """A placed prop's mesh as a GLB, which the game draws at its sprite's width from the GLB's own width across (x)."""
     form, variant = PLACED[(archive, record)]
     rgba = sprite(archive, record)
     seed = archive * 100 + record
@@ -1023,7 +1023,7 @@ def placed(archive, record):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("what", choices=("models", "placed"))
-    parser.add_argument("ids", nargs="*", help="ARCH3D ids, or a placed flat's ARCHIVE-RECORD")
+    parser.add_argument("ids", nargs="*", help="ARCH3D ids, or a placed prop's ARCHIVE-RECORD")
     a = parser.parse_args()
     if a.what == "models":
         for number in map(int, a.ids) if a.ids else [*MODELS, *LOGS]:

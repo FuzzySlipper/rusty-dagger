@@ -21,24 +21,24 @@ internal static partial class DaggerfallSiteContent
     {
         using JsonDocument document = JsonDocument.Parse(bytes);
         var world = document.RootElement.GetProperty("world");
-        if (!world.TryGetProperty("billboards", out var flats)) return [];
+        if (!world.TryGetProperty("billboards", out var billboards)) return [];
         List<DaggerfallSiteDecoration> result = [];
-        foreach (var flat in flats.EnumerateArray())
+        foreach (var billboard in billboards.EnumerateArray())
         {
-            string id = DaggerfallBaseContent.Text(flat, "id", diagnostics);
-            string spriteId = DaggerfallBaseContent.Text(flat, "spriteResourceId", diagnostics);
+            string id = DaggerfallBaseContent.Text(billboard, "id", diagnostics);
+            string spriteId = DaggerfallBaseContent.Text(billboard, "spriteResourceId", diagnostics);
             string[] parts = spriteId.Split('-');
             if (parts is not ["sprite/texture", var archiveText, var recordText]
                 || !int.TryParse(archiveText, out int archive) || !int.TryParse(recordText, out int record))
             { diagnostics.Add($"Decoration '{id}' has invalid sprite '{spriteId}'."); continue; }
-            bool nature = kind == DaggerfallWorldProfileKind.Exterior && OptionalBoolean(flat, "climateNature", false, diagnostics);
+            bool nature = kind == DaggerfallWorldProfileKind.Exterior && OptionalBoolean(billboard, "climateNature", false, diagnostics);
             int summer = nature ? DaggerfallClimateArchives.NatureTextureArchive(climate, DaggerfallExteriorSeason.Summer) : archive;
             int winter = nature ? DaggerfallClimateArchives.NatureTextureArchive(climate, DaggerfallExteriorSeason.Winter) : archive;
             if (!sprites.TryGetValue((summer, record), out var warm) || !sprites.TryGetValue((winter, record), out var cold))
             { diagnostics.Add($"Decoration '{id}' lacks shared sprite {summer}/{record} or {winter}/{record}."); continue; }
-            var position = ObjectVector3(flat.GetProperty("position"), id, diagnostics);
-            result.Add(new(id, WorldPoint.From(position), OptionalBoolean(flat, "baseAligned", false, diagnostics), warm, cold, (summer, record), (winter, record),
-                OptionalBoolean(flat, "lamp", false, diagnostics), DaggerfallBaseContent.OptionalText(flat, "light", diagnostics)));
+            var position = ObjectVector3(billboard.GetProperty("position"), id, diagnostics);
+            result.Add(new(id, WorldPoint.From(position), OptionalBoolean(billboard, "baseAligned", false, diagnostics), warm, cold, (summer, record), (winter, record),
+                OptionalBoolean(billboard, "lamp", false, diagnostics), DaggerfallBaseContent.OptionalText(billboard, "light", diagnostics)));
         }
         return result;
     }

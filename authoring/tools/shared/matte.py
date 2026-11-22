@@ -7,14 +7,14 @@ there, but it also drops what stands apart from a figure, such as a floating orb
 the ground-coloured parts: each final loses the ground the mask calls background and regains what its figure holds inside.
 Everything else stays as it was, including anything edited by hand.
 
-Each area says whether its holes fill. People fill: their cut-out opens holes in grey skin and hair. Flats only lose ground:
+Each area says whether its holes fill. People fill: their cut-out opens holes in grey skin and hair. Scenery only loses ground:
 their cut-out already opens the gaps their source draws open, such as an hourglass's waist or a chain's links, so a filled
 hole there would pack ground back in.
 
 The first run keeps each final under local/art/generated/AREA/pre-matte/, with the mask it was given, and every later run starts from
 those, so reruns are safe. Each final's generation image comes from its study: the one its opaque pixels match.
 
-    matte.py [--area people|flats] [KEY ...]      e.g. matte.py texture-184-record-015-frame-000; no key cleans the area
+    matte.py [--area people|scenery] [KEY ...]      e.g. matte.py texture-184-record-015-frame-000; no key cleans the area
 
 Run it for an area only once its finals are accepted, and check per area whether filling helps. It needs a ComfyUI that
 serves BiRefNet (den-m5's does; COMFY_URL names another) and takes about a second a final. A final with no generation
@@ -43,11 +43,11 @@ from postprocess import blur
 
 COMFY = os.environ.get("COMFY_URL", "http://192.168.1.24:8188")
 # Each area's finals, its study images by archive, record and frame, its finals' names, whether its holes fill, and how far
-# from the ground colour a leftover may stray. Flats paint some art in the ground's own grey, such as a potion's cloth, which
+# from the ground colour a leftover may stray. Scenery paints some art in the ground's own grey, such as a potion's cloth, which
 # sits a little further from it than leftover ground does, so they take a tighter match.
 AREAS = {
     "people": dict(studies="people-*-bp-*/images/person-{archive}-{record}", key=r"texture-(\d+)-record-(\d+)-frame-(000)", fill=True, ground=0.05),
-    "flats": dict(studies="flats-*-bp-*/images/flat-{archive}-{record}{frame}", key=r"texture-(\d+)-record-(\d+)-frame-(\d+)", fill=False, ground=0.025),
+    "scenery": dict(studies="scenery-*-bp-*/images/scenery-{archive}-{record}{frame}", key=r"texture-(\d+)-record-(\d+)-frame-(\d+)", fill=False, ground=0.025),
 }
 LO, HI = 0.035, 0.11   # the cut-out's distances from the ground: below LO is ground, above HI is art
 PATCH = 40             # the fewest pixels of leftover ground; fewer are flecks in the art

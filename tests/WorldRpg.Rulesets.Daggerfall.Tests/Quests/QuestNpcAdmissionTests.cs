@@ -25,8 +25,8 @@ public sealed class QuestNpcAdmissionTests
         Assert.Null(started.Placements.Single().Applied);
         var appearance = person.SelectedPerson!.Appearance!.Value;
         var faction = definitions.Factions.Factions[person.SelectedPerson.FactionId];
-        Assert.Equal(faction.FlatVisuals[0].Archive, appearance.BillboardArchive);
-        Assert.Equal(faction.FlatVisuals[0].Record, appearance.BillboardRecord);
+        Assert.Equal(faction.SpriteVisuals[0].Archive, appearance.BillboardArchive);
+        Assert.Equal(faction.SpriteVisuals[0].Record, appearance.BillboardRecord);
         Assert.True(fixture.Inputs.BillboardSprites.ContainsKey((appearance.BillboardArchive, appearance.BillboardRecord)));
         Assert.NotEmpty(fixture.Inputs.QuestMarkers);
         // The ordinary admitted update consumes Home requests; no separate host or task-action stub.
@@ -130,11 +130,11 @@ public sealed class QuestNpcAdmissionTests
         using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions);
         var session = fixture.Session;
         var state = session.State;
-        var faction = definitions.Factions.Factions.Values.First(value => value.FlatVisuals.Count > 0
-            && fixture.Inputs.BillboardSprites.ContainsKey((value.FlatVisuals[0].Archive, value.FlatVisuals[0].Record)));
-        var flat = faction.FlatVisuals[0];
+        var faction = definitions.Factions.Factions.Values.First(value => value.SpriteVisuals.Count > 0
+            && fixture.Inputs.BillboardSprites.ContainsKey((value.SpriteVisuals[0].Archive, value.SpriteVisuals[0].Record)));
+        var sprite = faction.SpriteVisuals[0];
         var site = definitions.Locations.Records.Single(value => value.Id == fixture.Inputs.Site);
-        long id = state.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", "Male", flat.Archive, flat.Record, 17, faction.Id), "quest giver", ["talk"]);
+        long id = state.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", "Male", sprite.Archive, sprite.Record, 17, faction.Id), "quest giver", ["talk"]);
         state.Npcs.SetDisplayName(id, "Existing Giver");
         session.Civilians.Materialize(id, new(new(2, 3, 4), .25f));
         state.Npcs.Bind(id, fixture.Inputs.ProfileKey);

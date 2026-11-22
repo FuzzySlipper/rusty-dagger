@@ -206,7 +206,7 @@ internal sealed class DaggerfallDungeonActionGraph
     /// Dispatches the action attached to one normalized model placement. The normalized map keeps
     /// the source placement id as <c>model/&lt;block&gt;/&lt;index&gt;</c>, while action records use
     /// <c>action/&lt;block&gt;/model-&lt;index&gt;</c>; this is the one stable identity conversion used by
-    /// Engine hit callers. Flat actions are admitted as Engine-owned Resource trigger entities by
+    /// Engine hit callers. Sprite actions are admitted as Engine-owned Resource trigger entities by
     /// <see cref="DaggerfallDungeonActionTriggerRuntime"/> and do not use source-point guessing here.
     /// </summary>
     internal DaggerfallDungeonActionDispatch? TriggerForPlacement(string placementId, DaggerfallDungeonActionEvent @event)

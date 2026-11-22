@@ -30,7 +30,7 @@ internal readonly record struct DaggerfallExteriorTerrainVariant(
     internal bool IsDesert => DaggerfallClimateArchives.IsDesertClimate(ClimateValue);
 }
 
-/// <summary>A deterministic nature flat admitted beside one source terrain cell.</summary>
+/// <summary>A deterministic nature sprite admitted beside one source terrain cell.</summary>
 internal readonly record struct DaggerfallExteriorNaturePlacement(
     DaggerfallExteriorCellId Cell,
     int TileX,

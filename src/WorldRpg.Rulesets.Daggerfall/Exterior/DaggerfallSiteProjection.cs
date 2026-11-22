@@ -9,10 +9,10 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>The tuning a site's projection and the exterior world read: its sounds, flats and light, the origin's rebase and the ground.</summary>
+/// <summary>The tuning a site's projection and the exterior world read: its sounds, sprites and light, the origin's rebase and the ground.</summary>
 internal sealed record DaggerfallSiteTuning(
     DaggerfallPresentationAudioTuning PresentationAudio,
-    DaggerfallFlatsTuning Flats,
+    DaggerfallSpritesTuning Sprites,
     DaggerfallSiteLightingTuning SiteLighting,
     DaggerfallWorldOriginTuning WorldOrigin,
     DaggerfallGroundTuning Ground);
@@ -104,7 +104,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             DaggerfallLocationParts parts = new(() => doors.Revision, () => doors.All.Select(door => (door.Id, door.Pose)),
                 () => placedGates.Open, () => placedGates.Visuals, () => placedMotion.Visuals, placedMotion.TryGetTransform);
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
-                tuning.PresentationAudio, random, audioBundle, parts, sessionPresentation, definitions, tuning.Flats, tuning.SiteLighting,
+                tuning.PresentationAudio, random, audioBundle, parts, sessionPresentation, definitions, tuning.Sprites, tuning.SiteLighting,
                 prepareLocationOffUpdate, (id, gender, sprite) => DaggerfallActorGender.Resolve(random, id, gender, sprite), configureAppearance);
             doors.SoundRequested += appearance.PlayDoorSound;
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar.Sky, carriesSky);

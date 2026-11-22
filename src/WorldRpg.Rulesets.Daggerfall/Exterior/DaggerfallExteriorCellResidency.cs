@@ -113,7 +113,7 @@ internal readonly record struct DaggerfallExteriorCellResidencyUpdate(
 
 /// <summary>
 /// Selects the donor's seven-by-seven exterior cell window. Product map-pixel identity stays global while the content
-/// each cell brings (its flats, water, ground containers and locations) stands in the current local origin frame. The
+/// each cell brings (its scenery, water, ground containers and locations) stands in the current local origin frame. The
 /// window draws no collision: <see cref="DaggerfallExteriorGroundCollider"/> holds the ground.
 /// </summary>
 internal sealed class DaggerfallExteriorCellResidency

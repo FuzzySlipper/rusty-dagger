@@ -39,11 +39,11 @@ public sealed class QuestPersonSelectionTests
                 Assert.Equal(person.FactionId, appearance.FactionId);
                 if (person.QuestorId is null)
                 {
-                    var flat = definitions.Factions.Factions[person.FactionId].FlatVisuals[person.Gender == "Female" ? 1 : 0];
-                    Assert.Equal((flat.Archive, flat.Record), (appearance.BillboardArchive, appearance.BillboardRecord));
+                    var sprite = definitions.Factions.Factions[person.FactionId].SpriteVisuals[person.Gender == "Female" ? 1 : 0];
+                    Assert.Equal((sprite.Archive, sprite.Record), (appearance.BillboardArchive, appearance.BillboardRecord));
                 }
             }
-            else Assert.Empty(definitions.Factions.Factions[person.FactionId].FlatVisuals);
+            else Assert.Empty(definitions.Factions.Factions[person.FactionId].SpriteVisuals);
             if (person.QuestorId is long id)
             {
                 Assert.Equal(giver.DurableId, id);
@@ -246,8 +246,8 @@ public sealed class QuestPersonSelectionTests
             _ => new(site, Giver(), CurrentProfile: new(site.Id, kind, "current"), Interior: interior), places: places);
         var selected = allocator.Allocate(Instance(declaration.SourceFile), declaration);
         var home = selected.SelectedPerson!.Home!;
-        var factionFlat = definitions.Factions.Factions[Giver().Appearance.FactionId].FlatVisuals[0];
-        Assert.Equal(definitions.Factions.NpcCaptions[(factionFlat.Archive, factionFlat.Record)], selected.Text!.Details);
+        var factionSprite = definitions.Factions.Factions[Giver().Appearance.FactionId].SpriteVisuals[0];
+        Assert.Equal(definitions.Factions.NpcCaptions[(factionSprite.Archive, factionSprite.Record)], selected.Text!.Details);
         Assert.Equal(Giver().Appearance, selected.SelectedPerson.Appearance);
         Assert.Equal(kind, home.Binding.PlaceSelection!.Kind);
         Assert.Equal(site.MapId, home.Binding.PlaceSelection.MapId);

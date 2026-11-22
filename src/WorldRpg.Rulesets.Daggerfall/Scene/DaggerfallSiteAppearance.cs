@@ -25,7 +25,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly DaggerfallAudioBundle? audioBundle;
     private readonly IRandomService? random;
     private readonly DaggerfallPresentationAudioTuning audioTuning;
-    private readonly DaggerfallFlatsTuning flats;
+    private readonly DaggerfallSpritesTuning sprites;
     private readonly DaggerfallSiteLightingTuning lighting;
     private readonly DaggerfallSiteProfile inputs;
 
@@ -42,8 +42,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private Func<IWalkerCrowd?> peopleRigs = () => null;
     internal void UsePeopleRigs(Func<IWalkerCrowd?> crowd) => peopleRigs = crowd;
     private double? playerBeastVoiceSeconds;
-    /// <summary>The archive of the light flats, which holds the magic candle.</summary>
-    private const int LightFlatArchive = 210;
+    /// <summary>The archive of the light sprites, which holds the magic candle.</summary>
+    private const int LightArchive = 210;
     /// <summary>
     /// A sprite that takes the light around it, so it falls with the day and warms by a lamp. Its edges are hard, so it
     /// stands in the depth buffer and fog reaches it: a blended sprite would take the fog of what is behind it, which over
@@ -68,14 +68,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private ulong candleVisualId;
 
     /// <summary>
-    /// Shows the magic candle where <paramref name="position"/> says, or nowhere: in refreshed art its refreshed flat where
+    /// Shows the magic candle where <paramref name="position"/> says, or nowhere: in refreshed art its refreshed sprite where
     /// the set has one, else the classic sprite, redrawn when the art drawn changes.
     /// </summary>
     internal void UpdateMagicCandle(Vector3? position)
     {
         if (disposed || locationSuspended) position = null;
         candlePosition = position;
-        bool refreshed = drawRefreshedEffects() && surfaceArt?.Scenery.ContainsKey((LightFlatArchive, 3)) == true;
+        bool refreshed = drawRefreshedEffects() && surfaceArt?.Scenery.ContainsKey((LightArchive, 3)) == true;
         if (position is null || candleRefreshed != refreshed)
         {
             if (candleAppearance is { } candle) Retire(candle); candleAppearance = null;
@@ -88,7 +88,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (!candleLooks.TryGetValue(refreshed, out var look)) candleLooks.Add(refreshed, look = CandleLook(candleSprite, refreshed));
         candleRefreshed = refreshed;
         candleAppearance = appearance.CreateSpriteFromAtlas(new(look.Atlas, refreshed ? 0 : candleSprite!.InitialFrameId, look.Pivot,
-            look.Size, flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), look.Material));
+            look.Size, sprites.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), look.Material));
     }
 
     /// <summary>
@@ -104,10 +104,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             return (atlas, Glowing(LitSprite, texture, lighting.LampLevel), sprite.Size, sprite.Pivot);
         }
         // The candle lives with the site, not its location, so it opens its own rather than the decorations' resources.
-        DaggerfallArtSprite art = surfaceArt!.Scenery[(LightFlatArchive, 3)];
+        DaggerfallArtSprite art = surfaceArt!.Scenery[(LightArchive, 3)];
         RenderResource image = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest).Handle;
         ownedResources.Add(image);
-        SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, RefreshedFlatFrames(art)));
+        SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, RefreshedSpriteFrames(art)));
         atlases.Add(refreshedAtlas);
         RenderResource map = image;
         if (art.Emission is { } emission)
@@ -268,7 +268,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// anew opens no classic file; without it, everything is admitted in classic art, and an art set given later draws
     /// beside it.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallLocationParts? parts = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false,
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallLocationParts? parts = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null, DaggerfallSpritesTuning? sprites = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false,
         Func<long, string, NormalizedActorSprite, string>? actorGender = null, Action<DaggerfallSiteAppearance>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -279,12 +279,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         this.parts = parts;
         this.appearance = appearance;
         this.content = content;
-        candleSprite = inputs.BillboardSprites.GetValueOrDefault((LightFlatArchive, 3));
+        candleSprite = inputs.BillboardSprites.GetValueOrDefault((LightArchive, 3));
         this.audio = audio;
         this.audioBundle = audioBundle;
         this.random = random;
         this.audioTuning = (audioTuning ?? DaggerfallPresentationAudioTuning.Classic).Validate();
-        this.flats = (flats ?? DaggerfallFlatsTuning.Default).Validate();
+        this.sprites = (sprites ?? DaggerfallSpritesTuning.Default).Validate();
         this.lighting = (lighting ?? DaggerfallSiteLightingTuning.Classic).Validate();
         hitCues = inputs.Audio.Count == 0 ? [] : DaggerfallSiteContent.OrderedHitCues(inputs.Audio);
         classicPresentation = sessionPresentation ?? inputs.ClassicPresentation;
@@ -406,7 +406,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach ((ModelVisual model, Transform _, int _) in world) ClassicModel(model);
         foreach ((ModelVisual open, ModelVisual closed, ulong _) in gateVisuals.Values) { ClassicModel(open); ClassicModel(closed); }
         foreach ((ModelVisual model, ulong _) in actionModelVisuals.Values) ClassicModel(model);
-        foreach (DecorationVisual flat in decorations) { ClassicDecoration(flat, winter: false); ClassicDecoration(flat, winter: true); }
+        foreach (DecorationVisual decoration in decorations) { ClassicDecoration(decoration, winter: false); ClassicDecoration(decoration, winter: true); }
         foreach (ActorVisual visual in actors.Values) { ClassicLive(visual); ClassicCorpse(visual); }
         foreach (NpcVisual visual in npcVisuals.Values) ClassicNpc(visual);
         for (int pile = 0; pile < groundContainerSprites.Count; pile++) ClassicTreasureAtlas(pile);
@@ -973,7 +973,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <summary>
     /// Opens the location's geometry. <paramref name="offUpdate"/> prepares its meshes and the textures its materials sample
     /// on the renderer's workers: the renderer draws none of the location until all of them are taken in, so it appears
-    /// whole an update or two later. Its flats' sprites open at once, since a sprite whose texture is still being prepared
+    /// whole an update or two later. Its scenery's sprites open at once, since a sprite whose texture is still being prepared
     /// draws without it.
     /// </summary>
     private void AdmitLocationResources(bool offUpdate)
@@ -1231,7 +1231,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         (SpriteAtlas atlas, RenderResource texture) = OpenActorAtlas(content, sprite);
         var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
-            flats.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+            sprites.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
         if (material is { } chosen) request = request with { Material = chosen };
         if (mobile is not null)
             request = request with { Material = new SpriteMaterialDescriptor(SpriteLightingMode.Synthetic,

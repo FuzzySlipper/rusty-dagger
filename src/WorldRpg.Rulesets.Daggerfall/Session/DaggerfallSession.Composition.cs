@@ -949,18 +949,18 @@ internal sealed partial class DaggerfallSession
                 (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _exterior.Locations);
             _exterior.UseGround(ground, GroundWalkers);
             _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers,
-                new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
-                new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
+                new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Sprites, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
+                new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Sprites, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
                 composition.ArtReplacements?.Sea, tuning.Expedition.Map.Relief, tuning.Expedition.Map.Ground, composition.ArtReplacements?.TravelMap);
             partiallyConstructed.Add(_horizon);
             _overland = new DaggerfallOverlandMap(engine, _horizon.Map, tuning.Expedition.Map, Expedition.Policy.AllDestinations(), _camera.Activate,
-                mobile => _sites.Projection.Inputs.MobileSprites.GetValueOrDefault(mobile), PartyMobile, tuning.Flats.Actors,
+                mobile => _sites.Projection.Inputs.MobileSprites.GetValueOrDefault(mobile), PartyMobile, tuning.Sprites.Actors,
                 composition.ArtReplacements?.TravelMap);
             partiallyConstructed.Add(_overland);
             _exterior.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
             if (composition.ArtReplacements?.GroundCover is { } cover)
                 _horizon.UseGroundCover(cover, tuning.GroundCover, DaggerfallGroundCover.TuftGrounds(definitions.Grids.Climate.Values),
-                    new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, new Dictionary<int, float>(),
+                    new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Sprites, new Dictionary<int, float>(),
                         (tuning.GroundCover.TownShare, tuning.GroundCover.TownRamp)));
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
             Law = new DaggerfallLaw(crime, State.Social, definitions, _tuning.Law, Crimes, State.Actors, State.Npcs, State.PlayerControl, _site,

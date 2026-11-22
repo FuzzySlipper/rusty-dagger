@@ -46,13 +46,13 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallAmbientTuning Ambient { get; init; } = DaggerfallAmbientTuning.Classic;
     internal DaggerfallHorizonTuning Horizon { get; init; } = DaggerfallHorizonTuning.Default;
     internal DaggerfallGroundTuning Ground { get; init; } = DaggerfallGroundTuning.Default;
-    internal DaggerfallFlatsTuning Flats { get; init; } = DaggerfallFlatsTuning.Default;
+    internal DaggerfallSpritesTuning Sprites { get; init; } = DaggerfallSpritesTuning.Default;
     internal DaggerfallSplatPeopleTuning SplatPeople { get; init; } = DaggerfallSplatPeopleTuning.Default;
     internal DaggerfallHangingTuning Hanging { get; init; } = DaggerfallHangingTuning.Default;
     internal DaggerfallLooseItemTuning LooseItems { get; init; } = DaggerfallLooseItemTuning.Default;
     internal DaggerfallWildNavigationTuning WildNavigation { get; init; } = DaggerfallWildNavigationTuning.Default;
     /// <summary>What a site's projection and the exterior world read of these.</summary>
-    internal DaggerfallSiteTuning Site => new(PresentationAudio, Flats, SiteLighting, WorldOrigin, Ground);
+    internal DaggerfallSiteTuning Site => new(PresentationAudio, Sprites, SiteLighting, WorldOrigin, Ground);
     internal DaggerfallFloraTuning Flora { get; init; } = DaggerfallFloraTuning.Default;
     internal DaggerfallGroundCoverTuning GroundCover { get; init; } = DaggerfallGroundCoverTuning.Default;
     internal DaggerfallSurfaceReliefTuning SurfaceRelief { get; init; } = DaggerfallSurfaceReliefTuning.Default;
@@ -161,7 +161,7 @@ internal sealed record DaggerfallTuning(
             Ambient = DaggerfallAmbientTuning.Read(root.GetProperty("ambient")),
             Horizon = DaggerfallHorizonTuning.Read(root.GetProperty("horizon")),
             Ground = DaggerfallGroundTuning.Read(root.GetProperty("ground")),
-            Flats = DaggerfallFlatsTuning.Read(root.GetProperty("flats")),
+            Sprites = DaggerfallSpritesTuning.Read(root.GetProperty("sprites")),
             SplatPeople = DaggerfallSplatPeopleTuning.Read(root.GetProperty("splatPeople")),
             Hanging = DaggerfallHangingTuning.Read(root.GetProperty("hanging")),
             LooseItems = DaggerfallLooseItemTuning.Read(root.GetProperty("looseItems")),

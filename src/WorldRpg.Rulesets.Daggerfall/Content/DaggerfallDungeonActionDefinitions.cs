@@ -50,7 +50,7 @@ internal sealed record DaggerfallDungeonActionDefinition(
     int NextObjectOffset,
     string? NextActionId,
     string? DoorId = null,
-    bool IsFlat = false,
+    bool IsSprite = false,
     double CooldownSeconds = 0d,
     byte SoundIndex = 0,
     Vector3? SourcePosition = null,
@@ -91,7 +91,7 @@ internal sealed record DaggerfallDungeonPoisonAction(string SourceRecord, string
     {
         if (Disposition != "source-unresolved" || PoisonId is not null
             || SourceRecord != "N0000007.RDB" || action.SourceOffset != 20287
-            || action.ActionFlag != (byte)DaggerfallDungeonActionFlag.Poison || !action.IsFlat || action.TriggerFlag != 2
+            || action.ActionFlag != (byte)DaggerfallDungeonActionFlag.Poison || !action.IsSprite || action.TriggerFlag != 2
             || action.Axis != 0 || action.Duration != 0 || action.Magnitude != 0
             || action.SoundIndex != 7 || action.RawIndex != 7
             || action.NextObjectOffset != -2 || action.NextActionId is not null || action.DoorId is not null)

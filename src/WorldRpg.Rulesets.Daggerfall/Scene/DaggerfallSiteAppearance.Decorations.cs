@@ -51,11 +51,11 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void AdmitDecorations(DaggerfallSiteProfile inputs)
     {
-        foreach (var flat in inputs.Decorations)
+        foreach (var decoration in inputs.Decorations)
         {
-            DecorationVisual visual = new(flat, NextLocationVisualOrdinal());
+            DecorationVisual visual = new(decoration, NextLocationVisualOrdinal());
             AttachDecorationMesh(visual);
-            AttachDecorationFlats(visual);
+            AttachDecorationSprites(visual);
             decorations.Add(visual);
             if (!drawRefreshedEffects() || visual.Mesh is null && visual.RefreshedSummer is null) ClassicDecoration(visual, winter: false);
             if (!drawRefreshedEffects() || visual.Mesh is null && visual.RefreshedWinter is null) ClassicDecoration(visual, winter: true);
@@ -63,47 +63,47 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>A decoration's classic sprite in summer or winter, built the first time it is drawn.</summary>
-    private DecorationSprite ClassicDecoration(DecorationVisual flat, bool winter)
+    private DecorationSprite ClassicDecoration(DecorationVisual decoration, bool winter)
     {
-        if ((winter ? flat.Winter : flat.Summer) is { } built) return built;
-        DaggerfallSiteDecoration definition = flat.Definition;
-        if (winter && definition.Summer == definition.Winter) return flat.Winter = ClassicDecoration(flat, winter: false);
+        if ((winter ? decoration.Winter : decoration.Summer) is { } built) return built;
+        DaggerfallSiteDecoration definition = decoration.Definition;
+        if (winter && definition.Summer == definition.Winter) return decoration.Winter = ClassicDecoration(decoration, winter: false);
         DecorationSprite created = winter
             ? CreateDecorationSprite(definition.Winter, definition.BaseAligned, Material(definition), GivesLight(definition, definition.WinterSource))
             : CreateDecorationSprite(definition.Summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
-        return winter ? flat.Winter = created : flat.Summer = created;
+        return winter ? decoration.Winter = created : decoration.Summer = created;
     }
 
     /// <summary>
-    /// The classic flats besides the lamps that give light, as the donor marks them emissive: the fireplace, the glowing
+    /// The classic props besides the lamps that give light, as the donor marks them emissive: the fireplace, the glowing
     /// statue, the brewing potion, the Mantellan Crux's fire and the magic decorations. The lamps (archive 210) that burn
     /// are the importer's: it publishes each one beside the light it sheds.
     /// </summary>
-    private static readonly IReadOnlyDictionary<int, int[]> LightFlats = new Dictionary<int, int[]>
+    private static readonly IReadOnlyDictionary<int, int[]> GlowingProps = new Dictionary<int, int[]>
     {
         [87] = [0], [101] = [2, 3, 5, 6, 7, 8, 9, 11, 12], [190] = [3, 4, 5], [200] = [7, 8, 9, 10], [202] = [2], [208] = [2],
         [253] = [10, 17, 18, 19, 22, 41, 48, 49, 50, 51, 52, 75, 77], [356] = [0, 2, 3], [380] = [3], [434] = [3],
     };
 
-    /// <summary>Whether <paramref name="flat"/>, drawn as <paramref name="source"/>, gives light: a burning lamp, or a flat the donor marks emissive.</summary>
-    private static bool GivesLight(DaggerfallSiteDecoration flat, (int Archive, int Record) source) =>
-        flat.Lamp || LightFlats.TryGetValue(source.Archive, out int[]? records) && records.Contains(source.Record);
+    /// <summary>Whether <paramref name="decoration"/>, drawn as <paramref name="source"/>, gives light: a burning lamp, or a prop the donor marks emissive.</summary>
+    private static bool GivesLight(DaggerfallSiteDecoration decoration, (int Archive, int Record) source) =>
+        decoration.Lamp || GlowingProps.TryGetValue(source.Archive, out int[]? records) && records.Contains(source.Record);
 
     /// <summary>
     /// A decoration takes the light around it and casts a shadow, except one that gives light. A tree or plant from the
     /// nature archives leans in the wind as wild nature does.
     /// </summary>
-    private SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat)
+    private SpriteMaterialDescriptor Material(DaggerfallSiteDecoration decoration)
     {
-        SpriteMaterialDescriptor lit = GivesLight(flat, flat.Source) ? LitSprite : CastingSprite;
-        return DaggerfallNatureArchives.Contains(flat.Source.Archive) ? flats.Flora(lit) : lit;
+        SpriteMaterialDescriptor lit = GivesLight(decoration, decoration.Source) ? LitSprite : CastingSprite;
+        return DaggerfallNatureArchives.Contains(decoration.Source.Archive) ? sprites.Flora(lit) : lit;
     }
 
-    /// <summary>A flat that gives light, under <paramref name="material"/>: what <paramref name="map"/> holds shines at the lamps' level.</summary>
+    /// <summary>A sprite that gives light, under <paramref name="material"/>: what <paramref name="map"/> holds shines at the lamps' level.</summary>
     private SpriteMaterialDescriptor Lamp(SpriteMaterialDescriptor material, RenderResource map) => Glowing(material, map, lampLevel);
 
     /// <summary>
-    /// A classic decoration's sprite. A light source takes the light around it like any flat and shines over it through
+    /// A classic decoration's sprite. A light source takes the light around it like any sprite and shines over it through
     /// emission, with its own texture as the map, as the donor reuses a lamp's colours for its glow.
     /// </summary>
     private DecorationSprite CreateDecorationSprite(NormalizedBillboardSprite sprite, bool baseAligned, SpriteMaterialDescriptor material, bool givesLight)
@@ -120,7 +120,7 @@ internal sealed partial class DaggerfallSiteAppearance
             decorationAtlases.Add(sprite.TexturePath, atlas);
         }
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId,
-            baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot, sprite.Size, flats.Decorations,
+            baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot, sprite.Size, sprites.Decorations,
             SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
             givesLight ? Lamp(material, decorationTextures[sprite.TexturePath]) : material)));
         if (givesLight) glowingDecorations.Add(result.Visual);
@@ -130,14 +130,14 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>Gives a placed decoration the refreshed sprites the set has for its summer and winter records.</summary>
-    private void AttachDecorationFlats(DecorationVisual flat)
+    private void AttachDecorationSprites(DecorationVisual decoration)
     {
         if (surfaceArt is null) return;
-        DaggerfallSiteDecoration definition = flat.Definition;
-        if (flat.RefreshedSummer is null && surfaceArt.Scenery.TryGetValue(definition.Source, out DaggerfallArtSprite? summer))
-            flat.RefreshedSummer = CreateRefreshedDecorationSprite(summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
-        if (flat.RefreshedWinter is null && surfaceArt.Scenery.TryGetValue(definition.WinterSource, out DaggerfallArtSprite? winter))
-            flat.RefreshedWinter = definition.WinterSource == definition.Source ? flat.RefreshedSummer
+        DaggerfallSiteDecoration definition = decoration.Definition;
+        if (decoration.RefreshedSummer is null && surfaceArt.Scenery.TryGetValue(definition.Source, out DaggerfallArtSprite? summer))
+            decoration.RefreshedSummer = CreateRefreshedDecorationSprite(summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
+        if (decoration.RefreshedWinter is null && surfaceArt.Scenery.TryGetValue(definition.WinterSource, out DaggerfallArtSprite? winter))
+            decoration.RefreshedWinter = definition.WinterSource == definition.Source ? decoration.RefreshedSummer
                 : CreateRefreshedDecorationSprite(winter, definition.BaseAligned, Material(definition), GivesLight(definition, definition.WinterSource));
     }
 
@@ -153,11 +153,11 @@ internal sealed partial class DaggerfallSiteAppearance
             var resource = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
             decorationResources.Add(resource.Handle);
             decorationTextures.Add(art.File.Path, resource.Handle);
-            atlas = appearance.CreateSpriteAtlas(new(resource.Handle, RefreshedFlatFrames(art)));
+            atlas = appearance.CreateSpriteAtlas(new(resource.Handle, RefreshedSpriteFrames(art)));
             decorationAtlases.Add(art.File.Path, atlas);
         }
         var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, 0, baseAligned ? art.Foot : art.Pivot, art.Size,
-            flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
+            sprites.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
             art.Emission is { } emission ? Lamp(material, GlowMap(emission))
                 : givesLight ? Lamp(material, decorationTextures[art.File.Path]) : material)));
         if (art.Emission is not null || givesLight) glowingDecorations.Add(result.Visual);
@@ -166,8 +166,8 @@ internal sealed partial class DaggerfallSiteAppearance
         return result;
     }
 
-    /// <summary>A refreshed flat's frames, numbered from 0 in the order its art states them, which is the order it plays them.</summary>
-    private static SpriteAtlasFrame[] RefreshedFlatFrames(DaggerfallArtSprite art) =>
+    /// <summary>A refreshed sprite's frames, numbered from 0 in the order its art states them, which is the order it plays them.</summary>
+    private static SpriteAtlasFrame[] RefreshedSpriteFrames(DaggerfallArtSprite art) =>
         SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
             art.Frames.Select((frame, index) => new NormalizedSpriteFrame((uint)index, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
 
@@ -214,34 +214,34 @@ internal sealed partial class DaggerfallSiteAppearance
 
     /// <summary>Where each placed nature decoration stands in the world, its foot, with its summer and winter records.</summary>
     internal IEnumerable<(Vector3 Foot, (int Archive, int Record) Summer, (int Archive, int Record) Winter)> PlacedNature() => decorations
-        .Where(flat => DaggerfallNatureArchives.Contains(flat.Definition.Source.Archive))
-        .Select(flat => (Compose(worldAppearance.Transform, new Transform(Foot(flat.Definition), Quaternion.Identity, Vector3.One)).Translation,
-            flat.Definition.Source, flat.Definition.WinterSource));
+        .Where(decoration => DaggerfallNatureArchives.Contains(decoration.Definition.Source.Archive))
+        .Select(decoration => (Compose(worldAppearance.Transform, new Transform(Foot(decoration.Definition), Quaternion.Identity, Vector3.One)).Translation,
+            decoration.Definition.Source, decoration.Definition.WinterSource));
 
     /// <summary>The floor a decoration's sprite stands on: its position less its pivot's share of its height.</summary>
-    private static Vector3 Foot(DaggerfallSiteDecoration flat) =>
-        flat.Position.ToVector() - (Vector3.UnitY * (flat.BaseAligned ? 0f : flat.Summer.Pivot.Y * flat.Summer.Size.Y));
+    private static Vector3 Foot(DaggerfallSiteDecoration decoration) =>
+        decoration.Position.ToVector() - (Vector3.UnitY * (decoration.BaseAligned ? 0f : decoration.Summer.Pivot.Y * decoration.Summer.Size.Y));
 
     /// <summary>The sprite a decoration draws now: its refreshed one while refreshed art is drawn and the set has it, else its classic one.</summary>
-    private DecorationSprite DrawnDecoration(DecorationVisual flat) => winterMaterials
-        ? (drawRefreshedEffects() ? flat.RefreshedWinter : null) ?? ClassicDecoration(flat, winter: true)
-        : (drawRefreshedEffects() ? flat.RefreshedSummer : null) ?? ClassicDecoration(flat, winter: false);
+    private DecorationSprite DrawnDecoration(DecorationVisual decoration) => winterMaterials
+        ? (drawRefreshedEffects() ? decoration.RefreshedWinter : null) ?? ClassicDecoration(decoration, winter: true)
+        : (drawRefreshedEffects() ? decoration.RefreshedSummer : null) ?? ClassicDecoration(decoration, winter: false);
 
     private void AppendDecorationFacts(List<AppearanceFact> facts, int slot)
     {
         bool refreshed = drawRefreshedEffects();
-        foreach (var flat in decorations)
+        foreach (var decoration in decorations)
         {
-            if (grownInField(winterMaterials ? flat.Definition.WinterSource : flat.Definition.Source)) continue;
-            if (refreshed && flat.Mesh is { } mesh)
+            if (grownInField(winterMaterials ? decoration.Definition.WinterSource : decoration.Definition.Source)) continue;
+            if (refreshed && decoration.Mesh is { } mesh)
             {
-                facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0, MeshPose(flat), mesh,
-                    worldAppearance.Visible, worldAppearance.Layer, flat.Swinging ? ShadowCasting.None : ShadowCasting.Cast));
+                facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, decoration.Ordinal), false, 0, MeshPose(decoration), mesh,
+                    worldAppearance.Visible, worldAppearance.Layer, decoration.Swinging ? ShadowCasting.None : ShadowCasting.Cast));
                 continue;
             }
-            facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0,
-                Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)),
-                DrawnDecoration(flat).Visual, worldAppearance.Visible, worldAppearance.Layer));
+            facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, decoration.Ordinal), false, 0,
+                Compose(worldAppearance.Transform, new Transform(decoration.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)),
+                DrawnDecoration(decoration).Visual, worldAppearance.Visible, worldAppearance.Layer));
         }
     }
 
@@ -250,42 +250,42 @@ internal sealed partial class DaggerfallSiteAppearance
     /// height, across the sprite's width. A hanging mesh so hangs from the sprite's top; each turns its own way about the
     /// vertical, so a room of them do not all face alike, and stands where it was fitted once fitted.
     /// </summary>
-    private Transform MeshPose(DecorationVisual flat)
+    private Transform MeshPose(DecorationVisual decoration)
     {
-        if (flat.HangingPose is { } fitted) return fitted;
-        Quaternion turn = flat.Hangs is null ? Quaternion.Identity
-            : Quaternion.CreateFromAxisAngle(Vector3.UnitY, StableHash.Fnv1a64(flat.Definition.Id) % 360 * MathF.PI / 180);
-        return Compose(worldAppearance.Transform, new Transform(Foot(flat.Definition), turn, new Vector3(flat.MeshScale)));
+        if (decoration.HangingPose is { } fitted) return fitted;
+        Quaternion turn = decoration.Hangs is null ? Quaternion.Identity
+            : Quaternion.CreateFromAxisAngle(Vector3.UnitY, StableHash.Fnv1a64(decoration.Definition.Id) % 360 * MathF.PI / 180);
+        return Compose(worldAppearance.Transform, new Transform(Foot(decoration.Definition), turn, new Vector3(decoration.MeshScale)));
     }
 
     /// <summary>The active site's hanging meshes, drawn in place of their sprites while refreshed art is drawn: what <see cref="DaggerfallHanging"/> swings.</summary>
     internal IEnumerable<DaggerfallHangingPiece> HangingPieces() => decorations
-        .Where(flat => flat is { Hangs: not null, Mesh: not null, Model: not null })
-        .Select(flat => new DaggerfallHangingPiece(flat.Definition.Id, $"{flat.Definition.Source.Archive}-{flat.Definition.Source.Record}", flat.Hangs!.Value.Kind,
-            flat.Mesh!, DaggerfallPresentationObjectIds.LocationVisual(DaggerfallPresentationObjectIds.ActiveLocationSlot, flat.Ordinal), flat.Model!,
-            flat.Hangs.Value.Rig, flat.Hangs.Value.Height, MeshPose(flat), Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)).Translation,
-            flat.Definition.Light));
+        .Where(decoration => decoration is { Hangs: not null, Mesh: not null, Model: not null })
+        .Select(decoration => new DaggerfallHangingPiece(decoration.Definition.Id, $"{decoration.Definition.Source.Archive}-{decoration.Definition.Source.Record}", decoration.Hangs!.Value.Kind,
+            decoration.Mesh!, DaggerfallPresentationObjectIds.LocationVisual(DaggerfallPresentationObjectIds.ActiveLocationSlot, decoration.Ordinal), decoration.Model!,
+            decoration.Hangs.Value.Rig, decoration.Hangs.Value.Height, MeshPose(decoration), Compose(worldAppearance.Transform, new Transform(decoration.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)).Translation,
+            decoration.Definition.Light));
 
     /// <summary>Hangs a hanging mesh where it was fitted clear of what is around it.</summary>
     internal void PlaceHanging(string id, Transform pose)
     {
-        foreach (DecorationVisual flat in decorations)
-            if (flat.Definition.Id == id) flat.HangingPose = pose;
+        foreach (DecorationVisual decoration in decorations)
+            if (decoration.Definition.Id == id) decoration.HangingPose = pose;
     }
 
     /// <summary>Marks a hanging mesh swinging or at rest: swinging, it casts no shadow, which would be drawn again every frame it moves.</summary>
     internal void SwingHanging(string id, bool swinging)
     {
-        foreach (DecorationVisual flat in decorations)
-            if (flat.Definition.Id == id) flat.Swinging = swinging;
+        foreach (DecorationVisual decoration in decorations)
+            if (decoration.Definition.Id == id) decoration.Swinging = swinging;
     }
 
     private void AdvanceDecorations()
     {
         bool refreshed = drawRefreshedEffects();
-        foreach (var flat in decorations)
+        foreach (var decoration in decorations)
             // A decoration drawn as its refreshed mesh has no sprite playing.
-            if (!(refreshed && flat.Mesh is not null) && DrawnDecoration(flat).Playback is { } playback)
+            if (!(refreshed && decoration.Mesh is not null) && DrawnDecoration(decoration).Playback is { } playback)
                 appearance.AdvanceSpritePlayback(new(playback));
     }
 
@@ -304,7 +304,7 @@ internal sealed partial class DaggerfallSiteAppearance
             if (sprite.Playback is { } playback) values.Add(playback);
             values.Add(sprite.Visual);
         }
-        values.AddRange(decorations.Select(flat => flat.Mesh).OfType<Appearance>());
+        values.AddRange(decorations.Select(decoration => decoration.Mesh).OfType<Appearance>());
         values.AddRange(decorationAtlases.Values);
         values.AddRange(decorationResources);
         decorations.Clear();

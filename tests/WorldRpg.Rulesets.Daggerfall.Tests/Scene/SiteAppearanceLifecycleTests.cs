@@ -143,7 +143,7 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(sprite.InitialFrameId, request.FrameId);
         Assert.Equal(sprite.Pivot, request.Pivot);
         Assert.Equal(sprite.Size, request.Size);
-        Assert.Equal(DaggerfallFlatsTuning.Default.Items, request.Billboard);
+        Assert.Equal(DaggerfallSpritesTuning.Default.Items, request.Billboard);
         Assert.Equal(SpriteSizeMode.World, request.SizeMode);
 
         // A profile switch or a fully looted pile is represented by the owner's filtered empty
@@ -160,12 +160,12 @@ public sealed class SiteAppearanceLifecycleTests
     }
 
     /// <summary>
-    /// With refreshed art a pile of several things stands as its treasure pile's refreshed flat, on that flat's own foot,
+    /// With refreshed art a pile of several things stands as its treasure pile's refreshed sprite, on that sprite's own foot,
     /// and opens no classic pile; a pile whose treasure record the set does not redraw stays classic, and classic art
     /// draws every pile classic again.
     /// </summary>
     [Fact]
-    public void A_treasure_pile_the_refreshed_set_redraws_draws_its_flat_and_opens_no_classic_pile()
+    public void A_treasure_pile_the_refreshed_set_redraws_draws_its_sprite_and_opens_no_classic_pile()
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -192,8 +192,8 @@ public sealed class SiteAppearanceLifecycleTests
             configure: site => site.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed));
 
         presentation.Publish(actors, piles);
-        SpriteFromAtlasRequest flat = Assert.Single(appearance.SpriteRequests, request => request.Size == new Vector2(1F, .6F));
-        Assert.Equal(new Vector2(.5F, 0F), flat.Pivot);
+        SpriteFromAtlasRequest sprite = Assert.Single(appearance.SpriteRequests, request => request.Size == new Vector2(1F, .6F));
+        Assert.Equal(new Vector2(.5F, 0F), sprite.Pivot);
         Assert.Equal(redrawn.Position.ToVector(), Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == (ulong)redrawn.Id).Transform.Translation);
         Assert.Contains("refreshed/pile.png", appearance.OpenedResourcePaths);
         Assert.DoesNotContain("sprite/treasure-0.png", appearance.OpenedResourcePaths);

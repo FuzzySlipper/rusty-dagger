@@ -38,25 +38,25 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
-    public void A_classic_light_flat_takes_the_light_and_shines_through_its_own_texture_at_the_lamps_level()
+    public void A_classic_light_sprite_takes_the_light_and_shines_through_its_own_texture_at_the_lamps_level()
     {
         List<string> releases = []; var graphics = new AppearanceFake(releases);
-        DaggerfallSiteDecoration Flat(string id, string path, (int, int) source, bool lamp)
+        DaggerfallSiteDecoration Decoration(string id, string path, (int, int) source, bool lamp)
         {
             NormalizedBillboardSprite sprite = new(path, Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new(.5f, 0f), Vector2.One);
             return new(id, new(0, 0, 0), true, sprite, sprite, source, source, lamp);
         }
-        // The import marks the campfire a burning lamp; the barrel is a plain flat.
-        DaggerfallSiteProfile profile = MediaInputs(decorations: [Flat("torch", "flat/torch.png", (210, 1), lamp: true), Flat("barrel", "flat/barrel.png", (205, 0), lamp: false)]);
+        // The import marks the campfire a burning lamp; the barrel is a plain sprite.
+        DaggerfallSiteProfile profile = MediaInputs(decorations: [Decoration("torch", "scenery/torch.png", (210, 1), lamp: true), Decoration("barrel", "scenery/barrel.png", (205, 0), lamp: false)]);
         ContentFake content = MediaContent(releases);
-        content.Add("flat/torch.png", Hash);
-        content.Add("flat/barrel.png", Hash);
+        content.Add("scenery/torch.png", Hash);
+        content.Add("scenery/barrel.png", Hash);
         using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
 
         SpriteFromAtlasRequest torch = graphics.SpriteRequests.Single(request => request.Material.EmissionMap != default);
         Assert.Equal(SpriteLightingMode.Synthetic, torch.Material.Lighting);
         Assert.Equal(Vector3.One, torch.Material.EmissionColor);
-        // A flat that gives light casts no shadow; the barrel beside it stands in the world and casts.
+        // A sprite that gives light casts no shadow; the barrel beside it stands in the world and casts.
         Assert.Equal(SpriteShadowPolicy.None, torch.Material.Shadow);
         Assert.Contains(graphics.SpriteRequests, request => request.Material == DaggerfallSiteAppearance.CastingSprite);
 

@@ -8,6 +8,6 @@ internal static class DaggerfallNatureArchives
     /// <summary>How many nature archives there are.</summary>
     internal const int Count = 12;
 
-    /// <summary>Whether a flat's archive is one of the nature archives.</summary>
+    /// <summary>Whether a sprite's archive is one of the nature archives.</summary>
     internal static bool Contains(int archive) => archive is >= First and < First + Count;
 }

@@ -5,7 +5,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>What in the world hurts by touch: open fires, and how far a sprung hurt trap reaches.</summary>
-/// <param name="BurningFlats">The flats that burn, by texture archive and record: campfires and braziers, not torches.</param>
+/// <param name="BurningProps">The props that burn, by texture archive and record: campfires and braziers, not torches.</param>
 /// <param name="FireRadius">How close to a fire's foot a body burns, across the ground, in metres.</param>
 /// <param name="FireHeight">How far above or below a fire's foot a body can be and still burn.</param>
 /// <param name="BodyBurnPerSecond">The health a body thrown into a fire loses each second.</param>
@@ -15,13 +15,13 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// <param name="PlayerBurnMaximum">The most it rises to.</param>
 /// <param name="PlayerCoolRate">How many seconds of heat each second out of the fire takes off.</param>
 /// <param name="TrapRadius">How far from the player a hurt trap the player sets off reaches others, in metres.</param>
-internal sealed record DaggerfallHazardTuning(IReadOnlySet<(int Archive, int Record)> BurningFlats, float FireRadius, float FireHeight,
+internal sealed record DaggerfallHazardTuning(IReadOnlySet<(int Archive, int Record)> BurningProps, float FireRadius, float FireHeight,
     double BodyBurnPerSecond, double BodyBurnSeconds, double PlayerBurnStart, double PlayerBurnRamp, double PlayerBurnMaximum, double PlayerCoolRate, float TrapRadius)
 {
     internal static DaggerfallHazardTuning Default { get; } = new(new HashSet<(int, int)> { (210, 0), (210, 1), (210, 19) }, .7f, 2f, 5d, 3d, .5d, 2d, 10d, 2d, 3f);
 
     internal static DaggerfallHazardTuning Read(JsonElement root) => new(
-        new HashSet<(int, int)>(root.GetProperty("burningFlats").EnumerateArray().Select(flat => (flat[0].GetInt32(), flat[1].GetInt32()))),
+        new HashSet<(int, int)>(root.GetProperty("burningProps").EnumerateArray().Select(prop => (prop[0].GetInt32(), prop[1].GetInt32()))),
         (float)Positive(root, "fireRadius"), (float)Positive(root, "fireHeight"), Positive(root, "bodyBurnPerSecond"), Positive(root, "bodyBurnSeconds"),
         Positive(root, "playerBurnStart"), Positive(root, "playerBurnRamp"), Positive(root, "playerBurnMaximum"), Positive(root, "playerCoolRate"), (float)Positive(root, "trapRadius"));
 
