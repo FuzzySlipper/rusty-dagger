@@ -63,7 +63,7 @@ figure img {display:block; width:100%; height:auto; border-radius:5px}
 <p id="empty" hidden>No matching records.</p><article id="detail" hidden><button id="back">← Catalogue</button>
 <div class="title"><h1 id="title"></h1><nav aria-label="Records"><button id="prev">Previous</button><button id="next">Next</button></nav></div>
 <p id="meta"></p><div class="views">
-<figure><figcaption>Refreshed sprite</figcaption><a id="spriteLink" target="_blank" rel="noopener"><img id="sprite" width="960" height="540" alt=""></a></figure>
+<figure><figcaption id="spriteCaption">Refreshed sprite</figcaption><a id="spriteLink" target="_blank" rel="noopener"><img id="sprite" width="960" height="540" alt=""></a></figure>
 <figure id="meshFigure"><figcaption id="meshCaption"></figcaption><a id="meshLink" target="_blank" rel="noopener"><img id="mesh" width="960" height="540" alt=""></a></figure></div>
 <div class="tools" id="angles" aria-label="Mesh angle"><span>Mesh angle</span><button data-angle="front">0°</button><button data-angle="side">90°</button><button data-angle="rear">225°</button></div>
 </article></section></main>
@@ -79,6 +79,7 @@ const first = records.length === 1 ? records[0].key : "";
 let key = location.hash.slice(1) || first, angle = "front", matches = [], catalogueY = 0;
 for (const value of categories.filter(name => records.some(row => row.category === name))) category.add(new Option(value, value));
 for (const value of new Set(records.map(row => row.climate))) climate.add(new Option(value, value));
+category.value = new URLSearchParams(location.search).get("category") || "";
 
 function choose(row) {
   if (!el("overview").hidden) catalogueY = window.scrollY;
@@ -103,7 +104,9 @@ function show(row) {
     el(id).alt = alt;
     el(id).src = el(id + "Link").href = "images/" + key + "-" + view + ".webp";
   }
-  picture("sprite", "sprite", key + " refreshed sprite");
+  const reference = row.classicReference ? "Classic DF sprite" : "Refreshed sprite";
+  el("spriteCaption").textContent = reference;
+  picture("sprite", "sprite", key + " " + reference);
   el("meshFigure").hidden = el("angles").hidden = !row.form;
   if (row.form) {
     const label = angles.find(b => b.dataset.angle === angle).textContent;
@@ -135,7 +138,7 @@ function gallery() {
         const plate = document.createElement("span"), image = document.createElement("img");
         plate.className = "plate"; image.loading = "lazy"; image.width = 960; image.height = 540;
         image.alt = ""; image.src = "images/" + row.key + "-" + view + ".webp";
-        plate.append(image, view === "front" ? "Mesh" : "Sprite");
+        plate.append(image, view === "front" ? "Mesh" : row.classicReference ? "Classic DF sprite" : "Sprite");
         pair.append(plate);
       }
       button.append(title, pair); cards.append(button);
@@ -189,6 +192,14 @@ window.addEventListener("hashchange", () => {
   }
   render();
 });
-search.oninput = climate.onchange = kind.onchange = category.onchange = () => { overview(); window.scrollTo(0, 0); };
+function filterCatalogue() { overview(); window.scrollTo(0, 0); }
+search.oninput = climate.onchange = kind.onchange = filterCatalogue;
+category.onchange = () => {
+  const url = new URL(location.href);
+  if (category.value) url.searchParams.set("category", category.value);
+  else url.searchParams.delete("category");
+  history.replaceState(null, "", url);
+  filterCatalogue();
+};
 render();
 </script></body></html>
