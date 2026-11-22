@@ -63,8 +63,13 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             presentation.SetOutcome("Commit or cancel character choices before beginning play.");
             return false;
         }
-        // Begin under a game other than the running one is the Host's to start, once it has switched to that game.
-        return parsed.Contains(DaggerfallUiActionKind.Begin) && !session.StartUnderChosenBundle(GameBundleStart.Begin);
+        if (!parsed.Contains(DaggerfallUiActionKind.Begin)) return false;
+        // Begin under a game other than the running one is the Host's to start, once it has switched to that game. The
+        // Host asks before this update's actions apply, so a game chosen ahead of Begin in the same update (held time
+        // delivers both together) is recorded first; the update records it again, to the same choice.
+        foreach (DaggerfallPlayerUiAction action in parsed.Actions.TakeWhile(action => action.Kind != DaggerfallUiActionKind.Begin))
+            if (action.Kind == DaggerfallUiActionKind.BundleSelect) session.ChooseBundle(action.Key!);
+        return !session.StartUnderChosenBundle(GameBundleStart.Begin);
     }
 
     /// <summary>Takes this update's parsed UI actions: the entry-screen check's parse when it read these events.</summary>

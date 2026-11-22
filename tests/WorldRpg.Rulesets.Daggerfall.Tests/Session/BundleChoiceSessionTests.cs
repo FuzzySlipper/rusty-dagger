@@ -4,6 +4,7 @@ using Rusty.Engine;
 using WorldRpg.Host;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -92,6 +93,52 @@ public sealed class BundleChoiceSessionTests
         DaggerfallSession game = RunningSession(product);
         Assert.Equal(DaggerfallWorldProfileIds.Dungeon(PrivateersHold), game.Sites.ActiveProfile);
         Assert.Equal("class16", game.State.Character.Capture().CareerId);
+    }
+
+    /// <summary>
+    /// Under held time the title's choice of game and its Begin reach the session in one update, which is how Begin
+    /// started the combat start again after a death and Quit to title with Charing chosen (#10982).
+    /// </summary>
+    [Theory]
+    [InlineData("fresh title")]
+    [InlineData("quit to title")]
+    [InlineData("death, then quit to title")]
+    public void A_game_chosen_in_the_same_update_as_begin_is_the_one_that_starts(string path)
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        DaggerfallSiteProfile charing = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        PopulateContent(content, charing);
+        foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(charing.Site!.Value)) AssembledWorldRun.Admit(content, near);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), new TestDaggerfallRuleset(videosEnabled: true),
+            new GameBundleId("daggerfall.classic"));
+        product.Start();
+        if (path != "fresh title")
+        {
+            product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"daggerfall.combat-start"}"""), Ui("""{"action":"begin"}""")]));
+            FinishLoading(product, 1);
+            Assert.Equal(DaggerfallWorldProfileIds.Dungeon(PrivateersHold), RunningSession(product).Sites.ActiveProfile);
+            if (path == "quit to title") product.QuitToTitle();
+            else
+            {
+                product.MarkDead();
+                product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"death-quit"}""")]));
+            }
+            Assert.Equal(ProductMode.Title, product.Mode);
+            Assert.Equal("daggerfall.combat-start", engine.PublishedNested("bundles", "current"));
+        }
+
+        product.Update(new ProductUpdate(OuterUpdate(3), [Ui("""{"action":"bundle-select","key":"daggerfall.town-start"}"""), Ui("""{"action":"begin"}""")]));
+        FinishLoading(product, 3);
+
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal(charing.ProfileKey, RunningSession(product).Sites.ActiveProfile);
     }
 
     [Fact]

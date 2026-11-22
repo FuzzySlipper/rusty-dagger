@@ -120,6 +120,9 @@ internal sealed class DaggerfallUiInput
     /// <summary>The recognized action at this index, or null for an unrecognized payload or another event.</summary>
     internal DaggerfallPlayerUiAction? ActionAt(int index) => _events[index].Action;
 
+    /// <summary>The recognized actions, in the order they arrived.</summary>
+    internal IEnumerable<DaggerfallPlayerUiAction> Actions => _events.Select(entry => entry.Action).OfType<DaggerfallPlayerUiAction>();
+
     internal bool Contains(DaggerfallUiActionKind kind) => _events.Any(entry => entry.Action?.Kind == kind);
 
     internal bool ContainsAny(params DaggerfallUiActionKind[] kinds) => _events.Any(entry => entry.Action is { } action && kinds.Contains(action.Kind));
