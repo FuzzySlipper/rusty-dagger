@@ -339,10 +339,12 @@ public static class DaggerfallWorldGridsBuilder
                 named ? name! : string.Empty,
                 named ? DaggerfallClimateDisposition.Named : DaggerfallClimateDisposition.Unresolved)
             {
+                // The donor's climate People, but for Subtropical: the donor gives it Breton, while its towns (Sentinel, on the
+                // desert's edge, and the Hammerfell coast) draw the desert buildings, so their people are Redguard (Patch, #10972).
                 People = value switch
                 {
-                    223 or 228 or 229 or 230 or 231 or 232 => "Breton",
-                    224 or 225 or 227 => "Redguard",
+                    223 or 228 or 230 or 231 or 232 => "Breton",
+                    224 or 225 or 227 or 229 => "Redguard",
                     226 => "Nord",
                     _ => string.Empty,
                 },

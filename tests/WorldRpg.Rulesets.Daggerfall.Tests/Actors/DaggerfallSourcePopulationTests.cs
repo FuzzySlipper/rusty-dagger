@@ -110,6 +110,7 @@ public sealed class DaggerfallSourcePopulationTests
 
     [Theory]
     [InlineData(17, "Daggerfall", "breton")]
+    [InlineData(20, "Sentinel", "redguard")]
     [InlineData(0, "Alik'ra", "redguard")]
     [InlineData(16, "Wrothgaria", "nord")]
     public void A_town_dresses_every_townsperson_as_its_climates_race_by_their_flag_and_seed(int region, string name, string race)

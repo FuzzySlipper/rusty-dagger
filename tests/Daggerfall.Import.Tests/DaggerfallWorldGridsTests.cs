@@ -50,6 +50,24 @@ public sealed class DaggerfallWorldGridsTests
         Assert.Equal(-1, stray.Region);
     }
 
+    [Theory]
+    [InlineData(223, "Breton")]
+    [InlineData(224, "Redguard")]
+    [InlineData(225, "Redguard")]
+    [InlineData(226, "Nord")]
+    [InlineData(227, "Redguard")]
+    [InlineData(228, "Breton")]
+    [InlineData(229, "Redguard")]
+    [InlineData(230, "Breton")]
+    [InlineData(231, "Breton")]
+    [InlineData(232, "Breton")]
+    public void Each_climate_names_the_people_of_its_towns(byte value, string people)
+    {
+        // The donor's climate People, but for Subtropical (Sentinel, on the desert's edge, and the Hammerfell coast), whose people are Redguard.
+        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(CreateStripedPak(223, value), "arena2/CLIMATE.PAK");
+        Assert.Equal(people, climate.Values.Single(cell => cell.Value == value).People);
+    }
+
     [Fact]
     public void Refuses_malformed_sources() =>
         Assert.Throws<Arena2FormatException>(() => DaggerfallWorldGridsBuilder.BuildClimate([1, 2, 3], "arena2/CLIMATE.PAK"));
