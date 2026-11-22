@@ -263,7 +263,7 @@ internal static class TestSessions
     internal static IReadOnlyList<InstalledContent> Installed(ProductContent content) => InstalledByContent.GetValue(content, static value =>
     {
         List<InstalledContent> installed = [];
-        foreach (string name in new[] { DaggerfallData.DataContainerName, DaggerfallMusicBundle.ContainerName, DaggerfallData.ClassicArtContainerName })
+        foreach (string name in new[] { DaggerfallData.DataContainerName, DaggerfallMusicBundle.ContainerName, DaggerfallData.ClassicArtContainerName, DaggerfallAnimations.ContainerName })
             if (TryOpen(value, name) is { } container) installed.Add(new InstalledContent(name, container));
         return installed;
     });
@@ -325,6 +325,20 @@ internal static class TestSessions
             bundles.Container(TestDataContainers.ClassicArt);
             foreach ((string path, ContentReferenceInfo entry) in TestDataContainers.Entries(TestDataContainers.ClassicArt))
                 bundles.AddEntry(TestDataContainers.ClassicArt, path, entry.Sha256, entry.ByteLength, () => TestDataContainers.Read(TestDataContainers.ClassicArt, path));
+        }
+
+        // The animations container as the art pack names its clips. The session tests' animation service never reads a pack's
+        // bytes, so a checkout without the container still has one; PublishedContentDeliveryTests holds the real one to the pack.
+        if (selectedPublicationRoots is not { Count: > 0 })
+        {
+            bundles.Container(DaggerfallAnimations.ContainerName);
+            using JsonDocument payload = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(contentRoot, "worldrpg/packs/daggerfall.art-replacements/payload.json")));
+            foreach (JsonProperty clip in payload.RootElement.GetProperty("artReplacements").GetProperty("splatPeople").GetProperty("clips").EnumerateObject())
+            {
+                string path = clip.Value.GetProperty("path").GetString()!;
+                bundles.AddEntry(DaggerfallAnimations.ContainerName, path, DaggerfallContentHash.Parse(clip.Value.GetProperty("sha256").GetString()!, "the art pack"),
+                    (ulong)clip.Value.GetProperty("byteLength").GetInt64(), () => TestDataContainers.Read(TestDataContainers.Animations, path));
+            }
         }
 
         return new ProductContent(eager.ToArray(), bundles);

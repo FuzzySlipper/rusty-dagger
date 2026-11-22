@@ -58,7 +58,7 @@ the one ignored folder. Its folders say what may be deleted:
 | Folder | Holds | Lifecycle |
 | --- | --- | --- |
 | `local/inputs/` | `arena2`, `fp-melee` (purchased art) | supplied, never regenerated: keep a copy |
-| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import, `authoring/tools/music/build.sh` and `authoring/tools/fp-arms/build.sh`, or pulled by `scripts/data-sync.sh` |
+| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak`, `animations.rpak` | what the game opens; rebuilt by the import, `authoring/tools/music/build.sh`, `authoring/tools/fp-arms/build.sh` and `authoring/tools/people/splat-people.py`, or pulled by `scripts/data-sync.sh` |
 | `local/build/` | import staging and records, the fp-arms build, verify stamps | regenerable |
 | `local/art/` | `reference/` exports, `generated/` finals and studies, `review/` pages | the art pipeline's working files ([authoring/README.md](authoring/README.md)) |
 | `local/scratch/` | experiments | deletable at any time |
@@ -167,6 +167,12 @@ the one ignored folder. Its folders say what may be deleted:
   `authoring/tools/music/sources.tsv`; `encode.sh` beside it writes them from the
   approved renders in Patch's `music-dev` repository. The tracks are named as the
   playlists name them (`dungeon-01`, `outside-night-03`).
+- `local/data/animations.rpak` holds the animation clips, which ship with the game
+  but never live in Git: `authoring/tools/people/splat-people.py` packs the
+  townspeople's from their NAS sources, the art pack's payload names each by its
+  path in the container, and it sits in the store's `ship/` root, pulled and linked
+  the same way and replaced with `scripts/data-sync.sh ship animations.rpak`.
+  Without it the townspeople draw their sprites, with a warning.
 - The values taken from Daggerfall Unity and the classic tables are authored
   data: the classic tables and the game's text are sections of the
   `daggerfall.base` pack's payload, and the quests are the `daggerfall.quests`
@@ -197,7 +203,7 @@ Tests that read the staging tree and records skip without them. The copies are a
 cache, about 4 GB a revision: remove any but the one den-agents' shared checkout
 links to (`readlink ~/dev/rusty-dagger/local/data`), with `chmod -R u+w` first. A
 worktree that linked a removed one runs `link` again; Windows asks for `cache`. Build
-`first-person.rpak` in a folder of the checkout's own.
+`first-person.rpak` or `animations.rpak` in a folder of the checkout's own.
 
 Rules for the tracked side:
 
@@ -361,7 +367,7 @@ coreclr/ | native/          the product's code
 bin/, share/, dotnet/       the Engine host, its licences and the .NET runtime
 tools/Daggerfall.Import.Tool/   the import, with the tracked files it reads (no Daggerfall Unity file)
 daggerfall-data.rpak            written by the import from the player's own files
-music.rpak, first-person.rpak   the score and the 3D arms, built on a development checkout and placed beside
+music.rpak, first-person.rpak, animations.rpak   the score, the 3D arms and the animation clips, built on a development checkout and placed beside
 ```
 
 The player imports once, from the game: while the data is missing, damaged or

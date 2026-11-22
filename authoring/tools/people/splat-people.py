@@ -2,23 +2,30 @@
 """splat-people: the gsplat townspeople every town walker draws as, and the art pack's `splatPeople` section.
 
 Takes the ready Dagger characters (local/art/generated/people/dagger-characters/ready.json: 09-game approved by Patch, each with
-the Engine's skinned-splat GLB on the 22 Mixamo body bones and its fit to every clip in PACKS) and writes into
-content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/:
+the Engine's skinned-splat GLB on the 22 Mixamo body bones and its fit to every clip in PACKS) and writes:
 
-  ID.glb             each character's skinned-splat GLB, as asset-pipeline wrote it
-  clips/NAME.glb     each clip of PACKS as a clip pack: the PINOC Mixamo export's skeleton, skin and one clip named NAME,
-                     without the X Bot mesh it is exported with. The exports name their clips alike (Armature.001|Scene),
-                     and one character carries several packs, so each takes its own name. The Engine binds a pack by
-                     joint names only when it names every joint of the character, so each pack also names the skirt
-                     joints the characters carry, under their own parents with no channels.
+  content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/ID.glb
+      each character's skinned-splat GLB, as asset-pipeline wrote it
+  local/data/animations.rpak, at splat-people/NAME.glb
+      each clip of PACKS as a clip pack: the PINOC Mixamo export's skeleton, skin and one clip named NAME, without the
+      X Bot mesh it is exported with. The exports name their clips alike (Armature.001|Scene), and one character carries
+      several packs, so each takes its own name. The Engine binds a pack by joint names only when it names every joint
+      of the character, so each pack also names the skirt joints the characters carry, under their own parents with no
+      channels.
+
+Animation clips never live in Git (Patch, 2026-11-22): their sources stay on the NAS and the packed clips ship in
+animations.rpak, which sits in the data store's ship/ root beside first-person.rpak and reaches every checkout through
+scripts/data-sync.sh (README, Game data). After a run, publish it with `scripts/data-sync.sh ship animations.rpak` as
+the payload change lands, or the game warns that the container holds other clips and walkers draw their sprites. Pack
+it in a checkout whose local/data is its own (a linked one is read-only).
 
 The clips (rusty-dagger #10978: walkers vary, not clones) are PINOC's library Walking and Standing Idle, softened
 Walking (gentle), and motions generated on Patch's PINOC account, each cut to a seamless loop (asset-pipeline
-loop_clip.py) and cleaned (clean_clip_noise.py), some softened (gentle_glb.py). Library clips are working material until
-Patch settles their licence (2026-11-19), so a new clip is a generated one. A walker walks one of WALKS (one of SKIRT_WALKS, softer, in a long
+loop_clip.py) and cleaned (clean_clip_noise.py), some softened (gentle_glb.py). Library and generated clips both ship
+(Patch, 2026-11-22). A walker walks one of WALKS (one of SKIRT_WALKS, softer, in a long
 skirt) and stands in one of IDLES, picked by its seed in the game.
 
-It states artReplacements.splatPeople in payload.json: the clips, the three sets, the joint the fits move (the top
+It states artReplacements.splatPeople in payload.json: the clips by their path in the container, the three sets, the joint the fits move (the top
 joint, Hips), and per character its name, the classic townsperson archive it draws (each walker wearing that art draws
 as it), its body, the pelvis fit of each clip it plays (k and A: Hips at (k x, A + k y, k z)) with the speed a fitted
 walk travels, and its palette: PALETTE sRGB colours k-means picks from its own Gaussians, weighted by opacity, which a
@@ -35,6 +42,7 @@ import json
 import os
 import shutil
 import struct
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -42,6 +50,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[3]
 PACK = ROOT / 'content/worldrpg/packs/daggerfall.art-replacements'
 MEDIA = PACK / 'media/splat-people'
+# What animations.rpak packs, and these clips' folder in it.
+ANIMATIONS = ROOT / 'local/build/animations'
+CLIP_FOLDER = 'splat-people'
+CONTAINER = ROOT / 'local/data/animations.rpak'
 CHARACTERS = ROOT / 'local/art/generated/people/dagger-characters'
 CLIPS = Path('/data/assets/splat-characters/pinoc-clips/mixamo')
 # Each pack's clip, by the name the game plays it under, from the PINOC Mixamo export it is cut from.
@@ -161,9 +173,10 @@ def palette(body):
     return [f'#{r:02x}{g:02x}{b:02x}' for r, g, b in np.clip(np.round(centres), 0, 255).astype(int)]
 
 
-def entry(path):
+def entry(path, root=ROOT / 'content'):
+    """A file as the payload states it: its path under root (the content, or the container's staging), length and digest."""
     data = path.read_bytes()
-    return {'path': path.relative_to(ROOT / 'content').as_posix(), 'byteLength': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+    return {'path': path.relative_to(root).as_posix(), 'byteLength': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
 
 
 def skirt(body):
@@ -200,13 +213,17 @@ def main():
         for joint, parent in skin_joints(body).items():
             if extra.setdefault(joint, parent) != parent:
                 raise SystemExit(f'{ready["id"]} hangs {joint} from {parent}, and another character from {extra[joint]}')
-    if MEDIA.exists():
-        shutil.rmtree(MEDIA)
-    (MEDIA / 'clips').mkdir(parents=True)
+    if CONTAINER.parent.is_symlink() or not os.access(CONTAINER.parent, os.W_OK):
+        raise SystemExit(f'{CONTAINER.parent} is linked or read-only: give this checkout a local/data of its own to pack animations.rpak')
+    for folder in (MEDIA, ANIMATIONS / CLIP_FOLDER):
+        if folder.exists():
+            shutil.rmtree(folder)
+        folder.mkdir(parents=True)
     clips = {}
     for name, file in PACKS.items():
-        clip_pack(args.clips / file, name, MEDIA / 'clips' / f'{name}.glb', extra)
-        clips[name] = entry(MEDIA / 'clips' / f'{name}.glb')
+        clip_pack(args.clips / file, name, ANIMATIONS / CLIP_FOLDER / f'{name}.glb', extra)
+        clips[name] = entry(ANIMATIONS / CLIP_FOLDER / f'{name}.glb', ANIMATIONS)
+    subprocess.run(['rusty', 'pack-content', str(ANIMATIONS), '--output', str(CONTAINER)], check=True, stdout=subprocess.DEVNULL)
     characters = {}
     for ready in ready_list:
         cid, fit = ready['id'], fits[ready['id']]
@@ -229,8 +246,9 @@ def main():
         'producer': 'PINOC (Viggle): library and generated motions, Mixamo rig', 'license': 'PINOC clip',
         'characters': characters}
     payload_path.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + '\n')
-    print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted) and the {", ".join(PACKS)} packs '
-          f'({sum(clip["byteLength"] for clip in clips.values()) / 1e6:.2f} MB), and stated artReplacements.splatPeople')
+    print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted), packed the {", ".join(PACKS)} packs '
+          f'({sum(clip["byteLength"] for clip in clips.values()) / 1e6:.2f} MB) into {CONTAINER.relative_to(ROOT)}, and stated artReplacements.splatPeople; '
+          f'publish it with scripts/data-sync.sh ship animations.rpak')
 
 
 if __name__ == '__main__':

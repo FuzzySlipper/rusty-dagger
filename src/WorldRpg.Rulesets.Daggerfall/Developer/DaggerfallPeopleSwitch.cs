@@ -25,12 +25,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// it walks at (<see cref="SplatGait"/>), so the same seed walks alike after a load. A character in a long skirt walks the
 /// art set's skirt walks instead, softer, with its skirt pushed open by the legs: by the tuning (or people.splat-pace for
 /// the run) its walkers go at their walk's own pace, slower than the rest, or the walk plays faster to keep the walkers' pace.
+/// The characters' clips are read from the animations container (<see cref="DaggerfallAnimations"/>); without it every
+/// walker draws its sprite and the gsplat switches are refused.
 /// </summary>
 /// <param name="rig">The art set's people rig, or null when it carries none.</param>
 /// <param name="splats">The art set's gsplat townspeople, or null when it carries none.</param>
+/// <param name="clips">The animations container the gsplat townspeople's clips are read from, or null when it is not installed.</param>
 /// <param name="partsRigs">The Engine's parts rigs, which the rig figure draws through.</param>
 /// <param name="animation">The Engine's animation, which opens, poses and draws the gsplat characters.</param>
-/// <param name="content">The product content the gsplat characters and their clips are read from.</param>
+/// <param name="content">The product content the gsplat characters' bodies are read from.</param>
 /// <param name="walkerSpeed">How fast a townsperson walks, in metres a second, which a character's stride keeps pace with.</param>
 /// <param name="tuning">How the gsplat people draw.</param>
 /// <param name="actors">The actors, counted for who walks here now.</param>
@@ -40,7 +43,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="seed">A walker's stable seed, by actor, which picks its gait.</param>
 /// <param name="refreshed">Whether the refreshed art draws; while the classic art does, walkers draw their sprites.</param>
 /// <param name="warn">Says what the walkers draw that the art set did not mean them to.</param>
-internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, DaggerfallSplatPeople? splats, Func<IPartsRigsService> partsRigs,
+internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, DaggerfallSplatPeople? splats, DaggerfallAnimations? clips, Func<IPartsRigsService> partsRigs,
     Func<IAnimationService> animation, Func<IContentService> content, float walkerSpeed, DaggerfallSplatPeopleTuning tuning, ActorsState actors,
     DaggerfallPeopleStage stage, IReadOnlyCollection<int> townspeople, Func<long, int?> townsperson, Func<long, int> seed, Func<bool> refreshed, Action<string> warn)
     : IWalkerCrowd, IDisposable, IDeveloperPeopleCommands
@@ -71,7 +74,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private SplatCrowd? splatCrowd;
 
     /// <summary>Whether walkers draw as the characters of their own townsperson art: the default, until people.rig or people.splat off.</summary>
-    private bool own = splats is not null;
+    private bool own = splats is not null && clips is not null;
 
     /// <summary>Whether this session has given way to its replacement: its walkers draw their sprites from then on.</summary>
     private bool yielded;
@@ -129,7 +132,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     public DebugCommandResult Splat(string character)
     {
         if (character == "off") return Off();
-        if (splats is null) return DaggerfallDeveloperReplies.Refused("The art set carries no gsplat townspeople.");
+        if (Unplayable() is { } refused) return refused;
         letGo = false;
         if (character == "own")
         {
@@ -138,11 +141,11 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             Splats().Use(null);
             Crowd = splatCrowd;
             ActorState[] walking = Walking();
-            int sprites = walking.Count(walker => townsperson(walker.DurableId) is not { } archive || !splats.ByArchive.ContainsKey(archive));
+            int sprites = walking.Count(walker => townsperson(walker.DurableId) is not { } archive || !splats!.ByArchive.ContainsKey(archive));
             return DebugCommandResult.Success($"Walking people draw as the gsplat characters of their townsperson art, lit; {walking.Length} walk here now" +
                 (sprites == 0 ? "." : $", {sprites} of them as sprites, wearing art without a character."));
         }
-        if (!splats.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
+        if (!splats!.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
             return DaggerfallDeveloperReplies.Refused($"The art set has no gsplat character '{character}'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, own or off.");
         SplatFigure figure = Open(splats, character, person);
         Splats().Use(figure);
@@ -160,8 +163,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             return DebugCommandResult.Success($"{released} spawned walkers draw as the rest do again.");
         }
         if (count is < 1 or > 16) return DaggerfallDeveloperReplies.Refused("people.spawn takes a COUNT of 1 to 16.");
-        if (splats is null) return DaggerfallDeveloperReplies.Refused("The art set carries no gsplat townspeople.");
-        if (!splats.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
+        if (Unplayable() is { } refused) return refused;
+        if (!splats!.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
             return DaggerfallDeveloperReplies.Refused($"The art set has no gsplat character '{character}'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, or off.");
         letGo = false;
         SplatFigure figure = Open(splats, character, person);
@@ -288,6 +291,12 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
+    /// <summary>Why the gsplat townspeople cannot be drawn: the art set carries none, or their clips are not installed; null when they can.</summary>
+    private DebugCommandResult? Unplayable() =>
+        splats is null ? DaggerfallDeveloperReplies.Refused("The art set carries no gsplat townspeople.")
+        : clips is null ? DaggerfallDeveloperReplies.Refused($"{DaggerfallAnimations.ContainerName} is not installed, so the gsplat townspeople have no clips.")
+        : null;
+
     private ActorState[] Walking() => [.. actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian && actor.Wander.State != WanderState.Unloaded)];
 
     /// <summary>
@@ -363,7 +372,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             {
                 if (!packs.TryGetValue(clip, out RenderResource? pack))
                 {
-                    using ContentReference reference = Reference(art.Clips[clip]);
+                    using ContentReference reference = clips!.Open(art.Clips[clip]);
                     packs.Add(clip, pack = engine.OpenAnimationClipPackFromContent(new(reference)));
                 }
                 engine.AssociateAnimationClipPackByJointNames(new(body, pack, art.Producer, art.License));

@@ -53,6 +53,9 @@ internal sealed record DaggerfallSessionComposition(
     /// <summary>The 3D first-person art installed beside the product, or none; drawn when the viewmodel tuning asks for it.</summary>
     internal DaggerfallHeldArt? HeldArt { get; init; }
 
+    /// <summary>The animation clips installed beside the product, or none; without them the townspeople draw their sprites.</summary>
+    internal DaggerfallAnimations? Animations { get; init; }
+
     /// <summary>The refreshed art set the bundle selects, or none; drawn unless a developer switches the run to classic art.</summary>
     internal DaggerfallArtReplacements? ArtReplacements { get; init; }
 

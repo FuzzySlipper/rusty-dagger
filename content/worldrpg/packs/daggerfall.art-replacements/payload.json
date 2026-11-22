@@ -128391,47 +128391,47 @@
   "splatPeople": {
    "clips": {
     "walk": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/walk.glb",
+     "path": "splat-people/walk.glb",
      "byteLength": 183248,
      "sha256": "d1cba35ad39f831ee867f0a69f40200abcc8f050ac1511983b865d3ae4db55e4"
     },
     "stroll": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/stroll.glb",
+     "path": "splat-people/stroll.glb",
      "byteLength": 174140,
      "sha256": "ec620cdb1e7b85cfba4657cf4600845fff204243a26e3f5080ee70283f4dcdee"
     },
     "stroll-easy": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/stroll-easy.glb",
+     "path": "splat-people/stroll-easy.glb",
      "byteLength": 174136,
      "sha256": "3be260ac96dea820a1ab16d6bcb6b840b9b4a8fa5f7c42c80c45a9e7bd7d37b4"
     },
     "gentle": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/gentle.glb",
+     "path": "splat-people/gentle.glb",
      "byteLength": 183248,
      "sha256": "5d5ce11a10902e7a4c309eb7983b5e63bef1b3b84208e0701f08ee6ff44897fa"
     },
     "stroll-gentle": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/stroll-gentle.glb",
+     "path": "splat-people/stroll-gentle.glb",
      "byteLength": 174164,
      "sha256": "8da263a4fc2b15b24fb4987a0ce8efa0711826d5ae10dbd797073c63b83fddc3"
     },
     "idle": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle.glb",
+     "path": "splat-people/idle.glb",
      "byteLength": 188020,
      "sha256": "50b0590a5c5a046a6f8b92a9b610d7f5f07f3d7638d3223cbf6dbfdf60688bf7"
     },
     "idle-relaxed": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle-relaxed.glb",
+     "path": "splat-people/idle-relaxed.glb",
      "byteLength": 174908,
      "sha256": "458fb5ecc57478e32cff93731c467a40ff8121e077c289c88ae570d418aaf70b"
     },
     "idle-crossed": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle-crossed.glb",
+     "path": "splat-people/idle-crossed.glb",
      "byteLength": 187640,
      "sha256": "bc2a5dd2acd94893c6db1f425314b3640d82a649e414f611f232684c94998a7b"
     },
     "idle-hips": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle-hips.glb",
+     "path": "splat-people/idle-hips.glb",
      "byteLength": 217304,
      "sha256": "e714634e9e88e300a835cf204167b14ef8a8a0748d23ecd11c07cb7dca6c2f48"
     }

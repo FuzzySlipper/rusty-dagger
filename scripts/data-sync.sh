@@ -7,8 +7,10 @@
 # (scripts/route.py data) is the one publisher; every checkout pulls the revision its commit needs. The data is derived
 # from arena2 and never leaves our network. Beside lan/, the store's ship/ root holds what ships with the game but lives
 # outside GitHub, finals only, so it can be published whole: exactly the shipped containers, first-person.rpak (the packed
-# arms authoring/tools/fp-arms/build.sh builds from purchased art, which ships packed but never as raw assets) and
-# music.rpak (Patch's arrangement of the score, which authoring/tools/music/build.sh packs from the store's assets/music/).
+# arms authoring/tools/fp-arms/build.sh builds from purchased art, which ships packed but never as raw assets),
+# music.rpak (Patch's arrangement of the score, which authoring/tools/music/build.sh packs from the store's assets/music/)
+# and animations.rpak (the animation clips, which never live in Git: authoring/tools/people/splat-people.py packs the
+# townspeople's from their NAS sources).
 #
 #   scripts/data-sync.sh pull                  # this checkout's revision into local/data, with the shipped containers
 #   scripts/data-sync.sh pull --import-tree    # also local/build/import, for a box that runs the tests
@@ -19,9 +21,9 @@
 #   scripts/data-sync.sh status                # the container's revision beside this tree's, and whether the store has it
 #   scripts/data-sync.sh store                 # the revisions the store holds, with their size and publish time
 #   scripts/data-sync.sh publish               # the import lane only: this checkout's whole import into the store
-#   scripts/data-sync.sh ship NAME             # the shipped container NAME (first-person.rpak or music.rpak) built
-#                                              # here into ship/, replacing the one there; only that one, since a
-#                                              # pulled copy of the other would replace a newer build
+#   scripts/data-sync.sh ship NAME             # the shipped container NAME (first-person.rpak, music.rpak or
+#                                              # animations.rpak) built here into ship/, replacing the one there; only
+#                                              # that one, since a pulled copy of another would replace a newer build
 #   ... --mirror                               # also delete from local/data what the store lacks (the import tree
 #                                              # is always made to match the revision)
 #   DAGGER_DATA_STORE=HOST:/path scripts/data-sync.sh pull   # a store over ssh (changed 8 KiB blocks only)
@@ -40,7 +42,7 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 data=$root/local/data
 store=${DAGGER_DATA_STORE:-/mnt/den-nas-backup/data/rusty-dagger/lan}
 store=${store%/}
-usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | cache [REVISION] | status | store | publish | ship first-person.rpak|music.rpak"
+usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | cache [REVISION] | status | store | publish | ship first-person.rpak|music.rpak|animations.rpak"
 
 direction=${1:-}
 shift || true
@@ -49,7 +51,7 @@ options=(-rt --info=stats1)
 for argument in "$@"; do
   case $argument in
     # Before the revision pattern: a container's name can begin with a hexadecimal digit.
-    first-person.rpak|music.rpak) [[ $direction == ship ]] || { echo "$usage" >&2; exit 2; }; shipping=$argument ;;
+    first-person.rpak|music.rpak|animations.rpak) [[ $direction == ship ]] || { echo "$usage" >&2; exit 2; }; shipping=$argument ;;
     [0-9a-f]*) [[ $direction == cache && $argument =~ ^[0-9a-f]{64}$ ]] || { echo "$usage" >&2; exit 2; }; named=$argument ;;
     --mirror) options+=(--delete) ;;
     --import-tree) import_tree=1 ;;
@@ -64,7 +66,7 @@ if [[ $store == *:* ]]; then
 fi
 # What ships outside GitHub sits in the store's ship/ root, beside lan/.
 ship=${store%/*}/ship ship_path=${store_path%/*}/ship
-shipped=(first-person.rpak music.rpak)
+shipped=(first-person.rpak music.rpak animations.rpak)
 at_store() { if [[ -n $store_host ]]; then ssh -o BatchMode=yes "$store_host" "$*"; else bash -c "$*"; fi; }
 
 # What the container says of itself (worldrpg/data-container.json), read through its index, so an entry stored
@@ -202,14 +204,17 @@ case $direction in
       rm "$incoming/import.tar.zst"
       (cd "$incoming" && sha256sum --check --quiet SHA256SUMS) ||
         { echo "data-sync: the copy of importer revision $revision does not match its sums; nothing was linked" >&2; exit 1; }
-      for name in "${shipped[@]}"; do ln -s "../../$name" "$incoming/data/$name"; done
       chmod -R a-w "$incoming/data" "$incoming/import"
       # When another link got there first, its copy is the same revision, checked the same way.
       mv -T "$incoming" "$entry" 2>/dev/null || true
     fi
-    # The shipped containers are not import outputs: one copy here serves every revision, refreshed from the store's ship/.
+    # The shipped containers are not import outputs: one copy here serves every revision, refreshed from the store's ship/,
+    # and each revision's data links to it, a revision cached before a container first shipped included.
     for name in "${shipped[@]}"; do
       if at_store "test -f '$ship_path/$name'" 2>/dev/null; then rsync "${options[@]}" "$ship/$name" "$cache/"; fi
+      if [[ ! -L $entry/data/$name ]]; then
+        chmod u+w "$entry/data" && ln -s "../../$name" "$entry/data/$name" && chmod a-w "$entry/data"
+      fi
     done
     if [[ $direction == cache ]]; then echo "data-sync: $entry holds importer revision $revision"; exit 0; fi
     folders=(local/data)
@@ -291,6 +296,7 @@ case $direction in
     case $shipping in
       first-person.rpak) builder=authoring/tools/fp-arms/build.sh ;;
       music.rpak) builder=authoring/tools/music/build.sh ;;
+      animations.rpak) builder=authoring/tools/people/splat-people.py ;;
     esac
     [[ -f $built && ! -L $built && ! -L $data ]] ||
       { echo "data-sync: no $shipping built in this checkout's own local/data ($builder)" >&2; exit 1; }

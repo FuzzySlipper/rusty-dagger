@@ -56,8 +56,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
 
     /// <summary>
     /// The containers the player's own Daggerfall files are converted into: the data every game reads and the developer's
-    /// optional classic art the data leaves out; and two that ship with the game, built on a development checkout: the
-    /// score, Patch's arrangement, whose tracks are read by name, and the optional 3D first-person art.
+    /// optional classic art the data leaves out; and three that ship with the game, built on a development checkout: the
+    /// score, Patch's arrangement, whose tracks are read by name, the optional 3D first-person art, and the optional
+    /// animation clips, which never live in Git.
     /// </summary>
     public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
     [
@@ -74,6 +75,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         new(DaggerfallHeldArt.ContainerName, "the 3D first-person arms", Required: false,
             DevelopmentStep: "Run `authoring/tools/fp-arms/build.sh` in the repository root (authoring/tools/fp-arms/README.md).",
             ReleaseStep: "Build first-person.rpak on a development checkout with authoring/tools/fp-arms/build.sh and place it beside the product."),
+        new(DaggerfallAnimations.ContainerName, "the townspeople's animation clips", Required: false,
+            DevelopmentStep: "Run `scripts/data-sync.sh pull` (or `link`), or build it with `authoring/tools/people/splat-people.py`.",
+            ReleaseStep: "Pull animations.rpak on a development checkout with scripts/data-sync.sh and place it beside the product."),
     ];
 
     /// <summary>
@@ -125,6 +129,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DisabledQuestSelection = admitted.DisabledQuestSelection,
             Music = admitted.Music,
             HeldArt = admitted.HeldArt,
+            Animations = admitted.Animations,
             ArtReplacements = admitted.ArtReplacements,
             Blocks = admitted.Blocks,
             Loading = context.Loading,
@@ -214,7 +219,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
             DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected, DaggerfallAttackTuning.Default.Classes.Keys);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, start.Pose, profiles, quests.Receipts, quests.DisabledSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt, art);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, start.Pose, profiles, quests.Receipts, quests.DisabledSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt,
+                DaggerfallAnimations.For(selected), art);
         });
 
     /// <summary>A quests pack's payload and the records in the <c>quests/</c> folder beside it.</summary>
@@ -249,5 +255,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         DaggerfallData Data,
         DaggerfallMusicBundle? Music,
         DaggerfallHeldArt? HeldArt,
+        DaggerfallAnimations? Animations,
         DaggerfallArtReplacements? ArtReplacements);
 }

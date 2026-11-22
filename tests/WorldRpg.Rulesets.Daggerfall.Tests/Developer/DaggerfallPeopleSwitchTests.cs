@@ -140,7 +140,7 @@ public sealed class DaggerfallPeopleSwitchTests
     {
         using ActorsState actors = new();
         List<string> warnings = [];
-        using DaggerfallPeopleSwitch people = new(null, null, () => PartsRigsRecorder.Create().Service, () => AnimationRecorder.Create().Service,
+        using DaggerfallPeopleSwitch people = new(null, null, null, () => PartsRigsRecorder.Create().Service, () => AnimationRecorder.Create().Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, warnings.Add);
         // Walkers draw their sprites, and nothing is said: there are no characters to miss.
         Assert.Null(people.Show(100, 10, 1.7F, walking: true));
@@ -173,7 +173,7 @@ public sealed class DaggerfallPeopleSwitchTests
             civilian.Actor.Add(new WorldRpg.Kit.Ai.WanderMemoryComponent());
         }
         // These walkers wear no townsperson art, so the crowd draws them as their sprites.
-        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, _ => 0, () => true, _ => { });
 
         var spawned = people.Spawn("454", 2);
@@ -213,7 +213,7 @@ public sealed class DaggerfallPeopleSwitchTests
         // Walkers 10 and 14 wear townsperson art 385, 11 wears 386, 12 wears art without a character, 13 none at all.
         Dictionary<long, int?> worn = new() { [10] = 385, [11] = 386, [12] = 999, [13] = null, [14] = 385 };
         using ActorsState actors = new();
-        using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, splats, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386, 999, 385], id => worn[id],
             _ => 0, () => refreshed, warnings.Add);
 
@@ -275,7 +275,7 @@ public sealed class DaggerfallPeopleSwitchTests
         }
         Dictionary<long, int?> worn = new() { [10] = 381, [11] = 395 };
         DaggerfallPeopleStage stage = Stage(actors);
-        using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, splats, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, stage, [381, 395], id => worn[id], _ => 0, () => true, _ => { });
         Appearance townsman = people.Show(100, 10, 1.7F, walking: true)!, townswoman = people.Show(101, 11, 1.7F, walking: true)!;
 
@@ -294,7 +294,7 @@ public sealed class DaggerfallPeopleSwitchTests
         AnimationRecorder animation = AnimationRecorder.Create();
         animation.Clips = Clips(Art().SplatPeople!);
         using ActorsState actors = new();
-        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, _ => { });
         Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
         people.Publishing();
@@ -322,7 +322,7 @@ public sealed class DaggerfallPeopleSwitchTests
         animation.Clips = Clips(Art().SplatPeople!);
         Dictionary<long, int?> worn = new() { [10] = 385, [11] = 386 };
         using ActorsState actors = new();
-        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386], id => worn[id], _ => 0, () => true, _ => { });
         Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
         Assert.NotNull(people.Show(101, 11, 1.7F, walking: true));
@@ -354,13 +354,49 @@ public sealed class DaggerfallPeopleSwitchTests
         animation.Clips = [new("walk", "walk", 1.03F, true, 1)];
         List<string> warnings = [];
         using ActorsState actors = new();
-        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, warnings.Add);
         Assert.Null(people.Show(100, 10, 1.7F, walking: true));
         Assert.Null(people.Show(101, 11, 1.7F, walking: true));
         Assert.Equal(["Gsplat character 385 would not open, so walkers wearing townsperson art 385 draw their sprites: " +
             "Gsplat character 385 carries no clip 'stroll' after its clip packs were bound; it has walk."], warnings);
         Assert.Single(animation.OpenedPaths);
+        Assert.Empty(animation.Created);
+    }
+
+    [Fact]
+    public void Without_the_animations_container_walkers_draw_their_sprites_and_the_gsplat_switches_say_why()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        List<string> warnings = [];
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, null, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, warnings.Add);
+        // The session says once that the container is missing; the walkers draw their sprites, and nothing is opened.
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        Assert.Null(people.Crowd);
+        Assert.Empty(animation.OpenedPaths);
+        Assert.Empty(warnings);
+        const string missing = "animations.rpak is not installed, so the gsplat townspeople have no clips.";
+        Assert.Equal(missing, people.Splat("385").Message);
+        Assert.Equal(missing, people.Splat("own").Message);
+        Assert.Equal(missing, people.Spawn("385", 1).Message);
+        Assert.True(people.Splat("off").Succeeded);
+    }
+
+    [Fact]
+    public void A_container_holding_another_build_of_a_clip_leaves_walkers_their_sprites_said_once()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = Clips(Art().SplatPeople!);
+        List<string> warnings = [];
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, Shipped(other: "stroll"), () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, warnings.Add);
+        Assert.Null(people.Show(100, 10, 1.7F, walking: true));
+        Assert.Null(people.Show(101, 11, 1.7F, walking: true));
+        Assert.Equal(["Gsplat character 385 would not open, so walkers wearing townsperson art 385 draw their sprites: animations.rpak holds another build of " +
+            "splat-people/stroll.glb than the art pack names; pull the container this checkout's payload was written with (scripts/data-sync.sh pull)."], warnings);
         Assert.Empty(animation.Created);
     }
 
@@ -442,7 +478,7 @@ public sealed class DaggerfallPeopleSwitchTests
             civilian.Stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(new Rusty.Engine.Mechanics.Stat(1), 1));
             civilian.Actor.Add(new WorldRpg.Kit.Ai.WanderMemoryComponent());
         }
-        using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, splats, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, id => seeds[id], () => true, _ => { });
 
         foreach (long id in seeds.Keys) Assert.NotNull(people.Show((ulong)(100 + id), id, 1.7F, walking: true));
@@ -478,7 +514,7 @@ public sealed class DaggerfallPeopleSwitchTests
             new Rusty.Engine.Mechanics.StatsComponent(), new ActorPose(new WorldPoint(12F, 0F, 0F), 0F), "health");
         walker.Stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(new Rusty.Engine.Mechanics.Stat(1), 1));
         walker.Actor.Add(new WorldRpg.Kit.Ai.WanderMemoryComponent());
-        using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+        using DaggerfallPeopleSwitch people = new(null, splats, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, _ => 0, () => true, _ => { });
 
         Assert.True(people.Splat("456").Succeeded);
@@ -534,7 +570,7 @@ public sealed class DaggerfallPeopleSwitchTests
     private static DaggerfallPeopleSwitch Switch(DaggerfallArtReplacements art, PartsRigsRecorder rigs, AnimationRecorder animation)
     {
         ActorsState actors = new();
-        return new(art.PeopleRig, art.SplatPeople, () => rigs.Service, () => animation.Service, () => new ContentFake([]), WalkerSpeed,
+        return new(art.PeopleRig, art.SplatPeople, Shipped(), () => rigs.Service, () => animation.Service, () => new ContentFake([]), WalkerSpeed,
             DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, _ => 0, () => true, _ => { });
     }
 
@@ -542,6 +578,21 @@ public sealed class DaggerfallPeopleSwitchTests
     private static DaggerfallPeopleStage Stage(ActorsState actors) => new(actors, _ => true, new WorldRpg.Kit.Controls.PlayerControlState(new WorldPoint(0F, 0F, 0F), 0F, 0F),
         (at, moving) => actors.All.Any(actor => !moving.Contains(actor.DurableId) && actor.Wander.Route is not null
             && System.Numerics.Vector3.Distance(actor.Position.ToVector(), at) < 1F) ? null : WorldPoint.From(at));
+
+    /// <summary>
+    /// The animations container as the art set names its clips: each at its path with its digest. The recording animation
+    /// service never reads a pack's bytes, so the container serves none.
+    /// </summary>
+    /// <param name="other">A clip the container holds another build of.</param>
+    internal static DaggerfallAnimations Shipped(string? other = null)
+    {
+        BundleContentFake service = new();
+        service.Container(DaggerfallAnimations.ContainerName);
+        foreach ((string name, DaggerfallArtFile clip) in Art().SplatPeople!.Clips)
+            service.AddEntry(DaggerfallAnimations.ContainerName, clip.Path, name == other ? default : clip.Sha256, 1,
+                () => throw new InvalidOperationException("The recording animation service reads no clip pack's bytes."));
+        return new(new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallAnimations.ContainerName));
+    }
 
     /// <summary>Every clip the art set's packs carry, as the Engine reads them back from a body that bound them all, each named its own id.</summary>
     internal static AnimationClipInfo[] Clips(DaggerfallSplatPeople splats) => [.. splats.Clips.Keys.Select((clip, at) => new AnimationClipInfo(clip, clip, 3F, true, (uint)at + 1))];

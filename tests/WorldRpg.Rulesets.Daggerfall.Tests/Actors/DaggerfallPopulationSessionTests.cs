@@ -584,6 +584,7 @@ public sealed class DaggerfallPopulationSessionTests
             {
                 Profiles = profiles,
                 ArtReplacements = art,
+                Animations = DaggerfallPeopleSwitchTests.Shipped(),
             };
             List<string> releases = [];
             ContentFake content = new(releases);

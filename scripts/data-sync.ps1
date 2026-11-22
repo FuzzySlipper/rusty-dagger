@@ -1,4 +1,4 @@
-# Pulls the containers the game opens (local\data: daggerfall-data.rpak, music.rpak, classic-art.rpak, first-person.rpak) into a Windows
+# Pulls the containers the game opens (local\data: daggerfall-data.rpak, music.rpak, classic-art.rpak, first-person.rpak, animations.rpak) into a Windows
 # checkout; scripts/data-sync.sh says what they are. The default source is den-agents' copies by importer revision,
 # ~/.cache/rusty-dagger/data/REVISION/data, through the P: share (mapped on the console desktop only): the revisions
 # its checkouts link to, main's among them, and any other that `scripts/data-sync.sh cache REVISION` fetched there
@@ -71,10 +71,10 @@ if ($revision -ne $checkout -or -not $whole) { Write-Output $missing; exit 1 }
 # The developer's classic-art container, for world.classic-art, where the revision has one (every one since #10763).
 robocopy $source $data daggerfall-data.rpak classic-art.rpak /FFT /NP /NFL /NDL /R:2 /W:2
 if ($LASTEXITCODE -ge 8) { throw "data-sync: robocopy failed ($LASTEXITCODE)" }
-# The shipped containers (first-person.rpak, music.rpak) are not import outputs: they sit beside the containers in a
+# The shipped containers (first-person.rpak, music.rpak, animations.rpak) are not import outputs: they sit beside the containers in a
 # checkout, at a cache's root, and in a store's ship root.
 $shipped = if (Test-Path (Join-Path $Store 'revisions')) { Join-Path (Split-Path -Parent $Store) 'ship' } else { $Store }
-foreach ($name in 'first-person.rpak', 'music.rpak') {
+foreach ($name in 'first-person.rpak', 'music.rpak', 'animations.rpak') {
     if (Test-Path (Join-Path $shipped $name)) {
         robocopy $shipped $data $name /FFT /NP /NFL /NDL /R:2 /W:2
         if ($LASTEXITCODE -ge 8) { throw "data-sync: robocopy failed ($LASTEXITCODE)" }

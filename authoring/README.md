@@ -151,8 +151,12 @@ writes its own comparison in `local/art/review/flora/trials/506-11/`.
 - The splat stages and approval manifest live under `local/art/generated/people/dagger-characters/`. To run the
   asset-pipeline `dagger-char` tools on this tree, set `DAGGER_CHAR_ROOT="$PWD/local/art/generated/people/dagger-characters"`
   from the Rusty Dagger root. Keep the existing character IDs and numbered stage directories.
-- Run `python3 authoring/tools/people/splat-people.py` to publish the ready skinned-splat GLBs, clip fits and shared
-  walk and idle clips to the art pack's `media/splat-people/`. Commit that directory and the pack's `payload.json` together.
+- Run `python3 authoring/tools/people/splat-people.py` to publish the ready skinned-splat GLBs and clip fits to the art
+  pack's `media/splat-people/` and pack the shared walk and idle clips into `local/data/animations.rpak`. Commit that
+  directory and the pack's `payload.json` together, and publish the container in the same turn with
+  `scripts/data-sync.sh ship animations.rpak`.
+- Animation clips never go in Git, PINOC library or generated alike: their sources stay on the NAS
+  (`/data/assets/splat-characters/pinoc-clips/`) and they ship packed in `animations.rpak` (README, Game data).
 - A new walk or idle joins the script's `PACKS` only after asset-pipeline has looped it (`loop_clip.py`), cleaned it
   (`clean_clip_noise.py`) and fitted it into every ready character's `ID-clip-fit.json`; PINOC's generated motions
   neither loop nor keep the bone lengths still.

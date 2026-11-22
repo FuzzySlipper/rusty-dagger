@@ -9,6 +9,7 @@ using WorldRpg.Host;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Tests.Support;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -1015,8 +1016,7 @@ public sealed class PublishedContentDeliveryTests
             .. new[] { "clouds", "sea", "window", "logo" }.Select(layer => section.GetProperty("titleScene").GetProperty(layer)),
             .. section.GetProperty("peopleRig").GetProperty("views").EnumerateObject()
                 .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model"))),
-            // The gsplat townspeople's walk and idle packs, and each character's body.
-            .. section.GetProperty("splatPeople").GetProperty("clips").EnumerateObject().Select(clip => clip.Value),
+            // Each gsplat townsperson's body; their clips ship in the animations container.
             .. section.GetProperty("splatPeople").GetProperty("characters").EnumerateObject().Select(character => character.Value.GetProperty("body"))];
         foreach (JsonElement file in files)
         {
@@ -1028,6 +1028,24 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(
             [.. ContentFiles(content, DaggerfallArtReplacements.Folder + "/media").Order(StringComparer.Ordinal)],
             [.. files.Select(file => file.GetProperty("path").GetString()!).Order(StringComparer.Ordinal)]);
+    }
+
+    [AnimationsContainerFact]
+    public void The_townspeoples_clips_ship_in_the_animations_container_as_the_art_pack_names_them()
+    {
+        ProductContent content = AdmittedContent();
+        JsonElement clips = JsonDocument.Parse(content.ReadBytes("worldrpg/packs/daggerfall.art-replacements/payload.json").ToArray()).RootElement
+            .GetProperty("artReplacements").GetProperty("splatPeople").GetProperty("clips");
+        IReadOnlyDictionary<string, ContentReferenceInfo> shipped = TestDataContainers.Entries(TestDataContainers.Animations);
+        // The container holds exactly the clips the pack names, each the bytes it names.
+        Assert.Equal([.. shipped.Keys.Order(StringComparer.Ordinal)],
+            [.. clips.EnumerateObject().Select(clip => clip.Value.GetProperty("path").GetString()!).Order(StringComparer.Ordinal)]);
+        Assert.All(clips.EnumerateObject().Select(clip => clip.Value), clip =>
+        {
+            ContentReferenceInfo entry = shipped[clip.GetProperty("path").GetString()!];
+            Assert.Equal(DaggerfallContentHash.Parse(clip.GetProperty("sha256").GetString()!, "the art pack"), entry.Sha256);
+            Assert.Equal((ulong)clip.GetProperty("byteLength").GetInt64(), entry.ByteLength);
+        });
     }
 
     private static ProductContent AdmittedContent()

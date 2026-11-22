@@ -23,6 +23,9 @@ internal static class TestDataContainers
     /// <summary>The developer's classic-art container: the classic media the art pack draws anew, which the data container leaves out.</summary>
     public const string ClassicArt = "classic-art.rpak";
 
+    /// <summary>The animations container's file name: the clips the game plays, which ship with it and never live in Git.</summary>
+    public const string Animations = "animations.rpak";
+
     private static readonly object Gate = new();
     private static readonly Dictionary<string, Opened> OpenedContainers = new(StringComparer.Ordinal);
     private static EngineTestHost? host;

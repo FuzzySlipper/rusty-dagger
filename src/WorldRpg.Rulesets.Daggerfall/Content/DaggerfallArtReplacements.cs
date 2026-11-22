@@ -98,7 +98,8 @@ internal sealed record DaggerfallPeopleRigDirection(string Label, float Angle, s
 
 /// <summary>
 /// The gsplat townspeople walking people draw as: their clip packs by the clip each carries (PINOC motions on the Mixamo
-/// rig, one clip a pack, named as the pack is listed); the walks a walker may walk (<paramref name="Walks"/>), the softer
+/// rig, one clip a pack, named as the pack is listed), each a path in the animations container
+/// (<see cref="DaggerfallAnimations"/>), not in the pack; the walks a walker may walk (<paramref name="Walks"/>), the softer
 /// ones a walker in a long skirt walks instead (<paramref name="SkirtWalks"/>), and the idles any walker may stand in,
 /// each walker playing one of each by its seed; the top joint their pelvis fits move; the producer and licence the
 /// packs are associated under; and the characters by asset-pipeline id.

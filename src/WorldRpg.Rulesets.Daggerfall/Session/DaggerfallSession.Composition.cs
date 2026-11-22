@@ -1134,12 +1134,15 @@ internal sealed partial class DaggerfallSession
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,
                 ApplyTransportChange);                                                                // Developer
             DaggerfallPeopleStage peopleStage = new(State.Actors, id => Population.Walks(id), State.PlayerControl, (at, moving) => _placement.StandingAt(at, moving));   // Developer
-            _people = new DaggerfallPeopleSwitch(composition.ArtReplacements?.PeopleRig, composition.ArtReplacements?.SplatPeople, () => _engine.PartsRigs,
-                () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, _tuning.SplatPeople, State.Actors,
-                peopleStage, [.. definitions.Catalogs.Races.SelectMany(race => race.Townspeople.Values.SelectMany(archives => archives))],
-                id => Population.Townsperson(id), id => Population.Seed(id), () => DrawnArt is not null,
-                message => engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
-                    "daggerfall.people", "people.splat", message, string.Empty)));   // Developer
+            Action<string> warnPeople = message => engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
+                "daggerfall.people", "people.splat", message, string.Empty));   // Developer
+            // The gsplat townspeople's clips ship in their own container; without it walkers draw their sprites, said once.
+            if (composition.ArtReplacements?.SplatPeople is not null && composition.Animations is null)
+                warnPeople($"{DaggerfallAnimations.ContainerName} is not installed, so the gsplat townspeople have no clips and walkers draw their sprites.");   // Developer
+            _people = new DaggerfallPeopleSwitch(composition.ArtReplacements?.PeopleRig, composition.ArtReplacements?.SplatPeople, composition.Animations,
+                () => _engine.PartsRigs, () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, _tuning.SplatPeople,
+                State.Actors, peopleStage, [.. definitions.Catalogs.Races.SelectMany(race => race.Townspeople.Values.SelectMany(archives => archives))],
+                id => Population.Townsperson(id), id => Population.Seed(id), () => DrawnArt is not null, warnPeople);   // Developer
             DaggerfallActorInspection actorInspection = new(State.Actors, State.PlayerControl, _roster, _senses, _enemyBehavior, _enemyMagic,
                 Casting, _combat, State.Effects, id => State.Actors.TryGet(id, out _) ? actorInventories.EquipmentFor(id).Read() : null, id => QuestFoes.Team(id),
                 () => _latestSimulationStep);                                                          // Developer
