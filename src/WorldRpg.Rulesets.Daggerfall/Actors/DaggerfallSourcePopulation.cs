@@ -177,6 +177,9 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         && definitions.Catalogs.TryGetRace(npc.Appearance.Race, out DaggerfallRaceDefinition race)
         ? race.Townsperson(npc.Appearance.Gender, npc.Appearance.NameSeed) : null;
 
+    /// <summary>Walker <paramref name="actorId"/>'s stable name seed, saved with it; 0 for an actor that is no townsperson.</summary>
+    internal int Seed(long actorId) => npcs.TryGet(actorId, out DaggerfallNpc? npc) ? npc.Appearance.NameSeed : 0;
+
     /// <summary>
     /// Advances only admitted source civilians. Enemy pursuit never owns this actor family; the
     /// wander coordinator records explicit idle, seeking, moving, blocked, unloaded, and dead

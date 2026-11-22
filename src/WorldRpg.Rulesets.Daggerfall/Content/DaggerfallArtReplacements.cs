@@ -97,38 +97,38 @@ internal sealed record DaggerfallPeopleRigView(DaggerfallArtFile Model, IReadOnl
 internal sealed record DaggerfallPeopleRigDirection(string Label, float Angle, string View, bool Mirror);
 
 /// <summary>
-/// The gsplat townspeople walking people draw as: PINOC's Mixamo Walking and Standing Idle as clip packs
-/// (<paramref name="Walk"/>, <paramref name="Idle"/>, whose clips are named <c>walk</c> and <c>idle</c>), the softened
-/// Walking that long skirts walk (<paramref name="Gentle"/>, clip <c>gentle</c>), the top joint their pelvis fits move,
-/// the producer and licence the packs are associated under, and the characters by asset-pipeline id.
+/// The gsplat townspeople walking people draw as: their clip packs by the clip each carries (PINOC motions on the Mixamo
+/// rig, one clip a pack, named as the pack is listed); the walks a walker may walk (<paramref name="Walks"/>), the softer
+/// ones a walker in a long skirt walks instead (<paramref name="SkirtWalks"/>), and the idles any walker may stand in,
+/// each walker playing one of each by its seed; the top joint their pelvis fits move; the producer and licence the
+/// packs are associated under; and the characters by asset-pipeline id.
 /// </summary>
-internal sealed record DaggerfallSplatPeople(DaggerfallArtFile Walk, DaggerfallArtFile Idle, DaggerfallArtFile Gentle, string Joint, string Producer,
-    string License, IReadOnlyDictionary<string, DaggerfallSplatPerson> Characters)
+internal sealed record DaggerfallSplatPeople(IReadOnlyDictionary<string, DaggerfallArtFile> Clips, IReadOnlyList<string> Walks,
+    IReadOnlyList<string> SkirtWalks, IReadOnlyList<string> Idles, string Joint, string Producer, string License,
+    IReadOnlyDictionary<string, DaggerfallSplatPerson> Characters)
 {
-    /// <summary>The clip each pack carries.</summary>
-    internal const string WalkClip = "walk", IdleClip = "idle", GentleClip = "gentle";
-
     /// <summary>The character that draws each classic townsperson archive, by its id.</summary>
     internal IReadOnlyDictionary<int, string> ByArchive { get; } = Characters.ToDictionary(character => character.Value.Archive, character => character.Key);
+
+    /// <summary>The walks <paramref name="person"/>'s walkers walk: the skirt walks in a long skirt, the walks otherwise.</summary>
+    internal IReadOnlyList<string> WalksOf(DaggerfallSplatPerson person) => person.Skirt is null ? Walks : SkirtWalks;
 }
 
 /// <summary>
 /// One gsplat character: what asset-pipeline calls it, the classic townsperson art it draws (a texture archive, which
 /// walkers wearing it draw as this character), its skinned-splat GLB (metres, standing on y = 0, facing +z), the
-/// pelvis fit of each clip to its legs, the speed its fitted walk travels, in metres a second, the colours of its
-/// own paint a pixel finish may snap to, and its long skirt, or null.
+/// pelvis fit of each clip it plays to its legs, by clip, the colours of its own paint a pixel finish may snap to, and
+/// its long skirt, or null.
 /// </summary>
-internal sealed record DaggerfallSplatPerson(string Name, int Archive, DaggerfallArtFile Body, DaggerfallSplatClipFit Walk, DaggerfallSplatClipFit Idle, float WalkSpeed,
-    IReadOnlyList<Color> Palette, DaggerfallSplatSkirt? Skirt = null);
+internal sealed record DaggerfallSplatPerson(string Name, int Archive, DaggerfallArtFile Body, IReadOnlyDictionary<string, DaggerfallSplatClipFit> Fits,
+    IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null);
 
 /// <summary>
-/// A long skirt on joints of its own, which the legs push open (<paramref name="Rest"/>); a character wearing one walks
-/// the gentle clip, fitted to its legs by <paramref name="Gentle"/>, which travels <paramref name="GentleSpeed"/> metres a second.
+/// A clip's pelvis fit: the top joint's translation t becomes (<paramref name="Scale"/> t.x, <paramref name="Lift"/> +
+/// <paramref name="Scale"/> t.y, <paramref name="Scale"/> t.z); a walk, fitted so, travels <paramref name="Speed"/>
+/// metres a second, and an idle travels none (null).
 /// </summary>
-internal sealed record DaggerfallSplatSkirt(SplatSkirt Rest, DaggerfallSplatClipFit Gentle, float GentleSpeed);
-
-/// <summary>A clip's pelvis fit: the top joint's translation t becomes (<paramref name="Scale"/> t.x, <paramref name="Lift"/> + <paramref name="Scale"/> t.y, <paramref name="Scale"/> t.z).</summary>
-internal sealed record DaggerfallSplatClipFit(float Scale, float Lift);
+internal sealed record DaggerfallSplatClipFit(float Scale, float Lift, float? Speed);
 
 /// <summary>A published file of the refreshed set: its path and digest.</summary>
 internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
@@ -794,21 +794,31 @@ internal sealed class DaggerfallArtReplacements
 
         DaggerfallSplatPeople SplatPeople(JsonElement splats)
         {
-            JsonElement clips = splats.GetProperty("clips");
+            Dictionary<string, DaggerfallArtFile> clips = splats.GetProperty("clips").EnumerateObject()
+                .ToDictionary(clip => clip.Name, clip => File(clip.Value, $"The splat people's clip {clip.Name}"), StringComparer.Ordinal);
+            string[] walks = Set("walks"), skirtWalks = Set("skirtWalks"), idles = Set("idles");
             Dictionary<string, DaggerfallSplatPerson> characters = splats.GetProperty("characters").EnumerateObject().ToDictionary(character => character.Name, character =>
             {
-                JsonElement walk = character.Value.GetProperty("walk");
                 DaggerfallSplatPerson person = new(character.Value.GetProperty("name").GetString()!, character.Value.GetProperty("archive").GetInt32(),
                     File(character.Value.GetProperty("body"), $"Splat person {character.Name}'s body"),
-                    Fit(walk), Fit(character.Value.GetProperty("idle")), walk.GetProperty("speed").GetSingle(),
+                    character.Value.GetProperty("fits").EnumerateObject().ToDictionary(fit => fit.Name, fit => new DaggerfallSplatClipFit(
+                        fit.Value.GetProperty("k").GetSingle(), fit.Value.GetProperty("A").GetSingle(),
+                        fit.Value.TryGetProperty("speed", out JsonElement speed) ? speed.GetSingle() : null), StringComparer.Ordinal),
                     [.. character.Value.GetProperty("palette").EnumerateArray().Select(colour => Color.FromSrgbHex(
                         int.Parse(colour.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))],
                     Skirt(character.Name, character.Value));
                 if (person.Palette.Count is 0 or > 256)
                     throw new InvalidOperationException($"Content pack '{packId}' gives splat person {character.Name} {person.Palette.Count} palette colours, not 1 to 256.");
-                if (!float.IsFinite(person.WalkSpeed) || person.WalkSpeed <= 0 || person.Skirt is { GentleSpeed: not > 0 }
-                    || new[] { person.Walk, person.Idle, person.Skirt?.Gentle ?? person.Walk }.Any(fit => !float.IsFinite(fit.Scale) || fit.Scale <= 0 || !float.IsFinite(fit.Lift)))
-                    throw new InvalidOperationException($"Content pack '{packId}' fits splat person {character.Name}'s clips by a scale that is not positive or walks them at {person.WalkSpeed} m/s.");
+                // Every clip a walker of it may play is fitted to its legs, a walk with the speed its stride travels.
+                foreach (string clip in (person.Skirt is null ? walks : skirtWalks).Concat(idles))
+                {
+                    bool walk = !idles.Contains(clip);
+                    if (!person.Fits.TryGetValue(clip, out DaggerfallSplatClipFit? fit))
+                        throw new InvalidOperationException($"Content pack '{packId}' gives splat person {character.Name} no fit of clip {clip}, which its walkers play.");
+                    if (!float.IsFinite(fit.Scale) || fit.Scale <= 0 || !float.IsFinite(fit.Lift) || walk != (fit.Speed is not null) || fit.Speed is { } speed && !(float.IsFinite(speed) && speed > 0))
+                        throw new InvalidOperationException($"Content pack '{packId}' fits splat person {character.Name}'s clip {clip} by scale {fit.Scale} and lift {fit.Lift} " +
+                            $"at {fit.Speed?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "no"} speed; a fit scales by more than 0 and a walk, not an idle, travels faster than 0.");
+                }
                 return person;
             }, StringComparer.Ordinal);
             if (characters.Count == 0)
@@ -816,14 +826,22 @@ internal sealed class DaggerfallArtReplacements
             // Two characters drawing one townsperson's art would leave one of them never drawn, whichever the reader kept.
             if (characters.GroupBy(character => character.Value.Archive).FirstOrDefault(archive => archive.Count() > 1) is { } shared)
                 throw new InvalidOperationException($"Content pack '{packId}' gives townsperson archive {shared.Key} to splat people {string.Join(" and ", shared.Select(character => character.Key))}.");
-            return new(File(clips.GetProperty("walk"), "The splat people's walk"), File(clips.GetProperty("idle"), "The splat people's idle"),
-                File(clips.GetProperty("gentle"), "The splat people's gentle walk"), splats.GetProperty("joint").GetString()!,
+            return new(clips, walks, skirtWalks, idles, splats.GetProperty("joint").GetString()!,
                 splats.GetProperty("producer").GetString()!, splats.GetProperty("license").GetString()!, characters);
 
-            static DaggerfallSplatClipFit Fit(JsonElement fit) => new(fit.GetProperty("k").GetSingle(), fit.GetProperty("A").GetSingle());
+            // A set of clips walkers pick from: one at least, each a pack, none twice, and no clip both a walk and an idle.
+            string[] Set(string name)
+            {
+                string[] set = [.. splats.GetProperty(name).EnumerateArray().Select(clip => clip.GetString()!)];
+                if (set.Length == 0 || set.Distinct().Count() != set.Length || set.Any(clip => !clips.ContainsKey(clip)))
+                    throw new InvalidOperationException($"Content pack '{packId}' states splat people {name} [{string.Join(", ", set)}]: a set of clips names one or more packs, each once.");
+                if (name != "idles" && splats.GetProperty("idles").EnumerateArray().Select(clip => clip.GetString()).FirstOrDefault(set.Contains) is { } both)
+                    throw new InvalidOperationException($"Content pack '{packId}' states clip {both} as one of the splat people's {name} and one of their idles.");
+                return set;
+            }
 
             // A long skirt on joints of its own, as asset-pipeline's rig laid it out: a cloth sheet on two tiers, or a ring on one.
-            DaggerfallSplatSkirt? Skirt(string id, JsonElement character)
+            SplatSkirt? Skirt(string id, JsonElement character)
             {
                 if (!character.TryGetProperty("skirt", out JsonElement skirt)) return null;
                 JsonElement legs = skirt.GetProperty("legs");
@@ -852,9 +870,7 @@ internal sealed class DaggerfallArtReplacements
                 {
                     throw new InvalidOperationException($"Content pack '{packId}' states splat person {id}'s skirt wrongly: {refused.Message}", refused);
                 }
-                JsonElement gentle = character.TryGetProperty("gentle", out JsonElement fitted) ? fitted
-                    : throw new InvalidOperationException($"Content pack '{packId}' gives splat person {id} a skirt but no fit of the gentle walk it walks.");
-                return new(rest, Fit(gentle), gentle.GetProperty("speed").GetSingle());
+                return rest;
 
                 static string[] Names(JsonElement names) => [.. names.EnumerateArray().Select(name => name.GetString()!)];
                 static float[] Floats(JsonElement values) => [.. values.EnumerateArray().Select(value => value.GetSingle())];

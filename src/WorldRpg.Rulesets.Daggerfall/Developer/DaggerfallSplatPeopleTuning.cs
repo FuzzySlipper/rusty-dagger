@@ -10,14 +10,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// not (<paramref name="OwnPalette"/>, which needs a grid), posed <paramref name="PoseRate"/> times a second (0 every
 /// frame), crossfading <paramref name="CrossfadeSeconds"/> between walk and idle, and casting into the sun's shadow as
 /// <paramref name="ShadowCaster"/>: an ellipsoid a joint, their own Gaussians (their silhouette), or nothing. A walker
-/// drawn in a long skirt walks the gentle clip: <paramref name="SkirtsSlow"/> walks it at that clip's own pace, slower
-/// than the other walkers ("slow"), and otherwise plays the clip faster to keep the walkers' pace ("clip").
+/// drawn in a long skirt walks a skirt walk: <paramref name="SkirtsSlow"/> walks it at that clip's own pace, slower
+/// than the other walkers ("slow"), and otherwise plays the clip faster to keep the walkers' pace ("clip"). Each walker's
+/// clips play, and it walks, at a rate up to <paramref name="GaitJitter"/> either side of 1, by its seed.
 /// people.splat-look, people.splat-shadow and people.splat-pace change them for a run.
 /// </summary>
 internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCoverage, bool OwnPalette, float PoseRate, float LightFloor,
-    float CrossfadeSeconds, SplatShadowCaster ShadowCaster, bool SkirtsSlow)
+    float CrossfadeSeconds, SplatShadowCaster ShadowCaster, bool SkirtsSlow, float GaitJitter)
 {
-    internal static DaggerfallSplatPeopleTuning Default { get; } = new(3, .5F, false, 0F, .15F, .25F, SplatShadowCaster.Ellipsoids, SkirtsSlow: true);
+    internal static DaggerfallSplatPeopleTuning Default { get; } = new(3, .5F, false, 0F, .15F, .25F, SplatShadowCaster.Ellipsoids, SkirtsSlow: true, GaitJitter: .06F);
 
     /// <summary>Whether long skirts walk slow, by the tuning and command name: slow or clip.</summary>
     internal static bool? Slow(string pace) => pace switch
@@ -39,9 +40,9 @@ internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCo
     internal DaggerfallSplatPeopleTuning Validate()
     {
         if (PixelGrid > 16 || !(PixelCoverage is > 0 and <= 1) || OwnPalette && PixelGrid == 0 || !float.IsFinite(PoseRate) || PoseRate < 0
-            || !(LightFloor is >= 0 and <= 1) || !float.IsFinite(CrossfadeSeconds) || CrossfadeSeconds < 0)
+            || !(LightFloor is >= 0 and <= 1) || !float.IsFinite(CrossfadeSeconds) || CrossfadeSeconds < 0 || !(GaitJitter is >= 0 and < .5F))
             throw new ArgumentException($"The gsplat people draw on a pixel grid of 0 to 16, a coverage above 0 to 1, their own palette only on a grid, " +
-                $"a pose rate and crossfade of 0 or more and a light floor of 0 to 1, not {this}.");
+                $"a pose rate and crossfade of 0 or more, a light floor of 0 to 1 and a gait jitter of 0 to under 0.5, not {this}.");
         return this;
     }
 
@@ -51,5 +52,6 @@ internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCo
         Caster(e.GetProperty("shadowCaster").GetString()!) ?? throw new ArgumentException(
             $"The gsplat people cast shadows as none, ellipsoids or splats, not '{e.GetProperty("shadowCaster").GetString()}'."),
         Slow(e.GetProperty("skirtedPace").GetString()!) ?? throw new ArgumentException(
-            $"Long-skirted gsplat people walk slow or clip, not '{e.GetProperty("skirtedPace").GetString()}'.")).Validate();
+            $"Long-skirted gsplat people walk slow or clip, not '{e.GetProperty("skirtedPace").GetString()}'."),
+        e.GetProperty("gaitJitter").GetSingle()).Validate();
 }

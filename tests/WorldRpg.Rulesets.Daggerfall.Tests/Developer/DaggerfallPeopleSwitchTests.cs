@@ -50,7 +50,7 @@ public sealed class DaggerfallPeopleSwitchTests
     public void A_gsplat_character_opens_once_with_its_clips_bound_and_fitted_and_draws_lit()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = Clips(Art().SplatPeople!);
         DaggerfallArtReplacements art = Art();
         DaggerfallSplatPeople splats = art.SplatPeople!;
         using DaggerfallPeopleSwitch people = Switch(art, PartsRigsRecorder.Create(), animation);
@@ -65,20 +65,22 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.True(drawn.Succeeded);
         Assert.Equal($"Walking people draw as gsplat 385 ({townsman.Name}), lit; 0 walk here now.", drawn.Message);
         SplatFigure figure = Assert.IsType<SplatCrowd>(people.Crowd).Figure!;
-        Assert.Equal(("walk", "idle", .25F), (figure.Walk, figure.Idle, figure.CrossfadeSeconds));
-        // Its stride keeps pace with a townsperson: the fitted walk plays at their speed over its own.
-        Assert.Equal(WalkerSpeed / townsman.WalkSpeed, figure.WalkRate, 5);
+        // He walks the art set's walks and stands in its idles, crossfading between them.
+        Assert.Equal(splats.Walks, figure.Walks.Select(walk => walk.Clip));
+        Assert.Equal(splats.Idles, figure.Idles);
+        Assert.Equal(.25F, figure.CrossfadeSeconds);
+        // Each walk's stride keeps pace with a townsperson: its fitted clip plays at their speed over its own.
+        Assert.All(figure.Walks, walk => Assert.Equal((1F, WalkerSpeed / townsman.Fits[walk.Clip].Speed!.Value), (walk.Pace, walk.Rate)));
 
-        // The clip packs open once, and the body binds both by joint names under their producer and licence.
-        Assert.Equal([splats.Walk.Path, splats.Idle.Path], animation.OpenedPackPaths);
+        // The clip packs open once each, and the body binds them all by joint names under their producer and licence.
+        string[] played = [.. splats.Walks.Concat(splats.Idles)];
+        Assert.Equal(played.Select(clip => splats.Clips[clip].Path), animation.OpenedPackPaths);
         Assert.Equal([townsman.Body.Path], animation.OpenedPaths);
-        Assert.Equal([(9001UL, 9501UL, splats.Producer, splats.License), (9001UL, 9502UL, splats.Producer, splats.License)], animation.JointNameBindings);
-        // Each clip's pelvis is fitted to his legs; the walk keeps none of its travel forward, since the walker moves himself.
-        Assert.Collection(animation.Fits,
-            walk => Assert.Equal(("walk", splats.Joint, new System.Numerics.Vector3(townsman.Walk.Scale, townsman.Walk.Scale, 0), new System.Numerics.Vector3(0, townsman.Walk.Lift, 0)),
-                (walk.Clip, walk.Joint, walk.Scale, walk.Offset)),
-            idle => Assert.Equal(("idle", splats.Joint, new System.Numerics.Vector3(townsman.Idle.Scale), new System.Numerics.Vector3(0, townsman.Idle.Lift, 0)),
-                (idle.Clip, idle.Joint, idle.Scale, idle.Offset)));
+        Assert.Equal(played.Select((_, at) => (9001UL, 9501UL + (ulong)at, splats.Producer, splats.License)), animation.JointNameBindings);
+        // Each clip's pelvis is fitted to his legs; a walk keeps none of its travel forward, since the walker moves himself.
+        Assert.Equal(played.Select(clip => (clip, splats.Joint, townsman.Fits[clip] is { Speed: null } idle ? new System.Numerics.Vector3(idle.Scale)
+                : new System.Numerics.Vector3(townsman.Fits[clip].Scale, townsman.Fits[clip].Scale, 0), new System.Numerics.Vector3(0, townsman.Fits[clip].Lift, 0))),
+            animation.Fits.Select(fit => (fit.Clip, fit.Joint, fit.Scale, fit.Offset)));
         // He is lit by the world's lights, as baked otherwise, and casts an ellipsoid a joint.
         SplatAppearanceRequest look = Assert.Single(animation.Splats);
         Assert.Same(figure.Appearance, look.Appearance);
@@ -113,7 +115,7 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.True(people.Splat("385").Succeeded);
         Assert.Same(figure, Assert.IsType<SplatCrowd>(people.Crowd).Figure);
         Assert.Single(animation.OpenedPaths);
-        Assert.Equal(2, animation.OpenedPackPaths.Count);
+        Assert.Equal(splats.Walks.Count + splats.Idles.Count, animation.OpenedPackPaths.Count);
 
         Assert.True(people.Splat("off").Succeeded);
         Assert.Null(people.Crowd);
@@ -128,7 +130,7 @@ public sealed class DaggerfallPeopleSwitchTests
         animation.Clips = [new("walk", "walk", 1.03F, true, 1)];
         using DaggerfallPeopleSwitch people = Switch(Art(), PartsRigsRecorder.Create(), animation);
         InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => people.Splat("385"));
-        Assert.Equal("Gsplat character 385 carries no clip 'idle' after its clip packs were bound; it has walk.", refused.Message);
+        Assert.Equal("Gsplat character 385 carries no clip 'stroll' after its clip packs were bound; it has walk.", refused.Message);
         Assert.Null(people.Crowd);
         Assert.Empty(animation.Created);
     }
@@ -139,7 +141,7 @@ public sealed class DaggerfallPeopleSwitchTests
         using ActorsState actors = new();
         List<string> warnings = [];
         using DaggerfallPeopleSwitch people = new(null, null, () => PartsRigsRecorder.Create().Service, () => AnimationRecorder.Create().Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, () => true, warnings.Add);
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, warnings.Add);
         // Walkers draw their sprites, and nothing is said: there are no characters to miss.
         Assert.Null(people.Show(100, 10, 1.7F, walking: true));
         Assert.Null(people.Crowd);
@@ -160,7 +162,7 @@ public sealed class DaggerfallPeopleSwitchTests
     public void Spawn_stands_the_nearest_walkers_ahead_as_their_own_character_whatever_the_rest_draw_as()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = Clips(Art().SplatPeople!);
         using ActorsState actors = new();
         actors.CreatePlayer(1, new Rusty.Engine.Entities.EntityTypeId("player"), new Rusty.Engine.Mechanics.StatsComponent(), "health");
         foreach ((long id, float distance) in new[] { (10L, 12F), (11L, 15F), (12L, 20F) })
@@ -172,7 +174,7 @@ public sealed class DaggerfallPeopleSwitchTests
         }
         // These walkers wear no townsperson art, so the crowd draws them as their sprites.
         using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, () => true, _ => { });
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, _ => 0, () => true, _ => { });
 
         var spawned = people.Spawn("454", 2);
         Assert.True(spawned.Succeeded, spawned.Message);
@@ -204,7 +206,7 @@ public sealed class DaggerfallPeopleSwitchTests
     public void Each_walker_draws_by_default_as_the_character_of_its_townsperson_art_and_off_draws_their_sprites()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = Clips(Art().SplatPeople!);
         DaggerfallSplatPeople splats = Art().SplatPeople!;
         List<string> warnings = [];
         bool refreshed = true;
@@ -213,7 +215,7 @@ public sealed class DaggerfallPeopleSwitchTests
         using ActorsState actors = new();
         using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
             () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386, 999, 385], id => worn[id],
-            () => refreshed, warnings.Add);
+            _ => 0, () => refreshed, warnings.Add);
 
         // Nothing opens before a walker is drawn.
         Assert.Null(people.Crowd);
@@ -260,7 +262,7 @@ public sealed class DaggerfallPeopleSwitchTests
     public void Staged_walkers_keep_drawing_as_the_character_of_their_own_townsperson_art()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = Clips(Art().SplatPeople!);
         DaggerfallSplatPeople splats = Art().SplatPeople!;
         using ActorsState actors = new();
         actors.CreatePlayer(1, new Rusty.Engine.Entities.EntityTypeId("player"), new Rusty.Engine.Mechanics.StatsComponent(), "health");
@@ -274,7 +276,7 @@ public sealed class DaggerfallPeopleSwitchTests
         Dictionary<long, int?> worn = new() { [10] = 381, [11] = 395 };
         DaggerfallPeopleStage stage = Stage(actors);
         using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, stage, [381, 395], id => worn[id], () => true, _ => { });
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, stage, [381, 395], id => worn[id], _ => 0, () => true, _ => { });
         Appearance townsman = people.Show(100, 10, 1.7F, walking: true)!, townswoman = people.Show(101, 11, 1.7F, walking: true)!;
 
         // Staging moves them in front of the player; it never changes what they wear.
@@ -290,10 +292,10 @@ public sealed class DaggerfallPeopleSwitchTests
     public void A_session_that_yields_to_its_replacement_lets_go_of_its_walkers_and_characters_and_draws_sprites()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = Clips(Art().SplatPeople!);
         using ActorsState actors = new();
         using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, () => true, _ => { });
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, _ => { });
         Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
         people.Publishing();
         people.Settle();
@@ -317,11 +319,11 @@ public sealed class DaggerfallPeopleSwitchTests
     public void Off_lets_go_of_the_characters_once_the_snapshot_without_them_is_accepted_so_sprites_cost_what_sprites_cost()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = Clips(Art().SplatPeople!);
         Dictionary<long, int?> worn = new() { [10] = 385, [11] = 386 };
         using ActorsState actors = new();
         using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386], id => worn[id], () => true, _ => { });
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386], id => worn[id], _ => 0, () => true, _ => { });
         Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
         Assert.NotNull(people.Show(101, 11, 1.7F, walking: true));
         people.Publishing();
@@ -341,7 +343,8 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.True(people.Splat("own").Succeeded);
         Assert.NotNull(people.Show(100, 10, 1.7F, walking: true));
         Assert.Equal(3, animation.OpenedPaths.Count);
-        Assert.Equal(4, animation.OpenedPackPaths.Count);
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        Assert.Equal(2 * (splats.Walks.Count + splats.Idles.Count), animation.OpenedPackPaths.Count);
     }
 
     [Fact]
@@ -352,11 +355,11 @@ public sealed class DaggerfallPeopleSwitchTests
         List<string> warnings = [];
         using ActorsState actors = new();
         using DaggerfallPeopleSwitch people = new(null, Art().SplatPeople, () => PartsRigsRecorder.Create().Service, () => animation.Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, () => true, warnings.Add);
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, warnings.Add);
         Assert.Null(people.Show(100, 10, 1.7F, walking: true));
         Assert.Null(people.Show(101, 11, 1.7F, walking: true));
         Assert.Equal(["Gsplat character 385 would not open, so walkers wearing townsperson art 385 draw their sprites: " +
-            "Gsplat character 385 carries no clip 'idle' after its clip packs were bound; it has walk."], warnings);
+            "Gsplat character 385 carries no clip 'stroll' after its clip packs were bound; it has walk."], warnings);
         Assert.Single(animation.OpenedPaths);
         Assert.Empty(animation.Created);
     }
@@ -384,34 +387,86 @@ public sealed class DaggerfallPeopleSwitchTests
     }
 
     [Fact]
-    public void The_art_set_states_the_six_long_skirts_on_their_joints_each_walking_the_gentle_clip()
+    public void The_art_set_states_the_six_long_skirts_on_their_joints_each_walking_the_skirt_walks()
     {
         DaggerfallSplatPeople splats = Art().SplatPeople!;
-        Assert.EndsWith("clips/gentle.glb", splats.Gentle.Path);
+        Assert.Equal(["gentle", "stroll-gentle"], splats.SkirtWalks);
         Assert.Equal(["395", "397-B", "398", "452-B", "453", "456"], splats.Characters.Where(person => person.Value.Skirt is not null).Select(person => person.Key).Order(StringComparer.Ordinal));
         // 395's wrap hangs on one tier, a ring of 8; the rest on two, a 16 x 7 sheet with a column of joints on every other.
-        SplatRingSkirt ring = Assert.IsType<SplatRingSkirt>(splats.Characters["395"].Skirt!.Rest);
+        SplatRingSkirt ring = Assert.IsType<SplatRingSkirt>(splats.Characters["395"].Skirt);
         Assert.Equal((8, 16), (ring.Joints.Count, ring.Heights.Count));
         foreach (string id in new[] { "397-B", "398", "452-B", "453", "456" })
         {
-            SplatClothSkirt cloth = Assert.IsType<SplatClothSkirt>(splats.Characters[id].Skirt!.Rest);
+            SplatClothSkirt cloth = Assert.IsType<SplatClothSkirt>(splats.Characters[id].Skirt);
             Assert.Equal((16, 7, 112, false), (cloth.Columns, cloth.Rows, cloth.Grid.Count, cloth.Slit));
             Assert.Equal([0, 2, 4, 6, 8, 10, 12, 14], cloth.BoneColumns);
             Assert.Equal(("Skirt0_U", "Skirt7_L", "mixamorig:Hips", "mixamorig:LeftUpLeg"), (cloth.Upper[0], cloth.Lower[^1], cloth.Hips, cloth.Legs.LeftUpLeg));
         }
-        // The gentle walk is shorter in the stride and slower than the full walk.
-        Assert.All(splats.Characters.Values.Where(person => person.Skirt is not null), person =>
-            Assert.True(person.Skirt!.Gentle.Scale < person.Walk.Scale && person.Skirt.GentleSpeed < person.WalkSpeed));
+        // Their walks are softer, shorter in the stride and slower than the walkers' pace.
+        Assert.All(splats.Characters.Values.Where(person => person.Skirt is not null), person => Assert.All(splats.SkirtWalks, clip =>
+            Assert.True(person.Fits[clip] is { Scale: < .7F, Speed: < WalkerSpeed }, $"{person.Name} walks {clip} at {person.Fits[clip]}.")));
+    }
+
+    [Fact]
+    public void Every_walker_picks_from_a_few_mild_walks_and_idles_each_fitted_to_every_character_that_plays_it()
+    {
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        Assert.Equal(["walk", "stroll", "stroll-easy"], splats.Walks);
+        Assert.Equal(["idle", "idle-relaxed", "idle-crossed", "idle-hips"], splats.Idles);
+        foreach ((string id, DaggerfallSplatPerson person) in splats.Characters)
+        {
+            // Each walk it walks has its stride's fit and travels near the walkers' pace, so its rate stays mild; each idle
+            // is fitted by the leg and travels nowhere.
+            Assert.All(splats.WalksOf(person), clip => Assert.True(person.Fits[clip] is { Scale: > .5F and < 1.2F, Speed: > 1F and < 1.6F },
+                $"{id} walks {clip} at {person.Fits[clip]}."));
+            Assert.All(splats.Idles, clip => Assert.True(person.Fits[clip] is { Scale: > .5F and < 1.2F, Speed: null }, $"{id} stands {clip} at {person.Fits[clip]}."));
+            // The easy stroll is the stroll softened: shorter in the stride and slower.
+            if (person.Skirt is null)
+                Assert.True(person.Fits["stroll-easy"].Speed < person.Fits["stroll"].Speed, id);
+        }
+    }
+
+    [Fact]
+    public void Each_walker_drawn_as_a_character_walks_and_stands_as_its_seed_picks_and_goes_at_its_gait_s_pace()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        animation.Clips = Clips(splats);
+        using ActorsState actors = new();
+        actors.CreatePlayer(1, new Rusty.Engine.Entities.EntityTypeId("player"), new Rusty.Engine.Mechanics.StatsComponent(), "health");
+        Dictionary<long, int> seeds = new() { [10] = 101, [11] = 202, [12] = 303, [13] = 404 };
+        foreach (long id in seeds.Keys)
+        {
+            ActorState civilian = actors.CreateActor(id, new Rusty.Engine.Entities.EntityTypeId(DaggerfallActorKinds.Civilian),
+                new Rusty.Engine.Mechanics.StatsComponent(), new ActorPose(new WorldPoint(12F + id, 0F, 0F), 0F), "health");
+            civilian.Stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(new Rusty.Engine.Mechanics.Stat(1), 1));
+            civilian.Actor.Add(new WorldRpg.Kit.Ai.WanderMemoryComponent());
+        }
+        using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, id => seeds[id], () => true, _ => { });
+
+        foreach (long id in seeds.Keys) Assert.NotNull(people.Show((ulong)(100 + id), id, 1.7F, walking: true));
+        SplatCrowd crowd = Assert.IsType<SplatCrowd>(people.Crowd);
+        SplatFigure figure = crowd.Own!(10)!;
+        foreach ((long id, int seed) in seeds)
+        {
+            // The gait its name seed draws, by the tuning's jitter; it walks at the pace that gait's stride keeps.
+            SplatGait gait = crowd.Gait((ulong)(100 + id))!.Value;
+            Assert.Equal(figure.Gait(seed, DaggerfallSplatPeopleTuning.Default.GaitJitter), gait);
+            Assert.Equal(gait.Pace, actors.Get(id).Wander.Pace, 5);
+            Assert.NotEqual(1F, gait.Pace);
+        }
+        Assert.True(seeds.Keys.Select(id => crowd.Gait((ulong)(100 + id))!.Value.Walk.Clip).Distinct().Count() > 1);
     }
 
     [Fact]
     public void A_character_in_a_long_skirt_walks_the_gentle_clip_with_its_skirt_on_its_rig_at_the_pace_the_tuning_gives()
     {
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2), new("gentle", "gentle", 1.03F, true, 3)];
+        animation.Clips = Clips(Art().SplatPeople!);
         DaggerfallSplatPeople splats = Art().SplatPeople!;
         DaggerfallSplatPerson person = splats.Characters["456"];
-        SplatClothSkirt skirt = Assert.IsType<SplatClothSkirt>(person.Skirt!.Rest);
+        SplatClothSkirt skirt = Assert.IsType<SplatClothSkirt>(person.Skirt);
         // Its rig: the hips, the legs and each column's two skirt joints, standing where the sheet's rest puts them.
         (string Name, System.Numerics.Vector3 At)[] rig = [(skirt.Hips, new(0, 1, 0)), .. skirt.Legs.Names.Select(name => (name, System.Numerics.Vector3.Zero)),
             .. skirt.BoneColumns.SelectMany((column, i) => new[] { (skirt.Upper[i], skirt.Grid[column * skirt.Rows]), (skirt.Lower[i], skirt.Grid[column * skirt.Rows + skirt.KneeRow]) })];
@@ -424,40 +479,50 @@ public sealed class DaggerfallPeopleSwitchTests
         walker.Stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(new Rusty.Engine.Mechanics.Stat(1), 1));
         walker.Actor.Add(new WorldRpg.Kit.Ai.WanderMemoryComponent());
         using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
-            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, () => true, _ => { });
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, _ => 0, () => true, _ => { });
 
         Assert.True(people.Splat("456").Succeeded);
         SplatFigure figure = Assert.IsType<SplatCrowd>(people.Crowd).Figure!;
-        // She binds the gentle walk beside the walk and idle, fitted to her legs, and by the tuning walks it as authored.
-        Assert.Equal([splats.Walk.Path, splats.Idle.Path, splats.Gentle.Path], animation.OpenedPackPaths);
-        Assert.Equal(3, animation.JointNameBindings.Count);
+        // She binds the skirt walks in place of the walks, beside the idles, fitted to her legs, and by the tuning walks each as authored.
+        Assert.Equal(splats.SkirtWalks.Concat(splats.Idles).Select(clip => splats.Clips[clip].Path), animation.OpenedPackPaths);
+        Assert.Equal(6, animation.JointNameBindings.Count);
         AnimationClipTranslationFitRequest fit = Assert.Single(animation.Fits, fit => fit.Clip == "gentle");
-        Assert.Equal((new System.Numerics.Vector3(person.Skirt.Gentle.Scale, person.Skirt.Gentle.Scale, 0), new System.Numerics.Vector3(0, person.Skirt.Gentle.Lift, 0)),
+        Assert.Equal((new System.Numerics.Vector3(person.Fits["gentle"].Scale, person.Fits["gentle"].Scale, 0), new System.Numerics.Vector3(0, person.Fits["gentle"].Lift, 0)),
             (fit.Scale, fit.Offset));
-        Assert.Equal(("gentle", "idle"), (figure.Walk, figure.Idle));
-        Assert.Equal(1F, figure.WalkRate, 5);
+        Assert.Equal(splats.SkirtWalks, figure.Walks.Select(walk => walk.Clip));
+        Assert.All(figure.Walks, walk =>
+        {
+            Assert.Equal(person.Fits[walk.Clip].Speed!.Value / WalkerSpeed, walk.Pace, 5);
+            Assert.Equal(1F, walk.Rate, 5);
+        });
         Assert.Same(skirt, figure.Skirt!.Skirt);
         // A skirt drives from where it was bound: the first step at rest places each joint where it stands.
         JointOverride[] placed = figure.Skirt.Sheet().Step(0, animation.ModelPose(new(System.Numerics.Vector3.Zero, System.Numerics.Quaternion.Identity, System.Numerics.Vector3.One)).Span);
         Assert.Equal(16, placed.Length);
         Assert.All(placed, joint => Assert.True(System.Numerics.Vector3.Distance(animation.Rest[(int)joint.Joint], joint.Translation) < 1e-4F));
 
-        // A walker drawn as her goes at her gentle walk's own pace, slower than the rest.
+        // A walker drawn as her goes at her walk's own pace, slower than the rest, by its gait's rate.
         Assert.Same(figure.Appearance, people.Show(100, walker.DurableId, 1.7F, walking: true));
-        Assert.Equal(person.Skirt.GentleSpeed / WalkerSpeed, walker.Wander.Pace, 5);
+        SplatGait gait = Assert.IsType<SplatCrowd>(people.Crowd).Gait(100)!.Value;
+        float own = person.Fits[gait.Walk.Clip].Speed!.Value / WalkerSpeed;
+        Assert.Equal(own * gait.Rate, walker.Wander.Pace, 5);
 
         // people.splat-pace clip plays her walk faster to keep the walkers' pace, for the run, wherever she is drawn.
         Assert.Equal("people.splat-pace takes slow or clip.", people.SplatPace("fast").Message);
         Assert.True(people.Spawn("456", 1).Succeeded);
         Assert.True(people.SplatPace("clip").Succeeded);
         SplatCrowd crowd = Assert.IsType<SplatCrowd>(people.Crowd);
-        Assert.Equal(WalkerSpeed / person.Skirt.GentleSpeed, crowd.Figure!.WalkRate, 5);
+        Assert.All(crowd.Figure!.Walks, walk =>
+        {
+            Assert.Equal(1F, walk.Pace);
+            Assert.Equal(WalkerSpeed / person.Fits[walk.Clip].Speed!.Value, walk.Rate, 5);
+        });
         Assert.Same(crowd.Figure, crowd.Assigned[walker.DurableId]);
         people.Show(100, walker.DurableId, 1.7F, walking: true);
-        Assert.Equal(1F, walker.Wander.Pace);
+        Assert.Equal(gait.Rate, walker.Wander.Pace, 5);
         Assert.True(people.SplatPace("slow").Succeeded);
         people.Show(100, walker.DurableId, 1.7F, walking: true);
-        Assert.Equal(person.Skirt.GentleSpeed / WalkerSpeed, walker.Wander.Pace, 5);
+        Assert.Equal(own * gait.Rate, walker.Wander.Pace, 5);
 
         // Drawn as her sprite again, she walks at the walkers' pace; her character stays open for the spawned walker.
         Assert.True(people.Splat("off").Succeeded);
@@ -470,13 +535,16 @@ public sealed class DaggerfallPeopleSwitchTests
     {
         ActorsState actors = new();
         return new(art.PeopleRig, art.SplatPeople, () => rigs.Service, () => animation.Service, () => new ContentFake([]), WalkerSpeed,
-            DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, () => true, _ => { });
+            DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [], _ => null, _ => 0, () => true, _ => { });
     }
 
     /// <summary>Staging on flat ground at the player's feet, where any spot is clear but one a staged walker already stands on.</summary>
     private static DaggerfallPeopleStage Stage(ActorsState actors) => new(actors, _ => true, new WorldRpg.Kit.Controls.PlayerControlState(new WorldPoint(0F, 0F, 0F), 0F, 0F),
         (at, moving) => actors.All.Any(actor => !moving.Contains(actor.DurableId) && actor.Wander.Route is not null
             && System.Numerics.Vector3.Distance(actor.Position.ToVector(), at) < 1F) ? null : WorldPoint.From(at));
+
+    /// <summary>Every clip the art set's packs carry, as the Engine reads them back from a body that bound them all, each named its own id.</summary>
+    internal static AnimationClipInfo[] Clips(DaggerfallSplatPeople splats) => [.. splats.Clips.Keys.Select((clip, at) => new AnimationClipInfo(clip, clip, 3F, true, (uint)at + 1))];
 
     /// <summary>The art set's people rig and gsplat townspeople alone: the rest of the refreshed set has no bearing on the switch.</summary>
     internal static DaggerfallArtReplacements Art()

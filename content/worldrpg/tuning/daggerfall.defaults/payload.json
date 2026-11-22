@@ -1054,7 +1054,8 @@
     "lightFloor": 0.15,
     "crossfadeSeconds": 0.25,
     "shadowCaster": "ellipsoids",
-    "skirtedPace": "slow"
+    "skirtedPace": "slow",
+    "gaitJitter": 0.06
   },
   "hanging": {
     "activationRadius": 4,

@@ -1137,7 +1137,7 @@ internal sealed partial class DaggerfallSession
             _people = new DaggerfallPeopleSwitch(composition.ArtReplacements?.PeopleRig, composition.ArtReplacements?.SplatPeople, () => _engine.PartsRigs,
                 () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, _tuning.SplatPeople, State.Actors,
                 peopleStage, [.. definitions.Catalogs.Races.SelectMany(race => race.Townspeople.Values.SelectMany(archives => archives))],
-                id => Population.Townsperson(id), () => DrawnArt is not null,
+                id => Population.Townsperson(id), id => Population.Seed(id), () => DrawnArt is not null,
                 message => engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
                     "daggerfall.people", "people.splat", message, string.Empty)));   // Developer
             DaggerfallActorInspection actorInspection = new(State.Actors, State.PlayerControl, _roster, _senses, _enemyBehavior, _enemyMagic,

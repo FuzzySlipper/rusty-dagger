@@ -6,14 +6,14 @@ using Xunit;
 
 namespace WorldRpg.Kit.Tests;
 
-/// <summary>Walkers drawn as a gsplat character: an instance each of its one appearance, playing its walk or its idle.</summary>
+/// <summary>Walkers drawn as a gsplat character: an instance each of its one appearance, playing the walk or the idle its seed picks.</summary>
 public sealed class SplatCrowdTests
 {
     [Fact]
     public void A_shown_walker_is_an_instance_of_the_figure_that_walks_at_its_rate_and_crossfades_to_its_idle_when_it_stops()
     {
         AnimationRecorder engine = AnimationRecorder.Create();
-        using SplatCrowd crowd = new(() => engine.Service);
+        using SplatCrowd crowd = new(() => engine.Service, _ => 0, 0F);
         Assert.Null(crowd.Show(7, 7, 1.7F, walking: true));
         SplatFigure figure = Figure("385", 1);
         crowd.Use(figure);
@@ -41,10 +41,52 @@ public sealed class SplatCrowdTests
     }
 
     [Fact]
+    public void Each_walker_walks_and_stands_as_its_seed_picks_from_the_figure_s_walks_and_idles_at_a_rate_near_1_its_pace_shares()
+    {
+        AnimationRecorder engine = AnimationRecorder.Create();
+        Dictionary<long, int> seeds = new() { [1] = 3, [2] = 4, [3] = 5, [4] = 6, [5] = 7, [6] = 8, [7] = 9, [8] = 3 };
+        using SplatCrowd crowd = new(() => engine.Service, actor => seeds[actor], .06F);
+        SplatFigure figure = Figure("385", 1) with
+        {
+            Walks = [new("walk", 1F, .9F), new("stroll", 1F, 1F), new("gentle", .85F, 1F)],
+            Idles = ["idle", "idle-relaxed", "idle-crossed"],
+        };
+        crowd.Use(figure);
+        foreach (long actor in seeds.Keys) crowd.Show((ulong)actor, actor, 1.7F, walking: actor % 2 == 0);
+        Publish(crowd);
+
+        // Each plays the walk or idle its seed draws from the figure's, at the rate its seed draws within the jitter.
+        SplatGait[] gaits = [.. seeds.Keys.Select(actor => crowd.Gait((ulong)actor)!.Value)];
+        Assert.Equal(seeds.Values.Select(seed => figure.Gait(seed, .06F)), gaits);
+        Assert.Equal(seeds.Keys.Select((actor, at) => actor % 2 == 0
+                ? $"play {at + 1} {gaits[at].Walk.Clip} speed {gaits[at].WalkRate:0.##} restart fade 0"
+                : $"play {at + 1} {gaits[at].Idle} speed {gaits[at].Rate:0.##} restart fade 0"),
+            engine.Calls.Where(call => call.StartsWith("play", StringComparison.Ordinal)));
+        Assert.All(gaits, gait => Assert.InRange(gait.Rate, .94F, 1.06F));
+        // The rate both plays the walk at and walks the walker at, so its stride keeps its pace.
+        Assert.All(gaits, gait => Assert.Equal((gait.Walk.Pace * gait.Rate, gait.Walk.Rate * gait.Rate), (gait.Pace, gait.WalkRate)));
+        // Seven seeds take every walk and idle between them and not one rate: no two walkers move as one.
+        Assert.Equal(3, gaits.Select(gait => gait.Walk).Distinct().Count());
+        Assert.Equal(3, gaits.Select(gait => gait.Idle).Distinct().Count());
+        Assert.Equal(7, gaits.Select(gait => gait.Rate).Distinct().Count());
+        // A seed draws one gait, in any crowd and run: walker 8 shares walker 1's, as a walker restored from a save keeps its own.
+        Assert.Equal(gaits[0], gaits[7]);
+        Assert.Null(crowd.Gait(99));
+        // Walkers who share a seed's last bits, as walkers of one townsperson's art do, still walk and stand apart.
+        SplatGait[] alike = [.. Enumerable.Range(0, 16).Select(at => figure.Gait(at * 4 + 1, .06F))];
+        Assert.Equal(3, alike.Select(gait => gait.Walk).Distinct().Count());
+        Assert.Equal(3, alike.Select(gait => gait.Idle).Distinct().Count());
+
+        // A figure with nothing to walk or stand in, or a rate that could stop a walker, is refused.
+        Assert.Throws<InvalidOperationException>(() => (figure with { Idles = [] }).Gait(3, 0F));
+        Assert.Throws<ArgumentOutOfRangeException>(() => figure.Gait(3, 1F));
+    }
+
+    [Fact]
     public void Another_character_replaces_each_walker_s_instance_and_starts_its_clip_again()
     {
         AnimationRecorder engine = AnimationRecorder.Create();
-        using SplatCrowd crowd = new(() => engine.Service);
+        using SplatCrowd crowd = new(() => engine.Service, _ => 0, 0F);
         crowd.Use(Figure("385", 1));
         crowd.Show(3, 3, 1.7F, walking: true);
         Publish(crowd);
@@ -62,7 +104,7 @@ public sealed class SplatCrowdTests
     public void A_walker_a_snapshot_leaves_out_is_released_before_it_is_published_and_off_releases_them_all()
     {
         AnimationRecorder engine = AnimationRecorder.Create();
-        using SplatCrowd crowd = new(() => engine.Service);
+        using SplatCrowd crowd = new(() => engine.Service, _ => 0, 0F);
         crowd.Use(Figure("385", 1));
         crowd.Show(1, 1, 1.7F, walking: false);
         crowd.Show(2, 2, 1.8F, walking: true);
@@ -94,7 +136,7 @@ public sealed class SplatCrowdTests
     public void A_walker_assigned_a_figure_draws_as_it_whether_or_not_the_crowd_uses_one()
     {
         AnimationRecorder engine = AnimationRecorder.Create();
-        using SplatCrowd crowd = new(() => engine.Service);
+        using SplatCrowd crowd = new(() => engine.Service, _ => 0, 0F);
         SplatFigure own = Figure("454", 2);
         crowd.Assign(5, own);
 
@@ -117,7 +159,7 @@ public sealed class SplatCrowdTests
     public void Each_walker_draws_as_its_own_figure_where_the_crowd_uses_none()
     {
         AnimationRecorder engine = AnimationRecorder.Create();
-        using SplatCrowd crowd = new(() => engine.Service);
+        using SplatCrowd crowd = new(() => engine.Service, _ => 0, 0F);
         SplatFigure townsman = Figure("385", 1), townswoman = Figure("453", 2), spawned = Figure("454", 3);
         crowd.UseOwn(actor => actor switch { 5 => townsman, 6 => townswoman, _ => null });
         crowd.Assign(7, spawned);
@@ -141,7 +183,7 @@ public sealed class SplatCrowdTests
     public void A_skirted_walker_places_its_skirt_from_the_legs_it_is_drawn_with_each_settle_that_time_moved()
     {
         AnimationRecorder engine = AnimationRecorder.Create();
-        using SplatCrowd crowd = new(() => engine.Service);
+        using SplatCrowd crowd = new(() => engine.Service, _ => 0, 0F);
         SplatFigure skirted = Figure("456", 1) with { Skirt = Skirt(out JointPose[] rest) };
         engine.Pose = rest;
         crowd.Use(skirted);
@@ -198,7 +240,7 @@ public sealed class SplatCrowdTests
     }
 
     private static SplatFigure Figure(string name, ulong appearance) =>
-        new(name, new Appearance(new AppearanceHandle(appearance), static () => { }), "walk", "idle", .9F, .25F);
+        new(name, new Appearance(new AppearanceHandle(appearance), static () => { }), [new("walk", 1F, .9F)], ["idle"], .25F);
 
     /// <summary>Records the animation calls a crowd makes, in order.</summary>
     public class AnimationRecorder : DispatchProxy

@@ -430,7 +430,7 @@ public sealed class DaggerfallPopulationSessionTests
         using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create(DaggerfallPeopleSwitchTests.Art());
         DaggerfallSession session = fixture.Session;
         AnimationRecorder animation = fixture.Engine.Animation;
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = DaggerfallPeopleSwitchTests.Clips(DaggerfallPeopleSwitchTests.Art().SplatPeople!);
         session.AdvanceElapsedTime(8 * 60 * 60);
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         ActorState[] civilians = [.. session.State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)];
@@ -439,6 +439,9 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("385").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(3), []));
         Appearance character = Drawn(animation, fixture.Composition.ArtReplacements!.SplatPeople!, "385");
+        // The walks and idles it picks among, each played under its own name here.
+        DaggerfallSplatPeople splats = fixture.Composition.ArtReplacements!.SplatPeople!;
+        SplatFigure splatFigure = new("385", character, [.. splats.Walks.Select(clip => new SplatWalk(clip, 1F, 1F))], splats.Idles, 0F);
         AppearanceFact[] snapshot = fixture.Appearance.Snapshots[^1];
         foreach (ActorState civilian in civilians)
         {
@@ -449,9 +452,10 @@ public sealed class DaggerfallPopulationSessionTests
             Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, fact.Transform.Rotation), ActorHeading.Forward(civilian.HeadingYawRadians)) < 1e-4F);
             int instance = animation.InstanceRequests.FindIndex(request => request.ObjectId == fact.ObjectId && request.Appearance == character);
             Assert.True(instance >= 0, $"Walker {fact.ObjectId} has no instance.");
-            // It walks while it moves to a waypoint and idles otherwise.
+            // It walks the walk its name seed picks while it moves to a waypoint, and stands in the idle it picks otherwise.
             AnimationPlaybackRequest play = Assert.Single(animation.Playbacks, play => play.Instance.Handle.Value == 7001UL + (ulong)instance);
-            Assert.Equal(IWalkerCrowd.Walks(civilian.Wander.State) ? "walk" : "idle", play.Clip);
+            SplatGait gait = splatFigure.Gait(session.State.Npcs.Require(civilian.DurableId).Appearance.NameSeed, DaggerfallSplatPeopleTuning.Default.GaitJitter);
+            Assert.Equal(IWalkerCrowd.Walks(civilian.Wander.State) ? gait.Walk.Clip : gait.Idle, play.Clip);
         }
 
         // Off draws their own sprites again, and their instances are gone by the time that snapshot is published: the
@@ -473,7 +477,7 @@ public sealed class DaggerfallPopulationSessionTests
         using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create(art);
         DaggerfallSession session = fixture.Session;
         AnimationRecorder animation = fixture.Engine.Animation;
-        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        animation.Clips = DaggerfallPeopleSwitchTests.Clips(DaggerfallPeopleSwitchTests.Art().SplatPeople!);
         session.AdvanceElapsedTime(8 * 60 * 60);
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         session.Update(new ProductUpdate(OuterUpdate(3), []));

@@ -153,6 +153,9 @@ writes its own comparison in `local/art/review/flora/trials/506-11/`.
   from the Rusty Dagger root. Keep the existing character IDs and numbered stage directories.
 - Run `python3 authoring/tools/people/splat-people.py` to publish the ready skinned-splat GLBs, clip fits and shared
   walk and idle clips to the art pack's `media/splat-people/`. Commit that directory and the pack's `payload.json` together.
+- A new walk or idle joins the script's `PACKS` only after asset-pipeline has looped it (`loop_clip.py`), cleaned it
+  (`clean_clip_noise.py`) and fitted it into every ready character's `ID-clip-fit.json`; PINOC's generated motions
+  neither loop nor keep the bone lengths still.
 - Fix a part that goes wrong by changing what is generated or how it is rigged, never by repainting the part.
 - Don't run the Krea retro pass again on a rig source: the face and held objects drift.
 - Record each figure's rig source in `specs/people/rig/<figure>.json`: input, models, sampler, seeds, the full prompt.

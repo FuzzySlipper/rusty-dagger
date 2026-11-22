@@ -128332,20 +128332,65 @@
      "byteLength": 183248,
      "sha256": "d1cba35ad39f831ee867f0a69f40200abcc8f050ac1511983b865d3ae4db55e4"
     },
-    "idle": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle.glb",
-     "byteLength": 188020,
-     "sha256": "50b0590a5c5a046a6f8b92a9b610d7f5f07f3d7638d3223cbf6dbfdf60688bf7"
+    "stroll": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/stroll.glb",
+     "byteLength": 174140,
+     "sha256": "ec620cdb1e7b85cfba4657cf4600845fff204243a26e3f5080ee70283f4dcdee"
+    },
+    "stroll-easy": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/stroll-easy.glb",
+     "byteLength": 174136,
+     "sha256": "3be260ac96dea820a1ab16d6bcb6b840b9b4a8fa5f7c42c80c45a9e7bd7d37b4"
     },
     "gentle": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/gentle.glb",
      "byteLength": 183248,
      "sha256": "5d5ce11a10902e7a4c309eb7983b5e63bef1b3b84208e0701f08ee6ff44897fa"
+    },
+    "stroll-gentle": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/stroll-gentle.glb",
+     "byteLength": 174164,
+     "sha256": "8da263a4fc2b15b24fb4987a0ce8efa0711826d5ae10dbd797073c63b83fddc3"
+    },
+    "idle": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle.glb",
+     "byteLength": 188020,
+     "sha256": "50b0590a5c5a046a6f8b92a9b610d7f5f07f3d7638d3223cbf6dbfdf60688bf7"
+    },
+    "idle-relaxed": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle-relaxed.glb",
+     "byteLength": 174908,
+     "sha256": "458fb5ecc57478e32cff93731c467a40ff8121e077c289c88ae570d418aaf70b"
+    },
+    "idle-crossed": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle-crossed.glb",
+     "byteLength": 187640,
+     "sha256": "bc2a5dd2acd94893c6db1f425314b3640d82a649e414f611f232684c94998a7b"
+    },
+    "idle-hips": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle-hips.glb",
+     "byteLength": 217304,
+     "sha256": "e714634e9e88e300a835cf204167b14ef8a8a0748d23ecd11c07cb7dca6c2f48"
     }
    },
+   "walks": [
+    "walk",
+    "stroll",
+    "stroll-easy"
+   ],
+   "skirtWalks": [
+    "gentle",
+    "stroll-gentle"
+   ],
+   "idles": [
+    "idle",
+    "idle-relaxed",
+    "idle-crossed",
+    "idle-hips"
+   ],
    "joint": "mixamorig:Hips",
-   "producer": "PINOC library (Viggle), Mixamo rig",
-   "license": "PINOC library clip",
+   "producer": "PINOC (Viggle): library and generated motions, Mixamo rig",
+   "license": "PINOC clip",
    "characters": {
     "381": {
      "name": "white linen tunic, red-orange zigzag hem",
@@ -128355,14 +128400,38 @@
       "byteLength": 1090144,
       "sha256": "0257104fb92c002e34edafae894d92178b2b54116cd79605eecc71dfbac17cf3"
      },
-     "walk": {
-      "k": 0.7708,
-      "A": 0.1646,
-      "speed": 1.3938
-     },
-     "idle": {
-      "k": 0.8507,
-      "A": 0.091
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
      },
      "palette": [
       "#c18a69",
@@ -128407,14 +128476,38 @@
       "byteLength": 1092532,
       "sha256": "e64eb08a24da4494132caa1a43b42feab6280cdd6596fd6707ecf9ff84ef1c83"
      },
-     "walk": {
-      "k": 0.7869,
-      "A": 0.1655,
-      "speed": 1.4229
-     },
-     "idle": {
-      "k": 0.8633,
-      "A": 0.0965
+     "fits": {
+      "walk": {
+       "k": 0.7884,
+       "A": 0.1639,
+       "speed": 1.4257
+      },
+      "stroll": {
+       "k": 0.7546,
+       "A": 0.1707,
+       "speed": 1.3174
+      },
+      "stroll-easy": {
+       "k": 0.6303,
+       "A": 0.3114,
+       "speed": 1.1005
+      },
+      "idle": {
+       "k": 0.8633,
+       "A": 0.0965
+      },
+      "idle-relaxed": {
+       "k": 0.8633,
+       "A": 0.084
+      },
+      "idle-crossed": {
+       "k": 0.8633,
+       "A": 0.0647
+      },
+      "idle-hips": {
+       "k": 0.8633,
+       "A": 0.0872
+      }
      },
      "palette": [
       "#4f2916",
@@ -128459,14 +128552,38 @@
       "byteLength": 1091180,
       "sha256": "65263cf8690a8f9fc011a0a610cee9b57fd88a4c84953b196eead3fa0056ba3c"
      },
-     "walk": {
-      "k": 0.8058,
-      "A": 0.1735,
-      "speed": 1.457
-     },
-     "idle": {
-      "k": 0.9024,
-      "A": 0.0862
+     "fits": {
+      "walk": {
+       "k": 0.8103,
+       "A": 0.1688,
+       "speed": 1.4651
+      },
+      "stroll": {
+       "k": 0.7789,
+       "A": 0.1731,
+       "speed": 1.3599
+      },
+      "stroll-easy": {
+       "k": 0.6663,
+       "A": 0.3015,
+       "speed": 1.1634
+      },
+      "idle": {
+       "k": 0.9024,
+       "A": 0.0862
+      },
+      "idle-relaxed": {
+       "k": 0.9024,
+       "A": 0.0739
+      },
+      "idle-crossed": {
+       "k": 0.9024,
+       "A": 0.0586
+      },
+      "idle-hips": {
+       "k": 0.9024,
+       "A": 0.0731
+      }
      },
      "palette": [
       "#442219",
@@ -128511,14 +128628,38 @@
       "byteLength": 1093816,
       "sha256": "2f004e05462ea4f5f45c94331bbfa65d0e1650d374f5a33694a679f00bc1d590"
      },
-     "walk": {
-      "k": 0.7873,
-      "A": 0.1608,
-      "speed": 1.4236
-     },
-     "idle": {
-      "k": 0.8694,
-      "A": 0.0856
+     "fits": {
+      "walk": {
+       "k": 0.7898,
+       "A": 0.1582,
+       "speed": 1.4281
+      },
+      "stroll": {
+       "k": 0.7497,
+       "A": 0.1711,
+       "speed": 1.3089
+      },
+      "stroll-easy": {
+       "k": 0.6435,
+       "A": 0.2925,
+       "speed": 1.1234
+      },
+      "idle": {
+       "k": 0.8694,
+       "A": 0.0856
+      },
+      "idle-relaxed": {
+       "k": 0.8694,
+       "A": 0.0736
+      },
+      "idle-crossed": {
+       "k": 0.8694,
+       "A": 0.0572
+      },
+      "idle-hips": {
+       "k": 0.8694,
+       "A": 0.0787
+      }
      },
      "palette": [
       "#f1b886",
@@ -128563,14 +128704,38 @@
       "byteLength": 1096384,
       "sha256": "70618d8241aaa0c46bb8353382b4ebfdbcc6948bf2cee4f82631d6599a2f2739"
      },
-     "walk": {
-      "k": 0.7851,
-      "A": 0.1657,
-      "speed": 1.4197
-     },
-     "idle": {
-      "k": 0.865,
-      "A": 0.0929
+     "fits": {
+      "walk": {
+       "k": 0.785,
+       "A": 0.1658,
+       "speed": 1.4194
+      },
+      "stroll": {
+       "k": 0.767,
+       "A": 0.1566,
+       "speed": 1.339
+      },
+      "stroll-easy": {
+       "k": 0.6437,
+       "A": 0.2961,
+       "speed": 1.1239
+      },
+      "idle": {
+       "k": 0.865,
+       "A": 0.0929
+      },
+      "idle-relaxed": {
+       "k": 0.865,
+       "A": 0.0806
+      },
+      "idle-crossed": {
+       "k": 0.865,
+       "A": 0.0618
+      },
+      "idle-hips": {
+       "k": 0.865,
+       "A": 0.0823
+      }
      },
      "palette": [
       "#67f1f9",
@@ -128615,14 +128780,38 @@
       "byteLength": 1094380,
       "sha256": "68f5bdfb6060da657644a9ee622cc572932cdad4879f8f44886d2b9160dd6712"
      },
-     "walk": {
-      "k": 0.8214,
-      "A": 0.1617,
-      "speed": 1.4853
-     },
-     "idle": {
-      "k": 0.9083,
-      "A": 0.0857
+     "fits": {
+      "walk": {
+       "k": 0.8215,
+       "A": 0.1616,
+       "speed": 1.4854
+      },
+      "stroll": {
+       "k": 0.7748,
+       "A": 0.1808,
+       "speed": 1.3527
+      },
+      "stroll-easy": {
+       "k": 0.6484,
+       "A": 0.3239,
+       "speed": 1.1321
+      },
+      "idle": {
+       "k": 0.9083,
+       "A": 0.0857
+      },
+      "idle-relaxed": {
+       "k": 0.9083,
+       "A": 0.0728
+      },
+      "idle-crossed": {
+       "k": 0.9083,
+       "A": 0.0555
+      },
+      "idle-hips": {
+       "k": 0.9083,
+       "A": 0.0727
+      }
      },
      "palette": [
       "#0d3c44",
@@ -128667,14 +128856,38 @@
       "byteLength": 1091524,
       "sha256": "1ebb1145371eecc5ba7d77ea705617b7905a8fcc2b53d13075980f584da2bd0c"
      },
-     "walk": {
-      "k": 0.7882,
-      "A": 0.1735,
-      "speed": 1.4252
-     },
-     "idle": {
-      "k": 0.8582,
-      "A": 0.1109
+     "fits": {
+      "walk": {
+       "k": 0.7877,
+       "A": 0.174,
+       "speed": 1.4243
+      },
+      "stroll": {
+       "k": 0.7563,
+       "A": 0.1789,
+       "speed": 1.3204
+      },
+      "stroll-easy": {
+       "k": 0.6342,
+       "A": 0.3176,
+       "speed": 1.1073
+      },
+      "idle": {
+       "k": 0.8582,
+       "A": 0.1109
+      },
+      "idle-relaxed": {
+       "k": 0.8582,
+       "A": 0.0976
+      },
+      "idle-crossed": {
+       "k": 0.8582,
+       "A": 0.0763
+      },
+      "idle-hips": {
+       "k": 0.8582,
+       "A": 0.102
+      }
      },
      "palette": [
       "#0c21a2",
@@ -128719,14 +128932,38 @@
       "byteLength": 1033356,
       "sha256": "2431faa31e859bf79a65dcd8c773311a07eafdad1c4dc798fdd53b33dbcd49c5"
      },
-     "walk": {
-      "k": 0.8015,
-      "A": 0.1688,
-      "speed": 1.4493
-     },
-     "idle": {
-      "k": 0.8742,
-      "A": 0.1048
+     "fits": {
+      "walk": {
+       "k": 0.8015,
+       "A": 0.1688,
+       "speed": 1.4493
+      },
+      "stroll": {
+       "k": 0.769,
+       "A": 0.175,
+       "speed": 1.3427
+      },
+      "stroll-easy": {
+       "k": 0.6444,
+       "A": 0.3163,
+       "speed": 1.1251
+      },
+      "idle": {
+       "k": 0.8742,
+       "A": 0.1048
+      },
+      "idle-relaxed": {
+       "k": 0.8742,
+       "A": 0.0913
+      },
+      "idle-crossed": {
+       "k": 0.8742,
+       "A": 0.072
+      },
+      "idle-hips": {
+       "k": 0.8742,
+       "A": 0.0919
+      }
      },
      "palette": [
       "#19018c",
@@ -128771,14 +129008,38 @@
       "byteLength": 1026956,
       "sha256": "4edeee2633ac7bfbec550d9a663c71d59bf62542a2997a5ec547eda7cf412800"
      },
-     "walk": {
-      "k": 0.7699,
-      "A": 0.1631,
-      "speed": 1.3922
-     },
-     "idle": {
-      "k": 0.8468,
-      "A": 0.0929
+     "fits": {
+      "walk": {
+       "k": 0.77,
+       "A": 0.163,
+       "speed": 1.3923
+      },
+      "stroll": {
+       "k": 0.7469,
+       "A": 0.1589,
+       "speed": 1.304
+      },
+      "stroll-easy": {
+       "k": 0.6208,
+       "A": 0.3016,
+       "speed": 1.0839
+      },
+      "idle": {
+       "k": 0.8468,
+       "A": 0.0929
+      },
+      "idle-relaxed": {
+       "k": 0.8468,
+       "A": 0.0804
+      },
+      "idle-crossed": {
+       "k": 0.8468,
+       "A": 0.0614
+      },
+      "idle-hips": {
+       "k": 0.8468,
+       "A": 0.0854
+      }
      },
      "palette": [
       "#76794a",
@@ -128823,14 +129084,38 @@
       "byteLength": 1091364,
       "sha256": "1d16bc1a992d38a36c2fb0180a20c10962f73653cf3f66e843d35a1c97ce0dff"
      },
-     "walk": {
-      "k": 0.784,
-      "A": 0.1723,
-      "speed": 1.4176
-     },
-     "idle": {
-      "k": 0.8644,
-      "A": 0.1113
+     "fits": {
+      "walk": {
+       "k": 0.7851,
+       "A": 0.1712,
+       "speed": 1.4197
+      },
+      "stroll": {
+       "k": 0.7444,
+       "A": 0.1831,
+       "speed": 1.2997
+      },
+      "stroll-easy": {
+       "k": 0.6555,
+       "A": 0.2943,
+       "speed": 1.1444
+      },
+      "idle": {
+       "k": 0.8644,
+       "A": 0.1113
+      },
+      "idle-relaxed": {
+       "k": 0.8644,
+       "A": 0.0983
+      },
+      "idle-crossed": {
+       "k": 0.8644,
+       "A": 0.0825
+      },
+      "idle-hips": {
+       "k": 0.8644,
+       "A": 0.0981
+      }
      },
      "palette": [
       "#49a0b5",
@@ -128875,14 +129160,38 @@
       "byteLength": 1093268,
       "sha256": "ed75af2a5f00368ee2806b68fdf9bb4e3f51011babbaeaaee4c7a1b811041f7a"
      },
-     "walk": {
-      "k": 0.8014,
-      "A": 0.1637,
-      "speed": 1.4491
-     },
-     "idle": {
-      "k": 0.8856,
-      "A": 0.0858
+     "fits": {
+      "walk": {
+       "k": 0.8021,
+       "A": 0.163,
+       "speed": 1.4503
+      },
+      "stroll": {
+       "k": 0.7722,
+       "A": 0.1637,
+       "speed": 1.3483
+      },
+      "stroll-easy": {
+       "k": 0.6432,
+       "A": 0.3105,
+       "speed": 1.1229
+      },
+      "idle": {
+       "k": 0.8856,
+       "A": 0.0858
+      },
+      "idle-relaxed": {
+       "k": 0.8856,
+       "A": 0.0729
+      },
+      "idle-crossed": {
+       "k": 0.8856,
+       "A": 0.0551
+      },
+      "idle-hips": {
+       "k": 0.8856,
+       "A": 0.0795
+      }
      },
      "palette": [
       "#0a79ab",
@@ -128927,14 +129236,38 @@
       "byteLength": 1090772,
       "sha256": "9278cc8fc5d38844085c96f8453ee5d0609fc8e88956cfc580003f9543b14029"
      },
-     "walk": {
-      "k": 0.7874,
-      "A": 0.1637,
-      "speed": 1.4239
-     },
-     "idle": {
-      "k": 0.8734,
-      "A": 0.0832
+     "fits": {
+      "walk": {
+       "k": 0.7877,
+       "A": 0.1635,
+       "speed": 1.4243
+      },
+      "stroll": {
+       "k": 0.7645,
+       "A": 0.159,
+       "speed": 1.3348
+      },
+      "stroll-easy": {
+       "k": 0.6446,
+       "A": 0.2955,
+       "speed": 1.1253
+      },
+      "idle": {
+       "k": 0.8734,
+       "A": 0.0832
+      },
+      "idle-relaxed": {
+       "k": 0.8734,
+       "A": 0.07
+      },
+      "idle-crossed": {
+       "k": 0.8734,
+       "A": 0.0538
+      },
+      "idle-hips": {
+       "k": 0.8734,
+       "A": 0.0758
+      }
      },
      "palette": [
       "#530b02",
@@ -128979,14 +129312,38 @@
       "byteLength": 1092864,
       "sha256": "93f97935e0bad81de93ede3f744dad6ef053a7cbf3fd9095fcb61a057bf07baf"
      },
-     "walk": {
-      "k": 0.8005,
-      "A": 0.1731,
-      "speed": 1.4475
-     },
-     "idle": {
-      "k": 0.8949,
-      "A": 0.0914
+     "fits": {
+      "walk": {
+       "k": 0.8013,
+       "A": 0.1724,
+       "speed": 1.4489
+      },
+      "stroll": {
+       "k": 0.7997,
+       "A": 0.1502,
+       "speed": 1.3963
+      },
+      "stroll-easy": {
+       "k": 0.6696,
+       "A": 0.2972,
+       "speed": 1.1691
+      },
+      "idle": {
+       "k": 0.8949,
+       "A": 0.0914
+      },
+      "idle-relaxed": {
+       "k": 0.8949,
+       "A": 0.076
+      },
+      "idle-crossed": {
+       "k": 0.8949,
+       "A": 0.0541
+      },
+      "idle-hips": {
+       "k": 0.8949,
+       "A": 0.0827
+      }
      },
      "palette": [
       "#5c0802",
@@ -129031,14 +129388,38 @@
       "byteLength": 1086812,
       "sha256": "5799c96bca983ea7aa9b391b9ad12ca0b7b7a9ce7714662d3619ac952683fd1b"
      },
-     "walk": {
-      "k": 0.824,
-      "A": 0.1628,
-      "speed": 1.4899
-     },
-     "idle": {
-      "k": 0.9174,
-      "A": 0.0803
+     "fits": {
+      "walk": {
+       "k": 0.8231,
+       "A": 0.1637,
+       "speed": 1.4882
+      },
+      "stroll": {
+       "k": 0.7944,
+       "A": 0.1643,
+       "speed": 1.387
+      },
+      "stroll-easy": {
+       "k": 0.6747,
+       "A": 0.3007,
+       "speed": 1.178
+      },
+      "idle": {
+       "k": 0.9174,
+       "A": 0.0803
+      },
+      "idle-relaxed": {
+       "k": 0.9174,
+       "A": 0.0686
+      },
+      "idle-crossed": {
+       "k": 0.9174,
+       "A": 0.053
+      },
+      "idle-hips": {
+       "k": 0.9174,
+       "A": 0.0683
+      }
      },
      "palette": [
       "#ed6f32",
@@ -129083,14 +129464,33 @@
       "byteLength": 964320,
       "sha256": "ed0c3b4375aa11bd70029f3a418d28a5cd998a4d723e17c7f569878d81df415a"
      },
-     "walk": {
-      "k": 0.8183,
-      "A": 0.156,
-      "speed": 1.4796
-     },
-     "idle": {
-      "k": 0.9077,
-      "A": 0.0847
+     "fits": {
+      "gentle": {
+       "k": 0.6257,
+       "A": 0.3652,
+       "speed": 1.1315
+      },
+      "stroll-gentle": {
+       "k": 0.584,
+       "A": 0.3984,
+       "speed": 1.0196
+      },
+      "idle": {
+       "k": 0.9077,
+       "A": 0.0847
+      },
+      "idle-relaxed": {
+       "k": 0.9077,
+       "A": 0.0703
+      },
+      "idle-crossed": {
+       "k": 0.9077,
+       "A": 0.0441
+      },
+      "idle-hips": {
+       "k": 0.9077,
+       "A": 0.077
+      }
      },
      "palette": [
       "#e2c9a3",
@@ -129126,11 +129526,6 @@
       "#3e0201",
       "#b40f16"
      ],
-     "gentle": {
-      "k": 0.6287,
-      "A": 0.3622,
-      "speed": 1.1368
-     },
      "skirt": {
       "tiers": 1,
       "hips": "mixamorig:Hips",
@@ -129388,14 +129783,38 @@
       "byteLength": 1092520,
       "sha256": "f08bf3ef8efc948dd9476a552d3a1fdfeb32ee0a58d6744b7a96f627bc3d28cc"
      },
-     "walk": {
-      "k": 0.8451,
-      "A": 0.1411,
-      "speed": 1.5281
-     },
-     "idle": {
-      "k": 0.9036,
-      "A": 0.1082
+     "fits": {
+      "walk": {
+       "k": 0.8442,
+       "A": 0.142,
+       "speed": 1.5265
+      },
+      "stroll": {
+       "k": 0.8075,
+       "A": 0.1543,
+       "speed": 1.4099
+      },
+      "stroll-easy": {
+       "k": 0.6918,
+       "A": 0.293,
+       "speed": 1.2079
+      },
+      "idle": {
+       "k": 0.9036,
+       "A": 0.1082
+      },
+      "idle-relaxed": {
+       "k": 0.9036,
+       "A": 0.0967
+      },
+      "idle-crossed": {
+       "k": 0.9036,
+       "A": 0.0791
+      },
+      "idle-hips": {
+       "k": 0.9036,
+       "A": 0.0955
+      }
      },
      "palette": [
       "#f22812",
@@ -129440,14 +129859,33 @@
       "byteLength": 965992,
       "sha256": "7f0bdd8a304e25393098bf0720f216bb70bcd1c6c829bc92d3c1db4ed07ec3b3"
      },
-     "walk": {
-      "k": 0.8449,
-      "A": 0.1702,
-      "speed": 1.5278
-     },
-     "idle": {
-      "k": 0.9438,
-      "A": 0.0774
+     "fits": {
+      "gentle": {
+       "k": 0.6439,
+       "A": 0.3857,
+       "speed": 1.1643
+      },
+      "stroll-gentle": {
+       "k": 0.6156,
+       "A": 0.3955,
+       "speed": 1.0747
+      },
+      "idle": {
+       "k": 0.9438,
+       "A": 0.0774
+      },
+      "idle-relaxed": {
+       "k": 0.9438,
+       "A": 0.0658
+      },
+      "idle-crossed": {
+       "k": 0.9438,
+       "A": 0.0486
+      },
+      "idle-hips": {
+       "k": 0.9438,
+       "A": 0.0675
+      }
      },
      "palette": [
       "#f1bf9e",
@@ -129483,11 +129921,6 @@
       "#c12f0b",
       "#000000"
      ],
-     "gentle": {
-      "k": 0.6475,
-      "A": 0.382,
-      "speed": 1.1708
-     },
      "skirt": {
       "tiers": 2,
       "hips": "mixamorig:Hips",
@@ -130112,14 +130545,33 @@
       "byteLength": 918980,
       "sha256": "13ff2f2e9bfce2cece75438f41ed664fdb821348c2309d5ca51ea52a0274d4df"
      },
-     "walk": {
-      "k": 0.8202,
-      "A": 0.178,
-      "speed": 1.483
-     },
-     "idle": {
-      "k": 0.9155,
-      "A": 0.0899
+     "fits": {
+      "gentle": {
+       "k": 0.6311,
+       "A": 0.3818,
+       "speed": 1.1411
+      },
+      "stroll-gentle": {
+       "k": 0.6029,
+       "A": 0.3925,
+       "speed": 1.0527
+      },
+      "idle": {
+       "k": 0.9155,
+       "A": 0.0899
+      },
+      "idle-relaxed": {
+       "k": 0.9155,
+       "A": 0.0776
+      },
+      "idle-crossed": {
+       "k": 0.9155,
+       "A": 0.0603
+      },
+      "idle-hips": {
+       "k": 0.9155,
+       "A": 0.0784
+      }
      },
      "palette": [
       "#162b3a",
@@ -130155,11 +130607,6 @@
       "#e1f2ec",
       "#4c6c86"
      ],
-     "gentle": {
-      "k": 0.6311,
-      "A": 0.3818,
-      "speed": 1.1412
-     },
      "skirt": {
       "tiers": 2,
       "hips": "mixamorig:Hips",
@@ -130784,14 +131231,38 @@
       "byteLength": 1025676,
       "sha256": "f8422ccf128a491117d8e7c554df6e35c0aa24266f4799ccd92da8f6a30bd22c"
      },
-     "walk": {
-      "k": 0.799,
-      "A": 0.1609,
-      "speed": 1.4448
-     },
-     "idle": {
-      "k": 0.8848,
-      "A": 0.0917
+     "fits": {
+      "walk": {
+       "k": 0.799,
+       "A": 0.1609,
+       "speed": 1.4448
+      },
+      "stroll": {
+       "k": 0.7562,
+       "A": 0.1804,
+       "speed": 1.3202
+      },
+      "stroll-easy": {
+       "k": 0.6508,
+       "A": 0.3026,
+       "speed": 1.1362
+      },
+      "idle": {
+       "k": 0.8848,
+       "A": 0.0917
+      },
+      "idle-relaxed": {
+       "k": 0.8848,
+       "A": 0.0792
+      },
+      "idle-crossed": {
+       "k": 0.8848,
+       "A": 0.0612
+      },
+      "idle-hips": {
+       "k": 0.8848,
+       "A": 0.0778
+      }
      },
      "palette": [
       "#303b28",
@@ -130836,14 +131307,33 @@
       "byteLength": 967468,
       "sha256": "90799718f7bb01da02122da7d9dd24552d455e7dd890cc26624033785e5082be"
      },
-     "walk": {
-      "k": 0.8348,
-      "A": 0.1498,
-      "speed": 1.5095
-     },
-     "idle": {
-      "k": 0.9158,
-      "A": 0.0877
+     "fits": {
+      "gentle": {
+       "k": 0.6302,
+       "A": 0.3723,
+       "speed": 1.1396
+      },
+      "stroll-gentle": {
+       "k": 0.6167,
+       "A": 0.3756,
+       "speed": 1.0766
+      },
+      "idle": {
+       "k": 0.9158,
+       "A": 0.0877
+      },
+      "idle-relaxed": {
+       "k": 0.9158,
+       "A": 0.0729
+      },
+      "idle-crossed": {
+       "k": 0.9158,
+       "A": 0.0463
+      },
+      "idle-hips": {
+       "k": 0.9158,
+       "A": 0.0793
+      }
      },
      "palette": [
       "#3f0101",
@@ -130879,11 +131369,6 @@
       "#000000",
       "#743b21"
      ],
-     "gentle": {
-      "k": 0.6312,
-      "A": 0.3714,
-      "speed": 1.1413
-     },
      "skirt": {
       "tiers": 2,
       "hips": "mixamorig:Hips",
@@ -131508,14 +131993,33 @@
       "byteLength": 962632,
       "sha256": "519450aee2f54dce3aaf3d268847371c5e6749ff89fb9bd38ebad17e12ebd35e"
      },
-     "walk": {
-      "k": 0.8316,
-      "A": 0.1677,
-      "speed": 1.5038
-     },
-     "idle": {
-      "k": 0.9225,
-      "A": 0.0841
+     "fits": {
+      "gentle": {
+       "k": 0.6344,
+       "A": 0.3807,
+       "speed": 1.1471
+      },
+      "stroll-gentle": {
+       "k": 0.5998,
+       "A": 0.399,
+       "speed": 1.0473
+      },
+      "idle": {
+       "k": 0.9225,
+       "A": 0.0841
+      },
+      "idle-relaxed": {
+       "k": 0.9225,
+       "A": 0.07
+      },
+      "idle-crossed": {
+       "k": 0.9225,
+       "A": 0.0507
+      },
+      "idle-hips": {
+       "k": 0.9225,
+       "A": 0.0765
+      }
      },
      "palette": [
       "#096a08",
@@ -131551,11 +132055,6 @@
       "#000000",
       "#170686"
      ],
-     "gentle": {
-      "k": 0.6338,
-      "A": 0.3814,
-      "speed": 1.146
-     },
      "skirt": {
       "tiers": 2,
       "hips": "mixamorig:Hips",
@@ -132180,14 +132679,38 @@
       "byteLength": 1091696,
       "sha256": "5afe819117f7ee3371559a97e473f249857f2180196bb1c8095d619f5cdb041a"
      },
-     "walk": {
-      "k": 0.8451,
-      "A": 0.1864,
-      "speed": 1.5282
-     },
-     "idle": {
-      "k": 0.9651,
-      "A": 0.0794
+     "fits": {
+      "walk": {
+       "k": 0.8452,
+       "A": 0.1863,
+       "speed": 1.5283
+      },
+      "stroll": {
+       "k": 0.8374,
+       "A": 0.1626,
+       "speed": 1.4621
+      },
+      "stroll-easy": {
+       "k": 0.7111,
+       "A": 0.3072,
+       "speed": 1.2415
+      },
+      "idle": {
+       "k": 0.9651,
+       "A": 0.0794
+      },
+      "idle-relaxed": {
+       "k": 0.9651,
+       "A": 0.0682
+      },
+      "idle-crossed": {
+       "k": 0.9651,
+       "A": 0.0494
+      },
+      "idle-hips": {
+       "k": 0.9651,
+       "A": 0.066
+      }
      },
      "palette": [
       "#051059",
@@ -132232,14 +132755,38 @@
       "byteLength": 1090216,
       "sha256": "9c6af6a1f4cf02a6a06f416c3eef59cc4dae1270b995d75108c9e7761c20ca45"
      },
-     "walk": {
-      "k": 0.7985,
-      "A": 0.166,
-      "speed": 1.4438
-     },
-     "idle": {
-      "k": 0.8867,
-      "A": 0.0838
+     "fits": {
+      "walk": {
+       "k": 0.797,
+       "A": 0.1676,
+       "speed": 1.4411
+      },
+      "stroll": {
+       "k": 0.7729,
+       "A": 0.1632,
+       "speed": 1.3495
+      },
+      "stroll-easy": {
+       "k": 0.6546,
+       "A": 0.2985,
+       "speed": 1.1428
+      },
+      "idle": {
+       "k": 0.8867,
+       "A": 0.0838
+      },
+      "idle-relaxed": {
+       "k": 0.8867,
+       "A": 0.0703
+      },
+      "idle-crossed": {
+       "k": 0.8867,
+       "A": 0.0526
+      },
+      "idle-hips": {
+       "k": 0.8867,
+       "A": 0.0768
+      }
      },
      "palette": [
       "#3c7f8f",
@@ -132284,14 +132831,33 @@
       "byteLength": 876492,
       "sha256": "1e2822d6150198c8049cd010a4669cb77660f4b90afd47fbd8ff28e62305b4c6"
      },
-     "walk": {
-      "k": 0.8509,
-      "A": 0.1465,
-      "speed": 1.5387
-     },
-     "idle": {
-      "k": 0.9325,
-      "A": 0.0882
+     "fits": {
+      "gentle": {
+       "k": 0.652,
+       "A": 0.367,
+       "speed": 1.1789
+      },
+      "stroll-gentle": {
+       "k": 0.6086,
+       "A": 0.4008,
+       "speed": 1.0626
+      },
+      "idle": {
+       "k": 0.9325,
+       "A": 0.0882
+      },
+      "idle-relaxed": {
+       "k": 0.9325,
+       "A": 0.0732
+      },
+      "idle-crossed": {
+       "k": 0.9325,
+       "A": 0.0471
+      },
+      "idle-hips": {
+       "k": 0.9325,
+       "A": 0.0802
+      }
      },
      "palette": [
       "#e3ab7c",
@@ -132327,11 +132893,6 @@
       "#000000",
       "#509fd3"
      ],
-     "gentle": {
-      "k": 0.647,
-      "A": 0.3719,
-      "speed": 1.1699
-     },
      "skirt": {
       "tiers": 2,
       "hips": "mixamorig:Hips",

@@ -1,28 +1,72 @@
 using Rusty.Engine;
+using WorldRpg.Kit.World;
 
 namespace WorldRpg.Kit.Presentation;
 
 /// <summary>
 /// A Gaussian-splat character walkers are drawn as: its animated appearance (in metres, standing on y = 0 and facing +z),
-/// which every walker draws as an instance of; the ids of its <paramref name="Walk"/> and <paramref name="Idle"/> clips;
-/// the rate its walk plays at so its stride keeps pace with a walker; the crossfade between the two; and its long skirt on
-/// joints of its own, which the legs push open, or null.
+/// which every walker draws as an instance of; the walks and idles a walker may play as it, each walker playing one of
+/// each (<see cref="Gait"/>); the crossfade between the two; and its long skirt on joints of its own, which the legs push
+/// open, or null.
 /// </summary>
-public sealed record SplatFigure(string Name, Appearance Appearance, string Walk, string Idle, float WalkRate, float CrossfadeSeconds,
-    SplatSkirtRig? Skirt = null);
+public sealed record SplatFigure(string Name, Appearance Appearance, IReadOnlyList<SplatWalk> Walks, IReadOnlyList<string> Idles, float CrossfadeSeconds,
+    SplatSkirtRig? Skirt = null)
+{
+    /// <summary>
+    /// The gait a walker of stable <paramref name="seed"/> has as this figure: one of its walks and one of its idles, and
+    /// a rate within <paramref name="jitter"/> either side of 1 that both play at and it walks at, each drawn from the
+    /// seed apart from the others. The same seed has the same gait in every run, so a walker keeps it over a save.
+    /// </summary>
+    public SplatGait Gait(int seed, float jitter)
+    {
+        if (!(jitter is >= 0 and < 1)) throw new ArgumentOutOfRangeException(nameof(jitter), jitter, "A gait's rate varies by 0 to under 1 either side of 1.");
+        if (Walks.Count == 0 || Idles.Count == 0) throw new InvalidOperationException($"Gsplat figure {Name} has {Walks.Count} walks and {Idles.Count} idles; a walker needs one of each.");
+        return new(Walks[(int)(Draw("walk") % (ulong)Walks.Count)], Idles[(int)(Draw("idle") % (ulong)Idles.Count)],
+            1F + jitter * (Draw("rate") % 10001 / 5000F - 1F));
+
+        // The hash's low bits follow the seed's own (the seed % 4 that picks a townsperson's art among four), so it is mixed through first.
+        ulong Draw(string what)
+        {
+            ulong mixed = StableHash.Fnv1a64($"splat-gait/{what}/{seed}");
+            mixed = (mixed ^ mixed >> 33) * 0xFF51AFD7ED558CCDUL;
+            mixed = (mixed ^ mixed >> 33) * 0xC4CEB9FE1A85EC53UL;
+            return mixed ^ mixed >> 33;
+        }
+    }
+}
+
+/// <summary>
+/// A walk a <see cref="SplatFigure"/> may walk: its clip, the share of the walkers' speed a walker walking it goes at, and
+/// the rate the clip plays at so its stride keeps that pace.
+/// </summary>
+public sealed record SplatWalk(string Clip, float Pace, float Rate);
+
+/// <summary>
+/// How one walker walks and stands as its figure: its <paramref name="Walk"/> and <paramref name="Idle"/>, and the
+/// <paramref name="Rate"/> both play at and it walks at, about 1, so no two walkers move as one.
+/// </summary>
+public readonly record struct SplatGait(SplatWalk Walk, string Idle, float Rate)
+{
+    /// <summary>The share of the walkers' speed this walker goes at; its walk's stride keeps it.</summary>
+    public float Pace => Walk.Pace * Rate;
+
+    /// <summary>The rate its walk plays at.</summary>
+    public float WalkRate => Walk.Rate * Rate;
+}
 
 /// <summary>
 /// Draws walkers as <see cref="SplatFigure"/>s, at their own size: one assigned to a walker (<see cref="Assign"/>),
 /// which it draws as that figure whether or not the crowd uses one, else the crowd's figure, else the walker's own
-/// (<see cref="UseOwn"/>). Each walker shown in a snapshot is an animation
-/// instance of the figure's appearance, playing its walk while it walks and its idle otherwise. The figure's
+/// (<see cref="UseOwn"/>). Each walker shown in a snapshot is an animation instance of the figure's appearance, playing
+/// the walk of its gait while it walks and the idle otherwise, its gait drawn from the walker's stable seed
+/// (<paramref name="seeds"/>, by actor) and the crowd's <paramref name="jitter"/>. The figure's
 /// appearance and clips belong to whoever made it. An object holds one instance, so a walker that changes figure has
 /// its instance replaced, and one a snapshot leaves out has its instance released before that snapshot is published:
 /// the Engine refuses a pose for an object that now shows a sprite. A figure with a skirt has each walker's skirt
 /// driven on its own sheet: each settle moves it on by the time <see cref="Advance"/> gave since the last, from where the
 /// walker's clips put its legs as that settle is drawn, and places the skirt joints over the clips.
 /// </summary>
-public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, IDisposable
+public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> seeds, float jitter) : IWalkerCrowd, IDisposable
 {
     private readonly Dictionary<ulong, Walker> shown = [];
     private readonly HashSet<ulong> seen = [];
@@ -42,6 +86,9 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
 
     /// <summary>The walkers drawn as a figure of their own, by actor.</summary>
     public IReadOnlyDictionary<long, SplatFigure> Assigned => assigned;
+
+    /// <summary>The gait walker object <paramref name="id"/> has as the figure the last snapshot showed it as, or null when it showed none.</summary>
+    public SplatGait? Gait(ulong id) => shown.TryGetValue(id, out Walker? walker) ? walker.Gait : null;
 
     /// <summary>Draws walker <paramref name="actor"/> as <paramref name="figure"/> from the next snapshot, or (null) as the crowd draws the rest.</summary>
     public void Assign(long actor, SplatFigure? figure)
@@ -77,15 +124,16 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
         if (disposed || (assigned.TryGetValue(actor, out SplatFigure? given) ? given : Figure ?? Own?.Invoke(actor)) is not { } figure) return null;
         seen.Add(id);
         if (!shown.TryGetValue(id, out Walker? walker))
-            shown[id] = walker = new(figure, Engine.CreateInstance(new(figure.Appearance, id)));
+            shown[id] = walker = new(figure, figure.Gait(seeds(actor), jitter), Engine.CreateInstance(new(figure.Appearance, id)));
         else if (walker.Figure != figure)
         {
             walker.Instance = Engine.ReplaceInstance(walker.Instance, new(figure.Appearance, id));
             walker.Figure = figure;
+            walker.Gait = figure.Gait(seeds(actor), jitter);
             walker.Played = null;
             walker.Skirt = null;
         }
-        walker.Wanted = walking ? figure.Walk : figure.Idle;
+        walker.Wanted = walking ? walker.Gait.Walk.Clip : walker.Gait.Idle;
         return figure.Appearance;
     }
 
@@ -110,7 +158,7 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
             if (walker.Played == walker.Wanted) continue;
             // A new instance starts its clip at once; a walker that stops or sets off crossfades into the other.
             bool fades = walker.Played is not null;
-            float speed = walker.Wanted == walker.Figure.Walk ? walker.Figure.WalkRate : 1F;
+            float speed = walker.Wanted == walker.Gait.Walk.Clip ? walker.Gait.WalkRate : walker.Gait.Rate;
             Engine.SetPlayback(new(walker.Instance, AnimationPlaybackKind.Play, walker.Wanted, AnimationLoopMode.Repeat, speed, 1F,
                 !fades, fades ? walker.Figure.CrossfadeSeconds : 0F, fades, 0F));
             walker.Played = walker.Wanted;
@@ -158,9 +206,10 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
         catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
-    private sealed class Walker(SplatFigure figure, AnimationInstance instance)
+    private sealed class Walker(SplatFigure figure, SplatGait gait, AnimationInstance instance)
     {
         internal SplatFigure Figure { get; set; } = figure;
+        internal SplatGait Gait { get; set; } = gait;
         internal AnimationInstance Instance { get; set; } = instance;
         /// <summary>The clip the latest snapshot asked for, and the one played; null before the first play.</summary>
         internal string Wanted { get; set; } = string.Empty;

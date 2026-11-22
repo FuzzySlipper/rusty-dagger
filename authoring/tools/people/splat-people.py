@@ -2,24 +2,30 @@
 """splat-people: the gsplat townspeople every town walker draws as, and the art pack's `splatPeople` section.
 
 Takes the ready Dagger characters (local/art/generated/people/dagger-characters/ready.json: 09-game approved by Patch, each with
-the Engine's skinned-splat GLB on the 22 Mixamo body bones and its fit to PINOC's Mixamo Walking and Standing Idle) and
-writes into content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/:
+the Engine's skinned-splat GLB on the 22 Mixamo body bones and its fit to every clip in PACKS) and writes into
+content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/:
 
-  ID.glb          each character's skinned-splat GLB, as asset-pipeline wrote it
-  clips/walk.glb  PINOC's Mixamo Walking as a clip pack: its skeleton, skin and one clip named walk, without the
-  clips/idle.glb  X Bot mesh it is exported with; Standing Idle the same, named idle; and gentle, asset-pipeline's
-  clips/gentle.glb softened Walking (gentle_glb.py, 0.75), which long skirts walk. The exports name their clips alike
-                  (Armature.001|Scene), and one character carries several packs, so each takes its own name. The
-                  Engine binds a pack by joint names only when it names every joint of the character, so each pack
-                  also names the skirt joints the characters carry, under their own parents with no channels.
+  ID.glb             each character's skinned-splat GLB, as asset-pipeline wrote it
+  clips/NAME.glb     each clip of PACKS as a clip pack: the PINOC Mixamo export's skeleton, skin and one clip named NAME,
+                     without the X Bot mesh it is exported with. The exports name their clips alike (Armature.001|Scene),
+                     and one character carries several packs, so each takes its own name. The Engine binds a pack by
+                     joint names only when it names every joint of the character, so each pack also names the skirt
+                     joints the characters carry, under their own parents with no channels.
 
-and states artReplacements.splatPeople in payload.json: the clips, the joint the fits move (the top joint, Hips), and
-per character its name, the classic townsperson archive it draws (each walker wearing that art draws as it), its body, the pelvis fit of each clip (k and A: Hips at (k x, A + k y, k z)) with the speed
-the fitted walk travels, and its palette: PALETTE sRGB colours k-means picks from its own Gaussians, weighted by
-opacity, which a pixel finish can snap its blocks to. A character with a long skirt on joints of its own (its GLB's
-asset.extras.skirt, from asset-pipeline's skirt_bones.py rig) walks the gentle clip, with its fit and speed, and states
-its skirt: two tiers as the cloth sheet's columns, rows, rest grid and bone columns, one tier as the ring's joints,
-directions, pivots and reach by height. Rerun it when asset-pipeline marks another character ready or refits one.
+The clips (rusty-dagger #10978: walkers vary, not clones) are PINOC's library Walking and Standing Idle, softened
+Walking (gentle), and motions generated on Patch's PINOC account, each cut to a seamless loop (asset-pipeline
+loop_clip.py) and cleaned (clean_clip_noise.py), some softened (gentle_glb.py). Library clips are working material until
+Patch settles their licence (2026-11-19), so a new clip is a generated one. A walker walks one of WALKS (one of SKIRT_WALKS, softer, in a long
+skirt) and stands in one of IDLES, picked by its seed in the game.
+
+It states artReplacements.splatPeople in payload.json: the clips, the three sets, the joint the fits move (the top
+joint, Hips), and per character its name, the classic townsperson archive it draws (each walker wearing that art draws
+as it), its body, the pelvis fit of each clip it plays (k and A: Hips at (k x, A + k y, k z)) with the speed a fitted
+walk travels, and its palette: PALETTE sRGB colours k-means picks from its own Gaussians, weighted by opacity, which a
+pixel finish can snap its blocks to. A character with a long skirt on joints of its own (its GLB's asset.extras.skirt,
+from asset-pipeline's skirt_bones.py rig) states its skirt: two tiers as the cloth sheet's columns, rows, rest grid and
+bone columns, one tier as the ring's joints, directions, pivots and reach by height. Rerun it when asset-pipeline marks
+another character ready or refits one.
 
     authoring/tools/people/splat-people.py [--characters DIR] [--clips DIR]
 """
@@ -39,10 +45,13 @@ MEDIA = PACK / 'media/splat-people'
 CHARACTERS = ROOT / 'local/art/generated/people/dagger-characters'
 CLIPS = Path('/data/assets/splat-characters/pinoc-clips/mixamo')
 # Each pack's clip, by the name the game plays it under, from the PINOC Mixamo export it is cut from.
-PACKS = {'walk': 'walking.glb', 'idle': 'standing-idle.glb', 'gentle': 'walking-gentle.glb'}
-# The packs every character binds; a skirted one binds GENTLE too, and walks it.
-BODY_PACKS = ('walk', 'idle')
-GENTLE = 'gentle'
+PACKS = {'walk': 'walking.glb', 'stroll': 'relaxed-stroll.glb', 'stroll-easy': 'relaxed-stroll-easy.glb',
+         'gentle': 'walking-gentle.glb', 'stroll-gentle': 'relaxed-stroll-gentle.glb',
+         'idle': 'standing-idle.glb', 'idle-relaxed': 'relaxed-idle.glb', 'idle-crossed': 'crossed-arms-idle.glb', 'idle-hips': 'hands-on-hips-idle.glb'}
+# The walks a walker picks from; the softer ones a walker in a long skirt picks from instead; the idles any walker picks from.
+WALKS = ('walk', 'stroll', 'stroll-easy')
+SKIRT_WALKS = ('gentle', 'stroll-gentle')
+IDLES = ('idle', 'idle-relaxed', 'idle-crossed', 'idle-hips')
 TOP_JOINT = 'mixamorig:Hips'
 PALETTE = 32
 
@@ -177,7 +186,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--characters', type=Path, default=os.environ.get('DAGGER_CHAR_ROOT') or CHARACTERS,
                         help="character stage root containing ready.json")
-    parser.add_argument('--clips', type=Path, default=CLIPS, help="PINOC's Mixamo exports of Walking, its gentle copy and Standing Idle")
+    parser.add_argument('--clips', type=Path, default=CLIPS, help="the PINOC Mixamo exports PACKS names, looped and cleaned")
     args = parser.parse_args()
     ready_list = json.loads((args.characters / 'ready.json').read_text())['ready']
     bodies, fits, skirts, extra = {}, {}, {}, {}
@@ -185,7 +194,7 @@ def main():
         body = bodies[ready['id']] = args.characters / ready['engine_glb']
         fits[ready['id']] = json.loads(body.with_name(f'{ready["id"]}-clip-fit.json').read_text())['clips']
         skirts[ready['id']] = skirt(body)
-        packs = BODY_PACKS + ((GENTLE,) if skirts[ready['id']] else ())
+        packs = (SKIRT_WALKS if skirts[ready['id']] else WALKS) + IDLES
         if any(fits[ready['id']].get(name, {}).get('path') != PACKS[name] for name in packs):
             raise SystemExit(f'{ready["id"]} was not fitted to {", ".join(PACKS[name] for name in packs)}')
         for joint, parent in skin_joints(body).items():
@@ -202,26 +211,26 @@ def main():
     for ready in ready_list:
         cid, fit = ready['id'], fits[ready['id']]
         shutil.copyfile(bodies[cid], MEDIA / f'{cid}.glb')
+        walks = SKIRT_WALKS if skirts[cid] else WALKS
         characters[cid] = {
             'name': ready['name'],
             'archive': int(cid.split('-')[0]),  # the stage names a character ARCHIVE or ARCHIVE-VARIANT
             'body': entry(MEDIA / f'{cid}.glb'),
-            'walk': {'k': fit['walk']['k'], 'A': fit['walk']['A'], 'speed': round(fit['walk']['fitted']['speed_m_s'], 4)},
-            'idle': {'k': fit['idle']['k'], 'A': fit['idle']['A']},
+            'fits': {name: {'k': fit[name]['k'], 'A': fit[name]['A']} | ({'speed': round(fit[name]['fitted']['speed_m_s'], 4)} if name in walks else {})
+                     for name in walks + IDLES},
             'palette': palette(MEDIA / f'{cid}.glb'),
         }
         if skirts[cid]:
-            characters[cid] |= {'gentle': {'k': fit[GENTLE]['k'], 'A': fit[GENTLE]['A'], 'speed': round(fit[GENTLE]['fitted']['speed_m_s'], 4)},
-                                'skirt': skirts[cid]}
+            characters[cid]['skirt'] = skirts[cid]
     payload_path = PACK / 'payload.json'
     payload = json.loads(payload_path.read_text())
     payload['artReplacements']['splatPeople'] = {
-        'clips': clips, 'joint': TOP_JOINT,
-        'producer': 'PINOC library (Viggle), Mixamo rig', 'license': 'PINOC library clip',
+        'clips': clips, 'walks': list(WALKS), 'skirtWalks': list(SKIRT_WALKS), 'idles': list(IDLES), 'joint': TOP_JOINT,
+        'producer': 'PINOC (Viggle): library and generated motions, Mixamo rig', 'license': 'PINOC clip',
         'characters': characters}
     payload_path.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + '\n')
-    print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted) and the {", ".join(PACKS)} packs, '
-          'and stated artReplacements.splatPeople')
+    print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted) and the {", ".join(PACKS)} packs '
+          f'({sum(clip["byteLength"] for clip in clips.values()) / 1e6:.2f} MB), and stated artReplacements.splatPeople')
 
 
 if __name__ == '__main__':
