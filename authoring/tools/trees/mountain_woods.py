@@ -77,13 +77,15 @@ CROWN = ((.500, .105, -.014, .155, .124, .137), (.400, .173, .038, .170, .105, .
 class CarvedBark:
     """Unroll each limb along its own rings. Even the back of a twisted root
     gets continuous grain across its circumference, with no change of chart."""
-    def __init__(self, tree, wood=None):
+    def __init__(self, tree, wood=None, frost=None):
         self.tree = tree
         pixels = tree.pixels
         if wood is None:
             wood = pixels[..., 3] > 128
         self.wood = np.array(filled(pixels, wood))
         self.distance = distance_transform_edt(pixels[..., 3] <= 128)
+        self.frost = (distance_transform_edt(~frost, return_indices=True)
+                      if frost is not None and frost.any() else None)
         self.tiles = []
         colours = pixels[wood, :3].astype(float)
         self.ramp = np.array(colour_ramp(colours, [.03, .12, .26, .43, .60, .76, .90, .98]))
@@ -123,6 +125,14 @@ class CarvedBark:
         level = np.clip(np.rint(7*(tone-.22*crack)).astype(int), 0, 7)
         direct = (.18+.76*np.clip((abs(face)-.18)/.62, 0, 1))*(1-.76*np.clip(self.distance[y, x]/5, 0, 1))
         pixels[..., :3] = np.rint(direct[..., None]*pixels[..., :3]+(1-direct[..., None])*self.ramp[level, :3])
+        if self.frost is not None:
+            # The light rim of a skinny icy twig is often only one painted
+            # texel wide. Carry it around the edge independently of the dry
+            # wood palette, including at the end where a twig is snapped.
+            distance, nearest = self.frost
+            rim = distance[y,x] <= max(1.25,h*.006)
+            fy,fx = nearest[:,y,x]
+            pixels[rim,:3] = tree.pixels[fy[rim],fx[rim],:3]
         slot = len(self.tiles)
         self.tiles.append(Image.fromarray(pixels))
         u, v = np.meshgrid(around, path)

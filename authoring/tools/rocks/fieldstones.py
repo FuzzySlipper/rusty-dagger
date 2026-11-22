@@ -467,16 +467,18 @@ def pack_wraps(pieces):
 
 def build(key, rgba, metres):
     painting = PAINTINGS[key]
+    return assembly(painting, LAYOUTS[painting.layout], ramp_for(key,rgba), metres)
+
+
+def assembly(painting, pieces, ramp, metres):
     seed = int.from_bytes(hashlib.sha256(painting.layout.encode()).digest()[:4],"little")
     rng = np.random.default_rng(seed)
-    pieces = LAYOUTS[painting.layout]
     # Each piece has a full wrap of its own, including its back. Size in the
     # world sets the atlas resolution; UVs stay identical across seasonal skins.
     unit = int(np.clip(round(8*metres**.48),7,17))
     (width,height), boxes = pack_wraps(pieces)
     atlas = Image.new("RGBA",(width*unit,height*unit))
     lattice = rng.random((32,32,32))
-    ramp = ramp_for(key,rgba)
     parts = {}
     for i,piece in enumerate(pieces):
         rings = rings_of(piece,rng)

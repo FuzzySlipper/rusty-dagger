@@ -113866,15 +113866,10 @@
    },
    "502-15": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-502-15-bark.png",
-     "byteLength": 661,
-     "sha256": "8812cbcfcbdccdf61b4b93d23169de97a51d9cbd478103d974bed19fd927b674"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-buttressed-snag-p15-swamp.prop-mesh.json",
+     "byteLength": 126023,
+     "sha256": "a00c1593cebb15f8b00ff093f8e7885e41cee781ab6cf3db11b3a0b7d5c1dca9",
+     "height": 1.040196
     },
     "placement": {
      "height": 11.933425,
@@ -113883,19 +113878,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-502-15-bark.png",
+     "byteLength": 184027,
+     "sha256": "f50fa22447645a42b123704afda43baee105d3a7a5e4e93d2f2ef602af3e12ed"
     }
    },
    "502-30": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p3-from-0.prop-mesh.json",
-     "byteLength": 56838,
-     "sha256": "693e5c9246d8935eafeb68530af3b8f20ee1558b6915bec1bdce57e5dfbf1ab0",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-502-30-bark.png",
-     "byteLength": 583,
-     "sha256": "fb427ac2eb34a3987deee23b5f84e4fd3abfd4a945a21c6dc35a873983d704ca"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-crooked-swamp-oak-p30-swamp.prop-mesh.json",
+     "byteLength": 209039,
+     "sha256": "6c53411fa16348b571c4162771bdadccc0bf21d12f09b0a2cf2a413d2c6a4131",
+     "height": 1.000389
     },
     "placement": {
      "height": 17.374308,
@@ -113904,6 +113899,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-502-30-bark.png",
+     "byteLength": 146720,
+     "sha256": "0e68b39863f597b181fffdf17323f5b396f7a58fa94d7b8f83deb98e095ef7e9"
     }
    },
    "503-5": {
@@ -113934,15 +113934,10 @@
    },
    "503-11": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-11-bark.png",
-     "byteLength": 650,
-     "sha256": "4f9c0e9323e939fe32b84fd290ca7b2c6cc4c13ac22e2447718b04e2c41ffb3c"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-desert-fork-p11-desert.prop-mesh.json",
+     "byteLength": 83625,
+     "sha256": "40d8314523761d07ddc0d6a916e3873ab5403935993cdd6e59e7db447563d872",
+     "height": 1.000618
     },
     "placement": {
      "height": 10.299816,
@@ -113951,6 +113946,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-11-bark.png",
+     "byteLength": 105681,
+     "sha256": "72096bc05f71e5bd96ddd9cf7e9a891f74d7f9a8515ed37823df9a0729986c29"
     }
    },
    "503-13": {
@@ -114044,15 +114044,10 @@
    },
    "503-12": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-12-bark.png",
-     "byteLength": 656,
-     "sha256": "256971d358e889da8cfd3ea20e660ed11a9ca03937f2601c18162d5652091d92"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-lightning-snag-p12-desert.prop-mesh.json",
+     "byteLength": 93321,
+     "sha256": "7c1c143ddeb66ce7bcf973e18e17a6d8fe88cbcf4fbcf3c74177795248ccc6d8",
+     "height": 1.000639
     },
     "placement": {
      "height": 10.692388,
@@ -114061,6 +114056,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-12-bark.png",
+     "byteLength": 123558,
+     "sha256": "4ba10ac7cb9d3128819afb2276a92408f575a6e6d721163de257a559b3db6042"
     }
    },
    "503-18": {
@@ -114170,15 +114170,10 @@
    },
    "503-28": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p3-from-0.prop-mesh.json",
-     "byteLength": 56838,
-     "sha256": "693e5c9246d8935eafeb68530af3b8f20ee1558b6915bec1bdce57e5dfbf1ab0",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-28-bark.png",
-     "byteLength": 652,
-     "sha256": "bcd8b735b43884a06f0133bc3e354169d81c0da14be870a9c98310f1346f2610"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-spreading-snag-p28-desert.prop-mesh.json",
+     "byteLength": 99359,
+     "sha256": "c333aeb331d16d9d0546b44f9f7ce168541da8a0fc99c6de3c6f740f4224f615",
+     "height": 0.974768
     },
     "placement": {
      "height": 6.669164,
@@ -114187,19 +114182,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-28-bark.png",
+     "byteLength": 139203,
+     "sha256": "abd97d2b3947203c99c5ceafaa2254fd25d4df2c56344ec4b578dadcf298ae98"
     }
    },
    "503-30": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-30-bark.png",
-     "byteLength": 670,
-     "sha256": "ad2c3c9d77d6f113608dea2ba2a6ee1680759b799e5ae3df334686d4bda1749a"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-bare-spire-p30-desert.prop-mesh.json",
+     "byteLength": 176129,
+     "sha256": "6be303de25d0f7856642f8af517300df236126bfdd0861f67796671e57cbdd2d",
+     "height": 1.000698
     },
     "placement": {
      "height": 14.883007,
@@ -114208,6 +114203,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-30-bark.png",
+     "byteLength": 211287,
+     "sha256": "1f08f88de8b9f3cb68401971b1d44955e1ff38fcc765af4354d2b10014ec231f"
     }
    },
    "504-11": {
@@ -114420,15 +114420,10 @@
    },
    "504-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-24-bark.png",
-     "byteLength": 640,
-     "sha256": "be2bf73f3545c60e662ea127ac0d8a18a12b8843eb164a3f5425543e2df3f134"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-silver-snag-p24-woodland.prop-mesh.json",
+     "byteLength": 72767,
+     "sha256": "571fe5e979b5e152bc27b1905f9646be018c08e90d806c6fa6cea19c910caa5a",
+     "height": 1.000552
     },
     "placement": {
      "height": 2.553438,
@@ -114437,6 +114432,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-24-bark.png",
+     "byteLength": 96605,
+     "sha256": "75bac73b8948435d4f10ace704f93a44edc52eaf11b3da4ba0b00f9abeaa1cbd"
     }
    },
    "504-25": {
@@ -114551,15 +114551,10 @@
    },
    "504-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.86-from-0.prop-mesh.json",
-     "byteLength": 26302,
-     "sha256": "a175f69fcbfce4c7fa1b7b7362c2c69e3810becc12e9b0db6068a706e074ec64",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-19-bark.png",
-     "byteLength": 639,
-     "sha256": "f076dfe227c4dc4f438ca9e9862aa1ca50c0c5c30eb595fd6151b6964b8391d3"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-split-stump-p19-woodland.prop-mesh.json",
+     "byteLength": 141652,
+     "sha256": "f4f2538382edde6ccb1ece19ab909130d9fc926e1b4c651bd3b07798d960f1c7",
+     "height": 0.976276
     },
     "placement": {
      "height": 4.315305,
@@ -114568,19 +114563,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-19-bark.png",
+     "byteLength": 169338,
+     "sha256": "facd790fa17f7df5e1b3aa8cf2a7764fc0442fcff0722a62e172d13fd67cacf9"
     }
    },
    "504-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.13-from-0.prop-mesh.json",
-     "byteLength": 24056,
-     "sha256": "9bf70bb9dc2147481c498e48e857807342f936e325c9838f96bf8955e54a8054",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-20-bark.png",
-     "byteLength": 659,
-     "sha256": "f034edca9611cd2c6be1c9ee5c9ca434e24891d763ab78b686f5a7d2c7da6a46"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-hollow-stump-p20-woodland.prop-mesh.json",
+     "byteLength": 147605,
+     "sha256": "0604fea51aca326aaa83fa2e6f5090c66203d4c6af7844fdc21483a8159dd768",
+     "height": 0.977515
     },
     "placement": {
      "height": 3.029614,
@@ -114589,19 +114584,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-20-bark.png",
+     "byteLength": 164494,
+     "sha256": "09eb92f8c2ad0565f20e3f8e39dbe73335946ee4aa84cbc665253f0b813b1666"
     }
    },
    "504-30": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-30-bark.png",
-     "byteLength": 657,
-     "sha256": "09f1cae0bca20ef06e49722b598ee1ebdcdb151dff26af74fc84f12a4548cc84"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-bare-spire-p30-woodland.prop-mesh.json",
+     "byteLength": 170663,
+     "sha256": "aee6e7657ca7da776419f687b8913da685175600a94b8667444e9a2a278dcc25",
+     "height": 1.000606
     },
     "placement": {
      "height": 13.259329,
@@ -114610,19 +114605,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-30-bark.png",
+     "byteLength": 213126,
+     "sha256": "6798202c5873cefc098b16376d100fb29e540a07f42ebe59a4612a13f717a292"
     }
    },
    "504-31": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/logs-p1-1.82-from-0.prop-mesh.json",
-     "byteLength": 25290,
-     "sha256": "48f3d38a92df72c45eefa20121f7d9dbc2bd87cb41d66230b939631e6f629ec7",
-     "height": 0.7149
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-31-bark.png",
-     "byteLength": 656,
-     "sha256": "d0fadb22987ce05b9240a2c9e4bd58293eeb76dad46182cfc5f37f2d604a5ac3"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-fallen-limbs-p31-woodland.prop-mesh.json",
+     "byteLength": 124450,
+     "sha256": "d2c0ad85a36c694c06580142d1c48ac8ecc928c732a4771461e75285dbff88fc",
+     "height": 0.993272
     },
     "placement": {
      "height": 0.858326,
@@ -114631,6 +114626,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-31-bark.png",
+     "byteLength": 123226,
+     "sha256": "fea7380824cf6e2abff09be9cc184016af974b61174167af9d8d5bcbe8750be8"
     }
    },
    "505-11": {
@@ -114817,15 +114817,10 @@
    },
    "505-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-24-bark.png",
-     "byteLength": 637,
-     "sha256": "57bcf37f4d25d9a1d5da3daffb10aa0e256e3b50a29e99782c2461bb6afb778f"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-silver-snag-p24-winter-woodland.prop-mesh.json",
+     "byteLength": 66086,
+     "sha256": "5f50f7160198d61ebfcde9b9938e13bc88c81d6249f644eceb9e0ebc51006ccf",
+     "height": 1.001273
     },
     "placement": {
      "height": 2.510604,
@@ -114834,6 +114829,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-24-bark.png",
+     "byteLength": 43106,
+     "sha256": "70474396f65f3fefb8a9b30f925f29473a9395a45dfd60b878cdde99892bf660"
     }
    },
    "505-25": {
@@ -114948,15 +114948,10 @@
    },
    "505-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.81-from-0.prop-mesh.json",
-     "byteLength": 26292,
-     "sha256": "1ac27cc9c5a5b4289e656e157880aa0abd05ae659e0645dd4e1d83d789a71bca",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-19-bark.png",
-     "byteLength": 661,
-     "sha256": "43e02e79acb6a336dad70be0d89d64fd1b5c1c1715afcb5c5a508b8b61fa3ebd"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-split-stump-p19-winter-woodland.prop-mesh.json",
+     "byteLength": 192083,
+     "sha256": "05f75a105ad195bedec4c00f11382038efdeccb2ac2a83657bd9ab0a5fc2d58b",
+     "height": 0.990405
     },
     "placement": {
      "height": 3.905452,
@@ -114965,19 +114960,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-19-bark.png",
+     "byteLength": 159026,
+     "sha256": "5ac5ef375175320e95a8cac46da36cc17f23f730b4020fa512dec0371059c7f8"
     }
    },
    "505-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.22-from-0.prop-mesh.json",
-     "byteLength": 24060,
-     "sha256": "985061f9933299861ba3753804a07d3fa637b151a9109fbae7cc8b8eef32a553",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-20-bark.png",
-     "byteLength": 674,
-     "sha256": "15870ad5ecce50bd5eeabf98b095c095c74257bd94eb2c423cf492d6189aa890"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-hollow-stump-p20-winter-woodland.prop-mesh.json",
+     "byteLength": 202132,
+     "sha256": "e32d7964ccd2ed9f83e511f8561b8d2ab91c73a2aed369749b351eaa26a4da3c",
+     "height": 0.978052
     },
     "placement": {
      "height": 2.700127,
@@ -114986,19 +114981,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-20-bark.png",
+     "byteLength": 148960,
+     "sha256": "ee8c488048506d249a4d52e3515bc863ebb7d4794c319535d0d4fb087139069e"
     }
    },
    "505-30": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-30-bark.png",
-     "byteLength": 651,
-     "sha256": "60eb80d01a9bdac883d63298a73ebd10b5e9e3cc73c88b3590f3850ab86c6123"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-bare-spire-p30-winter-woodland.prop-mesh.json",
+     "byteLength": 199196,
+     "sha256": "0217e29aa31bdc82458938a9245a683433d85f751d869c049e40219708cf5a7e",
+     "height": 1.001061
     },
     "placement": {
      "height": 12.860444,
@@ -115007,19 +115002,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-30-bark.png",
+     "byteLength": 209181,
+     "sha256": "f9850fa711e47b0b1ea66a78443cad350143ebd9607fb525d34b62b19f81ad88"
     }
    },
    "505-31": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/logs-p1-2.16-from-0.prop-mesh.json",
-     "byteLength": 25253,
-     "sha256": "12c9517fabd520a83e3628a544dce4968a6c80bed2c3f104aa3bc6832d3ce822",
-     "height": 0.7149
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-31-bark.png",
-     "byteLength": 650,
-     "sha256": "08da86960c230636305a131fa8e4221ccaff800af111d7aae5c551976abfc5b2"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-fallen-limbs-p31-winter-woodland.prop-mesh.json",
+     "byteLength": 213329,
+     "sha256": "96c4b3025254cca7a0a9b0b99cd3d0278619aaf06dab31065454b4bedbf3207e",
+     "height": 0.993337
     },
     "placement": {
      "height": 0.739902,
@@ -115028,6 +115023,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-31-bark.png",
+     "byteLength": 128361,
+     "sha256": "8ea2b3ad8e09eb540ea23e4e07be675dc06739173260f02e96f5c40f9d000338"
     }
    },
    "506-11": {
@@ -115188,15 +115188,10 @@
    },
    "506-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-24-bark.png",
-     "byteLength": 641,
-     "sha256": "0e6a368d760fa39a1fa19afa3521626ee847757eaf6295ebeaaf7324c01fd401"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-silver-snag-p24-mountain.prop-mesh.json",
+     "byteLength": 73116,
+     "sha256": "714d1294678825ab73ab92921f1d2ebfc5537afced1266102194ae91bf71bce2",
+     "height": 1.00129
     },
     "placement": {
      "height": 2.482088,
@@ -115205,6 +115200,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-24-bark.png",
+     "byteLength": 100455,
+     "sha256": "4d510358f47fd484fc4c1be8eacd882d51032ea5f9318397df7b19866fc6dfc7"
     }
    },
    "506-25": {
@@ -115387,15 +115387,10 @@
    },
    "506-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.84-from-0.prop-mesh.json",
-     "byteLength": 26277,
-     "sha256": "f7fd8de6adbc5d0677ab828b5f8267d884006963b29a7af541f5393f9353d119",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-19-bark.png",
-     "byteLength": 661,
-     "sha256": "2156cef313c6e5514bef0e4b341da0c9e4dd8a7edaf2e6fbb17387d042d37b66"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-split-stump-p19-mountain.prop-mesh.json",
+     "byteLength": 141765,
+     "sha256": "feed958d1622a103aba13caa0928d8f0441824c8a74d96bba9c1857e28a88241",
+     "height": 0.976161
     },
     "placement": {
      "height": 2.896261,
@@ -115404,19 +115399,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-19-bark.png",
+     "byteLength": 175530,
+     "sha256": "9113231895bec4181bd3c7bc8659d2c99dc1c25cf35517f04bceb09cbe5d5d30"
     }
    },
    "506-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.13-from-0.prop-mesh.json",
-     "byteLength": 24056,
-     "sha256": "9bf70bb9dc2147481c498e48e857807342f936e325c9838f96bf8955e54a8054",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-20-bark.png",
-     "byteLength": 655,
-     "sha256": "9557c2058d8adeee14862ecc7aa837815631ed5e1590330369c3b108ea346690"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-hollow-stump-p20-mountain.prop-mesh.json",
+     "byteLength": 147584,
+     "sha256": "03bd2ea193c80b34391b1de0e1cea60b819f919c6b866a43a7d3681965955b2d",
+     "height": 0.977509
     },
     "placement": {
      "height": 3.06142,
@@ -115425,6 +115420,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-20-bark.png",
+     "byteLength": 175700,
+     "sha256": "cf9b580be358319ac1ab038481d8227bcfb0ae624c8d01e14f0065d1eb727dbd"
     }
    },
    "506-28": {
@@ -115580,15 +115580,10 @@
    },
    "507-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-507-24-bark.png",
-     "byteLength": 637,
-     "sha256": "57bcf37f4d25d9a1d5da3daffb10aa0e256e3b50a29e99782c2461bb6afb778f"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-silver-snag-p24-winter-woodland.prop-mesh.json",
+     "byteLength": 66086,
+     "sha256": "5f50f7160198d61ebfcde9b9938e13bc88c81d6249f644eceb9e0ebc51006ccf",
+     "height": 1.001273
     },
     "placement": {
      "height": 2.510604,
@@ -115597,6 +115592,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-24-bark.png",
+     "byteLength": 43106,
+     "sha256": "70474396f65f3fefb8a9b30f925f29473a9395a45dfd60b878cdde99892bf660"
     }
    },
    "507-25": {
@@ -115753,15 +115753,10 @@
    },
    "507-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.81-from-0.prop-mesh.json",
-     "byteLength": 26292,
-     "sha256": "1ac27cc9c5a5b4289e656e157880aa0abd05ae659e0645dd4e1d83d789a71bca",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-507-19-bark.png",
-     "byteLength": 661,
-     "sha256": "43e02e79acb6a336dad70be0d89d64fd1b5c1c1715afcb5c5a508b8b61fa3ebd"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-split-stump-p19-winter-woodland.prop-mesh.json",
+     "byteLength": 192083,
+     "sha256": "05f75a105ad195bedec4c00f11382038efdeccb2ac2a83657bd9ab0a5fc2d58b",
+     "height": 0.990405
     },
     "placement": {
      "height": 2.603635,
@@ -115770,19 +115765,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-19-bark.png",
+     "byteLength": 159026,
+     "sha256": "5ac5ef375175320e95a8cac46da36cc17f23f730b4020fa512dec0371059c7f8"
     }
    },
    "507-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.22-from-0.prop-mesh.json",
-     "byteLength": 24060,
-     "sha256": "985061f9933299861ba3753804a07d3fa637b151a9109fbae7cc8b8eef32a553",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-507-20-bark.png",
-     "byteLength": 674,
-     "sha256": "15870ad5ecce50bd5eeabf98b095c095c74257bd94eb2c423cf492d6189aa890"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-hollow-stump-p20-winter-woodland.prop-mesh.json",
+     "byteLength": 202132,
+     "sha256": "e32d7964ccd2ed9f83e511f8561b8d2ab91c73a2aed369749b351eaa26a4da3c",
+     "height": 0.978052
     },
     "placement": {
      "height": 2.700127,
@@ -115791,6 +115786,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-20-bark.png",
+     "byteLength": 148960,
+     "sha256": "ee8c488048506d249a4d52e3515bc863ebb7d4794c319535d0d4fb087139069e"
     }
    },
    "507-28": {
@@ -115868,15 +115868,10 @@
    },
    "508-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-24-bark.png",
-     "byteLength": 641,
-     "sha256": "0e6a368d760fa39a1fa19afa3521626ee847757eaf6295ebeaaf7324c01fd401"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-silver-snag-p24-mountain.prop-mesh.json",
+     "byteLength": 73116,
+     "sha256": "714d1294678825ab73ab92921f1d2ebfc5537afced1266102194ae91bf71bce2",
+     "height": 1.00129
     },
     "placement": {
      "height": 4.964176,
@@ -115885,6 +115880,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-24-bark.png",
+     "byteLength": 100455,
+     "sha256": "4d510358f47fd484fc4c1be8eacd882d51032ea5f9318397df7b19866fc6dfc7"
     }
    },
    "508-1": {
@@ -115994,15 +115994,10 @@
    },
    "508-16": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p3-from-0.prop-mesh.json",
-     "byteLength": 56838,
-     "sha256": "693e5c9246d8935eafeb68530af3b8f20ee1558b6915bec1bdce57e5dfbf1ab0",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-16-bark.png",
-     "byteLength": 662,
-     "sha256": "7d8a289ba63da96a953f2e26b32b21aff558b8870f8ab62f6767ab3522046216"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-witch-fingers-p16-haunted.prop-mesh.json",
+     "byteLength": 98076,
+     "sha256": "3057ce722f0ea9801cd8e9b876f2073fca330c33aba581f82b9e911fc421233e",
+     "height": 1.001017
     },
     "placement": {
      "height": 6.050083,
@@ -116011,19 +116006,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-16-bark.png",
+     "byteLength": 123675,
+     "sha256": "eaef55f795bb9b78e4896b9975456e934bae3e9343087c7fedb6ede196925b76"
     }
    },
    "508-17": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-17-bark.png",
-     "byteLength": 662,
-     "sha256": "8dded9c5e4f310ec51279f929fb6285d68175f90fc2cb3ff8c8bccad66a5828f"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-stone-cradle-p17-haunted.prop-mesh.json",
+     "byteLength": 128968,
+     "sha256": "7e3fead1dbe5cabc832dc5093bbba31cd57b0cc7bd1535633a902c36decf2e70",
+     "height": 0.960201
     },
     "placement": {
      "height": 1.33742,
@@ -116032,19 +116027,24 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-17-bark.png",
+     "byteLength": 52127,
+     "sha256": "d225f18c7455fcf1d274ffbed1e1ae42a0f32686e4a59cd694eeb79eacf30353"
+    },
+    "stone": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-17-stone.png",
+     "byteLength": 22906,
+     "sha256": "eecd3dbd1d2fad4237b64da24dc2de8085c768c357eda4346f76a37307e0e268"
     }
    },
    "508-18": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-18-bark.png",
-     "byteLength": 655,
-     "sha256": "950201b4cba92ba8f9a42a9a56bfe8604a4142ddc4ad3c88c43f350506f59512"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-mossy-fork-p18-haunted.prop-mesh.json",
+     "byteLength": 124035,
+     "sha256": "d8be9d93b04ffd549e706109b3f37094e982cdbe555b3043bedb13797f83ae13",
+     "height": 1.001287
     },
     "placement": {
      "height": 10.314542,
@@ -116053,19 +116053,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-18-bark.png",
+     "byteLength": 144909,
+     "sha256": "c218b53ca0c2286d4760ce4ec5a37f57b170555a24a9e28d0b9659b21fb30627"
     }
    },
    "508-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.84-from-0.prop-mesh.json",
-     "byteLength": 26277,
-     "sha256": "f7fd8de6adbc5d0677ab828b5f8267d884006963b29a7af541f5393f9353d119",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-19-bark.png",
-     "byteLength": 661,
-     "sha256": "2156cef313c6e5514bef0e4b341da0c9e4dd8a7edaf2e6fbb17387d042d37b66"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-split-stump-p19-mountain.prop-mesh.json",
+     "byteLength": 141765,
+     "sha256": "feed958d1622a103aba13caa0928d8f0441824c8a74d96bba9c1857e28a88241",
+     "height": 0.976161
     },
     "placement": {
      "height": 4.344392,
@@ -116074,19 +116074,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-19-bark.png",
+     "byteLength": 175530,
+     "sha256": "9113231895bec4181bd3c7bc8659d2c99dc1c25cf35517f04bceb09cbe5d5d30"
     }
    },
    "508-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.13-from-0.prop-mesh.json",
-     "byteLength": 24056,
-     "sha256": "9bf70bb9dc2147481c498e48e857807342f936e325c9838f96bf8955e54a8054",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-20-bark.png",
-     "byteLength": 655,
-     "sha256": "9557c2058d8adeee14862ecc7aa837815631ed5e1590330369c3b108ea346690"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-hollow-stump-p20-mountain.prop-mesh.json",
+     "byteLength": 147584,
+     "sha256": "03bd2ea193c80b34391b1de0e1cea60b819f919c6b866a43a7d3681965955b2d",
+     "height": 0.977509
     },
     "placement": {
      "height": 3.06142,
@@ -116095,19 +116095,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-20-bark.png",
+     "byteLength": 175700,
+     "sha256": "cf9b580be358319ac1ab038481d8227bcfb0ae624c8d01e14f0065d1eb727dbd"
     }
    },
    "508-25": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p3-0.83-from-0.prop-mesh.json",
-     "byteLength": 31908,
-     "sha256": "c24033b708854980ea66307c48b4422339f2b37c01f2129e22617913003ab988",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-25-bark.png",
-     "byteLength": 653,
-     "sha256": "dd7d75c9ed99bf4e4af29d227772225617a633220bff4ebbd3d4626ef0a3ae64"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p16-mountain-woods.prop-mesh.json",
+     "byteLength": 138292,
+     "sha256": "1df9c293348be7d18198b014788754fe0aed9cff14db7c3d77d27756305beab1",
+     "height": 0.995984
     },
     "placement": {
      "height": 4.235792,
@@ -116116,19 +116116,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-510-16-bark.png",
+     "byteLength": 125557,
+     "sha256": "ec543c2d87ee1c53b5a362529bdbbc18796323b2717c0a64b34f19e75e2c5e92"
     }
    },
    "508-30": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-30-bark.png",
-     "byteLength": 670,
-     "sha256": "ad2c3c9d77d6f113608dea2ba2a6ee1680759b799e5ae3df334686d4bda1749a"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-bare-spire-p30-desert.prop-mesh.json",
+     "byteLength": 176129,
+     "sha256": "6be303de25d0f7856642f8af517300df236126bfdd0861f67796671e57cbdd2d",
+     "height": 1.000698
     },
     "placement": {
      "height": 11.575672,
@@ -116137,19 +116137,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-30-bark.png",
+     "byteLength": 211287,
+     "sha256": "1f08f88de8b9f3cb68401971b1d44955e1ff38fcc765af4354d2b10014ec231f"
     }
    },
    "508-31": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/logs-p1-1.85-from-0.prop-mesh.json",
-     "byteLength": 25280,
-     "sha256": "e7600c7ec7d0ba3ae58f6e05a3629b113d1213179d8e0d828d3744c38d1e3396",
-     "height": 0.7149
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-31-bark.png",
-     "byteLength": 650,
-     "sha256": "479d43d5b1800e819f586a1d505c901bbc58c0b75fbf9e37b7fe247f4054c30c"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-fallen-limbs-p31-haunted.prop-mesh.json",
+     "byteLength": 124515,
+     "sha256": "8a22528296b0491590559374dfb723d8148ced2d360e1eb4e0e6e132f51f9b70",
+     "height": 0.993325
     },
     "placement": {
      "height": 0.84795,
@@ -116158,19 +116158,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-31-bark.png",
+     "byteLength": 122642,
+     "sha256": "d0e5b6362361fc03b5fb3679da23d34e12c770ed8d44fbad8ded3b6c95b79893"
     }
    },
    "509-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-24-bark.png",
-     "byteLength": 637,
-     "sha256": "57bcf37f4d25d9a1d5da3daffb10aa0e256e3b50a29e99782c2461bb6afb778f"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-silver-snag-p24-winter-woodland.prop-mesh.json",
+     "byteLength": 66086,
+     "sha256": "5f50f7160198d61ebfcde9b9938e13bc88c81d6249f644eceb9e0ebc51006ccf",
+     "height": 1.001273
     },
     "placement": {
      "height": 5.021207,
@@ -116179,6 +116179,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-24-bark.png",
+     "byteLength": 43106,
+     "sha256": "70474396f65f3fefb8a9b30f925f29473a9395a45dfd60b878cdde99892bf660"
     }
    },
    "509-1": {
@@ -116288,15 +116293,10 @@
    },
    "509-16": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p3-from-0.prop-mesh.json",
-     "byteLength": 56838,
-     "sha256": "693e5c9246d8935eafeb68530af3b8f20ee1558b6915bec1bdce57e5dfbf1ab0",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-16-bark.png",
-     "byteLength": 659,
-     "sha256": "7c9ada0788140167a00b1ddc99a99d6d6263366c5bdd966b996fc0e59053302c"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-witch-fingers-p16-winter-haunted.prop-mesh.json",
+     "byteLength": 107041,
+     "sha256": "e507d6ca31c2652958afbe13def705b5e0084d1abddd0acc66609fd8b3dfdd32",
+     "height": 1.000549
     },
     "placement": {
      "height": 5.958444,
@@ -116305,19 +116305,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-16-bark.png",
+     "byteLength": 101242,
+     "sha256": "99b5e0754b137c0575f3870653678e031ce839070cf8a66e5c1db79e6f4a7218"
     }
    },
    "509-17": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-17-bark.png",
-     "byteLength": 661,
-     "sha256": "d76bb60d29d3bf4e680d9322e253b2710d6919644106e0a1ed25284a409dd642"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-stone-cradle-p17-winter-haunted.prop-mesh.json",
+     "byteLength": 179325,
+     "sha256": "3724d54e30984eb5b9431dfae1ab9fb0466c1e72aaf7dee6b1e95f34ea540ee0",
+     "height": 0.960186
     },
     "placement": {
      "height": 1.314297,
@@ -116326,19 +116326,24 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-17-bark.png",
+     "byteLength": 51596,
+     "sha256": "07b3ba54ce5023aa62d2f095a51f8ac1cb9bf3bcd779edb3ff50c268c63bba3b"
+    },
+    "stone": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-17-stone.png",
+     "byteLength": 17727,
+     "sha256": "a2be011ff4bb071db32630ede01bdd58eec7da39f97231e0618028758697534f"
     }
    },
    "509-18": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-18-bark.png",
-     "byteLength": 672,
-     "sha256": "2d3cfa5d00b56655d21c00b5af0af1a36f60d6feb8a37ed82928a5f02840a962"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-mossy-fork-p18-winter-haunted.prop-mesh.json",
+     "byteLength": 107107,
+     "sha256": "9f3ab9d32bcb160ac062c757887e72c4c27d4af1c0b77b91a892e0721a9d4f8c",
+     "height": 1.000029
     },
     "placement": {
      "height": 9.64287,
@@ -116347,19 +116352,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-18-bark.png",
+     "byteLength": 113929,
+     "sha256": "2a9e6c29d6c2cd07567f4105f56afb5dae98c9bfc818eb688609995aa20c53b8"
     }
    },
    "509-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.81-from-0.prop-mesh.json",
-     "byteLength": 26292,
-     "sha256": "1ac27cc9c5a5b4289e656e157880aa0abd05ae659e0645dd4e1d83d789a71bca",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-19-bark.png",
-     "byteLength": 661,
-     "sha256": "43e02e79acb6a336dad70be0d89d64fd1b5c1c1715afcb5c5a508b8b61fa3ebd"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-split-stump-p19-winter-woodland.prop-mesh.json",
+     "byteLength": 192083,
+     "sha256": "05f75a105ad195bedec4c00f11382038efdeccb2ac2a83657bd9ab0a5fc2d58b",
+     "height": 0.990405
     },
     "placement": {
      "height": 3.905452,
@@ -116368,19 +116373,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-19-bark.png",
+     "byteLength": 159026,
+     "sha256": "5ac5ef375175320e95a8cac46da36cc17f23f730b4020fa512dec0371059c7f8"
     }
    },
    "509-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.22-from-0.prop-mesh.json",
-     "byteLength": 24060,
-     "sha256": "985061f9933299861ba3753804a07d3fa637b151a9109fbae7cc8b8eef32a553",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-20-bark.png",
-     "byteLength": 674,
-     "sha256": "15870ad5ecce50bd5eeabf98b095c095c74257bd94eb2c423cf492d6189aa890"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-hollow-stump-p20-winter-woodland.prop-mesh.json",
+     "byteLength": 202132,
+     "sha256": "e32d7964ccd2ed9f83e511f8561b8d2ab91c73a2aed369749b351eaa26a4da3c",
+     "height": 0.978052
     },
     "placement": {
      "height": 2.700127,
@@ -116389,19 +116394,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-20-bark.png",
+     "byteLength": 148960,
+     "sha256": "ee8c488048506d249a4d52e3515bc863ebb7d4794c319535d0d4fb087139069e"
     }
    },
    "509-25": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p3-0.84-from-0.prop-mesh.json",
-     "byteLength": 31910,
-     "sha256": "f0d9dfd4b44357212f84fd78728075bf6398af78c40f194dc5aee0417d162910",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-25-bark.png",
-     "byteLength": 663,
-     "sha256": "b01b3dd7ca12c09aa811b8b9846ddf15705b7041cd9ffb6ac05d0d3e431028ca"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p16-winter-mountain-woods.prop-mesh.json",
+     "byteLength": 245685,
+     "sha256": "81e17c91c8dda8e2e647ced6aab6836a84f6d814e29efddfea8126face789c65",
+     "height": 1.002017
     },
     "placement": {
      "height": 3.894396,
@@ -116410,19 +116415,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-511-16-bark.png",
+     "byteLength": 97755,
+     "sha256": "402b00763d7bd6025fd1099ee157166ad45ca1d219e343626c09143ca9c7db94"
     }
    },
    "509-30": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p2-from-0.prop-mesh.json",
-     "byteLength": 45342,
-     "sha256": "9f6f4768dc160d983040287a4c2127cf91d285a18542916fb4b5cdc4925fb579",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-30-bark.png",
-     "byteLength": 651,
-     "sha256": "60eb80d01a9bdac883d63298a73ebd10b5e9e3cc73c88b3590f3850ab86c6123"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-bare-spire-p30-winter-woodland.prop-mesh.json",
+     "byteLength": 199196,
+     "sha256": "0217e29aa31bdc82458938a9245a683433d85f751d869c049e40219708cf5a7e",
+     "height": 1.001061
     },
     "placement": {
      "height": 11.252889,
@@ -116431,19 +116436,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-30-bark.png",
+     "byteLength": 209181,
+     "sha256": "f9850fa711e47b0b1ea66a78443cad350143ebd9607fb525d34b62b19f81ad88"
     }
    },
    "509-31": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/logs-p1-2.16-from-0.prop-mesh.json",
-     "byteLength": 25253,
-     "sha256": "12c9517fabd520a83e3628a544dce4968a6c80bed2c3f104aa3bc6832d3ce822",
-     "height": 0.7149
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-31-bark.png",
-     "byteLength": 650,
-     "sha256": "08da86960c230636305a131fa8e4221ccaff800af111d7aae5c551976abfc5b2"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-fallen-limbs-p31-winter-woodland.prop-mesh.json",
+     "byteLength": 213329,
+     "sha256": "96c4b3025254cca7a0a9b0b99cd3d0278619aaf06dab31065454b4bedbf3207e",
+     "height": 0.993337
     },
     "placement": {
      "height": 0.739902,
@@ -116452,6 +116457,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-31-bark.png",
+     "byteLength": 128361,
+     "sha256": "8ea2b3ad8e09eb540ea23e4e07be675dc06739173260f02e96f5c40f9d000338"
     }
    },
    "510-11": {
@@ -116560,15 +116570,10 @@
    },
    "510-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-510-24-bark.png",
-     "byteLength": 641,
-     "sha256": "0e6a368d760fa39a1fa19afa3521626ee847757eaf6295ebeaaf7324c01fd401"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-silver-snag-p24-mountain.prop-mesh.json",
+     "byteLength": 73116,
+     "sha256": "714d1294678825ab73ab92921f1d2ebfc5537afced1266102194ae91bf71bce2",
+     "height": 1.00129
     },
     "placement": {
      "height": 2.482088,
@@ -116577,6 +116582,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-24-bark.png",
+     "byteLength": 100455,
+     "sha256": "4d510358f47fd484fc4c1be8eacd882d51032ea5f9318397df7b19866fc6dfc7"
     }
    },
    "510-25": {
@@ -116801,15 +116811,10 @@
    },
    "510-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.84-from-0.prop-mesh.json",
-     "byteLength": 26277,
-     "sha256": "f7fd8de6adbc5d0677ab828b5f8267d884006963b29a7af541f5393f9353d119",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-510-19-bark.png",
-     "byteLength": 661,
-     "sha256": "2156cef313c6e5514bef0e4b341da0c9e4dd8a7edaf2e6fbb17387d042d37b66"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-split-stump-p19-mountain.prop-mesh.json",
+     "byteLength": 141765,
+     "sha256": "feed958d1622a103aba13caa0928d8f0441824c8a74d96bba9c1857e28a88241",
+     "height": 0.976161
     },
     "placement": {
      "height": 2.896261,
@@ -116818,19 +116823,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-19-bark.png",
+     "byteLength": 175530,
+     "sha256": "9113231895bec4181bd3c7bc8659d2c99dc1c25cf35517f04bceb09cbe5d5d30"
     }
    },
    "510-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.13-from-0.prop-mesh.json",
-     "byteLength": 24056,
-     "sha256": "9bf70bb9dc2147481c498e48e857807342f936e325c9838f96bf8955e54a8054",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-510-20-bark.png",
-     "byteLength": 655,
-     "sha256": "9557c2058d8adeee14862ecc7aa837815631ed5e1590330369c3b108ea346690"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-hollow-stump-p20-mountain.prop-mesh.json",
+     "byteLength": 147584,
+     "sha256": "03bd2ea193c80b34391b1de0e1cea60b819f919c6b866a43a7d3681965955b2d",
+     "height": 0.977509
     },
     "placement": {
      "height": 3.06142,
@@ -116839,6 +116844,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-20-bark.png",
+     "byteLength": 175700,
+     "sha256": "cf9b580be358319ac1ab038481d8227bcfb0ae624c8d01e14f0065d1eb727dbd"
     }
    },
    "510-27": {
@@ -116885,15 +116895,10 @@
    },
    "510-31": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-510-31-bark.png",
-     "byteLength": 662,
-     "sha256": "8dded9c5e4f310ec51279f929fb6285d68175f90fc2cb3ff8c8bccad66a5828f"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-stone-cradle-p17-haunted.prop-mesh.json",
+     "byteLength": 128968,
+     "sha256": "7e3fead1dbe5cabc832dc5093bbba31cd57b0cc7bd1535633a902c36decf2e70",
+     "height": 0.960201
     },
     "placement": {
      "height": 2.00613,
@@ -116902,6 +116907,16 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-17-bark.png",
+     "byteLength": 52127,
+     "sha256": "d225f18c7455fcf1d274ffbed1e1ae42a0f32686e4a59cd694eeb79eacf30353"
+    },
+    "stone": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-17-stone.png",
+     "byteLength": 22906,
+     "sha256": "eecd3dbd1d2fad4237b64da24dc2de8085c768c357eda4346f76a37307e0e268"
     }
    },
    "511-11": {
@@ -116958,15 +116973,10 @@
    },
    "511-24": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-511-24-bark.png",
-     "byteLength": 637,
-     "sha256": "57bcf37f4d25d9a1d5da3daffb10aa0e256e3b50a29e99782c2461bb6afb778f"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-silver-snag-p24-winter-woodland.prop-mesh.json",
+     "byteLength": 66086,
+     "sha256": "5f50f7160198d61ebfcde9b9938e13bc88c81d6249f644eceb9e0ebc51006ccf",
+     "height": 1.001273
     },
     "placement": {
      "height": 2.510604,
@@ -116975,6 +116985,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-24-bark.png",
+     "byteLength": 43106,
+     "sha256": "70474396f65f3fefb8a9b30f925f29473a9395a45dfd60b878cdde99892bf660"
     }
    },
    "511-25": {
@@ -117173,15 +117188,10 @@
    },
    "511-19": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p1-0.81-from-0.prop-mesh.json",
-     "byteLength": 26292,
-     "sha256": "1ac27cc9c5a5b4289e656e157880aa0abd05ae659e0645dd4e1d83d789a71bca",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-511-19-bark.png",
-     "byteLength": 661,
-     "sha256": "43e02e79acb6a336dad70be0d89d64fd1b5c1c1715afcb5c5a508b8b61fa3ebd"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-split-stump-p19-winter-woodland.prop-mesh.json",
+     "byteLength": 192083,
+     "sha256": "05f75a105ad195bedec4c00f11382038efdeccb2ac2a83657bd9ab0a5fc2d58b",
+     "height": 0.990405
     },
     "placement": {
      "height": 2.603635,
@@ -117190,19 +117200,19 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-19-bark.png",
+     "byteLength": 159026,
+     "sha256": "5ac5ef375175320e95a8cac46da36cc17f23f730b4020fa512dec0371059c7f8"
     }
    },
    "511-20": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/gnarled-p2-1.22-from-0.prop-mesh.json",
-     "byteLength": 24060,
-     "sha256": "985061f9933299861ba3753804a07d3fa637b151a9109fbae7cc8b8eef32a553",
-     "height": 1.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-511-20-bark.png",
-     "byteLength": 674,
-     "sha256": "15870ad5ecce50bd5eeabf98b095c095c74257bd94eb2c423cf492d6189aa890"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-hollow-stump-p20-winter-woodland.prop-mesh.json",
+     "byteLength": 202132,
+     "sha256": "e32d7964ccd2ed9f83e511f8561b8d2ab91c73a2aed369749b351eaa26a4da3c",
+     "height": 0.978052
     },
     "placement": {
      "height": 2.700127,
@@ -117211,6 +117221,11 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-20-bark.png",
+     "byteLength": 148960,
+     "sha256": "ee8c488048506d249a4d52e3515bc863ebb7d4794c319535d0d4fb087139069e"
     }
    },
    "511-27": {
@@ -117257,15 +117272,10 @@
    },
    "511-31": {
     "mesh": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/dead-p1-from-0.prop-mesh.json",
-     "byteLength": 62283,
-     "sha256": "3267a5eee4bd2b492a0a6f7409ace4500e56b4897efd6fac53ff422a0dc66a39",
-     "height": 8.0
-    },
-    "bark": {
-     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-511-31-bark.png",
-     "byteLength": 661,
-     "sha256": "d76bb60d29d3bf4e680d9322e253b2710d6919644106e0a1ed25284a409dd642"
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-stone-cradle-p17-winter-haunted.prop-mesh.json",
+     "byteLength": 179325,
+     "sha256": "3724d54e30984eb5b9431dfae1ab9fb0466c1e72aaf7dee6b1e95f34ea540ee0",
+     "height": 0.960186
     },
     "placement": {
      "height": 1.971446,
@@ -117274,6 +117284,16 @@
       "height": "art",
       "foot": "art"
      }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-17-bark.png",
+     "byteLength": 51596,
+     "sha256": "07b3ba54ce5023aa62d2f095a51f8ac1cb9bf3bcd779edb3ff50c268c63bba3b"
+    },
+    "stone": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-17-stone.png",
+     "byteLength": 17727,
+     "sha256": "a2be011ff4bb071db32630ede01bdd58eec7da39f97231e0618028758697534f"
     }
    },
    "500-3": {
@@ -118937,6 +118957,179 @@
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-2-leaves.png",
      "byteLength": 34683,
      "sha256": "5cbb830fe860d7d84c88967ec22afa8939154b0d422fc7319b791d08fc43f079"
+    }
+   },
+   "502-9": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-antler-fork-p9-swamp.prop-mesh.json",
+     "byteLength": 71272,
+     "sha256": "e4824e9089f3c97ff364fa81d0f7eff1719b45c6282ea576a974dc52a2f37964",
+     "height": 0.989477
+    },
+    "placement": {
+     "height": 1.50001,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-502-9-bark.png",
+     "byteLength": 59001,
+     "sha256": "8874c25aad8342cad4ed968252232026a887b75f0e58e4f524b3dd7ab43da730"
+    }
+   },
+   "503-1": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-dead-prickly-pear-p1-desert.prop-mesh.json",
+     "byteLength": 139418,
+     "sha256": "3a0362e52c6ae2fc74c2712f105fcce73cee3f87bb4733b840cec5bf8b60973f",
+     "height": 1.004642
+    },
+    "placement": {
+     "height": 1.14365,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-1-bark.png",
+     "byteLength": 12874,
+     "sha256": "5b64300117b9731c04a8862505c7b7464007821a1cac0bccc98b750e4116845b"
+    }
+   },
+   "503-6": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-stone-cradle-p6-desert.prop-mesh.json",
+     "byteLength": 155993,
+     "sha256": "3ee85ae8bbb122d8a0838b11d96a901bd482020cd5155328f66f98d2a70e294c",
+     "height": 0.960189
+    },
+    "placement": {
+     "height": 1.303497,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-6-bark.png",
+     "byteLength": 50835,
+     "sha256": "2bc4c82cf4437ab76b305a07d1c330d3ab0932b441ed596f4e1443fc43b28f5f"
+    },
+    "stone": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-6-stone.png",
+     "byteLength": 21216,
+     "sha256": "a7e177ad58e9d7df9db44f952b2dbd41a2a72f21759f1f136689d06b3cace0ce"
+    }
+   },
+   "503-10": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-low-desert-snag-p10-desert.prop-mesh.json",
+     "byteLength": 179861,
+     "sha256": "6a339f2d78d29bed5b0889249110ff69f1d311b079452d9c3151a934c6e053b2",
+     "height": 1.008242
+    },
+    "placement": {
+     "height": 0.703932,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-10-bark.png",
+     "byteLength": 183267,
+     "sha256": "f0d9c86e7a22cfa8d0a53d4049a8b6a6e13620b41abdad17778945a3a5e7660c"
+    }
+   },
+   "507-2": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-upright-snag-p2-winter-mountain.prop-mesh.json",
+     "byteLength": 227307,
+     "sha256": "db0cc31a128f5eb293940168d1165eeb6f184c2a7b8fa485b3f553d5ecbbba9b",
+     "height": 1.001083
+    },
+    "placement": {
+     "height": 6.500315,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-507-2-bark.png",
+     "byteLength": 210827,
+     "sha256": "b465d41128a51bd324244f8976f1f7def5208bd4a921282b6ce6494095d94f80"
+    }
+   },
+   "509-9": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-antler-fork-p9-winter-haunted.prop-mesh.json",
+     "byteLength": 96332,
+     "sha256": "83c39c67ce8dc0f4f5dc93f1a16d66a138b3498bf8a3bb28017cd9d3596318f6",
+     "height": 0.989477
+    },
+    "placement": {
+     "height": 1.49786,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-9-bark.png",
+     "byteLength": 59611,
+     "sha256": "161fd37d2357d40418469421289891126f02b61f94585d3baa7a820b6c4e5998"
+    }
+   },
+   "508-9": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-antler-fork-p9-swamp.prop-mesh.json",
+     "byteLength": 71272,
+     "sha256": "e4824e9089f3c97ff364fa81d0f7eff1719b45c6282ea576a974dc52a2f37964",
+     "height": 0.989477
+    },
+    "placement": {
+     "height": 1.50001,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-502-9-bark.png",
+     "byteLength": 59001,
+     "sha256": "8874c25aad8342cad4ed968252232026a887b75f0e58e4f524b3dd7ab43da730"
+    }
+   },
+   "511-2": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/deadwood-snowy-upright-snag-p2-winter-mountain.prop-mesh.json",
+     "byteLength": 227307,
+     "sha256": "db0cc31a128f5eb293940168d1165eeb6f184c2a7b8fa485b3f553d5ecbbba9b",
+     "height": 1.001083
+    },
+    "placement": {
+     "height": 6.500315,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-507-2-bark.png",
+     "byteLength": 210827,
+     "sha256": "b465d41128a51bd324244f8976f1f7def5208bd4a921282b6ce6494095d94f80"
     }
    }
   },

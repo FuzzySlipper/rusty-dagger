@@ -121,7 +121,7 @@ such as `506-11 507-11` to refresh only those entries. Open the page directly. T
 wilderness sprite and three mesh angles at one scale under fixed light. Browse all records grouped by subject,
 filter by climate or representation, or open a card to compare its mesh angles. The review takes mesh categories
 from their authored forms and sprite-only subjects from `tools/trees/sprite-categories.json`.
-For 500-4, 500-31, 502-4 and 502-11 the review stages the original DF sprite from the local
+For 500-4, 500-31, 502-4, 502-11 and 503-1 the review stages the original DF sprite from the local
 `export-flats` reference under `local/art/reference/flats/`. Its caption identifies which source was available.
 Edit nature rock arrangements and their baked stone, moss and snow in `tools/rocks/fieldstones.py`,
 then run `python3 authoring/tools/trees/trees.py --key A-R` and refresh the review.

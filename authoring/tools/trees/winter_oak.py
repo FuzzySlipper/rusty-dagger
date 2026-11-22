@@ -123,10 +123,10 @@ def wood_path(tree, centres, radii, sides, *, turn=0):
         tree.bark["normals"][start*3:] = (normals@rot).round(6).ravel().tolist()
 
 
-def traced_limbs(tree, *, draw=wood_path, spread_forks=False):
+def traced_limbs(tree, *, draw=wood_path, spread_forks=False, silhouette=None):
     """Sweep connected wood through the painted strokes, rooted at the actual foot."""
     h, w = tree.pixels.shape[:2]
-    paths, radius = trace_bare(tree.pixels)
+    paths, radius = trace_bare(tree.pixels if silhouette is None else silhouette)
     root = paths[0][0]
     tree.foot_x = (root%w)/(w-1)
     joint = {path[0] for path in paths[1:]}

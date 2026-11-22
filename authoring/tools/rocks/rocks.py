@@ -25,7 +25,7 @@ to 41 in deserts and 341 in temperate towns), so a rock matches the town's stone
 identity, which the location draws. Finals go to local/art/generated/models/ID.glb in the classic's frame, for
 `promote.py --area models --key ID`.
 
-Nature flats: trees.py draws the piles from fieldstones.py and the deadwood from `gnarled` and `logs` here. Placed flats (`placed`): the decoration flats blocks place, as GLBs in
+Nature flats: trees.py draws the piles from fieldstones.py and the deadwood from trees/deadwood.py. Placed flats (`placed`): the decoration flats blocks place, as GLBs in
 local/art/generated/effects/ for the art pack's `meshes` (promote.py's WORLD_MESHES, `--area effects --key A-R`), each
 built across its sprite's width, which the game draws it at from the GLB's own width.
 
@@ -846,21 +846,9 @@ def palette_of(rgba):
     return palette(buffer)
 
 
-# ---- nature bark: gnarled trunks and fallen logs --------------------------------------------------------------------
+# ---- placed fallen logs and woodpiles -------------------------------------------------------------------------------
 
-GNARLED, LOGS_FORM = "gnarled", "logs"
-# A dead trunk gnarled with age, as the sprites paint the great bare stumps: short and thick, flared wide at its foot,
-# twisting, its top broken off and its few limbs stubby; generate-flora.py's dead tree made old.
-GNARLED_KIND = {
-    "role": "tree", "height": 1.0, "bark": "dead", "leaves": None, "cards": None, "sink": .2, "caps": ["tip"],
-    "trunk": {"length": 3.2, "radius": .55, "sides": 8, "segments": 4, "wobble": .2, "rise": 0.0, "tip": .55, "flare": 1.6, "lean": .12},
-    "levels": [
-        {"count": [3, 5], "start": .5, "end": 1.0, "angle": [40, 80], "length": [1.6, 2.6], "shrink": .25, "radius": .5, "sides": 5,
-         "segments": 3, "wobble": .4, "rise": .08, "tip": .25, "even": True},
-        {"count": [2, 3], "start": .35, "end": 1.0, "angle": [30, 65], "length": [.6, 1.1], "shrink": .2, "radius": .55, "sides": 4,
-         "segments": 2, "wobble": .45, "rise": .08, "tip": .2},
-    ],
-}
+LOGS_FORM = "logs"
 # A heaped log's radius as a share of the heap's height, as thick as the sprites paint theirs (about 20 of a 68-pixel
 # heap), and its broken limbs: stubs pointing up and out, more of them than a forest log's, as the sprites draw them.
 LOG_RADIUS = .15
@@ -873,39 +861,13 @@ LOG_SINK = .05
 
 def turned_out(part):
     """generate-flora.py winds its tubes inward, which the Engine culls as their outside: each triangle is turned to face
-    the way its corners' normals point. trees.py turns the mesh trees' bark with it too."""
+    the way its corners' normals point."""
     p, n, idx = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3), part["indices"]
     for t in range(0, len(idx), 3):
         a, b, c = idx[t:t + 3]
         if np.dot(np.cross(p[b] - p[a], p[c] - p[a]), n[a] + n[b] + n[c]) < 0:
             idx[t + 1], idx[t + 2] = c, b
     return part
-
-
-def widened(mesh, aspect):
-    """The mesh stretched across (x and z alike) to `aspect`, its sprite's drawn width over its height, since the flora
-    field draws it at the sprite's height alone."""
-    for part in mesh["parts"]:
-        p = np.array(part["positions"]).reshape(-1, 3)
-        n = np.array(part["normals"]).reshape(-1, 3)
-        across = max(np.ptp(p[:, 0]), np.ptp(p[:, 2]))
-        k = aspect * mesh["height"] / across
-        p[:, [0, 2]] *= k
-        # Normals take the inverse stretch, so the stretched faces still shade as they face.
-        n[:, [0, 2]] /= k
-        n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-9)
-        part["positions"] = [round(float(v), 4) for v in p.ravel()]
-        part["normals"] = [round(float(v), 4) for v in n.ravel()]
-    return mesh
-
-
-def gnarled(seed, aspect):
-    """A gnarled dead trunk as a prop mesh of one bark part, a metre tall (the flora field draws it at its sprite's
-    height), as wide for its height as its sprite."""
-    lib = flora()
-    lib.KINDS[GNARLED] = GNARLED_KIND
-    parts, low, high, _, _ = lib.build(GNARLED, seed, GNARLED_KIND["height"])
-    return widened({"height": round(high[1], 4), "parts": [turned_out(part) for part in parts]}, aspect)
 
 
 def logs(seed, aspect):

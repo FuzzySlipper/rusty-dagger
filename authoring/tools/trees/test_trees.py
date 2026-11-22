@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 
 import trees
+import rocks
 
 
 class Meshes(unittest.TestCase):
@@ -49,7 +50,7 @@ class Meshes(unittest.TestCase):
                 *(f"505-{r}" for r in trees.winter_woodland.FORMS),
                 *(f"506-{r}" for r in trees.mountain_trees.FORMS),
                 *(f"507-{r}" for r in trees.winter_mountain.FORMS), "508-13", "509-13", "510-16", "510-21",
-                "511-16", "511-21", *trees.bushes.FORMS]
+                "511-16", "511-21", *trees.bushes.FORMS, *trees.deadwood.FORMS]
         for key in keys:
             with self.subTest(key=key):
                 entry = art[key]
@@ -72,6 +73,25 @@ class Meshes(unittest.TestCase):
                     self.assertAlmostEqual(supported, 1)
                 else:
                     self.assertGreater(supported, lowest_leaf)
+
+    def test_dead_cactus_has_solid_wood_across_the_painted_cutout(self):
+        art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]["503-1"]
+        mesh = json.loads((trees.CONTENT / art["mesh"]["path"]).read_bytes())
+        self.assertEqual(["bark"], [part["role"] for part in mesh["parts"]])
+        pad = mesh["parts"][0]
+        verts = np.array(pad["positions"]).reshape(-1, 3)
+        a, b, c = verts[np.array(pad["indices"]).reshape(-1, 3)].transpose(1, 0, 2)
+        for x, y in ((-.13, .40), (-.15, .55), (-.19, .66)):
+            # Intersect a front-to-back ray with both walls of the leaning pad.
+            left, right = b-a, c-a
+            det = left[:,0]*right[:,1] - left[:,1]*right[:,0]
+            good = abs(det)>1e-9
+            dx, dy = x-a[good,0], y-a[good,1]
+            u = (dx*right[good,1]-dy*right[good,0])/det[good]
+            v = (left[good,0]*dy-left[good,1]*dx)/det[good]
+            hits = (a[good,2]+u*left[good,2]+v*right[good,2])[(u>=0)&(v>=0)&(u+v<=1)]
+            self.assertGreaterEqual(len(hits), 2)
+            self.assertGreater(np.ptp(hits), .08)
 
     def test_matching_paintings_use_the_same_media_but_their_own_placement(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]
@@ -102,7 +122,7 @@ class Meshes(unittest.TestCase):
         rgba = trees.frame(flat)
         mesh, _ = trees.fieldstones.build("506-3", rgba, flat["placement"]["size"]["height"])
         positions = np.array(mesh["parts"][0]["positions"]).reshape(-1, 3)
-        solid = trees.rocks.outline(rgba.astype(np.uint8))
+        solid = rocks.outline(rgba.astype(np.uint8))
         self.assertAlmostEqual((positions[:, 0].max() - positions[:, 0].min()) / mesh["height"], solid.shape[1] / solid.shape[0], delta=.1)
         self.assertGreater(mesh["height"], .8)
 

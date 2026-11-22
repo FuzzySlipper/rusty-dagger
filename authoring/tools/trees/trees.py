@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
 """Make refreshed tree meshes and record them in the art set (`artReplacements.trees`).
 
-A tree mesh stands in for a refreshed flora sprite near the player. The meshes are rusty-craftsurvive's scripted trees
-(its scripts/generate-flora.py: low-poly trunks and branches in tiling bark, leaf cards in an atlas of four, their
-alpha the share each vertex flutters), copied with the leaf cards below the sprite's crown left out, so the trunk shows
-under the crown as the sprite's does. Their textures are repainted in the sprite's own colours:
-each texel takes the colour of the sprite's texel at the same rank of brightness, leaves from the sprite's crown and bark
-from its trunk (leaving out its darkest, the outline), so the tree wears the painted sprite's palette and its spread of
-light and dark; leaves lean toward the darks, which lit cards lose, and each leaf's edge is darkened a step, as the
-sprites outline theirs.
+Nature meshes replace the nearby flora sprites. Author their wood, foliage and stone
+in the regional recipes below, from the paintings in the art pack.
 
 Archive 500's palms have their own connected stems, root flares and folded fronds in rainforest_palms.py.
 Its other bespoke trees are shaped in rainforest_trees.py. Archive 501 shares matching paintings' meshes
@@ -19,7 +13,7 @@ The haunted broadleaf and its leafless winter counterpart are in haunted_trees.p
 Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
 The nature rocks in fieldstones.py are clusters of solid stones, with moss, snow and colour baked into their atlas.
-The dead trees and logs use the branch skeletons in authoring/tools/rocks/rocks.py.
+The bushes use bushes.py, and the standing and fallen deadwood use deadwood.py.
 
 The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so each entry's `placement` states that height in
 metres, with how high its foot stands: the shares of the sprite's frame measured here, at its flat's own size
@@ -38,11 +32,10 @@ import sys
 
 import numpy as np
 from PIL import Image
-from scipy import ndimage, stats
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "rocks"))
-import rocks  # noqa: E402
 import bushes
+import deadwood
 import fieldstones
 import rainforest_palms
 import rainforest_trees
@@ -62,12 +55,8 @@ REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/packs/daggerfall.art-replacements/media/trees"
 PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
-CRAFTSURVIVE = rocks.CRAFTSURVIVE / "content/game"
 
 # Each authored nature form selects its regional recipe or shared model.
-FIR, PINE, CORK, BEECH, CHESTNUT, PALM, DEAD = "fir", "pine", "cork-oak", "beech", "chestnut", "palm", "dead"
-GNARLED, LOGS = rocks.GNARLED, rocks.LOGS_FORM
-
 REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", subtropical_trees),
                   502: ("swamp", swamp_trees), 503: ("desert", desert_trees),
                   504: ("woodland", woodland_trees), 505: ("winter-woodland", winter_woodland),
@@ -76,18 +65,18 @@ REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", su
                   510: ("mountain-woods", mountain_woods), 511: ("winter-mountain-woods", winter_mountain_woods)}
 FORMS = {
     500: {**{r: (form, r) for r, form in rainforest_trees.FORMS.items()},
-          12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3)},
+          12: ("palm", 1), 14: ("palm", 2), 15: ("palm", 3)},
     501: {r: (form, r) for r, form in subtropical_trees.FORMS.items()},
     502: {r: (form, r) for r, form in swamp_trees.FORMS.items()},
-    503: {**{r: (form, r) for r, form in desert_trees.FORMS.items()}, 11: (DEAD, 1)},
-    504: {**{r: (form, r) for r, form in woodland_trees.FORMS.items()}, 24: (DEAD, 1)},
-    505: {**{r: (form, r) for r, form in winter_woodland.FORMS.items()}, 24: (DEAD, 1)},
-    506: {**{r: (form, r) for r, form in mountain_trees.FORMS.items()}, 24: (DEAD, 1)},
-    507: {**{r: (form, r) for r, form in winter_mountain.FORMS.items()}, 24: (DEAD, 1)},
-    508: {**{r: (form, r) for r, form in haunted_trees.FORMS.items()}, 24: (DEAD, 1)},
-    509: {**{r: (form, r) for r, form in winter_haunted.FORMS.items()}, 24: (DEAD, 1)},
-    510: {**{r: (form, r) for r, form in mountain_woods.FORMS.items()}, 24: (DEAD, 1)},
-    511: {**{r: (form, r) for r, form in winter_mountain_woods.FORMS.items()}, 24: (DEAD, 1)},
+    503: {r: (form, r) for r, form in desert_trees.FORMS.items()},
+    504: {r: (form, r) for r, form in woodland_trees.FORMS.items()},
+    505: {r: (form, r) for r, form in winter_woodland.FORMS.items()},
+    506: {r: (form, r) for r, form in mountain_trees.FORMS.items()},
+    507: {r: (form, r) for r, form in winter_mountain.FORMS.items()},
+    508: {r: (form, r) for r, form in haunted_trees.FORMS.items()},
+    509: {r: (form, r) for r, form in winter_haunted.FORMS.items()},
+    510: {r: (form, r) for r, form in mountain_woods.FORMS.items()},
+    511: {r: (form, r) for r, form in winter_mountain_woods.FORMS.items()},
 }
 # These flats share paintings with other nature records. Reuse their authored media
 # while placing every record at its own size, including when a source is rebuilt by key.
@@ -101,47 +90,16 @@ SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
                 **{f"511-{r}": f"507-{r}" for r in (5, 11, 23)}}
 SHARED_TREES.update(fieldstones.SHARED)
 SHARED_TREES.update(bushes.SHARED)
-DEAD_WOOD = {
-    502: {15: (DEAD, 2), 30: (DEAD, 3)},
-    503: {12: (DEAD, 2), 28: (DEAD, 3), 30: (DEAD, 2)},
-    **{a: {19: (GNARLED, 1), 20: (GNARLED, 2), 30: (DEAD, 2), 31: (LOGS, 1)} for a in (504, 505)},
-    **{a: {19: (GNARLED, 1), 20: (GNARLED, 2)} for a in (506, 507)},
-    **{a: {16: (DEAD, 3), 17: (DEAD, 1), 18: (DEAD, 2), 19: (GNARLED, 1), 20: (GNARLED, 2),
-           25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)} for a in (508, 509)},
-    **{a: {19: (GNARLED, 1), 20: (GNARLED, 2), 31: (DEAD, 1)} for a in (510, 511)},
-}
-for archive, forms in DEAD_WOOD.items():
-    FORMS[archive].update(forms)
+SHARED_TREES.update(deadwood.SHARED)
+for key, form in deadwood.FORMS.items():
+    archive, record = map(int, key.split("-"))
+    FORMS[archive][record] = ("deadwood-" + form, record)
 for key in fieldstones.PAINTINGS:
     archive, record = map(int, key.split("-"))
     FORMS[archive][record] = ("rock", record)
 for key, form in bushes.FORMS.items():
     archive, record = map(int, key.split("-"))
     FORMS[archive][record] = (form, record)
-# Each rusty-craftsurvive tree's leaves and bark textures. Every tree wears the oak's bark, whose vertical furrows are
-# what the sprites paint, but the palm, whose rings are its own.
-TEXTURES = {FIR: ("fir", "oak"), PINE: ("pine", "oak"), CORK: ("cork", "oak"), BEECH: ("beech", "oak"),
-            CHESTNUT: ("chestnut", "oak"), PALM: ("palm", "palm"), DEAD: (None, "oak"), GNARLED: (None, "oak"), LOGS: (None, "oak")}
-SOLID = 128
-# How far the leaves' colours lean toward the sprite's darks: a rank is raised to this power, so the painted crown's deep
-# shadow, which lit cards would otherwise lose, comes back.
-LEAF_DARKEN = 1.2
-# How dark, as a share of full brightness, a sprite's outline texels are.
-OUTLINE = .06
-# The most of a crown's leaves its other hues (blossoms, a summer tree's autumn touches) may colour.
-ACCENT = .1
-# A crown with less snow than this carries none.
-SNOW_LEAST = .03
-# Snow lies only on what faces up, a part of a crown's cards, so its share there is this many times the sprite's.
-SNOW_FACING = 3.2
-# The share of the trunk's darkest texels left out of its bark's colours: they are the sprite's outline, not its bark.
-BARK_OUTLINE = .15
-# A leaf card is a quad drawn both ways: four vertices and twelve indices.
-CARD_INDICES = 12
-# How far from its axis, in the mesh's metres, a trunk's bark reaches at its widest (its flared foot).
-TRUNK_REACH = .9
-# How much darker a leaf's edge is drawn than its body.
-EDGE = .6
 
 
 def frame(flat):
@@ -151,128 +109,10 @@ def frame(flat):
 
 
 def measures(rgba):
-    """The sprite's drawn rows, its trunk's width near the foot, the row its crown begins at and the trunk's centre."""
-    solid = rgba[..., 3] > SOLID
-    rows = np.nonzero(solid.any(1))[0]
-    top, foot = rows[0], rows[-1]
-    height = foot - top + 1
-    widths = solid.sum(1)
-    trunk = max(2, int(np.median(widths[foot - int(height * .2): foot - int(height * .06) + 1])))
-    crown = foot
-    for row in range(foot - int(height * .1), top, -1):
-        if widths[row] > trunk * 2.6:
-            crown = row
-            break
-    centre = int(np.median(np.nonzero(solid[foot - int(height * .15): foot])[1]))
-    return dict(top=top, foot=foot, height=height, trunk=trunk, crown=crown, centre=centre)
-
-
-def light(rgb):
-    return rgb @ [.2126, .7152, .0722]
-
-
-def hues(rgb):
-    """Each colour's hue in degrees and its saturation, 0 to 1."""
-    high, low = rgb.max(1), rgb.min(1)
-    span = np.maximum(high - low, 1e-6)
-    r, g, b = rgb[:, 0], rgb[:, 1], rgb[:, 2]
-    hue = np.where(high == r, (g - b) / span % 6, np.where(high == g, (b - r) / span + 2, (r - g) / span + 4)) * 60
-    return hue, (high - low) / np.maximum(high, 1e-6)
-
-
-def snowfall(crown):
-    """The snow a crown carries: the share of it that is snow, scaled to the share of a card that faces up, and the
-    snow's mean linear colour; none for a crown with hardly any."""
-    white = crown.min(1) >= rocks.SNOW
-    share = white.mean() if len(crown) else 0
-    if share < SNOW_LEAST:
-        return None
-    linear = np.where(crown[white] / 255 <= .04045, crown[white] / 255 / 12.92, ((crown[white] / 255 + .055) / 1.055) ** 2.4)
-    return {"share": round(min(1.0, share * SNOW_FACING), 3), "colour": [round(float(v), 4) for v in linear.mean(0)]}
-
-
-def palette(rgba, m):
-    """The sprite's crown and trunk colours, each sorted by brightness."""
-    solid = rgba[..., 3] > SOLID
-    crown = rgba[m["top"]:m["crown"]][solid[m["top"]:m["crown"]]][:, :3]
-    snow = snowfall(crown)
-    # The crown's outline is near black; a leaf ranked among it would be drawn black, so its colours are left out.
-    crown = crown[light(crown) > OUTLINE * 255]
-    # A leaf is one flat tone, so a colour the sprite only dabs (its blossoms, the branches in its crown, its snow) would
-    # paint whole leaves. Leaves take the colours of the crown's own hue (green, or an autumn tree's orange) and its
-    # shadows, then the other hues only their own share up to ACCENT, as the brightest; snow is left to the weather.
-    crown = crown[crown.min(1) < rocks.SNOW]
-    hue, saturation = hues(crown)
-    coloured = saturation > .12
-    if coloured.sum() >= 20:
-        bins = np.bincount((hue[coloured] // 30).astype(int) % 12, minlength=12)
-        # A hue spreads over its neighbouring bins (greens run from yellow-green to blue-green), so each bin counts them too.
-        main = (np.argmax(bins + np.roll(bins, 1) + np.roll(bins, -1)) + .5) * 30
-        near = np.abs((hue - main + 180) % 360 - 180) <= 45
-        foliage = crown[(near & coloured) | (~coloured & (light(crown) < 90))]
-        others = crown[coloured & ~near]
-        others = others[np.argsort(light(others))][-int(len(foliage) * min(ACCENT, len(others) / max(1, len(foliage) + len(others)))):] \
-            if len(others) and len(foliage) else others[:0]
-        crown = np.concatenate([foliage[np.argsort(light(foliage))], others])
-    else:
-        crown = crown if len(crown) else rgba[rgba[..., 3] > SOLID][:, :3]
-        crown = crown[np.argsort(light(crown))]
-    # The trunk's middle, below where the crown's leaves hang over it, and none of its green.
-    half = max(1, int(m["trunk"] * .3))
-    # A sprite whose crown reaches its foot shows little trunk there: then the trunk's column the whole way up, then all
-    # its drawn texels that are not green.
-    for low, high, left, right in ((m["crown"] + int((m["foot"] - m["crown"]) * .3), m["foot"], m["centre"] - half, m["centre"] + half + 1),
-                                   (m["top"], m["foot"], m["centre"] - half, m["centre"] + half + 1), (0, rgba.shape[0], 0, rgba.shape[1])):
-        trunk = rgba[low:high, max(0, left):right]
-        trunk = trunk[(trunk[..., 3] > SOLID) & rocks.wood(trunk)][:, :3]
-        if len(trunk) >= 20:
-            break
-    else:
-        raise SystemExit("A sprite has no texel of bark to take its colours from.")
-    trunk = trunk[np.argsort(light(trunk))]
-    return crown, trunk[int(len(trunk) * BARK_OUTLINE):], snow
-
-
-def repaint(source, colours, outline, darken=1.0):
-    """Each drawn texel takes the colour at its own rank of brightness among the sorted colours; leaves' edges a step darker."""
-    rgba = np.asarray(Image.open(source).convert("RGBA"), np.float64)
-    drawn = rgba[..., 3] > 0
-    values = light(rgba[..., :3][drawn])
-    # Equal texels share a rank, so a flat tone stays one colour.
-    ranks = ((stats.rankdata(values, method="average") - 1) / max(1, len(values) - 1)) ** darken
-    out = rgba.copy()
-    out[..., :3][drawn] = colours[np.round(ranks * (len(colours) - 1)).astype(int)]
-    if outline:
-        edge = drawn & ~ndimage.binary_erosion(drawn)
-        out[..., :3][edge] *= EDGE
-    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGBA")
-
-
-def trim(mesh, below):
-    """Leaves out the leaf cards whose middle stands below a height, and the branches' bark there (any triangle beyond
-    TRUNK_REACH of the trunk's axis), so the bare trunk shows under the crown as the sprite's does."""
-    for part in mesh["parts"]:
-        x, y, z = part["positions"][0::3], part["positions"][1::3], part["positions"][2::3]
-        size = CARD_INDICES if part["role"] == "leaves" else 3
-        kept = []
-        for start in range(0, len(part["indices"]), size):
-            shape = part["indices"][start:start + size]
-            corners = set(shape)
-            middle_y = sum(y[i] for i in corners) / len(corners)
-            reach = max(np.hypot(x[i], z[i]) for i in corners)
-            if middle_y >= below or (part["role"] == "bark" and reach <= TRUNK_REACH):
-                kept += shape
-        part["indices"] = kept
-    return mesh
-
-
-def outward(mesh):
-    """Turns each bark triangle to face the way its vertices' normals point (rocks.turned_out). rusty-craftsurvive winds
-    its tubes inward, which this Engine culls as their outside, so a trunk showed its far wall from within."""
-    for part in mesh["parts"]:
-        if part["role"] == "bark":
-            rocks.turned_out(part)
-    return mesh
+    """The height and bottom row of the solid painting inside its frame."""
+    rows = np.flatnonzero((rgba[..., 3] > 128).any(1))
+    foot = rows[-1]
+    return {"height": foot - rows[0] + 1, "foot": foot}
 
 
 def write_mesh(path, mesh):
@@ -329,60 +169,30 @@ def rock(flat, rgba, key, folder, old, recompute):
 
 
 def tree(flat, archive, record, species, variant, folder, old=None, recompute=False):
-    """One tree's mesh, trimmed under its sprite's crown, and its textures in the sprite's colours."""
+    """Build and publish one nature mesh with its painted materials."""
     rgba = frame(flat)
     if species == "rock":
         return rock(flat, rgba, f"{archive}-{record}", folder, old, recompute)
     m = measures(rgba)
-    palm = archive == 500 and record in rainforest_palms.PALMS
-    regional = REGIONAL_TREES.get(archive)
+    climate, recipes = REGIONAL_TREES[archive]
     key = f"{archive}-{record}"
-    bush = key in bushes.FORMS
-    if regional and (bush or palm or record in regional[1].FORMS):
-        climate, recipes = regional
-        name = f"tree-{archive}-{record}"
-        mesh_name = f"{species}-p{variant}-{climate}.prop-mesh.json"
-        if bush:
-            mesh, images = bushes.build(key, rgba)
-        elif palm:
-            mesh, bark, leaves = rainforest_palms.build(record, rgba)
-            images = {"bark": bark, "leaves": leaves}
-        else:
-            mesh, images = recipes.build(record, rgba)
-        write_mesh(folder / mesh_name, mesh)
-        entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
-                 "placement": placement(flat, rgba, m, old, recompute)}
-        for role, image in images.items():
-            filename = f"{name}-{role}.png"
-            image.save(folder / filename)
-            entry[role] = publish(filename, folder / filename)
-        return entry
-    crown, trunk, snow = palette(rgba, m)
-    if species in (GNARLED, LOGS):
-        # Drawn as wide for its height as its sprite, so a mesh serves only sprites of the same shape.
-        aspect = round((rgba[..., 3] > SOLID).any(0).sum() / m["height"], 2)
-        model = f"{species}-p{variant}-{aspect:g}"
-        mesh = (rocks.gnarled if species == GNARLED else rocks.logs)(variant, aspect)
+    if key in deadwood.FORMS:
+        mesh, images = deadwood.build(key, rgba)
+    elif key in bushes.FORMS:
+        mesh, images = bushes.build(key, rgba)
+    elif archive == 500 and record in rainforest_palms.PALMS:
+        mesh, bark, leaves = rainforest_palms.build(record, rgba)
+        images = {"bark": bark, "leaves": leaves}
     else:
-        model = f"{species}-p{variant}"
-        mesh = json.loads((CRAFTSURVIVE / f"models/trees/{model}.prop-mesh.json").read_text())
-    # The sprite's crown begins this far up its drawn height; the mesh's leaves start no lower, a little short of it. A
-    # bare tree keeps its low branches, as its sprite does.
-    base = 0 if species in (DEAD, GNARLED, LOGS) else round((m["foot"] - m["crown"]) / m["height"] * mesh["height"] * .85, 1)
-    # Trees trimmed alike share one file.
-    mesh_name = f"{model}-from-{base:g}.prop-mesh.json"
-    if not (folder / mesh_name).exists():
-        write_mesh(folder / mesh_name, outward(trim(mesh, base)))
-    leaves, bark = TEXTURES[species]
-    name = f"tree-{archive:03d}-{record:02d}"
-    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]}, "placement": placement(flat, rgba, m, old, recompute)}
-    if leaves and snow:
-        entry["snow"] = snow | {"texels": Image.open(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png").width}
-    if leaves:
-        repaint(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png", crown, True, LEAF_DARKEN).save(folder / f"{name}-leaves.png")
-        entry["leaves"] = publish(f"{name}-leaves.png", folder / f"{name}-leaves.png")
-    repaint(CRAFTSURVIVE / f"textures/trees/{bark}-bark.png", trunk, False).save(folder / f"{name}-bark.png")
-    entry["bark"] = publish(f"{name}-bark.png", folder / f"{name}-bark.png")
+        mesh, images = recipes.build(record, rgba)
+    mesh_name = f"{species}-p{variant}-{climate}.prop-mesh.json"
+    write_mesh(folder / mesh_name, mesh)
+    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
+             "placement": placement(flat, rgba, m, old, recompute)}
+    for role, image in images.items():
+        filename = f"tree-{key}-{role}.png"
+        image.save(folder / filename)
+        entry[role] = publish(filename, folder / filename)
     return entry
 
 
@@ -408,8 +218,7 @@ def main():
     # The shader that lays the winter trees' snow on their leaves, written by hand beside them.
     snow = (folder / "snow.wgsl").read_text()
     trees = dict(payload["artReplacements"]["trees"]) if keys else {}
-    # Built whole apart first and moved in only then, so a run that fails (a sprite it cannot read, rusty-craftsurvive
-    # not at CRAFTSURVIVE, a mesh refused) leaves the trees as they were rather than deleted.
+    # Build separately so a failed recipe leaves the published trees intact.
     with tempfile.TemporaryDirectory() as built:
         built = Path(built)
         build_keys = [key for key in keys if key in wanted] if keys else list(wanted)
