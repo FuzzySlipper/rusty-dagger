@@ -28,7 +28,7 @@ python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py 128 \
   --seeds 42201,42202,42203 --denoise 0.38
 ```
 
-For non-rigged / non-splat sprites (e.g. Daedric Princes shown only as 2D summoning apparitions), pass `--style-only` (and `--width 1024 --height 1024` for square sprites) to skip the wide-A turnaround stance and overhead lighting prep while keeping the flat `#30343b` slate ground for later cutout:
+For static NPCs or non-rigged sprites (e.g. Daedric Princes or static court NPCs), pass `--style-only` (and `--width 1024 --height 1024` for square sprites) to skip the wide-A turnaround stance and overhead lighting prep while keeping the flat `#30343b` slate ground for later cutout. When a classic 3/4 sprite hides one arm behind the torso, add `--show-both-arms` so the shoulders open slightly and both arms/hands stay visible for back views and splats:
 
 ```sh
 python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py npc-001 \

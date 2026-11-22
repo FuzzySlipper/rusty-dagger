@@ -89,7 +89,7 @@ def make_portrait_ref(portrait_png: Path, out_png: Path, size: int = 512, border
     return out_png
 
 
-def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False, portrait_only: bool = False) -> tuple[str, str]:
+def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False, portrait_only: bool = False, show_both_arms: bool = False) -> tuple[str, str]:
     pos = "his" if pronoun == "He" else ("her" if pronoun == "She" else "its")
     face_q = (
         "If wearing a hood, paint a real shadowed face inside the deep hood—brow and eyes recessed in dark-umber shadow while "
@@ -124,19 +124,35 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
         return qwen_p, krea_p
 
     if style_only:
+        if show_both_arms:
+            ref_line = (
+                "Input image: costume, proportions, props and colour-blocking reference. Faithfully preserve the classic "
+                "sprite's costume, face, hair, colours, held objects and natural static character poise, while opening the "
+                "shoulders slightly toward the viewer so BOTH arms and BOTH hands are clearly visible in a natural relaxed "
+                f"standing pose (do not hide an arm behind the torso, and do not force a stiff turnaround A-pose). {face_q}\n\n"
+            )
+            krea_tail = (
+                "Faithfully preserve the costume, colours, props and natural character poise of the input image, "
+                "with BOTH arms and BOTH hands clearly visible."
+            )
+        else:
+            ref_line = (
+                "Input image: exact composition, pose, silhouette, props and colour-blocking reference. Faithfully preserve the "
+                "classic sprite's exact pose, gesture, proportions, silhouette, held objects, companions and major colour regions—"
+                f"do not change the pose into a turnaround stance or remove elements. {face_q}\n\n"
+            )
+            krea_tail = "Faithfully preserve the pose, composition, props and silhouette of the input image."
         qwen_p = (
             "Task: Redraw a very small classic fantasy RPG sprite as newly illustrated high resolution art. "
             "Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\n"
-            "Input image: exact composition, pose, silhouette, props and colour-blocking reference. Faithfully preserve the "
-            "classic sprite's exact pose, gesture, proportions, silhouette, held objects, companions and major colour regions—"
-            f"do not change the pose into a turnaround stance or remove elements. {face_q}\n\n"
+            f"{ref_line}"
             f"Subject: {brief.rstrip('.')}.\n\n"
             "Style: ART DIRECTION — VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\n"
             "Draw the subject as an accomplished pen-and-ink dark-fantasy illustration in the tradition of Akihiko Yoshida "
             "(Vagrant Story) and classic tabletop RPG manuals, finished with opaque muted gouache washes. Build a confident underlying "
             "ink drawing with crisp seams, dark-umber contours, fine directional crosshatching inside folds and shadows, and opaque "
             "local colour washes preserving the sprite's exact colour relationships without glossy 3D shading.\n\n"
-            "Presentation: Isolated subject matching the classic sprite's silhouette and framing on a perfectly flat solid dark "
+            "Presentation: Isolated full-length subject matching the classic sprite's framing on a perfectly flat solid dark "
             "slate grey background, RGB 48,52,59. No floor, no scenery, no cast shadow, no border."
         )
         krea_p = (
@@ -145,7 +161,7 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
             "contour lines, fine crosshatching inside folds and shadows, and opaque matte gouache colour planes (4 to 6 painted "
             f"value groups per material). {face_q}"
             "Plain flat dark slate-grey background, RGB 48,52,59, no floor, no scenery, no border.\n\n"
-            f"Subject: {brief.rstrip('.')}. Faithfully preserve the pose, composition, props and silhouette of the input image."
+            f"Subject: {brief.rstrip('.')}. {krea_tail}"
         )
         return qwen_p, krea_p
 
@@ -218,6 +234,7 @@ def main():
     ap.add_argument("--pronoun", choices=["He", "She", "It"], default="He")
     ap.add_argument("--hooded-shadow", action="store_true", help="Keep brow/eyes shadowed inside deep hood without pitch-black void")
     ap.add_argument("--style-only", action="store_true", help="Direct high-res style transfer preserving the sprite's exact pose, props, and composition (no wide-A turnaround or overhead-lighting prep)")
+    ap.add_argument("--show-both-arms", action="store_true", help="With --style-only, open 3/4 sprites slightly toward the front so both arms and hands are clearly visible for splat/back generation")
     ap.add_argument("--portrait-only", action="store_true", help="Anchor face/hair/identity on a dialogue portrait while generating a full-length wide-A turnaround body from the brief")
     ap.add_argument("--portrait-trim", type=int, default=3, help="Pixels to trim off each edge of a classic framed portrait (default 3)")
     ap.add_argument("--seeds", default="42201,42202,42203")
@@ -250,7 +267,7 @@ def main():
         canvas = make_slate_canvas(ref_src.resolve(), out / f"sprite_{args.width}x{args.height}.png", args.width, args.height)
     up_spr = comfy_upload(args.comfy, canvas, f"sa-{args.id}-{canvas.name}")
 
-    qwen_p, krea_p = build_prompts(brief, pronoun, args.hooded_shadow, style_only=args.style_only, portrait_only=portrait_only)
+    qwen_p, krea_p = build_prompts(brief, pronoun, args.hooded_shadow, style_only=args.style_only, portrait_only=portrait_only, show_both_arms=args.show_both_arms)
     wf2 = json.loads(WF_TEMPLATE.read_text())
 
     s1_keys = ["1_load_sprite", "2_qwen_unet", "3_qwen_clip", "4_qwen_vae", "5_qwen_cache",
