@@ -119131,6 +119131,69 @@
      "byteLength": 210827,
      "sha256": "b465d41128a51bd324244f8976f1f7def5208bd4a921282b6ce6494095d94f80"
     }
+   },
+   "503-14": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/slender-flowering-cactus-p14-desert.prop-mesh.json",
+     "byteLength": 232329,
+     "sha256": "9bb0604908d7a8fc9fad73e9543ffe5758285a3182febaa685b8fdf3513c64e6",
+     "height": 0.99026
+    },
+    "placement": {
+     "height": 3.850183,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-14-bark.png",
+     "byteLength": 123070,
+     "sha256": "bc3d195c46ee34807713efad1192890c0667e3ccafe6f63d295d8e77cac4a70f"
+    }
+   },
+   "503-15": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/cork-based-cactus-p15-desert.prop-mesh.json",
+     "byteLength": 182061,
+     "sha256": "2713713808daaf0130f8b880723b7990fbcaf0bd4e4fe948e592013af4ce7ca5",
+     "height": 0.98374
+    },
+    "placement": {
+     "height": 3.075159,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-15-bark.png",
+     "byteLength": 119032,
+     "sha256": "12152bf2b1ea7ef5b89f67e114e9b605f3c79c8565a1d335806bbbf2dc4a42c7"
+    }
+   },
+   "503-16": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tiered-flowering-cactus-p16-desert.prop-mesh.json",
+     "byteLength": 242081,
+     "sha256": "cfdde98c2801c15e9c8373878845d70ae3ce7117fa82e6114c7e037c0bd874b5",
+     "height": 0.990826
+    },
+    "placement": {
+     "height": 4.082003,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-16-bark.png",
+     "byteLength": 92648,
+     "sha256": "f06cd1c8c5857c0a1d3d7880cad4f733391521adf94070682c3369f6262c8429"
+    }
    }
   },
   "sea": {

@@ -7,12 +7,13 @@ import numpy as np
 from PIL import Image, ImageDraw
 from scipy.ndimage import distance_transform_edt
 
+import cacti
 from rainforest_palms import add_grid, colour_ramp
 from rainforest_trees import Tree
 from subtropical_trees import palm_atlas, spiky_fan
 
 
-FORMS = {5: "terraced-acacia", 13: "desert-fan-palm", 23: "desert-thorn"}
+FORMS = {5: "terraced-acacia", 13: "desert-fan-palm", 23: "desert-thorn", **cacti.FORMS}
 
 STEMS = {
     5: ((.522, 1, 0, .091), (.522, .936, 0, .105), (.526, .864, .014, .062), (.533, .760, .021, .041),
@@ -347,6 +348,8 @@ def desert_palm(tree):
 
 
 def build(record, rgba):
+    if record in cacti.FORMS:
+        return cacti.build(record, rgba)
     tree = Tree(record, rgba, STEMS[record])
     images = desert_palm(tree) if record == 13 else branch_tree(tree, record)
     parts = [tree.bark, tree.leaves]
