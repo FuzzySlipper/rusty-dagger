@@ -158,6 +158,8 @@ def publish_page(output, records, trial=False):
         form = row["form"]
         if form == "rock":
             row["category"] = "Rocks"
+        elif form.endswith("-bush"):
+            row["category"] = "Bushes"
         elif form in ("logs", "gnarled", "dead"):
             row["category"] = "Deadwood"
         else:

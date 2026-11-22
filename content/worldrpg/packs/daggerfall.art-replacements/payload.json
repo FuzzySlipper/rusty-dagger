@@ -118496,6 +118496,448 @@
      "byteLength": 21543,
      "sha256": "9abdb13e894bfa5a9d185c750567c7b7c75a36d8c99e9c09492e12398d889920"
     }
+   },
+   "503-24": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tiered-desert-bush-p24-desert.prop-mesh.json",
+     "byteLength": 167358,
+     "sha256": "5fbc82741c4a9b32996a61376d3b90c68baabc7888c27ab9c799f0154157d6ed",
+     "height": 0.992525
+    },
+    "placement": {
+     "height": 1.085858,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-24-bark.png",
+     "byteLength": 913,
+     "sha256": "c55ff8bb2d4789958869ded9e895c995ed87ccae4369c38b8c2982e7280d5342"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-503-24-leaves.png",
+     "byteLength": 32716,
+     "sha256": "90535346fb2863173fc8c4f5fb28738f0232dee8ed34fbccf38ae5227cd0221a"
+    }
+   },
+   "504-1": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/flowering-cane-bush-p1-woodland.prop-mesh.json",
+     "byteLength": 227107,
+     "sha256": "a254e4846046899b267376b0aafd042dc51dbf1ddb54e7cdb90743c7db1c4709",
+     "height": 1.014694
+    },
+    "placement": {
+     "height": 2.165395,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-1-bark.png",
+     "byteLength": 7559,
+     "sha256": "3e129d3d19799dee7cd15fbc25e2f4229933afb962e6c1daf585153ed81e5453"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-1-leaves.png",
+     "byteLength": 109306,
+     "sha256": "1b21aae6ed83562d69fe6fb26a501caa6c2edd5943a4a3aa8ade9ce7c995e4d6"
+    }
+   },
+   "504-27": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/broadleaf-bush-p27-woodland.prop-mesh.json",
+     "byteLength": 289210,
+     "sha256": "9b6a573360be9ef2871d7830e3b6205ee8b55e1a285457a5172a4661fda4ebbb",
+     "height": 1.023732
+    },
+    "placement": {
+     "height": 1.969524,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-27-bark.png",
+     "byteLength": 3136,
+     "sha256": "b020c8aaec350f2174bb9b375373366682e5a6a0f39c3ee51accab899a97a3de"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-27-leaves.png",
+     "byteLength": 34678,
+     "sha256": "e1470ea385e3b11cf6700f3c77f11ef479d8ffebc50dcab1f914091aa6053424"
+    }
+   },
+   "504-28": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/parasol-bush-p28-woodland.prop-mesh.json",
+     "byteLength": 269566,
+     "sha256": "22cbe7d63fc253ea71d332871c69de2c8b1a993a6c11c13e4953bdeae15d2bf8",
+     "height": 1.020914
+    },
+    "placement": {
+     "height": 2.004087,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-28-bark.png",
+     "byteLength": 3691,
+     "sha256": "10cf6a8333dff4bef44c34455d5d9026102a9ee04fe28f44b1a15015431ecc39"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-504-28-leaves.png",
+     "byteLength": 58032,
+     "sha256": "c8170edbf2bcca5ce1fe88f3496656a2517cfb70e2039dd65ee3f21a2007b483"
+    }
+   },
+   "505-1": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snowy-cane-bush-p1-winter-woodland.prop-mesh.json",
+     "byteLength": 194214,
+     "sha256": "85519a15dd0e8df03d2b4b2c9b38ab5f0d7732b1c36528196149ade8c11565de",
+     "height": 0.971628
+    },
+    "placement": {
+     "height": 2.109467,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-1-bark.png",
+     "byteLength": 5810,
+     "sha256": "5ac92c0b8fa35ef4195d6c1234950c3afc1abc86cb2c9930c919180bd3a7c806"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-1-leaves.png",
+     "byteLength": 76410,
+     "sha256": "0ccfa2ff0c06ab0b89723308fb530eac000e7eee164fc6c02132e55de1108e70"
+    }
+   },
+   "505-27": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snowy-broadleaf-bush-p27-winter-woodland.prop-mesh.json",
+     "byteLength": 162163,
+     "sha256": "b367ccfd94051a40c0298a2cf326f071194e885c9f2345ff9f8dfd9b7bf277ae",
+     "height": 1.021096
+    },
+    "placement": {
+     "height": 1.841725,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-27-bark.png",
+     "byteLength": 2675,
+     "sha256": "206bedda54f731d1e1cd3fe63aeaa0b691f04ba0e83ed74845867e8068e005c9"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-27-leaves.png",
+     "byteLength": 69792,
+     "sha256": "635175094ca3f8529e765d86c46d54fd46e7c5c00487bc16c355a12ba94a5edc"
+    }
+   },
+   "505-28": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snowy-parasol-bush-p28-winter-woodland.prop-mesh.json",
+     "byteLength": 161385,
+     "sha256": "0f216dcf41a8c69a4d902f57595e854f83626f8aea5026289825748a09e330c0",
+     "height": 1.007851
+    },
+    "placement": {
+     "height": 2.170767,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-28-bark.png",
+     "byteLength": 3974,
+     "sha256": "b3ebc3a124a0d2066dc9a92cafc5058b3b95d53d1ecc6441855608fda08bb678"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-28-leaves.png",
+     "byteLength": 96221,
+     "sha256": "6100dbfb7ac404a814fd4da1fde2f04ff992afb84c0e302a14ec12a707c408a4"
+    }
+   },
+   "506-9": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/autumn-bush-p9-mountain.prop-mesh.json",
+     "byteLength": 245787,
+     "sha256": "f28a020235bb6de7ca3890f0f524007d05eae5ad15a4c9157a0126f78228922d",
+     "height": 1.017563
+    },
+    "placement": {
+     "height": 1.196878,
+     "foot": 0.012467,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-9-bark.png",
+     "byteLength": 3170,
+     "sha256": "22844450fcee112b629c4675019ac99adff44a1536b6c52bc2242dde7a9d1186"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-9-leaves.png",
+     "byteLength": 39176,
+     "sha256": "12ca9469546997ff0a91831f131b6449ffc8d40c1cc4c36b9f2958c9df6048b7"
+    }
+   },
+   "506-27": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/broadleaf-bush-p27-mountain.prop-mesh.json",
+     "byteLength": 289210,
+     "sha256": "9b6a573360be9ef2871d7830e3b6205ee8b55e1a285457a5172a4661fda4ebbb",
+     "height": 1.023732
+    },
+    "placement": {
+     "height": 1.986201,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-27-bark.png",
+     "byteLength": 3180,
+     "sha256": "545a42e8a07194b78e91b85146fb2303bfe1fbd0204fbc89aeb2741866e06273"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-27-leaves.png",
+     "byteLength": 34804,
+     "sha256": "5a18c9780738f9edff74c75d13ad1b849938f8d4d7a223cd0b01424ef15858db"
+    }
+   },
+   "508-2": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/ochre-bush-p2-haunted.prop-mesh.json",
+     "byteLength": 164556,
+     "sha256": "73f043ca5c35ac334d96d7b5a90372158f42f08bec8849c54bc87ed5bd7243c2",
+     "height": 1.005597
+    },
+    "placement": {
+     "height": 1.372466,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-2-bark.png",
+     "byteLength": 3426,
+     "sha256": "0d7576615a0705b437aa15f221df75738535eb683c1e5f6582d94fca2e63de2a"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-2-leaves.png",
+     "byteLength": 34683,
+     "sha256": "5cbb830fe860d7d84c88967ec22afa8939154b0d422fc7319b791d08fc43f079"
+    }
+   },
+   "508-28": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/parasol-bush-p28-haunted.prop-mesh.json",
+     "byteLength": 270067,
+     "sha256": "e172a087eca72ae2ed314419844237e63814bc4c16f341edc0c7375258378edb",
+     "height": 1.020914
+    },
+    "placement": {
+     "height": 2.008296,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-28-bark.png",
+     "byteLength": 4064,
+     "sha256": "27dc9cc2582811b71fb9fd8d9093aa45919fb13b9fe11f53e16ebe72da647ceb"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-28-leaves.png",
+     "byteLength": 56013,
+     "sha256": "e32d4ec2053b72e5a00319fdc6d14cc771ab5fb39985947305e50e777ed51d63"
+    }
+   },
+   "509-2": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snow-shelf-bush-p2-winter-haunted.prop-mesh.json",
+     "byteLength": 126534,
+     "sha256": "4f57c6a7c16474b46fbfb79edff80b03adba44942574097e4451dafab98b8303",
+     "height": 0.955296
+    },
+    "placement": {
+     "height": 1.33007,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-2-bark.png",
+     "byteLength": 3224,
+     "sha256": "f86b9541ee079e7d68698ad8620a48c8e5f03e3ea01bee27d23bce66f447b9c5"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-509-2-leaves.png",
+     "byteLength": 25539,
+     "sha256": "03480df1261d230f1bb63e3683fd0002008806ef330e1193d2828e9cec9dd147"
+    }
+   },
+   "507-27": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snowy-broadleaf-bush-p27-winter-woodland.prop-mesh.json",
+     "byteLength": 162163,
+     "sha256": "b367ccfd94051a40c0298a2cf326f071194e885c9f2345ff9f8dfd9b7bf277ae",
+     "height": 1.021096
+    },
+    "placement": {
+     "height": 1.841725,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-27-bark.png",
+     "byteLength": 2675,
+     "sha256": "206bedda54f731d1e1cd3fe63aeaa0b691f04ba0e83ed74845867e8068e005c9"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-27-leaves.png",
+     "byteLength": 69792,
+     "sha256": "635175094ca3f8529e765d86c46d54fd46e7c5c00487bc16c355a12ba94a5edc"
+    }
+   },
+   "508-27": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/broadleaf-bush-p27-mountain.prop-mesh.json",
+     "byteLength": 289210,
+     "sha256": "9b6a573360be9ef2871d7830e3b6205ee8b55e1a285457a5172a4661fda4ebbb",
+     "height": 1.023732
+    },
+    "placement": {
+     "height": 1.489651,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-27-bark.png",
+     "byteLength": 3180,
+     "sha256": "545a42e8a07194b78e91b85146fb2303bfe1fbd0204fbc89aeb2741866e06273"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-506-27-leaves.png",
+     "byteLength": 34804,
+     "sha256": "5a18c9780738f9edff74c75d13ad1b849938f8d4d7a223cd0b01424ef15858db"
+    }
+   },
+   "509-27": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snowy-broadleaf-bush-p27-winter-woodland.prop-mesh.json",
+     "byteLength": 162163,
+     "sha256": "b367ccfd94051a40c0298a2cf326f071194e885c9f2345ff9f8dfd9b7bf277ae",
+     "height": 1.021096
+    },
+    "placement": {
+     "height": 1.381294,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-27-bark.png",
+     "byteLength": 2675,
+     "sha256": "206bedda54f731d1e1cd3fe63aeaa0b691f04ba0e83ed74845867e8068e005c9"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-27-leaves.png",
+     "byteLength": 69792,
+     "sha256": "635175094ca3f8529e765d86c46d54fd46e7c5c00487bc16c355a12ba94a5edc"
+    }
+   },
+   "509-28": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snowy-parasol-bush-p28-winter-woodland.prop-mesh.json",
+     "byteLength": 161385,
+     "sha256": "0f216dcf41a8c69a4d902f57595e854f83626f8aea5026289825748a09e330c0",
+     "height": 1.007851
+    },
+    "placement": {
+     "height": 2.170767,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-28-bark.png",
+     "byteLength": 3974,
+     "sha256": "b3ebc3a124a0d2066dc9a92cafc5058b3b95d53d1ecc6441855608fda08bb678"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-505-28-leaves.png",
+     "byteLength": 96221,
+     "sha256": "6100dbfb7ac404a814fd4da1fde2f04ff992afb84c0e302a14ec12a707c408a4"
+    }
+   },
+   "510-9": {
+    "mesh": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/ochre-bush-p2-haunted.prop-mesh.json",
+     "byteLength": 164556,
+     "sha256": "73f043ca5c35ac334d96d7b5a90372158f42f08bec8849c54bc87ed5bd7243c2",
+     "height": 1.005597
+    },
+    "placement": {
+     "height": 1.372466,
+     "foot": 0.0,
+     "from": {
+      "height": "art",
+      "foot": "art"
+     }
+    },
+    "bark": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-2-bark.png",
+     "byteLength": 3426,
+     "sha256": "0d7576615a0705b437aa15f221df75738535eb683c1e5f6582d94fca2e63de2a"
+    },
+    "leaves": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/tree-508-2-leaves.png",
+     "byteLength": 34683,
+     "sha256": "5cbb830fe860d7d84c88967ec22afa8939154b0d422fc7319b791d08fc43f079"
+    }
    }
   },
   "sea": {
