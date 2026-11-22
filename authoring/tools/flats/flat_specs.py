@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Write a flats batch's specs for whole families (rusty-dagger #10499): every still, placed or scattered record of each
-family that has no final yet, its content said by Qwen3-VL, then make_spec.py with the flats template. A record an item
+"""Write a flats batch's specs for whole groups (rusty-dagger #10499): every still, placed or scattered record of each
+group that has no final yet, its content said by Qwen3-VL, then make_spec.py with the flats template. A record an item
 already drew stays out: promote.py takes its accepted `items` final. Animated records and winter sets are left to their
 own batches.
 
-    flat_specs.py --host den-nimo nature-desert props-statues
-Writes specs/flats/flats-FAMILY(-retro).json, and keeps captions in local/art/generated/flats/captions.json.
+    flat_specs.py --host den-nimo nature-desert prop-statue
+A group is a nature set by its climate (`nature-CLIMATE`) or a category and kind of the scenery export (`prop-statue`,
+`nature-crop`, `creature-animal`). Writes specs/flats/flats-GROUP(-retro).json, and keeps captions in local/art/generated/flats/captions.json.
 """
 import argparse, csv, json, os, subprocess, sys, tempfile
 from pathlib import Path
@@ -16,11 +17,16 @@ AUTHORING = Path(__file__).resolve().parents[2]
 ART = AUTHORING.parent / "local" / "art"
 AP = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
-RAW = ART / "reference/flats"
+RAW = ART / "reference/scenery"
 CAPTIONS = ART / "generated/flats/captions.json"
 CAPTION = ("This is a sprite from an old fantasy game, on a plain grey background. In one sentence of at most 30 words, say what "
            "single object it shows: its shape, parts, materials and main colours. Start with 'One'. Do not mention the background, "
            "style, pixels or that it is a sprite. Reply with the sentence only.")
+
+
+def group_of(row):
+    """A scenery record's batch group: its nature set's climate, or its category and kind."""
+    return f"nature-{row['climate']}" if row["climate"] else f"{row['category']}-{row['kind']}"
 
 
 def caption(comfy, source, key, cache):
@@ -46,35 +52,35 @@ def caption(comfy, source, key, cache):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--host", choices=list(HOSTS), required=True)
-    ap.add_argument("families", nargs="+")
+    ap.add_argument("groups", nargs="+")
     a = ap.parse_args()
     os.environ["COMFY_URL"] = HOSTS[a.host]
     sys.path.insert(0, str(AP / "tools/lora-training"))
     import comfy  # noqa: E402
     cache = json.loads(CAPTIONS.read_text()) if CAPTIONS.exists() else {}
     rows = list(csv.DictReader(open(RAW / "usage.csv")))
-    for family in a.families:
+    for group in a.groups:
         items = []
         for row in rows:
             archive, record = int(row["archive"]), int(row["record"])
             key = f"texture-{archive:03d}-record-{record:03d}-frame-000"
-            if row["family"] != family or int(row["frames"]) > 1:
+            if group_of(row) != group or int(row["frames"]) > 1:
                 continue
             if (ART / "generated/flats" / f"{key}.png").exists() or (ART / "generated/items" / f"{key}.png").exists():
                 continue
-            directory, image = f"{family}/texture-{archive:03d}", f"flat/{key}-source.png"
+            directory, image = row["directory"], f"sprite/{key}-source.png"
             items.append({"id": f"flat-{archive}-{record}", "directory": directory, "image": image,
                           "content": caption(comfy, RAW / directory / image, key, cache), "uncertainty": "",
                           "invention": "Add nothing the source does not show."})
         if not items:
-            print(family, "nothing to do")
+            print(group, "nothing to do")
             continue
         with tempfile.NamedTemporaryFile("w", suffix=".json") as listing:
             json.dump(items, listing)
             listing.flush()
-            subprocess.run([sys.executable, AUTHORING / "tools/shared/make_spec.py", "flats", family, listing.name, "--template", "flats",
-                            "--title", f"Flats: {family}"], check=True)
-        print(family, len(items), flush=True)
+            subprocess.run([sys.executable, AUTHORING / "tools/shared/make_spec.py", "flats", group, listing.name, "--template", "flats",
+                            "--title", f"Flats: {group}"], check=True)
+        print(group, len(items), flush=True)
 
 
 if __name__ == "__main__":

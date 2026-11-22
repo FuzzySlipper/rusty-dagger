@@ -44,10 +44,10 @@ internal static class ReferenceExportCommands
         return 0;
     }, Program.Tool);
 
-    public static ToolCommand Flats { get; } = new("export-flats", [Arena2, Output], args =>
+    public static ToolCommand Scenery { get; } = new("export-scenery", [Arena2, Output], args =>
     {
-        FlatReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
-            args.Optional("--output") ?? "local/art/reference/flats");
+        SceneryReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
+            args.Optional("--output") ?? "local/art/reference/scenery");
         return 0;
     }, Program.Tool);
 

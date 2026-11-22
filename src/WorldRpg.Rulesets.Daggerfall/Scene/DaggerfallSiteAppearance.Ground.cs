@@ -62,8 +62,8 @@ internal sealed partial class DaggerfallSiteAppearance
     private int TreasurePile(long id) => (int)((ulong)id * 0x9E3779B97F4A7C15UL % (ulong)groundContainerSprites.Count);
 
     /// <summary>The refreshed flat a treasure pile is drawn as while refreshed art is drawn, or null where it stays classic.</summary>
-    private DaggerfallArtFlat? RefreshedPile(int index) => drawRefreshedEffects() && groundContainerSprites[index].Source is { } source
-        ? surfaceArt?.Flats.GetValueOrDefault(source) : null;
+    private DaggerfallArtSprite? RefreshedPile(int index) => drawRefreshedEffects() && groundContainerSprites[index].Source is { } source
+        ? surfaceArt?.Scenery.GetValueOrDefault(source) : null;
 
     /// <summary>
     /// A treasure pile's billboard: its refreshed flat standing on its own foot, or the classic pile lifted by its pivot's
@@ -97,7 +97,7 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>A treasure pile's refreshed flat's atlas, opened once for the site.</summary>
-    private SpriteAtlas RefreshedPileAtlas(DaggerfallArtFlat art)
+    private SpriteAtlas RefreshedPileAtlas(DaggerfallArtSprite art)
     {
         if (groundItemAtlases.TryGetValue(art.File.Path, out SpriteAtlas? opened)) return opened;
         RenderResourceInfo texture = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);

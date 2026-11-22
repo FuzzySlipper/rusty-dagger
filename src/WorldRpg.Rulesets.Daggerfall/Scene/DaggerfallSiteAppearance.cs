@@ -75,7 +75,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         if (disposed || locationSuspended) position = null;
         candlePosition = position;
-        bool refreshed = drawRefreshedEffects() && surfaceArt?.Flats.ContainsKey((LightFlatArchive, 3)) == true;
+        bool refreshed = drawRefreshedEffects() && surfaceArt?.Scenery.ContainsKey((LightFlatArchive, 3)) == true;
         if (position is null || candleRefreshed != refreshed)
         {
             if (candleAppearance is { } candle) Retire(candle); candleAppearance = null;
@@ -104,7 +104,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             return (atlas, Glowing(LitSprite, texture, lighting.LampLevel), sprite.Size, sprite.Pivot);
         }
         // The candle lives with the site, not its location, so it opens its own rather than the decorations' resources.
-        DaggerfallArtFlat art = surfaceArt!.Flats[(LightFlatArchive, 3)];
+        DaggerfallArtSprite art = surfaceArt!.Scenery[(LightFlatArchive, 3)];
         RenderResource image = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest).Handle;
         ownedResources.Add(image);
         SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, RefreshedFlatFrames(art)));

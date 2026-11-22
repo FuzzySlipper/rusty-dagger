@@ -27,8 +27,8 @@
   "items": [
     {
       "id": "flat-201-7",
-      "directory": "props-animals/texture-201",
-      "image": "flat/texture-201-record-007-frame-000-source.png",
+      "directory": "creatures/texture-201",
+      "image": "sprite/texture-201-record-007-frame-000-source.png",
       "content": "One brown cat walking in side view with a long raised curling tail. Add no plants, ground or second object.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -36,8 +36,8 @@
     },
     {
       "id": "flat-210-0",
-      "directory": "props-lights/texture-210",
-      "image": "flat/texture-210-record-000-frame-000-source.png",
+      "directory": "props/texture-210",
+      "image": "sprite/texture-210-record-000-frame-000-source.png",
       "content": "One low round golden fire bowl on three short bowed legs, filled with burning flames. Bright orange and yellow painted flames. Add no plants, ground or second object.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -45,8 +45,8 @@
     },
     {
       "id": "flat-202-2",
-      "directory": "props-statues/texture-202",
-      "image": "flat/texture-202-record-002-frame-000-source.png",
+      "directory": "props/texture-202",
+      "image": "sprite/texture-202-record-002-frame-000-source.png",
       "content": "One dark polished bronze statue of a four-armed goddess with snaking hair on a round black plinth, each hand holding out a small dish of burning flame. Bright orange and yellow painted flames. Add no plants, ground or second object.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

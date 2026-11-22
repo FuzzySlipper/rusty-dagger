@@ -31,7 +31,7 @@ internal static class DaggerfallLeftOutMedia
                 {
                     "media" => art?.For(key) is not null || art?.Effects.ContainsKey(key) == true,
                     "surfaces" => Has(art?.Surfaces, key),
-                    "flats" => Has(art?.Flats, key),
+                    "flats" => Has(art?.Scenery, key), // the import names the scenery section's classic records flats
                     "people" => Has(art?.People, key),
                     "meshes" => Has(art?.Meshes, key),
                     "models" => art?.Models.ContainsKey(key) == true,

@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-207-14",
-      "directory": "props-arms/texture-207",
-      "image": "flat/texture-207-record-014-frame-000-source.png",
+      "directory": "props/texture-207",
+      "image": "sprite/texture-207-record-014-frame-000-source.png",
       "content": "One dark metallic helmet with a pointed top, attached to a brownish, textured strap or band.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

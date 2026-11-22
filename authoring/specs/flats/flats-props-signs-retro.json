@@ -27,8 +27,8 @@
   "items": [
     {
       "id": "flat-53-21",
-      "directory": "props-signs/texture-053",
-      "image": "flat/texture-053-record-021-frame-000-source.png",
+      "directory": "props/texture-053",
+      "image": "sprite/texture-053-record-021-frame-000-source.png",
       "content": "One tall metal lamp with a skull base, glowing flame, and green-tinted glass shade atop a tripod stand.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -36,8 +36,8 @@
     },
     {
       "id": "flat-53-24",
-      "directory": "props-signs/texture-053",
-      "image": "flat/texture-053-record-024-frame-000-source.png",
+      "directory": "props/texture-053",
+      "image": "sprite/texture-053-record-024-frame-000-source.png",
       "content": "One ornate staff with a silver shaft, topped by a wooden base holding a golden coin pile and a small red gem.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

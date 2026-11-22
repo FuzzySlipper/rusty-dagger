@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-505-22",
-      "directory": "nature-temperate-woodland-snow/texture-505",
-      "image": "flat/texture-505-record-022-frame-000-source.png",
+      "directory": "nature/texture-505",
+      "image": "sprite/texture-505-record-022-frame-000-source.png",
       "content": "One small low rock capped with white snow, a little green moss at its base. Only a snowy rock.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -47,8 +47,8 @@
     },
     {
       "id": "flat-507-22",
-      "directory": "nature-woodland-hills-snow/texture-507",
-      "image": "flat/texture-507-record-022-frame-000-source.png",
+      "directory": "nature/texture-507",
+      "image": "sprite/texture-507-record-022-frame-000-source.png",
       "content": "One small low rock capped with white snow, a little green moss at its base. Only a snowy rock.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

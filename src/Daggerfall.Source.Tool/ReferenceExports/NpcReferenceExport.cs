@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Daggerfall.Import.Arena2;
 
 namespace Daggerfall.Source.Tool.ReferenceExports;
@@ -19,6 +20,7 @@ internal static class NpcReferenceExport
     private const int PlaceholderFace = 410;
     private const int PortraitSide = 64;
     private const int PortraitCellBytes = PortraitSide * PortraitSide;
+    private const int CityWatchArchive = 399, FirstRider = 491, LastRider = 495;
 
     // These have NPC-related metadata, but the images depict a barn door, a standing light and a brazier.
     private static readonly HashSet<NpcFlat> Props = [new(171, 1), new(197, 6), new(210, 0)];
@@ -187,8 +189,11 @@ internal static class NpcReferenceExport
         }
 
         var characterLinks = ReadCharacterLinks(characters);
+        ILookup<int, EnemyClass> enemyClasses = EnemyClasses(basePayload).ToLookup(enemy => enemy.Archive);
         foreach (var source in DirectionalSpriteReferenceExport.Sources()
-            .Where(source => source.Family is "townspeople" or "guard" || source.Archive == 473)
+            .Where(source => source.Family is "townspeople" or "guard" || source.Archive is 473 or (>= FirstRider and <= LastRider))
+            .Concat(enemyClasses.Select(set => new DirectionalSpriteReferenceExport.Source(set.Key,
+                $"{string.Join(", ", set.Select(enemy => enemy.Name))} ({set.First().Gender})", "enemy-class", Gender: set.First().Gender)))
             .OrderBy(source => source.Archive))
         {
             int archive = source.Archive;
@@ -196,6 +201,8 @@ internal static class NpcReferenceExport
             if (FindId(sourceId) is not { } id) continue;
             List<NpcArt> art = ReadDirectional(export, source);
             Dictionary<string, string> facts = new() { ["Reference alias"] = alias };
+            // A mobile's character stages are named by its mobile id, and its female set's by that id and "-female".
+            string[] mobileAliases = [];
             string kind;
             switch (source.Family)
             {
@@ -208,19 +215,34 @@ internal static class NpcReferenceExport
                     break;
                 case "guard":
                     kind = "Wandering guard";
+                    mobileAliases = ["mobile-146"];
                     facts["World use"] = "Civilian city watch patrol variant. Dialogue portraits come from the corresponding male outfit 1 face banks.";
                     art.Add(new("Dialogue portrait variants", [.. new[] { 385, 387, 381 }.SelectMany(outfit =>
                         portraits.Range(CommonFaces, FaceStarts[outfit], 24))]));
+                    break;
+                case "enemy-class":
+                    kind = "Enemy class";
+                    EnemyClass[] classes = [.. enemyClasses[archive]];
+                    mobileAliases = [.. classes.Select(enemy => enemy.Gender == "female" ? $"mobile-{enemy.MobileId}-female" : $"mobile-{enemy.MobileId}")];
+                    facts["Classes"] = string.Join(", ", classes.Select(enemy => enemy.Name));
+                    facts["Mobile IDs"] = string.Join(", ", classes.Select(enemy => enemy.MobileId));
+                    facts["World use"] = "Hostile class in dungeons and wilderness encounters. Its behaviour is keyed by its mobile IDs; this record is its art.";
+                    break;
+                case "supplemental" when archive != 473:
+                    kind = "Mounted figure";
+                    facts["World use"] = "Source-only directional set; no gameplay consumer is established.";
                     break;
                 default:
                     kind = "Named NPC";
                     facts["World use"] = "King Lysandus’s spectre in the main quest. Lysandus’ Revenge names his tomb and Woodborne Hall.";
                     break;
             }
-            string[] matching = [.. characterLinks.Keys.Where(key => key == $"{archive:000}" || key.StartsWith($"{archive:000}-", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+            string[] stages = [.. mobileAliases.Select(mobile => mobile["mobile-".Length..])];
+            string[] matching = [.. characterLinks.Keys.Where(key => key == $"{archive:000}" || key.StartsWith($"{archive:000}-", StringComparison.Ordinal)
+                || stages.Contains(key)).Order(StringComparer.Ordinal)];
             var links = matching.Select(key => new NpcLink($"Character pipeline {key}",
                 Path.GetRelativePath(Path.Combine(export.Root, id), characterLinks[key]).Replace('\\', '/')));
-            string[] aliases = sourceId == id ? [alias, .. matching] : [alias, sourceId, .. matching];
+            string[] aliases = sourceId == id ? [alias, .. mobileAliases, .. matching] : [alias, sourceId, .. mobileAliases, .. matching];
             entries.Add(new(id, source.Name, kind, art, [], facts, [.. links], aliases));
         }
 
@@ -238,6 +260,24 @@ internal static class NpcReferenceExport
         first.Frames.Count == second.Frames.Count && first.Frames.Zip(second.Frames).All(pair =>
             File.ReadAllBytes(Path.Combine(root, "art", pair.First.File)).AsSpan()
                 .SequenceEqual(File.ReadAllBytes(Path.Combine(root, "art", pair.Second.File))));
+
+    private sealed record EnemyClass(int Archive, int MobileId, string Name, string Gender);
+
+    /// <summary>The human enemy classes by the sprite set each draws: a class has a male and a female set, and classes share sets.
+    /// The City Watch draws the guard's townsfolk set, so it is the guard's record.</summary>
+    private static IEnumerable<EnemyClass> EnemyClasses(string basePayload)
+    {
+        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(basePayload));
+        foreach (JsonElement mobile in payload.RootElement.GetProperty("mobiles").GetProperty("mobiles").EnumerateArray()
+            .Where(mobile => mobile.GetProperty("affinity").GetString() == "Human"))
+        {
+            int id = mobile.GetProperty("donorId").GetInt32();
+            string name = mobile.GetProperty("donorName").GetString()!;
+            foreach ((string property, string gender) in new[] { ("maleTexture", "male"), ("femaleTexture", "female") })
+                if (mobile.GetProperty(property).GetInt32() is var archive and not CityWatchArchive)
+                    yield return new(archive, id, name, gender);
+        }
+    }
 
     private static string[] FlatAliases(NpcFlat flat) => [flat.Id, $"{flat.Archive:000}-{flat.Record}"];
 

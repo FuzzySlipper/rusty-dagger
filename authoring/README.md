@@ -38,7 +38,7 @@ retrieving concept art, and adding a page or data route.
 dotnet run --project src/Daggerfall.Source.Tool -- export-items
 ```
 
-- Also `export-spells`, `export-paper-doll`, `export-effects`, `export-flats`, `export-people`, `export-surfaces` and
+- Also `export-spells`, `export-paper-doll`, `export-effects`, `export-scenery`, `export-people`, `export-surfaces` and
   `export-terrain`. Each writes `local/art/reference/<name>/`: an `index.html` catalogue, a CSV index, JSON manifests and
   native-resolution PNGs with their source record and frame. Missing source art is recorded, not skipped.
 - `--output DIR` writes somewhere else. Use a fresh directory for a new export: existing ones are kept experiments.
@@ -50,7 +50,8 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   Add an `npc-face-*` key for a faction portrait and append `| Display Name` to override the source caption.
   Keep assigned numbers when editing the list, and leave retired numbers reserved.
   Named NPCs use 001–100 and billboards use 101–380. IDs 400–450 are reserved for portraits. Wandering NPCs keep their
-  original three-digit numbers. Search accepts old references such as `mobile-452`, `npc-flat-23355`, or `182-59`.
+  original three-digit numbers. Enemy class sprite sets use 457–472 and mounted figures 496–500; 473–495 stay free
+  because they name those sets' source archives. Search accepts old references such as `mobile-452`, `npc-flat-23355`, or `182-59`.
   [NpcReferenceBriefs.json](../src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceBriefs.json) keeps the neutral
   description and costume, color, prop and pose tags by NPC ID. Keep pose separate from the brief. In the chart, combine
   costume filters, use **Compare** to select cards, and choose **Find similar** to rank matches by costume, color and props.
@@ -122,7 +123,7 @@ wilderness sprite and three mesh angles at one scale under fixed light. Browse a
 filter by climate or representation, or open a card to compare its mesh angles. The review takes mesh categories
 from their authored forms and sprite-only subjects from `tools/trees/sprite-categories.json`.
 For 500-4, 500-31, 502-4, 502-11 and 503-1 the review stages the original DF sprite from the local
-`export-flats` reference under `local/art/reference/flats/`. Its caption identifies which source was available.
+`export-scenery` reference under `local/art/reference/scenery/`. Its caption identifies which source was available.
 Edit nature rock arrangements and their baked stone, moss and snow in `tools/rocks/fieldstones.py`,
 then run `python3 authoring/tools/trees/trees.py --key A-R` and refresh the review.
 To try unpublished art, run `python3 authoring/tools/trees/review.py 506-11 --mesh /path/to/fir.prop-mesh.json`.

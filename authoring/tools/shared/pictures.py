@@ -21,7 +21,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "paper-doll"))
-from art_key import art_key
+from art_key import art_key, source_dir
 from doll_preview import ART, doll_layer
 
 EDGE = 8                   # border pixels whose median is the background the model actually painted
@@ -51,7 +51,7 @@ def main():
     ap.add_argument("--only", nargs="+", help="item ids to fit; the rest are left as they are")
     a = ap.parse_args()
     finals = ART / "generated" / a.area
-    sources = a.source or ART / "reference" / a.area
+    sources = a.source or ART / "reference" / source_dir(a.area)
     for item in json.load(open(a.spec))["items"]:
         if a.only and item["id"] not in a.only:
             continue

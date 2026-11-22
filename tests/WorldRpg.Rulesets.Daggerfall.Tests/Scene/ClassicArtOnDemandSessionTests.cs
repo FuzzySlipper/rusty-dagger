@@ -236,14 +236,14 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
 
         // A decoration is replaced by a refreshed flat, or by a mesh unless it hangs: the test's animation reads no joints,
         // so a hanging mesh's rig is refused and its sprite drawn in its place.
-        bool Replaced((int Archive, int Record) source) => art.Flats.ContainsKey(source)
+        bool Replaced((int Archive, int Record) source) => art.Scenery.ContainsKey(source)
             || art.Meshes.TryGetValue(source, out DaggerfallArtMesh? mesh) && mesh.Hangs is null;
     }
 
     /// <summary>The magic candle's classic sprite, which the art set draws anew.</summary>
     private static string Candle(DaggerfallSiteProfile site, DaggerfallArtReplacements art)
     {
-        Assert.True(art.Flats.ContainsKey((210, 3)));
+        Assert.True(art.Scenery.ContainsKey((210, 3)));
         return site.BillboardSprites[(210, 3)].TexturePath;
     }
 
@@ -253,7 +253,7 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
     /// </summary>
     private static IEnumerable<string> ReplacedNatureFiles(DaggerfallSiteProfile site, DaggerfallArtReplacements art) =>
         site.ProfileKind != DaggerfallWorldProfileKind.Exterior ? []
-            : site.BillboardSprites.Where(pair => DaggerfallNatureArchives.Contains(pair.Key.Archive) && art.Flats.ContainsKey(pair.Key))
+            : site.BillboardSprites.Where(pair => DaggerfallNatureArchives.Contains(pair.Key.Archive) && art.Scenery.ContainsKey(pair.Key))
                 .Select(pair => pair.Value.TexturePath);
 
     /// <summary>

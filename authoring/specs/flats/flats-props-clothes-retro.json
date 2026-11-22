@@ -27,8 +27,8 @@
   "items": [
     {
       "id": "flat-204-2",
-      "directory": "props-clothes/texture-204",
-      "image": "flat/texture-204-record-002-frame-000-source.png",
+      "directory": "props/texture-204",
+      "image": "sprite/texture-204-record-002-frame-000-source.png",
       "content": "One worn leather boot with laces, showing sole, heel, and upper, in brown and dark earth tones.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -36,8 +36,8 @@
     },
     {
       "id": "flat-204-6",
-      "directory": "props-clothes/texture-204",
-      "image": "flat/texture-204-record-006-frame-000-source.png",
+      "directory": "props/texture-204",
+      "image": "sprite/texture-204-record-006-frame-000-source.png",
       "content": "One round, textured object with a dark, possibly leather-like core and a purple, speckled outer surface, resembling a mystical orb or potion vial.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

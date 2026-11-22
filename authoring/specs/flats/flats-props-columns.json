@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-203-0",
-      "directory": "props-columns/texture-203",
-      "image": "flat/texture-203-record-000-frame-000-source.png",
+      "directory": "props/texture-203",
+      "image": "sprite/texture-203-record-000-frame-000-source.png",
       "content": "One dark, fluted column with a rounded capital and base, appearing stone-like in deep brown and black tones.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -47,8 +47,8 @@
     },
     {
       "id": "flat-203-1",
-      "directory": "props-columns/texture-203",
-      "image": "flat/texture-203-record-001-frame-000-source.png",
+      "directory": "props/texture-203",
+      "image": "sprite/texture-203-record-001-frame-000-source.png",
       "content": "One dark, weathered stone column with fluted shaft, capital, and base, showing greenish-grey and brownish hues.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -56,8 +56,8 @@
     },
     {
       "id": "flat-203-2",
-      "directory": "props-columns/texture-203",
-      "image": "flat/texture-203-record-002-frame-000-source.png",
+      "directory": "props/texture-203",
+      "image": "sprite/texture-203-record-002-frame-000-source.png",
       "content": "One moss-covered stone sarcophagus with vertical slats, dark grey and green hues, resting on a carved base.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -65,8 +65,8 @@
     },
     {
       "id": "flat-203-3",
-      "directory": "props-columns/texture-203",
-      "image": "flat/texture-203-record-003-frame-000-source.png",
+      "directory": "props/texture-203",
+      "image": "sprite/texture-203-record-003-frame-000-source.png",
       "content": "One dark, cylindrical metal container with vertical ridges and a flat base, showing muted browns, greys, and hints of green.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -74,8 +74,8 @@
     },
     {
       "id": "flat-203-5",
-      "directory": "props-columns/texture-203",
-      "image": "flat/texture-203-record-005-frame-000-source.png",
+      "directory": "props/texture-203",
+      "image": "sprite/texture-203-record-005-frame-000-source.png",
       "content": "One dark, fluted column with a rounded base and capital, appearing metallic or stone-like in deep grey and black tones.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -83,8 +83,8 @@
     },
     {
       "id": "flat-203-6",
-      "directory": "props-columns/texture-203",
-      "image": "flat/texture-203-record-006-frame-000-source.png",
+      "directory": "props/texture-203",
+      "image": "sprite/texture-203-record-006-frame-000-source.png",
       "content": "One dark, cylindrical metal pole with a flared base and cap, showing rusted textures and muted brown, green, and black tones.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

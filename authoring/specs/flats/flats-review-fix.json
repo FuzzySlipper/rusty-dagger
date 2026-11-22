@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-96-3",
-      "directory": "props-remains/texture-096",
-      "image": "flat/texture-096-record-003-frame-000-source.png",
+      "directory": "props/texture-096",
+      "image": "sprite/texture-096-record-003-frame-000-source.png",
       "content": "One old bare skeleton lying flat on its back, seen from the side: skull, ribcage, thin bare pelvis, thin bare arm and leg bones, every limb only thin dry bone, with worn green leather boots on its foot bones. Gothic Halloween spookiness: clean dry old bone, no skin, no muscle, no flesh, no blood, no gore, no plants.",
       "uncertainty": "",
       "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
@@ -47,8 +47,8 @@
     },
     {
       "id": "flat-216-20",
-      "directory": "props-treasure/texture-216",
-      "image": "flat/texture-216-record-020-frame-000-source.png",
+      "directory": "props/texture-216",
+      "image": "sprite/texture-216-record-020-frame-000-source.png",
       "content": "One tidy low wide pile of treasure: a heap of gold coins with a tied brown leather coin pouch on top and a small wooden crossbow lying behind it. Only these objects, no plants.",
       "uncertainty": "",
       "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
@@ -56,8 +56,8 @@
     },
     {
       "id": "flat-216-22",
-      "directory": "props-treasure/texture-216",
-      "image": "flat/texture-216-record-022-frame-000-source.png",
+      "directory": "props/texture-216",
+      "image": "sprite/texture-216-record-022-frame-000-source.png",
       "content": "One tidy low wide pile of treasure: a heap of gold coins with a tied brown leather coin pouch on top and a small wooden crossbow lying behind it. Only these objects, no plants.",
       "uncertainty": "",
       "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
@@ -65,8 +65,8 @@
     },
     {
       "id": "flat-216-28",
-      "directory": "props-treasure/texture-216",
-      "image": "flat/texture-216-record-028-frame-000-source.png",
+      "directory": "props/texture-216",
+      "image": "sprite/texture-216-record-028-frame-000-source.png",
       "content": "One tidy low wide pile of treasure: a folded dark leather cuirass on the ground with gold coins spilled in a line along its front. Only these objects, no plants.",
       "uncertainty": "",
       "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",
@@ -74,8 +74,8 @@
     },
     {
       "id": "flat-216-33",
-      "directory": "props-treasure/texture-216",
-      "image": "flat/texture-216-record-033-frame-000-source.png",
+      "directory": "props/texture-216",
+      "image": "sprite/texture-216-record-033-frame-000-source.png",
       "content": "One tidy low wide pile of treasure: a heap of gold coins with a small glass potion bottle standing in it and a short dagger lying beside it. Only these objects, no plants.",
       "uncertainty": "",
       "invention": "Draw the described subject in place of what the source shows, keeping only its rough outline, size and place.",

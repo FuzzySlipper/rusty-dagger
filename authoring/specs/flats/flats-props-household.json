@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-200-0",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-000-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-000-frame-000-source.png",
       "content": "One metallic trophy cup with a wide bowl, slender stem, and square base, featuring silver and grey tones.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -47,8 +47,8 @@
     },
     {
       "id": "flat-200-3",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-003-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-003-frame-000-source.png",
       "content": "One golden cup with a wide bowl, slender stem, and circular base, featuring red accents on its rim.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -56,8 +56,8 @@
     },
     {
       "id": "flat-200-4",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-004-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-004-frame-000-source.png",
       "content": "One metallic goblet with a flared rim, slender stem, and wide base, featuring red accents on its eyes.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -65,8 +65,8 @@
     },
     {
       "id": "flat-200-5",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-005-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-005-frame-000-source.png",
       "content": "One golden goblet with a wide bowl, slender stem, and circular base, featuring red accents on its rim.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -74,8 +74,8 @@
     },
     {
       "id": "flat-200-6",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-006-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-006-frame-000-source.png",
       "content": "One ornate goblet with a flared rim, slender stem, and base, crafted from dark brown and gold-toned materials.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -83,8 +83,8 @@
     },
     {
       "id": "flat-200-17",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-017-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-017-frame-000-source.png",
       "content": "One irregularly shaped mound of dark, rough-textured material, possibly coal or ash, with scattered greenish specks.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -92,8 +92,8 @@
     },
     {
       "id": "flat-200-18",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-018-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-018-frame-000-source.png",
       "content": "One dark wooden bucket with a handle, showing worn texture and greenish-blue mossy patches on its curved body.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -101,8 +101,8 @@
     },
     {
       "id": "flat-200-19",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-019-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-019-frame-000-source.png",
       "content": "One wooden bucket with metal rim and handle, showing worn brown and dark grey tones, featuring a curved spout and sturdy construction.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -110,8 +110,8 @@
     },
     {
       "id": "flat-200-20",
-      "directory": "props-household/texture-200",
-      "image": "flat/texture-200-record-020-frame-000-source.png",
+      "directory": "props/texture-200",
+      "image": "sprite/texture-200-record-020-frame-000-source.png",
       "content": "One wooden chair with curved backrest, round seat, and four legs, showing brown and grey tones.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

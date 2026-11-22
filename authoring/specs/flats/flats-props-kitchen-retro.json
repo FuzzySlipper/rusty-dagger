@@ -27,8 +27,8 @@
   "items": [
     {
       "id": "flat-218-1",
-      "directory": "props-kitchen/texture-218",
-      "image": "flat/texture-218-record-001-frame-000-source.png",
+      "directory": "props/texture-218",
+      "image": "sprite/texture-218-record-001-frame-000-source.png",
       "content": "One round, metallic-looking pot with a lid, featuring dark blue, grey, and purple hues, possibly made of ceramic or metal.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -36,8 +36,8 @@
     },
     {
       "id": "flat-218-2",
-      "directory": "props-kitchen/texture-218",
-      "image": "flat/texture-218-record-002-frame-000-source.png",
+      "directory": "props/texture-218",
+      "image": "sprite/texture-218-record-002-frame-000-source.png",
       "content": "One round, textured container with a lid, made of earthy brown and green materials, featuring a handle on its side.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -45,8 +45,8 @@
     },
     {
       "id": "flat-218-3",
-      "directory": "props-kitchen/texture-218",
-      "image": "flat/texture-218-record-003-frame-000-source.png",
+      "directory": "props/texture-218",
+      "image": "sprite/texture-218-record-003-frame-000-source.png",
       "content": "One round, greenish-brown ceramic jar with a lid, featuring earthy tones and subtle texture variations.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -54,8 +54,8 @@
     },
     {
       "id": "flat-218-4",
-      "directory": "props-kitchen/texture-218",
-      "image": "flat/texture-218-record-004-frame-000-source.png",
+      "directory": "props/texture-218",
+      "image": "sprite/texture-218-record-004-frame-000-source.png",
       "content": "One black metal frying pan with a long handle, featuring a slightly curved bowl and a metallic rim.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -63,8 +63,8 @@
     },
     {
       "id": "flat-218-6",
-      "directory": "props-kitchen/texture-218",
-      "image": "flat/texture-218-record-006-frame-000-source.png",
+      "directory": "props/texture-218",
+      "image": "sprite/texture-218-record-006-frame-000-source.png",
       "content": "One wooden-handled shovel with a dark metal blade and worn brown shaft, featuring a curved scoop and a pointed tip.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

@@ -24,7 +24,7 @@ internal static class Program
         ReferenceExportCommands.PaperDoll,
         ReferenceExportCommands.Effects,
         ReferenceExportCommands.Surfaces,
-        ReferenceExportCommands.Flats,
+        ReferenceExportCommands.Scenery,
         ReferenceExportCommands.People,
         ReferenceExportCommands.Npc,
         ReferenceExportCommands.Terrain,

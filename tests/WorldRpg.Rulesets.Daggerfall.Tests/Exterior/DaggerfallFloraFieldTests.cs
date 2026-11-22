@@ -166,7 +166,7 @@ public sealed class DaggerfallFloraFieldTests
         foreach ((int, int) record in new[] { tree, rock })
         {
             DaggerfallTreeArt mesh = art.Trees[record];
-            DaggerfallArtFlat flat = art.Flats[record];
+            DaggerfallArtSprite flat = art.Scenery[record];
             foreach (DaggerfallArtFile file in new[] { mesh.Mesh, flat.File, mesh.Bark, mesh.Leaves, mesh.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>())
                 served[file.Path] = File.ReadAllBytes(Path.Combine(Content, file.Path));
             looks[record] = new(flat.File, Vector2.Zero, Vector2.One, new Vector2(1, mesh.Height), new Vector2(.5F, 0)) { Tree = mesh, TreeSnow = art.TreeSnow };
@@ -276,7 +276,7 @@ public sealed class DaggerfallFloraFieldTests
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(
             File.ReadAllBytes(Path.Combine(Content, "worldrpg", "packs", "daggerfall.art-replacements", "payload.json")), "daggerfall.art-replacements");
         DaggerfallTreeArt tree = art.Trees[record];
-        DaggerfallArtFlat flat = art.Flats[record];
+        DaggerfallArtSprite flat = art.Scenery[record];
         DaggerfallArtFile[] files = [tree.Mesh, flat.File, .. new[] { tree.Bark, tree.Leaves, tree.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>()];
         Dictionary<string, ReadOnlyMemory<byte>> served = files.ToDictionary(file => file.Path, file => (ReadOnlyMemory<byte>)File.ReadAllBytes(Path.Combine(Content, file.Path)));
         DaggerfallFloraLook look = new(flat.File, Vector2.Zero, Vector2.One, size, new Vector2(.5F, 0)) { Tree = tree, TreeSnow = art.TreeSnow };

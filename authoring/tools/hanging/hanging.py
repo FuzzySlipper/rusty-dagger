@@ -63,7 +63,7 @@ SIZES = sizes()
 def flat(key):
     """The refreshed flat of a record: its first frame as an RGBA array (top row first) and where the classic frame lies in it."""
     payload = json.loads((PACK / "payload.json").read_text())
-    entry = next(e for e in payload["artReplacements"]["flats"] if (e["replaces"]["archive"], e["replaces"]["record"]) == key)
+    entry = next(e for e in payload["artReplacements"]["scenery"] if (e["replaces"]["archive"], e["replaces"]["record"]) == key)
     image = bpy.data.images.load(str(PACK.parent.parent.parent / entry["path"]))
     w, h = image.size
     pixels = np.array(image.pixels[:], dtype=np.float32).reshape(h, w, 4)[::-1]

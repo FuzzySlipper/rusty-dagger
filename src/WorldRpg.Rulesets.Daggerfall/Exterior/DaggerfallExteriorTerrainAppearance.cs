@@ -355,7 +355,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     internal DaggerfallFloraLook? FloraLook(int archive, int record)
     {
         // The set's own art places itself: its size and foot are its own, and its first frame its first.
-        if (_art?.Flats.GetValueOrDefault((archive, record)) is { } art)
+        if (_art?.Scenery.GetValueOrDefault((archive, record)) is { } art)
         {
             DaggerfallArtRect rect = art.Frames[0];
             return new(art.File, Uv(rect.X, rect.Y, art.Width, art.Height), Uv(rect.X + rect.Width, rect.Y + rect.Height, art.Width, art.Height), art.Size, art.Foot)

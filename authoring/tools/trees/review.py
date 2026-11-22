@@ -62,9 +62,9 @@ def classic_reference(directory, flat):
     if (a, r) not in ((500, 4), (500, 31), (502, 4), (502, 11), (503, 1)):
         return False
     name = f"texture-{a}-record-{r:03}-frame-000-source.png"
-    source = next((ROOT / "local/art/reference/flats").glob(f"*/texture-{a}/flat/{name}"), None)
+    source = next((ROOT / "local/art/reference/scenery").glob(f"*/texture-{a}/sprite/{name}"), None)
     if source is None:
-        print(f"{a}-{r}: {name} missing from export-flats; showing the refreshed sprite")
+        print(f"{a}-{r}: {name} missing from export-scenery; showing the refreshed sprite")
         return False
     path = directory / flat["path"]
     with Image.open(path) as refreshed, Image.open(source) as classic:
@@ -108,7 +108,7 @@ def stage(directory, flats, trees, snow, candidates):
             if role in ("stone", "leaves") and "snow" in tree:
                 with Image.open(dest) as texture:
                     tree["snow"]["texels"] = texture.width
-    payload = {"images": [], "flats": flats, "trees": trees, "treeSnow": snow}
+    payload = {"images": [], "scenery": flats, "trees": trees, "treeSnow": snow}
     (directory / "flora.json").write_text(json.dumps({"artReplacements": payload}))
     (directory / "flats-tuning.json").write_text(json.dumps(json.loads(TUNING.read_bytes())["flats"]))
     Image.new("RGBA", (8, 4), (133, 141, 148, 255)).save(directory / "background.png")
@@ -185,7 +185,7 @@ def main():
     candidates = {role: getattr(args, role) for role in roles if getattr(args, role)}
     art = json.loads((PACK / "payload.json").read_bytes())["artReplacements"]
     flats = {}
-    for flat in art["flats"]:
+    for flat in art["scenery"]:
         archive, record = flat["replaces"]["archive"], flat["replaces"]["record"]
         if 500 <= archive <= 511:
             flats[f"{archive}-{record}"] = flat

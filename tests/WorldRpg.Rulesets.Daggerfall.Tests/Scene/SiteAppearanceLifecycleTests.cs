@@ -175,7 +175,7 @@ public sealed class SiteAppearanceLifecycleTests
             new Vector2(.5F, .5F), new Vector2(.975F, .65F)) { Source = (216, record) };
         foreach (int record in new[] { 0, 1 }) content.Add($"sprite/treasure-{record}.png", Hash);
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes("""
-            {"artReplacements": {"images": [], "flats": [{"replaces": {"archive": 216, "record": 0}, "path": "refreshed/pile.png", "byteLength": 1,
+            {"artReplacements": {"images": [], "scenery": [{"replaces": {"archive": 216, "record": 0}, "path": "refreshed/pile.png", "byteLength": 1,
               "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 79, "height": 53,
               "frames": [{"x": 0, "y": 0, "width": 79, "height": 53}],
               "placement": {"size": {"width": 1.0, "height": 0.6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.0},

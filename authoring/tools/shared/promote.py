@@ -69,7 +69,7 @@ its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py)
 The `terrain` area does the same into `surfaces` for the ground tiles, from local/art/generated/terrain (tools/terrain/ground.py). A
 record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
-The `flats` area promotes the world's placed billboards and terrain nature (`flats`): each record in local/art/reference/flats/usage.csv
+The `flats` area promotes the world's placed sprites that are not people, its nature, props and animals (`scenery`): each record in local/art/reference/scenery/usage.csv
 whose every frame has an accepted final becomes one PNG atlas, as an effect does, with its own placement: a frame's size in
 metres, its pivot and its foot (fractions of the frame, from its left and bottom: where the sprite hangs from its position, and
 where it stands on the ground), and for several frames the rate they play at, in order. The game draws the flat from these
@@ -116,7 +116,7 @@ A placement is the entry's own. A new entry takes its values from the classic or
 classic image's size at the treasure piles' scale, the classic body's waist), each marked `original` in its `from`;
 after that, promotion keeps every value the payload holds, so a value changed on purpose survives a re-promotion.
 `--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again. An entry's
-id is what it replaces (an effect or image), or `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`, `mesh.ARCHIVE.RECORD` or `tree.ARCHIVE.RECORD`.
+id is what it replaces (an effect or image), or `scenery.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`, `mesh.ARCHIVE.RECORD` or `tree.ARCHIVE.RECORD`.
 
 Every area promotes the same way (promote_area). Its units are what an entry replaces, keyed as the area keys them: an
 art key (paper-doll, worn, spells, ui, surfaces, terrain), an item's media id (items), an effect's media id, a sprite
@@ -402,7 +402,7 @@ def with_placement(identity, entry, original):
     """An atlas entry whose `classic` rect (where the classic frame sits in its frames) is turned into its own placement,
     taken from the original once (`original(classic)`) and kept after, so the entry no longer states the rect."""
     classic = entry.pop("classic")
-    names = ["size", "pivot", "foot", *(["framesPerSecond"] if len(entry["frames"]) > 1 and identity.startswith("flat.") else [])]
+    names = ["size", "pivot", "foot", *(["framesPerSecond"] if len(entry["frames"]) > 1 and identity.startswith("scenery.") else [])]
     entry["placement"] = own(identity, names, lambda: original(classic))
     return entry
 
@@ -899,14 +899,14 @@ def flat_units():
 
     def build(archive, record, stem, sources, finals):
         entry = {"replaces": {"archive": archive, "record": record},
-                 **frame_atlas(stem, sources, [final.path for final in finals], f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH,
+                 **frame_atlas(stem, sources, [final.path for final in finals], f"{MEDIA}/scenery/{stem}.png", crunch=FLAT_CRUNCH,
                                glow=glow_of(archive, record))}
-        return [("flats", with_placement(f"flat.{archive}.{record}", entry, lambda classic: flat_placement(archive, record, classic, len(entry["frames"]))))]
+        return [("scenery", with_placement(f"scenery.{archive}.{record}", entry, lambda classic: flat_placement(archive, record, classic, len(entry["frames"]))))]
     units = {}
-    for row in csv.DictReader(open(ART / "reference/flats/usage.csv")):
+    for row in csv.DictReader(open(ART / "reference/scenery/usage.csv")):
         archive, record = int(row["archive"]), int(row["record"])
         stem = f"texture-{archive:03d}-record-{record:03d}"
-        sources = sorted((ART / "reference/flats" / row["family"] / f"texture-{archive:03d}/flat").glob(f"{stem}-frame-*-source.png"))
+        sources = sorted((ART / "reference/scenery" / row["directory"] / "sprite").glob(f"{stem}-frame-*-source.png"))
         if sources:
             finals = [final(f"{stem}-frame-{frame:03d}") for frame in range(len(sources))]
             units[stem] = Unit(finals, lambda archive=archive, record=record, stem=stem, sources=sources, finals=finals: build(archive, record, stem, sources, finals))
@@ -1024,7 +1024,7 @@ AREAS = {
                                   "effectGlow": (ONE, "effectGlow")}, effect_units),
     "surfaces": Area(["surfaces"], {"surfaces": stem}, lambda: surface_units("surfaces")),
     "terrain": Area(["terrain"], {"surfaces": stem}, lambda: surface_units("terrain")),
-    "flats": Area(["flats"], {"flats": record_stem}, flat_units),
+    "flats": Area(["scenery"], {"scenery": record_stem}, flat_units),
     "people": Area(["people"], {"people": record_stem}, people_units),
     "people-rig": Area(["people-rigs"], {"peopleRig": (ONE, PEOPLE_RIG_FIGURE)}, lambda: {PEOPLE_RIG_FIGURE: Unit([], lambda: [("peopleRig", people_rig())])}),
     "ui": Area(["ui"], {"images": stem}, ui_units),
@@ -1153,9 +1153,9 @@ def commit(stale, folders):
 
 def placed_entries(payload):
     """Every entry of the pack that may state a placement, with the id `--set` and `--recompute` name it by: what it replaces
-    for an image or effect, `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`."""
+    for an image or effect, `scenery.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`."""
     art = payload["artReplacements"]
-    named = {"flats": "flat", "people": "person", "meshes": "mesh"}
+    named = {"scenery": "scenery", "people": "person", "meshes": "mesh"}
     found = [(entry["replaces"], entry) for section in ("images", "effects") for entry in art.get(section, [])]
     for section, kind in named.items():
         found += [(f"{kind}.{entry['replaces']['archive']}.{entry['replaces']['record']}", entry) for entry in art.get(section, [])]
@@ -1165,14 +1165,15 @@ def placed_entries(payload):
 
 def replaced_classic(payload):
     """The classic identities the pack replaces, by kind and sorted: what an entry stands in for, nothing of how it looks,
-    so the list changes only when an entry is added or withdrawn, never when one is redone."""
+    so the list changes only when an entry is added or withdrawn, never when one is redone. The kinds are the importer's,
+    which names the classic records of the `scenery` section flats."""
     art = payload["artReplacements"]
     record = lambda entry: f"{entry['replaces']['archive']}-{entry['replaces']['record']}"
     return {
         "kind": "worldrpg.replaced-classic",
         "media": sorted({entry["replaces"] for entry in [*art.get("images", []), *art.get("effects", [])]}),
-        **{kind: sorted({record(entry) for entry in art.get(kind, [])}, key=lambda key: tuple(map(int, key.split("-"))))
-           for kind in ("surfaces", "flats", "people", "meshes")},
+        **{kind: sorted({record(entry) for entry in art.get(section, [])}, key=lambda key: tuple(map(int, key.split("-"))))
+           for kind, section in (("surfaces", "surfaces"), ("flats", "scenery"), ("people", "people"), ("meshes", "meshes"))},
         "models": sorted(art.get("models", {}), key=int),
     }
 

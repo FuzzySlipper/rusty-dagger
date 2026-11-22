@@ -134,9 +134,9 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (surfaceArt is null) return;
         DaggerfallSiteDecoration definition = flat.Definition;
-        if (flat.RefreshedSummer is null && surfaceArt.Flats.TryGetValue(definition.Source, out DaggerfallArtFlat? summer))
+        if (flat.RefreshedSummer is null && surfaceArt.Scenery.TryGetValue(definition.Source, out DaggerfallArtSprite? summer))
             flat.RefreshedSummer = CreateRefreshedDecorationSprite(summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
-        if (flat.RefreshedWinter is null && surfaceArt.Flats.TryGetValue(definition.WinterSource, out DaggerfallArtFlat? winter))
+        if (flat.RefreshedWinter is null && surfaceArt.Scenery.TryGetValue(definition.WinterSource, out DaggerfallArtSprite? winter))
             flat.RefreshedWinter = definition.WinterSource == definition.Source ? flat.RefreshedSummer
                 : CreateRefreshedDecorationSprite(winter, definition.BaseAligned, Material(definition), GivesLight(definition, definition.WinterSource));
     }
@@ -146,7 +146,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// numbered from 0 and played in order at its own rate. A light source shines through the emission map cut from its art, or,
     /// where the set has none, through its own texture as a classic one does.
     /// </summary>
-    private DecorationSprite CreateRefreshedDecorationSprite(DaggerfallArtFlat art, bool baseAligned, SpriteMaterialDescriptor material, bool givesLight)
+    private DecorationSprite CreateRefreshedDecorationSprite(DaggerfallArtSprite art, bool baseAligned, SpriteMaterialDescriptor material, bool givesLight)
     {
         if (!decorationAtlases.TryGetValue(art.File.Path, out var atlas))
         {
@@ -167,7 +167,7 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>A refreshed flat's frames, numbered from 0 in the order its art states them, which is the order it plays them.</summary>
-    private static SpriteAtlasFrame[] RefreshedFlatFrames(DaggerfallArtFlat art) =>
+    private static SpriteAtlasFrame[] RefreshedFlatFrames(DaggerfallArtSprite art) =>
         SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
             art.Frames.Select((frame, index) => new NormalizedSpriteFrame((uint)index, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
 

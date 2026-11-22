@@ -203,12 +203,12 @@ class Placements(unittest.TestCase):
 
     def test_a_promotion_keeps_the_values_an_entry_has_and_a_recompute_takes_them_again(self):
         kept = {"size": {"width": 9, "height": 9}, "pivot": {"x": 0, "y": 0}, "foot": {"x": 0, "y": 0}, "from": {"size": "hand", "pivot": "original", "foot": "original"}}
-        promote.KEPT["flat.210.4"] = kept
+        promote.KEPT["scenery.210.4"] = kept
         names = ["size", "pivot", "foot"]
-        self.assertIs(kept, promote.own("flat.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1)))
-        promote.RECOMPUTE.add("flat.210.4")
+        self.assertIs(kept, promote.own("scenery.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1)))
+        promote.RECOMPUTE.add("scenery.210.4")
         self.addCleanup(promote.RECOMPUTE.clear)
-        again = promote.own("flat.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1))
+        again = promote.own("scenery.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1))
         self.assertEqual(8, again["size"]["height"])   # the classic 2 m over the .25 of the frame it takes
         self.assertEqual({"size": "original", "pivot": "original", "foot": "original"}, again["from"])
 

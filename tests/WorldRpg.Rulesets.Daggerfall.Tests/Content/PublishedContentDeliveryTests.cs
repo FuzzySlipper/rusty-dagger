@@ -955,11 +955,11 @@ public sealed class PublishedContentDeliveryTests
 
         // Refreshed flats stand in for classic records, each an 8-bit RGBA atlas of its stated size; a flat that gives light
         // carries an emission map of the same layout.
-        JsonElement[] flats = [.. section.GetProperty("flats").EnumerateArray()];
+        JsonElement[] flats = [.. section.GetProperty("scenery").EnumerateArray()];
         Assert.NotEmpty(flats);
-        Assert.Equal(flats.Length, art.Flats.Count);
-        Assert.Contains(art.Flats.Values, flat => flat.Emission is not null);
-        Assert.All(art.Flats.Values, flat =>
+        Assert.Equal(flats.Length, art.Scenery.Count);
+        Assert.Contains(art.Scenery.Values, flat => flat.Emission is not null);
+        Assert.All(art.Scenery.Values, flat =>
         {
             foreach (DaggerfallArtFile file in new[] { flat.File, flat.Emission }.OfType<DaggerfallArtFile>())
             {

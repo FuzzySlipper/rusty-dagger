@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-201-2",
-      "directory": "props-animals/texture-201",
-      "image": "flat/texture-201-record-002-frame-000-source.png",
+      "directory": "creatures/texture-201",
+      "image": "sprite/texture-201-record-002-frame-000-source.png",
       "content": "One brown camel with two humps, four legs, and a head, standing upright.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -47,8 +47,8 @@
     },
     {
       "id": "flat-201-11",
-      "directory": "props-animals/texture-201",
-      "image": "flat/texture-201-record-011-frame-000-source.png",
+      "directory": "creatures/texture-201",
+      "image": "sprite/texture-201-record-011-frame-000-source.png",
       "content": "One seagull perched atop a wooden pole, featuring grey feathers, orange beak and legs, and a brownish-brown pole.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

@@ -210,7 +210,7 @@ def main():
     args = ap.parse_args()
     keys, recompute = args.key, set(args.recompute)
     payload = json.loads(PAYLOAD.read_text())
-    flats = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["flats"]}
+    flats = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["scenery"]}
     folder = CONTENT / MEDIA
     wanted = {f"{archive}-{record}": (archive, record, form) for archive, forms in FORMS.items() for record, form in forms.items()}
     if unknown := [key for key in keys if key not in wanted and key not in SHARED_TREES]:

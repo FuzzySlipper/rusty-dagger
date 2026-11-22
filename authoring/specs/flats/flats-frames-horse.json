@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-201-0-f1",
-      "directory": "props-animals/texture-201",
-      "image": "flat/texture-201-record-000-frame-001-source.png",
+      "directory": "creatures/texture-201",
+      "image": "sprite/texture-201-record-000-frame-001-source.png",
       "content": "One brown horse standing in side view, slim legs, with a pale grey mane and a long pale grey tail of the same grey as the mane, plain with no saddle or harness. Add no plants, ground or second object.",
       "uncertainty": "This is animation frame 1; only the moving part differs from frame 0, so the body must match frame 0.",
       "invention": "Add nothing the source does not show.",
@@ -47,8 +47,8 @@
     },
     {
       "id": "flat-201-0-f2",
-      "directory": "props-animals/texture-201",
-      "image": "flat/texture-201-record-000-frame-002-source.png",
+      "directory": "creatures/texture-201",
+      "image": "sprite/texture-201-record-000-frame-002-source.png",
       "content": "One brown horse standing in side view, slim legs, with a pale grey mane and a long pale grey tail of the same grey as the mane, plain with no saddle or harness. Add no plants, ground or second object.",
       "uncertainty": "This is animation frame 2; only the moving part differs from frame 0, so the body must match frame 0.",
       "invention": "Add nothing the source does not show.",
@@ -56,8 +56,8 @@
     },
     {
       "id": "flat-201-0-f3",
-      "directory": "props-animals/texture-201",
-      "image": "flat/texture-201-record-000-frame-003-source.png",
+      "directory": "creatures/texture-201",
+      "image": "sprite/texture-201-record-000-frame-003-source.png",
       "content": "One brown horse standing in side view, slim legs, with a pale grey mane and a long pale grey tail of the same grey as the mane, plain with no saddle or harness. Add no plants, ground or second object.",
       "uncertainty": "This is animation frame 3; only the moving part differs from frame 0, so the body must match frame 0.",
       "invention": "Add nothing the source does not show.",

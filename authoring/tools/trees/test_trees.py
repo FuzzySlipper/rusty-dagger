@@ -95,7 +95,7 @@ class Meshes(unittest.TestCase):
 
     def test_matching_paintings_use_the_same_media_but_their_own_placement(self):
         art = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]
-        flats = {f"{f['replaces']['archive']}-{f['replaces']['record']}": f for f in art["flats"]}
+        flats = {f"{f['replaces']['archive']}-{f['replaces']['record']}": f for f in art["scenery"]}
         for key, source in trees.SHARED_TREES.items():
             with self.subTest(key=key):
                 instance = art["trees"][key]
@@ -107,7 +107,7 @@ class Meshes(unittest.TestCase):
                 self.assertEqual(trees.shared_tree(original, flats[key], hand)["placement"], hand["placement"])
 
     def test_the_winter_rock_painted_with_pockets_is_built_whole_on_its_foot(self):
-        flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["flats"] if f["replaces"] == {"archive": 507, "record": 4})
+        flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["scenery"] if f["replaces"] == {"archive": 507, "record": 4})
         rgba = trees.frame(flat)
         mesh, _ = trees.fieldstones.build("507-4", rgba, flat["placement"]["size"]["height"])
         part = mesh["parts"][0]
@@ -118,7 +118,7 @@ class Meshes(unittest.TestCase):
 
     def test_a_rock_painted_with_a_pocket_stands_in_its_sprite_s_proportions(self):
         # 506-3's sprite is an arch: shaped round its opening, the rock stood squat at 55% of the sprite's height (#10874).
-        flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["flats"] if f["replaces"] == {"archive": 506, "record": 3})
+        flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["scenery"] if f["replaces"] == {"archive": 506, "record": 3})
         rgba = trees.frame(flat)
         mesh, _ = trees.fieldstones.build("506-3", rgba, flat["placement"]["size"]["height"])
         positions = np.array(mesh["parts"][0]["positions"]).reshape(-1, 3)

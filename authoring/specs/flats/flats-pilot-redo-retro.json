@@ -27,8 +27,8 @@
   "items": [
     {
       "id": "flat-212-2",
-      "directory": "props-town/texture-212",
-      "image": "flat/texture-212-record-002-frame-000-source.png",
+      "directory": "props/texture-212",
+      "image": "sprite/texture-212-record-002-frame-000-source.png",
       "content": "One round stone fountain with a tapering stone spire in a low octagonal basin of pale water, its outer wall a solid course of mid-grey stone blocks lit clearly down to the ground.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -37,8 +37,8 @@
     },
     {
       "id": "flat-504-9",
-      "directory": "nature-temperate-woodland/texture-504",
-      "image": "flat/texture-504-record-009-frame-000-source.png",
+      "directory": "nature/texture-504",
+      "image": "sprite/texture-504-record-009-frame-000-source.png",
       "content": "One thin dark bare sapling with a few long drooping leaves. Two tall cattail stems, each topped by a thick velvety brown seed head, above long drooping leaves.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -46,8 +46,8 @@
     },
     {
       "id": "flat-504-24",
-      "directory": "nature-temperate-woodland/texture-504",
-      "image": "flat/texture-504-record-024-frame-000-source.png",
+      "directory": "nature/texture-504",
+      "image": "sprite/texture-504-record-024-frame-000-source.png",
       "content": "One tall dead grey leafless tree with thin bare branches. Keep the classic height and thickness of trunk and branches, in cool pale grey wood.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -55,8 +55,8 @@
     },
     {
       "id": "flat-212-17",
-      "directory": "props-town/texture-212",
-      "image": "flat/texture-212-record-017-frame-000-source.png",
+      "directory": "props/texture-212",
+      "image": "sprite/texture-212-record-017-frame-000-source.png",
       "content": "One rounded weathered tan gravestone with a small stone at its foot. Soft painted edges with no dark contour line.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
@@ -64,8 +64,8 @@
     },
     {
       "id": "flat-212-18",
-      "directory": "props-town/texture-212",
-      "image": "flat/texture-212-record-018-frame-000-source.png",
+      "directory": "props/texture-212",
+      "image": "sprite/texture-212-record-018-frame-000-source.png",
       "content": "One rounded weathered grey gravestone with a small stone at its foot. Soft painted edges with no dark contour line.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

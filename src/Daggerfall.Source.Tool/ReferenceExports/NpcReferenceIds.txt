@@ -335,3 +335,29 @@
 454 npc-454
 455 npc-455
 456 npc-456
+
+# 457–472 Enemy class sprite sets: the human mobiles 128–145 by the archive each draws, male and female.
+# The numbers skip 473–495, which name these sets' and the riders' source archives.
+457 npc-475
+458 npc-476
+459 npc-477
+460 npc-478
+461 npc-479
+462 npc-480
+463 npc-481
+464 npc-482
+465 npc-483
+466 npc-484
+467 npc-485
+468 npc-486
+469 npc-487
+470 npc-488
+471 npc-489
+472 npc-490
+
+# 496–500 Mounted figures
+496 npc-491
+497 npc-492
+498 npc-493
+499 npc-494
+500 npc-495

@@ -103,7 +103,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         for (int record = 1; record <= 31; record++) graphics.Content.Add($"refreshed/flats/504-{record}.png", TestSessions.Hash);
         graphics.Content.Add("refreshed/flats/504-41.png", TestSessions.Hash);
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
-            $$$"""{"artReplacements": {"images": [], "flats": [{{{flats}}}]}}"""), "test.art");
+            $$$"""{"artReplacements": {"images": [], "scenery": [{{{flats}}}]}}"""), "test.art");
         bool refreshed = false;
         using DaggerfallExteriorTerrainAppearance appearance = new(graphics.Content, graphics, graphics.Admit(profile));
         appearance.UseArt(art, () => refreshed);

@@ -38,8 +38,8 @@
   "items": [
     {
       "id": "flat-210-24",
-      "directory": "props-lights/texture-210",
-      "image": "flat/texture-210-record-024-frame-000-source.png",
+      "directory": "props/texture-210",
+      "image": "sprite/texture-210-record-024-frame-000-source.png",
       "content": "One small iron and brass lantern with warm lit glass panes, hanging from a long chain. The chain is one unbroken line of closed oval links in plain dark iron, every link the same size and the same dark grey from top to bottom, with no copper, orange or gaps. Add no plants, ground or second object.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",

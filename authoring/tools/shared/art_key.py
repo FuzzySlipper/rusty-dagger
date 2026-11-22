@@ -9,9 +9,10 @@ import re
 TEXTURE = re.compile(r"texture-(\d+)-record-(\d+)-frame-(\d+)")
 
 
-# Areas whose images are named by texture archive; `worn` reads the player layers of the items export.
+# Areas whose images are named by texture archive; `worn` reads the player layers of the items export, and `flats` the
+# scenery export.
 TEXTURE_AREAS = ("items", "worn", "flats", "people")
-SOURCE_DIR = {"worn": "items"}
+SOURCE_DIR = {"worn": "items", "flats": "scenery"}
 
 
 def source_dir(area):

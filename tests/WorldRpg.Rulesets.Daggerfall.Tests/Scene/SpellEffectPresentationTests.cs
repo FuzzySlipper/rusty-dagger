@@ -34,7 +34,7 @@ public sealed class SpellEffectPresentationTests
             {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "placement": {"size": {"width": 2.15, "height": 0.9}}},
             {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "placement": {"size": {"width": 1.075, "height": 0.725}}},
             {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "glow": [1], "placement": {"size": {"width": 0.7, "height": 3.8}}}],
-          "flats": [
+          "scenery": [
             {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "placement": {"size": {"width": 4, "height": 6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25}}},
             {"replaces": {"archive": 210, "record": 14}, "path": "refreshed/lamp.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,

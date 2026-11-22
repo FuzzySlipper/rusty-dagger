@@ -28,20 +28,20 @@ internal static class PeopleReferenceExport
     public static void Run(string arena2, string output)
     {
         ReferenceExport export = new(arena2, output);
-        Dictionary<(int Archive, int Record), FlatReferenceExport.Usage> usage = [];
-        FlatReferenceExport.Usage Counted(int archive, int record)
+        Dictionary<(int Archive, int Record), SceneryReferenceExport.Usage> usage = [];
+        SceneryReferenceExport.Usage Counted(int archive, int record)
         {
-            if (!usage.TryGetValue((archive, record), out FlatReferenceExport.Usage? counted)) usage.Add((archive, record), counted = new());
+            if (!usage.TryGetValue((archive, record), out SceneryReferenceExport.Usage? counted)) usage.Add((archive, record), counted = new());
             return counted;
         }
-        void Exterior(int archive, int record, string block) { FlatReferenceExport.Usage u = Counted(archive, record); u.ExteriorBlocks.Add(block); u.Exterior++; }
-        void Interior(int archive, int record, string block) { FlatReferenceExport.Usage u = Counted(archive, record); u.InteriorBlocks.Add(block); u.Interior++; }
+        void Exterior(int archive, int record, string block) { SceneryReferenceExport.Usage u = Counted(archive, record); u.ExteriorBlocks.Add(block); u.Exterior++; }
+        void Interior(int archive, int record, string block) { SceneryReferenceExport.Usage u = Counted(archive, record); u.InteriorBlocks.Add(block); u.Interior++; }
 
         foreach (BlockRecord block in BlockRecordInventoryReader.Read(export.Read("BLOCKS.BSA"), "arena2/BLOCKS.BSA").Records)
         {
             if (block.RmbPlacements is { } rmb)
             {
-                foreach (RmbFlatPlacement flat in rmb.Buildings.SelectMany(building => building.Exterior.Flats).Concat(rmb.MiscFlats).Where(FlatReferenceExport.Person))
+                foreach (RmbFlatPlacement flat in rmb.Buildings.SelectMany(building => building.Exterior.Flats).Concat(rmb.MiscFlats).Where(SceneryReferenceExport.Person))
                     Exterior(flat.TextureArchive, flat.TextureRecord, block.SourceKey);
                 foreach (RmbPeoplePlacement person in rmb.Buildings.SelectMany(building => building.Exterior.People))
                     Exterior(person.TextureArchive, person.TextureRecord, block.SourceKey);
@@ -51,7 +51,7 @@ internal static class PeopleReferenceExport
             if (block.Kind == BlockRecordKind.Rdb && block.Objects is { } rdb)
                 foreach (RdbFlatPlacement flat in rdb.FlatPlacements.Where(flat => StaticNpcNormalization.IsDungeonNpc(flat.TextureArchive)))
                 {
-                    FlatReferenceExport.Usage u = Counted(flat.TextureArchive, flat.TextureRecord);
+                    SceneryReferenceExport.Usage u = Counted(flat.TextureArchive, flat.TextureRecord);
                     u.DungeonBlocks.Add(block.SourceKey);
                     u.Dungeon++;
                 }
@@ -72,7 +72,7 @@ internal static class PeopleReferenceExport
             {
                 // An archive only reached by a placement, such as a lit prop carrying a faction, is not a people archive.
                 if (!wandering && !Static.ContainsKey(archive) && !usage.ContainsKey((archive, record))) continue;
-                FlatReferenceExport.Usage counted = usage.GetValueOrDefault((archive, record)) ?? new();
+                SceneryReferenceExport.Usage counted = usage.GetValueOrDefault((archive, record)) ?? new();
                 List<ReferenceImage> frames = export.TextureImages(directory, "person", archive, record);
                 images.AddRange(frames);
                 int width = frames.FirstOrDefault()?.Width ?? 0, height = frames.FirstOrDefault()?.Height ?? 0;

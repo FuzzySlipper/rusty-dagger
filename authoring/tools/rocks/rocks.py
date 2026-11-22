@@ -967,7 +967,7 @@ PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 def sprite(archive, record):
     """A flat's refreshed sprite, its first frame, whose colours a mesh standing in for it is painted in, as trees.py paints
     the mesh trees."""
-    flats = json.loads(PAYLOAD.read_text())["artReplacements"]["flats"]
+    flats = json.loads(PAYLOAD.read_text())["artReplacements"]["scenery"]
     flat = next((f for f in flats if (f["replaces"]["archive"], f["replaces"]["record"]) == (archive, record)), None)
     if flat is None:
         raise SystemExit(f"{archive}-{record}: the art pack has no refreshed sprite to paint it from")

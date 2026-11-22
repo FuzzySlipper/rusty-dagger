@@ -168,7 +168,7 @@ internal sealed record DaggerfallTravelMapPlace(DaggerfallArtFile File, IReadOnl
 /// at its placed height.
 /// </summary>
 /// <param name="Size">Its size in the world, in metres: the width it is drawn across and, for a hanging mesh, the height it hangs.</param>
-/// <param name="Glow">The GLB material slots whose emissive maps shine at the lamps' level, as a refreshed flat's
+/// <param name="Glow">The GLB material slots whose emissive maps shine at the lamps' level, as a refreshed scenery sprite's
 /// emission map does: a lamp's glass and flame.</param>
 internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, Vector2 Size, IReadOnlyList<uint> Glow)
 {
@@ -280,10 +280,10 @@ internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Tall
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames, each the same box, and
 /// its own placement: a frame's size in the world in metres, its pivot and its foot (fractions of a frame, from its left and
 /// bottom: where the sprite stands on its position, and where it stands on the ground), and, for an atlas of several frames,
-/// the rate it plays them at, in order. A flat that gives light names its emission map, an atlas of the same layout holding
+/// the rate it plays them at, in order. A sprite that gives light names its emission map, an atlas of the same layout holding
 /// only what glows.
 /// </summary>
-internal sealed record DaggerfallArtFlat(DaggerfallArtFile File, int Width, int Height, IReadOnlyList<DaggerfallArtRect> Frames, Vector2 Size,
+internal sealed record DaggerfallArtSprite(DaggerfallArtFile File, int Width, int Height, IReadOnlyList<DaggerfallArtRect> Frames, Vector2 Size,
     Vector2 Pivot, Vector2 Foot, float FramesPerSecond, DaggerfallArtFile? Emission = null);
 
 /// <summary>
@@ -313,12 +313,12 @@ internal sealed class DaggerfallArtReplacements
 
     private DaggerfallArtReplacements(Dictionary<string, DaggerfallArtReplacement> byClassic, IReadOnlyDictionary<string, DaggerfallDyeTint> tints,
         IReadOnlyDictionary<string, DaggerfallEffectArt> effects, DaggerfallArtFile? effectGlow, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> meshes,
-        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> flats,
-        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> people)
+        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSprite> scenery,
+        IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSprite> people)
     {
         Meshes = meshes;
         Surfaces = surfaces;
-        Flats = flats;
+        Scenery = scenery;
         People = people;
         _byClassic = byClassic;
         _byMediaId = Every(byClassic.Values).ToDictionary(replacement => replacement.MediaId, StringComparer.Ordinal);
@@ -361,11 +361,11 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The refreshed surface textures, by the classic texture archive and record each replaces.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> Surfaces { get; }
 
-    /// <summary>The refreshed world billboards, by the classic texture archive and record each replaces.</summary>
-    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> Flats { get; }
+    /// <summary>The refreshed world sprites that are not people (nature, props and animals), by the classic texture archive and record each replaces.</summary>
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSprite> Scenery { get; }
 
     /// <summary>The refreshed standing people, by the classic billboard record each stands in for.</summary>
-    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtFlat> People { get; }
+    internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSprite> People { get; }
 
     /// <summary>The walking test figure, when the set has one.</summary>
     internal DaggerfallPeopleRig? PeopleRig { get; private init; }
@@ -460,7 +460,7 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<string, DaggerfallArtModel> models = new(StringComparer.Ordinal);
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
-        Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [], people = [];
+        Dictionary<(int Archive, int Record), DaggerfallArtSprite> scenery = [], people = [];
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -662,33 +662,33 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(surface.GetProperty("sha256").GetString()!, $"The refreshed surface for {replaces.Item1}/{replaces.Item2}")), width, height, glass)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two surfaces for {replaces.Item1}/{replaces.Item2}.");
                 }
-            foreach ((string name, string kind, Dictionary<(int Archive, int Record), DaggerfallArtFlat> sprites) in new[] { ("flats", "flat", flats), ("people", "person", people) })
+            foreach ((string name, string kind, Dictionary<(int Archive, int Record), DaggerfallArtSprite> sprites) in new[] { ("scenery", "scenery sprite", scenery), ("people", "person", people) })
                 if (section.TryGetProperty(name, out JsonElement spriteArt))
-                foreach (JsonElement flat in spriteArt.EnumerateArray())
+                foreach (JsonElement sprite in spriteArt.EnumerateArray())
                 {
-                    (int, int) replaces = (flat.GetProperty("replaces").GetProperty("archive").GetInt32(), flat.GetProperty("replaces").GetProperty("record").GetInt32());
-                    int width = flat.GetProperty("width").GetInt32(), height = flat.GetProperty("height").GetInt32();
-                    DaggerfallArtRect[] frames = [.. flat.GetProperty("frames").EnumerateArray().Select(Rect)];
+                    (int, int) replaces = (sprite.GetProperty("replaces").GetProperty("archive").GetInt32(), sprite.GetProperty("replaces").GetProperty("record").GetInt32());
+                    int width = sprite.GetProperty("width").GetInt32(), height = sprite.GetProperty("height").GetInt32();
+                    DaggerfallArtRect[] frames = [.. sprite.GetProperty("frames").EnumerateArray().Select(Rect)];
                     if (frames.Length == 0 || frames.Any(frame => frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0 || frame.X + frame.Width > width || frame.Y + frame.Height > height))
-                        throw new InvalidOperationException($"Content pack '{packId}' places the refreshed flat for {replaces.Item1}/{replaces.Item2} outside its atlas.");
-                    // A flat of several frames plays them at its own rate; a person shows the one frame.
+                        throw new InvalidOperationException($"Content pack '{packId}' places the refreshed {kind} for {replaces.Item1}/{replaces.Item2} outside its atlas.");
+                    // A scenery sprite of several frames plays them at its own rate; a person shows the one frame.
                     string subject = $"the refreshed {kind} for {replaces.Item1}/{replaces.Item2}";
-                    JsonElement placement = Placement(flat.TryGetProperty("placement", out JsonElement placed) ? placed : null, subject,
-                        ["size", "pivot", "foot", .. frames.Length > 1 && kind == "flat" ? ["framesPerSecond"] : Array.Empty<string>()]);
+                    JsonElement placement = Placement(sprite.TryGetProperty("placement", out JsonElement placed) ? placed : null, subject,
+                        ["size", "pivot", "foot", .. frames.Length > 1 && kind == "scenery sprite" ? ["framesPerSecond"] : Array.Empty<string>()]);
                     JsonElement size = placement.GetProperty("size");
                     Vector2 metres = new(size.GetProperty("width").GetSingle(), size.GetProperty("height").GetSingle());
                     Vector2 pivot = Point(placement.GetProperty("pivot")), foot = Point(placement.GetProperty("foot"));
                     float rate = placement.TryGetProperty("framesPerSecond", out JsonElement perSecond) ? perSecond.GetSingle() : 0F;
                     if (!float.IsFinite(metres.X) || !float.IsFinite(metres.Y) || metres.X <= 0 || metres.Y <= 0 || !float.IsFinite(rate) || rate < 0
-                        || frames.Length > 1 && kind == "flat" && rate == 0)
+                        || frames.Length > 1 && kind == "scenery sprite" && rate == 0)
                         throw new InvalidOperationException($"Content pack '{packId}' states an empty size or no rate for {subject}.");
-                    DaggerfallArtFile? emission = flat.TryGetProperty("emission", out JsonElement map)
+                    DaggerfallArtFile? emission = sprite.TryGetProperty("emission", out JsonElement map)
                         ? new(map.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(map.GetProperty("sha256").GetString()!, $"The emission map for {replaces.Item1}/{replaces.Item2}"))
                         : null;
-                    if (!sprites.TryAdd(replaces, new(new(flat.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")),
+                    if (!sprites.TryAdd(replaces, new(new(sprite.GetProperty("path").GetString()!,
+                            DaggerfallContentHash.Parse(sprite.GetProperty("sha256").GetString()!, $"The refreshed {kind} for {replaces.Item1}/{replaces.Item2}")),
                             width, height, frames, metres, pivot, foot, rate, emission)))
-                        throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
+                        throw new InvalidOperationException($"Content pack '{packId}' names two {name} sprites for {replaces.Item1}/{replaces.Item2}.");
                 }
             if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
             if (section.TryGetProperty("splatPeople", out JsonElement splats)) splatPeople = SplatPeople(splats);
@@ -770,7 +770,7 @@ internal sealed class DaggerfallArtReplacements
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
+        return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, scenery, people)
         { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)

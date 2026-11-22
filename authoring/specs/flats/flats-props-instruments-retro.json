@@ -27,8 +27,8 @@
   "items": [
     {
       "id": "flat-208-6",
-      "directory": "props-instruments/texture-208",
-      "image": "flat/texture-208-record-006-frame-000-source.png",
+      "directory": "props/texture-208",
+      "image": "sprite/texture-208-record-006-frame-000-source.png",
       "content": "One ornate trophy with curved handles, metallic accents, and a wooden base, featuring earthy browns, greens, and silver highlights.",
       "uncertainty": "",
       "invention": "Add nothing the source does not show.",
