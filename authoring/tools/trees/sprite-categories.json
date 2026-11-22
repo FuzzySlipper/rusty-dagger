@@ -18,34 +18,28 @@
     "Deadwood": [1, 6, 10],
     "Cacti": [14, 15, 16],
     "Flowers": [9, 31],
-    "Other plants": [7, 8, 17, 25, 26, 27, 29],
-    "Bushes": [24]
+    "Other plants": [7, 8, 17, 25, 26, 27, 29]
   },
   "504": {
-    "Bushes": [1, 27, 28],
     "Flowers": [2, 21],
     "Fungi": [23],
     "Other plants": [7, 8, 9, 22, 26, 29]
   },
   "505": {
-    "Bushes": [1, 27, 28],
     "Flowers": [2, 21],
     "Fungi": [23],
     "Other plants": [7, 8, 9, 22, 26, 29]
   },
   "506": {
-    "Bushes": [9, 27],
     "Flowers": [2, 21],
     "Other plants": [7, 8, 22, 23, 26, 29, 31]
   },
   "507": {
     "Deadwood": [2],
-    "Bushes": [27],
     "Flowers": [21],
     "Other plants": [7, 8, 9, 22, 26, 29, 30, 31]
   },
   "508": {
-    "Bushes": [2, 27, 28],
     "Deadwood": [9],
     "Flowers": [21],
     "Fungi": [22, 23],
@@ -53,7 +47,6 @@
     "Other scenery": [11]
   },
   "509": {
-    "Bushes": [2, 27, 28],
     "Deadwood": [9],
     "Flowers": [21],
     "Fungi": [22, 23],
@@ -62,8 +55,7 @@
   },
   "510": {
     "Flowers": [2],
-    "Other plants": [7, 8, 22, 23, 26, 29],
-    "Bushes": [9]
+    "Other plants": [7, 8, 22, 23, 26, 29]
   },
   "511": {
     "Deadwood": [2],

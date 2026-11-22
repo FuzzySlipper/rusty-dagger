@@ -258,7 +258,7 @@ class Boughs:
         tree = self.tree
         centre = tree.point(x, down, z)
         rx, rz = width*tree.aspect, depth*tree.aspect
-        compact = sprays == 3
+        compact = sprays <= 3
         a = np.linspace(0, math.tau, 6 if compact else 7)
         outline = 1+.095*np.cos(3*a+az)+.045*np.sin(5*a)
         rings, levels = [], []

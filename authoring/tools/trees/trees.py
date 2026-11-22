@@ -42,6 +42,7 @@ from scipy import ndimage, stats
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "rocks"))
 import rocks  # noqa: E402
+import bushes
 import fieldstones
 import rainforest_palms
 import rainforest_trees
@@ -63,14 +64,7 @@ MEDIA = "worldrpg/packs/daggerfall.art-replacements/media/trees"
 PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 CRAFTSURVIVE = rocks.CRAFTSURVIVE / "content/game"
 
-# The trees with meshes, by nature archive and record: every big tree of every climate but the few whose shapes are their
-# own (the desert's cacti and some rainforest undergrowth), which stay
-# sprites, as do bushes and small plants. Each names the rusty-craftsurvive tree drawn for it by form: conifers a fir or
-# pine, layered flat-topped trees a cork oak, round crowns a beech or chestnut, palms a palm, slender bare trees the dead
-# tree; a winter set's tree is its summer one's, in its snowy colours. Variants (p1 to p3) differ from record to record, so
-# a stand is not one tree repeated.
-# Then rocks.py's (#10849): the great gnarled dead trunks, the heaped fallen logs, and every rock but those a plant grows
-# from: boulders lying together (the variant their count), a standing shard or spire, or a cairn of stacked stones.
+# Each authored nature form selects its regional recipe or shared model.
 FIR, PINE, CORK, BEECH, CHESTNUT, PALM, DEAD = "fir", "pine", "cork-oak", "beech", "chestnut", "palm", "dead"
 GNARLED, LOGS = rocks.GNARLED, rocks.LOGS_FORM
 
@@ -106,6 +100,7 @@ SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
                 **{f"511-{r}": f"505-{r}" for r in (10, 13, 15, 25)},
                 **{f"511-{r}": f"507-{r}" for r in (5, 11, 23)}}
 SHARED_TREES.update(fieldstones.SHARED)
+SHARED_TREES.update(bushes.SHARED)
 DEAD_WOOD = {
     502: {15: (DEAD, 2), 30: (DEAD, 3)},
     503: {12: (DEAD, 2), 28: (DEAD, 3), 30: (DEAD, 2)},
@@ -120,6 +115,9 @@ for archive, forms in DEAD_WOOD.items():
 for key in fieldstones.PAINTINGS:
     archive, record = map(int, key.split("-"))
     FORMS[archive][record] = ("rock", record)
+for key, form in bushes.FORMS.items():
+    archive, record = map(int, key.split("-"))
+    FORMS[archive][record] = (form, record)
 # Each rusty-craftsurvive tree's leaves and bark textures. Every tree wears the oak's bark, whose vertical furrows are
 # what the sprites paint, but the palm, whose rings are its own.
 TEXTURES = {FIR: ("fir", "oak"), PINE: ("pine", "oak"), CORK: ("cork", "oak"), BEECH: ("beech", "oak"),
@@ -338,11 +336,15 @@ def tree(flat, archive, record, species, variant, folder, old=None, recompute=Fa
     m = measures(rgba)
     palm = archive == 500 and record in rainforest_palms.PALMS
     regional = REGIONAL_TREES.get(archive)
-    if regional and (palm or record in regional[1].FORMS):
+    key = f"{archive}-{record}"
+    bush = key in bushes.FORMS
+    if regional and (bush or palm or record in regional[1].FORMS):
         climate, recipes = regional
         name = f"tree-{archive}-{record}"
         mesh_name = f"{species}-p{variant}-{climate}.prop-mesh.json"
-        if palm:
+        if bush:
+            mesh, images = bushes.build(key, rgba)
+        elif palm:
             mesh, bark, leaves = rainforest_palms.build(record, rgba)
             images = {"bark": bark, "leaves": leaves}
         else:

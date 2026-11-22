@@ -49,7 +49,7 @@ class Meshes(unittest.TestCase):
                 *(f"505-{r}" for r in trees.winter_woodland.FORMS),
                 *(f"506-{r}" for r in trees.mountain_trees.FORMS),
                 *(f"507-{r}" for r in trees.winter_mountain.FORMS), "508-13", "509-13", "510-16", "510-21",
-                "511-16", "511-21"]
+                "511-16", "511-21", *trees.bushes.FORMS]
         for key in keys:
             with self.subTest(key=key):
                 entry = art[key]
