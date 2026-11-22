@@ -24,8 +24,8 @@ public sealed class SplatCrowdTests
         Assert.Equal(["instance 1 of 1 on 7", "instance 2 of 1 on 8"], engine.Calls);
         engine.Calls.Clear();
         Publish(crowd);
-        // A new instance starts its clip at once; the walk at the rate that keeps its stride at the walker's pace.
-        Assert.Equal(["play 1 walk speed 0.9 restart fade 0", "play 2 idle speed 1 restart fade 0"], engine.Calls);
+        // A new instance starts its clip at once, at its seed's phase; the walk at the rate that keeps its stride at the walker's pace.
+        Assert.Equal([$"play 1 walk speed 0.9 restart fade 0{At0}", $"play 2 idle speed 1 restart fade 0{At0}"], engine.Calls);
         engine.Calls.Clear();
 
         // The same clip again plays nothing; stopping crossfades to the idle, and setting off again to the walk.
@@ -36,7 +36,7 @@ public sealed class SplatCrowdTests
         crowd.Show(7, 7, 1.7F, walking: false);
         crowd.Show(8, 8, 1.9F, walking: true);
         Publish(crowd);
-        Assert.Equal(["play 1 idle speed 1 fade 0.25", "play 2 walk speed 0.9 fade 0.25"], engine.Calls);
+        Assert.Equal([$"play 1 idle speed 1 fade 0.25{At0}", $"play 2 walk speed 0.9 fade 0.25{At0}"], engine.Calls);
         Assert.Equal(2, crowd.Count);
     }
 
@@ -59,8 +59,8 @@ public sealed class SplatCrowdTests
         SplatGait[] gaits = [.. seeds.Keys.Select(actor => crowd.Gait((ulong)actor)!.Value)];
         Assert.Equal(seeds.Values.Select(seed => figure.Gait(seed, .06F)), gaits);
         Assert.Equal(seeds.Keys.Select((actor, at) => actor % 2 == 0
-                ? $"play {at + 1} {gaits[at].Walk.Clip} speed {gaits[at].WalkRate:0.##} restart fade 0"
-                : $"play {at + 1} {gaits[at].Idle} speed {gaits[at].Rate:0.##} restart fade 0"),
+                ? $"play {at + 1} {gaits[at].Walk.Clip} speed {gaits[at].WalkRate:0.##} restart fade 0 at {gaits[at].Phase:0.##}"
+                : $"play {at + 1} {gaits[at].Idle} speed {gaits[at].Rate:0.##} restart fade 0 at {gaits[at].Phase:0.##}"),
             engine.Calls.Where(call => call.StartsWith("play", StringComparison.Ordinal)));
         Assert.All(gaits, gait => Assert.InRange(gait.Rate, .94F, 1.06F));
         // The rate both plays the walk at and walks the walker at, so its stride keeps its pace.
@@ -69,6 +69,9 @@ public sealed class SplatCrowdTests
         Assert.Equal(3, gaits.Select(gait => gait.Walk).Distinct().Count());
         Assert.Equal(3, gaits.Select(gait => gait.Idle).Distinct().Count());
         Assert.Equal(7, gaits.Select(gait => gait.Rate).Distinct().Count());
+        // Nor do they start in step: each starts its clips its own share of the way through.
+        Assert.Equal(7, gaits.Select(gait => gait.Phase).Distinct().Count());
+        Assert.All(gaits, gait => Assert.InRange(gait.Phase, 0F, .9999F));
         // A seed draws one gait, in any crowd and run: walker 8 shares walker 1's, as a walker restored from a save keeps its own.
         Assert.Equal(gaits[0], gaits[7]);
         Assert.Null(crowd.Gait(99));
@@ -76,6 +79,7 @@ public sealed class SplatCrowdTests
         SplatGait[] alike = [.. Enumerable.Range(0, 16).Select(at => figure.Gait(at * 4 + 1, .06F))];
         Assert.Equal(3, alike.Select(gait => gait.Walk).Distinct().Count());
         Assert.Equal(3, alike.Select(gait => gait.Idle).Distinct().Count());
+        Assert.Equal(16, alike.Select(gait => gait.Phase).Distinct().Count());
 
         // A figure with nothing to walk or stand in, or a rate that could stop a walker, is refused.
         Assert.Throws<InvalidOperationException>(() => (figure with { Idles = [] }).Gait(3, 0F));
@@ -97,7 +101,7 @@ public sealed class SplatCrowdTests
         Assert.Same(other.Appearance, crowd.Show(3, 3, 1.7F, walking: true));
         Publish(crowd);
         // An object holds one instance: the old one is given up for the new.
-        Assert.Equal(["replace 1 with instance 2 of 2 on 3", "play 2 walk speed 0.9 restart fade 0"], engine.Calls);
+        Assert.Equal(["replace 1 with instance 2 of 2 on 3", $"play 2 walk speed 0.9 restart fade 0{At0}"], engine.Calls);
     }
 
     [Fact]
@@ -121,7 +125,7 @@ public sealed class SplatCrowdTests
         crowd.Show(1, 1, 1.7F, walking: false);
         crowd.Show(2, 2, 1.8F, walking: true);
         Publish(crowd);
-        Assert.Equal(["release 2", "instance 3 of 1 on 2", "play 3 walk speed 0.9 restart fade 0"], engine.Calls);
+        Assert.Equal(["release 2", "instance 3 of 1 on 2", $"play 3 walk speed 0.9 restart fade 0{At0}"], engine.Calls);
         engine.Calls.Clear();
 
         crowd.Use(null);
@@ -192,7 +196,7 @@ public sealed class SplatCrowdTests
         Publish(crowd);
         // Its first settle hangs each skirt at rest from the clip as it is drawn now, its own controls left out: every
         // walker's legs are read, then their sheets step together, then each is placed.
-        Assert.Equal(["instance 1 of 1 on 4", "instance 2 of 1 on 5", "play 1 walk speed 0.9 restart fade 0", "play 2 idle speed 1 restart fade 0",
+        Assert.Equal(["instance 1 of 1 on 4", "instance 2 of 1 on 5", $"play 1 walk speed 0.9 restart fade 0{At0}", $"play 2 idle speed 1 restart fade 0{At0}",
             "sample 1 now without controls", "sample 2 now without controls", "pose 1 places 3 in Model", "pose 2 places 3 in Model"], engine.Calls);
         crowd.Show(4, 4, 1.7F, walking: true);
         Publish(crowd);
@@ -215,7 +219,7 @@ public sealed class SplatCrowdTests
         crowd.Advance(1F / 60);
         crowd.Show(4, 4, 1.7F, walking: true);
         Publish(crowd);
-        Assert.Equal(["replace 1 with instance 3 of 2 on 4", "play 3 walk speed 0.9 restart fade 0"], engine.Calls);
+        Assert.Equal(["replace 1 with instance 3 of 2 on 4", $"play 3 walk speed 0.9 restart fade 0{At0}"], engine.Calls);
     }
 
     /// <summary>A three-column ring skirt under the hips, on a rig of its legs and the skirt.</summary>
@@ -340,6 +344,9 @@ public sealed class SplatCrowdTests
         crowd.Settle();
     }
 
+    /// <summary>Where seed 0's walkers start their clips, as the recorder writes it.</summary>
+    private static readonly string At0 = $" at {Figure("385", 1).Gait(0, 0F).Phase:0.##}";
+
     private static SplatFigure Figure(string name, ulong appearance) =>
         new(name, new Appearance(new AppearanceHandle(appearance), static () => { }), [new("walk", 1F, .9F)], ["idle"], .25F);
 
@@ -372,7 +379,7 @@ public sealed class SplatCrowdTests
                 case nameof(IAnimationService.SetPlayback):
                     AnimationPlaybackRequest play = (AnimationPlaybackRequest)args![0]!;
                     Assert.Equal((AnimationPlaybackKind.Play, AnimationLoopMode.Repeat, 1F), (play.Kind, play.LoopMode, play.Weight));
-                    Calls.Add($"play {play.Instance.Handle.Value} {play.Clip} speed {play.Speed:0.##}{(play.Restart ? " restart" : "")} fade {(play.HasFade ? play.FadeSeconds : 0):0.##}");
+                    Calls.Add($"play {play.Instance.Handle.Value} {play.Clip} speed {play.Speed:0.##}{(play.Restart ? " restart" : "")} fade {(play.HasFade ? play.FadeSeconds : 0):0.##} at {play.NormalizedTime:0.##}");
                     return null;
                 case nameof(IAnimationService.SampleJointPose):
                     AnimationPoseSampleRequest sample = (AnimationPoseSampleRequest)args![0]!;

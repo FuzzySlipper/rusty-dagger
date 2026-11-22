@@ -13,16 +13,16 @@ public sealed record SplatFigure(string Name, Appearance Appearance, IReadOnlyLi
     SplatSkirtRig? Skirt = null, SplatEyes? Eyes = null)
 {
     /// <summary>
-    /// The gait a walker of stable <paramref name="seed"/> has as this figure: one of its walks and one of its idles, and
-    /// a rate within <paramref name="jitter"/> either side of 1 that both play at and it walks at, each drawn from the
-    /// seed apart from the others. The same seed has the same gait in every run, so a walker keeps it over a save.
+    /// The gait a walker of stable <paramref name="seed"/> has as this figure: one of its walks and one of its idles, a
+    /// rate within <paramref name="jitter"/> either side of 1 that both play at and it walks at, and the share of the way
+    /// through either clip it starts at, each drawn from the seed apart from the others. The same seed has the same gait in every run, so a walker keeps it over a save.
     /// </summary>
     public SplatGait Gait(int seed, float jitter)
     {
         if (!(jitter is >= 0 and < 1)) throw new ArgumentOutOfRangeException(nameof(jitter), jitter, "A gait's rate varies by 0 to under 1 either side of 1.");
         if (Walks.Count == 0 || Idles.Count == 0) throw new InvalidOperationException($"Gsplat figure {Name} has {Walks.Count} walks and {Idles.Count} idles; a walker needs one of each.");
         return new(Walks[(int)(Draw("walk") % (ulong)Walks.Count)], Idles[(int)(Draw("idle") % (ulong)Idles.Count)],
-            1F + jitter * (Draw("rate") % 10001 / 5000F - 1F));
+            1F + jitter * (Draw("rate") % 10001 / 5000F - 1F), Draw("phase") % 10000 / 10000F);
 
         // Mixed, since the hash's low bits would follow the seed's own (the seed % 4 that picks a townsperson's art among four).
         ulong Draw(string what) => StableHash.Mixed($"splat-gait/{what}/{seed}");
@@ -36,10 +36,11 @@ public sealed record SplatFigure(string Name, Appearance Appearance, IReadOnlyLi
 public sealed record SplatWalk(string Clip, float Pace, float Rate);
 
 /// <summary>
-/// How one walker walks and stands as its figure: its <paramref name="Walk"/> and <paramref name="Idle"/>, and the
-/// <paramref name="Rate"/> both play at and it walks at, about 1, so no two walkers move as one.
+/// How one walker walks and stands as its figure: its <paramref name="Walk"/> and <paramref name="Idle"/>, the
+/// <paramref name="Rate"/> both play at and it walks at, about 1, and the <paramref name="Phase"/> (0 to under 1, a share
+/// of the clip) both start at, so no two walkers move as one, even those that set off together.
 /// </summary>
-public readonly record struct SplatGait(SplatWalk Walk, string Idle, float Rate)
+public readonly record struct SplatGait(SplatWalk Walk, string Idle, float Rate, float Phase)
 {
     /// <summary>The share of the walkers' speed this walker goes at; its walk's stride keeps it.</summary>
     public float Pace => Walk.Pace * Rate;
@@ -52,7 +53,7 @@ public readonly record struct SplatGait(SplatWalk Walk, string Idle, float Rate)
 /// Draws walkers as <see cref="SplatFigure"/>s, at their own size: one assigned to a walker (<see cref="Assign"/>),
 /// which it draws as that figure whether or not the crowd uses one, else the crowd's figure, else the walker's own
 /// (<see cref="UseOwn"/>). Each walker shown in a snapshot is an animation instance of the figure's appearance, playing
-/// the walk of its gait while it walks and the idle otherwise, its gait drawn from the walker's stable seed
+/// the walk of its gait while it walks and the idle otherwise, each from its gait's phase, its gait drawn from the walker's stable seed
 /// (<paramref name="seeds"/>, by actor) and the crowd's <paramref name="jitter"/>. The figure's
 /// appearance and clips belong to whoever made it. An object holds one instance, so a walker that changes figure has
 /// its instance replaced, and one a snapshot leaves out has its instance released before that snapshot is published:
@@ -170,11 +171,12 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
         foreach (Walker walker in shown.Values)
         {
             if (walker.Played == walker.Wanted) continue;
-            // A new instance starts its clip at once; a walker that stops or sets off crossfades into the other.
+            // A new instance starts its clip at once; a walker that stops or sets off crossfades into the other. Either starts
+            // at the walker's own phase, so walkers shown or setting off together are not in step.
             bool fades = walker.Played is not null;
             float speed = walker.Wanted == walker.Gait.Walk.Clip ? walker.Gait.WalkRate : walker.Gait.Rate;
             Engine.SetPlayback(new(walker.Instance, AnimationPlaybackKind.Play, walker.Wanted, AnimationLoopMode.Repeat, speed, 1F,
-                !fades, fades ? walker.Figure.CrossfadeSeconds : 0F, fades, 0F));
+                !fades, fades ? walker.Figure.CrossfadeSeconds : 0F, fades, walker.Gait.Phase));
             walker.Played = walker.Wanted;
         }
         float elapsed = seconds;

@@ -22,7 +22,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// first use and kept for the session. It shows a spawned walker as its character and the rest as the crowd in use, and
 /// settles every crowd it made, so one put aside lets go of its walkers. Each walker drawn as a character walks one of the
 /// art set's walks and stands in one of its idles, picked by its name seed with a rate about 1 that its clips play at and
-/// it walks at (<see cref="SplatGait"/>), so the same seed walks alike after a load. A character in a long skirt walks the
+/// it walks at, and a phase they start at (<see cref="SplatGait"/>), so the same seed walks alike after a load. A character in a long skirt walks the
 /// art set's skirt walks instead, softer, with its skirt pushed open by the legs: by the tuning (or people.splat-pace for
 /// the run) its walkers go at their walk's own pace, slower than the rest, or the walk plays faster to keep the walkers' pace.
 /// The characters' clips are read from the animations container (<see cref="DaggerfallAnimations"/>); without it every
