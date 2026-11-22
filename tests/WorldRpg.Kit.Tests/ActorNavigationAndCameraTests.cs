@@ -320,6 +320,95 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     [Fact]
+    public void Headings_turn_the_short_way_round_by_at_most_a_step()
+    {
+        Assert.Equal(MathF.Tau - 6f, ActorHeading.Between(3f, -3f), 5);
+        Assert.Equal(MathF.PI, ActorHeading.Between(0f, MathF.PI), 5);
+        Assert.Equal(3.1f, ActorHeading.Turn(3f, -3f, .1f), 5);
+        Assert.Equal(-3f, ActorHeading.Turn(3f, -3f, 1f));
+        Assert.Equal(-.5f, ActorHeading.Turn(0f, -2f, .5f));
+    }
+
+    [Fact]
+    public void A_wander_turns_toward_its_way_at_its_turn_rate_turning_on_the_spot_while_the_way_lies_behind()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(11), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        // Facing -z, with its way straight behind it along +z.
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), 0f));
+        ActorState actor = actors.Get(42);
+        actor.Stats.AddTrack(TrackId.Parse("health"), new Track(new Stat(100), 100));
+        actor.Actor.Add(new WanderMemoryComponent());
+        ActorWanderCoordinator wander = new(new ActorNavigationCoordinator(spatial.Service, session));
+        WanderPolicy policy = new(.5f, 2.5f, 0f, 8, 2, ActorNavigationMode.Swimming, TurnRadiansPerSecond: MathF.PI);
+        actor.Wander.Stage([new WorldPoint(0f, 0f, 4f)]);
+
+        // A quarter turn short of it is still facing away: it turns on the spot, not stepping.
+        WanderEvidence turning = wander.Update(actor, actor.Wander, policy, 1, .3f);
+        Assert.Equal(WanderState.Seeking, turning.Current);
+        Assert.Null(turning.Navigation);
+        Assert.Empty(spatial.Requests);
+        Assert.Equal(.3f * MathF.PI, actor.HeadingYawRadians, 4);
+        Assert.Equal(new WorldPoint(0f, 0f, 0f), actor.Position);
+
+        // Past the quarter turn it steps on as fast as it faces its way, still turning, never at once.
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(0f, 0f, .1f));
+        Assert.Equal(WanderState.Moving, wander.Update(actor, actor.Wander, policy, 2, .3f).Current);
+        Assert.Equal(.5f * MathF.Cos(.4f * MathF.PI) * .3f, spatial.Requests[^1].MaxStepUnits, 5);
+        Assert.Equal(.6f * MathF.PI, actor.HeadingYawRadians, 4);
+        Assert.Equal(0f, ActorHeading.Between(actor.Wander.Course!.Value, MathF.PI), 4);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(0f, 0f, .3f));
+        _ = wander.Update(actor, actor.Wander, policy, 3, .3f);
+        Assert.Equal(.5f * MathF.Cos(.1f * MathF.PI) * .3f, spatial.Requests[^1].MaxStepUnits, 5);
+        Assert.Equal(.9f * MathF.PI, actor.HeadingYawRadians, 4);
+
+        // Facing its way, it walks at full pace.
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(0f, 0f, .45f));
+        _ = wander.Update(actor, actor.Wander, policy, 4, .3f);
+        Assert.Equal(.15f, spatial.Requests[^1].MaxStepUnits, 5);
+        Assert.Equal(0f, ActorHeading.Between(actor.HeadingYawRadians, MathF.PI), 4);
+    }
+
+    [Fact]
+    public void A_wander_eases_up_to_its_pace_as_it_sets_off_and_down_as_it_comes_to_its_target()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(11), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        // Facing +x, along its way.
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), MathF.PI / 2f));
+        ActorState actor = actors.Get(42);
+        actor.Stats.AddTrack(TrackId.Parse("health"), new Track(new Stat(100), 100));
+        actor.Actor.Add(new WanderMemoryComponent());
+        ActorWanderCoordinator wander = new(new ActorNavigationCoordinator(spatial.Service, session));
+        WanderPolicy policy = new(1f, 2.5f, 0f, 8, 2, ActorNavigationMode.Swimming, EaseSeconds: .4f);
+        actor.Wander.Stage([new WorldPoint(4f, 0f, 0f)]);
+
+        float[] strides = new float[5];
+        for (int step = 0; step < strides.Length; step++)
+        {
+            spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(.1f * (step + 1), 0f, 0f));
+            _ = wander.Update(actor, actor.Wander, policy, (ulong)step, .1f);
+            strides[step] = actor.Wander.Stride;
+        }
+        Assert.Equal([.25f, .5f, .75f, 1f, 1f], strides.Select(stride => MathF.Round(stride, 4)));
+        Assert.Equal(.1f, spatial.Requests[^1].MaxStepUnits, 5);
+
+        // A tenth of a metre short of reaching its target (0.2 m from it) it has slowed to what stops it over the
+        // ease (sqrt(2 * 0.1 / 0.4)), and on reaching it halts.
+        actor.ApplyPose(new ActorPose(new WorldPoint(3.7f, 0f, 0f), MathF.PI / 2f));
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(3.75f, 0f, 0f));
+        Assert.Equal(WanderState.Moving, wander.Update(actor, actor.Wander, policy, 6, .1f).Current);
+        Assert.Equal(MathF.Sqrt(.5f) * .1f, spatial.Requests[^1].MaxStepUnits, 4);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(3.85f, 0f, 0f));
+        Assert.Equal(WanderState.Idle, wander.Update(actor, actor.Wander, policy, 7, .1f).Current);
+        Assert.Equal(0f, actor.Wander.Stride);
+        Assert.Null(actor.Wander.Course);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => (policy with { TurnRadiansPerSecond = 0f }).Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => (policy with { EaseSeconds = -1f }).Validate());
+    }
+
+    [Fact]
     public void Camera_viewpoint_equals_the_exact_position_in_its_engine_descriptor()
     {
         CameraDouble camera = CameraDouble.Create();

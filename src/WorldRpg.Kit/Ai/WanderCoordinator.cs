@@ -17,14 +17,21 @@ public enum WanderState
 }
 
 /// <summary>Ruleset-owned limits for one Engine-backed wander update.</summary>
-/// <remarks>The Kit owns no movement numbers; the ruleset supplies speed, waypoint and idle values.</remarks>
+/// <remarks>
+/// The Kit owns no movement numbers; the ruleset supplies speed, waypoint and idle values. A walker turns to face the
+/// way it walks at <paramref name="TurnRadiansPerSecond"/> at most (infinite: at once) and walks as fast as it faces that
+/// way: slower into a sharp turn, turning on the spot where the way lies behind it. It sets off and comes to a stop over
+/// <paramref name="EaseSeconds"/> (0: at full speed straight away).
+/// </remarks>
 public readonly record struct WanderPolicy(
     float MovementSpeedUnitsPerSecond,
     float WaypointDistance,
     float IdleDurationSeconds,
     uint NavigationMaximumVisited,
     uint MaximumFailures = 2,
-    ActorNavigationMode NavigationMode = ActorNavigationMode.Ground)
+    ActorNavigationMode NavigationMode = ActorNavigationMode.Ground,
+    float TurnRadiansPerSecond = float.PositiveInfinity,
+    float EaseSeconds = 0f)
 {
     public WanderPolicy Validate()
     {
@@ -37,6 +44,8 @@ public readonly record struct WanderPolicy(
         if (NavigationMaximumVisited == 0) throw new ArgumentOutOfRangeException(nameof(NavigationMaximumVisited));
         if (MaximumFailures == 0) throw new ArgumentOutOfRangeException(nameof(MaximumFailures));
         if (!Enum.IsDefined(NavigationMode)) throw new ArgumentOutOfRangeException(nameof(NavigationMode));
+        if (!(TurnRadiansPerSecond > 0f)) throw new ArgumentOutOfRangeException(nameof(TurnRadiansPerSecond));
+        if (!float.IsFinite(EaseSeconds) || EaseSeconds < 0f) throw new ArgumentOutOfRangeException(nameof(EaseSeconds));
         return this;
     }
 }
@@ -52,6 +61,12 @@ public sealed class WanderMemoryComponent
     public uint WaypointIndex { get; private set; }
     public float IdleRemainingSeconds { get; private set; }
     public WorldPoint? Target { get; private set; }
+
+    /// <summary>The heading the actor walks toward its target, which its facing turns to; null while it has no target.</summary>
+    public float? Course { get; private set; }
+
+    /// <summary>The share of its pace the actor walked its last step at, easing up from 0 as it sets off and down as it stops or turns.</summary>
+    public float Stride { get; private set; }
 
     /// <summary>
     /// A route set for a developer's look at the actor, followed in place of its own waypoints: one point it walks to
@@ -100,6 +115,7 @@ public sealed class WanderMemoryComponent
             NavigationFailures = 0;
             Target = null;
         }
+        if (next is not (WanderState.Seeking or WanderState.Moving)) Halt();
         return previous;
     }
 
@@ -117,12 +133,25 @@ public sealed class WanderMemoryComponent
         TransitionTo(WanderState.Idle);
     }
 
-    internal void BeginWaypoint(WorldPoint target)
+    internal void BeginWaypoint(WorldPoint target, float course)
     {
         target.Validate();
         Target = target;
+        Course = course;
         State = WanderState.Seeking;
         NavigationFailures = 0;
+    }
+
+    internal void Walk(float stride, float course)
+    {
+        Stride = stride;
+        Course = course;
+    }
+
+    private void Halt()
+    {
+        Stride = 0f;
+        Course = null;
     }
 
     internal void RecordNavigationSuccess() => NavigationFailures = 0;
@@ -131,6 +160,7 @@ public sealed class WanderMemoryComponent
     {
         Target = null;
         State = WanderState.Idle;
+        Halt();
         NavigationFailures = 0;
         IdleRemainingSeconds = idleSeconds;
         WaypointIndex = checked(WaypointIndex + 1);
@@ -171,6 +201,9 @@ public sealed class ActorWanderCoordinator
         new(0f, 0f, -1f),
     ];
 
+    /// <summary>How near its target an actor has reached it, in metres.</summary>
+    private const float ReachedDistance = .2f;
+
     private readonly ActorNavigationCoordinator _navigation;
 
     public ActorWanderCoordinator(ActorNavigationCoordinator navigation) =>
@@ -196,31 +229,52 @@ public sealed class ActorWanderCoordinator
 
         // A staged actor at its one point stands there, as it was placed.
         if (memory.Route is [var stand] && memory.State == WanderState.Idle
-            && Vector3.DistanceSquared(actor.Position.ToVector(), stand.ToVector()) <= .04f)
+            && Vector3.Distance(actor.Position.ToVector(), stand.ToVector()) <= ReachedDistance)
             return new(previous, memory.State, memory.Target, null);
         if (memory.State is WanderState.Idle or WanderState.Blocked)
         {
             if (!memory.ConsumeIdle(deltaSeconds))
                 return new(previous, memory.State, memory.Target, null);
-            memory.BeginWaypoint(NextWaypoint(actor, memory, simulationStep, policy));
+            BeginWaypoint(actor, memory, NextWaypoint(actor, memory, simulationStep, policy));
         }
         else if (memory.Target is null)
         {
-            memory.BeginWaypoint(NextWaypoint(actor, memory, simulationStep, policy));
+            BeginWaypoint(actor, memory, NextWaypoint(actor, memory, simulationStep, policy));
         }
 
         WorldPoint target = memory.Target!.Value;
+        ActorPose before = actor.Pose;
+        float course = memory.Course ?? before.HeadingYawRadians;
+        float speed = policy.MovementSpeedUnitsPerSecond * memory.Pace;
+        float turned = ActorHeading.Turn(before.HeadingYawRadians, course, policy.TurnRadiansPerSecond * deltaSeconds);
+        float stride = Stride(memory.Stride, MathF.Cos(ActorHeading.Between(turned, course)),
+            Vector3.Distance(before.Position.ToVector(), target.ToVector()) - ReachedDistance, speed, policy.EaseSeconds, deltaSeconds);
+        // Still facing away from its way, the actor turns on the spot before it walks on.
+        if (stride <= 0f)
+        {
+            memory.Walk(0f, course);
+            actor.ApplyPose(new ActorPose(before.Position, turned));
+            return new(previous, memory.State, memory.Target, null);
+        }
+
         NavigationStepResult navigation = _navigation.Evaluate(actor, new ActorNavigationRequest(
             target,
-            checked(policy.MovementSpeedUnitsPerSecond * memory.Pace * deltaSeconds),
+            checked(speed * stride * deltaSeconds),
             policy.NavigationMaximumVisited,
             policy.NavigationMode,
             deltaSeconds));
 
         if (navigation.Outcome == NavigationPathOutcome.Reached)
         {
+            // Navigation faces the actor the way it stepped: that is its course, and its facing turns toward it.
+            ActorPose stepped = actor.Pose;
+            Vector3 step = stepped.Position.ToVector() - before.Position.ToVector();
+            if (step.X != 0f || step.Z != 0f) course = stepped.HeadingYawRadians;
+            memory.Walk(stride, course);
+            actor.ApplyPose(new ActorPose(stepped.Position,
+                ActorHeading.Turn(before.HeadingYawRadians, course, policy.TurnRadiansPerSecond * deltaSeconds)));
             memory.RecordNavigationSuccess();
-            if (Vector3.DistanceSquared(actor.Position.ToVector(), target.ToVector()) <= .04f)
+            if (Vector3.Distance(actor.Position.ToVector(), target.ToVector()) <= ReachedDistance)
                 memory.CompleteWaypoint(policy.IdleDurationSeconds);
             else
                 memory.TransitionTo(WanderState.Moving);
@@ -231,6 +285,30 @@ public sealed class ActorWanderCoordinator
         }
 
         return new(previous, memory.State, memory.Target, navigation);
+    }
+
+    /// <summary>Begins walking to <paramref name="target"/>, its course first the straight way there.</summary>
+    private static void BeginWaypoint(ActorState actor, WanderMemoryComponent memory, WorldPoint target)
+    {
+        Vector3 way = target.ToVector() - actor.Position.ToVector();
+        memory.BeginWaypoint(target, way.X != 0f || way.Z != 0f ? ActorHeading.Yaw(way) : actor.HeadingYawRadians);
+    }
+
+    /// <summary>
+    /// The share of its pace an actor walks this step at: as much of it as the actor faces its course
+    /// (<paramref name="facing"/>, the cosine between them; none while its course lies behind it), and no more than it
+    /// eases up to from its last step's <paramref name="stride"/> over <paramref name="easeSeconds"/>, nor than lets it
+    /// ease to a stop over those seconds in the <paramref name="remaining"/> distance until it has reached its target.
+    /// It always walks at least one step's easing, so it reaches a target however close.
+    /// </summary>
+    internal static float Stride(float stride, float facing, float remaining, float speed, float easeSeconds, float deltaSeconds)
+    {
+        float wanted = Math.Clamp(facing, 0f, 1f);
+        if (easeSeconds == 0f) return wanted;
+        float ease = deltaSeconds / easeSeconds;
+        // Slowing at a steady rate from speed v to rest over easeSeconds T covers v * T / 2, so at distance d it walks sqrt(2d / vT) of v.
+        float stopping = MathF.Sqrt(2f * MathF.Max(remaining, 0f) / (speed * easeSeconds));
+        return MathF.Min(wanted, MathF.Max(ease, MathF.Min(stopping, stride + ease)));
     }
 
     private static WorldPoint NextWaypoint(ActorState actor, WanderMemoryComponent memory,

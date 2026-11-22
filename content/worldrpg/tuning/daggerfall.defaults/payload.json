@@ -626,7 +626,9 @@
     "waypointDistance": 2.5,
     "idleDurationSeconds": 2.5,
     "navigationMaximumVisited": 64,
-    "recycleDistanceMeters": 150.0
+    "recycleDistanceMeters": 150.0,
+    "turnDegreesPerSecond": 240.0,
+    "easeSeconds": 0.4
   },
   "lootInteraction": {
     "maximumDistance": 2.25,

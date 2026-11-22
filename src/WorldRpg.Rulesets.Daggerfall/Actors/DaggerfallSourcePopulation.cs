@@ -51,7 +51,9 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         tuning.IdleDurationSeconds,
         tuning.NavigationMaximumVisited,
         MaximumFailures: 2,
-        NavigationMode: ActorNavigationMode.Ground);
+        NavigationMode: ActorNavigationMode.Ground,
+        TurnRadiansPerSecond: float.DegreesToRadians(tuning.TurnDegreesPerSecond),
+        EaseSeconds: tuning.EaseSeconds);
 
     /// <summary>
     /// Reconciles the active exterior's source population. Re-entry finds the same source key and

@@ -53,6 +53,10 @@ public sealed class DaggerfallSourcePopulationTests
         Assert.Equal((person, 7UL, .25f), (id, step, deltaSeconds));
         Assert.Equal(DaggerfallCivilianWanderTuning.Classic.MovementSpeedUnitsPerSecond, policy.MovementSpeedUnitsPerSecond);
         Assert.Equal(ActorNavigationMode.Ground, policy.NavigationMode);
+        // Townspeople ease their turns and their setting off and stopping.
+        Assert.Equal(float.DegreesToRadians(DaggerfallCivilianWanderTuning.Classic.TurnDegreesPerSecond), policy.TurnRadiansPerSecond);
+        Assert.Equal(DaggerfallCivilianWanderTuning.Classic.EaseSeconds, policy.EaseSeconds);
+        Assert.True(float.IsFinite(policy.TurnRadiansPerSecond) && policy.EaseSeconds > 0f);
     }
 
     [Fact]
