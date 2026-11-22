@@ -18,11 +18,8 @@ Mountain conifers and their summer broadleaf variants are in mountain_trees.py, 
 The haunted broadleaf and its leafless winter counterpart are in haunted_trees.py and winter_haunted.py.
 Rebuild a record with trees.py --key 500-12 (repeat --key for a set).
 
-The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
-manner: the slender bare trees are rusty-craftsurvive's dead tree as above; the great gnarled trunks and the fallen logs
-are its branch skeleton built old and heaped, their bark painted as a tree's; a rock is shaped to its sprite's outline and
-drawn as `stone`, which the wind does not move, in a generated stone tile painted from the sprite's own rock colours, a
-winter rock's snow laid on its upward faces as a winter crown's is.
+The nature rocks in fieldstones.py are clusters of solid stones, with moss, snow and colour baked into their atlas.
+The dead trees and logs use the branch skeletons in authoring/tools/rocks/rocks.py.
 
 The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so each entry's `placement` states that height in
 metres, with how high its foot stands: the shares of the sprite's frame measured here, at its flat's own size
@@ -45,6 +42,7 @@ from scipy import ndimage, stats
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "rocks"))
 import rocks  # noqa: E402
+import fieldstones
 import rainforest_palms
 import rainforest_trees
 import subtropical_trees
@@ -75,8 +73,7 @@ CRAFTSURVIVE = rocks.CRAFTSURVIVE / "content/game"
 # from: boulders lying together (the variant their count), a standing shard or spire, or a cairn of stacked stones.
 FIR, PINE, CORK, BEECH, CHESTNUT, PALM, DEAD = "fir", "pine", "cork-oak", "beech", "chestnut", "palm", "dead"
 GNARLED, LOGS = rocks.GNARLED, rocks.LOGS_FORM
-BOULDERS, SLAB, CAIRN = rocks.BOULDERS, rocks.SLAB, rocks.CAIRN
-ROCKS = (BOULDERS, SLAB, CAIRN)
+
 REGIONAL_TREES = {500: ("rainforest", rainforest_trees), 501: ("subtropical", subtropical_trees),
                   502: ("swamp", swamp_trees), 503: ("desert", desert_trees),
                   504: ("woodland", woodland_trees), 505: ("winter-woodland", winter_woodland),
@@ -108,31 +105,21 @@ SHARED_TREES = {"501-1": "500-21", "501-12": "500-14", "501-13": "500-15",
                 "510-10": "501-20", **{f"510-{r}": f"506-{r}" for r in (5, 11, 12, 13, 15, 25, 30)},
                 **{f"511-{r}": f"505-{r}" for r in (10, 13, 15, 25)},
                 **{f"511-{r}": f"507-{r}" for r in (5, 11, 23)}}
-DEAD_WOOD_AND_ROCKS = {
-    500: {4: (SLAB, 1), 17: (SLAB, 1), 31: (BOULDERS, 4)},
-    501: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (BOULDERS, 3), 6: (BOULDERS, 3), 23: (BOULDERS, 3)},
-    502: {4: (CAIRN, 5), 5: (CAIRN, 4), 6: (CAIRN, 5), 10: (CAIRN, 4), 11: (BOULDERS, 4), 15: (DEAD, 2), 30: (DEAD, 3)},
-    503: {2: (BOULDERS, 1), 3: (BOULDERS, 3), 4: (SLAB, 1), 12: (DEAD, 2), 18: (SLAB, 1), 19: (BOULDERS, 2), 20: (BOULDERS, 2),
-          21: (BOULDERS, 1), 22: (BOULDERS, 1), 28: (DEAD, 3), 30: (DEAD, 2)},
-    504: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (SLAB, 1), 6: (BOULDERS, 3), 19: (GNARLED, 1), 20: (GNARLED, 2), 30: (DEAD, 2),
-          31: (LOGS, 1)},
-    505: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (SLAB, 1), 6: (BOULDERS, 3), 19: (GNARLED, 1), 20: (GNARLED, 2), 30: (DEAD, 2),
-          31: (LOGS, 1)},
-    506: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 17: (SLAB, 1), 18: (SLAB, 1), 19: (GNARLED, 1), 20: (GNARLED, 2),
-          28: (SLAB, 1)},
-    507: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 17: (SLAB, 1), 18: (SLAB, 1), 19: (GNARLED, 1), 20: (GNARLED, 2),
-          28: (SLAB, 1)},
-    508: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 5: (SLAB, 1), 6: (SLAB, 1), 16: (DEAD, 3), 17: (DEAD, 1), 18: (DEAD, 2),
-          19: (GNARLED, 1), 20: (GNARLED, 2), 25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)},
-    509: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 5: (SLAB, 1), 6: (SLAB, 1), 16: (DEAD, 3), 17: (DEAD, 1), 18: (DEAD, 2),
-          19: (GNARLED, 1), 20: (GNARLED, 2), 25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)},
-    510: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 14: (SLAB, 1), 17: (SLAB, 1), 18: (SLAB, 1),
-          19: (GNARLED, 1), 20: (GNARLED, 2), 27: (SLAB, 1), 28: (SLAB, 1), 31: (DEAD, 1)},
-    511: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 14: (SLAB, 1), 17: (SLAB, 1), 18: (SLAB, 1),
-          19: (GNARLED, 1), 20: (GNARLED, 2), 27: (SLAB, 1), 28: (SLAB, 1), 31: (DEAD, 1)},
+SHARED_TREES.update(fieldstones.SHARED)
+DEAD_WOOD = {
+    502: {15: (DEAD, 2), 30: (DEAD, 3)},
+    503: {12: (DEAD, 2), 28: (DEAD, 3), 30: (DEAD, 2)},
+    **{a: {19: (GNARLED, 1), 20: (GNARLED, 2), 30: (DEAD, 2), 31: (LOGS, 1)} for a in (504, 505)},
+    **{a: {19: (GNARLED, 1), 20: (GNARLED, 2)} for a in (506, 507)},
+    **{a: {16: (DEAD, 3), 17: (DEAD, 1), 18: (DEAD, 2), 19: (GNARLED, 1), 20: (GNARLED, 2),
+           25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)} for a in (508, 509)},
+    **{a: {19: (GNARLED, 1), 20: (GNARLED, 2), 31: (DEAD, 1)} for a in (510, 511)},
 }
-for archive, forms in DEAD_WOOD_AND_ROCKS.items():
-    FORMS.setdefault(archive, {}).update(forms)
+for archive, forms in DEAD_WOOD.items():
+    FORMS[archive].update(forms)
+for key in fieldstones.PAINTINGS:
+    archive, record = map(int, key.split("-"))
+    FORMS[archive][record] = ("rock", record)
 # Each rusty-craftsurvive tree's leaves and bark textures. Every tree wears the oak's bark, whose vertical furrows are
 # what the sprites paint, but the palm, whose rings are its own.
 TEXTURES = {FIR: ("fir", "oak"), PINE: ("pine", "oak"), CORK: ("cork", "oak"), BEECH: ("beech", "oak"),
@@ -326,27 +313,28 @@ def shared_tree(source, flat, old=None, recompute=False):
     return {**source, "placement": placement(flat, rgba, measures(rgba), old, recompute)}
 
 
-def rock(flat, rgba, archive, record, form, stones, folder, old, recompute):
-    """One rock's mesh, shaped to its sprite's outline, and its stone in the sprite's colours, with the snow it carries."""
-    m = measures(rgba)
-    # Sprites drawn alike (a rock several climates share) give one mesh and one stone.
-    seed = int(hashlib.sha256(rgba.tobytes()).hexdigest()[:8], 16)
-    mesh, stone = rocks.nature_rock(form, seed, rgba.astype(np.uint8), stones)
-    mesh_name, stone_name = f"rock-{seed:08x}.prop-mesh.json", f"rock-{seed:08x}-stone.png"
+def rock(flat, rgba, key, folder, old, recompute):
+    placed = placement(flat, rgba, measures(rgba), old, recompute)
+    mesh, atlas = fieldstones.build(key, rgba, placed["height"])
+    # Summer and winter share the same sculpt. A changed sculpt gets its own
+    # path so a scoped rebuild cannot replace geometry another skin still uses.
+    shape = hashlib.sha256(json.dumps(mesh, separators=(",", ":")).encode()).hexdigest()[:16]
+    mesh_name, stone_name = f"rock-{shape}.prop-mesh.json", f"rock-{key}-stone.png"
     write_mesh(folder / mesh_name, mesh)
-    Image.fromarray(stone, "RGBA").save(folder / stone_name)
-    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]}, "placement": placement(flat, rgba, m, old, recompute),
-             "stone": publish(stone_name, folder / stone_name)}
-    if snow := snowfall(rgba[rgba[..., 3] > SOLID][:, :3]):
-        entry["snow"] = snow | {"texels": rocks.TILE}
+    atlas.save(folder / stone_name)
+    stone = publish(stone_name, folder / stone_name)
+    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
+             "placement": placed, "stone": stone}
+    if any(part["role"] == "bark" for part in mesh["parts"]):
+        entry["bark"] = stone
     return entry
 
 
 def tree(flat, archive, record, species, variant, folder, old=None, recompute=False):
     """One tree's mesh, trimmed under its sprite's crown, and its textures in the sprite's colours."""
     rgba = frame(flat)
-    if species in ROCKS:
-        return rock(flat, rgba, archive, record, species, variant, folder, old, recompute)
+    if species == "rock":
+        return rock(flat, rgba, f"{archive}-{record}", folder, old, recompute)
     m = measures(rgba)
     palm = archive == 500 and record in rainforest_palms.PALMS
     regional = REGIONAL_TREES.get(archive)
@@ -438,7 +426,8 @@ def main():
             trees[key] = shared_tree(trees[SHARED_TREES[key]], flat, old, bool({"all", key} & recompute))
         if keys:
             # A file another entry names too (a rock several climates share) changes under it unless that entry is rebuilt.
-            written = {f"{MEDIA}/{file.name}" for file in built.iterdir()}
+            written = {f"{MEDIA}/{file.name}" for file in built.iterdir()
+                       if not (folder / file.name).exists() or file.read_bytes() != (folder / file.name).read_bytes()}
             if sharing := sorted(key for key, entry in trees.items() if key not in build_keys and key not in shared and written & set(paths(entry))):
                 raise SystemExit(f"{', '.join(keys)} write files that {', '.join(sharing)} also name: give those keys too")
         else:

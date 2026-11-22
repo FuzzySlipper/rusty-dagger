@@ -25,8 +25,7 @@ to 41 in deserts and 341 in temperate towns), so a rock matches the town's stone
 identity, which the location draws. Finals go to local/art/generated/models/ID.glb in the classic's frame, for
 `promote.py --area models --key ID`.
 
-Nature flats: trees.py draws them in the flora field, taking their shapes from `nature_rock`, `gnarled` and `logs`
-here, each painted from its refreshed sprite. Placed flats (`placed`): the decoration flats blocks place, as GLBs in
+Nature flats: trees.py draws the piles from fieldstones.py and the deadwood from `gnarled` and `logs` here. Placed flats (`placed`): the decoration flats blocks place, as GLBs in
 local/art/generated/effects/ for the art pack's `meshes` (promote.py's WORLD_MESHES, `--area effects --key A-R`), each
 built across its sprite's width, which the game draws it at from the GLB's own width.
 
@@ -757,14 +756,7 @@ def log_model(number):
 
 # ---- nature flats ---------------------------------------------------------------------------------------------------
 
-# Forms a nature sprite's rock is built in (trees.py draws them in the flora field as `stone`):
-# - boulders: one or more rounded stones lying together, filling the sprite's outline;
-# - slab: a standing shard or spire, cut in long faces;
-# - cairn: stones stacked one on another, a stone to each band of the sprite's height;
-# - spire: a stalagmite, as round as it is wide, its flared foot and drips the sprite's outline turned about its middle.
-BOULDERS, SLAB, CAIRN, SPIRE = "boulders", "slab", "cairn", "spire"
-# The share of a rock's width its depth is, front to back, where the sprite shows only its front.
-DEPTH = .8
+SPIRE = "spire"
 # Of a nature rock's height, the share sunk under the ground, so it sits in it rather than on it.
 SUNK = .06
 
@@ -776,9 +768,9 @@ def outline(rgba):
     return solid[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1]
 
 
-def silhouette_reach(solid, centre, directions, height, depth=DEPTH):
+def silhouette_reach(solid, centre, directions, height):
     """How far along each direction from centre (metres, y up, the sprite `height` tall) the sprite's outline, given a depth
-    of DEPTH times its width in each row, still holds the point."""
+    equal to its width in each row, still holds the point."""
     rows, cols = solid.shape
     metre = height / rows
     widths = solid.sum(1) * metre
@@ -794,108 +786,36 @@ def silhouette_reach(solid, centre, directions, height, depth=DEPTH):
             if row < 0 or row >= rows or col < 0 or col >= cols or not solid[row, col]:
                 break
             middle = (lefts[row] + solid[row].sum() / 2) * metre
-            if abs(z) > widths[row] * depth / 2 * np.sqrt(max(0.0, 1 - ((x - middle) / max(widths[row] / 2, 1e-6)) ** 2)) + 1e-6:
+            if abs(z) > widths[row] / 2 * np.sqrt(max(0.0, 1 - ((x - middle) / max(widths[row] / 2, 1e-6)) ** 2)) + 1e-6:
                 break
             last = t
         reach[i] = last
     return reach
 
 
-def pile(rng, solid, metre, stones):
-    """Boulders lying together in a sprite's outline: `stones` across its foot, each as tall as the outline over it, and
-    one more on them wherever the outline stands higher than they do. Each is a rounded stone cut in a few broad faces."""
-    rows, cols = solid.shape
-    tops = np.array([rows - np.argmax(solid[:, c]) if solid[:, c].any() else 0 for c in range(cols)]) * metre
-    # A heap of small stones needs fewer faces to each, a scattered rock being seen small and often.
-    sphere, faces = icosphere(1 if stones >= 3 else 2)
-    lefts, rights = np.nonzero(solid.any(0))[0][[0, -1]]
-    span = (rights - lefts + 1) * metre
-    pieces, placed = [], np.zeros(cols)
-    for k in range(stones):
-        a, b = lefts + (rights - lefts + 1) * k / stones, lefts + (rights - lefts + 1) * (k + 1) / stones
-        middle = (a + b) / 2
-        under = tops[int(a):max(int(a) + 1, int(b))]
-        # Lying stones are wider than tall, and pressed into their neighbours.
-        tall = min(under.max(), span / stones * .95) * rng.uniform(.8, 1)
-        wide = span / stones * rng.uniform(1.2, 1.45)
-        centre = np.array([middle * metre, tall / 2 * .9, rng.uniform(-.15, .15) * wide])
-        points = centre + sphere * np.array([wide / 2, tall / 2, wide * DEPTH / 2])
-        pieces.append((press(points, faces, rng, 1, 0, facets=7, cut_depth=(.08, .25), tilt=.25, wobble=.02), faces))
-        placed[int(a):max(int(a) + 1, int(b))] = tall * .9
-    # Where the outline rises well over the stones at its foot, one more lies on them.
-    over = tops - placed
-    if over.max() > tops.max() * .25:
-        c = int(np.argmax(over))
-        tall = over[c] * 1.4
-        wide = min(span * .55, tall * 1.7)
-        centre = np.array([c * metre, placed[c] + over[c] / 2 - tall * .1, 0])
-        points = centre + sphere * np.array([wide / 2, tall / 2, wide * DEPTH / 2])
-        pieces.append((press(points, faces, rng, 1, 0, facets=7, cut_depth=(.08, .25), tilt=.25, wobble=.02), faces))
-    return pieces
-
-
-def reached(solid, form, sphere, height):
-    """A rock's centre, the drawn texel low in the outline's middle nearest to where its weight sits, and how far the
-    outline reaches from it along each of the sphere's directions."""
+def stalagmite(seed, rgba):
+    """The placed cave decoration follows its painted taper, closed across any cutout pockets."""
+    rng = np.random.default_rng(seed)
+    solid = ndimage.binary_fill_holes(outline(rgba))
+    height = 1.0
+    sphere, faces = icosphere(2)
     rows = solid.shape[0]
     metre = height / rows
     lower = np.argwhere(solid[int(rows * .6):])
-    want = np.array([rows - 1 - height * {BOULDERS: .3, SPIRE: .12}.get(form, .35) / metre, np.median(lower[:, 1])])
+    want = np.array([rows - 1 - height * .12 / metre, np.median(lower[:, 1])])
     drawn = np.argwhere(solid)
     row, col = drawn[np.argmin(np.linalg.norm(drawn - want, axis=1))]
     centre = np.array([(col + .5) * metre, (rows - row - .5) * metre, 0])
-    return centre, silhouette_reach(solid, centre, sphere, height, 1.0 if form == SPIRE else DEPTH)
-
-
-def nature_rock(form, seed, rgba, stones=1):
-    """A nature sprite's rock as a prop mesh of one `stone` part, in metres with its foot at 0 and the sprite's drawn
-    height 1; and its stone texture painted from the sprite's own rock colours (snow left to the flora field's shader)."""
-    rng = np.random.default_rng(seed)
-    # A pocket painted see-through inside the outline is stone behind it, as the sprites paint it solid in other seasons
-    # and climates: shaped round it, a rock was carved to its centre wherever a direction ran into a pocket, standing at a
-    # share of its sprite's height (506-3 at 55%), or, where every direction below did, folded its underside into a point
-    # off the ground with normals of no length (507-4's winter sprite, #10871; #10874).
-    solid = ndimage.binary_fill_holes(outline(rgba))
-    rows, cols = solid.shape
-    height = 1.0
-    metre = height / rows
-    sphere, faces = icosphere(1 if form == CAIRN else 2)
-    if form == CAIRN:
-        # A stone to each band, each its band's width, set on the one below.
-        bands = max(2, stones)
-        pieces = []
-        for k in range(bands):
-            top, bottom = int(rows * k / bands), int(rows * (k + 1) / bands)
-            band = solid[top:bottom]
-            if not band.any():
-                continue
-            cols_in = np.nonzero(band.any(0))[0]
-            width = (cols_in[-1] - cols_in[0] + 1) * metre
-            centre = np.array([(cols_in[0] + cols_in[-1] + 1) / 2 * metre, (rows - (top + bottom) / 2) * metre, 0])
-            scale = np.array([width / 2, (bottom - top) * metre / 2 * 1.15, width * DEPTH / 2])
-            points = centre + sphere * scale
-            points = press(points, faces, rng, 1, 0, facets=8, cut_depth=(.1, .3), tilt=.25, wobble=.02)
-            pieces.append((points, faces))
-    elif form == BOULDERS and stones > 1:
-        pieces = pile(rng, solid, metre, stones)
-    else:
-        centre, reach = reached(solid, form, sphere, height)
-        points = centre + sphere * reach[:, None]
-        if form == SPIRE:
-            points = press(points, faces, rng, 1, 0, facets=6, cut_depth=(.05, .15), tilt=.2, wobble=.01)
-        elif form == SLAB:
-            points = press(points, faces, rng, 1, 0, facets=9, cut_depth=(.08, .25), tilt=.15, wobble=.01)
-        else:
-            points = press(points, faces, rng, stones, groove=height * .07, facets=6 + stones * 3, cut_depth=(.1, .3), tilt=.25, wobble=.015)
-        pieces = [(points, faces)]
+    reach = silhouette_reach(solid, centre, sphere, height)
+    points = centre + sphere * reach[:, None]
+    points = press(points, faces, rng, 1, 0, facets=6, cut_depth=(.05, .15), tilt=.2, wobble=.01)
+    points = points - [solid.shape[1] * metre / 2, height * SUNK, 0]
+    unit, corner_normals = split_normals(points, faces)
     positions, normals, uvs = [], [], []
     tile_metres = TILE / TEXELS_PER_METRE / 3
-    for points, faces in pieces:
-        points = points - [cols * metre / 2, height * SUNK, 0]
-        unit, corner_normals = split_normals(points, faces)
-        for f, face in enumerate(faces):
-            corners = points[face]
-            positions.extend(corners); normals.extend(corner_normals[f]); uvs.extend(projected_uvs(corners, unit[f], tile_metres))
+    for f, face in enumerate(faces):
+        corners = points[face]
+        positions.extend(corners); normals.extend(corner_normals[f]); uvs.extend(projected_uvs(corners, unit[f], tile_metres))
     positions = np.array(positions)
     # The rock stands on its foot: whatever sinks under the ground is cut flat at it, and the ground shades its foot.
     positions[:, 1] = np.maximum(positions[:, 1], -height * SUNK)
@@ -1124,7 +1044,7 @@ def placed(archive, record):
             mesh = logs(variant, solid.shape[1] / solid.shape[0])
             texture = png(paint(bark_steps(seed), bark_colours(rgba)))
         else:
-            mesh, stone = nature_rock(form, seed, rgba)
+            mesh, stone = stalagmite(seed, rgba)
             texture = png(stone)
         part = mesh["parts"][0]
         p, n = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3)

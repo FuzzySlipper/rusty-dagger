@@ -4,7 +4,7 @@ see-through pockets are built whole: the winter rock 507-4 on its foot (#10871),
 
     python3 test_trees.py
 """
-import hashlib, json, shutil, tempfile, unittest
+import json, shutil, tempfile, unittest
 from pathlib import Path
 
 import numpy as np
@@ -89,8 +89,7 @@ class Meshes(unittest.TestCase):
     def test_the_winter_rock_painted_with_pockets_is_built_whole_on_its_foot(self):
         flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["flats"] if f["replaces"] == {"archive": 507, "record": 4})
         rgba = trees.frame(flat)
-        species, variant = trees.FORMS[507][4]
-        mesh, _ = trees.rocks.nature_rock(species, int(hashlib.sha256(rgba.tobytes()).hexdigest()[:8], 16), rgba.astype(np.uint8), variant)
+        mesh, _ = trees.fieldstones.build("507-4", rgba, flat["placement"]["size"]["height"])
         part = mesh["parts"][0]
         normals = np.array(part["normals"]).reshape(-1, 3)
         self.assertTrue(np.allclose(np.linalg.norm(normals, axis=1), 1, atol=1e-3))
@@ -101,12 +100,21 @@ class Meshes(unittest.TestCase):
         # 506-3's sprite is an arch: shaped round its opening, the rock stood squat at 55% of the sprite's height (#10874).
         flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["flats"] if f["replaces"] == {"archive": 506, "record": 3})
         rgba = trees.frame(flat)
-        species, variant = trees.FORMS[506][3]
-        mesh, _ = trees.rocks.nature_rock(species, int(hashlib.sha256(rgba.tobytes()).hexdigest()[:8], 16), rgba.astype(np.uint8), variant)
+        mesh, _ = trees.fieldstones.build("506-3", rgba, flat["placement"]["size"]["height"])
         positions = np.array(mesh["parts"][0]["positions"]).reshape(-1, 3)
         solid = trees.rocks.outline(rgba.astype(np.uint8))
         self.assertAlmostEqual((positions[:, 0].max() - positions[:, 0].min()) / mesh["height"], solid.shape[1] / solid.shape[0], delta=.1)
         self.assertGreater(mesh["height"], .8)
+
+    def test_all_rock_faces_have_painted_area_including_the_caps_seen_from_above(self):
+        entries = json.loads(trees.PAYLOAD.read_bytes())["artReplacements"]["trees"]
+        paths = {entries[key]["mesh"]["path"] for key in trees.fieldstones.PAINTINGS}
+        for path in paths:
+            for part in json.loads((trees.CONTENT / path).read_bytes())["parts"]:
+                triangles = np.array(part["indices"]).reshape(-1, 3)
+                coords = np.array(part["uvs"]).reshape(-1, 2)[triangles]
+                u, v = coords[:, 1] - coords[:, 0], coords[:, 2] - coords[:, 0]
+                self.assertTrue(np.all(abs(u[:, 0]*v[:, 1] - u[:, 1]*v[:, 0]) > 0), path)
 
 
 class Placement(unittest.TestCase):

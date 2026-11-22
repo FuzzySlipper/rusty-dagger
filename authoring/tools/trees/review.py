@@ -55,6 +55,32 @@ def framing(directory, flat, tree):
     return 1.10 * max(high - low, 2 * radius * 9 / 16), (high + low) / 2, triangles
 
 
+def classic_reference(directory, flat):
+    # Patch chose the original depictions as mesh references for these four.
+    # Stage the exported original privately, at the flat's painted size and foot.
+    a, r = flat["replaces"]["archive"], flat["replaces"]["record"]
+    if (a, r) not in ((500, 4), (500, 31), (502, 4), (502, 11)):
+        return False
+    name = f"texture-{a}-record-{r:03}-frame-000-source.png"
+    source = next((ROOT / "local/art/reference/flats").glob(f"*/texture-{a}/flat/{name}"), None)
+    if source is None:
+        print(f"{a}-{r}: {name} missing from export-flats; showing the refreshed sprite")
+        return False
+    path = directory / flat["path"]
+    with Image.open(path) as refreshed, Image.open(source) as classic:
+        original = classic.convert("RGBA")
+        original = original.crop(original.getbbox())
+        left, top, right, bottom = refreshed.convert("RGBA").getbbox()
+        scale = min((right-left)/original.width, (bottom-top)/original.height)
+        original = original.resize((round(original.width*scale), round(original.height*scale)), Image.Resampling.NEAREST)
+        image = Image.new("RGBA", refreshed.size)
+        image.paste(original, ((left+right-original.width)//2,bottom-original.height))
+    image.save(path)
+    data = path.read_bytes()
+    flat.update(byteLength=len(data), sha256=hashlib.sha256(data).hexdigest())
+    return True
+
+
 def stage(directory, flats, trees, snow, candidates):
     """Stage only the inputs the requested records draw, at their content-relative paths."""
     files = {flat["path"] for flat in flats}
@@ -65,6 +91,7 @@ def stage(directory, flats, trees, snow, candidates):
         dest = directory / path
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(CONTENT / path, dest)
+    originals = {f"{f['replaces']['archive']}-{f['replaces']['record']}" for f in flats if classic_reference(directory, f)}
     if candidates:
         # Engine content references select bytes by path and digest. Describe the trial bytes in
         # this private stage so a trial never resolves the shipped texture or a previous mesh.
@@ -85,6 +112,7 @@ def stage(directory, flats, trees, snow, candidates):
     (directory / "flora.json").write_text(json.dumps({"artReplacements": payload}))
     (directory / "flats-tuning.json").write_text(json.dumps(json.loads(TUNING.read_bytes())["flats"]))
     Image.new("RGBA", (8, 4), (133, 141, 148, 255)).save(directory / "background.png")
+    return originals
 
 
 def debug(origin, command):
@@ -170,7 +198,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="flora-preview-") as tmp, tempfile.TemporaryDirectory(dir=output) as rendered:
         directory = Path(tmp)
         trees = {k: dict(art["trees"][k]) for k in keys if k in art["trees"]}
-        stage(directory, [flats[key] for key in keys], trees, art["treeSnow"], candidates)
+        originals = stage(directory, [flats[key] for key in keys], trees, art["treeSnow"], candidates)
         start = subprocess.run(["rusty", "dev", "start", "--project", str(PROJECT), "--live-debug"],
                                cwd=ROOT, env={**os.environ, "FloraPreviewContent": tmp}, stdout=subprocess.PIPE, text=True, check=True)
         host = json.loads(start.stdout)
@@ -187,6 +215,8 @@ def main():
                     form = "rock"
                 records[key] = dict(key=key, climate=CLIMATES[flat["replaces"]["archive"] - 500], form=form,
                                     height=tree["placement"]["height"] if tree else flat["placement"]["size"]["height"], triangles=triangles)
+                if key in originals:
+                    records[key]["classicReference"] = True
                 if index == 1 or index % 25 == 0:
                     print(f"{index}/{len(keys)}  {key}", flush=True)
         finally:
