@@ -31,8 +31,10 @@ as it), its body, the pelvis fit of each clip it plays (k and A: Hips at (k x, A
 walk travels, and its palette: PALETTE sRGB colours k-means picks from its own Gaussians, weighted by opacity, which a
 pixel finish can snap its blocks to. A character with a long skirt on joints of its own (its GLB's asset.extras.skirt,
 from asset-pipeline's skirt_bones.py rig) states its skirt: two tiers as the cloth sheet's columns, rows, rest grid and
-bone columns, one tier as the ring's joints, directions, pivots and reach by height. Rerun it when asset-pipeline marks
-another character ready or refits one.
+bone columns, one tier as the ring's joints, directions, pivots and reach by height. A character whose eyes asset-pipeline
+marked (its GLB's asset.extras.eyes: the _GROUP its eye Gaussians are in and its lids' sRGB colour) states its eyes,
+which blink in the game; one without is named as it runs, and its walkers don't blink. Rerun it when asset-pipeline
+marks another character ready, refits one or marks its eyes.
 
     authoring/tools/people/splat-people.py [--characters DIR] [--clips DIR]
 """
@@ -195,6 +197,32 @@ def skirt(body):
             'pivots': [rounded(point) for point in rest['pivots']], 'heights': rounded(rest['ys']), 'reach': [rounded(column) for column in rest['rad']]}
 
 
+def eyes(body):
+    """The eyes a body's GLB marks (asset.extras.eyes) as the payload states them, or None: their group must be one its
+    _GROUP attribute (one unsigned byte per Gaussian) gives some Gaussians."""
+    gltf, binary = read_glb(body)
+    marked = gltf['asset'].get('extras', {}).get('eyes')
+    if marked is None:
+        return None
+    group, lid = marked.get('group'), marked.get('lid', '')
+    if not isinstance(group, int) or not 1 <= group <= 255 or len(lid) != 7 or lid[0] != '#' or any(c not in '0123456789abcdefABCDEF' for c in lid[1:]):
+        raise SystemExit(f'{body} marks eyes {marked}, not a group of 1 to 255 and lids #rrggbb')
+    attributes = gltf['meshes'][0]['primitives'][0]['attributes']
+    if '_GROUP' not in attributes:
+        raise SystemExit(f'{body} marks eyes in group {group} but carries no _GROUP')
+    accessor = gltf['accessors'][attributes['_GROUP']]
+    if (accessor['componentType'], accessor['type']) != (5121, 'SCALAR'):
+        raise SystemExit(f'{body} keeps _GROUP as {accessor["componentType"]} {accessor["type"]}, not one unsigned byte a Gaussian')
+    view = gltf['bufferViews'][accessor['bufferView']]
+    # glTF pads vertex attributes to 4 bytes, so a byte a Gaussian may sit in a wider stride.
+    stride = view.get('byteStride', 1)
+    start = view.get('byteOffset', 0) + accessor.get('byteOffset', 0)
+    groups = np.frombuffer(binary, np.uint8, stride * (accessor['count'] - 1) + 1, start)[::stride]
+    if not (groups == group).any():
+        raise SystemExit(f'{body} marks eyes in group {group}, which none of its Gaussians is in')
+    return {'group': group, 'lid': lid.lower()}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--characters', type=Path, default=os.environ.get('DAGGER_CHAR_ROOT') or CHARACTERS,
@@ -239,6 +267,8 @@ def main():
         }
         if skirts[cid]:
             characters[cid]['skirt'] = skirts[cid]
+        if marked := eyes(MEDIA / f'{cid}.glb'):
+            characters[cid]['eyes'] = marked
     payload_path = PACK / 'payload.json'
     payload = json.loads(payload_path.read_text())
     payload['artReplacements']['splatPeople'] = {
@@ -246,7 +276,10 @@ def main():
         'producer': 'PINOC (Viggle): library and generated motions, Mixamo rig', 'license': 'PINOC clip',
         'characters': characters}
     payload_path.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + '\n')
-    print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted), packed the {", ".join(PACKS)} packs '
+    if blind := sorted(cid for cid, character in characters.items() if 'eyes' not in character):
+        print(f'{len(blind)} characters have no eyes marked and will not blink: {", ".join(blind)}')
+    print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted, '
+          f'{sum(1 for c in characters.values() if "eyes" in c)} with eyes), packed the {", ".join(PACKS)} packs '
           f'({sum(clip["byteLength"] for clip in clips.values()) / 1e6:.2f} MB) into {CONTAINER.relative_to(ROOT)}, and stated artReplacements.splatPeople; '
           f'publish it with scripts/data-sync.sh ship animations.rpak')
 

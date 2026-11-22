@@ -128460,8 +128460,8 @@
      "archive": 381,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/381.glb",
-      "byteLength": 1090144,
-      "sha256": "0257104fb92c002e34edafae894d92178b2b54116cd79605eecc71dfbac17cf3"
+      "byteLength": 1154220,
+      "sha256": "e60d5ab10901b7331cd8b6924aa574449f54c9f62915b1941c7056c28a502e88"
      },
      "fits": {
       "walk": {
@@ -128529,15 +128529,19 @@
       "#3c2a28",
       "#524039",
       "#faf9f1"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#432721"
+     }
     },
     "382": {
      "name": "bare-chested, white wrap kilt, steel bracers",
      "archive": 382,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/382.glb",
-      "byteLength": 1092532,
-      "sha256": "e64eb08a24da4494132caa1a43b42feab6280cdd6596fd6707ecf9ff84ef1c83"
+      "byteLength": 1156748,
+      "sha256": "b019acdce0b9f5326f76761cf4e0e8a423aca3d57de4bbe5b1e16f80d2e80467"
      },
      "fits": {
       "walk": {
@@ -128605,15 +128609,19 @@
       "#b7350d",
       "#3f0403",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#714433"
+     }
     },
     "383-A": {
      "name": "teal tunic, yellow zigzag bands",
      "archive": 383,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/383-A.glb",
-      "byteLength": 1091180,
-      "sha256": "65263cf8690a8f9fc011a0a610cee9b57fd88a4c84953b196eead3fa0056ba3c"
+      "byteLength": 1155316,
+      "sha256": "159b5d8b5780f825dc5cb49d0f6dbedc06c9664494b58356bcf6874d447d3ba8"
      },
      "fits": {
       "walk": {
@@ -128681,15 +128689,19 @@
       "#52909d",
       "#a126b4",
       "#33727b"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#804e38"
+     }
     },
     "384-C": {
      "name": "yellow and grey striped tunic and kilt",
      "archive": 384,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/384-C.glb",
-      "byteLength": 1093816,
-      "sha256": "2f004e05462ea4f5f45c94331bbfa65d0e1650d374f5a33694a679f00bc1d590"
+      "byteLength": 1158108,
+      "sha256": "924f30c2c276243d98d9a6731d9bedd146135ebb133d49632e7682e28f2e9794"
      },
      "fits": {
       "walk": {
@@ -128757,15 +128769,19 @@
       "#663624",
       "#600c03",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#3b211a"
+     }
     },
     "385": {
      "name": "townsman: teal tunic, orange hood, striped hose",
      "archive": 385,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/385.glb",
-      "byteLength": 1096384,
-      "sha256": "70618d8241aaa0c46bb8353382b4ebfdbcc6948bf2cee4f82631d6599a2f2739"
+      "byteLength": 1160828,
+      "sha256": "27d8b453e067f94c25d0d303c33a00fb1d71cbe7fab3e81ffcb3a3a656bbb4e8"
      },
      "fits": {
       "walk": {
@@ -128833,15 +128849,19 @@
       "#1c1d0a",
       "#959182",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#c38d6d"
+     }
     },
     "386-C": {
      "name": "sleeveless teal tunic, pale blue mantle",
      "archive": 386,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/386-C.glb",
-      "byteLength": 1094380,
-      "sha256": "68f5bdfb6060da657644a9ee622cc572932cdad4879f8f44886d2b9160dd6712"
+      "byteLength": 1158704,
+      "sha256": "9cf2136ae6e272e7c76c47cda6fe0dd0653116c0a80bed168090cd3a3983df29"
      },
      "fits": {
       "walk": {
@@ -128909,15 +128929,19 @@
       "#561205",
       "#110300",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#9f6a4f"
+     }
     },
     "387-A": {
      "name": "green tunic, yellow-purple plaid kilt, fur-cuffed boots",
      "archive": 387,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/387-A.glb",
-      "byteLength": 1091524,
-      "sha256": "1ebb1145371eecc5ba7d77ea705617b7905a8fcc2b53d13075980f584da2bd0c"
+      "byteLength": 1155680,
+      "sha256": "e4e695902807e30dae54bb9a0e9182ebeb82e8e9c1db785f88a474cb9ad55df0"
      },
      "fits": {
       "walk": {
@@ -128985,15 +129009,19 @@
       "#710606",
       "#000001",
       "#3a3d2d"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#936857"
+     }
     },
     "388": {
      "name": "green hood, orange tunic, striped hose",
      "archive": 388,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/388.glb",
-      "byteLength": 1033356,
-      "sha256": "2431faa31e859bf79a65dcd8c773311a07eafdad1c4dc798fdd53b33dbcd49c5"
+      "byteLength": 1094092,
+      "sha256": "b13ae5d68a24632bd6ca30ceab0df76a8780116c37f84d700dbb4113e9bf83c2"
      },
      "fits": {
       "walk": {
@@ -129061,15 +129089,19 @@
       "#df7532",
       "#f1efe0",
       "#7d0805"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#542f25"
+     }
     },
     "389": {
      "name": "green hood, teal and pale blue tunic, striped hose",
      "archive": 389,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/389.glb",
-      "byteLength": 1026956,
-      "sha256": "4edeee2633ac7bfbec550d9a663c71d59bf62542a2997a5ec547eda7cf412800"
+      "byteLength": 1087316,
+      "sha256": "dba5797b2393095eab6e0acbdc961525d53f8f98a4d47e2e3f54df7eec7b4690"
      },
      "fits": {
       "walk": {
@@ -129137,15 +129169,19 @@
       "#000000",
       "#c18b5e",
       "#030234"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#5b3428"
+     }
     },
     "390-B": {
      "name": "teal and pale blue tunic, chequered hose",
      "archive": 390,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/390-B.glb",
-      "byteLength": 1091364,
-      "sha256": "1d16bc1a992d38a36c2fb0180a20c10962f73653cf3f66e843d35a1c97ce0dff"
+      "byteLength": 1155512,
+      "sha256": "bb87a2f93c6106f709508b509fb122324118ce3fd9e1a88052a8a34ec3a7e797"
      },
      "fits": {
       "walk": {
@@ -129213,15 +129249,19 @@
       "#bbe8f1",
       "#d4946a",
       "#450b03"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#975a44"
+     }
     },
     "391": {
      "name": "green tunic, blue-green hood collar, blue hose",
      "archive": 391,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/391.glb",
-      "byteLength": 1093268,
-      "sha256": "ed75af2a5f00368ee2806b68fdf9bb4e3f51011babbaeaaee4c7a1b811041f7a"
+      "byteLength": 1157528,
+      "sha256": "86dd826d38fc7b6d56bebbded09afca177cad5b6d6564b6929c8a87fa271e1a0"
      },
      "fits": {
       "walk": {
@@ -129289,15 +129329,19 @@
       "#3e5061",
       "#112230",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#a67a5f"
+     }
     },
     "392": {
      "name": "light blue gown, red hip band",
      "archive": 392,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/392.glb",
-      "byteLength": 1090772,
-      "sha256": "9278cc8fc5d38844085c96f8453ee5d0609fc8e88956cfc580003f9543b14029"
+      "byteLength": 1154884,
+      "sha256": "b83d3bef6e03d3905e8681f1f4fbc0484cd6a0f99b9ae3891d91e8d9f8cc5011"
      },
      "fits": {
       "walk": {
@@ -129365,15 +129409,19 @@
       "#a91a0d",
       "#f1f3ed",
       "#eb1206"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#ac7f6a"
+     }
     },
     "393": {
      "name": "blue hood, laced bodice, striped skirt",
      "archive": 393,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/393.glb",
-      "byteLength": 1092864,
-      "sha256": "93f97935e0bad81de93ede3f744dad6ef053a7cbf3fd9095fcb61a057bf07baf"
+      "byteLength": 1157100,
+      "sha256": "658350f221295bc59db06e451ab9500af1649081e5a8c22d2e6c15773e70329a"
      },
      "fits": {
       "walk": {
@@ -129441,15 +129489,19 @@
       "#3fa2ef",
       "#6f432c",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#bb8c6e"
+     }
     },
     "394": {
      "name": "rust-orange robe, green hood collar",
      "archive": 394,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/394.glb",
-      "byteLength": 1086812,
-      "sha256": "5799c96bca983ea7aa9b391b9ad12ca0b7b7a9ce7714662d3619ac952683fd1b"
+      "byteLength": 1150692,
+      "sha256": "1c3c6ca8ce3334ed10bcbfaf0cdff786a76c9ac69f38cc4102de97cff2788fb0"
      },
      "fits": {
       "walk": {
@@ -129517,15 +129569,19 @@
       "#42170c",
       "#82533c",
       "#edb388"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#a47459"
+     }
     },
     "395": {
      "name": "cream cape and wrap skirt, yellow sash",
      "archive": 395,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/395.glb",
-      "byteLength": 964320,
-      "sha256": "ed0c3b4375aa11bd70029f3a418d28a5cd998a4d723e17c7f569878d81df415a"
+      "byteLength": 1020732,
+      "sha256": "3233bdd64b3ccbd050b13fa2844c53cb59a975fd78959494c78d057a4a49a115"
      },
      "fits": {
       "gentle": {
@@ -129836,6 +129892,10 @@
         0.14178
        ]
       ]
+     },
+     "eyes": {
+      "group": 1,
+      "lid": "#8c5f4b"
      }
     },
     "396": {
@@ -129843,8 +129903,8 @@
      "archive": 396,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/396.glb",
-      "byteLength": 1092520,
-      "sha256": "f08bf3ef8efc948dd9476a552d3a1fdfeb32ee0a58d6744b7a96f627bc3d28cc"
+      "byteLength": 1156736,
+      "sha256": "bd93be90e7d98189f4c96d00d794dcbaf1f0db4ee6af43c3f8c6a3be7faaa6e9"
      },
      "fits": {
       "walk": {
@@ -129912,15 +129972,19 @@
       "#732615",
       "#c09685",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#785645"
+     }
     },
     "397-B": {
      "name": "397 bare body (for the separate shawl layer)",
      "archive": 397,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/397-B.glb",
-      "byteLength": 965992,
-      "sha256": "7f0bdd8a304e25393098bf0720f216bb70bcd1c6c829bc92d3c1db4ed07ec3b3"
+      "byteLength": 1022272,
+      "sha256": "e1b9f90c3d6803b8ae971d033867b33d17af78248b18fefeb4b8dfca3690ede2"
      },
      "fits": {
       "gentle": {
@@ -130598,6 +130662,10 @@
        "Skirt7_L"
       ],
       "slit": false
+     },
+     "eyes": {
+      "group": 1,
+      "lid": "#704331"
      }
     },
     "398": {
@@ -130605,8 +130673,8 @@
      "archive": 398,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/398.glb",
-      "byteLength": 918980,
-      "sha256": "13ff2f2e9bfce2cece75438f41ed664fdb821348c2309d5ca51ea52a0274d4df"
+      "byteLength": 972496,
+      "sha256": "72d68edff2c5dd759106b3238313eeb1f7559ff74c61e118a457eabd9857f7c7"
      },
      "fits": {
       "gentle": {
@@ -131284,6 +131352,10 @@
        "Skirt7_L"
       ],
       "slit": false
+     },
+     "eyes": {
+      "group": 1,
+      "lid": "#573125"
      }
     },
     "451": {
@@ -131291,8 +131363,8 @@
      "archive": 451,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/451.glb",
-      "byteLength": 1025676,
-      "sha256": "f8422ccf128a491117d8e7c554df6e35c0aa24266f4799ccd92da8f6a30bd22c"
+      "byteLength": 1085960,
+      "sha256": "a8b1a778c9fe5fc1f5389625b0ff1a5b0eea1fe177c1be1689dbf5475e24673a"
      },
      "fits": {
       "walk": {
@@ -131360,15 +131432,19 @@
       "#e88138",
       "#036306",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#a2735e"
+     }
     },
     "452-B": {
      "name": "452 bare body (for the separate cloak layer)",
      "archive": 452,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/452-B.glb",
-      "byteLength": 967468,
-      "sha256": "90799718f7bb01da02122da7d9dd24552d455e7dd890cc26624033785e5082be"
+      "byteLength": 1023836,
+      "sha256": "2d812ed4485bb6c19ec053de1ebf47b8e61cae8ee11cba4c6f4a312e727e1f1a"
      },
      "fits": {
       "gentle": {
@@ -132046,6 +132122,10 @@
        "Skirt7_L"
       ],
       "slit": false
+     },
+     "eyes": {
+      "group": 1,
+      "lid": "#a37a64"
      }
     },
     "453": {
@@ -132053,8 +132133,8 @@
      "archive": 453,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/453.glb",
-      "byteLength": 962632,
-      "sha256": "519450aee2f54dce3aaf3d268847371c5e6749ff89fb9bd38ebad17e12ebd35e"
+      "byteLength": 1018716,
+      "sha256": "c2cddbe4698dc0b659be98d0eba2e82da305ba7ab8985f6943684617d53c0ca2"
      },
      "fits": {
       "gentle": {
@@ -132732,6 +132812,10 @@
        "Skirt7_L"
       ],
       "slit": false
+     },
+     "eyes": {
+      "group": 1,
+      "lid": "#a17760"
      }
     },
     "454": {
@@ -132739,8 +132823,8 @@
      "archive": 454,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/454.glb",
-      "byteLength": 1091696,
-      "sha256": "5afe819117f7ee3371559a97e473f249857f2180196bb1c8095d619f5cdb041a"
+      "byteLength": 1155864,
+      "sha256": "5c5f55d97d7881f638fd0e21d3516d746e4abced86c5f2162da461e5ce1f0f9a"
      },
      "fits": {
       "walk": {
@@ -132808,15 +132892,19 @@
       "#a5cfef",
       "#300401",
       "#000000"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#bc9a7f"
+     }
     },
     "455": {
      "name": "rust hood, laced bodice, rust skirt",
      "archive": 455,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/455.glb",
-      "byteLength": 1090216,
-      "sha256": "9c6af6a1f4cf02a6a06f416c3eef59cc4dae1270b995d75108c9e7761c20ca45"
+      "byteLength": 1154296,
+      "sha256": "0dd51eb0a0396542c1669e27c5822259e30b3e8283c857f2c75350828cd9c159"
      },
      "fits": {
       "walk": {
@@ -132884,15 +132972,19 @@
       "#0b0001",
       "#000000",
       "#69b4c9"
-     ]
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#a4806a"
+     }
     },
     "456": {
      "name": "bell sleeves, half-chequered skirt",
      "archive": 456,
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/456.glb",
-      "byteLength": 876492,
-      "sha256": "1e2822d6150198c8049cd010a4669cb77660f4b90afd47fbd8ff28e62305b4c6"
+      "byteLength": 927508,
+      "sha256": "fbfdaeab25661091aac742a32a20ae9c80b9b7ce3fa8a08fcdf97833da762f8c"
      },
      "fits": {
       "gentle": {
@@ -133570,6 +133662,10 @@
        "Skirt7_L"
       ],
       "slit": false
+     },
+     "eyes": {
+      "group": 1,
+      "lid": "#ac806a"
      }
     }
    }

@@ -27,6 +27,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// the run) its walkers go at their walk's own pace, slower than the rest, or the walk plays faster to keep the walkers' pace.
 /// The characters' clips are read from the animations container (<see cref="DaggerfallAnimations"/>); without it every
 /// walker draws its sprite and the gsplat switches are refused.
+/// A walker drawn as a character whose eyes are marked blinks on its own clock from its name seed, by the tuning, until
+/// people.splat-blinks off; the characters without eyes are said once, when the crowd is made.
 /// </summary>
 /// <param name="rig">The art set's people rig, or null when it carries none.</param>
 /// <param name="splats">The art set's gsplat townspeople, or null when it carries none.</param>
@@ -70,6 +72,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private bool unclothed;
     /// <summary>Whether walkers drawn in a long skirt walk at their walk's own pace, not the walkers': the tuning's until people.splat-pace.</summary>
     private bool slow = tuning.SkirtsSlow;
+    /// <summary>Whether walkers drawn as a character with eyes blink: the default, until people.splat-blinks off.</summary>
+    private bool blinking = true;
     private PartsRigCrowd? rigCrowd;
     private SplatCrowd? splatCrowd;
 
@@ -211,6 +215,16 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             : "Gsplat people in a long skirt walk at the walkers' pace, their gentle walk played faster to keep up.");
     }
 
+    public DebugCommandResult SplatBlinks(string state)
+    {
+        if (state is not ("on" or "off")) return DaggerfallDeveloperReplies.Refused("people.splat-blinks takes on or off.");
+        blinking = state == "on";
+        splatCrowd?.Blink(blinking ? tuning.Blinks : null);
+        return DebugCommandResult.Success(blinking
+            ? $"Gsplat people with eyes blink every {tuning.Blinks.IntervalMinSeconds:0.#} to {tuning.Blinks.IntervalMaxSeconds:0.#} seconds, each on its own clock."
+            : "Gsplat people keep their eyes open.");
+    }
+
     public DebugCommandResult SplatShadow(string caster)
     {
         if (DaggerfallSplatPeopleTuning.Caster(caster) is not { } shadow)
@@ -309,8 +323,12 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         int[] missing = [.. townspeople.Where(archive => !splats!.ByArchive.ContainsKey(archive)).Distinct().Order()];
         if (missing.Length != 0)
             warn($"Townsperson art {string.Join(", ", missing)} has no gsplat character; walkers wearing it draw their sprites.");
+        string[] blind = [.. splats!.Characters.Where(character => character.Value.Eyes is null).Select(character => character.Key).Order(StringComparer.Ordinal)];
+        if (blind.Length != 0)
+            warn($"Gsplat character{(blind.Length == 1 ? "" : "s")} {string.Join(", ", blind)} {(blind.Length == 1 ? "has" : "have")} no eyes marked, so walkers drawn as them don't blink.");
         splatCrowd = new(animation, seed, tuning.GaitJitter);
         splatCrowd.UseOwn(Own);
+        splatCrowd.Blink(blinking ? tuning.Blinks : null);
         return splatCrowd;
     }
 
@@ -389,7 +407,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
                 : null;
             appearance = engine.CreateAnimatedMeshAppearance(new(body));
             Finish(appearance, person);
-            SplatFigure figure = new($"{id} ({person.Name})", appearance, walking, idles, tuning.CrossfadeSeconds, skirtRig);
+            SplatFigure figure = new($"{id} ({person.Name})", appearance, walking, idles, tuning.CrossfadeSeconds, skirtRig, person.Eyes);
             characters.Add(id, (body, appearance, figure));
             return figure;
         }

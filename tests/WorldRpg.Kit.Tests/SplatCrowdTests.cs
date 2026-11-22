@@ -232,6 +232,107 @@ public sealed class SplatCrowdTests
         return SplatSkirtRig.Resolve(ring, [.. named.Select(joint => new AnimationJointInfo(joint.Name, 0))], rest);
     }
 
+    [Fact]
+    public void Walkers_with_eyes_blink_each_on_its_own_seeded_clock_and_the_engine_hears_only_changes()
+    {
+        AnimationRecorder engine = AnimationRecorder.Create();
+        using SplatCrowd crowd = new(() => engine.Service, actor => (int)actor * 7, 0F);
+        SplatEyes eyes = new(1, new Color(.8F, .6F, .5F, 1F));
+        SplatFigure seeing = Figure("385", 1) with { Eyes = eyes }, blind = Figure("386", 2);
+        SplatBlinks blinks = new(2F, 6F, .06F, .15F, .1F);
+        crowd.Blink(blinks);
+        crowd.Assign(3, blind);
+        crowd.Use(seeing);
+        // Each walker's clock starts at the settle that first draws it, so the reference clocks start with no time.
+        SplatBlinkClock[] clocks = [blinks.Clock(7), blinks.Clock(14)];
+        foreach (SplatBlinkClock clock in clocks) clock.Step(0);
+        float[] drawn = [0, 0];
+        List<string> expected = [];
+        Show();
+        engine.Calls.Clear();
+
+        // 30 seconds of 20 ms frames: each tint is a change in how shut that walker's lids are, toward its lid colour.
+        for (int frame = 0; frame < 1500; frame++)
+        {
+            crowd.Advance(.02F);
+            Show();
+            for (int walker = 0; walker < 2; walker++)
+            {
+                float closure = clocks[walker].Step(.02F);
+                if (closure != drawn[walker]) expected.Add($"tint {walker + 1} group 1 to 0.8,0.6,0.5 by {closure:0.###}");
+                drawn[walker] = closure;
+            }
+        }
+        Assert.Equal(expected, engine.Calls);
+        // Each blinked every 2 to 6 seconds (one change to shut a blink), shutting fully, and the blind walker (instance 3) never tinted.
+        foreach (string walker in new[] { "1", "2" })
+            Assert.InRange(engine.Calls.Count(call => call == $"tint {walker} group 1 to 0.8,0.6,0.5 by 1"), 4, 14);
+        Assert.DoesNotContain(engine.Calls, call => call.StartsWith("tint 3", StringComparison.Ordinal));
+        Assert.NotEqual(engine.Calls.Where(call => call.StartsWith("tint 1", StringComparison.Ordinal)).Select(call => call[6..]),
+            engine.Calls.Where(call => call.StartsWith("tint 2", StringComparison.Ordinal)).Select(call => call[6..]));
+
+        // Blinks off opens any lid shut now at the next settle, and tells the Engine nothing more.
+        while (!engine.Calls[^1].EndsWith("by 1", StringComparison.Ordinal))
+        {
+            crowd.Advance(.02F);
+            Show();
+        }
+        string shutWalker = engine.Calls[^1].Split(' ')[1];
+        engine.Calls.Clear();
+        crowd.Blink(null);
+        crowd.Advance(.02F);
+        Show();
+        Assert.Equal([$"tint {shutWalker} group 1 to 0.8,0.6,0.5 by 0"], engine.Calls);
+        engine.Calls.Clear();
+        for (int frame = 0; frame < 500; frame++)
+        {
+            crowd.Advance(.02F);
+            Show();
+        }
+        Assert.Empty(engine.Calls);
+
+        void Show()
+        {
+            crowd.Show(1, 1, 1.7F, walking: true);
+            crowd.Show(2, 2, 1.7F, walking: false);
+            crowd.Show(3, 3, 1.7F, walking: true);
+            Publish(crowd);
+        }
+    }
+
+    [Fact]
+    public void A_blink_closes_stays_shut_and_opens_and_a_seed_blinks_alike_in_every_run_within_its_interval()
+    {
+        SplatBlinks blinks = new(2F, 6F, .06F, .15F, .1F);
+        Assert.Equal(.31F, blinks.Seconds, 5);
+        Assert.Equal([0F, .5F, 1F, 1F, 1F, .5F, 0F, 0F], new[] { -.01F, .03F, .06F, .1F, .2F, .26F, .31F, 1F }.Select(at => blinks.Closure(at)), new FloatTolerance(1e-5F));
+        // A clock's blinks are its seed's: two clocks of one seed agree, another seed's differ.
+        float[] Run(int seed)
+        {
+            SplatBlinkClock clock = blinks.Clock(seed);
+            return [.. Enumerable.Range(0, 3000).Select(_ => clock.Step(.01F))];
+        }
+        float[] one = Run(11);
+        Assert.Equal(one, Run(11));
+        Assert.NotEqual(one, Run(12));
+        // The first blink starts within the longest interval; each later one 2 to 6 seconds after the last ends.
+        int[] starts = [.. Enumerable.Range(1, one.Length - 1).Where(at => one[at] > 0 && one[at - 1] == 0)];
+        Assert.True(starts[0] * .01F <= 6F + .01F, $"first at {starts[0] * .01F}");
+        Assert.All(starts.Zip(starts.Skip(1)), pair => Assert.InRange((pair.Second - pair.First) * .01F, 2F + .31F - .02F, 6F + .31F + .02F));
+        Assert.InRange(starts.Length, 4, 15);
+
+        Assert.Throws<ArgumentException>(() => new SplatBlinks(0F, 6F, .06F, .15F, .1F).Validate());
+        Assert.Throws<ArgumentException>(() => new SplatBlinks(6F, 2F, .06F, .15F, .1F).Validate());
+        Assert.Throws<ArgumentException>(() => new SplatBlinks(2F, 6F, 0F, 0F, 0F).Validate());
+        Assert.Throws<ArgumentOutOfRangeException>(() => blinks.Clock(1).Step(-1F));
+    }
+
+    private sealed class FloatTolerance(float tolerance) : IEqualityComparer<float>
+    {
+        public bool Equals(float x, float y) => MathF.Abs(x - y) <= tolerance;
+        public int GetHashCode(float value) => 0;
+    }
+
     /// <summary>What the site appearance does with the snapshot the crowd showed walkers in.</summary>
     private static void Publish(SplatCrowd crowd)
     {
@@ -277,6 +378,10 @@ public sealed class SplatCrowdTests
                     AnimationPoseSampleRequest sample = (AnimationPoseSampleRequest)args![0]!;
                     Calls.Add($"sample {sample.Instance.Handle.Value}{(sample.UseCurrentPlayback ? " now" : "")}{(sample.ApplyPoseControls ? "" : " without controls")}");
                     return new ReadOnlyMemory<JointPose>(Pose);
+                case nameof(IAnimationService.SetSplatGroupTint):
+                    SplatGroupTintRequest tint = (SplatGroupTintRequest)args![0]!;
+                    Calls.Add($"tint {tint.Instance.Handle.Value} group {tint.Group} to {tint.Target.R:0.##},{tint.Target.G:0.##},{tint.Target.B:0.##} by {tint.Weight:0.###}");
+                    return null;
                 case nameof(IAnimationService.SetPose):
                     AnimationPoseRequest pose = (AnimationPoseRequest)args![0]!;
                     Calls.Add($"pose {pose.Instance.Handle.Value} places {pose.Overrides.Length} in {string.Join(",", pose.Overrides.ToArray().Select(o => o.Space).Distinct())}");

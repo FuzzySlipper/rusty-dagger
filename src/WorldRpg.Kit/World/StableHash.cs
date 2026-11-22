@@ -21,6 +21,18 @@ public static class StableHash
         return hash;
     }
 
+    /// <summary>
+    /// The hash with its bits mixed through (MurmurHash3's finalizer), for drawing from: FNV-1a's low bits follow the
+    /// value's last characters, so keys that differ only in a seed's low digits would otherwise draw alike.
+    /// </summary>
+    public static ulong Mixed(ReadOnlySpan<char> value)
+    {
+        ulong mixed = Fnv1a64(value);
+        mixed = (mixed ^ mixed >> 33) * 0xFF51AFD7ED558CCDUL;
+        mixed = (mixed ^ mixed >> 33) * 0xC4CEB9FE1A85EC53UL;
+        return mixed ^ mixed >> 33;
+    }
+
     /// <summary>The hash, with zero (reserved by identity owners as "none") replaced by one.</summary>
     public static ulong NonZeroFnv1a64(ReadOnlySpan<char> value)
     {

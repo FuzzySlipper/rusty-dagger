@@ -6,11 +6,11 @@ namespace WorldRpg.Kit.Presentation;
 /// <summary>
 /// A Gaussian-splat character walkers are drawn as: its animated appearance (in metres, standing on y = 0 and facing +z),
 /// which every walker draws as an instance of; the walks and idles a walker may play as it, each walker playing one of
-/// each (<see cref="Gait"/>); the crossfade between the two; and its long skirt on joints of its own, which the legs push
-/// open, or null.
+/// each (<see cref="Gait"/>); the crossfade between the two; its long skirt on joints of its own, which the legs push
+/// open, or null; and its eyes, which blink, or null.
 /// </summary>
 public sealed record SplatFigure(string Name, Appearance Appearance, IReadOnlyList<SplatWalk> Walks, IReadOnlyList<string> Idles, float CrossfadeSeconds,
-    SplatSkirtRig? Skirt = null)
+    SplatSkirtRig? Skirt = null, SplatEyes? Eyes = null)
 {
     /// <summary>
     /// The gait a walker of stable <paramref name="seed"/> has as this figure: one of its walks and one of its idles, and
@@ -24,14 +24,8 @@ public sealed record SplatFigure(string Name, Appearance Appearance, IReadOnlyLi
         return new(Walks[(int)(Draw("walk") % (ulong)Walks.Count)], Idles[(int)(Draw("idle") % (ulong)Idles.Count)],
             1F + jitter * (Draw("rate") % 10001 / 5000F - 1F));
 
-        // The hash's low bits follow the seed's own (the seed % 4 that picks a townsperson's art among four), so it is mixed through first.
-        ulong Draw(string what)
-        {
-            ulong mixed = StableHash.Fnv1a64($"splat-gait/{what}/{seed}");
-            mixed = (mixed ^ mixed >> 33) * 0xFF51AFD7ED558CCDUL;
-            mixed = (mixed ^ mixed >> 33) * 0xC4CEB9FE1A85EC53UL;
-            return mixed ^ mixed >> 33;
-        }
+        // Mixed, since the hash's low bits would follow the seed's own (the seed % 4 that picks a townsperson's art among four).
+        ulong Draw(string what) => StableHash.Mixed($"splat-gait/{what}/{seed}");
     }
 }
 
@@ -64,7 +58,10 @@ public readonly record struct SplatGait(SplatWalk Walk, string Idle, float Rate)
 /// its instance replaced, and one a snapshot leaves out has its instance released before that snapshot is published:
 /// the Engine refuses a pose for an object that now shows a sprite. A figure with a skirt has each walker's skirt
 /// driven on its own sheet: each settle moves it on by the time <see cref="Advance"/> gave since the last, from where the
-/// walker's clips put its legs as that settle is drawn, and places the skirt joints over the clips.
+/// walker's clips put its legs as that settle is drawn, and places the skirt joints over the clips. While the crowd
+/// blinks (<see cref="Blink"/>), a figure with eyes has each walker blink on its own clock, keyed by its seed: each settle
+/// moves the clock on by the same time and tints the eyes toward the lids by how shut they are, telling the Engine only
+/// when that changes.
 /// </summary>
 public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> seeds, float jitter) : IWalkerCrowd, IDisposable
 {
@@ -74,6 +71,9 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
     private static readonly Transform Unplaced = new(System.Numerics.Vector3.Zero, System.Numerics.Quaternion.Identity, System.Numerics.Vector3.One);
     private float seconds;
     private bool disposed;
+
+    /// <summary>How walkers with eyes blink, or null while they don't.</summary>
+    public SplatBlinks? Blinks { get; private set; }
 
     /// <summary>The figure walkers are drawn as, or null while they show their own art.</summary>
     public SplatFigure? Figure { get; private set; }
@@ -112,7 +112,18 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
         Own = figures;
     }
 
-    /// <summary>Counts <paramref name="elapsed"/> seconds of drawn time toward the next settle, which moves the skirts on by them.</summary>
+    /// <summary>
+    /// Has walkers with eyes blink as <paramref name="blinks"/> from the next settle, or (null) keep their eyes open: each
+    /// walker's clock starts again, and lids shut now open at that settle.
+    /// </summary>
+    public void Blink(SplatBlinks? blinks)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        Blinks = blinks;
+        foreach (Walker walker in shown.Values) walker.Blink = null;
+    }
+
+    /// <summary>Counts <paramref name="elapsed"/> seconds of drawn time toward the next settle, which moves the skirts and blinks on by them.</summary>
     public void Advance(float elapsed)
     {
         if (!float.IsFinite(elapsed) || elapsed < 0) throw new ArgumentOutOfRangeException(nameof(elapsed), elapsed, "Drawn time advances by 0 or more seconds.");
@@ -124,14 +135,17 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
         if (disposed || (assigned.TryGetValue(actor, out SplatFigure? given) ? given : Figure ?? Own?.Invoke(actor)) is not { } figure) return null;
         seen.Add(id);
         if (!shown.TryGetValue(id, out Walker? walker))
-            shown[id] = walker = new(figure, figure.Gait(seeds(actor), jitter), Engine.CreateInstance(new(figure.Appearance, id)));
+            shown[id] = walker = new(figure, seeds(actor), figure.Gait(seeds(actor), jitter), Engine.CreateInstance(new(figure.Appearance, id)));
         else if (walker.Figure != figure)
         {
             walker.Instance = Engine.ReplaceInstance(walker.Instance, new(figure.Appearance, id));
             walker.Figure = figure;
-            walker.Gait = figure.Gait(seeds(actor), jitter);
+            walker.Gait = figure.Gait(walker.Seed, jitter);
             walker.Played = null;
             walker.Skirt = null;
+            // The new instance draws its eyes open.
+            walker.Blink = null;
+            walker.Closure = 0;
         }
         walker.Wanted = walking ? walker.Gait.Walk.Clip : walker.Gait.Idle;
         return figure.Appearance;
@@ -163,17 +177,40 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
                 !fades, fades ? walker.Figure.CrossfadeSeconds : 0F, fades, 0F));
             walker.Played = walker.Wanted;
         }
-        DriveSkirts();
+        float elapsed = seconds;
+        seconds = 0;
+        DriveSkirts(elapsed);
+        DriveBlinks(elapsed);
     }
 
     /// <summary>
-    /// Moves every shown skirt on by the time since the last settle. The legs are read from the Engine and the joints placed
+    /// Moves every shown walker's blink on by <paramref name="elapsed"/> and tints its eyes by how shut they are, where that
+    /// changed. A walker's clock starts at its first settle while the crowd blinks; without blinks its eyes open.
+    /// </summary>
+    private void DriveBlinks(float elapsed)
+    {
+        foreach (Walker walker in shown.Values)
+        {
+            if (walker.Figure.Eyes is not { } eyes) continue;
+            float closure = 0;
+            if (Blinks is { } blinks)
+            {
+                bool started = walker.Blink is not null;
+                walker.Blink ??= blinks.Clock(walker.Seed);
+                closure = walker.Blink.Step(started ? elapsed : 0);
+            }
+            if (closure == walker.Closure) continue;
+            Engine.SetSplatGroupTint(new(walker.Instance, eyes.Group, eyes.Lid, closure));
+            walker.Closure = closure;
+        }
+    }
+
+    /// <summary>
+    /// Moves every shown skirt on by <paramref name="elapsed"/>, the time since the last settle. The legs are read from the Engine and the joints placed
     /// on this update; the sheets between, which read nothing else, step side by side on the thread pool.
     /// </summary>
-    private void DriveSkirts()
+    private void DriveSkirts(float elapsed)
     {
-        float elapsed = seconds;
-        seconds = 0;
         List<(Walker Walker, JointPose[] Pose)> driven = [];
         foreach (Walker walker in shown.Values)
         {
@@ -206,9 +243,11 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
         catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
-    private sealed class Walker(SplatFigure figure, SplatGait gait, AnimationInstance instance)
+    private sealed class Walker(SplatFigure figure, int seed, SplatGait gait, AnimationInstance instance)
     {
         internal SplatFigure Figure { get; set; } = figure;
+        /// <summary>The walker's stable seed, which keys its gait and its blinks.</summary>
+        internal int Seed { get; } = seed;
         internal SplatGait Gait { get; set; } = gait;
         internal AnimationInstance Instance { get; set; } = instance;
         /// <summary>The clip the latest snapshot asked for, and the one played; null before the first play.</summary>
@@ -216,5 +255,9 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
         internal string? Played { get; set; }
         /// <summary>The walker's skirt, from its first settle as a figure with one.</summary>
         internal SplatSkirtSheet? Skirt { get; set; }
+        /// <summary>The walker's blinks, from its first settle while the crowd blinks a figure with eyes.</summary>
+        internal SplatBlinkClock? Blink { get; set; }
+        /// <summary>How shut its eyes were last drawn: 0 open, 1 shut.</summary>
+        internal float Closure { get; set; }
     }
 }

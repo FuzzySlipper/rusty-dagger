@@ -26,6 +26,9 @@ public interface IDeveloperPeopleCommands : IDebugCommandModule
     [DebugCommand("people.splat-pace", Description = "Developer: walkers drawn in a long skirt walk at their skirt walk's own pace, slower than the rest (slow), or play it faster to keep the walkers' pace (clip), for this run; the tuning's splatPeople holds the shipped pace.")]
     DebugCommandResult SplatPace(string pace);
 
+    [DebugCommand("people.splat-blinks", Description = "Developer: gsplat people whose characters have eyes blink on their own seeded clocks (on, the tuning's splatPeople.blinks) or keep their eyes open (off), for this run.")]
+    DebugCommandResult SplatBlinks(string state);
+
     [DebugCommand("people.splat-shadow", Description = "Developer: cast the gsplat people into the sun's shadow as none, ellipsoids (one a joint) or splats (their own silhouette), for this run; the tuning's splatPeople holds the shipped caster.")]
     DebugCommandResult SplatShadow(string caster);
 }

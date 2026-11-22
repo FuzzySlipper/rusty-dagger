@@ -118,11 +118,11 @@ internal sealed record DaggerfallSplatPeople(IReadOnlyDictionary<string, Daggerf
 /// <summary>
 /// One gsplat character: what asset-pipeline calls it, the classic townsperson art it draws (a texture archive, which
 /// walkers wearing it draw as this character), its skinned-splat GLB (metres, standing on y = 0, facing +z), the
-/// pelvis fit of each clip it plays to its legs, by clip, the colours of its own paint a pixel finish may snap to, and
-/// its long skirt, or null.
+/// pelvis fit of each clip it plays to its legs, by clip, the colours of its own paint a pixel finish may snap to, its
+/// long skirt, or null, and its eyes (the splat group its eye Gaussians are in, and its lids' colour), which blink, or null.
 /// </summary>
 internal sealed record DaggerfallSplatPerson(string Name, int Archive, DaggerfallArtFile Body, IReadOnlyDictionary<string, DaggerfallSplatClipFit> Fits,
-    IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null);
+    IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null, SplatEyes? Eyes = null);
 
 /// <summary>
 /// A clip's pelvis fit: the top joint's translation t becomes (<paramref name="Scale"/> t.x, <paramref name="Lift"/> +
@@ -807,7 +807,7 @@ internal sealed class DaggerfallArtReplacements
                         fit.Value.TryGetProperty("speed", out JsonElement speed) ? speed.GetSingle() : null), StringComparer.Ordinal),
                     [.. character.Value.GetProperty("palette").EnumerateArray().Select(colour => Color.FromSrgbHex(
                         int.Parse(colour.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))],
-                    Skirt(character.Name, character.Value));
+                    Skirt(character.Name, character.Value), Eyes(character.Name, character.Value));
                 if (person.Palette.Count is 0 or > 256)
                     throw new InvalidOperationException($"Content pack '{packId}' gives splat person {character.Name} {person.Palette.Count} palette colours, not 1 to 256.");
                 // Every clip a walker of it may play is fitted to its legs, a walk with the speed its stride travels.
@@ -839,6 +839,19 @@ internal sealed class DaggerfallArtReplacements
                 if (name != "idles" && splats.GetProperty("idles").EnumerateArray().Select(clip => clip.GetString()).FirstOrDefault(set.Contains) is { } both)
                     throw new InvalidOperationException($"Content pack '{packId}' states clip {both} as one of the splat people's {name} and one of their idles.");
                 return set;
+            }
+
+            // Its eyes, as asset-pipeline marked them: the splat group (1 to 255) of the Gaussians that paint them, and the lids'
+            // sRGB colour, which the Engine's group tint takes as it is, not as linear light.
+            SplatEyes? Eyes(string id, JsonElement character)
+            {
+                if (!character.TryGetProperty("eyes", out JsonElement eyes)) return null;
+                int group = eyes.GetProperty("group").GetInt32();
+                string lid = eyes.GetProperty("lid").GetString()!;
+                if (group is < 1 or > 255 || lid.Length != 7 || lid[0] != '#' || !int.TryParse(lid.AsSpan(1), System.Globalization.NumberStyles.HexNumber,
+                        System.Globalization.CultureInfo.InvariantCulture, out int rgb))
+                    throw new InvalidOperationException($"Content pack '{packId}' gives splat person {id} eyes in group {group} with lids '{lid}'; eyes are a group of 1 to 255 with lids #rrggbb.");
+                return new((byte)group, new(((rgb >> 16) & 0xFF) / 255F, ((rgb >> 8) & 0xFF) / 255F, (rgb & 0xFF) / 255F, 1F));
             }
 
             // A long skirt on joints of its own, as asset-pipeline's rig laid it out: a cloth sheet on two tiers, or a ring on one.

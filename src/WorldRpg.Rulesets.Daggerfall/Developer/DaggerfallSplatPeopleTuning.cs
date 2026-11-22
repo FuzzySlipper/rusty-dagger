@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Rusty.Engine;
+using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -12,13 +13,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <paramref name="ShadowCaster"/>: an ellipsoid a joint, their own Gaussians (their silhouette), or nothing. A walker
 /// drawn in a long skirt walks a skirt walk: <paramref name="SkirtsSlow"/> walks it at that clip's own pace, slower
 /// than the other walkers ("slow"), and otherwise plays the clip faster to keep the walkers' pace ("clip"). Each walker's
-/// clips play, and it walks, at a rate up to <paramref name="GaitJitter"/> either side of 1, by its seed.
-/// people.splat-look, people.splat-shadow and people.splat-pace change them for a run.
+/// clips play, and it walks, at a rate up to <paramref name="GaitJitter"/> either side of 1, by its seed. A walker drawn as
+/// a character with eyes blinks as <paramref name="Blinks"/> says, on its own seeded clock.
+/// people.splat-look, people.splat-shadow, people.splat-pace and people.splat-blinks change them for a run.
 /// </summary>
 internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCoverage, bool OwnPalette, float PoseRate, float LightFloor,
-    float CrossfadeSeconds, SplatShadowCaster ShadowCaster, bool SkirtsSlow, float GaitJitter)
+    float CrossfadeSeconds, SplatShadowCaster ShadowCaster, bool SkirtsSlow, float GaitJitter, SplatBlinks Blinks)
 {
-    internal static DaggerfallSplatPeopleTuning Default { get; } = new(3, .5F, false, 0F, .15F, .25F, SplatShadowCaster.Ellipsoids, SkirtsSlow: true, GaitJitter: .06F);
+    internal static DaggerfallSplatPeopleTuning Default { get; } = new(3, .5F, false, 0F, .15F, .25F, SplatShadowCaster.Ellipsoids, SkirtsSlow: true, GaitJitter: .06F,
+        Blinks: new(2F, 6F, .06F, .15F, .1F));
 
     /// <summary>Whether long skirts walk slow, by the tuning and command name: slow or clip.</summary>
     internal static bool? Slow(string pace) => pace switch
@@ -43,6 +46,7 @@ internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCo
             || !(LightFloor is >= 0 and <= 1) || !float.IsFinite(CrossfadeSeconds) || CrossfadeSeconds < 0 || !(GaitJitter is >= 0 and < .5F))
             throw new ArgumentException($"The gsplat people draw on a pixel grid of 0 to 16, a coverage above 0 to 1, their own palette only on a grid, " +
                 $"a pose rate and crossfade of 0 or more, a light floor of 0 to 1 and a gait jitter of 0 to under 0.5, not {this}.");
+        Blinks.Validate();
         return this;
     }
 
@@ -53,5 +57,13 @@ internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCo
             $"The gsplat people cast shadows as none, ellipsoids or splats, not '{e.GetProperty("shadowCaster").GetString()}'."),
         Slow(e.GetProperty("skirtedPace").GetString()!) ?? throw new ArgumentException(
             $"Long-skirted gsplat people walk slow or clip, not '{e.GetProperty("skirtedPace").GetString()}'."),
-        e.GetProperty("gaitJitter").GetSingle()).Validate();
+        e.GetProperty("gaitJitter").GetSingle(), ReadBlinks(e.GetProperty("blinks"))).Validate();
+
+    private static SplatBlinks ReadBlinks(JsonElement e)
+    {
+        JsonElement interval = e.GetProperty("intervalSeconds");
+        if (interval.GetArrayLength() != 2) throw new ArgumentException($"The gsplat people's blinks come every [least, most] seconds, not {interval}.");
+        return new(interval[0].GetSingle(), interval[1].GetSingle(), e.GetProperty("closingSeconds").GetSingle(), e.GetProperty("closedSeconds").GetSingle(),
+            e.GetProperty("openingSeconds").GetSingle());
+    }
 }

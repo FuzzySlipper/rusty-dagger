@@ -423,6 +423,13 @@ public sealed class DaggerfallPeopleSwitchTests
     }
 
     [Fact]
+    public void Every_character_in_the_art_set_has_its_eyes_marked_so_every_walker_blinks()
+    {
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        Assert.All(splats.Characters, character => Assert.True(character.Value.Eyes is { Group: 1, Lid.A: 1F }, $"{character.Key} has eyes {character.Value.Eyes}."));
+    }
+
+    [Fact]
     public void The_art_set_states_the_six_long_skirts_on_their_joints_each_walking_the_skirt_walks()
     {
         DaggerfallSplatPeople splats = Art().SplatPeople!;
@@ -567,6 +574,83 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Equal(1F, walker.Wander.Pace);
     }
 
+    [Fact]
+    public void Walkers_drawn_as_a_character_with_eyes_blink_on_their_own_clocks_until_splat_blinks_off_and_one_without_is_said_once()
+    {
+        // 385 has eyes marked; every other character none, whatever the shipped art carries.
+        DaggerfallSplatPeople splats = Art(characters =>
+        {
+            foreach ((string _, System.Text.Json.Nodes.JsonNode? character) in characters) character!.AsObject().Remove("eyes");
+            characters["385"]!["eyes"] = new System.Text.Json.Nodes.JsonObject { ["group"] = 1, ["lid"] = "#C08070" };
+        }).SplatPeople!;
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = Clips(splats);
+        List<string> warnings = [];
+        // Walkers 10 and 14 wear 385's art, 11 wears 386's (drawn by 386-C, which has no eyes).
+        Dictionary<long, int?> worn = new() { [10] = 385, [11] = 386, [14] = 385 };
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, splats, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385, 386], id => worn[id],
+            actor => (int)actor, () => true, warnings.Add);
+
+        // The lids are the marked sRGB colour as it is, which the Engine's group tint takes, not converted to linear light.
+        Assert.Equal(new SplatEyes(1, new Color(0xC0 / 255F, 0x80 / 255F, 0x70 / 255F, 1F)), splats.Characters["385"].Eyes);
+        Assert.Null(splats.Characters["386-C"].Eyes);
+
+        // 20 seconds of 20 ms updates: each 385 walker blinks on its own clock, shutting fully, toward its lids; 386-C never.
+        Run(1000);
+        Assert.Equal([$"Gsplat characters {string.Join(", ", splats.Characters.Keys.Where(id => id != "385").Order(StringComparer.Ordinal))} have no eyes marked, so walkers drawn as them don't blink."],
+            warnings);
+        ulong[] seeing = [.. animation.Tints.Select(tint => tint.Instance.Handle.Value).Distinct().Order()];
+        Assert.Equal(2, seeing.Length);
+        Assert.All(animation.Tints, tint => Assert.Equal((1, splats.Characters["385"].Eyes!.Lid), (tint.Group, tint.Target)));
+        Assert.All(animation.Tints, tint => Assert.InRange(tint.Weight, 0F, 1F));
+        foreach (ulong instance in seeing)
+            Assert.InRange(animation.Tints.Count(tint => tint.Instance.Handle.Value == instance && tint.Weight == 1F), 3, 10);
+        Assert.NotEqual(Weights(seeing[0]), Weights(seeing[1]));
+
+        // people.splat-blinks off opens any shut lid and blinks no more; on blinks again; anything else is refused.
+        Assert.Equal("people.splat-blinks takes on or off.", people.SplatBlinks("shut").Message);
+        Assert.Equal("Gsplat people keep their eyes open.", people.SplatBlinks("off").Message);
+        Run(1);
+        Assert.All(seeing, instance => Assert.Equal(0F, animation.Tints.Last(tint => tint.Instance.Handle.Value == instance).Weight));
+        int count = animation.Tints.Count;
+        Run(500);
+        Assert.Equal(count, animation.Tints.Count);
+        Assert.Equal("Gsplat people with eyes blink every 2 to 6 seconds, each on its own clock.", people.SplatBlinks("on").Message);
+        Run(500);
+        Assert.Contains(animation.Tints.Skip(count), tint => tint.Weight == 1F);
+        Assert.Single(warnings);
+
+        void Run(int updates)
+        {
+            for (int update = 0; update < updates; update++)
+            {
+                people.Show(100, 10, 1.7F, walking: true);
+                people.Show(101, 11, 1.7F, walking: true);
+                people.Show(104, 14, 1.7F, walking: false);
+                people.Advance(.02F);
+                people.Publishing();
+                people.Settle();
+            }
+        }
+
+        float[] Weights(ulong instance) => [.. animation.Tints.Where(tint => tint.Instance.Handle.Value == instance).Select(tint => tint.Weight)];
+    }
+
+    [Theory]
+    [InlineData(0, "#c08070")]
+    [InlineData(256, "#c08070")]
+    [InlineData(1, "c08070")]
+    [InlineData(1, "#c0807")]
+    [InlineData(1, "#c0807g")]
+    public void Eyes_outside_a_group_of_1_to_255_or_with_lids_not_rrggbb_are_refused_naming_the_character(int group, string lid)
+    {
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => Art(characters =>
+            characters["385"]!["eyes"] = new System.Text.Json.Nodes.JsonObject { ["group"] = group, ["lid"] = lid }));
+        Assert.Equal($"Content pack 'daggerfall.art-replacements' gives splat person 385 eyes in group {group} with lids '{lid}'; eyes are a group of 1 to 255 with lids #rrggbb.", refused.Message);
+    }
+
     private static DaggerfallPeopleSwitch Switch(DaggerfallArtReplacements art, PartsRigsRecorder rigs, AnimationRecorder animation)
     {
         ActorsState actors = new();
@@ -597,13 +681,17 @@ public sealed class DaggerfallPeopleSwitchTests
     /// <summary>Every clip the art set's packs carry, as the Engine reads them back from a body that bound them all, each named its own id.</summary>
     internal static AnimationClipInfo[] Clips(DaggerfallSplatPeople splats) => [.. splats.Clips.Keys.Select((clip, at) => new AnimationClipInfo(clip, clip, 3F, true, (uint)at + 1))];
 
-    /// <summary>The art set's people rig and gsplat townspeople alone: the rest of the refreshed set has no bearing on the switch.</summary>
-    internal static DaggerfallArtReplacements Art()
+    /// <summary>
+    /// The art set's people rig and gsplat townspeople alone: the rest of the refreshed set has no bearing on the switch.
+    /// <paramref name="characters"/> may change the gsplat characters as read, by id, first.
+    /// </summary>
+    internal static DaggerfallArtReplacements Art(Action<System.Text.Json.Nodes.JsonObject>? characters = null)
     {
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/payload.json")));
-        JsonElement section = payload.RootElement.GetProperty("artReplacements");
+        System.Text.Json.Nodes.JsonNode section = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot,
+            "content/worldrpg/packs/daggerfall.art-replacements/payload.json")))!["artReplacements"]!;
+        characters?.Invoke(section["splatPeople"]!["characters"]!.AsObject());
         return DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
-            $"{{\"artReplacements\": {{\"images\": [], \"peopleRig\": {section.GetProperty("peopleRig").GetRawText()}, \"splatPeople\": {section.GetProperty("splatPeople").GetRawText()}}}}}"),
+            $"{{\"artReplacements\": {{\"images\": [], \"peopleRig\": {section["peopleRig"]!.ToJsonString()}, \"splatPeople\": {section["splatPeople"]!.ToJsonString()}}}}}"),
             "daggerfall.art-replacements");
     }
 }

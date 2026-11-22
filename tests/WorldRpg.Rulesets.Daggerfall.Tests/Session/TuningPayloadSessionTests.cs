@@ -31,6 +31,20 @@ public sealed class TuningPayloadSessionTests
     }
 
     [Fact]
+    public void The_gsplat_people_blink_as_the_tuning_says_and_an_interval_that_could_never_end_is_refused()
+    {
+        string root = TestData.RepositoryRoot;
+        var loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning/daggerfall.defaults/payload.json")));
+        Assert.Equal(new WorldRpg.Kit.Presentation.SplatBlinks(2F, 6F, .06F, .15F, .1F), loaded.SplatPeople.Blinks);
+        var adjusted = DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["splatPeople"]!["blinks"]!["closedSeconds"] = .3));
+        Assert.Equal(.3F, adjusted.SplatPeople.Blinks.ClosedSeconds);
+        Assert.Throws<ArgumentException>(() => DaggerfallTuning.Read(MutatedTuning(root,
+            tuning => tuning["splatPeople"]!["blinks"]!["intervalSeconds"] = new System.Text.Json.Nodes.JsonArray(6, 2))));
+        Assert.Throws<ArgumentException>(() => DaggerfallTuning.Read(MutatedTuning(root,
+            tuning => tuning["splatPeople"]!["blinks"]!["intervalSeconds"] = new System.Text.Json.Nodes.JsonArray(0, 6))));
+    }
+
+    [Fact]
     public void The_attack_tunings_code_default_agrees_with_the_payload_including_its_paths_and_reach()
     {
         DaggerfallAttackTuning expected = DaggerfallAttackTuning.Default;

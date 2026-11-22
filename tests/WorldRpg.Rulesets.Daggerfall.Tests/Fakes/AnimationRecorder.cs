@@ -18,6 +18,7 @@ internal class AnimationRecorder : DispatchProxy
     internal List<SplatAppearanceRequest> Splats { get; } = [];
     internal List<AnimationInstanceRequest> InstanceRequests { get; } = [];
     internal List<AnimationPlaybackRequest> Playbacks { get; } = [];
+    internal List<SplatGroupTintRequest> Tints { get; } = [];
     internal List<Appearance> Created { get; } = [];
     internal int ReleasedAppearances { get; private set; }
     internal int Instances { get; private set; }
@@ -54,6 +55,7 @@ internal class AnimationRecorder : DispatchProxy
         nameof(IAnimationService.FitAnimationClipTranslation) => Record(Fits, (AnimationClipTranslationFitRequest)args![0]!),
         nameof(IAnimationService.SetSplatAppearance) => Record(Splats, (SplatAppearanceRequest)args![0]!),
         nameof(IAnimationService.SetPlayback) => Record(Playbacks, (AnimationPlaybackRequest)args![0]!),
+        nameof(IAnimationService.SetSplatGroupTint) => Record(Tints, (SplatGroupTintRequest)args![0]!),
         nameof(IAnimationService.UpdateAnimatedMeshMaterialFactors) => Factors((AnimatedMeshMaterialFactorsRequest)args![0]!),
         nameof(IAnimationService.ReadJointPose) => Live is { } live
             ? new AnimationJointPoseResult(live, ReadOnlyMemory<IkChainReach>.Empty, default, 0, true) : default(AnimationJointPoseResult),
