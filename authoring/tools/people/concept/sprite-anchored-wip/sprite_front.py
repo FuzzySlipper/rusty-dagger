@@ -77,7 +77,19 @@ def make_slate_canvas(sprite_png: Path, out_png: Path, width: int, height: int) 
     return out_png
 
 
-def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False) -> tuple[str, str]:
+def make_portrait_ref(portrait_png: Path, out_png: Path, size: int = 512, border_trim: int = 3) -> Path:
+    """Trim the classic gold frame border from a dialogue portrait and upscale cleanly for Stage 1."""
+    im = Image.open(portrait_png).convert("RGB")
+    if border_trim > 0 and im.width > border_trim * 4 and im.height > border_trim * 4:
+        im = im.crop((border_trim, border_trim, im.width - border_trim, im.height - border_trim))
+    scale = max(1, int(round(size / max(im.width, im.height, 1))))
+    big = im.resize((im.width * scale, im.height * scale), Image.NEAREST)
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+    big.save(out_png)
+    return out_png
+
+
+def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False, portrait_only: bool = False) -> tuple[str, str]:
     pos = "his" if pronoun == "He" else ("her" if pronoun == "She" else "its")
     face_q = (
         "If wearing a hood, paint a real shadowed face inside the deep hood—brow and eyes recessed in dark-umber shadow while "
@@ -116,6 +128,33 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
         f"wide 30-degree A-pose well away from {pos} sides, leaving a wide clear gap of background between each arm, hand and "
         f"{pos} waist/pouches; hands open and empty (no weapon or staff). "
     )
+    if portrait_only:
+        qwen_p = (
+            "Task: Paint a full-length high-resolution dark-fantasy character turnaround sheet for the character whose face is "
+            "shown in the small classic RPG portrait reference. Reconstruct natural high-resolution anatomy and costume detail; "
+            "do not enlarge or trace the pixel blocks, and do not crop to a bust or close-up portrait.\n\n"
+            "Input image: facial likeness, hair, skin tone, age and collar colour cue ONLY. Faithfully preserve this character's "
+            "exact face, hair, skin tone and age while painting their full standing body from head to toe in a clean symmetrical "
+            f"30-degree wide-A turnaround pose with empty open hands. {face_q}\n\n"
+            f"Subject and composition: {brief.rstrip('.')}. {stance}\n\n"
+            "Style: ART DIRECTION — VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\n"
+            "Draw the character as an accomplished pen-and-ink dark-fantasy character sheet in the tradition of Akihiko Yoshida "
+            "(Vagrant Story) and classic tabletop RPG manuals, finished with opaque muted gouache washes. Build a confident underlying "
+            "ink drawing with crisp seams, dark-umber contours, fine directional crosshatching inside folds, and opaque local colour "
+            "washes without glossy 3D shading.\n\n"
+            "Presentation: Full-length isolated standing figure from head to shoes filling ~88% of the vertical portrait frame on a "
+            "perfectly flat solid dark slate grey background, RGB 48,52,59. Soft overhead light equal on both sides. No floor, no cast shadow, no border."
+        )
+        krea_p = (
+            "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+            "Drawn and painted as a vivid, punchy 1990s PC fantasy role-playing game character sheet: confident dark-umber pen-and-ink "
+            "contour lines, fine crosshatching only inside cloth folds and overhangs equally on both sides, and opaque matte gouache "
+            f"colour planes (4 to 6 painted value groups per material). {face_q}"
+            "Plain flat dark slate-grey background, RGB 48,52,59, no floor or border.\n\n"
+            f"Subject and composition: {brief.rstrip('.')}. {stance}"
+        )
+        return qwen_p, krea_p
+
     qwen_p = (
         "Task: Redraw a very small classic fantasy RPG sprite as newly illustrated high resolution art. "
         "Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\n"
@@ -145,11 +184,14 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("id", help="Character id (looked up in briefs.json unless --brief is given)")
-    ap.add_argument("--sprite", required=True, type=Path, help="Classic front sprite PNG (transparent RGBA)")
+    ap.add_argument("--sprite", type=Path, default=None, help="Classic front sprite PNG (transparent RGBA)")
+    ap.add_argument("--portrait", type=Path, default=None, help="Classic dialogue portrait PNG (implies --portrait-only)")
     ap.add_argument("--brief", default="", help="Override costume brief text")
     ap.add_argument("--pronoun", choices=["He", "She", "It"], default="He")
     ap.add_argument("--hooded-shadow", action="store_true", help="Keep brow/eyes shadowed inside deep hood without pitch-black void")
     ap.add_argument("--style-only", action="store_true", help="Direct high-res style transfer preserving the sprite's exact pose, props, and composition (no wide-A turnaround or overhead-lighting prep)")
+    ap.add_argument("--portrait-only", action="store_true", help="Anchor face/hair/identity on a dialogue portrait while generating a full-length wide-A turnaround body from the brief")
+    ap.add_argument("--portrait-trim", type=int, default=3, help="Pixels to trim off each edge of a classic framed portrait (default 3)")
     ap.add_argument("--seeds", default="42201,42202,42203")
     ap.add_argument("--denoise", type=float, default=0.38, help="Stage 2 Krea2 New B denoise (0.38=grittier ink, 0.46=more Brom/Elmore)")
     ap.add_argument("--width", type=int, default=832)
@@ -167,12 +209,22 @@ def main():
         brief = briefs[args.id]["brief"]
         pronoun = briefs[args.id].get("pronoun", pronoun)
 
+    portrait_only = args.portrait_only or (args.portrait is not None)
+    if args.style_only and portrait_only:
+        raise SystemExit("Cannot combine --style-only with --portrait / --portrait-only")
+    ref_src = args.portrait or args.sprite
+    if ref_src is None:
+        raise SystemExit("Pass --sprite PATH or --portrait PATH")
+
     out = (args.out or (DEFAULT_OUTPUT / f"{args.id}-sa")).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    canvas = make_slate_canvas(args.sprite.resolve(), out / f"sprite_{args.width}x{args.height}.png", args.width, args.height)
+    if portrait_only:
+        canvas = make_portrait_ref(ref_src.resolve(), out / "portrait_ref.png", border_trim=args.portrait_trim)
+    else:
+        canvas = make_slate_canvas(ref_src.resolve(), out / f"sprite_{args.width}x{args.height}.png", args.width, args.height)
     up_spr = comfy_upload(args.comfy, canvas, f"sa-{args.id}-{canvas.name}")
 
-    qwen_p, krea_p = build_prompts(brief, pronoun, args.hooded_shadow, style_only=args.style_only)
+    qwen_p, krea_p = build_prompts(brief, pronoun, args.hooded_shadow, style_only=args.style_only, portrait_only=portrait_only)
     wf2 = json.loads(WF_TEMPLATE.read_text())
 
     s1_keys = ["1_load_sprite", "2_qwen_unet", "3_qwen_clip", "4_qwen_vae", "5_qwen_cache",
