@@ -145,4 +145,13 @@ public sealed class DaggerfallNearbySpawnTests
         string report = Assert.Single(stage.Reports);
         Assert.StartsWith("The start's foes fire-daedra were not brought: No clear floor within 4 m", report, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void No_published_actor_is_a_townsperson_so_world_spawn_never_brings_one_with_a_look_of_its_own()
+    {
+        // Townsfolk come only from a town's source population, dressed by its climate's race; world.spawn brings actor definitions.
+        Assert.DoesNotContain(TestPayload.Definitions.Actors.Values, definition => definition.Kind == DaggerfallActorKinds.Civilian);
+        using Stage stage = new();
+        Assert.Equal("'civilian' is no actor definition that can be spawned.", stage.Spawn.Bring(DaggerfallActorKinds.Civilian, 1, 5F).Refusal);
+    }
 }

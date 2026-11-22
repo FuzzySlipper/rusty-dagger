@@ -257,6 +257,36 @@ public sealed class DaggerfallPeopleSwitchTests
     }
 
     [Fact]
+    public void Staged_walkers_keep_drawing_as_the_character_of_their_own_townsperson_art()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        using ActorsState actors = new();
+        actors.CreatePlayer(1, new Rusty.Engine.Entities.EntityTypeId("player"), new Rusty.Engine.Mechanics.StatsComponent(), "health");
+        foreach ((long id, float distance) in new[] { (10L, 12F), (11L, 15F) })
+        {
+            ActorState civilian = actors.CreateActor(id, new Rusty.Engine.Entities.EntityTypeId(DaggerfallActorKinds.Civilian),
+                new Rusty.Engine.Mechanics.StatsComponent(), new ActorPose(new WorldPoint(distance, 0F, 0F), 0F), "health");
+            civilian.Stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(new Rusty.Engine.Mechanics.Stat(1), 1));
+            civilian.Actor.Add(new WorldRpg.Kit.Ai.WanderMemoryComponent());
+        }
+        Dictionary<long, int?> worn = new() { [10] = 381, [11] = 395 };
+        DaggerfallPeopleStage stage = Stage(actors);
+        using DaggerfallPeopleSwitch people = new(null, splats, () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, stage, [381, 395], id => worn[id], () => true, _ => { });
+        Appearance townsman = people.Show(100, 10, 1.7F, walking: true)!, townswoman = people.Show(101, 11, 1.7F, walking: true)!;
+
+        // Staging moves them in front of the player; it never changes what they wear.
+        Assert.True(stage.Stage(2, 4, 2).Succeeded);
+        Assert.Same(townsman, people.Show(100, 10, 1.7F, walking: false));
+        Assert.Same(townswoman, people.Show(101, 11, 1.7F, walking: false));
+        Assert.True(stage.Cross(2, 4, 3).Succeeded);
+        Assert.Same(townsman, people.Show(100, 10, 1.7F, walking: true));
+        Assert.Equal([splats.Characters[splats.ByArchive[381]].Body.Path, splats.Characters[splats.ByArchive[395]].Body.Path], animation.OpenedPaths);
+    }
+
+    [Fact]
     public void A_session_that_yields_to_its_replacement_lets_go_of_its_walkers_and_characters_and_draws_sprites()
     {
         AnimationRecorder animation = AnimationRecorder.Create();

@@ -155,6 +155,13 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(saved.Npcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)),
             again.Npcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)));
         Assert.Equal(saved.DynamicActors.Select(actor => actor.EntityId), again.DynamicActors.Select(actor => actor.EntityId));
+        // Each townsperson comes back as who they were, so they wear the same townsperson art: their town's race, their gender and seed.
+        Assert.Equal(saved.Npcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)),
+            again.Npcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)));
+        long[] townsfolk = [.. session.State.Npcs.All.Where(DaggerfallCivilians.IsSourcePopulation).Select(npc => npc.DurableId)];
+        Assert.NotEmpty(townsfolk);
+        Assert.All(townsfolk, id => Assert.NotNull(session.Population.Townsperson(id)));
+        Assert.Equal(townsfolk.Select(session.Population.Townsperson), townsfolk.Select(restored.Population.Townsperson));
     }
 
     [Fact]

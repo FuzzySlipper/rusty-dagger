@@ -25,12 +25,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="suppressSpawns">Whether the player's form keeps new people from coming out (a beast form).</param>
 /// <param name="held">Whether a reaction holds an actor in place.</param>
 /// <param name="wander">Steps one admitted civilian's wander (the enemy behaviour module's).</param>
+/// <param name="report">Says, once a site, that its townsfolk stay away because its climate gives them no race.</param>
 internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, ActorsState actors, PlayerControlState player,
     DaggerfallDefinitions definitions, DaggerfallCivilianWanderTuning tuning, DaggerfallCivilians civilians,
     Func<DaggerfallSiteProfile> profile, Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteAppearance> appearance,
     Func<bool> locationLoaded, Func<bool> residencyInitialized, Func<WorldPoint, WorldPoint> profileToLocal, Func<Vector3, Vector3> localToProfile,
     Func<DaggerfallSiteId, DaggerfallSiteRecord> requireSite, Func<bool> isDay, Func<bool> suppressSpawns, Func<long, bool> held,
-    Action<ActorState, WanderPolicy, ulong, float> wander)
+    Action<ActorState, WanderPolicy, ulong, float> wander, Action<string> report)
 {
     private const byte FemalePopulationFlag = 0x20;
     // PopulationManager's source pool scales by the number of exterior blocks, then clamps
@@ -54,6 +55,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         NavigationMode: ActorNavigationMode.Ground,
         TurnRadiansPerSecond: float.DegreesToRadians(tuning.TurnDegreesPerSecond),
         EaseSeconds: tuning.EaseSeconds);
+    /// <summary>The sites already said to have no race, so each is said once.</summary>
+    private readonly HashSet<DaggerfallSiteId> raceless = [];
 
     /// <summary>
     /// Reconciles the active exterior's source population. Re-entry finds the same source key and
@@ -81,7 +84,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             return;
         }
 
-        string? race = ResolveRace(site, active.Population);
+        string? race = Race(site);
         if (race is null)
         {
             foreach (DaggerfallNpc npc in sourceNpcs) Hide(npc);
@@ -265,26 +268,19 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         return distance <= VisiblePopulationRangeMeters;
     }
 
-    private string? ResolveRace(DaggerfallSiteRecord site, IReadOnlyList<DaggerfallPopulationPlacement> placements)
+    /// <summary>
+    /// The race <paramref name="site"/>'s townsfolk are, as the donor's PopulationManager takes it: the People of the
+    /// climate cell the site lies in. A site whose climate names none, or a race the catalog lacks, has no townsfolk,
+    /// said once; no race is made up for it.
+    /// </summary>
+    private string? Race(DaggerfallSiteRecord site)
     {
         DaggerfallClimateCell climate = definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY);
-        if (!string.IsNullOrWhiteSpace(climate.People))
-        {
-            DaggerfallRaceDefinition? climateRace = definitions.Catalogs.Races.FirstOrDefault(race =>
-                StringComparer.OrdinalIgnoreCase.Equals(race.Id, climate.People));
-            if (climateRace is not null) return climateRace.Id;
-        }
-
-        // Older hand-authored fixtures may carry no importer People column. Their source faction
-        // still supplies a donor race when one placement names a published faction; no default race
-        // is invented when neither source has one.
-        foreach (DaggerfallPopulationPlacement placement in placements.OrderBy(value => value.Id, StringComparer.Ordinal))
-        {
-            if (placement.FactionId == 0 || !definitions.Factions.Factions.TryGetValue(placement.FactionId, out DaggerfallFactionDefinition? faction))
-                continue;
-            DaggerfallRaceDefinition? factionRace = definitions.Catalogs.Races.FirstOrDefault(race => race.DonorRaceId == faction.Race);
-            if (factionRace is not null) return factionRace.Id;
-        }
+        if (definitions.Catalogs.Races.FirstOrDefault(race => StringComparer.OrdinalIgnoreCase.Equals(race.Id, climate.People)) is { } race)
+            return race.Id;
+        if (raceless.Add(site.Id))
+            report($"{site.Name} ({site.Id}) has no townsfolk: its climate {climate.Value} ({climate.Name}) names " +
+                (string.IsNullOrWhiteSpace(climate.People) ? "no race for them." : $"the race '{climate.People}', which the race catalog lacks."));
         return null;
     }
 

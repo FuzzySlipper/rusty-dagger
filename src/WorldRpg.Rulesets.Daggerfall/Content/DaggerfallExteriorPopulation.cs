@@ -15,9 +15,10 @@ internal static class DaggerfallExteriorPopulation
         const float blockSide = DaggerfallWorldGrid.HorizontalSize / 8f;
         const float cellSize = blockSide / automapSide;
         var factions = definitions.Factions.Factions.Values;
+        // The people of the location's own region, as the donor's GetPeopleOfCurrentRegion finds them; a region with none
+        // (the player's ships) has no wandering townsfolk, never another region's.
         var people = factions.Where(faction => faction.Type == 15 && faction.Region == location.Id.Region && faction.Flats.Count != 0)
-            .OrderBy(faction => faction.Id).FirstOrDefault()
-            ?? factions.Where(faction => faction.Type == 15 && faction.Flats.Count != 0).OrderBy(faction => faction.Id).FirstOrDefault();
+            .OrderBy(faction => faction.Id).FirstOrDefault();
         if (people is null || location.Exterior is not { } exterior) return [];
         var blocks = exterior.Blocks.ToDictionary(block => (block.X, block.Y));
         var cells = clear.Where(cell => blocks.ContainsKey((cell.X / automapSide, cell.Z / automapSide)))

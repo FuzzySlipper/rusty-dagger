@@ -869,7 +869,9 @@ internal sealed partial class DaggerfallSession
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),
                 _site.Require, () => _time.Calendar.IsDay, () => State.RacialOverrides.Current?.SuppressPopulationSpawns == true,
-                id => _reactions.Holds(id), (actor, policy, step, deltaSeconds) => _ = _enemyBehavior.UpdateCivilian(actor, policy, step, deltaSeconds));
+                id => _reactions.Holds(id), (actor, policy, step, deltaSeconds) => _ = _enemyBehavior.UpdateCivilian(actor, policy, step, deltaSeconds),
+                message => engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
+                    "daggerfall.people", "population", message, string.Empty)));
             NpcProjection = new DaggerfallNpcProjection(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance,
                 () => _exterior.ActiveLocationLoaded, point => _exterior.ProfileToLocal(point));
             if (saved is null) _roster.GrantInitialAuthoredEquipment();

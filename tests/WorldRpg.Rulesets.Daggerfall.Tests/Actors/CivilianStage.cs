@@ -10,13 +10,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// The Actors civilian owners' inputs without the session: an NPC registry with its allocator, the Kit actors with the
 /// player, an exterior profile publishing one billboard and its appearance, and the roster's materialize (the actor factory's civilian), unload and retire recorded.
+/// The profile is of <paramref name="site"/> (the first exterior when null) and places <paramref name="population"/>.
 /// </summary>
 internal sealed class CivilianStage : IDisposable
 {
-    internal CivilianStage()
+    private readonly IReadOnlyList<DaggerfallPopulationPlacement> _population;
+
+    internal CivilianStage(DaggerfallSiteRecord? site = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        Site = definitions.Locations.Records.First(site => site.Exterior is not null);
+        Site = site ?? definitions.Locations.Records.First(site => site.Exterior is not null);
+        _population = population ?? [];
         Profile = At(DaggerfallWorldProfileKind.Exterior, "civilians");
         Look = new DaggerfallNpcAppearance("breton", "Male", 210, 4, 7, 0);
         ContentFake content = TestSessions.MediaContent(_releases);
@@ -36,7 +40,7 @@ internal sealed class CivilianStage : IDisposable
             [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new System.Numerics.Vector2(.5F, .5F), System.Numerics.Vector2.One);
         return new DaggerfallSiteProfile(new ProjectFacts(new WorldPoint(1f, 1f, 1f), new Dictionary<long, AuthoredActor>()), source.Geometry,
             source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, site: Site.Id, profileKind: kind,
-            logicalProfileId: logicalId, billboardSprites: new Dictionary<(int Archive, int Record), NormalizedBillboardSprite> { [(210, 4)] = billboard });
+            logicalProfileId: logicalId, billboardSprites: new Dictionary<(int Archive, int Record), NormalizedBillboardSprite> { [(210, 4)] = billboard }, population: _population);
     }
 
     /// <summary>The profile frame's offset from the scene's local frame.</summary>
