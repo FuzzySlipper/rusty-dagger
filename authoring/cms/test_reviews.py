@@ -17,19 +17,19 @@ class ReviewTests(TestCase):
                                lambda category, key: self.revision if category == "pipeline-assets" else None)
 
     def test_keys_distinguish_categories_and_preserve_unset_fields(self):
-        self.reviews.patch("flora", "500-12", {"note": "Leaf density", "rating": "bad"})
-        self.reviews.patch("flora", "500-12", {"marked": True})
-        self.reviews.patch("npcs", "500-12", {"note": "Other record", "marked": True})
-        self.assertEqual(self.store.clear_marks("flora"), 1)
-        flora = self.reviews.item("flora", "500-12")
+        self.reviews.patch("nature", "nature-500-12", {"note": "Leaf density", "rating": "bad"})
+        self.reviews.patch("nature", "nature-500-12", {"marked": True})
+        self.reviews.patch("props", "nature-500-12", {"note": "Other record", "marked": True})
+        self.assertEqual(self.store.clear_marks("nature"), 1)
+        flora = self.reviews.item("nature", "nature-500-12")
         self.assertEqual((flora["note"], flora["rating"], flora["marked"]), ("Leaf density", "bad", False))
-        self.assertTrue(self.reviews.item("npcs", "500-12")["marked"])
+        self.assertTrue(self.reviews.item("props", "nature-500-12")["marked"])
 
     def test_marks_notes_and_ratings_survive_reopen(self):
-        self.reviews.patch("mobiles", "mobile-128", {"marked": True, "rating": "good", "note": "Approved robe"})
+        self.reviews.patch("creatures", "creature-004", {"marked": True, "rating": "good", "note": "Approved robe"})
         store = ReviewStore(self.file)
-        self.assertEqual(store.rows("mobiles")[0]["note"], "Approved robe")
-        self.assertEqual(store.rows("mobiles")[0]["rating"], "good")
+        self.assertEqual(store.rows("creatures")[0]["note"], "Approved robe")
+        self.assertEqual(store.rows("creatures")[0]["rating"], "good")
 
     def test_changed_media_needs_review_but_keeps_notes_and_marks(self):
         key = "381/01-concept/front.png"
@@ -50,12 +50,18 @@ class ReviewTests(TestCase):
         self.assertIsNone(self.reviews.item("pipeline-assets", key)["rating"])
 
     def test_npc_merge_keeps_old_notes_and_includes_the_keeper_in_marked_records(self):
-        self.reviews.patch("npcs", "npc-332", {"marked": True, "note": "Keeper should retain this"})
+        self.reviews.patch("people", "npc-332", {"marked": True, "note": "Keeper should retain this"})
         self.aliases["npc-332"] = "npc-193"
-        row, = self.reviews.list("npcs")
+        row, = self.reviews.list("people")
         self.assertEqual(row["id"], "npc-193")
         self.assertEqual(row["related"][0]["note"], "Keeper should retain this")
         self.assertTrue(row["marked"])
-        self.reviews.patch("npcs", "npc-193", {"marked": False})
-        self.assertFalse(self.reviews.item("npcs", "npc-332")["marked"])
-        self.assertTrue(self.reviews.item("npcs", "npc-193")["related"])
+        self.reviews.patch("people", "npc-193", {"marked": False})
+        self.assertFalse(self.reviews.item("people", "npc-332")["marked"])
+        self.assertTrue(self.reviews.item("people", "npc-193")["related"])
+
+    def test_a_creature_found_by_its_mobile_id_shows_the_review_filed_under_it(self):
+        self.reviews.patch("creatures", "mobile-4", {"note": "Classic bear"})
+        self.aliases["mobile-4"] = "creature-004"
+        row = self.reviews.item("creatures", "creature-004")
+        self.assertEqual(row["related"][0]["note"], "Classic bear")

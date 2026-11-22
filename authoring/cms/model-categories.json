@@ -1,0 +1,23 @@
+{
+  "about": "What each band of ARCH3D model ids shows, by asset category and kind. The first band that holds an id decides; an id in no band is architecture. A kind left empty is sorted by the record's own review.",
+  "bands": [
+    {"from": 444, "to": 447, "category": "architecture", "kind": "battlement"},
+    {"from": 517, "to": 520, "category": "architecture", "kind": "wall"},
+    {"from": 735, "to": 754, "category": "nature", "kind": "bush"},
+    {"from": 905, "to": 905, "category": "nature", "kind": "bush"},
+    {"from": 41000, "to": 41199, "category": "props", "kind": "furniture"},
+    {"from": 41200, "to": 41299, "category": "props", "kind": "town"},
+    {"from": 41300, "to": 41399, "category": "props", "kind": "dungeon"},
+    {"from": 41400, "to": 41400, "category": "nature", "kind": ""},
+    {"from": 41401, "to": 41699, "category": "props", "kind": "fixture"},
+    {"from": 41700, "to": 41701, "category": "props", "kind": "town"},
+    {"from": 41702, "to": 41799, "category": "nature", "kind": ""},
+    {"from": 41800, "to": 41810, "category": "props", "kind": "furniture"},
+    {"from": 41811, "to": 41899, "category": "props", "kind": "container"},
+    {"from": 43000, "to": 43999, "category": "props", "kind": "statue"},
+    {"from": 51000, "to": 51999, "category": "props", "kind": "furniture"},
+    {"from": 60500, "to": 60599, "category": "nature", "kind": "rock"},
+    {"from": 62000, "to": 62999, "category": "props", "kind": "statue"},
+    {"from": 74000, "to": 74999, "category": "props", "kind": "dungeon"}
+  ]
+}

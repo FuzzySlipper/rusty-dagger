@@ -38,13 +38,13 @@ class Workspace:
         return Catalog(self.library, read_json(self.links, {}))
 
     def concept_subject(self, catalog, key):
-        id = key if key in catalog.npcs or key in catalog.mobiles else catalog.aliases.get(key, key)
-        row = catalog.npcs.get(id) or catalog.mobiles.get(id)
+        id = catalog.resolve(key)
+        row = catalog.subjects.get(id)
         if not row:
             return None
-        aliases = tuple(old for old, target in catalog.aliases.items()
-                        if target == id and old.startswith("npc-") and old != id)
-        subject = catalog.summary(id, row, id in catalog.mobiles)
+        # Concept art filed under any earlier id of the character stays its own.
+        aliases = tuple(old for old, target in catalog.aliases.items() if target == id and old != id)
+        subject = catalog.summary(id, row)
         return {key: subject[key] for key in ("id", "name", "classic", "classicUrl")}, aliases
 
     def character(self, key):
@@ -77,8 +77,7 @@ class Workspace:
         return self.concept_store.approve(id, aliases, body.get("candidate"), body.get("view", "front")) | subject
 
     def reviews(self):
-        aliases = read_json(self.library.npcs / "manifest.json", {}).get("aliases", {})
-        return Reviews(self.review_store, aliases, lambda category, id: revision(self.library, category, id))
+        return Reviews(self.review_store, self.catalog().aliases, lambda category, id: revision(self.library, category, id))
 
     def overview(self):
         catalog = self.catalog()
@@ -243,7 +242,7 @@ class Handler(SimpleHTTPRequestHandler):
             elif path in ("/media/npc/", "/media/npc/index.html"):
                 page = (self.workspace.library.npcs / "index.html").read_text()
                 page = page.replace("<body>", '<body data-merge-endpoint="/api/npcs/merge">', 1)
-                page = page.replace("<header>", '<header><nav><a href="/#npcs">Authoring workspace</a></nav>', 1)
+                page = page.replace("<header>", '<header><nav><a href="/#people">Authoring workspace</a></nav>', 1)
                 self.send_data(page.encode(), "text/html; charset=utf-8")
             elif path == "/media/npc/filter.js":
                 script = REPO / "src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceChart.js"

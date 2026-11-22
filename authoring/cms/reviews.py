@@ -69,14 +69,18 @@ class ReviewStore:
             return change.rowcount
 
 
+# The categories whose records can be found by an earlier id: people and creatures that were merged or renumbered.
+CHARACTERS = ("people", "creatures")
+
+
 class Reviews:
-    def __init__(self, store, npc_aliases, revision):
+    def __init__(self, store, aliases, revision):
         self.store = store
-        self.npc_aliases = npc_aliases
+        self.aliases = aliases
         self.revision = revision
 
     def canonical(self, category, id):
-        return self.npc_aliases.get(id, id) if category == "npcs" else id
+        return self.aliases.get(id, id) if category in CHARACTERS else id
 
     def item(self, category, id):
         id = self.canonical(category, id)
@@ -101,7 +105,7 @@ class Reviews:
 
     def patch(self, category, id, change):
         id = self.canonical(category, id)
-        aliases = [old for old, target in self.npc_aliases.items() if target == id and old != id] if category == "npcs" else []
+        aliases = [old for old, target in self.aliases.items() if target == id and old != id] if category in CHARACTERS else []
         version = self.revision(category, id)
         if isinstance(change, dict) and "expectedRevision" in change:
             change = dict(change)

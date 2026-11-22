@@ -8,6 +8,7 @@ from urllib.parse import quote
 CMS = Path(__file__).resolve().parent
 REPO = CMS.parents[1]
 BASE_PAYLOAD = REPO / "content/worldrpg/packs/daggerfall.base/payload.json"
+MODEL_CATEGORIES = CMS / "model-categories.json"
 DEFAULT_CONCEPTS = REPO / "local/authoring/concepts"
 DEFAULT_REVIEWS = REPO / "local/authoring/reviews.sqlite3"
 DEFAULT_NPCS = REPO / "local/art/reference/npc"
@@ -38,6 +39,30 @@ class Library:
         return REPO / "local/art/review/flora"
 
     @property
+    def scenery(self):
+        return REPO / "local/art/reference/scenery"
+
+    @property
+    def surfaces(self):
+        return REPO / "local/art/reference/surfaces"
+
+    @property
+    def art_payload(self):
+        return REPO / "content/worldrpg/packs/daggerfall.art-replacements/payload.json"
+
+    @property
+    def model_notes(self):
+        return REPO / "authoring/ledger/models-notes.json"
+
+    @property
+    def music_sources(self):
+        return REPO / "authoring/tools/music/sources.tsv"
+
+    @property
+    def classic_media(self):
+        return REPO / "local/build/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
+
+    @property
     def characters(self):
         return self.character_root or self.pipeline / "outputs/dagger-characters"
 
@@ -51,6 +76,8 @@ class Library:
             "/media/npc/": self.npcs,
             "/media/classic/": self.mobiles,
             "/media/flora/": self.flora,
+            "/media/scenery/": self.scenery,
+            "/media/surfaces/": self.surfaces,
             STAGE_MOUNT: self.characters,
             "/asset-pipeline/outputs/dagger-characters/": self.characters,
             "/media/turnarounds/": self.turnarounds,

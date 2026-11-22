@@ -13,15 +13,32 @@ shows its URL. Use `den-serve restart rusty-dagger-authoring -repo "$PWD/authori
 
 ## Review and link records
 
-The CMS reads the NPC and classic mobile reference exports, the flora review catalog,
-and the character stages in `local/art/generated/people/dagger-characters/`. It discovers villager variants from NPC aliases.
+The CMS sorts every asset by what it shows. An asset id is `<prefix>-<key>`: the prefix names its category and the key is
+its classic source key, except that people keep their `npc-` numbers. A record's finer kind (tree or rock, light or sign)
+is a field, so re-sorting it never changes its id.
+
+| Category | ID | Read from |
+| --- | --- | --- |
+| People | `npc-381` | the NPC chart (`export-npc`), including the enemy class sprite sets and mounted figures |
+| Creatures | `creature-004`, `creature-201-2` | the classic mobile reference below mobile 128, and the animals of `export-scenery` |
+| Nature | `nature-500-12`, `nature-213-2`, `nature-m60511` | the flora review, `export-scenery` and the ARCH3D remodels |
+| Props | `prop-210-3`, `prop-m41000` | `export-scenery` and the ARCH3D remodels |
+| Architecture | `arch-m444` | the ARCH3D remodels |
+| Textures | `texture-002-1` | `export-surfaces`, the records a block or the terrain draws |
+| Animations | `anim-stroll`, `anim-rig-walk` | the art pack's gsplat clips (shipped in `animations.rpak`) and parts rig clips |
+| Audio | `sound-437`, `music-dungeon-01` | the import's classic sounds by archive ordinal, and the score's tracks |
+
+An ARCH3D model's category and kind come from its id band in [model-categories.json](model-categories.json). A human
+enemy class (mobiles 128–145) is the people record of the sprite set it draws, found by its `mobile-` id. Character stages
+keep their pipeline ids (`381`, `383-A`, `128`), linked to people and creatures through those ids.
+It discovers villager variants from NPC aliases.
 Use **Link pipeline** on a character to add a relationship, then **Set as canonical** or **Set as final** to select
 a depiction. These decisions are stored by stable ID in [links.json](links.json). Pipeline approvals stay in
 the character stage files. A single approved front or game-ready output is shown by default when available.
 
 **NPC compare & merge** opens the existing comparison viewer. Choose the keeper and click **Apply merge** to update
 the same ledger and rebuild the reference pages from the host. Workbench review links open the native
-media and ratings. The Flora pages use the Engine-rendered review images from the existing flora exporter.
+media and ratings. Nature records of the climate sets show the Engine-rendered images of the flora review.
 
 Use **Mark** on a card or detail page, **Marked only** to browse the selection, and **Clear all marks** to reset that
 catalog. Ratings and notes stay with the record when marks are cleared. **Review in CMS** opens locally filed
@@ -31,21 +48,21 @@ applying production changes through the existing character tools.
 Review data is keyed by category and ID in `local/authoring/reviews.sqlite3`. Use the CLI on the CMS host, or
 set `DAGGER_CMS_URL` or pass `--url` before the subcommand from another machine.
 
-Use the catalog category and stable ID when looking up a note or rating.
+Use the catalog category and stable ID when looking up a note or rating: an asset category above (`people`,
+`creatures`, `nature`, `props`, `architecture`, `textures`, `animations`, `audio`), or a character stage's.
 
 | Category | Example ID |
 | --- | --- |
-| `npcs` | `npc-381` |
-| `mobiles` | `mobile-128` |
-| `flora` | `500-12` |
+| `people` | `npc-381` |
+| `nature` | `nature-500-12` |
 | `pipelines` | `452` |
 | `pipeline-stages` | `452/01-concept` |
 | `pipeline-assets` | `452/01-concept/approved/front.png` |
 
 ```sh
-python3 authoring/cms/review_cli.py marked flora --ids
-python3 authoring/cms/review_cli.py get npcs npc-381
-python3 authoring/cms/review_cli.py set flora 500-12 --mark --note "Check this render in the next pass"
+python3 authoring/cms/review_cli.py marked nature --ids
+python3 authoring/cms/review_cli.py get people npc-381
+python3 authoring/cms/review_cli.py set nature nature-500-12 --mark --note "Check this render in the next pass"
 python3 authoring/cms/review_cli.py list pipeline-assets --prefix 452/01-concept/ --rating bad
 ```
 
@@ -57,7 +74,7 @@ so the CMS can find their reviews.
 Use the [people concept recipes](../tools/people/concept/README.md) to prepare classic reference sheets, write
 costume briefs, and generate front or back candidates.
 
-Open **Concept art** from an NPC or mobile record. Candidates are grouped by batch. Open one to inspect the original
+Open **Concept art** from a people or creature record. Candidates are grouped by batch. Open one to inspect the original
 image and its generation details, then choose **Approve as front** or **Approve as back**. Each view has one
 approval. The character page uses the front as its canonical depiction. Both approvals appear on the concept
 art page. Previous candidates remain available.

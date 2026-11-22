@@ -1,26 +1,53 @@
-"""Compose the catalog from the NPC export, game data, and character stages."""
+"""Compose the asset catalog by category, from the reference exports, game data, the art pack and character stages.
 
+Every asset id is `<prefix>-<key>`: the prefix names its category (`CATEGORIES`) and the key is its classic source key,
+except that people keep their editorial `npc-` numbers. People and creatures drawn as characters have character pages
+with pipelines and concept art; every other record is a reviewable asset with its facts and previews.
+"""
+
+import csv
 from collections import defaultdict
 
-from library import BASE_PAYLOAD, asset_url, file_link, read_json
+from library import BASE_PAYLOAD, MODEL_CATEGORIES, asset_url, file_link, read_json
 from pipelines import REVIEW_STATES, character_index
+
+CATEGORIES = {"npc": "people", "creature": "creatures", "nature": "nature", "prop": "props", "arch": "architecture",
+              "texture": "textures", "anim": "animations", "sound": "audio", "music": "audio"}
+ASSETS = ("people", "creatures", "nature", "props", "architecture", "textures", "animations", "audio")
+PREFIXES = {"people": "npc", "creatures": "creature", "nature": "nature", "props": "prop", "architecture": "arch"}
+# The flora review's display groups, as nature kinds.
+FLORA_KINDS = {"Trees": "tree", "Bushes": "bush", "Flowers": "flower", "Other plants": "plant", "Cacti": "cactus",
+               "Fungi": "fungus", "Rocks": "rock", "Deadwood": "deadwood", "Other scenery": "scenery"}
+# The classic mobiles below this id are creatures; the human classes from it on are people's enemy class records.
+FIRST_HUMAN_MOBILE = 128
+
+
+def category_of(id):
+    """The category an asset id names by its prefix, or None for an id of no category."""
+    return CATEGORIES.get(id.partition("-")[0])
 
 
 class Catalog:
     def __init__(self, library, links):
         self.library = library
         npc_manifest = read_json(library.npcs / "manifest.json", {})
-        self.aliases = npc_manifest.get("aliases", {})
         self.briefs = read_json(library.npcs / "briefs.json", {})
         self.npcs = {row["id"]: row for row in npc_manifest.get("entries", [])}
-        self.mobiles = {row["directory"]: row for row in read_json(library.mobiles / "manifest.json", {}).get("mobiles", [])}
+        self.creatures = {}
+        creature_aliases = {}
+        for row in read_json(library.mobiles / "manifest.json", {}).get("mobiles", []):
+            if row["mobileId"] < FIRST_HUMAN_MOBILE:
+                id = f"creature-{row['mobileId']:03d}"
+                self.creatures[id] = row
+                creature_aliases[row["directory"]] = id
+        self.subjects = self.npcs | self.creatures
+        self.aliases = npc_manifest.get("aliases", {}) | creature_aliases
         self.raw_links = links
         self.links = {}
         self.conflicts = {}
         grouped = defaultdict(list)
         for key, choice in links.items():
-            subject = key if key in self.npcs or key in self.mobiles else self.aliases.get(key, key)
-            grouped[subject].append(choice)
+            grouped[self.resolve(key)].append(choice)
         for subject, group in grouped.items():
             combined = {"pipelines": list(dict.fromkeys(id for choice in group for id in choice.get("pipelines", [])))}
             for role in ("concept", "final"):
@@ -34,23 +61,25 @@ class Catalog:
                     self.conflicts.setdefault(subject, []).append(role)
             self.links[subject] = combined
         self.pipelines = character_index(library)
-        self.by_subject = {key: [] for key in self.npcs | self.mobiles}
+        self.by_subject = {key: [] for key in self.subjects}
         for pipeline_id in self.pipelines:
-            subject = self.aliases.get(pipeline_id)
-            if subject not in self.npcs:
-                candidate = f"mobile-{pipeline_id}"
-                subject = candidate if candidate in self.mobiles else None
+            # A townsperson's stages are named by its archive, a mobile's by its mobile id (and "-female").
+            subject = self.aliases.get(pipeline_id) or self.aliases.get(f"mobile-{pipeline_id}")
             if subject in self.by_subject:
                 self.by_subject[subject].append(pipeline_id)
 
+    def resolve(self, key):
+        """A character's id from its id or any earlier id: canonical ids first, since an imported mobile and a villager
+        alias can use different namespaces."""
+        return key if key in self.subjects else self.aliases.get(key, key)
+
     def get(self, key):
-        # Consult canonical keys first: an imported mobile and a villager alias can use different namespaces.
-        key = key if key in self.npcs or key in self.mobiles else self.aliases.get(key, key)
-        row = self.npcs.get(key) or self.mobiles.get(key)
+        key = self.resolve(key)
+        row = self.subjects.get(key)
         if not row:
             return None
-        mobile = key in self.mobiles
-        reference = self.summary(key, row, mobile)
+        creature = key in self.creatures
+        reference = self.summary(key, row)
         pipeline = [self.pipelines[id] for id in reference["pipelineIds"]]
         choice = self.links.get(key, {})
         concepts = [art for item in pipeline for art in item["concepts"]]
@@ -63,32 +92,36 @@ class Catalog:
         final = assigned(choice.get("final"), finals)
         if not choice.get("final") and "final" not in conflicts and len(finals) == 1:
             final = finals[0]
+        turnaround = next((name for name in [row.get("directory"), *row.get("aliases", [])]
+                           if name and file_link(self.library.turnarounds, "/media/turnarounds/", f"{name}/turnaround.mp4")), None)
         return reference | {
             "pipelines": pipeline, "automaticPipelines": self.by_subject[key],
             "concept": canonical, "conceptChoices": concepts, "final": final, "finalChoices": finals,
             "explicitConcept": choice.get("concept"), "explicitFinal": choice.get("final"), "conflicts": conflicts,
-            "game": self.mobile_game(row) if mobile else self.npc_game(key),
-            "turnaround": file_link(self.library.turnarounds, "/media/turnarounds/", f"{key}/turnaround.mp4") if mobile else None,
-            "turnaroundStill": file_link(self.library.turnarounds, "/media/turnarounds/", f"{key}/views/body-front.png") if mobile else None,
+            "game": self.mobile_game(row) if creature else self.npc_game(key),
+            "turnaround": turnaround and asset_url("/media/turnarounds/", f"{turnaround}/turnaround.mp4"),
+            "turnaroundStill": turnaround and file_link(self.library.turnarounds, "/media/turnarounds/", f"{turnaround}/views/body-front.png"),
         }
 
-    def summary(self, key, row, mobile=False):
+    def summary(self, key, row):
         choice = self.links.get(key, {})
         pipeline_ids = list(dict.fromkeys([*self.by_subject[key], *choice.get("pipelines", [])]))
         pipeline_ids = [id for id in pipeline_ids if id in self.pipelines]
         missing_ids = [id for id in choice.get("pipelines", []) if id not in self.pipelines]
-        if mobile:
+        if key in self.creatures:
             image = next((frame["file"] for frame in row.get("frames", []) if frame["direction"] == "front"), None)
             classic = file_link(self.library.mobiles, "/media/classic/", image)
-            sources = asset_url("/media/classic/", f"{key}/manifest.json")
+            sources = asset_url("/media/classic/", f"{row['directory']}/manifest.json")
+            kind, aliases = "Monster", [row["directory"]]
         else:
             image = f"art/{row['image']}" if row.get("image") else None
             classic = file_link(self.library.npcs, "/media/npc/", image)
             sources = asset_url("/media/npc/", f"{key}/index.html")
+            kind, aliases = row["kind"], row.get("aliases", [])
         return {
-            "id": key, "name": row["name"], "kind": "Classic mobile" if mobile else row["kind"],
+            "id": key, "category": category_of(key), "name": row["name"], "kind": kind,
             "classic": classic, "classicUrl": sources, "brief": self.briefs.get(key),
-            "aliases": row.get("aliases", []), "pipelineIds": pipeline_ids, "missingPipelines": missing_ids,
+            "aliases": aliases, "pipelineIds": pipeline_ids, "missingPipelines": missing_ids,
         }
 
     def npc_game(self, key):
@@ -108,15 +141,26 @@ class Catalog:
         return {"facts": facts, "record": donor}
 
     def overview(self):
-        return {
-            "npcs": [self.summary(key, row) for key, row in self.npcs.items()],
-            "mobiles": [self.summary(key, row, True) for key, row in self.mobiles.items()],
+        scenery = scenery_index(self.library)
+        models = model_index(self.library)
+        flora = flora_index(self.library)
+        assets = {
+            "people": [self.summary(key, row) for key, row in self.npcs.items()],
+            "creatures": [self.summary(key, row) for key, row in self.creatures.items()] + scenery["creatures"],
+            "nature": flora + [row for row in scenery["nature"] if row["id"] not in {item["id"] for item in flora}] + models["nature"],
+            "props": scenery["props"] + models["props"],
+            "architecture": models["architecture"],
+            "textures": texture_index(self.library),
+            "animations": animation_index(self.library),
+            "audio": audio_index(self.library),
+        }
+        return assets | {
+            "categories": CATEGORIES,
             "pipelines": [{"id": row["id"], "name": row["name"], "stages": row["stages"],
                            "final": row["final"], "thumbnail": next((art["url"] for art in row["concepts"]), None),
                            "subjects": [key for key, ids in self.by_subject.items()
                                         if row["id"] in ids or row["id"] in self.links.get(key, {}).get("pipelines", [])]}
                           for row in self.pipelines.values()],
-            "flora": flora_index(self.library),
             "review": [{**stage, "pipeline": id, "character": row["name"]}
                        for id, row in self.pipelines.items() for stage in row["stages"] if stage["state"] in REVIEW_STATES],
         }
@@ -129,8 +173,108 @@ def assigned(choice, available):
     return None
 
 
+def asset(id, name, kind, preview=None, facts=None, **extra):
+    return {"id": id, "category": category_of(id), "name": name, "kind": kind, "preview": preview, "facts": facts or {}} | extra
+
+
 def flora_index(library):
-    rows = read_json(library.flora / "catalogue.json", {})
-    return [row | {"views": {angle: url for angle in ("sprite", "front", "side", "rear")
-                             if (url := file_link(library.flora, "/media/flora/", f"images/{key}-{angle}.webp"))}}
-            for key, row in rows.items()]
+    """The flora review's records of the nature sets, with their engine-rendered views."""
+    rows = []
+    for key, row in read_json(library.flora / "catalogue.json", {}).items():
+        views = {angle: url for angle in ("sprite", "front", "side", "rear")
+                 if (url := file_link(library.flora, "/media/flora/", f"images/{key}-{angle}.webp"))}
+        kind = FLORA_KINDS.get(row["category"], "")
+        rows.append(asset(f"nature-{key}", row["form"] or row["category"], kind, views.get("front") or views.get("sprite"),
+                          {"Climate": row["climate"], "Height": f"{float(row['height']):.2f} m", "Triangles": row["triangles"]},
+                          views=views, climate=row["climate"]))
+    return rows
+
+
+def read_csv(path):
+    try:
+        with open(path, encoding="utf-8") as file:
+            return list(csv.DictReader(file))
+    except FileNotFoundError:
+        return []
+
+
+def scenery_index(library):
+    """The scenery export's records by category: nature, props and creatures (the placed animals)."""
+    found = {"nature": [], "props": [], "creatures": []}
+    rows = read_csv(library.scenery / "usage.csv")
+    for row in rows:
+        archive, record = int(row["archive"]), int(row["record"])
+        stem = f"texture-{archive:03d}-record-{record:03d}"
+        preview = file_link(library.scenery, "/media/scenery/", f"{row['directory']}/sprite/{stem}-frame-000-source.png")
+        placements = sum(int(row[f"{place}_placements"]) for place in ("exterior", "interior", "dungeon"))
+        facts = {"Classic record": f"TEXTURE.{archive:03d} record {record}", "Placements": placements,
+                 "Frames": row["frames"], "Size": f"{row['width']} × {row['height']}"}
+        if row["climate"]:
+            facts["Climate"] = row["climate"]
+        if row["light"] == "1":
+            facts["Gives light"] = True
+        category = CATEGORIES[row["category"]]
+        found[category].append(asset(row["id"], f"TEXTURE.{archive:03d} record {record}", row["kind"], preview, facts,
+                                     climate=row["climate"]))
+    return found
+
+
+def model_category(model, bands):
+    """An ARCH3D model's category and kind by the first band that holds its id; architecture where none does."""
+    return next(((band["category"], band["kind"]) for band in bands if band["from"] <= model <= band["to"]), ("architecture", ""))
+
+
+def model_index(library):
+    """The remodelled ARCH3D models, by the category each shows: nature, props or architecture."""
+    bands = read_json(MODEL_CATEGORIES, {}).get("bands", [])
+    payload = read_json(library.art_payload, {}).get("artReplacements", {}).get("models", {})
+    found = {"nature": [], "props": [], "architecture": []}
+    for key, note in sorted(read_json(library.model_notes, {}).items(), key=lambda item: int(item[0])):
+        category, kind = model_category(int(key), bands)
+        facts = {"ARCH3D model": key, "Status": note.get("status", ""), "Note": note.get("note", "")}
+        if key in payload:
+            facts["Triangles"] = payload[key]["triangles"]
+        found[category].append(asset(f"{PREFIXES[category]}-m{key}", f"ARCH3D {key}", kind, None, facts))
+    return found
+
+
+def texture_index(library):
+    """Every classic surface texture record a block or the terrain draws, by its texture set."""
+    found = []
+    for row in read_csv(library.surfaces / "usage.csv"):
+        if not any(int(row[field]) for field in ("exterior_blocks", "interior_blocks", "dungeon_blocks", "flat_planes", "standing_planes")):
+            continue
+        archive, record = int(row["archive"]), int(row["record"])
+        stem = f"texture-{archive:03d}-record-{record:03d}"
+        preview = file_link(library.surfaces, "/media/surfaces/", f"{row['set']}/texture-{archive:03d}/surface/{stem}-frame-000-source.png")
+        found.append(asset(f"texture-{archive:03d}-{record}", f"TEXTURE.{archive:03d} record {record}", row["set"], preview,
+                           {"Climate": row["climate"], "Size": f"{row['width']} × {row['height']}"}, climate=row["climate"]))
+    return found
+
+
+def animation_index(library):
+    """The motion clips the art pack plays: the gsplat townsfolk's clips, shipped in animations.rpak, and the parts rig's."""
+    art = read_json(library.art_payload, {}).get("artReplacements", {})
+    splat, rig = art.get("splatPeople", {}), art.get("peopleRig", {})
+    walks, idles = {*splat.get("walks", []), *splat.get("skirtWalks", [])}, set(splat.get("idles", []))
+    found = [asset(f"anim-{clip}", clip, "walk" if clip in walks else "idle" if clip in idles else "gesture", None,
+                   {"Rig": "gsplat townsfolk (Mixamo)", "Container": "animations.rpak"})
+             for clip in dict.fromkeys([*splat.get("clips", []), *splat.get("idles", [])])]
+    found += [asset(f"anim-rig-{clip}", clip, "walk" if clip == rig.get("walk") else "idle" if clip == rig.get("idle") else "gesture",
+                    None, {"Rig": f"parts rig {rig.get('figure', '')}".strip()}) for clip in rig.get("clips", [])]
+    return found
+
+
+def audio_index(library):
+    """The classic sound clips the import publishes, by their archive ordinal, and the score's tracks."""
+    def kind(clip):
+        group, dot, _ = clip.partition(".")
+        return ("" if group == "sound" else group) if dot else "effect"
+    found = [asset(f"sound-{clip['sourceRecordOrdinal']}", clip["clip"], kind(clip["clip"]), None,
+                   {"Media id": clip["mediaId"], "Sample rate": clip["sampleRate"]})
+             for clip in read_json(library.classic_media, {}).get("audio", [])]
+    try:
+        tracks = [line.split("\t")[0] for line in library.music_sources.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except FileNotFoundError:
+        tracks = []
+    return found + [asset(f"music-{track}", track, "music", None, {"Container": "music.rpak"}) for track in tracks]

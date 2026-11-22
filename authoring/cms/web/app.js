@@ -21,6 +21,12 @@ const sprite = (url, alt, isPixel = false) => `<div class="preview${isPixel ? ' 
   ${url ? `<img src="${escape(url)}" alt="${escape(alt)}" loading="lazy">` : '<span class="muted">No preview</span>'}</div>`;
 const empty = message => `<p class="empty">${escape(message)}</p>`;
 const subjectUrl = id => `#character/${key(id)}`;
+const assetUrl = id => `#asset/${key(id)}`;
+const assetLabels = {
+  people: 'People', creatures: 'Creatures', nature: 'Nature', props: 'Props', architecture: 'Architecture',
+  textures: 'Textures', animations: 'Animations', audio: 'Audio',
+};
+const assetPages = Object.keys(assetLabels);
 const pipelineUrl = id => `#pipeline/${key(id)}`;
 const stageUrl = (id, stage) => `#review/${key(id)}/${key(stage)}`;
 const factList = facts => `<dl class="facts">${Object.entries(facts).map(([name, value]) =>
@@ -45,12 +51,13 @@ async function refreshCatalog() {
 }
 
 function sections() {
-  return [
-    ['npcs', 'NPC records', catalog.npcs.length],
-    ['mobiles', 'Classic mobiles', catalog.mobiles.length],
-    ['pipelines', 'Character pipelines', catalog.pipelines.length],
-    ['flora', 'Flora records', catalog.flora.length],
-  ];
+  return [...assetPages.map(page => [page, assetLabels[page], catalog[page].length]),
+    ['pipelines', 'Character pipelines', catalog.pipelines.length]];
+}
+
+// The category an asset id names by its prefix, as the catalog states the prefixes.
+function categoryOf(id) {
+  return catalog.categories[id.split('-')[0]];
 }
 
 function overview() {
@@ -81,13 +88,15 @@ function card(category, id, url, preview, name, status, pixel = false) {
     ${tileReview(category, id, escape)}</article>`;
 }
 
-function characterCategory(id) {
-  return id.startsWith('npc-') ? 'npcs' : 'mobiles';
-}
-
 function characterCard(row) {
   const status = row.pipelineIds.length ? `${row.pipelineIds.length} linked pipeline${row.pipelineIds.length === 1 ? '' : 's'}` : row.kind;
-  return card(characterCategory(row.id), row.id, subjectUrl(row.id), row.classic, row.name, status, true);
+  return card(row.category, row.id, subjectUrl(row.id), row.classic, row.name, status, true);
+}
+
+// People and creatures drawn as characters have character pages; every other record has an asset page.
+function assetCard(row) {
+  if (row.pipelineIds) return characterCard(row);
+  return card(row.category, row.id, assetUrl(row.id), row.preview, row.name, row.kind || assetLabels[row.category], true);
 }
 
 function pipelineCard(row) {
@@ -95,25 +104,21 @@ function pipelineCard(row) {
   return card('pipelines', row.id, pipelineUrl(row.id), row.thumbnail, row.name, status || 'Character stages');
 }
 
-function floraCard(row) {
-  return card('flora', row.key, `#flora/${key(row.key)}`, row.views.front || row.views.sprite, row.form || row.category, row.climate);
-}
-
 function listing(page, items = catalog[page], term = '') {
-  const label = { npcs: 'NPC records', mobiles: 'Classic mobiles', pipelines: 'Character stages', flora: 'Flora' }[page];
-  const card = { npcs: characterCard, mobiles: characterCard, pipelines: pipelineCard, flora: floraCard }[page];
-  const field = page === 'flora' ? 'climate' : ['npcs', 'mobiles'].includes(page) ? 'kind' : null;
+  const label = assetLabels[page] ?? 'Character stages';
+  const card = page === 'pipelines' ? pipelineCard : assetCard;
+  const field = page === 'pipelines' ? null : 'kind';
   const labels = field ? [...new Set(items.map(row => row[field]))].sort() : [];
   const controls = `<div class="filters"><label>Filter <input type="search" id="filter" value="${escape(term)}" placeholder="ID, name, or description"></label>
-    ${labels.length > 1 ? `<label>${page === 'flora' ? 'Climate' : 'Type'} <select id="facet"><option value="">All</option>
-    ${labels.map(value => `<option>${escape(value)}</option>`).join('')}</select></label>` : ''}
+    ${labels.length > 1 ? `<label>Kind <select id="facet"><option value="">All</option>
+    ${labels.map(value => `<option value="${escape(value)}">${escape(value || 'Unsorted')}</option>`).join('')}</select></label>` : ''}
     <label>Rating <select id="rating-filter"><option value="">All ratings</option><option value="good">Good</option>
       <option value="maybe">Maybe</option><option value="bad">Bad</option><option value="unrated">Unrated</option></select></label>
     <label class="mark-filter"><input type="checkbox" id="marked-filter"> Marked only</label>
     <output id="results" aria-live="polite"></output></div>
     <div class="mark-bar"><span id="marked-count"></span><button type="button" data-clear-marks="${page}">Clear all marks</button>
       <output id="mark-status" role="status"></output></div>`;
-  content.innerHTML = title(label, '', page === 'npcs' ? link('/media/npc/', 'Compare & merge NPCs', 'button primary') : '') +
+  content.innerHTML = title(label, '', page === 'people' ? link('/media/npc/', 'Compare & merge NPCs', 'button primary') : '') +
     controls + '<div id="tiles" class="tiles"></div>';
   const filter = document.querySelector('#filter');
   const facet = document.querySelector('#facet');
@@ -127,7 +132,7 @@ function listing(page, items = catalog[page], term = '') {
   }
   function show() {
     const matching = match(items, filter.value).filter(row => {
-      const saved = reviewFor(page, row.id ?? row.key);
+      const saved = reviewFor(page, row.id);
       return (!facet?.value || row[field] === facet.value) && (!marked.checked || saved.marked) &&
         (!rating.value || (rating.value === 'unrated' ? !saved.rating : saved.rating === rating.value));
     });
@@ -148,17 +153,14 @@ function listing(page, items = catalog[page], term = '') {
 function match(rows, query) {
   const terms = query.toLowerCase().trim().split(/\s+/);
   return rows.filter(row => {
-    const haystack = [row.id, row.key, row.name, row.kind, row.category, row.form, row.climate,
-      row.brief?.brief, ...(row.aliases ?? [])].join(' ').toLowerCase();
+    const haystack = [row.id, row.name, row.kind, row.climate, row.brief?.brief, ...(row.aliases ?? [])].join(' ').toLowerCase();
     return terms.every(term => haystack.includes(term));
   });
 }
 
 function searchResults(term) {
-  const groups = [
-    ['NPCs and mobiles', [...catalog.npcs, ...catalog.mobiles], characterCard],
-    ['Character stages', catalog.pipelines, pipelineCard], ['Flora', catalog.flora, floraCard],
-  ];
+  const groups = [...assetPages.map(page => [assetLabels[page], catalog[page], assetCard]),
+    ['Character stages', catalog.pipelines, pipelineCard]];
   const results = groups.map(([name, rows, card]) => {
     const found = match(rows, term);
     return found.length ? `<section><h2>${name} <small>${found.length}</small></h2>
@@ -240,13 +242,13 @@ function characterDetail(subject) {
     empty(subject.explicitFinal ? 'The saved final is unavailable.' : subject.conflicts.includes('final') ?
       'Choose a game-ready output from the merged pipelines.' : 'A game-ready output has yet to be selected.')}</article>`;
   const game = subject.game;
-  content.innerHTML = `<a class="breadcrumb" href="#${subject.id.startsWith('npc-') ? 'npcs' : 'mobiles'}">Character catalog</a>` +
+  content.innerHTML = `<a class="breadcrumb" href="#${subject.category}">${assetLabels[subject.category]}</a>` +
     title(subject.name, `${subject.id} · ${subject.kind}`,
       link(`#concepts/${key(subject.id)}`, `Concept art${subject.conceptStage?.count ? ` · ${subject.conceptStage.count}` : ''}`, 'button primary')) +
     (subject.brief?.brief ? `<p class="brief">${escape(subject.brief.brief)}</p>` : '') +
     `<div class="depictions">${paintPanel('Classic depiction', classic, 'Classic sprite export unavailable.', true)}
       ${conceptPanel}${finalPanel}</div>
-    ${reviewPanel(characterCategory(subject.id), subject.id, escape)}
+    ${reviewPanel(subject.category, subject.id, escape)}
     <section class="panel"><div class="section-heading"><h2>Game data</h2>${link(game.url, 'Source record')}</div>
     ${factList(game.placementCount === undefined ? game.facts : { ...game.facts, 'Source placements': game.placementCount })}
     ${game.record ? `<details><summary>Mobile definition</summary><pre>${escape(JSON.stringify(game.record, null, 2))}</pre></details>` : ''}</section>
@@ -296,15 +298,13 @@ function bindLinks(subject) {
     button.addEventListener('click', () => save(button, { [button.dataset.clear]: null }));
 }
 
-function floraDetail(row) {
-  const views = Object.entries(row.views).map(([angle, url]) => `<article class="panel depiction"><h2>${escape(
-    { sprite: 'Sprite', front: 'Mesh front', side: 'Mesh side', rear: 'Mesh rear' }[angle]
-  )}</h2>${sprite(url, angle)}${link(url, 'Open render', 'source-link')}</article>`).join('');
-  return '<a class="breadcrumb" href="#flora">Flora catalog</a>' +
-    title(row.form || row.category, `${row.key} · ${row.climate}`, link('/media/flora/', 'Original flora review', 'button')) +
-    factList({ Category: row.category, Height: `${Number(row.height).toFixed(2)} m`, Triangles: row.triangles }) +
-    `<div class="flora-views">${views || empty('Render assets are unavailable.')}</div>` +
-    reviewPanel('flora', row.key, escape);
+function assetDetail(row) {
+  const views = Object.entries(row.views ?? (row.preview ? { classic: row.preview } : {})).map(([angle, url]) =>
+    `<article class="panel depiction"><h2>${escape({ classic: 'Classic source', sprite: 'Sprite', front: 'Mesh front',
+      side: 'Mesh side', rear: 'Mesh rear' }[angle])}</h2>${sprite(url, angle, angle === 'classic')}${link(url, 'Open image', 'source-link')}</article>`).join('');
+  return `<a class="breadcrumb" href="#${row.category}">${assetLabels[row.category]}</a>` +
+    title(row.name, `${row.id}${row.kind ? ` · ${row.kind}` : ''}`, row.views ? link('/media/flora/', 'Original flora review', 'button') : '') +
+    factList(row.facts) + (views ? `<div class="asset-views">${views}</div>` : '') + reviewPanel(row.category, row.id, escape);
 }
 
 function stageReview(detail) {
@@ -328,13 +328,13 @@ async function render() {
   let id;
   try {
     id = decodeURIComponent(encoded);
-    const section = ['character', 'concepts'].includes(page) ? (id.startsWith('npc-') ? 'npcs' : 'mobiles') :
-      ['pipeline', 'review'].includes(page) ? 'pipelines' : page;
-    for (const element of document.querySelectorAll('[data-page]'))
-      element.toggleAttribute('aria-current', element.dataset.page === section);
     window.scrollTo(0, 0);
     await refreshCatalog();
     if (view !== currentView) return;
+    const section = ['character', 'concepts', 'asset'].includes(page) ? categoryOf(id) :
+      ['pipeline', 'review'].includes(page) ? 'pipelines' : page;
+    for (const element of document.querySelectorAll('[data-page]'))
+      element.toggleAttribute('aria-current', element.dataset.page === section);
     if (page === 'character' && id) {
       const subject = await request(`/api/characters/${key(id)}`);
       if (view === currentView) characterDetail(subject);
@@ -352,13 +352,13 @@ async function render() {
     } else if (page === 'review' && id && stage) {
       const detail = await request(`/api/stage-review/${key(id)}/${stage}`);
       if (view === currentView) content.innerHTML = stageReview(detail);
-    } else if (page === 'flora' && id) {
-      const row = catalog.flora.find(row => row.key === id);
-      if (!row) throw new Error('Flora record not found.');
-      content.innerHTML = floraDetail(row);
+    } else if (page === 'asset' && id) {
+      const row = catalog[categoryOf(id)]?.find(row => row.id === id);
+      if (!row) throw new Error('Asset record not found.');
+      content.innerHTML = assetDetail(row);
     } else if (page === 'search' && id) {
       content.innerHTML = searchResults(id);
-    } else if (['npcs', 'mobiles', 'pipelines', 'flora'].includes(page)) {
+    } else if ([...assetPages, 'pipelines'].includes(page)) {
       listing(page);
     } else {
       content.innerHTML = overview();
