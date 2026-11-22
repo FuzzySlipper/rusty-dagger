@@ -96,6 +96,33 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
         "nose, cheekbones and jaw remain clearly sculpted in muted warm tones (never an empty black void). "
         if hooded_shadow else ""
     )
+    if style_only and portrait_only:
+        qwen_p = (
+            "Task: Paint a full-body high-resolution dark-fantasy character illustration showing the character from the front, "
+            "head to toe, for the person whose face is shown in the small classic RPG portrait reference. Reconstruct natural "
+            "high-resolution anatomy and costume detail; do not enlarge or trace the pixel blocks, and do not crop to a bust or close-up portrait.\n\n"
+            "Input image: facial likeness, hair, skin tone, age and ornaments ONLY. Preserve this character's facial likeness, hair, "
+            "skin tone and age while clearly incorporating any extra facial details described in the brief, and paint their complete "
+            f"full-body figure from the front, head to toe. {face_q}\n\n"
+            f"Subject: {brief.rstrip('.')}.\n\n"
+            "Style: ART DIRECTION — VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\n"
+            "Draw the character as an accomplished pen-and-ink dark-fantasy illustration in the tradition of Akihiko Yoshida "
+            "(Vagrant Story) and classic tabletop RPG manuals, finished with opaque muted gouache washes. Build a confident underlying "
+            "ink drawing with crisp seams, dark-umber contours, fine directional crosshatching inside folds and shadows, and opaque "
+            "local colour washes without glossy 3D shading.\n\n"
+            "Presentation: Full-body isolated character shown from the front, head to toe, filling ~88% of the vertical portrait "
+            "frame on a perfectly flat solid dark slate grey background, RGB 48,52,59. No floor, no scenery, no cast shadow, no border."
+        )
+        krea_p = (
+            "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+            "Drawn and painted as a vivid, punchy 1990s PC fantasy role-playing game character illustration: confident dark-umber "
+            "pen-and-ink contour lines, fine crosshatching inside cloth folds and shadows, and opaque matte gouache colour planes "
+            f"(4 to 6 painted value groups per material). {face_q}"
+            "Plain flat dark slate-grey background, RGB 48,52,59, no floor, no scenery, no border.\n\n"
+            f"Subject: Full-body character portrait shown from the front, head to toe. {brief.rstrip('.')}."
+        )
+        return qwen_p, krea_p
+
     if style_only:
         qwen_p = (
             "Task: Redraw a very small classic fantasy RPG sprite as newly illustrated high resolution art. "
@@ -211,8 +238,6 @@ def main():
         pronoun = briefs[args.id].get("pronoun", pronoun)
 
     portrait_only = args.portrait_only or (args.portrait is not None)
-    if args.style_only and portrait_only:
-        raise SystemExit("Cannot combine --style-only with --portrait / --portrait-only")
     ref_src = args.portrait or args.sprite
     if ref_src is None:
         raise SystemExit("Pass --sprite PATH or --portrait PATH")

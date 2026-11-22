@@ -36,12 +36,15 @@ python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py npc-0
   --style-only --width 1024 --height 1024 --seeds 101,102,103,104,105,106 --denoise 0.38 --brief "..."
 ```
 
-For named NPCs whose reused world sprite disagrees with their dialogue portrait (`FACES.CIF`), pass `--portrait PATH` (implies `--portrait-only`; trims the classic 3 px gold border automatically) to anchor the face, hair, and collar cues on the portrait while generating a full-length wide-A turnaround body from the brief:
+For named NPCs whose reused world sprite disagrees with their dialogue portrait (`FACES.CIF`), pass `--portrait PATH` (implies `--portrait-only`; trims the classic 3 px gold border automatically) to anchor the face, hair, and collar cues on the portrait while generating a full-length body from the brief. Combine `--portrait` with `--style-only` for static NPCs to get a natural head-to-toe front portrait without wide-A turnaround pose constraints:
 
 ```sh
 python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py npc-022 \
   --portrait local/art/reference/npc/art/portrait/faces.cif-006.png \
   --seeds 22101,22102,22103,22104,22105,22106 --denoise 0.38 --brief "..."
+python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py npc-023 \
+  --portrait local/art/reference/npc/art/portrait/faces.cif-007.png --style-only \
+  --seeds 23101,23102,23103,23104,23105,23106 --denoise 0.38 --brief "..."
 ```
 
 ## Matching Back View (`../back_ph3.py` — MiniMax H3 Image `p-h3-image_w4a8`)
