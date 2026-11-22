@@ -56,10 +56,10 @@ def framing(directory, flat, tree):
 
 
 def classic_reference(directory, flat):
-    # Patch chose the original depictions as mesh references for these four.
+    # Patch chose the original depictions as mesh references.
     # Stage the exported original privately, at the flat's painted size and foot.
     a, r = flat["replaces"]["archive"], flat["replaces"]["record"]
-    if (a, r) not in ((500, 4), (500, 31), (502, 4), (502, 11)):
+    if (a, r) not in ((500, 4), (500, 31), (502, 4), (502, 11), (503, 1)):
         return False
     name = f"texture-{a}-record-{r:03}-frame-000-source.png"
     source = next((ROOT / "local/art/reference/flats").glob(f"*/texture-{a}/flat/{name}"), None)
@@ -160,7 +160,7 @@ def publish_page(output, records, trial=False):
             row["category"] = "Rocks"
         elif form.endswith("-bush"):
             row["category"] = "Bushes"
-        elif form in ("logs", "gnarled", "dead"):
+        elif form.startswith("deadwood-") or form in ("logs", "gnarled", "dead"):
             row["category"] = "Deadwood"
         else:
             row["category"] = "Trees" if form else sprites.get(key, "Unclassified")
