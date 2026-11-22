@@ -35,7 +35,7 @@ public sealed class TuningPayloadSessionTests
     {
         string root = TestData.RepositoryRoot;
         var loaded = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/tuning/daggerfall.defaults/payload.json")));
-        Assert.Equal(new WorldRpg.Kit.Presentation.SplatBlinks(2F, 6F, .06F, .15F, .1F), loaded.SplatPeople.Blinks);
+        Assert.Equal(new WorldRpg.Kit.Presentation.SplatBlinks(2F, 6F, .04F, .07F, .06F), loaded.SplatPeople.Blinks);
         var adjusted = DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["splatPeople"]!["blinks"]!["closedSeconds"] = .3));
         Assert.Equal(.3F, adjusted.SplatPeople.Blinks.ClosedSeconds);
         Assert.Throws<ArgumentException>(() => DaggerfallTuning.Read(MutatedTuning(root,

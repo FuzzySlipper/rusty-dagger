@@ -21,7 +21,7 @@ internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCo
     float CrossfadeSeconds, SplatShadowCaster ShadowCaster, bool SkirtsSlow, float GaitJitter, SplatBlinks Blinks)
 {
     internal static DaggerfallSplatPeopleTuning Default { get; } = new(3, .5F, false, 0F, .15F, .25F, SplatShadowCaster.Ellipsoids, SkirtsSlow: true, GaitJitter: .06F,
-        Blinks: new(2F, 6F, .06F, .15F, .1F));
+        Blinks: new(2F, 6F, .04F, .07F, .06F));
 
     /// <summary>Whether long skirts walk slow, by the tuning and command name: slow or clip.</summary>
     internal static bool? Slow(string pace) => pace switch
