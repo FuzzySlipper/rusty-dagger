@@ -229,7 +229,8 @@ def main():
                         help="character stage root containing ready.json")
     parser.add_argument('--clips', type=Path, default=CLIPS, help="the PINOC Mixamo exports PACKS names, looped and cleaned")
     args = parser.parse_args()
-    ready_list = json.loads((args.characters / 'ready.json').read_text())['ready']
+    # a static NPC (asset-pipeline static-npc: stands in one place, its own idle and look clips, no Mixamo fit) is not a walker
+    ready_list = [r for r in json.loads((args.characters / 'ready.json').read_text())['ready'] if not r.get('static')]
     bodies, fits, skirts, extra = {}, {}, {}, {}
     for ready in ready_list:
         body = bodies[ready['id']] = args.characters / ready['engine_glb']
