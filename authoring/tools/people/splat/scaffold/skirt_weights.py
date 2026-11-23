@@ -92,6 +92,7 @@ def main():
     ap.add_argument("--hips", type=float, default=0.0, help="share of every skirt Gaussian's leg weight moved onto Hips, growing from 0 at the top to this at the hem")
     ap.add_argument("--drop-inside", type=float, help="with --bones: metres (default 0.03; 0: off). Drop skirt Gaussians lying this far inside the skirt's outer shell (the legs under a long skirt, which on skirt bones ride the cloth and show at the hem; Patch 2026-11-21)")
     ap.add_argument("--inside-legs", action="store_true", help="with --bones: the Gaussians --drop-inside finds stay on their leg bones instead of being dropped, for a robe short enough that a stride shows the shin above the hem (npc-468)")
+    ap.add_argument("--inside-band", type=float, default=0.12, help="--inside-legs: metres above the hem within which leg-coloured inside Gaussians stay")
     ap.add_argument("--drop-hem-dark", type=float, default=0.0, help="with --bones: luminance (0: off). Drop near-black Gaussians a shin leads within 5 cm of the hem: the shadow under an ankle-length hem baked onto the ankles, which trails the back heel in a stride (453, Patch 2026-11-21)")
     ap.add_argument("--bones", type=Path, help="skirt_bones.py rig's skirt.json: put the skirt on that ring of bones instead (SCAFFOLD is then its rig)")
     a = ap.parse_args()
@@ -152,10 +153,12 @@ def main():
             if shin.sum() >= 20:
                 leg_c, cloth_c = np.median(c[shin], 0), np.median(c[skirt & ~drop], 0)
                 legish = np.linalg.norm(c - leg_c, axis=1) < np.linalg.norm(c - cloth_c, axis=1)
-                kept = drop & legish
+                # and only near the hem: the shin a stride shows. Higher up, dark folds and ink lines of the robe's inside passed as leg and
+                # stuck out of the robe at the knee as dark shards (468's second try)
+                kept = drop & legish & (M[:, 1] < hem + a.inside_band * G["sc"])
                 W2[kept] = 0; W2[np.ix_(kept, np.arange(W.shape[1]))] = W[kept]; skirt = skirt & ~kept; drop = drop & ~kept
                 rep_extra["inside_kept_on_legs"] = int(kept.sum()); rep_extra["dropped_inside"] = int(drop.sum())
-                rep_extra["leg_colour"] = [round(float(x), 3) for x in leg_c]
+                rep_extra["leg_colour"] = [round(float(x), 3) for x in leg_c]; rep_extra["inside_band_m"] = a.inside_band
     if a.bones and a.drop_hem_dark > 0:
         lum = np.clip(s["rgb"].astype(float), 0, 1) @ np.array([0.3, 0.59, 0.11])
         shin = np.isin(W.argmax(1), [idx["LeftLeg"], idx["RightLeg"]])

@@ -13,5 +13,10 @@
     "pipelines": [
       "npc-024"
     ]
+  },
+  "npc-468": {
+    "pipelines": [
+      "npc-468"
+    ]
   }
 }
