@@ -3,5 +3,10 @@
     "pipelines": [
       "017"
     ]
+  },
+  "npc-024": {
+    "pipelines": [
+      "npc-024"
+    ]
   }
 }
