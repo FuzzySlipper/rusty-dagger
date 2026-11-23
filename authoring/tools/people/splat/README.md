@@ -52,8 +52,18 @@ $S init npc-023            # the approved front (and back, if the CMS has one) a
 $S keys npc-023; $S clay npc-023; $S mesh npc-023; $S rig npc-023
 $S guide npc-023           # look at a few guide frames: H3 poses the arms by the stick figure
 $S clip npc-023            # look at a few clip frames yourself; no review gate (Patch 2026-11-22)
-$S bake npc-023; $S bound npc-023; $S publish npc-023
+$S bake npc-023 --to r1    # --to r1 keeps the free round-1 fit for the graft (or $S r1 npc-023 after a plain bake)
+$S bound npc-023
+$S graft npc-023           # the free fit grafted on the face and hands: size 32k-graft beside 32k-face-share-cleaned
+$S publish npc-023         # Patch looks at both sizes in the Workbench
+$S ship npc-023 --size 32k-graft --said "Patch's words"   # final, Engine GLB with eyes and clips, inset core, page, CMS link
 ```
+
+Patch shipped npc-023 grafted (2026-11-23), and npc-024 has a grafted size waiting for his look: the bound bake blurs where Meshy's clay is a
+poor stand-in (mitten hands, a too-thick hooded head), and the free fit is sharp there. Skip `r1` and `graft` for a figure
+whose clay is close. The core's size is `core_tris` in npc.json (2,400 as on npc-023; rusty-engine measured CPU skinning at
+about 40 us a figure a frame at 2,400 and 14 us at 800; Patch is comparing the two on npc-024). The core comes beside the
+Engine GLB as `ID.core.glb`, never in its place, and ready.json lists it as `core_glb`.
 
 Settings live in `00-brief/npc.json`:
 
@@ -68,18 +78,15 @@ Settings live in `00-brief/npc.json`:
 | `sizes` | The runtime sizes to distil. |
 | `front_only` | No back painting. The orbit's back is H3's own. Patch prefers this to drift from an angled back painting. |
 
-After Patch looks at the published set in the Workbench, choose the size with his words:
+`ship` runs `dagger-char bound ID --step choose --size NAME --patch-said "..."`, which writes `ID.glb` (with the eye mask
+when `character/eye_picks.json` has the character's eye centres) and the static NPC's own clips, `ID-idle.glb` and
+`ID-look.glb`, and lists the character in `ready.json` as `static`. It then runs `scaffold/core_extract.py` for the core
+and `dagger-char page`, and posts the CMS link (`{"addPipeline": ID}` to `/api/characters/ID/links`). Commit
+`authoring/cms/links.json` afterwards.
 
-```sh
-authoring/tools/people/splat/character/dagger-char bound npc-023 --step choose --size 32k-face-share-cleaned --patch-said "..."
-```
-
-That writes `ID.glb` and the static NPC's own clips, `ID-idle.glb` and `ID-look.glb`, and lists the character in
-`ready.json` as `static`. Link it to its CMS record with **Link pipeline**, or:
-
-```sh
-curl -X POST -H 'Content-Type: application/json' -d '{"addPipeline":"npc-023"}' http://192.168.1.10:8784/api/characters/npc-023/links
-```
+Eye picks are by hand: `scaffold/eye_mask.py ID.glb OUT.glb REPORT.png` runs the search, which often finds brow shadow
+instead. The report crops the 512 px render to x 128-384, around the eyes' mean height, at twice the size, so convert from
+report pixels before writing `--eyes` and the picks (npc-023, 2026-11-23). A bare skull (npc-024) gets none.
 
 ## Hosts and shared resources
 

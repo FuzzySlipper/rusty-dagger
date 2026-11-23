@@ -287,6 +287,10 @@ def run_of(cid):
         r = static_npc(cid, str(dc.char_dir(cid) / 'work'), k, f"the stick-guided {cfg.get('size', 1920)} px clip (static-npc)")
         names = [f'{n // 1000}k-face-share-cleaned' for n in cfg.get('sizes', [32000])]
         r['sizes'] = {n: (f'{k}/bound/sizes/{n}', f"bound {n.split('-')[0]}, a quarter of the seed on the face, cleaned") for n in names}
+        for n in cfg.get('sizes', [32000]):   # static-npc graft: the free r1 fit grafted on the face and hands (Patch shipped npc-023 so, 2026-11-23)
+            gn = f'{n // 1000}k-graft'
+            if (dc.char_dir(cid) / 'work' / k / 'bound/sizes' / gn / 'splat.npz').exists():
+                r['sizes'][gn] = (f'{k}/bound/sizes/{gn}', f"bound {n // 1000}k, cleaned, with the free round-1 fit grafted on the face and hands (graft_free.py)")
         r['default_size'] = names[0]
         r['game_review'] = [(f'{k}/bound/review-bound/views.png', 'views.png')]
         r['who'] = 'NPC'

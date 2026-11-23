@@ -31,7 +31,15 @@ Steps, in order (each checks that the one before it has run):
             round-1 fit (npc.json bake_to "r1data"; batch 2 showed the bound bake does not need it). About 50 min.
   bound     the bound bake (400k) and each runtime size in npc.json "sizes" (default 32k: one figure, never a crowd), cleaned
   preview   optional: the procedural idle and look clips rendered from six views (bound_run.sh idle)
+  r1        optional, for a graft: the free round-1 fit of a bake that stopped at r1data (bake --to r1 does it in one go)
+  graft     optional: the free r1 fit grafted on the face and hands of each runtime size (graft_free.py, CPU) -> size NNk-graft,
+            which publish then shows beside the plain size (npc.json "graft": regions, default "face,hands"; "graft_face_cone", 45).
+            Patch shipped npc-023 so (2026-11-23): the bound bake blurs where Meshy's clay is a poor stand-in (mitten hands)
   publish   dagger-char bound ID: adopt, playable (idle and look clips from static_idle.py), publish to the Workbench
+  ship      after Patch's look: --size NAME --said "his words". The chosen size becomes 09-game/bound/final (dagger-char bound
+            choose: ID.glb with the eye mask, ID-idle.glb, ID-look.glb, ready.json), the matte inset core beside it (core_extract.py:
+            ID.core.glb with the core as a second primitive, rusty-engine #10990's contract; ID-core.glb for the Workbench;
+            npc.json "core_tris", default 2400 as on npc-023, 0 for none), the overview page, and the CMS link to the character
   status    which steps have their outputs
 
 Gate for Patch: the bake in the Workbench after publish (no clip gate since 2026-11-22: clips haven't been rejected in a long time). Long steps
@@ -59,6 +67,7 @@ DEFAULTS = {'cms_url': 'http://192.168.1.10:8784', 'tolerance': 9, 'size': 1920,
             # robe went see-through there as 021's face did); a static NPC barely moves, so the shell need not be tight.
             # With loose_factor 1.5 the head and hands get 9 cm.
             'shell_m': 0.06}
+OPEN3D_PY = os.environ.get('OPEN3D_PY') or str(AP / '.runtime/tools/splat-mesh/bin/python')   # graft_free.py and core_extract.py need Open3D
 BRIEF = ('clay-front.txt', 'clay-back.txt', 'orbit.txt', 'rings.json')
 
 
@@ -226,7 +235,7 @@ def step_guide(n, a):
 
 
 def step_clip(n, a):
-    sz = a.size or n.cfg['size']
+    sz = int(a.size or n.cfg['size'])
     n.need(n.guide / str(sz), step='guide')
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
     sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env})
@@ -277,12 +286,60 @@ def step_publish(n, a):
         sh([REPO / 'authoring/tools/people/splat/character/dagger-char', 'bound', n.id, '--step', s])
 
 
+def step_r1(n, a):
+    n.need(n.k / 'bake/r1-data/views.json', step='bake')
+    env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': LAB_COMFY, **n.env}
+    sh(['authoring/tools/people/splat/bake/pipeline.sh', n.work, f'{n.rid}-A', n.cfg['cpu_host'], 'r1', 'r1'], env=env)
+    print(f'{n.id}: free round-1 fit {(n.k / "bake/r1/splat.npz").relative_to(REPO)}')
+
+
+def step_graft(n, a):
+    cfg = n.cfg; n.need(n.k / 'bake/r1/splat.npz', step='r1'); n.need(n.k / 'bound/score/transform.json', step='bound')
+    sizes = [int(x) for x in a.sizes.split(',')] if a.sizes else cfg['sizes']
+    for count in sizes:
+        base = n.k / f'bound/sizes/{count // 1000}k-face-share-cleaned'; out = n.k / f'bound/sizes/{count // 1000}k-graft'
+        n.need(base / 'splat.npz', step='bound')
+        sh([OPEN3D_PY, 'authoring/tools/people/splat/scaffold/graft_free.py', base, n.k / 'bake/r1/splat.npz', n.k / 'bound/score/transform.json',
+            n.scaffold / 'scaffold.glb', out, '--regions', cfg.get('graft', 'face,hands'), '--face-cone', str(cfg.get('graft_face_cone', 45))],
+           log=n.k / 'bound/graft.log')
+        g = json.loads((out / 'graft.json').read_text())
+        sc = json.loads((base / 'score.json').read_text()); sc['gaussians'] = g['total']
+        sc['note'] = f"the score of {base.name}, the body the graft went onto; the grafted body is not scored again"
+        (out / 'score.json').write_text(json.dumps(sc, indent=1) + '\n')
+        print(f"{n.id}: {out.name}: {g['grafted']} Gaussians grafted on {', '.join(g['regions'])} ({g['total']} in all)")
+    print(f'{n.id}: run publish to show the grafted size beside the plain one in the Workbench')
+
+
+def step_ship(n, a):
+    cfg = n.cfg
+    if not a.size or not a.said:
+        raise SystemExit('static-npc ship: --size NAME and --said "Patch\'s words" (ship only after his look)')
+    D = REPO / 'authoring/tools/people/splat/character/dagger-char'
+    sh([D, 'bound', n.id, '--step', 'choose', '--size', a.size, '--patch-said', a.said])
+    fin = n.ch / '09-game/bound/final'; tris = int(cfg.get('core_tris', 2400))
+    if tris:
+        sh([OPEN3D_PY, 'authoring/tools/people/splat/scaffold/core_extract.py', fin / f'{n.id}.glb', fin / 'scaffold.glb', fin, n.id,
+            '--tris', str(tris), '--voxel', '0.007', '--clips', f"{fin / f'{n.id}-idle.glb'},{fin / f'{n.id}-look.glb'}"], log=fin / 'core.log')
+        r = json.loads((fin / f'{n.id}-core.json').read_text())
+        print(f"{n.id}: core {r['triangles']} triangles, {r['rest_poke_points_consensus']} rest pokes, splats behind it from the front {r['early_z']['front']['splat_pct']}%")
+    sh([D, 'page'])
+    import urllib.request
+    req = urllib.request.Request(f"{cfg['cms_url']}/api/characters/{cfg.get('cms', n.id)}/links", method='POST',
+                                 data=json.dumps({'addPipeline': n.id}).encode(), headers={'Content-Type': 'application/json'})
+    try:
+        urllib.request.urlopen(req, timeout=30).read()
+        print(f"{n.id}: linked in the CMS ({cfg['cms_url']}/#character/{cfg.get('cms', n.id)}); commit authoring/cms/links.json")
+    except Exception as e:   # the CMS down: the final is filed all the same
+        print(f'{n.id}: CMS link failed ({e}); POST {{"addPipeline": "{n.id}"}} to /api/characters/{cfg.get("cms", n.id)}/links later')
+
+
 def step_status(n, a):
     marks = [('init', n.ch / '01-concept/approved/front.png'), ('keys', n.keys / 'front.png'), ('clay', n.clay / 'front.png'),
              ('mesh', n.mesh / 'model.glb'), ('rig', n.scaffold / 'scaffold.glb'), ('guide', n.guide / str(n.cfg['size'])),
              ('clip', n.clip_dir() / 'review.mp4'), ('bake', n.k / 'bake/r1-data/views.json'),
              ('bound', n.k / 'bound/bound-cleaned/splat.npz'), ('preview', n.k / 'bound/idle/renders'),
-             ('publish', n.ch / '09-game/bound/playable/character.json')]
+             ('r1', n.k / 'bake/r1/splat.npz'), ('graft', n.k / f"bound/sizes/{n.cfg['sizes'][0] // 1000}k-graft/splat.npz"),
+             ('publish', n.ch / '09-game/bound/playable/character.json'), ('ship', n.ch / f'09-game/bound/final/{n.id}.glb')]
     for name, p in marks:
         print(f"  {'done' if p.exists() else '    '}  {name:8s} {p.relative_to(REPO)}")
     edited = [x for x in BRIEF if (n.brief / x).exists() and (n.brief / x).read_bytes() != (TEMPLATES / x).read_bytes()]
@@ -290,7 +347,8 @@ def step_status(n, a):
 
 
 STEPS = {'init': step_init, 'keys': step_keys, 'clay': step_clay, 'mesh': step_mesh, 'rig': step_rig, 'guide': step_guide,
-         'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'publish': step_publish, 'status': step_status}
+         'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'r1': step_r1,
+         'graft': step_graft, 'publish': step_publish, 'ship': step_ship, 'status': step_status}
 
 
 def main():
@@ -300,7 +358,8 @@ def main():
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
     ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
     ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')
-    ap.add_argument('--size', type=int, help='clip: orbit size in px (default 1920)')
+    ap.add_argument('--size', help='clip: orbit size in px (default 1920); ship: the runtime size to ship (e.g. 32k-graft)')
+    ap.add_argument('--said', help="ship: Patch's words")
     ap.add_argument('--to', choices=['r1data', 'r1'], help='bake: last stage (default r1data; r1 adds the free round-1 fit)')
     ap.add_argument('--sizes', help='bound/preview: runtime Gaussian counts, comma-separated (default npc.json sizes, 32000)')
     ap.add_argument('--force', action='store_true', help='use a prompt that is still 021\'s template')
