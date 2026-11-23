@@ -469,9 +469,11 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-expedition-clock { margin: 0; flex: 1 1 auto; font: 700 1.15rem var(--font-label); letter-spacing: .04em; }
 .dagger-expedition-speeds, .dagger-expedition-modes { display: flex; gap: .3rem; }
 /* A waiting encounter: a centred panel over the dimmed map, which takes no pointer until it is entered. */
-.dagger-expedition-encounter { position: fixed; inset: 0; display: grid; place-items: center; background: rgb(0 0 0 / .5); }
+/* Servo's grid and flex leave a fixed box's child off centre, so the frame centres itself. */
+.dagger-expedition-encounter { position: fixed; inset: 0; background: rgb(0 0 0 / .5); }
 .dagger-expedition-encounter[hidden] { display: none; }
-.dagger-expedition .dagger-expedition-encounter-frame { display: grid; justify-items: center; gap: 1rem; width: var(--panel-narrow); padding: 1.4rem 1.6rem;
+.dagger-expedition .dagger-expedition-encounter-frame { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: grid; justify-items: center; gap: 1rem; width: var(--panel-narrow); padding: 1.4rem 1.6rem;
   text-align: center; box-shadow: 0 .75rem 2.75rem rgb(0 0 0 / .7); }
 .dagger-expedition-encounter-frame h2 { margin: 0; }
 .dagger-expedition-encounter-line { margin: 0; line-height: 1.45; }
