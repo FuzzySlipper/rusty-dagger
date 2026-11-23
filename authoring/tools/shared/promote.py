@@ -61,7 +61,9 @@ classic sprite it replaces gave once), and the game draws the mesh that wide fro
 admits it. A hanging root, chain, cage or lantern (tools/hanging/hanging.py) also states what it hangs as (`hangs`, as its GLB's
 scene states it): the game draws it from its sprite's top at its `size`'s height and swings it when an actor walks through it.
 Where the mesh stands on the floor is the world's, not the art's: the import places a sprite at its pivot, and the game lowers the
-mesh by the classic pivot's share of the sprite's height.
+mesh by the classic pivot's share of the sprite's height. A sprite mesh or remodel drawn inside out, by winding.py's check (faces
+wound against their normals, or showing a viewer outside them their back), is refused by name: fix the generator that built
+it, or turn a generated mesh's stray faces with `winding.py --fix FINAL.glb`.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
@@ -152,6 +154,9 @@ from doll_preview import ART, AUTHORING, doll_layer, placed, worn_layer
 
 sys.path.insert(0, str(AUTHORING / "tools/surfaces"))
 import reduce  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import winding  # noqa: E402
 
 REPOSITORY = AUTHORING.parent
 CONTENT = REPOSITORY / "content"
@@ -763,6 +768,15 @@ def glb_normals(gltf, data):
     return np.concatenate(rows)
 
 
+def inside_out(path, published):
+    """Refuses a mesh drawn inside out, by name: faces wound against the normals it carries, or showing their backs to a
+    viewer outside it, past winding.py's limits (#10997). The renderer culls back faces, so such a mesh shows its far
+    side through its near one."""
+    entry = winding.scan((path, published.removeprefix("worldrpg/"), True))
+    if entry["flagged"] and not entry["exception"]:
+        raise SystemExit(f"{published}: inside out, {winding.describe(entry)}; fix its winding (authoring/tools/shared/winding.py)")
+
+
 def world_mesh_entry(final, archive, record):
     """A sprite mesh's entry: the GLB as it is, its material slots with an emissive map (`glow`), and what a hanging
     piece hangs as (`hangs`), as its scene states. A normal not of unit length or not finite is refused by name: the
@@ -772,6 +786,7 @@ def world_mesh_entry(final, archive, record):
     normals = glb_normals(gltf, data)
     if (wrong := ~np.isfinite(normals).all(1) | (np.abs(np.linalg.norm(normals, axis=1) - 1) > .01)).any():
         raise SystemExit(f"{final.path.name}: {int(wrong.sum())} of its normals are not of unit length or not finite")
+    inside_out(final.path, f"{MEDIA}/effects/{final.key}")
     glow = [slot for slot, material in enumerate(gltf.get("materials", [])) if "emissiveTexture" in material]
     hangs = gltf.get("scenes", [{}])[gltf.get("scene", 0)].get("extras", {}).get("hangs")
     if ((archive, record) in HANGING) != (hangs is not None):
@@ -813,6 +828,7 @@ def model_units():
         if run.returncode:
             raise SystemExit(f"models: {final.key}: {(run.stderr or run.stdout).strip()}")
         entry = json.loads(run.stdout.strip().splitlines()[-1])
+        inside_out(written / f"{final.key}.rstatmsh", entry["path"])
         print(f"models: {final.key}, {entry['triangles']} triangles", flush=True)
         return [("models", entry)]
     return {key: Unit([final], lambda final=final: build(final)) for key in sorted(notes, key=int) for final in [generated("models", key, ".glb")]}
