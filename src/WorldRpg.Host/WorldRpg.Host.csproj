@@ -20,6 +20,8 @@
          Shadow budget video option overrides it. -->
     <RustyEngineProductSceneShadows>enabled</RustyEngineProductSceneShadows>
     <RustyEngineProductShadowBudget>32</RustyEngineProductShadowBudget>
+    <!-- Turns on the Engine's occlusion culling of hidden opaque parts and splats; disabled is the off switch. -->
+    <RustyEngineProductOcclusionCulling>enabled</RustyEngineProductOcclusionCulling>
     <RustyEngineProductVolumetricClouds>low</RustyEngineProductVolumetricClouds>
     <RustyEngineProductUiRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'product-ui'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
