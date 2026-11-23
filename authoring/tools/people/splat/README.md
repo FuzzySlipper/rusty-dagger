@@ -59,7 +59,9 @@ Settings live in `00-brief/npc.json`:
 
 | Key | What it does |
 | --- | --- |
-| `view_yaw` | The paintings' angle, measured from the outlines when not set. |
+| `view_yaw` | The paintings' angle, measured from the outlines when not set. With one painting the measure can be fooled: npc-024's ragged hem gave -35 degrees for a square-on front (outline IoU 0.763 against 0.742 at 0), so compare the mesh's outline at 0 before the guide and set 0 when the painting is square. |
+| `backdrop` | `"R,G,B"`: a chroma-key clip. The keyframes and the lit guide sit on that colour (say it in orbit.txt too), and the bake's mattes open every enclosed patch near it and take its spill off the edge (`key_holes`, default 60; `despill`, default 2 px). Pick the colour furthest from the painting's palette in OKLab. npc-024 used magenta (his hair is green); H3 drew it as a flat (247,94,184), spread about 2, and the cuts opened between claws and hem tatters with no pink rim. |
+| `clean_opts` | Options for `clean_bound.py`: `"--no-face --no-crown"` for green hair or a crown. Its face rule removes greenish Gaussians on the head and its crown rule recolours the top of the head to the hair, both made for 381's strays (npc-024: they took his hair and his gold crown). |
 | `hands` | `front` (the default) when the hands are held in front, as on a staff; `sides` when the arms hang. |
 | `head_axis` | The head's turning axis, for a far-forward head. |
 | `loose`, `loose_factor`, `shell_m` | How much room the bound bake gives the scaffold. |
