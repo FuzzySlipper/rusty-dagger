@@ -57,8 +57,16 @@ PY=/workspace/splat-probe/venv/bin/python; SPY=python; SOLV3R=/workspace/solv3r;
 # GPU=den-m5|den-nimo runs the lab stages on a Strix Halo's GPU instead of the 5090 (Patch 2026-11-18: the lab crashed under the
 # bakes; a Halo is ~5x slower but may crash). Env: authoring/tools/people/splat/hosts/strix-gpu/setup.sh HOST (ROCm torch, patched gsplat 1.5.3, Solv3R); stages
 # run in ~/.local/state/asset-gpu/work/BATCH/ID under a per-Halo lock and the Halo's ComfyUI resource; VACE uses that Halo's ComfyUI.
-GPU=${GPU:-gpu-lab}; GS=/home/agent/.local/state/asset-gpu; GW=$GS/work/$B/$ID${BAKE#bake}
+GPU=${GPU:-gpu-lab}; GS=/home/agent/.local/state/asset-gpu; GRES=${GPU#den-}-comfy
+# GPU=runpod-*: a rented RunPod pod reached by that ssh alias, its environment in /workspace/asset-gpu (hosts/runpod/setup.sh;
+# asset-pipeline docs/runpod-bake-pods.md). Only the gsplat stages belong there; VACE stays on the 5090.
+case $GPU in runpod*) GS=/workspace/asset-gpu; GRES=$GPU ;; esac
+GW=$GS/work/$B/$ID${BAKE#bake}; export GRES
 if [ "$GPU" != gpu-lab ]; then PY=$GS/venv/bin/python; SPY=$PY; SOLV3R=$GS/solv3r; SOLV3R_W=$GS/hf/solv3r-c95998a.safetensors; fi
+# EXTRA_RING=NAME:LOW,HIGH:FOV:TARGET_Y (bake.env): a fourth close-up repaint ring, rendered, referenced, repainted by VACE
+# (prompts.json NAME / negative-NAME), matched and put in the round-1 data with the three. npc-023 (2026-11-22): hands hanging
+# at the hips fall between high-close (from above, 0.26) and legs-low (-0.31), and baked to a blur: hands:-10,20:9.5:0.0
+RINGS="head-high high-close legs-low${EXTRA_RING:+ ${EXTRA_RING%%:*}}"
 mkdir -p $D
 stamp() { echo "$STAGE $1 $(date +%s) $2" >> $D/times.txt; }
 # Staged-tool guard (2026-11-15: a lab copy of the trainer staged before per-view 'weight' existed ignored it for a day, so every
@@ -77,7 +85,7 @@ lab_tools_ok() {
 }
 halo_tools_ok() {
   local want got
-  want=$( { (cd tools && find solv3r-mage mesh-splat -name '*.py' -not -path '*__pycache__*' | xargs sha256sum); (cd tests/splats && find creatures -name '*.py' -not -path '*__pycache__*' | xargs sha256sum); } | LC_ALL=C sort -k2)
+  want=$( (cd authoring/tools/people/splat && find solv3r mesh-splat gsplat -name '*.py' -not -path '*__pycache__*' | xargs sha256sum) | LC_ALL=C sort -k2)
   got=$(ssh -o BatchMode=yes $HALO "cd ~/.local/state/asset-cpu/rusty-dagger 2>/dev/null && find solv3r mesh-splat gsplat -name '*.py' -not -path '*__pycache__*' | xargs sha256sum" 2>/dev/null | LC_ALL=C sort -k2)
   [ "$want" = "$got" ]
 }
@@ -114,7 +122,7 @@ lab() {    # lab RESOURCE PURPOSE PUT FETCH CMD: CMD is written to bake/lab-STAG
     flock -w ${LOCK_WAIT:-7200} /tmp/halo-gpu-$GPU.lock bash -c '
       echo "$(date +%s) before $ID $STAGE on $GPU" >> $D/vram.log
       ssh -o BatchMode=yes $GPU "mkdir -p $GW" && tar czf - -C $D $put | ssh -o BatchMode=yes $GPU "tar xzf - -C $GW"
-      asset-resources run --host $GPU --resource ${GPU#den-}-comfy --owner claude --purpose "Villager $ID bake on the Halo GPU: $p" -- \
+      asset-resources run --host $GPU --resource $GRES --owner claude --purpose "Villager $ID bake on the Halo GPU: $p" -- \
         ssh -o BatchMode=yes $GPU "export OMP_NUM_THREADS=8; cd $GW && nice -n 5 bash lab-$STAGE.sh" 2>&1 | grep -v "^resource-board"
       rc=${PIPESTATUS[0]}
       [ -n "$fetch" ] && { ssh -o BatchMode=yes $GPU "cd $GW && tar czf - $fetch 2>/dev/null" | tar xzf - -C $D; }
@@ -198,19 +206,22 @@ resid)     # per-view residual of round 0 against its frames, by body band and p
   lab lab-gsplat "round 0 per-view residuals" "" "resid-r0.jsonl" \
     "cp ../tools/residual_by_view.py . && $PY residual_by_view.py r0 data 768 > resid-r0.jsonl; wc -l < resid-r0.jsonl" ;;
 rings)
+  XR=; if [ -n "${EXTRA_RING:-}" ]; then IFS=: read -r xn xe xf xt <<< "$EXTRA_RING"
+    XR="\$PY render_rings.py r0/splat.npz \$o --ring $xn:$xe --fov $xf --target 0.0 $xt 0.0 --size \$n --background 128 128 128 > /dev/null;"; fi
   lab lab-gsplat "ring renders from round 0" "" "rings-1024 rings-$SIZE" \
-    "for n in 1024 $SIZE; do o=rings-\$n; $PY render_rings.py r0/splat.npz \$o --ring head-high:30,50 --fov 10.5 --target 0.0 0.40 0.0 --size \$n --background 128 128 128 > /dev/null; $PY render_rings.py r0/splat.npz \$o --ring high-close:50,78:1.1 --fov 19 --target 0.0 0.26 0.0 --size \$n --background 128 128 128 > /dev/null; $PY render_rings.py r0/splat.npz \$o --ring legs-low:-20,15:2.2 --fov 12 --target 0.0 -0.31 0.0 --size \$n --background 128 128 128 > /dev/null; done; ls rings-1024" ;;
+    "for n in 1024 $SIZE; do o=rings-\$n; $PY render_rings.py r0/splat.npz \$o --ring head-high:30,50 --fov 10.5 --target 0.0 0.40 0.0 --size \$n --background 128 128 128 > /dev/null; $PY render_rings.py r0/splat.npz \$o --ring high-close:50,78:1.1 --fov 19 --target 0.0 0.26 0.0 --size \$n --background 128 128 128 > /dev/null; $PY render_rings.py r0/splat.npz \$o --ring legs-low:-20,15:2.2 --fov 12 --target 0.0 -0.31 0.0 --size \$n --background 128 128 128 > /dev/null; $XR done; ls rings-1024" ;;
 refs)
   ext=$(python3 -c "
 import numpy as np; s=np.load('$D/r0/splat.npz'); y=s['means'][:,1]; print(round(float(np.percentile(y,99.9)-np.percentile(y,0.1)),4))")
   front=$W/$K/cut-t6/front-cut.png; [ -f $front ] || front=$W/$K/cut/front-cut.png
-  mkdir -p $D/refs; python3 $HERE/make_refs.py $front $D/refs $ext head-high:10.5:0.40 high-close:19:0.26 legs-low:12:-0.31
+  XF=; [ -n "${EXTRA_RING:-}" ] && { IFS=: read -r xn xe xf xt <<< "$EXTRA_RING"; XF="$xn:$xf:$xt"; }
+  mkdir -p $D/refs; python3 $HERE/make_refs.py $front $D/refs $ext head-high:10.5:0.40 high-close:19:0.26 legs-low:12:-0.31 $XF
   echo "extent $ext from $front" ;;
 vace)
   J=$D/prompts.json; SEED=610000; OUT=$D/vace; mkdir -p $OUT; G0=$GPU
   # VACE runs on the 5090's ComfyUI unless VACE_GPU names a Halo or ~/.local/state/gpu-lab-off exists (Patch needs the 5090: touch it; rm to allow again)
   [ -n "${DRY:-}" ] && { echo "DRY vace: rings from $D/rings-1024, refs $D/refs, prompts $J"; exit 0; }
-  for ring in head-high high-close legs-low; do
+  for ring in $RINGS; do
     # a ring made before the current refs belongs to an earlier design (395's capelet reused the long cape's VACE, 2026-11-19): redo it
     [ -d $OUT/$ring ] && [ -n "$(ls $OUT/$ring 2>/dev/null)" ] && [ ! $D/refs -nt $OUT/$ring ] && { SEED=$((SEED+1)); continue; }
     P=$(python3 -c "import json;d=json.load(open('$J'));print(d['${ring%%-*}'])"); N=$(python3 -c "import json;d=json.load(open('$J'));print(d.get('negative-${ring%%-*}', d['negative']))")
@@ -234,10 +245,10 @@ vace)
 match)
   # MATCH_OPTS (bake.env) passes repaint_match.py options: 453's legs-low dropped its back third because round 0 shades the skirt's
   # back nearly black and VACE paints it lit, a lighting difference, not new content (2026-11-19: --max-ignore 0.5)
-  halo "VACE colour match and ignore masks" "rm -rf vace-matched; for ring in head-high high-close legs-low; do OPENBLAS_NUM_THREADS=8 python3 \$ASSET_CPU_REPO/gsplat/repaint_match.py rings-1024/\$ring vace/\$ring vace-matched/\$ring ${MATCH_OPTS:-} || exit 3; done" ;;
+  halo "VACE colour match and ignore masks" "rm -rf vace-matched; for ring in $RINGS; do OPENBLAS_NUM_THREADS=8 python3 \$ASSET_CPU_REPO/gsplat/repaint_match.py rings-1024/\$ring vace/\$ring vace-matched/\$ring ${MATCH_OPTS:-} || exit 3; done" ;;
 r1data)
   V=vace-matched; [ "${MATCH:-1}" = 0 ] && V=vace
-  halo "round-1 training set" "rm -rf r1-data; OPENBLAS_NUM_THREADS=8 python3 \$ASSET_CPU_REPO/gsplat/loop_dataset.py r1-data --anchors data --poses r0/poses.npz --init r0/splat.npz --ring rings-$SIZE/head-high:$V/head-high --ring rings-$SIZE/high-close:$V/high-close --ring rings-$SIZE/legs-low:$V/legs-low --exact-every 9 --fill-holes 300 --dilate 6 --background-from-alpha 2>&1 | tail -n 2 | cut -c1-300" ;;
+  halo "round-1 training set" "rm -rf r1-data; OPENBLAS_NUM_THREADS=8 python3 \$ASSET_CPU_REPO/gsplat/loop_dataset.py r1-data --anchors data --poses r0/poses.npz --init r0/splat.npz --ring rings-$SIZE/head-high:$V/head-high --ring rings-$SIZE/high-close:$V/high-close --ring rings-$SIZE/legs-low:$V/legs-low ${EXTRA_RING:+--ring rings-$SIZE/${EXTRA_RING%%:*}:$V/${EXTRA_RING%%:*}} --exact-every 9 --fill-holes 300 --dilate 6 --background-from-alpha 2>&1 | tail -n 2 | cut -c1-300" ;;
 r1)
   lab lab-gsplat "round 1 at ${SIZE}px, anchor weight 4" "r1-data" "r1 review-r1 r1.log" \
     "cp ../tools/*.py . 2>/dev/null; $PY -u train_loop_splat.py r1-data r1 --steps 15000 --cap 400000 --ring 0 --pose-lr 2e-5 --anchor-weight 4 --opacity-reg 0 > r1.log 2>&1; grep -E 'SCORE|rror|Traceback' r1.log; $PY splat_to_cloud.py r1/splat.npz r1/cloud.ply --report-only | cut -c1-300; $PY loop_review.py review-r1 'Round 0=r0' 'Round 1=r1' --detail Face:0,0.39,0.06:0:5:6 --detail Face-above:0,0.39,0.04:0:40:8 --detail Crown:0,0.42,0:150:55:9 --detail Legs-side:0,-0.32,0:90:5:16 --detail Legs-back:0,-0.32,0:180:5:16 --detail Shoes-below:0,-0.47,0:0:-40:14 --detail Hem-below:0,-0.2,0:20:-50:18 --detail Shoulders-above:0,0.25,0:30:65:16 | grep -c wrote" ;;

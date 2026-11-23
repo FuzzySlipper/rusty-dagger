@@ -38,7 +38,9 @@ LOOSE=${LOOSE:-LeftHand,RightHand}; LOOSE_FACTOR=${LOOSE_FACTOR:-2.4}   # LOOSE=
 SC=${SCAFFOLD:-$CH/02-guide/scaffold/scaffold.glb}; TR=$BD/score/transform.json   # SCAFFOLD=: another rig for the same body (cape_chain.py rig adds a cape chain)
 LAB=/workspace/$B/$ID${BK#bake}; L=~/server-access/gpu-lab/connect; GPY=/workspace/splat-probe/venv/bin/python
 # GPU=den-m5|den-nimo: the lab steps on a Strix Halo's GPU (authoring/tools/people/splat/hosts/strix-gpu/setup.sh; bake.sh GPU=... stages the tools there)
-GPU=${GPU:-gpu-lab}; GS=/home/agent/.local/state/asset-gpu; LOCKF=/tmp/gpu-lab-claude.lock
+GPU=${GPU:-gpu-lab}; GS=/home/agent/.local/state/asset-gpu; LOCKF=/tmp/gpu-lab-claude.lock; GRES=${GPU#den-}-comfy
+case $GPU in runpod*) GS=/workspace/asset-gpu; GRES=$GPU ;; esac   # a rented RunPod pod (ssh alias runpod-*; bake.sh says more)
+export GRES
 if [ "$GPU" != gpu-lab ]; then LAB=$GS/work/$B/$ID${BK#bake}; GPY=$GS/venv/bin/python; LOCKF=/tmp/halo-gpu-$GPU.lock; fi
 rx() { if [ "$GPU" = gpu-lab ]; then $L "gpu-lab exec $*"; else ssh -o BatchMode=yes $GPU "$*"; fi; }   # one simple command on the GPU host
 export -f rx; export GPU L
@@ -56,7 +58,7 @@ lab() {   # lab PURPOSE PUT_DIR PUT_FILES SCRIPT LOG FETCH: tar PUT_FILES (under
       asset-resources run --host gpu-lab --resource lab-gsplat --owner claude --purpose "$purpose" -- \
         $L "gpu-lab exec bash -c \"echo 1000 > /proc/self/oom_score_adj; export TORCH_EXTENSIONS_DIR=/cache/torch_extensions/py312_cu130 OMP_NUM_THREADS=2; cd $LAB && bash $script\"" 2>&1 | grep --line-buffered -v -e Container -e "^resource-board" >> $log
     else
-      asset-resources run --host $GPU --resource ${GPU#den-}-comfy --owner claude --purpose "$purpose (Halo GPU)" -- \
+      asset-resources run --host $GPU --resource $GRES --owner claude --purpose "$purpose (Halo GPU)" -- \
         ssh -o BatchMode=yes $GPU "export OMP_NUM_THREADS=8; cd $LAB && nice -n 5 bash $script" 2>&1 | grep --line-buffered -v -e "^resource-board" >> $log
     fi
     rc=${PIPESTATUS[0]}
@@ -95,22 +97,24 @@ EOF
   STAMP=$(cd $D && find $DATA -type f ! -name .stamp -printf '%P %s %T@\n' | sort | md5sum | cut -c1-12); echo $STAMP > $D/$DATA/.stamp
   flock -w ${LOCK_WAIT:-7200} $LOCKF bash -c "[ \"\$(rx 'cat $LAB/$DATA/.stamp' 2>/dev/null | grep -v Container)\" = $STAMP ] || { rx 'mkdir -p $LAB' 2>&1 | grep -v Container; rx 'rm -rf $LAB/$DATA' 2>&1 | grep -v Container; tar czf - -C $D $DATA | rx 'tar xzf - -C $LAB' 2>&1 | grep -v Container; echo 'staged $DATA ($STAMP) to $GPU'; }" >> $BD/bound.log
   [ -n "${VRAM_PEAK:-}" ] && cp $T/vram_peak.py $BD/   # VRAM_PEAK=1: the trainer's peak GPU memory in the log (vram_peak.py)
+  # the review compares with the free fit ($FIT), which a host that never ran it (a fresh RunPod pod, npc-023 2026-11-22) lacks
+  [ "$GPU" != gpu-lab ] && { rx "test -f $LAB/$FIT/splat.npz" || tar czf - -C $D $FIT/splat.npz | rx "mkdir -p $LAB && tar xzf - -C $LAB"; }
   lab "Villager $ID bound bake on the scaffold" $BD "lab-bound.sh $BN-data/shell.npz $BN-data/init_points.npz${VRAM_PEAK:+ vram_peak.py}" lab-bound.sh $BD/bound.log "$BN/splat.npz $BN/score.json $BN/poses.npz $BN.log review-$BN" || exit 4
   [ -f $BD/$BN/splat.npz ] || exit 5
   python3 $T/export_bound.py $BD/$BN/splat.npz $SC $TR $BD/discs.bin --binding $BD/binding.npz --loose-bones $LOOSE --loose-factor $LOOSE_FACTOR > $BD/binding.json 2>> $BD/bound.log || exit 6
   grep -E "SCORE" $BD/bound.log | tail -n 1 | cut -c1-400; cat $BD/binding.json ;;
 distil)
   N=${1:-16000}; SH=${2:-0.25}; NAME=$((N / 1000))k-face-share; REACH=$(reach); O=$BD/sizes/$NAME; mkdir -p $O
-  python3 $T/bone_region.py $BD/bound/splat.npz $BD/binding.npz $SC $BD/face.npy --bones Head --front 0 > $BD/face.json || exit 2
-  DD=dist-data-$(md5sum < $BD/bound/splat.npz | cut -c1-8)   # views of this bake only (391-A's re-bound body was once trained on the old bake's views, 2026-11-18)
+  python3 $T/bone_region.py $BD/$BN/splat.npz $BD/binding.npz $SC $BD/face.npy --bones Head --front 0 > $BD/face.json || exit 2
+  DD=dist-data-$(md5sum < $BD/$BN/splat.npz | cut -c1-8)   # views of this bake only (391-A's re-bound body was once trained on the old bake's views, 2026-11-18)
   cat > $BD/lab-distil.sh <<EOF
 #!/bin/bash
 # lab side of $ID's distil to $NAME, run in $LAB
 PY=$GPY
-[ -f $DD/views.json ] || \$PY distill_dataset.py bound/splat.npz $DD --size 2176 --distance 2.25 --elevations=-55,-35,-15,0,15,35,60 > dist.log 2>&1 || { tail -n 5 dist.log; exit 2; }
+[ -f $DD/views.json ] || \$PY distill_dataset.py $BN/splat.npz $DD --size 2176 --distance 2.25 --elevations=-55,-35,-15,0,15,35,60 > dist.log 2>&1 || { tail -n 5 dist.log; exit 2; }
 echo "dataset \$(ls dist-data/images | wc -l) views"
-\$PY budget_seed.py $DD bound/splat.npz $NAME-data --count $N --link --region face.npy --share $SH > $NAME.seed.json || { cat $NAME.seed.json; exit 3; }
-\$PY -u ${VRAM_PEAK:+vram_peak.py} train_loop_splat.py $NAME-data $NAME --cap $N --steps 15000 --ring 0 --freeze-poses --anchor-weight 1 --opacity-reg 0 --shell bound-data/shell.npz --shell-reach $REACH > $NAME.train.log 2>&1 || { tail -n 5 $NAME.train.log; exit 4; }
+\$PY budget_seed.py $DD $BN/splat.npz $NAME-data --count $N --link --region face.npy --share $SH > $NAME.seed.json || { cat $NAME.seed.json; exit 3; }
+\$PY -u ${VRAM_PEAK:+vram_peak.py} train_loop_splat.py $NAME-data $NAME --cap $N --steps 15000 --ring 0 --freeze-poses --anchor-weight 1 --opacity-reg 0 --shell $BN-data/shell.npz --shell-reach $REACH > $NAME.train.log 2>&1 || { tail -n 5 $NAME.train.log; exit 4; }
 grep -E 'SCORE|shell |VRAM_PEAK' $NAME.train.log
 EOF
   mkdir -p $BD/stage-distil; cp $C/budget_seed.py $C/distill_dataset.py $C/train_loop_splat.py $T/vram_peak.py $BD/lab-distil.sh $BD/face.npy $BD/stage-distil/
