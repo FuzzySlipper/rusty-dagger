@@ -7,6 +7,10 @@ and static NPCs who stand in one place both go this way. The finished body is an
 These tools came from asset-pipeline on 2026-11-22 (Patch: one place, less sprawl, a clearer process). Their history and
 measurements stay in asset-pipeline's `docs/splat-scaffold.md`. This page is the process.
 
+Only the settled route lives here. New or experimental splat work is tried in asset-pipeline (Patch 2026-11-22), and a step
+moves here once it is accepted and runs as a named script, with this page updated in the same change. Attempt scripts never
+go in this folder.
+
 ```
 CMS concept (front, back optional)  ──keys, clay, Meshy mesh──▶  02-guide/scaffold/scaffold.glb (rigged clay)
             │                                                          │

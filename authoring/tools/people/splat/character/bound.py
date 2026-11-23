@@ -33,7 +33,7 @@ import dagger_char as dc
 from adopt import _link
 _hard_link = _link
 
-REPO = dc.REPO; LE = dc.AP / 'live-evidence'   # the runs before the move live in asset-pipeline; T = REPO / 'authoring/tools/people/splat/scaffold'
+REPO = dc.REPO; LE = dc.AP / 'live-evidence'; T = REPO / 'authoring/tools/people/splat/scaffold'   # LE: the runs before the move live in asset-pipeline
 WB = 'http://192.168.1.10:8960/#?root=active-evidence&id=import%3A'
 FINISH = {'size': '16k-face-share', 'gaussians': 16000, 'face_share': 0.25}   # the default runtime body of a bound character
 # One entry per character with a scaffold run. Paths are inside the run folder. sizes: name -> (folder, what it is).
@@ -313,7 +313,9 @@ def adopt(cid):
         if Path(a).resolve() != Path(b).resolve():
             _hard_link(a, b)
     # 02-guide: the rigged scaffold
-    _link(E / r['clay'][0], g / 'clay-front.png'); _link(E / r['clay'][1], g / 'clay-back.png')
+    _link(E / r['clay'][0], g / 'clay-front.png')
+    if (E / r['clay'][1]).exists():   # a front-only character (npc-023) has no back clay
+        _link(E / r['clay'][1], g / 'clay-back.png')
     _link(E / r['scaffold'], g / 'scaffold.glb'); _link(E / r['scaffold_json'], g / 'scaffold.json'); _link(E / r['transform'], g / 'transform.json')
     _link(E / r['outline'][0], g / 'outline-score.json'); _link(E / r['outline'][1], g / 'outline-overlay.png')
     sj = json.load(open(g / 'scaffold.json')); oj = json.load(open(g / 'outline-score.json'))['mean']
@@ -323,7 +325,7 @@ def adopt(cid):
         if r.get('static') else f"clay mesh from the clay pair, API rig, donor hands transplanted: {sj['joints']} joints, {sj['triangles']:,} triangles. ")
        + "The bound bake is held to it and animated by it",
        numbers={'outline_iou': oj['mesh']['iou'], 'finished_splat_own_iou': oj['splat']['iou']}, made_from='01-concept approved paintings (clay edits of both)')
-    it('02-guide', 'clay front and back', 'intermediate', g / 'clay-front.png', 'the approved paintings edited to plain clay; what the mesher saw (clay-back.png beside it)')
+    it('02-guide', 'clay front and back' if (g / 'clay-back.png').exists() else 'clay front', 'intermediate', g / 'clay-front.png', 'the approved paintings edited to plain clay; what the mesher saw' + (' (clay-back.png beside it)' if (g / 'clay-back.png').exists() else ' (front only: no back painting)'))
     it('02-guide', 'scaffold to bake transform', 'intermediate', g / 'transform.json', 'places the scaffold in the bake\'s units (outline fit)')
     it('02-guide', 'outline score', 'evidence', g / 'outline-overlay.png', 'scaffold outline over the bake\'s cut-outs, 12 views (numbers: outline-score.json)',
        numbers={'iou': oj['mesh']['iou'], 'covered': oj['mesh']['covered'], 'spill': oj['mesh']['spill']})

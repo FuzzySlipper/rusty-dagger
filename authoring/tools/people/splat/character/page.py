@@ -347,7 +347,7 @@ def media(cid, k, bound=False):
     d = dc.char_dir(cid); s = d / k; h = []
     img = lambda p, cap: f"<figure><a href='{rel_c(p, d)}'><img src='{rel_c(p, d)}' alt=''></a><figcaption>{esc(cap)}</figcaption></figure>"
     if bound and k == '02-guide' and (s / 'scaffold/clay-front.png').exists():
-        h = [img(s / 'scaffold/clay-front.png', 'clay front (what the mesher saw)'), img(s / 'scaffold/clay-back.png', 'clay back')]
+        h = [img(s / 'scaffold/clay-front.png', 'clay front (what the mesher saw)')] + ([img(s / 'scaffold/clay-back.png', 'clay back')] if (s / 'scaffold/clay-back.png').exists() else [])   # front-only: no back
         return ''.join(h + ([img(s / 'scaffold/outline-overlay.png', 'scaffold outline over the bake\'s cut-outs')] if (s / 'scaffold/outline-overlay.png').exists() else []))
     if bound and k in ('08-final', '09-game') and sorted(s.glob('bound/review/*.png')):
         return ''.join(img(p, p.stem.replace('-', ' ')) for p in sorted(s.glob('bound/review/*.png'))[:4])
