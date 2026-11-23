@@ -214,6 +214,10 @@ internal sealed partial class DaggerfallSession
             // is real once the step applied it, and the director is told once per admitted update.
             if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber, _activeProfileKey.Site); // Scene
         }
+        // The entry screen plays the title's song until a game starts; the world's context then replaces it as any
+        // context change does, and a new game's session replaces this one with the loop it retires.
+        else if (_mode == ProductMode.Title && !_newGameInitialized && Music.Scored)
+            Music.Advance(DaggerfallMusicContext.Title, _time.Calendar.DayNumber, _activeProfileKey.Site);   // Scene
         UpdatePlayerTime(facts);                                                                  // Session: player time's hand-off, below
         // Play time counts the time the world runs in play; menus, the title and held moments do not.
         if (_mode == ProductMode.Playing && facts.LifecycleState == ProductLifecycleState.Running

@@ -25,6 +25,7 @@ public enum DaggerfallMusicContext
     TempleNeutral,
     TempleBad,
     Castle,
+    Title,
 }
 
 /// <summary>
@@ -95,6 +96,9 @@ public sealed class DaggerfallMusicDirector : IDisposable
 
     /// <summary>The donor's Castle playlist: a dungeon's castle block.</summary>
     public static readonly IReadOnlyList<string> CastleSongs = ["castle-dungeon-01"];
+
+    /// <summary>The entry screen's song, until a game starts and the world's own context replaces it.</summary>
+    public static readonly IReadOnlyList<string> TitleSongs = ["title-menu-01"];
 
     /// <summary>A numbered series of Patch's tracks: <c>dungeon-01</c> to <c>dungeon-17</c>.</summary>
     private static string[] Numbered(string name, int count) =>
@@ -291,6 +295,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
             DaggerfallMusicContext.Overcast => OvercastSongs,
             DaggerfallMusicContext.TempleNeutral => TempleNeutralSongs,
             DaggerfallMusicContext.TempleBad => TempleBadSongs,
+            DaggerfallMusicContext.Title => TitleSongs,
             DaggerfallMusicContext.Combat or DaggerfallMusicContext.Menu => [],
             _ => throw new ArgumentOutOfRangeException(nameof(context), context, "Music answers to no context the contract declares."),
         };

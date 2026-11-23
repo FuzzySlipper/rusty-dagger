@@ -61,6 +61,34 @@ public sealed class DaggerfallMusicSessionTests
     }
 
     [Fact]
+    public void The_entry_screen_plays_the_title_song_and_play_hands_over_to_the_worlds_cue()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        EngineContextFake engine = MusicEngine(inputs);
+        using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) {
+            Music = Score(FullContent(root)) });
+
+        session.ApplyProductMode(ProductMode.Title);
+        session.Update(Update());
+        session.Update(Update());
+        // The entry screen's song loops as one retained voice while the title is up.
+        Assert.Equal("title-menu-01", session.Music.Track);
+        Assert.Single(engine.StartedAudioVoices);
+
+        session.ApplyProductMode(ProductMode.Playing);
+        session.Update(Update());
+        // Play retires the title's loop before the world's own cue starts.
+        Assert.Equal("dungeon-09", session.Music.Track);
+        Assert.Equal(
+            ["daggerfall.music/cue.started: Music cue 'title-menu-01' started for context 'Title'.",
+             "daggerfall.music/cue.retired: Music cue 'title-menu-01' retired.",
+             "daggerfall.music/cue.started: Music cue 'dungeon-09' started for context 'Dungeon'."],
+            Cues(engine));
+        Assert.Equal(1, engine.ReleasedAudioVoices);
+    }
+
+    [Fact]
     public void A_dungeon_castle_zone_plays_the_castle_song_and_leaving_it_returns_to_the_dungeon()
     {
         string root = TestData.RepositoryRoot;

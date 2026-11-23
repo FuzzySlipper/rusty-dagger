@@ -12,17 +12,18 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallMusicDirectorTests
 {
     [Fact]
-    public void The_playlists_name_patchs_arrangement_with_three_of_the_donors_unused_dungeon_songs_and_its_two_fm_only_songs()
+    public void The_playlists_name_patchs_arrangement_with_three_of_the_donors_unused_dungeon_songs_and_its_two_fm_only_songs_and_the_title_song()
     {
         Assert.Equal(Enumerable.Range(1, 17).Select(number => $"dungeon-{number:00}"), DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Dungeon));
         Assert.Contains("outside-day-sunny-08", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny));
         Assert.Contains("outside-day-sunny-08", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Cloudy));
         Assert.Contains("mages-guild-03", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.MagesGuild));
         Assert.Equal(["castle-dungeon-01"], DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Castle));
-        // Every one of the 59 recordings plays somewhere; no classic name, sneaking track or title track is left.
-        Assert.Equal(59, DaggerfallMusicDirector.PlaylistTracks.Count);
+        Assert.Equal(["title-menu-01"], DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Title));
+        // Every one of the 60 recordings plays somewhere; no classic name or sneaking track is left.
+        Assert.Equal(60, DaggerfallMusicDirector.PlaylistTracks.Count);
         Assert.All(DaggerfallMusicDirector.PlaylistTracks, track => Assert.Matches("^[a-z]+(-[a-z]+)*-[0-9]{2}$", track));
-        Assert.DoesNotContain(DaggerfallMusicDirector.PlaylistTracks, track => track.StartsWith("sneaking", StringComparison.Ordinal) || track.StartsWith("title", StringComparison.Ordinal));
+        Assert.DoesNotContain(DaggerfallMusicDirector.PlaylistTracks, track => track.StartsWith("sneaking", StringComparison.Ordinal));
     }
 
     [Fact]

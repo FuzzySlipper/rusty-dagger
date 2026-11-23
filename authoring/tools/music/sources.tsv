@@ -1,7 +1,7 @@
 building-interior-01	renders/building-interior-01/first-pass/building-interior-01 - FIRST PASS.wav
 castle-dungeon-01	renders/castle-dungeon-01/first-pass/castle-dungeon-01 - FIRST PASS.wav
-dungeon-01	renders/04/first-pass/04 - FIRST PASS.wav
-dungeon-02	renders/05/first-pass/05 - FIRST PASS.wav
+dungeon-01	renders/dungeon-01/first-pass/dungeon-01 - FIRST PASS.wav
+dungeon-02	renders/dungeon-02/first-pass/dungeon-01 - FIRST PASS.wav
 dungeon-03	renders/dungeon-03/first-pass/dungeon-03 - FIRST PASS.wav
 dungeon-04	renders/dungeon-04/first-pass/dungeon-04 - FIRST PASS.wav
 dungeon-05	renders/dungeon-05/first-pass/dungeon-05 - FIRST PASS.wav
@@ -32,8 +32,8 @@ outside-day-snow-01	renders/outside-day-snow-01/first-pass/outside-day-snow-01 -
 outside-day-snow-02	renders/outside-day-snow-02/performer-octaves/outside-day-snow-02 - PERFORMER VIOLINS AND VIOLA MIX.wav
 outside-day-snow-03	renders/outside-day-snow-03/refinement/outside-day-snow-03 - PERFORMER VIOLIN AND SOFTER HARP MIX.wav
 outside-day-snow-04	renders/outside-day-snow-04/first-pass/outside-day-snow-04 - FIRST PASS.wav
-outside-day-sunny-01	renders/02/final/02 - FINAL MIX.wav
-outside-day-sunny-02	renders/03/first-pass/03 - FIRST PASS.wav
+outside-day-sunny-01	renders/outside-day-sunny-01/final/outside-day-sunny-01 - FINAL MIX.wav
+outside-day-sunny-02	renders/outside-day-sunny-02/first-pass/outside-day-sunny-02- FIRST PASS.wav
 outside-day-sunny-03	renders/outside-day-sunny-03/final/outside-day-sunny-03 - FINAL MIX.wav
 outside-day-sunny-04	renders/outside-day-sunny-04/first-pass/outside-day-sunny-04 - FIRST PASS.wav
 outside-day-sunny-05	renders/outside-day-sunny-05/first-pass/B - ACE viola section.wav
@@ -57,3 +57,4 @@ tavern-05	renders/tavern-05/first-pass/tavern-05 - FIRST PASS.wav
 temple-akatosh-kynareth-01	renders/temple-akatosh-kynareth-01/performer-violin/C - Performer First Violins.wav
 temple-arkay-mara-dibella-01	renders/temple-arkay-mara-dibella-01/performer-violins/C - Performer violin sections and chapel choir.wav
 temple-zen-julianos-stendarr-01	renders/temple-zen-julianos-stendarr-01/performer-violin/C - Performer First Violins.wav
+title-menu-01	renders/title-menu-01/final/title-menu-01 - FINAL MIX.wav

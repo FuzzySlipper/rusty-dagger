@@ -165,8 +165,10 @@ public sealed class ProductModeSessionTests
         product.Update(new ProductUpdate(OuterUpdate(++step), []));
         Assert.True(spatial.StepCalls > 0, "ordinary play admits world time");
         Assert.Contains("daggerfall.music/cue.started: Music cue 'dungeon-09' started for context 'Dungeon'.", engine.PublishedDiagnostics);
-        Assert.Single(engine.StartedAudioVoices);
-        Assert.Equal(0, engine.ReleasedAudioVoices);
+        // The entry screen's song played until the new game's session replaced it, which retired that loop.
+        Assert.Contains("daggerfall.music/cue.started: Music cue 'title-menu-01' started for context 'Title'.", engine.PublishedDiagnostics);
+        Assert.Equal(2, engine.StartedAudioVoices.Count);
+        Assert.Equal(1, engine.ReleasedAudioVoices);
         // The cue's body came out of the music container installed beside the product.
         Assert.Contains(bundles.OpenedReferences, reference => reference.Bundle == DaggerfallMusicBundle.ContainerName);
     }
