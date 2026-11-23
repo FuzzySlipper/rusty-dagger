@@ -94,10 +94,15 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>The light a flying spell carries in its element's colour (the donor's missile light).</summary>
     internal float SpellLightRange { get; init; } = 6f;
     internal float SpellLightIntensity { get; init; } = 1f;
-    /// <summary>What the ambient of each kind of place is multiplied by.</summary>
+    /// <summary>
+    /// What the ambient of each kind of place is multiplied by. Under a roof the ambient is a flat floor on every surface
+    /// in raster lighting, and none at all with ray-traced global illumination, where only rays reaching the sky meet it.
+    /// It stays low enough that a lamp's shadow is nearly as dark as without it: a little fill in place of the bounce
+    /// rays would bring.
+    /// </summary>
     internal float ExteriorScale { get; init; } = 3f;
-    internal float InteriorScale { get; init; } = .65f;
-    internal float DungeonScale { get; init; } = .5f;
+    internal float InteriorScale { get; init; } = .1f;
+    internal float DungeonScale { get; init; } = .1f;
     /// <summary>
     /// What the lamps of each kind of place are multiplied by. They carry the light where they burn, well above the
     /// ambient, so a room has pools, dark corners and visible lamp shadows: the donor's intensities, made for Unity's
