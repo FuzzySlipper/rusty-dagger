@@ -83,8 +83,9 @@ $S ship npc-468 --size 16k-graft-tidy --said "..."   # Engine GLB on the 22 Mixa
 Two walker settings npc-468 needed:
 - `"skirt_opts": "--solid 3 --inside-legs"` for a robe that ends above the ankle. The skirt step drops the legs inside the
   robe's bell (on skirt bones they rode the cloth). For a mid-shin robe, that made the shin vanish when a stride swung it out
-  in front, so the shoe floated. `--inside-legs` keeps the ones coloured like the legs below the hem on their leg bones; the rest, the robe's own inner
-  cloth, is still dropped (kept on the legs, it swung out through the robe as pale haze).
+  in front, so the shoe floated. `--inside-legs` keeps the ones coloured like the legs below the hem, and only within `--inside-band` (12 cm) above it,
+  on their leg bones. The rest is still dropped: kept on the legs, the robe's inner cloth swung out through the robe as pale
+  haze, and its dark folds higher up stuck out at the knee as shards (npc-468's two failed tries).
 - `clean_opts` for a teal or green hood, as for green hair. The bound step now warns when the face or crown rule takes much.
 
 With a `backdrop`, the bound step's clean also drops Gaussians coloured like the key (`clean_bound.py --key`): 4,700 magenta
