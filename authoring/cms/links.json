@@ -4,6 +4,11 @@
       "017"
     ]
   },
+  "npc-023": {
+    "pipelines": [
+      "npc-023"
+    ]
+  },
   "npc-024": {
     "pipelines": [
       "npc-024"

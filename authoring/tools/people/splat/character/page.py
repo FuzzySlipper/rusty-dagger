@@ -197,6 +197,8 @@ def ready(root, ms):
             ey = eyes_of(fin, m['id'])
             if ey:
                 out[-1]['eyes'] = ey
+            if (fin / f"{m['id']}.core.glb").exists():   # the Engine GLB with the matte inset core as a second primitive (rusty-engine #10990's contract; npc-023, Patch 2026-11-23)
+                out[-1]['core_glb'] = f"{m['id']}/09-game/bound/final/{m['id']}.core.glb"
             gj = fin / f"{m['id']}.glb.json"
             if gj.exists() and json.loads(gj.read_text()).get('static'):   # a static NPC: not a walker; ID-idle.glb and ID-look.glb are its clips
                 out[-1].update({'static': True, 'clips': {c: f"{m['id']}/09-game/bound/final/{m['id']}-{c}.glb" for c in ('idle', 'look')}})
