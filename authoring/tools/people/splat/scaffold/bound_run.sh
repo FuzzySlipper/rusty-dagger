@@ -125,8 +125,10 @@ EOF
   tail -n 2 $BD/distil-$NAME.log | cut -c1-400; cat $O/binding.json ;;
 clean)
   NAME=${1:-16k-face-share}
-  python3 $T/clean_bound.py $BD/bound/splat.npz $BD/binding.npz $SC $BD/bound-cleaned || exit 2
-  python3 $T/clean_bound.py $BD/sizes/$NAME/splat.npz $BD/sizes/$NAME/binding.npz $SC $BD/sizes/$NAME-cleaned || exit 3
+  # CLEAN_OPTS="--no-face --no-crown": a character whose hair is greenish or who wears a crown (npc-024, 2026-11-23: the face rule
+  # took his grey-green hair, the crown rule recoloured his gold crown to hair); static-npc passes npc.json "clean_opts"
+  python3 $T/clean_bound.py $BD/bound/splat.npz $BD/binding.npz $SC $BD/bound-cleaned ${CLEAN_OPTS:-} || exit 2
+  python3 $T/clean_bound.py $BD/sizes/$NAME/splat.npz $BD/sizes/$NAME/binding.npz $SC $BD/sizes/$NAME-cleaned ${CLEAN_OPTS:-} || exit 3
   cp $BD/sizes/$NAME/score.json $BD/sizes/$NAME-cleaned/score.json ;;   # the uncleaned body's score: the cleaned one is not scored again
 skirt)
   NAME=${1:-16k-face-share-cleaned}; WD=${2:-1.6}; SKR=$BD/skirt-rig; SSC=$SC; BONES=

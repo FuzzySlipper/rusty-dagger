@@ -253,7 +253,7 @@ def step_bound(n, a):
     cfg = n.cfg; n.need(n.k / 'bake/r1-data/views.json', step='bake')
     b = ['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A']
     yaw = json.loads((n.scaffold / 'scaffold.json').read_text()).get('view_yaw', 0)
-    loose = {k: str(cfg[c]) for k, c in (('LOOSE', 'loose'), ('LOOSE_FACTOR', 'loose_factor'), ('SHELL_M', 'shell_m')) if c in cfg}   # npc.json: "loose": "Head,LeftHand,RightHand"
+    loose = {k: str(cfg[c]) for k, c in (('LOOSE', 'loose'), ('LOOSE_FACTOR', 'loose_factor'), ('SHELL_M', 'shell_m'), ('CLEAN_OPTS', 'clean_opts')) if c in cfg}   # clean_opts: "--no-face --no-crown" for green hair or a crown   # npc.json: "loose": "Head,LeftHand,RightHand"
     loose.update(n.env)
     sh(b + ['score'], env={**n.env, 'YAW': str(yaw)})
     sh(b + ['bound'], env=loose)
