@@ -365,7 +365,7 @@
         "level": 1
       }
     ],
-    "volumeStep": 0.05000000074505806,
+    "volumeStep": 0.05,
     "categories": [
       {
         "id": "movement",

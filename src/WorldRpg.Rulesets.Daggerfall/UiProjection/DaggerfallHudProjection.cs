@@ -263,54 +263,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("ruleset", builder.String(slot.Ruleset)))).ToArray())),
                 ("diagnostic", saveSlotDiagnostic is null ? builder.Null() : builder.String(saveSlotDiagnostic)))),
         ];
-        IReadOnlyDictionary<string, IReadOnlyList<int>> controllerButtons = controlSettings?.ControllerButtons(PadActions)
-            ?? new Dictionary<string, IReadOnlyList<int>>();
-        if (controlSettings is not null) fields = [.. fields, ("controls", builder.Object(
-            ("diagnostic", builder.String(controlDiagnostic ?? "")),
-            ("lookSensitivity", builder.Number(controlSettings.LookSensitivity)),
-            ("invertVertical", builder.Boolean(controlSettings.InvertVertical)),
-            ("uiScale", controlSettings.UiScale is float uiScale ? builder.Number(uiScale) : builder.Null()),
-            // Ground cover grows only from a refreshed art set, so it is offered only with one.
-            ("groundCover", RefreshedArt ? builder.Object(
-                ("grows", builder.Boolean(controlSettings.GroundCover)),
-                ("distance", builder.Number(controlSettings.ClutterDistance)),
-                ("minimum", builder.Number(DaggerfallControlSettings.MinimumClutterDistance)),
-                ("maximum", builder.Number(DaggerfallControlSettings.MaximumClutterDistance)),
-                ("step", builder.Number(DaggerfallControlSettings.ClutterDistanceStep))) : builder.Null()),
-            // Which lamps cast shadows near the player, in sectors of what share of the game's side (0 for none), and outdoors.
-            ("lampShadows", builder.Object(
-                ("lamps", builder.String(controlSettings.LampShadows.Lamps.ToString().ToLowerInvariant())),
-                ("lampChoices", builder.Array(Enum.GetValues<DaggerfallLampShadowLamps>().Select(lamps => builder.Object(
-                    ("id", builder.String(lamps.ToString().ToLowerInvariant())), ("label", builder.String(DaggerfallLampShadowChoice.Label(lamps))))).ToArray())),
-                ("sectors", builder.Number(controlSettings.LampShadows.SectorShare)),
-                ("outdoors", builder.Boolean(controlSettings.LampShadows.Outdoors)),
-                ("sectorShares", builder.Array(DaggerfallLampShadowChoice.SectorShares.Select(share => builder.Number(share)).ToArray())))),
-            // Building relief draws only with a refreshed art set, so its strength and reach are offered only with one.
-            ("surfaceRelief", RefreshedArt ? builder.Object(
-                ("strength", builder.Number(controlSettings.SurfaceRelief)),
-                ("maximum", builder.Number(DaggerfallControlSettings.MaximumSurfaceRelief)),
-                ("step", builder.Number(DaggerfallControlSettings.SurfaceReliefStep)),
-                ("distance", builder.Number(controlSettings.ReliefDistance)),
-                ("distanceMinimum", builder.Number(DaggerfallControlSettings.MinimumReliefDistance)),
-                ("distanceMaximum", builder.Number(DaggerfallControlSettings.MaximumReliefDistance)),
-                ("distanceStep", builder.Number(DaggerfallControlSettings.ReliefDistanceStep))) : builder.Null()),
-            ("uiScaleRange", builder.Object(
-                ("minimum", builder.Number(DaggerfallControlSettings.MinimumUiScale)),
-                ("maximum", builder.Number(DaggerfallControlSettings.MaximumUiScale)),
-                ("step", builder.Number(DaggerfallControlSettings.UiScaleStep)))),
-            ("volumes", builder.Array(DaggerfallControlSettings.SoundBuses.Select(bus => builder.Object(
-                ("id", builder.String(bus.Id)), ("label", builder.String(bus.Label)), ("level", builder.Number(controlSettings.Volume(bus.Id))))).ToArray())),
-            ("volumeStep", builder.Number(DaggerfallControlSettings.VolumeStep)),
-            ("categories", builder.Array(DaggerfallControlSettings.Categories.Select(category => builder.Object(
-                ("id", builder.String(category.Id)), ("label", builder.String(category.Label)))).ToArray())),
-            ("bindings", builder.Array(DaggerfallControlSettings.Catalog.Select(action => builder.Object(
-                ("id", builder.String(action.Id)), ("category", builder.String(action.Category)),
-                ("label", builder.String(DaggerfallControlSettings.Labels[action.Id])),
-                ("keys", builder.Array(controlSettings.KeysFor(action.Id).Select(builder.String).ToArray())),
-                ("fixed", builder.Boolean(DaggerfallControlSettings.FixedReason(action.Id) is not null)),
-                ("fixedReason", DaggerfallControlSettings.FixedReason(action.Id) is { } reason ? builder.String(reason) : builder.Null()),
-                ("buttons", builder.Array(controllerButtons[action.Id].Select(button => builder.Number(button)).ToArray())),
-                ("buttonFixedReason", DaggerfallControlSettings.ButtonFixedReason(action.Id) is { } padReason ? builder.String(padReason) : builder.Null()))).ToArray()))))];
+        if (controlSettings is not null)
+            fields = [.. fields, ("controls", Controls(builder, controlSettings, controlDiagnostic, RefreshedArt, controlSettings.ControllerButtons(PadActions)))];
         if (activation is not null) fields = [.. fields, ("activation", builder.Object(
             ("mode", builder.String(activation.Mode)),
             ("label", builder.String(DaggerfallHudText.ModeLabel(activation.Mode))),
@@ -582,6 +536,62 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("label", builder.String(item.Label)),
                     ("quantity", builder.String(item.Quantity)))).ToArray())),
                 ("refusedDefinitions", builder.Array(transport.Wagon.RefusedDefinitions.Select(builder.String).ToArray())))));
+
+    /// <summary>
+    /// The control and video preferences the settings page edits. Every fractional value goes out as the decimal its float
+    /// was written as (0.1, not the widened 0.10000000149), so a range row's step divides its span: arrows reach the
+    /// maximum and a typed value on the step is accepted (#11003).
+    /// </summary>
+    internal static uint Controls(UiValueBuilder builder, DaggerfallControlSettings settings, string? diagnostic, bool refreshedArt,
+        IReadOnlyDictionary<string, IReadOnlyList<int>> controllerButtons) => builder.Object(
+        ("diagnostic", builder.String(diagnostic ?? "")),
+        ("lookSensitivity", Setting(builder, settings.LookSensitivity)),
+        ("invertVertical", builder.Boolean(settings.InvertVertical)),
+        ("uiScale", settings.UiScale is float uiScale ? Setting(builder, uiScale) : builder.Null()),
+        // Ground cover grows only from a refreshed art set, so it is offered only with one.
+        ("groundCover", refreshedArt ? builder.Object(
+            ("grows", builder.Boolean(settings.GroundCover)),
+            ("distance", Setting(builder, settings.ClutterDistance)),
+            ("minimum", Setting(builder, DaggerfallControlSettings.MinimumClutterDistance)),
+            ("maximum", Setting(builder, DaggerfallControlSettings.MaximumClutterDistance)),
+            ("step", Setting(builder, DaggerfallControlSettings.ClutterDistanceStep))) : builder.Null()),
+        // Which lamps cast shadows near the player, in sectors of what share of the game's side (0 for none), and outdoors.
+        ("lampShadows", builder.Object(
+            ("lamps", builder.String(settings.LampShadows.Lamps.ToString().ToLowerInvariant())),
+            ("lampChoices", builder.Array(Enum.GetValues<DaggerfallLampShadowLamps>().Select(lamps => builder.Object(
+                ("id", builder.String(lamps.ToString().ToLowerInvariant())), ("label", builder.String(DaggerfallLampShadowChoice.Label(lamps))))).ToArray())),
+            ("sectors", Setting(builder, settings.LampShadows.SectorShare)),
+            ("outdoors", builder.Boolean(settings.LampShadows.Outdoors)),
+            ("sectorShares", builder.Array(DaggerfallLampShadowChoice.SectorShares.Select(share => Setting(builder, share)).ToArray())))),
+        // Building relief draws only with a refreshed art set, so its strength and reach are offered only with one.
+        ("surfaceRelief", refreshedArt ? builder.Object(
+            ("strength", Setting(builder, settings.SurfaceRelief)),
+            ("maximum", Setting(builder, DaggerfallControlSettings.MaximumSurfaceRelief)),
+            ("step", Setting(builder, DaggerfallControlSettings.SurfaceReliefStep)),
+            ("distance", Setting(builder, settings.ReliefDistance)),
+            ("distanceMinimum", Setting(builder, DaggerfallControlSettings.MinimumReliefDistance)),
+            ("distanceMaximum", Setting(builder, DaggerfallControlSettings.MaximumReliefDistance)),
+            ("distanceStep", Setting(builder, DaggerfallControlSettings.ReliefDistanceStep))) : builder.Null()),
+        ("uiScaleRange", builder.Object(
+            ("minimum", Setting(builder, DaggerfallControlSettings.MinimumUiScale)),
+            ("maximum", Setting(builder, DaggerfallControlSettings.MaximumUiScale)),
+            ("step", Setting(builder, DaggerfallControlSettings.UiScaleStep)))),
+        ("volumes", builder.Array(DaggerfallControlSettings.SoundBuses.Select(bus => builder.Object(
+            ("id", builder.String(bus.Id)), ("label", builder.String(bus.Label)), ("level", Setting(builder, settings.Volume(bus.Id))))).ToArray())),
+        ("volumeStep", Setting(builder, DaggerfallControlSettings.VolumeStep)),
+        ("categories", builder.Array(DaggerfallControlSettings.Categories.Select(category => builder.Object(
+            ("id", builder.String(category.Id)), ("label", builder.String(category.Label)))).ToArray())),
+        ("bindings", builder.Array(DaggerfallControlSettings.Catalog.Select(action => builder.Object(
+            ("id", builder.String(action.Id)), ("category", builder.String(action.Category)),
+            ("label", builder.String(DaggerfallControlSettings.Labels[action.Id])),
+            ("keys", builder.Array(settings.KeysFor(action.Id).Select(builder.String).ToArray())),
+            ("fixed", builder.Boolean(DaggerfallControlSettings.FixedReason(action.Id) is not null)),
+            ("fixedReason", DaggerfallControlSettings.FixedReason(action.Id) is { } reason ? builder.String(reason) : builder.Null()),
+            ("buttons", builder.Array(controllerButtons[action.Id].Select(button => builder.Number(button)).ToArray())),
+            ("buttonFixedReason", DaggerfallControlSettings.ButtonFixedReason(action.Id) is { } padReason ? builder.String(padReason) : builder.Null()))).ToArray())));
+
+    /// <summary>A float preference as the shortest decimal that names it, which a float widened to double is not.</summary>
+    private static uint Setting(UiValueBuilder builder, float value) => builder.Number((double)(decimal)value);
 
     internal static uint Dialogue(UiValueBuilder builder, DaggerfallDialogueView dialogue) => builder.Object(
         ("revision", builder.String(dialogue.Revision)),
