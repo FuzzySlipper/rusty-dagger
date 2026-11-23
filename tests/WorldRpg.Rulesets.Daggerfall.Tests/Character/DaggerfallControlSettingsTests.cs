@@ -234,6 +234,29 @@ public sealed class DaggerfallControlSettingsTests
         Assert.Equal(2f, settings.SurfaceRelief, 4);
     }
 
+    /// <summary>
+    /// Relief reaches its tuned fade (a share of 1) by default, also for preferences saved before the choice existed; it
+    /// round-trips from half to triple in quarters, and a share off its steps or outside its range is refused without
+    /// changing the one in force.
+    /// </summary>
+    [Fact]
+    public void Relief_distance_defaults_to_the_tuned_reach_and_round_trips_from_half_to_triple_in_quarters()
+    {
+        DaggerfallControlSettings settings = new();
+        Assert.Equal(1f, settings.ReliefDistance);
+        Assert.Equal(1f, DaggerfallControlSettings.Parse(PersistedBindings(new("attack", "Primary"))).ReliefDistance);
+
+        settings.SetReliefDistance(.5f);
+        Assert.Equal(.5f, DaggerfallControlSettings.Parse(settings.Serialize()).ReliefDistance);
+        settings.SetReliefDistance(2.75f);
+        Assert.Equal(2.75f, DaggerfallControlSettings.Parse(settings.Serialize()).ReliefDistance, 4);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetReliefDistance(1.1f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetReliefDistance(3.25f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetReliefDistance(.25f));
+        Assert.Equal(2.75f, settings.ReliefDistance, 4);
+    }
+
     private static string PersistedBindings(KeyValuePair<string, string?> replacement)
     {
         Dictionary<string, List<string>?> bindings = new(StringComparer.Ordinal);

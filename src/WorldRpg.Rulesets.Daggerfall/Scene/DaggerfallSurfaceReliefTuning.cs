@@ -8,7 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// How a building's walls, doors and roofs draw their record's relief near the camera (the art set's surface shader,
 /// <c>relief.wgsl</c>): each texel stands as a small column under the classic face, as deep as the record's relief
 /// states times the player's strength, and the relief shallows to the flat face between the fade's start and end, beyond
-/// which nothing is marched. The strength is the player's video choice, not tuning.
+/// which nothing is marched. The strength, and a share both fade distances scale by, are the player's video choices; the
+/// tuned fade is the reach at a share of 1.
 /// </summary>
 /// <param name="FadeStart">How far from the camera the relief starts to shallow, in metres.</param>
 /// <param name="FadeEnd">How far from the camera it is gone, in metres.</param>
@@ -32,10 +33,11 @@ internal sealed record DaggerfallSurfaceReliefTuning(float FadeStart, float Fade
     /// <summary>
     /// The surface shader drawing one record's relief: <paramref name="relief"/> its image, whose alpha is each texel's
     /// height, 1 at the face, or none; <paramref name="depth"/> its floor's depth under the face in metres, after the player's
-    /// strength, 0 for none; and lit glass flickering by a share at a rate (<paramref name="flicker"/>).
+    /// strength, 0 for none; <paramref name="distance"/> the player's share of the tuned fade, both ends scaled alike so the
+    /// edge keeps fading; and lit glass flickering by a share at a rate (<paramref name="flicker"/>).
     /// </summary>
-    internal MaterialShader Shader(RenderResource shader, RenderResource? relief, float depth, Vector2 flicker) => new(new RenderResourceReference(shader),
-        new Vector4(depth, Steps, FadeStart, FadeEnd), new Vector4(Cavity, Slope, 0, 0), new Vector4(flicker, 0, 0), default,
+    internal MaterialShader Shader(RenderResource shader, RenderResource? relief, float depth, float distance, Vector2 flicker) => new(new RenderResourceReference(shader),
+        new Vector4(depth, Steps, FadeStart * distance, FadeEnd * distance), new Vector4(Cavity, Slope, 0, 0), new Vector4(flicker, 0, 0), default,
         relief is null ? default : new RenderResourceReference(relief), default);
 
     internal static DaggerfallSurfaceReliefTuning Read(JsonElement e) => new DaggerfallSurfaceReliefTuning(

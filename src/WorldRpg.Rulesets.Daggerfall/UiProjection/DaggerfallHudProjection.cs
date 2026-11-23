@@ -285,11 +285,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("sectors", builder.Number(controlSettings.LampShadows.SectorShare)),
                 ("outdoors", builder.Boolean(controlSettings.LampShadows.Outdoors)),
                 ("sectorShares", builder.Array(DaggerfallLampShadowChoice.SectorShares.Select(share => builder.Number(share)).ToArray())))),
-            // Building relief draws only with a refreshed art set, so its strength is offered only with one.
+            // Building relief draws only with a refreshed art set, so its strength and reach are offered only with one.
             ("surfaceRelief", RefreshedArt ? builder.Object(
                 ("strength", builder.Number(controlSettings.SurfaceRelief)),
                 ("maximum", builder.Number(DaggerfallControlSettings.MaximumSurfaceRelief)),
-                ("step", builder.Number(DaggerfallControlSettings.SurfaceReliefStep))) : builder.Null()),
+                ("step", builder.Number(DaggerfallControlSettings.SurfaceReliefStep)),
+                ("distance", builder.Number(controlSettings.ReliefDistance)),
+                ("distanceMinimum", builder.Number(DaggerfallControlSettings.MinimumReliefDistance)),
+                ("distanceMaximum", builder.Number(DaggerfallControlSettings.MaximumReliefDistance)),
+                ("distanceStep", builder.Number(DaggerfallControlSettings.ReliefDistanceStep))) : builder.Null()),
             ("uiScaleRange", builder.Object(
                 ("minimum", builder.Number(DaggerfallControlSettings.MinimumUiScale)),
                 ("maximum", builder.Number(DaggerfallControlSettings.MaximumUiScale)),

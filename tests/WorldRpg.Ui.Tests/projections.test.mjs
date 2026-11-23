@@ -2986,7 +2986,7 @@ test('Settings offers lamp shadows beside the shadow budget and sends the whole 
   await Promise.resolve(); await Promise.resolve();
 });
 
-test('Settings offers surface relief only with a refreshed art set, as a strength from flat to its maximum', async () => {
+test('Settings offers surface relief only with a refreshed art set, as a strength from flat to its maximum and a reach', async () => {
   const f = fixture();
   try {
     f.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: null } });
@@ -2997,7 +2997,7 @@ test('Settings offers surface relief only with a refreshed art set, as a strengt
   await Promise.resolve(); await Promise.resolve();
   const g = fixture();
   try {
-    g.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: { strength: 0.6, maximum: 2, step: 0.1 } } });
+    g.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: { strength: 0.6, maximum: 2, step: 0.1, distance: 1, distanceMinimum: 0.5, distanceMaximum: 3, distanceStep: 0.25 } } });
     g.root.querySelector('[data-action="settings"]').click();
     const relief = video.mounts.at(-1).options.productOptions.find(row => row.id === 'surfaceRelief');
     assert.deepEqual([relief.group, relief.kind, relief.min, relief.max, relief.step, relief.value], ['Buildings', 'range', 0, 2, 0.1, 0.6]);
@@ -3005,6 +3005,10 @@ test('Settings offers surface relief only with a refreshed art set, as a strengt
     assert.deepEqual(g.actions.at(-1), { action: 'controls-surface-relief', scale: 0 });
     relief.onChange('1.4');
     assert.deepEqual(g.actions.at(-1), { action: 'controls-surface-relief', scale: 1.4 });
+    const reach = video.mounts.at(-1).options.productOptions.find(row => row.id === 'reliefDistance');
+    assert.deepEqual([reach.group, reach.kind, reach.min, reach.max, reach.step, reach.value], ['Buildings', 'range', 0.5, 3, 0.25, 1]);
+    reach.onChange('0.5');
+    assert.deepEqual(g.actions.at(-1), { action: 'controls-relief-distance', scale: 0.5 });
   } finally { g.dispose(); }
   await Promise.resolve(); await Promise.resolve();
 });

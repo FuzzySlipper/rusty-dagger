@@ -188,6 +188,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.ControlsClutterDistance:
             case DaggerfallUiActionKind.ControlsLampShadows:
             case DaggerfallUiActionKind.ControlsSurfaceRelief:
+            case DaggerfallUiActionKind.ControlsReliefDistance:
             case DaggerfallUiActionKind.ControlsRebind:
             case DaggerfallUiActionKind.ControlsRebindButton:
             case DaggerfallUiActionKind.ControlsVolume:

@@ -58,7 +58,7 @@ public sealed class SurfaceReliefPresentationTests
         """).Replace("HASH", HashHex, StringComparison.Ordinal);
 
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics) Compose(DaggerfallWorldProfileKind kind, Func<bool> refreshed, Func<float> strength,
-        bool glass = false)
+        bool glass = false, Func<float>? distance = null)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -69,7 +69,7 @@ public sealed class SurfaceReliefPresentationTests
             content.Add(path, Hash);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance presentation = new(content, graphics, Profile(kind, glass));
-        presentation.UseSurfaceRelief(DaggerfallSurfaceReliefTuning.Default, strength);
+        presentation.UseSurfaceRelief(DaggerfallSurfaceReliefTuning.Default, () => (strength(), distance?.Invoke() ?? 1F));
         presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service,
             DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(ArtJson), "test.art"), refreshed);
         return (presentation, graphics);
@@ -86,10 +86,10 @@ public sealed class SurfaceReliefPresentationTests
         graphics.OpenedResourcePaths[Enumerable.Range(0, graphics.OpenedResourcePaths.Count).Single(at => resource == new RenderResourceReference((ulong)at + 1))];
 
     [Fact]
-    public void An_outdoor_wall_draws_its_seasons_relief_with_the_surface_shader_at_the_players_strength_and_the_tuned_fade()
+    public void An_outdoor_wall_draws_its_seasons_relief_with_the_surface_shader_at_the_players_strength_and_reach()
     {
-        float strength = .6F;
-        var (presentation, graphics) = Compose(DaggerfallWorldProfileKind.Exterior, () => true, () => strength);
+        float strength = .6F, distance = 1F;
+        var (presentation, graphics) = Compose(DaggerfallWorldProfileKind.Exterior, () => true, () => strength, distance: () => distance);
         using DaggerfallSiteAppearance owned = presentation;
         using var actors = EmptyActors();
         Material plaster = Surfaces(graphics)[0];
@@ -112,6 +112,11 @@ public sealed class SurfaceReliefPresentationTests
         strength = 2F;
         presentation.Publish(actors);
         Assert.Equal(.03F * 2F, Now(graphics, plaster).Shader.Parameter0.X, 6);
+        // A new reach scales both ends of the tuned fade alike, so the edge still shallows rather than cuts off.
+        distance = .5F;
+        presentation.Publish(actors);
+        Assert.Equal(new Vector2(tuning.FadeStart * .5F, tuning.FadeEnd * .5F),
+            new Vector2(Now(graphics, plaster).Shader.Parameter0.Z, Now(graphics, plaster).Shader.Parameter0.W));
         strength = 0F;
         presentation.Publish(actors);
         Assert.Equal(default, Now(graphics, plaster).Shader);

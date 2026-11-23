@@ -251,6 +251,22 @@ public sealed class DaggerfallControlSettings
         SurfaceRelief = MathF.Round(strength / SurfaceReliefStep) * SurfaceReliefStep;
     }
 
+    /// <summary>
+    /// How far from the player building relief reaches before it has faded flat, as a share of its tuned fade
+    /// (<see cref="DaggerfallSurfaceReliefTuning"/>), in steps of <see cref="ReliefDistanceStep"/>: a video preference.
+    /// </summary>
+    public float ReliefDistance { get; private set; } = 1;
+    public const float MinimumReliefDistance = .5f, MaximumReliefDistance = 3, ReliefDistanceStep = .25f;
+
+    public void SetReliefDistance(float share)
+    {
+        if (!float.IsFinite(share) || share < MinimumReliefDistance - 1e-4f || share > MaximumReliefDistance + 1e-4f
+            || MathF.Abs(share / ReliefDistanceStep - MathF.Round(share / ReliefDistanceStep)) > 1e-3f)
+            throw new ArgumentOutOfRangeException(nameof(share), share,
+                $"Relief reaches {MinimumReliefDistance:0.#} to {MaximumReliefDistance:0.#} times its distance, in steps of {ReliefDistanceStep:0.##}.");
+        ReliefDistance = MathF.Round(share / ReliefDistanceStep) * ReliefDistanceStep;
+    }
+
     /// <summary>The sound buses the player sets levels for, in the order the settings show them, with their names.</summary>
     public static readonly IReadOnlyList<(string Id, string Label)> SoundBuses =
         [("music", "Music"), ("ambient", "Ambience"), ("effects", "Sound effects"), ("interface", "Interface sounds")];
@@ -296,6 +312,7 @@ public sealed class DaggerfallControlSettings
             : throw new ArgumentOutOfRangeException(nameof(preferences), preferences.LampShadows, "No lamp shadow choice carries this name."),
             preferences.ShadowSectors, preferences.OutdoorLampShadows));
         SetSurfaceRelief(preferences.SurfaceRelief);
+        SetReliefDistance(preferences.ReliefDistance);
         _controller = preferences.Controller?.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
         foreach ((string bus, float level) in preferences.Volumes ?? []) SetVolume(bus, level);
     }
@@ -365,7 +382,7 @@ public sealed class DaggerfallControlSettings
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
     public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, GroundCover, ClutterDistance,
-        LampShadows.Lamps.ToString().ToLowerInvariant(), LampShadows.SectorShare, LampShadows.Outdoors, SurfaceRelief), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+        LampShadows.Lamps.ToString().ToLowerInvariant(), LampShadows.SectorShare, LampShadows.Outdoors, SurfaceRelief, ReliefDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -541,7 +558,8 @@ internal sealed record DaggerfallControlPreferences(
     string LampShadows = "main",
     float ShadowSectors = 1,
     bool OutdoorLampShadows = false,
-    float SurfaceRelief = DaggerfallControlSettings.DefaultSurfaceRelief);
+    float SurfaceRelief = DaggerfallControlSettings.DefaultSurfaceRelief,
+    float ReliefDistance = 1);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

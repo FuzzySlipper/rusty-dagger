@@ -37,7 +37,7 @@ internal sealed class DaggerfallQuit(PresentationState presentation)
         DaggerfallUiActionKind.ControlsRebind, DaggerfallUiActionKind.ControlsRebindButton, DaggerfallUiActionKind.ControlsVolume,
         DaggerfallUiActionKind.ControlsReset, DaggerfallUiActionKind.ControlsLook, DaggerfallUiActionKind.ControlsUiScale,
         DaggerfallUiActionKind.ControlsGroundCover, DaggerfallUiActionKind.ControlsClutterDistance,
-        DaggerfallUiActionKind.ControlsLampShadows, DaggerfallUiActionKind.ControlsSurfaceRelief,
+        DaggerfallUiActionKind.ControlsLampShadows, DaggerfallUiActionKind.ControlsSurfaceRelief, DaggerfallUiActionKind.ControlsReliefDistance,
     ];
 
     private bool _available;

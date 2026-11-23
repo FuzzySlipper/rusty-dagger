@@ -34,11 +34,11 @@ internal sealed partial class DaggerfallSiteAppearance
     // How far lit glass flickers about its level, as a share of it, and how fast, in cycles a second.
     private Vector2 windowFlicker;
     // The set's surface shader, once an art set with one is admitted outdoors, the tuning its relief draws by, and the
-    // player's strength, read live, with the strength the surfaces draw now.
+    // player's strength and share of the tuned reach, read live, with the choice the surfaces draw now.
     private RenderResource? surfaceShader;
     private DaggerfallSurfaceReliefTuning reliefTuning = DaggerfallSurfaceReliefTuning.Default;
-    private Func<float> reliefStrength = () => 0F;
-    private float surfacesStrength;
+    private Func<(float Strength, float Distance)> reliefChoice = () => (0F, 1F);
+    private (float Strength, float Distance) surfacesRelief;
 
     /// <summary>
     /// One location material: its classic texture path per season (summer, winter, rain; a season without a variant repeats
@@ -113,13 +113,13 @@ internal sealed partial class DaggerfallSiteAppearance
             : surface.Frames is not null ? ClassicFrame(surface, surface.Frame) : ClassicSurface(surface, season);
 
     /// <summary>
-    /// Draws building relief by <paramref name="tuning"/> at the player's <paramref name="strength"/>, read each update, so a
-    /// change in the video settings shows at once.
+    /// Draws building relief by <paramref name="tuning"/> at the player's strength and share of the tuned reach
+    /// (<paramref name="choice"/>), read each update, so a change in the video settings shows at once.
     /// </summary>
-    internal void UseSurfaceRelief(DaggerfallSurfaceReliefTuning tuning, Func<float> strength)
+    internal void UseSurfaceRelief(DaggerfallSurfaceReliefTuning tuning, Func<(float Strength, float Distance)> choice)
     {
         reliefTuning = tuning.Validate();
-        reliefStrength = strength;
+        reliefChoice = choice;
         ApplySurfaces();
     }
 
@@ -183,11 +183,11 @@ internal sealed partial class DaggerfallSiteAppearance
                 surface.Relief[season] = (ReliefImage(relief), depth);
     }
 
-    /// <summary>Draws each surface in the current season, art set and relief strength.</summary>
+    /// <summary>Draws each surface in the current season, art set and relief choice.</summary>
     private void ApplySurfaces()
     {
         surfacesRefreshed = drawRefreshedEffects();
-        surfacesStrength = reliefStrength();
+        surfacesRelief = reliefChoice();
         int season = SurfaceSeason;
         foreach (SurfaceMaterial surface in surfaceMaterials) ApplySurface(surface, season);
         ApplyShells(season, surfacesRefreshed);
@@ -195,7 +195,7 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private int SurfaceSeason => materialSeason switch { DaggerfallExteriorSeason.Winter => 1, DaggerfallExteriorSeason.Rain => 2, _ => 0 };
 
-    /// <summary>Draws one surface in a season, the current art set and relief strength, updating its material only where that changes it.</summary>
+    /// <summary>Draws one surface in a season, the current art set and relief choice, updating its material only where that changes it.</summary>
     private void ApplySurface(SurfaceMaterial surface, int season)
     {
         RenderResource wanted = DrawnSurface(surface, season, surfacesRefreshed);
@@ -203,9 +203,9 @@ internal sealed partial class DaggerfallSiteAppearance
         float level = glass is null ? 0F : windowLevel;
         Vector2 flicker = level > 0 ? windowFlicker : default;
         MaterialShader shader = surfaceShader is not { } surfaces ? default
-            : surfacesRefreshed && surfacesStrength > 0 && surface.Relief[season] is { } height
-                ? reliefTuning.Shader(surfaces, height.Image, height.Depth * surfacesStrength, flicker)
-                : flicker.X > 0 ? reliefTuning.Shader(surfaces, null, 0, flicker) : default;
+            : surfacesRefreshed && surfacesRelief.Strength > 0 && surface.Relief[season] is { } height
+                ? reliefTuning.Shader(surfaces, height.Image, height.Depth * surfacesRelief.Strength, surfacesRelief.Distance, flicker)
+                : flicker.X > 0 ? reliefTuning.Shader(surfaces, null, 0, 1, flicker) : default;
         if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) return;
         appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));
         (surface.Current, surface.CurrentGlass, surface.Level, surface.Shader) = (wanted, glass, level, shader);

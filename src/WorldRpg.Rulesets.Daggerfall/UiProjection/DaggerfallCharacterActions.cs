@@ -122,6 +122,7 @@ internal sealed class DaggerfallCharacterActions(DaggerfallCharacterCreation cre
             case DaggerfallUiActionKind.ControlsLampShadows: controls.Change(settings => settings.SetLampShadows(
                 new(Enum.Parse<DaggerfallLampShadowLamps>(action.Item!, ignoreCase: true), action.Scale!.Value, action.Enabled!.Value))); break;
             case DaggerfallUiActionKind.ControlsSurfaceRelief: controls.Change(settings => settings.SetSurfaceRelief(action.Scale!.Value)); break;
+            case DaggerfallUiActionKind.ControlsReliefDistance: controls.Change(settings => settings.SetReliefDistance(action.Scale!.Value)); break;
             case DaggerfallUiActionKind.ControlsRebind: controls.Change(settings => settings.Rebind(action.Item!, [action.Key!], action.Confirm)); break;
             case DaggerfallUiActionKind.ControlsRebindButton:
                 controls.Change(settings => settings.RebindButton(action.Item!, checked((int)action.Amount!.Value), controls.PadActions, action.Confirm)); break;
