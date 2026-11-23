@@ -67,4 +67,11 @@ internal sealed record DaggerfallSessionComposition(
 
     /// <summary>The host's loading screen, where slow world changes accepted in an update are staged; null runs them at once.</summary>
     internal LoadingScreen? Loading { get; init; }
+
+    /// <summary>
+    /// The seed a new session's keyed draws take (<see cref="DaggerfallGameRandom"/>): the ruleset makes a fresh one for
+    /// each fresh session, so a character's creation rolls and the game it commits share one seed that no other game
+    /// has. A restore takes its save's seed instead. Zero leaves every draw's own seed as it is.
+    /// </summary>
+    internal ulong GameSeed { get; init; }
 }

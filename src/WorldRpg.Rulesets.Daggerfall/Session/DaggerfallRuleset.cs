@@ -133,6 +133,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             ArtReplacements = admitted.ArtReplacements,
             Blocks = admitted.Blocks,
             Loading = context.Loading,
+            GameSeed = DaggerfallGameRandom.NewSeed(),
         };
 
     private DaggerfallAdmittedContent Admit(ResolvedGameComposition composition) =>

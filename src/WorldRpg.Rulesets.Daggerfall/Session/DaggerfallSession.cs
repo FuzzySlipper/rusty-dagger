@@ -41,7 +41,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallExpeditionSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
     IDaggerfallMusicPlace, IPresentationYieldingSession
 {
-    private readonly IRandomService _random;
+    private readonly DaggerfallGameRandom _random;
     private readonly IEngineContext _engine;
     private readonly DaggerfallTuning _tuning;
     private readonly DaggerfallViewLight _viewLight;

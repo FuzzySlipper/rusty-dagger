@@ -152,6 +152,12 @@ public sealed class CommittedBundleCompositionTests
         NewGameSessionTests.Commit(titleSession);
         using DaggerfallSession game = Assert.IsType<DaggerfallSession>(titleSession.CreateNewGame());
         Assert.All(newGame.Quests, file => Assert.Contains(game.State.Quests.All, quest => quest.SourceFile == file));
+
+        // Each new game the ruleset composes draws from a seed of its own, which its saves keep.
+        using IGameSession otherTitle = CreateWithBundle(_ => { });
+        NewGameSessionTests.Commit(Assert.IsType<DaggerfallSession>(otherTitle));
+        using DaggerfallSession other = Assert.IsType<DaggerfallSession>(((DaggerfallSession)otherTitle).CreateNewGame());
+        Assert.NotEqual(DaggerfallSavePayload.Read(game.CaptureSave()).GameSeed, DaggerfallSavePayload.Read(other.CaptureSave()).GameSeed);
     }
 
     [Fact]

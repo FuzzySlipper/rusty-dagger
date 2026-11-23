@@ -69,6 +69,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired] public string? PendingTeleport { get; init; }
     /// <summary>The real seconds the player has spent in play, which the save slot list shows.</summary>
     [JsonRequired] public double PlaySeconds { get; init; }
+    /// <summary>The game's seed for its keyed draws (<see cref="DaggerfallGameRandom"/>), so a load draws as the game did.</summary>
+    [JsonRequired] public ulong GameSeed { get; init; }
     [JsonRequired] public DaggerfallTeleportAnchor? TeleportAnchor { get; init; }
     [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
     [JsonRequired] public DaggerfallCreateItemRequest? PendingCreateItem { get; init; }

@@ -80,7 +80,7 @@ internal sealed partial class DaggerfallSession
     private DaggerfallSession AdmitComposition(IEngineContext engine, DaggerfallSessionComposition composition)
     {
         if (composition.Profiles is { } profiles) AdmitSiteProfiles(profiles);
-        if (composition.Blocks is { } blocks) Site.AdmitBuildingNames(engine.Random, composition.Definitions, blocks, State.Quests.LearnedBuildingName);
+        if (composition.Blocks is { } blocks) Site.AdmitBuildingNames(_random, composition.Definitions, blocks, State.Quests.LearnedBuildingName);
         return this;
     }
 
@@ -119,7 +119,7 @@ internal sealed partial class DaggerfallSession
                     "daggerfall.viewmodel", "art.missing",
                     $"viewmodel.style is {tuning.Viewmodel.Style} but {DaggerfallHeldArt.ContainerName} is not installed, so the classic weapon sprites are drawn.",
                     string.Empty));
-            _random = engine.Random;
+            _random = new DaggerfallGameRandom(engine.Random, saved?.GameSeed ?? composition.GameSeed);
             _definitions = definitions;
             _buildingGreeting = new DaggerfallBuildingGreeting(definitions, _random);
             DungeonText = new DaggerfallDungeonText(new DaggerfallTextResolver(definitions.Text));
@@ -293,7 +293,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallAttributeDrainEffects.TransferDefinitions(() => character.Career, ReactToSpellAttack,
                     id => id == actors.Player.DurableId ? actors.Player.Actor : actors.TryGet(id, out var actor) ? actor.Actor : null,
                     () => effects),
-                .. DaggerfallRestorationEffects.Definitions(engine.Random,
+                .. DaggerfallRestorationEffects.Definitions(_random,
                     id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1, _vitality),
                 .. DaggerfallContinuousDestructionEffects.Definitions(_random, _vitality, AppendEffectDamage, AppendSpellTrackLoss,
                     id => authored.TryGetValue(id, out var definition) && _senses!.IsHostile(id, definition), ReactToSpellAttack),
@@ -647,22 +647,22 @@ internal sealed partial class DaggerfallSession
             _itemMaker = new DaggerfallItemMaker(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
                 State.Inventory, State.ItemInstances, _itemEnchanting, ItemSouls.Gems, _uniqueItems, () => _time.Calendar);
             _potionMaker = new DaggerfallPotionMaking(definitions, State.Npcs, State.ConcreteGuildServices, State.Inventory,
-                State.Containers, State.Wagon, State.ItemInstances, engine.Random, () => _time.Calendar);
+                State.Containers, State.Wagon, State.ItemInstances, _random, () => _time.Calendar);
             SpellSales = new DaggerfallSpellSales(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
                 State.Character, State.Inventory, State.Actors.Player.Stats,
                 key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar);
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
             _questTexts = new DaggerfallQuestTextContext(definitions, _site, State.Npcs, State.ItemInstances,
-                item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, engine.Random,
+                item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, _random,
                 faction => State.Social.GuildEligibility(faction) is { IsMember: true } membership
                     ? DaggerfallGuildRankTitles.Title(faction, membership.Rank, State.Character.Identity.Gender == DaggerfallCharacterGender.Female) : null,
                 (place, building) => DialogueDirections.QuestPlace(place, building));
             State.Quests.BindTextContext(_questTexts.For);
             State.Quests.BindCalendar(() => _time.Calendar);
-            DaggerfallNames questNames = new(definitions, engine.Random);
+            DaggerfallNames questNames = new(definitions, _random);
             npcs.BindNames(npc => questNames.NpcName(npc.Appearance, npc.Site.Region));
-            var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, engine.Random,
+            var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, _random,
                 (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
                 region => region >= 0 && region < definitions.BuildingNames.RegionNames.Count ? definitions.BuildingNames.RegionNames[region] : null,
                 questNames.Residence);
@@ -701,12 +701,12 @@ internal sealed partial class DaggerfallSession
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             _inventoryUi.BindItemExits(questItemExits);
-            State.Quests.BindResourceAllocator(new(definitions, engine.Random, new DaggerfallItemFactory(definitions, engine.Random), questNames,
+            State.Quests.BindResourceAllocator(new(definitions, _random, new DaggerfallItemFactory(definitions, _random), questNames,
                 () => new(State.Progression.Level, State.Character.Identity.RaceId,
                     State.Character.Identity.Gender.ToString().ToLowerInvariant(), _site.ActiveSite?.Region
                         ?? throw new NotSupportedException("Quest resource generation requires the current region.")),
                 State.Social.GuildEligibility, State.RegionalPrices.AdjustmentForRegion, _inventoryUi.DescribeCreatedItem));
-            State.Quests.BindPersonAllocator(new(definitions, engine.Random, questNames,
+            State.Quests.BindPersonAllocator(new(definitions, _random, questNames,
                 instance => new(_site.ActiveSite ?? throw new NotSupportedException("Quest Person selection requires the current site."),
                     instance.QuestorId is long giver ? State.Npcs.Require(giver) : null,
                     PermanentPlayerClanFactionId: State.RacialOverrides.Current?.State.Vampire?.Clan, CurrentProfile: _sites.ActiveProfile,
@@ -901,6 +901,7 @@ internal sealed partial class DaggerfallSession
             _persistence.PendingDispel = () => DispelChoice.Pending;
             _persistence.PendingTeleport = () => TeleportChoice.Pending;
             _persistence.PlaySeconds = () => _playSeconds;
+            _persistence.GameSeed = () => _random.Seed;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;
@@ -909,7 +910,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallInteriors interiors = new(actionTriggers, State.DungeonActions, State.DungeonDiscoveries,
                 (key, admitted) => new DaggerfallDungeonActionGraph(key.LogicalId, admitted.DungeonActions, State.Variables.Write,
                     executeFamilyAction: action => DungeonActions.Execute(action)), _site);
-            _sites = new DaggerfallSiteCrossing(engine, State.Actors, State.Npcs, State.PlayerControl, State.Effects, State.Transport.ForceFootOnInteriorTransition,
+            _sites = new DaggerfallSiteCrossing(engine, _random, State.Actors, State.Npcs, State.PlayerControl, State.Effects, State.Transport.ForceFootOnInteriorTransition,
                 definitions, tuning.Site, _time, _site, _spatial, _camera, audioBundles,
                 _roster, _persistence, (id, definition, offset) => _persistence.CaptureDynamicActorDelta(id, definition, offset),
                 _groundContainers, _enemyBehavior, interiors, this,
@@ -943,7 +944,7 @@ internal sealed partial class DaggerfallSession
             // what emits above 1 rolls off, and it is what bloom spreads.
             engine.CameraView.SetToneMapping(new(ToneMappingOperator.Rolloff, 1));
             engine.CameraView.SetBloom(new(1, tuning.SiteLighting.Bloom));
-            _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Ambient, tuning.Horizon, tuning.PresentationAudio,
+            _weatherPresentation = new DaggerfallWeatherPresentation(engine, _random, composition.Sky, tuning.Ambient, tuning.Horizon, tuning.PresentationAudio,
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
             DaggerfallHorizonGround ground = new(definitions.Terrain,

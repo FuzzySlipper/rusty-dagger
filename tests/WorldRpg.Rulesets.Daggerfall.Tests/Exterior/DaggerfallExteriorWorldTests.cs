@@ -73,7 +73,7 @@ public sealed class DaggerfallExteriorWorldTests
             new DurableIdentityAllocator(DurableIdentityKind.Container, 100), inputs.ProfileKey, QuestItemDropsFake.Exits(assembled.ItemInstances));
         Host host = new();
 
-        DaggerfallExteriorWorld exterior = new(engine.Context, actors, assembled.Npcs, assembled.PlayerControl, effects, definitions, tuning.Site,
+        DaggerfallExteriorWorld exterior = new(engine.Context, engine.Context.Random, actors, assembled.Npcs, assembled.PlayerControl, effects, definitions, tuning.Site,
             new DaggerfallWorldTime(DaggerfallCalendar.Start, 0d, 12d), new DaggerfallSiteContext(definitions.Locations), spatial,
             new FirstPersonCameraSystem(engine.Context.CameraView, assembled.PlayerControl, tuning.Camera), null, roster, host, ground, site, host,
             []);
@@ -90,7 +90,7 @@ public sealed class DaggerfallExteriorWorldTests
 
         // The same owner over an exterior holds its town unloaded until the window admits it.
         site.ActiveProfile = new(inputs.ProfileKey.Site, DaggerfallWorldProfileKind.Exterior, "outside");
-        DaggerfallExteriorWorld outside = new(engine.Context, actors, assembled.Npcs, assembled.PlayerControl, effects, definitions, tuning.Site,
+        DaggerfallExteriorWorld outside = new(engine.Context, engine.Context.Random, actors, assembled.Npcs, assembled.PlayerControl, effects, definitions, tuning.Site,
             new DaggerfallWorldTime(DaggerfallCalendar.Start, 0d, 12d), new DaggerfallSiteContext(definitions.Locations), spatial,
             new FirstPersonCameraSystem(engine.Context.CameraView, assembled.PlayerControl, tuning.Camera), null, roster, host, ground, site, host,
             []);

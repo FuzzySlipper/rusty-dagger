@@ -168,7 +168,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
     // commits the saved origin before placing anything, so placements are expressed against this.
     private Vector3? _artifactFrameCompensation;
 
-    internal DaggerfallExteriorWorld(IEngineContext engine, ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState player,
+    internal DaggerfallExteriorWorld(IEngineContext engine, IRandomService random, ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState player,
         DaggerfallEffectLifecycle effects, DaggerfallDefinitions definitions,
         DaggerfallSiteTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
         FirstPersonCameraSystem camera, DaggerfallSiteAudioBundles? audioBundles, DaggerfallActorRoster roster,
@@ -186,7 +186,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _groundBlend = tuning.Ground.Blend;
-        _random = engine.Random;
+        _random = random ?? throw new ArgumentNullException(nameof(random));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _site = site ?? throw new ArgumentNullException(nameof(site));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));

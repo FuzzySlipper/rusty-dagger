@@ -135,6 +135,17 @@ public sealed class NewGameSessionTests
     }
 
     [Fact]
+    public void A_committed_character_begins_its_game_on_the_seed_its_creation_drew_and_a_load_keeps_the_saved_one()
+    {
+        using Fixture f = new(gameSeed: 41); Commit(f.Title, "class00");
+        using var game = Assert.IsType<DaggerfallSession>(f.Title.CreateNewGame());
+        WorldRpg.Kit.RulesetSavePayload save = game.CaptureSave();
+        Assert.Equal(41UL, DaggerfallSavePayload.Read(save).GameSeed);
+        using var restored = DaggerfallSession.Restore(f.Engine().Context, f.Composition with { GameSeed = 42 }, save);
+        Assert.Equal(41UL, DaggerfallSavePayload.Read(restored.CaptureSave()).GameSeed);
+    }
+
+    [Fact]
     public void Incomplete_or_invalid_character_cannot_launch_and_abandon_restart_does_not_grant()
     {
         using Fixture f = new(); var title = f.Title;
@@ -280,10 +291,10 @@ public sealed class NewGameSessionTests
         internal DaggerfallSession Title { get; }
         internal EngineContextFake TitleEngine { get; }
         private readonly Rusty.Engine.IRandomService _random;
-        internal Fixture(Rusty.Engine.IRandomService? random = null, DaggerfallSiteAnchor? startPose = null)
+        internal Fixture(Rusty.Engine.IRandomService? random = null, DaggerfallSiteAnchor? startPose = null, ulong gameSeed = 0)
         {
             _random = random ?? RandomMinimum.Create();
-            Composition = new(Definitions, Inputs, DaggerfallTuning.Defaults) { StartPose = startPose };
+            Composition = new(Definitions, Inputs, DaggerfallTuning.Defaults) { StartPose = startPose, GameSeed = gameSeed };
             TitleEngine = Engine();
             Title = DaggerfallSession.StartNew(TitleEngine.Context, Composition);
         }

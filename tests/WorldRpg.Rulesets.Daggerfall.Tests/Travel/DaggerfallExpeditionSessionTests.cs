@@ -308,6 +308,41 @@ public sealed class DaggerfallExpeditionSessionTests
     }
 
     [Fact]
+    public void Each_game_meets_the_maps_unseen_encounters_at_hours_of_its_own_and_its_save_meets_them_at_the_same_hours()
+    {
+        // The party camps in the wild from the same place and time in every game; each hour's unseen encounter is drawn
+        // seed by seed (TravelSeededEncounterRandom), and nothing else stops the map.
+        long FirstEncounterHour(Fixture fixture)
+        {
+            fixture.Open();
+            fixture.Submit(new { action = "expedition-mode", mode = "camp" });
+            fixture.Submit(new { action = "expedition-speed", speed = 3 });
+            fixture.RunUntilStopped();
+            Assert.True(fixture.Session.Expedition.EncounterWaiting);
+            return fixture.Now / 3600;
+        }
+        IRandomService random = TravelSeededEncounterRandom.CreateSeeded();
+        Dictionary<ulong, long> hours = [];
+        foreach (ulong seed in new ulong[] { 11, 12, 13 })
+        {
+            using Fixture game = new(gameSeed: seed, random: random);
+            hours[seed] = FirstEncounterHour(game);
+        }
+        Assert.True(hours.Values.Distinct().Count() > 1, $"Every game met its first encounter at hour {hours[11]}.");
+
+        // A game saved before it set out meets its encounter at the same hour after a load, whatever seed the session
+        // it is loaded into was composed with.
+        RulesetSavePayload save;
+        using (Fixture game = new(gameSeed: 12, random: random))
+        {
+            save = game.Session.CaptureSave();
+            Assert.Equal(12UL, DaggerfallSavePayload.Read(save).GameSeed);
+        }
+        using Fixture loaded = new(gameSeed: 99, random: random, save: save);
+        Assert.Equal(hours[12], FirstEncounterHour(loaded));
+    }
+
+    [Fact]
     public void A_band_that_catches_the_party_is_queued_head_by_head_and_waits_in_the_profile_it_is_entered_in()
     {
         using Fixture fixture = new(bands: true);
@@ -495,6 +530,8 @@ public sealed class DaggerfallExpeditionSessionTests
         private readonly List<string> releases = [];
         private readonly DaggerfallSiteProfiles profiles;
         private readonly bool encounter, bands;
+        private readonly ulong gameSeed;
+        private readonly IRandomService? random;
         private ulong step = 1;
         internal DaggerfallSession Session { get; }
         internal DaggerfallArtReplacements? Art { get; }
@@ -518,8 +555,13 @@ public sealed class DaggerfallExpeditionSessionTests
 
         /// <param name="bands">The map's bands draw their lowest values (a published foe), as the hour's unseen encounters never come.</param>
         /// <param name="art">The session has the art set, the travel map's art among it.</param>
-        internal Fixture(bool encounter = false, DaggerfallDefinitions? definitions = null, bool bands = false, bool art = false)
+        /// <param name="gameSeed">The seed a new game's keyed draws take.</param>
+        /// <param name="random">The Engine's random service, in place of the one the other choices pick.</param>
+        /// <param name="save">A save the session is restored from instead of starting a new game.</param>
+        internal Fixture(bool encounter = false, DaggerfallDefinitions? definitions = null, bool bands = false, bool art = false,
+            ulong gameSeed = 0, IRandomService? random = null, RulesetSavePayload? save = null)
         {
+            this.gameSeed = gameSeed; this.random = random;
             if (art) Art = DaggerfallArtReplacements.Read(TestContentFiles.Read(System.IO.Path.Combine(TestData.RepositoryRoot, "content",
                 "worldrpg/packs/daggerfall.art-replacements/payload.json")), "daggerfall.art-replacements");
             this.definitions = definitions ?? TestPayload.Definitions; this.encounter = encounter; this.bands = bands;
@@ -535,7 +577,7 @@ public sealed class DaggerfallExpeditionSessionTests
             Wild = WildBeside(OriginPixel, origin.Id);
             Origin = Profile(origin.Id, "travel-origin"); Destination = Profile(destination.Id, "travel-arrival");
             profiles = new([Origin, Destination]);
-            Session = Create(null); Session.Site.Discover(destination.Id);
+            Session = Create(save); Session.Site.Discover(destination.Id);
             if (Session.State.Currency.Read().Gold > 0) Assert.True(Session.State.Currency.TrySpendCarried(Session.State.Currency.Read().Gold));
             DaggerfallSiteProfile Profile(DaggerfallSiteId id, string name) => new(
                 new ProjectFacts(new WorldPoint(name == "travel-origin" ? 1 : 3, 1, 1), new Dictionary<long, AuthoredActor>()), source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, new Dictionary<long, NormalizedActorSprite>(),
@@ -550,10 +592,10 @@ public sealed class DaggerfallExpeditionSessionTests
             PopulateTerrainContent(content, Origin); PopulateTerrainContent(content, Destination);
             Spatial = SpatialFake.Create(Origin.Geometry.Spatial[0].Sha256, releases);
             var engine = Engine = EngineContextFake.Create(content, Spatial.Service,
-                Appearance = new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : bands ? TravelBandRandom.CreateBands() : LodgingRandom.Create());
+                Appearance = new AppearanceFake(releases), random: random ?? (encounter ? TravelEncounterRandom.CreateEncounter() : bands ? TravelBandRandom.CreateBands() : LodgingRandom.Create()));
             DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)));
             DaggerfallSessionComposition composition = new(definitions, Origin, DaggerfallTuning.Defaults, Inputs.Value.Identity)
-                { Profiles = profiles, Sky = sky, ArtReplacements = Art };
+                { Profiles = profiles, Sky = sky, ArtReplacements = Art, GameSeed = gameSeed };
             return save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
         }
         internal DaggerfallSession Restore(RulesetSavePayload save) => Create(save);
@@ -680,6 +722,23 @@ internal class TravelBandRandom : LodgingRandom
     protected override object? Invoke(MethodInfo? method, object?[]? arguments) =>
         method?.Name == nameof(IRandomService.DrawKeyed) && arguments![0] is KeyedRngRequest { Scope: "daggerfall.expedition.bands" } request
             ? new KeyedRngReceipt(request.Minimum) : base.Invoke(method, arguments);
+}
+
+/// <summary>
+/// The lodging fake's draws, whose bands and encounters never come, but for the hour's encounter choice, which is drawn
+/// from its whole request, seed included, as the Engine's keyed draw is: a draw that no other game's seed shares.
+/// </summary>
+internal class TravelSeededEncounterRandom : LodgingRandom
+{
+    internal static IRandomService CreateSeeded() => DispatchProxy.Create<IRandomService, TravelSeededEncounterRandom>();
+    protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+    {
+        if (method?.Name != nameof(IRandomService.DrawKeyed) || arguments![0] is not KeyedRngRequest { Scope: "daggerfall.encounter.v1" } request)
+            return base.Invoke(method, arguments);
+        ulong hash = 14695981039346656037UL;
+        foreach (char value in request.ToString()) hash = unchecked((hash ^ value) * 1099511628211UL);
+        return new KeyedRngReceipt(request.Minimum + (long)(hash % (ulong)(request.Maximum - request.Minimum + 1)));
+    }
 }
 
 internal class TravelEncounterRandom : LodgingRandom

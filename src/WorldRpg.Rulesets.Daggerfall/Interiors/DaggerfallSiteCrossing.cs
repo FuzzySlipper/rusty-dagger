@@ -74,7 +74,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
 
     /// <param name="footIndoors">Puts the player on foot as an interior is entered (Travel's transport).</param>
     /// <param name="captureActor">One dynamic actor's state as a delta (its id, definition and the frame offset it moves by).</param>
-    internal DaggerfallSiteCrossing(IEngineContext engine, ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState player,
+    internal DaggerfallSiteCrossing(IEngineContext engine, IRandomService random, ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState player,
         DaggerfallEffectLifecycle effects, Action footIndoors, DaggerfallDefinitions definitions,
         DaggerfallSiteTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
         FirstPersonCameraSystem camera, DaggerfallSiteAudioBundles? audioBundles, DaggerfallActorRoster roster,
@@ -92,7 +92,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         _footIndoors = footIndoors ?? throw new ArgumentNullException(nameof(footIndoors));
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
-        _random = engine.Random;
+        _random = random ?? throw new ArgumentNullException(nameof(random));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _site = site ?? throw new ArgumentNullException(nameof(site));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
@@ -108,7 +108,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         Profiles = profiles;
         ActiveProfile = activeProfile;
         ReturnProfile = returnProfile;
-        _exterior = new DaggerfallExteriorWorld(engine, actors, npcs, player, effects, definitions, tuning, time, site,
+        _exterior = new DaggerfallExteriorWorld(engine, random, actors, npcs, player, effects, definitions, tuning, time, site,
             spatial, camera, audioBundles, roster, siteDeltas, groundContainers, this, host, _deltas, sessionPresentation);
     }
 

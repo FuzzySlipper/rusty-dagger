@@ -24,12 +24,12 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
     private DaggerfallMoons? _moons;
     private bool _disposed;
 
-    internal DaggerfallWeatherPresentation(IEngineContext engine, DaggerfallSkyMedia? media,
+    internal DaggerfallWeatherPresentation(IEngineContext engine, IRandomService random, DaggerfallSkyMedia? media,
         DaggerfallAmbientTuning tuning, DaggerfallHorizonTuning horizon,
         DaggerfallPresentationAudioTuning audioTuning, Func<DaggerfallWorldProfileKey, string, AudioClip?> openClip)
     {
         _engine = engine; _media = media; _tuning = tuning.Validate(); _horizon = horizon;
-        _ambient = new(engine.Audio, engine.Random, tuning, openClip, audioTuning);
+        _ambient = new(engine.Audio, random, tuning, openClip, audioTuning);
     }
 
     /// <summary>Shows the weather over the active site, whose profile, frame offset, lighting and appearance it draws on.</summary>
