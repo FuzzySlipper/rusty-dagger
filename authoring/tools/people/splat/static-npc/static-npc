@@ -6,6 +6,11 @@ ID is the CMS id, npc-NNN (Patch 2026-11-22: clearer; 017 and 021 came before it
 work/ keeps the bare number (work/NNN/A, bake id NNN-A), as the batch scripts read run ids as NNN-X; publications are named
 npc-NNN-bound-....
 
+Walkers too (npc.json "walker": true; init --walker; npc-468, 2026-11-23, Patch: the animated NPC process in the same
+manner): Meshy's API rig with donor hands in place of the short chain, the stick guide from that rig, and after bound a walk
+step (skirt bones for a robe or long skirt, the Mixamo clips on the bench, tidy) in place of the static idle. The steps that
+differ say so below.
+
 Every file lives in the character's folder, local/art/generated/people/dagger-characters/ID/:
   00-brief/      npc.json (settings) and the prompts, edited by hand for each character: clay-front.txt, clay-back.txt,
                  orbit.txt (the orbit clip), rings.json (the three repaint rings and their negatives). init copies 021's as a start.
@@ -21,20 +26,25 @@ Steps, in order (each checks that the one before it has run):
   clay      Qwen edits both keyframes to plain grey clay on the GPU lab (00-brief/clay-*.txt)
   mesh      Meshy multi-view mesh of the clay pair, untextured (20 credits); on a content block, local Hunyuan3D-2mv instead
             (Patch 2026-11-22), or --mesher hy2mv from the start
-  rig       static_rig.py: the short chain (Hips..Head, still hands) and the stick-figure joints for the guide, turned to the
+  rig       walker: meshy_rig.py (Meshy's remesh and API rig of the mesh's task, 10 credits) and transplant_hands.py (rigged donor
+            hands at the cuffs, DONOR_HANDS) -> scaffold.glb with 36 joints, and scaffold_views.py's check renders.
+            static: static_rig.py: the short chain (Hips..Head, still hands) and the stick-figure joints for the guide, turned to the
             paintings' view when they are drawn at an angle (measured from the outlines; npc.json "view_yaw" overrides; 017).
             npc.json "hands": front (held before the body, the default), sides (hanging at the thighs: 023) or 'X,Y,Z;X,Y,Z'.
             Look at the guide's first frames before the clip: the stick's arms are what H3 poses the arms by
-  guide     the lit stick-figure and depth orbit guide (Blender on den-m5)
+  guide     the lit stick-figure and depth orbit guide (Blender on den-m5); a walker's stick comes from its rig (stick_fit.py)
   clip      H3 REF2VA orbit clip on the GPU lab (00-brief/orbit.txt), --size 1920 by default
   bake      cut-outs, cameras, first fit, the repaint rings (00-brief/rings.json) and round-1 data; stops before the free
             round-1 fit (npc.json bake_to "r1data"; batch 2 showed the bound bake does not need it). About 50 min.
   bound     the bound bake (400k) and each runtime size in npc.json "sizes" (default 32k: one figure, never a crowd), cleaned
-  preview   optional: the procedural idle and look clips rendered from six views (bound_run.sh idle)
+  preview   static, optional: the procedural idle and look clips rendered from six views (bound_run.sh idle)
   r1        optional, for a graft: the free round-1 fit of a bake that stopped at r1data (bake --to r1 does it in one go)
   graft     optional: the free r1 fit grafted on the face and hands of each runtime size (graft_free.py, CPU) -> size NNk-graft,
             which publish then shows beside the plain size (npc.json "graft": regions, default "face,hands"; "graft_face_cone", 45).
             Patch shipped npc-023 so (2026-11-23): the bound bake blurs where Meshy's clay is a poor stand-in (mitten hands)
+  walk      walker: for each runtime size (and its graft): skirt (npc.json "skirt": skirt bones, two-tier XPBD, for a robe or long
+            skirt), the Mixamo Walking and Around clips on the GPU lab, tidy (drop_loose.py: Gaussians that come loose in the clips),
+            and the clips again on the tidied body for the review stills. Sizes NNk-face-share-cleaned[-skirt]-tidy, NNk-graft[-skirt]-tidy
   publish   dagger-char bound ID: adopt, playable (idle and look clips from static_idle.py), publish to the Workbench
   ship      after Patch's look: --size NAME --said "his words". The chosen size becomes 09-game/bound/final (dagger-char bound
             choose: ID.glb with the eye mask, ID-idle.glb, ID-look.glb, ready.json), the matte inset core beside it (core_extract.py:
@@ -68,6 +78,9 @@ DEFAULTS = {'cms_url': 'http://192.168.1.10:8784', 'tolerance': 9, 'size': 1920,
             # With loose_factor 1.5 the head and hands get 9 cm.
             'shell_m': 0.06}
 OPEN3D_PY = os.environ.get('OPEN3D_PY') or str(AP / '.runtime/tools/splat-mesh/bin/python')   # graft_free.py and core_extract.py need Open3D
+# a walker binds as the villagers did: 2.5 cm of shell, the hands (and a hooded head) loose at 2.4 times that, 16k for a crowd
+WALKER = {'sizes': [16000], 'loose': 'Head,LeftHand,RightHand', 'loose_factor': 2.4, 'shell_m': 0.025, 'skirt_bones': 8}
+DONOR_HANDS = os.environ.get('DONOR_HANDS') or str(AP / 'live-evidence/wam-mobile30-20261103-r05/final/painted/body_r05-full-skin.glb')   # WAM r05's rigged hands (batch 2)
 BRIEF = ('clay-front.txt', 'clay-back.txt', 'orbit.txt', 'rings.json')
 
 
@@ -110,7 +123,12 @@ class Npc:
     @property
     def cfg(self):
         f = self.brief / 'npc.json'
-        return {**DEFAULTS, **(json.loads(f.read_text()) if f.exists() else {})}
+        c = json.loads(f.read_text()) if f.exists() else {}
+        return {**DEFAULTS, **(WALKER if c.get('walker') else {}), **c}
+
+    @property
+    def walker(self):
+        return bool(self.cfg.get('walker'))
 
     def need(self, *paths, step):
         for p in paths:
@@ -144,7 +162,16 @@ def step_init(n, a):
         sh([REPO / 'authoring/tools/people/splat/character/dagger-char', 'init', n.id, '--name', a.name or n.id])
     ap = n.ch / '01-concept/approved'; ap.mkdir(parents=True, exist_ok=True)
     cfg = n.cfg; cfg.update({'name': a.name or cfg.get('name', n.id), 'cms': a.cms})
+    if a.walker:
+        cfg.update(walker=True, **{k: v for k, v in WALKER.items() if k not in cfg or cfg[k] == DEFAULTS.get(k)})
     for v in ('front', 'back'):
+        if a.from_dir:   # paintings not approved in the CMS but given by Patch (npc-468: the old 128 pipeline folder's approved pair)
+            src = Path(a.from_dir) / f'{v}.png'
+            if src.exists():
+                shutil.copy(src, ap / f'{v}.png'); continue
+            if v == 'back' and not a.back_required:
+                cfg['front_only'] = True; print(f'{n.id}: no back in {a.from_dir}; front-only'); continue
+            raise SystemExit(f'init --from: {src} is missing')
         r = subprocess.run(['python3', 'authoring/cms/concept_cli.py', '--url', cfg['cms_url'], 'approved', a.cms, '--view', v,
                             '--image', str(ap / f'{v}.png')], cwd=DAGGER, capture_output=True, text=True)
         if r.returncode or not (ap / f'{v}.png').exists():
@@ -212,6 +239,8 @@ def step_mesh(n, a):
 
 def step_rig(n, a):
     n.need(n.mesh / 'model.glb', step='mesh'); n.scaffold.mkdir(parents=True, exist_ok=True); n.guide.mkdir(parents=True, exist_ok=True)
+    if n.walker:
+        return rig_walker(n, a)
     sh(['python3', 'authoring/tools/people/splat/scaffold/static_rig.py', n.mesh / 'model.glb', n.scaffold / 'scaffold.glb', '--report', n.scaffold / 'scaffold.json',
         '--stick', n.guide / 'fit-static.json', '--view-yaw', str(n.cfg.get('view_yaw', 'auto')),
         '--front', n.cut / 'front-cut.png'] + (['--back', n.cut / 'back-cut.png'] if 'back' in n.views else [])
@@ -228,10 +257,29 @@ def step_rig(n, a):
     print('  check the hands sit on what he holds, and that a hood or hat goes with Head (rig.log); scaffold_views.py renders it')
 
 
+def rig_walker(n, a):
+    """Meshy's API rig (it needs the Meshy task of the mesh step: a Hunyuan3D-2mv mesh has none) and donor hands at the cuffs,
+    as batch 2's scaffold.sh did."""
+    if not (n.mesh / 'task.json').exists():
+        raise SystemExit(f'{n.id}: the walker rig needs a Meshy mesh task ({n.mesh}/task.json); a Hunyuan3D-2mv mesh has no API rig here')
+    rig = n.ch / '02-guide/wip/rig-meshy'; log = n.scaffold / 'rig.log'
+    sh(['python3', 'authoring/tools/people/splat/mesh/meshy_rig.py', n.mesh, rig], log=log)
+    sh(['python3', 'authoring/tools/people/splat/scaffold/transplant_hands.py', rig / 'rigged-glb.glb', DONOR_HANDS, n.scaffold / 'scaffold.glb',
+        '--report', n.scaffold / 'scaffold.json'], log=log)
+    chk = n.ch / '02-guide/wip/check'
+    sh(['blender', '-b', '-P', 'authoring/tools/people/splat/scaffold/scaffold_views.py', '--', n.scaffold / 'scaffold.glb', chk], log=log, check=False)
+    rep = json.loads((n.scaffold / 'scaffold.json').read_text())
+    print(f"{n.id}: walker scaffold {(n.scaffold / 'scaffold.glb').relative_to(REPO)}: {json.dumps(rep)[:300]}")
+    print(f'  look at {chk.relative_to(REPO)} (rest and walk views): the hands at the cuffs, the hood with the head, nothing fused')
+
+
 def step_guide(n, a):
-    n.need(n.scaffold / 'scaffold.glb', n.guide / 'fit-static.json', step='rig'); n.need(n.cut / 'front-cut.png', step='keys')
+    n.need(n.scaffold / 'scaffold.glb', step='rig'); n.need(n.cut / 'front-cut.png', step='keys')
+    if not n.walker:
+        n.need(n.guide / 'fit-static.json', step='rig')
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
-    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'guide', str(n.cfg['size'])], env={**n.env, **n.key_env, 'FIT': str(n.guide / 'fit-static.json')})
+    fit = {} if n.walker else {'FIT': str(n.guide / 'fit-static.json')}   # a walker's stick comes from its own rig (stick_fit.py)
+    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'guide', str(n.cfg['size'])], env={**n.env, **n.key_env, **fit})
 
 
 def step_clip(n, a):
@@ -275,9 +323,44 @@ def step_bound(n, a):
 
 
 def step_preview(n, a):
+    if n.walker:
+        raise SystemExit(f'{n.id} is a walker: the walk step renders its clips')
     n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
     size = f"{(a.sizes and int(a.sizes.split(',')[0]) or n.cfg['sizes'][0]) // 1000}k-face-share-cleaned"
     sh(['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A', 'idle', size], env=n.env)
+
+
+def walk_names(n, sizes=None):
+    """A walker's runtime sizes as the walk step leaves them: (base, after skirt, after tidy), the graft last."""
+    cfg = n.cfg; sk = '-skirt' if cfg.get('skirt') else ''; out = []
+    for count in sizes or cfg['sizes']:
+        for base in (f'{count // 1000}k-face-share-cleaned', f'{count // 1000}k-graft'):
+            if (n.k / 'bound/sizes' / base / 'splat.npz').exists():
+                out.append((base, base + sk, base + sk + '-tidy'))
+    return out
+
+
+def step_walk(n, a):
+    if not n.walker:
+        raise SystemExit(f'{n.id} is static: preview renders its idle and look clips')
+    cfg = n.cfg; n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
+    b = ['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A']
+    env = {**n.env, 'SKIRT_BONES': str(cfg.get('skirt_bones', 8)) if cfg.get('skirt') else '', 'SKIRT_OPTS': cfg.get('skirt_opts', '--solid 3'),
+           **({'SKIRT_RIG_OPTS': cfg['skirt_rig_opts']} if cfg.get('skirt_rig_opts') else {})}
+    names = walk_names(n, [int(x) for x in a.sizes.split(',')] if a.sizes else None)
+    for base, skirted, tidy in names:
+        if skirted != base:
+            sh(b + ['skirt', base], env=env)      # skirt bones under Hips (two tiers, a cloth sheet per clip), the legs inside dropped
+        sh(b + ['clips', skirted], env=env)       # Mixamo Walking and Around on the bench, rendered on the GPU lab
+        sh(b + ['tidy', skirted], env=env)        # drop the Gaussians that came loose in the clips
+        sh(b + ['clips', tidy], env={**env, 'CLIPS_TAG': '-tidy'})
+        C = n.k / 'bound/clips-tidy'
+        sh(['python3', 'authoring/tools/people/splat/scaffold/clip_compare.py', 'videos', C / 'data', C / 'renders', '--name', f'{n.rid}-400k-and-16k',
+            '--grid', 'bound400k=bound 400k (tidy),body=runtime body (tidy)', '--views', 'quarter,close,face,back-quarter',
+            '--stills', 'walking:10:quarter', 'walking:10:close', 'walking:20:quarter', 'walking:24:back-quarter', 'around:120:quarter', 'walking:10:face'],
+           log=n.k / 'bound/walk.log', check=False)
+        print(f'{n.id}: {tidy} walks; stills in {(C / "data/videos").relative_to(REPO)}')
+    print(f'{n.id}: run publish to put the walking sizes in the Workbench')
 
 
 def step_publish(n, a):
@@ -319,7 +402,7 @@ def step_ship(n, a):
     fin = n.ch / '09-game/bound/final'; tris = int(cfg.get('core_tris', 2400))
     if tris:
         sh([OPEN3D_PY, 'authoring/tools/people/splat/scaffold/core_extract.py', fin / f'{n.id}.glb', fin / 'scaffold.glb', fin, n.id,
-            '--tris', str(tris), '--voxel', '0.007', '--clips', f"{fin / f'{n.id}-idle.glb'},{fin / f'{n.id}-look.glb'}"], log=fin / 'core.log')
+            '--tris', str(tris), '--voxel', '0.007'] + ([] if n.walker else ['--clips', f"{fin / f'{n.id}-idle.glb'},{fin / f'{n.id}-look.glb'}"]), log=fin / 'core.log')
         r = json.loads((fin / f'{n.id}-core.json').read_text())
         print(f"{n.id}: core {r['triangles']} triangles, {r['rest_poke_points_consensus']} rest pokes, splats behind it from the front {r['early_z']['front']['splat_pct']}%")
     sh([D, 'page'])
@@ -339,6 +422,7 @@ def step_status(n, a):
              ('clip', n.clip_dir() / 'review.mp4'), ('bake', n.k / 'bake/r1-data/views.json'),
              ('bound', n.k / 'bound/bound-cleaned/splat.npz'), ('preview', n.k / 'bound/idle/renders'),
              ('r1', n.k / 'bake/r1/splat.npz'), ('graft', n.k / f"bound/sizes/{n.cfg['sizes'][0] // 1000}k-graft/splat.npz"),
+             *([('walk', n.k / 'bound/sizes' / walk_names(n)[0][2] / 'splat.npz')] if n.walker and walk_names(n) else []),
              ('publish', n.ch / '09-game/bound/playable/character.json'), ('ship', n.ch / f'09-game/bound/final/{n.id}.glb')]
     for name, p in marks:
         print(f"  {'done' if p.exists() else '    '}  {name:8s} {p.relative_to(REPO)}")
@@ -347,7 +431,7 @@ def step_status(n, a):
 
 
 STEPS = {'init': step_init, 'keys': step_keys, 'clay': step_clay, 'mesh': step_mesh, 'rig': step_rig, 'guide': step_guide,
-         'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'r1': step_r1,
+         'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'r1': step_r1, 'walk': step_walk,
          'graft': step_graft, 'publish': step_publish, 'ship': step_ship, 'status': step_status}
 
 
@@ -355,6 +439,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('step', choices=list(STEPS)); ap.add_argument('id')
     ap.add_argument('--cms', help='init: the CMS character id (default ID when it is npc-NNN)');
+    ap.add_argument('--walker', action='store_true', help='init: a figure that walks (Meshy API rig, Mixamo clips, the walk step)')
+    ap.add_argument('--from', dest='from_dir', help='init: take front.png (and back.png) from this folder instead of the CMS approval')
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
     ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
     ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')

@@ -278,12 +278,43 @@ def pub_name(cid):
     return cid if cid.startswith('npc-') else f'town{cid}'
 
 
+def walker_npc(cid, cfg, k):
+    """A walker made with static-npc (npc.json "walker": true; npc-468, 2026-11-23): Meshy's API rig, Mixamo clips, and the walk
+    step's sizes: skirt bones for a robe (npc.json "skirt"), then tidy; the grafted size beside the plain one when it was made."""
+    W = dc.char_dir(cid) / 'work'; sk = '-skirt' if cfg.get('skirt') else ''
+    r = own_run(cid, str(W), k, f"the stick-guided {cfg.get('size', 1920)} px clip (static-npc, walker)")
+    full = f'{k}/bound/bound-cleaned{sk}-tidy'
+    if (W / full / 'splat.npz').exists():
+        r['bake'] = (full, f'{full}/binding.npz', f'{k}/bound/bound-data/shell.npz')
+    sizes = {}
+    for n in cfg.get('sizes', [16000]):
+        c = f'{n // 1000}k'
+        sizes[f'{c}-face-share-cleaned'] = (f'{k}/bound/sizes/{c}-face-share-cleaned', f'bound {c}, a quarter of the seed on the face, cleaned (not walked: no skirt, no tidy)')
+        for base, name, what in ((f'{c}-face-share-cleaned', f'{c}-tidy', f'bound {c}, cleaned'),
+                                 (f'{c}-graft', f'{c}-graft-tidy', f'bound {c}, cleaned, with the free round-1 fit grafted on the face and hands (graft_free.py)')):
+            if (W / k / 'bound/sizes' / f'{base}{sk}-tidy' / 'splat.npz').exists():
+                sizes[name] = (f'{k}/bound/sizes/{base}{sk}-tidy', what + (', the robe on skirt bones (skirt_bones.py)' if sk else '')
+                               + ', without the Gaussians that came loose in the clips (drop_loose.py)')
+    r['sizes'] = sizes
+    r['default_size'] = next((x for x in (f"{cfg.get('sizes', [16000])[0] // 1000}k-graft-tidy", f"{cfg.get('sizes', [16000])[0] // 1000}k-tidy") if x in sizes), next(iter(sizes)))
+    if sk and (W / k / 'bound/skirt-rig/skirt.json').exists():
+        r['skirt_rig'] = f'{k}/bound/skirt-rig'
+        r['clips']['walking'] = (str(dc.ROOT / 'batches/clips-skirt/walking.json'), None)   # the gentler walk for a long skirt (Patch 2026-11-21)
+    v = f"{k}/bound/clips-tidy/data/videos/{cid.removeprefix('npc-')}-400k-and-16k"
+    r['game_review'] = [(f'{v}-{c}.png', f'{cid}-400k-and-body-{c}.png') for c in ('walking-f010-quarter', 'walking-f010-close', 'walking-f020-quarter',
+                                                                                    'walking-f024-back-quarter', 'around-f120-quarter', 'walking-f010-face')]
+    r['who'] = 'NPC'
+    return r
+
+
 def run_of(cid):
     npc = dc.char_dir(cid) / '00-brief/npc.json'
     if cid not in RUNS and npc.exists():   # a static NPC made with authoring/tools/people/splat/static-npc/static-npc: its run folder is the character's work/
         # since 2026-11-22 (Patch) a new character is named by its CMS id, npc-NNN; the run under work/ keeps the bare number, NNN/A,
         # because the batch scripts read a run id as NNN-X
         cfg = json.loads(npc.read_text()); k = f"{cid.removeprefix('npc-')}/A"
+        if cfg.get('walker'):
+            RUNS[cid] = walker_npc(cid, cfg, k); return RUNS[cid]
         r = static_npc(cid, str(dc.char_dir(cid) / 'work'), k, f"the stick-guided {cfg.get('size', 1920)} px clip (static-npc)")
         names = [f'{n // 1000}k-face-share-cleaned' for n in cfg.get('sizes', [32000])]
         r['sizes'] = {n: (f'{k}/bound/sizes/{n}', f"bound {n.split('-')[0]}, a quarter of the seed on the face, cleaned") for n in names}
