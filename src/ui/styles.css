@@ -468,6 +468,14 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-expedition-top, .dagger-expedition-bottom { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; padding: .4rem .75rem; }
 .dagger-expedition-clock { margin: 0; flex: 1 1 auto; font: 700 1.15rem var(--font-label); letter-spacing: .04em; }
 .dagger-expedition-speeds, .dagger-expedition-modes { display: flex; gap: .3rem; }
+/* A waiting encounter: a centred panel over the dimmed map, which takes no pointer until it is entered. */
+.dagger-expedition-encounter { position: fixed; inset: 0; display: grid; place-items: center; background: rgb(0 0 0 / .5); }
+.dagger-expedition-encounter[hidden] { display: none; }
+.dagger-expedition .dagger-expedition-encounter-frame { display: grid; justify-items: center; gap: 1rem; width: var(--panel-narrow); padding: 1.4rem 1.6rem;
+  text-align: center; box-shadow: 0 .75rem 2.75rem rgb(0 0 0 / .7); }
+.dagger-expedition-encounter-frame h2 { margin: 0; }
+.dagger-expedition-encounter-line { margin: 0; line-height: 1.45; }
+.dagger-expedition-encounter-enter { min-width: 9rem; padding: .6rem 1.4rem; font: 700 1rem var(--font-label); }
 .dagger-expedition-body { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: .5rem; min-height: 0; }
 .dagger-world-map { position: fixed; inset: 1rem; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: .5rem; padding: .75rem; }
 .dagger-world-map[hidden] { display: none; }

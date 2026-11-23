@@ -19,6 +19,9 @@ public sealed class DaggerfallExpeditionTests
     private const long FootPixel = 104 * 60;
     private const int Fastest = 3;
 
+    /// <summary>The default rules with a camp's time passing at the march's rate, for tests that count camp hours by it.</summary>
+    private static readonly DaggerfallExpeditionTuning MarchRateCamp = DaggerfallExpeditionTuning.Default with { CampTime = 1 };
+
     [Fact]
     public void A_cautious_march_crosses_the_route_pixel_by_pixel_passing_its_true_minutes_and_stops_on_arrival()
     {
@@ -77,7 +80,7 @@ public sealed class DaggerfallExpeditionTests
     [Fact]
     public void A_halt_passes_time_standing_and_a_wild_camp_recovers_each_whole_hour_at_the_rough_ground_share()
     {
-        (DaggerfallExpedition expedition, World world) = Create();
+        (DaggerfallExpedition expedition, World world) = Create(tuning: MarchRateCamp);
         expedition.Begin(new(2, 2), false);
         expedition.SetDestination(new(4, 2), null);
         expedition.SetMode(DaggerfallExpeditionMode.Halt);
@@ -102,9 +105,29 @@ public sealed class DaggerfallExpeditionTests
     }
 
     [Fact]
+    public void A_camp_passes_time_the_tunings_times_faster_than_a_halt_at_the_same_speed()
+    {
+        DaggerfallExpeditionTuning tuning = DaggerfallExpeditionTuning.Default;
+        (DaggerfallExpedition expedition, World world) = Create();
+        expedition.Begin(new(2, 2), false);
+        expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        expedition.SetSpeed(1);
+        Run(expedition, .25);
+        long halted = world.Stretches.Sum(stretch => stretch.Seconds);
+        Assert.Equal(.25 * tuning.TimeScales[0] * 60, halted);
+
+        world.Stretches.Clear();
+        expedition.SetMode(DaggerfallExpeditionMode.Camp);
+        expedition.SetSpeed(1);
+        Run(expedition, .25);
+        Assert.Equal(halted * tuning.CampTime, world.Stretches.Sum(stretch => stretch.Seconds));
+        Assert.All(world.Stretches, stretch => Assert.Equal(DaggerfallExpeditionActivity.Camping, stretch.Activity));
+    }
+
+    [Fact]
     public void Camping_in_a_settlement_takes_lodging_once_a_day_and_halts_a_party_that_cannot_pay()
     {
-        (DaggerfallExpedition expedition, World world) = Create();
+        (DaggerfallExpedition expedition, World world) = Create(tuning: MarchRateCamp);
         expedition.Begin(new(1, 1), false);
         Assert.Equal(30, expedition.LodgingHere);
         expedition.SetMode(DaggerfallExpeditionMode.Camp);
@@ -187,7 +210,7 @@ public sealed class DaggerfallExpeditionTests
         Assert.Equal(0, expedition.Speed);
         expedition.SetDestination(new(1, 1), null);
         Assert.Equal(new DaggerfallTravelMapPixel(6, 1), expedition.Destination?.Pixel);
-        Assert.Equal("Something approaches. Enter to meet it.", expedition.Leave());
+        Assert.Equal("Something approaches! Enter to meet it.", expedition.Leave());
         DaggerfallExpeditionEntry entry = Assert.IsType<DaggerfallExpeditionEntry>(expedition.Entry());
         Assert.Equal((new DaggerfallTravelMapPixel(2, 1), new DaggerfallTravelMapPixel(1, 1), null),
             (entry.Pixel, entry.CameFrom, entry.Location));
@@ -328,8 +351,14 @@ public sealed class DaggerfallExpeditionTests
 
         expedition.SetSpeed(Fastest);
         Run(expedition, 1);
-        Assert.EndsWith("catches up with you! Enter to fight.", expedition.Message);
+        Assert.EndsWith("caught up with you! Enter to fight.", expedition.Message);
         Assert.True(expedition.EncounterWaiting);
+        Assert.NotNull(expedition.EncounterFoe);
+        Assert.StartsWith(expedition.EncounterFoe, expedition.Message);
+        // A save while it waits keeps who caught the party.
+        DaggerfallExpedition restored = new(Policy(), Sites(), DaggerfallExpeditionTuning.Default, world,
+            JsonSerializer.Deserialize<DaggerfallExpeditionSave>(JsonSerializer.Serialize(expedition.Capture())));
+        Assert.Equal((expedition.EncounterFoe, expedition.Message), (restored.EncounterFoe, restored.Message));
         (DaggerfallExpeditionBand met, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) = Assert.Single(world.Met);
         Assert.Equal((new DaggerfallTravelMapPixel(2, 2), DaggerfallEncounterStaging.Caught), (pixel, staging));
         Assert.Empty(expedition.AllBands);
@@ -507,14 +536,16 @@ public sealed class DaggerfallExpeditionTests
     private static DaggerfallCalendar At(int hour) =>
         DaggerfallCalendar.FromAbsoluteSeconds(DaggerfallCalendar.Start.ToAbsoluteSeconds() + hour * 3600L);
 
-    private static (DaggerfallExpedition Expedition, World World) Create(Action<World>? setup = null, bool bands = false)
+    private static (DaggerfallExpedition Expedition, World World) Create(Action<World>? setup = null, bool bands = false,
+        DaggerfallExpeditionTuning? tuning = null)
     {
         World world = new();
         setup?.Invoke(world);
+        tuning ??= DaggerfallExpeditionTuning.Default;
         return (bands
-            ? new DaggerfallExpedition(Policy(), Sites(), DaggerfallExpeditionTuning.Default, world, null, TestPayload.Definitions.Encounters,
+            ? new DaggerfallExpedition(Policy(), Sites(), tuning, world, null, TestPayload.Definitions.Encounters,
                 TestPayload.Definitions.Mobiles)
-            : new DaggerfallExpedition(Policy(), Sites(), DaggerfallExpeditionTuning.Default, world), world);
+            : new DaggerfallExpedition(Policy(), Sites(), tuning, world), world);
     }
 
     private static DaggerfallTravelPolicy Policy() => new(Sites(), Grids(), DaggerfallTuning.Defaults.Transport);

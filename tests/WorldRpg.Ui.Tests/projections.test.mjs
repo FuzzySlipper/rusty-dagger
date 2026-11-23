@@ -3520,7 +3520,7 @@ function expedition(overrides = {}) {
     ship: 'none', swimming: false, canBoard: false, shipFare: 100, date: 'Morndas, 1st of Morning Star, 3E 405', time: '08:00',
     weather: 'rain', land: 'Woodlands', here: 'Daggerfall', lodging: 30, remaining: null, transport: 'foot',
     health: { current: 40, maximum: 60 }, fatigue: { current: 3000, maximum: 6400 }, magicka: { current: 10, maximum: 20 },
-    canLeave: true, canEnter: true, enterLabel: 'Enter Daggerfall', encounter: false, teleport: false, teleportPlace: null,
+    canLeave: true, canEnter: true, enterLabel: 'Enter Daggerfall', encounter: null, teleport: false, teleportPlace: null,
     message: null, found: [], bands: [], ...overrides,
   };
 }
@@ -3765,12 +3765,26 @@ test('the expedition bars set the speed and how the party goes, find and pin pla
     assert.equal(screen.querySelector('.dagger-expedition-journey').textContent, 'In the woodlands, on foot · heading for Charing, about 9 hours away.');
     screen.querySelector('.dagger-expedition-enter').click();
     assert.deepEqual(f.actions.at(-1), { action: 'expedition-enter' });
-    // An encounter stops everything but entering.
-    f.publish({ expedition: expedition({ canLeave: false, encounter: true, message: 'Something approaches! Enter to meet it.' }) });
+    // A band come upon unseen may be passed by: no panel, and the bottom bar's Enter fights it.
+    const panel = screen.querySelector('.dagger-expedition-encounter');
+    f.publish({ expedition: expedition({ canLeave: false, message: 'You come upon Orc. Enter to fight, or go on to pass it by.' }) });
+    assert.equal(panel.hidden, true);
+    // An encounter stops everything but entering, and a centred panel names it with an Enter of its own, focused.
+    f.publish({ expedition: expedition({ canLeave: false, enterLabel: 'Enter', message: '3 Orcs caught up with you! Enter to fight.',
+      encounter: { title: '3 Orcs', line: 'There is no outrunning them now. Enter to fight.' } }) });
     assert.equal(screen.querySelector('[data-speed="1"]').disabled, true);
     assert.ok([...screen.querySelectorAll('[data-mode]')].every(node => node.disabled));
-    assert.equal(screen.querySelector('.dagger-expedition-message').textContent, 'Something approaches! Enter to meet it.');
+    assert.equal(screen.querySelector('.dagger-expedition-message').textContent, '3 Orcs caught up with you! Enter to fight.');
     assert.equal(screen.querySelector('.dagger-expedition-enter').disabled, false);
+    assert.equal(panel.hidden, false);
+    assert.equal(panel.querySelector('h2').textContent, '3 Orcs');
+    assert.equal(panel.querySelector('.dagger-expedition-encounter-line').textContent, 'There is no outrunning them now. Enter to fight.');
+    const panelEnter = panel.querySelector('.dagger-expedition-encounter-enter');
+    assert.equal(document.activeElement, panelEnter);
+    panelEnter.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-enter' });
+    f.publish({ expedition: expedition() });
+    assert.equal(panel.hidden, true);
   } finally { f.dispose(); }
 });
 

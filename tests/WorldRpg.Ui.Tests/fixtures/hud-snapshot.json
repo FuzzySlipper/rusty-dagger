@@ -1106,7 +1106,7 @@
     "canLeave": true,
     "canEnter": false,
     "enterLabel": "Enter",
-    "encounter": false,
+    "encounter": null,
     "teleport": false,
     "teleportPlace": null,
     "message": "Leave the building or dungeon before travelling.",

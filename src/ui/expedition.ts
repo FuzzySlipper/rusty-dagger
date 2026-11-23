@@ -22,6 +22,9 @@ export interface ExpeditionBandProjection {
 }
 
 /** A name over the travel map, where the view puts it: across and down the view from its top left, 0 to 1. */
+/** An encounter the party must enter to meet: who, and what Enter does. */
+export interface ExpeditionEncounterProjection { readonly title: string; readonly line: string }
+
 export interface ExpeditionLabelProjection { readonly name: string; readonly kind: string; readonly across: number; readonly down: number }
 
 export type ExpeditionMode = 'cautious' | 'reckless' | 'halt' | 'camp';
@@ -58,7 +61,7 @@ export interface ExpeditionProjection {
   readonly canLeave: boolean;
   readonly canEnter: boolean;
   readonly enterLabel: string;
-  readonly encounter: boolean;
+  readonly encounter: ExpeditionEncounterProjection | null;
   readonly teleport: boolean;
   readonly teleportPlace: string | null;
   readonly message: string | null;
@@ -130,6 +133,8 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   page(direction: -1 | 1): void;
   pageHint(): string | null;
   initialFocus(): HTMLElement | null;
+  /** The centred panel a waiting encounter raises over the map, its own navigation surface. */
+  readonly encounter: { readonly root: HTMLElement; isOpen(): boolean; initialFocus(): HTMLElement };
   dispose(): void;
 } {
   const root = document.createElement('section');
@@ -258,11 +263,31 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   exits.append(menuButton, leave, enter);
   bottom.append(modes, vitals, status, exits);
 
+  // A waiting encounter must be entered: a centred panel over the dimmed map names it, its Enter focused. The bottom
+  // bar's Enter stays for a band come upon unseen, which the party may also pass by.
+  const encounterPanel = document.createElement('div');
+  encounterPanel.className = 'dagger-expedition-encounter';
+  encounterPanel.hidden = true;
+  const encounterFrame = document.createElement('div');
+  encounterFrame.className = 'dagger-frame dagger-expedition-encounter-frame';
+  encounterFrame.setAttribute('role', 'alertdialog');
+  encounterFrame.setAttribute('aria-modal', 'true');
+  const encounterTitle = document.createElement('h2');
+  encounterTitle.className = 'dagger-frame-title';
+  encounterTitle.id = 'dagger-expedition-encounter-title';
+  encounterFrame.setAttribute('aria-labelledby', encounterTitle.id);
+  const encounterLine = document.createElement('p');
+  encounterLine.className = 'dagger-expedition-encounter-line';
+  const encounterEnter = button('Enter');
+  encounterEnter.className = 'dagger-expedition-encounter-enter';
+  encounterFrame.append(encounterTitle, encounterLine, encounterEnter);
+  encounterPanel.append(encounterFrame);
+
   let current: ExpeditionProjection | null = null;
   const body = document.createElement('div');
   body.className = 'dagger-expedition-body';
   body.append(view, side);
-  root.append(top, body, bottom);
+  root.append(top, body, bottom, encounterPanel);
   // Over the HUD and under every dialog (the menu, a quest's question, a confirmation): the window's Servo has no top
   // layer, so a dialog stays above the map only by coming after it.
   const firstDialog = parent.querySelector('dialog');
@@ -384,6 +409,7 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   menuButton.addEventListener('click', openMenu);
   leave.addEventListener('click', () => claim({ action: 'expedition-leave' }));
   enter.addEventListener('click', () => claim({ action: 'expedition-enter' }));
+  encounterEnter.addEventListener('click', () => claim({ action: 'expedition-enter' }));
 
   const vital = (name: string, value: ExpeditionVitalProjection): HTMLElement => {
     const bar = document.createElement('div');
@@ -415,25 +441,26 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
 
   const render = (state: ExpeditionProjection): void => {
     clock.textContent = `${state.time} on ${state.date} · ${WEATHER[state.weather] ?? state.weather}`;
-    redraw(speeds, JSON.stringify([state.speed, state.speeds, state.teleport, state.encounter]), () => {
+    const encounter = state.encounter !== null;
+    redraw(speeds, JSON.stringify([state.speed, state.speeds, state.teleport, encounter]), () => {
       speeds.replaceChildren();
       for (let speed = 0; speed <= state.speeds; speed++) {
         const control = button(SPEEDS[speed] ?? `Speed ${speed}`);
         control.dataset.speed = String(speed);
         control.setAttribute('aria-pressed', String(state.speed === speed));
-        control.disabled = state.teleport || (state.encounter && speed > 0);
+        control.disabled = state.teleport || (encounter && speed > 0);
         control.addEventListener('click', () => claim({ action: 'expedition-speed', speed }));
         speeds.append(control);
       }
     });
-    redraw(modes, JSON.stringify([state.mode, state.lodging, state.swimming, state.teleport, state.encounter]), () => {
+    redraw(modes, JSON.stringify([state.mode, state.lodging, state.swimming, state.teleport, encounter]), () => {
       modes.replaceChildren();
       for (const entry of MODES) {
         const control = button(entry.mode === 'camp' && state.lodging !== null ? `Camp · ${state.lodging} gold` : entry.label);
         control.dataset.mode = entry.mode;
         control.dataset.tooltip = entry.tooltip;
         control.setAttribute('aria-pressed', String(state.mode === entry.mode));
-        control.disabled = state.teleport || state.encounter || (entry.mode === 'camp' && state.swimming);
+        control.disabled = state.teleport || encounter || (entry.mode === 'camp' && state.swimming);
         control.addEventListener('click', () => claim({ action: 'expedition-mode', mode: entry.mode }));
         modes.append(control);
       }
@@ -474,18 +501,23 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
     });
     journey.textContent = journeyLine(state);
     message.textContent = state.message ?? '';
-    root.dataset.encounter = String(state.encounter);
+    root.dataset.encounter = String(encounter);
     ship.textContent = state.ship === 'none' ? state.shipFare > 0 ? `Board ship · ${state.shipFare} gold` : 'Board ship' : 'Go ashore';
-    ship.disabled = state.teleport || state.encounter || (state.ship === 'none' && !state.canBoard);
+    ship.disabled = state.teleport || encounter || (state.ship === 'none' && !state.canBoard);
     ship.dataset.tooltip = state.ship === 'none' ? 'Board a ship at a port near the sea.' : 'Leave the ship where it has landed.';
     pinLabel.textContent = state.pin ? state.pin.name ?? `The marked spot (${state.pin.x}, ${state.pin.y})` : 'No pin set.';
     goToPin.disabled = travelToPin.disabled = clearPin.disabled = state.pin === null;
-    travelToPin.disabled ||= state.teleport || state.encounter;
-    centreGo.disabled = state.encounter;
+    travelToPin.disabled ||= state.teleport || encounter;
+    centreGo.disabled = encounter;
     leave.textContent = state.teleport ? 'Cancel' : 'Close map';
     leave.hidden = !state.canLeave;
     enter.textContent = state.enterLabel;
     enter.disabled = !state.canEnter;
+    encounterPanel.hidden = state.encounter === null;
+    encounterTitle.textContent = state.encounter?.title ?? '';
+    encounterLine.textContent = state.encounter?.line ?? '';
+    encounterEnter.textContent = state.enterLabel;
+    encounterEnter.disabled = !state.canEnter;
     imAt.setAttribute('aria-pressed', String(state.view.following));
     compass.style.transform = `rotate(${-state.view.heading}deg)`;
     redraw(labels, JSON.stringify(state.labels.map(label => [label.name, label.kind, Math.round(label.across * 1000), Math.round(label.down * 1000)])), () => {
@@ -518,6 +550,7 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
     page(direction): void { move(0, 0, 0, 0, direction); },
     pageHint: () => current ? 'Zoom' : null,
     initialFocus: () => current?.canEnter && !current.canLeave ? enter : view,
+    encounter: { root: encounterPanel, isOpen: () => current?.encounter != null, initialFocus: () => encounterEnter },
     dispose(): void { unanchor(); root.remove(); },
   };
 }

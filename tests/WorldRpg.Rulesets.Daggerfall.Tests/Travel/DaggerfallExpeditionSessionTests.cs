@@ -282,7 +282,9 @@ public sealed class DaggerfallExpeditionSessionTests
         fixture.Go(fixture.Wild);
         fixture.RunUntilStopped();
         Assert.True(fixture.Session.Expedition.EncounterWaiting);
-        Assert.True((bool)fixture.Expedition()!["encounter"]!);
+        // The centred panel names it and says Enter meets it.
+        Assert.Equal(("Something approaches", "It is upon you before you can see what it is. Enter to meet it."),
+            ((string)((Dictionary<string, object?>)fixture.Expedition()!["encounter"]!)["title"]!, (string)((Dictionary<string, object?>)fixture.Expedition()!["encounter"]!)["line"]!));
         Assert.Equal("Something approaches! Enter to meet it.", fixture.Session.Expedition.Message);
         DaggerfallEncounterResolution pending = Assert.Single(DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved);
         Assert.NotNull(pending.ActorDefinition);
@@ -328,6 +330,7 @@ public sealed class DaggerfallExpeditionSessionTests
         fixture.RunUntilStopped();
         Assert.EndsWith("Enter to fight.", fixture.Session.Expedition.Message);
         Assert.True(fixture.Session.Expedition.EncounterWaiting);
+        Assert.Equal(fixture.Session.Expedition.EncounterFoe, (string)((Dictionary<string, object?>)fixture.Expedition()!["encounter"]!)["title"]!);
         DaggerfallEncounterResolution[] band = [.. DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved
             .Where(resolution => resolution.Band is not null)];
         Assert.NotEmpty(band);

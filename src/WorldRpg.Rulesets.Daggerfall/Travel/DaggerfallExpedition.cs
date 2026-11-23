@@ -111,6 +111,7 @@ internal sealed record DaggerfallExpeditionLodging([property: JsonRequired] Dagg
 /// The expedition saved where the map was left: whether it was open, where the player's body stands and the party is,
 /// the leg, mode, pin, ship and lodging, the low-fatigue warning, an encounter waiting to be met and the hour in camp.
 /// </summary>
+/// <param name="EncounterFoe">The band that caught the party, by name; null for an unseen hour's encounter.</param>
 internal sealed record DaggerfallExpeditionSave(
     [property: JsonRequired] bool Open,
     [property: JsonRequired] DaggerfallTravelMapPixel Body,
@@ -124,7 +125,8 @@ internal sealed record DaggerfallExpeditionSave(
     DaggerfallExpeditionLodging? Lodging,
     [property: JsonRequired] bool LowFatigueWarned,
     [property: JsonRequired] bool EncounterWaiting,
-    [property: JsonRequired] long CampSeconds)
+    [property: JsonRequired] long CampSeconds,
+    string? EncounterFoe = null)
 {
     internal static DaggerfallExpeditionSave Closed { get; } = new(false, default, default, default, null, DaggerfallExpeditionMode.Cautious,
         null, DaggerfallExpeditionShip.None, false, null, false, false, 0);
@@ -146,6 +148,7 @@ internal sealed record DaggerfallExpeditionSave(
         }
         if (!Open && (Leg is not null || Ship != DaggerfallExpeditionShip.None || EncounterWaiting))
             throw new ArgumentException("A closed expedition keeps no leg, ship or waiting encounter.");
+        if (EncounterFoe is not null && !EncounterWaiting) throw new ArgumentException("Expedition save names a foe with no encounter waiting.");
         return this;
     }
 }
@@ -168,7 +171,6 @@ internal sealed class DaggerfallExpedition
     private const long SecondsPerHour = DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour;
     private const long LongestStretch = 10 * DaggerfallCalendar.SecondsPerMinute;
     private const double LongestFrame = .25;
-    private const string EncounterLine = "Something approaches! Enter to meet it.";
 
     private static readonly IReadOnlySet<DaggerfallSiteKind> Settlements = new HashSet<DaggerfallSiteKind>
         { DaggerfallSiteKind.TownCity, DaggerfallSiteKind.TownHamlet, DaggerfallSiteKind.TownVillage, DaggerfallSiteKind.Tavern };
@@ -193,6 +195,7 @@ internal sealed class DaggerfallExpedition
     private DaggerfallExpeditionLodging? _lodging;
     private bool _lowFatigueWarned;
     private bool _encounterWaiting;
+    private string? _encounterFoe;
     private long _campSeconds;
     private int _speed;
     private double _owed;
@@ -236,6 +239,9 @@ internal sealed class DaggerfallExpedition
 
     /// <summary>An encounter was rolled and waits for the player to enter and meet it.</summary>
     internal bool EncounterWaiting => _encounterWaiting;
+
+    /// <summary>The band that caught the party and waits to be fought, by name; null for an unseen hour's encounter.</summary>
+    internal string? EncounterFoe => _encounterWaiting ? _encounterFoe : null;
 
     internal DaggerfallTravelMapPixel Party => _party;
     internal DaggerfallExpeditionMode Mode => _mode;
@@ -282,6 +288,7 @@ internal sealed class DaggerfallExpedition
         _ship = aboardOwnShip ? DaggerfallExpeditionShip.Owned : DaggerfallExpeditionShip.None;
         _sailed = aboardOwnShip;
         _encounterWaiting = false;
+        _encounterFoe = null;
         _campSeconds = 0;
     }
 
@@ -304,7 +311,7 @@ internal sealed class DaggerfallExpedition
     {
         if (!_open) return null;
         if (_teleport is null && (_party != _body || _ship != DaggerfallExpeditionShip.None || _encounterWaiting))
-            return _message = _encounterWaiting ? "Something approaches. Enter to meet it." : "The party has moved on. Enter to go on foot from here.";
+            return _message = _encounterWaiting ? EncounterLine() : "The party has moved on. Enter to go on foot from here.";
         Close();
         return null;
     }
@@ -322,6 +329,7 @@ internal sealed class DaggerfallExpedition
         _ship = DaggerfallExpeditionShip.None;
         _sailed = false;
         _encounterWaiting = false;
+        _encounterFoe = null;
         _campSeconds = 0;
         _speed = 0;
         _owed = 0;
@@ -564,7 +572,8 @@ internal sealed class DaggerfallExpedition
         // Going on by any means (the same way again, a halt or a camp) passes by a band come upon unseen.
         SteerAway();
         // A long frame does not leap: the map gives it at most a quarter second's time.
-        _owed += Math.Min(realSeconds, LongestFrame) * _tuning.TimeScales[_speed - 1] * DaggerfallCalendar.SecondsPerMinute;
+        _owed += Math.Min(realSeconds, LongestFrame) * _tuning.TimeScales[_speed - 1] * DaggerfallCalendar.SecondsPerMinute
+            * (_mode == DaggerfallExpeditionMode.Camp ? _tuning.CampTime : 1);
         long passed = 0;
         while (_owed >= 1 && Running)
         {
@@ -604,7 +613,8 @@ internal sealed class DaggerfallExpedition
                 && _world.EncounterArrives(_party, LocationHere is not null, after.MinuteNumber))
             {
                 _encounterWaiting = true;
-                Pause(EncounterLine);
+                _encounterFoe = null;
+                Pause(EncounterLine());
                 break;
             }
             if (WarnLowFatigue(activity)) break;
@@ -646,7 +656,7 @@ internal sealed class DaggerfallExpedition
     internal DaggerfallSiteId? TeleportPlace => _teleport?.Place;
 
     internal DaggerfallExpeditionSave Capture() => !_open || _teleport is not null || _held is not null ? DaggerfallExpeditionSave.Closed with { Mode = _pace, Pin = _pin, Lodging = _lodging }
-        : new(true, _body, _party, _cameFrom, _leg, _mode, _pin, _ship, _sailed, _lodging, _lowFatigueWarned, _encounterWaiting, _campSeconds);
+        : new(true, _body, _party, _cameFrom, _leg, _mode, _pin, _ship, _sailed, _lodging, _lowFatigueWarned, _encounterWaiting, _campSeconds, EncounterFoe);
 
     private void Restore(DaggerfallExpeditionSave saved)
     {
@@ -663,8 +673,9 @@ internal sealed class DaggerfallExpedition
         _lodging = saved.Lodging;
         _lowFatigueWarned = saved.LowFatigueWarned;
         _encounterWaiting = saved.EncounterWaiting;
+        _encounterFoe = saved.EncounterFoe;
         _campSeconds = saved.CampSeconds;
-        _message = _encounterWaiting ? EncounterLine : null;
+        _message = _encounterWaiting ? EncounterLine() : null;
     }
 
     /// <summary>A closed map's remembered pace, pin and lodging, from a save that left it closed.</summary>
@@ -739,7 +750,8 @@ internal sealed class DaggerfallExpedition
                 _bands.Remove(band);
                 _bandAhead = null;
                 _encounterWaiting = true;
-                Pause($"{band.Name} {(many ? "catch" : "catches")} up with you! Enter to fight.");
+                _encounterFoe = band.Name;
+                Pause(EncounterLine());
                 return true;
             case DaggerfallBandEventKind.CameUpon:
                 _bandAhead = band;
@@ -759,7 +771,10 @@ internal sealed class DaggerfallExpedition
     }
 
     private string? Refused() => _held ?? (_teleport is not null ? "Choose where the guild should teleport you."
-        : _encounterWaiting ? "Something approaches. Enter to meet it." : null);
+        : _encounterWaiting ? EncounterLine() : null);
+
+    /// <summary>The map's line while an encounter waits: the band that caught the party, or an unseen one.</summary>
+    private string EncounterLine() => _encounterFoe is { } foe ? $"{foe} caught up with you! Enter to fight." : "Something approaches! Enter to meet it.";
 
     /// <summary>
     /// Heads a new way from where the party stands. Midway between two pixels it goes on along the new way from that

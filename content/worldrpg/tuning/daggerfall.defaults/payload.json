@@ -485,6 +485,7 @@
   },
   "expedition": {
     "timeScales": [30, 120, 360],
+    "campTime": 6,
     "recklessTime": 0.5,
     "recklessFatigue": 2,
     "nightTime": 1.25,

@@ -173,6 +173,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // The world map holds the world, over the travel map it may be opened from; Back closes it.
     navigation.register({ name: 'world-map', root: worldMap.root, layer: 56, isOpen: worldMap.isOpen, back: worldMap.back,
       page: worldMap.page, pageHint: worldMap.pageHint, initialFocus: worldMap.initialFocus }),
+    // A waiting encounter's panel holds the cursor over the travel map until it is entered; Back opens the menu.
+    navigation.register({ name: 'expedition-encounter', root: expedition.encounter.root, layer: 55.5, isOpen: expedition.encounter.isOpen,
+      back: expedition.back, initialFocus: expedition.encounter.initialFocus }),
     // The travel map holds the world; a quest's question or the menu comes up over it, Back leaves it when it can.
     navigation.register({ name: 'expedition', root: expedition.root, layer: 55, isOpen: expedition.isOpen, back: expedition.back,
       page: expedition.page, pageHint: expedition.pageHint, initialFocus: expedition.initialFocus }),

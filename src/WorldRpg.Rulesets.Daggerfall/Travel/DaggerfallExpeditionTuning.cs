@@ -9,6 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Travel;
 /// donor's (<see cref="DaggerfallTravelPolicy.PixelMinutes"/>); these scale them and set what the map costs and pays.
 /// </summary>
 /// <param name="TimeScales">Game minutes that pass per real second at each speed above the pause, slowest first.</param>
+/// <param name="CampTime">How many times a speed's game minutes pass per real second in camp, so a night's rest goes by in moments.</param>
 /// <param name="RecklessTime">A reckless pixel's share of a cautious one's minutes; the donor's reckless travel takes half.</param>
 /// <param name="RecklessFatigue">How many times the per-minute fatigue a reckless march spends of a cautious one.</param>
 /// <param name="NightTime">How many times a pixel's minutes a march takes between dusk and dawn.</param>
@@ -20,6 +21,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Travel;
 /// <param name="LowFatigue">The share of the fatigue pool under which the map warns once and pauses.</param>
 internal sealed record DaggerfallExpeditionTuning(
     IReadOnlyList<double> TimeScales,
+    double CampTime,
     double RecklessTime,
     double RecklessFatigue,
     double NightTime,
@@ -31,7 +33,7 @@ internal sealed record DaggerfallExpeditionTuning(
     double LowFatigue)
 {
     internal static DaggerfallExpeditionTuning Default { get; } = new(
-        [30, 120, 360], .5, 2, 1.25,
+        [30, 120, 360], 6, .5, 2, 1.25,
         new Dictionary<DaggerfallWeatherKind, double>
         {
             [DaggerfallWeatherKind.Sunny] = 1, [DaggerfallWeatherKind.Cloudy] = 1, [DaggerfallWeatherKind.Overcast] = 1,
@@ -65,6 +67,7 @@ internal sealed record DaggerfallExpeditionTuning(
         if (TimeScales.Count == 0 || TimeScales.Any(scale => !double.IsFinite(scale) || scale <= 0)
             || TimeScales.Zip(TimeScales.Skip(1)).Any(pair => pair.Second <= pair.First))
             throw new InvalidOperationException("Expedition tuning 'timeScales' must be positive game minutes per second, slowest first.");
+        Positive(CampTime, "campTime");
         Positive(RecklessTime, "recklessTime");
         Positive(RecklessFatigue, "recklessFatigue");
         Positive(NightTime, "nightTime");
@@ -83,6 +86,7 @@ internal sealed record DaggerfallExpeditionTuning(
 
     internal static DaggerfallExpeditionTuning Read(JsonElement section) => new DaggerfallExpeditionTuning(
         [.. section.GetProperty("timeScales").EnumerateArray().Select(scale => scale.GetDouble())],
+        section.GetProperty("campTime").GetDouble(),
         section.GetProperty("recklessTime").GetDouble(),
         section.GetProperty("recklessFatigue").GetDouble(),
         section.GetProperty("nightTime").GetDouble(),

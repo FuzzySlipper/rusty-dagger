@@ -14,6 +14,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>One of the player's vitals and its pool, as the HUD counts them.</summary>
 internal readonly record struct DaggerfallExpeditionVital(double Current, double Maximum);
 
+/// <summary>An encounter the party must enter to meet, as its centred panel names it: who, and what Enter does.</summary>
+internal sealed record DaggerfallExpeditionEncounterView(string Title, string Line);
+
 /// <summary>
 /// What the expedition's travel map shows about the world the Engine draws: the names over it and the way its view
 /// faces and whether it follows the party; where the party heads and the pin; the time, weather and land; how
@@ -31,7 +34,7 @@ internal sealed record DaggerfallExpeditionView(
     long? RemainingSeconds, DaggerfallTransportMode Transport,
     DaggerfallExpeditionVital Health, DaggerfallExpeditionVital Fatigue, DaggerfallExpeditionVital Magicka,
     bool CanLeave, bool CanEnter, string EnterLabel,
-    bool EncounterWaiting, bool Teleporting, string? TeleportPlace,
+    DaggerfallExpeditionEncounterView? Encounter, bool Teleporting, string? TeleportPlace,
     string? Message, IReadOnlyList<DaggerfallTravelDestination> Found,
     IReadOnlyList<DaggerfallExpeditionBandView> Bands);
 
@@ -185,9 +188,14 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             Vital(stats, DaggerfallMechanicsIds.Health), Worn(stats), Vital(stats, DaggerfallMechanicsIds.Magicka),
             expedition.CanLeave, expedition.Teleporting ? teleport is not null : !atSea && expedition.Held is null,
             expedition.Teleporting ? "Teleport" : here is not null && expedition.Known(here.Id) ? $"Enter {here.Name}" : "Enter",
-            expedition.EncounterWaiting, expedition.Teleporting, teleport?.Name,
+            Encounter(), expedition.Teleporting, teleport?.Name,
             expedition.Message, expedition.Found, [.. expedition.SeenBands]);
     }
+
+    /// <summary>The waiting encounter's panel: the band that caught the party, or an unseen one; null when none waits.</summary>
+    private DaggerfallExpeditionEncounterView? Encounter() => !expedition.EncounterWaiting ? null
+        : expedition.EncounterFoe is { } foe ? new(foe, "There is no outrunning them now. Enter to fight.")
+        : new("Something approaches", "It is upon you before you can see what it is. Enter to meet it.");
 
     /// <summary>A mount chosen, or a ship boarded or left, in the travel panel.</summary>
     internal void ChangeTransport(DaggerfallPlayerUiAction action)
