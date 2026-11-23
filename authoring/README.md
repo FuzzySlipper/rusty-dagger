@@ -149,9 +149,10 @@ writes its own comparison in `local/art/review/flora/trials/506-11/`.
 
 ## Animated people
 
-- The splat stages and approval manifest live under `local/art/generated/people/dagger-characters/`. To run the
-  asset-pipeline `dagger-char` tools on this tree, set `DAGGER_CHAR_ROOT="$PWD/local/art/generated/people/dagger-characters"`
-  from the Rusty Dagger root. Keep the existing character IDs and numbered stage directories.
+- The splat characters are made here, by the bound route in [`tools/people/splat/`](tools/people/splat/README.md) (moved
+  from asset-pipeline on 2026-11-22): `static-npc` for figures that never walk, `dagger-char` for the stage records. Their
+  stages and `ready.json` live under `local/art/generated/people/dagger-characters/`, the tree the CMS reads. New characters
+  are named by their CMS id (`npc-023`); keep the existing ids and numbered stage directories.
 - Run `python3 authoring/tools/people/splat-people.py` to publish the ready skinned-splat GLBs and clip fits to the art
   pack's `media/splat-people/` and pack the shared walk and idle clips into `local/data/animations.rpak`. Commit that
   directory and the pack's `payload.json` together, and publish the container in the same turn with

@@ -1,0 +1,303 @@
+#!/usr/bin/env python3
+"""static-npc STEP ID [options]: the green path for a static NPC - a figure that stands in one place and never walks - as
+bound Gaussian splats (Patch 2026-11-22; the route is docs/splat-scaffold.md "Static NPCs", first run on 021).
+
+ID is the CMS id, npc-NNN (Patch 2026-11-22: clearer; 017 and 021 came before it with bare numbers). The bake's run inside
+work/ keeps the bare number (work/NNN/A, bake id NNN-A), as the batch scripts read run ids as NNN-X; publications are named
+npc-NNN-bound-....
+
+Every file lives in the character's folder, local/art/generated/people/dagger-characters/ID/:
+  00-brief/      npc.json (settings) and the prompts, edited by hand for each character: clay-front.txt, clay-back.txt,
+                 orbit.txt (the orbit clip), rings.json (the three repaint rings and their negatives). init copies 021's as a start.
+  01-concept/    approved/{front,back}.png from the rusty-dagger CMS (back optional: with none, front_only in npc.json, every
+                 step takes the front alone and the orbit's back is H3's own; Patch 2026-11-22, 023); wip/cut, wip/keys-1920
+  02-guide/      wip/clay, wip/mesh-clay, wip/orbit-guide (stick joints, guide videos); scaffold/scaffold.glb (the short rig)
+  work/          the bake's run folder: work/NNN/A/{guided,bake,bound}
+  08-final, 09-game   the bound bake and its runtime sizes, filed by dagger-char bound (publish)
+
+Steps, in order (each checks that the one before it has run):
+  init      dagger-char init, the approved front (and back, if approved) from the CMS (--cms, default ID), npc.json, prompt templates
+  keys      cut both paintings from their background (flood_cut, --tolerance) and make the 1920 px keyframes
+  clay      Qwen edits both keyframes to plain grey clay on the GPU lab (00-brief/clay-*.txt)
+  mesh      Meshy multi-view mesh of the clay pair, untextured (20 credits); on a content block, local Hunyuan3D-2mv instead
+            (Patch 2026-11-22), or --mesher hy2mv from the start
+  rig       static_rig.py: the short chain (Hips..Head, still hands) and the stick-figure joints for the guide, turned to the
+            paintings' view when they are drawn at an angle (measured from the outlines; npc.json "view_yaw" overrides; 017).
+            npc.json "hands": front (held before the body, the default), sides (hanging at the thighs: 023) or 'X,Y,Z;X,Y,Z'.
+            Look at the guide's first frames before the clip: the stick's arms are what H3 poses the arms by
+  guide     the lit stick-figure and depth orbit guide (Blender on den-m5)
+  clip      H3 REF2VA orbit clip on the GPU lab (00-brief/orbit.txt), --size 1920 by default
+  bake      cut-outs, cameras, first fit, the repaint rings (00-brief/rings.json) and round-1 data; stops before the free
+            round-1 fit (npc.json bake_to "r1data"; batch 2 showed the bound bake does not need it). About 50 min.
+  bound     the bound bake (400k) and each runtime size in npc.json "sizes" (default 32k: one figure, never a crowd), cleaned
+  preview   optional: the procedural idle and look clips rendered from six views (bound_run.sh idle)
+  publish   dagger-char bound ID: adopt, playable (idle and look clips from static_idle.py), publish to the Workbench
+  status    which steps have their outputs
+
+Gate for Patch: the bake in the Workbench after publish (no clip gate since 2026-11-22: clips haven't been rejected in a long time). Long steps
+(clip, bake, bound) run in the foreground for tens of minutes: run them under authoring/tools/people/splat/bake/watchdog.sh.
+"""
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[5]   # rusty-dagger
+AP = Path(os.environ.get('ASSET_PIPELINE') or Path.home() / 'dev/asset-pipeline')
+TEMPLATES = Path(__file__).resolve().parent / 'templates'
+DAGGER = REPO
+LAB_COMFY = 'http://192.168.1.20:8188'
+DEFAULTS = {'cms_url': 'http://192.168.1.10:8784', 'tolerance': 9, 'size': 1920, 'mesher': 'meshy', 'bake_to': 'r1data',
+            'sizes': [32000], 'face_share': 0.25, 'cpu_host': 'den-m5',
+            # the loose head (2026-11-22): 7 cm of shell room round Head, not 2.5, where the mesher's head is too thick. 021's
+            # see-through face 26% -> 15% (free fit 11%); 017's bound face 5.7%, more solid than her free fit's 8.9%
+            'loose': 'Head,LeftHand,RightHand', 'loose_factor': 1.5,
+            # a 6 cm shell everywhere (017, 2026-11-22: Meshy rounded off her bent knee and hip by 6 cm or more, and the bound
+            # robe went see-through there as 021's face did); a static NPC barely moves, so the shell need not be tight.
+            # With loose_factor 1.5 the head and hands get 9 cm.
+            'shell_m': 0.06}
+BRIEF = ('clay-front.txt', 'clay-back.txt', 'orbit.txt', 'rings.json')
+
+
+def sh(cmd, log=None, env=None, check=True):
+    print('+', cmd if isinstance(cmd, str) else ' '.join(map(str, cmd)), flush=True)
+    e = dict(os.environ, **(env or {}))
+    if log:
+        with open(log, 'a') as fh:
+            r = subprocess.run(cmd, shell=isinstance(cmd, str), cwd=REPO, env=e, stdout=fh, stderr=subprocess.STDOUT)
+    else:
+        r = subprocess.run(cmd, shell=isinstance(cmd, str), cwd=REPO, env=e)
+    if check and r.returncode:
+        raise SystemExit(f'static-npc: failed (rc {r.returncode})' + (f'; see {log}' if log else ''))
+    return r.returncode
+
+
+class Npc:
+    def __init__(self, cid):
+        self.id = cid
+        self.rid = cid.removeprefix('npc-')                 # the run id under work/ (NNN; bake id NNN-A)
+        self.ch = REPO / 'local/art/generated/people/dagger-characters' / cid
+        self.brief = self.ch / '00-brief'
+        self.cut = self.ch / '01-concept/wip/cut'
+        self.keys = self.ch / f'01-concept/wip/keys-1920'
+        self.clay = self.ch / '02-guide/wip/clay'
+        self.mesh = self.ch / '02-guide/wip/mesh-clay'
+        self.guide = self.ch / '02-guide/wip/orbit-guide'
+        self.scaffold = self.ch / '02-guide/scaffold'
+        self.work = self.ch / 'work'
+        self.k = self.work / self.rid / 'A'
+        self.env = {'CHAR': cid}                           # bound_run.sh and guided_clip.sh: the character folder when it is not the run id
+
+    @property
+    def cfg(self):
+        f = self.brief / 'npc.json'
+        return {**DEFAULTS, **(json.loads(f.read_text()) if f.exists() else {})}
+
+    def need(self, *paths, step):
+        for p in paths:
+            if not Path(p).exists():
+                raise SystemExit(f'static-npc {self.id}: {Path(p).relative_to(REPO)} is missing; run "{step}" first')
+
+    def prompt(self, name, force=False):
+        f = self.brief / name
+        self.need(f, step='init')
+        if not force and (TEMPLATES / name).exists() and f.read_bytes() == (TEMPLATES / name).read_bytes():
+            raise SystemExit(f'static-npc {self.id}: 00-brief/{name} is still 021\'s template; write it for this character '
+                             '(or --force to use it as it is)')
+        return f
+
+    @property
+    def views(self):
+        """The paintings this character has: front, and back unless it is front-only."""
+        return ('front',) if self.cfg.get('front_only') else ('front', 'back')
+
+    def clip_dir(self):
+        return self.k / 'guided' / f"stick-{self.cfg['size']}"
+
+
+def step_init(n, a):
+    a.cms = a.cms or (n.id if n.id.startswith('npc-') else None)
+    if not a.cms:
+        raise SystemExit('init needs --cms (the CMS character id, e.g. npc-021); name new characters npc-NNN (Patch 2026-11-22)')
+    if not n.id.startswith('npc-') and not n.ch.exists():
+        raise SystemExit(f'name the character by its CMS id: static-npc init npc-{n.id} (Patch 2026-11-22)')
+    if not (n.ch / 'character.json').exists():
+        sh([REPO / 'authoring/tools/people/splat/character/dagger-char', 'init', n.id, '--name', a.name or n.id])
+    ap = n.ch / '01-concept/approved'; ap.mkdir(parents=True, exist_ok=True)
+    cfg = n.cfg; cfg.update({'name': a.name or cfg.get('name', n.id), 'cms': a.cms})
+    for v in ('front', 'back'):
+        r = subprocess.run(['python3', 'authoring/cms/concept_cli.py', '--url', cfg['cms_url'], 'approved', a.cms, '--view', v,
+                            '--image', str(ap / f'{v}.png')], cwd=DAGGER, capture_output=True, text=True)
+        if r.returncode or not (ap / f'{v}.png').exists():
+            if v == 'back' and not a.back_required:   # no approved back: front-only (Patch 2026-11-22, 023)
+                cfg['front_only'] = True
+                print(f'{n.id}: no approved back in the CMS; front-only (every step takes the front alone)'); continue
+            raise SystemExit(f'CMS fetch of {a.cms} {v} failed: {r.stdout[-400:]} {r.stderr[-400:]}')
+    n.brief.mkdir(parents=True, exist_ok=True)
+    (n.brief / 'npc.json').write_text(json.dumps(cfg, indent=1) + '\n')
+    for name in BRIEF:
+        if name == 'clay-back.txt' and cfg.get('front_only'):
+            continue
+        if not (n.brief / name).exists():
+            shutil.copy(TEMPLATES / name, n.brief / name)
+    print(f'{n.id}: paintings in 01-concept/approved; edit 00-brief/{", ".join(BRIEF)} for this character (they are 021\'s)')
+
+
+def step_keys(n, a):
+    ap = n.ch / '01-concept/approved'; n.need(*(ap / f'{v}.png' for v in n.views), step='init')
+    tol = a.tolerance or n.cfg['tolerance']; n.cut.mkdir(parents=True, exist_ok=True)
+    for v in n.views:
+        sh(['python3', 'authoring/tools/people/splat/mesh-splat/flood_cut.py', 'cut', ap / f'{v}.png', n.cut / f'{v}-cut.png', '--tolerance', str(tol)])
+    sh(['python3', 'authoring/tools/people/splat/mesh-splat/flood_cut.py', 'keyframes', n.keys] + [f"{v}={n.cut / f'{v}-cut.png'}" for v in n.views]
+       + ['--size', '1920', '--height', '1675', '--floor', '1799', '--equal-height'])
+    print(f'{n.id}: check the cut-outs ({n.cut.relative_to(REPO)}) at full size: tolerance 16 ate a robe edge on 128, 9 is the default')
+
+
+def step_clay(n, a):
+    n.need(n.keys / 'front.png', step='keys'); n.clay.mkdir(parents=True, exist_ok=True)
+    for v in n.views:
+        p = n.prompt(f'clay-{v}.txt', a.force)
+        shutil.copy(n.keys / f'{v}.png', n.clay / f'key-{v}.png'); shutil.copy(p, n.clay / f'prompt-{v}.txt')
+        sh(f"flock -w 3600 /tmp/gpu-lab-claude.lock asset-resources run --host gpu-lab --resource lab-comfy --owner claude "
+           f"--purpose 'Scaffold clay ({v}) for static NPC {n.id}' -- python3 authoring/tools/people/splat/image/qwen_edit.py --image {n.clay}/key-{v}.png "
+           f"--prompt \"$(cat {n.clay}/prompt-{v}.txt)\" --resolution 1328 --out {n.clay}/{v}.png", log=n.clay / f'{v}.log')
+    print(f'{n.id}: clay in {n.clay.relative_to(REPO)}; check it keeps the outline before meshing')
+
+
+def step_mesh(n, a):
+    n.need(*(n.clay / f'{v}.png' for v in n.views), step='clay')
+    mesher = a.mesher or n.cfg['mesher']; log = n.ch / '02-guide/wip/mesh.log'
+    if mesher == 'meshy':
+        imgs = ' '.join(f'{n.clay}/{v}.png' for v in n.views)   # the front alone for a front-only character
+        rc = sh(f"timeout 900 python3 authoring/tools/people/splat/mesh/meshy_multiview.py {n.mesh} {imgs} "
+                f"--pose '' --no-texture", log=log, check=False)
+        if rc == 0 and (n.mesh / 'model.glb').exists():
+            print(f'{n.id}: Meshy mesh {(n.mesh / "model.glb").relative_to(REPO)}'); return
+        text = log.read_text()[-4000:]
+        if 'ForbiddenForNSFW' not in text and '403' not in text:
+            raise SystemExit(f'Meshy failed (rc {rc}), not a content block; see {log}')
+        print(f'{n.id}: Meshy refused the clay (content block); switching to local Hunyuan3D-2mv (Patch 2026-11-22)')
+    hy = n.ch / '02-guide/wip/mesh-hy2mv'
+    if n.cfg.get('front_only'):
+        raise SystemExit(f'{n.id}: Hunyuan3D-2mv here takes a front and a back; a front-only character has no back clay')
+    sh([AP / 'tools/fast-bound/fast-bound', 'scaffold',   # asset-pipeline's fast-bound, as a tool on files
+        '--front', n.clay / 'front.png', '--back', n.clay / 'back.png', '--out', hy,
+        '--mesher', 'hy2mv', '--rigger', 'none', '--stop-after', 'mesh'], log=log)
+    glbs = sorted(p for p in hy.rglob('*.glb') if 'scaffold' not in p.name)
+    if not glbs:
+        raise SystemExit(f'Hunyuan3D-2mv gave no mesh; see {log}')
+    n.mesh.mkdir(parents=True, exist_ok=True); shutil.copy(glbs[0], n.mesh / 'model.glb')
+    (n.mesh / 'mesher.txt').write_text(f'hy2mv: {glbs[0]}\n')
+    print(f'{n.id}: Hunyuan3D-2mv mesh {(n.mesh / "model.glb").relative_to(REPO)}')
+
+
+def step_rig(n, a):
+    n.need(n.mesh / 'model.glb', step='mesh'); n.scaffold.mkdir(parents=True, exist_ok=True); n.guide.mkdir(parents=True, exist_ok=True)
+    sh(['python3', 'authoring/tools/people/splat/scaffold/static_rig.py', n.mesh / 'model.glb', n.scaffold / 'scaffold.glb', '--report', n.scaffold / 'scaffold.json',
+        '--stick', n.guide / 'fit-static.json', '--view-yaw', str(n.cfg.get('view_yaw', 'auto')),
+        '--front', n.cut / 'front-cut.png'] + (['--back', n.cut / 'back-cut.png'] if 'back' in n.views else [])
+       + (['--head-axis', str(n.cfg['head_axis'])] if n.cfg.get('head_axis') else [])
+       + ['--hands', str(n.cfg.get('hands', 'front'))], log=n.scaffold / 'rig.log')
+    rep = json.loads((n.scaffold / 'scaffold.json').read_text())
+    print(f"{n.id}: {rep['joints']} joints, {rep['triangles']:,} triangles; mesh vertices each joint leads: {rep['dominant']}")
+    print(f"  paintings' view {rep['view_yaw']} degrees round to the right of the mesh's front"
+          + (f" (outline IoU {rep['view_yaw_iou']['best']}, square {rep['view_yaw_iou']['square']})" if 'view_yaw_iou' in rep else '')
+          + '; the stick guide opens there (npc.json "view_yaw" sets it)')
+    hz = rep.get('head_zone_on_head')
+    print(f'  head zone (above the Neck joint) led by Neck/Head: {hz}' + ('  <- LOW: a face that tears in the look clip (017); check the '
+          'hands and the head axis (npc.json head_axis)' if hz is not None and hz < 0.97 else ''))
+    print('  check the hands sit on what he holds, and that a hood or hat goes with Head (rig.log); scaffold_views.py renders it')
+
+
+def step_guide(n, a):
+    n.need(n.scaffold / 'scaffold.glb', n.guide / 'fit-static.json', step='rig'); n.need(n.cut / 'front-cut.png', step='keys')
+    shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
+    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'guide', str(n.cfg['size'])], env={**n.env, 'FIT': str(n.guide / 'fit-static.json')})
+
+
+def step_clip(n, a):
+    sz = a.size or n.cfg['size']
+    n.need(n.guide / str(sz), step='guide')
+    shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
+    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env=n.env)
+    d = n.k / 'guided' / f'stick-{sz}'
+    sh(f"ffmpeg -loglevel error -y -framerate 24 -pattern_type glob -i '{d}/frames/*.png' -vf scale=960:960 -c:v libx264 -crf 20 "
+       f"-pix_fmt yuv420p {d}/review.mp4")
+    print(f'{n.id}: clip {d.relative_to(REPO)}/review.mp4 - look at a few frames and go on to bake (Patch 2026-11-22: no clip gate)')
+
+
+def step_bake(n, a):
+    cfg = n.cfg; d = n.clip_dir(); n.need(d / 'frames', step='clip')
+    rings = json.loads(n.prompt('rings.json', a.force).read_text())
+    (n.k / 'cut').mkdir(parents=True, exist_ok=True); shutil.copy(n.cut / 'front-cut.png', n.k / 'cut/front-cut.png')
+    (n.k / 'bake.env').write_text(f"CLIP={d.relative_to(n.work)}\nSIZE={cfg['size']}\n")
+    (n.k / 'prompts.json').write_text(json.dumps(rings, indent=1) + '\n')
+    env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': LAB_COMFY}
+    sh(['authoring/tools/people/splat/bake/bake.sh', n.work, f'{n.rid}-A', 'tools'], env=env)
+    sh(['authoring/tools/people/splat/bake/pipeline.sh', n.work, f'{n.rid}-A', cfg['cpu_host'], 'frames', a.to or cfg['bake_to']], env=env)
+
+
+def step_bound(n, a):
+    cfg = n.cfg; n.need(n.k / 'bake/r1-data/views.json', step='bake')
+    b = ['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A']
+    yaw = json.loads((n.scaffold / 'scaffold.json').read_text()).get('view_yaw', 0)
+    loose = {k: str(cfg[c]) for k, c in (('LOOSE', 'loose'), ('LOOSE_FACTOR', 'loose_factor'), ('SHELL_M', 'shell_m')) if c in cfg}   # npc.json: "loose": "Head,LeftHand,RightHand"
+    loose.update(n.env)
+    sh(b + ['score'], env={**n.env, 'YAW': str(yaw)})
+    sh(b + ['bound'], env=loose)
+    sizes = [int(x) for x in a.sizes.split(',')] if a.sizes else cfg['sizes']
+    for count in sizes:
+        sh(b + ['distil', str(count), str(cfg['face_share'])], env=loose)
+        sh(b + ['clean', f'{count // 1000}k-face-share'], env=loose)
+    sc = json.loads((n.k / 'bound/score/scores.json').read_text())['mean']['mesh']['iou']
+    print(f'{n.id}: scaffold outline IoU {sc} (villagers 0.87-0.93); review sheets in {(n.k / "bound/review-bound").relative_to(REPO)}')
+
+
+def step_preview(n, a):
+    n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
+    size = f"{(a.sizes and int(a.sizes.split(',')[0]) or n.cfg['sizes'][0]) // 1000}k-face-share-cleaned"
+    sh(['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A', 'idle', size], env=n.env)
+
+
+def step_publish(n, a):
+    n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
+    for s in ('adopt', 'playable', 'publish'):
+        sh([REPO / 'authoring/tools/people/splat/character/dagger-char', 'bound', n.id, '--step', s])
+
+
+def step_status(n, a):
+    marks = [('init', n.ch / '01-concept/approved/front.png'), ('keys', n.keys / 'front.png'), ('clay', n.clay / 'front.png'),
+             ('mesh', n.mesh / 'model.glb'), ('rig', n.scaffold / 'scaffold.glb'), ('guide', n.guide / str(n.cfg['size'])),
+             ('clip', n.clip_dir() / 'review.mp4'), ('bake', n.k / 'bake/r1-data/views.json'),
+             ('bound', n.k / 'bound/bound-cleaned/splat.npz'), ('preview', n.k / 'bound/idle/renders'),
+             ('publish', n.ch / '09-game/bound/playable/character.json')]
+    for name, p in marks:
+        print(f"  {'done' if p.exists() else '    '}  {name:8s} {p.relative_to(REPO)}")
+    edited = [x for x in BRIEF if (n.brief / x).exists() and (n.brief / x).read_bytes() != (TEMPLATES / x).read_bytes()]
+    print(f"  prompts written for this character: {', '.join(edited) or 'none yet'}")
+
+
+STEPS = {'init': step_init, 'keys': step_keys, 'clay': step_clay, 'mesh': step_mesh, 'rig': step_rig, 'guide': step_guide,
+         'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'publish': step_publish, 'status': step_status}
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('step', choices=list(STEPS)); ap.add_argument('id')
+    ap.add_argument('--cms', help='init: the CMS character id (default ID when it is npc-NNN)');
+    ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
+    ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
+    ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')
+    ap.add_argument('--size', type=int, help='clip: orbit size in px (default 1920)')
+    ap.add_argument('--to', choices=['r1data', 'r1'], help='bake: last stage (default r1data; r1 adds the free round-1 fit)')
+    ap.add_argument('--sizes', help='bound/preview: runtime Gaussian counts, comma-separated (default npc.json sizes, 32000)')
+    ap.add_argument('--force', action='store_true', help='use a prompt that is still 021\'s template')
+    a = ap.parse_args()
+    STEPS[a.step](Npc(a.id), a)
+
+
+if __name__ == '__main__':
+    main()

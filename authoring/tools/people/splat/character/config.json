@@ -1,0 +1,5 @@
+{
+ "root": "local/art/generated/people/dagger-characters",
+ "root_note": "Relative to the rusty-dagger repository (local/ is git-ignored); the authoring CMS reads the same tree. Patch browses it over his share of den-agents' home. DAGGER_CHAR_ROOT overrides.",
+ "warn_free_gb": 100
+}

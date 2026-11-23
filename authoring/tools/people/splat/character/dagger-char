@@ -1,0 +1,3 @@
+#!/bin/bash
+# dagger-char: the dagger character factory CLI (authoring/tools/people/splat/character/dagger_char.py)
+exec python3 "$(dirname "$(readlink -f "$0")")/dagger_char.py" "$@"

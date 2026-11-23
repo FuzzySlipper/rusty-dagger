@@ -1,0 +1,379 @@
+diff --git a/gsplat/cuda/csrc/IntersectTile.cu b/gsplat/cuda/csrc/IntersectTile.cu
+index 85ab9945..6fdd83e1 100644
+--- a/gsplat/cuda/csrc/IntersectTile.cu
++++ b/gsplat/cuda/csrc/IntersectTile.cu
+@@ -11,6 +11,10 @@
+ #include "Intersect.h"
+ #include "Utils.cuh"
+ 
++#if defined(USE_ROCM)
++namespace cub = hipcub;
++#endif
++
+ namespace gsplat {
+ 
+ namespace cg = cooperative_groups;
+diff --git a/gsplat/cuda/csrc/Projection2DGSFused.cu b/gsplat/cuda/csrc/Projection2DGSFused.cu
+index 9d6e1c55..b7d36fa4 100644
+--- a/gsplat/cuda/csrc/Projection2DGSFused.cu
++++ b/gsplat/cuda/csrc/Projection2DGSFused.cu
+@@ -433,7 +433,7 @@ __global__ void projection_2dgs_fused_bwd_kernel(
+     // #if __CUDA_ARCH__ >= 700
+     // write out results with warp-level reduction
+     auto warp = cg::tiled_partition<32>(cg::this_thread_block());
+-    auto warp_group_g = cg::labeled_partition(warp, gid);
++    auto warp_group_g = GS_CG_LABELED(warp, gid);
+     if (v_means != nullptr) {
+         warpSum(v_mean, warp_group_g);
+         if (warp_group_g.thread_rank() == 0) {
+@@ -460,7 +460,7 @@ __global__ void projection_2dgs_fused_bwd_kernel(
+     }
+ 
+     if (v_viewmats != nullptr) {
+-        auto warp_group_c = cg::labeled_partition(warp, cid);
++        auto warp_group_c = GS_CG_LABELED(warp, cid);
+         warpSum(v_R, warp_group_c);
+         warpSum(v_t, warp_group_c);
+         if (warp_group_c.thread_rank() == 0) {
+diff --git a/gsplat/cuda/csrc/Projection2DGSPacked.cu b/gsplat/cuda/csrc/Projection2DGSPacked.cu
+index 4667dc77..473d636f 100644
+--- a/gsplat/cuda/csrc/Projection2DGSPacked.cu
++++ b/gsplat/cuda/csrc/Projection2DGSPacked.cu
+@@ -414,7 +414,7 @@ __global__ void projection_2dgs_packed_bwd_kernel(
+         // write out results with dense layout
+         // #if __CUDA_ARCH__ >= 700
+         // write out results with warp-level reduction
+-        auto warp_group_g = cg::labeled_partition(warp, gid);
++        auto warp_group_g = GS_CG_LABELED(warp, gid);
+         if (v_means != nullptr) {
+             warpSum(v_mean, warp_group_g);
+             if (warp_group_g.thread_rank() == 0) {
+@@ -441,7 +441,7 @@ __global__ void projection_2dgs_packed_bwd_kernel(
+     }
+ 
+     if (v_viewmats != nullptr) {
+-        auto warp_group_c = cg::labeled_partition(warp, cid);
++        auto warp_group_c = GS_CG_LABELED(warp, cid);
+         warpSum(v_R, warp_group_c);
+         warpSum(v_t, warp_group_c);
+         if (warp_group_c.thread_rank() == 0) {
+diff --git a/gsplat/cuda/csrc/ProjectionEWA3DGSFused.cu b/gsplat/cuda/csrc/ProjectionEWA3DGSFused.cu
+index 09997d04..e9d51637 100644
+--- a/gsplat/cuda/csrc/ProjectionEWA3DGSFused.cu
++++ b/gsplat/cuda/csrc/ProjectionEWA3DGSFused.cu
+@@ -469,7 +469,7 @@ __global__ void projection_ewa_3dgs_fused_bwd_kernel(
+     // #if __CUDA_ARCH__ >= 700
+     // write out results with warp-level reduction
+     auto warp = cg::tiled_partition<32>(cg::this_thread_block());
+-    auto warp_group_g = cg::labeled_partition(warp, gid);
++    auto warp_group_g = GS_CG_LABELED(warp, gid);
+     if (v_means != nullptr) {
+         warpSum(v_mean, warp_group_g);
+         if (warp_group_g.thread_rank() == 0) {
+@@ -513,7 +513,7 @@ __global__ void projection_ewa_3dgs_fused_bwd_kernel(
+         }
+     }
+     if (v_viewmats != nullptr) {
+-        auto warp_group_c = cg::labeled_partition(warp, cid);
++        auto warp_group_c = GS_CG_LABELED(warp, cid);
+         warpSum(v_R, warp_group_c);
+         warpSum(v_t, warp_group_c);
+         if (warp_group_c.thread_rank() == 0) {
+diff --git a/gsplat/cuda/csrc/ProjectionEWA3DGSPacked.cu b/gsplat/cuda/csrc/ProjectionEWA3DGSPacked.cu
+index 6a36854c..eb16f816 100644
+--- a/gsplat/cuda/csrc/ProjectionEWA3DGSPacked.cu
++++ b/gsplat/cuda/csrc/ProjectionEWA3DGSPacked.cu
+@@ -591,7 +591,7 @@ __global__ void projection_ewa_3dgs_packed_bwd_kernel(
+         // write out results with dense layout
+         // #if __CUDA_ARCH__ >= 700
+         // write out results with warp-level reduction
+-        auto warp_group_g = cg::labeled_partition(warp, gid);
++        auto warp_group_g = GS_CG_LABELED(warp, gid);
+         if (v_means != nullptr) {
+             warpSum(v_mean, warp_group_g);
+             if (warp_group_g.thread_rank() == 0) {
+@@ -639,7 +639,7 @@ __global__ void projection_ewa_3dgs_packed_bwd_kernel(
+     }
+     // v_viewmats is always in dense layout
+     if (v_viewmats != nullptr) {
+-        auto warp_group_c = cg::labeled_partition(warp, cid);
++        auto warp_group_c = GS_CG_LABELED(warp, cid);
+         warpSum(v_R, warp_group_c);
+         warpSum(v_t, warp_group_c);
+         if (warp_group_c.thread_rank() == 0) {
+diff --git a/gsplat/cuda/csrc/RasterizeToIndices2DGS.cu b/gsplat/cuda/csrc/RasterizeToIndices2DGS.cu
+index b4856093..131e691f 100644
+--- a/gsplat/cuda/csrc/RasterizeToIndices2DGS.cu
++++ b/gsplat/cuda/csrc/RasterizeToIndices2DGS.cu
+@@ -252,7 +252,7 @@ void launch_rasterize_to_indices_2dgs_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+             rasterize_to_indices_2dgs_kernel<float>,
+             cudaFuncAttributeMaxDynamicSharedMemorySize,
+             shmem_size
+diff --git a/gsplat/cuda/csrc/RasterizeToIndices3DGS.cu b/gsplat/cuda/csrc/RasterizeToIndices3DGS.cu
+index a46ede76..1a913ce4 100644
+--- a/gsplat/cuda/csrc/RasterizeToIndices3DGS.cu
++++ b/gsplat/cuda/csrc/RasterizeToIndices3DGS.cu
+@@ -213,7 +213,7 @@ void launch_rasterize_to_indices_3dgs_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+             rasterize_to_indices_3dgs_kernel<float>,
+             cudaFuncAttributeMaxDynamicSharedMemorySize,
+             shmem_size
+diff --git a/gsplat/cuda/csrc/RasterizeToPixels2DGSBwd.cu b/gsplat/cuda/csrc/RasterizeToPixels2DGSBwd.cu
+index a483d9a0..c739f7fa 100644
+--- a/gsplat/cuda/csrc/RasterizeToPixels2DGSBwd.cu
++++ b/gsplat/cuda/csrc/RasterizeToPixels2DGSBwd.cu
+@@ -240,7 +240,7 @@ __global__ void rasterize_to_pixels_2dgs_bwd_kernel(
+     // this gives the last gaussian id that have intersected with any pixels in
+     // the warp
+     const int32_t warp_bin_final =
+-        cg::reduce(warp, bin_final, cg::greater<int>());
++        GS_CG_REDUCE(warp, bin_final, GS_CG_GREATER<int>());
+ 
+     /**
+      * =======================================================
+@@ -745,7 +745,7 @@ void launch_rasterize_to_pixels_2dgs_bwd_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+             rasterize_to_pixels_2dgs_bwd_kernel<CDIM, float>,
+             cudaFuncAttributeMaxDynamicSharedMemorySize,
+             shmem_size
+diff --git a/gsplat/cuda/csrc/RasterizeToPixels2DGSFwd.cu b/gsplat/cuda/csrc/RasterizeToPixels2DGSFwd.cu
+index 9f84dc5b..d5e373e3 100644
+--- a/gsplat/cuda/csrc/RasterizeToPixels2DGSFwd.cu
++++ b/gsplat/cuda/csrc/RasterizeToPixels2DGSFwd.cu
+@@ -486,7 +486,7 @@ void launch_rasterize_to_pixels_2dgs_fwd_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+             rasterize_to_pixels_2dgs_fwd_kernel<CDIM, float>,
+             cudaFuncAttributeMaxDynamicSharedMemorySize,
+             shmem_size
+diff --git a/gsplat/cuda/csrc/RasterizeToPixels3DGSBwd.cu b/gsplat/cuda/csrc/RasterizeToPixels3DGSBwd.cu
+index 7f1c0252..4db50080 100644
+--- a/gsplat/cuda/csrc/RasterizeToPixels3DGSBwd.cu
++++ b/gsplat/cuda/csrc/RasterizeToPixels3DGSBwd.cu
+@@ -124,7 +124,7 @@ __global__ void rasterize_to_pixels_3dgs_bwd_kernel(
+     const uint32_t tr = block.thread_rank();
+     cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+     const int32_t warp_bin_final =
+-        cg::reduce(warp, bin_final, cg::greater<int>());
++        GS_CG_REDUCE(warp, bin_final, GS_CG_GREATER<int>());
+     for (uint32_t b = 0; b < num_batches; ++b) {
+         // resync all threads before writing next batch of shared mem
+         block.sync();
+@@ -331,7 +331,7 @@ void launch_rasterize_to_pixels_3dgs_bwd_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+             rasterize_to_pixels_3dgs_bwd_kernel<CDIM, float>,
+             cudaFuncAttributeMaxDynamicSharedMemorySize,
+             shmem_size
+diff --git a/gsplat/cuda/csrc/RasterizeToPixels3DGSFwd.cu b/gsplat/cuda/csrc/RasterizeToPixels3DGSFwd.cu
+index b78a8736..a34f5e5f 100644
+--- a/gsplat/cuda/csrc/RasterizeToPixels3DGSFwd.cu
++++ b/gsplat/cuda/csrc/RasterizeToPixels3DGSFwd.cu
+@@ -227,7 +227,7 @@ void launch_rasterize_to_pixels_3dgs_fwd_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+             rasterize_to_pixels_3dgs_fwd_kernel<CDIM, float>,
+             cudaFuncAttributeMaxDynamicSharedMemorySize,
+             shmem_size
+diff --git a/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSBwd.cu b/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSBwd.cu
+index 4c21f616..87434297 100644
+--- a/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSBwd.cu
++++ b/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSBwd.cu
+@@ -207,7 +207,7 @@ __global__ void rasterize_to_pixels_from_world_3dgs_bwd_kernel(
+     const uint32_t tr = block.thread_rank();
+     cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+     const int32_t warp_bin_final =
+-        cg::reduce(warp, bin_final, cg::greater<int>());
++        GS_CG_REDUCE(warp, bin_final, GS_CG_GREATER<int>());
+     for (uint32_t b = 0; b < num_batches; ++b) {
+         // resync all threads before writing next batch of shared mem
+         block.sync();
+@@ -463,7 +463,7 @@ void launch_rasterize_to_pixels_from_world_3dgs_bwd_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+             rasterize_to_pixels_from_world_3dgs_bwd_kernel<CDIM, float>,
+             cudaFuncAttributeMaxDynamicSharedMemorySize,
+             shmem_size
+diff --git a/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSFwd.cu b/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSFwd.cu
+index b4d13886..dffcac2f 100644
+--- a/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSFwd.cu
++++ b/gsplat/cuda/csrc/RasterizeToPixelsFromWorld3DGSFwd.cu
+@@ -353,7 +353,7 @@ void launch_rasterize_to_pixels_from_world_3dgs_fwd_kernel(
+     // TODO: an optimization can be done by passing the actual number of
+     // channels into the kernel functions and avoid necessary global memory
+     // writes. This requires moving the channel padding from python to C side.
+-    if (cudaFuncSetAttribute(
++    if (cudaFuncSetAttribute((const void *)
+         rasterize_to_pixels_from_world_3dgs_fwd_kernel<CDIM, float>,
+         cudaFuncAttributeMaxDynamicSharedMemorySize,
+         shmem_size
+diff --git a/gsplat/cuda/include/Cameras.cuh b/gsplat/cuda/include/Cameras.cuh
+index 61a28f1f..0a96095b 100644
+--- a/gsplat/cuda/include/Cameras.cuh
++++ b/gsplat/cuda/include/Cameras.cuh
+@@ -1065,10 +1065,10 @@ public:
+ 
+         if (dist.reference_poly == FThetaCameraDistortionParameters::PolynomialType::PIXELDIST_TO_ANGLE)
+             // compute first derivative of the backwards polynomial
+-            dreference_poly = {1.f * dist.pixeldist_to_angle_poly.at(1), 2.f * dist.pixeldist_to_angle_poly.at(2), 3.f * dist.pixeldist_to_angle_poly.at(3), 4.f * dist.pixeldist_to_angle_poly.at(4), 5.f * dist.pixeldist_to_angle_poly.at(5)};
++            dreference_poly = {1.f * dist.pixeldist_to_angle_poly[1], 2.f * dist.pixeldist_to_angle_poly[2], 3.f * dist.pixeldist_to_angle_poly[3], 4.f * dist.pixeldist_to_angle_poly[4], 5.f * dist.pixeldist_to_angle_poly[5]};
+         else
+             // compute first derivative of the forward polynomial
+-            dreference_poly = {1.f * dist.angle_to_pixeldist_poly.at(1), 2.f * dist.angle_to_pixeldist_poly.at(2), 3.f * dist.angle_to_pixeldist_poly.at(3), 4.f * dist.angle_to_pixeldist_poly.at(4), 5.f * dist.angle_to_pixeldist_poly.at(5)};
++            dreference_poly = {1.f * dist.angle_to_pixeldist_poly[1], 2.f * dist.angle_to_pixeldist_poly[2], 3.f * dist.angle_to_pixeldist_poly[3], 4.f * dist.angle_to_pixeldist_poly[4], 5.f * dist.angle_to_pixeldist_poly[5]};
+ 
+         // FThetaCameraModelParameters are defined such that the image coordinate origin corresponds to
+         // the center of the first pixel. We therefore need to offset the principal point by half a pixel.
+diff --git a/gsplat/cuda/include/Utils.cuh b/gsplat/cuda/include/Utils.cuh
+index 2809d93f..931b59ba 100644
+--- a/gsplat/cuda/include/Utils.cuh
++++ b/gsplat/cuda/include/Utils.cuh
+@@ -3,7 +3,32 @@
+ #include "Common.h"
+ 
+ #include <cooperative_groups.h>
++#if !defined(USE_ROCM)
+ #include <cooperative_groups/reduce.h>
++#define GS_CG_REDUCE cooperative_groups::reduce
++#define GS_CG_PLUS cooperative_groups::plus
++#define GS_CG_GREATER cooperative_groups::greater
++#define GS_CG_LABELED cooperative_groups::labeled_partition
++#else
++// HIP has no cooperative_groups reduce: a shuffle-xor tree over the warp tile (den-m5 gfx1151, wave32, 2026-11-18)
++namespace gs_cg {
++template <typename T> struct plus { __device__ __forceinline__ T operator()(T a, T b) const { return a + b; } };
++template <typename T> struct greater { __device__ __forceinline__ T operator()(T a, T b) const { return a > b ? a : b; } };
++template <typename Tile, typename T, typename Op>
++__device__ __forceinline__ T reduce(const Tile &t, T v, Op op) {
++    for (int o = t.size() / 2; o > 0; o /= 2) v = op(v, __shfl_xor(v, o, t.size()));
++    return v;
++}
++// no labeled_partition on HIP: each thread is its own group, so warpSum is a no-op and every thread does its own atomic add
++struct single { __device__ __forceinline__ unsigned size() const { return 1; } __device__ __forceinline__ unsigned thread_rank() const { return 0; } };
++template <typename Tile, typename L> __device__ __forceinline__ single labeled_partition(const Tile &, L) { return single{}; }
++template <typename T, typename Op> __device__ __forceinline__ T reduce(const single &, T v, Op) { return v; }
++}
++#define GS_CG_LABELED gs_cg::labeled_partition
++#define GS_CG_REDUCE gs_cg::reduce
++#define GS_CG_PLUS gs_cg::plus
++#define GS_CG_GREATER gs_cg::greater
++#endif
+ 
+ namespace gsplat {
+ 
+@@ -87,30 +112,30 @@ template <uint32_t DIM, class WarpT>
+ inline __device__ void warpSum(float *val, WarpT &warp) {
+ #pragma unroll
+     for (uint32_t i = 0; i < DIM; i++) {
+-        val[i] = cg::reduce(warp, val[i], cg::plus<float>());
++        val[i] = GS_CG_REDUCE(warp, val[i], GS_CG_PLUS<float>());
+     }
+ }
+ 
+ template <class WarpT> inline __device__ void warpSum(float &val, WarpT &warp) {
+-    val = cg::reduce(warp, val, cg::plus<float>());
++    val = GS_CG_REDUCE(warp, val, GS_CG_PLUS<float>());
+ }
+ 
+ template <class WarpT> inline __device__ void warpSum(vec4 &val, WarpT &warp) {
+-    val.x = cg::reduce(warp, val.x, cg::plus<float>());
+-    val.y = cg::reduce(warp, val.y, cg::plus<float>());
+-    val.z = cg::reduce(warp, val.z, cg::plus<float>());
+-    val.w = cg::reduce(warp, val.w, cg::plus<float>());
++    val.x = GS_CG_REDUCE(warp, val.x, GS_CG_PLUS<float>());
++    val.y = GS_CG_REDUCE(warp, val.y, GS_CG_PLUS<float>());
++    val.z = GS_CG_REDUCE(warp, val.z, GS_CG_PLUS<float>());
++    val.w = GS_CG_REDUCE(warp, val.w, GS_CG_PLUS<float>());
+ }
+ 
+ template <class WarpT> inline __device__ void warpSum(vec3 &val, WarpT &warp) {
+-    val.x = cg::reduce(warp, val.x, cg::plus<float>());
+-    val.y = cg::reduce(warp, val.y, cg::plus<float>());
+-    val.z = cg::reduce(warp, val.z, cg::plus<float>());
++    val.x = GS_CG_REDUCE(warp, val.x, GS_CG_PLUS<float>());
++    val.y = GS_CG_REDUCE(warp, val.y, GS_CG_PLUS<float>());
++    val.z = GS_CG_REDUCE(warp, val.z, GS_CG_PLUS<float>());
+ }
+ 
+ template <class WarpT> inline __device__ void warpSum(vec2 &val, WarpT &warp) {
+-    val.x = cg::reduce(warp, val.x, cg::plus<float>());
+-    val.y = cg::reduce(warp, val.y, cg::plus<float>());
++    val.x = GS_CG_REDUCE(warp, val.x, GS_CG_PLUS<float>());
++    val.y = GS_CG_REDUCE(warp, val.y, GS_CG_PLUS<float>());
+ }
+ 
+ template <class WarpT> inline __device__ void warpSum(mat4 &val, WarpT &warp) {
+@@ -132,7 +157,7 @@ template <class WarpT> inline __device__ void warpSum(mat2 &val, WarpT &warp) {
+ }
+ 
+ template <class WarpT> inline __device__ void warpMax(float &val, WarpT &warp) {
+-    val = cg::reduce(warp, val, cg::greater<float>());
++    val = GS_CG_REDUCE(warp, val, GS_CG_GREATER<float>());
+ }
+ 
+ ///////////////////////////////
+diff --git a/setup.py b/setup.py
+index f152008e..d43b163c 100644
+--- a/setup.py
++++ b/setup.py
+@@ -43,7 +43,7 @@ def get_extensions():
+     undef_macros = []
+     define_macros = []
+ 
+-    extra_compile_args = {"cxx": ["-O3"]}
++    extra_compile_args = {"cxx": ["-O3", "-std=c++20"]}
+     if not os.name == "nt":  # Not on Windows:
+         extra_compile_args["cxx"] += ["-Wno-sign-compare"]
+     extra_link_args = [] if WITH_SYMBOLS else ["-s"]
+@@ -69,7 +69,7 @@ def get_extensions():
+ 
+     nvcc_flags = os.getenv("NVCC_FLAGS", "")
+     nvcc_flags = [] if nvcc_flags == "" else nvcc_flags.split(" ")
+-    nvcc_flags += ["-O3", "--use_fast_math", "-std=c++17"]
++    nvcc_flags += ["-O3", "-std=c++20", "-U_GLIBCXX_ASSERTIONS"] if torch.version.hip else ["-O3", "--use_fast_math", "-std=c++17"]   # hipcc: torch 2.14 needs C++20, no nvcc flags (den-m5 2026-11-18)
+     if LINE_INFO:
+         nvcc_flags += ["-lineinfo"]
+     if torch.version.hip:
+@@ -81,13 +81,16 @@ def get_extensions():
+         nvcc_flags += ["--expt-relaxed-constexpr"]
+ 
+     # GLM/Torch has spammy and very annoyingly verbose warnings that this suppresses
+-    nvcc_flags += ["-diag-suppress", "20012,186"]
++    if not torch.version.hip:
++        nvcc_flags += ["-diag-suppress", "20012,186"]
+     extra_compile_args["nvcc"] = nvcc_flags
+     if sys.platform == "win32":
+         extra_compile_args["nvcc"] += ["-DWIN32_LEAN_AND_MEAN", "-allow-unsupported-compiler"]
+ 
+     current_dir = pathlib.Path(__file__).parent.resolve()
+     glm_path = osp.join(current_dir, "gsplat", "cuda", "csrc", "third_party", "glm")
++    if torch.version.hip:   # outside the tree, so hipify leaves glm alone
++        glm_path = osp.expanduser("~/.local/include")
+     include_dirs = [glm_path, osp.join(current_dir, "gsplat", "cuda", "include")]
+ 
+     extension = CUDAExtension(
