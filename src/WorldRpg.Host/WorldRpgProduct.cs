@@ -663,25 +663,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// </summary>
     public void Restart()
     {
-        if (_shutdown)
-        {
-            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is shut down"));
-            return;
-        }
-
-        if (_mode == ProductMode.Title)
-        {
-            // Replacing a session that has not begun would be the same run started twice, and it would put
-            // the entry screen behind the world without the client having asked to leave it.
-            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the entry screen leaves only for ordinary play; begin first"));
-            return;
-        }
-
-        YieldToReplacement();
-        IGameSession replacement = Ruleset.CreateSession(SessionContext(Composition));
-        ReplaceSession(replacement, replacement is ICharacterCreationSession ? ProductMode.Title : ProductMode.Playing,
-            "the product replaced its session");
-        _started = true;
+        if (RestartPhases() is { } phases) LoadingScreen.RunNow(phases);
     }
 
     /// <summary>
@@ -690,21 +672,65 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// </summary>
     public void QuitToTitle()
     {
-        if (_shutdown)
-        {
-            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is shut down"));
-            return;
-        }
+        if (QuitToTitlePhases() is { } phases) LoadingScreen.RunNow(phases);
+    }
 
-        if (_mode == ProductMode.Title)
+    /// <summary>
+    /// <see cref="Restart"/> as the loading screen's phases: the fresh session is built, then adopted. Null, with the
+    /// refusal recorded, when there is nothing to restart.
+    /// </summary>
+    private IReadOnlyList<LoadingPhase>? RestartPhases(Action? adopted = null)
+    {
+        // Replacing a session that has not begun would be the same run started twice, and it would put
+        // the entry screen behind the world without the client having asked to leave it.
+        if (RefusesReplacement("the entry screen leaves only for ordinary play; begin first")) return null;
+        return ReplacementPhases("Building the world", "Entering the world", replacement =>
         {
-            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is already at the title"));
-            return;
-        }
+            ReplaceSession(replacement, replacement is ICharacterCreationSession ? ProductMode.Title : ProductMode.Playing,
+                "the product replaced its session");
+            _started = true;
+            adopted?.Invoke();
+        });
+    }
 
-        YieldToReplacement();
-        ReplaceSession(Ruleset.CreateSession(SessionContext(Composition)),
-            ProductMode.Title, "the product quit to the title");
+    /// <summary>
+    /// <see cref="QuitToTitle"/> as the loading screen's phases: the title's session is built, then the running one
+    /// retires for it. Null, with the refusal recorded, when the product is already at the title.
+    /// </summary>
+    private IReadOnlyList<LoadingPhase>? QuitToTitlePhases(Action? adopted = null)
+    {
+        if (RefusesReplacement("the product is already at the title")) return null;
+        return ReplacementPhases("Opening the title", "Leaving the world", replacement =>
+        {
+            ReplaceSession(replacement, ProductMode.Title, "the product quit to the title");
+            adopted?.Invoke();
+        });
+    }
+
+    /// <summary>Records why the running session cannot be replaced now: the product is shut down, or at its title.</summary>
+    private bool RefusesReplacement(string atTitle)
+    {
+        string? refusal = _shutdown ? "the product is shut down" : _mode == ProductMode.Title ? atTitle : null;
+        if (refusal is not null) Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, refusal));
+        return refusal is not null;
+    }
+
+    /// <summary>
+    /// A fresh session from the same composition in two phases: building it (<paramref name="building"/>), then
+    /// adopting it in place of the running one, which retires (<paramref name="adopting"/>).
+    /// </summary>
+    private IReadOnlyList<LoadingPhase> ReplacementPhases(string building, string adopting, Action<IGameSession> adopt)
+    {
+        IGameSession? replacement = null;
+        return
+        [
+            new(building, () =>
+            {
+                YieldToReplacement();
+                replacement = Ruleset.CreateSession(SessionContext(Composition));
+            }),
+            new(adopting, () => adopt(replacement!)),
+        ];
     }
 
     /// <summary>
@@ -927,10 +953,11 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
 
         switch (request.Outcome)
         {
+            // Both build a whole session and retire the defeated one, so the choice is acknowledged on the loading
+            // screen in this update and carried out on the updates after.
             case PlayerDefeatOutcome.NewGame:
-                Restart();
-                if (_session is IPlayerDefeatOutcomeSession replacement)
-                    replacement.ReportPlayerDefeatOutcome("New game started.");
+                StageReplacement("Starting a new game", RestartPhases(() =>
+                    (_session as IPlayerDefeatOutcomeSession)?.ReportPlayerDefeatOutcome("New game started.")));
                 return;
             case PlayerDefeatOutcome.Load:
                 if (string.IsNullOrWhiteSpace(request.SaveKey))
@@ -946,14 +973,22 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
                 requesting.ReportPlayerDefeatOutcome("Load failed: the selected ruleset does not support save slots.");
                 return;
             case PlayerDefeatOutcome.QuitToTitle:
-                QuitToTitle();
-                if (_session is IPlayerDefeatOutcomeSession title)
-                    title.ReportPlayerDefeatOutcome("Returned to the title.");
+                StageReplacement("Returning to the title", QuitToTitlePhases(() =>
+                    (_session as IPlayerDefeatOutcomeSession)?.ReportPlayerDefeatOutcome("Returned to the title.")));
                 return;
             default:
                 requesting.ReportPlayerDefeatOutcome("The defeat choice was not recognized.");
                 return;
         }
+    }
+
+    /// <summary>
+    /// Puts a session replacement on the loading screen; a refused one (null phases) was already recorded. A phase
+    /// that throws faults the update, as the replacement did before it was staged.
+    /// </summary>
+    private void StageReplacement(string title, IReadOnlyList<LoadingPhase>? phases)
+    {
+        if (phases is not null) _loading.Start(title, phases, ExceptionDispatchInfo.Throw);
     }
 
     private void HonorSaveSlotRequest(ISaveRequestingGameSession requesting, SaveSlotRequest request)

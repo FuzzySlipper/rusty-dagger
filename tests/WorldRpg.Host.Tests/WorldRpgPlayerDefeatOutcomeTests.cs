@@ -21,6 +21,12 @@ public sealed class WorldRpgPlayerDefeatOutcomeTests
         defeated.Request = new(PlayerDefeatOutcome.NewGame);
         product.Update(Update(1));
 
+        // The choice puts the loading screen up in its own update; the new game is built on the updates after.
+        Assert.Equal("Starting a new game", product.Loading?.Title);
+        Assert.Equal(ProductMode.Dead, product.Mode);
+        Assert.False(defeated.Disposed);
+        RunLoading(product);
+
         Assert.Equal(ProductMode.Playing, product.Mode);
         Assert.Equal(2, ruleset.Created);
         Assert.True(defeated.Disposed);
@@ -40,6 +46,17 @@ public sealed class WorldRpgPlayerDefeatOutcomeTests
 
         defeated.Request = new(PlayerDefeatOutcome.QuitToTitle);
         product.Update(Update(1));
+
+        // Return to menu shows the loading screen at once and stays on it until the title is ready.
+        Assert.Equal("Returning to the title", product.Loading?.Title);
+        Assert.Equal(ProductMode.Dead, product.Mode);
+        Assert.Equal(1, ruleset.Created);
+        Assert.False(defeated.Disposed);
+        product.Update(Update(2));
+        Assert.Equal("Leaving the world", product.Loading?.Label);
+        Assert.Equal(2, ruleset.Created);
+        Assert.False(defeated.Disposed);
+        RunLoading(product);
 
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Equal(2, ruleset.Created);
@@ -83,6 +100,16 @@ public sealed class WorldRpgPlayerDefeatOutcomeTests
         Assert.Equal(1, ruleset.Created);
         Assert.Same(current, ruleset.Current);
         Assert.Equal("The defeat choices are no longer available.", current.Outcome);
+    }
+
+    /// <summary>Gives the product updates until its loading screen clears.</summary>
+    private static void RunLoading(WorldRpgProduct product)
+    {
+        for (ulong step = 10; product.Loading is not null; step++)
+        {
+            Assert.True(step < 20, "The loading screen did not clear.");
+            product.Update(Update(step));
+        }
     }
 
     private static ProductUpdate Update(ulong step) => new(
