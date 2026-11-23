@@ -144,9 +144,18 @@ def main():
         below = P[:, 1] < C["top"] - 2 * C["fade"]   # leave the waist, where the skirt lies on the body
         drop = skirt & below & (rr < shell[si, hy] - a.drop_inside)
         rep_extra["dropped_inside"] = int(drop.sum()); rep_extra["drop_inside_m"] = a.drop_inside
-        if a.inside_legs:   # keep them on their legs instead: a mid-shin robe shows the shin that swings out in front (npc-468, 2026-11-23)
-            W2[drop] = 0; W2[np.ix_(drop, np.arange(W.shape[1]))] = W[drop]; skirt = skirt & ~drop; rep_extra["inside_kept_on_legs"] = int(drop.sum()); rep_extra["dropped_inside"] = 0
-            drop = np.zeros(n, bool)
+        if a.inside_legs:   # keep the legs on their legs instead: a mid-shin robe shows the shin that swings out in front (npc-468, 2026-11-23).
+            # Only what is coloured like the legs below the hem stays: the rest inside the bell is the robe's own inner cloth, which on
+            # the legs pokes out through the robe as pale haze (the first try kept all 1,100 of 468's and did that)
+            c = np.clip(s["rgb"].astype(float), 0, 1)
+            shin = np.isin(W.argmax(1), [idx["LeftLeg"], idx["RightLeg"], idx["LeftFoot"], idx["RightFoot"]]) & ~skirt & (M[:, 1] < hem)
+            if shin.sum() >= 20:
+                leg_c, cloth_c = np.median(c[shin], 0), np.median(c[skirt & ~drop], 0)
+                legish = np.linalg.norm(c - leg_c, axis=1) < np.linalg.norm(c - cloth_c, axis=1)
+                kept = drop & legish
+                W2[kept] = 0; W2[np.ix_(kept, np.arange(W.shape[1]))] = W[kept]; skirt = skirt & ~kept; drop = drop & ~kept
+                rep_extra["inside_kept_on_legs"] = int(kept.sum()); rep_extra["dropped_inside"] = int(drop.sum())
+                rep_extra["leg_colour"] = [round(float(x), 3) for x in leg_c]
     if a.bones and a.drop_hem_dark > 0:
         lum = np.clip(s["rgb"].astype(float), 0, 1) @ np.array([0.3, 0.59, 0.11])
         shin = np.isin(W.argmax(1), [idx["LeftLeg"], idx["RightLeg"]])

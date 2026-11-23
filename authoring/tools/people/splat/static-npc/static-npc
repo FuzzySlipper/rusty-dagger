@@ -395,8 +395,14 @@ def step_graft(n, a):
         sh([OPEN3D_PY, 'authoring/tools/people/splat/scaffold/graft_free.py', base, n.k / 'bake/r1/splat.npz', n.k / 'bound/score/transform.json',
             n.scaffold / 'scaffold.glb', out, '--regions', cfg.get('graft', 'face,hands'), '--face-cone', str(cfg.get('graft_face_cone', 45))],
            log=n.k / 'bound/graft.log')
+        if cfg.get('backdrop'):   # the free fit's donors carry key spill too (npc-468: 111 magenta Gaussians in the grafted body)
+            tmp = out.with_name(out.name + '.keyclean'); shutil.rmtree(tmp, ignore_errors=True)
+            sh(['python3', 'authoring/tools/people/splat/scaffold/clean_bound.py', out / 'splat.npz', out / 'binding.npz', n.scaffold / 'scaffold.glb', tmp,
+                '--no-hands', '--no-face', '--no-crown', '--key', cfg['backdrop']], log=n.k / 'bound/graft.log')
+            shutil.copy(out / 'graft.json', tmp / 'graft.json'); shutil.rmtree(out); tmp.rename(out)
         g = json.loads((out / 'graft.json').read_text())
-        sc = json.loads((base / 'score.json').read_text()); sc['gaussians'] = g['total']
+        sc = json.loads((base / 'score.json').read_text())
+        sc['gaussians'] = json.loads((out / 'clean.json').read_text())['kept'] if (out / 'clean.json').exists() else g['total']
         sc['note'] = f"the score of {base.name}, the body the graft went onto; the grafted body is not scored again"
         (out / 'score.json').write_text(json.dumps(sc, indent=1) + '\n')
         print(f"{n.id}: {out.name}: {g['grafted']} Gaussians grafted on {', '.join(g['regions'])} ({g['total']} in all)")
