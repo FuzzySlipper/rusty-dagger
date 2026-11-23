@@ -18,6 +18,8 @@
 #           then a matte review on the same Halo (Patch, 2026-11-15; a glance, not a gate): review/mattes/CLIP/ - mattes.mp4 (cut-out on
 #           magenta | what was cut), sheet.png (every 6th frame, full size, removed / kept-hole px, EDGE) and numbers.json, per clip;
 #           multi-clip bakes set MATTE_CLIPS=name:first-last,... (matte_review.py); a failed review warns and the bake carries on)
+#          (mattes: KEY_HOLES=DIST and DESPILL=PX for a chroma-key clip (guided_clip.sh BACKDROP): every enclosed patch near the backdrop
+#           colour is opened whatever its size, and the key's spill is taken off the edge; npc-024, 2026-11-23)
 #          (mattes: BIREFNET_EDGE=PX also cuts the matte's outline back to the BiRefNet mask widened by PX px at 1088 (orbit_views.py
 #           --birefnet-edge): for depth-controlled clips, whose pale glow the colour key keeps as a grey fringe - villager 381's finger flecks)
 #          mattes  [Halo]  orbit_views.py (--threshold 8, the clip's direction, --last 71, --open-holes) and orbit_inputs.py
@@ -178,7 +180,7 @@ mattes)
       python3 authoring/tools/people/splat/mesh-splat/birefnet_masks.py $D/frames $D/birefnet --comfy ${BIREFNET_COMFY:-http://192.168.1.24:8188,http://192.168.1.23:8188} --last ${LAST:-71} 2>&1 | grep -v '^resource-board' | tail -n 1
     [ "$(ls $D/birefnet 2>/dev/null | wc -l)" -ge "$(( ${LAST:-71} + 1 ))" ] && BOPT="--birefnet birefnet${BIREFNET_EDGE:+ --birefnet-edge $BIREFNET_EDGE}" || echo "BiRefNet masks incomplete: the flat / large / guide tests decide" >&2
   fi
-  halo "mattes and Solv3R inputs" "python3 \$ASSET_CPU_REPO/mesh-splat/orbit_views.py frames orbit --direction $dir --last ${LAST:-71} --step ${STEP:-5} --threshold 8 --open-holes ${OPEN_HOLES:-500} --hole-large ${HOLE_LARGE:-4000,2.5} $GOPT $BOPT > /dev/null && python3 \$ASSET_CPU_REPO/mesh-splat/orbit_inputs.py orbit/views inputs > /dev/null && ls inputs/images | wc -l"; mrc=$?
+  halo "mattes and Solv3R inputs" "python3 \$ASSET_CPU_REPO/mesh-splat/orbit_views.py frames orbit --direction $dir --last ${LAST:-71} --step ${STEP:-5} --threshold 8 --open-holes ${OPEN_HOLES:-500} --hole-large ${HOLE_LARGE:-4000,2.5} ${KEY_HOLES:+--key-holes $KEY_HOLES} ${DESPILL:+--despill $DESPILL} $GOPT $BOPT > /dev/null && python3 \$ASSET_CPU_REPO/mesh-splat/orbit_inputs.py orbit/views inputs > /dev/null && ls inputs/images | wc -l"; mrc=$?
   [ $mrc = 0 ] && { halo "matte review (glance)" "python3 \$ASSET_CPU_REPO/mesh-splat/matte_review.py . ${MATTE_CLIPS:+--clips $MATTE_CLIPS}" || echo "matte review failed (warning only)"; }
   (exit $mrc) ;;
 cams)

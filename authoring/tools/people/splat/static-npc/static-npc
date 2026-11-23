@@ -92,6 +92,13 @@ class Npc:
         self.env = {'CHAR': cid}                           # bound_run.sh and guided_clip.sh: the character folder when it is not the run id
 
     @property
+    def key_env(self):
+        """npc.json "backdrop": "R,G,B" - a chroma-key clip (npc-024, 2026-11-23): the keyframes and guide sit on that colour (say it in
+        orbit.txt too), and the mattes open every enclosed patch near it and take its spill off the edges."""
+        b = self.cfg.get('backdrop')
+        return {'BACKDROP': b} if b else {}
+
+    @property
     def cfg(self):
         f = self.brief / 'npc.json'
         return {**DEFAULTS, **(json.loads(f.read_text()) if f.exists() else {})}
@@ -215,14 +222,14 @@ def step_rig(n, a):
 def step_guide(n, a):
     n.need(n.scaffold / 'scaffold.glb', n.guide / 'fit-static.json', step='rig'); n.need(n.cut / 'front-cut.png', step='keys')
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
-    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'guide', str(n.cfg['size'])], env={**n.env, 'FIT': str(n.guide / 'fit-static.json')})
+    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'guide', str(n.cfg['size'])], env={**n.env, **n.key_env, 'FIT': str(n.guide / 'fit-static.json')})
 
 
 def step_clip(n, a):
     sz = a.size or n.cfg['size']
     n.need(n.guide / str(sz), step='guide')
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
-    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env=n.env)
+    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env})
     d = n.k / 'guided' / f'stick-{sz}'
     sh(f"ffmpeg -loglevel error -y -framerate 24 -pattern_type glob -i '{d}/frames/*.png' -vf scale=960:960 -c:v libx264 -crf 20 "
        f"-pix_fmt yuv420p {d}/review.mp4")
@@ -236,6 +243,8 @@ def step_bake(n, a):
     (n.k / 'bake.env').write_text(f"CLIP={d.relative_to(n.work)}\nSIZE={cfg['size']}\n")
     (n.k / 'prompts.json').write_text(json.dumps(rings, indent=1) + '\n')
     env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': LAB_COMFY}
+    if n.key_env:
+        env.update(KEY_HOLES=str(cfg.get('key_holes', 60)), DESPILL=str(cfg.get('despill', 2)))
     sh(['authoring/tools/people/splat/bake/bake.sh', n.work, f'{n.rid}-A', 'tools'], env=env)
     sh(['authoring/tools/people/splat/bake/pipeline.sh', n.work, f'{n.rid}-A', cfg['cpu_host'], 'frames', a.to or cfg['bake_to']], env=env)
 

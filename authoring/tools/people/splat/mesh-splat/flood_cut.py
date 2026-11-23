@@ -82,12 +82,13 @@ def keyframes(args):
     for view, c in cuts.items():
         w, h = round(c.size[0] * scales[view]), round(c.size[1] * scales[view])
         small = c.resize((w, h), Image.LANCZOS)
-        canvas = Image.new('RGBA', (args.size, args.size), (args.grey,) * 3 + (255,))
+        bg = tuple(int(v) for v in args.bg.split(',')) if args.bg else (args.grey,) * 3
+        canvas = Image.new('RGBA', (args.size, args.size), bg + (255,))
         canvas.alpha_composite(small, ((args.size - w) // 2, args.floor + 1 - h))
         canvas.convert('RGB').save(out / f'{view}.png')
         placed[view] = [w, h]
     (out / 'scale.json').write_text(json.dumps({'scale': scale, 'scales': scales, 'equal_height': args.equal_height, 'size': args.size,
-                                                'floor': args.floor, 'grey': args.grey, 'placed': placed}, indent=1))
+                                                'floor': args.floor, 'grey': args.grey, 'bg': args.bg, 'placed': placed}, indent=1))
     print(json.dumps({'scale': round(scale, 4), 'scales': {v: round(x, 4) for v, x in scales.items()}, 'placed': placed}))
 
 
@@ -109,6 +110,7 @@ def main():
     k.add_argument('--scale', type=float)
     k.add_argument('--floor', type=int, default=719)
     k.add_argument('--grey', type=int, default=128)
+    k.add_argument('--bg', help='R,G,B backdrop instead of --grey: a chroma key colour absent from the character (npc-024, 2026-11-23)')
     k.add_argument('--equal-height', action='store_true', help='scale each view on its own to exactly --height')
     args = p.parse_args()
     cut(args) if args.cmd == 'cut' else keyframes(args)

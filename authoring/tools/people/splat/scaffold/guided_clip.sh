@@ -4,7 +4,8 @@
 # paintings in 01-concept/wip/cut/{front,back}-cut.png, the clip prompt in 02-guide/wip/orbit-guide/prompt.txt); the clip goes to
 # RUN/ID/A/guided/NAME (default stick-SIZE). CHAR=npc-NNN names the character folder when it differs from ID (static-npc: the run is
 # NNN, the folder npc-NNN). With no back painting (023) the keyframes
-# and REF2VA take the front alone.
+# and REF2VA take the front alone. BACKDROP=R,G,B (with the export) puts the keyframes and the lit guide on that colour, a chroma
+# key absent from the character, for a cleaner matte (npc-024, 2026-11-23; say the colour in orbit.txt too).
 #   guide  the stick figure from the scaffold's joints (stick_fit.py; FIT=joints.json gives them instead), its lit-clay (L11 key and fills) and depth orbits at eye level
 #          (27 degree lens, 73 frames) rendered with Blender on den-m5's CPU, and the keyframes at SIZE
 #   clip   H3 REF2VA on the GPU lab: the lit stick video as <Video 1>, depth control 0.5 from the same camera, the two keyframes as
@@ -36,11 +37,12 @@ from PIL import Image
 d = sys.argv[1]; os.makedirs(f'{d}/shaded-flat', exist_ok=True)
 for f in sorted(glob.glob(f'{d}/shaded/*.png')):
     a = np.asarray(Image.open(f).convert('RGBA')).astype(float); al = a[..., 3:] / 255
-    Image.fromarray(np.rint(a[..., :3] * al + 128 * (1 - al)).astype(np.uint8)).save(f'{d}/shaded-flat/{os.path.basename(f)}')
+    bg = np.array([float(v) for v in os.environ.get('BACKDROP', '128,128,128').split(',')])
+    Image.fromarray(np.rint(a[..., :3] * al + bg * (1 - al)).astype(np.uint8)).save(f'{d}/shaded-flat/{os.path.basename(f)}')
 PY
   for v in "$G/$SZ/stick/depth $G/$SZ/stick/depth.mp4" "$G/$SZ/stick-L11/shaded-flat $G/$SZ/stick-L11/shaded.mp4"; do set -- $v; ffmpeg -loglevel error -y -framerate 24 -i $1/%03d.png -c:v libx264 -qp 0 -pix_fmt yuv444p $2; done
   Hh=$(python3 -c "print(round(1898/2176*$SZ))"); Fl=$(python3 -c "print(round(2039/2176*$SZ))")
-  python3 authoring/tools/people/splat/mesh-splat/flood_cut.py keyframes $C/wip/keys-$SZ front=$C/wip/cut/front-cut.png $([ -f $C/wip/cut/back-cut.png ] && echo back=$C/wip/cut/back-cut.png) --size $SZ --height $Hh --floor $Fl --equal-height > /dev/null || exit 4
+  python3 authoring/tools/people/splat/mesh-splat/flood_cut.py keyframes $C/wip/keys-$SZ front=$C/wip/cut/front-cut.png $([ -f $C/wip/cut/back-cut.png ] && echo back=$C/wip/cut/back-cut.png) ${BACKDROP:+--bg $BACKDROP} --size $SZ --height $Hh --floor $Fl --equal-height > /dev/null || exit 4
   echo "guide $SZ: $(ffprobe -v error -count_frames -select_streams v -show_entries stream=nb_read_frames,width -of csv=p=0 $G/$SZ/stick-L11/shaded.mp4) $(ffprobe -v error -count_frames -select_streams v -show_entries stream=nb_read_frames,width -of csv=p=0 $G/$SZ/stick/depth.mp4)" ;;
 clip)
   [ -f $G/prompt.txt ] || { echo "guided_clip.sh: no $G/prompt.txt" >&2; exit 2; }

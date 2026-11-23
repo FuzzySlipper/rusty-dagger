@@ -84,7 +84,7 @@ def guide_background(guide, filled):
     return ~warp(g, best[1], best[2] * step, best[3] * step), round(float(best[0]), 3)
 
 
-def matte(image, threshold, open_holes=0, flat=(6, 3.5), report=None, large=None, guide=None, guide_frac=0.5, bmask=None, prev=None, bedge=None):
+def matte(image, threshold, open_holes=0, flat=(6, 3.5), report=None, large=None, guide=None, guide_frac=0.5, bmask=None, prev=None, bedge=None, key=None):
     pixels = np.asarray(image.convert("RGB")).astype(np.int16)
     border = np.concatenate([pixels[:8].reshape(-1, 3), pixels[-8:].reshape(-1, 3), pixels[:, :8].reshape(-1, 3), pixels[:, -8:].reshape(-1, 3)])
     distance = np.abs(pixels - np.median(border, 0)).max(-1)
@@ -128,8 +128,7 @@ def matte(image, threshold, open_holes=0, flat=(6, 3.5), report=None, large=None
             trimmed = int((subject & ~cap).sum()); subject &= cap
         if report is not None:
             report.update(removed=removed, kept=kept, opened=opened, regained=int(held.sum()), trimmed=trimmed, maps=(opened_map, kept_map))
-        soft = ndimage.gaussian_filter(subject.astype(np.float32), 0.7)
-        return np.where(subject, np.maximum(soft, 0.55), soft * 0.5)
+        return edge(key_holes(subject, distance, key, report))
     if open_holes:
         scale = (pixels.shape[1] / 2176) ** 2
         labels, count = ndimage.label(subject & ~closed)
@@ -166,9 +165,50 @@ def matte(image, threshold, open_holes=0, flat=(6, 3.5), report=None, large=None
                 report.update(opened=opened)
                 if giou is not None:
                     report.update(guide_iou=giou)
+    return edge(key_holes(subject, distance, key, report))
+
+
+def edge(subject):
     # A soft edge one pixel wide, so the cut-out does not carry a hard stair-step.
     soft = ndimage.gaussian_filter(subject.astype(np.float32), 0.7)
     return np.where(subject, np.maximum(soft, 0.55), soft * 0.5)
+
+
+def key_holes(subject, distance, key, report):
+    """--key-holes DIST: on a chroma-key backdrop (guided_clip.sh BACKDROP, npc-024 2026-11-23) every patch inside the figure within DIST
+    of the border colour is backdrop, whatever its size - between fingers, under an arm, through a torn robe - as the key colour was
+    chosen to be absent from the character. Patches under 12 px (at 1088) are left: single pixels of noise, not holes."""
+    if not key:
+        return subject
+    near = subject & (distance <= key)
+    near = ndimage.binary_opening(near, iterations=1)
+    labels, count = ndimage.label(near)
+    small = 12 * (subject.shape[1] / 1088) ** 2
+    out, n = subject.copy(), 0
+    for index, box in enumerate(ndimage.find_objects(labels), 1):
+        hole = labels[box] == index
+        if hole.sum() >= small:
+            out[box][hole] = False; n += int(hole.sum())
+    if report is not None:
+        report.update(key_opened=n)
+    return out
+
+
+def despill(image, alpha, width):
+    """--despill PX: the key colour bleeds into the figure's edge pixels (an H3 clip shades the cloth's rim toward the backdrop). Within
+    PX px of the matte edge, the excess of the key's strong channels over its weak ones is taken off the strong ones - green for a
+    green key, red and blue (by their shared part) for magenta."""
+    pix = np.asarray(image).astype(np.float32)
+    border = np.concatenate([pix[:8].reshape(-1, 3), pix[-8:].reshape(-1, 3), pix[:, :8].reshape(-1, 3), pix[:, -8:].reshape(-1, 3)])
+    k = np.median(border, 0); hi = k > 128; lo = ~hi
+    if not hi.any() or not lo.any():
+        return image
+    inside = alpha > 0.5
+    zone = inside & ~ndimage.binary_erosion(inside, iterations=max(1, round(width * pix.shape[1] / 1088)))
+    zone |= (alpha > 0) & ~inside
+    spill = np.clip(pix[..., hi].min(-1) - pix[..., lo].max(-1), 0, None) * zone
+    pix[..., hi] -= spill[..., None]
+    return Image.fromarray(np.clip(np.rint(pix), 0, 255).astype(np.uint8))
 
 
 def main():
@@ -187,6 +227,8 @@ def main():
     parser.add_argument("--guide", type=Path)
     parser.add_argument("--guide-frac", type=float, default=0.5)
     parser.add_argument("--birefnet", type=Path)
+    parser.add_argument("--key-holes", type=float, metavar="DIST", help="chroma-key backdrop: open every enclosed patch within DIST of the border colour")
+    parser.add_argument("--despill", type=float, metavar="PX", help="chroma-key backdrop: take the key colour's spill off the edge's PX px (at 1088)")
     parser.add_argument("--birefnet-edge", type=float, metavar="PX",
                         help="with --birefnet: also cut the matte's outline back to the mask widened by PX pixels (at 1088; scaled with the frame). "
                              "For clips with a pale glow round the figure (depth-controlled lit-clay clips), which the colour key keeps as a 2-3 px grey "
@@ -205,11 +247,13 @@ def main():
         report = {}
         guide = Image.open(guides[index]) if index < len(guides) else None
         bmask = Image.open(bdir / f"{index:03d}.png") if bdir else None
-        alpha = matte(image, args.threshold, args.open_holes, flat, report, large, guide, args.guide_frac, bmask, prev, args.birefnet_edge if bdir else None)
+        alpha = matte(image, args.threshold, args.open_holes, flat, report, large, guide, args.guide_frac, bmask, prev, args.birefnet_edge if bdir else None, args.key_holes)
         if bdir:
             prev = report.pop("maps")
-        if args.open_holes or bdir:
+        if args.open_holes or bdir or args.key_holes:
             holes[f"{index:03d}"] = report
+        if args.despill:
+            image = despill(image, alpha, args.despill)
         cut = np.dstack([np.asarray(image), (alpha * 255).astype(np.uint8)])
         name = f"{index:03d}"
         Image.fromarray(cut, "RGBA").save(args.out / "views" / f"{name}.png")
@@ -220,15 +264,15 @@ def main():
             expected = args.direction * args.step * args.every
             row["turn"] = sorted([expected - args.direction * args.slack / 2, expected + args.direction * args.slack])
         rows.append(row)
-        check = Image.new("RGB", image.size, (255, 0, 255))
+        check = Image.new("RGB", image.size, (0, 200, 0) if args.key_holes else (255, 0, 255))
         check.paste(image, mask=Image.fromarray((alpha * 255).astype(np.uint8)))
         thumbs.append(check.resize((192, 192 * image.size[1] // image.size[0]), Image.LANCZOS))
     (args.out / "views.json").write_text(json.dumps(rows, indent=1) + "\n")
-    if args.open_holes or bdir:
+    if args.open_holes or bdir or args.key_holes:
         (args.out / "holes.json").write_text(json.dumps(holes, indent=1) + "\n")
     columns = 12
     height = thumbs[0].size[1]
-    sheet = Image.new("RGB", (192 * columns, height * -(-len(thumbs) // columns)), (255, 0, 255))
+    sheet = Image.new("RGB", (192 * columns, height * -(-len(thumbs) // columns)), (0, 200, 0) if args.key_holes else (255, 0, 255))
     for index, thumb in enumerate(thumbs):
         sheet.paste(thumb, (192 * (index % columns), height * (index // columns)))
     sheet.save(args.out / "mattes.png")
