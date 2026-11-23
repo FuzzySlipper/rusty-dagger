@@ -60,6 +60,45 @@ public sealed class LoadingScreenSessionTests
     }
 
     [Fact]
+    public void An_arrival_keeps_the_screen_and_holds_the_world_until_the_scene_it_opened_is_drawn_and_shown()
+    {
+        AssembledWorld world = Shared.Value;
+        DaggerfallSiteRecord destination = world.Nearby(_ => true);
+        using AssembledWorldRun run = world.Start(PrivateersHold, loadingScreen: true);
+        LoadingScreen loading = run.Loading!;
+        string title = $"Entering {destination.Name}";
+        double PlaySeconds() => DaggerfallSavePayload.Read(run.Session.CaptureSave()).PlaySeconds;
+        // The renderer is still taking in batch 7, which the journey's arrival opened among others.
+        run.Appearance.Preparation = new(CompletedBatch: 6, LastBatch: 7, PendingResources: 120, FailedResources: 0);
+
+        run.AcceptJourney(destination);
+        run.Step();
+        run.Step();
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), run.Session.Sites.ActiveProfile);
+        double arrived = PlaySeconds();
+
+        // The ground stands, but the scene does not show yet: the screen stays, measured by what is still pending,
+        // and no update reaches the world, whatever a later batch (ground streaming in) opens meanwhile.
+        for (int update = 0; update < 5; update++) run.Step();
+        Assert.Equal(new LoadingState(title, title, 1, 2, .5d), loading.Current);
+        run.Appearance.Preparation = new(6, 8, 30, 0);
+        run.Step();
+        Assert.Equal(new LoadingState(title, title, 1, 2, (1d + .75d) / 2d), loading.Current);
+        Assert.Equal(arrived, PlaySeconds());
+
+        // Batch 7 is drawn: a full bar for the frame that shows the scene under the screen, then the update that
+        // clears it, which shows the scene uncovered and takes no step; only the one after runs the world.
+        run.Appearance.Preparation = new(7, 8, 30, 0);
+        run.Step();
+        Assert.Equal(new LoadingState(title, title, 2, 2, 1d), loading.Current);
+        run.Step();
+        Assert.Null(loading.Current);
+        Assert.Equal(arrived, PlaySeconds());
+        run.Step();
+        Assert.True(PlaySeconds() > arrived);
+    }
+
+    [Fact]
     public void An_entrance_taken_while_an_enemy_hit_is_pending_is_still_staged_on_the_loading_screen()
     {
         // Every draw comes up lowest, so the rat's swing lands.

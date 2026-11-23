@@ -11,9 +11,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// phase each. A caller with no update to acknowledge in (a direct API, a developer command), or a host that
 /// shows no loading screen, gets the same work at once.
 /// </summary>
-internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArrivalGroundSession
+internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArrivalSession
 {
     private readonly LoadingScreen? _loading;
+    private readonly DrawnScene _drawn;
     private bool _inAdmittedUpdate;
 
     /// <summary>
@@ -25,12 +26,27 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
         if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
     }
 
-    /// <inheritdoc/>
+    /// <summary>How far the ground around the player has come: its collider live, then the ground drawn over it.</summary>
     public LoadingProgress AwaitArrivalGround()
     {
         SyncWeatherContext();
         LoadingProgress collider = _exterior.AwaitGroundCollider();
         return collider.Done ? _horizon.GroundProgress() : collider;
+    }
+
+    /// <summary>
+    /// The arrival's ground, then the scene drawn: an arrival that lets play resume before the Engine has taken in what
+    /// it opened shows an empty or half-drawn world while enemies placed beside the player already act. Once both are
+    /// done under a loading screen, the world also waits out the update that clears it (<see cref="_arrivalUnseen"/>).
+    /// </summary>
+    public LoadingProgress AwaitArrival()
+    {
+        LoadingProgress ground = AwaitArrivalGround();
+        if (!ground.Done) return ground;
+        LoadingProgress drawn = _drawn.Await();
+        // Under a loading screen the arrival is first seen once the screen clears; at once, it is seen on the next update.
+        _arrivalUnseen = drawn.Done && _loading is { IsLoading: true };
+        return drawn;
     }
 
     /// <summary>Whether slow work accepted now is staged on the loading screen rather than run at once.</summary>
@@ -53,13 +69,13 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();
         _ = _loading!.Start(title,
             [.. phases.Select((phase, index) => new LoadingPhase(phase.Label, () => _exterior.DeferCollision(phase.Run),
-                index == phases.Count - 1 ? AwaitArrival : _exterior.AwaitArrivalCollision))],
+                index == phases.Count - 1 ? AwaitStagedArrival : _exterior.AwaitArrivalCollision))],
             // The arrival has happened by the time its ground is refused, so the work's own failure wording does not fit.
             error => Presentation.SetOutcome(error is DaggerfallArrivalCollisionRefusedException ? error.Message : failure(error)));
     }
 
-    /// <summary>The last step of a world change: its collision, then the ground drawn over it.</summary>
-    private LoadingProgress AwaitArrival()
+    /// <summary>The last step of a world change: its collision, then the arrival stood and drawn.</summary>
+    private LoadingProgress AwaitStagedArrival()
     {
         if (!_arrivalStood)
         {
@@ -68,9 +84,9 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
             _arrivalStood = true;
         }
 
-        LoadingProgress ground = AwaitArrivalGround();
-        if (ground.Done) _arrivalStood = false;
-        return ground;
+        LoadingProgress arrival = AwaitArrival();
+        if (arrival.Done) _arrivalStood = false;
+        return arrival;
     }
 
     /// <summary>

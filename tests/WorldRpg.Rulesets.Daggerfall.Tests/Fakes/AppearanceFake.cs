@@ -71,8 +71,9 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         return new(OwnResource(checked((ulong)OpenResourceContentRequests.Count)), default, 0);
     }
     internal List<RenderResourceContentRequest> OpenResourceContentRequests { get; } = [];
-    /// <summary>Nothing is ever being prepared: a fake renderer takes deferred resources in at once.</summary>
-    public ResourcePreparationReadout ReadResourcePreparation() => default;
+    /// <summary>What the renderer is still taking in; nothing by default, as a fake renderer takes deferred resources in at once.</summary>
+    internal ResourcePreparationReadout Preparation { get; set; }
+    public ResourcePreparationReadout ReadResourcePreparation() => Preparation;
     /// <summary>The content path each opened resource's reference names, in order; null for a reference no content fake issued.</summary>
     internal List<string?> OpenedResourcePaths { get; } = [];
 

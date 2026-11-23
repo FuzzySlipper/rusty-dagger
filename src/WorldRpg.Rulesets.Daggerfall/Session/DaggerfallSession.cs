@@ -318,6 +318,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private ulong? _latestSimulationStep;
     /// <summary>This update's play waits for arrival ground the Engine has not made live, which holds the world.</summary>
     private bool _groundless;
+    /// <summary>
+    /// An arrival stood and drawn whose loading screen has not yet cleared over it: the update that clears the screen
+    /// shows the scene uncovered and takes no step, so nothing acts before the player has seen where they are.
+    /// </summary>
+    private bool _arrivalUnseen;
     /// <summary>What is open over the world, which of it holds the world, and the pad's panel request.</summary>
     private readonly DaggerfallOpenInteractions _interactions;
     private bool _disposed;

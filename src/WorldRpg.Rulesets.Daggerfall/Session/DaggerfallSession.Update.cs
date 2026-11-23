@@ -92,7 +92,7 @@ internal sealed partial class DaggerfallSession
             // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
             // and the player stands on it: nothing would hold anyone up meanwhile.
             _groundless = _mode == ProductMode.Playing && !_exterior.RecoverArrivalGround();   // Exterior
-            bool playing = _mode == ProductMode.Playing && !_groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !Law.ModalOpen && Cinematics?.ActiveSource is null && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
+            bool playing = _mode == ProductMode.Playing && !_groundless && !_arrivalUnseen && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !Law.ModalOpen && Cinematics?.ActiveSource is null && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
             bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || Law.ModalOpen || DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null;
             DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
                 : playing ? DaggerfallUiPhases.Playing
@@ -192,7 +192,7 @@ internal sealed partial class DaggerfallSession
 
         // Sprite playback consumes the Engine-bound outer update identity. It must not run for each private
         // catch-up simulation step above, and it must not run while the world is holding still.
-        if (_mode == ProductMode.Playing && !_interactions.HoldsWorldOpen
+        if (_mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && !_arrivalUnseen
             && facts.LifecycleState == ProductLifecycleState.Running
             && facts.AdmittedStepCount > 0)
         {
@@ -220,10 +220,10 @@ internal sealed partial class DaggerfallSession
             Music.Advance(DaggerfallMusicContext.Title, _time.Calendar.DayNumber, _activeProfileKey.Site);   // Scene
         UpdatePlayerTime(facts);                                                                  // Session: player time's hand-off, below
         // Play time counts the time the world runs in play; menus, the title and held moments do not.
-        if (_mode == ProductMode.Playing && facts.LifecycleState == ProductLifecycleState.Running
+        if (_mode == ProductMode.Playing && !_arrivalUnseen && facts.LifecycleState == ProductLifecycleState.Running
             && double.IsFinite(facts.FixedDeltaSeconds) && facts.FixedDeltaSeconds > 0)
             _playSeconds += facts.FixedDeltaSeconds * facts.AdmittedStepCount;                    // Session
-        bool ambientPlaying = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && Cinematics?.ActiveSource is null
+        bool ambientPlaying = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && !_arrivalUnseen && Cinematics?.ActiveSource is null
             && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null
             && facts.LifecycleState == ProductLifecycleState.Running
             && !PlayerTimeHeld
@@ -234,6 +234,7 @@ internal sealed partial class DaggerfallSession
         // A paused or held update reached no impact boundary, so acts it deferred are not performed.
         _actTiming.Drop();                                                                        // Character
         foreach (var appearance in _sites.Appearances) appearance.CompleteAdmittedUpdate();      // Scene
+        _arrivalUnseen = false;                                                                   // Session: this update showed the arrival
         return ProductUpdateResult.None;
     }
 
@@ -1294,7 +1295,7 @@ internal sealed partial class DaggerfallSession
     private void UpdatePlayerTime(ProductUpdateFacts facts)
     {
         bool presentation = PresentationNeedsTime;
-        bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && !_groundless
+        bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && !_groundless && !_arrivalUnseen
             && !State.Actors.Player.IsDefeated && !Law.ModalOpen && !Summoning.PendingOffer
             && State.Quests.PendingOffer is null && DispelChoice.Pending is null
             && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
@@ -1331,6 +1332,7 @@ internal sealed partial class DaggerfallSession
         elapsedSubmitted ? "time passing"
         : _mode != ProductMode.Playing ? $"game {_mode.ToString().ToLowerInvariant()}"
         : _groundless ? "ground still loading"
+        : _arrivalUnseen ? "the arrival is first shown"
         : Summoning.PendingOffer || State.Quests.PendingOffer is not null ? "an offer waits for an answer"
         : Law.ModalOpen ? "the court waits for an answer"
         : Cinematics?.ActiveSource is not null ? "a cinematic is playing"

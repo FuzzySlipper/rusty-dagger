@@ -128,7 +128,9 @@ public sealed class BundleChoiceSessionTests
             else
             {
                 product.MarkDead();
+                // The death screen's quit goes up on the loading screen at once and reaches the title on the updates after.
                 product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"death-quit"}""")]));
+                FinishLoading(product, 2);
             }
             Assert.Equal(ProductMode.Title, product.Mode);
             Assert.Equal("daggerfall.combat-start", engine.PublishedNested("bundles", "current"));

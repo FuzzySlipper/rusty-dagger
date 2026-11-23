@@ -107,6 +107,7 @@ internal sealed partial class DaggerfallSession
             _playerTime = new World.DaggerfallPlayerTime(engine.GameplayTime);
             _composition = composition;
             _loading = composition.Loading;
+            _drawn = new DrawnScene(engine.Graphics.ReadResourcePreparation);
             _newGameInitialized = saved is not null;
             _tuning = tuning;
             _viewLight = new(tuning.SiteLighting);

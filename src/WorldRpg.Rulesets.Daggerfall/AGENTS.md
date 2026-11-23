@@ -70,7 +70,7 @@ On top of the root `AGENTS.md`.
 ## Exterior
 
 - Collider, near and far ground read one height function (`DaggerfallHorizonGround.Ground`). The heightfields don't collide.
-- Arrival and load hold play until ground stands under the player and every tracked actor.
+- Arrival and load hold play until ground stands under the player and every tracked actor, and the resource batches the Engine was preparing for the scene are drawn (`DrawnScene`); the update that clears the loading screen takes no step.
 - The lift's floor is fixed on the map, never measured from the player; its fade is linear.
 - Brightness comes from the lights, not exposure; the tone operator stays `Rolloff`.
 - Rules read weather from `DaggerfallWeather.Conditions` (the session's `LocalWeather`), not from which sky draws.
