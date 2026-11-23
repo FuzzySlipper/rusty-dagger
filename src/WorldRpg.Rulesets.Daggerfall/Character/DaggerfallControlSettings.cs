@@ -256,7 +256,7 @@ public sealed class DaggerfallControlSettings
     /// (<see cref="DaggerfallSurfaceReliefTuning"/>), in steps of <see cref="ReliefDistanceStep"/>: a video preference.
     /// </summary>
     public float ReliefDistance { get; private set; } = 1;
-    public const float MinimumReliefDistance = .5f, MaximumReliefDistance = 3, ReliefDistanceStep = .25f;
+    public const float MinimumReliefDistance = .5f, MaximumReliefDistance = 20, ReliefDistanceStep = .25f;
 
     public void SetReliefDistance(float share)
     {

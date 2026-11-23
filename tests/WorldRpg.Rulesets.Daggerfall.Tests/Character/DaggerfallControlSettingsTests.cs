@@ -236,11 +236,11 @@ public sealed class DaggerfallControlSettingsTests
 
     /// <summary>
     /// Relief reaches its tuned fade (a share of 1) by default, also for preferences saved before the choice existed; it
-    /// round-trips from half to triple in quarters, and a share off its steps or outside its range is refused without
+    /// round-trips from half to twenty times in quarters, and a share off its steps or outside its range is refused without
     /// changing the one in force.
     /// </summary>
     [Fact]
-    public void Relief_distance_defaults_to_the_tuned_reach_and_round_trips_from_half_to_triple_in_quarters()
+    public void Relief_distance_defaults_to_the_tuned_reach_and_round_trips_from_half_to_twenty_times_in_quarters()
     {
         DaggerfallControlSettings settings = new();
         Assert.Equal(1f, settings.ReliefDistance);
@@ -248,11 +248,13 @@ public sealed class DaggerfallControlSettingsTests
 
         settings.SetReliefDistance(.5f);
         Assert.Equal(.5f, DaggerfallControlSettings.Parse(settings.Serialize()).ReliefDistance);
+        settings.SetReliefDistance(20);
+        Assert.Equal(20f, DaggerfallControlSettings.Parse(settings.Serialize()).ReliefDistance, 4);
         settings.SetReliefDistance(2.75f);
         Assert.Equal(2.75f, DaggerfallControlSettings.Parse(settings.Serialize()).ReliefDistance, 4);
 
         Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetReliefDistance(1.1f));
-        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetReliefDistance(3.25f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetReliefDistance(20.25f));
         Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetReliefDistance(.25f));
         Assert.Equal(2.75f, settings.ReliefDistance, 4);
     }
