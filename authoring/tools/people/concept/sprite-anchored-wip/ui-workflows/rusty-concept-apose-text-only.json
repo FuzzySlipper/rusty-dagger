@@ -1,0 +1,847 @@
+{
+  "id": "18c5428c-61df-4983-be10-c0b752d13c62",
+  "revision": 0,
+  "last_node_id": 13,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 13,
+      "type": "Note",
+      "title": "A-Posed Concept Art (Text-Only New B, Single Stage)",
+      "pos": [
+        40,
+        -150
+      ],
+      "size": [
+        740,
+        120
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "text": ""
+      },
+      "widgets_values": [
+        "TEXT-ONLY A-POSED NEW B WORKFLOW (Townspeople / no sprite ref)\n- Single-stage Krea2-Turbo with Brom 0.35 + Elmore 0.45 + RetroInk 0.45 (8 steps, cfg 1.0, denoise 1.0).\n- Edit Node 8 prompt to change the character description while keeping the symmetrical standing A-pose and RGB 48,52,59 slate ground."
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "title": "1. Krea2-Turbo UNET",
+      "pos": [
+        40,
+        20
+      ],
+      "size": [
+        340,
+        82
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "unet_name",
+          "name": "unet_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "unet_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "weight_dtype",
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "weight_dtype"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader"
+      },
+      "widgets_values": [
+        "krea2_turbo_fp8_scaled.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "LoraLoaderModelOnly",
+      "title": "2. LoRA 1: Brom (0.35)",
+      "pos": [
+        40,
+        140
+      ],
+      "size": [
+        340,
+        82
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "localized_name": "lora_name",
+          "name": "lora_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "lora_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "strength_model",
+          "name": "strength_model",
+          "type": "FLOAT",
+          "widget": {
+            "name": "strength_model"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "fantasy-illustration/brom-gothic-fantasy.safetensors",
+        0.35
+      ]
+    },
+    {
+      "id": 6,
+      "type": "LoraLoaderModelOnly",
+      "title": "3. LoRA 2: Elmore (0.45)",
+      "pos": [
+        40,
+        260
+      ],
+      "size": [
+        340,
+        82
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        },
+        {
+          "localized_name": "lora_name",
+          "name": "lora_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "lora_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "strength_model",
+          "name": "strength_model",
+          "type": "FLOAT",
+          "widget": {
+            "name": "strength_model"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "fantasy-illustration/elmore-tabletop-cover.safetensors",
+        0.45
+      ]
+    },
+    {
+      "id": 7,
+      "type": "LoraLoaderModelOnly",
+      "title": "4. LoRA 3: RetroInk (0.45)",
+      "pos": [
+        40,
+        380
+      ],
+      "size": [
+        340,
+        82
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "localized_name": "lora_name",
+          "name": "lora_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "lora_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "strength_model",
+          "name": "strength_model",
+          "type": "FLOAT",
+          "widget": {
+            "name": "strength_model"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "Retro_Dark_Fantasy_Illustration_krea2_3352765_epoch_8.safetensors",
+        0.45
+      ]
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "title": "5. Qwen3VL 4B CLIP (krea2)",
+      "pos": [
+        40,
+        500
+      ],
+      "size": [
+        340,
+        106
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip_name",
+          "name": "clip_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "clip_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "type",
+          "name": "type",
+          "type": "COMBO",
+          "widget": {
+            "name": "type"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "device",
+          "name": "device",
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader"
+      },
+      "widgets_values": [
+        "qwen3vl_4b_fp8_scaled.safetensors",
+        "krea2",
+        "default"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "title": "6. Krea2 VAE",
+      "pos": [
+        40,
+        640
+      ],
+      "size": [
+        340,
+        58
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "vae_name",
+          "name": "vae_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "vae_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "qwen_image_vae.safetensors"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "EmptyLatentImage",
+      "title": "7. Output Size (832x1216)",
+      "pos": [
+        440,
+        440
+      ],
+      "size": [
+        300,
+        106
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        832,
+        1216,
+        1
+      ]
+    },
+    {
+      "id": 8,
+      "type": "CLIPTextEncode",
+      "title": "8. New B A-Pose Prompt",
+      "pos": [
+        440,
+        20
+      ],
+      "size": [
+        480,
+        340
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        },
+        {
+          "localized_name": "text",
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6,
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration. A medieval European townswoman in her twenties with long blonde hair, in a white blouse with wide bell sleeves, a long skirt whose one side is blue and the other a black-and-white chequer, with a brown hem, and rust leather shoes. Full length, the whole figure visible with room around it, shown as the front view of a costume fitting or character turnaround sheet, in a symmetrical neutral standing pose facing the viewer, feet a little apart with both shoes whole. Her arms hang relaxed and slightly away from her body, with a clear gap of background between each arm and her waist, hands open and empty. Against a plain flat dark slate-grey background, RGB 48,52,59, with no floor, scenery, cast shadow, canvas frame, border, lettering or other people. Soft light from directly overhead lights both sides of his body equally. She is the only person in the picture. Natural adult proportions.\n\nDrawn and painted as a vivid, punchy 1990s PC fantasy role-playing game character sheet: confident dark-umber pen-and-ink contour lines, fine crosshatching only inside the folds of the cloth and under overhangs, the same on both sides of the figure, and opaque matte gouache colour planes (4 to 6 distinct painted value groups per material). Keep the face and eyes well-lit, expressive and clearly readable in warm shaded skin tones\u2014do not obscure the eyes or face in pitch-black shadow, and avoid glossy photorealistic airbrushing."
+      ]
+    },
+    {
+      "id": 9,
+      "type": "ConditioningZeroOut",
+      "title": "9. Zero Negative",
+      "pos": [
+        440,
+        390
+      ],
+      "size": [
+        240,
+        30
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "conditioning",
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ConditioningZeroOut"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 10,
+      "type": "KSampler",
+      "title": "10. Krea New B KSampler (8 steps, cfg 1.0)",
+      "pos": [
+        970,
+        20
+      ],
+      "size": [
+        320,
+        262
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 4
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 8
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 9
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "steps",
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "sampler_name",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "scheduler",
+          "name": "scheduler",
+          "type": "COMBO",
+          "widget": {
+            "name": "scheduler"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "denoise",
+          "name": "denoise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "denoise"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        42201,
+        "randomize",
+        8,
+        1.0,
+        "euler",
+        "simple",
+        1.0
+      ]
+    },
+    {
+      "id": 11,
+      "type": "VAEDecode",
+      "title": "11. Decode",
+      "pos": [
+        970,
+        330
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 10
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 12,
+      "type": "SaveImage",
+      "title": "12. Save Final New B Concept",
+      "pos": [
+        970,
+        420
+      ],
+      "size": [
+        360,
+        360
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 12
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "concept-ui/apose-text-only"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      5,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      3,
+      6,
+      0,
+      7,
+      0,
+      "MODEL"
+    ],
+    [
+      4,
+      7,
+      0,
+      10,
+      0,
+      "MODEL"
+    ],
+    [
+      5,
+      2,
+      0,
+      8,
+      0,
+      "CLIP"
+    ],
+    [
+      6,
+      8,
+      0,
+      9,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      8,
+      0,
+      10,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      8,
+      9,
+      0,
+      10,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      9,
+      4,
+      0,
+      10,
+      3,
+      "LATENT"
+    ],
+    [
+      10,
+      10,
+      0,
+      11,
+      0,
+      "LATENT"
+    ],
+    [
+      11,
+      3,
+      0,
+      11,
+      1,
+      "VAE"
+    ],
+    [
+      12,
+      11,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Krea2-Turbo New B Text-to-Image A-Pose (Brom 0.35 + Elmore 0.45 + RetroInk 0.45)",
+      "bounding": [
+        10,
+        -20,
+        1360,
+        820
+      ],
+      "color": "#8A5A2B",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7,
+      "offset": [
+        40,
+        200
+      ]
+    }
+  },
+  "version": 0.4
+}
