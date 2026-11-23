@@ -312,12 +312,22 @@ def step_bound(n, a):
     yaw = json.loads((n.scaffold / 'scaffold.json').read_text()).get('view_yaw', 0)
     loose = {k: str(cfg[c]) for k, c in (('LOOSE', 'loose'), ('LOOSE_FACTOR', 'loose_factor'), ('SHELL_M', 'shell_m'), ('CLEAN_OPTS', 'clean_opts')) if c in cfg}   # clean_opts: "--no-face --no-crown" for green hair or a crown   # npc.json: "loose": "Head,LeftHand,RightHand"
     loose.update(n.env)
+    if cfg.get('backdrop'):   # the key colour baked into Gaussians goes in the clean (clean_bound.py --key; npc-468)
+        loose['CLEAN_OPTS'] = f"{cfg.get('clean_opts', '')} --key {cfg['backdrop']}".strip()
     sh(b + ['score'], env={**n.env, 'YAW': str(yaw)})
     sh(b + ['bound'], env=loose)
     sizes = [int(x) for x in a.sizes.split(',')] if a.sizes else cfg['sizes']
     for count in sizes:
         sh(b + ['distil', str(count), str(cfg['face_share'])], env=loose)
         sh(b + ['clean', f'{count // 1000}k-face-share'], env=loose)
+    for count in sizes:   # the clean rules were made for 381: the face rule removes greenish Gaussians on the head, the crown rule recolours
+        c = n.k / f'bound/sizes/{count // 1000}k-face-share-cleaned/clean.json'   # the top of the head (npc-024's hair and crown, npc-468's teal hood)
+        if c.exists():
+            cj = json.loads(c.read_text())
+            if cj.get('face_green_removed', 0) > 0.005 * cj['gaussians'] or cj.get('crown_recoloured', 0) > 0.01 * cj['gaussians']:
+                print(f"{n.id}: WARNING clean_bound removed {cj.get('face_green_removed', 0)} greenish head Gaussians and recoloured "
+                      f"{cj.get('crown_recoloured', 0)} on the crown of {cj['gaussians']}: green hair, a teal hood or a crown? Set npc.json "
+                      '"clean_opts": "--no-face --no-crown" and run bound_run.sh clean again (static-npc README)')
     sc = json.loads((n.k / 'bound/score/scores.json').read_text())['mean']['mesh']['iou']
     print(f'{n.id}: scaffold outline IoU {sc} (villagers 0.87-0.93); review sheets in {(n.k / "bound/review-bound").relative_to(REPO)}')
 

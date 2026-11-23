@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Clean a bound bake by editing its Gaussians: no new bake.
 
-    clean_bound.py SPLAT.npz BINDING.npz SCAFFOLD.glb OUT_DIR [--no-hands] [--no-face] [--no-crown]
+    clean_bound.py SPLAT.npz BINDING.npz SCAFFOLD.glb OUT_DIR [--no-hands] [--no-face] [--no-crown] [--key R,G,B]
 
 A bound bake knows which bone leads every Gaussian (BINDING.npz, export_bound.py --binding), so faults that sit on a known part
 and have the wrong colour for it can be taken out by rule. Three rules, each found on villager 381 (2026-11-16):
@@ -34,6 +34,8 @@ def main():
     ap.add_argument("splat", type=Path); ap.add_argument("binding", type=Path); ap.add_argument("scaffold", type=Path); ap.add_argument("out", type=Path)
     for k in ("hands", "face", "crown"):
         ap.add_argument(f"--no-{k}", action="store_true")
+    ap.add_argument("--key", help="R,G,B of a chroma-key backdrop (static-npc passes npc.json backdrop): drop Gaussians coloured like it")
+    ap.add_argument("--key-excess", type=float, default=0.12, help="--key: the key's strong channels above its weak ones by more than this")
     a = ap.parse_args()
     s = dict(np.load(a.splat)); b = dict(np.load(a.binding)); n = len(s["means"])
     names = np.array(load_rig(a.scaffold)["names"])
@@ -66,6 +68,12 @@ def main():
         stray = top & (dist > max(0.25, dm + 4 * mad))
         new = s["rgb"].copy(); new[stray] = hair.astype(new.dtype); s["rgb"] = new
         report["crown_recoloured"] = int(stray.sum()); report["crown_gaussians"] = int(top.sum())
+    if a.key:   # chroma-key spill baked into Gaussians (npc-468, 2026-11-23: magenta specks inside his robe; 4,700 of 400k): the excess of the
+        # key's strong channels over its weak ones, as orbit_views.py --despill measures it. Pick the key absent from the palette (OKLab)
+        k = np.array([float(v) for v in a.key.split(",")]); hi = k > 128; lo = ~hi
+        if hi.any() and lo.any():
+            spill = (rgb[:, hi].min(1) - rgb[:, lo].max(1)) > a.key_excess
+            drop |= spill; report["key_removed"] = int(spill.sum())
     keep = ~drop
     a.out.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(a.out / "splat.npz", **{k: (v[keep] if getattr(v, "shape", ()) and v.shape[0] == n else v) for k, v in s.items()})

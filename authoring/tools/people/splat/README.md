@@ -65,6 +65,39 @@ whose clay is close. The core's size is `core_tris` in npc.json (2,400 as on npc
 about 40 us a figure a frame at 2,400 and 14 us at 800; Patch is comparing the two on npc-024). The core comes beside the
 Engine GLB as `ID.core.glb`, never in its place, and ready.json lists it as `core_glb`.
 
+### A walker
+
+`static-npc` also takes a figure that walks (npc-468, 2026-11-23: Patch asked for the animated NPC process as solid scripts):
+
+```sh
+$S init npc-468 --walker [--from DIR]   # --from: front.png/back.png given outside the CMS approval
+$S keys npc-468; $S clay npc-468; $S mesh npc-468
+$S rig npc-468             # Meshy's remesh + API rig (10 credits) and WAM r05 donor hands at the cuffs; check 02-guide/wip/check
+$S guide npc-468; $S clip npc-468
+$S bake npc-468 --to r1; $S bound npc-468; $S graft npc-468
+$S walk npc-468            # skirt bones for a robe (npc.json "skirt": true), Mixamo Walking and Around, tidy, review stills
+$S publish npc-468         # sizes 16k-tidy and 16k-graft-tidy, the robe on its skirt rig, the gentler walk for a long skirt
+$S ship npc-468 --size 16k-graft-tidy --said "..."   # Engine GLB on the 22 Mixamo joints (+ skirt joints), clip fit, core, CMS link
+```
+
+Two walker settings npc-468 needed:
+- `"skirt_opts": "--solid 3 --inside-legs"` for a robe that ends above the ankle. The skirt step drops the legs inside the
+  robe's bell (on skirt bones they rode the cloth). For a mid-shin robe, that made the shin vanish when a stride swung it out
+  in front, so the shoe floated. `--inside-legs` keeps them on their leg bones instead.
+- `clean_opts` for a teal or green hood, as for green hair. The bound step now warns when the face or crown rule takes much.
+
+With a `backdrop`, the bound step's clean also drops Gaussians coloured like the key (`clean_bound.py --key`): 4,700 magenta
+specks inside npc-468's robe, 1.2% of the 400k.
+
+A walker binds as the villagers did: 2.5 cm of shell, 16k for a crowd, with the hands and a hooded head loose at 2.4 times
+the shell. The rig step needs a Meshy mesh task: a Hunyuan3D-2mv mesh has no API rig here. Use the back painting when the
+pair is solid: same pose, items on the right sides seen from behind, outlines that agree. A back that drifts from the front
+makes H3 morph during the orbit, and front-only is better then (Patch 2026-11-23).
+
+For cards beside the Gaussians (an experiment, in asset-pipeline): `tools/bbsplat-gsplat/character_cards.py ID` bakes 6,144 cards
+from the walked full bake on the GPU lab, binds each card as the Gaussians around it are bound (skirt bones, loose hands), and
+publishes a Workbench set with the playable clips.
+
 Settings live in `00-brief/npc.json`:
 
 | Key | What it does |

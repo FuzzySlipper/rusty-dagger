@@ -91,6 +91,7 @@ def main():
     ap.add_argument("--solid", type=float, help="skirt opacity becomes 1-(1-a)^SOLID (e.g. 3): a thin baked skirt back no longer shows the legs inside")
     ap.add_argument("--hips", type=float, default=0.0, help="share of every skirt Gaussian's leg weight moved onto Hips, growing from 0 at the top to this at the hem")
     ap.add_argument("--drop-inside", type=float, help="with --bones: metres (default 0.03; 0: off). Drop skirt Gaussians lying this far inside the skirt's outer shell (the legs under a long skirt, which on skirt bones ride the cloth and show at the hem; Patch 2026-11-21)")
+    ap.add_argument("--inside-legs", action="store_true", help="with --bones: the Gaussians --drop-inside finds stay on their leg bones instead of being dropped, for a robe short enough that a stride shows the shin above the hem (npc-468)")
     ap.add_argument("--drop-hem-dark", type=float, default=0.0, help="with --bones: luminance (0: off). Drop near-black Gaussians a shin leads within 5 cm of the hem: the shadow under an ankle-length hem baked onto the ankles, which trails the back heel in a stride (453, Patch 2026-11-21)")
     ap.add_argument("--bones", type=Path, help="skirt_bones.py rig's skirt.json: put the skirt on that ring of bones instead (SCAFFOLD is then its rig)")
     a = ap.parse_args()
@@ -143,6 +144,9 @@ def main():
         below = P[:, 1] < C["top"] - 2 * C["fade"]   # leave the waist, where the skirt lies on the body
         drop = skirt & below & (rr < shell[si, hy] - a.drop_inside)
         rep_extra["dropped_inside"] = int(drop.sum()); rep_extra["drop_inside_m"] = a.drop_inside
+        if a.inside_legs:   # keep them on their legs instead: a mid-shin robe shows the shin that swings out in front (npc-468, 2026-11-23)
+            W2[drop] = 0; W2[np.ix_(drop, np.arange(W.shape[1]))] = W[drop]; skirt = skirt & ~drop; rep_extra["inside_kept_on_legs"] = int(drop.sum()); rep_extra["dropped_inside"] = 0
+            drop = np.zeros(n, bool)
     if a.bones and a.drop_hem_dark > 0:
         lum = np.clip(s["rgb"].astype(float), 0, 1) @ np.array([0.3, 0.59, 0.11])
         shin = np.isin(W.argmax(1), [idx["LeftLeg"], idx["RightLeg"]])
