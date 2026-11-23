@@ -101,8 +101,8 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// rays would bring.
     /// </summary>
     internal float ExteriorScale { get; init; } = 3f;
-    internal float InteriorScale { get; init; } = .1f;
-    internal float DungeonScale { get; init; } = .1f;
+    internal float InteriorScale { get; init; } = .05f;
+    internal float DungeonScale { get; init; } = .05f;
     /// <summary>
     /// What the lamps of each kind of place are multiplied by. They carry the light where they burn, well above the
     /// ambient, so a room has pools, dark corners and visible lamp shadows: the donor's intensities, made for Unity's
