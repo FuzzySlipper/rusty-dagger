@@ -261,6 +261,25 @@ internal sealed record ActorLocationOverride(
 }
 
 /// <summary>
+/// Sparse pre-visit or persistent slot referral metadata on an <see cref="ActorLedgerEntry"/>.
+/// Allows callers to address a deterministic <see cref="ActorOriginKind.SeededSlot"/> ("Ask Mara at the west gate")
+/// before the player ever visits the target site without synthesizing a full social/NPC record or touching neighbors.
+/// </summary>
+internal sealed record ActorReferralDiff(
+    string[] Tags,
+    string? DisplayNameOverride = null)
+{
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Tags);
+        if (Tags.Length == 0 || Tags.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Saved actor referral requires at least one non-empty tag.", nameof(Tags));
+        if (DisplayNameOverride is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(DisplayNameOverride);
+    }
+}
+
+/// <summary>
 /// One sparse world-scoped actor record in <see cref="DaggerfallActorLedger"/>. Covers all actors
 /// (people and creatures alike) with no split. <see cref="ActorOriginKind.SeededSlot"/> and
 /// <see cref="ActorOriginKind.CastIndividual"/> entries self-prune when all deltas are null.
@@ -272,7 +291,8 @@ internal sealed record ActorLedgerEntry(
     ActorPoseOverride? Pose = null,
     ActorCombatStateDiff? Combat = null,
     ActorSocialDiff? Social = null,
-    ActorLocationOverride? Location = null)
+    ActorLocationOverride? Location = null,
+    ActorReferralDiff? Referral = null)
 {
     /// <summary>True when a deterministic slot or cast entry has no non-default delta left to persist.</summary>
     [JsonIgnore]
@@ -282,7 +302,8 @@ internal sealed record ActorLedgerEntry(
         && Pose is null
         && Combat is null
         && Social is null
-        && Location is null;
+        && Location is null
+        && Referral is null;
 
     internal void Validate()
     {
@@ -295,6 +316,7 @@ internal sealed record ActorLedgerEntry(
         Combat?.Validate();
         Social?.Validate();
         Location?.Validate();
+        Referral?.Validate();
     }
 }
 
@@ -403,6 +425,56 @@ internal sealed class DaggerfallActorLedger
         if (entry.Location?.Kind != ActorLocationKind.AtSite || entry.Location.Profile is null) return null;
         DaggerfallWorldProfileKey profile = entry.Location.Profile.Require();
         return profile == activeProfile ? null : (profile, entry);
+    }
+
+    /// <summary>
+    /// Records a referral targeting a deterministic <see cref="ActorOriginKind.SeededSlot"/> by its canonical
+    /// <paramref name="targetProfile"/> and <paramref name="slotId"/>, even before the player has ever visited
+    /// <paramref name="targetProfile"/>. Only the referred slot enters the ledger; untouched neighbors stay absent.
+    /// Returns the deterministic durable actor identity that resolves on first visit.
+    /// </summary>
+    internal long RegisterSlotReferral(
+        DaggerfallWorldProfileKey targetProfile,
+        string slotId,
+        string referralTag,
+        string? displayNameOverride = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(slotId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(referralTag);
+        if (displayNameOverride is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(displayNameOverride);
+
+        string slotKey = $"{targetProfile.LogicalId}/{slotId}";
+        long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(targetProfile.Site, slotKey);
+        if (_entries.TryGetValue(durableId, out ActorLedgerEntry? existing))
+        {
+            List<string> mergedTags = existing.Referral is { Tags: { Length: > 0 } prior }
+                ? [.. prior]
+                : [];
+            if (!mergedTags.Contains(referralTag, StringComparer.Ordinal))
+                mergedTags.Add(referralTag);
+            string? resolvedName = displayNameOverride ?? existing.Referral?.DisplayNameOverride;
+            ActorSocialDiff? updatedSocial = existing.Social is { } s
+                ? s with
+                {
+                    DisplayNameOverride = resolvedName ?? s.DisplayNameOverride,
+                    ReferralTags = [.. (s.ReferralTags ?? []).Concat(mergedTags).Distinct(StringComparer.Ordinal)],
+                }
+                : null;
+            _entries[durableId] = existing with
+            {
+                Referral = new ActorReferralDiff([.. mergedTags], resolvedName),
+                Social = updatedSocial,
+            };
+        }
+        else
+        {
+            _entries[durableId] = new ActorLedgerEntry(
+                durableId,
+                ActorOrigin.Seeded(targetProfile, slotId),
+                Referral: new ActorReferralDiff([referralTag], displayNameOverride));
+        }
+        return durableId;
     }
 
     /// <summary>Marks a deterministic slot or authored placement permanently removed (banished).</summary>

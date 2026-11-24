@@ -8,6 +8,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Presentation;
@@ -520,8 +521,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : DrawnLive(visual);
             // A walking person drawn as the crowd's figure reads Tier-2 ActorRenderComponent rather than gameplay kind.
             bool crowdVisual = render?.Spec.Kind is ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig;
+            bool walking = actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander)
+                && IWalkerCrowd.Walks(wander.State);
             Appearance? rigged = !actor.IsDefeated && crowdVisual
-                ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, IWalkerCrowd.Walks(actor.Wander.State)) : null;
+                ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, walking) : null;
             chosen = rigged ?? chosen;
             if (chosen is null) continue;
             // A corpse mesh lies along its creature's heading; a billboard turns to the camera on its own.

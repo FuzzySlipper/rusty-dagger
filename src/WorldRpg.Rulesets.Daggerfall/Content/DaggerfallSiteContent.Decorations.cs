@@ -31,6 +31,7 @@ internal static partial class DaggerfallSiteContent
             if (parts is not ["sprite/texture", var archiveText, var recordText]
                 || !int.TryParse(archiveText, out int archive) || !int.TryParse(recordText, out int record))
             { diagnostics.Add($"Decoration '{id}' has invalid sprite '{spriteId}'."); continue; }
+            if (DaggerfallPeopleSlots.IsPersonClutterBillboard(archive, record)) continue;
             bool nature = kind == DaggerfallWorldProfileKind.Exterior && OptionalBoolean(billboard, "climateNature", false, diagnostics);
             int summer = nature ? DaggerfallClimateArchives.NatureTextureArchive(climate, DaggerfallExteriorSeason.Summer) : archive;
             int winter = nature ? DaggerfallClimateArchives.NatureTextureArchive(climate, DaggerfallExteriorSeason.Winter) : archive;

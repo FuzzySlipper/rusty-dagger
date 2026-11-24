@@ -492,6 +492,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         ActorLocationOverride? location = relocated ? ActorLocationOverride.AtSite(activeProfile) : null;
 
         ActorSocialDiff? social = null;
+        ActorReferralDiff? referral = null;
         if (!origin.IsFixedPlacement && State.Npcs.TryGet(actor.DurableId, out DaggerfallNpc? npc))
         {
             State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorLedger);
@@ -500,8 +501,15 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             string[]? witnessedCrimes = overlay is { WitnessedCrimes.Count: > 0 }
                 ? [.. overlay.WitnessedCrimes]
                 : priorLedger?.Social?.WitnessedCrimes;
+            string[]? referralTags = overlay is { ReferralTags.Count: > 0 }
+                ? [.. overlay.ReferralTags]
+                : priorLedger?.Referral?.Tags ?? priorLedger?.Social?.ReferralTags;
+            string? referralName = priorLedger?.Referral?.DisplayNameOverride;
+            if (referralTags is { Length: > 0 })
+                referral = new ActorReferralDiff(referralTags, referralName);
             bool nameChanged = originComp?.BaselineNpc is { DisplayName: not null } baseNpc
-                && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName);
+                && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName)
+                && !StringComparer.Ordinal.Equals(npc.DisplayName, referralName);
             bool presenceChanged = npc.Presence != DaggerfallNpcPresence.Active;
             bool hasPriorSocialDelta = priorLedger?.Social is { } ps
                 && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 } || ps.EscortPortrait is not null);
@@ -515,19 +523,20 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     Met = met,
                     Muted = muted,
                     WitnessedCrimes = witnessedCrimes,
+                    ReferralTags = referralTags,
                 };
             }
         }
 
         inventoryIsDefault = IsDefaultActorInventory(actor.DurableId, origin, capturedInventory);
-        bool hasNonPoseDelta = vitals is not null || combat is not null || social is not null || relocated || !inventoryIsDefault;
+        bool hasNonPoseDelta = vitals is not null || combat is not null || social is not null || referral is not null || relocated || !inventoryIsDefault;
         bool idleWanderOnly = !hasNonPoseDelta && originComp is not null
             && originComp.MatchesIdleWanderPose(currentPos, actor.HeadingYawRadians);
         ActorPoseOverride? pose = (!relocated && originComp is not null
             && (PoseEqual(currentPos, actor.HeadingYawRadians, originComp.BaselinePose, originComp.BaselineHeading) || idleWanderOnly))
             ? null
             : new ActorPoseOverride(currentPos.X, currentPos.Y, currentPos.Z, actor.HeadingYawRadians);
-        return new ActorLedgerEntry(actor.DurableId, origin, vitals, pose, combat, social, location);
+        return new ActorLedgerEntry(actor.DurableId, origin, vitals, pose, combat, social, location, referral);
     }
 
     private bool IsDefaultActorInventory(long actorId, ActorOrigin origin, DaggerfallActorInventorySave? saved)
@@ -815,6 +824,9 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 if (dynSocial.WitnessedCrimes is { Length: > 0 })
                     foreach (string operationId in dynSocial.WitnessedCrimes)
                         dynOverlay.RecordWitnessedCrime(operationId);
+                if (dynSocial.ReferralTags is { Length: > 0 })
+                    foreach (string tag in dynSocial.ReferralTags)
+                        dynOverlay.RecordReferralTag(tag);
             }
         }
 

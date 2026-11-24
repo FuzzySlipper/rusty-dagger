@@ -6,7 +6,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>Admitted source placement and presentation, before a session allocates its durable person.</summary>
 internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Position,
-    DaggerfallNpcAppearance Appearance, string Role, IReadOnlyList<string> Services, NormalizedActorSprite Sprite)
+    DaggerfallNpcAppearance Appearance, string Role, IReadOnlyList<string> Services, NormalizedActorSprite Sprite,
+    ActorInteractionPolicyKind Interaction = ActorInteractionPolicyKind.FullDialogue,
+    ActorHarmPolicyKind Harm = ActorHarmPolicyKind.Protected,
+    string? SpawnerId = null,
+    bool DeriveRegionalFaction = false)
 {
     internal static IReadOnlyList<DaggerfallStaticNpcPlacement> Read(ReadOnlyMemory<byte>? bytes,
         IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> sprites, DaggerfallDefinitions definitions,
@@ -36,11 +40,17 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
                 diagnostics.Add($"Normalized static person '{id}' lacks its source site.");
                 continue;
             }
-            string? race = person.GetProperty("race").GetString();
+            string? race = person.TryGetProperty("race", out JsonElement raceEl) && raceEl.ValueKind == JsonValueKind.String
+                ? raceEl.GetString()
+                : null;
             if (race is null && definitions.BuildingNames.TryGetNameBank(site.Value.Region, out int bank))
                 race = bank == 0 ? "breton" : "redguard";
             string gender = person.GetProperty("gender").GetString()!;
             int faction = person.GetProperty("factionId").GetInt32();
+            bool deriveRegionalFaction = person.TryGetProperty("deriveRegionalFaction", out JsonElement deriveEl)
+                && deriveEl.ValueKind == JsonValueKind.True;
+            if (deriveRegionalFaction && faction == 0)
+                faction = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, site.Value.Region)?.Id ?? 0;
             if ((race is null || !definitions.Catalogs.TryGetRace(race, out _)) || gender is not ("Male" or "Female")
                 || faction < 0)
                 diagnostics.Add($"Normalized static person '{id}' names an unavailable race, gender or faction.");
@@ -48,15 +58,44 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
             WorldPoint position = new(point.GetProperty("x").GetSingle(), point.GetProperty("y").GetSingle(), point.GetProperty("z").GetSingle());
             if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
                 diagnostics.Add($"Normalized static person '{id}' has a non-finite pose.");
+            string? interactionRaw = person.TryGetProperty("interaction", out JsonElement intEl) && intEl.ValueKind == JsonValueKind.String
+                ? intEl.GetString()
+                : null;
+            string? harmRaw = person.TryGetProperty("harm", out JsonElement harmEl) && harmEl.ValueKind == JsonValueKind.String
+                ? harmEl.GetString()
+                : null;
+            string? spawnerId = person.TryGetProperty("spawnerId", out JsonElement spawnerEl) && spawnerEl.ValueKind == JsonValueKind.String
+                ? spawnerEl.GetString()
+                : null;
+            ActorInteractionPolicyKind interaction = DaggerfallPeopleSlots.ParseInteractionPolicy(interactionRaw);
+            ActorHarmPolicyKind harm = DaggerfallPeopleSlots.ParseHarmPolicy(harmRaw,
+                fallback: interaction == ActorInteractionPolicyKind.None
+                    ? ActorHarmPolicyKind.LawProtectedCivilian
+                    : ActorHarmPolicyKind.Protected);
             bool interior = world.TryGetProperty("interiorBuilding", out JsonElement building) && building.ValueKind == JsonValueKind.Object;
             int type = interior ? building.GetProperty("buildingType").GetInt32() : -1;
             int buildingFaction = interior ? building.GetProperty("factionId").GetInt32() : 0;
             DaggerfallFactionDefinition? sourceFaction = definitions.Factions.Factions.GetValueOrDefault(faction);
-            (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
-                definitions, sourceFaction, type, buildingFaction, "person");
+            string role;
+            IReadOnlyList<string> services;
+            if (interaction == ActorInteractionPolicyKind.None)
+            {
+                role = spawnerId ?? "clutter-person";
+                services = [];
+            }
+            else if (interaction == ActorInteractionPolicyKind.AmbientBark)
+            {
+                role = spawnerId ?? "bystander";
+                services = ["bark"];
+            }
+            else
+            {
+                (role, services) = DaggerfallNpcServiceFacts.Resolve(
+                    definitions, sourceFaction, type, buildingFaction, "person");
+            }
             result.Add(new(id, position, new(race ?? string.Empty, gender, archive, record,
                 person.GetProperty("nameSeed").GetInt32(), faction), role,
-                services, billboard.Standing((archive, record))));
+                services, billboard.Standing((archive, record)), interaction, harm, spawnerId, deriveRegionalFaction));
         }
         return result;
     }

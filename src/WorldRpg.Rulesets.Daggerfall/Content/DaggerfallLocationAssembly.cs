@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
@@ -332,8 +333,16 @@ internal sealed class DaggerfallLocationAssembly
                 if (document.EnterMarker is { } enter) _enter ??= origin + enter;
                 _startMarkers.AddRange(StartMarkers(block, document));
                 PlaceStaticNpcs(document, origin, id => PlaceId(id, block.X, block.Y));
+                bool hasPackClutter = PlacePeopleClutterSlots(
+                    document,
+                    owner._definitions.People.GetRmbExteriorSlots(block.SourceName),
+                    origin,
+                    id => PlaceId(id, block.X, block.Y),
+                    (block.X << 8) ^ block.Y);
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, id => PlaceId(id, block.X, block.Y)));
-                foreach (JsonNode? billboard in document.Section("billboards")) Append("billboards", Billboard(billboard, origin, id => PlaceId(id, block.X, block.Y)));
+                int fallbackClutter = 0;
+                foreach (JsonNode? billboard in document.Section("billboards"))
+                    AppendBillboardOrPromoteClutter(billboard, document, origin, id => PlaceId(id, block.X, block.Y), hasPackClutter, (block.X << 8) ^ block.Y, ref fallbackClutter);
                 if (document.ClearGround is { } bits)
                     for (int index = 0; index < AutomapSide * AutomapSide; index++)
                         if ((bits[index / 8] & (1 << (index % 8))) != 0)
@@ -355,6 +364,109 @@ internal sealed class DaggerfallLocationAssembly
                 value["nameSeed"] = offset ^ key.Site.Index;
                 Append("staticNpcs", value);
             }
+        }
+
+        private bool PlacePeopleClutterSlots(
+            DaggerfallWorldBlockDocument document,
+            IReadOnlyList<DaggerfallPeopleSlotDefinition> slots,
+            Vector3 origin,
+            Func<string, string>? placeId,
+            int nameSeedSalt)
+        {
+            bool emittedAny = false;
+            foreach (DaggerfallPeopleSlotDefinition slot in slots)
+            {
+                if (string.Equals(slot.Interaction, "full-dialogue", StringComparison.Ordinal)
+                    && !string.Equals(slot.SpawnerId, "clutter-person", StringComparison.Ordinal))
+                    continue;
+                emittedAny = true;
+                string sanitized = slot.SlotId.Replace(':', '-');
+                string id = placeId is not null
+                    ? placeId($"person/{Scope(document)}/{sanitized}")
+                    : $"person/{sanitized}";
+                string harm = slot.SpawnerId is not null
+                    && owner._definitions.People.Spawners.TryGetValue(slot.SpawnerId, out DaggerfallPeopleSpawnerDefinition? spawner)
+                    ? spawner.Harm
+                    : "law-protected-civilian";
+                int nameSeed = unchecked((int)StableHash.NonZeroFnv1a64(
+                    $"clutter-person:{key.Site.Region}:{key.Site.Index}:{id}:{nameSeedSalt}"));
+                JsonObject person = new()
+                {
+                    ["id"] = id,
+                    ["position"] = Vector(slot.Position.ToVector() + origin),
+                    ["billboardArchive"] = slot.ClassicVisual.Archive,
+                    ["billboardRecord"] = slot.ClassicVisual.Record,
+                    ["factionId"] = slot.FactionId ?? 0,
+                    ["deriveRegionalFaction"] = slot.DeriveRegionalFaction,
+                    ["race"] = null,
+                    ["gender"] = slot.ClassicVisual.Gender,
+                    ["nameSeed"] = nameSeed,
+                    ["interaction"] = slot.Interaction,
+                    ["harm"] = harm,
+                    ["spawnerId"] = slot.SpawnerId,
+                };
+                Append("staticNpcs", person);
+            }
+            return emittedAny;
+        }
+
+        private void AppendBillboardOrPromoteClutter(
+            JsonNode? billboard,
+            DaggerfallWorldBlockDocument document,
+            Vector3 origin,
+            Func<string, string>? placeId,
+            bool hasPackClutterSlots,
+            int nameSeedSalt,
+            ref int fallbackClutterOrdinal)
+        {
+            if (billboard is JsonObject obj
+                && obj["spriteResourceId"] is JsonValue spriteVal
+                && spriteVal.TryGetValue(out string? spriteId)
+                && TryParseBillboardSprite(spriteId, out int archive, out int record)
+                && DaggerfallPeopleSlots.IsPersonClutterBillboard(archive, record))
+            {
+                // Person clutter flats never enter decorative scenery billboards.
+                if (!hasPackClutterSlots && obj["position"] is JsonObject pos)
+                {
+                    int ordinal = fallbackClutterOrdinal++;
+                    string id = placeId is not null
+                        ? placeId($"person/{Scope(document)}/clutter-{ordinal}")
+                        : $"person/clutter-{ordinal}";
+                    Vector3 position = new Vector3(
+                        pos["x"]!.GetValue<float>(),
+                        pos["y"]!.GetValue<float>(),
+                        pos["z"]!.GetValue<float>()) + origin;
+                    int nameSeed = unchecked((int)StableHash.NonZeroFnv1a64(
+                        $"clutter-billboard:{key.Site.Region}:{key.Site.Index}:{id}:{nameSeedSalt}"));
+                    Append("staticNpcs", new JsonObject
+                    {
+                        ["id"] = id,
+                        ["position"] = Vector(position),
+                        ["billboardArchive"] = archive,
+                        ["billboardRecord"] = record,
+                        ["factionId"] = 0,
+                        ["deriveRegionalFaction"] = true,
+                        ["race"] = null,
+                        ["gender"] = "Male",
+                        ["nameSeed"] = nameSeed,
+                        ["interaction"] = "none",
+                        ["harm"] = "law-protected-civilian",
+                        ["spawnerId"] = "clutter-person",
+                    });
+                }
+                return;
+            }
+            Append("billboards", placeId is not null ? Billboard(billboard, origin, placeId) : Clone(billboard));
+        }
+
+        private static bool TryParseBillboardSprite(string spriteId, out int archive, out int record)
+        {
+            archive = 0;
+            record = 0;
+            string[] parts = spriteId.Split('-');
+            return parts is ["sprite/texture", var archiveText, var recordText]
+                && int.TryParse(archiveText, NumberStyles.None, CultureInfo.InvariantCulture, out archive)
+                && int.TryParse(recordText, NumberStyles.None, CultureInfo.InvariantCulture, out record);
         }
 
         /// <summary>One building's inside half, in the frame its block builds it in.</summary>
@@ -395,8 +507,14 @@ internal sealed class DaggerfallLocationAssembly
                 Append("staticNpcs", value);
             }
 
+            bool hasPackClutter = owner._definitions.People.TryGetRmbInteriorSlots(placed.SourceName, building.Index, out DaggerfallPeopleBuildingSlots? interiorPeople)
+                && interiorPeople is not null
+                && PlacePeopleClutterSlots(document, interiorPeople.Slots, Vector3.Zero, placeId: null, buildingKey);
+
             foreach (JsonNode? light in document.Section("lights")) Append("lights", Clone(light));
-            foreach (JsonNode? billboard in document.Section("billboards")) Append("billboards", Clone(billboard));
+            int fallbackClutter = 0;
+            foreach (JsonNode? billboard in document.Section("billboards"))
+                AppendBillboardOrPromoteClutter(billboard, document, Vector3.Zero, placeId: null, hasPackClutter, buildingKey, ref fallbackClutter);
             foreach (JsonNode? container in document.Section("propertyContainers")) Append("propertyContainers", Clone(container));
             DaggerfallWorldBlockBuilding slot = document.InteriorBuilding!;
             _world["interiorBuilding"] = new JsonObject
@@ -465,8 +583,16 @@ internal sealed class DaggerfallLocationAssembly
                     }
                     Append("waterVolumes", volume);
                 }
+                bool hasPackClutter = PlacePeopleClutterSlots(
+                    document,
+                    owner._definitions.People.GetRdbDungeonSlots(block.SourceKey),
+                    origin,
+                    Placed,
+                    (block.X << 8) ^ block.Z);
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
-                foreach (JsonNode? billboard in document.Section("billboards")) Append("billboards", Billboard(billboard, origin, Placed));
+                int fallbackClutter = 0;
+                foreach (JsonNode? billboard in document.Section("billboards"))
+                    AppendBillboardOrPromoteClutter(billboard, document, origin, Placed, hasPackClutter, (block.X << 8) ^ block.Z, ref fallbackClutter);
                 foreach (JsonNode? action in document.Section("actions"))
                 {
                     JsonObject value = Moved(action, origin, Placed);

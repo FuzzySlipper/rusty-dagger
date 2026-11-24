@@ -481,6 +481,30 @@ internal static class DaggerfallPeopleSlots
     private const long HighBandBit = 0x4000_0000_0000L;
     private const int RegionalPeopleFactionType = 15;
 
+    /// <summary>
+    /// Whether billboard texture (<paramref name="archive"/>, <paramref name="record"/>) is a person flat
+    /// that must materialize as a real actor rather than a decorative scenery billboard.
+    /// Excludes non-person prop <c>(197, 6)</c>.
+    /// </summary>
+    internal static bool IsPersonClutterBillboard(int archive, int record) =>
+        archive is (>= 175 and <= 184) or 186 or 197 or 334 or 346 or 357
+        && !(archive == 197 && record == 6);
+
+    internal static ActorInteractionPolicyKind ParseInteractionPolicy(string? value) => value switch
+    {
+        "none" => ActorInteractionPolicyKind.None,
+        "ambient-bark" => ActorInteractionPolicyKind.AmbientBark,
+        _ => ActorInteractionPolicyKind.FullDialogue,
+    };
+
+    internal static ActorHarmPolicyKind ParseHarmPolicy(string? value, ActorHarmPolicyKind fallback = ActorHarmPolicyKind.Protected) => value switch
+    {
+        "protected" => ActorHarmPolicyKind.Protected,
+        "law-protected-civilian" => ActorHarmPolicyKind.LawProtectedCivilian,
+        "combatant" => ActorHarmPolicyKind.Combatant,
+        _ => fallback,
+    };
+
     /// <summary>Canonical site-qualified slot key for an exterior RMB block person slot at grid cell (<paramref name="blockX"/>, <paramref name="blockY"/>).</summary>
     internal static string ExteriorBlockSlotKey(int blockX, int blockY, string templateSlotId)
     {

@@ -568,7 +568,7 @@ internal sealed class DaggerfallActorRoster
                         {
                             actor = MaterializeDeterministicNpc(npc, ActorOrigin.Seeded(profile.ProfileKey, placement.Id),
                                 placement.Position, translation, _actorLedger.TryGet(id, out ActorLedgerEntry? delta) ? delta : null,
-                                siteProfile: profile);
+                                siteProfile: profile, staticPlacement: placement);
                             created = true;
                         }
                         if (!TryAdmitDirectionalMobileAppearance(profile, appearance, id))
@@ -778,11 +778,19 @@ internal sealed class DaggerfallActorRoster
     }
 
     private ActorState MaterializeDeterministicNpc(DaggerfallNpc npc, ActorOrigin origin, WorldPoint baselineProfilePose,
-        Vector3 translation, ActorLedgerEntry? delta, bool isRelocated = false, DaggerfallSiteProfile? siteProfile = null)
+        Vector3 translation, ActorLedgerEntry? delta, bool isRelocated = false, DaggerfallSiteProfile? siteProfile = null,
+        DaggerfallStaticNpcPlacement? staticPlacement = null)
     {
         DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npc.DurableId, npc.Kind != DaggerfallNpcKind.Civilian);
         WorldPoint worldPose = DaggerfallSceneOrigin.Shift(baselineProfilePose, translation);
         ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, new ActorPose(worldPose, 0f), _definitions);
+        if (staticPlacement is not null)
+        {
+            actor.Actor.Get<ActorHarmPolicy>().Set(staticPlacement.Harm);
+            actor.Actor.Get<ActorInteractionPolicy>().Set(staticPlacement.Interaction);
+            if (!string.IsNullOrWhiteSpace(staticPlacement.SpawnerId))
+                actor.Actor.Get<ActorOverlayComponent>().ArchetypeId = staticPlacement.SpawnerId;
+        }
         DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
         actor.Actor.Add(new ActorOriginComponent(origin, baselineProfilePose, 0f, baselineStats, npc, isRelocated));
         try
@@ -855,6 +863,16 @@ internal sealed class DaggerfallActorRoster
                 : delta.Location with { Detached = false };
             _actorLedger.Upsert(delta with { Location = clearedLocation });
         }
+        if (delta.Referral is { } referral)
+        {
+            if (!string.IsNullOrWhiteSpace(referral.DisplayNameOverride))
+                _npcs.SetDisplayName(npc.DurableId, referral.DisplayNameOverride);
+            if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? refOverlay))
+            {
+                foreach (string tag in referral.Tags)
+                    refOverlay.RecordReferralTag(tag);
+            }
+        }
         if (delta.Social is { } social)
         {
             if (!string.IsNullOrWhiteSpace(social.DisplayNameOverride))
@@ -868,6 +886,9 @@ internal sealed class DaggerfallActorRoster
                 if (social.WitnessedCrimes is { Length: > 0 })
                     foreach (string operationId in social.WitnessedCrimes)
                         overlay.RecordWitnessedCrime(operationId);
+                if (social.ReferralTags is { Length: > 0 })
+                    foreach (string tag in social.ReferralTags)
+                        overlay.RecordReferralTag(tag);
             }
         }
     }

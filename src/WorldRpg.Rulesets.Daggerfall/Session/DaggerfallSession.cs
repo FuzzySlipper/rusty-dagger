@@ -135,6 +135,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private DaggerfallExteriorWorld _exterior => _sites.Exterior;
     private DaggerfallWorldProfileKey _activeProfileKey => _sites.ActiveProfile;
     private DaggerfallSiteAppearance _appearance => _sites.Projection.Appearance;
+    internal DaggerfallSiteAppearance ActiveAppearance => _appearance;
     private DaggerfallDoorRuntime _doors => _sites.Projection.Doors;
     /// <summary>Exterior doors' buildings: their names, entry rules, greetings and what entering comes to.</summary>
     internal DaggerfallBuildingEntrance Entrance { get; }

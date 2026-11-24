@@ -145,7 +145,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             Splats().Use(null);
             Crowd = splatCrowd;
             ActorState[] walking = Walking();
-            int sprites = walking.Count(walker => townsperson(walker.DurableId) is not { } archive || !splats!.ByArchive.ContainsKey(archive));
+            int sprites = walking.Count(walker => ResolveCrowdCharacterId(walker.DurableId) is null);
             return DebugCommandResult.Success($"Walking people draw as the gsplat characters of their townsperson art, lit; {walking.Length} walk here now" +
                 (sprites == 0 ? "." : $", {sprites} of them as sprites, wearing art without a character."));
         }
@@ -311,7 +311,13 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         : clips is null ? DaggerfallDeveloperReplies.Refused($"{DaggerfallAnimations.ContainerName} is not installed, so the gsplat townspeople have no clips.")
         : null;
 
-    private ActorState[] Walking() => [.. actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>() && actor.Wander.State != WanderState.Unloaded)];
+    private ActorState[] Walking() =>
+    [
+        .. actors.All.Where(actor =>
+            actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
+            && render.Spec.Kind is ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig
+            && (!actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander) || wander.State != WanderState.Unloaded)),
+    ];
 
     /// <summary>
     /// The gsplat crowd, made on its first use, drawing each walker as its own character while <see cref="own"/>. As it is
@@ -332,6 +338,32 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         return splatCrowd;
     }
 
+    private (string Id, int? Archive)? ResolveCrowdCharacter(long actor)
+    {
+        if (splats is null) return null;
+        if (actors.TryGet(actor, out ActorState? state)
+            && state.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render))
+        {
+            if (render.Spec.Kind is not (ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig))
+                return null;
+            if (render.Spec.CrowdCharacterHint is { Length: > 0 } hint
+                && splats.Characters.ContainsKey(hint))
+                return (hint, render.Spec.Archive);
+            if (render.Spec.Archive is int specArchive
+                && splats.ByArchive.TryGetValue(specArchive, out string? specId))
+                return (specId, specArchive);
+        }
+        if (townsperson(actor) is not { } archive)
+        {
+            if (!unclothed) warn("A walker wears no classic townsperson art (its race has none), so it draws its sprite.");
+            unclothed = true;
+            return null;
+        }
+        return splats.ByArchive.TryGetValue(archive, out string? id) ? (id, archive) : null;
+    }
+
+    private string? ResolveCrowdCharacterId(long actor) => ResolveCrowdCharacter(actor)?.Id;
+
     /// <summary>
     /// Walker <paramref name="actor"/>'s own character, opened on its first use, while walkers draw as their own and the
     /// refreshed art draws; null (its sprite) when its art has no character or the character would not open.
@@ -339,25 +371,24 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private SplatFigure? Own(long actor)
     {
         if (!own || !refreshed()) return null;
-        if (townsperson(actor) is not { } archive)
-        {
-            if (!unclothed) warn("A walker wears no classic townsperson art (its race has none), so it draws its sprite.");
-            unclothed = true;
-            return null;
-        }
-        if (!splats!.ByArchive.TryGetValue(archive, out string? id) || broken.Contains(id)) return null;
-        try { return Open(splats, id, splats.Characters[id]); }
+        if (ResolveCrowdCharacter(actor) is not { } resolved || broken.Contains(resolved.Id)) return null;
+        try { return Open(splats!, resolved.Id, splats!.Characters[resolved.Id]); }
         catch (Exception exception)
         {
-            broken.Add(id);
-            warn($"Gsplat character {id} would not open, so walkers wearing townsperson art {archive} draw their sprites: {exception.Message}");
+            broken.Add(resolved.Id);
+            warn(resolved.Archive is int archive
+                ? $"Gsplat character {resolved.Id} would not open, so walkers wearing townsperson art {archive} draw their sprites: {exception.Message}"
+                : $"Gsplat character {resolved.Id} would not open, so actors using it draw their sprites: {exception.Message}");
             return null;
         }
     }
 
     private void Pace(long actor, float pace)
     {
-        if (actors.TryGet(actor, out ActorState walker) && walker.Wander.Pace != pace) walker.Wander.SetPace(pace);
+        if (actors.TryGet(actor, out ActorState walker)
+            && walker.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander)
+            && wander.Pace != pace)
+            wander.SetPace(pace);
     }
 
     /// <summary>

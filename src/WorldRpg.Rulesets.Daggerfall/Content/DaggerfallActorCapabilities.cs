@@ -69,6 +69,10 @@ internal sealed record ArchetypeProfile(
         "static-npc", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
         ActorHarmPolicyKind.Protected, ActorInteractionPolicyKind.FullDialogue, Walks: false);
 
+    internal static ArchetypeProfile ClutterPerson { get; } = new(
+        "clutter-person", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
+        ActorHarmPolicyKind.LawProtectedCivilian, ActorInteractionPolicyKind.None, Walks: false);
+
     internal static ArchetypeProfile Questor { get; } = new(
         "questor", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
         ActorHarmPolicyKind.Protected, ActorInteractionPolicyKind.FullDialogue, Walks: false);
@@ -82,10 +86,11 @@ internal sealed record ArchetypeProfile(
         ActorHarmPolicyKind.Combatant, ActorInteractionPolicyKind.None, Walks: true);
 }
 
-/// <summary>Attached social/quest overlay state on a live actor (HUD escort portrait, mute, archetype id, witness memory).</summary>
+/// <summary>Attached social/quest overlay state on a live actor (HUD escort portrait, mute, archetype id, witness memory, referrals).</summary>
 internal sealed class ActorOverlayComponent
 {
     private readonly List<string> _witnessedCrimes = [];
+    private readonly List<string> _referralTags = [];
 
     internal string? ArchetypeId { get; set; }
     internal bool Met { get; set; }
@@ -94,6 +99,7 @@ internal sealed class ActorOverlayComponent
     internal string? EscortPortraitMedia { get; set; }
     internal int EscortOrder { get; set; }
     internal IReadOnlyList<string> WitnessedCrimes => _witnessedCrimes;
+    internal IReadOnlyList<string> ReferralTags => _referralTags;
 
     internal void RecordWitnessedCrime(string operationId)
     {
@@ -101,4 +107,14 @@ internal sealed class ActorOverlayComponent
         if (!_witnessedCrimes.Contains(operationId, StringComparer.Ordinal))
             _witnessedCrimes.Add(operationId);
     }
+
+    internal void RecordReferralTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        if (!_referralTags.Contains(tag, StringComparer.Ordinal))
+            _referralTags.Add(tag);
+    }
+
+    internal bool HasReferralTag(string tag) =>
+        !string.IsNullOrWhiteSpace(tag) && _referralTags.Contains(tag, StringComparer.Ordinal);
 }

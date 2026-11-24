@@ -212,9 +212,26 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_social.ReactionForNpc(npc!).Value < -20)
             return new(false, "That person refuses to respond.");
 
-        if (_actors.TryGet(npc!.DurableId, out ActorState? spoken)
-            && spoken.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
-            overlay.Met = true;
+        ActorOverlayComponent? overlay = null;
+        ActorInteractionPolicyKind interactionKind = ActorInteractionPolicyKind.FullDialogue;
+        if (_actors.TryGet(npc!.DurableId, out ActorState? spoken))
+        {
+            if (spoken.Actor.TryGet<ActorInteractionPolicy>(out ActorInteractionPolicy? policy))
+                interactionKind = policy.Policy;
+            if (spoken.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? attachedOverlay))
+                overlay = attachedOverlay;
+        }
+        if (interactionKind == ActorInteractionPolicyKind.None)
+            return new(false, "That person has nothing to say.");
+
+        if (overlay is not null) overlay.Met = true;
+
+        if (interactionKind == ActorInteractionPolicyKind.AmbientBark)
+        {
+            string bark = ResolveAmbientBark(npc!, overlay);
+            return Report(new(true, bark));
+        }
+
         Open(npc!, actor!);
         return new(true, $"You speak with {npc!.DisplayName ?? npc.Role}.");
     }
@@ -336,6 +353,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         var benefit = _guildWelcome?.Invoke(npc);
         if (!string.IsNullOrEmpty(benefit?.Message)) greeting += "\n" + benefit.Message;
+        if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
+            && liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? openOverlay)
+            && openOverlay.ReferralTags.Count > 0)
+        {
+            greeting += "\n" + FormatReferralLine(npc, openOverlay.ReferralTags[0]);
+        }
         string revision = checked(++_nextRevision).ToString(CultureInfo.InvariantCulture);
         _current = new TalkSession(npc.DurableId, actor.Entity, actor.Position, npc.Site, revision, greeting)
         {
@@ -738,25 +761,57 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (site is null) return false;
         try { npc = _npcs.Require(id); }
         catch (InvalidOperationException) { return false; }
-        if ((!allowMuted && _muted(id)) || !IsTalkableAt(npc!, site)) return false;
         if (_activeProfile is not null
             && (npc!.Profile is not { } profile || profile != _activeProfile())) return false;
+        bool canBark = false;
         if (_actors.TryGet(id, out ActorState currentActor))
         {
             // A defeated person is a corpse, which its own owner offers; they are no one to talk to.
             if (currentActor.IsDefeated) return false;
-            if (currentActor.Actor.TryGet<ActorInteractionPolicy>(out ActorInteractionPolicy? interaction) && !interaction.CanTalk)
-                return false;
+            if (currentActor.Actor.TryGet<ActorInteractionPolicy>(out ActorInteractionPolicy? interaction))
+            {
+                if (!interaction.CanTalk && !interaction.CanBark) return false;
+                canBark = interaction.CanBark;
+            }
             actor = new(currentActor.Actor.Entity, currentActor.Position);
+        }
+        if ((!allowMuted && _muted(id)) || !IsTalkableAt(npc!, site, canBark))
+        {
+            actor = null;
+            return false;
         }
         return actor is not null;
     }
 
-    private bool IsTalkableAt(DaggerfallNpc npc, DaggerfallSiteRecord site) =>
+    private bool IsTalkableAt(DaggerfallNpc npc, DaggerfallSiteRecord site, bool allowBark = false) =>
         _npcs.IsGameplayActive(npc.DurableId)
-        && npc.Services.Contains("talk", StringComparer.Ordinal)
+        && (allowBark || npc.Services.Contains("talk", StringComparer.Ordinal))
         && (npc.Profile is { } profile ? profile.Site == site.Id
             : npc.Site.Region == site.Id.Region && string.Equals(npc.Site.Location, site.Name, StringComparison.Ordinal));
+
+    // Test-data ambient barks (final writing deferred): deterministic per actor, with referral awareness.
+    private static readonly string[] DefaultAmbientBarks =
+    [
+        "Busy day on the streets. Watch your step.",
+        "Keep moving, traveler — plenty to do before sundown.",
+        "Quiet enough around here, if you don't look for trouble.",
+        "Mind the cobblestones; they're slick after rain.",
+    ];
+
+    private static string ResolveAmbientBark(DaggerfallNpc npc, ActorOverlayComponent? overlay)
+    {
+        string speaker = npc.DisplayName ?? npc.Role;
+        if (overlay is { ReferralTags.Count: > 0 })
+            return $"{speaker}: \"{FormatReferralLine(npc, overlay.ReferralTags[0])}\"";
+        int index = (int)(unchecked((ulong)npc.DurableId) % (ulong)DefaultAmbientBarks.Length);
+        return $"{speaker}: \"{DefaultAmbientBarks[index]}\"";
+    }
+
+    private static string FormatReferralLine(DaggerfallNpc npc, string referralTag)
+    {
+        string speaker = npc.DisplayName ?? npc.Role;
+        return $"You're looking for {speaker}? Word reached me about '{referralTag}'.";
+    }
 
     private bool MatchesRevision(string? revision) =>
         _current is { } current && string.Equals(current.Revision, revision, StringComparison.Ordinal);
