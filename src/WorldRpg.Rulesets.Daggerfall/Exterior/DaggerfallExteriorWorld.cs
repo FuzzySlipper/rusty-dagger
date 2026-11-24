@@ -760,10 +760,10 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         Projection.Rebase(locationFrameOffset);
         if (restoringSavedFrame)
         {
-            HashSet<long> staticActorIds = _npcs.All
-                .Where(npc => npc.Profile == Projection.Inputs.ProfileKey && npc.Kind == DaggerfallNpcKind.Static)
+            HashSet<long> deterministicActorIds = _npcs.All
+                .Where(npc => npc.Profile == Projection.Inputs.ProfileKey && DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId))
                 .Select(npc => npc.DurableId).ToHashSet();
-            RebaseActors(staticActorIds, locationFrameOffset);
+            RebaseActors(deterministicActorIds, ExteriorProfileTranslation(Projection.Inputs, activeOrigin, includeOriginCompensation: true));
         }
         else
         {
@@ -1175,6 +1175,11 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
                 siteProfile: projection.Inputs, siteAppearance: projection.Appearance);
             _host.AdmitResidentCivilianAppearances(projection);
             _roster.MaterializeStaticNpcs(profile, projection.Appearance);
+            HashSet<long> residentPopulationIds = _npcs.All
+                .Where(npc => npc.Profile == key && DaggerfallCivilians.IsSourcePopulation(npc) && npc.Presence != DaggerfallNpcPresence.Removed)
+                .Select(npc => npc.DurableId)
+                .ToHashSet();
+            _roster.MaterializeActiveRestoredPopulation(profile, residentPopulationIds, projection.Appearance);
             HashSet<long> actorIds = profile.Project.Actors.Keys.ToHashSet();
             foreach (DaggerfallNpc npc in _npcs.All.Where(npc => npc.Profile == key))
                 actorIds.Add(npc.DurableId);
@@ -1379,6 +1384,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         Projection.Resume(offUpdate: _onTheRoad);
         _deltas.TryGetValue(ActiveProfile, out DaggerfallSiteRuntimeDelta? delta);
         _roster.MaterializeSite(profile, delta?.Actors, delta?.DynamicActors, delta?.BanishedActors, restoreAuthoredAppearance: true);
+        _roster.MaterializeStaticNpcs(profile);
         RebaseActors(ProfileActorIds(profile, delta), ExteriorProfileTranslation(profile));
         if (delta is not null)
         {

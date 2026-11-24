@@ -226,6 +226,11 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                     EncounterGeneration = combat?.EncounterGeneration,
                 });
             }
+            else
+            {
+                // Non-fixed SeededSlot/CastIndividual detached state stays in ActorLedger and is hydrated by ApplySparseLedgerDelta.
+                continue;
+            }
             if (combat?.DetachedInventory is { } inventory) inventories.Add(inventory);
             if (combat?.DetachedCorpse is { } corpse) corpses.Add(corpse);
             if (combat?.DetachedEffects is { Length: > 0 } detachedEffects) effects.AddRange(detachedEffects);

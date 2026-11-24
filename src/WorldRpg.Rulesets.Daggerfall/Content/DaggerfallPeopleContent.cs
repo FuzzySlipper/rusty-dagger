@@ -115,6 +115,23 @@ internal sealed record DaggerfallPeopleSet(
 
     internal IReadOnlyList<DaggerfallPeopleSlotDefinition> GetRdbDungeonSlots(string blockSourceKey) =>
         RdbDungeons.TryGetValue(blockSourceKey, out IReadOnlyList<DaggerfallPeopleSlotDefinition>? slots) ? slots : [];
+
+    internal bool TryGetIndividualByFaction(int factionId, out DaggerfallCastIndividualDefinition? individual)
+    {
+        if (factionId > 0)
+        {
+            foreach (DaggerfallCastIndividualDefinition candidate in Individuals.Values)
+            {
+                if (candidate.FactionId == factionId)
+                {
+                    individual = candidate;
+                    return true;
+                }
+            }
+        }
+        individual = null;
+        return false;
+    }
 }
 
 /// <summary>Concrete resolved result for a single <see cref="DaggerfallPeopleSlotDefinition"/> at a site.</summary>

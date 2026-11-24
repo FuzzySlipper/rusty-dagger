@@ -20,8 +20,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="retireDetached">Retires a civilian an inactive site's delta retains; false when none does.</param>
 internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsState actors, Func<DaggerfallSiteProfile> profile,
     Func<DaggerfallSiteAppearance> appearance, Func<DaggerfallSiteId, DaggerfallSiteRecord> requireSite, Func<WorldPoint, WorldPoint> profileToLocal,
-    Func<DaggerfallNpc, ActorPose, long> materialize, Action<long> unload, Action<long> retire, Func<long, bool> retireDetached)
+    Func<DaggerfallNpc, ActorPose, long> materialize, Action<long> unload, Action<long> retire, Func<long, bool> retireDetached,
+    Func<DaggerfallNpc, ActorOrigin, WorldPoint, ActorPose, long>? materializeDeterministic = null,
+    Func<long, bool>? isSuppressed = null)
 {
+    private readonly Func<long, bool> _isSuppressed = isSuppressed ?? (_ => false);
+
     /// <summary>
     /// Materializes one registered NPC at an explicit world pose. The actor is recorded as a runtime civilian dynamic
     /// actor, so its pose, inventory, corpse and identity ledger take part in the existing save boundary.
@@ -33,6 +37,7 @@ internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsStat
             throw new InvalidOperationException($"NPC {npcId} is {npc.Kind}, not a materializable civilian.");
         if (npc.Presence == DaggerfallNpcPresence.Removed)
             throw new InvalidOperationException($"NPC {npcId} has been removed and cannot be materialized.");
+        if (_isSuppressed(npcId)) return npcId;
         DaggerfallSiteProfile active = profile();
         bool sourcePopulation = IsSourcePopulation(npc);
         if (actors.TryGet(npcId, out _))
@@ -55,6 +60,42 @@ internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsStat
             }
         }
         // The live actor's Transform now owns the pose; the registry's detached placement is dropped.
+        npcs.ReleasePose(npcId);
+        return actorId;
+    }
+
+    /// <summary>
+    /// Materializes one deterministic <see cref="ActorOriginKind.SeededSlot"/> civilian (e.g., an exterior town walker)
+    /// without adding it to the minted dynamic-actor map so untouched slots save zero ledger bytes.
+    /// </summary>
+    internal long MaterializeDeterministic(long npcId, ActorOrigin origin, WorldPoint baselineProfilePose, ActorPose pose)
+    {
+        DaggerfallNpc npc = npcs.Require(npcId);
+        if (npc.Kind != DaggerfallNpcKind.Civilian)
+            throw new InvalidOperationException($"NPC {npcId} is {npc.Kind}, not a materializable civilian.");
+        if (npc.Presence == DaggerfallNpcPresence.Removed)
+            throw new InvalidOperationException($"NPC {npcId} has been removed and cannot be materialized.");
+        if (_isSuppressed(npcId)) return npcId;
+        DaggerfallSiteProfile active = profile();
+        bool sourcePopulation = IsSourcePopulation(npc);
+        if (actors.TryGet(npcId, out _))
+        {
+            if (sourcePopulation) AdmitSourcePopulationAppearance(npc, active, appearance());
+            return npcId;
+        }
+
+        long actorId = materializeDeterministic is not null
+            ? materializeDeterministic(npc, origin, baselineProfilePose, pose)
+            : materialize(npc, pose);
+        if (sourcePopulation)
+        {
+            try { AdmitSourcePopulationAppearance(npc, active, appearance()); }
+            catch
+            {
+                unload(actorId);
+                throw;
+            }
+        }
         npcs.ReleasePose(npcId);
         return actorId;
     }
@@ -90,6 +131,8 @@ internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsStat
             // and must not be recreated by the next site admission.
             if (npc.Kind != DaggerfallNpcKind.Civilian
                 || npc.Presence != DaggerfallNpcPresence.Active
+                || _isSuppressed(npc.DurableId)
+                || DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId)
                 || site is null
                 || (npc.Profile is { } physical ? physical != active.ProfileKey
                     : npc.Site.Region != site.Id.Region || !StringComparer.Ordinal.Equals(npc.Site.Location, site.Name))

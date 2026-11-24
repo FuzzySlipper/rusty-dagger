@@ -248,6 +248,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     {
         Dictionary<long, ActorLedgerEntry> entries = [];
         HashSet<long> prunedDeterministicIds = [];
+        HashSet<long> capturedLiveDeterministicIds = [];
         HashSet<long> referencedNpcs = CollectReferencedNpcs();
 
         // 1. Active-site live deterministic actors (FixedPlacement, SeededSlot, CastIndividual) — origin-aware sparse capture.
@@ -256,6 +257,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             .Where(actor => !dynamicActors.ContainsKey(actor.DurableId))
             .OrderBy(actor => actor.DurableId))
         {
+            capturedLiveDeterministicIds.Add(actor.DurableId);
             ActorLedgerEntry sparse = CaptureSparseDeterministicActor(actor, activeProfile, localToProfile, referencedNpcs,
                 actorInventories.TryGetValue(actor.DurableId, out DaggerfallActorInventorySave? inv) ? inv : null,
                 out bool inventoryIsDefault);
@@ -398,10 +400,13 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         }
 
         // 6. Carry forward non-empty sparse ledger entries (SeededSlot/CastIndividual across sites, WithParty,
-        // OnOverlandBand, OffStage), never resurrecting retired Minted AtSite entries.
+        // OnOverlandBand, OffStage), never resurrecting retired Minted AtSite entries or stale entries for
+        // live deterministic actors whose current state was freshly captured/pruned in Step 1.
         foreach (ActorLedgerEntry extra in State.ActorLedger.All)
         {
-            if (extra.IsEmptyBaseline || entries.ContainsKey(extra.DurableId)) continue;
+            if (extra.IsEmptyBaseline || entries.ContainsKey(extra.DurableId)
+                || capturedLiveDeterministicIds.Contains(extra.DurableId))
+                continue;
             if (extra.Origin.Kind == ActorOriginKind.Minted
                 && extra.Location?.Kind is not (ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.OffStage))
                 continue;
@@ -417,6 +422,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         foreach (DaggerfallMerchantSave merchant in State.Merchants.Capture()) ids.Add(merchant.ProviderNpcId);
         foreach (DaggerfallServiceQueuedWork pending in State.Services.Capture().Pending) ids.Add(pending.Provider.NpcId);
         DaggerfallQuestInstancesSave quests = State.Quests.Capture();
+        foreach (DaggerfallQuestWorkContact contact in quests.WorkPool.Contacts) ids.Add(contact.Npc);
         if (quests.PendingOffer?.Quest.QuestorId is long offerGiver) ids.Add(offerGiver);
         foreach (DaggerfallQuestInstanceSave instance in quests.Instances)
         {
@@ -471,8 +477,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         {
             State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorLedger);
             ActorOverlayComponent? overlay = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov) ? ov : null;
-            bool met = overlay?.Met == true || priorLedger?.Social?.Met == true;
-            bool muted = overlay?.IsMuted == true || priorLedger?.Social?.Muted == true;
+            bool met = overlay is not null ? overlay.Met : priorLedger?.Social?.Met == true;
+            bool muted = overlay is not null ? overlay.IsMuted : priorLedger?.Social?.Muted == true;
             bool nameChanged = originComp?.BaselineNpc is { } baseNpc
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName);
             bool presenceChanged = npc.Presence != DaggerfallNpcPresence.Active;
@@ -566,9 +572,10 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         ArgumentNullException.ThrowIfNull(doors);
         ArgumentNullException.ThrowIfNull(motion);
         ArgumentNullException.ThrowIfNull(dynamicActors);
-        // Flush any sparse diffs for deterministic SeededSlot/CastIndividual actors leaving this site into State.ActorLedger
-        // (untouched slots self-prune to zero entries).
+        // Flush any sparse diffs (including non-default inventories, corpses, and effects) for deterministic
+        // SeededSlot/CastIndividual actors leaving this site into State.ActorLedger (untouched slots self-prune).
         HashSet<long> referencedNpcs = CollectReferencedNpcs();
+        DaggerfallActiveEffectSave[] allActiveEffects = State.Effects.Capture();
         foreach (ActorState actor in State.Actors.All)
         {
             if (dynamicActors.ContainsKey(actor.DurableId) || inputs.Project.Actors.ContainsKey(actor.DurableId)) continue;
@@ -578,9 +585,31 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 continue;
             if (State.Npcs.TryGet(actor.DurableId, out DaggerfallNpc? npc) && npc.Profile is { } npcProfile && npcProfile != inputs.ProfileKey)
                 continue;
+            DaggerfallActorInventorySave? capturedInv = State.ActorInventories.InventoryFor(actor.DurableId) is { } invCoord
+                ? new DaggerfallActorInventorySave(actor.DurableId, CaptureInventory(invCoord, State.ActorInventories.EquipmentFor(actor.DurableId), DaggerfallItemOwner.Actor(actor.DurableId)))
+                : null;
             ActorLedgerEntry sparse = CaptureSparseDeterministicActor(actor, inputs.ProfileKey,
-                point => WorldPoint.From(point.ToVector() - actorFrameOffset), referencedNpcs, null, out _);
-            State.ActorLedger.Upsert(sparse);
+                point => WorldPoint.From(point.ToVector() - actorFrameOffset), referencedNpcs, capturedInv, out bool inventoryIsDefault);
+            DaggerfallActorInventorySave? detachedInv = inventoryIsDefault ? null : capturedInv;
+            DaggerfallCorpseSave? detachedCorpse = CaptureCorpses([actor.DurableId]).SingleOrDefault();
+            DaggerfallActiveEffectSave[] detachedEffects = allActiveEffects.Where(effect => effect.TargetId == actor.DurableId).ToArray();
+            if (sparse.IsEmptyBaseline && detachedInv is null && detachedCorpse is null && detachedEffects.Length == 0)
+            {
+                State.ActorLedger.Remove(actor.DurableId);
+                continue;
+            }
+            ActorCombatStateDiff? combat = detachedInv is not null || detachedCorpse is not null || detachedEffects.Length > 0
+                ? (sparse.Combat ?? new ActorCombatStateDiff()) with
+                {
+                    DetachedInventory = detachedInv,
+                    DetachedCorpse = detachedCorpse,
+                    DetachedEffects = detachedEffects.Length > 0 ? detachedEffects : null,
+                }
+                : sparse.Combat;
+            ActorLocationOverride location = sparse.Location is { Kind: ActorLocationKind.AtSite, Profile: { } locProfile }
+                ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true)
+                : ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true);
+            State.ActorLedger.Upsert(sparse with { Combat = combat, Location = location });
         }
         long[] authoredIds = [.. inputs.Project.Actors.Keys.Where(id => !BanishedActors().Contains(id) && State.Actors.TryGet(id, out _)).OrderBy(id => id)];
         DaggerfallActorSave[] actors = authoredIds.Select(id =>
@@ -633,6 +662,21 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         [new(id, CaptureInventory(State.ActorInventories.InventoryFor(id) ?? throw new InvalidOperationException($"Actor {id} has no inventory."),
             State.ActorInventories.EquipmentFor(id), DaggerfallItemOwner.Actor(id)))], CaptureCorpses([id]), [],
         State.Effects.Capture().Where(effect => effect.TargetId == id).ToArray());
+
+    /// <summary>Reapplies detached inventory, corpse, and effect state onto a freshly materialized deterministic actor.</summary>
+    internal void RestoreDetachedActorState(DaggerfallActorInventorySave? inventory, DaggerfallCorpseSave? corpse,
+        DaggerfallActiveEffectSave[]? effects)
+    {
+        if (inventory is not null)
+            ApplyActorInventories([inventory]);
+        if (corpse is not null)
+            _corpseLoot.Restore([corpse], CorpseIdentities([corpse]));
+        if (effects is { Length: > 0 })
+        {
+            _effects.Restore(effects);
+            _ = DaggerfallTempleBlessingEffects.ExpireDue(_effects, _time);
+        }
+    }
 
     /// <summary>Reapplies detached values after the destination has created fresh authored actors.</summary>
     internal void RestoreSiteDelta(DaggerfallSiteRuntimeDelta delta)
@@ -695,15 +739,16 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         DaggerfallSavePayload saved = restore.Payload;
         sites.RestoreDeltas(saved.SiteDeltas, saved.ActorLedger);
         encounters.Restore(saved.Encounters);
-        RestoreSections(saved, sites.ActiveProfile);
+        RestoreSections(saved, sites.Projection.Inputs, roster);
         heldEnchantments.Refresh();
         sites.Projection.Appearance.SyncRestoredDefeat(State.Actors);
         restoreDungeonText(saved.DungeonText);
         sites.Interiors.ActionTriggers.RebaseRestoredPlayer(State.PlayerControl, State.Actors.Player.Actor.Entity);
     }
 
-    private void RestoreSections(DaggerfallSavePayload saved, DaggerfallWorldProfileKey activeProfile)
+    private void RestoreSections(DaggerfallSavePayload saved, DaggerfallSiteProfile activeInputs, DaggerfallActorRoster roster)
     {
+        DaggerfallWorldProfileKey activeProfile = activeInputs.ProfileKey;
         foreach (ActorLedgerEntry entry in saved.ActorLedger.OrderBy(e => e.DurableId))
         {
             if (!entry.Origin.IsFixedPlacement || entry.Location is { Detached: true } || entry.Location?.Kind == ActorLocationKind.Removed)
@@ -721,6 +766,27 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 throw new InvalidOperationException($"The saved dynamic actor '{spawned.EntityId}' was not materialized by the selected content.");
             current.ApplyPose(new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
         }
+
+        // Materialize deterministic active-site actors (static, cast, relocated, and any active-site
+        // deterministic population civilians referenced by saved ledger/inventories/corpses/effects)
+        // BEFORE applying saved actor inventories, corpses, and effects.
+        roster.MaterializeStaticNpcs(activeInputs);
+        HashSet<long> requiredActiveDeterministicIds = [];
+        foreach (ActorLedgerEntry entry in saved.ActorLedger)
+        {
+            if (entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual) || entry.Origin.IsFixedPlacement)
+                continue;
+            if (entry.Location is null && entry.Origin.SiteProfile?.Require() == activeProfile
+                || entry.Location is { Kind: ActorLocationKind.AtSite, Detached: false, Profile: { } p } && p.Require() == activeProfile)
+                requiredActiveDeterministicIds.Add(entry.DurableId);
+        }
+        foreach (DaggerfallActorInventorySave inv in saved.ActorInventories)
+            if (DaggerfallPeopleSlots.IsDeterministicId(inv.EntityId)) requiredActiveDeterministicIds.Add(inv.EntityId);
+        foreach (DaggerfallCorpseSave corpse in saved.Corpses)
+            if (DaggerfallPeopleSlots.IsDeterministicId(corpse.ActorId)) requiredActiveDeterministicIds.Add(corpse.ActorId);
+        foreach (DaggerfallActiveEffectSave effect in saved.ActiveEffects)
+            if (DaggerfallPeopleSlots.IsDeterministicId(effect.TargetId)) requiredActiveDeterministicIds.Add(effect.TargetId);
+        roster.MaterializeActiveRestoredPopulation(activeInputs, requiredActiveDeterministicIds);
 
         State.Progression.AdvanceTo(saved.Experience, saved.Level);
         State.SkillUses.Restore(saved.SkillUses);

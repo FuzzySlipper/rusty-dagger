@@ -31,8 +31,11 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     Func<DaggerfallSiteProfile> profile, Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteAppearance> appearance,
     Func<bool> locationLoaded, Func<bool> residencyInitialized, Func<WorldPoint, WorldPoint> profileToLocal, Func<Vector3, Vector3> localToProfile,
     Func<DaggerfallSiteId, DaggerfallSiteRecord> requireSite, Func<bool> isDay, Func<bool> suppressSpawns, Func<long, bool> held,
-    Action<ActorState, WanderPolicy, ulong, float> wander, Action<string> report)
+    Action<ActorState, WanderPolicy, ulong, float> wander, Action<string> report,
+    DaggerfallActorLedger? actorLedger = null, Func<long, bool>? isWithParty = null)
 {
+    private readonly DaggerfallActorLedger _actorLedger = actorLedger ?? new DaggerfallActorLedger();
+    private readonly Func<long, bool> _isWithParty = isWithParty ?? (_ => false);
     private const byte FemalePopulationFlag = 0x20;
     // PopulationManager's source pool scales by the number of exterior blocks, then clamps
     // the admitted pool to the donor's 24..96 people window.  The source list remains the
@@ -116,6 +119,11 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
         foreach (DaggerfallPopulationPlacement placement in candidates)
         {
+            string slotKey = $"{active.ProfileKey.LogicalId}/{placement.Id}";
+            long deterministicId = DaggerfallPeopleSlots.SeededSlotIdentity(siteId, slotKey);
+            if (_actorLedger.IsHomeSlotSuppressed(deterministicId, active.ProfileKey) || _isWithParty(deterministicId))
+                continue;
+
             DaggerfallFactionDefinition? faction = placement.FactionId == 0
                 ? null
                 : definitions.Factions.Factions[placement.FactionId];
@@ -125,16 +133,19 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                 definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId, "civilian");
 
             DaggerfallNpc? existing = sourceNpcs.FirstOrDefault(npc =>
-                StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
+                npc.DurableId == deterministicId || StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
+            if (existing is not null && (_actorLedger.IsHomeSlotSuppressed(existing.DurableId, active.ProfileKey) || _isWithParty(existing.DurableId)))
+                continue;
             if (suppressSpawns() && existing?.Presence != DaggerfallNpcPresence.Active) continue;
-            long npcId = existing?.DurableId ?? npcs.RegisterPopulationCivilian(
-                npcSite,
-                placement.Id,
-                look,
-                role,
-                services);
-            if (existing is not null)
+            long npcId = existing?.DurableId ?? deterministicId;
+            if (existing is null)
+            {
+                npcs.RegisterDeterministic(deterministicId, DaggerfallNpcKind.Civilian, placement.Id, npcSite, look, role, services);
+            }
+            else
+            {
                 npcs.RefreshPopulationFacts(npcId, look, role, services);
+            }
             DaggerfallNpc npc = npcs.Require(npcId);
             if (npc.Presence == DaggerfallNpcPresence.Removed)
                 continue;
@@ -156,7 +167,10 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             WorldPoint position = current.X is float x && current.Y is float y && current.Z is float z
                 ? profileToLocal(new WorldPoint(x, y, z))
                 : profileToLocal(placement.Position);
-            civilians.Materialize(npcId, new ActorPose(position, 0F));
+            if (DaggerfallPeopleSlots.IsDeterministicId(npcId))
+                civilians.MaterializeDeterministic(npcId, ActorOrigin.Seeded(active.ProfileKey, placement.Id), placement.Position, new ActorPose(position, 0F));
+            else
+                civilians.Materialize(npcId, new ActorPose(position, 0F));
         }
 
         // A source civilian may have been hidden by night before a retained site delta was saved.
@@ -228,7 +242,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
     private void Hide(DaggerfallNpc npc)
     {
-        if (npc.Presence == DaggerfallNpcPresence.Removed)
+        if (npc.Presence == DaggerfallNpcPresence.Removed || _isWithParty(npc.DurableId)
+            || (_actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? ledgerEntry) && ledgerEntry?.Location?.Kind == ActorLocationKind.WithParty))
             return;
         npcs.SetPresence(npc.DurableId, DaggerfallNpcPresence.Hidden);
         DaggerfallSiteAppearance shown = appearance();

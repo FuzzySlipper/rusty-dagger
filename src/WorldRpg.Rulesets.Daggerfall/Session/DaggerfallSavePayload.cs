@@ -589,20 +589,40 @@ internal sealed record DaggerfallSavePayload(
         {
             foreach (DaggerfallStaticNpcPlacement staticNpc in inputs.StaticNpcs)
             {
-                long id = DaggerfallPeopleSlots.SeededSlotIdentity(activeSiteId, $"{inputs.ProfileKey.LogicalId}/{staticNpc.Id}");
+                long id = staticNpc.Appearance.FactionId > 0
+                    && definitions.People.TryGetIndividualByFaction(staticNpc.Appearance.FactionId, out DaggerfallCastIndividualDefinition? cast)
+                    && cast is not null
+                    ? DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id)
+                    : DaggerfallPeopleSlots.SeededSlotIdentity(activeSiteId, $"{inputs.ProfileKey.LogicalId}/{staticNpc.Id}");
+                if (!restoredLedgerView.IsHomeSlotSuppressed(id, inputs.ProfileKey))
+                    activeDeterministicIds.Add(id);
+            }
+            foreach (DaggerfallPopulationPlacement pop in inputs.Population)
+            {
+                long id = DaggerfallPeopleSlots.SeededSlotIdentity(activeSiteId, $"{inputs.ProfileKey.LogicalId}/{pop.Id}");
                 if (!restoredLedgerView.IsHomeSlotSuppressed(id, inputs.ProfileKey))
                     activeDeterministicIds.Add(id);
             }
         }
+        HashSet<long> inactiveDeterministicIds = [];
         foreach (ActorLedgerEntry entry in ActorLedger)
         {
             if (entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual) || entry.Origin.IsFixedPlacement)
                 continue;
             if (!DaggerfallPeopleSlots.IsDeterministicId(entry.DurableId))
                 throw new ArgumentException($"Saved deterministic actor {entry.DurableId} does not sit in the deterministic identity band.");
-            if (entry.Location is null && entry.Origin.SiteProfile?.Require() == inputs.ProfileKey
+            if (entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } detP })
+            {
+                if (detP.Require() != inputs.ProfileKey || activeLocationUnloaded)
+                    inactiveDeterministicIds.Add(entry.DurableId);
+                else
+                    activeDeterministicIds.Add(entry.DurableId);
+            }
+            else if (entry.Location is null && entry.Origin.SiteProfile?.Require() == inputs.ProfileKey
                 || entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } p } && p.Require() == inputs.ProfileKey)
+            {
                 activeDeterministicIds.Add(entry.DurableId);
+            }
         }
         // Dynamic actors are spawn-time registrations, not content placements: each one names
         // the definition it was spawned from, and a definition the selected content cannot
@@ -804,6 +824,26 @@ internal sealed record DaggerfallSavePayload(
             foreach (DaggerfallActorInventorySave inventory in delta.ActorInventories)
                 ValidateInventory(inventory.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Actor(inventory.EntityId), requireEquipment: true);
         }
+        foreach (ActorLedgerEntry entry in ActorLedger)
+        {
+            if (entry.Origin.IsFixedPlacement || entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual))
+                continue;
+            if (entry.Combat?.DetachedCorpse is { } detCorpse)
+            {
+                detCorpse.Validate();
+                if (!corpseActors.Add(detCorpse.ActorId))
+                    throw new ArgumentException($"Saved corpse actor {detCorpse.ActorId} appears in more than one active or inactive site.");
+                if (!containerIdentities.Add(detCorpse.ContainerId))
+                    throw new ArgumentException($"Saved inactive corpse container identity {detCorpse.ContainerId} appears more than once.");
+                RequireLiveCorpseContainer(savedLedger, detCorpse);
+                ValidateInventory(new DaggerfallInventorySave(detCorpse.Stacks, detCorpse.UniqueItems, []), definitions, uniqueItems, DaggerfallItemOwner.Corpse(detCorpse.ActorId), requireEquipment: false);
+            }
+            if (entry.Combat?.DetachedInventory is { } detInv)
+            {
+                detInv.Validate();
+                ValidateInventory(detInv.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Actor(detInv.EntityId), requireEquipment: true);
+            }
+        }
         if (allActors.Overlaps(inactiveAuthoredActorIds) || allActors.Overlaps(inactiveDynamicActorIds)
             || inactiveAuthoredActorIds.Overlaps(inactiveDynamicActorIds))
             throw new ArgumentException("Saved active and inactive site actors must not share durable identities.");
@@ -875,7 +915,7 @@ internal sealed record DaggerfallSavePayload(
             if (location?.Exterior?.Buildings.ContainsKey(building.Building) != true)
                 throw new ArgumentException($"Saved building discovery names an unavailable building '{building.Building}' at '{building.Site}'.");
         }
-        HashSet<long> combatants = [DaggerfallActorIdentity.PlayerEntityId, .. allActors, .. inactiveAuthoredActorIds, .. inactiveDynamicActorIds];
+        HashSet<long> combatants = [DaggerfallActorIdentity.PlayerEntityId, .. allActors, .. inactiveAuthoredActorIds, .. inactiveDynamicActorIds, .. inactiveDeterministicIds];
         foreach (DaggerfallCombatCooldownSave cooldown in CombatCooldowns)
             if (!combatants.Contains(cooldown.AttackerId))
                 throw new ArgumentException($"Saved attack cooldown refers to missing actor {cooldown.AttackerId}.");
@@ -902,6 +942,22 @@ internal sealed record DaggerfallSavePayload(
             foreach (var corpse in delta.Corpses)
                 AddQuestStacks(questStacks, DaggerfallItemOwner.Corpse(corpse.ActorId), corpse.Stacks);
         }
+        List<DaggerfallUniqueSave> detachedDeterministicUniques = [];
+        foreach (ActorLedgerEntry entry in ActorLedger)
+        {
+            if (entry.Origin.IsFixedPlacement || entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual))
+                continue;
+            if (entry.Combat?.DetachedInventory is { } detInv)
+            {
+                AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(detInv.EntityId), detInv.Inventory.Stacks);
+                detachedDeterministicUniques.AddRange(detInv.Inventory.UniqueItems);
+            }
+            if (entry.Combat?.DetachedCorpse is { } detCorpse)
+            {
+                AddQuestStacks(questStacks, DaggerfallItemOwner.Corpse(detCorpse.ActorId), detCorpse.Stacks);
+                detachedDeterministicUniques.AddRange(detCorpse.UniqueItems);
+            }
+        }
         foreach (var storage in Property.Storage)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Property(storage.ContainerId), storage.Inventory.Stacks);
         DaggerfallUniqueSave[] questUnique = [.. Inventory.UniqueItems, .. ActorInventories.SelectMany(value => value.Inventory.UniqueItems),
@@ -909,7 +965,7 @@ internal sealed record DaggerfallSavePayload(
             .. QuestCustody.SelectMany(value => value.Inventory.UniqueItems), .. (Wagon?.Inventory.UniqueItems ?? []),
             .. Merchants.SelectMany(value => value.Inventory.UniqueItems), .. Merchants.SelectMany(value => value.Custody.UniqueItems),
             .. Property.Storage.SelectMany(value => value.Inventory.UniqueItems), .. inactiveRuntimeDeltas.SelectMany(value => value.ActorInventories).SelectMany(value => value.Inventory.UniqueItems),
-            .. inactiveRuntimeDeltas.SelectMany(value => value.Corpses).SelectMany(value => value.UniqueItems)];
+            .. inactiveRuntimeDeltas.SelectMany(value => value.Corpses).SelectMany(value => value.UniqueItems), .. detachedDeterministicUniques];
         if (Quests.PendingOffer is { } pendingOffer && (pendingOffer.Quest.QuestorId is not long giver
             || !savedNpcs.TryGetValue(giver, out var offerNpc) || new DaggerfallNpcSite(offerNpc.Region, offerNpc.Location, offerNpc.Building, offerNpc.ProfileId) != pendingOffer.Site))
             throw new ArgumentException("Saved quest offer has no matching provider.");

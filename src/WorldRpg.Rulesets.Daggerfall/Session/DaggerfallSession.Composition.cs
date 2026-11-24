@@ -863,7 +863,7 @@ internal sealed partial class DaggerfallSession
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
                 State.ItemInstances, State.Npcs, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 authored, saved?.ActiveDynamicActors(inputs.ProfileKey) ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
-                _lootUi.CloseActor, _corpseLoot, State.ActorLedger);
+                _lootUi.CloseActor, _corpseLoot, State.ActorLedger, _persistence.RestoreDetachedActorState);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
             Crimes = new DaggerfallCrimes(State.Crime, State.Actors, State.Npcs, State.PlayerControl, _site, _roster.Definitions, definitions,
                 State.ItemInstances, State.SkillUses, State.RacialOverrides, _random, engine.Perception, () => _spatial.Session,
@@ -886,14 +886,19 @@ internal sealed partial class DaggerfallSession
                 State.Character, () => State.Progression.Level);
             Civilians = new DaggerfallCivilians(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance, _site.Require,
                 point => _exterior.ProfileToLocal(point), (npc, pose) => _roster.MaterializeCivilian(npc, pose), id => _roster.UnloadActor(id),
-                RetireActor, id => RetireDetachedActor(id, DaggerfallActorKinds.Civilian));
+                RetireActor, id => RetireDetachedActor(id, DaggerfallActorKinds.Civilian),
+                (npc, origin, baseline, pose) => _roster.MaterializeDeterministicCivilian(npc, origin, baseline, pose),
+                id => State.Quests.IsEscortWithParty(id)
+                    || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry)
+                        && entry?.Location?.Kind is ActorLocationKind.WithParty or ActorLocationKind.OffStage or ActorLocationKind.Removed));
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),
                 _site.Require, () => _time.Calendar.IsDay, () => State.RacialOverrides.Current?.SuppressPopulationSpawns == true,
                 id => _reactions.Holds(id), (actor, policy, step, deltaSeconds) => _ = _enemyBehavior.UpdateCivilian(actor, policy, step, deltaSeconds),
                 message => engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
-                    "daggerfall.people", "population", message, string.Empty)));
+                    "daggerfall.people", "population", message, string.Empty)),
+                State.ActorLedger, id => State.Quests.IsEscortWithParty(id));
             State.Quests.BindEscortOverlay((actorId, media, order) =>
             {
                 if (media is not null)
@@ -947,16 +952,14 @@ internal sealed partial class DaggerfallSession
                     if (State.Quests.IsEscortWithParty(actorId)) return;
                     DaggerfallWorldProfileKey? returnProfile = null;
                     ActorPoseOverride? returnPose = null;
+                    ActorLedgerEntry? priorEntry = null;
                     if (State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? existing) && existing is not null)
                     {
+                        priorEntry = existing;
                         returnProfile = existing.Origin.SiteProfile?.Require();
                         returnPose = existing.Pose;
-                        State.ActorLedger.Upsert(existing with
-                        {
-                            Location = existing.Location?.Kind == ActorLocationKind.WithParty ? ActorLocationOverride.OffStage : existing.Location,
-                            Social = existing.Social is { } s ? s with { EscortPortrait = null, EscortOrder = 0 } : null,
-                        });
                     }
+                    bool hasReturnTarget = false;
                     if (!State.Actors.TryGet(actorId, out _)
                         && State.Npcs.TryGet(actorId, out DaggerfallNpc? returningNpc)
                         && returningNpc.Presence != DaggerfallNpcPresence.Removed)
@@ -969,12 +972,33 @@ internal sealed partial class DaggerfallSession
                                 : null;
                         if (profileKey is { } pk && profilePoint is { } pt)
                         {
+                            hasReturnTarget = true;
+                            if (priorEntry is not null)
+                            {
+                                bool isHomeSite = priorEntry.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual
+                                    && priorEntry.Origin.SiteProfile?.Require() == pk;
+                                State.ActorLedger.Upsert(priorEntry with
+                                {
+                                    Location = isHomeSite ? null : ActorLocationOverride.AtSite(pk),
+                                    Social = priorEntry.Social is { } s ? s with { EscortPortrait = null, EscortOrder = 0 } : null,
+                                });
+                            }
                             State.Npcs.Place(actorId, pk, pt);
                             if (pk == _activeProfileKey && _exterior.ActiveLocationLoaded)
                             {
                                 if (returningNpc.Kind == DaggerfallNpcKind.Civilian)
                                 {
-                                    Civilians.Materialize(actorId, new ActorPose(_exterior.ProfileToLocal(pt), returnPose?.HeadingRadians ?? 0f));
+                                    if (DaggerfallPeopleSlots.IsDeterministicId(actorId) && priorEntry is not null)
+                                    {
+                                        WorldPoint baseline = _sites.Projection.Inputs.Population
+                                            .FirstOrDefault(p => StringComparer.Ordinal.Equals(p.Id, priorEntry.Origin.SlotKey))?.Position ?? pt;
+                                        Civilians.MaterializeDeterministic(actorId, priorEntry.Origin, baseline,
+                                            new ActorPose(_exterior.ProfileToLocal(pt), returnPose?.HeadingRadians ?? 0f));
+                                    }
+                                    else
+                                    {
+                                        Civilians.Materialize(actorId, new ActorPose(_exterior.ProfileToLocal(pt), returnPose?.HeadingRadians ?? 0f));
+                                    }
                                     State.Npcs.Bind(actorId, pk);
                                     State.Npcs.ReleasePose(actorId);
                                 }
@@ -984,6 +1008,14 @@ internal sealed partial class DaggerfallSession
                                 }
                             }
                         }
+                    }
+                    if (!hasReturnTarget && priorEntry is not null)
+                    {
+                        State.ActorLedger.Upsert(priorEntry with
+                        {
+                            Location = priorEntry.Location?.Kind == ActorLocationKind.WithParty ? ActorLocationOverride.OffStage : priorEntry.Location,
+                            Social = priorEntry.Social is { } s ? s with { EscortPortrait = null, EscortOrder = 0 } : null,
+                        });
                     }
                 }
             });
@@ -1301,7 +1333,7 @@ internal sealed partial class DaggerfallSession
                     throw new ArgumentException($"Custom spell '{spell.Key}' contains an unavailable compiled construction effect or combination.");
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
-            _roster.MaterializeStaticNpcs(inputs);
+            if (restore is null) _roster.MaterializeStaticNpcs(inputs);
             _sites.Load(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
             // Treasure and dungeon enemies are placed on the floor under their markers, so the site's
             // collision must be admitted first: before it, a ground probe meets nothing and they float.

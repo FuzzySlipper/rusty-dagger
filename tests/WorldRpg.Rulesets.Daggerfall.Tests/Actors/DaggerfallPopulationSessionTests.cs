@@ -147,23 +147,24 @@ public sealed class DaggerfallPopulationSessionTests
         DaggerfallSession session = fixture.Session;
         session.AdvanceElapsedTime(8 * 60 * 60);
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
-        DaggerfallNpcSave savedNpcs = saved.RestoredNpcs();
         DaggerfallWorldProfileKey activeKey = saved.Site.ActiveProfile!.Require();
-        Assert.Contains(savedNpcs.Entries, entry => entry.Presence == (int)DaggerfallNpcPresence.Active);
+        // Untouched deterministic source population walkers write zero ActorLedger / ActorInventories bytes.
+        Assert.Empty(saved.ActorLedger);
+        Assert.Empty(saved.ActorInventories);
 
         // Civilians are projected only after the save, its effects and its residency are restored:
-        // the restored registry, identities and presences are exactly the saved ones.
+        // deterministic admission restores the exact same registry identities, appearances, and presences.
         (EngineContextFake restoredEngine, _) = fixture.CreateEngine();
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, session.CaptureSave());
         DaggerfallSavePayload again = DaggerfallSavePayload.Read(restored.CaptureSave());
-        DaggerfallNpcSave againNpcs = again.RestoredNpcs();
-        Assert.Equal(savedNpcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)),
-            againNpcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)));
+        Assert.Empty(again.ActorLedger);
+        Assert.Equal(session.State.Npcs.All.OrderBy(n => n.DurableId).Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)),
+            restored.State.Npcs.All.OrderBy(n => n.DurableId).Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)));
         Assert.Equal(saved.ActiveDynamicActors(activeKey).Select(actor => actor.EntityId),
             again.ActiveDynamicActors(activeKey).Select(actor => actor.EntityId));
         // Each townsperson comes back as who they were, so they wear the same townsperson art: their town's race, their gender and seed.
-        Assert.Equal(savedNpcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)),
-            againNpcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)));
+        Assert.Equal(session.State.Npcs.All.OrderBy(n => n.DurableId).Select(entry => (entry.DurableId, entry.Appearance.Race, entry.Appearance.Gender, entry.Appearance.NameSeed)),
+            restored.State.Npcs.All.OrderBy(n => n.DurableId).Select(entry => (entry.DurableId, entry.Appearance.Race, entry.Appearance.Gender, entry.Appearance.NameSeed)));
         long[] townsfolk = [.. session.State.Npcs.All.Where(DaggerfallCivilians.IsSourcePopulation).Select(npc => npc.DurableId)];
         Assert.NotEmpty(townsfolk);
         Assert.All(townsfolk, id => Assert.NotNull(session.Population.Townsperson(id)));
@@ -215,7 +216,7 @@ public sealed class DaggerfallPopulationSessionTests
             npc => npc.StableKey == "population/source/0/0" && npc.Profile == resident.ProfileKey);
         long residentId = residentNpc.DurableId;
         Assert.True(session.State.Actors.TryGet(residentId, out ActorState? admitted));
-        WorldPoint authoredPose = new(1F, 1F, 1F);
+        WorldPoint authoredPose = new(2F, 1F, 3F);
         // The live actor's Transform is the only pose owner; the registry keeps identity and binding.
         Assert.Null(residentNpc.X);
         admitted!.ApplyPose(new ActorPose(session.Exterior.ProfileToLocal(authoredPose), admitted.HeadingYawRadians));

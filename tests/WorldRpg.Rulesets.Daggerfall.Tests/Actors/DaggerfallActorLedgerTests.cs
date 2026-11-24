@@ -5,6 +5,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -184,6 +185,161 @@ public sealed class DaggerfallActorLedgerTests
     public void Untouched_populated_site_writes_zero_ledger_entries_and_self_prunes_and_suppresses_relocated_seeded_and_cast_actors()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallCastIndividualDefinition cast = definitions.People.Individuals.Values.First();
+        DaggerfallSiteProfile exteriorTemplate = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        // Real populated exterior town (Charing source walkers) + an authored CastIndividual placement admitted
+        // automatically by production MaterializeStaticNpcs via its Individual FactionId.
+        DaggerfallSiteProfile homeTown = StaticNpcAdmissionTests.StaticProviderSite(exteriorTemplate, factionId: cast.FactionId);
+        DaggerfallSiteProfile otherTown = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))));
+        DaggerfallSiteProfiles profiles = new([homeTown, otherTown]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, homeTown);
+        PopulateContent(content, otherTown);
+        SpatialFake spatial = SpatialFake.Create(homeTown.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, homeTown, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        // Advance into daytime so exterior town walkers are admitted via SourcePopulation.Reconcile.
+        session.AdvanceElapsedTime(8 * 60 * 60);
+
+        DaggerfallNpc[] walkers = [.. session.State.Npcs.All.Where(DaggerfallCivilians.IsSourcePopulation)];
+        Assert.NotEmpty(walkers);
+        Assert.All(walkers, walker => Assert.True(DaggerfallPeopleSlots.IsDeterministicId(walker.DurableId)));
+        DaggerfallNpc walkerNpc = walkers[0];
+        long walkerId = walkerNpc.DurableId;
+        Assert.True(session.State.Actors.TryGet(walkerId, out ActorState? walkerLive));
+        Assert.Equal(ActorOriginKind.SeededSlot, walkerLive!.Actor.Get<ActorOriginComponent>().Origin.Kind);
+
+        // CastIndividual was admitted automatically by MaterializeStaticNpcs (no direct test-only call).
+        long castId = DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
+        Assert.True(session.State.Actors.TryGet(castId, out ActorState? castLive));
+        Assert.Equal(ActorOriginKind.CastIndividual, castLive!.Actor.Get<ActorOriginComponent>().Origin.Kind);
+        Assert.Equal(cast.Name, session.State.Npcs.Require(castId).DisplayName);
+
+        // Untouched populated town (walkers + cast individual) saves 0 ledger entries and 0 actor inventory entries.
+        DaggerfallSavePayload untouched = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.Empty(untouched.ActorLedger);
+        Assert.Empty(untouched.ActorInventories);
+
+        // R11015-7: Move the CastIndividual, SAVE, RELOAD, then reset back to authored baseline pose/heading,
+        // SAVE again, and RELOAD — must self-prune to 0 ledger entries without resurrecting the old moved pose.
+        WorldPoint baselineLocal = castLive.Position;
+        WorldPoint movedLocal = new(baselineLocal.X + 3f, baselineLocal.Y, baselineLocal.Z + 1f);
+        castLive.ApplyPose(new ActorPose(movedLocal, 0.5f));
+        RulesetSavePayload movedSaveBytes = session.CaptureSave();
+        DaggerfallSavePayload moved = DaggerfallSavePayload.Read(movedSaveBytes);
+        ActorLedgerEntry sparseMoved = Assert.Single(moved.ActorLedger, entry => entry.DurableId == castId);
+        Assert.Equal(ActorOriginKind.CastIndividual, sparseMoved.Origin.Kind);
+        Assert.NotNull(sparseMoved.Pose);
+        Assert.Null(sparseMoved.Vitals);
+
+        using (DaggerfallSession reloadedMoved = DaggerfallSession.Restore(engine.Context, composition, movedSaveBytes))
+        {
+            ActorState reloadedCast = reloadedMoved.State.Actors.Get(castId);
+            Assert.Equal(movedLocal.X, reloadedCast.Position.X, 3);
+            Assert.Equal(movedLocal.Z, reloadedCast.Position.Z, 3);
+
+            // Reset back to authored baseline pose & heading after reload.
+            reloadedCast.ApplyPose(new ActorPose(baselineLocal, 0f));
+            RulesetSavePayload prunedSaveBytes = reloadedMoved.CaptureSave();
+            DaggerfallSavePayload pruned = DaggerfallSavePayload.Read(prunedSaveBytes);
+            Assert.Empty(pruned.ActorLedger);
+
+            using DaggerfallSession reloadedPruned = DaggerfallSession.Restore(engine.Context, composition, prunedSaveBytes);
+            ActorState restoredBaselineCast = reloadedPruned.State.Actors.Get(castId);
+            Assert.Equal(baselineLocal.X, restoredBaselineCast.Position.X, 3);
+            Assert.Equal(baselineLocal.Z, restoredBaselineCast.Position.Z, 3);
+        }
+
+        // Relocate the CastIndividual to otherTown via ActorLedger and save:
+        // Step 1 must suppress home-slot re-admission at homeTown, and Step 2 must materialize it at otherTown.
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            castId,
+            ActorOrigin.Cast(cast.Id),
+            Pose: new ActorPoseOverride(4f, 0f, 5f, 0f),
+            Social: DaggerfallSessionPersistence.ToSocialDiff(session.State.Npcs.Require(castId)),
+            Location: ActorLocationOverride.AtSite(otherTown.ProfileKey)));
+        session.Roster.UnloadActor(castId);
+        RulesetSavePayload relocatedSave = session.CaptureSave();
+
+        using DaggerfallSession reloadedAtHome = DaggerfallSession.Restore(engine.Context, composition, relocatedSave);
+        Assert.False(reloadedAtHome.State.Actors.TryGet(castId, out _));
+        Assert.True(reloadedAtHome.TryTransitionTo(otherTown.ProfileKey));
+        Assert.True(reloadedAtHome.State.Actors.TryGet(castId, out ActorState? relocatedLive));
+        Assert.Equal(new WorldPoint(4f, 0f, 5f), relocatedLive!.Position);
+    }
+
+    [Fact]
+    public void Source_civilian_HUD_escort_is_not_rematerialized_by_population_reconcile_across_save_and_reload()
+    {
+        DaggerfallDefinitions definitions = CivilianEscortQuestDefinitions();
+        DaggerfallSiteProfile town = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, town);
+        SpatialFake spatial = SpatialFake.Create(town.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, town, DaggerfallTuning.Defaults)
+        {
+            Profiles = new DaggerfallSiteProfiles([town]),
+        };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc walker = session.State.Npcs.All.First(DaggerfallCivilians.IsSourcePopulation);
+        long escortId = walker.DurableId;
+        Assert.True(DaggerfallPeopleSlots.IsDeterministicId(escortId));
+        Assert.True(session.State.Actors.TryGet(escortId, out ActorState? liveWalker));
+        WorldPoint startPos = liveWalker!.Position;
+
+        var started = session.State.Quests.Start(new(
+            "escort-civ", "escort-civ.txt", "escort-civ", DaggerfallQuestLifecycle.Active, null,
+            [new("vip", DaggerfallQuestResourceBinding.Actors(escortId))
+            {
+                SelectedPerson = new(walker.Appearance.FactionId, walker.Appearance.Race, walker.Appearance.Gender,
+                    0, null, walker.Appearance.NameSeed, walker.DisplayName ?? walker.Role, false, null, escortId)
+                {
+                    Appearance = walker.Appearance,
+                },
+            }], []));
+
+        // AddFace moves the source civilian WithParty and unloads their world actor.
+        TriggerTask(session, started.InstanceId, "join");
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.True(session.State.Quests.IsEscortWithParty(escortId));
+        Assert.False(session.State.Actors.TryGet(escortId, out _));
+
+        // Population reconciliation must NOT rematerialize a WithParty source civilian.
+        session.Population.Reconcile();
+        Assert.False(session.State.Actors.TryGet(escortId, out _));
+        Assert.DoesNotContain(session.QueryNearby(startPos, radius: 1000d), hit => hit.Actor.DurableId == escortId);
+
+        // Save and reload while WithParty: ActorLedger preserves WithParty and Population.Reconcile still suppresses it.
+        RulesetSavePayload saveBytes = session.CaptureSave();
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(saveBytes);
+        ActorLedgerEntry savedEntry = Assert.Single(saved.ActorLedger, entry => entry.DurableId == escortId);
+        Assert.Equal(ActorLocationKind.WithParty, savedEntry.Location?.Kind);
+
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, saveBytes);
+        restored.Population.Reconcile();
+        Assert.True(restored.State.Quests.IsEscortWithParty(escortId));
+        Assert.False(restored.State.Actors.TryGet(escortId, out _));
+        Assert.DoesNotContain(restored.QueryNearby(startPos, radius: 1000d), hit => hit.Actor.DurableId == escortId);
+
+        // Delivery (DropFace) rematerializes exactly one actor with the same deterministic ID.
+        TriggerTask(restored, started.InstanceId, "deliver");
+        restored.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.False(restored.State.Quests.IsEscortWithParty(escortId));
+        ActorState delivered = Assert.Single(restored.State.Actors.All, actor => actor.DurableId == escortId);
+        Assert.Contains(restored.QueryNearby(delivered.Position, radius: 5d), hit => hit.Actor.DurableId == escortId);
+    }
+
+    [Fact]
+    public void Non_default_deterministic_NPC_inventory_round_trips_across_save_reload_and_site_transitions()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile homeTown = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))));
         DaggerfallSiteProfile otherTown = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))));
         DaggerfallSiteProfiles profiles = new([homeTown, otherTown]);
@@ -195,66 +351,42 @@ public sealed class DaggerfallActorLedgerTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallSessionComposition composition = new(definitions, homeTown, DaggerfallTuning.Defaults) { Profiles = profiles };
 
-        long staticId;
-        WorldPoint baselinePos;
-        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition))
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        DaggerfallNpc npc = Assert.Single(session.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Static);
+        long staticId = npc.DurableId;
+        Assert.True(DaggerfallPeopleSlots.IsDeterministicId(staticId));
+
+        // Grant a non-default stack item to the deterministic static NPC's inventory.
+        InventoryStackId testStackId = InventoryStackId.Parse("test.static.gold");
+        DaggerfallItemDefinition goldDef = definitions.RequireItem(new DaggerfallItemId("gold-piece"));
+        MechanicsInventoryCoordinator npcInventory = session.State.ActorInventories.InventoryFor(staticId)!;
+        npcInventory.Grant(new InventoryGrant(new InventoryItemId(goldDef.Id.Value), testStackId, 42));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(staticId),
+            new InventoryStack(testStackId, ItemDefinitionId.Parse(goldDef.Id.Value), 42), goldDef);
+
+        // Path A: Direct save -> reload must materialize the deterministic owner BEFORE applying ActorInventories.
+        RulesetSavePayload directSave = session.CaptureSave();
+        Assert.Contains(DaggerfallSavePayload.Read(directSave).ActorInventories, inv => inv.EntityId == staticId);
+        using (DaggerfallSession directRestored = DaggerfallSession.Restore(engine.Context, composition, directSave))
         {
-            DaggerfallNpc npc = Assert.Single(session.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Static);
-            staticId = npc.DurableId;
-            Assert.True(DaggerfallPeopleSlots.IsDeterministicId(staticId));
-            Assert.True(session.State.Actors.TryGet(staticId, out ActorState? live));
-            baselinePos = live!.Position;
-
-            // Untouched populated town saves 0 ledger entries and 0 actor inventory entries (0 actor delta bytes).
-            DaggerfallSavePayload untouched = DaggerfallSavePayload.Read(session.CaptureSave());
-            Assert.Empty(untouched.ActorLedger);
-            Assert.Empty(untouched.ActorInventories);
-
-            // Moving the static NPC creates one sparse SeededSlot entry with ONLY Pose (no Vitals).
-            WorldPoint movedPos = new(baselinePos.X + 3f, baselinePos.Y, baselinePos.Z + 1f);
-            live.ApplyPose(new ActorPose(movedPos, 0.5f));
-            DaggerfallSavePayload moved = DaggerfallSavePayload.Read(session.CaptureSave());
-            ActorLedgerEntry sparseMoved = Assert.Single(moved.ActorLedger, entry => entry.DurableId == staticId);
-            Assert.Equal(ActorOriginKind.SeededSlot, sparseMoved.Origin.Kind);
-            Assert.NotNull(sparseMoved.Pose);
-            Assert.Null(sparseMoved.Vitals);
-
-            // Restoring back to baseline self-prunes ActorLedger back to 0 entries (0 bytes).
-            live.ApplyPose(new ActorPose(baselinePos, 0f));
-            DaggerfallSavePayload pruned = DaggerfallSavePayload.Read(session.CaptureSave());
-            Assert.Empty(pruned.ActorLedger);
-
-            // Relocate the SeededSlot NPC to otherTown via ActorLedger and save:
-            // Step 1 must suppress home-slot re-admission at homeTown, and Step 2 must materialize it at otherTown.
-            ActorOrigin origin = live.Actor.Get<ActorOriginComponent>().Origin;
-            session.State.ActorLedger.Upsert(new ActorLedgerEntry(
-                staticId,
-                origin,
-                Pose: new ActorPoseOverride(4f, 0f, 5f, 0f),
-                Social: DaggerfallSessionPersistence.ToSocialDiff(npc),
-                Location: ActorLocationOverride.AtSite(otherTown.ProfileKey)));
-            session.Roster.UnloadActor(staticId);
-            RulesetSavePayload relocatedSave = session.CaptureSave();
-
-            using DaggerfallSession reloadedAtHome = DaggerfallSession.Restore(engine.Context, composition, relocatedSave);
-            Assert.False(reloadedAtHome.State.Actors.TryGet(staticId, out _));
-            Assert.True(reloadedAtHome.TryTransitionTo(otherTown.ProfileKey));
-            Assert.True(reloadedAtHome.State.Actors.TryGet(staticId, out ActorState? relocatedLive));
-            Assert.Equal(new WorldPoint(4f, 0f, 5f), relocatedLive!.Position);
-
-            // CastIndividual admission + WithParty home-slot suppression.
-            string castId = definitions.People.Individuals.Keys.First();
-            long? castActorId = reloadedAtHome.Roster.MaterializeCastIndividual(castId, otherTown, new WorldPoint(2f, 0f, 2f));
-            Assert.NotNull(castActorId);
-            Assert.True(reloadedAtHome.State.Actors.TryGet(castActorId!.Value, out ActorState? castLive));
-            Assert.Equal(ActorOriginKind.CastIndividual, castLive!.Actor.Get<ActorOriginComponent>().Origin.Kind);
-            reloadedAtHome.State.ActorLedger.Upsert(new ActorLedgerEntry(
-                castActorId.Value,
-                ActorOrigin.Cast(castId),
-                Location: ActorLocationOverride.WithParty(ActorPartyRole.Escort)));
-            reloadedAtHome.Roster.UnloadActor(castActorId.Value);
-            Assert.Null(reloadedAtHome.Roster.MaterializeCastIndividual(castId, otherTown, new WorldPoint(2f, 0f, 2f)));
+            InventoryStack restoredStack = Assert.Single(directRestored.State.ActorInventories.InventoryFor(staticId)!.Read().Stacks);
+            Assert.Equal(testStackId, restoredStack.Id);
+            Assert.Equal(42UL, restoredStack.Quantity);
         }
+
+        // Path B: Leave site -> save while away -> reload while away -> return to homeTown -> inventory preserved!
+        Assert.True(session.TryTransitionTo(otherTown.ProfileKey));
+        Assert.False(session.State.Actors.TryGet(staticId, out _));
+        RulesetSavePayload awaySave = session.CaptureSave();
+        ActorLedgerEntry awayEntry = Assert.Single(DaggerfallSavePayload.Read(awaySave).ActorLedger, entry => entry.DurableId == staticId);
+        Assert.NotNull(awayEntry.Combat?.DetachedInventory);
+
+        using DaggerfallSession awayRestored = DaggerfallSession.Restore(engine.Context, composition, awaySave);
+        Assert.True(awayRestored.TryTransitionTo(homeTown.ProfileKey));
+        Assert.True(awayRestored.State.Actors.TryGet(staticId, out _));
+        InventoryStack returnedStack = Assert.Single(awayRestored.State.ActorInventories.InventoryFor(staticId)!.Read().Stacks);
+        Assert.Equal(testStackId, returnedStack.Id);
+        Assert.Equal(42UL, returnedStack.Quantity);
     }
 
     [Fact]
@@ -382,6 +514,25 @@ public sealed class DaggerfallActorLedgerTests
                 }
                 : instance).ToArray(),
         });
+    }
+
+    private static DaggerfallDefinitions CivilianEscortQuestDefinitions()
+    {
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {
+              "name": "escort-civ",
+              "displayName": "",
+              "sourceFile": "escort-civ.txt",
+              "messages": [],
+              "blocks": [
+                { "kind": "person", "firstLine": 1, "lines": ["Person _vip_ group Questor"] },
+                { "kind": "task", "firstLine": 10, "lines": ["_join_ task:", "add _vip_ face"] },
+                { "kind": "task", "firstLine": 20, "lines": ["_deliver_ task:", "drop _vip_ face"] }
+              ]
+            }
+            """)!);
+        return TestPayload.WithQuests(root);
     }
 
     private static DaggerfallDefinitions EscortQuestDefinitions()
