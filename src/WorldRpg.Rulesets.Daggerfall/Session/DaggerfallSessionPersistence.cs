@@ -471,11 +471,6 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             || (origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile);
 
         WorldPoint currentPos = origin.IsFixedPlacement ? actor.Position : localToProfile(actor.Position);
-        ActorPoseOverride? pose = !relocated && originComp is not null
-            && PoseEqual(currentPos, actor.HeadingYawRadians, originComp.BaselinePose, originComp.BaselineHeading)
-            ? null
-            : new ActorPoseOverride(currentPos.X, currentPos.Y, currentPos.Z, actor.HeadingYawRadians);
-
         DaggerfallEnemyPerceptionMemory memory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
         string? wabbajack = DaggerfallWabbajack.DefinitionOf(actor.Actor);
         string? teamOverride = actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction) ? faction.TeamOverride : null;
@@ -525,6 +520,13 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         }
 
         inventoryIsDefault = IsDefaultActorInventory(actor.DurableId, origin, capturedInventory);
+        bool hasNonPoseDelta = vitals is not null || combat is not null || social is not null || relocated || !inventoryIsDefault;
+        bool idleWanderOnly = !hasNonPoseDelta && originComp is not null
+            && originComp.MatchesIdleWanderPose(currentPos, actor.HeadingYawRadians);
+        ActorPoseOverride? pose = (!relocated && originComp is not null
+            && (PoseEqual(currentPos, actor.HeadingYawRadians, originComp.BaselinePose, originComp.BaselineHeading) || idleWanderOnly))
+            ? null
+            : new ActorPoseOverride(currentPos.X, currentPos.Y, currentPos.Z, actor.HeadingYawRadians);
         return new ActorLedgerEntry(actor.DurableId, origin, vitals, pose, combat, social, location);
     }
 

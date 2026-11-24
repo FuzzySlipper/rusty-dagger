@@ -93,6 +93,25 @@ public sealed class GuardContinuitySessionTests
         long[] untouchedWalkers = f.UntouchedWalkerIds;
         string? originalName = s.State.Npcs.Require(guardId).DisplayName;
 
+        // R11014-1: Simulate pre-promotion street wandering for BOTH the guard and an untouched walker
+        // (recording idle wander poses the same way DaggerfallSourcePopulation.Step does).
+        // The untouched walker must still self-prune to zero bytes, while the promoted guard must
+        // preserve their exact wandered position across reload and town return even if saved immediately
+        // after promotion before any pursuit movement occurs.
+        ActorState guardBeforeWander = s.State.Actors.Get(guardId);
+        WorldPoint authoredGuardLocal = guardBeforeWander.Position;
+        WorldPoint wanderedGuardLocal = new(authoredGuardLocal.X + 1.25f, authoredGuardLocal.Y, authoredGuardLocal.Z - 0.75f);
+        float wanderedGuardHeading = 1.1f;
+        guardBeforeWander.ApplyPose(new ActorPose(wanderedGuardLocal, wanderedGuardHeading));
+        guardBeforeWander.Actor.Get<ActorOriginComponent>().RecordIdleWanderPose(
+            WorldPoint.From(s.Exterior.LocalToProfile(wanderedGuardLocal.ToVector())), wanderedGuardHeading);
+
+        ActorState untouchedWalker = s.State.Actors.Get(untouchedWalkers[0]);
+        WorldPoint wanderedCivilianLocal = new(untouchedWalker.Position.X + 2.5f, untouchedWalker.Position.Y, untouchedWalker.Position.Z + 1.5f);
+        untouchedWalker.ApplyPose(new ActorPose(wanderedCivilianLocal, 0.4f));
+        untouchedWalker.Actor.Get<ActorOriginComponent>().RecordIdleWanderPose(
+            WorldPoint.From(s.Exterior.LocalToProfile(wanderedCivilianLocal.ToVector())), 0.4f);
+
         // Speak to guard, commit crime in sight, promote, resist arrest to enter mid-pursuit, and wound them.
         f.TalkTo(guardId);
         f.CanSee = id => id == guardId;
@@ -108,13 +127,17 @@ public sealed class GuardContinuitySessionTests
         health.SetCurrent(woundedHealth);
         int equippedBeforeSave = s.State.ActorInventories.EquipmentFor(guardId).Read().Assignments.Count;
         Assert.True(equippedBeforeSave > 0);
+        WorldPoint expectedPursuitProfile = WorldPoint.From(s.Exterior.LocalToProfile(pursuing.Position.ToVector()));
 
-        // Save mid-pursuit: ONLY the sparse diff for the promoted guard is saved — zero untouched town walkers!
+        // Save mid-pursuit (before any post-promotion movement): ONLY the sparse diff for the promoted guard is saved — zero untouched town walkers!
         RulesetSavePayload midPursuitSaveBytes = s.CaptureSave();
         DaggerfallSavePayload midPursuitSave = DaggerfallSavePayload.Read(midPursuitSaveBytes);
         ActorLedgerEntry sparseGuard = Assert.Single(midPursuitSave.ActorLedger);
         Assert.Equal(guardId, sparseGuard.DurableId);
         Assert.Equal(ActorOriginKind.SeededSlot, sparseGuard.Origin.Kind);
+        Assert.NotNull(sparseGuard.Pose);
+        Assert.Equal(expectedPursuitProfile.X, sparseGuard.Pose!.X, 3);
+        Assert.Equal(expectedPursuitProfile.Z, sparseGuard.Pose.Z, 3);
         Assert.Equal(ArchetypeProfile.Guard.Id, sparseGuard.Combat?.PromotedArchetype);
         Assert.True(sparseGuard.Combat?.ForcedHostile);
         Assert.True(sparseGuard.Social?.Met);
@@ -125,12 +148,15 @@ public sealed class GuardContinuitySessionTests
         foreach (long walkerId in untouchedWalkers)
             Assert.DoesNotContain(midPursuitSave.ActorInventories, inv => inv.EntityId == walkerId);
 
-        // Reload mid-pursuit: guard resolves ONCE as the watchman with witness memory, wounds, and watch gear.
+        // Reload mid-pursuit: guard resolves ONCE as the watchman at the exact wandered pursuit pose (never snapped back to authored slot).
         using DaggerfallSession reloaded = f.Restore(midPursuitSaveBytes);
         reloaded.Population.Reconcile();
         Assert.Single(reloaded.State.Actors.All, a => a.DurableId == guardId);
         Assert.Single(reloaded.State.Npcs.All, n => n.StableKey == Fixture.GateGuardSlotKey);
         ActorState reloadedGuard = reloaded.State.Actors.Get(guardId);
+        WorldPoint expectedReloadedLocal = reloaded.Exterior.ProfileToLocal(expectedPursuitProfile);
+        Assert.Equal(expectedReloadedLocal.X, reloadedGuard.Position.X, 3);
+        Assert.Equal(expectedReloadedLocal.Z, reloadedGuard.Position.Z, 3);
         Assert.Equal(originalName, reloaded.State.Npcs.Require(guardId).DisplayName);
         Assert.Equal(146, reloaded.DefinitionsByActor[guardId].MobileId);
         Assert.True(reloadedGuard.Actor.Get<ActorHarmPolicy>().IsCombatant);
@@ -151,6 +177,9 @@ public sealed class GuardContinuitySessionTests
         Assert.Equal(guardId, detachedGuard.DurableId);
         Assert.Equal(ActorLocationKind.AtSite, detachedGuard.Location?.Kind);
         Assert.True(detachedGuard.Location?.Detached);
+        Assert.NotNull(detachedGuard.Pose);
+        Assert.Equal(expectedPursuitProfile.X, detachedGuard.Pose!.X, 3);
+        Assert.Equal(expectedPursuitProfile.Z, detachedGuard.Pose.Z, 3);
         Assert.Equal(ArchetypeProfile.Guard.Id, detachedGuard.Combat?.PromotedArchetype);
         Assert.NotNull(detachedGuard.Combat?.DetachedInventory);
         Assert.True(detachedGuard.Social?.Met);
@@ -161,13 +190,16 @@ public sealed class GuardContinuitySessionTests
         awayReloaded.Population.Reconcile();
         f.Step(awayReloaded);
 
-        // Guard resolves ONCE on return — never both a civilian and a watchman — with full continuity and rearrest.
+        // Guard resolves ONCE on return — never both a civilian and a watchman — at their exact persisted pose with full continuity and rearrest.
         Assert.Single(awayReloaded.State.Actors.All, a => a.DurableId == guardId);
         Assert.Single(awayReloaded.State.Npcs.All, n => n.StableKey == Fixture.GateGuardSlotKey);
         Assert.Single(awayReloaded.State.Crime.LegalResponses.Single().Guards, id => id == guardId);
         Assert.Equal("arrest", awayReloaded.Law.View?.Phase);
 
         ActorState returnedGuard = awayReloaded.State.Actors.Get(guardId);
+        WorldPoint expectedReturnedLocal = awayReloaded.Exterior.ProfileToLocal(expectedPursuitProfile);
+        Assert.Equal(expectedReturnedLocal.X, returnedGuard.Position.X, 3);
+        Assert.Equal(expectedReturnedLocal.Z, returnedGuard.Position.Z, 3);
         Assert.Equal(originalName, awayReloaded.State.Npcs.Require(guardId).DisplayName);
         Assert.Equal(146, awayReloaded.DefinitionsByActor[guardId].MobileId);
         Assert.True(returnedGuard.Actor.Get<ActorHarmPolicy>().IsCombatant);

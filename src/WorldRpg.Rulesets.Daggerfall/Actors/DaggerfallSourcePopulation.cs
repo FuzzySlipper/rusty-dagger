@@ -253,7 +253,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             if (actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
                 && !originComp.IsRelocated)
             {
-                originComp.SetBaselinePose(WorldPoint.From(localToProfile(actor.Position.ToVector())), actor.HeadingYawRadians);
+                originComp.RecordIdleWanderPose(WorldPoint.From(localToProfile(actor.Position.ToVector())), actor.HeadingYawRadians);
             }
         }
     }

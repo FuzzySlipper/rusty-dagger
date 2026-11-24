@@ -21,18 +21,31 @@ internal sealed class ActorOriginComponent(
     DaggerfallNpc? baselineNpc = null,
     bool isRelocated = false)
 {
+    private WorldPoint? _lastWanderedPose;
+    private float _lastWanderedHeading;
+
     internal ActorOrigin Origin { get; } = origin ?? throw new ArgumentNullException(nameof(origin));
     internal WorldPoint BaselinePose { get; private set; } = baselinePose;
-    internal float BaselineHeading { get; private set; } = baselineHeading;
+    internal float BaselineHeading { get; } = baselineHeading;
     internal DaggerfallStatsSave? BaselineStats { get; } = baselineStats;
     internal DaggerfallNpc? BaselineNpc { get; } = baselineNpc;
     internal bool IsRelocated { get; } = isRelocated;
 
-    internal void SetBaselinePose(WorldPoint pose, float? heading = null)
+    internal void SetBaselinePose(WorldPoint pose) => BaselinePose = pose;
+
+    /// <summary>Records an idle street-wander pose without overwriting the authored <see cref="BaselinePose"/>.</summary>
+    internal void RecordIdleWanderPose(WorldPoint profilePose, float heading)
     {
-        BaselinePose = pose;
-        if (heading is float h) BaselineHeading = h;
+        _lastWanderedPose = profilePose;
+        _lastWanderedHeading = heading;
     }
+
+    internal bool MatchesIdleWanderPose(WorldPoint profilePose, float heading) =>
+        _lastWanderedPose is { } wandered
+        && MathF.Abs(profilePose.X - wandered.X) < 1e-4f
+        && MathF.Abs(profilePose.Y - wandered.Y) < 1e-4f
+        && MathF.Abs(profilePose.Z - wandered.Z) < 1e-4f
+        && MathF.Abs(heading - _lastWanderedHeading) < 1e-4f;
 }
 
 /// <summary>How an actor in <see cref="DaggerfallActorLedger"/> came to exist.</summary>
