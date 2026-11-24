@@ -9,7 +9,9 @@ internal sealed class DaggerfallNames(DaggerfallDefinitions definitions, IRandom
     /// <summary>A person's name from how they look and the region they belong to.</summary>
     internal string NpcName(DaggerfallNpcAppearance appearance, int region)
     {
-        if (definitions.Factions.Factions.GetValueOrDefault(appearance.FactionId) is { Type: 0 } individual)
+        // Classic StaticNPC.GetDisplayName takes the faction's own name only for Individual (type 4)
+        // factions; type 0 (Daedra) sits on nine Sentinel/Wayrest commoner flats by source typo.
+        if (definitions.Factions.Factions.GetValueOrDefault(appearance.FactionId) is { Type: 4 } individual)
             return individual.Name;
         if (!definitions.BuildingNames.TryGetNameBank(region, out int bank))
             throw new NotSupportedException($"NPC region {region} has no published name bank.");
