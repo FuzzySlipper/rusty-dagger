@@ -253,22 +253,64 @@ public sealed class DaggerfallActorLedgerTests
             Assert.Equal(baselineLocal.Z, restoredBaselineCast.Position.Z, 3);
         }
 
-        // Relocate the CastIndividual to otherTown via ActorLedger and save:
-        // Step 1 must suppress home-slot re-admission at homeTown, and Step 2 must materialize it at otherTown.
+        // R11015-9: Relocate BOTH the CastIndividual AND a SeededSlot walker to otherTown via ActorLedger:
+        // Step 1 must suppress home-slot re-admission at homeTown, Step 2 must materialize both at otherTown,
+        // AND saving + reloading at otherTown must retain both identities, exact destination poses, and home suppression!
+        WorldPoint castDestPose = new(4f, 0f, 5f);
+        WorldPoint seededDestPose = new(6f, 0f, 7f);
+        ActorOrigin castOrigin = castLive.Actor.Get<ActorOriginComponent>().Origin;
+        ActorOrigin walkerOrigin = walkerLive.Actor.Get<ActorOriginComponent>().Origin;
         session.State.ActorLedger.Upsert(new ActorLedgerEntry(
             castId,
-            ActorOrigin.Cast(cast.Id),
-            Pose: new ActorPoseOverride(4f, 0f, 5f, 0f),
+            castOrigin,
+            Pose: new ActorPoseOverride(castDestPose.X, castDestPose.Y, castDestPose.Z, 0f),
             Social: DaggerfallSessionPersistence.ToSocialDiff(session.State.Npcs.Require(castId)),
             Location: ActorLocationOverride.AtSite(otherTown.ProfileKey)));
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            walkerId,
+            walkerOrigin,
+            Pose: new ActorPoseOverride(seededDestPose.X, seededDestPose.Y, seededDestPose.Z, 0f),
+            Social: DaggerfallSessionPersistence.ToSocialDiff(walkerNpc),
+            Location: ActorLocationOverride.AtSite(otherTown.ProfileKey)));
         session.Roster.UnloadActor(castId);
+        session.Roster.UnloadActor(walkerId);
         RulesetSavePayload relocatedSave = session.CaptureSave();
 
         using DaggerfallSession reloadedAtHome = DaggerfallSession.Restore(engine.Context, composition, relocatedSave);
+        reloadedAtHome.Population.Reconcile();
         Assert.False(reloadedAtHome.State.Actors.TryGet(castId, out _));
+        Assert.False(reloadedAtHome.State.Actors.TryGet(walkerId, out _));
+
+        // Arrive at otherTown: Step 2 admits both at their exact destination poses.
         Assert.True(reloadedAtHome.TryTransitionTo(otherTown.ProfileKey));
-        Assert.True(reloadedAtHome.State.Actors.TryGet(castId, out ActorState? relocatedLive));
-        Assert.Equal(new WorldPoint(4f, 0f, 5f), relocatedLive!.Position);
+        Assert.True(reloadedAtHome.State.Actors.TryGet(castId, out ActorState? relocatedCast));
+        Assert.True(reloadedAtHome.State.Actors.TryGet(walkerId, out ActorState? relocatedWalker));
+        Assert.Equal(castDestPose, relocatedCast!.Position);
+        Assert.Equal(seededDestPose, relocatedWalker!.Position);
+
+        // Save at otherTown after arrival and reload at otherTown: neither entry may prune or drop its destination pose!
+        RulesetSavePayload arrivedSaveBytes = reloadedAtHome.CaptureSave();
+        DaggerfallSavePayload arrivedSave = DaggerfallSavePayload.Read(arrivedSaveBytes);
+        ActorLedgerEntry arrivedCastEntry = Assert.Single(arrivedSave.ActorLedger, e => e.DurableId == castId);
+        ActorLedgerEntry arrivedWalkerEntry = Assert.Single(arrivedSave.ActorLedger, e => e.DurableId == walkerId);
+        Assert.Equal(ActorOriginKind.CastIndividual, arrivedCastEntry.Origin.Kind);
+        Assert.Equal(otherTown.ProfileKey, arrivedCastEntry.Location?.Profile?.Require());
+        Assert.NotNull(arrivedCastEntry.Pose);
+        Assert.Equal(ActorOriginKind.SeededSlot, arrivedWalkerEntry.Origin.Kind);
+        Assert.Equal(otherTown.ProfileKey, arrivedWalkerEntry.Location?.Profile?.Require());
+        Assert.NotNull(arrivedWalkerEntry.Pose);
+
+        using DaggerfallSession reloadedAtOther = DaggerfallSession.Restore(engine.Context, composition, arrivedSaveBytes);
+        Assert.True(reloadedAtOther.State.Actors.TryGet(castId, out ActorState? persistedCast));
+        Assert.True(reloadedAtOther.State.Actors.TryGet(walkerId, out ActorState? persistedWalker));
+        Assert.Equal(castDestPose, persistedCast!.Position);
+        Assert.Equal(seededDestPose, persistedWalker!.Position);
+
+        // Returning to homeTown must continue suppressing both home slots (no duplicate bodies at home).
+        Assert.True(reloadedAtOther.TryTransitionTo(homeTown.ProfileKey));
+        reloadedAtOther.Population.Reconcile();
+        Assert.False(reloadedAtOther.State.Actors.TryGet(castId, out _));
+        Assert.False(reloadedAtOther.State.Actors.TryGet(walkerId, out _));
     }
 
     [Fact]
@@ -292,7 +334,12 @@ public sealed class DaggerfallActorLedgerTests
         long escortId = walker.DurableId;
         Assert.True(DaggerfallPeopleSlots.IsDeterministicId(escortId));
         Assert.True(session.State.Actors.TryGet(escortId, out ActorState? liveWalker));
-        WorldPoint startPos = liveWalker!.Position;
+        // R11015-8: Move the walker away from its authored baseline before AddFace (as ordinary wandering does)
+        // so DropFace must restore the exact moved position without double-applying the displacement.
+        WorldPoint baselinePos = liveWalker!.Position;
+        WorldPoint movedLocal = new(baselinePos.X + 4.5f, baselinePos.Y, baselinePos.Z - 2.5f);
+        liveWalker.ApplyPose(new ActorPose(movedLocal, 0.75f));
+        WorldPoint movedProfile = WorldPoint.From(session.Exterior.LocalToProfile(movedLocal.ToVector()));
 
         var started = session.State.Quests.Start(new(
             "escort-civ", "escort-civ.txt", "escort-civ", DaggerfallQuestLifecycle.Active, null,
@@ -314,7 +361,7 @@ public sealed class DaggerfallActorLedgerTests
         // Population reconciliation must NOT rematerialize a WithParty source civilian.
         session.Population.Reconcile();
         Assert.False(session.State.Actors.TryGet(escortId, out _));
-        Assert.DoesNotContain(session.QueryNearby(startPos, radius: 1000d), hit => hit.Actor.DurableId == escortId);
+        Assert.DoesNotContain(session.QueryNearby(session.Exterior.ProfileToLocal(movedProfile), radius: 1000d), hit => hit.Actor.DurableId == escortId);
 
         // Save and reload while WithParty: ActorLedger preserves WithParty and Population.Reconcile still suppresses it.
         RulesetSavePayload saveBytes = session.CaptureSave();
@@ -326,13 +373,21 @@ public sealed class DaggerfallActorLedgerTests
         restored.Population.Reconcile();
         Assert.True(restored.State.Quests.IsEscortWithParty(escortId));
         Assert.False(restored.State.Actors.TryGet(escortId, out _));
-        Assert.DoesNotContain(restored.QueryNearby(startPos, radius: 1000d), hit => hit.Actor.DurableId == escortId);
+        Assert.DoesNotContain(restored.QueryNearby(restored.Exterior.ProfileToLocal(movedProfile), radius: 1000d), hit => hit.Actor.DurableId == escortId);
 
-        // Delivery (DropFace) rematerializes exactly one actor with the same deterministic ID.
+        // Delivery (DropFace) rematerializes exactly one actor at the EXACT pre-escort moved position (no double displacement!).
         TriggerTask(restored, started.InstanceId, "deliver");
         restored.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.False(restored.State.Quests.IsEscortWithParty(escortId));
         ActorState delivered = Assert.Single(restored.State.Actors.All, actor => actor.DurableId == escortId);
+        WorldPoint expectedRestoredLocal = restored.Exterior.ProfileToLocal(movedProfile);
+        Vector3 deliveredProfile = restored.Exterior.LocalToProfile(delivered.Position.ToVector());
+        Assert.Equal(movedProfile.X, deliveredProfile.X, 3);
+        Assert.Equal(movedProfile.Y, deliveredProfile.Y, 3);
+        Assert.Equal(movedProfile.Z, deliveredProfile.Z, 3);
+        Assert.Equal(expectedRestoredLocal.X, delivered.Position.X, 3);
+        Assert.Equal(expectedRestoredLocal.Y, delivered.Position.Y, 3);
+        Assert.Equal(expectedRestoredLocal.Z, delivered.Position.Z, 3);
         Assert.Contains(restored.QueryNearby(delivered.Position, radius: 5d), hit => hit.Actor.DurableId == escortId);
     }
 

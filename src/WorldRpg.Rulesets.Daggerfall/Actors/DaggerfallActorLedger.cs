@@ -18,13 +18,15 @@ internal sealed class ActorOriginComponent(
     WorldPoint baselinePose,
     float baselineHeading,
     DaggerfallStatsSave? baselineStats = null,
-    DaggerfallNpc? baselineNpc = null)
+    DaggerfallNpc? baselineNpc = null,
+    bool isRelocated = false)
 {
     internal ActorOrigin Origin { get; } = origin ?? throw new ArgumentNullException(nameof(origin));
     internal WorldPoint BaselinePose { get; private set; } = baselinePose;
     internal float BaselineHeading { get; } = baselineHeading;
     internal DaggerfallStatsSave? BaselineStats { get; } = baselineStats;
     internal DaggerfallNpc? BaselineNpc { get; } = baselineNpc;
+    internal bool IsRelocated { get; } = isRelocated;
 
     internal void SetBaselinePose(WorldPoint pose) => BaselinePose = pose;
 }
@@ -62,8 +64,10 @@ internal sealed record ActorOrigin(
     internal bool IsFixedPlacement =>
         Kind == ActorOriginKind.SeededSlot && SlotKey is { } slot && slot.StartsWith("fixed:", StringComparison.Ordinal);
 
-    internal static ActorOrigin Cast(string castId) =>
-        new(ActorOriginKind.CastIndividual, CastId: castId);
+    internal static ActorOrigin Cast(string castId, DaggerfallWorldProfileKey? homeProfile = null) =>
+        new(ActorOriginKind.CastIndividual,
+            SiteProfile: homeProfile is { } hp ? DaggerfallWorldProfileKeySave.Capture(hp) : null,
+            CastId: castId);
 
     internal static ActorOrigin MintedActor(string definitionId, int level = 1, ulong? creationSeed = null, string? gender = null) =>
         new(ActorOriginKind.Minted, DefinitionId: definitionId, Level: level, CreationSeed: creationSeed, Gender: gender);
@@ -81,6 +85,7 @@ internal sealed record ActorOrigin(
                 break;
             case ActorOriginKind.CastIndividual:
                 ArgumentException.ThrowIfNullOrWhiteSpace(CastId);
+                SiteProfile?.Validate();
                 break;
             case ActorOriginKind.Minted:
                 ArgumentException.ThrowIfNullOrWhiteSpace(DefinitionId);

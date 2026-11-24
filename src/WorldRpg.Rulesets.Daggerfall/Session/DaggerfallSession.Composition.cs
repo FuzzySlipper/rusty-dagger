@@ -887,7 +887,7 @@ internal sealed partial class DaggerfallSession
             Civilians = new DaggerfallCivilians(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance, _site.Require,
                 point => _exterior.ProfileToLocal(point), (npc, pose) => _roster.MaterializeCivilian(npc, pose), id => _roster.UnloadActor(id),
                 RetireActor, id => RetireDetachedActor(id, DaggerfallActorKinds.Civilian),
-                (npc, origin, baseline, pose) => _roster.MaterializeDeterministicCivilian(npc, origin, baseline, pose),
+                (npc, origin, baseline, pose, frameOffset) => _roster.MaterializeDeterministicCivilian(npc, origin, baseline, pose, frameOffset),
                 id => State.Quests.IsEscortWithParty(id)
                     || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry)
                         && entry?.Location?.Kind is ActorLocationKind.WithParty or ActorLocationKind.OffStage or ActorLocationKind.Removed));
@@ -993,7 +993,8 @@ internal sealed partial class DaggerfallSession
                                         WorldPoint baseline = _sites.Projection.Inputs.Population
                                             .FirstOrDefault(p => StringComparer.Ordinal.Equals(p.Id, priorEntry.Origin.SlotKey))?.Position ?? pt;
                                         Civilians.MaterializeDeterministic(actorId, priorEntry.Origin, baseline,
-                                            new ActorPose(_exterior.ProfileToLocal(pt), returnPose?.HeadingRadians ?? 0f));
+                                            new ActorPose(_exterior.ProfileToLocal(pt), returnPose?.HeadingRadians ?? 0f),
+                                            _exterior.ProfileToLocal(default).ToVector());
                                     }
                                     else
                                     {

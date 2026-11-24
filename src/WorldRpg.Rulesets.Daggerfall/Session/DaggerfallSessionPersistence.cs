@@ -451,8 +451,12 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             ? null
             : new ActorVitalsDiff(currentStats);
 
+        bool relocated = (originComp?.IsRelocated == true)
+            || (origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile);
+
         WorldPoint currentPos = origin.IsFixedPlacement ? actor.Position : localToProfile(actor.Position);
-        ActorPoseOverride? pose = originComp is not null && PoseEqual(currentPos, actor.HeadingYawRadians, originComp.BaselinePose, originComp.BaselineHeading)
+        ActorPoseOverride? pose = !relocated && originComp is not null
+            && PoseEqual(currentPos, actor.HeadingYawRadians, originComp.BaselinePose, originComp.BaselineHeading)
             ? null
             : new ActorPoseOverride(currentPos.X, currentPos.Y, currentPos.Z, actor.HeadingYawRadians);
 
@@ -469,7 +473,6 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 TeamOverride: teamOverride)
             : null;
 
-        bool relocated = origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile;
         ActorLocationOverride? location = relocated ? ActorLocationOverride.AtSite(activeProfile) : null;
 
         ActorSocialDiff? social = null;

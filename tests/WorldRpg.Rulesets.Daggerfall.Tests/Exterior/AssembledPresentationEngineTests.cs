@@ -219,6 +219,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         RulesetSavePayload save;
+        Dictionary<long, float> saved;
         try
         {
             host.Call(_ => run.Travel(court));
@@ -226,14 +227,15 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             host.Call(_ => run.AdvanceToHour(12));
             Steps(host, run, 60);
             Assert.NotEqual(Vector3.Zero, run.Session.Exterior.LocalCompensation);
+            saved = host.Call(_ => run.Session.State.Actors.All
+                .Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)
+                .ToDictionary(actor => actor.DurableId, actor => actor.Position.Y));
             save = host.Call(_ => run.Session.CaptureSave());
         }
         finally
         {
             host.Call(_ => run.Dispose());
         }
-        DaggerfallSavePayload savedPayload = DaggerfallSavePayload.Read(save);
-        Dictionary<long, float> saved = savedPayload.ActiveDynamicActors(savedPayload.Site.ActiveProfile!.Require()).ToDictionary(actor => actor.EntityId, actor => actor.Y);
 
         AssembledWorldRun restored = OnGround(host, host.Call(engine => world.Restore(engine, files, save)));
         try

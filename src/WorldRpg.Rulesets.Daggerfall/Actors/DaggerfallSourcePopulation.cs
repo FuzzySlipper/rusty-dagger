@@ -168,7 +168,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                 ? profileToLocal(new WorldPoint(x, y, z))
                 : profileToLocal(placement.Position);
             if (DaggerfallPeopleSlots.IsDeterministicId(npcId))
-                civilians.MaterializeDeterministic(npcId, ActorOrigin.Seeded(active.ProfileKey, placement.Id), placement.Position, new ActorPose(position, 0F));
+                civilians.MaterializeDeterministic(npcId, ActorOrigin.Seeded(active.ProfileKey, placement.Id), placement.Position,
+                    new ActorPose(position, 0F), profileToLocal(default).ToVector());
             else
                 civilians.Materialize(npcId, new ActorPose(position, 0F));
         }
