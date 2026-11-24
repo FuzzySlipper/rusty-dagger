@@ -94,6 +94,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallActorPlacement _placement;
     private readonly DaggerfallNearbySpawn _nearbySpawn;
     private readonly DaggerfallEnemySenses _senses;
+    internal DaggerfallEnemySenses Senses => _senses;
     private readonly DaggerfallDungeonPopulation _dungeonPopulation;
     internal DaggerfallCivilians Civilians { get; }
     internal DaggerfallSourcePopulation Population { get; }
@@ -109,6 +110,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallHeldEnchantments _heldEnchantments;
     private readonly DaggerfallItemCastTriggers _itemCastTriggers = null!;
     private readonly DaggerfallActorRoster _roster;
+    internal DaggerfallActorRoster Roster => _roster;
     private readonly DaggerfallActorGrounding _grounding;
     private readonly DaggerfallDefinitions _definitions;
     private readonly FactBuffer<IProductFact> _facts = new();
@@ -536,7 +538,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         using IDisposable detachedResidents = _exterior.SuspendResidentExteriorLocationsForSave();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.CaptureDeltas(), _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
-            _sites.Projection.CaptureMotion(), _exterior.CaptureExteriorResidency(), _exterior.CaptureExteriorLocationResidency());
+            _sites.Projection.CaptureMotion(), _exterior.CaptureExteriorResidency(), _exterior.CaptureExteriorLocationResidency(),
+            point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector())));
     }
 
     /// <summary>

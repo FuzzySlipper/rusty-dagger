@@ -51,7 +51,7 @@ internal sealed record DaggerfallActorAssembly(
 /// </summary>
 internal sealed record DaggerfallActorSaves(DaggerfallPlayerSave Player, DaggerfallActorSave[] Actors, long[] BanishedActors,
     DaggerfallDynamicActorSave[] DynamicActors, DaggerfallNpcSave Npcs, DaggerfallCharacterSave? Character,
-    ActorLedgerEntry[]? Ledger = null);
+    ActorLedgerEntry[]? Ledger = null, IReadOnlySet<long>? SavedInventoryIds = null);
 
 /// <summary>
 /// The atlas gender a spawned enemy took when it entered the world. DaggerfallMobileUnit.GetTextureArchive
@@ -145,27 +145,41 @@ internal static class DaggerfallActorFactory
                         [new KitEquipmentSlotId(slot.Value)]);
                 }
             }
+            DaggerfallActorLedger actorLedger = new();
+            if (saved?.Ledger is { } savedLedgerEntries)
+                actorLedger.Restore(savedLedgerEntries);
+
             Dictionary<long, DaggerfallActorDefinition> authored = [];
             foreach (AuthoredActor source in inputs.Project.Actors.Values)
             {
-                if (saved?.BanishedActors.Contains(source.EntityId) == true) continue;
+                if (saved?.BanishedActors.Contains(source.EntityId) == true
+                    || actorLedger.IsHomeSlotSuppressed(source.EntityId, inputs.ProfileKey)) continue;
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
                     throw new InvalidOperationException($"Site placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
                 authored.Add(source.EntityId, definition);
                 if (!materializeActiveSite) continue;
-                DaggerfallActorSave? prior = saved?.Actors.Single(value => value.EntityId == source.EntityId);
-                if (prior?.WabbajackDefinition is { } transformed) definition = DaggerfallWabbajack.RequireDefinition(definitions, transformed);
+                DaggerfallActorSave? prior = saved?.Actors.SingleOrDefault(value => value.EntityId == source.EntityId);
+                ActorLedgerEntry? sparseEntry = actorLedger.TryGet(source.EntityId, out ActorLedgerEntry? foundEntry) ? foundEntry : null;
+                string? transformedDef = prior?.WabbajackDefinition ?? sparseEntry?.Combat?.WabbajackDefinition;
+                if (transformedDef is { } transformed) definition = DaggerfallWabbajack.RequireDefinition(definitions, transformed);
                 authored[source.EntityId] = definition;
                 ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
                     mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
                     new ActorPose(source.Position, 0f));
+                DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
+                actor.Actor.Add(new ActorOriginComponent(
+                    ActorOrigin.FixedPlacement(inputs.ProfileKey, source.EntityId),
+                    source.Position, 0f, baselineStats));
                 if (prior is not null) RestoreStats(actor.Actor, prior.Stats);
-                DaggerfallWabbajack.Restore(actor.Actor, prior?.WabbajackDefinition);
+                else if (sparseEntry?.Vitals is { } sparseVitals) RestoreStats(actor.Actor, sparseVitals.Stats);
+                DaggerfallWabbajack.Restore(actor.Actor, transformedDef);
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = source.Passive;
                 actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = source.SpawnDistance;
-                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(prior?.ForcedHostile ?? false);
-                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = prior?.LanguagePacified ?? false;
-                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = prior?.MagicallyPacified ?? false;
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(prior?.ForcedHostile ?? sparseEntry?.Combat?.ForcedHostile ?? false);
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = prior?.LanguagePacified ?? sparseEntry?.Combat?.LanguagePacified ?? false;
+                actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = prior?.MagicallyPacified ?? sparseEntry?.Combat?.MagicallyPacified ?? false;
+                if (sparseEntry?.Combat?.TeamOverride is { } teamOverride)
+                    actor.Actor.Get<FactionComponent>().SetTeamOverride(teamOverride);
                 RegisterActorInventory(actor, inventoryStore);
                 // A placed actor whose definition declares a loadout carries it in a managed
                 // inventory over the session's inventory store: today that is the ranged actors'
@@ -177,7 +191,8 @@ internal static class DaggerfallActorFactory
                     if (definitions.Items.Where(item => definition.Loadout.Any(entry => entry.ItemId == item.Key)).Any(item => item.Value.IsFungible is false))
                         throw new InvalidOperationException($"Placed actor '{source.ActorId.Value}' loadout carries a unique item, which placed actors do not equip yet.");
                     MechanicsInventoryCoordinator actorInventory = new(actor.Inventory, actors.Entities, itemDefinitions);
-                    if (saved is null)
+                    bool hasSavedInventory = saved is not null && (saved.SavedInventoryIds is null || saved.SavedInventoryIds.Contains(source.EntityId));
+                    if (!hasSavedInventory)
                     {
                         foreach ((DaggerfallLoadoutEntry entry, int ordinal) in definition.Loadout
                             .Where(entry => definitions.Items[entry.ItemId].IsFungible)
@@ -207,10 +222,6 @@ internal static class DaggerfallActorFactory
                     entry.X, entry.Y, entry.Z) { Profile = entry.Profile?.Require(), DisplayName = entry.DisplayName }));
             }
 
-            DaggerfallActorLedger actorLedger = new();
-            if (saved?.Ledger is { } savedLedgerEntries)
-                actorLedger.Restore(savedLedgerEntries);
-
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved.DynamicActors, authored, inventoryStore, npcs);
@@ -236,13 +247,16 @@ internal static class DaggerfallActorFactory
     internal static ActorState CreateAuthoredActor(IRandomService random, DaggerfallMechanicsState mechanics,
         DaggerfallDefinitions definitions, ActorsState actors, InventoryStore inventoryStore,
         IReadOnlyDictionary<InventoryItemId, ItemDefinition> items, DaggerfallItemInstances instances,
-        AuthoredActor source, DaggerfallActorSave? restored = null)
+        AuthoredActor source, DaggerfallActorSave? restored = null, DaggerfallWorldProfileKey? profileKey = null)
     {
         DaggerfallActorDefinition definition = restored?.WabbajackDefinition is { } transformed
             ? DaggerfallWabbajack.RequireDefinition(definitions, transformed) : definitions.RequireActor(source.ActorId);
         ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
             mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
             new ActorPose(source.Position, 0F));
+        DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
+        if (profileKey is { } pk)
+            actor.Actor.Add(new ActorOriginComponent(ActorOrigin.FixedPlacement(pk, source.EntityId), source.Position, 0F, baselineStats));
         if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, restored?.WabbajackDefinition);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = source.Passive;
@@ -385,7 +399,13 @@ internal static class DaggerfallActorFactory
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
         if (saved.Gender is { } gender) actor.Actor.Add(new DaggerfallActorGender(gender));
-        if (saved.PlayerAllied) actor.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
+        if (saved.TeamOverride is { } teamOverride) actor.Actor.Get<FactionComponent>().SetTeamOverride(teamOverride);
+        else if (saved.PlayerAllied) actor.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
+        if (saved.EncounterBandId is int bandId && saved.EncounterGeneration is ulong bandGen)
+            actor.Actor.Add(new DaggerfallEncounterBandMember(bandId, bandGen));
+        actor.Actor.Add(new ActorOriginComponent(
+            ActorOrigin.MintedActor(saved.Definition, saved.Level, gender: saved.Gender),
+            new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
         if (npcs is not null && npcs.All.FirstOrDefault(n => n.DurableId == saved.EntityId) is { } restoredNpc)
         {
             ArchetypeProfile npcProfile = restoredNpc.Kind switch
@@ -486,7 +506,7 @@ internal static class DaggerfallActorFactory
         actor.Actor.Add(new EquipmentComponent(inventoryStore, actor.Actor.Entity));
     }
 
-    private static void RestoreStats(Actor actor, DaggerfallStatsSave saved)
+    internal static void RestoreStats(Actor actor, DaggerfallStatsSave saved)
     {
         DaggerfallRestoredStats restored = DaggerfallStatsSaveBoundary.Restore(saved, actor.Entity);
         actor.Replace(restored.Component);

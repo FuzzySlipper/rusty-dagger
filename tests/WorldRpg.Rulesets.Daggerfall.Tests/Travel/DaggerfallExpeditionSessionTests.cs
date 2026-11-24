@@ -286,7 +286,7 @@ public sealed class DaggerfallExpeditionSessionTests
         Assert.Equal(("Something approaches", "It is upon you before you can see what it is. Enter to meet it."),
             ((string)((Dictionary<string, object?>)fixture.Expedition()!["encounter"]!)["title"]!, (string)((Dictionary<string, object?>)fixture.Expedition()!["encounter"]!)["line"]!));
         Assert.Equal("Something approaches! Enter to meet it.", fixture.Session.Expedition.Message);
-        DaggerfallEncounterResolution pending = Assert.Single(DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved);
+        DaggerfallEncounterResolution pending = Assert.Single(DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Pending);
         Assert.NotNull(pending.ActorDefinition);
         DaggerfallSiteRecord host = fixture.Session.Expedition.HostAt(fixture.Session.Expedition.Party);
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(host.Id).LogicalId, pending.ProfileId);
@@ -366,7 +366,7 @@ public sealed class DaggerfallExpeditionSessionTests
         Assert.EndsWith("Enter to fight.", fixture.Session.Expedition.Message);
         Assert.True(fixture.Session.Expedition.EncounterWaiting);
         Assert.Equal(fixture.Session.Expedition.EncounterFoe, (string)((Dictionary<string, object?>)fixture.Expedition()!["encounter"]!)["title"]!);
-        DaggerfallEncounterResolution[] band = [.. DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Resolved
+        DaggerfallEncounterResolution[] band = [.. DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Encounters.Pending
             .Where(resolution => resolution.Band is not null)];
         Assert.NotEmpty(band);
         Assert.All(band, member => Assert.Equal(DaggerfallEncounterStaging.Caught, member.Band!.Staging));
@@ -376,7 +376,7 @@ public sealed class DaggerfallExpeditionSessionTests
 
         // A save while it waits keeps the band's members and how they were staged.
         using (DaggerfallSession reloaded = fixture.Restore(fixture.Session.CaptureSave()))
-            Assert.Equal(band.Select(member => member.Band), DaggerfallSavePayload.Read(reloaded.CaptureSave()).Encounters.Resolved
+            Assert.Equal(band.Select(member => member.Band), DaggerfallSavePayload.Read(reloaded.CaptureSave()).Encounters.Pending
                 .Where(member => member.Band is not null).Select(member => member.Band));
 
         fixture.Submit(new { action = "expedition-enter" });

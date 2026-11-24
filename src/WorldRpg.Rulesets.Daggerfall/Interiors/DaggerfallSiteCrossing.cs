@@ -221,6 +221,9 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                     PlayerAllied = combat?.PlayerAllied ?? false,
                     CorruptionOrigin = combat?.CorruptionOrigin,
                     Gender = entry.Origin.Gender,
+                    TeamOverride = combat?.TeamOverride,
+                    EncounterBandId = combat?.EncounterBandId,
+                    EncounterGeneration = combat?.EncounterGeneration,
                 });
             }
             if (combat?.DetachedInventory is { } inventory) inventories.Add(inventory);

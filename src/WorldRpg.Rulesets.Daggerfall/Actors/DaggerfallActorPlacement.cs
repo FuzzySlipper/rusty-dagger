@@ -68,13 +68,13 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     internal PursuitTarget? SelectTarget(long observerId)
     {
         if (!actors.TryGet(observerId, out var observer) || observer.IsDefeated || restrained(observerId)) return null;
-        if (foeTeam(observerId) == "player-ally")
+        string? team = EffectiveTeam(observerId);
+        if (team == "player-ally")
             return allowsFoeInfighting(observerId) ? SelectAllyTarget(observerId) : null;
         PursuitTarget? selected = player.Position is { } position ? new(DaggerfallActorIdentity.PlayerEntityId, position) : null;
         if (!allowsFoeInfighting(observerId) || !infightingActive()) return selected;
         double best = player.Position is { } standing ? Vector3.Distance(observer.Position.ToVector(), standing.ToVector()) : double.PositiveInfinity;
         Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
-        string? team = EffectiveTeam(observerId);
         foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
                      Math.Max(detectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
                      DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, _ => true)
@@ -106,11 +106,12 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
         foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
                      Math.Max(detectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
                      DaggerfallPerceptionQueryDefaults.MinimumFacingCosine,
-                     definition => definition.Team != "player-ally")
+                     _ => true)
                      .Where(pair => pair.Kind == PerceptionPairKind.Visible)
                      .OrderBy(pair => pair.Distance).ThenBy(pair => pair.Target))
         {
             long id = checked((long)pair.Target);
+            if (EffectiveTeam(id) == "player-ally") continue;
             // EnemySenses excludes pacified enemies and protected quest actors from ally attacks.
             if (isPacified(id) || !allowsFoeInfighting(id)) continue;
             return new PursuitTarget(id, actors.Get(id).Position);

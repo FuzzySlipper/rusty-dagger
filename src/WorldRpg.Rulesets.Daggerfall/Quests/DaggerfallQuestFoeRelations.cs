@@ -66,7 +66,8 @@ internal sealed partial class DaggerfallQuestInstances
         && instance.Resources.Any(resource => resource.SelectedFoe is not null && resource.Binding.ActorIds.Contains(actorId)));
     internal bool IsFoeRestrained(long actorId) => FoeResourceRelations(actorId) is { Restrained: true } relation && !relation.ReleasedRestraint.Contains(actorId);
     internal bool AllowsFoeInfighting(long actorId) => FoeRelationsFor(actorId)?.Infighting ?? !IsQuestFoe(actorId);
-    internal string? FoeTeam(long actorId, string? original) => FoeRelationsFor(actorId)?.Team is { } team ? DaggerfallFoeTeams.Name(team) : original;
+    internal string? FoeTeamOverride(long actorId) => FoeRelationsFor(actorId)?.Team is { } team ? DaggerfallFoeTeams.Name(team) : null;
+    internal string? FoeTeam(long actorId, string? original) => FoeTeamOverride(actorId) ?? original;
     bool IDaggerfallQuestTaskLifecycle.FoeRelation(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation)
     {
         if (operation.Kind == DaggerfallQuestTaskOperationKind.Enemies)

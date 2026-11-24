@@ -248,7 +248,11 @@ internal sealed partial class DaggerfallSession
             if (saved is null)
             {
                 foreach (ActorState actor in actors.All.Where(actor => definitions.Walks(authored[actor.DurableId])))
+                {
                     _grounding.Ground(actor);
+                    if (actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp))
+                        originComp.SetBaselinePose(actor.Position);
+                }
             }
             _camera = new FirstPersonCameraSystem(engine.CameraView, assembled.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
@@ -362,12 +366,12 @@ internal sealed partial class DaggerfallSession
             _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
             _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => ItemSouls.Gems);
             _itemCondition.Broken += item => ItemSouls.ReleaseBoundSoul(item);
-            _placement = new DaggerfallActorPlacement(actors, assembled.PlayerControl, npcs.IsGameplayActive, authored, id => QuestFoes.Team(id),
+            _placement = new DaggerfallActorPlacement(actors, assembled.PlayerControl, npcs.IsGameplayActive, authored, id => QuestFoes.TeamOverride(id),
                 id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), id => quests.IsFoeRestrained(id),
                 id => quests.FoeRelationsFor(id)?.Infighting == true, () => quests.HasInfightingFoes, _spatial, engine.Perception, _random,
                 () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
                 (float)_tuning.Camera.FieldOfViewYDegrees, sight, definitions.CreatureFactions);
-            _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, id => QuestFoes.Team(id),
+            _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, id => QuestFoes.TeamOverride(id),
                 id => _enemyBehavior!.IsPacified(id), () => _enemyBehavior!.LastPerception, effects, _locomotion,
                 () => State!.WeaponDrawn, () => _combat!.PlayerHoldsBow(), () => _time.Calendar.MinuteNumber, _random,
                 () => _activeProfileKey, _encounters);
@@ -376,7 +380,19 @@ internal sealed partial class DaggerfallSession
                 () => _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) ? site : null,
                 () => { DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell(); return (cell.X, cell.Y); },
                 () => _exterior.LocationAtPlayer() is not null, () => _latestUpdateGeneration, (definition, pose, level) => SpawnActor(definition, pose, level),
-                id => actors.TryGet(id, out var actor) && actor is not null ? actor.Pose : null, id => _enemyBehavior!.Provoke(id, _time.Calendar.MinuteNumber));
+                id => actors.TryGet(id, out var actor) && actor is not null ? actor.Pose : null, id => _enemyBehavior!.Provoke(id, _time.Calendar.MinuteNumber),
+                findBandLeader: (bandId, gen) =>
+                {
+                    foreach (ActorState candidate in actors.All)
+                        if (candidate.Actor.TryGet<DaggerfallEncounterBandMember>(out var member) && member.BandId == bandId && member.Generation == gen)
+                            return candidate.Pose;
+                    return null;
+                },
+                tagBandMember: (actorId, bandId, gen) =>
+                {
+                    if (actors.TryGet(actorId, out ActorState? spawned))
+                        spawned.Actor.Add(new DaggerfallEncounterBandMember(bandId, gen));
+                });
             _nearbySpawn = new DaggerfallNearbySpawn(definitions.Actors, mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile), _placement,
                 assembled.PlayerControl, (actor, pose) => SpawnActor(actor, pose),
                 id => { _enemyBehavior!.MakeHostile(id); _enemyBehavior.Provoke(id, _time.Calendar.MinuteNumber); }, line => Presentation.SetOutcome(line));
@@ -847,7 +863,7 @@ internal sealed partial class DaggerfallSession
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
                 State.ItemInstances, State.Npcs, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 authored, saved?.ActiveDynamicActors(inputs.ProfileKey) ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
-                _lootUi.CloseActor, _corpseLoot);
+                _lootUi.CloseActor, _corpseLoot, State.ActorLedger);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
             Crimes = new DaggerfallCrimes(State.Crime, State.Actors, State.Npcs, State.PlayerControl, _site, _roster.Definitions, definitions,
                 State.ItemInstances, State.SkillUses, State.RacialOverrides, _random, engine.Perception, () => _spatial.Session,
@@ -897,11 +913,14 @@ internal sealed partial class DaggerfallSession
                             rememberedPose = new ActorPoseOverride(nx, ny, nz, 0f);
                         }
 
+                        ActorOrigin? liveOrigin = liveActor is not null && liveActor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
+                            ? originComp.Origin
+                            : null;
                         ActorLedgerEntry current = State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? existing) && existing is not null
                             ? existing
                             : new ActorLedgerEntry(
                                 actorId,
-                                new ActorOrigin(ActorOriginKind.Minted,
+                                liveOrigin ?? new ActorOrigin(ActorOriginKind.Minted,
                                     SiteProfile: homeProfile is { } hp ? DaggerfallWorldProfileKeySave.Capture(hp) : null,
                                     DefinitionId: escortNpc.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc),
                                 Social: DaggerfallSessionPersistence.ToSocialDiff(escortNpc));

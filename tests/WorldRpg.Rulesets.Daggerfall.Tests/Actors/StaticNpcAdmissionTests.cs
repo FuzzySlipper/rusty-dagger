@@ -87,10 +87,10 @@ public sealed class StaticNpcAdmissionTests
             session.SpellRelease.ReleaseReadySpell(session.State.Actors.Player.DurableId, Vector3.UnitZ).Outcome);
 
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
-        DaggerfallNpcEntry savedNpc = Assert.Single(saved.RestoredNpcs().Entries, value => value.DurableId == npc.DurableId);
-        Assert.Equal(providerSite.ProfileKey.LogicalId, savedNpc.ProfileId);
-        DaggerfallDynamicActorSave savedActor = Assert.Single(saved.ActiveDynamicActors(providerSite.ProfileKey), value => value.EntityId == npc.DurableId);
-        Assert.Equal(DaggerfallActorKinds.StaticNpc, savedActor.Definition);
+        ActorLedgerEntry savedEntry = Assert.Single(saved.ActorLedger, entry => entry.DurableId == npc.DurableId);
+        Assert.Equal(ActorOriginKind.SeededSlot, savedEntry.Origin.Kind);
+        Assert.True(savedEntry.Social!.Met);
+        Assert.Equal(providerSite.ProfileKey.LogicalId, savedEntry.Social.ProfileId);
 
         Assert.True(session.TryTransitionTo(outside.ProfileKey));
         Assert.False(session.State.Actors.TryGet(npc.DurableId, out _));

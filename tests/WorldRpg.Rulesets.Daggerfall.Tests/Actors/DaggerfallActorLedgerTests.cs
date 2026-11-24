@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
@@ -5,8 +6,11 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -174,6 +178,194 @@ public sealed class DaggerfallActorLedgerTests
         ActorState delivered = Assert.Single(restored.State.Actors.All, actor => actor.DurableId == escortId);
         Assert.Single(restored.State.Npcs.All, npc => npc.DurableId == escortId);
         Assert.Contains(restored.QueryNearby(delivered.Position, radius: 5d), hit => hit.Actor.DurableId == escortId);
+    }
+
+    [Fact]
+    public void Untouched_populated_site_writes_zero_ledger_entries_and_self_prunes_and_suppresses_relocated_seeded_and_cast_actors()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile homeTown = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))));
+        DaggerfallSiteProfile otherTown = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))));
+        DaggerfallSiteProfiles profiles = new([homeTown, otherTown]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, homeTown);
+        PopulateContent(content, otherTown);
+        SpatialFake spatial = SpatialFake.Create(homeTown.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, homeTown, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        long staticId;
+        WorldPoint baselinePos;
+        using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition))
+        {
+            DaggerfallNpc npc = Assert.Single(session.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Static);
+            staticId = npc.DurableId;
+            Assert.True(DaggerfallPeopleSlots.IsDeterministicId(staticId));
+            Assert.True(session.State.Actors.TryGet(staticId, out ActorState? live));
+            baselinePos = live!.Position;
+
+            // Untouched populated town saves 0 ledger entries and 0 actor inventory entries (0 actor delta bytes).
+            DaggerfallSavePayload untouched = DaggerfallSavePayload.Read(session.CaptureSave());
+            Assert.Empty(untouched.ActorLedger);
+            Assert.Empty(untouched.ActorInventories);
+
+            // Moving the static NPC creates one sparse SeededSlot entry with ONLY Pose (no Vitals).
+            WorldPoint movedPos = new(baselinePos.X + 3f, baselinePos.Y, baselinePos.Z + 1f);
+            live.ApplyPose(new ActorPose(movedPos, 0.5f));
+            DaggerfallSavePayload moved = DaggerfallSavePayload.Read(session.CaptureSave());
+            ActorLedgerEntry sparseMoved = Assert.Single(moved.ActorLedger, entry => entry.DurableId == staticId);
+            Assert.Equal(ActorOriginKind.SeededSlot, sparseMoved.Origin.Kind);
+            Assert.NotNull(sparseMoved.Pose);
+            Assert.Null(sparseMoved.Vitals);
+
+            // Restoring back to baseline self-prunes ActorLedger back to 0 entries (0 bytes).
+            live.ApplyPose(new ActorPose(baselinePos, 0f));
+            DaggerfallSavePayload pruned = DaggerfallSavePayload.Read(session.CaptureSave());
+            Assert.Empty(pruned.ActorLedger);
+
+            // Relocate the SeededSlot NPC to otherTown via ActorLedger and save:
+            // Step 1 must suppress home-slot re-admission at homeTown, and Step 2 must materialize it at otherTown.
+            ActorOrigin origin = live.Actor.Get<ActorOriginComponent>().Origin;
+            session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+                staticId,
+                origin,
+                Pose: new ActorPoseOverride(4f, 0f, 5f, 0f),
+                Social: DaggerfallSessionPersistence.ToSocialDiff(npc),
+                Location: ActorLocationOverride.AtSite(otherTown.ProfileKey)));
+            session.Roster.UnloadActor(staticId);
+            RulesetSavePayload relocatedSave = session.CaptureSave();
+
+            using DaggerfallSession reloadedAtHome = DaggerfallSession.Restore(engine.Context, composition, relocatedSave);
+            Assert.False(reloadedAtHome.State.Actors.TryGet(staticId, out _));
+            Assert.True(reloadedAtHome.TryTransitionTo(otherTown.ProfileKey));
+            Assert.True(reloadedAtHome.State.Actors.TryGet(staticId, out ActorState? relocatedLive));
+            Assert.Equal(new WorldPoint(4f, 0f, 5f), relocatedLive!.Position);
+
+            // CastIndividual admission + WithParty home-slot suppression.
+            string castId = definitions.People.Individuals.Keys.First();
+            long? castActorId = reloadedAtHome.Roster.MaterializeCastIndividual(castId, otherTown, new WorldPoint(2f, 0f, 2f));
+            Assert.NotNull(castActorId);
+            Assert.True(reloadedAtHome.State.Actors.TryGet(castActorId!.Value, out ActorState? castLive));
+            Assert.Equal(ActorOriginKind.CastIndividual, castLive!.Actor.Get<ActorOriginComponent>().Origin.Kind);
+            reloadedAtHome.State.ActorLedger.Upsert(new ActorLedgerEntry(
+                castActorId.Value,
+                ActorOrigin.Cast(castId),
+                Location: ActorLocationOverride.WithParty(ActorPartyRole.Escort)));
+            reloadedAtHome.Roster.UnloadActor(castActorId.Value);
+            Assert.Null(reloadedAtHome.Roster.MaterializeCastIndividual(castId, otherTown, new WorldPoint(2f, 0f, 2f)));
+        }
+    }
+
+    [Fact]
+    public void Encounter_save_retains_only_pending_outcomes_while_materialized_encounters_live_in_ActorLedger()
+    {
+        using var fixture = new SanguineRoseSessionTests.Fixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallEncounterRequest request = new(DaggerfallEncounterContext.Dungeon, 1, DungeonType: 2, EnemyAlert: true);
+
+        // Step 1: Queue first encounter and let it materialize onto the floor.
+        HashSet<long> existingActorIds = session.State.Actors.All.Select(a => a.DurableId).ToHashSet();
+        WorldPoint playerPos = session.State.PlayerControl.Position!.Value;
+        fixture.Spatial.FloorHit = r => r.Direction.Y < -.99f
+            ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY, Point = r.Origin with { Y = playerPos.Y } }
+            : default;
+        DaggerfallEncounterResolution first = session.WorldEncounters.Queue(request);
+        Assert.NotNull(first.ActorDefinition);
+        fixture.Update();
+
+        // Step 2: Remove floor so second encounter remains strictly Pending.
+        fixture.Spatial.FloorHit = _ => default;
+        DaggerfallEncounterResolution second = session.WorldEncounters.Queue(request);
+        Assert.NotNull(second.ActorDefinition);
+        fixture.Update();
+
+        RulesetSavePayload saveBytes = session.CaptureSave();
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(saveBytes);
+        // Encounters save holds ONLY the unmaterialized second outcome; first lives exclusively in ActorLedger.
+        DaggerfallEncounterResolution savedPending = Assert.Single(saved.Encounters.Pending);
+        Assert.Equal(second.Sequence, savedPending.Sequence);
+        Assert.Null(savedPending.SpawnedActorId);
+        ActorLedgerEntry materializedInLedger = Assert.Single(saved.ActorLedger,
+            entry => !existingActorIds.Contains(entry.DurableId)
+                && entry.Origin.Kind == ActorOriginKind.Minted
+                && entry.Origin.DefinitionId == first.ActorDefinition);
+
+        using DaggerfallSession restored = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition, saveBytes);
+        Assert.True(restored.State.Actors.TryGet(materializedInLedger.DurableId, out _));
+        Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters.Pending);
+    }
+
+    [Fact]
+    public void Live_FactionComponent_override_governs_hostility_and_quest_relation_takes_precedence()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["change foe _enemy_ team Undead"]);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: QuestWorldAdmissionTests.WithMarker);
+        DaggerfallSession session = fixture.Session;
+
+        // Ordinary creature: mutating FactionComponent.TeamOverride flips hostility directly without quest involvement.
+        long ratId = session.SpawnActor("rat", new ActorPose(new WorldPoint(4f, 0f, 4f), 0f));
+        ActorState rat = session.State.Actors.Get(ratId);
+        DaggerfallActorDefinition ratDef = session.DefinitionsByActor[ratId];
+        Assert.True(session.Senses.IsHostile(ratId, ratDef));
+        rat.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
+        Assert.False(session.Senses.IsHostile(ratId, ratDef));
+
+        // Quest foe: explicit quest FoeRelations team override takes precedence over FactionComponent.
+        var site = definitions.Locations.Records.Single(value => value.Id == fixture.Inputs.Site);
+        session.State.Quests.Start(new("qteam", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
+            [new("location", DaggerfallQuestResourceBinding.Place(new(site.Region, site.Index)) with { PlaceSelection = new(fixture.Inputs.ProfileKind, site.MapId, null, 0) })], []));
+        session.State.Quests.RequestPlacement("qteam", "initial", "enemy", "location");
+        session.State.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
+        long foeId = session.State.Quests.Capture().Instances.Single().Resources.Single(r => r.Symbol == "enemy").Binding.ActorIds.Single();
+        ActorState foe = session.State.Actors.Get(foeId);
+        DaggerfallActorDefinition foeDef = session.DefinitionsByActor[foeId];
+        foe.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
+        Assert.False(session.Senses.IsHostile(foeId, foeDef));
+        fixture.Update(); // runs "change foe _enemy_ team Undead"
+        Assert.True(session.Senses.IsHostile(foeId, foeDef));
+    }
+
+    [Fact]
+    public void Save_load_retire_spawned_actor_then_save_load_removes_stale_ledger_entry_for_live_and_detached_actors()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(actions: ["remove foe _enemy_"]);
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: QuestWorldAdmissionTests.WithMarker);
+        DaggerfallSiteProfiles profiles = new([fixture.Inputs, fixture.Castle]);
+        fixture.Session.AdmitSiteProfiles(profiles);
+
+        // Path A: live spawned actor save -> load -> retire -> save -> load.
+        long liveId = fixture.Session.SpawnActor("rat", new ActorPose(new WorldPoint(5f, 0f, 5f), 0f));
+        RulesetSavePayload save1 = fixture.Session.CaptureSave();
+        using (DaggerfallSession restored1 = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, save1))
+        {
+            Assert.True(restored1.State.Actors.TryGet(liveId, out _));
+            restored1.RetireActor(liveId);
+            Assert.False(restored1.State.Actors.TryGet(liveId, out _));
+            RulesetSavePayload save2 = restored1.CaptureSave();
+            Assert.DoesNotContain(DaggerfallSavePayload.Read(save2).ActorLedger, entry => entry.DurableId == liveId);
+
+            using DaggerfallSession restored2 = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, save2);
+            Assert.False(restored2.State.Actors.TryGet(liveId, out _));
+        }
+
+        // Path B: detached actor save -> load -> detached retire -> save -> load.
+        var site = definitions.Locations.Records.Single(value => value.Id == fixture.Inputs.Site);
+        fixture.Session.State.Quests.Start(new("det", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
+            [new("location", DaggerfallQuestResourceBinding.Place(new(site.Region, site.Index)) with { PlaceSelection = new(fixture.Inputs.ProfileKind, site.MapId, null, 0) })], []));
+        fixture.Session.State.Quests.RequestPlacement("det", "initial", "enemy", "location");
+        fixture.Session.State.Quests.AdmitPlacements(fixture.Inputs, fixture.Session.QuestPlacement);
+        long detachedId = fixture.Session.State.Quests.Capture().Instances.Single().Resources.Single(r => r.Symbol == "enemy").Binding.ActorIds.Single();
+        Assert.True(fixture.Session.TryTransitionTo(fixture.Castle.ProfileKey));
+        RulesetSavePayload awaySave1 = fixture.Session.CaptureSave();
+
+        using DaggerfallSession awayRestored = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, awaySave1);
+        awayRestored.Update(new ProductUpdate(OuterUpdate(5), [])); // runs "remove foe _enemy_" while off-site
+        RulesetSavePayload awaySave2 = awayRestored.CaptureSave();
+        Assert.DoesNotContain(DaggerfallSavePayload.Read(awaySave2).ActorLedger, entry => entry.DurableId == detachedId);
+        using DaggerfallSession awayRestored2 = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, awaySave2);
+        Assert.True(awayRestored2.TryTransitionTo(fixture.Inputs.ProfileKey));
+        Assert.False(awayRestored2.State.Actors.TryGet(detachedId, out _));
     }
 
     private static void TriggerTask(DaggerfallSession session, string instanceId, string taskSymbol)

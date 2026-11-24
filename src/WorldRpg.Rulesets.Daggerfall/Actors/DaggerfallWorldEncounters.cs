@@ -28,7 +28,7 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
     DaggerfallDefinitions definitions, PlayerControlState player, Func<int> playerLevel, Func<bool> swimming, Func<bool> onShip,
     Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteRecord?> activeSite, Func<(int X, int Y)> exteriorCell,
     Func<bool> atLocation, Func<ulong?> generation, Func<string, ActorPose, int, long> spawn, Func<long, ActorPose?> actorPose,
-    Action<long> provoke)
+    Action<long> provoke, Func<int, ulong, ActorPose?>? findBandLeader = null, Action<long, int, ulong>? tagBandMember = null)
 {
     /// <summary>
     /// Catches up each elapsed minute and stops at its first selected spawn, as the donor does. Ordinary play reaches
@@ -148,16 +148,25 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
             _ => pose,
         };
         long actor = spawn(pending.ActorDefinition!, pose, pending.Request.PlayerLevel);
+        if (pending.Band is { } memberBand)
+        {
+            _bandLeaders.TryAdd((memberBand.Id, pending.Generation), actor);
+            tagBandMember?.Invoke(actor, memberBand.Id, pending.Generation);
+        }
         if (pending.Band is { Staging: DaggerfallEncounterStaging.Caught }) provoke(actor);
         return actor;
     }
 
+    private readonly Dictionary<(int BandId, ulong Generation), long> _bandLeaders = [];
+
     /// <summary>How far a band's members stand from its first, in metres.</summary>
     private static (float Minimum, float Maximum) BandSpacing => (1.5f, 3.5f);
 
-    private ActorPose? FirstOfBand(DaggerfallEncounterResolution pending, DaggerfallEncounterBand band) => encounters.Resolved
-        .Where(other => other.Band?.Id == band.Id && other.Generation == pending.Generation && other.SpawnedActorId is not null)
-        .Select(other => actorPose(other.SpawnedActorId!.Value)).FirstOrDefault(found => found is not null);
+    private ActorPose? FirstOfBand(DaggerfallEncounterResolution pending, DaggerfallEncounterBand band)
+    {
+        if (findBandLeader?.Invoke(band.Id, pending.Generation) is { } tagged) return tagged;
+        return _bandLeaders.TryGetValue((band.Id, pending.Generation), out long leaderId) ? actorPose(leaderId) : null;
+    }
 
     private static ActorPose Facing(ActorPose pose, WorldPoint target)
     {

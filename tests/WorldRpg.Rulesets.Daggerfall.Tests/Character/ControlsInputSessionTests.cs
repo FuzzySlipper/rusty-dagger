@@ -645,8 +645,10 @@ public sealed class ControlsInputSessionTests
         var encounter = session.WorldEncounters.Queue(request with { PlayerLevel = entry + 3 });
         Assert.NotNull(encounter.ActorDefinition);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        var spawned = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved);
-        long actorId = Assert.IsType<long>(spawned.SpawnedActorId);
+        DaggerfallSavePayload afterSpawn = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.Empty(afterSpawn.Encounters.Pending);
+        long actorId = Assert.Single(afterSpawn.ActiveDynamicActors(afterSpawn.Site.ActiveProfile!.Require()),
+            actor => actor.Definition == encounter.ActorDefinition).EntityId;
         Assert.False(session.Sites.Projection.Inputs.ActorSprites.ContainsKey(actorId));
         int mobileId = Assert.IsType<int>(session.DefinitionsByActor[actorId].MobileId);
         Assert.True(session.Sites.Projection.Inputs.MobileSprites.ContainsKey(mobileId));

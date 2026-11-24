@@ -443,9 +443,9 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         Vector3 delta = session.Exterior.LocalCompensation;
         RulesetSavePayload saved = session.CaptureSave();
         var payload = DaggerfallSavePayload.Read(saved);
-        Assert.Equal(encounter.Pose.Position.ToVector() + delta, Assert.Single(payload.Encounters.Resolved).Pose.Position.ToVector());
-        Assert.Equal(.3f, Assert.Single(payload.Encounters.Resolved).Pose.HeadingYawRadians);
-        Assert.Null(Assert.Single(payload.Encounters.Resolved).SpawnedActorId);
+        Assert.Equal(encounter.Pose.Position.ToVector() + delta, Assert.Single(payload.Encounters.Pending).Pose.Position.ToVector());
+        Assert.Equal(.3f, Assert.Single(payload.Encounters.Pending).Pose.HeadingYawRadians);
+        Assert.Null(Assert.Single(payload.Encounters.Pending).SpawnedActorId);
         List<string> restoredReleases = [];
         ContentFake restoredContent = new(restoredReleases);
         PopulateContent(restoredContent, exterior);
@@ -459,12 +459,13 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             ? new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Normal = Vector3.UnitY, Point = request.Origin with { Y = floorY } }
             : default;
         restored.Update(new ProductUpdate(OuterUpdate(1), []));
-        var materialized = Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters.Resolved);
-        Assert.NotNull(materialized.SpawnedActorId);
-        Assert.Equal(encounter.Pose.Position.ToVector() + delta, materialized.Pose.Position.ToVector());
+        DaggerfallSavePayload afterMaterialize = DaggerfallSavePayload.Read(restored.CaptureSave());
+        Assert.Empty(afterMaterialize.Encounters.Pending);
+        long spawnedActorId = Assert.Single(afterMaterialize.ActiveDynamicActors(exterior.ProfileKey),
+            actor => actor.Definition == encounter.ActorDefinition).EntityId;
         // The foe is placed around the restored player in the same local frame, at the donor's distances,
         // rather than in a frame the rebase left behind.
-        WorldPoint live = restored.State.Actors.Get(materialized.SpawnedActorId!.Value).Position;
+        WorldPoint live = restored.State.Actors.Get(spawnedActorId).Position;
         WorldPoint player = restored.State.PlayerControl.Position!.Value;
         float horizontal = Vector2.Distance(new(live.X, live.Z), new(player.X, player.Z));
         Assert.InRange(horizontal, DaggerfallEncounterPolicy.MinimumSpawnDistance(DaggerfallEncounterContext.WildernessDay) - .01f,

@@ -110,7 +110,7 @@ public sealed class DaggerfallEncounterPolicyTests
         Assert.Equal(3, recording.Requests.Count);
 
         DaggerfallEncounterRuntime restored = new(definitions, recording.Service);
-        restored.Restore(first.Capture(), new Dictionary<long, string>());
+        restored.Restore(first.Capture());
         long[] spawned = restored.MaterializePending("privateers-hold", pending =>
         {
             Assert.Equal("encounter-warrior", pending.ActorDefinition);
@@ -121,7 +121,8 @@ public sealed class DaggerfallEncounterPolicyTests
         Assert.Equal([7_000L], spawned);
         Assert.Equal(3, recording.Requests.Count);
         Assert.Empty(restored.MaterializePending("privateers-hold", _ => throw new Xunit.Sdk.XunitException("already spawned")));
-        Assert.Equal(7_000, Assert.Single(restored.Resolved).SpawnedActorId);
+        Assert.Empty(restored.Pending);
+        Assert.Empty(restored.Capture().Pending);
     }
 
     [Fact]
@@ -134,10 +135,10 @@ public sealed class DaggerfallEncounterPolicyTests
         runtime.Select(new DaggerfallEncounterRequest(DaggerfallEncounterContext.Dungeon, 1,
             DungeonType: 2, EnemyAlert: true), 4, "active", pose);
         runtime.RebasePending("other", new System.Numerics.Vector3(-1000, 0, -1000));
-        Assert.Equal(pose, Assert.Single(runtime.Resolved).Pose);
+        Assert.Equal(pose, Assert.Single(runtime.Pending).Pose);
         runtime.RebasePending("active", new System.Numerics.Vector3(-1000, 0, -1000));
         DaggerfallEncounterRuntime restored = new(definitions, recording.Service);
-        restored.Restore(runtime.Capture(), new Dictionary<long, string>());
+        restored.Restore(runtime.Capture());
         Assert.Single(restored.MaterializePending("active", pending =>
         {
             Assert.Equal(new ActorPose(new WorldPoint(3, 4, 5), .5f), pending.Pose);
@@ -145,11 +146,12 @@ public sealed class DaggerfallEncounterPolicyTests
         }));
         restored.RebasePending("active", new System.Numerics.Vector3(1000, 0, 1000));
         Assert.Empty(restored.MaterializePending("active", _ => throw new Exception("duplicate spawn")));
+        Assert.Empty(restored.Capture().Pending);
         Assert.Equal(3, recording.Requests.Count);
     }
 
     [Fact]
-    public void RejectsRestoredSelectionsThatDoNotMatchTheCanonicalTableOrSpawnedActor()
+    public void RejectsRestoredSelectionsThatDoNotMatchTheCanonicalTableOrAreAlreadyMaterialized()
     {
         DaggerfallDefinitions definitions = Definitions();
         DaggerfallEncounterRuntime runtime = new(definitions, RecordingRandom.Create().Service);
@@ -157,25 +159,14 @@ public sealed class DaggerfallEncounterPolicyTests
             new DaggerfallEncounterRequest(DaggerfallEncounterContext.Dungeon, 1, DungeonType: 2, EnemyAlert: true), 4, "privateers-hold",
             new ActorPose(new WorldPoint(3, 4, 5), 0.5f));
         DaggerfallEncounterRuntimeSave wrongTable = new([selected with { Choice = selected.Choice with { Entry = 1 } }]);
-        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service).Restore(wrongTable, new Dictionary<long, string>()));
+        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service).Restore(wrongTable));
 
-        DaggerfallEncounterRuntimeSave missingActor = new([selected with { SpawnedActorId = 7_000 }]);
-        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service).Restore(missingActor, new Dictionary<long, string>()));
-        DaggerfallEncounterRuntime accepted = new(definitions, RecordingRandom.Create().Service);
-        accepted.Restore(missingActor, new Dictionary<long, string> { [7_000] = "encounter-warrior" });
-        Assert.Equal(7_000, Assert.Single(accepted.Resolved).SpawnedActorId);
-        DaggerfallEncounterRuntime retired = new(definitions, RecordingRandom.Create().Service);
-        retired.Restore(missingActor, new Dictionary<long, string>(), new HashSet<long> { 7_000 });
-        Assert.Equal(7_000, Assert.Single(retired.Resolved).SpawnedActorId);
-        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service)
-            .Restore(missingActor, new Dictionary<long, string>(), new HashSet<long> { 7_001 }));
+        // Encounters save may only hold pre-materialization Pending outcomes; materialized actors belong in ActorLedger.
+        DaggerfallEncounterRuntimeSave materialized = new([selected with { SpawnedActorId = 7_000 }]);
+        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service).Restore(materialized));
 
-        DaggerfallEncounterRuntimeSave wrongActor = new([selected with { SpawnedActorId = 7_000 }]);
-        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service)
-            .Restore(wrongActor, new Dictionary<long, string> { [7_000] = "imp" }));
-        DaggerfallEncounterRuntimeSave sequenceGap = new([selected with { Sequence = 2 }]);
-        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service)
-            .Restore(sequenceGap, new Dictionary<long, string>()));
+        DaggerfallEncounterRuntimeSave emptyOutcome = new([selected with { Choice = new(DaggerfallEncounterContext.Dungeon, null, null, null, null, null, null, "dungeon-not-alert"), ActorDefinition = null }]);
+        Assert.Throws<ArgumentException>(() => new DaggerfallEncounterRuntime(definitions, RecordingRandom.Create().Service).Restore(emptyOutcome));
     }
 
     [Fact]

@@ -123,6 +123,35 @@ public sealed class DaggerfallNpcRegistry
         return durableId;
     }
 
+    /// <summary>
+    /// Idempotently registers a deterministic <c>SeededSlot</c> or <c>CastIndividual</c> NPC under its deterministic
+    /// high-band <paramref name="durableId"/> without allocating from the monotonic identity ledger.
+    /// </summary>
+    internal long RegisterDeterministic(long durableId, DaggerfallNpcKind kind, string stableKey, DaggerfallNpcSite site,
+        DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services, string? displayName = null)
+    {
+        if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(stableKey);
+        ValidateSite(site);
+        ValidateAppearance(appearance);
+        ArgumentException.ThrowIfNullOrWhiteSpace(role);
+        ArgumentNullException.ThrowIfNull(services);
+        string key = StableIdentityKey(kind, site, stableKey);
+        if (_npcs.ContainsKey(durableId))
+        {
+            _stable.TryAdd(key, durableId);
+            if (!string.IsNullOrWhiteSpace(displayName)) SetDisplayName(durableId, displayName);
+            return durableId;
+        }
+        _npcs.Add(durableId, new DaggerfallNpc(durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null)
+        {
+            DisplayName = displayName,
+        });
+        _stable[key] = durableId;
+        Name(durableId);
+        return durableId;
+    }
+
     /// <summary>Registers a civilian: always a fresh identity, even for identical visuals.</summary>
     public long RegisterCivilian(DaggerfallNpcSite site, DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services)
     {

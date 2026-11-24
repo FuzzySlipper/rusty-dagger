@@ -32,9 +32,10 @@ internal sealed class DaggerfallEnemySenses(ActorsState actors, PlayerControlSta
     /// <summary>Whether an actor fights the player now: combatant harm policy, hostile faction team (with quest overrides), and not pacified.</summary>
     internal bool IsHostile(long actorId, DaggerfallActorDefinition definition)
     {
-        bool combatant = actors.TryGet(actorId, out ActorState? actor) && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
-            ? harm.IsCombatant
-            : definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
+        if (definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)) return false;
+        bool combatant = !actors.TryGet(actorId, out ActorState? actor)
+            || !actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
+            || harm.IsCombatant;
         if (!combatant || isPacified(actorId)) return false;
         string? effectiveTeam = foeTeam(actorId)
             ?? (actor is not null && actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction) ? faction.EffectiveTeam : definition.Team);

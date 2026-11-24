@@ -1,8 +1,33 @@
 using System.Text.Json.Serialization;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
+
+/// <summary>Attached to a materialized encounter band member so remaining pending band members place beside it.</summary>
+internal sealed record DaggerfallEncounterBandMember(int BandId, ulong Generation);
+
+/// <summary>
+/// Attached to every live non-player actor in <c>EntityStore</c> to record its canonical <see cref="ActorOrigin"/>
+/// and initial baseline so <see cref="DaggerfallActorLedger"/> can compute true sparse diffs and self-prune
+/// untouched <see cref="ActorOriginKind.SeededSlot"/> and <see cref="ActorOriginKind.CastIndividual"/> actors to zero save bytes.
+/// </summary>
+internal sealed class ActorOriginComponent(
+    ActorOrigin origin,
+    WorldPoint baselinePose,
+    float baselineHeading,
+    DaggerfallStatsSave? baselineStats = null,
+    DaggerfallNpc? baselineNpc = null)
+{
+    internal ActorOrigin Origin { get; } = origin ?? throw new ArgumentNullException(nameof(origin));
+    internal WorldPoint BaselinePose { get; private set; } = baselinePose;
+    internal float BaselineHeading { get; } = baselineHeading;
+    internal DaggerfallStatsSave? BaselineStats { get; } = baselineStats;
+    internal DaggerfallNpc? BaselineNpc { get; } = baselineNpc;
+
+    internal void SetBaselinePose(WorldPoint pose) => BaselinePose = pose;
+}
 
 /// <summary>How an actor in <see cref="DaggerfallActorLedger"/> came to exist.</summary>
 internal enum ActorOriginKind
@@ -96,6 +121,8 @@ internal sealed record ActorCombatStateDiff(
     string? TeamOverride = null,
     bool? InfightingOverride = null,
     string? PromotedArchetype = null,
+    int? EncounterBandId = null,
+    ulong? EncounterGeneration = null,
     DaggerfallActorInventorySave? DetachedInventory = null,
     DaggerfallCorpseSave? DetachedCorpse = null,
     DaggerfallActiveEffectSave[]? DetachedEffects = null)

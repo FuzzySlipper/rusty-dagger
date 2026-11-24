@@ -212,6 +212,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_social.ReactionForNpc(npc!).Value < -20)
             return new(false, "That person refuses to respond.");
 
+        if (_actors.TryGet(npc!.DurableId, out ActorState? spoken)
+            && spoken.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+            overlay.Met = true;
         Open(npc!, actor!);
         return new(true, $"You speak with {npc!.DisplayName ?? npc.Role}.");
     }

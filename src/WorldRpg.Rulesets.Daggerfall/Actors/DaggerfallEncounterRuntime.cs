@@ -19,20 +19,22 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
     private const string Scope = "daggerfall.encounter.v1";
     private readonly DaggerfallDefinitions _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
     private readonly IRandomService _random = random ?? throw new ArgumentNullException(nameof(random));
-    private readonly List<DaggerfallEncounterResolution> _resolved = [];
+    private readonly List<DaggerfallEncounterResolution> _pending = [];
     private readonly HashSet<string> _populatedDungeons = new(StringComparer.Ordinal);
+    private ulong _nextSequence = 1UL;
 
     internal bool DungeonPopulated(string profile) => _populatedDungeons.Contains(profile);
     internal void MarkDungeonPopulated(string profile) => _populatedDungeons.Add(profile);
 
-    internal IReadOnlyList<DaggerfallEncounterResolution> Resolved => _resolved;
+    /// <summary>Pre-materialization pending encounter selections awaiting placement.</summary>
+    internal IReadOnlyList<DaggerfallEncounterResolution> Pending => _pending;
 
     internal DaggerfallEncounterResolution Select(DaggerfallEncounterRequest request, ulong generation, string profileId, ActorPose pose)
     {
         request.Validate();
         if (generation == 0) throw new ArgumentOutOfRangeException(nameof(generation));
         ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
-        ulong sequence = checked((ulong)_resolved.Count + 1UL);
+        ulong sequence = checked(_nextSequence++);
 
         DaggerfallEncounterChoice choice = DaggerfallEncounterPolicy.Choose(_definitions.Encounters, request, (roll, minimum, maximum) =>
             checked((int)_random.DrawKeyed(new KeyedRngRequest(Seed, Scope, $"generation:{generation}:sequence:{sequence}:{roll}", minimum, maximum)).Value));
@@ -46,7 +48,7 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
         }
 
         DaggerfallEncounterResolution result = new(generation, sequence, profileId, request, choice, actor?.Value, pose, SpawnedActorId: null);
-        _resolved.Add(result);
+        if (actor is not null) _pending.Add(result);
         return result;
     }
 
@@ -66,29 +68,37 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
             ? found : throw new InvalidOperationException($"A band names unpublished mobile {choice.MobileId}.");
         DaggerfallActorId actor = DaggerfallEncounterActors.ActorFor(mobile);
         _ = _definitions.RequireActor(actor);
-        DaggerfallEncounterResolution result = new(generation, checked((ulong)_resolved.Count + 1UL), profileId, request, choice, actor.Value, pose,
+        DaggerfallEncounterResolution result = new(generation, checked(_nextSequence++), profileId, request, choice, actor.Value, pose,
             SpawnedActorId: null) { Band = band };
-        _resolved.Add(result);
+        _pending.Add(result);
         return result;
     }
 
     /// <summary>
     /// Offers each pending selection of the active profile to <paramref name="spawn"/>, which places and
-    /// creates its actor or returns null when no placement was found this step. Like the donor's foe
-    /// spawner, a pending selection is offered again on every later step until it is placed.
+    /// creates its actor or returns null when no placement was found this step. Once materialized, the actor
+    /// lives solely in <c>EntityStore</c>/<see cref="DaggerfallActorLedger"/> and leaves the pending queue.
     /// </summary>
     internal IReadOnlyList<long> MaterializePending(string activeProfileId, Func<DaggerfallEncounterResolution, long?> spawn)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(activeProfileId);
         ArgumentNullException.ThrowIfNull(spawn);
         List<long> created = [];
-        for (int index = 0; index < _resolved.Count; index++)
+        for (int index = 0; index < _pending.Count;)
         {
-            DaggerfallEncounterResolution current = _resolved[index];
+            DaggerfallEncounterResolution current = _pending[index];
             if (current.ActorDefinition is null || current.SpawnedActorId is not null
-                || !StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId)) continue;
-            if (spawn(current) is not long actorId) continue;
-            _resolved[index] = current with { SpawnedActorId = actorId };
+                || !StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId))
+            {
+                index++;
+                continue;
+            }
+            if (spawn(current) is not long actorId)
+            {
+                index++;
+                continue;
+            }
+            _pending.RemoveAt(index);
             created.Add(actorId);
         }
         return created;
@@ -116,55 +126,50 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
     }
 
     /// <summary>Whether a selected encounter of the active profile is still waiting for a placement.</summary>
-    internal bool HasPending(string activeProfileId) => _resolved.Any(current => current.ActorDefinition is not null
+    internal bool HasPending(string activeProfileId) => _pending.Any(current => current.ActorDefinition is not null
         && current.SpawnedActorId is null && StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId));
 
     /// <summary>Pending spawns share the active profile's local frame with current actors.</summary>
     internal void RebasePending(string activeProfileId, Vector3 delta)
     {
-        for (int index = 0; index < _resolved.Count; index++)
+        for (int index = 0; index < _pending.Count; index++)
         {
-            DaggerfallEncounterResolution current = _resolved[index];
+            DaggerfallEncounterResolution current = _pending[index];
             if (current.SpawnedActorId is not null || current.ActorDefinition is null
                 || !StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId)) continue;
-            _resolved[index] = current with { Pose = new ActorPose(
+            _pending[index] = current with { Pose = new ActorPose(
                 DaggerfallSceneOrigin.Shift(current.Pose.Position, delta), current.Pose.HeadingYawRadians) };
         }
     }
 
-    internal DaggerfallEncounterRuntimeSave Capture() => new([.. _resolved]) { PopulatedDungeons = [.. _populatedDungeons.Order(StringComparer.Ordinal)] };
+    internal DaggerfallEncounterRuntimeSave Capture() => new([.. _pending])
+    {
+        PopulatedDungeons = [.. _populatedDungeons.Order(StringComparer.Ordinal)],
+        NextSequence = _nextSequence,
+    };
 
-    internal void Restore(DaggerfallEncounterRuntimeSave saved, IReadOnlyDictionary<long, string> liveActors) =>
-        Restore(saved, liveActors, new HashSet<long>());
-
-    /// <summary>
-    /// Restores encounter relationships while allowing a selected actor to have been retired
-    /// after its corpse/identity lifecycle completed.  A tombstoned identity remains a valid
-    /// historical SpawnedActorId, but it can never be materialized again.
-    /// </summary>
-    internal void Restore(DaggerfallEncounterRuntimeSave saved, IReadOnlyDictionary<long, string> liveActors,
-        IReadOnlySet<long> tombstonedActors)
+    /// <summary>Restores strictly pre-materialization pending encounter selections and dungeon population flags.</summary>
+    internal void Restore(DaggerfallEncounterRuntimeSave saved)
     {
         ArgumentNullException.ThrowIfNull(saved);
-        ArgumentNullException.ThrowIfNull(liveActors);
-        ArgumentNullException.ThrowIfNull(tombstonedActors);
         saved.Validate();
         _populatedDungeons.UnionWith(saved.PopulatedDungeons);
-        if (_resolved.Count != 0) throw new InvalidOperationException("Encounter runtime restores only into a fresh session.");
-        ulong expectedSequence = 1;
-        foreach (DaggerfallEncounterResolution value in saved.Resolved.OrderBy(value => value.Sequence))
+        if (_pending.Count != 0) throw new InvalidOperationException("Encounter runtime restores only into a fresh session.");
+        ulong maxSequence = 0;
+        foreach (DaggerfallEncounterResolution value in saved.Pending.OrderBy(value => value.Sequence))
         {
-            if (value.Sequence != expectedSequence++)
-                throw new ArgumentException("Saved encounter sequences must remain contiguous from one.");
-            ValidateRestored(value, liveActors, tombstonedActors);
-            _resolved.Add(value);
+            ValidateRestoredPending(value);
+            _pending.Add(value);
+            if (value.Sequence > maxSequence) maxSequence = value.Sequence;
         }
+        _nextSequence = Math.Max(saved.NextSequence, checked(maxSequence + 1UL));
     }
 
-    private void ValidateRestored(DaggerfallEncounterResolution value, IReadOnlyDictionary<long, string> liveActors,
-        IReadOnlySet<long> tombstonedActors)
+    private void ValidateRestoredPending(DaggerfallEncounterResolution value)
     {
         value.Validate();
+        if (value.SpawnedActorId is not null || value.Choice.MobileId is null || string.IsNullOrWhiteSpace(value.ActorDefinition))
+            throw new ArgumentException("Saved encounters may retain only pre-materialization pending outcomes.");
         if (value.Choice.Context != value.Request.Context)
             throw new ArgumentException("A saved encounter choice must retain its request context.");
         if (!float.IsFinite(value.Pose.Position.X) || !float.IsFinite(value.Pose.Position.Y)
@@ -172,12 +177,6 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
             throw new ArgumentException("A saved encounter pose must be finite.");
 
         DaggerfallEncounterChoice choice = value.Choice;
-        if (choice.MobileId is null)
-        {
-            ValidateEmptyChoice(value.Request, choice);
-            return;
-        }
-
         // A band from the expedition map was picked from its table without the source's spawn chance.
         bool chanceKept = value.Band is null
             ? choice.ChanceRoll is 0 && choice.ChanceDenominator == DaggerfallEncounterPolicy.DenominatorFor(value.Request.Context)
@@ -197,41 +196,13 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
         if (!StringComparer.Ordinal.Equals(value.ActorDefinition, expectedActor))
             throw new ArgumentException("A saved encounter actor does not match its selected mobile.");
         _ = _definitions.RequireActor(new DaggerfallActorId(expectedActor));
-        if (value.SpawnedActorId is long spawned)
-        {
-            if (liveActors.TryGetValue(spawned, out string? liveDefinition))
-            {
-                if (!StringComparer.Ordinal.Equals(liveDefinition, expectedActor))
-                    throw new ArgumentException("A saved spawned encounter actor does not match its canonical dynamic actor definition.");
-            }
-            else if (!tombstonedActors.Contains(spawned))
-            {
-                throw new ArgumentException("A saved spawned encounter actor is neither live nor a known tombstone.");
-            }
-        }
-    }
-
-    private static void ValidateEmptyChoice(DaggerfallEncounterRequest request, DaggerfallEncounterChoice choice)
-    {
-        if (choice.Table is not null || choice.Entry is not null || choice.LevelPercentile is not null)
-            throw new ArgumentException("An empty encounter outcome cannot carry table-selection facts.");
-        if (request.Context == DaggerfallEncounterContext.Dungeon && !request.EnemyAlert)
-        {
-            if (choice.Reason != "dungeon-not-alert" || choice.ChanceRoll is not null || choice.ChanceDenominator is not null)
-                throw new ArgumentException("A non-alert dungeon encounter must retain the canonical empty result.");
-            return;
-        }
-
-        int denominator = DaggerfallEncounterPolicy.DenominatorFor(request.Context);
-        if (choice.Reason != "source-chance-missed" || choice.ChanceDenominator != denominator
-            || choice.ChanceRoll is not int chance || chance is < 1 || chance >= denominator)
-            throw new ArgumentException("A saved empty encounter does not match the canonical source chance result.");
     }
 }
 
 /// <summary>
-/// One selected result, either pending actor materialization or bound to the actor it created. Its pose is
-/// the player's where the encounter was selected; the actor itself is placed around the player when it appears.
+/// One pre-materialization encounter selection awaiting placement. Its pose is the player's where the
+/// encounter was selected; the actor itself is placed around the player when it appears, after which
+/// ownership moves to <c>EntityStore</c> and <see cref="DaggerfallActorLedger"/>.
 /// </summary>
 internal sealed record DaggerfallEncounterResolution(
     ulong Generation,
@@ -260,20 +231,24 @@ internal sealed record DaggerfallEncounterResolution(
     }
 }
 
-internal sealed record DaggerfallEncounterRuntimeSave(DaggerfallEncounterResolution[] Resolved)
+internal sealed record DaggerfallEncounterRuntimeSave(DaggerfallEncounterResolution[] Pending)
 {
     [System.Text.Json.Serialization.JsonRequired] public string[] PopulatedDungeons { get; init; } = [];
+    public ulong NextSequence { get; init; } = 1UL;
     internal void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Resolved);
+        ArgumentNullException.ThrowIfNull(Pending);
         ArgumentNullException.ThrowIfNull(PopulatedDungeons);
+        if (NextSequence == 0) throw new ArgumentOutOfRangeException(nameof(NextSequence));
         if (PopulatedDungeons.Any(string.IsNullOrWhiteSpace) || PopulatedDungeons.Distinct(StringComparer.Ordinal).Count() != PopulatedDungeons.Length)
             throw new ArgumentException("Populated dungeon identities must be distinct and non-blank.");
         HashSet<(ulong Generation, ulong Sequence)> identities = [];
-        foreach (DaggerfallEncounterResolution resolution in Resolved)
+        foreach (DaggerfallEncounterResolution resolution in Pending)
         {
             ArgumentNullException.ThrowIfNull(resolution);
             resolution.Validate();
+            if (resolution.SpawnedActorId is not null || resolution.Choice.MobileId is null || string.IsNullOrWhiteSpace(resolution.ActorDefinition))
+                throw new ArgumentException("Saved encounters may retain only pre-materialization pending outcomes.");
             if (!identities.Add((resolution.Generation, resolution.Sequence)))
                 throw new ArgumentException("Saved encounter resolutions must have distinct generation and sequence identities.");
         }

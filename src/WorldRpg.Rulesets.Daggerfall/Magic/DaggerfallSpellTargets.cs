@@ -33,9 +33,9 @@ internal sealed class DaggerfallSpellTargets(DaggerfallDefinitions definitions, 
 
     internal bool IsEligible(long id) =>
         gameplayActive(id)
-        && (!actors.TryGet(id, out ActorState target)
-            || !target.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
-            || harm.CanBeAffectedBySpells);
+        && (actors.TryGet(id, out ActorState target) && target.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
+            ? harm.CanBeAffectedBySpells
+            : definitionOf(id)?.Kind != DaggerfallActorKinds.StaticNpc);
 
     /// <summary>The eligible actors within a radius of a point, by id; an area spell's or a sweep's targets.</summary>
     /// <param name="caster">Whose spell it is, observing the query; the player when none.</param>

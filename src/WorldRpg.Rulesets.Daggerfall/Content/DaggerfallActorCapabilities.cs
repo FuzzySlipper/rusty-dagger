@@ -86,6 +86,7 @@ internal sealed record ArchetypeProfile(
 internal sealed class ActorOverlayComponent
 {
     internal string? ArchetypeId { get; set; }
+    internal bool Met { get; set; }
     internal bool IsMuted { get; set; }
     internal bool IsQuestor { get; set; }
     internal string? EscortPortraitMedia { get; set; }

@@ -30,9 +30,17 @@ internal sealed class DaggerfallQuestFoes(DaggerfallQuestInstances quests, Actor
 {
     /// <summary>Whether a quest holds this foe back from acting.</summary>
     internal bool Restrained(long id) => quests.IsFoeRestrained(id);
-    /// <summary>The team a foe fights for: its definition's, unless a quest made it an ally or changed it.</summary>
-    internal string? Team(long id) => actorDefinitions.TryGetValue(id, out var definition)
-        ? quests.FoeTeam(id, definition.Team) : null;
+    /// <summary>Explicit quest team override for <paramref name="id"/>, or null when no quest overrides its <see cref="FactionComponent"/>.</summary>
+    internal string? TeamOverride(long id) => quests.FoeTeamOverride(id);
+
+    /// <summary>The team a foe fights for: quest override first, then its live <see cref="FactionComponent"/>, then its definition.</summary>
+    internal string? Team(long id)
+    {
+        string? baseTeam = actors.TryGet(id, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction)
+            ? faction.EffectiveTeam
+            : actorDefinitions.TryGetValue(id, out DaggerfallActorDefinition? definition) ? definition.Team : null;
+        return quests.FoeTeam(id, baseTeam);
+    }
 
     /// <summary>Removes every monster and enemy class, or makes them all hostile, as a quest commands.</summary>
     internal void CommandAllEnemies(bool clear)

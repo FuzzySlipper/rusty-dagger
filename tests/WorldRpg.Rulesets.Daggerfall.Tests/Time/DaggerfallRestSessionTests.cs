@@ -37,7 +37,7 @@ public sealed class DaggerfallRestSessionTests
             PopulateTerrainContent(content, exterior);
             SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
-                new AppearanceFake(releases), random: RandomMaximum.Create());
+                new AppearanceFake(releases), random: RandomMinimum.Create());
             using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults) {Sky = sky});
             if (wilderness)
                 session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize + 1f, 1f, 1f).ToVector());
@@ -46,8 +46,8 @@ public sealed class DaggerfallRestSessionTests
             int climate = definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
 
-            Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);
-            DaggerfallEncounterResolution[] selected = DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved;
+            Assert.Equal(DaggerfallRestInterruption.Encounter, session.RestPanel.View.Interruption);
+            DaggerfallEncounterResolution[] selected = DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Pending;
             Assert.NotEmpty(selected);
             Assert.All(selected, value =>
             {
@@ -111,7 +111,7 @@ public sealed class DaggerfallRestSessionTests
             Assert.Equal(DaggerfallRestInterruption.Encounter, session.RestPanel.View.Interruption);
             saved = DaggerfallSavePayload.Read(session.CaptureSave());
             Assert.Equal(CalendarSeconds(before) + elapsed, CalendarSeconds(saved.Calendar));
-            DaggerfallEncounterResolution selected = Assert.Single(saved.Encounters.Resolved);
+            DaggerfallEncounterResolution selected = Assert.Single(saved.Encounters.Pending);
             Assert.NotNull(selected.Choice.MobileId);
             Assert.Null(selected.SpawnedActorId);
             // The rest window closes on the encounter and its line is published once.
@@ -120,7 +120,7 @@ public sealed class DaggerfallRestSessionTests
 
             // Without a floor the foe waits; the refusal explains the unseen approaching encounter.
             session.Update(new ProductUpdate(OuterUpdate(2), []));
-            Assert.Null(Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved).SpawnedActorId);
+            Assert.Null(Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Pending).SpawnedActorId);
             session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
             Assert.Equal("Something approaches. Move or turn to let the encounter arrive before resting.", session.RestPanel.View.Message);
 
@@ -130,11 +130,13 @@ public sealed class DaggerfallRestSessionTests
                     Point = request.Origin with { Y = player.Y } }
                 : default;
             session.Update(new ProductUpdate(OuterUpdate(4), []));
-            DaggerfallEncounterResolution placed = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved);
-            long spawned = Assert.IsType<long>(placed.SpawnedActorId);
+            DaggerfallSavePayload afterPlace = DaggerfallSavePayload.Read(session.CaptureSave());
+            Assert.Empty(afterPlace.Encounters.Pending);
+            long spawned = Assert.Single(afterPlace.ActiveDynamicActors(inputs.ProfileKey),
+                actor => actor.Definition == selected.ActorDefinition).EntityId;
             float distance = Vector3.Distance(session.State.Actors.All.Single(actor => actor.DurableId == spawned).Position.ToVector(),
                 session.State.PlayerControl.Position!.Value.ToVector());
-            Assert.InRange(distance, DaggerfallEncounterPolicy.MinimumSpawnDistance(placed.Request.Context) - .01f,
+            Assert.InRange(distance, DaggerfallEncounterPolicy.MinimumSpawnDistance(selected.Request.Context) - .01f,
                 DaggerfallEncounterPolicy.MaximumSpawnDistance);
             // As the donor's line-of-sight spawn, the foe starts just past the edge of the view, not behind
             // the player where a wall at their back would refuse every placement.
@@ -319,9 +321,9 @@ public sealed class DaggerfallRestSessionTests
     {
         using WorldEncounterFixture f = new(wilderness);
         f.Session.AdvanceElapsedTime(minute * 60);
-        Assert.Empty(DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Resolved);
+        Assert.Empty(DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Pending);
         f.Session.Update(new ProductUpdate(OuterUpdate(1) with { FixedDeltaSeconds = 5 }, []));
-        DaggerfallEncounterResolution[] selected = DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Resolved;
+        DaggerfallEncounterResolution[] selected = DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Pending;
         if (!expected) { Assert.Empty(selected); return; }
         DaggerfallEncounterResolution pending = Assert.Single(selected);
         Assert.Null(pending.SpawnedActorId); // No valid ground yet: selection survives placement failure.
@@ -336,7 +338,8 @@ public sealed class DaggerfallRestSessionTests
         using WorldEncounterFixture f = new(wilderness: true);
         f.Session.Update(new ProductUpdate(OuterUpdate(1) with { FixedDeltaSeconds = 5 }, []));
         DaggerfallSavePayload pending = DaggerfallSavePayload.Read(f.Session.CaptureSave());
-        Assert.Null(Assert.Single(pending.Encounters.Resolved).SpawnedActorId);
+        DaggerfallEncounterResolution queued = Assert.Single(pending.Encounters.Pending);
+        Assert.Null(queued.SpawnedActorId);
         using DaggerfallSession restored = f.Restore(pending);
         Assert.Equal(JsonSerializer.Serialize(pending.Encounters),
             JsonSerializer.Serialize(DaggerfallSavePayload.Read(restored.CaptureSave()).Encounters));
@@ -347,7 +350,9 @@ public sealed class DaggerfallRestSessionTests
             : default;
         restored.Update(new ProductUpdate(OuterUpdate(2), []));
         DaggerfallSavePayload placed = DaggerfallSavePayload.Read(restored.CaptureSave());
-        long actorId = Assert.IsType<long>(Assert.Single(placed.Encounters.Resolved).SpawnedActorId);
+        Assert.Empty(placed.Encounters.Pending);
+        long actorId = Assert.Single(placed.ActiveDynamicActors(placed.Site.ActiveProfile!.Require()),
+            actor => actor.Definition == queued.ActorDefinition).EntityId;
         Assert.True(restored.Sites.Projection.Appearance.HasActor(actorId));
         Assert.Contains(actorId, restored.EnemyBehavior.LastEvidence.Keys);
         Assert.False(restored.Exterior.ActiveLocationLoaded);
@@ -357,7 +362,9 @@ public sealed class DaggerfallRestSessionTests
         using DaggerfallSession again = f.Restore(placed);
         Assert.True(again.Sites.Projection.Appearance.HasActor(actorId));
         again.Update(new ProductUpdate(OuterUpdate(3), []));
-        Assert.Equal(actorId, Assert.Single(DaggerfallSavePayload.Read(again.CaptureSave()).Encounters.Resolved).SpawnedActorId);
+        DaggerfallSavePayload againSaved = DaggerfallSavePayload.Read(again.CaptureSave());
+        Assert.Empty(againSaved.Encounters.Pending);
+        Assert.Equal(actorId, Assert.Single(againSaved.ActiveDynamicActors(againSaved.Site.ActiveProfile!.Require())).EntityId);
         Assert.Single(again.State.Actors.All.Where(actor => actor.DurableId == actorId));
     }
 
@@ -366,7 +373,7 @@ public sealed class DaggerfallRestSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture();
         f.Update(fixedDelta: 5);
-        Assert.Empty(DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Resolved);
+        Assert.Empty(DaggerfallSavePayload.Read(f.Session.CaptureSave()).Encounters.Pending);
     }
 
     private sealed class WorldEncounterFixture : IDisposable

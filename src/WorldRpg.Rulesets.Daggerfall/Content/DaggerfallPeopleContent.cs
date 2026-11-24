@@ -509,6 +509,9 @@ internal static class DaggerfallPeopleSlots
         return (long)(StableHash.NonZeroFnv1a64($"daggerfall.cast:{castId}") & HighBandMask) | HighBandBit;
     }
 
+    /// <summary>Whether <paramref name="durableId"/> sits in the deterministic high-bit band (seeded slot, cast individual, or fixed placement).</summary>
+    internal static bool IsDeterministicId(long durableId) => durableId > 0 && (durableId & HighBandBit) != 0;
+
     /// <summary>
     /// Independent per-slot 64-bit seed derived strictly from <paramref name="worldSocialSeed"/>, <paramref name="site"/>,
     /// and <paramref name="slotKey"/> — completely separate from <see cref="DaggerfallGameRandom.Seed"/>.
