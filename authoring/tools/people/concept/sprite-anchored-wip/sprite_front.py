@@ -19,6 +19,7 @@ HERE = Path(__file__).resolve().parent
 CONCEPT = HERE.parent
 REPO = CONCEPT.parents[3]
 WF_TEMPLATE = HERE / "workflow-new-b-sprite-to-concept-2stage.json"
+POSE_LOCK_DIR = HERE / "pose-lock"
 DEFAULT_OUTPUT = REPO / "local/art/generated/studies/people-concept"
 
 
@@ -89,13 +90,55 @@ def make_portrait_ref(portrait_png: Path, out_png: Path, size: int = 512, border
     return out_png
 
 
-def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False, portrait_only: bool = False, show_both_arms: bool = False) -> tuple[str, str]:
+def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False, portrait_only: bool = False, show_both_arms: bool = False, pose_lock: bool = False, pose_garment: str = "auto") -> tuple[str, str]:
     pos = "his" if pronoun == "He" else ("her" if pronoun == "She" else "its")
     face_q = (
         "If wearing a hood, paint a real shadowed face inside the deep hood—brow and eyes recessed in dark-umber shadow while "
         "nose, cheekbones and jaw remain clearly sculpted in muted warm tones (never an empty black void). "
         if hooded_shadow else ""
     )
+    if pose_lock:
+        draped = (
+            pose_garment == "draped"
+            or (pose_garment == "auto" and any(w in brief.lower() for w in ("robe", "gown", "dress", "cassock", "skirt")))
+        )
+        leg_clause = (
+            "Legs stand straight beneath the long garment with both feet/shoes visible, flat and parallel, pointing straight ahead about hip-width apart."
+            if draped
+            else "Legs straight, feet flat and parallel pointing straight ahead about hip-width apart with a clear gap between the legs from mid-thigh down."
+        )
+        pose_text = (
+            f"Standing straight and symmetric facing directly forward, head level and looking straight ahead, shoulders level. "
+            f"Both arms hang down and slightly away from {pos} sides at about 22 degrees with a clear gap of background between each hand and {pos} hips, "
+            f"elbows softly bent slightly forward, wrists straight, palms facing inward toward {pos} thighs, thumbs pointing forward, fingers together "
+            f"and gently curled in a relaxed hanging hand (nothing held, empty hands, not spread open). {leg_clause}"
+        )
+        ref_intro = (
+            "using Image 1 ONLY for the character's facial likeness, hair, skin tone, age, eyes and head/collar cues. "
+            if portrait_only
+            else "using Image 1 for costume, colour-blocking, face and character identity cues while strictly following the pose-lock control depth map. "
+        )
+        qwen_p = (
+            f"Task: Paint a full-length high-resolution dark-fantasy character concept sheet {ref_intro}"
+            "Keep the clothing cleanly tailored and uncluttered with natural drape.\n\n"
+            "CRITICAL POSE LOCK: Follow the exact body proportions, arm spread, elbow bend, wrist angle, relaxed palm-inward thumb-forward gently curled hands, "
+            f"and hip-width parallel forward-pointing feet—do NOT open the palms toward the camera, do NOT spread the fingers, and do NOT bring the feet together. {face_q}\n\n"
+            f"Subject: {brief.rstrip('.')}. {pose_text}\n\n"
+            "Style: ART DIRECTION — VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\n"
+            "Draw the character as an accomplished pen-and-ink dark-fantasy character sheet in the tradition of Akihiko Yoshida (Vagrant Story) and classic "
+            "tabletop RPG manuals, finished with opaque muted gouache washes. Confident dark-umber ink contours, fine directional crosshatching inside folds, "
+            "opaque local colour washes without glossy 3D shading.\n\n"
+            "Presentation: Full-length isolated standing figure on a perfectly flat solid dark slate grey background, RGB 48,52,59. Soft overhead light equal on both sides. No floor, no cast shadow, no border."
+        )
+        krea_p = (
+            "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+            "Drawn and painted as a vivid, punchy 1990s PC fantasy role-playing game character sheet: confident dark-umber pen-and-ink contour lines, "
+            "fine crosshatching only inside cloth folds and overhangs equally on both sides, and opaque matte gouache colour planes (4 to 6 painted value groups per material). "
+            f"{face_q}"
+            "Soft even overhead light equal on both sides. Plain flat solid dark slate-grey background, RGB 48,52,59, no floor, no cast shadow, no scenery, no border.\n\n"
+            f"Subject and pose: Full-length isolated character from head to feet. {brief.rstrip('.')}. {pose_text}"
+        )
+        return qwen_p, krea_p
     if style_only and portrait_only:
         qwen_p = (
             "Task: Paint a full-body high-resolution dark-fantasy character illustration showing the character from the front, "
@@ -238,13 +281,24 @@ def main():
     ap.add_argument("--show-both-arms", action="store_true", help="With --style-only, open 3/4 sprites slightly toward the front so both arms and hands are clearly visible for splat/back generation")
     ap.add_argument("--portrait-only", action="store_true", help="Anchor face/hair/identity on a dialogue portrait while generating a full-length wide-A turnaround body from the brief")
     ap.add_argument("--portrait-trim", type=int, default=3, help="Pixels to trim off each edge of a classic framed portrait (default 3)")
+    ap.add_argument("--pose-lock", action="store_true", help="M11b canonical X Bot pose lock (Stage 1 Qwen 2.1 Fun Union Depth + slate border lock, Stage 2 scheduled Krea2 Depth LoRA)")
+    ap.add_argument("--pose-garment", choices=["auto", "open", "draped"], default="auto", help="With --pose-lock, leg prompt phrasing (auto detects robes/dresses/gowns)")
+    ap.add_argument("--pose-depth", type=Path, default=POSE_LOCK_DIR / "xbot-depth-832x1216.png", help="Depth control map for --pose-lock")
+    ap.add_argument("--pose-slate", type=Path, default=POSE_LOCK_DIR / "slate-bg-832x1216.png", help="Slate background image for --pose-lock built-in border lock")
+    ap.add_argument("--pose-mask", type=Path, default=POSE_LOCK_DIR / "xbot-regen-mask-832x1216.png", help="Dilated figure regenerate mask for --pose-lock")
+    ap.add_argument("--pose-s1-strength", type=float, default=0.95, help="Stage 1 Fun ControlNet Union strength (default 0.95)")
+    ap.add_argument("--pose-s1-end", type=float, default=0.90, help="Stage 1 Fun ControlNet Union end_percent (default 0.90)")
+    ap.add_argument("--pose-s2-strength", type=float, default=0.70, help="Stage 2 Krea2 Depth Control-LoRA strength (0 disables, default 0.70)")
+    ap.add_argument("--pose-s2-end", type=float, default=0.75, help="Stage 2 Krea2 Depth Control-LoRA end_percent (default 0.75)")
     ap.add_argument("--seeds", default="42201,42202,42203")
-    ap.add_argument("--denoise", type=float, default=0.38, help="Stage 2 Krea2 New B denoise (0.38=grittier ink, 0.46=more Brom/Elmore)")
+    ap.add_argument("--denoise", type=float, default=None, help="Stage 2 Krea2 New B denoise (default 0.40 with --pose-lock, else 0.38)")
     ap.add_argument("--width", type=int, default=832)
     ap.add_argument("--height", type=int, default=1216)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--comfy", default="http://192.168.1.20:8188")
     args = ap.parse_args()
+    if args.denoise is None:
+        args.denoise = 0.40 if args.pose_lock else 0.38
 
     brief = args.brief
     pronoun = args.pronoun
@@ -268,20 +322,62 @@ def main():
         canvas = make_slate_canvas(ref_src.resolve(), out / f"sprite_{args.width}x{args.height}.png", args.width, args.height)
     up_spr = comfy_upload(args.comfy, canvas, f"sa-{args.id}-{canvas.name}")
 
-    qwen_p, krea_p = build_prompts(brief, pronoun, args.hooded_shadow, style_only=args.style_only, portrait_only=portrait_only, show_both_arms=args.show_both_arms)
+    qwen_p, krea_p = build_prompts(
+        brief, pronoun, args.hooded_shadow,
+        style_only=args.style_only, portrait_only=portrait_only, show_both_arms=args.show_both_arms,
+        pose_lock=args.pose_lock, pose_garment=args.pose_garment,
+    )
     wf2 = json.loads(WF_TEMPLATE.read_text())
 
     s1_keys = ["1_load_sprite", "2_qwen_unet", "3_qwen_clip", "4_qwen_vae", "5_qwen_cache",
                "6_qwen_prompt", "7_qwen_latent", "8_qwen_sampler", "9_qwen_decode", "10_save_stage1"]
-    s1_tpl = {k: wf2[k] for k in s1_keys}
+    s1_tpl = {k: json.loads(json.dumps(wf2[k])) for k in s1_keys}
     s1_tpl["7_qwen_latent"]["inputs"]["width"] = args.width
     s1_tpl["7_qwen_latent"]["inputs"]["height"] = args.height
 
     s2_keys = ["11_krea_unet", "12_krea_clip", "13_krea_vae", "14_lora_brom", "15_lora_elmore", "16_lora_retroink",
                "17_krea_encode", "18_krea_prompt", "19_krea_zero_neg", "20_krea_sampler", "21_krea_decode", "22_save_final"]
-    s2_tpl = {k: wf2[k] for k in s2_keys}
+    s2_tpl = {k: json.loads(json.dumps(wf2[k])) for k in s2_keys}
     s2_tpl["0_load_s1"] = {"class_type": "LoadImage", "inputs": {"image": "stage1.png"}}
     s2_tpl["17_krea_encode"]["inputs"]["pixels"] = ["0_load_s1", 0]
+
+    if args.pose_lock:
+        up_depth = comfy_upload(args.comfy, args.pose_depth.resolve(), "rusty-poselock-xbot-depth.png")
+        up_slate = comfy_upload(args.comfy, args.pose_slate.resolve(), "rusty-poselock-slate-bg.png")
+        up_mask = comfy_upload(args.comfy, args.pose_mask.resolve(), "rusty-poselock-regen-mask.png")
+        s1_tpl["2b_patch"] = {"class_type": "ModelPatchLoader", "inputs": {"name": "qwen_image_2.1_fun_controlnet_union_int8_convrot.safetensors"}}
+        s1_tpl["2c_depth"] = {"class_type": "LoadImage", "inputs": {"image": up_depth}}
+        s1_tpl["2e_slate"] = {"class_type": "LoadImage", "inputs": {"image": up_slate}}
+        s1_tpl["2f_mask_im"] = {"class_type": "LoadImage", "inputs": {"image": up_mask}}
+        s1_tpl["2g_mask"] = {"class_type": "ImageToMask", "inputs": {"image": ["2f_mask_im", 0], "channel": "red"}}
+        s1_tpl["2d_cn"] = {
+            "class_type": "ZImageFunControlnet",
+            "inputs": {
+                "model": ["5_qwen_cache", 0],
+                "model_patch": ["2b_patch", 0],
+                "vae": ["4_qwen_vae", 0],
+                "image": ["2c_depth", 0],
+                "inpaint_image": ["2e_slate", 0],
+                "mask": ["2g_mask", 0],
+                "strength": args.pose_s1_strength,
+                "start_percent": 0.0,
+                "end_percent": args.pose_s1_end,
+            },
+        }
+        s1_tpl["8_qwen_sampler"]["inputs"]["model"] = ["2d_cn", 0]
+        if args.pose_s2_strength > 0:
+            s2_tpl["16b_depth"] = {"class_type": "LoadImage", "inputs": {"image": up_depth}}
+            s2_tpl["16c_enc"] = {"class_type": "Krea2ControlPlusImageEncode", "inputs": {
+                "control_image": ["16b_depth", 0], "vae": ["13_krea_vae", 0], "latent": ["17_krea_encode", 0],
+                "resize": "match_latent_size", "upscale_method": "lanczos", "crop": "center",
+                "channel_mode": "grayscale", "normalize": "per_image_minmax", "invert": False, "batch_mode": "independent_images",
+            }}
+            s2_tpl["16d_lora"] = {"class_type": "Krea2ControlPlusLoRALoader", "inputs": {
+                "model": ["16_lora_retroink", 0], "lora_name": "krea2_depth_control_lora.safetensors",
+                "strength": args.pose_s2_strength, "start_percent": 0.0, "end_percent": args.pose_s2_end,
+            }}
+            s2_tpl["16e_apply"] = {"class_type": "Krea2ControlPlusApply", "inputs": {"model": ["16d_lora", 0], "control_latent": ["16c_enc", 0]}}
+            s2_tpl["20_krea_sampler"]["inputs"]["model"] = ["16e_apply", 0]
 
     seeds = [int(x) for x in args.seeds.split(",") if x.strip()]
     s1_paths = []
