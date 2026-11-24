@@ -453,7 +453,6 @@ public sealed class DaggerfallSiteContextTests
     private static DaggerfallSavePayload Payload(DaggerfallSiteSave? site) => new(
         new DaggerfallPlayerSave(0f, 0f, 0f, 0f, 0f, EmptyStats()),
         [],
-        [],
         0,
         1,
         new DaggerfallInventorySave([], [], []),
@@ -468,7 +467,6 @@ public sealed class DaggerfallSiteContextTests
         site ?? throw new ArgumentNullException(nameof(site)),
         [],
         new DaggerfallVariablesSave([]),
-        new DaggerfallNpcSave([]),
         [],
         new DaggerfallSkillProgressionSave([], 0, []),
         new DaggerfallSocialSave([], [], [], []),

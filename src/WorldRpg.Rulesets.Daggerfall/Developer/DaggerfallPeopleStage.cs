@@ -94,5 +94,5 @@ internal sealed class DaggerfallPeopleStage(ActorsState actors, Func<long, bool>
     }
 
     private IEnumerable<ActorState> Civilians() =>
-        actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian && !actor.IsDefeated);
+        actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>() && !actor.IsDefeated);
 }

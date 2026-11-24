@@ -14,8 +14,8 @@ internal sealed class DaggerfallTargetingPolicy(IReadOnlyDictionary<long, Dagger
     private readonly Func<long, bool> _actorGameplayActive = actorGameplayActive ?? (_ => true);
 
     public bool IsValidTarget(ActorState actor) => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId
-        && actor.DurableId > 0 && definitions.TryGetValue(actor.DurableId, out var definition)
-        && definition.Kind != DaggerfallActorKinds.StaticNpc
+        && actor.DurableId > 0 && definitions.ContainsKey(actor.DurableId)
+        && (!actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) || harm.CanBeTargetedInCombat)
         && _actorGameplayActive(actor.DurableId);
     public double MinimumFacingCosine => tuning.MinimumFacingCosine;
 

@@ -48,8 +48,7 @@ internal sealed class DaggerfallActorSight(IReadOnlyDictionary<long, DaggerfallA
     internal float BodyLift(long durableId)
     {
         if (durableId == DaggerfallActorIdentity.PlayerEntityId) return playerBody;
-        if (definitions.TryGetValue(durableId, out DaggerfallActorDefinition? definition) && definition.Kind == DaggerfallActorKinds.Civilian
-            && personSightHeight?.Invoke(durableId) is double sight)
+        if (personSightHeight?.Invoke(durableId) is double sight)
             return (float)sight;
         return WalkerHeight(durableId) * .5F;
     }

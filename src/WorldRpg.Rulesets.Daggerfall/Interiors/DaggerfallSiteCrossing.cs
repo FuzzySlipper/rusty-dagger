@@ -158,20 +158,94 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     internal DaggerfallSiteProfiles RequireProfiles() =>
         Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
 
-    /// <summary>Adds the saved inactive sites' deltas to a restoring session; ResolveRestore admitted each profile once.</summary>
-    internal void RestoreDeltas(IEnumerable<DaggerfallSiteDeltaSave> saved)
+    /// <summary>Adds the saved inactive sites' structural deltas paired with their detached ledger actors; ResolveRestore admitted each profile once.</summary>
+    internal void RestoreDeltas(IEnumerable<DaggerfallSiteDeltaSave> saved, IEnumerable<ActorLedgerEntry> ledger)
     {
+        ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(ledger);
+        ActorLedgerEntry[] entries = [.. ledger];
         foreach (DaggerfallSiteDeltaSave delta in saved)
-            _deltas.Add(delta.Profile.Require(), new DaggerfallSiteRuntimeDelta(delta.Actors, delta.DynamicActors, delta.ActorInventories,
-                delta.Corpses, delta.Doors, delta.Effects, delta.Motion) { BanishedActors = delta.BanishedActors });
+        {
+            DaggerfallWorldProfileKey profile = delta.Profile.Require();
+            _deltas.Add(profile, BuildRuntimeDelta(delta, profile, entries));
+        }
     }
 
-    /// <summary>The inactive sites' deltas as the save holds them, in the stable order of their profiles.</summary>
+    internal static DaggerfallSiteRuntimeDelta BuildRuntimeDelta(DaggerfallSiteDeltaSave structural,
+        DaggerfallWorldProfileKey profile, IEnumerable<ActorLedgerEntry> ledger)
+    {
+        List<DaggerfallActorSave> authored = [];
+        List<DaggerfallDynamicActorSave> dynamic = [];
+        List<DaggerfallActorInventorySave> inventories = [];
+        List<DaggerfallCorpseSave> corpses = [];
+        List<DaggerfallActiveEffectSave> effects = [];
+        List<long> banished = [];
+
+        foreach (ActorLedgerEntry entry in ledger)
+        {
+            if (entry.Origin.IsFixedPlacement && entry.Location?.Kind == ActorLocationKind.Removed
+                && entry.Origin.SiteProfile?.Require() == profile)
+            {
+                banished.Add(entry.DurableId);
+                continue;
+            }
+            if (entry.Location is not { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } savedProfile }
+                || savedProfile.Require() != profile
+                || entry.Vitals is not { } vitals
+                || entry.Pose is not { } pose)
+                continue;
+
+            ActorCombatStateDiff? combat = entry.Combat;
+            if (entry.Origin.IsFixedPlacement)
+            {
+                authored.Add(new DaggerfallActorSave(entry.DurableId, pose.X, pose.Y, pose.Z, pose.HeadingRadians, vitals.Stats)
+                {
+                    WabbajackDefinition = combat?.WabbajackDefinition,
+                    ForcedHostile = combat?.ForcedHostile ?? false,
+                    LanguagePacified = combat?.LanguagePacified ?? false,
+                    MagicallyPacified = combat?.MagicallyPacified ?? false,
+                });
+            }
+            else if (entry.Origin.Kind == ActorOriginKind.Minted)
+            {
+                dynamic.Add(new DaggerfallDynamicActorSave(entry.DurableId, entry.Origin.DefinitionId!,
+                    pose.X, pose.Y, pose.Z, pose.HeadingRadians, vitals.Stats)
+                {
+                    Level = entry.Origin.Level ?? 1,
+                    SpawnDistance = combat?.SpawnDistance ?? 0,
+                    Passive = combat?.Passive ?? false,
+                    WabbajackActive = combat?.WabbajackActive ?? false,
+                    ForcedHostile = combat?.ForcedHostile ?? false,
+                    LanguagePacified = combat?.LanguagePacified ?? false,
+                    MagicallyPacified = combat?.MagicallyPacified ?? false,
+                    PlayerAllied = combat?.PlayerAllied ?? false,
+                    CorruptionOrigin = combat?.CorruptionOrigin,
+                    Gender = entry.Origin.Gender,
+                });
+            }
+            if (combat?.DetachedInventory is { } inventory) inventories.Add(inventory);
+            if (combat?.DetachedCorpse is { } corpse) corpses.Add(corpse);
+            if (combat?.DetachedEffects is { Length: > 0 } detachedEffects) effects.AddRange(detachedEffects);
+        }
+
+        return new DaggerfallSiteRuntimeDelta(
+            [.. authored.OrderBy(a => a.EntityId)],
+            [.. dynamic.OrderBy(a => a.EntityId)],
+            [.. inventories.OrderBy(i => i.EntityId)],
+            [.. corpses.OrderBy(c => c.ActorId)],
+            structural.Doors,
+            [.. effects],
+            structural.Motion)
+        {
+            BanishedActors = [.. banished.Order()],
+        };
+    }
+
+    /// <summary>The inactive sites' structural deltas as the save holds them, in the stable order of their profiles.</summary>
     internal DaggerfallSiteDeltaSave[] CaptureDeltas() =>
         [.. _deltas.OrderBy(entry => entry.Key.Site.Region).ThenBy(entry => entry.Key.Site.Index).ThenBy(entry => entry.Key.LogicalId, StringComparer.Ordinal).Select(entry => new DaggerfallSiteDeltaSave(
-            DaggerfallWorldProfileKeySave.Capture(entry.Key), entry.Value.Actors, entry.Value.DynamicActors, entry.Value.ActorInventories, entry.Value.Corpses, entry.Value.Doors, entry.Value.Effects)
+            DaggerfallWorldProfileKeySave.Capture(entry.Key), entry.Value.Doors)
         {
-            BanishedActors = entry.Value.BanishedActors,
             Motion = entry.Value.Motion
                 ?? throw new InvalidOperationException($"Inactive site '{entry.Key.LogicalId}' has no captured dungeon motion snapshot."),
         })];
@@ -719,40 +793,21 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     }
 }
 
-/// <summary>One inactive site's durable gameplay state. Runtime Engine identities are recreated when it becomes active.</summary>
+/// <summary>One inactive site's structural gameplay state (doors and motion); actor state lives in <see cref="DaggerfallActorLedger"/>.</summary>
 internal sealed record DaggerfallSiteDeltaSave(
     DaggerfallWorldProfileKeySave Profile,
-    DaggerfallActorSave[] Actors,
-    DaggerfallDynamicActorSave[] DynamicActors,
-    DaggerfallActorInventorySave[] ActorInventories,
-    DaggerfallCorpseSave[] Corpses,
-    DaggerfallDoorSave[] Doors,
-    DaggerfallActiveEffectSave[] Effects)
+    DaggerfallDoorSave[] Doors)
 {
     /// <summary>Detached current motion phases for this unloaded profile.</summary>
     [JsonRequired]
     public DaggerfallDungeonMotionSnapshot Motion { get; init; } = null!;
-    [JsonRequired]
-    public long[] BanishedActors { get; init; } = [];
 
     internal void Validate()
     {
         ArgumentNullException.ThrowIfNull(Profile); Profile.Validate();
-        ArgumentNullException.ThrowIfNull(Actors);
-        ArgumentNullException.ThrowIfNull(DynamicActors);
-        if(Actors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)) || DynamicActors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)))
-            throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
-        ArgumentNullException.ThrowIfNull(ActorInventories);
-        ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(Doors);
-        ArgumentNullException.ThrowIfNull(Effects);
         ArgumentNullException.ThrowIfNull(Motion);
         Motion.Validate();
-        foreach (DaggerfallActorSave actor in Actors) { ArgumentNullException.ThrowIfNull(actor); actor.Validate(); }
-        foreach (DaggerfallDynamicActorSave actor in DynamicActors) { ArgumentNullException.ThrowIfNull(actor); actor.Validate(); }
-        foreach (DaggerfallActorInventorySave inventory in ActorInventories) { ArgumentNullException.ThrowIfNull(inventory); inventory.Validate(); }
-        foreach (DaggerfallCorpseSave corpse in Corpses) { ArgumentNullException.ThrowIfNull(corpse); corpse.Validate(); }
         foreach (DaggerfallDoorSave door in Doors) { ArgumentNullException.ThrowIfNull(door); door.Validate(); }
-        foreach (DaggerfallActiveEffectSave effect in Effects) { ArgumentNullException.ThrowIfNull(effect); effect.Validate(); }
     }
 }

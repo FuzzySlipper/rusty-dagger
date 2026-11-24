@@ -39,6 +39,7 @@ internal sealed record DaggerfallActorAssembly(
     DaggerfallActorInventories ActorInventories,
     DaggerfallItemInstances ItemInstances,
     DaggerfallNpcRegistry Npcs,
+    DaggerfallActorLedger ActorLedger,
     DaggerfallCharacterState Character,
     Dictionary<long, DaggerfallActorDefinition> Definitions,
     DaggerfallActorDefinition PlayerDefinition,
@@ -49,7 +50,8 @@ internal sealed record DaggerfallActorAssembly(
 /// spawned actors, the people and the character. A new game has none.
 /// </summary>
 internal sealed record DaggerfallActorSaves(DaggerfallPlayerSave Player, DaggerfallActorSave[] Actors, long[] BanishedActors,
-    DaggerfallDynamicActorSave[] DynamicActors, DaggerfallNpcSave Npcs, DaggerfallCharacterSave? Character);
+    DaggerfallDynamicActorSave[] DynamicActors, DaggerfallNpcSave Npcs, DaggerfallCharacterSave? Character,
+    ActorLedgerEntry[]? Ledger = null);
 
 /// <summary>
 /// The atlas gender a spawned enemy took when it entered the world. DaggerfallMobileUnit.GetTextureArchive
@@ -91,6 +93,11 @@ internal static class DaggerfallActorFactory
                 PlayerCapabilities);
             player.Actor.Add(new DaggerfallSpellReadiness());
             player.Actor.Add(new CombatContributions());
+            player.Actor.Add(new ActorHarmPolicy(ActorHarmPolicyKind.Combatant));
+            player.Actor.Add(new ActorInteractionPolicy(ActorInteractionPolicyKind.None));
+            player.Actor.Add(new FactionComponent(creatureFactionId: "player-ally"));
+            player.Actor.Add(new ActorOverlayComponent { ArchetypeId = "player" });
+            player.Actor.Add(new ActorRenderComponent(ActorVisualSpec.NoneSpec));
             EntityId playerEntity = player.Actor.Entity;
             if (saved is not null) RestoreStats(player.Actor, saved.Player.Stats);
             InventoryStore inventoryStore = new();
@@ -200,9 +207,13 @@ internal static class DaggerfallActorFactory
                     entry.X, entry.Y, entry.Z) { Profile = entry.Profile?.Require(), DisplayName = entry.DisplayName }));
             }
 
+            DaggerfallActorLedger actorLedger = new();
+            if (saved?.Ledger is { } savedLedgerEntries)
+                actorLedger.Restore(savedLedgerEntries);
+
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
-            if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved.DynamicActors, authored, inventoryStore);
+            if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved.DynamicActors, authored, inventoryStore, npcs);
             // A restored player stands where the save left them from construction on: the active profile may
             // have no start of its own (a location without start markers), and the camera is built from this pose.
             // A new game stands where the new-game definition places it, else at the start site's start.
@@ -215,7 +226,7 @@ internal static class DaggerfallActorFactory
                 control,
                 actors, inventoryStore, inventory, equipmentCoordinator, containers,
                 new DaggerfallActorInventories(actors, itemDefinitions, equipmentSlots),
-                itemInstances, npcs, character,
+                itemInstances, npcs, actorLedger, character,
                 authored, playerDefinition, mechanics);
         }
         catch { actors.Dispose(); throw; }
@@ -299,19 +310,48 @@ internal static class DaggerfallActorFactory
             Career: null);
     }
 
-    /// <summary>Materializes one registry NPC as a canonical actor with an empty inventory.</summary>
+    /// <summary>Materializes one registry NPC (civilian, static, or questor) as a canonical actor with real stats, faction, capability, and render components.</summary>
     internal static ActorState CreateCivilianActor(DaggerfallMechanicsState mechanics, ActorsState actors,
-        InventoryStore inventoryStore, DaggerfallNpc npc, ActorPose pose)
+        InventoryStore inventoryStore, DaggerfallNpc npc, ActorPose pose, DaggerfallDefinitions? definitions = null)
     {
         ArgumentNullException.ThrowIfNull(mechanics);
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(inventoryStore);
         ArgumentNullException.ThrowIfNull(npc);
-        DaggerfallActorDefinition definition = CivilianDefinition(npc.DurableId, npc.Kind == DaggerfallNpcKind.Static);
+        ArchetypeProfile profile = npc.Kind switch
+        {
+            DaggerfallNpcKind.Static => ArchetypeProfile.StaticNpc,
+            DaggerfallNpcKind.Questor => ArchetypeProfile.Questor,
+            _ => ArchetypeProfile.Civilian,
+        };
+        DaggerfallActorDefinition definition = CivilianDefinition(npc.DurableId, npc.Kind != DaggerfallNpcKind.Civilian);
         ActorState actor = CreateNonPlayerActor(actors, npc.DurableId, definition,
-            mechanics.CreateStats(definition, new DaggerfallVitalValues(1, 0, 0)), pose);
+            mechanics.CreateStats(definition, new DaggerfallVitalValues(profile.BaseHealth, profile.BaseFatigue, profile.BaseMagicka)), pose);
+        ApplyNpcComponents(actor, npc, profile, definitions);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
+    }
+
+    internal static void ApplyNpcComponents(ActorState actor, DaggerfallNpc npc, ArchetypeProfile profile, DaggerfallDefinitions? definitions)
+    {
+        actor.Actor.Get<ActorHarmPolicy>().Set(profile.DefaultHarm);
+        actor.Actor.Get<ActorInteractionPolicy>().Set(profile.DefaultInteraction);
+        int? regionalPeopleId = definitions is not null
+            ? DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, npc.Site.Region)?.Id
+            : null;
+        int? primaryFactionId = npc.Appearance.FactionId != 0 ? npc.Appearance.FactionId : regionalPeopleId;
+        FactionComponent faction = actor.Actor.Get<FactionComponent>();
+        faction.SetPeopleFactions(primaryFactionId, regionalPeopleId);
+        faction.SetCreatureFaction(string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase) ? "city-watch" : null);
+
+        ActorOverlayComponent overlay = actor.Actor.Get<ActorOverlayComponent>();
+        overlay.ArchetypeId = profile.Id;
+        overlay.IsQuestor = npc.Kind == DaggerfallNpcKind.Questor;
+
+        ActorVisualSpec visual = npc.Kind == DaggerfallNpcKind.Civilian
+            ? ActorVisualSpec.SplatCivilian(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, npc.Appearance.Gender)
+            : ActorVisualSpec.Billboard(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, onBase: true);
+        actor.Actor.Get<ActorRenderComponent>().SetVisual(visual);
     }
 
     /// <summary>Resolves authored encounter definitions and the explicit runtime civilian definition.</summary>
@@ -330,7 +370,8 @@ internal static class DaggerfallActorFactory
     /// <summary>Recreates an inactive site's spawned actor with its durable identity and saved pose.</summary>
     internal static ActorState CreateDynamicActor(IRandomService random, DaggerfallMechanicsState mechanics,
         DaggerfallDefinitions definitions, ActorsState actors, InventoryStore inventoryStore,
-        Dictionary<long, DaggerfallActorDefinition> definitionsByActor, DaggerfallDynamicActorSave saved)
+        Dictionary<long, DaggerfallActorDefinition> definitionsByActor, DaggerfallDynamicActorSave saved,
+        DaggerfallNpcRegistry? npcs = null)
     {
         ArgumentNullException.ThrowIfNull(saved);
         // Encounter class actors carry a spawn-time policy adjustment (including the thief
@@ -344,11 +385,22 @@ internal static class DaggerfallActorFactory
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
         if (saved.Gender is { } gender) actor.Actor.Add(new DaggerfallActorGender(gender));
+        if (saved.PlayerAllied) actor.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
+        if (npcs is not null && npcs.All.FirstOrDefault(n => n.DurableId == saved.EntityId) is { } restoredNpc)
+        {
+            ArchetypeProfile npcProfile = restoredNpc.Kind switch
+            {
+                DaggerfallNpcKind.Static => ArchetypeProfile.StaticNpc,
+                DaggerfallNpcKind.Questor => ArchetypeProfile.Questor,
+                _ => ArchetypeProfile.Civilian,
+            };
+            ApplyNpcComponents(actor, restoredNpc, npcProfile, definitions);
+        }
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = saved.LanguagePacified;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = saved.MagicallyPacified;
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = saved.SpawnDistance;
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = saved.Passive;
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = saved.SpawnDistance;
+        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = saved.Passive;
         definitionsByActor.Add(saved.EntityId, definition);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
@@ -367,7 +419,8 @@ internal static class DaggerfallActorFactory
         DaggerfallDefinitions definitions,
         IEnumerable<DaggerfallDynamicActorSave> saved,
         Dictionary<long, DaggerfallActorDefinition> definitionsByActor,
-        InventoryStore inventoryStore)
+        InventoryStore inventoryStore,
+        DaggerfallNpcRegistry? npcs = null)
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(actors);
@@ -377,14 +430,13 @@ internal static class DaggerfallActorFactory
         ArgumentNullException.ThrowIfNull(definitionsByActor);
         ArgumentNullException.ThrowIfNull(inventoryStore);
         foreach (DaggerfallDynamicActorSave spawned in saved.OrderBy(value => value.EntityId))
-            CreateDynamicActor(random, mechanics, definitions, actors, inventoryStore, definitionsByActor, spawned);
+            CreateDynamicActor(random, mechanics, definitions, actors, inventoryStore, definitionsByActor, spawned, npcs);
     }
 
     /// <summary>
     /// Creates one non-player actor with the per-actor state every Daggerfall NPC carries: the Kit
-    /// actor components, pursuit memory and the enemy-senses memory the behavior policy reads.
-    /// Every placed, spawned, restored and civilian actor is created here, so no later owner
-    /// attaches either memory after the fact.
+    /// actor components, capability policies, unified faction, Tier-2 render spec, pursuit memory,
+    /// and the enemy-senses memory the behavior policy reads.
     /// </summary>
     internal static ActorState CreateNonPlayerActor(ActorsState actors, long durableId, DaggerfallActorDefinition definition,
         StatsComponent stats, ActorPose pose)
@@ -394,6 +446,27 @@ internal static class DaggerfallActorFactory
         actor.Actor.Add(new CombatContributions());
         actor.Actor.Add(new PursuitMemoryComponent());
         actor.Actor.Add(new DaggerfallEnemyPerceptionMemory());
+
+        ActorHarmPolicyKind harmKind = definition.Kind switch
+        {
+            DaggerfallActorKinds.StaticNpc => ActorHarmPolicyKind.Protected,
+            DaggerfallActorKinds.Civilian => ActorHarmPolicyKind.LawProtectedCivilian,
+            _ => ActorHarmPolicyKind.Combatant,
+        };
+        ActorInteractionPolicyKind interactionKind = definition.Kind is DaggerfallActorKinds.StaticNpc or DaggerfallActorKinds.Civilian
+            ? ActorInteractionPolicyKind.FullDialogue
+            : ActorInteractionPolicyKind.None;
+        actor.Actor.Add(new ActorHarmPolicy(harmKind));
+        actor.Actor.Add(new ActorInteractionPolicy(interactionKind));
+        actor.Actor.Add(new FactionComponent(creatureFactionId: definition.Team ?? (harmKind == ActorHarmPolicyKind.Combatant ? "player-enemy" : null)));
+        actor.Actor.Add(new ActorOverlayComponent { ArchetypeId = definition.Kind });
+        ActorVisualSpec visualSpec = definition.MobileId is int mobileId
+            ? ActorVisualSpec.DirectionalMobile(mobileId)
+            : definition.Kind == DaggerfallActorKinds.Civilian
+                ? new ActorVisualSpec(ActorVisualKind.SplatCharacter, definition.Id.Value)
+                : new ActorVisualSpec(ActorVisualKind.Billboard, definition.Id.Value);
+        actor.Actor.Add(new ActorRenderComponent(visualSpec));
+
         if (definition.Kind == DaggerfallActorKinds.Civilian)
             actor.Actor.Add(new WanderMemoryComponent());
         return actor;

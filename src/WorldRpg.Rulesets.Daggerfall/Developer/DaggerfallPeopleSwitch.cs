@@ -311,7 +311,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         : clips is null ? DaggerfallDeveloperReplies.Refused($"{DaggerfallAnimations.ContainerName} is not installed, so the gsplat townspeople have no clips.")
         : null;
 
-    private ActorState[] Walking() => [.. actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian && actor.Wander.State != WanderState.Unloaded)];
+    private ActorState[] Walking() => [.. actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>() && actor.Wander.State != WanderState.Unloaded)];
 
     /// <summary>
     /// The gsplat crowd, made on its first use, drawing each walker as its own character while <see cref="own"/>. As it is

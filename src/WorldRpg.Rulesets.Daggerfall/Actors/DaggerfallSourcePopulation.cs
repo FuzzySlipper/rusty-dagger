@@ -195,7 +195,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             .ToHashSet();
         bool admitted = profile().ProfileKind == DaggerfallWorldProfileKind.Exterior
             && isDay();
-        foreach (ActorState actor in actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian))
+        foreach (ActorState actor in actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>()))
         {
             bool recycled = false;
             DaggerfallNpc? populationNpc = npcs.All.FirstOrDefault(npc =>

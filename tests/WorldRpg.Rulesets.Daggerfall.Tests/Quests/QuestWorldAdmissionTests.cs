@@ -338,8 +338,8 @@ public sealed class QuestWorldAdmissionTests
         Assert.Equal(castle.QuestMarkers.Single().Position, moved.Position);
         Assert.Equal(quantity, restored.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Single(value => value.Id == carried).Quantity);
         var after = DaggerfallSavePayload.Read(restored.CaptureSave());
-        Assert.Single(after.DynamicActors, value => value.EntityId == id);
-        Assert.DoesNotContain(after.SiteDeltas.SelectMany(value => value.DynamicActors), value => value.EntityId == id);
+        Assert.Single(after.ActiveDynamicActors(castle.ProfileKey), value => value.EntityId == id);
+        Assert.DoesNotContain(after.ActorLedger, entry => entry.DurableId == id && entry.Location is { Detached: true });
         Assert.True(restored.TryTransitionTo(fixture.Inputs.ProfileKey));
         Assert.False(restored.State.Actors.TryGet(id, out _));
         using var inactive = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, restored.CaptureSave());
@@ -347,7 +347,7 @@ public sealed class QuestWorldAdmissionTests
         inactive.State.Quests.AdmitPlacements(castle, inactive.QuestPlacement);
         Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
         Assert.Equal(quantity, inactive.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Single(value => value.Id == carried).Quantity);
-        Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
+        Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).ActiveDynamicActors(castle.ProfileKey), value => value.EntityId == id);
     }
 
     [Theory]

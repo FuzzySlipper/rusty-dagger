@@ -97,8 +97,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallDungeonPopulation _dungeonPopulation;
     internal DaggerfallCivilians Civilians { get; }
     internal DaggerfallSourcePopulation Population { get; }
-    internal DaggerfallNpcProjection NpcProjection { get; }
     internal DaggerfallWorldEncounters WorldEncounters { get; }
+
+    /// <summary>Unified proximity query over the single active-scene <c>EntityStore</c>; excludes off-stage and <c>WithParty</c> escorts.</summary>
+    internal IReadOnlyList<NearbyActorHit> QueryNearby(WorldPoint origin, double radius,
+        Func<ActorState, bool>? predicate = null, bool includeDefeated = false) =>
+        DaggerfallActorQueries.QueryNearby(State.Actors, origin, radius, predicate, State.Npcs.IsGameplayActive, includeDefeated);
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly DaggerfallSessionPersistence _persistence;
     private readonly DurableIdentityAllocator _actorIdentities;
@@ -531,7 +535,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _heldEnchantments.Refresh();
         using IDisposable detachedResidents = _exterior.SuspendResidentExteriorLocationsForSave();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
-            _sites.CaptureDeltas(), _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
+            _sites.CaptureDeltas(), _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
             _sites.Projection.CaptureMotion(), _exterior.CaptureExteriorResidency(), _exterior.CaptureExteriorLocationResidency());
     }
 

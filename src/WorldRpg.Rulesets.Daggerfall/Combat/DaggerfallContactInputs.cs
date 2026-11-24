@@ -23,4 +23,7 @@ internal sealed record DaggerfallContactInputs(DaggerfallDefinitions Definitions
 
     /// <summary>The player's biography bonus to avoiding blows, which deflection adds.</summary>
     internal Func<int> PlayerAvoidHit { get; init; } = () => 0;
+
+    /// <summary>Whether the target's <see cref="ActorHarmPolicy"/> permits active blow deflection.</summary>
+    internal Func<long, bool> CanDeflect { get; init; } = _ => true;
 }

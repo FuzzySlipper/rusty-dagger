@@ -281,7 +281,7 @@ public sealed class DaggerfallRestSessionTests
             DaggerfallSavePayload restoredSave = DaggerfallSavePayload.Read(restored.CaptureSave());
             Assert.Equal(restedSave.Calendar, restoredSave.Calendar);
             Assert.Equal(JsonSerializer.Serialize(restedSave.SkillUses), JsonSerializer.Serialize(restoredSave.SkillUses));
-            Assert.Equal(JsonSerializer.Serialize(restedSave.Actors), JsonSerializer.Serialize(restoredSave.Actors));
+            Assert.Equal(JsonSerializer.Serialize(restedSave.ActorLedger), JsonSerializer.Serialize(restoredSave.ActorLedger));
         }
 
         DaggerfallSiteRecord town = definitions.Locations.Records.First(record => record.Kind == DaggerfallSiteKind.TownCity);
@@ -302,7 +302,7 @@ public sealed class DaggerfallRestSessionTests
         Assert.Contains("Camping in a town", townSession.RestPanel.View.Message, StringComparison.Ordinal);
         Assert.Equal(townBefore.Calendar, townAfter.Calendar);
         Assert.Equal(JsonSerializer.Serialize(townBefore.SkillUses), JsonSerializer.Serialize(townAfter.SkillUses));
-        Assert.Equal(JsonSerializer.Serialize(townBefore.Actors), JsonSerializer.Serialize(townAfter.Actors));
+        Assert.Equal(JsonSerializer.Serialize(townBefore.ActorLedger), JsonSerializer.Serialize(townAfter.ActorLedger));
 
         // Loitering is not camping: as the donor's loiter, which never asks where the player is, it passes in town.
         townSession.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"loiter\",\"hours\":1}")]));

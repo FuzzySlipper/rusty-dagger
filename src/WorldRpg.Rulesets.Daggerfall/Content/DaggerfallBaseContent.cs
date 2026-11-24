@@ -195,8 +195,13 @@ internal static partial class DaggerfallBaseContent
                 || enemyRanged.MinimumDistance >= rangedAction.Reach)
                 diagnostics.Add("Enemy ranged setup requires an admitted bow, fungible arrows, positive quiver count and valid range band.");
             diagnostics.ThrowIfAny();
+            DaggerfallCreatureFactionSet creatureFactions = root.TryGetProperty("creatureFactions", out JsonElement creatureFactionsEl)
+                ? DaggerfallCreatureFactionSet.Read(creatureFactionsEl, diagnostics)
+                : DaggerfallCreatureFactionSet.ClassicDefault;
+            diagnostics.ThrowIfAny();
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, DaggerfallQuestSourceSet.None, cinematics, encounters)
             {
+                CreatureFactions = creatureFactions,
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,
                 EnemyRanged = enemyRanged,

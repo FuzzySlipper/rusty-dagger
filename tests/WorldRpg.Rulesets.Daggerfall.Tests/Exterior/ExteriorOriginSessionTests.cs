@@ -249,8 +249,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
                 new("Breton", "Female", address.Archive, address.Record, 1, 0), "quest person", ["talk"]);
             session.State.Npcs.Place(npcId, exterior.ProfileKey, npcPosition);
             session.ReconcileNpcProjection();
-            EntityId npcBody = session.State.Actors.Entities.Resolve(ActorsState.Identity(npcId));
-            WorldPoint npcBeforeRebase = DaggerfallNpcBody.Position(session.State.Actors.Store, npcBody);
+            WorldPoint npcBeforeRebase = session.State.Actors.Get(npcId).Position;
             session.State.Actors.Store.Set(session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion,
                 session.State.Actors.Store.Get(session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion)
                     with { SupportPreviousTranslation = actorPosition.ToVector() });
@@ -284,10 +283,10 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             Assert.NotEqual(Vector3.Zero, delta);
             Assert.Equal(playerPosition.ToVector() + delta, session.State.PlayerControl.Position!.Value.ToVector());
             Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Get(actorId).Position.ToVector());
-            // The Engine EntityOriginRebaser moved the projected quest person's Transform and the
+            // The Engine EntityOriginRebaser moved the questor ActorState's Transform and the
             // actor's stored character motion in the same commit; no global position outlives it.
             Assert.Equal(npcBeforeRebase.ToVector() + delta,
-                DaggerfallNpcBody.Position(session.State.Actors.Store, npcBody).ToVector());
+                session.State.Actors.Get(npcId).Position.ToVector());
             Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Store.Get(
                 session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion).SupportPreviousTranslation);
             Assert.Empty(session.State.Actors.Store.Query(DaggerfallExteriorWorld.GlobalPositions));
@@ -309,7 +308,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             Assert.Equal(engine.OriginCommits[^1].OriginAfterCellX, captured.ExteriorResidency!.Value.EngineOriginCellX);
             Assert.Equal(playerPosition.ToVector() + delta,
                 new Vector3(captured.Player.X, captured.Player.Y, captured.Player.Z));
-            DaggerfallDynamicActorSave capturedActor = Assert.Single(captured.DynamicActors,
+            DaggerfallDynamicActorSave capturedActor = Assert.Single(captured.ActiveDynamicActors(exterior.ProfileKey),
                 actor => actor.EntityId == actorId);
             Assert.Equal(actorPosition.ToVector() + delta,
                 new Vector3(capturedActor.X, capturedActor.Y, capturedActor.Z));
@@ -327,16 +326,14 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         DaggerfallSavePayload savedPayload = DaggerfallSavePayload.Read(save);
         Assert.Equal(new Vector3(savedPayload.Player.X, savedPayload.Player.Y, savedPayload.Player.Z),
             restored.State.PlayerControl.Position!.Value.ToVector());
-        DaggerfallDynamicActorSave savedActor = Assert.Single(savedPayload.DynamicActors,
+        DaggerfallDynamicActorSave savedActor = Assert.Single(savedPayload.ActiveDynamicActors(exterior.ProfileKey),
             actor => actor.EntityId == actorId);
         Assert.Equal(new Vector3(savedActor.X, savedActor.Y, savedActor.Z),
             restored.State.Actors.Get(actorId).Position.ToVector());
-        var npcEntity = restored.State.Actors.Entities.Resolve(ActorsState.Identity(npcId));
-        // Quest NPC registry positions are profile coordinates.  Re-entry projects them through
-        // both the saved origin compensation and Charing's admitted continuous terrain frame;
-        // resident player/actor poses already carry that frame in their saved local coordinates.
+        // Placed questors are canonical ActorStates; their restored local coordinates match
+        // Charing's admitted continuous terrain frame and saved origin compensation.
         WorldPoint expectedNpcLocal = restored.Exterior.ProfileToLocal(npcPosition);
-        Vector3 restoredNpcLocal = DaggerfallNpcBody.Position(restored.State.Actors.Store, npcEntity).ToVector();
+        Vector3 restoredNpcLocal = restored.State.Actors.Get(npcId).Position.ToVector();
         Assert.Equal(expectedNpcLocal.ToVector(), restoredNpcLocal);
         Assert.Equal(restoredNpcLocal,
             restored.Dialogue.NpcTargets().Single(target => target.Identity.Value == (ulong)npcId).Position.ToVector());
@@ -366,11 +363,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         Assert.Equal(expectedReturnPlayer.X, returnPose.X, 3);
         Assert.Equal(expectedReturnPlayer.Y, returnPose.Y, 3);
         Assert.Equal(expectedReturnPlayer.Z, returnPose.Z, 3);
-        DaggerfallDynamicActorSave insideActor = Assert.Single(inside.SiteDeltas).DynamicActors.Single(
-            actor => actor.EntityId == actorId);
-        Assert.Equal(expectedActorProfile.X, insideActor.X, 3);
-        Assert.Equal(expectedActorProfile.Y, insideActor.Y, 3);
-        Assert.Equal(expectedActorProfile.Z, insideActor.Z, 3);
+        ActorLedgerEntry insideActor = Assert.Single(inside.ActorLedger,
+            entry => entry.DurableId == actorId && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true });
+        Assert.Equal(expectedActorProfile.X, insideActor.Pose!.X, 3);
+        Assert.Equal(expectedActorProfile.Y, insideActor.Pose.Y, 3);
+        Assert.Equal(expectedActorProfile.Z, insideActor.Pose.Z, 3);
         // The interior also admits its own property storage; the dropped pile is the exterior one.
         DaggerfallGroundContainerSave insideGround = Assert.Single(inside.GroundContainers,
             ground => ground.Profile.Require() == exterior.ProfileKey);
@@ -399,7 +396,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         Assert.True(fromInside.TryTransitionTo(exterior.ProfileKey));
         Assert.Equal(DurableEntityResolution.Materialized,
             fromInside.State.Actors.Entities.Classify(actorIdentity, fromInside.State.Npcs.Identities!));
-        WorldPoint savedActorProfile = new(insideActor.X, insideActor.Y, insideActor.Z);
+        WorldPoint savedActorProfile = new(insideActor.Pose!.X, insideActor.Pose.Y, insideActor.Pose.Z);
         WorldPoint fromInsideActorPosition = fromInside.Exterior.ProfileToLocal(savedActorProfile);
         Assert.Equal(fromInsideActorPosition.X, fromInside.State.Actors.Get(actorId).Position.X, 3);
         Assert.Equal(fromInsideActorPosition.Y, fromInside.State.Actors.Get(actorId).Position.Y, 3);
@@ -701,10 +698,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         }
 
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
-        var delta = Assert.Single(captured.SiteDeltas, value => value.Profile.Require() == exterior.ProfileKey);
-        var rat = Assert.Single(delta.DynamicActors, actor => actor.EntityId == far);
-        Assert.Equal(farProfile.X, rat.X, 2);
-        Assert.Equal(farProfile.Z, rat.Z, 2);
+        _ = Assert.Single(captured.SiteDeltas, value => value.Profile.Require() == exterior.ProfileKey);
+        ActorLedgerEntry rat = Assert.Single(captured.ActorLedger, entry => entry.DurableId == far
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p } && p.Require() == exterior.ProfileKey);
+        Assert.Equal(farProfile.X, rat.Pose!.X, 2);
+        Assert.Equal(farProfile.Z, rat.Pose.Z, 2);
 
         List<string> resumedReleases = [];
         ContentFake resumedContent = new(resumedReleases);
@@ -720,9 +718,10 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         // Twenty kilometres from Charing its location closure stays unloaded, so the rat waits detached in
         // the site delta, at the profile position the reset carried it to, until the player comes back.
         Assert.False(restored.State.Actors.TryGet(far, out _));
-        var retained = Assert.Single(returned.SiteDeltas.SelectMany(value => value.DynamicActors), actor => actor.EntityId == far);
-        Assert.Equal(farProfile.X, retained.X, 2);
-        Assert.Equal(farProfile.Z, retained.Z, 2);
+        ActorLedgerEntry retained = Assert.Single(returned.ActorLedger, entry => entry.DurableId == far
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true });
+        Assert.Equal(farProfile.X, retained.Pose!.X, 2);
+        Assert.Equal(farProfile.Z, retained.Pose.Z, 2);
     }
 
     [Fact]

@@ -404,14 +404,15 @@ public sealed class SessionCollisionResidencyTests
         // occur exactly once, even though it was live while the active source was captured.
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
-        Assert.DoesNotContain(saved.SiteDeltas, delta => delta.Profile.Require() == source.ProfileKey
-            && delta.DynamicActors.Any(actor => actor.EntityId == actorId));
-        DaggerfallSiteDeltaSave residentDelta = Assert.Single(saved.SiteDeltas,
-            delta => delta.Profile.Require() == resident.ProfileKey);
+        Assert.DoesNotContain(saved.ActorLedger, entry => entry.DurableId == actorId
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p } && p.Require() == source.ProfileKey);
+        _ = Assert.Single(saved.SiteDeltas, delta => delta.Profile.Require() == resident.ProfileKey);
+        ActorLedgerEntry residentEntry = Assert.Single(saved.ActorLedger, entry => entry.DurableId == actorId
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p } && p.Require() == resident.ProfileKey);
         WorldPoint savedProfilePose = new(
-            Assert.Single(residentDelta.DynamicActors).X,
-            Assert.Single(residentDelta.DynamicActors).Y,
-            Assert.Single(residentDelta.DynamicActors).Z);
+            residentEntry.Pose!.X,
+            residentEntry.Pose.Y,
+            residentEntry.Pose.Z);
         Assert.Equal(profilePose.X, savedProfilePose.X, 3);
         Assert.Equal(profilePose.Y, savedProfilePose.Y, 3);
         Assert.Equal(profilePose.Z, savedProfilePose.Z, 3);

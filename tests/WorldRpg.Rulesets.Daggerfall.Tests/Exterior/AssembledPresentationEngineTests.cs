@@ -232,7 +232,8 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
         {
             host.Call(_ => run.Dispose());
         }
-        Dictionary<long, float> saved = DaggerfallSavePayload.Read(save).DynamicActors.ToDictionary(actor => actor.EntityId, actor => actor.Y);
+        DaggerfallSavePayload savedPayload = DaggerfallSavePayload.Read(save);
+        Dictionary<long, float> saved = savedPayload.ActiveDynamicActors(savedPayload.Site.ActiveProfile!.Require()).ToDictionary(actor => actor.EntityId, actor => actor.Y);
 
         AssembledWorldRun restored = OnGround(host, host.Call(engine => world.Restore(engine, files, save)));
         try

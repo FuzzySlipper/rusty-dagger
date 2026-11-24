@@ -192,19 +192,24 @@ public sealed class DaggerfallMysticismEffectsTests
     {
         using Fixture f = new(twoSites: true); var s = f.Session;
         s.BanishActor(HoldActor(1)); Assert.False(s.State.Actors.TryGet(HoldActor(1), out _)); var saved = DaggerfallSavePayload.Read(s.CaptureSave());
-        Assert.Contains(HoldActor(1), saved.BanishedActors); Assert.DoesNotContain(saved.Actors, actor => actor.EntityId == HoldActor(1));
+        Assert.Contains(HoldActor(1), saved.ActiveBanishedActors(f.Composition.StartSite.ProfileKey));
+        Assert.DoesNotContain(saved.ActiveAuthoredActors(f.Composition.StartSite.ProfileKey), actor => actor.EntityId == HoldActor(1));
         using var restored = f.Restore(s.CaptureSave()); Assert.False(restored.State.Actors.TryGet(HoldActor(1), out _));
         Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey));
         var awaySaved = s.CaptureSave();
-        Assert.Contains(HoldActor(1), DaggerfallSavePayload.Read(awaySaved).BanishedActors);
+        Assert.Contains(HoldActor(1), DaggerfallSavePayload.Read(awaySaved).AllBanishedActors());
         using var away = f.Restore(awaySaved);
         Assert.True(away.TryTransitionTo(f.Composition.StartSite.ProfileKey));
         Assert.False(away.State.Actors.TryGet(HoldActor(1), out _));
         Assert.True(s.TryTransitionTo(f.Composition.StartSite.ProfileKey));
         Assert.False(s.State.Actors.TryGet(HoldActor(1), out _));
         using var returned = f.Restore(s.CaptureSave()); Assert.False(returned.State.Actors.TryGet(HoldActor(1), out _));
-        Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { BanishedActors = [HoldActor(1), HoldActor(1)] })));
-        Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { BanishedActors = [999999] })));
+        ActorLedgerEntry banishedEntry = Assert.Single(saved.ActorLedger, entry => entry.DurableId == HoldActor(1));
+        Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { ActorLedger = [.. saved.ActorLedger, banishedEntry] })));
+        Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with
+        {
+            ActorLedger = [.. saved.ActorLedger, new ActorLedgerEntry(999999, ActorOrigin.FixedPlacement(f.Composition.StartSite.ProfileKey, 999999), Location: ActorLocationOverride.Removed)],
+        })));
     }
     [Fact]
     public void Selecting_a_saved_multi_effect_bundle_cancels_all_its_effects_and_preserves_other_bundles()

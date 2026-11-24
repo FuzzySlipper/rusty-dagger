@@ -51,9 +51,9 @@ internal sealed class DaggerfallDetectors(DaggerfallEffectLifecycle effects, Act
             var magical = effects.Active.Select(effect => effect.Context.Target.Value).ToHashSet();
             foreach (var actor in actors.All.Where(actor => !actor.IsDefeated && gameplayActive(actor.DurableId)))
             {
-                if (definitionOf(actor.DurableId) is not { } definition) continue;
-                bool enemy = definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
-                bool civilian = definition.Kind == DaggerfallActorKinds.Civilian;
+                if (definitionOf(actor.DurableId) is null) continue;
+                bool enemy = actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) ? harm.IsCombatant : true;
+                bool civilian = harm?.IsLawProtectedCivilian ?? false;
                 if (kind == DaggerfallDetection.Enemy ? enemy : (enemy || civilian) && magical.Contains(checked((ulong)actor.DurableId)))
                     positions.Add(actor.DurableId, actor.Position);
             }

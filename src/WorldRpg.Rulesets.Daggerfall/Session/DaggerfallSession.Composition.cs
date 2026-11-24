@@ -132,7 +132,7 @@ internal sealed partial class DaggerfallSession
             // constructed once every service it names exists, so nothing reads a service before it is built.
             bool materializeActiveSite = saved?.ExteriorLocationResidency?.Loaded != false;
             DaggerfallActorAssembly assembled = DaggerfallActorFactory.Create(_random, definitions, inputs,
-                saved is null ? null : new DaggerfallActorSaves(saved.Player, saved.Actors, saved.BanishedActors, saved.DynamicActors, saved.Npcs, saved.Character),
+                saved is null ? null : saved.ToActorSaves(inputs.ProfileKey),
                 materializeActiveSite, composition.StartPose);
             ActorsState actors = assembled.Actors;
             partiallyConstructed.Add(actors);
@@ -366,7 +366,7 @@ internal sealed partial class DaggerfallSession
                 id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), id => quests.IsFoeRestrained(id),
                 id => quests.FoeRelationsFor(id)?.Infighting == true, () => quests.HasInfightingFoes, _spatial, engine.Perception, _random,
                 () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
-                (float)_tuning.Camera.FieldOfViewYDegrees, sight);
+                (float)_tuning.Camera.FieldOfViewYDegrees, sight, definitions.CreatureFactions);
             _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, id => QuestFoes.Team(id),
                 id => _enemyBehavior!.IsPacified(id), () => _enemyBehavior!.LastPerception, effects, _locomotion,
                 () => State!.WeaponDrawn, () => _combat!.PlayerHoldsBow(), () => _time.Calendar.MinuteNumber, _random,
@@ -418,6 +418,10 @@ internal sealed partial class DaggerfallSession
             {
                 PlayerAvoidHit = () => character.Background?.Modifiers.AvoidHit ?? 0,
                 PlayerCurse = () => racialOverrides.Current,
+                CanDeflect = id => id == actors.Player.DurableId
+                    || !actors.TryGet(id, out ActorState target)
+                    || !target.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
+                    || harm.CanDeflectAttacks,
             };
             _guard = new DaggerfallContactGuard(contactInputs, _tuning.Contact);
             _condition = new DaggerfallPlayerCondition(_vitality, _tuning.Attacks.Stamina, _tuning.Rest, _random, DaggerfallRandomKey.Seed);
@@ -440,7 +444,7 @@ internal sealed partial class DaggerfallSession
             StrikeAim = new DaggerfallStrikeAim(actors, () => assembled.PlayerControl.Position, () => _input.ResolveCurrentLook(assembled.PlayerControl).Forward,
                 _tuning.Camera.EyeHeight, _contact, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.Attacks.AimRange,
                 actor => QuestFoes.Team(actor) == "player-ally",
-                actor => DefinitionsByActor.TryGetValue(actor, out DaggerfallActorDefinition? definition) && definition.Kind == DaggerfallActorKinds.Civilian);
+                actor => actors.TryGet(actor, out ActorState target) && target.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsLawProtectedCivilian);
             StrikeFeel = new DaggerfallStrikeFeel(_tuning.Attacks.Strike, _camera, () => _engine.GameplayTime.Read().Rate);
             _combat = new DaggerfallCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
@@ -842,7 +846,7 @@ internal sealed partial class DaggerfallSession
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
                 State.ItemInstances, State.Npcs, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
-                authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
+                authored, saved?.ActiveDynamicActors(inputs.ProfileKey) ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
                 _lootUi.CloseActor, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
             Crimes = new DaggerfallCrimes(State.Crime, State.Actors, State.Npcs, State.PlayerControl, _site, _roster.Definitions, definitions,
@@ -874,8 +878,96 @@ internal sealed partial class DaggerfallSession
                 id => _reactions.Holds(id), (actor, policy, step, deltaSeconds) => _ = _enemyBehavior.UpdateCivilian(actor, policy, step, deltaSeconds),
                 message => engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
                     "daggerfall.people", "population", message, string.Empty)));
-            NpcProjection = new DaggerfallNpcProjection(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance,
-                () => _exterior.ActiveLocationLoaded, point => _exterior.ProfileToLocal(point));
+            State.Quests.BindEscortOverlay((actorId, media, order) =>
+            {
+                if (media is not null)
+                {
+                    if (State.Npcs.All.FirstOrDefault(n => n.DurableId == actorId) is { } escortNpc)
+                    {
+                        DaggerfallWorldProfileKey? homeProfile = escortNpc.Profile;
+                        ActorPoseOverride? rememberedPose = null;
+                        if (State.Actors.TryGet(actorId, out ActorState? liveActor))
+                        {
+                            homeProfile ??= _activeProfileKey;
+                            Vector3 profilePos = _exterior.LocalToProfile(liveActor.Position.ToVector());
+                            rememberedPose = new ActorPoseOverride(profilePos.X, profilePos.Y, profilePos.Z, liveActor.HeadingYawRadians);
+                        }
+                        else if (escortNpc.X is float nx && escortNpc.Y is float ny && escortNpc.Z is float nz)
+                        {
+                            rememberedPose = new ActorPoseOverride(nx, ny, nz, 0f);
+                        }
+
+                        ActorLedgerEntry current = State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? existing) && existing is not null
+                            ? existing
+                            : new ActorLedgerEntry(
+                                actorId,
+                                new ActorOrigin(ActorOriginKind.Minted,
+                                    SiteProfile: homeProfile is { } hp ? DaggerfallWorldProfileKeySave.Capture(hp) : null,
+                                    DefinitionId: escortNpc.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc),
+                                Social: DaggerfallSessionPersistence.ToSocialDiff(escortNpc));
+                        ActorOrigin updatedOrigin = current.Origin.SiteProfile is null && homeProfile is { } hp2
+                            ? current.Origin with { SiteProfile = DaggerfallWorldProfileKeySave.Capture(hp2) }
+                            : current.Origin;
+                        State.ActorLedger.Upsert(current with
+                        {
+                            Origin = updatedOrigin,
+                            Location = ActorLocationOverride.WithParty(ActorPartyRole.Escort),
+                            Pose = rememberedPose ?? current.Pose,
+                            Social = (current.Social ?? DaggerfallSessionPersistence.ToSocialDiff(escortNpc)) with
+                            {
+                                EscortPortrait = media,
+                                EscortOrder = order,
+                            },
+                        });
+                    }
+                    // HUD-only escorts travel WithParty and leave EntityStore so QueryNearby never sees them.
+                    _roster.UnloadActor(actorId);
+                }
+                else
+                {
+                    if (State.Quests.IsEscortWithParty(actorId)) return;
+                    DaggerfallWorldProfileKey? returnProfile = null;
+                    ActorPoseOverride? returnPose = null;
+                    if (State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? existing) && existing is not null)
+                    {
+                        returnProfile = existing.Origin.SiteProfile?.Require();
+                        returnPose = existing.Pose;
+                        State.ActorLedger.Upsert(existing with
+                        {
+                            Location = existing.Location?.Kind == ActorLocationKind.WithParty ? ActorLocationOverride.OffStage : existing.Location,
+                            Social = existing.Social is { } s ? s with { EscortPortrait = null, EscortOrder = 0 } : null,
+                        });
+                    }
+                    if (!State.Actors.TryGet(actorId, out _)
+                        && State.Npcs.TryGet(actorId, out DaggerfallNpc? returningNpc)
+                        && returningNpc.Presence != DaggerfallNpcPresence.Removed)
+                    {
+                        DaggerfallWorldProfileKey? profileKey = returningNpc.Profile ?? returnProfile;
+                        WorldPoint? profilePoint = returnPose is { } rp
+                            ? new WorldPoint(rp.X, rp.Y, rp.Z)
+                            : returningNpc.X is float rx && returningNpc.Y is float ry && returningNpc.Z is float rz
+                                ? new WorldPoint(rx, ry, rz)
+                                : null;
+                        if (profileKey is { } pk && profilePoint is { } pt)
+                        {
+                            State.Npcs.Place(actorId, pk, pt);
+                            if (pk == _activeProfileKey && _exterior.ActiveLocationLoaded)
+                            {
+                                if (returningNpc.Kind == DaggerfallNpcKind.Civilian)
+                                {
+                                    Civilians.Materialize(actorId, new ActorPose(_exterior.ProfileToLocal(pt), returnPose?.HeadingRadians ?? 0f));
+                                    State.Npcs.Bind(actorId, pk);
+                                    State.Npcs.ReleasePose(actorId);
+                                }
+                                else
+                                {
+                                    ReconcileNpcProjection();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
             if (saved is null) _roster.GrantInitialAuthoredEquipment();
             CreateItemChoice = new DaggerfallCreateItem(definitions, _random, State.Inventory, State.ItemInstances, State.Encumbrance,
                 _uniqueItems, State.Character, () => _time.Calendar, Presentation, saved?.PendingCreateItem);
@@ -907,7 +999,7 @@ internal sealed partial class DaggerfallSession
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;
-            _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
+            _roster.BanishedActors.UnionWith(saved?.ActiveBanishedActors(inputs.ProfileKey) ?? []);
             _persistence.BanishedActors = () => _roster.BanishedActors;
             DaggerfallInteriors interiors = new(actionTriggers, State.DungeonActions, State.DungeonDiscoveries,
                 (key, admitted) => new DaggerfallDungeonActionGraph(key.LogicalId, admitted.DungeonActions, State.Variables.Write,
@@ -926,7 +1018,15 @@ internal sealed partial class DaggerfallSession
                 point => _exterior.LocalToProfile(point), (point, distance) => _grounding.GroundPosition(point, distance),
                 (definition, pose) => _roster.Spawn(definition, pose),
                 (item, position) => _groundContainers.CreateQuestItem(item, position, _uniqueItems), _questItemPlacement.PlaceBound,
-                NpcProjection.Project, BringOutRetainedQuestActor);
+                (npc, profile, pose, sprite) =>
+                {
+                    if (State.ActorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? entry) && entry is not null
+                        && entry.Location?.Kind == ActorLocationKind.WithParty)
+                    {
+                        State.ActorLedger.Upsert(entry with { Location = ActorLocationOverride.AtSite(profile.ProfileKey) });
+                    }
+                    _roster.MaterializeQuestor(npc, profile, new ActorPose(pose, 0f), sprite);
+                }, BringOutRetainedQuestActor);
             QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, () => Expedition.Open, _roster.Definitions, _placement, _vitality,
                 tuning.QuestSpawning, () => _sites.ReadQuestLocation(), (definition, pose) => _roster.Spawn(definition, pose),
                 _roster.RemoveQuestActor, (id, allies) => _enemyBehavior.MakeHostile(id, includePlayerAllies: allies),
@@ -1340,11 +1440,10 @@ internal sealed partial class DaggerfallSession
         Activation.Use(module, door);
     }
 
-    /// <summary>Who needs exterior ground beside the player: the living, past a town's people, who have its ground plane.</summary>
+    /// <summary>Who needs exterior ground beside the player: active combatants who have its ground plane.</summary>
     private IEnumerable<Vector3> GroundWalkers() => State.Actors.All
         .Where(actor => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && !actor.IsDefeated
-            && _roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
-            && definition.Kind is not (DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc))
+            && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsCombatant)
         .Select(actor => actor.Position.ToVector());
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();

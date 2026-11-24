@@ -29,10 +29,17 @@ internal sealed class DaggerfallEnemySenses(ActorsState actors, PlayerControlSta
     DaggerfallLocomotionPolicy locomotion, Func<bool> weaponDrawn, Func<bool> playerHoldsBow, Func<long> minute,
     IRandomService random, Func<DaggerfallWorldProfileKey> activeProfile, DaggerfallEncounterRuntime encounters)
 {
-    /// <summary>Whether a monster or enemy class fights the player now: not an ally of theirs and not pacified.</summary>
-    internal bool IsHostile(long actorId, DaggerfallActorDefinition definition) =>
-        definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass
-        && foeTeam(actorId) != "player-ally" && !isPacified(actorId);
+    /// <summary>Whether an actor fights the player now: combatant harm policy, hostile faction team (with quest overrides), and not pacified.</summary>
+    internal bool IsHostile(long actorId, DaggerfallActorDefinition definition)
+    {
+        bool combatant = actors.TryGet(actorId, out ActorState? actor) && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
+            ? harm.IsCombatant
+            : definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
+        if (!combatant || isPacified(actorId)) return false;
+        string? effectiveTeam = foeTeam(actorId)
+            ?? (actor is not null && actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction) ? faction.EffectiveTeam : definition.Team);
+        return content.CreatureFactions.AreTeamsHostile(effectiveTeam, "player-ally", observerPacified: false);
+    }
 
     /// <summary>What EnemyMotor reads of an actor and its target: their levels, a paralysed target, a turned back, an open guard.</summary>
     internal DaggerfallEnemyMotorContext MotorContext(long actorId, long targetId)

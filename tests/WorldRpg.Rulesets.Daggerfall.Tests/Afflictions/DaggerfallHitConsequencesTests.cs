@@ -341,7 +341,8 @@ public sealed class DaggerfallHitConsequencesTests
         }
         Strike(s, 13);
         var save = s.CaptureSave();
-        Assert.Equal(level, Assert.Single(DaggerfallSavePayload.Read(save).DynamicActors, actor => actor.EntityId == target).Level);
+        var savedPayload = DaggerfallSavePayload.Read(save);
+        Assert.Equal(level, Assert.Single(savedPayload.ActiveDynamicActors(savedPayload.Site.ActiveProfile!.Require()), actor => actor.EntityId == target).Level);
         using var restored = f.Restore(save);
         Assert.Equal(level, restored.DefinitionsByActor[target].Level);
         restored.State.Actors.Get(target).Actor.Get<CombatContributions>().Rules.Add(new AbsorbHealth());

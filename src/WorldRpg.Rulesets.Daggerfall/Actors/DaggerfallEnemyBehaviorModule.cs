@@ -242,7 +242,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     {
         foreach (ActorState actor in _actors.All)
         {
-            if (actor.IsDefeated || actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian || _isPlayerAllied(actor.DurableId)) continue;
+            if (actor.IsDefeated || (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant) || _isPlayerAllied(actor.DurableId)) continue;
             DaggerfallEnemyPerceptionMemory memory = Senses(actor);
             memory.SetForcedHostile(true);
         }
@@ -273,10 +273,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
         foreach (ActorState actor in _actors.All.OrderBy(value => value.DurableId))
         {
             if (actor.IsDefeated) _lastTargetDistances.Remove(actor.DurableId);
-            // Source civilians have their own bounded wander owner. They carry the common enemy
-            // sense component for actor/save compatibility, but must never acquire hostile pursuit
-            // merely because they are now canonical Mechanics actors.
-            if (actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)
+            // Non-combatant actors (law-protected civilians, protected statics/questors) carry the common
+            // sense component for uniform actor/save layout, but never acquire hostile pursuit until promoted.
+            if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant)
             {
                 actor.Pursuit.TransitionTo(actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle);
                 _combat.InterruptPendingAttack(actor.DurableId, generation);
@@ -534,8 +533,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
         ulong simulationStep, float deltaSeconds)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        if (actor.Actor.TypeId.Value != DaggerfallActorKinds.Civilian)
-            throw new InvalidOperationException($"Actor {actor.DurableId} is not a Daggerfall civilian.");
+        if (!actor.Actor.Has<WanderMemoryComponent>())
+            throw new InvalidOperationException($"Actor {actor.DurableId} does not carry wander capability.");
         return _wander.Update(actor, actor.Wander, policy, simulationStep, deltaSeconds);
     }
 

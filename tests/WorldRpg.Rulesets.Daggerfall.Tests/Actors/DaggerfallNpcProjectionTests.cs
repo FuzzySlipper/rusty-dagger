@@ -1,36 +1,55 @@
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>Projected questors: bodies at their placements, moved and retired as the site's people change, built without the session.</summary>
+/// <summary>Unified questor admission: active placed questors materialize as canonical actors in EntityStore and retire on unload or party escort.</summary>
 public sealed class DaggerfallNpcProjectionTests
 {
     [Fact]
-    public void Active_placed_questors_of_the_site_are_projected_and_the_rest_retired()
+    public void Active_placed_questors_of_the_site_materialize_as_canonical_actors_and_retire_when_hidden_or_with_party()
     {
-        using CivilianStage stage = new();
-        bool loaded = true;
-        DaggerfallNpcProjection projection = new(stage.Npcs, stage.Actors, () => stage.Profile, () => stage.Appearance, () => loaded,
-            point => WorldPoint.From(point.ToVector() + CivilianStage.Offset));
-        DaggerfallNpcAppearance look = stage.Look;
-        long questor = stage.Npcs.RegisterStable(DaggerfallNpcKind.Questor, "questor", stage.NpcSite, look, "quest person", ["talk"]);
-        stage.Npcs.Place(questor, stage.Profile.ProfileKey, new WorldPoint(1f, 0f, 2f));
-        // An unplaced questor stands nowhere, so it has no body.
-        _ = stage.Npcs.RegisterStable(DaggerfallNpcKind.Questor, "unplaced", stage.NpcSite, look, "quest person", ["talk"]);
+        using var fixture = new SanguineRoseSessionTests.Fixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteProfile profile = fixture.Inputs;
+        var address = profile.BillboardSprites.Keys.First();
+        DaggerfallNpcAppearance look = new("breton", "Male", address.Archive, address.Record, 7, 0);
+        DaggerfallSiteRecord site = TestPayload.Definitions.Locations.Records.Single(record => record.Id == profile.Site!.Value);
+        DaggerfallNpcSite npcSite = new(site.Region, site.Name, string.Empty, profile.ProfileKey.LogicalId);
 
-        projection.Reconcile();
-        DaggerfallNpcView view = Assert.Single(projection.Views());
-        Assert.Equal(new DaggerfallNpcView(questor, new WorldPoint(101f, 0f, 2f)), view);
+        long questor = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Questor, "questor-unified", npcSite, look, "quest person", ["talk"]);
+        session.State.Npcs.Place(questor, profile.ProfileKey, new WorldPoint(2f, 0f, 3f));
+        long unplaced = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Questor, "unplaced-questor", npcSite, look, "quest person", ["talk"]);
 
-        // A body follows its placement on the next reconcile, and leaves when the town is unloaded.
-        stage.Npcs.Place(questor, stage.Profile.ProfileKey, new WorldPoint(5f, 0f, 2f));
-        projection.Reconcile();
-        Assert.Equal(new WorldPoint(105f, 0f, 2f), Assert.Single(projection.Views()).Position);
-        loaded = false;
-        projection.Reconcile();
-        Assert.Empty(projection.Views());
+        session.ReconcileNpcProjection();
+        Assert.True(session.State.Actors.TryGet(questor, out ActorState? live));
+        Assert.False(session.State.Actors.TryGet(unplaced, out _));
+        Assert.Equal(new WorldPoint(2f, 0f, 3f), live!.Position);
+        Assert.True(live.Actor.Has<StatsComponent>());
+        Assert.Equal(ActorHarmPolicyKind.Protected, live.Actor.Get<ActorHarmPolicy>().Policy);
+        Assert.Equal(ActorInteractionPolicyKind.FullDialogue, live.Actor.Get<ActorInteractionPolicy>().Policy);
+        Assert.True(live.Actor.Get<ActorOverlayComponent>().IsQuestor);
+        Assert.Equal(ActorVisualKind.Billboard, live.Actor.Get<ActorRenderComponent>().Spec.Kind);
+
+        // Hiding retires the body while preserving its profile pose so unhiding rematerializes it at the same spot.
+        session.State.Npcs.SetPresence(questor, DaggerfallNpcPresence.Hidden);
+        session.ReconcileNpcProjection();
+        Assert.False(session.State.Actors.TryGet(questor, out _));
+
+        session.State.Npcs.SetPresence(questor, DaggerfallNpcPresence.Active);
+        session.ReconcileNpcProjection();
+        Assert.True(session.State.Actors.TryGet(questor, out ActorState? returned));
+        Assert.Equal(new WorldPoint(2f, 0f, 3f), returned!.Position);
+
+        // Marking WithParty in ActorLedger unloads the world body so proximity queries never see it.
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            questor,
+            ActorOrigin.MintedActor(DaggerfallActorKinds.StaticNpc),
+            Location: ActorLocationOverride.WithParty(ActorPartyRole.Escort)));
+        session.ReconcileNpcProjection();
+        Assert.False(session.State.Actors.TryGet(questor, out _));
     }
 }

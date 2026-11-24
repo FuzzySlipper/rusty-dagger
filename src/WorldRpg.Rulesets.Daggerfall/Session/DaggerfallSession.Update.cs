@@ -612,7 +612,7 @@ internal sealed partial class DaggerfallSession
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            State.Effects.PerceptionFor, NpcProjection.Views(), spellFlights, State.Npcs.IsGameplayActive,
+            State.Effects.PerceptionFor, spellFlights, State.Npcs.IsGameplayActive,
             id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null, _overland.Facts);   // Scene
         _overlays.Publish();                                                                      // Developer
     }
@@ -1493,10 +1493,14 @@ internal sealed partial class DaggerfallSession
         // restores their effects and stat sources before this same live sweep releases them.
     }
 
-    /// <summary>Who stands in the active site after a change: projected questors, then the town's source population.</summary>
+    /// <summary>Who stands in the active site after a change: canonical questor actors, then the town's source population.</summary>
     internal void ReconcileNpcProjection()
     {
-        NpcProjection.Reconcile();                                                                // Actors
+        _roster.ReconcileQuestActors(_sites.Projection.Inputs, _appearance, _exterior.ActiveLocationLoaded,
+            point => _exterior.ProfileToLocal(point),
+            id => State.Quests.IsEscortWithParty(id)
+                || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.WithParty),
+            point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector())));  // Actors
         Population.Reconcile();                                                                   // Actors
     }
 

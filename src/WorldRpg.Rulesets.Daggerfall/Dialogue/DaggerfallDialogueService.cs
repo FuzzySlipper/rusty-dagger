@@ -742,11 +742,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             // A defeated person is a corpse, which its own owner offers; they are no one to talk to.
             if (currentActor.IsDefeated) return false;
+            if (currentActor.Actor.TryGet<ActorInteractionPolicy>(out ActorInteractionPolicy? interaction) && !interaction.CanTalk)
+                return false;
             actor = new(currentActor.Actor.Entity, currentActor.Position);
         }
-        else if (_actors.Entities.TryResolve(ActorsState.Identity(id), out var entity)
-            && _actors.Store.Has<DaggerfallNpcBody>(entity))
-            actor = new(entity, DaggerfallNpcBody.Position(_actors.Store, entity));
         return actor is not null;
     }
 

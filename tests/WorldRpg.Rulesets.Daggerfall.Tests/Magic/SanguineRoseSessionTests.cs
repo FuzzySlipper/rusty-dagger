@@ -108,7 +108,7 @@ public sealed class SanguineRoseSessionTests
         f.Session.RetireActor(ally);
         Assert.False(f.Session.State.Actors.Store.IsAlive(entity));
         Assert.False(f.Session.DefinitionsByActor.ContainsKey(ally));
-        Assert.DoesNotContain(ally, DaggerfallSavePayload.Read(f.Session.CaptureSave()).DynamicActors.Select(actor => actor.EntityId));
+        Assert.DoesNotContain(ally, DaggerfallSavePayload.Read(f.Session.CaptureSave()).ActorLedger.Select(entry => entry.DurableId));
         using var retired = f.Restore();
         Assert.False(retired.State.Actors.TryGet(ally, out _));
     }

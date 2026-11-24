@@ -80,9 +80,10 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.True(PopulationTextureOpens(fixture.Appearance) > before);
         RulesetSavePayload save = session.CaptureSave();
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
-        Assert.Contains(captured.SiteDeltas, delta => delta.Profile.Require() == fixture.Source.ProfileKey
-            && delta.DynamicActors.Any(actor => actor.EntityId == sourceNpc.DurableId));
-        DaggerfallNpcEntry savedNpc = Assert.Single(captured.Npcs.Entries,
+        Assert.Contains(captured.ActorLedger, entry => entry.DurableId == sourceNpc.DurableId
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p }
+            && p.Require() == fixture.Source.ProfileKey);
+        DaggerfallNpcEntry savedNpc = Assert.Single(captured.RestoredNpcs().Entries,
             entry => entry.DurableId == sourceNpc.DurableId);
         Assert.Equal(fixture.Source.ProfileKey, savedNpc.Profile!.Require());
 
@@ -125,10 +126,11 @@ public sealed class DaggerfallPopulationSessionTests
 
         RulesetSavePayload save = session.CaptureSave();
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
-        DaggerfallNpcEntry savedNpc = Assert.Single(captured.Npcs.Entries, entry => entry.DurableId == sourceId);
+        DaggerfallNpcEntry savedNpc = Assert.Single(captured.RestoredNpcs().Entries, entry => entry.DurableId == sourceId);
         Assert.Equal((int)DaggerfallNpcPresence.Hidden, savedNpc.Presence);
-        Assert.Contains(captured.SiteDeltas, delta => delta.Profile.Require() == fixture.Source.ProfileKey
-            && delta.DynamicActors.Any(actor => actor.EntityId == sourceId));
+        Assert.Contains(captured.ActorLedger, entry => entry.DurableId == sourceId
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p }
+            && p.Require() == fixture.Source.ProfileKey);
 
         (EngineContextFake restoredEngine, AppearanceFake restoredAppearance) = fixture.CreateEngine();
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, save);
@@ -145,19 +147,23 @@ public sealed class DaggerfallPopulationSessionTests
         DaggerfallSession session = fixture.Session;
         session.AdvanceElapsedTime(8 * 60 * 60);
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
-        Assert.Contains(saved.Npcs.Entries, entry => entry.Presence == (int)DaggerfallNpcPresence.Active);
+        DaggerfallNpcSave savedNpcs = saved.RestoredNpcs();
+        DaggerfallWorldProfileKey activeKey = saved.Site.ActiveProfile!.Require();
+        Assert.Contains(savedNpcs.Entries, entry => entry.Presence == (int)DaggerfallNpcPresence.Active);
 
         // Civilians are projected only after the save, its effects and its residency are restored:
         // the restored registry, identities and presences are exactly the saved ones.
         (EngineContextFake restoredEngine, _) = fixture.CreateEngine();
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, session.CaptureSave());
         DaggerfallSavePayload again = DaggerfallSavePayload.Read(restored.CaptureSave());
-        Assert.Equal(saved.Npcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)),
-            again.Npcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)));
-        Assert.Equal(saved.DynamicActors.Select(actor => actor.EntityId), again.DynamicActors.Select(actor => actor.EntityId));
+        DaggerfallNpcSave againNpcs = again.RestoredNpcs();
+        Assert.Equal(savedNpcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)),
+            againNpcs.Entries.Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)));
+        Assert.Equal(saved.ActiveDynamicActors(activeKey).Select(actor => actor.EntityId),
+            again.ActiveDynamicActors(activeKey).Select(actor => actor.EntityId));
         // Each townsperson comes back as who they were, so they wear the same townsperson art: their town's race, their gender and seed.
-        Assert.Equal(saved.Npcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)),
-            again.Npcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)));
+        Assert.Equal(savedNpcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)),
+            againNpcs.Entries.Select(entry => (entry.DurableId, entry.Race, entry.Gender, entry.NameSeed)));
         long[] townsfolk = [.. session.State.Npcs.All.Where(DaggerfallCivilians.IsSourcePopulation).Select(npc => npc.DurableId)];
         Assert.NotEmpty(townsfolk);
         Assert.All(townsfolk, id => Assert.NotNull(session.Population.Townsperson(id)));
@@ -228,17 +234,17 @@ public sealed class DaggerfallPopulationSessionTests
         // The save detaches the resident closure into its site delta through the one profile-frame
         // conversion; the NPC entry carries no second pose.
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
-        DaggerfallNpcEntry savedNpc = Assert.Single(saved.Npcs.Entries,
+        DaggerfallNpcEntry savedNpc = Assert.Single(saved.RestoredNpcs().Entries,
             entry => entry.DurableId == residentId);
         Assert.Null(savedNpc.X);
         Assert.Null(savedNpc.Y);
         Assert.Null(savedNpc.Z);
-        DaggerfallDynamicActorSave savedActor = Assert.Single(saved.SiteDeltas
-            .Where(delta => delta.Profile.LogicalId == resident.ProfileKey.LogicalId)
-            .SelectMany(delta => delta.DynamicActors), actor => actor.EntityId == residentId);
-        Assert.Equal(authoredPose.X, savedActor.X, 3);
-        Assert.Equal(authoredPose.Y, savedActor.Y, 3);
-        Assert.Equal(authoredPose.Z, savedActor.Z, 3);
+        ActorLedgerEntry savedEntry = Assert.Single(saved.ActorLedger, entry => entry.DurableId == residentId
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p }
+            && p.LogicalId == resident.ProfileKey.LogicalId);
+        Assert.Equal(authoredPose.X, savedEntry.Pose!.X, 3);
+        Assert.Equal(authoredPose.Y, savedEntry.Pose.Y, 3);
+        Assert.Equal(authoredPose.Z, savedEntry.Pose.Z, 3);
 
         // Retire and re-admit the resident closure. The retained actor's profile pose must receive
         // the cell translation exactly once when its actor becomes live again.

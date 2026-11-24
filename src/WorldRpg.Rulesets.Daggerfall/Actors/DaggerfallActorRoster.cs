@@ -271,14 +271,14 @@ internal sealed class DaggerfallActorRoster
         _corpseLoot.Retire(durableId);
         _actors.Entities.Destroy(ActorsState.Identity(durableId));
         _identities.Remove(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)durableId)));
-        if (_npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind is DaggerfallNpcKind.Civilian or DaggerfallNpcKind.Static))
+        if (_npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind is DaggerfallNpcKind.Civilian or DaggerfallNpcKind.Static or DaggerfallNpcKind.Questor))
             _npcs.SetPresence(durableId, DaggerfallNpcPresence.Removed);
         ActorRetired?.Invoke(durableId);
     }
 
     /// <summary>
-    /// Materializes one registered civilian at an explicit world pose as a runtime civilian dynamic
-    /// actor, so its pose, inventory, corpse, and identity ledger participate in the save boundary.
+    /// Materializes one registered NPC (civilian, static, or questor) at an explicit world pose as a canonical
+    /// active-scene actor carrying real stats, faction, capability policies, and Tier-2 render component.
     /// </summary>
     internal long MaterializeCivilian(DaggerfallNpc npc, ActorPose pose)
     {
@@ -288,8 +288,8 @@ internal sealed class DaggerfallActorRoster
         if (_identities.Classify(identity) != DurableIdentityClassification.Live)
             throw new InvalidOperationException($"NPC {npcId} does not own a live actor identity.");
 
-        DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npcId, npc.Kind == DaggerfallNpcKind.Static);
-        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, pose);
+        DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npcId, npc.Kind != DaggerfallNpcKind.Civilian);
+        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, pose, _definitions);
         try
         {
             if (!_definitionsByActor.TryAdd(npcId, definition))
@@ -304,6 +304,97 @@ internal sealed class DaggerfallActorRoster
             _dynamicActors.Remove(npcId);
             _actors.Entities.Destroy(identity);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Materializes or moves a questor as a real canonical <see cref="ActorState"/> in <c>EntityStore</c> with its
+    /// billboard admitted through <see cref="DaggerfallSiteAppearance"/>, replacing the legacy <c>DaggerfallNpcProjection</c>.
+    /// </summary>
+    internal long MaterializeQuestor(DaggerfallNpc npc, DaggerfallSiteProfile site, ActorPose pose,
+        NormalizedBillboardSprite sprite, DaggerfallSiteAppearance? siteAppearance = null)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        ArgumentNullException.ThrowIfNull(site);
+        ArgumentNullException.ThrowIfNull(sprite);
+        DaggerfallSiteAppearance appearance = siteAppearance ?? _appearance();
+        long id = npc.DurableId;
+        bool created = false;
+        try
+        {
+            if (_actors.TryGet(id, out ActorState? existing))
+            {
+                existing.ApplyPose(pose);
+            }
+            else
+            {
+                MaterializeCivilian(npc, pose);
+                created = true;
+            }
+            appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+            return id;
+        }
+        catch
+        {
+            if (created) UnloadActor(id, siteAppearance);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Reconciles active-scene questors against the active profile and escort party status: materializes active
+    /// questors for the loaded site as real <see cref="ActorState"/>s and unloads questors that are hidden, removed,
+    /// off-site, or currently <see cref="ActorLocationKind.WithParty"/> (HUD escort).
+    /// </summary>
+    internal void ReconcileQuestActors(DaggerfallSiteProfile active, DaggerfallSiteAppearance appearance, bool locationLoaded,
+        Func<WorldPoint, WorldPoint> profileToLocal, Func<long, bool>? isWithParty = null,
+        Func<WorldPoint, WorldPoint>? localToProfile = null)
+    {
+        ArgumentNullException.ThrowIfNull(active);
+        ArgumentNullException.ThrowIfNull(appearance);
+        ArgumentNullException.ThrowIfNull(profileToLocal);
+
+        Dictionary<long, DaggerfallNpc> shouldBeLive = _npcs.All
+            .Where(npc => locationLoaded
+                && npc.Kind == DaggerfallNpcKind.Questor
+                && npc.Profile == active.ProfileKey
+                && _npcs.IsGameplayActive(npc.DurableId)
+                && isWithParty?.Invoke(npc.DurableId) != true)
+            .ToDictionary(npc => npc.DurableId);
+
+        foreach (ActorState actor in _actors.All.ToArray())
+        {
+            if (!actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay) || !overlay.IsQuestor)
+                continue;
+            if (!shouldBeLive.ContainsKey(actor.DurableId))
+            {
+                if (_npcs.TryGet(actor.DurableId, out DaggerfallNpc? npc)
+                    && npc.Profile is { } npcProfile
+                    && npc.Presence != DaggerfallNpcPresence.Removed
+                    && isWithParty?.Invoke(actor.DurableId) != true
+                    && npc.X is null)
+                {
+                    _npcs.Place(npc.DurableId, npcProfile, localToProfile?.Invoke(actor.Position) ?? actor.Position);
+                }
+                UnloadActor(actor.DurableId, appearance);
+            }
+        }
+
+        foreach (DaggerfallNpc npc in shouldBeLive.Values.OrderBy(value => value.DurableId))
+        {
+            if (_actors.TryGet(npc.DurableId, out _))
+            {
+                if (!appearance.HasActor(npc.DurableId)
+                    && active.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? existingSprite))
+                    appearance.AdmitActor(npc.DurableId, existingSprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+                continue;
+            }
+            if (npc.X is not float x || npc.Y is not float y || npc.Z is not float z)
+                throw new InvalidOperationException($"Placed NPC {npc.DurableId} has no profile position.");
+            if (!active.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
+                throw new NotSupportedException($"NPC {npc.DurableId} has no published billboard {npc.Appearance.BillboardArchive}/{npc.Appearance.BillboardRecord} at '{active.ProfileKey.LogicalId}'.");
+            MaterializeQuestor(npc, active, new ActorPose(profileToLocal(new(x, y, z)), 0f), sprite, appearance);
+            _npcs.ReleasePose(npc.DurableId);
         }
     }
 
@@ -515,7 +606,7 @@ internal sealed class DaggerfallActorRoster
         try
         {
             var actor = DaggerfallActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _actors, _inventoryStore,
-                _definitionsByActor, saved);
+                _definitionsByActor, saved, _npcs);
             _dynamicActors.Add(saved.EntityId, new DaggerfallActorId(saved.Definition));
             if (projectAppearance && _definitionsByActor[saved.EntityId].MobileId is int mobileId)
             {
@@ -552,7 +643,7 @@ internal sealed class DaggerfallActorRoster
             if (actor.IsDefeated) continue;
             if (!actorGameplayActive(actor.DurableId)) continue;
             if (!definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)) continue;
-            DaggerfallEnemyGroup group = definition.Kind is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
+            DaggerfallEnemyGroup group = actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant
                 ? DaggerfallEnemyGroup.Humanoid
                 : DaggerfallFormulaPolicy.EnemyGroupFor(definition);
             nearby.Add(new DaggerfallNearbyCreature(group, actor.Position));

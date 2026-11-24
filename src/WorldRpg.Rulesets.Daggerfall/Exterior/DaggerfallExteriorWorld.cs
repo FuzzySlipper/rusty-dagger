@@ -1525,8 +1525,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         // The commit installs pending batches and moves them with the rest; a held one would miss the move.
         ReleaseHeldPlacements();
         EntityStore store = _actors.Store;
-        EntityId[] roots = [.. _actors.All.Select(actor => actor.Actor.Entity),
-            .. store.Query<DaggerfallNpcBody>().Select(entry => entry.Entity)];
+        EntityId[] roots = [.. _actors.All.Select(actor => actor.Actor.Entity)];
         (WorldOriginCommitReceipt receipt, EntityId[] excluded) = CommitThroughRebaser(store, roots, current, x, y, z, excludeOutsideEnvelope);
         try
         {

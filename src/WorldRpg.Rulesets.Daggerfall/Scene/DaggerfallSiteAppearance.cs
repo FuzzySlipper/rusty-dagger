@@ -143,7 +143,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly DaggerfallDefinitions? mobileDefinitions;
     private readonly Dictionary<long, ActorVisual> actors = [];
     private readonly Dictionary<long, GroundVisual> groundVisuals = [];
-    private readonly Dictionary<long, NpcVisual> npcVisuals = [];
     private readonly Dictionary<RangedShotIdentity, ulong> arrowVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
@@ -408,7 +407,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach ((ModelVisual model, ulong _) in actionModelVisuals.Values) ClassicModel(model);
         foreach (DecorationVisual decoration in decorations) { ClassicDecoration(decoration, winter: false); ClassicDecoration(decoration, winter: true); }
         foreach (ActorVisual visual in actors.Values) { ClassicLive(visual); ClassicCorpse(visual); }
-        foreach (NpcVisual visual in npcVisuals.Values) ClassicNpc(visual);
         for (int pile = 0; pile < groundContainerSprites.Count; pile++) ClassicTreasureAtlas(pile);
         foreach (NormalizedClassicEffect effect in classicEffects.Values) ClassicEffectTexture(effect);
         // A candle burning now draws its classic sprite from the next update, which needs the published billboard.
@@ -448,7 +446,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <param name="travelMap">The travel map's parts in the backdrop while it is open; its camera shows no held arms.</param>
     internal void Publish(ActorsState actors, IReadOnlyDictionary<long, DaggerfallGroundContainer> groundContainers,
         IReadOnlyList<DaggerfallRangedFlightView>? rangedFlights = null,
-        Func<long, DaggerfallPerceptionEffectState>? perception = null, IReadOnlyList<DaggerfallNpcView>? npcs = null,
+        Func<long, DaggerfallPerceptionEffectState>? perception = null,
         IReadOnlyList<DaggerfallDungeonSpellFlightView>? dungeonSpellFlights = null, Func<long, bool>? actorActive = null,
         Func<long, DaggerfallGroundItemLook?>? groundLook = null, IReadOnlyList<AppearanceFact>? travelMap = null)
     {
@@ -466,10 +464,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.Gameplay(container.Id, "Ground container"), false, 0,
                     new Transform(container.Position.ToVector() + Vector3.UnitY * visual.Lift, Quaternion.Identity, Vector3.One), visual.Billboard.Appearance, true, RenderLayer.Scene));
         }
-        foreach (var npc in npcs ?? [])
-            if (npcVisuals.TryGetValue(npc.Id, out var visual))
-                facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.Gameplay(npc.Id, "NPC"), false, 0,
-                    new Transform(npc.Position.ToVector(), Quaternion.Identity, Vector3.One), DrawnNpc(visual), true, RenderLayer.Scene));
         ReconcileSpellFlights(dungeonSpellFlights ?? []);
         foreach (EffectVisual effect in effects)
             facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
@@ -518,12 +512,15 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (ActorVisual visual in actors.Values)
         {
             if (!state.TryGet(visual.EntityId, out ActorState? actor)) continue;
+            ActorRenderComponent? render = actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? attached) ? attached : null;
+            if (render?.Spec.Kind is ActorVisualKind.PortraitOnly or ActorVisualKind.None) continue;
             ulong id = slot == DaggerfallPresentationObjectIds.ActiveLocationSlot
                 ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
                 : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
             Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : DrawnLive(visual);
-            // A walking person drawn as the crowd's figure faces where it walks (a rig figure shows the view its camera sees).
-            Appearance? rigged = !actor.IsDefeated && actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian
+            // A walking person drawn as the crowd's figure reads Tier-2 ActorRenderComponent rather than gameplay kind.
+            bool crowdVisual = render?.Spec.Kind is ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig;
+            Appearance? rigged = !actor.IsDefeated && crowdVisual
                 ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, IWalkerCrowd.Walks(actor.Wander.State)) : null;
             chosen = rigged ?? chosen;
             if (chosen is null) continue;
@@ -924,7 +921,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (ActorVisual visual in actors.Values.Reverse()) DisposeActorVisual(visual, ref failures);
         if (candleAppearance is { } candle) Dispose(candle, ref failures); candleAppearance = null;
         foreach (GroundVisual visual in groundVisuals.Values.Reverse()) visual.Billboard.Dispose(ref failures);
-        foreach (NpcVisual visual in npcVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
         effects.Clear();
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
@@ -934,7 +930,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (mount is { } ridden) { mount = null; Dispose(ridden, ref failures); }
         actors.Clear();
         groundVisuals.Clear();
-        npcVisuals.Clear();
         if (arrowAppearance is { } arrowVisual) { arrowAppearance = null; Dispose(arrowVisual, ref failures); }
         arrowVisualEntityIds.Clear();
         foreach (var (_, _, trail, _) in spellFlightVisuals.Values) if (trail is not null) Dispose(trail, ref failures);
@@ -1154,30 +1149,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         try { value.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
-    }
-
-    /// <summary>
-    /// Draws a person the quests place, cut from <paramref name="source"/>: its refreshed person where the set has one while
-    /// refreshed art is drawn, else its classic billboard, built the first time it is drawn.
-    /// </summary>
-    internal void AddNpc(long id, NormalizedBillboardSprite sprite, (int Archive, int Record) source)
-    {
-        if (npcVisuals.ContainsKey(id)) return;
-        NpcVisual visual = new(sprite) { Refreshed = RefreshedPerson(source, onBase: false) };
-        try { if (!drawRefreshedEffects() || visual.Refreshed is null) ClassicNpc(visual); }
-        catch { visual.Dispose(); throw; }
-        npcVisuals.Add(id, visual);
-    }
-
-    private Appearance ClassicNpc(NpcVisual visual) => visual.Classic ??= CreateSprite(content, new NormalizedActorSprite(visual.Sprite.TexturePath,
-        visual.Sprite.TextureSha256, visual.Sprite.AtlasWidth, visual.Sprite.AtlasHeight, visual.Sprite.Frames, visual.Sprite.InitialFrameId,
-        visual.Sprite.Pivot, visual.Sprite.Size), material: CastingSprite).Appearance;
-
-    private Appearance DrawnNpc(NpcVisual visual) => drawRefreshedEffects() && visual.Refreshed is { } refreshed ? refreshed : ClassicNpc(visual);
-
-    internal void RetireNpc(long id)
-    {
-        if (npcVisuals.Remove(id, out var visual)) Retire(visual);
     }
 
     private ActorVisual CreateActorVisual(long entityId, NormalizedActorSprite sprite, int? mobileId = null)
@@ -1796,25 +1767,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (Corpse is { } corpse) DaggerfallSiteAppearance.Dispose(corpse, ref failures);
             if (CorpseMesh is { } mesh) DaggerfallSiteAppearance.Dispose(mesh, ref failures);
             CorpseMesh = null;
-        }
-    }
-
-    /// <summary>A person the quests place: its classic billboard once built, and its refreshed person where the set has one.</summary>
-    private sealed class NpcVisual(NormalizedBillboardSprite sprite) : IDisposable
-    {
-        internal NormalizedBillboardSprite Sprite { get; } = sprite;
-        internal Appearance? Classic { get; set; }
-        internal Appearance? Refreshed { get; init; }
-        public void Dispose()
-        {
-            List<Exception>? failures = null;
-            Dispose(ref failures);
-            if (failures is { Count: > 0 }) throw new AggregateException(failures);
-        }
-        internal void Dispose(ref List<Exception>? failures)
-        {
-            if (Classic is { } classic) DaggerfallSiteAppearance.Dispose(classic, ref failures);
-            if (Refreshed is { } refreshed) DaggerfallSiteAppearance.Dispose(refreshed, ref failures);
         }
     }
 

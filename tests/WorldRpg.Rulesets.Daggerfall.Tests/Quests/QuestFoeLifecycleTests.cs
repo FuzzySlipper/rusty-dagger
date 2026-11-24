@@ -116,8 +116,10 @@ public sealed class QuestFoeLifecycleTests
             Assert.False(f.Session.State.Actors.TryGet(id, out _));
             if (!offSite) Assert.False(f.Session.State.InventoryStore.TryGetInventory(sourceActor, out _));
             var captured = DaggerfallSavePayload.Read(f.Session.CaptureSave());
-            Assert.DoesNotContain(captured.ActorInventories.Concat(captured.SiteDeltas.SelectMany(value => value.ActorInventories)), value => value.EntityId == id);
-            Assert.DoesNotContain(captured.Corpses.Concat(captured.SiteDeltas.SelectMany(value => value.Corpses)), value => value.ActorId == id);
+            Assert.DoesNotContain(captured.ActorInventories, value => value.EntityId == id);
+            Assert.DoesNotContain(captured.ActorLedger, entry => entry.Combat?.DetachedInventory?.EntityId == id);
+            Assert.DoesNotContain(captured.Corpses, value => value.ActorId == id);
+            Assert.DoesNotContain(captured.ActorLedger, entry => entry.Combat?.DetachedCorpse?.ActorId == id);
         }
         if (offSite) Assert.False(f.Session.State.Actors.TryGet(id, out _));
         using var restored = f.Restore(profiles);
@@ -246,7 +248,8 @@ public sealed class QuestFoeLifecycleTests
         Assert.Empty(Resource(f.Session).DefeatedFoeIds);
         Assert.False(Resource(f.Session).FoeInjured);
         var save = DaggerfallSavePayload.Read(f.Session.CaptureSave());
-        Assert.DoesNotContain(save.Corpses.Concat(save.SiteDeltas.SelectMany(value => value.Corpses)), value => value.ActorId == id);
+        Assert.DoesNotContain(save.Corpses, value => value.ActorId == id);
+        Assert.DoesNotContain(save.ActorLedger, entry => entry.Combat?.DetachedCorpse?.ActorId == id);
         using var restored = f.Restore(profiles);
         Assert.Empty(Resource(restored).DefeatedFoeIds);
     }

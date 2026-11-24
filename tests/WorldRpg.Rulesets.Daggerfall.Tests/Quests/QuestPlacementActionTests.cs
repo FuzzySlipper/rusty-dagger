@@ -304,14 +304,14 @@ public sealed class QuestPlacementActionTests
         Assert.Contains(state.Effects.Capture(), effect => effect.ItemId == f.Source);
         Assert.True(f.Session.TryTransitionTo(castle.ProfileKey));
         var saved = DaggerfallSavePayload.Read(f.Session.CaptureSave());
-        Assert.Contains(saved.SiteDeltas.SelectMany(value => value.Effects), effect => effect.ItemId == f.Source);
+        Assert.Contains(saved.ActorLedger.SelectMany(entry => entry.Combat?.DetachedEffects ?? []), effect => effect.ItemId == f.Source);
         using var inactive = f.Restore(profiles);
         inactive.Update(new ProductUpdate(OuterUpdate(1), []));
         var moved = inactive.State.ItemInstances.RequireUnique(f.Source);
         Assert.Equal("ground", moved.Owner.Scope);
         Assert.Null(moved.HeldCast);
         var after = DaggerfallSavePayload.Read(inactive.CaptureSave());
-        Assert.DoesNotContain(after.SiteDeltas.SelectMany(value => value.Effects), effect => effect.ItemId == f.Source);
+        Assert.DoesNotContain(after.ActorLedger.SelectMany(entry => entry.Combat?.DetachedEffects ?? []), effect => effect.ItemId == f.Source);
         Assert.DoesNotContain(after.ActiveEffects, effect => effect.ItemId == f.Source);
         Assert.True(inactive.TryTransitionTo(f.Inputs.ProfileKey));
         Assert.DoesNotContain(inactive.State.Effects.Capture(), effect => effect.ItemId == f.Source);

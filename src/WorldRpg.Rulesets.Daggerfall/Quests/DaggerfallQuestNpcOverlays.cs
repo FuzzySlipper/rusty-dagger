@@ -5,6 +5,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Quest-scoped NPC relations and HUD faces over the existing selected resource identities.</summary>
 internal sealed partial class DaggerfallQuestInstances
 {
+    private Action<long, string?, int>? _escortFaceChanged;
+    internal void BindEscortOverlay(Action<long, string?, int> onEscortFaceChanged) => _escortFaceChanged = onEscortFaceChanged;
+    internal bool IsEscortWithParty(long id) => ActiveNpcResources(id).Any(value => value.Resource.EscortFaceMedia is not null);
     internal bool IsNpcMuted(long id) => ActiveNpcResources(id).Any(value => value.Resource.IsMuted);
     internal IReadOnlyList<DaggerfallQuestContact> QuestContacts(long id) => ActiveNpcResources(id)
         .Where(value => value.Resource.IsQuestor).Select(value => new DaggerfallQuestContact(value.Instance.InstanceId, value.Resource.Symbol)).ToArray();
@@ -143,13 +146,18 @@ internal sealed partial class DaggerfallQuestInstances
             case DaggerfallQuestTaskOperationKind.MuteNpc:
                 SetResource(instance.InstanceId, resource with { IsMuted = true }); break;
             case DaggerfallQuestTaskOperationKind.DropFace:
-                SetResource(instance.InstanceId, resource with { EscortFaceMedia = null, EscortFaceOrder = 0 }); break;
+                SetResource(instance.InstanceId, resource with { EscortFaceMedia = null, EscortFaceOrder = 0 });
+                foreach (long actorId in resource.Binding.ActorIds) _escortFaceChanged?.Invoke(actorId, null, 0);
+                break;
             case DaggerfallQuestTaskOperationKind.AddFace:
                 // Resolve before publishing optional speech, so invalid media cannot leave half an action.
                 string media = resource.EscortFaceMedia ?? ResolveEscortFace(instance, resource);
+                long order = resource.EscortFaceOrder > 0 ? resource.EscortFaceOrder
+                    : checked(_instances.Values.SelectMany(value => value.Resources).Select(value => value.EscortFaceOrder).DefaultIfEmpty().Max() + 1);
                 if (operation.MessageId is > 0 and var saying) Messages.Popup(instance, saying);
-                SetResource(instance.InstanceId, resource with { EscortFaceMedia = media, EscortFaceOrder = resource.EscortFaceOrder > 0 ? resource.EscortFaceOrder
-                    : checked(_instances.Values.SelectMany(value => value.Resources).Select(value => value.EscortFaceOrder).DefaultIfEmpty().Max() + 1) }); break;
+                SetResource(instance.InstanceId, resource with { EscortFaceMedia = media, EscortFaceOrder = order });
+                foreach (long actorId in resource.Binding.ActorIds) _escortFaceChanged?.Invoke(actorId, media, checked((int)order));
+                break;
             default: throw new ArgumentException($"'{operation.Kind}' is not an NPC overlay action.");
         }
     }

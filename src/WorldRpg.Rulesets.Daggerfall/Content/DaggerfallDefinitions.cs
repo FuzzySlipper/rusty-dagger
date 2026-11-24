@@ -267,12 +267,11 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// </summary>
     internal DaggerfallBooksSet Books { get; private set; } = books;
 
-    /// <summary>
-    /// The published faction catalog, loaded from the pack alone: each faction resolves to its
-    /// filed relations and bindings, and each politic region resolves to the factions that claim
-    /// it or to the explicit unclaimed region.
-    /// </summary>
+    /// <summary>The published faction catalog, loaded from the pack alone.</summary>
     internal DaggerfallFactionsSet Factions { get; } = factions;
+
+    /// <summary>The 22 authored creature-family factions mapping 1:1 to classic foe teams.</summary>
+    internal DaggerfallCreatureFactionSet CreatureFactions { get; init; } = DaggerfallCreatureFactionSet.ClassicDefault;
 
     /// <summary>
     /// The published wilderness terrain, loaded from the pack alone: each map pixel resolves to

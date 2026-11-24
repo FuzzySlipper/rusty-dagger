@@ -30,8 +30,7 @@ internal sealed record DaggerfallResolvedRestore(DaggerfallSavePayload Payload, 
 /// <summary>Daggerfall's complete current state. The Host stores its encoded bytes without interpreting them.</summary>
 internal sealed record DaggerfallSavePayload(
     DaggerfallPlayerSave Player,
-    DaggerfallActorSave[] Actors,
-    DaggerfallDynamicActorSave[] DynamicActors,
+    ActorLedgerEntry[] ActorLedger,
     int Experience,
     int Level,
     DaggerfallInventorySave Inventory,
@@ -42,7 +41,6 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallSiteSave Site,
     DaggerfallActorInventorySave[] ActorInventories,
     DaggerfallVariablesSave Variables,
-    DaggerfallNpcSave Npcs,
     DaggerfallActiveEffectSave[] ActiveEffects,
     DaggerfallSkillProgressionSave SkillUses,
     DaggerfallSocialSave Social,
@@ -78,8 +76,6 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired] public DaggerfallCreateItemRequest? PendingCreateItem { get; init; }
     /// <summary>How far the player is through the tutorial Help offers, or null when none is under way.</summary>
     [JsonRequired] public DaggerfallTutorialProgress? Tutorial { get; init; }
-    [JsonRequired]
-    public long[] BanishedActors { get; init; } = [];
 
     /// <summary>Every current quest instance; an empty collection is meaningful current state.</summary>
     [JsonRequired]
@@ -95,7 +91,7 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallExteriorCellResidencySave? ExteriorResidency { get; init; }
     /// <summary>Whether the active exterior location cell still owns admitted geometry and actors.</summary>
     public DaggerfallExteriorLocationResidencySave? ExteriorLocationResidency { get; init; }
-    /// <summary>Detached state for admitted sites that are currently unloaded.</summary>
+    /// <summary>Structural detached state (doors and motion) for admitted sites that are currently unloaded.</summary>
     [JsonRequired]
     public DaggerfallSiteDeltaSave[] SiteDeltas { get; init; } = [];
     /// <summary>The current bank balance and generated-gold stack sequence; coins and letters remain inventory entries.</summary>
@@ -176,6 +172,96 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallNotebookSave Notebook { get; init; } = new([], [], null, 0, 0);
     /// <summary>The dynamic identity kinds owned by the current Daggerfall ruleset.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Actor, DurableIdentityKind.Item, DurableIdentityKind.Container];
+
+    /// <summary>Active-site authored placements projected from <see cref="ActorLedger"/>.</summary>
+    internal DaggerfallActorSave[] ActiveAuthoredActors(DaggerfallWorldProfileKey activeProfile) =>
+        [.. ActorLedger
+            .Where(entry => entry.Origin.IsFixedPlacement
+                && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: false, Profile: { } p }
+                && p.Require() == activeProfile
+                && entry.Vitals is not null && entry.Pose is not null)
+            .OrderBy(entry => entry.DurableId)
+            .Select(ToActorSave)];
+
+    /// <summary>Active-site dynamically minted actors projected from <see cref="ActorLedger"/>.</summary>
+    internal DaggerfallDynamicActorSave[] ActiveDynamicActors(DaggerfallWorldProfileKey activeProfile) =>
+        [.. ActorLedger
+            .Where(entry => entry.Origin.Kind == ActorOriginKind.Minted
+                && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: false, Profile: { } p }
+                && p.Require() == activeProfile
+                && entry.Vitals is not null && entry.Pose is not null)
+            .OrderBy(entry => entry.DurableId)
+            .Select(ToDynamicActorSave)];
+
+    /// <summary>Banished authored actor IDs for <paramref name="activeProfile"/> projected from <see cref="ActorLedger"/>.</summary>
+    internal long[] ActiveBanishedActors(DaggerfallWorldProfileKey activeProfile) =>
+        [.. ActorLedger
+            .Where(entry => entry.Origin.IsFixedPlacement
+                && entry.Location?.Kind == ActorLocationKind.Removed
+                && entry.Origin.SiteProfile?.Require() == activeProfile)
+            .Select(entry => entry.DurableId)
+            .Order()];
+
+    /// <summary>All banished authored actor IDs across all sites projected from <see cref="ActorLedger"/>.</summary>
+    internal long[] AllBanishedActors() =>
+        [.. ActorLedger
+            .Where(entry => entry.Origin.IsFixedPlacement && entry.Location?.Kind == ActorLocationKind.Removed)
+            .Select(entry => entry.DurableId)
+            .Order()];
+
+    /// <summary>All NPC registry entries projected from <see cref="ActorLedger"/>.</summary>
+    internal DaggerfallNpcSave RestoredNpcs() =>
+        new([.. ActorLedger
+            .Where(entry => entry.Social is not null)
+            .OrderBy(entry => entry.DurableId)
+            .Select(ToNpcEntry)]);
+
+    /// <summary>Constructs the factory restore bundle from the single <see cref="ActorLedger"/>.</summary>
+    internal DaggerfallActorSaves ToActorSaves(DaggerfallWorldProfileKey activeProfile) =>
+        new(Player, ActiveAuthoredActors(activeProfile), ActiveBanishedActors(activeProfile),
+            ActiveDynamicActors(activeProfile), RestoredNpcs(), Character, ActorLedger);
+
+    private static DaggerfallActorSave ToActorSave(ActorLedgerEntry entry) =>
+        new(entry.DurableId, entry.Pose!.X, entry.Pose.Y, entry.Pose.Z, entry.Pose.HeadingRadians, entry.Vitals!.Stats)
+        {
+            WabbajackDefinition = entry.Combat?.WabbajackDefinition,
+            ForcedHostile = entry.Combat?.ForcedHostile ?? false,
+            LanguagePacified = entry.Combat?.LanguagePacified ?? false,
+            MagicallyPacified = entry.Combat?.MagicallyPacified ?? false,
+        };
+
+    private static DaggerfallDynamicActorSave ToDynamicActorSave(ActorLedgerEntry entry) =>
+        new(entry.DurableId, entry.Origin.DefinitionId!, entry.Pose!.X, entry.Pose.Y, entry.Pose.Z,
+            entry.Pose.HeadingRadians, entry.Vitals!.Stats)
+        {
+            Level = entry.Origin.Level ?? 1,
+            SpawnDistance = entry.Combat?.SpawnDistance ?? 0,
+            Passive = entry.Combat?.Passive ?? false,
+            WabbajackActive = entry.Combat?.WabbajackActive ?? false,
+            ForcedHostile = entry.Combat?.ForcedHostile ?? false,
+            LanguagePacified = entry.Combat?.LanguagePacified ?? false,
+            MagicallyPacified = entry.Combat?.MagicallyPacified ?? false,
+            PlayerAllied = entry.Combat?.PlayerAllied ?? false,
+            CorruptionOrigin = entry.Combat?.CorruptionOrigin,
+            Gender = entry.Origin.Gender,
+        };
+
+    private static DaggerfallNpcEntry ToNpcEntry(ActorLedgerEntry entry)
+    {
+        ActorSocialDiff s = entry.Social!;
+        DaggerfallWorldProfileKeySave? profile = entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } p } ? p : null;
+        ActorPoseOverride? detachedPose = entry.Vitals is null ? entry.Location?.Pose : null;
+        int presence = entry.Location?.Kind == ActorLocationKind.Removed ? (int)DaggerfallNpcPresence.Removed : s.Presence;
+        return new DaggerfallNpcEntry(
+            entry.DurableId, s.NpcKind, s.StableKey, s.Region, s.Location, s.Building,
+            s.Race, s.Gender, s.BillboardArchive, s.BillboardRecord, s.NameSeed, s.FactionId,
+            s.Role, s.Services, presence, detachedPose?.X, detachedPose?.Y, detachedPose?.Z)
+        {
+            Profile = profile,
+            DisplayName = s.DisplayNameOverride,
+            ProfileId = s.ProfileId,
+        };
+    }
 
     internal static RulesetSavePayload Encode(DaggerfallSavePayload value)
     {
@@ -383,20 +469,21 @@ internal sealed record DaggerfallSavePayload(
         HashSet<long> knownAuthoredActorIds = [.. inputs.Project.Actors.Keys];
         HashSet<long> inactiveAuthoredActorIds = [];
         HashSet<long> inactiveDynamicActorIds = [];
+        List<DaggerfallSiteRuntimeDelta> inactiveRuntimeDeltas = [];
+        HashSet<DaggerfallWorldProfileKey> detachedProfiles = [];
         bool activeLocationUnloaded = ExteriorLocationResidency?.Loaded == false;
         if (profiles is null)
         {
-            HashSet<DaggerfallWorldProfileKey> detachedProfiles = [];
             foreach (DaggerfallSiteDeltaSave delta in SiteDeltas)
             {
                 DaggerfallWorldProfileKey key = delta.Profile.Require();
                 if (!detachedProfiles.Add(key))
                     throw new ArgumentException($"Saved site state repeats inactive site '{key}'.");
+                inactiveRuntimeDeltas.Add(DaggerfallSiteCrossing.BuildRuntimeDelta(delta, key, ActorLedger));
             }
         }
         else
         {
-            HashSet<DaggerfallWorldProfileKey> detachedProfiles = [];
             foreach (DaggerfallSiteDeltaSave delta in SiteDeltas)
             {
                 DaggerfallWorldProfileKey key = delta.Profile.Require();
@@ -404,20 +491,22 @@ internal sealed record DaggerfallSavePayload(
                 if ((key == inputs.ProfileKey && !activeLocationUnloaded) || !detachedProfiles.Add(key))
                     throw new ArgumentException("Saved inactive site state must name each non-active profile once.");
                 DaggerfallSiteProfile profile = profiles.Require(key);
+                DaggerfallSiteRuntimeDelta runtimeDelta = DaggerfallSiteCrossing.BuildRuntimeDelta(delta, key, ActorLedger);
+                inactiveRuntimeDeltas.Add(runtimeDelta);
                 HashSet<long> selectedActors = [.. profile.Project.Actors.Keys];
                 knownAuthoredActorIds.UnionWith(selectedActors);
-                ValidateBanished(delta.BanishedActors, selectedActors, delta.Actors.Select(actor => actor.EntityId));
-                HashSet<long> savedActors = [.. delta.Actors.Select(actor => actor.EntityId), .. delta.BanishedActors];
-                if (!savedActors.SetEquals(selectedActors))
+                ValidateBanished(runtimeDelta.BanishedActors, selectedActors, runtimeDelta.Actors.Select(actor => actor.EntityId));
+                HashSet<long> savedSiteActors = [.. runtimeDelta.Actors.Select(actor => actor.EntityId), .. runtimeDelta.BanishedActors];
+                if (!savedSiteActors.SetEquals(selectedActors))
                     throw new ArgumentException($"Saved inactive site '{site}' does not carry exactly its authored actors.");
-                foreach (DaggerfallActorSave actor in delta.Actors)
+                foreach (DaggerfallActorSave actor in runtimeDelta.Actors)
                 {
                     if (!inactiveAuthoredActorIds.Add(actor.EntityId))
                         throw new ArgumentException($"Saved inactive site '{site}' repeats authored actor {actor.EntityId}.");
                     ValidateStats(actor.Stats, $"inactive actor {actor.EntityId}");
                     if (actor.WabbajackDefinition is { } transformation) _ = DaggerfallWabbajack.RequireDefinition(definitions, transformation);
                 }
-                foreach (DaggerfallDynamicActorSave actor in delta.DynamicActors)
+                foreach (DaggerfallDynamicActorSave actor in runtimeDelta.DynamicActors)
                 {
                     if (actor.EntityId <= 0 || selectedActors.Contains(actor.EntityId) || !inactiveDynamicActorIds.Add(actor.EntityId))
                         throw new ArgumentException($"Saved inactive site '{site}' has an invalid or repeated dynamic actor identity.");
@@ -426,13 +515,13 @@ internal sealed record DaggerfallSavePayload(
                     ValidateStats(actor.Stats, $"inactive dynamic actor {actor.EntityId}");
                     if (actor.WabbajackActive) _ = DaggerfallWabbajack.RequireDefinition(definitions, actor.Definition);
                 }
-                HashSet<long> inventoryOwners = [.. delta.ActorInventories.Select(inventory => inventory.EntityId)];
-                HashSet<long> selectedSiteActors = [.. selectedActors.Except(delta.BanishedActors), .. delta.DynamicActors.Select(actor => actor.EntityId)];
+                HashSet<long> inventoryOwners = [.. runtimeDelta.ActorInventories.Select(inventory => inventory.EntityId)];
+                HashSet<long> selectedSiteActors = [.. selectedActors.Except(runtimeDelta.BanishedActors), .. runtimeDelta.DynamicActors.Select(actor => actor.EntityId)];
                 if (!inventoryOwners.SetEquals(selectedSiteActors))
                     throw new ArgumentException($"Saved inactive site '{site}' does not carry exactly its actor inventories.");
-                if (delta.Corpses.Any(corpse => !selectedSiteActors.Contains(corpse.ActorId)))
+                if (runtimeDelta.Corpses.Any(corpse => !selectedSiteActors.Contains(corpse.ActorId)))
                     throw new ArgumentException($"Saved inactive site '{site}' carries a corpse for a non-site actor.");
-                if (delta.Effects.Any(effect => !selectedSiteActors.Contains(effect.TargetId)))
+                if (runtimeDelta.Effects.Any(effect => !selectedSiteActors.Contains(effect.TargetId)))
                     throw new ArgumentException($"Saved inactive site '{site}' carries an effect for a non-site actor.");
                 HashSet<DaggerfallRdbDoorId> profileDoors = [.. profile.Doors.Select(door => door.Id)];
                 HashSet<DaggerfallRdbDoorId> deltaDoors = [.. delta.Doors.Select(door => door.Id)];
@@ -441,9 +530,26 @@ internal sealed record DaggerfallSavePayload(
                 ValidateDungeonMotion(profile, delta.Motion);
             }
         }
+        // Every detached materialized actor in the ledger must belong to an admitted SiteDelta,
+        // and every live (non-detached) AtSite actor must belong to the active profile.
+        foreach (ActorLedgerEntry entry in ActorLedger)
+        {
+            if (entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } entryProfile } && entry.Vitals is not null)
+            {
+                DaggerfallWorldProfileKey key = entryProfile.Require();
+                if (entry.Location.Detached && !detachedProfiles.Contains(key))
+                    throw new ArgumentException($"Saved detached actor {entry.DurableId} names profile '{key.LogicalId}' with no matching site delta.");
+                if (!entry.Location.Detached && key != inputs.ProfileKey)
+                    throw new ArgumentException($"Saved live actor {entry.DurableId} names non-active profile '{key.LogicalId}'.");
+            }
+        }
         _ = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallActorSave[] activeAuthored = ActiveAuthoredActors(inputs.ProfileKey);
+        DaggerfallDynamicActorSave[] activeDynamic = ActiveDynamicActors(inputs.ProfileKey);
+        long[] activeBanished = ActiveBanishedActors(inputs.ProfileKey);
+        long[] allBanished = AllBanishedActors();
         HashSet<long> savedActorIds = [];
-        foreach (DaggerfallActorSave actor in Actors)
+        foreach (DaggerfallActorSave actor in activeAuthored)
         {
             if (!inputs.Project.Actors.TryGetValue(actor.EntityId, out AuthoredActor? placement))
                 throw new ArgumentException($"Saved actor {actor.EntityId} is not placed by the selected content.");
@@ -453,17 +559,17 @@ internal sealed record DaggerfallSavePayload(
             if (!savedActorIds.Add(actor.EntityId))
                 throw new ArgumentException($"Saved actor {actor.EntityId} appears more than once.");
         }
-        ValidateBanished(BanishedActors, knownAuthoredActorIds, savedActorIds.Concat(inactiveAuthoredActorIds));
+        ValidateBanished(allBanished, knownAuthoredActorIds, savedActorIds.Concat(inactiveAuthoredActorIds));
         foreach (AuthoredActor placement in inputs.Project.Actors.Values)
         {
-            if (!activeLocationUnloaded && !savedActorIds.Contains(placement.EntityId) && !BanishedActors.Contains(placement.EntityId))
+            if (!activeLocationUnloaded && !savedActorIds.Contains(placement.EntityId) && !activeBanished.Contains(placement.EntityId))
                 throw new ArgumentException($"Current save is missing authored actor {placement.EntityId}.");
         }
         // Dynamic actors are spawn-time registrations, not content placements: each one names
         // the definition it was spawned from, and a definition the selected content cannot
         // explain is reported rather than silently materialized.
         HashSet<long> dynamicActorIds = [];
-        foreach (DaggerfallDynamicActorSave actor in DynamicActors)
+        foreach (DaggerfallDynamicActorSave actor in activeDynamic)
         {
             ArgumentNullException.ThrowIfNull(actor);
             if (actor.EntityId <= 0 || !dynamicActorIds.Add(actor.EntityId))
@@ -471,7 +577,7 @@ internal sealed record DaggerfallSavePayload(
             if (actor.WabbajackActive) _ = DaggerfallWabbajack.RequireDefinition(definitions, actor.Definition);
             if (inactiveDynamicActorIds.Contains(actor.EntityId))
                 throw new ArgumentException($"Saved dynamic actor {actor.EntityId} is active and inactive at once.");
-            if (savedActorIds.Contains(actor.EntityId) || BanishedActors.Contains(actor.EntityId))
+            if (savedActorIds.Contains(actor.EntityId) || allBanished.Contains(actor.EntityId))
                 throw new ArgumentException($"Saved dynamic actor {actor.EntityId} collides with an authored actor.");
             if (!IsAdmittedDynamicDefinition(definitions, actor.Definition))
                 throw new ArgumentException($"Saved dynamic actor {actor.EntityId} refers to missing definition '{actor.Definition}'.");
@@ -485,17 +591,23 @@ internal sealed record DaggerfallSavePayload(
             if (savedLedger.Classify(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)actorId))) != DurableIdentityClassification.Live)
                 throw new ArgumentException($"Saved dynamic actor {actorId} is not live in the persisted identity ledger.");
         }
-        Dictionary<long, DaggerfallNpcEntry> savedNpcs = Npcs.Entries.ToDictionary(entry => entry.DurableId);
-        foreach (DaggerfallDynamicActorSave actor in DynamicActors.Concat(SiteDeltas.SelectMany(delta => delta.DynamicActors)))
+        DaggerfallNpcSave restoredNpcs = RestoredNpcs();
+        restoredNpcs.Validate();
+        Dictionary<long, DaggerfallNpcEntry> savedNpcs = restoredNpcs.Entries.ToDictionary(entry => entry.DurableId);
+        DaggerfallDynamicActorSave[] allDynamicActors = [.. activeDynamic, .. inactiveRuntimeDeltas.SelectMany(delta => delta.DynamicActors)];
+        foreach (DaggerfallDynamicActorSave actor in allDynamicActors)
         {
             if (actor.Definition is not (DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc)) continue;
             if (!savedNpcs.TryGetValue(actor.EntityId, out DaggerfallNpcEntry? npc))
                 throw new ArgumentException($"Saved civilian actor {actor.EntityId} has no matching NPC identity record.");
-            if ((DaggerfallNpcKind)npc.Kind != (actor.Definition == DaggerfallActorKinds.StaticNpc ? DaggerfallNpcKind.Static : DaggerfallNpcKind.Civilian) || (DaggerfallNpcPresence)npc.Presence == DaggerfallNpcPresence.Removed)
+            bool kindMatches = actor.Definition == DaggerfallActorKinds.StaticNpc
+                ? (DaggerfallNpcKind)npc.Kind is DaggerfallNpcKind.Static or DaggerfallNpcKind.Questor
+                : (DaggerfallNpcKind)npc.Kind == DaggerfallNpcKind.Civilian;
+            if (!kindMatches || (DaggerfallNpcPresence)npc.Presence == DaggerfallNpcPresence.Removed)
                 throw new ArgumentException($"Saved civilian actor {actor.EntityId} does not name a live civilian NPC identity.");
         }
 
-        var dynamicDefinitions = DynamicActors.Concat(SiteDeltas.SelectMany(delta => delta.DynamicActors))
+        var dynamicDefinitions = allDynamicActors
             .ToDictionary(actor => actor.EntityId, actor => actor.Definition);
         foreach (var npc in savedNpcs.Values)
         {
@@ -510,11 +622,12 @@ internal sealed record DaggerfallSavePayload(
         }
         foreach (var npc in savedNpcs.Values)
         {
+            bool aliasesDynamic = dynamicDefinitions.TryGetValue(npc.DurableId, out var definition)
+                && !((npc.Kind == (int)DaggerfallNpcKind.Civilian && definition == DaggerfallActorKinds.Civilian)
+                    || (npc.Kind is (int)DaggerfallNpcKind.Static or (int)DaggerfallNpcKind.Questor && definition == DaggerfallActorKinds.StaticNpc));
             if (npc.DurableId == DaggerfallActorIdentity.PlayerEntityId || savedActorIds.Contains(npc.DurableId)
-                || inactiveAuthoredActorIds.Contains(npc.DurableId) || BanishedActors.Contains(npc.DurableId)
-                || dynamicDefinitions.TryGetValue(npc.DurableId, out var definition)
-                    && (npc.Kind != (int)DaggerfallNpcKind.Civilian || definition != DaggerfallActorKinds.Civilian)
-                    && (npc.Kind != (int)DaggerfallNpcKind.Static || definition != DaggerfallActorKinds.StaticNpc))
+                || inactiveAuthoredActorIds.Contains(npc.DurableId) || allBanished.Contains(npc.DurableId)
+                || aliasesDynamic)
                 throw new ArgumentException($"Saved NPC {npc.DurableId} aliases an unrelated actor identity.");
             var classification = savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)npc.DurableId)));
             if (classification != DurableIdentityClassification.Live
@@ -630,7 +743,7 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException($"Saved actor inventory {inventory.EntityId} has no distinct saved actor.");
             ValidateInventory(inventory.Inventory, definitions, uniqueItems, DaggerfallItemOwner.Actor(inventory.EntityId), requireEquipment: true);
         }
-        foreach (DaggerfallSiteDeltaSave delta in SiteDeltas)
+        foreach (DaggerfallSiteRuntimeDelta delta in inactiveRuntimeDeltas)
         {
             foreach (DaggerfallCorpseSave corpse in delta.Corpses)
             {
@@ -739,7 +852,7 @@ internal sealed record DaggerfallSavePayload(
             AddQuestStacks(questStacks, DaggerfallItemOwner.Wagon(questWagon.Id), questWagon.Inventory.Stacks);
         foreach (DaggerfallActorInventorySave inventory in ActorInventories)
             AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
-        foreach (var delta in SiteDeltas)
+        foreach (var delta in inactiveRuntimeDeltas)
         {
             foreach (var inventory in delta.ActorInventories)
                 AddQuestStacks(questStacks, DaggerfallItemOwner.Actor(inventory.EntityId), inventory.Inventory.Stacks);
@@ -752,18 +865,18 @@ internal sealed record DaggerfallSavePayload(
             .. Corpses.SelectMany(value => value.UniqueItems), .. GroundContainers.SelectMany(value => value.Inventory.UniqueItems),
             .. QuestCustody.SelectMany(value => value.Inventory.UniqueItems), .. (Wagon?.Inventory.UniqueItems ?? []),
             .. Merchants.SelectMany(value => value.Inventory.UniqueItems), .. Merchants.SelectMany(value => value.Custody.UniqueItems),
-            .. Property.Storage.SelectMany(value => value.Inventory.UniqueItems), .. SiteDeltas.SelectMany(value => value.ActorInventories).SelectMany(value => value.Inventory.UniqueItems),
-            .. SiteDeltas.SelectMany(value => value.Corpses).SelectMany(value => value.UniqueItems)];
+            .. Property.Storage.SelectMany(value => value.Inventory.UniqueItems), .. inactiveRuntimeDeltas.SelectMany(value => value.ActorInventories).SelectMany(value => value.Inventory.UniqueItems),
+            .. inactiveRuntimeDeltas.SelectMany(value => value.Corpses).SelectMany(value => value.UniqueItems)];
         if (Quests.PendingOffer is { } pendingOffer && (pendingOffer.Quest.QuestorId is not long giver
             || !savedNpcs.TryGetValue(giver, out var offerNpc) || new DaggerfallNpcSite(offerNpc.Region, offerNpc.Location, offerNpc.Building, offerNpc.ProfileId) != pendingOffer.Site))
             throw new ArgumentException("Saved quest offer has no matching provider.");
         Quests.ValidateBindings(combatants, savedLedger, locations, questStacks, questUnique.ToDictionary(value => value.EntityId),
-            QuestCustody.ToDictionary(value => value.Id, value => value.InstanceId), savedNpcs, definitions, BanishedActors.Concat(SiteDeltas.SelectMany(delta => delta.BanishedActors)).ToHashSet());
+            QuestCustody.ToDictionary(value => value.Id, value => value.InstanceId), savedNpcs, definitions, allBanished.ToHashSet());
         foreach (var reward in Quests.Instances.SelectMany(instance => instance.Tasks).SelectMany(task => task.OperationState)
             .Select(operation => operation.Reward).OfType<DaggerfallQuestRewardState>())
             if (reward is { LootOpened: false, GroundContainer: { } rewardContainer } && !GroundContainers.Any(ground => ground.Id == rewardContainer))
                 throw new ArgumentException("Pending quest reward refers to an unavailable loot container.");
-        DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. SiteDeltas.SelectMany(delta => delta.Effects)];
+        DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. inactiveRuntimeDeltas.SelectMany(delta => delta.Effects)];
         if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
             throw new ArgumentException("Saved health-leech last use is later than the current calendar.");
         ValidateActiveEffects(allEffects, combatants, uniqueItems, definitions.Magic);
@@ -802,10 +915,7 @@ internal sealed record DaggerfallSavePayload(
         ValidateEffectSourceReferences(
         [
             (DaggerfallActorIdentity.PlayerEntityId, Player.Stats),
-            .. Actors.Select(actor => (actor.EntityId, actor.Stats)),
-            .. DynamicActors.Select(actor => (actor.EntityId, actor.Stats)),
-            .. SiteDeltas.SelectMany(delta => delta.Actors).Select(actor => (actor.EntityId, actor.Stats)),
-            .. SiteDeltas.SelectMany(delta => delta.DynamicActors).Select(actor => (actor.EntityId, actor.Stats)),
+            .. ActorLedger.Where(entry => entry.Vitals is not null).Select(entry => (entry.DurableId, entry.Vitals!.Stats)),
         ],
         allEffects, Inventory, definitions.Magic);
         IReadOnlySet<long> tombstonedActors = savedLedger.RemovedIdentities(DurableIdentityKind.Actor)
@@ -836,10 +946,7 @@ internal sealed record DaggerfallSavePayload(
         TeleportAnchor?.Validate();
         PendingIdentify?.Validate();
         PendingCreateItem?.Validate();
-        ArgumentNullException.ThrowIfNull(Actors);
-        ArgumentNullException.ThrowIfNull(DynamicActors);
-        if(Actors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)) || DynamicActors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)))
-            throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
+        ArgumentNullException.ThrowIfNull(ActorLedger);
         ArgumentNullException.ThrowIfNull(Inventory);
         ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(GroundContainers);
@@ -876,8 +983,6 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(ActorInventories);
         ArgumentNullException.ThrowIfNull(Variables);
         Variables.Validate();
-        ArgumentNullException.ThrowIfNull(Npcs);
-        Npcs.Validate();
         ArgumentNullException.ThrowIfNull(ActiveEffects);
         ArgumentNullException.ThrowIfNull(Infections);
         Infections.Validate();
@@ -974,22 +1079,16 @@ internal sealed record DaggerfallSavePayload(
         Player.Validate();
         ValidateStats(Player.Stats, "player");
         HashSet<long> actorIds = [];
-        foreach (DaggerfallActorSave actor in Actors)
+        foreach (ActorLedgerEntry entry in ActorLedger)
         {
-            ArgumentNullException.ThrowIfNull(actor);
-            actor.Validate();
-            if (actor.EntityId <= 0 || !actorIds.Add(actor.EntityId))
-                throw new ArgumentException("Saved actor identities must be positive and unique.");
-            ValidateStats(actor.Stats, $"actor {actor.EntityId}");
+            ArgumentNullException.ThrowIfNull(entry);
+            entry.Validate();
+            if (!actorIds.Add(entry.DurableId))
+                throw new ArgumentException($"Saved actor ledger identity {entry.DurableId} appears more than once.");
+            if (entry.Vitals is { } vitals)
+                ValidateStats(vitals.Stats, $"actor {entry.DurableId}");
         }
-        foreach (DaggerfallDynamicActorSave actor in DynamicActors)
-        {
-            ArgumentNullException.ThrowIfNull(actor);
-            actor.Validate();
-            if (actor.EntityId <= 0 || !actorIds.Add(actor.EntityId))
-                throw new ArgumentException("Saved dynamic actor identities must be positive and unique.");
-            ValidateStats(actor.Stats, $"dynamic actor {actor.EntityId}");
-        }
+        RestoredNpcs().Validate();
         Inventory.Validate();
         HashSet<long> corpseActors = [];
         HashSet<ulong> containerIdentities = [];
@@ -1014,9 +1113,8 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallPropertyStorageSave storage in Property.Storage)
             if (!containerIdentities.Add(checked((ulong)storage.ContainerId)))
                 throw new ArgumentException($"Saved property storage container {storage.ContainerId} collides with another container.");
-        foreach (DaggerfallSiteDeltaSave delta in SiteDeltas)
-        foreach (DaggerfallCorpseSave corpse in delta.Corpses)
-            if (!containerIdentities.Add(corpse.ContainerId))
+        foreach (ActorLedgerEntry entry in ActorLedger)
+            if (entry.Combat?.DetachedCorpse is { } corpse && !containerIdentities.Add(corpse.ContainerId))
                 throw new ArgumentException("Saved inactive corpse container identities must be distinct from active containers and each other.");
         HashSet<string> custodyQuests = new(StringComparer.Ordinal);
         foreach (var custody in QuestCustody)

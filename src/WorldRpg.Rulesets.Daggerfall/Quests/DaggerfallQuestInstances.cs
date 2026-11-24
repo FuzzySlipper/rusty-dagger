@@ -1184,7 +1184,13 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         // Visible actors continue under their canonical roster/registry lifetime.
         instance.Placements = [];
         Messages.RemoveDialogue(instance.InstanceId);
+        long[] droppedEscorts = instance.Resources
+            .Where(resource => resource.EscortFaceMedia is not null)
+            .SelectMany(resource => resource.Binding.ActorIds)
+            .Distinct()
+            .ToArray();
         instance.Resources = instance.Resources.Select(resource => resource with { DialogueVisible = false, DialogueLinks = [], IsQuestor = false, IsMuted = false, EscortFaceMedia = null, EscortFaceOrder = 0 }).ToArray();
+        foreach (long actorId in droppedEscorts) _escortFaceChanged?.Invoke(actorId, null, 0);
         _removeCarriedQuestItems?.Invoke(instance.InstanceId);
     }
 

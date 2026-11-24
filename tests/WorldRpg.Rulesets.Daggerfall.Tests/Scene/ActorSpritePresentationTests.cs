@@ -229,20 +229,23 @@ public sealed class ActorSpritePresentationTests
             """), "test.art");
         NormalizedBillboardSprite billboard = new("person.png", Hash, 8, 8, [new NormalizedAtlasFrame(7, 0, 0, 8, 8)], 7, new Vector2(.5F, .5F), new Vector2(2F, 4F));
         using ActorsState actors = ActorsAt(new WorldPoint(0F, 0F, 0F));
+        ActorState questor = actors.CreateActor(40, new Rusty.Engine.Entities.EntityTypeId(DaggerfallActorKinds.StaticNpc),
+            HealthyMechanics(), new ActorPose(new WorldPoint(1F, 0F, 1F), 0F), "health");
+        questor.Actor.Add(new ActorRenderComponent(ActorVisualSpec.Billboard(182, 0, onBase: true)));
         bool refreshed = true;
         using var presentation = new DaggerfallSiteAppearance(content, graphics, MediaInputs());
         presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed);
-        presentation.AddNpc(40, billboard, (182, 0));
+        presentation.AdmitActor(40, billboard.Standing((182, 0)));
         Appearance Drawn()
         {
-            presentation.Publish(actors, new Dictionary<long, WorldRpg.Rulesets.Daggerfall.Modules.Loot.DaggerfallGroundContainer>(), npcs: [new DaggerfallNpcView(40, new WorldPoint(1F, 0F, 1F))]);
+            presentation.Publish(actors, new Dictionary<long, WorldRpg.Rulesets.Daggerfall.Modules.Loot.DaggerfallGroundContainer>());
             return Assert.Single(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(1F, 0F, 1F)).Appearance;
         }
         Appearance person = Drawn();
         Assert.Contains("refreshed/people/texture-182-record-000.png", graphics.OpenedResourcePaths);
         Assert.DoesNotContain("person.png", graphics.OpenedResourcePaths);
-        // Drawn at its own size about its own pivot, which is where the person is placed, whatever the classic billboard states.
-        Assert.Equal((new Vector2(3F, 7F), new Vector2(.5F, .4F)), (graphics.SpriteRequests[^1].Size, graphics.SpriteRequests[^1].Pivot));
+        // Unified standing questor draws at its own size on its own foot pivot, matching static people.
+        Assert.Equal((new Vector2(3F, 7F), new Vector2(.45F, 0F)), (graphics.SpriteRequests[^1].Size, graphics.SpriteRequests[^1].Pivot));
 
         presentation.BuildClassic();
         Assert.Contains("person.png", graphics.OpenedResourcePaths);

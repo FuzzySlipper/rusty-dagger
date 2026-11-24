@@ -63,16 +63,17 @@ public sealed class DungeonPopulationSessionTests
         ulong step = 0;
         void Update(params ProductInputEvent[] events) => session.Update(new ProductUpdate(OuterUpdate(++step), events));
         var initial = DaggerfallSavePayload.Read(session.CaptureSave());
-        Assert.Equal(profile.DungeonPopulation.Enemies.Count, initial.DynamicActors.Length);
+        DaggerfallDynamicActorSave[] initialDynamic = initial.ActiveDynamicActors(profile.ProfileKey);
+        Assert.Equal(profile.DungeonPopulation.Enemies.Count, initialDynamic.Length);
         Assert.Equal(profile.DungeonPopulation.Treasures.Count, initial.GroundContainers.Count(value => value.TreasurePlacement is not null));
         Assert.Contains(profile.ProfileKey.LogicalId, initial.Encounters.PopulatedDungeons);
         foreach (var marker in profile.DungeonPopulation.Enemies)
         {
             // Grounding may change Y; the source horizontal placement and spawn-range metadata survive.
-            var actor = initial.DynamicActors.First(value => Math.Abs(value.X - marker.Position.X) < .01 && Math.Abs(value.Z - marker.Position.Z) < .01);
+            var actor = initialDynamic.First(value => Math.Abs(value.X - marker.Position.X) < .01 && Math.Abs(value.Z - marker.Position.Z) < .01);
             Assert.Equal(marker.SpawnDistance, session.State.Actors.Get(actor.EntityId).Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance);
         }
-        long enemy = initial.DynamicActors[0].EntityId;
+        long enemy = initialDynamic[0].EntityId;
         session.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
         Update();
         Assert.True(session.State.Actors.Get(enemy).IsDefeated);
@@ -111,7 +112,7 @@ public sealed class DungeonPopulationSessionTests
         session.Dispose();
         using var restored = DaggerfallSession.Restore(engine.Context, composition, saved);
         var restoredSave = DaggerfallSavePayload.Read(restored.CaptureSave());
-        Assert.Equal(initial.DynamicActors.Select(value => value.EntityId).Order(), restoredSave.DynamicActors.Select(value => value.EntityId).Order());
+        Assert.Equal(initialDynamic.Select(value => value.EntityId).Order(), restoredSave.ActiveDynamicActors(profile.ProfileKey).Select(value => value.EntityId).Order());
         Assert.True(restored.State.Actors.Get(enemy).IsDefeated);
         var restoredTreasure = restoredSave.GroundContainers.Single(value => value.Id == treasure.Id);
         Assert.Empty(restoredTreasure.Inventory.Stacks); Assert.Empty(restoredTreasure.Inventory.UniqueItems);

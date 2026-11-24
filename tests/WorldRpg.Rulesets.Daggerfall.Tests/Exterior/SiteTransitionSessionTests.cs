@@ -309,7 +309,8 @@ public sealed class SiteTransitionSessionTests
         Assert.Equal(exterior.ProfileKey, captured.Site.ReturnProfile!.Require());
         Assert.Equal(exterior.ProfileKey, Assert.Single(captured.SiteDeltas).Profile.Require());
         // The rat stays outside with the street's own spawns of the morning.
-        Assert.Contains(captured.SiteDeltas[0].DynamicActors, actor => actor.EntityId == spawnedActor);
+        Assert.Contains(captured.ActorLedger, entry => entry.DurableId == spawnedActor
+            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p } && p.Require() == exterior.ProfileKey);
 
         List<string> resumedReleases = [];
         ContentFake resumedContent = new(resumedReleases);
@@ -378,8 +379,9 @@ public sealed class SiteTransitionSessionTests
         }
 
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
-        DaggerfallSiteDeltaSave sourceDelta = Assert.Single(captured.SiteDeltas);
-        Assert.Equal(dynamicActor, Assert.Single(sourceDelta.Effects).TargetId);
+        _ = Assert.Single(captured.SiteDeltas);
+        ActorLedgerEntry detachedEntry = Assert.Single(captured.ActorLedger, entry => entry.DurableId == dynamicActor);
+        Assert.Equal(dynamicActor, Assert.Single(detachedEntry.Combat!.DetachedEffects!).TargetId);
         DaggerfallActiveEffectSave retainedSave = Assert.Single(captured.ActiveEffects);
         Assert.Equal("inactive-caster-effect", retainedSave.Instance);
         Assert.Equal<long?>(dynamicActor, retainedSave.CasterId);

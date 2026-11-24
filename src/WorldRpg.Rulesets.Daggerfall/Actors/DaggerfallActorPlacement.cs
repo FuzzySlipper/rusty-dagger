@@ -45,9 +45,11 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions, Func<long, string?> foeTeam, Func<long, bool> isPacified,
     Func<long, bool> allowsFoeInfighting, Func<long, bool> restrained, Func<long, bool> joinsInfighting, Func<bool> infightingActive,
     SpatialMovementSystem spatial, IPerceptionService perception, IRandomService random,
-    Func<CharacterStepEnvironment> environment, double detectionDistance, float fieldOfViewYDegrees, IActorSight? sight = null)
+    Func<CharacterStepEnvironment> environment, double detectionDistance, float fieldOfViewYDegrees, IActorSight? sight = null,
+    DaggerfallCreatureFactionSet? creatureFactions = null)
 {
     private readonly IActorSight _sight = sight ?? PoseSight.Instance;
+    private readonly DaggerfallCreatureFactionSet _creatureFactions = creatureFactions ?? DaggerfallCreatureFactionSet.ClassicDefault;
 
     // FoeSpawner's placement envelope, in normalized world metres.
     private const float SummonFloorDistance = 4f;
@@ -72,7 +74,7 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
         if (!allowsFoeInfighting(observerId) || !infightingActive()) return selected;
         double best = player.Position is { } standing ? Vector3.Distance(observer.Position.ToVector(), standing.ToVector()) : double.PositiveInfinity;
         Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
-        string? team = foeTeam(observerId);
+        string? team = EffectiveTeam(observerId);
         foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
                      Math.Max(detectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
                      DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, _ => true)
@@ -82,12 +84,19 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
             // Classic quest foes are excluded from AI fights unless the source explicitly opts in.
             // Other actors keep their established player pursuit unless participating in that opt-in.
             if (!joinsInfighting(observerId) && !joinsInfighting(id)) continue;
-            if (!allowsFoeInfighting(id) || foeTeam(id) == team
-                || foeTeam(id) == "player-ally" && isPacified(observerId) || pair.Distance >= best) continue;
+            if (!allowsFoeInfighting(id)
+                || !_creatureFactions.AreTeamsHostile(team, EffectiveTeam(id), isPacified(observerId))
+                || pair.Distance >= best) continue;
             selected = new(id, actors.Get(id).Position); best = pair.Distance;
         }
         return selected;
     }
+
+    private string? EffectiveTeam(long actorId) =>
+        foeTeam(actorId)
+        ?? (actors.TryGet(actorId, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction)
+            ? faction.EffectiveTeam
+            : definitions.TryGetValue(actorId, out DaggerfallActorDefinition? definition) ? definition.Team : null);
 
     /// <summary>The nearest visible foe of the player's side an ally can attack, if any.</summary>
     internal PursuitTarget? SelectAllyTarget(long observerId)
@@ -123,7 +132,10 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
         PerceptionTarget[] targets = actors.All.Where(actor => actor.DurableId != observerId && !actor.IsDefeated
                 && isGameplayActive(actor.DurableId)
                 && definitions.TryGetValue(actor.DurableId, out var definition)
-                && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass && eligible(definition with { Team = foeTeam(actor.DurableId) }))
+                && (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
+                    ? harm.IsCombatant
+                    : definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
+                && eligible(definition with { Team = EffectiveTeam(actor.DurableId) }))
             .OrderBy(actor => actor.DurableId)
             .Select(actor => new PerceptionTarget(checked((ulong)actor.DurableId), actor.Position.ToVector() + lift)).ToArray();
         PerceptionQueryRequest request = new(spatial.Session,

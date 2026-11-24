@@ -76,6 +76,8 @@ internal sealed class DaggerfallState(
     /// </summary>
     internal bool WeaponDrawn { get; set; } = true;
     internal ActorsState Actors { get; } = assembled.Actors;
+    /// <summary>The single world-scoped sparse actor ledger covering all actors (people and creatures alike).</summary>
+    internal DaggerfallActorLedger ActorLedger { get; } = assembled.ActorLedger;
     internal ProgressionState Progression => Actors.Player.Progression;
     internal MechanicsInventoryCoordinator Inventory { get; } = assembled.Inventory;
 

@@ -30,7 +30,7 @@ public sealed class DaggerfallQuestPlacementTests
         (definition, pose) => { watched.Spawned.Add((definition, pose)); return watched.NextActor++; },
         (item, position) => { watched.Created.Add((item, position)); return new(DaggerfallItemOwner.Ground(41), null, 99UL); },
         (binding, position) => { watched.Placed.Add((binding, position)); return binding; },
-        (_, _, _) => throw new InvalidOperationException("No questor is projected in this stage."),
+        (_, _, _, _) => throw new InvalidOperationException("No questor is materialized in this stage."),
         (id, position) => watched.BroughtOut.Add((id, position)));
 
     [Fact]

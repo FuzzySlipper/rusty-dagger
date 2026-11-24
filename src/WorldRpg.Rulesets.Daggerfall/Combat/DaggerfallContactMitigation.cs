@@ -97,8 +97,7 @@ internal sealed class DaggerfallContactMitigation(DaggerfallContactInputs sessio
 
     private bool Deflects(DaggerfallPhysicalHarm harm)
     {
-        // A civilian's lightweight definition carries no combat skills, and it has none to turn a blow aside with.
-        if (harm.Target.Kind == DaggerfallActorKinds.Civilian) return false;
+        if (!session.CanDeflect(harm.TargetId)) return false;
         int chance = DeflectionChance(harm.TargetId);
         if (chance <= 0) return false;
         bool enemy = harm.AttackerId != DaggerfallActorIdentity.PlayerEntityId;

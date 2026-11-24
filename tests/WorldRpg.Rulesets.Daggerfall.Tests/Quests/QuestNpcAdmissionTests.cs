@@ -38,12 +38,14 @@ public sealed class QuestNpcAdmissionTests
         Assert.Equal(person.SelectedPerson.DisplayName, npc.DisplayName);
         Assert.Equal(fixture.Inputs.ProfileKey, npc.Profile);
         var entity = session.State.Actors.Entities.Resolve(ActorsState.Identity(id));
-        Assert.True(session.State.Actors.Store.Has<DaggerfallNpcBody>(entity));
-        Assert.False(session.State.Actors.Store.Has<ActorBody>(entity));
-        Assert.False(session.State.Actors.Store.Has<StatsComponent>(entity));
-        Assert.False(session.State.Actors.Store.Has<InventoryComponent>(entity));
-        Assert.Equal(combatants, session.State.Actors.All.Count());
-        var body = DaggerfallNpcBody.Position(session.State.Actors.Store, entity);
+        Assert.True(session.State.Actors.TryGet(id, out ActorState? questorActor));
+        Assert.True(session.State.Actors.Store.Has<StatsComponent>(entity));
+        Assert.True(session.State.Actors.Store.Has<InventoryComponent>(entity));
+        Assert.Equal(ActorHarmPolicyKind.Protected, questorActor!.Actor.Get<ActorHarmPolicy>().Policy);
+        Assert.Equal(ActorInteractionPolicyKind.FullDialogue, questorActor.Actor.Get<ActorInteractionPolicy>().Policy);
+        Assert.Equal(ActorVisualKind.Billboard, questorActor.Actor.Get<ActorRenderComponent>().Spec.Kind);
+        Assert.Equal(combatants + 1, session.State.Actors.All.Count());
+        var body = questorActor.Position;
         var save = DaggerfallSavePayload.Read(session.CaptureSave());
         var quest = save.Quests.Instances.Single();
         var forged = save with { Quests = save.Quests with { Instances = [quest with
@@ -52,21 +54,28 @@ public sealed class QuestNpcAdmissionTests
         Assert.Contains("NPC identity", Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition, encoded)).Message);
         foreach (bool placedProfile in new[] { false, true })
         {
-            var alias = save with { Npcs = save.Npcs with { Entries = save.Npcs.Entries.Select(value => value.DurableId == id
-                ? value with { DurableId = HoldActor(1), Profile = placedProfile ? value.Profile : null } : value).ToArray() } };
-            Assert.Contains("aliases", Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition,
-                DaggerfallSavePayload.Encode(alias))).Message);
+            var alias = save with { ActorLedger = save.ActorLedger.Select(value => value.DurableId == id
+                ? value with
+                {
+                    DurableId = HoldActor(1),
+                    Location = placedProfile ? value.Location : ActorLocationOverride.OffStage,
+                    Vitals = placedProfile ? value.Vitals : null,
+                    Pose = placedProfile ? value.Pose : null,
+                }
+                : value).Where((value, index) => value.DurableId != HoldActor(1) || value.Social is not null).ToArray() };
+            Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition,
+                DaggerfallSavePayload.Encode(alias)));
         }
-        var wrongKind = save with { Npcs = save.Npcs with { Entries = save.Npcs.Entries.Select(value => value.DurableId == id
-            ? value with { Kind = (int)DaggerfallNpcKind.Static } : value).ToArray() } };
+        var wrongKind = save with { ActorLedger = save.ActorLedger.Select(value => value.DurableId == id && value.Social is { } s
+            ? value with { Social = s with { NpcKind = (int)DaggerfallNpcKind.Static } } : value).ToArray() };
         Assert.Contains("Questor", Assert.Throws<ArgumentException>(() => wrongKind.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults)).Message);
         // An explicitly selected existing giver may be static; hidden people retain their
         // durable binding and text while the canonical registry suppresses projection.
         var explicitGiver = wrongKind with { Quests = save.Quests with { Instances = [quest with
             { Resources = quest.Resources.Select(value => value with { SelectedPerson = value.SelectedPerson! with { QuestorId = id } }).ToArray() }] } };
         _ = explicitGiver.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults);
-        var hidden = save with { Npcs = save.Npcs with { Entries = save.Npcs.Entries.Select(value => value.DurableId == id
-            ? value with { Presence = (int)DaggerfallNpcPresence.Hidden } : value).ToArray() } };
+        var hidden = save with { ActorLedger = save.ActorLedger.Select(value => value.DurableId == id && value.Social is { } s
+            ? value with { Social = s with { Presence = (int)DaggerfallNpcPresence.Hidden } } : value).ToArray() };
         _ = hidden.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults);
         var changedGiver = explicitGiver with { Quests = explicitGiver.Quests with { Instances = [explicitGiver.Quests.Instances.Single() with
             { Resources = explicitGiver.Quests.Instances.Single().Resources.Select(value => value with
@@ -80,8 +89,8 @@ public sealed class QuestNpcAdmissionTests
         Assert.Equal(npc.DisplayName, restored.State.Npcs.Require(id).DisplayName);
         Assert.Equal(npc.Profile, restored.State.Npcs.Require(id).Profile);
         var restoredEntity = restored.State.Actors.Entities.Resolve(ActorsState.Identity(id));
-        Assert.Equal(body, DaggerfallNpcBody.Position(restored.State.Actors.Store, restoredEntity));
-        Assert.Equal(combatants, restored.State.Actors.All.Count());
+        Assert.Equal(body, restored.State.Actors.Get(id).Position);
+        Assert.Equal(combatants + 1, restored.State.Actors.All.Count());
         Assert.NotNull(restored.State.Quests.Capture().Instances.Single().Placements.Single().Applied);
         var dialogue = new DaggerfallDialogueService(restored.State.Npcs, restored.State.Actors, restored.State.Social,
             restored.State.SkillUses, restored.State.Actors.Player.Stats, definitions, RandomMinimum.Create(),
@@ -99,8 +108,7 @@ public sealed class QuestNpcAdmissionTests
             fixture.Composition with { Profiles = profiles }, restored.CaptureSave());
         Assert.False(inactive.State.Actors.Entities.TryResolve(ActorsState.Identity(id), out _));
         Assert.True(inactive.TryTransitionTo(fixture.Inputs.ProfileKey));
-        var returnedEntity = inactive.State.Actors.Entities.Resolve(ActorsState.Identity(id));
-        Assert.Equal(body, DaggerfallNpcBody.Position(inactive.State.Actors.Store, returnedEntity));
+        Assert.Equal(body, inactive.State.Actors.Get(id).Position);
         Assert.Equal(npc.DisplayName, inactive.State.Npcs.Require(id).DisplayName);
         Assert.Single(inactive.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Questor);
         Assert.Single(inactive.State.Quests.Capture().Instances.Single().Placements);
@@ -177,7 +185,7 @@ public sealed class QuestNpcAdmissionTests
         using var inactive = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, restored.CaptureSave());
         Assert.True(inactive.TryTransitionTo(castle.ProfileKey));
         Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
-        Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
+        Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).ActiveDynamicActors(castle.ProfileKey), value => value.EntityId == id);
         // A live person stands on the floor, which this fixture's spatial answers at zero: only a projected questor's centred billboard is lifted.
         Assert.Equal(0F, inactive.State.Actors.Get(id).Position.Y, 3);
     }
