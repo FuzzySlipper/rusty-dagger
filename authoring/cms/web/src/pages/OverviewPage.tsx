@@ -1,5 +1,5 @@
 import { ASSET_LABELS, ASSET_PAGES } from '../types';
-import { conceptsUrl, pipelineUrl, stageUrl } from '../router';
+import { blocksUrl, castUrl, conceptsUrl, pipelineUrl, spawnerUrl, stageUrl } from '../router';
 import { useApp } from '../state';
 import { ReviewBadge } from '../components/ReviewControls';
 import { Chip, Empty, PageHeading } from '../components/ui';
@@ -38,6 +38,29 @@ export function OverviewPage() {
           </a>
         ))}
       </div>
+
+      {catalog.peoplePack?.available ? (
+        <section class="panel">
+          <div class="section-heading">
+            <h2>daggerfall.people pack</h2>
+            <span class="muted">{catalog.peoplePack.castNeedingArt} named cast individuals awaiting concept art</span>
+          </div>
+          <div class="collections" style={{ marginBottom: 0 }}>
+            <a class="collection" href={castUrl()}>
+              <strong>{catalog.peoplePack.castCount}</strong>
+              <span>Cast individuals</span>
+            </a>
+            <a class="collection" href={spawnerUrl()}>
+              <strong>{catalog.peoplePack.spawnerCount}</strong>
+              <span>Typed spawners</span>
+            </a>
+            <a class="collection" href={blocksUrl()}>
+              <strong>{catalog.peoplePack.slotCount.toLocaleString()}</strong>
+              <span>Block slots</span>
+            </a>
+          </div>
+        </section>
+      ) : null}
 
       {concepts.length ? (
         <section class="panel">

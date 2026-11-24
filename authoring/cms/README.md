@@ -106,6 +106,24 @@ python3 authoring/cms/concept_cli.py approved npc-381 --view back --image /tmp/n
 Pass `--url` before the command when accessing the CMS from another machine.
 Images and approvals live under `local/authoring/concepts/` on the CMS host.
 
+## Game data (`daggerfall.people`)
+
+The CMS reads and validates `content/worldrpg/packs/daggerfall.people/` directly through [people_pack.py](people_pack.py):
+
+- **Cast individuals** (`#cast`, `#cast/<id>`): inspect all unique cast records from `cast/individuals.json`, cross-linked to their `npc-###` art record and concept-art/final status, with focused metadata and sprite editing.
+- **Typed spawners** (`#spawners`, `#spawners/<id>`): inspect and edit `defaultPool`, per-region `regionalPools` (stored under canonical numeric region index keys such as `"17"` for Daggerfall or `"20"` for Sentinel, displaying region names from `daggerfall.base`), and spawner policies in `spawners.json`.
+- **Block slots** (`#blocks`): server-filtered, paginated cross-reference over `blocks/*.json` (RMB interiors, RMB exteriors, RDB dungeons) by spawner, cast, building type, regional faction derivation, interaction, and effective harm.
+- **Reverse links on People (`npc-###`) pages**: each character detail page lists every cast individual, spawner pool, and block-slot count referencing its `(archive, record)` aliases.
+
+Use `people_cli.py` from scripts or agents against `DAGGER_CMS_URL` (pass `--people-pack` to `server.py` when testing against a scratch copy):
+
+```sh
+python3 authoring/cms/people_cli.py overview
+python3 authoring/cms/people_cli.py validate
+python3 authoring/cms/people_cli.py cast king-gothryd
+python3 authoring/cms/people_cli.py blocks --spawner banker --building-type 3
+```
+
 ## Add a page
 
 The CMS uses a Preact + TypeScript frontend under `authoring/cms/web/src/` bundled to `web/dist/app.js` with `esbuild`,

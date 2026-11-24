@@ -11,6 +11,9 @@ import { ConceptsPage } from './pages/ConceptsPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { StageReviewPage } from './pages/StageReviewPage';
 import { SearchPage } from './pages/SearchPage';
+import { CastPage } from './pages/CastPage';
+import { SpawnersPage } from './pages/SpawnersPage';
+import { BlockSlotsPage } from './pages/BlockSlotsPage';
 
 function renderRoute(route: Route) {
   switch (route.page) {
@@ -30,6 +33,12 @@ function renderRoute(route: Route) {
       return <StageReviewPage pipeline={route.id} stage={route.stage} />;
     case 'search':
       return <SearchPage term={route.term} />;
+    case 'cast':
+      return <CastPage id={route.id} />;
+    case 'spawners':
+      return <SpawnersPage id={route.id} />;
+    case 'blocks':
+      return <BlockSlotsPage initialQuery={route.query} />;
   }
 }
 
@@ -93,6 +102,16 @@ export function App() {
               {ASSET_LABELS[page]}
             </a>
           ))}
+          <div class="nav-group-label">Game data</div>
+          <a href="#cast" data-page="cast" aria-current={currentSection === 'cast' ? 'page' : undefined}>
+            Cast individuals
+          </a>
+          <a href="#spawners" data-page="spawners" aria-current={currentSection === 'spawners' ? 'page' : undefined}>
+            Typed spawners
+          </a>
+          <a href="#blocks" data-page="blocks" aria-current={currentSection === 'blocks' ? 'page' : undefined}>
+            Block slots
+          </a>
           <div class="nav-group-label">Pipelines</div>
           <a href="#pipelines" data-page="pipelines" aria-current={currentSection === 'pipelines' ? 'page' : undefined}>
             Character stages

@@ -8,7 +8,10 @@ export type Route =
   | { page: 'asset'; id: string }
   | { page: 'pipeline'; id: string }
   | { page: 'review'; id: string; stage: string }
-  | { page: 'search'; term: string };
+  | { page: 'search'; term: string }
+  | { page: 'cast'; id?: string }
+  | { page: 'spawners'; id?: string }
+  | { page: 'blocks'; query: Record<string, string> };
 
 export const encodeKey = (value: string): string => encodeURIComponent(value);
 
@@ -18,6 +21,16 @@ export const assetUrl = (id: string): string => `#asset/${encodeKey(id)}`;
 export const pipelineUrl = (id: string): string => `#pipeline/${encodeKey(id)}`;
 export const stageUrl = (id: string, stage: string): string => `#review/${encodeKey(id)}/${encodeKey(stage)}`;
 export const searchUrl = (term: string): string => `#search/${encodeKey(term)}`;
+export const castUrl = (id?: string): string => (id ? `#cast/${encodeKey(id)}` : '#cast');
+export const spawnerUrl = (id?: string): string => (id ? `#spawners/${encodeKey(id)}` : '#spawners');
+export const blocksUrl = (filters: Record<string, string | number | undefined> = {}): string => {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v !== undefined && v !== '') params.set(k, String(v));
+  }
+  const qs = params.toString();
+  return qs ? `#blocks?${qs}` : '#blocks';
+};
 
 function safeDecode(value: string): string {
   try {
@@ -29,7 +42,8 @@ function safeDecode(value: string): string {
 
 export function parseHash(hash: string): Route {
   const raw = hash.startsWith('#') ? hash.slice(1) : hash;
-  const [page = 'overview', encoded = '', ...rest] = raw.split('/');
+  const [pathPart, queryPart = ''] = raw.split('?');
+  const [page = 'overview', encoded = '', ...rest] = pathPart.split('/');
   const id = encoded ? safeDecode(encoded) : '';
   const stage = rest.length ? safeDecode(rest.join('/')) : '';
 
@@ -39,6 +53,17 @@ export function parseHash(hash: string): Route {
   if (page === 'pipeline' && id) return { page: 'pipeline', id };
   if (page === 'review' && id && stage) return { page: 'review', id, stage };
   if (page === 'search' && id) return { page: 'search', term: id };
+  if (page === 'cast') return id ? { page: 'cast', id } : { page: 'cast' };
+  if (page === 'spawners') return id ? { page: 'spawners', id } : { page: 'spawners' };
+  if (page === 'blocks') {
+    const query: Record<string, string> = {};
+    if (queryPart) {
+      for (const [k, v] of new URLSearchParams(queryPart).entries()) {
+        query[k] = v;
+      }
+    }
+    return { page: 'blocks', query };
+  }
   if (page === 'pipelines') return { page: 'listing', category: 'pipelines' };
   if ((ASSET_PAGES as string[]).includes(page)) {
     return { page: 'listing', category: page as AssetCategory };
@@ -62,6 +87,12 @@ export function activeSection(
     case 'pipeline':
     case 'review':
       return 'pipelines';
+    case 'cast':
+      return 'cast';
+    case 'spawners':
+      return 'spawners';
+    case 'blocks':
+      return 'blocks';
     case 'search':
       return '';
   }

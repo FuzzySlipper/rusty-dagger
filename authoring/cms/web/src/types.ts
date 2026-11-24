@@ -162,6 +162,14 @@ export interface ConceptStageSummary {
   approved: string | null;
 }
 
+export interface PeoplePackCounts {
+  available: boolean;
+  castCount: number;
+  spawnerCount: number;
+  slotCount: number;
+  castNeedingArt: number;
+}
+
 export interface CatalogOverview {
   people: CharacterSummary[];
   creatures: CatalogAssetRow[];
@@ -176,6 +184,7 @@ export interface CatalogOverview {
   review: PendingStageReview[];
   reviews: ReviewRow[];
   conceptStages: ConceptStageSummary[];
+  peoplePack?: PeoplePackCounts;
 }
 
 export interface LinkChoice {
@@ -218,6 +227,34 @@ export interface CharacterGameData {
   record?: Record<string, unknown>;
 }
 
+export interface CharacterPeoplePackUsage {
+  visualKeys: Array<{ archive: number; record: number; key: string }>;
+  cast: Array<{
+    id: string;
+    name: string;
+    race: string | null;
+    gender: string;
+    factionId: number;
+    factionName: string | null;
+    homeBlock: string;
+    homeSlotId: string;
+    interaction: string;
+    harm: string;
+    visual: { archive: number; record: number };
+  }>;
+  spawners: Array<{
+    spawnerId: string;
+    role: string;
+    pool: string;
+    regionName: string | null;
+    weight: number;
+    gender: string;
+    archive: number;
+    record: number;
+  }>;
+  slotCount: number;
+}
+
 export interface CharacterDetail extends CharacterSummary {
   pipelines: PipelineDetail[];
   automaticPipelines: string[];
@@ -235,6 +272,146 @@ export interface CharacterDetail extends CharacterSummary {
     count: number;
     approved: ConceptCandidate | null;
     conflict: boolean;
+  };
+  peoplePack?: CharacterPeoplePackUsage;
+}
+
+export interface VisualArtInfo {
+  archive: number;
+  record: number;
+  key: string;
+  npcId: string | null;
+  npcName: string | null;
+  npcKind: string | null;
+  classic: string | null;
+  conceptUrl: string | null;
+  hasApprovedConcept: boolean;
+  hasFinalAsset: boolean;
+  pipelineCount: number;
+}
+
+export interface VisualOption extends VisualArtInfo {
+  castCount: number;
+  spawnerCount: number;
+  slotCount: number;
+}
+
+export interface BlockSlotItem {
+  kind: 'rmb-interior' | 'rmb-exterior' | 'rdb-dungeon';
+  block: string;
+  buildingIndex: number | null;
+  buildingType: number | null;
+  buildingTypeName: string | null;
+  buildingFactionId: number | null;
+  slotId: string;
+  castId: string | null;
+  spawner: string | null;
+  position: [number, number, number];
+  interaction: string;
+  effectiveHarm: string | null;
+  factionId: number | null;
+  factionName: string | null;
+  deriveRegionalFaction: boolean;
+  visual: { archive: number; record: number; gender: string };
+  art?: VisualArtInfo;
+}
+
+export interface CastIndividual {
+  id: string;
+  factionId: number;
+  factionName: string | null;
+  name: string;
+  race: string | null;
+  gender: 'Male' | 'Female';
+  visual: { archive: number; record: number };
+  homeBlock: string;
+  homeSlotId: string;
+  interaction: string;
+  harm: string;
+  art: VisualArtInfo;
+  usage: { slotCount: number; blocks: string[] };
+  sharedVisualWith: string[];
+  needsConceptArt: boolean;
+  needsFinalArt: boolean;
+  slots?: BlockSlotItem[];
+}
+
+export interface SpawnerPoolEntry {
+  archive: number;
+  record: number;
+  gender: 'Male' | 'Female';
+  weight: number;
+  share: number;
+  art: VisualArtInfo;
+}
+
+export interface RegionalPoolGroup {
+  regionKey: string;
+  canonicalKey: string;
+  regionIndex: number | null;
+  regionName: string;
+  entries: SpawnerPoolEntry[];
+}
+
+export interface SpawnerDefinition {
+  id: string;
+  role: string;
+  interaction: string;
+  harm: string;
+  deriveRegionalFaction: boolean;
+  visualMode: 'pool' | 'classic-slot';
+  defaultPool: SpawnerPoolEntry[];
+  regionalPools: RegionalPoolGroup[];
+  usage: {
+    slotCount: number;
+    blockCount: number;
+    byKind: Record<string, number>;
+    byBuildingType: Array<{ buildingType: number; name: string; count: number }>;
+  };
+}
+
+export interface RegionOption {
+  index: number;
+  key: string;
+  name: string;
+}
+
+export interface PeoplePackEnums {
+  genders: Array<'Male' | 'Female'>;
+  interactions: string[];
+  harms: string[];
+  visualModes: Array<'pool' | 'classic-slot'>;
+  races: string[];
+  buildingTypes: Array<{ id: number; name: string }>;
+  regions: RegionOption[];
+}
+
+export interface PeoplePackOverview {
+  available: boolean;
+  counts: {
+    cast: number;
+    spawners: number;
+    slots: number;
+    castNeedingConceptArt: number;
+    castNeedingFinalArt: number;
+    castSharingVisual: number;
+    spawnersSingleVisual: number;
+    spawnersWithRegionalPools: number;
+  };
+  enums: PeoplePackEnums;
+  cast: CastIndividual[];
+  spawners: SpawnerDefinition[];
+}
+
+export interface BlockSlotsResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: BlockSlotItem[];
+  summary: {
+    blockCount: number;
+    byKind: Record<string, number>;
+    byBuildingType: Array<{ buildingType: number; name: string; count: number }>;
   };
 }
 

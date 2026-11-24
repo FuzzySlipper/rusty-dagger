@@ -1,9 +1,10 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { apiRequest, isAbortError } from '../api';
-import { conceptsUrl, encodeKey, stageUrl } from '../router';
+import { blocksUrl, castUrl, conceptsUrl, encodeKey, spawnerUrl, stageUrl } from '../router';
 import { useApp } from '../state';
 import { ASSET_LABELS, type CharacterDetail, type LinkChoice, type PipelineDetail } from '../types';
+import { ArtDataCard, ArtDataChip } from '../components/ArtDataLink';
 import { ReviewBadge, ReviewPanel } from '../components/ReviewControls';
 import { Breadcrumb, Chip, Empty, FactList, PageHeading, SpritePreview } from '../components/ui';
 
@@ -352,6 +353,65 @@ export function CharacterPage({ id }: { id: string }) {
       </div>
 
       <ReviewPanel category={subject.category} id={subject.id} />
+
+      {subject.peoplePack ? (
+        <section class="panel" id="people-pack-usage">
+          <div class="section-heading">
+            <h2>daggerfall.people usage</h2>
+            <div class="actions">
+              {subject.peoplePack.visualKeys.map(vk => (
+                <a key={vk.key} class="art-data-chip" href={blocksUrl({ q: vk.key })}>
+                  <span>TEXTURE.{vk.archive}</span>
+                  <code>rec {vk.record}</code>
+                </a>
+              ))}
+              {subject.peoplePack.slotCount > 0 && subject.peoplePack.visualKeys[0] ? (
+                <a class="button" href={blocksUrl({ q: subject.peoplePack.visualKeys[0].key })}>
+                  {subject.peoplePack.slotCount.toLocaleString()} block slots
+                </a>
+              ) : null}
+            </div>
+          </div>
+
+          {subject.peoplePack.cast.length ? (
+            <div class="usage-subsection">
+              <h3>Named cast individuals ({subject.peoplePack.cast.length})</h3>
+              <div class="usage-cards">
+                {subject.peoplePack.cast.map(c => (
+                  <ArtDataCard
+                    key={c.id}
+                    href={castUrl(c.id)}
+                    id={c.id}
+                    title={c.name}
+                    subtitle={`${c.race ?? 'race unset'} · ${c.gender} · Faction ${c.factionId} · ${c.homeBlock}`}
+                    badge={{ state: c.harm }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {subject.peoplePack.spawners.length ? (
+            <div class="usage-subsection">
+              <h3>Typed spawner pools ({subject.peoplePack.spawners.length})</h3>
+              <div class="usage-pills">
+                {subject.peoplePack.spawners.map((ref, idx) => (
+                  <ArtDataChip
+                    key={`${ref.spawnerId}-${ref.pool}-${ref.archive}-${ref.record}-${idx}`}
+                    href={spawnerUrl(ref.spawnerId)}
+                    id={ref.pool === 'default' ? `w:${ref.weight}` : `${ref.regionName ?? ref.pool} · w:${ref.weight}`}
+                    label={`${ref.spawnerId} (${ref.gender})`}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {!subject.peoplePack.cast.length && !subject.peoplePack.spawners.length && subject.peoplePack.slotCount === 0 ? (
+            <Empty>Not currently referenced by any cast individual, spawner pool, or block slot in daggerfall.people.</Empty>
+          ) : null}
+        </section>
+      ) : null}
 
       <section class="panel">
         <div class="section-heading">

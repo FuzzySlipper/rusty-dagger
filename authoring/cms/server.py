@@ -21,6 +21,8 @@ from library import (
     CMS, DEFAULT_CHARACTERS, DEFAULT_CONCEPTS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library,
 )
 from packs import PackStore
+import people_pack as people_pack_module
+from people_pack import PeoplePackStore
 from pipelines import STAGES, stage_row
 from review_media import revision, stage_assets, stage_info
 import reviews as reviews_module
@@ -42,6 +44,7 @@ class Workspace:
         self.cache = cache if cache is not None else FileCache()
         self.packs = packs if packs is not None else PackStore(self.cache)
         self.catalog_store = CatalogStore(library, links, self.cache, self.packs)
+        self.people_pack = PeoplePackStore(library, self.cache, self.packs)
 
     def catalog(self):
         return self.catalog_store.catalog()
@@ -64,6 +67,8 @@ class Workspace:
             stage = self.concept_store.stage(subject["id"], aliases)
             subject["conceptStage"] = {"count": len(stage["candidates"]), "approved": stage["approved"],
                                       "conflict": stage["conflict"]}
+        if subject and subject.get("category") == "people":
+            subject["peoplePack"] = self.people_pack.usage_for_npc(subject["id"], catalog, self.concept_store)
         return subject
 
     def concept_stage(self, key):
@@ -101,7 +106,11 @@ class Workspace:
                         stage = self.concept_store.stage(id, aliases)
                         concepts[id] = {"id": id, "name": subject["name"], "count": len(stage["candidates"]),
                                         "approved": stage["approved"]["name"] if stage["approved"] else None}
-        return self.catalog_store.overview() | {"reviews": self.reviews().list(), "conceptStages": list(concepts.values())}
+        return self.catalog_store.overview() | {
+            "reviews": self.reviews().list(),
+            "conceptStages": list(concepts.values()),
+            "peoplePack": self.people_pack.summary_counts(catalog, self.concept_store),
+        }
 
     def stage_review(self, pipeline, stage):
         info = stage_info(self.library, pipeline, stage)
@@ -155,6 +164,7 @@ def create_router(workspace: Workspace) -> Router:
     catalog_module.register_routes(router, workspace)
     reviews_module.register_routes(router, workspace)
     concepts_module.register_routes(router, workspace)
+    people_pack_module.register_routes(router, workspace)
     return router
 
 
@@ -255,6 +265,8 @@ def main():
     parser.add_argument("--concept-root", type=Path, default=DEFAULT_CONCEPTS)
     parser.add_argument("--characters", type=Path, default=os.getenv("DAGGER_CHAR_ROOT"),
                         help="override the repo-local character stage root")
+    parser.add_argument("--people-pack", type=Path, default=None,
+                        help="override the daggerfall.people content pack directory")
     args = parser.parse_args()
     character_root = args.characters or DEFAULT_CHARACTERS
     library = Library(
@@ -262,6 +274,7 @@ def main():
         args.asset_pipeline.resolve(),
         character_root.resolve() if args.characters or character_root.is_dir() else None,
         repo=args.repo.resolve(),
+        people_pack_root=args.people_pack.resolve() if args.people_pack else None,
     )
     workspace = Workspace(
         library,

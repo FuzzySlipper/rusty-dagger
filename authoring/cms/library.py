@@ -30,6 +30,7 @@ class Library:
     pipeline: Path
     character_root: Path | None = None
     repo: Path = REPO
+    people_pack_root: Path | None = None
 
     @property
     def base_payload(self):
@@ -37,7 +38,7 @@ class Library:
 
     @property
     def people_pack(self):
-        return self.repo / "content/worldrpg/packs/daggerfall.people"
+        return self.people_pack_root or (self.repo / "content/worldrpg/packs/daggerfall.people")
 
     @property
     def mobiles(self):
