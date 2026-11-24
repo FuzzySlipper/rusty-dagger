@@ -80,6 +80,19 @@ $S publish npc-468         # sizes 16k-tidy and 16k-graft-tidy, the robe on its 
 $S ship npc-468 --size 16k-graft-tidy --said "..."   # Engine GLB on the 22 Mixamo joints (+ skirt joints), clip fit, core, CMS link
 ```
 
+npc-468's second round (Patch 2026-11-23: the legs disconnect at speed, goofy hands, a staff and staff clips):
+- `$S hands npc-468` after `graft`: turn_hands.py re-rests painted open hands along the forearm, thumb forward. The retarget's
+  hands follow their forearm, so a palm-forward painted hand stayed palm-forward through every clip.
+- `"skirt_opts": "--solid 3 --fill-legs --fill-top 0.10"`: the bake never saw the shins under a robe, so legging rings are
+  added from the shoe to 10 cm above the hem, in the colour and at the radius of the legging seen below it. Higher up, a robe
+  front stretched thin at full stride shows them through.
+- Walkers take the full walk; `"walk_clip": "gentle"` brings back the villagers' softer one for a long skirt.
+- `"extra_clips": {name: [clip JSON, Mixamo GLB]}`: a character's own motions in its playable set and Engine clip fit. 468's
+  staff walk, strike and cast are PINOC generations (`fbx_clip_dump.mjs` for the JSON); the GLBs stay on the NAS
+  (`pinoc-clips/mixamo/staff-468`). `splat-people.py` does not pack them for the game yet.
+- A held prop is an experiment in asset-pipeline `tools/splat-prop/`: `prop_splat.py` paints it from its concept onto a Meshy
+  shape, `attach_prop.py` puts it in the re-rested hand along the thumb as size NAME-prop, which publish and ship take.
+
 Two walker settings npc-468 needed:
 - `"skirt_opts": "--solid 3 --inside-legs"` for a robe that ends above the ankle. The skirt step drops the legs inside the
   robe's bell (on skirt bones they rode the cloth). For a mid-shin robe, that made the shin vanish when a stride swung it out
