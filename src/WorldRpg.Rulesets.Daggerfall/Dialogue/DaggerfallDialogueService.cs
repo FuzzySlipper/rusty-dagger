@@ -90,6 +90,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallNpc, DaggerfallGuildProviderTopic, string?, DaggerfallGuildProviderResult>? _guildService;
     private readonly Func<bool> _suppressTalk;
     private readonly Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? _guildWelcome;
+    private readonly Func<DaggerfallSiteRecord, DaggerfallNpc, string?>? _issueReferral;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -123,9 +124,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<int>? questRumorCount = null,
         Func<int, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null,
         Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? guildWelcome = null,
-        Func<DaggerfallTextContext>? currentText = null)
+        Func<DaggerfallTextContext>? currentText = null,
+        Func<DaggerfallSiteRecord, DaggerfallNpc, string?>? issueReferral = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
+        _issueReferral = issueReferral;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -498,6 +501,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             session.Reply = questAnswer.Text;
             session.Diagnostics.AddRange(questAnswer.Diagnostics);
         }
+        else if (topic == DaggerfallDialogueTopic.Referral)
+        {
+            string? referralMessage = _issueReferral?.Invoke(site, npc);
+            session.Question = "Do you know anyone nearby I should speak with?";
+            session.Reply = referralMessage ?? "No one comes to mind right now.";
+        }
         else if (work)
         {
             int workId = _workAvailable(npc.DurableId) ? 8075 + band : 8078;
@@ -821,6 +830,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_current is not { } session) { _publish(null); return; }
         const string Talk = DaggerfallDialogueTopicGroups.Talk;
         List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?", Group: Talk), new("news", "Any news?", Group: Talk)];
+        if (_issueReferral is not null)
+            topics.Add(new("referral", "Any contacts nearby?", Group: Talk));
         if (npc.Services.Any(service => service is "quest" or "quests" or "quest-candidate") || _workAvailable(npc.DurableId))
             topics.Add(new("work", "Do you know of any work?", Group: Talk));
         if (_directionDirectory is not null)
@@ -901,6 +912,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             "directions" => DaggerfallDialogueTopic.Directions,
             "news" => DaggerfallDialogueTopic.News,
+            "referral" => DaggerfallDialogueTopic.Referral,
             "work" => DaggerfallDialogueTopic.Work,
             "donate" => DaggerfallDialogueTopic.Donate,
             "cure" => DaggerfallDialogueTopic.Cure,
@@ -913,7 +925,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "spymaster" => DaggerfallDialogueTopic.Spymaster,
             _ => default,
         };
-        if (value is "directions" or "news" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes") return true;
+        if (value is "directions" or "news" or "referral" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes") return true;
         if (value is { Length: > 10 } dynamicDirection && dynamicDirection.StartsWith("direction:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Directions;

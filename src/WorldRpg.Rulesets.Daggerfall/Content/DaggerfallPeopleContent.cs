@@ -505,6 +505,40 @@ internal static class DaggerfallPeopleSlots
         _ => fallback,
     };
 
+    /// <summary>
+    /// Canonical placed static-person slot identifier emitted by <see cref="DaggerfallLocationAssembly"/>
+    /// for an exterior RMB block slot, shared with pre-visit referral targeting so both derive the exact same ID.
+    /// </summary>
+    internal static string PlacedExteriorBlockPersonId(string blockSourceName, int blockX, int blockY, string templateSlotId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(blockSourceName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(templateSlotId);
+        string slug = BlockScopeSlug(blockSourceName);
+        string sanitized = templateSlotId.Replace(':', '-');
+        return string.Create(CultureInfo.InvariantCulture, $"person/{slug}/{blockX}/{blockY}/{sanitized}");
+    }
+
+    internal static string BlockScopeSlug(string sourceName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceName);
+        System.Text.StringBuilder builder = new(sourceName.Length);
+        bool separator = false;
+        foreach (char c in sourceName.Trim().ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(c))
+            {
+                builder.Append(c);
+                separator = false;
+            }
+            else if (!separator && builder.Length > 0)
+            {
+                builder.Append('-');
+                separator = true;
+            }
+        }
+        return builder.ToString().TrimEnd('-');
+    }
+
     /// <summary>Canonical site-qualified slot key for an exterior RMB block person slot at grid cell (<paramref name="blockX"/>, <paramref name="blockY"/>).</summary>
     internal static string ExteriorBlockSlotKey(int blockX, int blockY, string templateSlotId)
     {

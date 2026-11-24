@@ -337,7 +337,7 @@ internal sealed class DaggerfallLocationAssembly
                     document,
                     owner._definitions.People.GetRmbExteriorSlots(block.SourceName),
                     origin,
-                    id => PlaceId(id, block.X, block.Y),
+                    slotId => DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(block.SourceName, block.X, block.Y, slotId),
                     (block.X << 8) ^ block.Y);
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, id => PlaceId(id, block.X, block.Y)));
                 int fallbackClutter = 0;
@@ -370,7 +370,7 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallWorldBlockDocument document,
             IReadOnlyList<DaggerfallPeopleSlotDefinition> slots,
             Vector3 origin,
-            Func<string, string>? placeId,
+            Func<string, string>? placeSlotId,
             int nameSeedSalt)
         {
             bool emittedAny = false;
@@ -380,10 +380,9 @@ internal sealed class DaggerfallLocationAssembly
                     && !string.Equals(slot.SpawnerId, "clutter-person", StringComparison.Ordinal))
                     continue;
                 emittedAny = true;
-                string sanitized = slot.SlotId.Replace(':', '-');
-                string id = placeId is not null
-                    ? placeId($"person/{Scope(document)}/{sanitized}")
-                    : $"person/{sanitized}";
+                string id = placeSlotId is not null
+                    ? placeSlotId(slot.SlotId)
+                    : $"person/{slot.SlotId.Replace(':', '-')}";
                 string harm = slot.SpawnerId is not null
                     && owner._definitions.People.Spawners.TryGetValue(slot.SpawnerId, out DaggerfallPeopleSpawnerDefinition? spawner)
                     ? spawner.Harm
@@ -509,7 +508,7 @@ internal sealed class DaggerfallLocationAssembly
 
             bool hasPackClutter = owner._definitions.People.TryGetRmbInteriorSlots(placed.SourceName, building.Index, out DaggerfallPeopleBuildingSlots? interiorPeople)
                 && interiorPeople is not null
-                && PlacePeopleClutterSlots(document, interiorPeople.Slots, Vector3.Zero, placeId: null, buildingKey);
+                && PlacePeopleClutterSlots(document, interiorPeople.Slots, Vector3.Zero, placeSlotId: null, buildingKey);
 
             foreach (JsonNode? light in document.Section("lights")) Append("lights", Clone(light));
             int fallbackClutter = 0;
@@ -587,7 +586,7 @@ internal sealed class DaggerfallLocationAssembly
                     document,
                     owner._definitions.People.GetRdbDungeonSlots(block.SourceKey),
                     origin,
-                    Placed,
+                    slotId => Placed($"person/{Scope(document)}/{slotId.Replace(':', '-')}"),
                     (block.X << 8) ^ block.Z);
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, Placed));
                 int fallbackClutter = 0;

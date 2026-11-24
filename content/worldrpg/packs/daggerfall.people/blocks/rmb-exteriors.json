@@ -5,13 +5,13 @@
       {"slotId":"e:p00","spawner":"temple-priest","position":[50.675,0.1,-54.575],"interaction":"full-dialogue","factionId":813,"visual":{"archive":181,"record":2,"gender":"Male"}}
     ],
     "TVRNBL02.RMB": [
-      {"slotId":"e:c00","spawner":"clutter-person","position":[70.9,0.1,-44.775],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":184,"record":6,"gender":"Female"}}
+      {"slotId":"e:c00","spawner":"clutter-person","position":[70.9,0.1,-44.775],"interaction":"ambient-bark","deriveRegionalFaction":true,"visual":{"archive":184,"record":6,"gender":"Female"}}
     ],
     "TVRNBL04.RMB": [
       {"slotId":"e:c00","spawner":"clutter-person","position":[60.975,0.1,-21.75],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":182,"record":34,"gender":"Female"}}
     ],
     "TVRNGL02.RMB": [
-      {"slotId":"e:c00","spawner":"clutter-person","position":[70.9,0.1,-44.775],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":184,"record":6,"gender":"Female"}}
+      {"slotId":"e:c00","spawner":"clutter-person","position":[70.9,0.1,-44.775],"interaction":"ambient-bark","deriveRegionalFaction":true,"visual":{"archive":184,"record":6,"gender":"Female"}}
     ],
     "TVRNGL04.RMB": [
       {"slotId":"e:c00","spawner":"clutter-person","position":[60.975,0.1,-21.75],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":182,"record":34,"gender":"Female"}}

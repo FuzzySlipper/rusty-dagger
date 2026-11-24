@@ -1397,7 +1397,8 @@ internal sealed partial class DaggerfallSession
             currentText: CurrentTextContext,
             activeProfile: () => _sites.ActiveProfile,
             discloseDirection: DialogueDirections.Disclose,
-            dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true);
+            dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true,
+            issueReferral: (site, npc) => new DaggerfallSlotReferralPolicy(_definitions, State.ActorLedger).TryIssuePreVisitReferral(site, npc)?.Message);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

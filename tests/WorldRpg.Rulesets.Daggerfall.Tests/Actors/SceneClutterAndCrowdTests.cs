@@ -298,86 +298,57 @@ public sealed class SceneClutterAndCrowdTests
     public void Real_assembled_town_with_tavern_clutter_block_emits_clutter_person_out_of_decorations()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteRecord tavernTown = definitions.Locations.Records.First(record =>
+
+        // 1. Real Arena2 town with TVRNBL04/TVRNGL04 -> non-talkable (None) clutter person out of Decorations.
+        DaggerfallSiteRecord noneTown = definitions.Locations.Records.First(record =>
             record.Exterior is { Blocks: { Count: > 0 } blocks }
-            && blocks.Any(b => b.SourceName is "TVRNBL02.RMB" or "TVRNBL04.RMB" or "TVRNGL02.RMB" or "TVRNGL04.RMB"));
+            && blocks.Any(b => b.SourceName is "TVRNBL04.RMB" or "TVRNGL04.RMB"));
+        DaggerfallSiteProfile assembledNone = Assembled(DaggerfallWorldProfileIds.Exterior(noneTown.Id));
 
-        DaggerfallSiteProfile assembled = Assembled(DaggerfallWorldProfileIds.Exterior(tavernTown.Id));
-
-        // Zero person-archive billboards remain in Decorations.
-        Assert.DoesNotContain(assembled.Decorations, dec =>
+        Assert.DoesNotContain(assembledNone.Decorations, dec =>
             DaggerfallPeopleSlots.IsPersonClutterBillboard(dec.Source.Archive, dec.Source.Record));
-
-        // The tavern clutter person from daggerfall.people is emitted as a real non-talkable StaticNpc placement.
-        DaggerfallStaticNpcPlacement clutter = Assert.Single(assembled.StaticNpcs, npc =>
+        DaggerfallStaticNpcPlacement noneClutter = Assert.Single(assembledNone.StaticNpcs, npc =>
             npc.SpawnerId == "clutter-person"
             && npc.Interaction == ActorInteractionPolicyKind.None
             && npc.Harm == ActorHarmPolicyKind.LawProtectedCivilian);
-        int expectedRegionFaction = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, tavernTown.Id.Region)!.Id;
-        Assert.Equal(expectedRegionFaction, clutter.Appearance.FactionId);
-        Assert.Empty(clutter.Services);
+        int expectedNoneFaction = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, noneTown.Id.Region)!.Id;
+        Assert.Equal(expectedNoneFaction, noneClutter.Appearance.FactionId);
+        Assert.Empty(noneClutter.Services);
+
+        // 2. Real Arena2 town with TVRNBL02/TVRNGL02 -> AmbientBark clutter bystander out of Decorations.
+        DaggerfallSiteRecord barkTown = definitions.Locations.Records.First(record =>
+            record.Exterior is { Blocks: { Count: > 0 } blocks }
+            && blocks.Any(b => b.SourceName is "TVRNBL02.RMB" or "TVRNGL02.RMB"));
+        DaggerfallSiteProfile assembledBark = Assembled(DaggerfallWorldProfileIds.Exterior(barkTown.Id));
+
+        Assert.DoesNotContain(assembledBark.Decorations, dec =>
+            DaggerfallPeopleSlots.IsPersonClutterBillboard(dec.Source.Archive, dec.Source.Record));
+        DaggerfallStaticNpcPlacement barkClutter = Assert.Single(assembledBark.StaticNpcs, npc =>
+            npc.SpawnerId == "clutter-person"
+            && npc.Interaction == ActorInteractionPolicyKind.AmbientBark
+            && npc.Harm == ActorHarmPolicyKind.LawProtectedCivilian);
+        int expectedBarkFaction = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, barkTown.Id.Region)!.Id;
+        Assert.Equal(expectedBarkFaction, barkClutter.Appearance.FactionId);
+        Assert.Contains("bark", barkClutter.Services);
     }
 
     [Fact]
-    public void Pre_visit_slot_referral_survives_save_reload_resolves_exact_seeded_person_and_leaves_neighbors_at_zero_bytes()
+    public void Pre_visit_slot_referral_via_real_dialogue_survives_save_reload_and_resolves_real_AmbientBark_slot_with_zero_neighbor_bytes()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile template = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
-        DaggerfallSiteRecord[] exteriorRecords = [.. definitions.Locations.Records.Where(record => record.Exterior is not null)];
-        DaggerfallSiteRecord sourceRecord = exteriorRecords[0];
-        DaggerfallSiteRecord targetRecord = exteriorRecords.First(r => r.Id != sourceRecord.Id);
+        DaggerfallSiteRecord charingRecord = definitions.Locations.Records.Single(record => record.Id == Charing);
+        var nearest = new DaggerfallSlotReferralPolicy(definitions, new DaggerfallActorLedger())
+            .FindNearestReferralTarget(charingRecord);
+        Assert.NotNull(nearest);
 
-        DaggerfallWorldProfileKey sourceProfileKey = DaggerfallWorldProfileIds.Exterior(sourceRecord.Id);
+        (DaggerfallSiteRecord targetRecord, DaggerfallSiteBlock targetBlock, DaggerfallPeopleSlotDefinition targetSlot) = nearest!.Value;
+        DaggerfallWorldProfileKey charingKey = DaggerfallWorldProfileIds.Exterior(charingRecord.Id);
         DaggerfallWorldProfileKey targetProfileKey = DaggerfallWorldProfileIds.Exterior(targetRecord.Id);
 
-        var address = template.BillboardSprites.Keys.First();
-        NormalizedActorSprite sprite = template.BillboardSprites[address].Standing(address);
-
-        const string maraSlotId = "person/west-gate/mara";
-        const string neighbor1SlotId = "person/west-gate/neighbor-1";
-        const string neighbor2SlotId = "person/west-gate/neighbor-2";
-
-        DaggerfallStaticNpcPlacement maraSlot = new(
-            maraSlotId,
-            new WorldPoint(30f, 0f, 30f),
-            new DaggerfallNpcAppearance("breton", "Female", address.Archive, address.Record, 505, 0),
-            "bystander",
-            ["bark"],
-            sprite,
-            ActorInteractionPolicyKind.AmbientBark,
-            ActorHarmPolicyKind.LawProtectedCivilian,
-            "bystander",
-            DeriveRegionalFaction: true);
-
-        DaggerfallStaticNpcPlacement neighbor1 = new(
-            neighbor1SlotId,
-            new WorldPoint(32f, 0f, 30f),
-            new DaggerfallNpcAppearance("breton", "Male", address.Archive, address.Record, 506, 0),
-            "clutter-person",
-            [],
-            sprite,
-            ActorInteractionPolicyKind.None,
-            ActorHarmPolicyKind.LawProtectedCivilian,
-            "clutter-person",
-            DeriveRegionalFaction: true);
-
-        DaggerfallStaticNpcPlacement neighbor2 = new(
-            neighbor2SlotId,
-            new WorldPoint(34f, 0f, 30f),
-            new DaggerfallNpcAppearance("breton", "Female", address.Archive, address.Record, 507, 0),
-            "person",
-            ["talk"],
-            sprite,
-            ActorInteractionPolicyKind.FullDialogue,
-            ActorHarmPolicyKind.Protected,
-            "town-resident",
-            DeriveRegionalFaction: true);
-
-        DaggerfallSiteProfile sourceProfile = WithSiteAndStaticNpcs(template, sourceRecord.Id, sourceProfileKey, []);
-        DaggerfallSiteProfile targetProfile = WithSiteAndStaticNpcs(
-            template, targetRecord.Id, targetProfileKey, [maraSlot, neighbor1, neighbor2]);
-        DaggerfallSiteProfiles profiles = new([sourceProfile, targetProfile]);
-        DaggerfallSessionComposition composition = new(definitions, sourceProfile, DaggerfallTuning.Defaults)
+        DaggerfallSiteProfile charingProfile = Assembled(charingKey);
+        DaggerfallSiteProfile targetProfile = Assembled(targetProfileKey);
+        DaggerfallSiteProfiles profiles = new([charingProfile, targetProfile]);
+        DaggerfallSessionComposition composition = new(definitions, charingProfile, DaggerfallTuning.Defaults)
         {
             Profiles = profiles,
         };
@@ -386,64 +357,89 @@ public sealed class SceneClutterAndCrowdTests
         {
             List<string> releases = [];
             ContentFake content = new(releases);
-            PopulateContent(content, sourceProfile);
+            PopulateContent(content, charingProfile);
             PopulateContent(content, targetProfile);
-            SpatialFake spatial = SpatialFake.Create(sourceProfile.Geometry.Spatial[0].Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(charingProfile.Geometry.Spatial[0].Sha256, releases);
             AppearanceFake appearance = new(releases);
             return EngineContextFake.Create(content, spatial.Service, appearance);
         }
 
+        string expectedSlotId = DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(
+            targetBlock.SourceName, targetBlock.X, targetBlock.Y, targetSlot.SlotId);
         long expectedMaraId = DaggerfallPeopleSlots.SeededSlotIdentity(
-            targetRecord.Id, $"{targetProfileKey.LogicalId}/{maraSlotId}");
-        long neighbor1Id = DaggerfallPeopleSlots.SeededSlotIdentity(
-            targetRecord.Id, $"{targetProfileKey.LogicalId}/{neighbor1SlotId}");
-        long neighbor2Id = DaggerfallPeopleSlots.SeededSlotIdentity(
-            targetRecord.Id, $"{targetProfileKey.LogicalId}/{neighbor2SlotId}");
+            targetRecord.Id, $"{targetProfileKey.LogicalId}/{expectedSlotId}");
+        string expectedTag = $"referred-from:{charingRecord.Name}";
+
+        // Collect real untouched neighbor seeded IDs in the target town (other static/clutter slots + exterior population slots).
+        long[] targetNeighborIds =
+        [
+            .. targetProfile.StaticNpcs
+                .Where(s => !StringComparer.Ordinal.Equals(s.Id, expectedSlotId))
+                .Select(s => DaggerfallPeopleSlots.SeededSlotIdentity(targetRecord.Id, $"{targetProfileKey.LogicalId}/{s.Id}")),
+            .. targetProfile.Population
+                .Select(p => DaggerfallPeopleSlots.SeededSlotIdentity(targetRecord.Id, $"{targetProfileKey.LogicalId}/{p.Id}")),
+        ];
+        Assert.NotEmpty(targetNeighborIds);
 
         RulesetSavePayload savedBeforeVisit;
         using (DaggerfallSession first = DaggerfallSession.StartNew(CreateEngine().Context, composition))
         {
-            // Register pre-visit slot referral BEFORE ever visiting targetProfileKey.
-            long registeredId = first.State.ActorLedger.RegisterSlotReferral(
-                targetProfileKey,
-                maraSlotId,
-                "west-gate:mara",
-                displayNameOverride: "Mara");
-            Assert.Equal(expectedMaraId, registeredId);
+            // Advance to daytime so Charing's real townspeople are live and talkable.
+            first.AdvanceElapsedTime(8 * 60 * 60);
+            DaggerfallActivationTarget charingSpeaker = first.Dialogue.NpcTargets().First();
 
+            // Open dialogue with a real Charing townsperson and ask the real "referral" topic.
+            DaggerfallActivationOutcome opened = first.Dialogue.ActivateNpc(
+                new DaggerfallActivationSelection(DaggerfallActivationMode.Talk, charingSpeaker));
+            Assert.True(opened.Applied);
+            DaggerfallDialogueView openingView = Assert.IsType<DaggerfallDialogueView>(first.ActivationPanel.View.Dialogue);
+            Assert.Contains(openingView.Topics, topic => topic.Id == "referral");
+
+            DaggerfallActivationOutcome referralReply = first.Dialogue.Ask(openingView.Revision, "referral", null, null);
+            Assert.True(referralReply.Applied);
+            Assert.Contains(targetRecord.Name, referralReply.Message, StringComparison.Ordinal);
+            Assert.Contains("Mara", referralReply.Message, StringComparison.Ordinal);
+            first.Dialogue.Close();
+
+            // Save BEFORE ever visiting targetProfileKey: only the referred slot enters ActorLedger for the target town.
             savedBeforeVisit = first.CaptureSave();
             DaggerfallSavePayload decodedBefore = DaggerfallSavePayload.Read(savedBeforeVisit);
             ActorLedgerEntry referralEntry = Assert.Single(
                 decodedBefore.ActorLedger,
                 entry => entry.DurableId == expectedMaraId);
             Assert.Equal(ActorOriginKind.SeededSlot, referralEntry.Origin.Kind);
-            Assert.Equal(maraSlotId, referralEntry.Origin.SlotKey);
+            Assert.Equal(expectedSlotId, referralEntry.Origin.SlotKey);
             Assert.NotNull(referralEntry.Referral);
-            Assert.Contains("west-gate:mara", referralEntry.Referral!.Tags);
+            Assert.Contains(expectedTag, referralEntry.Referral!.Tags);
             Assert.Equal("Mara", referralEntry.Referral.DisplayNameOverride);
-            // Untouched neighbors at the unvisited target site are completely absent.
-            Assert.DoesNotContain(decodedBefore.ActorLedger, entry => entry.DurableId == neighbor1Id);
-            Assert.DoesNotContain(decodedBefore.ActorLedger, entry => entry.DurableId == neighbor2Id);
+            foreach (long neighborId in targetNeighborIds)
+                Assert.DoesNotContain(decodedBefore.ActorLedger, entry => entry.DurableId == neighborId);
         }
 
-        // Reload BEFORE visiting targetProfileKey, then travel to targetProfileKey for the FIRST time.
+        // Reload BEFORE visiting targetProfileKey, then travel to the real assembled target town for the FIRST time.
         using (DaggerfallSession reloaded = DaggerfallSession.Restore(CreateEngine().Context, composition, savedBeforeVisit))
         {
             Assert.True(reloaded.State.ActorLedger.TryGet(expectedMaraId, out ActorLedgerEntry? restoredEntry));
             Assert.NotNull(restoredEntry!.Referral);
 
             Assert.True(reloaded.TryTransitionTo(targetProfileKey));
+            reloaded.AdvanceElapsedTime(60);
 
-            // Exact pre-visit durable ID resolves to Mara with hydrated DisplayName and ReferralTags.
+            // Exact pre-visit durable ID resolves to the real TVRNBL02/TVRNGL02 AmbientBark bystander with hydrated name & tag.
             Assert.True(reloaded.State.Actors.TryGet(expectedMaraId, out ActorState? maraActor));
+            Assert.True(maraActor.Actor.Has<StatsComponent>());
+            Assert.Equal(ActorInteractionPolicyKind.AmbientBark, maraActor.Actor.Get<ActorInteractionPolicy>().Policy);
+            Assert.Equal(ActorHarmPolicyKind.LawProtectedCivilian, maraActor.Actor.Get<ActorHarmPolicy>().Policy);
+            int expectedTargetRegionFaction = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, targetRecord.Id.Region)!.Id;
+            Assert.Equal(expectedTargetRegionFaction, maraActor.Actor.Get<FactionComponent>().RegionalPeopleFactionId);
+
             DaggerfallNpc maraNpc = reloaded.State.Npcs.Require(expectedMaraId);
             Assert.Equal("Mara", maraNpc.DisplayName);
-            ActorOverlayComponent overlay = maraActor.Actor.Get<ActorOverlayComponent>();
-            Assert.True(overlay.HasReferralTag("west-gate:mara"));
+            Assert.True(maraActor.Actor.Get<ActorOverlayComponent>().HasReferralTag(expectedTag));
 
-            // Neighbors also materialized as real live EntityStore actors.
-            Assert.True(reloaded.State.Actors.TryGet(neighbor1Id, out _));
-            Assert.True(reloaded.State.Actors.TryGet(neighbor2Id, out _));
+            // Real target-town neighbors are also live in EntityStore.
+            long[] liveNeighbors = [.. targetNeighborIds.Where(id => reloaded.State.Actors.TryGet(id, out _))];
+            Assert.NotEmpty(liveNeighbors);
 
             // Activating Mara triggers her referral-aware AmbientBark without opening a full dialogue modal.
             DaggerfallActivationTarget maraTarget = Assert.Single(
@@ -453,18 +449,18 @@ public sealed class SceneClutterAndCrowdTests
                 new DaggerfallActivationSelection(DaggerfallActivationMode.Talk, maraTarget));
             Assert.True(barkOutcome.Applied);
             Assert.Contains("Mara", barkOutcome.Message, StringComparison.Ordinal);
-            Assert.Contains("west-gate:mara", barkOutcome.Message, StringComparison.Ordinal);
+            Assert.Contains(expectedTag, barkOutcome.Message, StringComparison.Ordinal);
             Assert.Null(reloaded.Dialogue.CurrentNpc());
 
-            // Saving after first visit keeps Mara's referral entry while untouched neighbors stay at 0 ledger bytes.
+            // Saving after first visit keeps Mara's referral entry while ALL untouched target-town neighbors write 0 ledger bytes.
             DaggerfallSavePayload savedAfterVisit = DaggerfallSavePayload.Read(reloaded.CaptureSave());
             ActorLedgerEntry afterEntry = Assert.Single(
                 savedAfterVisit.ActorLedger,
                 entry => entry.DurableId == expectedMaraId);
             Assert.NotNull(afterEntry.Referral);
-            Assert.Contains("west-gate:mara", afterEntry.Referral!.Tags);
-            Assert.DoesNotContain(savedAfterVisit.ActorLedger, entry => entry.DurableId == neighbor1Id);
-            Assert.DoesNotContain(savedAfterVisit.ActorLedger, entry => entry.DurableId == neighbor2Id);
+            Assert.Contains(expectedTag, afterEntry.Referral!.Tags);
+            foreach (long neighborId in targetNeighborIds)
+                Assert.DoesNotContain(savedAfterVisit.ActorLedger, entry => entry.DurableId == neighborId);
         }
     }
 
