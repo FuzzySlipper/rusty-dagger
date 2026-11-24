@@ -26,7 +26,9 @@ Steps, in order (each checks that the one before it has run):
   clay      Qwen edits both keyframes to plain grey clay on the GPU lab (00-brief/clay-*.txt)
   mesh      Meshy multi-view mesh of the clay pair, untextured (20 credits); on a content block, local Hunyuan3D-2mv instead
             (Patch 2026-11-22), or --mesher hy2mv from the start
-  rig       walker: meshy_rig.py (Meshy's remesh and API rig of the mesh's task, 10 credits) and transplant_hands.py (rigged donor
+  rig       walker: meshy_rig.py (Meshy's remesh and API rig of the mesh's task, 10 credits; when Meshy can't estimate the pose, or
+            with npc.json "rigger": "fit", asset-pipeline's fit_rig.py fits the target rest pose's skeleton to the mesh and weights it
+            by bone heat on a watertight proxy - npc-468's pose-locked painting, 2026-11-24) and transplant_hands.py (rigged donor
             hands at the cuffs, DONOR_HANDS) -> scaffold.glb with 36 joints, and scaffold_views.py's check renders.
             static: static_rig.py: the short chain (Hips..Head, still hands) and the stick-figure joints for the guide, turned to the
             paintings' view when they are drawn at an angle (measured from the outlines; npc.json "view_yaw" overrides; 017).
@@ -88,6 +90,8 @@ OPEN3D_PY = os.environ.get('OPEN3D_PY') or str(AP / '.runtime/tools/splat-mesh/b
 # a walker binds as the villagers did: 2.5 cm of shell, the hands (and a hooded head) loose at 2.4 times that, 16k for a crowd
 WALKER = {'sizes': [16000], 'loose': 'Head,LeftHand,RightHand', 'loose_factor': 2.4, 'shell_m': 0.025, 'skirt_bones': 8}
 DONOR_HANDS = os.environ.get('DONOR_HANDS') or str(AP / 'live-evidence/wam-mobile30-20261103-r05/final/painted/body_r05-full-skin.glb')   # WAM r05's rigged hands (batch 2)
+# the target rest pose's skeleton (pose_xbot.py; Patch's pose-locked paintings are drawn to it): fit_rig.py fits it to a mesh
+FIT_TEMPLATE = os.environ.get('FIT_TEMPLATE') or str(AP / 'live-evidence/animated-rest-pose-20261123-r01/joints.json')
 BRIEF = ('clay-front.txt', 'clay-back.txt', 'orbit.txt', 'rings.json')
 
 
@@ -291,9 +295,23 @@ def rig_walker(n, a):
     if not (n.mesh / 'task.json').exists():
         raise SystemExit(f'{n.id}: the walker rig needs a Meshy mesh task ({n.mesh}/task.json); a Hunyuan3D-2mv mesh has no API rig here')
     rig = n.ch / '02-guide/wip/rig-meshy'; log = n.scaffold / 'rig.log'
-    sh(['python3', 'authoring/tools/people/splat/mesh/meshy_rig.py', n.mesh, rig], log=log)
+    rigger = getattr(a, 'rigger', None) or n.cfg.get('rigger', 'meshy')
+    if rigger == 'meshy':
+        rc = sh(['python3', 'authoring/tools/people/splat/mesh/meshy_rig.py', n.mesh, rig], log=log, check=False)
+        if rc:
+            if 'pose estimation' not in log.read_text()[-2000:]:
+                raise SystemExit(f'static-npc: Meshy rig failed (rc {rc}); see {log}')
+            # npc-468's pose-locked painting (2026-11-24): arms hanging beside an ankle-length robe; Meshy's estimator refused it twice
+            print(f'{n.id}: Meshy could not estimate the pose; fitting the target skeleton instead (fit_rig.py)'); rigger = 'fit'
+    if rigger == 'fit':
+        src = rig / 'remesh.glb' if (rig / 'remesh.glb').exists() else n.mesh / 'model.glb'
+        rig.mkdir(parents=True, exist_ok=True)
+        sh(['blender', '-b', '-P', AP / 'tools/splat-rig/fit_rig.py', '--', src, FIT_TEMPLATE, rig / 'rigged-glb.glb', '--report', rig / 'fit.json'], log=log)
+    # donor hands replace a mesher's mitten hands (Meshy, batch 2); a fitted rig keeps the mesher's own hands, which follow a
+    # pose-locked painting's relaxed hands (npc-468, 2026-11-24; the Engine GLB has no finger joints either way). npc.json "donor_hands"
+    donor = n.cfg.get('donor_hands', rigger == 'meshy')
     sh(['python3', 'authoring/tools/people/splat/scaffold/transplant_hands.py', rig / 'rigged-glb.glb', DONOR_HANDS, n.scaffold / 'scaffold.glb',
-        '--report', n.scaffold / 'scaffold.json'], log=log)
+        '--report', n.scaffold / 'scaffold.json'] + ([] if donor else ['--keep-hands']), log=log)
     chk = n.ch / '02-guide/wip/check'
     sh(['blender', '-b', '-P', 'authoring/tools/people/splat/scaffold/scaffold_views.py', '--', n.scaffold / 'scaffold.glb', chk], log=log, check=False)
     rep = json.loads((n.scaffold / 'scaffold.json').read_text())
@@ -513,6 +531,7 @@ def main():
     ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
     ap.add_argument('--gpu', choices=['gpu-lab', *HALOS], help='clay, clip, bake, r1, bound, walk: where the GPU work runs (npc.json "gpu_host"; default gpu-lab)')
     ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')
+    ap.add_argument('--rigger', choices=['meshy', 'fit'], help="rig (walker): meshy (API rig, default; falls back to fit when Meshy can't estimate the pose) or fit (fit_rig.py: the target skeleton fitted to the mesh)")
     ap.add_argument('--size', help='clip: orbit size in px (default 1920); ship: the runtime size to ship (e.g. 32k-graft)')
     ap.add_argument('--said', help="ship: Patch's words")
     ap.add_argument('--from-turned', choices=['forward'], help="hands: the bodies carry an earlier turn with this target; apply the difference (npc-468)")

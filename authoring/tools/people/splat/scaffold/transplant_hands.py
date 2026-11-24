@@ -100,6 +100,8 @@ def main():
     ap.add_argument("--wrist", help="L,R: metres past the rig's wrist joint where the hand leaves the cuff (default: the thinnest slice)")
     ap.add_argument("--thumb", choices=("front", "in"), default="front", help="which way the thumbs point in the scaffold's pose")
     ap.add_argument("--report", type=Path)
+    ap.add_argument("--keep-hands", action="store_true", help="keep the scaffold's own hands (no donor): only rewrite the rig with plain joints "
+                    "(npc-468's pose-locked painting, 2026-11-24: the mesher's relaxed hands match the painting; a flat donor hand would not)")
     a = ap.parse_args()
     sd, sacc = read_glb(a.scaffold)
     names, parents, pb = rig(sd, sacc)
@@ -111,6 +113,9 @@ def main():
     parts, report = [(V, N, F, D)], {"scaffold": str(a.scaffold), "hands": str(a.hands), "thumb": a.thumb}
     keep_face = np.ones(len(F), bool)
     for side, sx in (("Left", 1.0), ("Right", -1.0)):
+        if a.keep_hands:
+            report[side] = {"kept": True, "own_hand_vertices": int((D[:, names.index(side + "Hand")] > 0.5).sum())}
+            continue
         hi, fi = names.index(side + "Hand"), names.index(side + "ForeArm")
         joint = pb[hi].copy()
         own = np.flatnonzero(D[:, hi] > 0.5)
