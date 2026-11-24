@@ -243,12 +243,18 @@ vace)
     GPU=$VG
     [ "$GPU" != gpu-lab ] && { VLOCK=/tmp/halo-gpu-$GPU.lock; VRES=${GPU#den-}-comfy; VCOMFY=http://$(case $GPU in den-m5) echo 192.168.1.24;; den-nimo) echo 192.168.1.23;; esac):8188; }
     export ring P N SEED OUT D ID GPU VCOMFY VRES
-    flock -w ${LOCK_WAIT:-7200} $VLOCK bash -c '
-      echo "$(date +%s) before $ID vace $ring: vram $(~/server-access/gpu-lab/connect "gpu-lab exec nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader" 2>/dev/null | grep -v Container)" >> $D/vram.log
-      [ "$GPU" = gpu-lab ] && authoring/tools/people/splat/bake/lab-comfy-restart.sh $D/vram.log --in-lock --if-rss-gb ${RESTART_RSS_GB:-20}   # clear held memory (Patch, 2026-11-14)
-      asset-resources run --host $GPU --resource $VRES --owner claude --purpose "Villager $ID bake: VACE ring $ring" -- \
-        python3 -I authoring/tools/people/splat/gsplat/vace_ring.py $D/rings-1024/$ring $D/refs/$ring.png $OUT/$ring --comfy $VCOMFY \
-        --strength 0.8 --prompt "$P" --negative "$N" --seed $SEED 2>&1 | grep -E "done|rror|status"' || { echo "FAILED $ring"; exit 1; }
+    vrun() {
+      flock -w ${LOCK_WAIT:-7200} $VLOCK bash -c 'set -o pipefail
+        echo "$(date +%s) before $ID vace $ring: vram $(~/server-access/gpu-lab/connect "gpu-lab exec nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader" 2>/dev/null | grep -v Container)" >> $D/vram.log
+        [ "$GPU" = gpu-lab ] && authoring/tools/people/splat/bake/lab-comfy-restart.sh $D/vram.log --in-lock --if-rss-gb ${RESTART_RSS_GB:-20}   # clear held memory (Patch, 2026-11-14)
+        asset-resources run --host $GPU --resource $VRES --owner claude --purpose "Villager $ID bake: VACE ring $ring" -- \
+          python3 -I authoring/tools/people/splat/gsplat/vace_ring.py $D/rings-1024/$ring $D/refs/$ring.png $OUT/$ring --comfy $VCOMFY \
+          --strength 0.8 --prompt "$P" --negative "$N" --seed $SEED 2>&1 | grep -E "done|rror|status"'
+    }
+    # a Halo's ComfyUI can crash mid-job (den-m5, 2026-11-24: SEGV/ABRT three times on model loads after gsplat work): retry the
+    # ring once on the 5090 when it answers
+    vrun || { [ "$GPU" != gpu-lab ] && curl -sf -m 10 http://192.168.1.20:8188/queue > /dev/null && { echo "vace $ring failed on $GPU; again on the 5090"
+      GPU=gpu-lab VLOCK=/tmp/gpu-lab-claude.lock VCOMFY=http://192.168.1.20:8188 VRES=lab-wan-vace; export GPU VCOMFY VRES; vrun; }; } || { echo "FAILED $ring"; exit 1; }
     echo "$ring $(( $(date +%s) - t0 )) s" | tee -a $OUT/times.txt; SEED=$((SEED+1))
   done ;;
 match)

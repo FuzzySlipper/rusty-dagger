@@ -156,8 +156,10 @@ class Npc:
 
     @property
     def gpu_env(self):
-        """bake.sh, pipeline.sh and bound_run.sh: GPU= and VACE_GPU= put their lab stages on a Halo; guided_clip.sh: HALO=."""
-        return {} if self.gpu == 'gpu-lab' else {'GPU': self.gpu, 'VACE_GPU': self.gpu, 'HALO': self.gpu}
+        """bake.sh, pipeline.sh and bound_run.sh: GPU= puts their gsplat stages on a Halo; guided_clip.sh: HALO=."""
+        # VACE stays on the 5090 (bake.sh's own rule: about 4 min a ring there, a short lab job Patch allows; den-m5's ComfyUI crashed on
+        # model loads after gsplat work three times on 2026-11-24)
+        return {} if self.gpu == 'gpu-lab' else {'GPU': self.gpu, 'HALO': self.gpu}
 
     def need(self, *paths, step):
         for p in paths:
