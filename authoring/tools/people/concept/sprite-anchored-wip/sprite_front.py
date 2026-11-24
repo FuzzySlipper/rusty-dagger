@@ -116,7 +116,7 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
         ref_intro = (
             "using Image 1 ONLY for the character's facial likeness, hair, skin tone, age, eyes and head/collar cues. "
             if portrait_only
-            else "using Image 1 for costume, colour-blocking, face and character identity cues while strictly following the pose-lock control depth map. "
+            else "using Image 1 for costume, colour-blocking, face and character identity cues while strictly following the pose-lock control skeleton. "
         )
         qwen_p = (
             f"Task: Paint a full-length high-resolution dark-fantasy character concept sheet {ref_intro}"
@@ -281,24 +281,37 @@ def main():
     ap.add_argument("--show-both-arms", action="store_true", help="With --style-only, open 3/4 sprites slightly toward the front so both arms and hands are clearly visible for splat/back generation")
     ap.add_argument("--portrait-only", action="store_true", help="Anchor face/hair/identity on a dialogue portrait while generating a full-length wide-A turnaround body from the brief")
     ap.add_argument("--portrait-trim", type=int, default=3, help="Pixels to trim off each edge of a classic framed portrait (default 3)")
-    ap.add_argument("--pose-lock", action="store_true", help="M11b canonical X Bot pose lock (Stage 1 Qwen 2.1 Fun Union Depth + slate border lock, Stage 2 scheduled Krea2 Depth LoRA)")
+    ap.add_argument("--pose-lock", action="store_true", help="Canonical X Bot rest-pose lock (default: universal DWPose stick figure + built-in #30343b slate lock)")
+    ap.add_argument("--pose-mode", choices=["stick", "depth-female", "depth-male"], default="stick", help="With --pose-lock: stick (universal DWPose, zero proportion bias; default), depth-female (X Bot depth), or depth-male (Y Bot depth)")
     ap.add_argument("--pose-garment", choices=["auto", "open", "draped"], default="auto", help="With --pose-lock, leg prompt phrasing (auto detects robes/dresses/gowns)")
-    ap.add_argument("--pose-depth", type=Path, default=POSE_LOCK_DIR / "xbot-depth-832x1216.png", help="Depth control map for --pose-lock")
+    ap.add_argument("--pose-control", type=Path, default=None, help="Override pose control map path for --pose-lock")
     ap.add_argument("--pose-slate", type=Path, default=POSE_LOCK_DIR / "slate-bg-832x1216.png", help="Slate background image for --pose-lock built-in border lock")
-    ap.add_argument("--pose-mask", type=Path, default=POSE_LOCK_DIR / "xbot-regen-mask-832x1216.png", help="Dilated figure regenerate mask for --pose-lock")
-    ap.add_argument("--pose-s1-strength", type=float, default=0.95, help="Stage 1 Fun ControlNet Union strength (default 0.95)")
-    ap.add_argument("--pose-s1-end", type=float, default=0.90, help="Stage 1 Fun ControlNet Union end_percent (default 0.90)")
-    ap.add_argument("--pose-s2-strength", type=float, default=0.70, help="Stage 2 Krea2 Depth Control-LoRA strength (0 disables, default 0.70)")
-    ap.add_argument("--pose-s2-end", type=float, default=0.75, help="Stage 2 Krea2 Depth Control-LoRA end_percent (default 0.75)")
+    ap.add_argument("--pose-mask", type=Path, default=None, help="Override dilated figure regenerate mask path for --pose-lock")
+    ap.add_argument("--pose-s1-strength", type=float, default=None, help="Stage 1 Fun ControlNet Union strength (defaults: stick=1.00, depth-female=0.95, depth-male=0.90)")
+    ap.add_argument("--pose-s1-end", type=float, default=None, help="Stage 1 Fun ControlNet Union end_percent (defaults: stick=0.95, depth-female=0.90, depth-male=0.75)")
+    ap.add_argument("--pose-s2-strength", type=float, default=None, help="Stage 2 Krea2 Depth Control-LoRA strength (defaults: stick=0.0, depth-female=0.70, depth-male=0.45)")
+    ap.add_argument("--pose-s2-end", type=float, default=None, help="Stage 2 Krea2 Depth Control-LoRA end_percent (defaults: stick=1.0, depth-female=0.75, depth-male=0.65)")
     ap.add_argument("--seeds", default="42201,42202,42203")
-    ap.add_argument("--denoise", type=float, default=None, help="Stage 2 Krea2 New B denoise (default 0.40 with --pose-lock, else 0.38)")
+    ap.add_argument("--denoise", type=float, default=None, help="Stage 2 Krea2 New B denoise (default 0.40 with depth-female, else 0.38)")
     ap.add_argument("--width", type=int, default=832)
     ap.add_argument("--height", type=int, default=1216)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--comfy", default="http://192.168.1.20:8188")
     args = ap.parse_args()
+    pose_presets = {
+        "stick":        ("dwpose-832x1216.png",     "rusty-poselock-dwpose.png",     "xbot-regen-mask-832x1216.png", "rusty-poselock-regen-mask.png",      1.00, 0.95, 0.00, 1.00, 0.38),
+        "depth-female": ("xbot-depth-832x1216.png", "rusty-poselock-xbot-depth.png", "xbot-regen-mask-832x1216.png", "rusty-poselock-regen-mask.png",      0.95, 0.90, 0.70, 0.75, 0.40),
+        "depth-male":   ("ybot-depth-832x1216.png", "rusty-poselock-ybot-depth.png", "ybot-regen-mask-832x1216.png", "rusty-poselock-ybot-regen-mask.png", 0.90, 0.75, 0.45, 0.65, 0.38),
+    }
+    p_ctrl_fn, p_ctrl_rem, p_mask_fn, p_mask_rem, d_s1, d_e1, d_s2, d_e2, d_den = pose_presets[args.pose_mode]
+    if args.pose_control is None: args.pose_control = POSE_LOCK_DIR / p_ctrl_fn
+    if args.pose_mask is None: args.pose_mask = POSE_LOCK_DIR / p_mask_fn
+    if args.pose_s1_strength is None: args.pose_s1_strength = d_s1
+    if args.pose_s1_end is None: args.pose_s1_end = d_e1
+    if args.pose_s2_strength is None: args.pose_s2_strength = d_s2
+    if args.pose_s2_end is None: args.pose_s2_end = d_e2
     if args.denoise is None:
-        args.denoise = 0.40 if args.pose_lock else 0.38
+        args.denoise = d_den if args.pose_lock else 0.38
 
     brief = args.brief
     pronoun = args.pronoun
@@ -342,11 +355,11 @@ def main():
     s2_tpl["17_krea_encode"]["inputs"]["pixels"] = ["0_load_s1", 0]
 
     if args.pose_lock:
-        up_depth = comfy_upload(args.comfy, args.pose_depth.resolve(), "rusty-poselock-xbot-depth.png")
+        up_ctrl = comfy_upload(args.comfy, args.pose_control.resolve(), p_ctrl_rem)
         up_slate = comfy_upload(args.comfy, args.pose_slate.resolve(), "rusty-poselock-slate-bg.png")
-        up_mask = comfy_upload(args.comfy, args.pose_mask.resolve(), "rusty-poselock-regen-mask.png")
+        up_mask = comfy_upload(args.comfy, args.pose_mask.resolve(), p_mask_rem)
         s1_tpl["2b_patch"] = {"class_type": "ModelPatchLoader", "inputs": {"name": "qwen_image_2.1_fun_controlnet_union_int8_convrot.safetensors"}}
-        s1_tpl["2c_depth"] = {"class_type": "LoadImage", "inputs": {"image": up_depth}}
+        s1_tpl["2c_ctrl"] = {"class_type": "LoadImage", "inputs": {"image": up_ctrl}}
         s1_tpl["2e_slate"] = {"class_type": "LoadImage", "inputs": {"image": up_slate}}
         s1_tpl["2f_mask_im"] = {"class_type": "LoadImage", "inputs": {"image": up_mask}}
         s1_tpl["2g_mask"] = {"class_type": "ImageToMask", "inputs": {"image": ["2f_mask_im", 0], "channel": "red"}}
@@ -356,7 +369,7 @@ def main():
                 "model": ["5_qwen_cache", 0],
                 "model_patch": ["2b_patch", 0],
                 "vae": ["4_qwen_vae", 0],
-                "image": ["2c_depth", 0],
+                "image": ["2c_ctrl", 0],
                 "inpaint_image": ["2e_slate", 0],
                 "mask": ["2g_mask", 0],
                 "strength": args.pose_s1_strength,
@@ -366,7 +379,7 @@ def main():
         }
         s1_tpl["8_qwen_sampler"]["inputs"]["model"] = ["2d_cn", 0]
         if args.pose_s2_strength > 0:
-            s2_tpl["16b_depth"] = {"class_type": "LoadImage", "inputs": {"image": up_depth}}
+            s2_tpl["16b_depth"] = {"class_type": "LoadImage", "inputs": {"image": up_ctrl}}
             s2_tpl["16c_enc"] = {"class_type": "Krea2ControlPlusImageEncode", "inputs": {
                 "control_image": ["16b_depth", 0], "vae": ["13_krea_vae", 0], "latent": ["17_krea_encode", 0],
                 "resize": "match_latent_size", "upscale_method": "lanczos", "crop": "center",

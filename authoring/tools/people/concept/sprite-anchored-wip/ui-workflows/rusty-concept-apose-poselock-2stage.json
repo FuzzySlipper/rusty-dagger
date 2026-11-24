@@ -1,19 +1,19 @@
 {
-  "id": "1ddaf9fe-1830-4ccf-b832-cb9e5a3dd70e",
+  "id": "a8aa7635-428f-494e-b9bc-4da17beac671",
   "revision": 0,
-  "last_node_id": 32,
-  "last_link_id": 40,
+  "last_node_id": 29,
+  "last_link_id": 33,
   "nodes": [
     {
       "id": 23,
       "type": "Note",
-      "title": "Pose-Locked A-Pose Concept Art (M11b: Qwen 2.1 Fun Union Depth + Slate Lock -> Krea 2 New B)",
+      "title": "Pose-Locked A-Pose Concept Art (Universal DWPose Stick Figure + Slate Lock -> Krea 2 New B)",
       "pos": [
         40,
         -180
       ],
       "size": [
-        980,
+        1040,
         175
       ],
       "flags": {},
@@ -25,7 +25,7 @@
         "text": ""
       },
       "widgets_values": [
-        "POSE-LOCKED A-POSE 2-STAGE CONCEPT WORKFLOW (M11b \u2014 canonical X Bot 22deg arm / 18deg elbow / 25deg curled palm-inward hands / 20% foot stance)\n- Node 1: Drop in the character's dialogue portrait (face/hair/skin likeness reference).\n- Nodes 6 & 18: Edit the Subject description (works for bare limbs, robes, dresses, and heavy plate armor without changing strengths).\n- Pose-Lock Controls (Nodes 24-29 & 30-32) come pre-wired with the canonical depth map, #30343b slate lock, and 90px figure mask.\n- Stage 1 Union: strength=0.95, end=0.90 | Stage 2 Krea New B: denoise=0.40, scheduled Depth LoRA strength=0.70, end=0.75."
+        "POSE-LOCKED A-POSE 2-STAGE CONCEPT WORKFLOW (Universal DWPose Stick Figure + Built-In #30343b Slate Lock \u2014 stock ComfyUI nodes only)\n- Node 1: Drop in the character's dialogue portrait or classic sprite reference.\n- Nodes 6 & 18: Edit the Subject description (one universal stick figure works across male, female, stocky, robed, dress, and heavy armor builds without distorting proportions).\n- Node 25: Pre-loaded with rusty-poselock-dwpose.png (canonical 22deg arm / 18deg elbow / 25deg curled palm-inward hands / parallel 3-pt feet). Optional depth maps rusty-poselock-xbot-depth.png / rusty-poselock-ybot-depth.png are also uploaded.\n- Stage 1 Union: strength=1.00, end=0.95 | Stage 2 Krea New B: denoise=0.38 (8 steps)."
       ],
       "color": "#223",
       "bgcolor": "#335"
@@ -33,7 +33,7 @@
     {
       "id": 1,
       "type": "LoadImage",
-      "title": "1. Load Character Portrait Ref",
+      "title": "1. Load Character Portrait / Sprite Ref",
       "pos": [
         40,
         40
@@ -408,7 +408,7 @@
         "Node name for S&R": "TextEncodeQwenImage21"
       },
       "widgets_values": [
-        "Task: Paint a full-length high-resolution dark-fantasy character concept sheet using Image 1 ONLY for the character's facial likeness, hair, skin tone, age, eyes and head/collar cues. Keep the clothing cleanly tailored and uncluttered with natural drape.\n\nCRITICAL POSE LOCK: Follow the exact body proportions, arm spread, elbow bend, wrist angle, relaxed palm-inward thumb-forward gently curled hands, and hip-width parallel forward-pointing feet\u2014do NOT open the palms toward the camera, do NOT spread the fingers, and do NOT bring the feet together.\n\nSubject: An athletic poised young female Dark Brotherhood temple dancer in her twenties with warm olive-tan skin, a completely shaved bald head with a single long glossy jet-black ponytail falling down behind her back, sharp high-arched dark eyebrows, pale blue-grey eyes and calm expression; wearing a fitted pale pearl-white silver satin halter crop bodice leaving her shoulders, arms and midriff bare, matching bright burnished-gold metal cuff bracelets on both wrists, and a low-slung dark charcoal-black waist belt with a long narrow tapering charcoal-black ceremonial front loincloth panel richly bordered in bright gold trim with gold embroidered scrollwork hanging straight down between her bare legs to her ankles, standing barefoot. Standing straight and symmetric facing directly forward, head level and looking straight ahead, shoulders level. Both arms hang down and slightly away from her sides at about 22 degrees with a clear gap of background between each hand and her hips, elbows softly bent slightly forward, wrists straight, palms facing inward toward her thighs, thumbs pointing forward, fingers together and gently curled in a relaxed hanging hand (nothing held, empty hands, not spread open). Legs straight, feet flat and parallel pointing straight ahead about hip-width apart with a clear gap between the legs from mid-thigh down.\n\nStyle: ART DIRECTION \u2014 VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\nDraw the character as an accomplished pen-and-ink dark-fantasy character sheet in the tradition of Akihiko Yoshida (Vagrant Story) and classic tabletop RPG manuals, finished with opaque muted gouache washes. Confident dark-umber ink contours, fine directional crosshatching inside folds, opaque local colour washes without glossy 3D shading.\n\nPresentation: Full-length isolated standing figure on a perfectly flat solid dark slate grey background, RGB 48,52,59. Soft overhead light equal on both sides. No floor, no cast shadow, no border."
+        "Task: Paint a full-length high-resolution dark-fantasy character concept sheet using Image 1 for the character's facial likeness, costume, hair, skin tone and colour cues. Keep the clothing cleanly tailored and uncluttered with natural drape.\n\nCRITICAL POSE LOCK: Follow the exact body proportions, arm spread, elbow bend, wrist angle, relaxed palm-inward thumb-forward gently curled hands, and hip-width parallel forward-pointing feet\u2014do NOT open the palms toward the camera, do NOT spread the fingers, and do NOT bring the feet together.\n\nSubject: An athletic poised young female Dark Brotherhood temple dancer in her twenties with warm olive-tan skin, a completely shaved bald head with a single long glossy jet-black ponytail falling down behind her back, sharp high-arched dark eyebrows, pale blue-grey eyes and calm expression; wearing a fitted pale pearl-white silver satin halter crop bodice leaving her shoulders, arms and midriff bare, matching bright burnished-gold metal cuff bracelets on both wrists, and a low-slung dark charcoal-black waist belt with a long narrow tapering charcoal-black ceremonial front loincloth panel richly bordered in bright gold trim with gold embroidered scrollwork hanging straight down between her bare legs to her ankles, standing barefoot. Standing straight and symmetric facing directly forward, head level and looking straight ahead, shoulders level. Both arms hang down and slightly away from her sides at about 22 degrees with a clear gap of background between each hand and her hips, elbows softly bent slightly forward, wrists straight, palms facing inward toward her thighs, thumbs pointing forward, fingers together and gently curled in a relaxed hanging hand (nothing held, empty hands, not spread open). Legs straight, feet flat and parallel pointing straight ahead about hip-width apart with a clear gap between the legs from mid-thigh down.\n\nStyle: ART DIRECTION \u2014 VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\nDraw the character as an accomplished pen-and-ink dark-fantasy character sheet in the tradition of Akihiko Yoshida (Vagrant Story) and classic tabletop RPG manuals, finished with opaque muted gouache washes. Confident dark-umber ink contours, fine directional crosshatching inside folds, opaque local colour washes without glossy 3D shading.\n\nPresentation: Full-length isolated standing figure on a perfectly flat solid dark slate grey background, RGB 48,52,59. Soft overhead light equal on both sides. No floor, no cast shadow, no border."
       ]
     },
     {
@@ -895,7 +895,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            37
+            16
           ]
         }
       ],
@@ -1003,8 +1003,7 @@
           "type": "VAE",
           "links": [
             18,
-            19,
-            35
+            19
           ]
         }
       ],
@@ -1138,8 +1137,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            23,
-            36
+            23
           ]
         }
       ],
@@ -1151,7 +1149,7 @@
     {
       "id": 20,
       "type": "KSampler",
-      "title": "20. [Stage 2] Krea New B KSampler (d=0.40, 8 steps)",
+      "title": "20. [Stage 2] Krea New B KSampler (d=0.38, 8 steps)",
       "pos": [
         2290,
         40
@@ -1168,7 +1166,7 @@
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 40
+          "link": 16
         },
         {
           "localized_name": "positive",
@@ -1263,7 +1261,7 @@
         1.0,
         "euler",
         "simple",
-        0.4
+        0.38
       ]
     },
     {
@@ -1396,7 +1394,7 @@
     {
       "id": 25,
       "type": "LoadImage",
-      "title": "25. [Pose Lock] Canonical X Bot Depth (832x1216)",
+      "title": "25. [Pose Lock] Universal DWPose Stick Figure (832x1216)",
       "pos": [
         40,
         960
@@ -1425,8 +1423,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            30,
-            34
+            30
           ]
         },
         {
@@ -1440,7 +1437,7 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "rusty-poselock-xbot-depth.png",
+        "rusty-poselock-dwpose.png",
         "image"
       ]
     },
@@ -1593,7 +1590,7 @@
     {
       "id": 29,
       "type": "ZImageFunControlnet",
-      "title": "29. [Stage 1] Apply Fun Union Depth + Slate Lock",
+      "title": "29. [Stage 1] Apply Fun Union DWPose + Slate Lock",
       "pos": [
         1010,
         860
@@ -1689,261 +1686,10 @@
         "Node name for S&R": "ZImageFunControlnet"
       },
       "widgets_values": [
-        0.95,
+        1.0,
         0.0,
-        0.9
+        0.95
       ]
-    },
-    {
-      "id": 30,
-      "type": "Krea2ControlPlusImageEncode",
-      "title": "30. [Stage 2] Encode Depth Control Latent",
-      "pos": [
-        1400,
-        860
-      ],
-      "size": [
-        340,
-        240
-      ],
-      "flags": {},
-      "order": 30,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "control_image",
-          "name": "control_image",
-          "type": "IMAGE",
-          "link": 34
-        },
-        {
-          "localized_name": "vae",
-          "name": "vae",
-          "type": "VAE",
-          "link": 35
-        },
-        {
-          "localized_name": "resize",
-          "name": "resize",
-          "type": "COMBO",
-          "link": null,
-          "widget": {
-            "name": "resize"
-          }
-        },
-        {
-          "localized_name": "upscale_method",
-          "name": "upscale_method",
-          "type": "COMBO",
-          "link": null,
-          "widget": {
-            "name": "upscale_method"
-          }
-        },
-        {
-          "localized_name": "crop",
-          "name": "crop",
-          "type": "COMBO",
-          "link": null,
-          "widget": {
-            "name": "crop"
-          }
-        },
-        {
-          "localized_name": "channel_mode",
-          "name": "channel_mode",
-          "type": "COMBO",
-          "link": null,
-          "widget": {
-            "name": "channel_mode"
-          }
-        },
-        {
-          "localized_name": "normalize",
-          "name": "normalize",
-          "type": "COMBO",
-          "link": null,
-          "widget": {
-            "name": "normalize"
-          }
-        },
-        {
-          "localized_name": "invert",
-          "name": "invert",
-          "type": "BOOLEAN",
-          "link": null,
-          "widget": {
-            "name": "invert"
-          }
-        },
-        {
-          "localized_name": "batch_mode",
-          "name": "batch_mode",
-          "type": "COMBO",
-          "link": null,
-          "widget": {
-            "name": "batch_mode"
-          }
-        },
-        {
-          "localized_name": "latent",
-          "name": "latent",
-          "type": "LATENT",
-          "link": 36,
-          "shape": 7
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "control_latent",
-          "name": "control_latent",
-          "type": "LATENT",
-          "links": [
-            39
-          ]
-        },
-        {
-          "localized_name": "encoded_control_image",
-          "name": "encoded_control_image",
-          "type": "IMAGE",
-          "links": []
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Krea2ControlPlusImageEncode"
-      },
-      "widgets_values": [
-        "match_latent_size",
-        "lanczos",
-        "center",
-        "grayscale",
-        "per_image_minmax",
-        false,
-        "independent_images"
-      ]
-    },
-    {
-      "id": 31,
-      "type": "Krea2ControlPlusLoRALoader",
-      "title": "31. [Stage 2] Krea2 Depth Control-LoRA (0.70, end 0.75)",
-      "pos": [
-        1800,
-        860
-      ],
-      "size": [
-        380,
-        140
-      ],
-      "flags": {},
-      "order": 31,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 37
-        },
-        {
-          "localized_name": "lora_name",
-          "name": "lora_name",
-          "type": "COMBO",
-          "link": null,
-          "widget": {
-            "name": "lora_name"
-          }
-        },
-        {
-          "localized_name": "strength",
-          "name": "strength",
-          "type": "FLOAT",
-          "link": null,
-          "widget": {
-            "name": "strength"
-          }
-        },
-        {
-          "localized_name": "start_percent",
-          "name": "start_percent",
-          "type": "FLOAT",
-          "link": null,
-          "widget": {
-            "name": "start_percent"
-          }
-        },
-        {
-          "localized_name": "end_percent",
-          "name": "end_percent",
-          "type": "FLOAT",
-          "link": null,
-          "widget": {
-            "name": "end_percent"
-          }
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            38
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Krea2ControlPlusLoRALoader"
-      },
-      "widgets_values": [
-        "krea2_depth_control_lora.safetensors",
-        0.7,
-        0.0,
-        0.75
-      ]
-    },
-    {
-      "id": 32,
-      "type": "Krea2ControlPlusApply",
-      "title": "32. [Stage 2] Apply Krea2 Depth Control",
-      "pos": [
-        2240,
-        860
-      ],
-      "size": [
-        310,
-        82
-      ],
-      "flags": {},
-      "order": 32,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model",
-          "name": "model",
-          "type": "MODEL",
-          "link": 38
-        },
-        {
-          "localized_name": "control_latent",
-          "name": "control_latent",
-          "type": "LATENT",
-          "link": 39
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "MODEL",
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            40
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Krea2ControlPlusApply"
-      },
-      "widgets_values": []
     }
   ],
   "links": [
@@ -2056,6 +1802,14 @@
       15,
       0,
       16,
+      0,
+      "MODEL"
+    ],
+    [
+      16,
+      16,
+      0,
+      20,
       0,
       "MODEL"
     ],
@@ -2194,62 +1948,6 @@
       8,
       0,
       "MODEL"
-    ],
-    [
-      34,
-      25,
-      0,
-      30,
-      0,
-      "IMAGE"
-    ],
-    [
-      35,
-      13,
-      0,
-      30,
-      1,
-      "VAE"
-    ],
-    [
-      36,
-      17,
-      0,
-      30,
-      9,
-      "LATENT"
-    ],
-    [
-      37,
-      16,
-      0,
-      31,
-      0,
-      "MODEL"
-    ],
-    [
-      38,
-      31,
-      0,
-      32,
-      0,
-      "MODEL"
-    ],
-    [
-      39,
-      30,
-      0,
-      32,
-      1,
-      "LATENT"
-    ],
-    [
-      40,
-      32,
-      0,
-      20,
-      0,
-      "MODEL"
     ]
   ],
   "groups": [
@@ -2281,11 +1979,11 @@
     },
     {
       "id": 3,
-      "title": "POSE LOCK \u2014 Canonical X Bot Depth + Built-In #30343b Slate Lock (M11b)",
+      "title": "POSE LOCK \u2014 Universal DWPose Stick Figure + Built-In #30343b Slate Lock (M12)",
       "bounding": [
         10,
         820,
-        2670,
+        1340,
         490
       ],
       "color": "#2E6F40",
