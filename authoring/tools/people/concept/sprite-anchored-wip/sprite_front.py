@@ -90,7 +90,7 @@ def make_portrait_ref(portrait_png: Path, out_png: Path, size: int = 512, border
     return out_png
 
 
-def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False, portrait_only: bool = False, show_both_arms: bool = False, pose_lock: bool = False, pose_garment: str = "auto") -> tuple[str, str]:
+def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: bool = False, portrait_only: bool = False, show_both_arms: bool = False, pose_lock: bool = False, pose_garment: str = "auto", style_variant: str = "clean") -> tuple[str, str]:
     pos = "his" if pronoun == "He" else ("her" if pronoun == "She" else "its")
     face_q = (
         "If wearing a hood, paint a real shadowed face inside the deep hood—brow and eyes recessed in dark-umber shadow while "
@@ -113,6 +113,41 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
             f"elbows softly bent slightly forward, wrists straight, palms facing inward toward {pos} thighs, thumbs pointing forward, fingers together "
             f"and gently curled in a relaxed hanging hand (nothing held, empty hands, not spread open). {leg_clause}"
         )
+        if style_variant == "crunchy":
+            task_line = (
+                "Task: Paint a full-length high-resolution classic dark-fantasy RPG character sheet for the person whose face is shown in the small portrait reference. "
+                "Reconstruct natural high-resolution anatomy and costume detail; do not enlarge or trace the pixel blocks.\n\n"
+                if portrait_only
+                else "Task: Redraw a very small classic fantasy RPG character sprite as newly illustrated high resolution art. "
+                "Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\n"
+            )
+            input_line = (
+                "Input image: facial likeness, hair, skin tone, age and collar cues ONLY. Follow the exact pose skeleton (22-degree hanging arms, relaxed palm-inward "
+                f"thumb-forward curled empty hands, parallel hip-width feet) while keeping the clothing cleanly tailored and uncluttered. {face_q}\n\n"
+                if portrait_only
+                else "Input image: costume and colour-blocking reference only. Follow the exact pose skeleton (22-degree hanging arms, relaxed palm-inward "
+                f"thumb-forward curled empty hands, parallel hip-width feet) while preserving the classic sprite's costume, colours and proportions. {face_q}\n\n"
+            )
+            qwen_p = (
+                f"{task_line}{input_line}"
+                f"Subject and composition: {brief.rstrip('.')}. {pose_text}\n\n"
+                "Style: ART DIRECTION — VAGRANT STORY & OLD TABLETOP DARK FANTASY PEN-AND-INK CROSSHATCHING WITH MUTED WASH\n\n"
+                "Draw the character as an accomplished pen-and-ink dark-fantasy character sheet in the tradition of Akihiko Yoshida (Vagrant Story) and classic "
+                "tabletop RPG manuals, finished with opaque muted gouache washes. Build a confident underlying ink drawing with crisp costume seams, "
+                "dark-umber contours, dense fine directional crosshatching inside cloth folds and shadows, weathered dry-brush fabric grain, and opaque local colour "
+                "washes without glossy 3D shading or smooth digital cel gradients.\n\n"
+                "Presentation: Full-length isolated figure filling ~88% of the vertical 832x1216 portrait frame on a perfectly flat solid dark slate grey "
+                "background, RGB 48,52,59. Soft overhead light equal on both sides. No floor, no cast shadow, no border."
+            )
+            krea_p = (
+                "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+                "Drawn and painted as a vivid, punchy 1990s PC fantasy role-playing game character sheet: confident dark-umber pen-and-ink contour lines, "
+                "fine crosshatching inside cloth folds and overhangs equally on both sides, weathered dry-brush texture and opaque matte gouache colour planes "
+                f"(4 to 6 painted value groups per material). {face_q}"
+                "Plain flat dark slate-grey background, RGB 48,52,59, no floor or border.\n\n"
+                f"Subject and composition: {brief.rstrip('.')}. {pose_text}"
+            )
+            return qwen_p, krea_p
         ref_intro = (
             "using Image 1 ONLY for the character's facial likeness, hair, skin tone, age, eyes and head/collar cues. "
             if portrait_only
@@ -283,16 +318,17 @@ def main():
     ap.add_argument("--portrait-trim", type=int, default=3, help="Pixels to trim off each edge of a classic framed portrait (default 3)")
     ap.add_argument("--pose-lock", action="store_true", help="Canonical X Bot rest-pose lock (default: universal DWPose stick figure + built-in #30343b slate lock)")
     ap.add_argument("--pose-mode", choices=["stick", "depth-female", "depth-male"], default="stick", help="With --pose-lock: stick (universal DWPose, zero proportion bias; default), depth-female (X Bot depth), or depth-male (Y Bot depth)")
+    ap.add_argument("--style-variant", choices=["clean", "crunchy"], default="clean", help="With --pose-lock: clean (smoother comic-gouache, end=0.95, d=0.38) or crunchy (restored vintage Vagrant-Story crosshatch/dry-brush finish matching original 128, end=0.60, default d=0.46; pass --denoise 0.38 for midpoint)")
     ap.add_argument("--pose-garment", choices=["auto", "open", "draped"], default="auto", help="With --pose-lock, leg prompt phrasing (auto detects robes/dresses/gowns)")
     ap.add_argument("--pose-control", type=Path, default=None, help="Override pose control map path for --pose-lock")
     ap.add_argument("--pose-slate", type=Path, default=POSE_LOCK_DIR / "slate-bg-832x1216.png", help="Slate background image for --pose-lock built-in border lock")
     ap.add_argument("--pose-mask", type=Path, default=None, help="Override dilated figure regenerate mask path for --pose-lock")
     ap.add_argument("--pose-s1-strength", type=float, default=None, help="Stage 1 Fun ControlNet Union strength (defaults: stick=1.00, depth-female=0.95, depth-male=0.90)")
-    ap.add_argument("--pose-s1-end", type=float, default=None, help="Stage 1 Fun ControlNet Union end_percent (defaults: stick=0.95, depth-female=0.90, depth-male=0.75)")
+    ap.add_argument("--pose-s1-end", type=float, default=None, help="Stage 1 Fun ControlNet Union end_percent (defaults: stick clean=0.95 / crunchy=0.60, depth-female=0.90, depth-male=0.75)")
     ap.add_argument("--pose-s2-strength", type=float, default=None, help="Stage 2 Krea2 Depth Control-LoRA strength (defaults: stick=0.0, depth-female=0.70, depth-male=0.45)")
     ap.add_argument("--pose-s2-end", type=float, default=None, help="Stage 2 Krea2 Depth Control-LoRA end_percent (defaults: stick=1.0, depth-female=0.75, depth-male=0.65)")
     ap.add_argument("--seeds", default="42201,42202,42203")
-    ap.add_argument("--denoise", type=float, default=None, help="Stage 2 Krea2 New B denoise (default 0.40 with depth-female, else 0.38)")
+    ap.add_argument("--denoise", type=float, default=None, help="Stage 2 Krea2 New B denoise (default 0.46 with crunchy, 0.40 with depth-female, else 0.38)")
     ap.add_argument("--width", type=int, default=832)
     ap.add_argument("--height", type=int, default=1216)
     ap.add_argument("--out", type=Path, default=None)
@@ -304,6 +340,10 @@ def main():
         "depth-male":   ("ybot-depth-832x1216.png", "rusty-poselock-ybot-depth.png", "ybot-regen-mask-832x1216.png", "rusty-poselock-ybot-regen-mask.png", 0.90, 0.75, 0.45, 0.65, 0.38),
     }
     p_ctrl_fn, p_ctrl_rem, p_mask_fn, p_mask_rem, d_s1, d_e1, d_s2, d_e2, d_den = pose_presets[args.pose_mode]
+    if args.pose_lock and args.style_variant == "crunchy":
+        if args.pose_mode == "stick":
+            d_e1 = 0.60
+        d_den = 0.46
     if args.pose_control is None: args.pose_control = POSE_LOCK_DIR / p_ctrl_fn
     if args.pose_mask is None: args.pose_mask = POSE_LOCK_DIR / p_mask_fn
     if args.pose_s1_strength is None: args.pose_s1_strength = d_s1
@@ -338,7 +378,7 @@ def main():
     qwen_p, krea_p = build_prompts(
         brief, pronoun, args.hooded_shadow,
         style_only=args.style_only, portrait_only=portrait_only, show_both_arms=args.show_both_arms,
-        pose_lock=args.pose_lock, pose_garment=args.pose_garment,
+        pose_lock=args.pose_lock, pose_garment=args.pose_garment, style_variant=args.style_variant,
     )
     wf2 = json.loads(WF_TEMPLATE.read_text())
 
