@@ -157,6 +157,13 @@ tools)     # the lab copies, from the repository, to /workspace/$B/tools, under 
   export L B S; flock -w ${LOCK_WAIT:-7200} /tmp/gpu-lab-claude.lock bash -c 'tar czf - -C $S tools | $L "gpu-lab exec bash -c \"mkdir -p /workspace/$B && tar xzf - -C /workspace/$B && ls /workspace/$B/tools | wc -l\"" 2>&1 | grep -v Container'
   rm -rf $S ;;
 frames)
+  # A bake starts here, so nothing from an earlier bake of this run id may survive: the Halo sync (strix-cpu/run.sh) brings the whole
+  # staged folder back without deleting, and the GPU host keeps its copy too. npc-468's second run (2026-11-24) trained on the first
+  # run's VACE repaints (the vace stage saw finished rings and skipped) and mattes from its BiRefNet masks. Clear both remote
+  # copies and every local stage output (prompts.json stays).
+  ssh -o BatchMode=yes $HALO "rm -rf ~/.local/state/asset-cpu/work/${D:?}" || echo "bake.sh: could not clear $HALO's staged copy of $D" >&2
+  if [ "$GPU" = gpu-lab ]; then $L "gpu-lab exec rm -rf ${LAB:?}" > /dev/null 2>&1 || true; else ssh -o BatchMode=yes $GPU "rm -rf ${GW:?}" || true; fi
+  find "${D:?}" -mindepth 1 -maxdepth 1 ! -name prompts.json -exec rm -rf {} +
   rm -rf $D/frames "${D:?}/birefnet"; cp -al $W/$CLIP/frames $D/frames; cp $W/$CLIP/run.json $D/clip-run.json
   echo "$W/$CLIP" > $D/clip.txt; [ -f $D/prompts.json ] || cp $W/$K/prompts.json $D/ 2>/dev/null; ls $D/frames | wc -l ;;
 mattes)
