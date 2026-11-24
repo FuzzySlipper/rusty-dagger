@@ -174,9 +174,15 @@ internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsStat
         npc.Kind == DaggerfallNpcKind.Civilian
         && npc.StableKey.StartsWith("population/", StringComparison.Ordinal);
 
-    private static void AdmitSourcePopulationAppearance(DaggerfallNpc npc, DaggerfallSiteProfile profile,
+    private void AdmitSourcePopulationAppearance(DaggerfallNpc npc, DaggerfallSiteProfile profile,
         DaggerfallSiteAppearance appearance)
     {
+        if (actors.TryGet(npc.DurableId, out ActorState? live)
+            && live.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
+            && render.Spec.Kind == ActorVisualKind.DirectionalMobile)
+        {
+            return;
+        }
         if (!profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord),
                 out NormalizedBillboardSprite? sourceSprite))
         {

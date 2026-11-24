@@ -340,7 +340,9 @@ internal sealed class DaggerfallLocationAssembly
                             clear.Add(((block.X * AutomapSide) + (index % AutomapSide), (block.Y * AutomapSide) + (index / AutomapSide)));
             }
 
-            _dynamicPopulation = DaggerfallExteriorPopulation.Create(owner._definitions, record, clear);
+            Vector3? gateAnchor = _gates.Count > 0 ? _gates[0].Pose.Translation : _start;
+            _dynamicPopulation = DaggerfallExteriorPopulation.Create(owner._definitions, record, clear,
+                gateAnchor is { } anchor ? new WorldPoint(anchor.X, anchor.Y, anchor.Z) : null);
         }
 
         private void PlaceStaticNpcs(DaggerfallWorldBlockDocument document, Vector3 origin, Func<string, string> placed)

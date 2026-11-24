@@ -23,12 +23,16 @@ internal sealed class ActorOriginComponent(
 {
     internal ActorOrigin Origin { get; } = origin ?? throw new ArgumentNullException(nameof(origin));
     internal WorldPoint BaselinePose { get; private set; } = baselinePose;
-    internal float BaselineHeading { get; } = baselineHeading;
+    internal float BaselineHeading { get; private set; } = baselineHeading;
     internal DaggerfallStatsSave? BaselineStats { get; } = baselineStats;
     internal DaggerfallNpc? BaselineNpc { get; } = baselineNpc;
     internal bool IsRelocated { get; } = isRelocated;
 
-    internal void SetBaselinePose(WorldPoint pose) => BaselinePose = pose;
+    internal void SetBaselinePose(WorldPoint pose, float? heading = null)
+    {
+        BaselinePose = pose;
+        if (heading is float h) BaselineHeading = h;
+    }
 }
 
 /// <summary>How an actor in <see cref="DaggerfallActorLedger"/> came to exist.</summary>

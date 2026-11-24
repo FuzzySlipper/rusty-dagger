@@ -4,6 +4,7 @@ using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
@@ -160,24 +161,32 @@ public sealed class LawSessionTests
     }
 
     [Fact]
-    public void Wandering_guard_becomes_one_hostile_watch_actor_and_preserves_identity_after_site_return()
+    public void Wandering_guard_promotes_in_place_and_preserves_identity_after_site_return()
     {
         using var f = new Fixture(); var s = f.Session;
-        long civilian = f.Civilian("guard");
+        long guard = f.Civilian("guard");
+        string? nameBefore = s.State.Npcs.Require(guard).DisplayName;
         f.Charge(); f.Step();
         long watch = Assert.Single(s.State.Crime.LegalResponses.Single().Guards);
-        Assert.NotEqual(civilian, watch);
-        Assert.False(s.State.Actors.TryGet(civilian, out _));
-        Assert.Equal(DaggerfallNpcPresence.Removed, s.State.Npcs.Require(civilian).Presence);
+        Assert.Equal(guard, watch);
+        Assert.True(s.State.Actors.TryGet(guard, out ActorState? liveGuard));
+        Assert.Equal(DaggerfallNpcPresence.Active, s.State.Npcs.Require(guard).Presence);
+        Assert.Equal(nameBefore, s.State.Npcs.Require(guard).DisplayName);
         Assert.Equal(146, s.DefinitionsByActor[watch].MobileId);
-        Assert.True(s.State.Actors.Get(watch).Actor.Get<Modules.Behavior.DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        Assert.True(liveGuard!.Actor.Get<ActorHarmPolicy>().IsCombatant);
+        Assert.Equal(ActorVisualKind.DirectionalMobile, liveGuard.Actor.Get<ActorRenderComponent>().Spec.Kind);
+        Assert.Equal(146, liveGuard.Actor.Get<ActorRenderComponent>().Spec.MobileId);
+        Assert.True(liveGuard.Actor.Get<Modules.Behavior.DaggerfallEnemyPerceptionMemory>().ForcedHostile);
         f.Choose("resist");
         Assert.True(s.TryTransitionTo(f.Other.ProfileKey));
         Assert.True(s.TryTransitionTo(f.Inputs.ProfileKey)); f.Step();
-        Assert.Equal(watch, Assert.Single(s.State.Crime.LegalResponses.Single().Guards));
+        Assert.Equal(guard, Assert.Single(s.State.Crime.LegalResponses.Single().Guards));
         using var restored = f.Restore(s.CaptureSave());
-        Assert.False(restored.State.Actors.TryGet(civilian, out _));
-        Assert.Equal(146, restored.DefinitionsByActor[watch].MobileId);
+        Assert.True(restored.State.Actors.TryGet(guard, out ActorState? restoredGuard));
+        Assert.Equal(nameBefore, restored.State.Npcs.Require(guard).DisplayName);
+        Assert.Equal(146, restored.DefinitionsByActor[guard].MobileId);
+        Assert.True(restoredGuard!.Actor.Get<ActorHarmPolicy>().IsCombatant);
+        Assert.Equal(ActorVisualKind.DirectionalMobile, restoredGuard.Actor.Get<ActorRenderComponent>().Spec.Kind);
     }
 
     [Fact]

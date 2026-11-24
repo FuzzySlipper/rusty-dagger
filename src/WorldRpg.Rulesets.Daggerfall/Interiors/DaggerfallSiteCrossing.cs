@@ -222,6 +222,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                     CorruptionOrigin = combat?.CorruptionOrigin,
                     Gender = entry.Origin.Gender,
                     TeamOverride = combat?.TeamOverride,
+                    PromotedArchetype = combat?.PromotedArchetype,
                     EncounterBandId = combat?.EncounterBandId,
                     EncounterGeneration = combat?.EncounterGeneration,
                 });

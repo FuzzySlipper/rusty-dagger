@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -57,13 +58,14 @@ public sealed class QuestGuardSpawnTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Mobile_watchman_conversion_retires_original_without_creating_a_charge(bool immediate)
+    public void Mobile_watchman_promotion_upgrades_original_in_place_without_creating_a_charge(bool immediate)
     {
         using var f = new Fixture(immediate);
         long npc = f.Civilian("guard");
         f.Advance();
-        Assert.Single(Guards(f.Session));
-        Assert.False(f.Session.State.Actors.TryGet(npc, out _));
+        Assert.Equal(npc, Assert.Single(Guards(f.Session)));
+        Assert.True(f.Session.State.Actors.TryGet(npc, out ActorState? promoted));
+        Assert.True(promoted!.Actor.Get<ActorHarmPolicy>().IsCombatant);
         Assert.Equal(DaggerfallQuestGuardSpawnOutcome.Complete, Schedule(f.Session).Outcome);
         Assert.Empty(f.Session.State.Crime.Incidents);
     }
@@ -75,8 +77,9 @@ public sealed class QuestGuardSpawnTests
         f.Civilian(); f.Advance();
         long watchman = f.Civilian("guard");
         f.Advance(seconds: 5);
-        Assert.Single(Guards(f.Session));
-        Assert.False(f.Session.State.Actors.TryGet(watchman, out _));
+        Assert.Equal(watchman, Assert.Single(Guards(f.Session)));
+        Assert.True(f.Session.State.Actors.TryGet(watchman, out ActorState? promoted));
+        Assert.True(promoted!.Actor.Get<ActorHarmPolicy>().IsCombatant);
         Assert.Equal(DaggerfallQuestGuardSpawnOutcome.Complete, Schedule(f.Session).Outcome);
         using var wilderness = new Fixture(true);
         wilderness.Session.State.PlayerControl.MoveTo(new Vector3(10000, 2, 10000));

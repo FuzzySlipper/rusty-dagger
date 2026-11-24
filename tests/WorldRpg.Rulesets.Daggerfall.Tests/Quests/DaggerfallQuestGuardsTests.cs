@@ -12,13 +12,12 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// </summary>
 public sealed class DaggerfallQuestGuardsTests
 {
-    private static DaggerfallQuestGuards Guards(SocietyStage stage, bool town = true, List<long>? retired = null)
+    private static DaggerfallQuestGuards Guards(SocietyStage stage, bool town = true)
     {
         DaggerfallSiteProfile profile = TestSessions.MediaInputs();
         return new(stage.Actors, stage.Npcs, stage.Player, stage.Crime, stage.ActorDefinitions, new DaggerfallWorldTime(DaggerfallCalendar.Start, 0d, 12d),
             stage.Crimes, stage.Law, DaggerfallTuning.Defaults.QuestSpawning, DaggerfallTuning.Defaults.Law,
-            () => new DaggerfallQuestLocationRead(profile, town ? stage.Site : null, null), () => stage.Active, () => profile,
-            id => (retired ?? []).Add(id));
+            () => new DaggerfallQuestLocationRead(profile, town ? stage.Site : null, null), () => stage.Active, () => profile);
     }
 
     [Fact]

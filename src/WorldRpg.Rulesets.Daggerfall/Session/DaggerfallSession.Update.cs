@@ -949,8 +949,19 @@ internal sealed partial class DaggerfallSession
         if (Law.Serve(response) is not { } released) return;                                     // Society, passing time
         foreach (long id in released.Guards)
         {
-            if (State.Actors.TryGet(id, out _)) _roster.RemoveQuestActor(id);                    // Actors
-            else RetireDetachedActor(id);                                                         // Session
+            if (_roster.Dynamic.ContainsKey(id))
+            {
+                if (State.Actors.TryGet(id, out _)) _roster.RemoveQuestActor(id);                    // Actors
+                else RetireDetachedActor(id);                                                         // Session
+            }
+            else if (State.Actors.TryGet(id, out ActorState? calmGuard))
+            {
+                calmGuard.Actor.Get<Modules.Behavior.DaggerfallEnemyPerceptionMemory>().SetForcedHostile(false);
+            }
+            else
+            {
+                RetireDetachedActor(id);                                                              // Session
+            }
         }
         foreach (string id in new[] { "health", "fatigue", "stamina", "magicka" })
         {

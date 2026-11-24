@@ -61,7 +61,7 @@ internal sealed class SocietyStage : IDisposable
             returnProfile: () => Active,
             spawn: (_, _) => throw new InvalidOperationException("No watch arrives in this stage."),
             makeHostile: Hostile.Add,
-            retireCivilian: _ => throw new InvalidOperationException("No guard converts in this stage."));
+            promoteGuard: _ => throw new InvalidOperationException("No guard converts in this stage."));
         Crime.IncidentRecorded += Law.Admit;
     }
 

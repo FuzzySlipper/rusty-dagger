@@ -36,6 +36,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
     /// <summary>The atlas gender chosen at spawn; absent for an actor without mobile presentation.</summary>
     public string? Gender { get; init; }
     public string? TeamOverride { get; init; }
+    public string? PromotedArchetype { get; init; }
     public int? EncounterBandId { get; init; }
     public ulong? EncounterGeneration { get; init; }
     internal void Validate()

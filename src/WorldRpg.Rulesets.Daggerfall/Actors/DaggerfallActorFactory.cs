@@ -408,13 +408,23 @@ internal static class DaggerfallActorFactory
             new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
         if (npcs is not null && npcs.All.FirstOrDefault(n => n.DurableId == saved.EntityId) is { } restoredNpc)
         {
-            ArchetypeProfile npcProfile = restoredNpc.Kind switch
-            {
-                DaggerfallNpcKind.Static => ArchetypeProfile.StaticNpc,
-                DaggerfallNpcKind.Questor => ArchetypeProfile.Questor,
-                _ => ArchetypeProfile.Civilian,
-            };
+            bool promotedGuard = string.Equals(saved.PromotedArchetype, ArchetypeProfile.Guard.Id, StringComparison.Ordinal)
+                || definition.MobileId == 146;
+            ArchetypeProfile npcProfile = promotedGuard
+                ? ArchetypeProfile.Guard
+                : restoredNpc.Kind switch
+                {
+                    DaggerfallNpcKind.Static => ArchetypeProfile.StaticNpc,
+                    DaggerfallNpcKind.Questor => ArchetypeProfile.Questor,
+                    _ => ArchetypeProfile.Civilian,
+                };
             ApplyNpcComponents(actor, restoredNpc, npcProfile, definitions);
+            if (promotedGuard && definition.MobileId is int watchMobile)
+            {
+                actor.Actor.Get<FactionComponent>().SetCreatureFaction("city-watch");
+                actor.Actor.Get<ActorRenderComponent>().SetVisual(
+                    ActorVisualSpec.DirectionalMobile(watchMobile, saved.Gender ?? restoredNpc.Appearance.Gender));
+            }
         }
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = saved.LanguagePacified;

@@ -130,7 +130,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             DaggerfallNpcAppearance look = new(race, (placement.Flags & FemalePopulationFlag) != 0 ? "Female" : "Male",
                 placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
             (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
-                definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId, "civilian");
+                definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId,
+                placement.IsGuard ? "guard" : "civilian");
 
             DaggerfallNpc? existing = sourceNpcs.FirstOrDefault(npc =>
                 npc.DurableId == deterministicId || StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
@@ -182,7 +183,13 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
     /// <summary>Whether <paramref name="actorId"/> is one of the active site's source civilians, which this population walks.</summary>
     internal bool Walks(long actorId) => npcs.All.Any(npc => npc.DurableId == actorId && DaggerfallCivilians.IsSourcePopulation(npc)
-        && npcs.IsGameplayActive(actorId) && npc.Profile == activeProfile());
+        && npcs.IsGameplayActive(actorId) && npc.Profile == activeProfile())
+        && !IsPromotedCombatant(actorId);
+
+    private bool IsPromotedCombatant(long actorId) =>
+        actors.TryGet(actorId, out ActorState? actor)
+        && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
+        && harm.IsCombatant;
 
     /// <summary>
     /// The classic townsperson art walker <paramref name="actorId"/> wears, as classic Daggerfall dresses a townsperson:
@@ -212,6 +219,11 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             && isDay();
         foreach (ActorState actor in actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>()))
         {
+            if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsCombatant)
+            {
+                actor.Wander.MarkUnloaded();
+                continue;
+            }
             bool recycled = false;
             DaggerfallNpc? populationNpc = npcs.All.FirstOrDefault(npc =>
                 DaggerfallCivilians.IsSourcePopulation(npc) && npc.DurableId == actor.DurableId);
@@ -238,12 +250,17 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             actor.Wander.MarkLoaded();
             if (held(actor.DurableId)) continue;
             wander(actor, WanderPolicy, simulationStep, deltaSeconds);
+            if (actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
+                && !originComp.IsRelocated)
+            {
+                originComp.SetBaselinePose(WorldPoint.From(localToProfile(actor.Position.ToVector())), actor.HeadingYawRadians);
+            }
         }
     }
 
     private void Hide(DaggerfallNpc npc)
     {
-        if (npc.Presence == DaggerfallNpcPresence.Removed || _isWithParty(npc.DurableId)
+        if (npc.Presence == DaggerfallNpcPresence.Removed || _isWithParty(npc.DurableId) || IsPromotedCombatant(npc.DurableId)
             || (_actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? ledgerEntry) && ledgerEntry?.Location?.Kind == ActorLocationKind.WithParty))
             return;
         npcs.SetPresence(npc.DurableId, DaggerfallNpcPresence.Hidden);

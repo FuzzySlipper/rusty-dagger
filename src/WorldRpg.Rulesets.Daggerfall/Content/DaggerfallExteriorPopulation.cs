@@ -9,7 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal static class DaggerfallExteriorPopulation
 {
     internal static IReadOnlyList<DaggerfallPopulationPlacement> Create(DaggerfallDefinitions definitions,
-        DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear)
+        DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear, WorldPoint? gateAnchor = null)
     {
         const int automapSide = 64;
         const float blockSide = DaggerfallWorldGrid.HorizontalSize / 8f;
@@ -26,7 +26,7 @@ internal static class DaggerfallExteriorPopulation
         int count = Math.Min(Math.Clamp(blocks.Count / 16, 1, 4) * 24, cells.Length);
         string slug = new string(location.Name.Select(character => char.IsAsciiLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-').ToArray()).Trim('-');
         if (slug.Length == 0) slug = "source";
-        List<DaggerfallPopulationPlacement> result = [];
+        WorldPoint[] positions = new WorldPoint[count];
         for (int index = 0; index < count; index++)
         {
             var cell = cells[(int)((long)index * cells.Length / count)];
@@ -35,10 +35,36 @@ internal static class DaggerfallExteriorPopulation
             int sourceY = automapSide - 1 - (cell.Z - block.Y * automapSide);
             float x = block.X * blockSide + (sourceX * automapSide + automapSide / 2) * (cellSize / automapSide);
             float z = block.Y * blockSide + (sourceY * automapSide + automapSide / 2) * (cellSize / automapSide);
+            positions[index] = new WorldPoint(x, 0f, -z);
+        }
+        int gateGuardIndex = count > 1 ? 1 : 0;
+        if (gateAnchor is { } anchor && count > 1)
+        {
+            float bestDistSq = float.MaxValue;
+            for (int index = 1; index < count; index++)
+            {
+                float dx = positions[index].X - anchor.X;
+                float dz = positions[index].Z - anchor.Z;
+                float distSq = dx * dx + dz * dz;
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    gateGuardIndex = index;
+                }
+            }
+        }
+        List<DaggerfallPopulationPlacement> result = [];
+        for (int index = 0; index < count; index++)
+        {
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
-            int sprite = people.Sprites[index % people.Sprites.Count];
-            result.Add(new(id, new WorldPoint(x, 0f, -z), sprite >> 7, sprite & 0x7f, people.Id,
-                (byte)(index % people.Sprites.Count == 1 ? 0x20 : 0), StableSeed(id)));
+            bool isGuard = count > 1 ? Math.Abs(index - gateGuardIndex) % 32 == 0 : index == 0;
+            int sprite = people.Sprites[isGuard ? 0 : index % people.Sprites.Count];
+            byte flags = isGuard ? (byte)0 : (byte)(index % people.Sprites.Count == 1 ? 0x20 : 0);
+            result.Add(new(id, positions[index], sprite >> 7, sprite & 0x7f, people.Id,
+                flags, StableSeed(id))
+            {
+                IsGuard = isGuard,
+            });
         }
         return result;
     }

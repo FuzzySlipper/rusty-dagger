@@ -82,13 +82,23 @@ internal sealed record ArchetypeProfile(
         ActorHarmPolicyKind.Combatant, ActorInteractionPolicyKind.None, Walks: true);
 }
 
-/// <summary>Attached social/quest overlay state on a live actor (HUD escort portrait, mute, archetype id).</summary>
+/// <summary>Attached social/quest overlay state on a live actor (HUD escort portrait, mute, archetype id, witness memory).</summary>
 internal sealed class ActorOverlayComponent
 {
+    private readonly List<string> _witnessedCrimes = [];
+
     internal string? ArchetypeId { get; set; }
     internal bool Met { get; set; }
     internal bool IsMuted { get; set; }
     internal bool IsQuestor { get; set; }
     internal string? EscortPortraitMedia { get; set; }
     internal int EscortOrder { get; set; }
+    internal IReadOnlyList<string> WitnessedCrimes => _witnessedCrimes;
+
+    internal void RecordWitnessedCrime(string operationId)
+    {
+        if (string.IsNullOrWhiteSpace(operationId)) return;
+        if (!_witnessedCrimes.Contains(operationId, StringComparer.Ordinal))
+            _witnessedCrimes.Add(operationId);
+    }
 }

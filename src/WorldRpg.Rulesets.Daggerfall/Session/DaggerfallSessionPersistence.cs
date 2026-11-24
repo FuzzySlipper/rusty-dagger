@@ -371,7 +371,23 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 && npc.Presence == DaggerfallNpcPresence.Active)
                 continue;
 
+            ActorOverlayComponent? liveOverlay = State.Actors.TryGet(npc.DurableId, out ActorState? liveNpcActor)
+                && liveNpcActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov)
+                ? ov
+                : null;
             ActorSocialDiff social = ToSocialDiff(npc, priorLedger?.Social);
+            if (liveOverlay is not null)
+            {
+                string[]? liveWitnessed = liveOverlay.WitnessedCrimes.Count > 0
+                    ? [.. liveOverlay.WitnessedCrimes]
+                    : social.WitnessedCrimes;
+                social = social with
+                {
+                    Met = liveOverlay.Met || social.Met,
+                    Muted = liveOverlay.IsMuted,
+                    WitnessedCrimes = liveWitnessed,
+                };
+            }
             if (entries.TryGetValue(npc.DurableId, out ActorLedgerEntry? existing))
             {
                 if (existing.Social is null && !deterministic)
@@ -463,14 +479,19 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         DaggerfallEnemyPerceptionMemory memory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
         string? wabbajack = DaggerfallWabbajack.DefinitionOf(actor.Actor);
         string? teamOverride = actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction) ? faction.TeamOverride : null;
+        ActorOverlayComponent? overlay = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov) ? ov : null;
+        string? promotedArchetype = string.Equals(overlay?.ArchetypeId, ArchetypeProfile.Guard.Id, StringComparison.Ordinal)
+            ? ArchetypeProfile.Guard.Id
+            : null;
         ActorCombatStateDiff? combat = wabbajack is not null || memory.ForcedHostile || memory.LanguagePacified
-            || memory.MagicallyPacified || teamOverride is not null
+            || memory.MagicallyPacified || teamOverride is not null || promotedArchetype is not null
             ? new ActorCombatStateDiff(
                 WabbajackDefinition: wabbajack,
                 ForcedHostile: memory.ForcedHostile,
                 LanguagePacified: memory.LanguagePacified,
                 MagicallyPacified: memory.MagicallyPacified,
-                TeamOverride: teamOverride)
+                TeamOverride: teamOverride,
+                PromotedArchetype: promotedArchetype)
             : null;
 
         ActorLocationOverride? location = relocated ? ActorLocationOverride.AtSite(activeProfile) : null;
@@ -479,19 +500,27 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         if (!origin.IsFixedPlacement && State.Npcs.TryGet(actor.DurableId, out DaggerfallNpc? npc))
         {
             State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorLedger);
-            ActorOverlayComponent? overlay = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov) ? ov : null;
             bool met = overlay is not null ? overlay.Met : priorLedger?.Social?.Met == true;
             bool muted = overlay is not null ? overlay.IsMuted : priorLedger?.Social?.Muted == true;
-            bool nameChanged = originComp?.BaselineNpc is { } baseNpc
+            string[]? witnessedCrimes = overlay is { WitnessedCrimes.Count: > 0 }
+                ? [.. overlay.WitnessedCrimes]
+                : priorLedger?.Social?.WitnessedCrimes;
+            bool nameChanged = originComp?.BaselineNpc is { DisplayName: not null } baseNpc
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName);
             bool presenceChanged = npc.Presence != DaggerfallNpcPresence.Active;
             bool hasPriorSocialDelta = priorLedger?.Social is { } ps
                 && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 } || ps.EscortPortrait is not null);
-            bool mustKeepSocial = met || muted || nameChanged || presenceChanged || hasPriorSocialDelta
+            bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || promotedArchetype is not null
+                || nameChanged || presenceChanged || hasPriorSocialDelta
                 || relocated || referencedNpcs.Contains(actor.DurableId);
             if (mustKeepSocial)
             {
-                social = ToSocialDiff(npc, priorLedger?.Social) with { Met = met, Muted = muted };
+                social = ToSocialDiff(npc, priorLedger?.Social) with
+                {
+                    Met = met,
+                    Muted = muted,
+                    WitnessedCrimes = witnessedCrimes,
+                };
             }
         }
 
@@ -540,7 +569,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     {
         bool hasAny = dyn.SpawnDistance != 0 || dyn.Passive || dyn.WabbajackActive || dyn.ForcedHostile
             || dyn.LanguagePacified || dyn.MagicallyPacified || dyn.PlayerAllied || dyn.CorruptionOrigin is not null
-            || dyn.TeamOverride is not null || dyn.EncounterBandId is not null
+            || dyn.TeamOverride is not null || dyn.PromotedArchetype is not null || dyn.EncounterBandId is not null
             || detachedInventory is not null || detachedCorpse is not null || detachedEffects is { Length: > 0 };
         if (!hasAny) return null;
         return new ActorCombatStateDiff(
@@ -553,6 +582,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             PlayerAllied: dyn.PlayerAllied,
             CorruptionOrigin: dyn.CorruptionOrigin,
             TeamOverride: dyn.TeamOverride,
+            PromotedArchetype: dyn.PromotedArchetype,
             EncounterBandId: dyn.EncounterBandId,
             EncounterGeneration: dyn.EncounterGeneration,
             DetachedInventory: detachedInventory,
@@ -655,6 +685,10 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             LanguagePacified = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified,
             MagicallyPacified = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified,
             TeamOverride = actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction) ? faction.TeamOverride : null,
+            PromotedArchetype = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)
+                && string.Equals(overlay.ArchetypeId, ArchetypeProfile.Guard.Id, StringComparison.Ordinal)
+                ? ArchetypeProfile.Guard.Id
+                : null,
             EncounterBandId = actor.Actor.TryGet<DaggerfallEncounterBandMember>(out var bandMember) ? bandMember.BandId : null,
             EncounterGeneration = bandMember?.Generation,
         };
@@ -762,12 +796,24 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             current.ApplyPose(new ActorPose(new WorldPoint(pose.X, pose.Y, pose.Z), pose.HeadingRadians));
         }
 
-        // Dynamic actors were materialized by construction; restore only re-applies their poses.
+        // Dynamic actors were materialized by construction; restore re-applies their poses and social overlays.
+        Dictionary<long, ActorSocialDiff> restoredDynamicSocial = saved.ActorLedger
+            .Where(e => e.Origin.Kind == ActorOriginKind.Minted && e.Social is not null)
+            .ToDictionary(e => e.DurableId, e => e.Social!);
         foreach (DaggerfallDynamicActorSave spawned in saved.ActiveDynamicActors(activeProfile).OrderBy(actor => actor.EntityId))
         {
             if (!State.Actors.TryGet(spawned.EntityId, out ActorState? current))
                 throw new InvalidOperationException($"The saved dynamic actor '{spawned.EntityId}' was not materialized by the selected content.");
             current.ApplyPose(new ActorPose(new WorldPoint(spawned.X, spawned.Y, spawned.Z), spawned.HeadingRadians));
+            if (restoredDynamicSocial.TryGetValue(spawned.EntityId, out ActorSocialDiff? dynSocial)
+                && current.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? dynOverlay))
+            {
+                dynOverlay.Met = dynSocial.Met;
+                dynOverlay.IsMuted = dynSocial.Muted;
+                if (dynSocial.WitnessedCrimes is { Length: > 0 })
+                    foreach (string operationId in dynSocial.WitnessedCrimes)
+                        dynOverlay.RecordWitnessedCrime(operationId);
+            }
         }
 
         // Materialize deterministic active-site actors (static, cast, relocated, and any active-site

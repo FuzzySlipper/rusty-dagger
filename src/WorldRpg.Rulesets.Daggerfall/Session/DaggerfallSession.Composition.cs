@@ -1131,7 +1131,7 @@ internal sealed partial class DaggerfallSession
                 returnProfile: () => _sites.ReturnProfile,
                 spawn: (definition, pose) => _roster.Spawn(definition, pose),
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
-                retireCivilian: Civilians.Retire);
+                promoteGuard: id => _roster.PromoteToCityWatch(id));
             crime.IncidentRecorded += Law.Admit;
             GuildProviders = new DaggerfallGuildProviders(State.ConcreteGuildServices, State.ConcreteGuildMembership, State.KnightlyClaimActions,
                 new DaggerfallGuildAdmission(State.ConcreteGuildMembership, State.Social, State.SkillUses, State.Crime,
@@ -1146,7 +1146,7 @@ internal sealed partial class DaggerfallSession
                 _sites.TryRelocatePlayer, _sites.ClearReturnDestination);
             _questGuards = new DaggerfallQuestGuards(State.Actors, State.Npcs, State.PlayerControl, State.Crime, _roster.Definitions, _time,
                 Crimes, Law, tuning.QuestSpawning, tuning.Law, () => _sites.ReadQuestLocation(), () => _activeProfileKey,
-                () => _sites.Projection.Inputs, Civilians.Retire);
+                () => _sites.Projection.Inputs);
             QuestWork = new DaggerfallQuestWork(State.Quests, State.Npcs, State.Services, State.Social, State.Crime,
                 (npc, building) => GuildProviders.TryResolve(npc, building, DaggerfallConcreteGuildService.Quests, out var guild, out _, out _) ? guild : null,
                 definitions,

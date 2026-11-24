@@ -41,7 +41,7 @@ internal sealed record DaggerfallLegalChoiceResult(DaggerfallLegalStep Step, Dag
 /// <param name="activeInputs">The active profile's inputs, whose portals bring the watch into an interior.</param>
 /// <param name="returnProfile">The exterior the player entered the current interior from, if any.</param>
 /// <param name="spawn">Admits an actor of this definition at this pose through the roster.</param>
-/// <param name="retireCivilian">Retires a civilian whose guard the watch replaces.</param>
+/// <param name="promoteGuard">Promotes an existing calm guard actor into an active city watchman in place on the same durable identity.</param>
 internal sealed class DaggerfallLaw(
     DaggerfallCrimeState crime,
     DaggerfallSocialState social,
@@ -65,7 +65,7 @@ internal sealed class DaggerfallLaw(
     Func<DaggerfallWorldProfileKey?> returnProfile,
     Func<string, ActorPose, long> spawn,
     Action<long> makeHostile,
-    Action<long> retireCivilian)
+    Func<long, long?> promoteGuard)
 {
     /// <summary>The case in front of the player: the one holding the legal modal, else the active region's.</summary>
     internal DaggerfallLegalResponseSave? Current => crime.LegalResponses.FirstOrDefault(response => response.Modal)
@@ -78,6 +78,18 @@ internal sealed class DaggerfallLaw(
     internal void Admit(DaggerfallCrimeIncidentSave incident)
     {
         if (!incident.Reported && incident.Witnesses.Query != DaggerfallCrimeWitnessQuery.CompletedWithWitnesses) return;
+        foreach (long witnessId in incident.Witnesses.WitnessActorIds)
+        {
+            if (actors.TryGet(witnessId, out ActorState? witnessActor)
+                && !witnessActor.IsDefeated
+                && witnessActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+                overlay.RecordWitnessedCrime(incident.OperationId);
+        }
+        if (incident.AffectedActorOrOwnerId is long affectedId
+            && actors.TryGet(affectedId, out ActorState? affectedActor)
+            && !affectedActor.IsDefeated
+            && affectedActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? affectedOverlay))
+            affectedOverlay.RecordWitnessedCrime(incident.OperationId);
         int loss = DaggerfallCrimePolicy.RegionalReputationLoss(incident.Crime);
         if (incident.Crime != DaggerfallCrimeKind.CriminalConspiracy) ChangeReputation(incident.Region, -loss);
         var response = crime.Response(incident.Region);
@@ -95,10 +107,25 @@ internal sealed class DaggerfallLaw(
 
     private void Start(DaggerfallCrimeIncidentSave incident, string[] charges)
     {
-        bool guardSaw = incident.Witnesses.WitnessActorIds.Any(id => crimes.IsCityWatch(id)
-            || npcs.All.Any(npc => npc.DurableId == id && npc.Role == "guard"));
+        bool guardSaw = incident.Witnesses.WitnessActorIds.Any(IsWatchOrGuardCandidate)
+            || (incident.AffectedActorOrOwnerId is long affectedGuard && IsWatchOrGuardCandidate(affectedGuard));
         crime.SetResponse(new(incident.OperationId, incident.Region, charges, DaggerfallLegalPhase.Pursuit,
             DaggerfallWorldProfileKeySave.Capture(activeProfile()), guardSaw ? 0 : crimes.Roll(incident.OperationId, "guard-delay", tuning.MinimumResponseSeconds, tuning.MaximumResponseSeconds), []));
+    }
+
+    private bool IsWatchOrGuardCandidate(long actorId) =>
+        crimes.IsCityWatch(actorId) || IsCalmTownGuard(actorId);
+
+    private bool IsCalmTownGuard(long actorId)
+    {
+        if (!actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated) return false;
+        if (crimes.IsCityWatch(actorId)) return false;
+        if (!npcs.IsGameplayActive(actorId)) return false;
+        if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsProtected) return false;
+        if (actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction)
+            && string.Equals(faction.CreatureFactionId, "city-watch", StringComparison.Ordinal))
+            return true;
+        return npcs.TryGet(actorId, out DaggerfallNpc? npc) && string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ChangeReputation(int region, int change)
@@ -163,16 +190,34 @@ internal sealed class DaggerfallLaw(
             if (response.ResponseDelaySeconds > 0) return null;
         }
         var live = response.Guards.Where(id => actors.TryGet(id, out var actor) && !actor.IsDefeated).ToList();
-        // A wandering guard is initially a social civilian. As in PlayerEntity's guard
-        // conversion, retire that representation and admit a real watch actor at its pose.
-        // Its new durable combat identity then remains in this case and the site delta.
-        foreach (var npc in npcs.All.Where(npc => npc.Kind == DaggerfallNpcKind.Civilian
-            && npc.Role == "guard" && npcs.IsGameplayActive(npc.DurableId)).ToArray())
+        // Promote calm town guards in place ONLY if they witnessed/were targeted by a pending charge or
+        // can actually see the wanted player now; never conscript a distant guard across town.
+        HashSet<string> pendingChargeSet = new(response.Charges, StringComparer.Ordinal);
+        HashSet<long> involvedGuards = [];
+        foreach (DaggerfallCrimeIncidentSave incident in crime.Incidents)
         {
-            if (!actors.TryGet(npc.DurableId, out var actor) || actor.IsDefeated) continue;
-            long guard = AdmitCityWatch(actor.Pose);
-            retireCivilian(npc.DurableId);
-            live.Add(guard);
+            if (!pendingChargeSet.Contains(incident.OperationId)) continue;
+            foreach (long witnessId in incident.Witnesses.WitnessActorIds)
+                if (IsCalmTownGuard(witnessId)) involvedGuards.Add(witnessId);
+            if (incident.AffectedActorOrOwnerId is long affected && IsCalmTownGuard(affected))
+                involvedGuards.Add(affected);
+        }
+        foreach (ActorState candidate in actors.All)
+        {
+            if (!IsCalmTownGuard(candidate.DurableId)) continue;
+            if (candidate.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)
+                && overlay.WitnessedCrimes.Any(pendingChargeSet.Contains))
+                involvedGuards.Add(candidate.DurableId);
+        }
+        DaggerfallCrimeWitnessEvidence guardSight = crimes.QueryWitnesses(actor => IsCalmTownGuard(actor.DurableId));
+        if (guardSight.Query == DaggerfallCrimeWitnessQuery.CompletedWithWitnesses)
+            foreach (long sightedGuard in guardSight.WitnessActorIds)
+                if (IsCalmTownGuard(sightedGuard)) involvedGuards.Add(sightedGuard);
+
+        foreach (long guardId in involvedGuards.Order())
+        {
+            if (PromoteCityWatch(guardId) is long promoted && !live.Contains(promoted))
+                live.Add(promoted);
         }
         // Nearby real watchmen join the response; dynamic arrivals use the same roster and safe
         // spatial placement as summoned actors. Detached guard identities remain in their site delta.
@@ -204,7 +249,15 @@ internal sealed class DaggerfallLaw(
         return null;
     }
 
-    /// <summary>Admits a city watchman at this pose, hostile to the player.</summary>
+    /// <summary>Promotes an existing town guard actor into an active hostile city watchman in place on the same durable ID.</summary>
+    internal long? PromoteCityWatch(long actorId)
+    {
+        if (promoteGuard(actorId) is not long promoted) return null;
+        makeHostile(promoted);
+        return promoted;
+    }
+
+    /// <summary>Admits a newly minted city watchman reinforcement at this pose, hostile to the player.</summary>
     internal long AdmitCityWatch(ActorPose pose)
     {
         var watch = definitions.Actors.Values.Single(definition => definition.MobileId == 146);

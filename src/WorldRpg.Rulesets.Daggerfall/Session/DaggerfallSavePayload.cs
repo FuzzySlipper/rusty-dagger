@@ -247,6 +247,7 @@ internal sealed record DaggerfallSavePayload(
             CorruptionOrigin = entry.Combat?.CorruptionOrigin,
             Gender = entry.Origin.Gender,
             TeamOverride = entry.Combat?.TeamOverride,
+            PromotedArchetype = entry.Combat?.PromotedArchetype,
             EncounterBandId = entry.Combat?.EncounterBandId,
             EncounterGeneration = entry.Combat?.EncounterGeneration,
         };
@@ -682,9 +683,13 @@ internal sealed record DaggerfallSavePayload(
             if (!actorOwned && npc.X is null)
                 throw new ArgumentException($"Saved NPC {npc.DurableId} is placed with neither a saved actor nor a pose.");
         }
+        HashSet<long> promotedNpcIds = [.. ActorLedger
+            .Where(e => e.Combat?.PromotedArchetype is not null)
+            .Select(e => e.DurableId)];
         foreach (var npc in savedNpcs.Values)
         {
             bool aliasesDynamic = dynamicDefinitions.TryGetValue(npc.DurableId, out var definition)
+                && !promotedNpcIds.Contains(npc.DurableId)
                 && !((npc.Kind == (int)DaggerfallNpcKind.Civilian && definition == DaggerfallActorKinds.Civilian)
                     || (npc.Kind is (int)DaggerfallNpcKind.Static or (int)DaggerfallNpcKind.Questor && definition == DaggerfallActorKinds.StaticNpc));
             if (npc.DurableId == DaggerfallActorIdentity.PlayerEntityId || savedActorIds.Contains(npc.DurableId)
@@ -857,6 +862,7 @@ internal sealed record DaggerfallSavePayload(
             foreach (long guard in response.Guards)
                 if (guard == DaggerfallActorIdentity.PlayerEntityId ||
                     !allActors.Contains(guard) && !inactiveAuthoredActorIds.Contains(guard) && !inactiveDynamicActorIds.Contains(guard)
+                    && !inactiveDeterministicIds.Contains(guard)
                     && savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)guard))) != DurableIdentityClassification.Removed)
                     throw new ArgumentException($"Saved legal response '{response.Id}' names guard {guard} without an actor or removed identity.");
         }

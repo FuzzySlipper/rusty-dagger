@@ -38,16 +38,26 @@ internal sealed partial class DaggerfallQuestInstances
 }
 
 /// <summary>
-/// The city guards a quest calls: how many come and from where (watchmen converted from civilians who saw the player, or
-/// arrivals after the report travels), each admitted to the watch and joined to a legal response already under way.
+/// The city guards a quest calls: how many come and from where (town guards promoted in place when they witness the
+/// player, or newly minted watch reinforcements after the report travels), each admitted to the watch and joined to a
+/// legal response already under way.
 /// </summary>
-/// <remarks>Where the player is, the active profile and its interior change with the site, so they are read as they are
-/// asked; a converted guard civilian is retired through Actors' civilians, handed in.</remarks>
 internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState playerControl, DaggerfallCrimeState crime,
     IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, DaggerfallWorldTime time, DaggerfallCrimes crimes, DaggerfallLaw law,
     DaggerfallQuestSpawningTuning spawning, DaggerfallLawTuning lawTuning, Func<DaggerfallQuestLocationRead> questLocation,
-    Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteProfile> profile, Action<long> retireCivilian)
+    Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteProfile> profile)
 {
+    private bool IsTownGuard(long actorId) =>
+        (actors.TryGet(actorId, out ActorState? actor)
+            && actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction)
+            && string.Equals(faction.CreatureFactionId, "city-watch", StringComparison.Ordinal))
+        || (npcs.TryGet(actorId, out DaggerfallNpc? npc) && string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase));
+
+    private bool IsCalmCivilianObserver(ActorState actor) =>
+        !actor.IsDefeated
+        && npcs.IsGameplayActive(actor.DurableId)
+        && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
+        && harm.IsLawProtectedCivilian;
     internal DaggerfallQuestGuardSpawnState? Spawn(string operation, bool immediate, double elapsedSeconds,
         DaggerfallQuestGuardSpawnState? state)
     {
@@ -78,18 +88,20 @@ internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcReg
             }
             else
             {
-                var candidates = npcs.All.Where(npc => npc.Kind == DaggerfallNpcKind.Civilian && npcs.IsGameplayActive(npc.DurableId)
-                    && actors.TryGet(npc.DurableId, out var actor) && !actor.IsDefeated
-                    && Vector3.Distance(actor.Position.ToVector(), player.ToVector()) <= spawning.GuardWitnessDistance).ToDictionary(npc => npc.DurableId);
+                var candidates = actors.All
+                    .Where(actor => IsCalmCivilianObserver(actor)
+                        && Vector3.Distance(actor.Position.ToVector(), player.ToVector()) <= spawning.GuardWitnessDistance)
+                    .ToDictionary(actor => actor.DurableId);
                 long[] convert;
                 if (immediate)
                 {
                     Vector3 forward = ActorHeading.Forward(playerControl.YawRadians);
                     float behind = MathF.Cos(spawning.GuardConversionAngleDegrees * MathF.PI / 180f);
-                    convert = candidates.Values.Where(npc => npc.Role == "guard" ||
-                        Vector3.Dot(Vector3.Normalize(actors.Get(npc.DurableId).Position.ToVector() - player.ToVector()), forward) <= behind
-                            && crimes.Roll(operation, "quest-guard-convert:" + npc.DurableId, 1, 100) <= spawning.GuardConversionChance)
-                        .OrderByDescending(npc => npc.Role == "guard").ThenBy(npc => npc.DurableId).Select(npc => npc.DurableId).ToArray();
+                    convert = candidates.Values.Where(actor => IsTownGuard(actor.DurableId) ||
+                        Vector3.Dot(Vector3.Normalize(actor.Position.ToVector() - player.ToVector()), forward) <= behind
+                            && crimes.Roll(operation, "quest-guard-convert:" + actor.DurableId, 1, 100) <= spawning.GuardConversionChance)
+                        .OrderByDescending(actor => IsTownGuard(actor.DurableId)).ThenBy(actor => actor.DurableId)
+                        .Select(actor => actor.DurableId).ToArray();
                     state = Result(DaggerfallQuestGuardSpawnOutcome.Pending, convert.Length == 0 ? count : convert.Length, candidates: convert);
                 }
                 else
@@ -97,7 +109,7 @@ internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcReg
                     var witnesses = crimes.QueryWitnesses(actor => candidates.ContainsKey(actor.DurableId),
                         spawning.GuardWitnessDistance, Math.Cos(spawning.GuardWitnessAngleDegrees * Math.PI / 180));
                     if (witnesses.Query != DaggerfallCrimeWitnessQuery.CompletedWithWitnesses) return Result(DaggerfallQuestGuardSpawnOutcome.NoWitness);
-                    convert = witnesses.WitnessActorIds.Where(id => candidates[id].Role == "guard").ToArray();
+                    convert = witnesses.WitnessActorIds.Where(IsTownGuard).ToArray();
                     state = Result(DaggerfallQuestGuardSpawnOutcome.Pending, convert.Length == 0 ? count : convert.Length,
                         convert.Length == 0 ? crimes.Roll(operation, "quest-guard-delay", lawTuning.MinimumResponseSeconds, lawTuning.MaximumResponseSeconds) : 0, convert);
                     if (state.DelaySeconds > 0) return state;
@@ -114,16 +126,30 @@ internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcReg
         }
         if (state.Remaining == 0) return state with { Outcome = DaggerfallQuestGuardSpawnOutcome.Complete };
         long? candidate = state.CandidateNpcs.Length > 0 ? state.CandidateNpcs[0] : null;
-        ActorPose pose;
+        long guard;
         if (candidate is { } npcId)
         {
             if (!npcs.IsGameplayActive(npcId) || !actors.TryGet(npcId, out var actor) || actor.IsDefeated)
                 return state with { CandidateNpcs = state.CandidateNpcs[1..], Remaining = state.Remaining - 1 };
-            pose = actor.Pose;
+            if (IsTownGuard(npcId))
+            {
+                if (law.PromoteCityWatch(npcId) is not long promoted)
+                    return state with { CandidateNpcs = state.CandidateNpcs[1..], Remaining = state.Remaining - 1 };
+                guard = promoted;
+            }
+            else
+            {
+                guard = law.AdmitCityWatch(actor.Pose);
+            }
         }
-        else if (!law.TryGuardArrivalPose(operation + "/quest/" + state.SpawnedCount, player, out pose)) return state;
-        long guard = law.AdmitCityWatch(pose);
-        if (candidate is { } converted && npcs.Require(converted).Role == "guard") retireCivilian(converted);
+        else if (law.TryGuardArrivalPose(operation + "/quest/" + state.SpawnedCount, player, out ActorPose pose))
+        {
+            guard = law.AdmitCityWatch(pose);
+        }
+        else
+        {
+            return state;
+        }
         // The law owner receives actual watchmen only when a current case already exists.
         // Spawning never invents an accusation or a second legal response.
         if (law.Current is { Modal: false } response && response.Profile.Require() == activeProfile())

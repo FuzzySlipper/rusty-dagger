@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Loot;
@@ -152,6 +153,98 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
+    /// Promotes a live town guard NPC in place to an active city-watch combatant on the same durable entity:
+    /// upgrades stats to levelled watch class stats, updates capability policies, faction, overlay archetype,
+    /// Tier-2 render spec (<see cref="ActorVisualKind.DirectionalMobile"/> 146), appearance, and watch gear.
+    /// </summary>
+    internal long? PromoteToCityWatch(long actorId, bool grantEquipment = true, DaggerfallSiteAppearance? siteAppearance = null)
+    {
+        if (!_actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated)
+            return null;
+        return ApplyCityWatchPromotion(actor, grantEquipment, swapAppearance: true, _profile(), siteAppearance);
+    }
+
+    private long ApplyCityWatchPromotion(ActorState actor, bool grantEquipment, bool swapAppearance,
+        DaggerfallSiteProfile? siteProfile = null, DaggerfallSiteAppearance? siteAppearance = null)
+    {
+        long actorId = actor.DurableId;
+        if (_definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? currentDef)
+            && currentDef.MobileId == 146
+            && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? existingHarm)
+            && existingHarm.IsCombatant)
+        {
+            return actorId;
+        }
+
+        DaggerfallActorDefinition baseWatch = _definitions.Actors.Values.Single(value => value.MobileId == 146);
+        int baseLevel = baseWatch.Level ?? _actors.Player.Progression.Level;
+        int spawnLevel = checked(baseLevel + (int)_random.DrawKeyed(new KeyedRngRequest(
+            DaggerfallRandomKey.Seed, CombatRandomKey.EnemyScope,
+            $"class-guard-level:{actorId}", 3, 6)).Value);
+        DaggerfallActorDefinition watchDef = DaggerfallEncounterActors.AtLevel(baseWatch, _definitions.Vocabulary, spawnLevel);
+
+        StatsComponent watchStats = _mechanics.CreateStats(watchDef, SpawnVitals(watchDef, spawnLevel, actorId));
+        actor.Actor.Replace(watchStats);
+        if (actor.Actor.Has<DaggerfallRestoredStats>())
+            actor.Actor.Remove<DaggerfallRestoredStats>();
+
+        string npcGender = _npcs.TryGet(actorId, out DaggerfallNpc? npc) ? npc.Appearance.Gender : "unspecified";
+        DaggerfallSiteProfile activeProfile = siteProfile ?? _profile();
+        NormalizedActorSprite? mobileSprite = activeProfile.MobileSprites.GetValueOrDefault(146);
+        string gender = mobileSprite is not null
+            ? DaggerfallActorGender.Resolve(_random, actorId, npcGender, mobileSprite)
+            : string.Equals(npcGender, "female", StringComparison.OrdinalIgnoreCase) ? "female" : "male";
+        if (actor.Actor.Has<DaggerfallActorGender>())
+            actor.Actor.Replace(new DaggerfallActorGender(gender));
+        else
+            actor.Actor.Add(new DaggerfallActorGender(gender));
+
+        _definitionsByActor[actorId] = watchDef;
+        if (_dynamicActors.ContainsKey(actorId))
+            _dynamicActors[actorId] = watchDef.Id;
+
+        actor.Actor.Get<ActorHarmPolicy>().Set(ArchetypeProfile.Guard.DefaultHarm);
+        actor.Actor.Get<ActorInteractionPolicy>().Set(ArchetypeProfile.Guard.DefaultInteraction);
+        actor.Actor.Get<FactionComponent>().SetCreatureFaction("city-watch");
+        actor.Actor.Get<ActorOverlayComponent>().ArchetypeId = ArchetypeProfile.Guard.Id;
+        actor.Actor.Get<ActorRenderComponent>().SetVisual(ActorVisualSpec.DirectionalMobile(146, gender));
+        if (actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander))
+            wander.MarkUnloaded();
+
+        if (swapAppearance && mobileSprite is not null)
+        {
+            DaggerfallSiteAppearance appearance = siteAppearance ?? Appearance;
+            appearance.RetireActor(actorId);
+            appearance.AddActor(actorId, mobileSprite.ForGender(gender), 146);
+        }
+
+        if (grantEquipment && _actorInventories.EquipmentFor(actorId).Read().Assignments.Count == 0)
+        {
+            GrantSpawnLoadout(actor, watchDef);
+            GrantStartingEquipment(actor, watchDef);
+        }
+
+        return actorId;
+    }
+
+    private bool TryAdmitDirectionalMobileAppearance(DaggerfallSiteProfile profile, DaggerfallSiteAppearance appearance, long actorId)
+    {
+        if (!_actors.TryGet(actorId, out ActorState? actor)
+            || !actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
+            || render.Spec.Kind != ActorVisualKind.DirectionalMobile
+            || render.Spec.MobileId is not int mobileId)
+            return false;
+        if (profile.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
+        {
+            string gender = actor.Actor.TryGet<DaggerfallActorGender>(out DaggerfallActorGender? resolvedGender)
+                ? resolvedGender.Value
+                : render.Spec.Gender ?? "unspecified";
+            appearance.AddActor(actorId, sprite.ForGender(gender), mobileId);
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Registers one actor from a published definition beyond the authored placements, with the
     /// same Mechanics binding an authored actor is constructed with: catalog stats, pursuit
     /// memory, managed inventory and equipment, definition loadout, and floor grounding.
@@ -186,14 +279,18 @@ internal sealed class DaggerfallActorRoster
             DaggerfallActorFactory.RegisterActorInventory(actor, _inventoryStore);
             GrantSpawnLoadout(actor, spawnedDefinition);
             GrantStartingEquipment(actor, spawnedDefinition);
+            string? resolvedGender = null;
             if (spawnedDefinition.MobileId is int mobileId)
             {
                 if (!_profile().MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Spawned actor '{spawnedDefinition.Id.Value}' has no admitted mobile {mobileId} presentation.");
-                string gender = DaggerfallActorGender.Resolve(_random, durableId, "unspecified", sprite);
-                actor.Actor.Add(new DaggerfallActorGender(gender));
-                Appearance.AddActor(durableId, sprite.ForGender(gender), definition.MobileId);
+                resolvedGender = DaggerfallActorGender.Resolve(_random, durableId, "unspecified", sprite);
+                actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
+                Appearance.AddActor(durableId, sprite.ForGender(resolvedGender), definition.MobileId);
             }
+            actor.Actor.Add(new ActorOriginComponent(
+                ActorOrigin.MintedActor(spawnedDefinition.Id.Value, spawnLevel, gender: resolvedGender),
+                pose.Position, pose.HeadingYawRadians));
             _definitionsByActor.Add(durableId, spawnedDefinition);
             _dynamicActors.Add(durableId, spawnedDefinition.Id);
             registered = true;
@@ -312,6 +409,9 @@ internal sealed class DaggerfallActorRoster
 
         DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npcId, npc.Kind != DaggerfallNpcKind.Civilian);
         ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, pose, _definitions);
+        actor.Actor.Add(new ActorOriginComponent(
+            ActorOrigin.MintedActor(definition.Id.Value, gender: npc.Appearance.Gender),
+            pose.Position, pose.HeadingYawRadians));
         try
         {
             if (!_definitionsByActor.TryAdd(npcId, definition))
@@ -467,10 +567,12 @@ internal sealed class DaggerfallActorRoster
                         if (!_actors.TryGet(id, out ActorState? actor))
                         {
                             actor = MaterializeDeterministicNpc(npc, ActorOrigin.Seeded(profile.ProfileKey, placement.Id),
-                                placement.Position, translation, _actorLedger.TryGet(id, out ActorLedgerEntry? delta) ? delta : null);
+                                placement.Position, translation, _actorLedger.TryGet(id, out ActorLedgerEntry? delta) ? delta : null,
+                                siteProfile: profile);
                             created = true;
                         }
-                        appearance.AdmitActor(id, placement.Sprite);
+                        if (!TryAdmitDirectionalMobileAppearance(profile, appearance, id))
+                            appearance.AdmitActor(id, placement.Sprite);
                         _npcs.Bind(id, profile.ProfileKey);
                         batch.Add(id);
                     }
@@ -581,7 +683,8 @@ internal sealed class DaggerfallActorRoster
                     ? null
                     : _definitions.Factions.Factions.GetValueOrDefault(placement.FactionId);
                 (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
-                    _definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId, "civilian");
+                    _definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId,
+                    placement.IsGuard ? "guard" : "civilian");
                 string race = _definitions.Catalogs.Races.FirstOrDefault()?.Id ?? "breton";
                 DaggerfallNpcAppearance look = new(race, (placement.Flags & 0x20) != 0 ? "Female" : "Male",
                     placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
@@ -590,8 +693,9 @@ internal sealed class DaggerfallActorRoster
             }
             if (npc.Presence == DaggerfallNpcPresence.Removed) continue;
             ActorLedgerEntry? delta = _actorLedger.TryGet(id, out ActorLedgerEntry? savedDelta) ? savedDelta : null;
-            _ = MaterializeDeterministicNpc(npc, ActorOrigin.Seeded(profile.ProfileKey, placement.Id), placement.Position, Vector3.Zero, delta);
+            _ = MaterializeDeterministicNpc(npc, ActorOrigin.Seeded(profile.ProfileKey, placement.Id), placement.Position, Vector3.Zero, delta, siteProfile: profile);
             if (npc.Presence == DaggerfallNpcPresence.Active
+                && !TryAdmitDirectionalMobileAppearance(profile, appearance, id)
                 && profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
             {
                 appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
@@ -643,8 +747,9 @@ internal sealed class DaggerfallActorRoster
                 _ => true,
             };
             WorldPoint basePose = ResolveBaselineProfilePose(profile, entry, npc);
-            _ = MaterializeDeterministicNpc(npc, entry.Origin, basePose, translation, entry, isRelocated: !atHomeSite);
+            _ = MaterializeDeterministicNpc(npc, entry.Origin, basePose, translation, entry, isRelocated: !atHomeSite, siteProfile: profile);
             if (npc.Presence == DaggerfallNpcPresence.Active
+                && !TryAdmitDirectionalMobileAppearance(profile, appearance, entry.DurableId)
                 && profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
             {
                 appearance.AdmitActor(entry.DurableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
@@ -673,7 +778,7 @@ internal sealed class DaggerfallActorRoster
     }
 
     private ActorState MaterializeDeterministicNpc(DaggerfallNpc npc, ActorOrigin origin, WorldPoint baselineProfilePose,
-        Vector3 translation, ActorLedgerEntry? delta, bool isRelocated = false)
+        Vector3 translation, ActorLedgerEntry? delta, bool isRelocated = false, DaggerfallSiteProfile? siteProfile = null)
     {
         DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npc.DurableId, npc.Kind != DaggerfallNpcKind.Civilian);
         WorldPoint worldPose = DaggerfallSceneOrigin.Shift(baselineProfilePose, translation);
@@ -684,7 +789,7 @@ internal sealed class DaggerfallActorRoster
         {
             if (!_definitionsByActor.TryAdd(npc.DurableId, definition))
                 throw new InvalidOperationException($"Deterministic NPC {npc.DurableId} already has a runtime actor definition.");
-            if (delta is not null) ApplySparseLedgerDelta(actor, npc, delta, translation);
+            if (delta is not null) ApplySparseLedgerDelta(actor, npc, delta, translation, siteProfile);
             return actor;
         }
         catch
@@ -695,8 +800,11 @@ internal sealed class DaggerfallActorRoster
         }
     }
 
-    private void ApplySparseLedgerDelta(ActorState actor, DaggerfallNpc npc, ActorLedgerEntry delta, Vector3 translation)
+    private void ApplySparseLedgerDelta(ActorState actor, DaggerfallNpc npc, ActorLedgerEntry delta, Vector3 translation,
+        DaggerfallSiteProfile? siteProfile = null)
     {
+        if (string.Equals(delta.Combat?.PromotedArchetype, ArchetypeProfile.Guard.Id, StringComparison.Ordinal))
+            _ = ApplyCityWatchPromotion(actor, grantEquipment: false, swapAppearance: false, siteProfile);
         if (delta.Vitals is { } vitals)
             DaggerfallActorFactory.RestoreStats(actor.Actor, vitals.Stats);
         if (delta.Pose is { } pose)
@@ -757,6 +865,9 @@ internal sealed class DaggerfallActorRoster
                 overlay.IsMuted = social.Muted;
                 overlay.EscortPortraitMedia = social.EscortPortrait;
                 overlay.EscortOrder = social.EscortOrder;
+                if (social.WitnessedCrimes is { Length: > 0 })
+                    foreach (string operationId in social.WitnessedCrimes)
+                        overlay.RecordWitnessedCrime(operationId);
             }
         }
     }
