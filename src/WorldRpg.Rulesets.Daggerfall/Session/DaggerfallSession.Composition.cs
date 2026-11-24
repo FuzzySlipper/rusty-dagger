@@ -890,7 +890,13 @@ internal sealed partial class DaggerfallSession
                 (npc, origin, baseline, pose, frameOffset) => _roster.MaterializeDeterministicCivilian(npc, origin, baseline, pose, frameOffset),
                 id => State.Quests.IsEscortWithParty(id)
                     || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry)
-                        && entry?.Location?.Kind is ActorLocationKind.WithParty or ActorLocationKind.OffStage or ActorLocationKind.Removed));
+                        && entry?.Location?.Kind is ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.OffStage or ActorLocationKind.Removed));
+            OverlandParties = new DaggerfallOverlandPartyCoordinator(
+                Expedition, State.ActorLedger, actors, State.Npcs, _roster,
+                () => _sites.Projection.Inputs, () => _appearance,
+                point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector())),
+                () => _exterior.ProfileToLocal(default).ToVector(),
+                DaggerfallSessionPersistence.ToSocialDiff);
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),
@@ -903,49 +909,11 @@ internal sealed partial class DaggerfallSession
             {
                 if (media is not null)
                 {
-                    if (State.Npcs.All.FirstOrDefault(n => n.DurableId == actorId) is { } escortNpc)
-                    {
-                        DaggerfallWorldProfileKey? homeProfile = escortNpc.Profile;
-                        ActorPoseOverride? rememberedPose = null;
-                        if (State.Actors.TryGet(actorId, out ActorState? liveActor))
-                        {
-                            homeProfile ??= _activeProfileKey;
-                            Vector3 profilePos = _exterior.LocalToProfile(liveActor.Position.ToVector());
-                            rememberedPose = new ActorPoseOverride(profilePos.X, profilePos.Y, profilePos.Z, liveActor.HeadingYawRadians);
-                        }
-                        else if (escortNpc.X is float nx && escortNpc.Y is float ny && escortNpc.Z is float nz)
-                        {
-                            rememberedPose = new ActorPoseOverride(nx, ny, nz, 0f);
-                        }
-
-                        ActorOrigin? liveOrigin = liveActor is not null && liveActor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
-                            ? originComp.Origin
-                            : null;
-                        ActorLedgerEntry current = State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? existing) && existing is not null
-                            ? existing
-                            : new ActorLedgerEntry(
-                                actorId,
-                                liveOrigin ?? new ActorOrigin(ActorOriginKind.Minted,
-                                    SiteProfile: homeProfile is { } hp ? DaggerfallWorldProfileKeySave.Capture(hp) : null,
-                                    DefinitionId: escortNpc.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc),
-                                Social: DaggerfallSessionPersistence.ToSocialDiff(escortNpc));
-                        ActorOrigin updatedOrigin = current.Origin.SiteProfile is null && homeProfile is { } hp2
-                            ? current.Origin with { SiteProfile = DaggerfallWorldProfileKeySave.Capture(hp2) }
-                            : current.Origin;
-                        State.ActorLedger.Upsert(current with
-                        {
-                            Origin = updatedOrigin,
-                            Location = ActorLocationOverride.WithParty(ActorPartyRole.Escort),
-                            Pose = rememberedPose ?? current.Pose,
-                            Social = (current.Social ?? DaggerfallSessionPersistence.ToSocialDiff(escortNpc)) with
-                            {
-                                EscortPortrait = media,
-                                EscortOrder = order,
-                            },
-                        });
-                    }
-                    // HUD-only escorts travel WithParty and leave EntityStore so QueryNearby never sees them.
-                    _roster.UnloadActor(actorId);
+                    // HUD-only escorts travel WithParty through the unified overland party coordinator and leave EntityStore.
+                    if (State.Npcs.TryGet(actorId, out _) || State.ActorLedger.TryGet(actorId, out _))
+                        OverlandParties.JoinParty(actorId, ActorPartyRole.Escort, media, explicitOrder: order);
+                    else
+                        _roster.UnloadActor(actorId);
                 }
                 else
                 {
@@ -1262,7 +1230,8 @@ internal sealed partial class DaggerfallSession
                 RoomRental, travelPanel, _site, EffectItemName, Cinematics, LocalMap, Law, CreateItemChoice, TeleportChoice, DispelChoice,
                 IdentifyChoice, Spellbook, Detectors, _playerTime, _loading, _tutorial, Radial, Activation, _input, () => DrawnArt,
                 () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
-                Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone), InputReadout);
+                Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone), InputReadout,
+                () => OverlandParties.PartyPortraits());
             DaggerfallHeldWorkbench heldWorkbench = new(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
             {
                 if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
@@ -1323,7 +1292,7 @@ internal sealed partial class DaggerfallSession
                 InputReadout,
                 heldWorkbench,
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
-                new DaggerfallExpeditionBandReadout(Expedition),
+                new DaggerfallExpeditionBandReadout(Expedition, OverlandParties, State.Actors, State.Npcs),
                 new DaggerfallOverlandViewCommands(_overland),
             ];                                                                                     // Developer
             if (restore is not null)

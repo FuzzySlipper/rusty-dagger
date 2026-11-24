@@ -464,6 +464,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId);   // Actors
     }
 
+    void IDaggerfallExpeditionSurroundings.MeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) =>
+        OverlandParties.OnMeetPersistentBand(band, pixel, staging);
+
+    void IDaggerfallExpeditionSurroundings.PersistentBandArrived(DaggerfallPersistentOverlandBand band) =>
+        _ = OverlandParties.OnPersistentBandArrived(band);
+
     bool IDaggerfallExpeditionSurroundings.EncounterArrives(DaggerfallTravelMapPixel pixel, bool atLocation, long minute) =>
         WorldEncounters.Overland(minute, _definitions.Grids.ClimateAtWorldPixel(pixel.X, pixel.Y).Value, atLocation) is { } request
         && WorldEncounters.Queue(request, DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId)
@@ -804,7 +810,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallMapPosition MapPosition { get; } = null!;
 
     /// <summary>The expedition map, the one way to travel overland: the party on the atlas, in running time.</summary>
-    internal DaggerfallExpedition Expedition { get; } = null!;
+    internal DaggerfallExpedition Expedition { get; }
+    internal DaggerfallOverlandPartyCoordinator OverlandParties { get; } = null!;
 
     /// <summary>The player's crimes: pickpocketing, witnesses, and what an attack on a civilian or a guard charges.</summary>
     internal DaggerfallCrimes Crimes { get; } = null!;

@@ -1029,6 +1029,8 @@ internal sealed partial class DaggerfallSession
         string? held = _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior ? "Leave the building or dungeon before travelling."
             : _encounters.HasPending(_activeProfileKey.LogicalId) ? "Something approaches. Move or turn to let the encounter arrive before travelling."
             : _senses.EnemyNearby() ? "Nearby enemies prevent travel." : null;                  // Actors
+        if (held is null)
+            _ = OverlandParties.BoardStagedPartyMembers();                                        // Travel, Actors
         Expedition.Begin(MapPosition.Position(), State.Transport.OnShip, held);                   // Travel
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
         _hud.RequestTravelPlaces();                                                               // UiProjection
@@ -1086,6 +1088,7 @@ internal sealed partial class DaggerfallSession
                 _sites.ClearReturnDestination();                                                  // Interiors
             }
             Expedition.Close();                                                                   // Travel
+            OverlandParties.OnEnterSceneFromExpedition(exterior!, _exterior.ProfileToLocal(anchor.Position), anchor.YawRadians);   // Travel, Actors
             _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                    // Character, Combat
             RequestPanel(DaggerfallPanel.Resume);                                                 // UiProjection
             Presentation.SetOutcome(entry.Location is null ? "You set out on foot." : $"You arrive at {place}.");   // UiProjection

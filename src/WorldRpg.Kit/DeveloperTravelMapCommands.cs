@@ -15,6 +15,9 @@ public interface IDeveloperTravelMapCommands : IDebugCommandModule
 
     [DebugCommand("map.stage-band", Description = "Developer: stage a band on the open travel map DISTANCE map pixels (0.3 to 10) off at BEARING degrees clockwise from north, camped (camp) or wandering (wander), its foe from the tables for that pixel and hour.")]
     DebugCommandResult StageBand(double distance, double bearing, string staging);
+
+    [DebugCommand("map.dispatch-persistent", Description = "Developer: dispatch a live scene person onto a persistent OnOverlandBand travelling party toward the pinned destination (or DISTANCE pixels off) so it survives map close/reopen and save/load.")]
+    DebugCommandResult DispatchPersistentBand(string bandId, double distance, double bearing);
 }
 
 /// <summary>

@@ -52,7 +52,8 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
     DaggerfallTeleport teleport, DaggerfallDispel dispel, DaggerfallIdentify identify, DaggerfallSpellbookPanel spellbook,
     DaggerfallDetectors detectors, DaggerfallPlayerTime playerTime, LoadingScreen? loading, DaggerfallTutorial tutorial,
     DaggerfallRadialCommands radial, DaggerfallActivation aim, PlayerInputSystem playerInput, Func<DaggerfallArtReplacements?> drawnArt,
-    Func<bool> weaponDrawn, Func<bool> holdsWorldOpen, float deadzone, DaggerfallInputReadout readout)
+    Func<bool> weaponDrawn, Func<bool> holdsWorldOpen, float deadzone, DaggerfallInputReadout readout,
+    Func<IReadOnlyList<DaggerfallPartyPortrait>>? partyPortraits = null)
 {
     /// <summary>The device the player last pressed something on ("keyboard" or "controller"), so the HUD names its bindings for it.</summary>
     internal string InputDevice { get; private set; } = "keyboard";
@@ -146,8 +147,32 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
         return new(action, string.IsNullOrWhiteSpace(target.Label) ? DaggerfallHudText.TargetName(target.Kind) : target.Label);
     }
 
-    /// <summary>An escort's portrait in the art set drawn: a generic escort wears a race's head, which has refreshed art.</summary>
-    private DaggerfallQuestPresentation DrawnEscorts(DaggerfallQuestPresentation escorts) => drawnArt() is { } art
-        ? escorts with { EscortFaces = [.. escorts.EscortFaces.Select(face => face with { MediaId = art.Drawn(face.MediaId) })] }
-        : escorts;
+    /// <summary>An escort's portrait in the art set drawn: merges ledger <c>WithParty</c> portraits (drivers/companions) alongside quest escorts.</summary>
+    private DaggerfallQuestPresentation DrawnEscorts(DaggerfallQuestPresentation escorts)
+    {
+        IReadOnlyList<DaggerfallQuestEscortFace> faces = escorts.EscortFaces;
+        if (partyPortraits is not null)
+        {
+            IReadOnlyList<DaggerfallPartyPortrait> extra = partyPortraits();
+            if (extra.Count > 0)
+            {
+                List<DaggerfallQuestEscortFace> merged = [.. faces];
+                HashSet<string> existingMedia = [.. merged.Select(f => f.MediaId)];
+                foreach (DaggerfallPartyPortrait member in extra)
+                {
+                    if (merged.Count >= 3) break;
+                    if (!existingMedia.Add(member.MediaId)) continue;
+                    merged.Add(new DaggerfallQuestEscortFace(
+                        $"party:{member.Role.ToString().ToLowerInvariant()}",
+                        $"actor:{member.DurableId}",
+                        member.Name,
+                        member.MediaId));
+                }
+                faces = merged;
+            }
+        }
+        return drawnArt() is { } art
+            ? escorts with { EscortFaces = [.. faces.Select(face => face with { MediaId = art.Drawn(face.MediaId) })] }
+            : ReferenceEquals(faces, escorts.EscortFaces) ? escorts : escorts with { EscortFaces = faces };
+    }
 }

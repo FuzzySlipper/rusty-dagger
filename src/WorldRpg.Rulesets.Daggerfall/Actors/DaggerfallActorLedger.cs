@@ -418,6 +418,52 @@ internal sealed class DaggerfallActorLedger
             .OrderBy(entry => entry.Social?.EscortOrder ?? 0)
             .ThenBy(entry => entry.DurableId)];
 
+    /// <summary>All ledger entries currently travelling on persistent overland band <paramref name="bandId"/>.</summary>
+    internal IReadOnlyList<ActorLedgerEntry> EntriesOnOverlandBand(string bandId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
+        return
+        [
+            .. _entries.Values
+                .Where(entry => entry.Location?.Kind == ActorLocationKind.OnOverlandBand
+                    && StringComparer.Ordinal.Equals(entry.Location.BandId, bandId))
+                .OrderBy(entry => entry.DurableId),
+        ];
+    }
+
+    /// <summary>Moves an actor onto a persistent overland travelling band, suppressing its home slot while in transit.</summary>
+    internal void SetOnOverlandBand(long durableId, string bandId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
+        if (_entries.TryGetValue(durableId, out ActorLedgerEntry? existing))
+        {
+            _entries[durableId] = existing with
+            {
+                Location = ActorLocationOverride.OnOverlandBand(bandId),
+                Pose = null,
+            };
+        }
+    }
+
+    /// <summary>
+    /// Clears an actor's <see cref="ActorLocationKind.OnOverlandBand"/> transit override on intercept or destination arrival,
+    /// placing it at <paramref name="arrivalProfile"/> (or restoring home slot null location when arriving home at baseline).
+    /// </summary>
+    internal void ClearBandLocation(long durableId, DaggerfallWorldProfileKey arrivalProfile, ActorPoseOverride? arrivalPose = null)
+    {
+        if (!_entries.TryGetValue(durableId, out ActorLedgerEntry? existing)) return;
+        bool isHome = existing.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual
+            && existing.Origin.SiteProfile?.Require() == arrivalProfile;
+        ActorLocationOverride? location = isHome
+            ? null
+            : ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: false);
+        Upsert(existing with
+        {
+            Location = location,
+            Pose = arrivalPose ?? existing.Pose,
+        });
+    }
+
     /// <summary>Finds one detached actor residing at an inactive site (not <paramref name="activeProfile"/>).</summary>
     internal (DaggerfallWorldProfileKey Profile, ActorLedgerEntry Entry)? FindDetachedAtInactiveSite(long durableId, DaggerfallWorldProfileKey activeProfile)
     {

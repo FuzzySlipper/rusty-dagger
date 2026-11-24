@@ -338,7 +338,20 @@ internal sealed record DaggerfallSavePayload(
         Notebook.Validate(definitions, definitions.TextPresentation);
         if (LastTavernMealMinute < 0) throw new ArgumentOutOfRangeException(nameof(LastTavernMealMinute));
         Lodging.Validate(definitions.Locations);
-        foreach (DaggerfallSiteId place in new[] { Expedition.Leg?.Destination.Place, Expedition.Pin?.Place, Expedition.Lodging?.Place }.OfType<DaggerfallSiteId>())
+        HashSet<string> savedPersistentBandIds = new(
+            (Expedition.PersistentBands ?? []).Select(b => b.BandId),
+            StringComparer.Ordinal);
+        foreach (ActorLedgerEntry bandMember in ActorLedger)
+        {
+            if (bandMember.Location is { Kind: ActorLocationKind.OnOverlandBand, BandId: { } memberBandId }
+                && !savedPersistentBandIds.Contains(memberBandId))
+            {
+                throw new ArgumentException($"Saved actor {bandMember.DurableId} references missing persistent overland band '{memberBandId}'.");
+            }
+        }
+        foreach (DaggerfallSiteId place in new[] { Expedition.Leg?.Destination.Place, Expedition.Pin?.Place, Expedition.Lodging?.Place }
+            .Concat((Expedition.PersistentBands ?? []).Select(b => b.Destination?.Place))
+            .OfType<DaggerfallSiteId>())
             if (!definitions.Locations.Keys.Contains((place.Region, place.Index)))
                 throw new ArgumentException($"Saved expedition names missing place {place}.");
         if (Transport.OnShip || Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)

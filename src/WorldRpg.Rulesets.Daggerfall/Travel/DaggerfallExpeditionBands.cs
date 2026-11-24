@@ -61,6 +61,136 @@ internal enum DaggerfallBandEventKind { Spotted, Caught, CameUpon }
 internal sealed record DaggerfallBandEvent(DaggerfallBandEventKind Kind, DaggerfallExpeditionBand Band);
 
 /// <summary>
+/// One persistent travelling party on the expedition map linked to <see cref="DaggerfallActorLedger"/> entries whose
+/// location override is <see cref="ActorLocationKind.OnOverlandBand"/> with the same <see cref="BandId"/>.
+/// Unlike transient <see cref="DaggerfallExpeditionBand"/> chasers, a persistent band survives map close/reopen and
+/// save/load, marches toward its destination across map stretches, and materializes its exact ledger actors into
+/// <c>EntityStore</c> on intercept or destination arrival.
+/// </summary>
+internal sealed class DaggerfallPersistentOverlandBand
+{
+    internal DaggerfallPersistentOverlandBand(
+        string bandId,
+        int displayId,
+        string name,
+        DaggerfallBandKind kind,
+        double x,
+        double y,
+        double heading,
+        double speedPixelsPerHour,
+        DaggerfallExpeditionMark? destination = null,
+        DaggerfallWorldProfileKeySave? destinationProfile = null,
+        bool camp = false,
+        bool spotted = false,
+        bool hostile = false,
+        int? mobile = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        BandId = bandId;
+        DisplayId = displayId;
+        Name = name;
+        Kind = kind;
+        X = x;
+        Y = y;
+        Heading = heading;
+        SpeedPixelsPerHour = speedPixelsPerHour;
+        Destination = destination;
+        DestinationProfile = destinationProfile;
+        Camp = camp;
+        Spotted = spotted;
+        Hostile = hostile;
+        Mobile = mobile;
+    }
+
+    internal string BandId { get; }
+    internal int DisplayId { get; }
+    internal string Name { get; }
+    internal DaggerfallBandKind Kind { get; }
+    internal double X { get; set; }
+    internal double Y { get; set; }
+    internal double Heading { get; set; }
+    internal double SpeedPixelsPerHour { get; }
+    internal DaggerfallExpeditionMark? Destination { get; set; }
+    internal DaggerfallWorldProfileKeySave? DestinationProfile { get; set; }
+    internal bool Camp { get; set; }
+    internal bool Spotted { get; set; }
+    internal bool Passed { get; set; }
+    internal bool Hostile { get; }
+    internal int? Mobile { get; }
+
+    internal double Distance(double x, double y) => Math.Sqrt((X - x) * (X - x) + (Y - y) * (Y - y));
+
+    /// <summary>
+    /// Advances this persistent band by <paramref name="hours"/> toward its destination (or pursuing the party if
+    /// <see cref="Hostile"/> and <see cref="Spotted"/>). Returns true when the band reaches its destination pixel.
+    /// </summary>
+    internal bool StepMove((double X, double Y) party, double hours)
+    {
+        if (Camp || SpeedPixelsPerHour <= 0 || hours <= 0) return false;
+        double targetX, targetY;
+        bool pursuing = Hostile && Spotted;
+        if (pursuing)
+        {
+            targetX = party.X;
+            targetY = party.Y;
+        }
+        else if (Destination is { } dest)
+        {
+            targetX = dest.Pixel.X + .5;
+            targetY = dest.Pixel.Y + .5;
+        }
+        else
+        {
+            return false;
+        }
+
+        double dx = targetX - X;
+        double dy = targetY - Y;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        double step = SpeedPixelsPerHour * hours;
+        if (length <= 1e-9) return !pursuing && Destination is not null;
+
+        Heading = (Math.Atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+        double moved = Math.Min(step, length);
+        X += dx / length * moved;
+        Y += dy / length * moved;
+        return !pursuing && Destination is not null && length <= step + 1e-9;
+    }
+
+    internal DaggerfallPersistentBandSave ToSave() => new(
+        BandId,
+        Name,
+        Kind,
+        X,
+        Y,
+        Heading,
+        SpeedPixelsPerHour,
+        Destination,
+        DestinationProfile,
+        Camp,
+        Spotted,
+        Hostile,
+        Mobile);
+
+    internal static DaggerfallPersistentOverlandBand FromSave(DaggerfallPersistentBandSave save, int displayId) => new(
+        save.BandId,
+        displayId,
+        save.Name,
+        save.Kind,
+        save.X,
+        save.Y,
+        save.Heading,
+        save.SpeedPixelsPerHour,
+        save.Destination,
+        save.DestinationProfile,
+        save.Camp,
+        save.Spotted,
+        save.Hostile,
+        save.Mobile);
+}
+
+/// <summary>
 /// The light, time and weather a band and the party see by, and the party's way of going, at the moment sight is judged.
 /// </summary>
 /// <param name="Scouting">The named input a later scouting skill feeds the party's sight: a share from 0 to 1.</param>

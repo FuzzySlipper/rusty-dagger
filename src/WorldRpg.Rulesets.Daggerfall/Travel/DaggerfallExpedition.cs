@@ -84,6 +84,12 @@ internal interface IDaggerfallExpeditionSurroundings
 
     /// <summary>A band is met at the party's pixel: its members are kept for the profile Enter puts the player in, staged so.</summary>
     void MeetBand(DaggerfallExpeditionBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging);
+
+    /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party is met at the party's pixel.</summary>
+    void MeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) { }
+
+    /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party reached its destination pixel.</summary>
+    void PersistentBandArrived(DaggerfallPersistentOverlandBand band) { }
 }
 
 /// <summary>Where Enter puts the player: the party's pixel, the location standing there if any, and the pixel the party came from.</summary>
@@ -95,6 +101,44 @@ internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, 
 {
     /// <summary>The mobile its foe is, which the travel map draws it as.</summary>
     internal int? Mobile { get; init; }
+
+    /// <summary>Non-null when this token represents a persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party.</summary>
+    internal string? PersistentBandId { get; init; }
+}
+
+/// <summary>
+/// One persistent travelling party on the overland map linked to <see cref="DaggerfallActorLedger"/> entries whose
+/// location override is <see cref="ActorLocationKind.OnOverlandBand"/> with the same <paramref name="BandId"/>.
+/// Survives map close/reopen and save/load alongside transient generated chasers.
+/// </summary>
+internal sealed record DaggerfallPersistentBandSave(
+    [property: JsonRequired] string BandId,
+    [property: JsonRequired] string Name,
+    [property: JsonRequired] DaggerfallBandKind Kind,
+    [property: JsonRequired] double X,
+    [property: JsonRequired] double Y,
+    [property: JsonRequired] double Heading,
+    [property: JsonRequired] double SpeedPixelsPerHour,
+    DaggerfallExpeditionMark? Destination = null,
+    DaggerfallWorldProfileKeySave? DestinationProfile = null,
+    bool Camp = false,
+    bool Spotted = false,
+    bool Hostile = false,
+    int? Mobile = null)
+{
+    internal DaggerfallPersistentBandSave Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(BandId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Name);
+        if (!Enum.IsDefined(Kind)) throw new ArgumentException($"Persistent band '{BandId}' names an unknown kind.");
+        if (!double.IsFinite(X) || !double.IsFinite(Y) || !double.IsFinite(Heading)
+            || !double.IsFinite(SpeedPixelsPerHour) || SpeedPixelsPerHour < 0)
+            throw new ArgumentOutOfRangeException(nameof(X), $"Persistent band '{BandId}' has invalid coordinates or speed.");
+        new DaggerfallTravelMapPixel((int)Math.Floor(X), (int)Math.Floor(Y)).RequireInBounds(nameof(X));
+        Destination?.Pixel.RequireInBounds(nameof(Destination));
+        DestinationProfile?.Validate();
+        return this;
+    }
 }
 
 /// <summary>A point on the map the party may head for or the player may pin: a pixel, and the place there when one was chosen.</summary>
@@ -126,7 +170,8 @@ internal sealed record DaggerfallExpeditionSave(
     [property: JsonRequired] bool LowFatigueWarned,
     [property: JsonRequired] bool EncounterWaiting,
     [property: JsonRequired] long CampSeconds,
-    string? EncounterFoe = null)
+    string? EncounterFoe = null,
+    DaggerfallPersistentBandSave[]? PersistentBands = null)
 {
     internal static DaggerfallExpeditionSave Closed { get; } = new(false, default, default, default, null, DaggerfallExpeditionMode.Cautious,
         null, DaggerfallExpeditionShip.None, false, null, false, false, 0);
@@ -149,6 +194,17 @@ internal sealed record DaggerfallExpeditionSave(
         if (!Open && (Leg is not null || Ship != DaggerfallExpeditionShip.None || EncounterWaiting))
             throw new ArgumentException("A closed expedition keeps no leg, ship or waiting encounter.");
         if (EncounterFoe is not null && !EncounterWaiting) throw new ArgumentException("Expedition save names a foe with no encounter waiting.");
+        if (PersistentBands is not null)
+        {
+            HashSet<string> bandIds = new(StringComparer.Ordinal);
+            foreach (DaggerfallPersistentBandSave band in PersistentBands)
+            {
+                ArgumentNullException.ThrowIfNull(band);
+                band.Validate();
+                if (!bandIds.Add(band.BandId))
+                    throw new ArgumentException($"Expedition save repeats persistent band '{band.BandId}'.");
+            }
+        }
         return this;
     }
 }
@@ -203,7 +259,10 @@ internal sealed class DaggerfallExpedition
     private (long NpcId, Func<bool> Available, DaggerfallSiteId? Place)? _teleport;
     private string? _held;
     private readonly DaggerfallExpeditionBands _bands;
+    private readonly List<DaggerfallPersistentOverlandBand> _persistentBands = [];
+    private int _nextPersistentDisplayId = -1;
     private DaggerfallExpeditionBand? _bandAhead;
+    private DaggerfallPersistentOverlandBand? _persistentBandAhead;
     private DaggerfallTravelDestination[] _found = [];
 
     /// <param name="tables">The classic encounter tables bands are staged from; none stages no band.</param>
@@ -316,11 +375,12 @@ internal sealed class DaggerfallExpedition
         return null;
     }
 
-    /// <summary>The map closes: the player left it, entered the world, or the game left play.</summary>
+    /// <summary>The map closes: transient chasers clear, while persistent <see cref="ActorLocationKind.OnOverlandBand"/> parties remain tracked.</summary>
     internal void Close()
     {
         _bands.Clear();
         _bandAhead = null;
+        _persistentBandAhead = null;
         _open = false;
         _teleport = null;
         _held = null;
@@ -639,6 +699,13 @@ internal sealed class DaggerfallExpedition
             _bands.Remove(band);
             _bandAhead = null;
         }
+        if (_persistentBandAhead is { } persistent && _persistentBands.Contains(persistent)
+            && persistent.Distance(Position.X, Position.Y) <= _bands.Tuning.MeetDistance)
+        {
+            _world.MeetPersistentBand(persistent, _party, persistent.Camp ? DaggerfallEncounterStaging.Camp : DaggerfallEncounterStaging.Travelling);
+            _persistentBands.Remove(persistent);
+            _persistentBandAhead = null;
+        }
         return new(_party, LocationHere, _cameFrom);
     }
 
@@ -655,8 +722,15 @@ internal sealed class DaggerfallExpedition
     /// <summary>The place the guild's teleport has been asked for, if any.</summary>
     internal DaggerfallSiteId? TeleportPlace => _teleport?.Place;
 
-    internal DaggerfallExpeditionSave Capture() => !_open || _teleport is not null || _held is not null ? DaggerfallExpeditionSave.Closed with { Mode = _pace, Pin = _pin, Lodging = _lodging }
-        : new(true, _body, _party, _cameFrom, _leg, _mode, _pin, _ship, _sailed, _lodging, _lowFatigueWarned, _encounterWaiting, _campSeconds, EncounterFoe);
+    internal DaggerfallExpeditionSave Capture()
+    {
+        DaggerfallPersistentBandSave[]? persistent = _persistentBands.Count > 0
+            ? [.. _persistentBands.OrderBy(b => b.BandId, StringComparer.Ordinal).Select(b => b.ToSave())]
+            : null;
+        return !_open || _teleport is not null || _held is not null
+            ? DaggerfallExpeditionSave.Closed with { Mode = _pace, Pin = _pin, Lodging = _lodging, PersistentBands = persistent }
+            : new(true, _body, _party, _cameFrom, _leg, _mode, _pin, _ship, _sailed, _lodging, _lowFatigueWarned, _encounterWaiting, _campSeconds, EncounterFoe, persistent);
+    }
 
     private void Restore(DaggerfallExpeditionSave saved)
     {
@@ -676,9 +750,10 @@ internal sealed class DaggerfallExpedition
         _encounterFoe = saved.EncounterFoe;
         _campSeconds = saved.CampSeconds;
         _message = _encounterWaiting ? EncounterLine() : null;
+        RestorePersistentBands(saved.PersistentBands);
     }
 
-    /// <summary>A closed map's remembered pace, pin and lodging, from a save that left it closed.</summary>
+    /// <summary>A closed map's remembered pace, pin, lodging and persistent overland bands, from a save that left it closed.</summary>
     private void RestoreClosed(DaggerfallExpeditionSave saved)
     {
         if (saved.Open) return;
@@ -686,6 +761,38 @@ internal sealed class DaggerfallExpedition
         _mode = _pace;
         _pin = saved.Pin;
         _lodging = saved.Lodging;
+        RestorePersistentBands(saved.PersistentBands);
+    }
+
+    private void RestorePersistentBands(DaggerfallPersistentBandSave[]? savedBands)
+    {
+        _persistentBands.Clear();
+        _persistentBandAhead = null;
+        if (savedBands is null) return;
+        foreach (DaggerfallPersistentBandSave band in savedBands)
+            _persistentBands.Add(DaggerfallPersistentOverlandBand.FromSave(band.Validate(), _nextPersistentDisplayId--));
+    }
+
+    /// <summary>All active persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling parties.</summary>
+    internal IReadOnlyList<DaggerfallPersistentOverlandBand> PersistentBands => _persistentBands;
+
+    /// <summary>Registers or replaces a persistent travelling party on the overland map.</summary>
+    internal DaggerfallPersistentOverlandBand RegisterPersistentBand(DaggerfallPersistentBandSave save)
+    {
+        ArgumentNullException.ThrowIfNull(save);
+        save.Validate();
+        _persistentBands.RemoveAll(existing => StringComparer.Ordinal.Equals(existing.BandId, save.BandId));
+        DaggerfallPersistentOverlandBand created = DaggerfallPersistentOverlandBand.FromSave(save, _nextPersistentDisplayId--);
+        _persistentBands.Add(created);
+        return created;
+    }
+
+    /// <summary>Removes a persistent travelling party from the overland map.</summary>
+    internal bool RemovePersistentBand(string bandId)
+    {
+        if (_persistentBandAhead is { } ahead && StringComparer.Ordinal.Equals(ahead.BandId, bandId))
+            _persistentBandAhead = null;
+        return _persistentBands.RemoveAll(b => StringComparer.Ordinal.Equals(b.BandId, bandId)) > 0;
     }
 
     /// <summary>How far the party sees now, in map pixels.</summary>
@@ -694,15 +801,22 @@ internal sealed class DaggerfallExpedition
     /// <summary>How far a band sees the party now, in map pixels.</summary>
     internal double BandSight => _bands.BandSight(SightConditions());
 
-    /// <summary>The bands within the party's sight, nearest first, as the map draws them.</summary>
+    /// <summary>The bands within the party's sight (generated chasers and persistent parties alike), nearest first.</summary>
     internal IReadOnlyList<DaggerfallExpeditionBandView> SeenBands => _open && _teleport is null
-        ? [.. _bands.Seen(Position, PartySight).Select(View)] : [];
+        ? [.. _bands.Seen(Position, PartySight).Select(View)
+            .Concat(_persistentBands.Where(b => b.Distance(Position.X, Position.Y) <= PartySight).Select(ViewPersistent))
+            .OrderBy(view => view.Distance)]
+        : [];
 
-    /// <summary>Every band staged around the party, seen or not, for a developer.</summary>
-    internal IReadOnlyList<DaggerfallExpeditionBandView> AllBands => [.. _bands.All.Select(View)];
+    /// <summary>Every band staged around the party (generated chasers and persistent parties alike), for a developer.</summary>
+    internal IReadOnlyList<DaggerfallExpeditionBandView> AllBands =>
+        [.. _bands.All.Select(View).Concat(_persistentBands.Select(ViewPersistent)).OrderBy(view => view.Distance)];
 
     /// <summary>The band the party has come upon unseen and stands beside, if any.</summary>
-    internal DaggerfallExpeditionBandView? BandAhead => _bandAhead is { } band ? View(band) : null;
+    internal DaggerfallExpeditionBandView? BandAhead =>
+        _bandAhead is { } band ? View(band)
+        : _persistentBandAhead is { } persistent ? ViewPersistent(persistent)
+        : null;
 
     /// <summary>
     /// Stages one band for a developer, a distance (pixels) and bearing (degrees clockwise from north) from the party,
@@ -721,6 +835,13 @@ internal sealed class DaggerfallExpedition
             { Mobile = band.Choice.MobileId };
     }
 
+    private DaggerfallExpeditionBandView ViewPersistent(DaggerfallPersistentOverlandBand band)
+    {
+        (double x, double y) = Position;
+        return new(band.DisplayId, band.X, band.Y, band.Heading, band.Kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y))
+            { Mobile = band.Mobile, PersistentBandId = band.BandId };
+    }
+
     private DaggerfallBandSightConditions SightConditions()
     {
         int climate = _policy.Climate(_party);
@@ -728,12 +849,12 @@ internal sealed class DaggerfallExpedition
     }
 
     /// <summary>
-    /// The bands' part of a stretch: they move and look, and the map stops when one it can see sets off after the party,
-    /// when one catches the party (only Enter goes on), or when the party comes upon one unseen (Enter, or another way).
-    /// At sea no band reaches the party.
+    /// The bands' part of a stretch: persistent travelling parties advance toward their destinations and check for
+    /// arrival or intercept, then transient generated chasers move and look. At sea no band intercepts the party.
     /// </summary>
     private bool BandsStop(long seconds, DaggerfallCalendar after)
     {
+        if (StepPersistentBands(seconds)) return true;
         if (_policy.IsOcean(_party)) return false;
         double partySight = PartySight;
         if (_bands.Step(seconds, after.ToAbsoluteSeconds(), Position, SightConditions(), _world.PlayerLevel, _world.Roll) is not { } found)
@@ -762,12 +883,77 @@ internal sealed class DaggerfallExpedition
         }
     }
 
+    private bool StepPersistentBands(long seconds)
+    {
+        if (_persistentBands.Count == 0) return false;
+        double hours = seconds / (double)SecondsPerHour;
+        (double px, double py) = Position;
+        double partySight = PartySight;
+        double sees = _bands.BandSight(SightConditions());
+        double meetDistance = _bands.Tuning.MeetDistance;
+        bool atSea = _policy.IsOcean(_party);
+
+        DaggerfallPersistentOverlandBand? spottedStop = null;
+        foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
+        {
+            bool arrived = band.StepMove((px, py), hours);
+            double distance = band.Distance(px, py);
+            if (band.Passed && distance > meetDistance * 2) band.Passed = false;
+
+            if (!atSea && distance <= meetDistance && !band.Passed)
+            {
+                if (band.Hostile && (band.Spotted || sees >= meetDistance))
+                {
+                    _world.MeetPersistentBand(band, _party, DaggerfallEncounterStaging.Caught);
+                    _persistentBands.Remove(band);
+                    if (_persistentBandAhead == band) _persistentBandAhead = null;
+                    _encounterWaiting = true;
+                    _encounterFoe = band.Name;
+                    Pause(EncounterLine());
+                    return true;
+                }
+                _persistentBandAhead = band;
+                Pause($"You come upon {band.Name}{(band.Camp ? ", camped by the way" : "")}. Enter to meet, or go on to pass it by.");
+                return true;
+            }
+
+            if (arrived)
+            {
+                _persistentBands.Remove(band);
+                if (_persistentBandAhead == band) _persistentBandAhead = null;
+                _world.PersistentBandArrived(band);
+                continue;
+            }
+
+            if (!atSea && band.Hostile && !band.Spotted && !band.Passed && distance <= sees)
+            {
+                band.Spotted = true;
+                band.Camp = false;
+                if (distance <= partySight) spottedStop ??= band;
+            }
+        }
+
+        if (spottedStop is not null)
+        {
+            Pause($"{spottedStop.Name} spotted you and gives chase!");
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>Going on past a band come upon unseen, by another way or the same, leaves it be until the party has drawn off.</summary>
     private void SteerAway()
     {
-        if (_bandAhead is not { } band) return;
-        band.Passed = true;
-        _bandAhead = null;
+        if (_bandAhead is { } band)
+        {
+            band.Passed = true;
+            _bandAhead = null;
+        }
+        if (_persistentBandAhead is { } persistent)
+        {
+            persistent.Passed = true;
+            _persistentBandAhead = null;
+        }
     }
 
     private string? Refused() => _held ?? (_teleport is not null ? "Choose where the guild should teleport you."
