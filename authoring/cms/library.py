@@ -19,7 +19,7 @@ STAGE_MOUNT = "/generated/people/dagger-characters/"
 
 def read_json(path, default):
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(Path(path).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return default
 
@@ -29,38 +29,55 @@ class Library:
     npcs: Path
     pipeline: Path
     character_root: Path | None = None
+    repo: Path = REPO
+
+    @property
+    def base_payload(self):
+        return self.repo / "content/worldrpg/packs/daggerfall.base/payload.json"
+
+    @property
+    def people_pack(self):
+        return self.repo / "content/worldrpg/packs/daggerfall.people"
 
     @property
     def mobiles(self):
-        return REPO / "local/art/reference/daggerfall-mobile-idle-unmirrored-r01"
+        return self.repo / "local/art/reference/daggerfall-mobile-idle-unmirrored-r01"
 
     @property
     def flora(self):
-        return REPO / "local/art/review/flora"
+        return self.repo / "local/art/review/flora"
 
     @property
     def scenery(self):
-        return REPO / "local/art/reference/scenery"
+        return self.repo / "local/art/reference/scenery"
 
     @property
     def surfaces(self):
-        return REPO / "local/art/reference/surfaces"
+        return self.repo / "local/art/reference/surfaces"
 
     @property
     def art_payload(self):
-        return REPO / "content/worldrpg/packs/daggerfall.art-replacements/payload.json"
+        return self.repo / "content/worldrpg/packs/daggerfall.art-replacements/payload.json"
 
     @property
     def model_notes(self):
-        return REPO / "authoring/ledger/models-notes.json"
+        return self.repo / "authoring/ledger/models-notes.json"
 
     @property
     def music_sources(self):
-        return REPO / "authoring/tools/music/sources.tsv"
+        return self.repo / "authoring/tools/music/sources.tsv"
 
     @property
     def classic_media(self):
-        return REPO / "local/build/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
+        return self.repo / "local/build/import/staging/worldrpg/imports/shared/media/classic/manifest.json"
+
+    @property
+    def npc_chart_script(self):
+        return self.repo / "src/Daggerfall.Source.Tool/ReferenceExports/NpcReferenceChart.js"
+
+    @property
+    def merge_script(self):
+        return self.repo / "scripts/apply-npc-merges.py"
 
     @property
     def characters(self):

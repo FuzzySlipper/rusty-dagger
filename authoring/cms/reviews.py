@@ -115,3 +115,33 @@ class Reviews:
                 raise ValueError("The review target changed. Reload the page before rating it.")
         self.store.patch(category, id, change, version, aliases)
         return self.item(category, id)
+
+
+def register_routes(router, workspace):
+    """Register review and temporary-mark routes on the CMS router."""
+
+    def list_reviews(req):
+        rows = workspace.reviews().list(req.arg("category"))
+        marked = req.arg("marked")
+        rating = req.arg("rating")
+        prefix = req.arg("prefix")
+        return [
+            row for row in rows
+            if (marked != "1" or row["marked"])
+            and (not rating or row["rating"] == rating)
+            and (not prefix or row["id"].startswith(prefix))
+        ]
+
+    def get_review(req):
+        return workspace.reviews().item(req.params["category"], req.params["id"])
+
+    def patch_review(req):
+        return workspace.reviews().patch(req.params["category"], req.params["id"], req.json())
+
+    def clear_marks(req):
+        return {"cleared": workspace.review_store.clear_marks(req.params["category"])}
+
+    router.get("/api/reviews", list_reviews)
+    router.get("/api/reviews/{category}/{id:path}", get_review)
+    router.post("/api/reviews/{category}/{id:path}", patch_review)
+    router.post("/api/marks/{category}/clear", clear_marks)

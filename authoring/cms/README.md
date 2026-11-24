@@ -120,11 +120,13 @@ The CMS has one browser shell and hash routes. Follow [the concept page](web/con
    Put a substantial renderer in its own module under `web/` and import it from `app.js`. For a new shared
    catalog, add its rows to `Catalog.overview()` and give `listing()` a title and card renderer. Add it to
    `sections()` and `searchResults()` if it should appear in the overview and global search.
-3. Put any new data route in [server.py](server.py). Read or update records through their owning adapter.
-   [catalog.py](catalog.py) assembles the asset lists, [pipelines.py](pipelines.py) reads character stages, and
-   [review_media.py](review_media.py) locates stage previews. Keep asset paths and their browser mounts in
-   [library.py](library.py). For a new reviewable record type, pass its category and stable ID to `tileReview()`
-   or `reviewPanel()` in [reviews.js](web/reviews.js) to share marks, ratings, and notes.
+3. Register new data routes in the owning domain module's `register_routes(router, workspace)` helper and wire it into
+   `create_router()` in [server.py](server.py) via [router.py](router.py). Use [cache.py](cache.py) for mtime-cached
+   read-heavy files and [packs.py](packs.py) (`PackStore` / `ValidationError`) for locked, validated atomic JSON writes
+   to git-tracked content packs. [catalog.py](catalog.py) assembles the asset lists, [pipelines.py](pipelines.py) reads
+   character stages, and [review_media.py](review_media.py) locates stage previews. Keep repo-rooted asset/pack paths
+   and their browser mounts in [library.py](library.py). For a new reviewable record type, pass its category and stable
+   ID to `tileReview()` or `reviewPanel()` in [reviews.js](web/reviews.js) to share marks, ratings, and notes.
 4. Add only the page-specific styles to [style.css](web/style.css). Open the route directly and through its
    parent link, then exercise its normal actions. Test writes on a loopback instance with scratch paths for
    `--links`, `--reviews`, and `--concept-root`. For merge tests, also pass a copy of the NPC chart and merge

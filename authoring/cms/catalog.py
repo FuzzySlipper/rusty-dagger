@@ -8,8 +8,11 @@ with pipelines and concept art; every other record is a reviewable asset with it
 import csv
 from collections import defaultdict
 
-from library import BASE_PAYLOAD, MODEL_CATEGORIES, asset_url, file_link, read_json
+from cache import FileCache, dir_stamp, file_stamp
+from library import MODEL_CATEGORIES, asset_url, file_link, read_json
+from packs import PackStore
 from pipelines import REVIEW_STATES, character_index
+from router import NotFoundError
 
 CATEGORIES = {"npc": "people", "creature": "creatures", "nature": "nature", "prop": "props", "arch": "architecture",
               "texture": "textures", "anim": "animations", "sound": "audio", "music": "audio"}
@@ -28,14 +31,15 @@ def category_of(id):
 
 
 class Catalog:
-    def __init__(self, library, links):
+    def __init__(self, library, links, cache: FileCache | None = None):
         self.library = library
-        npc_manifest = read_json(library.npcs / "manifest.json", {})
-        self.briefs = read_json(library.npcs / "briefs.json", {})
+        self.cache = cache
+        npc_manifest = self._json(library.npcs / "manifest.json", {})
+        self.briefs = self._json(library.npcs / "briefs.json", {})
         self.npcs = {row["id"]: row for row in npc_manifest.get("entries", [])}
         self.creatures = {}
         creature_aliases = {}
-        for row in read_json(library.mobiles / "manifest.json", {}).get("mobiles", []):
+        for row in self._json(library.mobiles / "manifest.json", {}).get("mobiles", []):
             if row["mobileId"] < FIRST_HUMAN_MOBILE:
                 id = f"creature-{row['mobileId']:03d}"
                 self.creatures[id] = row
@@ -67,6 +71,9 @@ class Catalog:
             subject = self.aliases.get(pipeline_id) or self.aliases.get(f"mobile-{pipeline_id}")
             if subject in self.by_subject:
                 self.by_subject[subject].append(pipeline_id)
+
+    def _json(self, path, default):
+        return self.cache.json(path, default) if self.cache is not None else read_json(path, default)
 
     def resolve(self, key):
         """A character's id from its id or any earlier id: canonical ids first, since an imported mobile and a villager
@@ -125,12 +132,12 @@ class Catalog:
         }
 
     def npc_game(self, key):
-        detail = read_json(self.library.npcs / key / "manifest.json", {})
+        detail = self._json(self.library.npcs / key / "manifest.json", {})
         return {"facts": detail.get("facts", {}), "placementCount": len(detail.get("placements", [])),
                 "url": asset_url("/media/npc/", f"{key}/manifest.json")}
 
     def mobile_game(self, row):
-        data = read_json(BASE_PAYLOAD, {}).get("mobiles", {}).get("mobiles", [])
+        data = self._json(self.library.base_payload, {}).get("mobiles", {}).get("mobiles", [])
         donor = next((record for record in data if record["donorId"] == row["mobileId"]), {})
         facts = {"Classic archive": f"TEXTURE.{row['sourceArchive']:03d}",
                  "Display variant": row["variant"], "Mobile ID": row["mobileId"]}
@@ -141,18 +148,18 @@ class Catalog:
         return {"facts": facts, "record": donor}
 
     def overview(self):
-        scenery = scenery_index(self.library)
-        models = model_index(self.library)
-        flora = flora_index(self.library)
+        scenery = scenery_index(self.library, self.cache)
+        models = model_index(self.library, self.cache)
+        flora = flora_index(self.library, self.cache)
         assets = {
             "people": [self.summary(key, row) for key, row in self.npcs.items()],
             "creatures": [self.summary(key, row) for key, row in self.creatures.items()] + scenery["creatures"],
             "nature": flora + [row for row in scenery["nature"] if row["id"] not in {item["id"] for item in flora}] + models["nature"],
             "props": scenery["props"] + models["props"],
             "architecture": models["architecture"],
-            "textures": texture_index(self.library),
-            "animations": animation_index(self.library),
-            "audio": audio_index(self.library),
+            "textures": texture_index(self.library, self.cache),
+            "animations": animation_index(self.library, self.cache),
+            "audio": audio_index(self.library, self.cache),
         }
         return assets | {
             "categories": CATEGORIES,
@@ -177,10 +184,18 @@ def asset(id, name, kind, preview=None, facts=None, **extra):
     return {"id": id, "category": category_of(id), "name": name, "kind": kind, "preview": preview, "facts": facts or {}} | extra
 
 
-def flora_index(library):
+def _cached_json(cache, path, default):
+    return cache.json(path, default) if cache is not None else read_json(path, default)
+
+
+def _cached_csv(cache, path):
+    return cache.csv(path) if cache is not None else read_csv(path)
+
+
+def flora_index(library, cache=None):
     """The flora review's records of the nature sets, with their engine-rendered views."""
     rows = []
-    for key, row in read_json(library.flora / "catalogue.json", {}).items():
+    for key, row in _cached_json(cache, library.flora / "catalogue.json", {}).items():
         views = {angle: url for angle in ("sprite", "front", "side", "rear")
                  if (url := file_link(library.flora, "/media/flora/", f"images/{key}-{angle}.webp"))}
         kind = FLORA_KINDS.get(row["category"], "")
@@ -198,10 +213,10 @@ def read_csv(path):
         return []
 
 
-def scenery_index(library):
+def scenery_index(library, cache=None):
     """The scenery export's records by category: nature, props and creatures (the placed animals)."""
     found = {"nature": [], "props": [], "creatures": []}
-    rows = read_csv(library.scenery / "usage.csv")
+    rows = _cached_csv(cache, library.scenery / "usage.csv")
     for row in rows:
         archive, record = int(row["archive"]), int(row["record"])
         stem = f"texture-{archive:03d}-record-{record:03d}"
@@ -224,12 +239,12 @@ def model_category(model, bands):
     return next(((band["category"], band["kind"]) for band in bands if band["from"] <= model <= band["to"]), ("architecture", ""))
 
 
-def model_index(library):
+def model_index(library, cache=None):
     """The remodelled ARCH3D models, by the category each shows: nature, props or architecture."""
-    bands = read_json(MODEL_CATEGORIES, {}).get("bands", [])
-    payload = read_json(library.art_payload, {}).get("artReplacements", {}).get("models", {})
+    bands = _cached_json(cache, MODEL_CATEGORIES, {}).get("bands", [])
+    payload = _cached_json(cache, library.art_payload, {}).get("artReplacements", {}).get("models", {})
     found = {"nature": [], "props": [], "architecture": []}
-    for key, note in sorted(read_json(library.model_notes, {}).items(), key=lambda item: int(item[0])):
+    for key, note in sorted(_cached_json(cache, library.model_notes, {}).items(), key=lambda item: int(item[0])):
         category, kind = model_category(int(key), bands)
         facts = {"ARCH3D model": key, "Status": note.get("status", ""), "Note": note.get("note", "")}
         if key in payload:
@@ -238,10 +253,10 @@ def model_index(library):
     return found
 
 
-def texture_index(library):
+def texture_index(library, cache=None):
     """Every classic surface texture record a block or the terrain draws, by its texture set."""
     found = []
-    for row in read_csv(library.surfaces / "usage.csv"):
+    for row in _cached_csv(cache, library.surfaces / "usage.csv"):
         if not any(int(row[field]) for field in ("exterior_blocks", "interior_blocks", "dungeon_blocks", "flat_planes", "standing_planes")):
             continue
         archive, record = int(row["archive"]), int(row["record"])
@@ -252,9 +267,9 @@ def texture_index(library):
     return found
 
 
-def animation_index(library):
+def animation_index(library, cache=None):
     """The motion clips the art pack plays: the gsplat townsfolk's clips, shipped in animations.rpak, and the parts rig's."""
-    art = read_json(library.art_payload, {}).get("artReplacements", {})
+    art = _cached_json(cache, library.art_payload, {}).get("artReplacements", {})
     splat, rig = art.get("splatPeople", {}), art.get("peopleRig", {})
     walks, idles = {*splat.get("walks", []), *splat.get("skirtWalks", [])}, set(splat.get("idles", []))
     found = [asset(f"anim-{clip}", clip, "walk" if clip in walks else "idle" if clip in idles else "gesture", None,
@@ -265,16 +280,149 @@ def animation_index(library):
     return found
 
 
-def audio_index(library):
+def audio_index(library, cache=None):
     """The classic sound clips the import publishes, by their archive ordinal, and the score's tracks."""
     def kind(clip):
         group, dot, _ = clip.partition(".")
         return ("" if group == "sound" else group) if dot else "effect"
     found = [asset(f"sound-{clip['sourceRecordOrdinal']}", clip["clip"], kind(clip["clip"]), None,
                    {"Media id": clip["mediaId"], "Sample rate": clip["sampleRate"]})
-             for clip in read_json(library.classic_media, {}).get("audio", [])]
+             for clip in _cached_json(cache, library.classic_media, {}).get("audio", [])]
     try:
         tracks = [line.split("\t")[0] for line in library.music_sources.read_text(encoding="utf-8").splitlines() if line.strip()]
     except FileNotFoundError:
         tracks = []
     return found + [asset(f"music-{track}", track, "music", None, {"Container": "music.rpak"}) for track in tracks]
+
+
+class CatalogStore:
+    """Mtime-cached access to the asset catalog, overview snapshot, and character pipeline links."""
+
+    def __init__(self, library, links, cache: FileCache, packs: PackStore):
+        self.library = library
+        self.links = links
+        self.cache = cache
+        self.packs = packs
+
+    def _catalog_stamp(self):
+        return (
+            file_stamp(self.library.npcs / "manifest.json"),
+            file_stamp(self.library.npcs / "briefs.json"),
+            file_stamp(self.library.mobiles / "manifest.json"),
+            file_stamp(self.links),
+            file_stamp(self.library.characters / "ready.json"),
+            dir_stamp(self.library.characters, "*/character.json"),
+        )
+
+    def _overview_stamp(self):
+        return (
+            self._catalog_stamp(),
+            file_stamp(self.library.flora / "catalogue.json"),
+            file_stamp(self.library.scenery / "usage.csv"),
+            file_stamp(self.library.surfaces / "usage.csv"),
+            file_stamp(self.library.model_notes),
+            file_stamp(self.library.art_payload),
+            file_stamp(self.library.classic_media),
+            file_stamp(self.library.music_sources),
+            file_stamp(MODEL_CATEGORIES),
+        )
+
+    def catalog(self) -> Catalog:
+        stamp = self._catalog_stamp()
+        return self.cache.get(
+            ("catalog", self.library, self.links),
+            stamp,
+            lambda: Catalog(self.library, self.packs.read_json(self.links, {}), self.cache),
+        )
+
+    def overview(self) -> dict:
+        stamp = self._overview_stamp()
+        cached = self.cache.get(
+            ("catalog-overview", self.library, self.links),
+            stamp,
+            lambda: self.catalog().overview(),
+        )
+        return dict(cached)
+
+    def update_links(self, key: str, body) -> str:
+        if not isinstance(body, dict):
+            raise ValueError("A link update needs a JSON object.")
+
+        def mutate(raw_links):
+            catalog = Catalog(self.library, raw_links or {}, self.cache)
+            subject = catalog.get(key)
+            if not subject:
+                raise ValueError("Unknown character.")
+            identity = subject["id"]
+            current = dict(catalog.links.get(identity, {}))
+            if "addPipeline" in body:
+                pipeline = body["addPipeline"]
+                if not isinstance(pipeline, str) or pipeline not in catalog.pipelines:
+                    raise ValueError("Choose an existing character pipeline.")
+                current["pipelines"] = list(dict.fromkeys([*current.get("pipelines", []), pipeline]))
+            if "removePipeline" in body:
+                current["pipelines"] = [id for id in current.get("pipelines", []) if id != body["removePipeline"]]
+            allowed = set(subject["automaticPipelines"]) | set(current.get("pipelines", []))
+            for role in ("concept", "final"):
+                if role in body:
+                    choice = body[role]
+                    if choice is None:
+                        current.pop(role, None)
+                        continue
+                    if not isinstance(choice, dict) or not isinstance(choice.get("pipeline"), str) or choice["pipeline"] not in allowed:
+                        raise ValueError("Choose an asset from a linked pipeline.")
+                    pipeline = catalog.pipelines[choice["pipeline"]]
+                    choices = pipeline["concepts"] if role == "concept" else [pipeline["final"]] if pipeline["final"] else []
+                    if not assigned(choice, choices):
+                        raise ValueError(f"The selected {role} is no longer available.")
+                    current[role] = {"pipeline": choice["pipeline"], "path": choice["path"]}
+                elif current.get(role, {}).get("pipeline") not in allowed:
+                    current.pop(role, None)
+            links = {}
+            for id, link in catalog.raw_links.items():
+                if id == identity:
+                    continue
+                if catalog.aliases.get(id) != identity:
+                    links[id] = link
+                    continue
+                unresolved = {role: link[role] for role in catalog.conflicts.get(identity, [])
+                              if role not in body and role in link and link[role]["pipeline"] in allowed}
+                if unresolved:
+                    links[id] = unresolved
+            if any(current.values()):
+                links[identity] = current
+            return links, identity
+
+        identity = self.packs.update_json(self.links, mutate, default=dict, sort_keys=True)
+        self.cache.invalidate(("catalog", self.library, self.links))
+        self.cache.invalidate(("catalog-overview", self.library, self.links))
+        return identity
+
+
+def register_routes(router, workspace):
+    """Register asset catalog, character, pipeline, stage-review, and NPC merge routes."""
+
+    def get_character(req):
+        subject = workspace.character(req.params["key"])
+        if subject is None:
+            raise NotFoundError("Character not found.")
+        return subject
+
+    def get_pipeline(req):
+        record = workspace.catalog().pipelines.get(req.params["key"])
+        if record is None:
+            raise NotFoundError("Pipeline not found.")
+        return record
+
+    def get_stage_review(req):
+        review = workspace.stage_review(req.params["pipeline"], req.params["stage"])
+        if review is None:
+            raise NotFoundError("Stage not found.")
+        return review
+
+    router.get("/api/catalog", lambda _req: workspace.overview())
+    router.get("/api/characters/{key}", get_character)
+    router.post("/api/characters/{key}/links", lambda req: workspace.update_links(req.params["key"], req.json()))
+    router.get("/api/pipelines/{key}", get_pipeline)
+    router.get("/api/stage-review/{pipeline}/{stage:path}", get_stage_review)
+    router.post("/api/npcs/merge", lambda req: workspace.merge_npcs(req.json()))

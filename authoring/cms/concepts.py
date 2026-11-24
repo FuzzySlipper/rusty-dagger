@@ -153,3 +153,24 @@ class ConceptStore:
     def candidate(row):
         return {"id": row["id"], "subject": row["subject"], "batch": row["batch"], "name": row["name"],
                 "url": asset_url(MEDIA, row["file"]), "details": json.loads(row["details"]), "createdAt": row["created"]}
+
+
+def register_routes(router, workspace):
+    """Register concept-stage routes on the CMS router."""
+    from router import NotFoundError
+
+    def get_stage(req):
+        stage = workspace.concept_stage(req.params["key"])
+        if stage is None:
+            raise NotFoundError("Character not found.")
+        return stage
+
+    def submit_candidate(req):
+        return workspace.concept_action(req.params["key"], "candidates", req.json())
+
+    def approve_candidate(req):
+        return workspace.concept_action(req.params["key"], "approve", req.json())
+
+    router.get("/api/concepts/{key}", get_stage)
+    router.post("/api/concepts/{key}/candidates", submit_candidate)
+    router.post("/api/concepts/{key}/approve", approve_candidate)

@@ -10,17 +10,6 @@ from library import MODEL_CATEGORIES, Library, read_json
 from server import Workspace
 
 
-class FixtureLibrary(Library):
-    """Every source the catalog reads, under one scratch folder."""
-
-    def fixture(name):
-        return property(lambda self: self.npcs.parent / name)
-
-    mobiles, flora, scenery, surfaces = fixture("mobiles"), fixture("flora"), fixture("scenery"), fixture("surfaces")
-    art_payload, model_notes = fixture("art.json"), fixture("models-notes.json")
-    music_sources, classic_media = fixture("music.tsv"), fixture("classic.json")
-
-
 SCENERY = """id,category,kind,archive,record,climate,directory,width,height,frames,exterior_blocks,exterior_placements,interior_blocks,interior_placements,dungeon_blocks,dungeon_placements,scattered,light
 nature-500-12,nature,,500,12,rainforest,nature/texture-500,40,80,1,0,0,0,0,0,0,1,0
 nature-213-2,nature,plant,213,2,,nature/texture-213,30,40,1,63,136,7,7,0,0,0,0
@@ -38,7 +27,7 @@ class CatalogTests(TestCase):
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
-        self.library = FixtureLibrary(self.root / "npc", self.root / "pipeline")
+        self.library = Library(self.root / "local/art/reference/npc", self.root / "pipeline", repo=self.root)
         self.path = self.root / "links.json"
         self.workspace = Workspace(self.library, self.path, self.root / "merges.json")
         self.write(self.library.npcs / "manifest.json", {
@@ -68,10 +57,11 @@ class CatalogTests(TestCase):
             {"clip": "ambient.bird1", "mediaId": "audio.ambient.bird1", "sourceRecordOrdinal": 437, "sampleRate": 11025},
             {"clip": "swing", "mediaId": "audio.melee.dagger.swing", "sourceRecordOrdinal": 106, "sampleRate": 11025},
             {"clip": "sound.165", "mediaId": "audio.source.165", "sourceRecordOrdinal": 165, "sampleRate": 11025}]})
+        self.library.music_sources.parent.mkdir(parents=True, exist_ok=True)
         self.library.music_sources.write_text("dungeon-01\trenders/04.wav\ntown-01\trenders/town.wav\n")
-        self.library.scenery.mkdir()
+        self.library.scenery.mkdir(parents=True, exist_ok=True)
         (self.library.scenery / "usage.csv").write_text(SCENERY)
-        self.library.surfaces.mkdir()
+        self.library.surfaces.mkdir(parents=True, exist_ok=True)
         (self.library.surfaces / "usage.csv").write_text(SURFACES)
         self.pipeline("128", "empty")
         self.pipeline("381-A", "approved")
