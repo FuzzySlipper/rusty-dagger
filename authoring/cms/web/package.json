@@ -1,0 +1,17 @@
+{
+  "name": "rusty-dagger-cms-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "esbuild src/main.tsx --bundle --format=esm --target=es2022 --jsx=automatic --jsx-import-source=preact --minify --outfile=dist/app.js",
+    "watch": "esbuild src/main.tsx --bundle --format=esm --target=es2022 --jsx=automatic --jsx-import-source=preact --sourcemap --watch --outfile=dist/app.js"
+  },
+  "dependencies": {
+    "preact": "^10.26.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.3"
+  }
+}

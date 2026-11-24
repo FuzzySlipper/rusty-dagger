@@ -2,6 +2,7 @@
 /local
 /.runtime/
 /node_modules/
+authoring/cms/web/node_modules/
 __pycache__/
 .letta/
 .claude/

@@ -108,29 +108,29 @@ Images and approvals live under `local/authoring/concepts/` on the CMS host.
 
 ## Add a page
 
-The CMS has one browser shell and hash routes. Follow [the concept page](web/concepts.js) for a detail view or
-`listing()` in [app.js](web/app.js) for a catalog.
+The CMS uses a Preact + TypeScript frontend under `authoring/cms/web/src/` bundled to `web/dist/app.js` with `esbuild`,
+served directly by [server.py](server.py) with hash routes. Follow [ConceptsPage.tsx](web/src/pages/ConceptsPage.tsx)
+for a detail view or [AssetListingPage.tsx](web/src/pages/AssetListingPage.tsx) for a catalog.
 
-1. Give the page a stable hash route. For a top-level section, add an `href="#page"` link with `data-page="page"`
-   in [index.html](web/index.html). Link detail pages from their parent records and have them highlight the parent
-   section in the navigation.
-2. Add a branch in `render()` in [app.js](web/app.js). Use the data already loaded from `/api/catalog` when it
-   contains the needed fields. Otherwise, fetch a detail endpoint with `request()`. Check the captured view
-   against `currentView` after an awaited fetch so a slower result cannot replace a page the user navigated to.
-   Put a substantial renderer in its own module under `web/` and import it from `app.js`. For a new shared
-   catalog, add its rows to `Catalog.overview()` and give `listing()` a title and card renderer. Add it to
-   `sections()` and `searchResults()` if it should appear in the overview and global search.
+1. Give the page a stable hash route in [router.ts](web/src/router.ts) and add its navigation entry in
+   [App.tsx](web/src/App.tsx). Link detail pages from their parent records and have `activeSection()` highlight the
+   parent section in the navigation.
+2. Put each view in its own component under `web/src/pages/` and reuse the shared primitives under `web/src/components/`
+   (`ArtDataCard`/`ArtDataChip` for bidirectional art ↔ data links, `DataTable` for filterable/paginated tables,
+   `DirtyBar`/`FieldRow`/`ValidationSummary` for structured forms, `Modal` for inspectors/pickers, and `ReviewPanel`/
+   `TileReview` for shared marks, ratings, and notes). Read cached catalog data from `useApp()` ([state.tsx](web/src/state.tsx))
+   and fetch detail or table endpoints with `apiRequest()` ([api.ts](web/src/api.ts)) using an `AbortController` so a
+   slower response cannot overwrite a newer view.
 3. Register new data routes in the owning domain module's `register_routes(router, workspace)` helper and wire it into
    `create_router()` in [server.py](server.py) via [router.py](router.py). Use [cache.py](cache.py) for mtime-cached
    read-heavy files and [packs.py](packs.py) (`PackStore` / `ValidationError`) for locked, validated atomic JSON writes
    to git-tracked content packs. [catalog.py](catalog.py) assembles the asset lists, [pipelines.py](pipelines.py) reads
    character stages, and [review_media.py](review_media.py) locates stage previews. Keep repo-rooted asset/pack paths
-   and their browser mounts in [library.py](library.py). For a new reviewable record type, pass its category and stable
-   ID to `tileReview()` or `reviewPanel()` in [reviews.js](web/reviews.js) to share marks, ratings, and notes.
-4. Add only the page-specific styles to [style.css](web/style.css). Open the route directly and through its
-   parent link, then exercise its normal actions. Test writes on a loopback instance with scratch paths for
-   `--links`, `--reviews`, and `--concept-root`. For merge tests, also pass a copy of the NPC chart and merge
-   ledger with `--npc-root` and `--npc-merges`.
+   and their browser mounts in [library.py](library.py).
+4. Add only page-specific styles to [style.css](web/style.css). Open the route directly and through its parent link,
+   then exercise its normal actions. Test writes on a loopback instance with scratch paths for `--links`, `--reviews`,
+   and `--concept-root`. For merge tests, also pass a copy of the NPC chart and merge ledger with `--npc-root` and
+   `--npc-merges`.
 
 This starts an isolated instance on a free loopback port. Open the URL it prints.
 
@@ -140,9 +140,10 @@ python3 authoring/cms/server.py --port 0 --links "$scratch/links.json" \
   --reviews "$scratch/reviews.sqlite3" --concept-root "$scratch/concepts"
 ```
 
-Run the CMS checks when changing code.
+Run the CMS checks when changing code. Rebuild `web/dist/app.js` whenever `web/src/` changes.
 
 ```sh
 python3 -m unittest discover -s authoring/cms
-node --check authoring/cms/web/app.js
+npm --prefix authoring/cms/web run check
+npm --prefix authoring/cms/web run build
 ```

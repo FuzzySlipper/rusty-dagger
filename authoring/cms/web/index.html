@@ -6,36 +6,9 @@
   <meta name="color-scheme" content="dark">
   <title>Rusty Dagger Authoring</title>
   <link rel="stylesheet" href="/style.css">
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="/dist/app.js"></script>
 </head>
 <body>
-  <div class="shell">
-    <aside class="sidebar">
-      <a class="brand" href="#overview"><span class="monogram" aria-hidden="true">RD</span><span>Rusty Dagger<small>Authoring workspace</small></span></a>
-      <nav class="navigation" aria-label="Workspace">
-        <a href="#overview" data-page="overview">Overview</a>
-        <a href="#people" data-page="people">People</a>
-        <a href="#creatures" data-page="creatures">Creatures</a>
-        <a href="#nature" data-page="nature">Nature</a>
-        <a href="#props" data-page="props">Props</a>
-        <a href="#architecture" data-page="architecture">Architecture</a>
-        <a href="#textures" data-page="textures">Textures</a>
-        <a href="#animations" data-page="animations">Animations</a>
-        <a href="#audio" data-page="audio">Audio</a>
-        <a href="#pipelines" data-page="pipelines">Character stages</a>
-      </nav>
-      <a class="external" href="/media/npc/">NPC compare &amp; merge</a>
-    </aside>
-    <main class="workspace">
-      <header class="topbar">
-        <form id="asset-search" role="search">
-          <label class="visually-hidden" for="query">Find any asset</label>
-          <input id="query" name="query" type="search" autocomplete="off" placeholder="Find any asset by ID or name">
-          <button type="submit">Search</button>
-        </form>
-      </header>
-      <div id="content" aria-live="polite"><p>Loading catalog…</p></div>
-    </main>
-  </div>
+  <div id="app"><p style="padding:24px;color:#b1bdb2;font:16px system-ui,sans-serif">Loading catalog…</p></div>
 </body>
 </html>
