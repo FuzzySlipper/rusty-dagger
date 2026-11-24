@@ -171,7 +171,8 @@ internal sealed record DaggerfallExpeditionSave(
     [property: JsonRequired] bool EncounterWaiting,
     [property: JsonRequired] long CampSeconds,
     string? EncounterFoe = null,
-    DaggerfallPersistentBandSave[]? PersistentBands = null)
+    DaggerfallPersistentBandSave[]? PersistentBands = null,
+    string? PendingPersistentBandId = null)
 {
     internal static DaggerfallExpeditionSave Closed { get; } = new(false, default, default, default, null, DaggerfallExpeditionMode.Cautious,
         null, DaggerfallExpeditionShip.None, false, null, false, false, 0);
@@ -194,9 +195,9 @@ internal sealed record DaggerfallExpeditionSave(
         if (!Open && (Leg is not null || Ship != DaggerfallExpeditionShip.None || EncounterWaiting))
             throw new ArgumentException("A closed expedition keeps no leg, ship or waiting encounter.");
         if (EncounterFoe is not null && !EncounterWaiting) throw new ArgumentException("Expedition save names a foe with no encounter waiting.");
+        HashSet<string> bandIds = new(StringComparer.Ordinal);
         if (PersistentBands is not null)
         {
-            HashSet<string> bandIds = new(StringComparer.Ordinal);
             foreach (DaggerfallPersistentBandSave band in PersistentBands)
             {
                 ArgumentNullException.ThrowIfNull(band);
@@ -204,6 +205,13 @@ internal sealed record DaggerfallExpeditionSave(
                 if (!bandIds.Add(band.BandId))
                     throw new ArgumentException($"Expedition save repeats persistent band '{band.BandId}'.");
             }
+        }
+        if (PendingPersistentBandId is not null)
+        {
+            if (!EncounterWaiting)
+                throw new ArgumentException("Expedition save names a pending persistent band with no encounter waiting.");
+            if (!bandIds.Contains(PendingPersistentBandId))
+                throw new ArgumentException($"Expedition save names missing pending persistent band '{PendingPersistentBandId}'.");
         }
         return this;
     }
@@ -263,6 +271,7 @@ internal sealed class DaggerfallExpedition
     private int _nextPersistentDisplayId = -1;
     private DaggerfallExpeditionBand? _bandAhead;
     private DaggerfallPersistentOverlandBand? _persistentBandAhead;
+    private string? _pendingPersistentBandId;
     private DaggerfallTravelDestination[] _found = [];
 
     /// <param name="tables">The classic encounter tables bands are staged from; none stages no band.</param>
@@ -381,6 +390,7 @@ internal sealed class DaggerfallExpedition
         _bands.Clear();
         _bandAhead = null;
         _persistentBandAhead = null;
+        _pendingPersistentBandId = null;
         _open = false;
         _teleport = null;
         _held = null;
@@ -699,7 +709,19 @@ internal sealed class DaggerfallExpedition
             _bands.Remove(band);
             _bandAhead = null;
         }
-        if (_persistentBandAhead is { } persistent && _persistentBands.Contains(persistent)
+        if (_pendingPersistentBandId is { } caughtBandId)
+        {
+            DaggerfallPersistentOverlandBand? caught = _persistentBands.FirstOrDefault(b =>
+                StringComparer.Ordinal.Equals(b.BandId, caughtBandId));
+            _pendingPersistentBandId = null;
+            if (caught is not null)
+            {
+                _world.MeetPersistentBand(caught, _party, DaggerfallEncounterStaging.Caught);
+                _persistentBands.Remove(caught);
+                if (_persistentBandAhead == caught) _persistentBandAhead = null;
+            }
+        }
+        else if (_persistentBandAhead is { } persistent && _persistentBands.Contains(persistent)
             && persistent.Distance(Position.X, Position.Y) <= _bands.Tuning.MeetDistance)
         {
             _world.MeetPersistentBand(persistent, _party, persistent.Camp ? DaggerfallEncounterStaging.Camp : DaggerfallEncounterStaging.Travelling);
@@ -729,7 +751,7 @@ internal sealed class DaggerfallExpedition
             : null;
         return !_open || _teleport is not null || _held is not null
             ? DaggerfallExpeditionSave.Closed with { Mode = _pace, Pin = _pin, Lodging = _lodging, PersistentBands = persistent }
-            : new(true, _body, _party, _cameFrom, _leg, _mode, _pin, _ship, _sailed, _lodging, _lowFatigueWarned, _encounterWaiting, _campSeconds, EncounterFoe, persistent);
+            : new(true, _body, _party, _cameFrom, _leg, _mode, _pin, _ship, _sailed, _lodging, _lowFatigueWarned, _encounterWaiting, _campSeconds, EncounterFoe, persistent, _encounterWaiting ? _pendingPersistentBandId : null);
     }
 
     private void Restore(DaggerfallExpeditionSave saved)
@@ -751,6 +773,7 @@ internal sealed class DaggerfallExpedition
         _campSeconds = saved.CampSeconds;
         _message = _encounterWaiting ? EncounterLine() : null;
         RestorePersistentBands(saved.PersistentBands);
+        _pendingPersistentBandId = saved.PendingPersistentBandId;
     }
 
     /// <summary>A closed map's remembered pace, pin, lodging and persistent overland bands, from a save that left it closed.</summary>
@@ -904,8 +927,9 @@ internal sealed class DaggerfallExpedition
             {
                 if (band.Hostile && (band.Spotted || sees >= meetDistance))
                 {
-                    _world.MeetPersistentBand(band, _party, DaggerfallEncounterStaging.Caught);
-                    _persistentBands.Remove(band);
+                    // Keep the caught persistent band in _persistentBands until Entry() actually enters the 3D scene
+                    // so saving while EncounterWaiting keeps the band and its ActorLedger members consistent and reloadable.
+                    _pendingPersistentBandId = band.BandId;
                     if (_persistentBandAhead == band) _persistentBandAhead = null;
                     _encounterWaiting = true;
                     _encounterFoe = band.Name;

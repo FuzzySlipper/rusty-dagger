@@ -98,6 +98,7 @@ internal sealed class ActorOverlayComponent
     internal bool IsQuestor { get; set; }
     internal string? EscortPortraitMedia { get; set; }
     internal int EscortOrder { get; set; }
+    internal string? StagedPartyRole { get; set; }
     internal IReadOnlyList<string> WitnessedCrimes => _witnessedCrimes;
     internal IReadOnlyList<string> ReferralTags => _referralTags;
 

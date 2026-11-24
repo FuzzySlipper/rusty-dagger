@@ -381,11 +381,18 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 string[]? liveWitnessed = liveOverlay.WitnessedCrimes.Count > 0
                     ? [.. liveOverlay.WitnessedCrimes]
                     : social.WitnessedCrimes;
+                ActorPartyRole? liveStagedRole = liveOverlay.StagedPartyRole is { Length: > 0 } rawDynRole
+                    && Enum.TryParse<ActorPartyRole>(rawDynRole, out ActorPartyRole parsedDynRole)
+                    ? parsedDynRole
+                    : social.StagedPartyRole;
                 social = social with
                 {
                     Met = liveOverlay.Met || social.Met,
                     Muted = liveOverlay.IsMuted,
                     WitnessedCrimes = liveWitnessed,
+                    EscortPortrait = liveOverlay.EscortPortraitMedia ?? social.EscortPortrait,
+                    EscortOrder = liveOverlay.EscortOrder > 0 ? liveOverlay.EscortOrder : social.EscortOrder,
+                    StagedPartyRole = liveStagedRole,
                 };
             }
             if (entries.TryGetValue(npc.DurableId, out ActorLedgerEntry? existing))
@@ -412,7 +419,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 Pose: priorLedger?.Pose,
                 Combat: priorLedger?.Combat,
                 Social: social,
-                Location: location);
+                Location: location,
+                Referral: priorLedger?.Referral);
         }
 
         // 6. Carry forward non-empty sparse ledger entries (SeededSlot/CastIndividual across sites, WithParty,
@@ -511,10 +519,20 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName)
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, referralName);
             bool presenceChanged = npc.Presence != DaggerfallNpcPresence.Active;
+            ActorPartyRole? stagedPartyRole = overlay?.StagedPartyRole is { Length: > 0 } rawRole
+                && Enum.TryParse<ActorPartyRole>(rawRole, out ActorPartyRole parsedRole)
+                ? parsedRole
+                : priorLedger?.Social?.StagedPartyRole;
+            string? escortPortrait = overlay is not null && stagedPartyRole is not null
+                ? overlay.EscortPortraitMedia ?? priorLedger?.Social?.EscortPortrait
+                : priorLedger?.Social?.EscortPortrait;
+            int escortOrder = overlay is not null && stagedPartyRole is not null && overlay.EscortOrder > 0
+                ? overlay.EscortOrder
+                : priorLedger?.Social?.EscortOrder ?? 0;
             bool hasPriorSocialDelta = priorLedger?.Social is { } ps
-                && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 } || ps.EscortPortrait is not null);
+                && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 } || ps.EscortPortrait is not null || ps.StagedPartyRole is not null);
             bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || promotedArchetype is not null
-                || nameChanged || presenceChanged || hasPriorSocialDelta
+                || stagedPartyRole is not null || nameChanged || presenceChanged || hasPriorSocialDelta
                 || relocated || referencedNpcs.Contains(actor.DurableId);
             if (mustKeepSocial)
             {
@@ -524,6 +542,9 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     Muted = muted,
                     WitnessedCrimes = witnessedCrimes,
                     ReferralTags = referralTags,
+                    EscortPortrait = escortPortrait,
+                    EscortOrder = escortOrder,
+                    StagedPartyRole = stagedPartyRole,
                 };
             }
         }
@@ -606,6 +627,94 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         CaptureSiteDelta(inputs, projection.Doors, projection.Motion, dynamicActors, actorFilter, actorFrameOffset);
 
     void IDaggerfallSiteDeltas.Restore(DaggerfallSiteRuntimeDelta delta) => RestoreSiteDelta(delta);
+
+    /// <summary>
+    /// Captures one live actor's full canonical state (vitals, pose, combat, social, referral, non-default inventory,
+    /// corpse, and active effects) into a sparse <see cref="ActorLedgerEntry"/> right before unloading it into
+    /// travel custody (<see cref="ActorLocationKind.OnOverlandBand"/> or <see cref="ActorLocationKind.WithParty"/>).
+    /// Returns null when <paramref name="actorId"/> is not currently live in <c>EntityStore</c>.
+    /// </summary>
+    internal ActorLedgerEntry? CaptureLiveActorForCustody(
+        long actorId,
+        DaggerfallWorldProfileKey activeProfile,
+        Func<WorldPoint, WorldPoint> localToProfile)
+    {
+        if (!State.Actors.TryGet(actorId, out ActorState? actor)) return null;
+        DaggerfallActorInventorySave? capturedInv = State.ActorInventories.InventoryFor(actorId) is { } invCoord
+            ? new DaggerfallActorInventorySave(actorId,
+                CaptureInventory(invCoord, State.ActorInventories.EquipmentFor(actorId), DaggerfallItemOwner.Actor(actorId)))
+            : null;
+        ActorLedgerEntry sparse = CaptureSparseDeterministicActor(
+            actor, activeProfile, localToProfile, CollectReferencedNpcs(), capturedInv, out bool inventoryIsDefault);
+        if (!actor.Actor.Has<ActorOriginComponent>())
+        {
+            State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? priorOriginEntry);
+            ActorOrigin resolvedOrigin;
+            if (priorOriginEntry is not null && !priorOriginEntry.Origin.IsFixedPlacement)
+            {
+                resolvedOrigin = priorOriginEntry.Origin;
+            }
+            else if (State.Npcs.TryGet(actorId, out DaggerfallNpc? mintedNpc))
+            {
+                DaggerfallWorldProfileKey homeProfile = mintedNpc.Profile ?? activeProfile;
+                resolvedOrigin = new ActorOrigin(
+                    DaggerfallPeopleSlots.IsDeterministicId(actorId) ? ActorOriginKind.SeededSlot : ActorOriginKind.Minted,
+                    SiteProfile: DaggerfallWorldProfileKeySave.Capture(homeProfile),
+                    SlotKey: DaggerfallPeopleSlots.IsDeterministicId(actorId) ? mintedNpc.StableKey : null,
+                    DefinitionId: DaggerfallPeopleSlots.IsDeterministicId(actorId)
+                        ? null
+                        : mintedNpc.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc);
+            }
+            else if (_actorDefinitions.TryGetValue(actorId, out DaggerfallActorDefinition? def))
+            {
+                resolvedOrigin = ActorOrigin.MintedActor(def.Id.Value, def.Level ?? 1);
+            }
+            else
+            {
+                resolvedOrigin = sparse.Origin;
+            }
+            sparse = sparse with { Origin = resolvedOrigin };
+        }
+        if (sparse.Origin.SiteProfile is null && State.Npcs.TryGet(actorId, out DaggerfallNpc? npcWithSite))
+        {
+            sparse = sparse with
+            {
+                Origin = sparse.Origin with
+                {
+                    SiteProfile = DaggerfallWorldProfileKeySave.Capture(npcWithSite.Profile ?? activeProfile),
+                },
+            };
+        }
+        DaggerfallActorInventorySave? detachedInv = inventoryIsDefault ? null : capturedInv;
+        DaggerfallCorpseSave? detachedCorpse = CaptureCorpses([actorId]).SingleOrDefault();
+        DaggerfallActiveEffectSave[] detachedEffects = State.Effects.Capture()
+            .Where(effect => effect.TargetId == actorId)
+            .ToArray();
+        ActorCombatStateDiff? combat = detachedInv is not null || detachedCorpse is not null || detachedEffects.Length > 0
+            ? (sparse.Combat ?? new ActorCombatStateDiff()) with
+            {
+                DetachedInventory = detachedInv,
+                DetachedCorpse = detachedCorpse,
+                DetachedEffects = detachedEffects.Length > 0 ? detachedEffects : null,
+            }
+            : sparse.Combat;
+        ActorSocialDiff? social = sparse.Social;
+        if (social is null && State.Npcs.TryGet(actorId, out DaggerfallNpc? npc))
+        {
+            State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? priorLedger);
+            ActorOverlayComponent? overlay = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov) ? ov : null;
+            social = ToSocialDiff(npc, priorLedger?.Social) with
+            {
+                Met = overlay?.Met ?? priorLedger?.Social?.Met == true,
+                Muted = overlay?.IsMuted ?? priorLedger?.Social?.Muted == true,
+                WitnessedCrimes = overlay is { WitnessedCrimes.Count: > 0 } ? [.. overlay.WitnessedCrimes] : priorLedger?.Social?.WitnessedCrimes,
+                ReferralTags = overlay is { ReferralTags.Count: > 0 } ? [.. overlay.ReferralTags] : priorLedger?.Social?.ReferralTags,
+                EscortPortrait = overlay?.EscortPortraitMedia ?? priorLedger?.Social?.EscortPortrait,
+                EscortOrder = overlay is { EscortOrder: > 0 } ? overlay.EscortOrder : priorLedger?.Social?.EscortOrder ?? 0,
+            };
+        }
+        return sparse with { Combat = combat, Social = social };
+    }
 
     /// <summary>Captures one unloading site's actor-owned state without retaining runtime entities.</summary>
     internal DaggerfallSiteRuntimeDelta CaptureSiteDelta(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion,
@@ -821,6 +930,9 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             {
                 dynOverlay.Met = dynSocial.Met;
                 dynOverlay.IsMuted = dynSocial.Muted;
+                dynOverlay.EscortPortraitMedia = dynSocial.EscortPortrait;
+                dynOverlay.EscortOrder = dynSocial.EscortOrder;
+                dynOverlay.StagedPartyRole = dynSocial.StagedPartyRole?.ToString();
                 if (dynSocial.WitnessedCrimes is { Length: > 0 })
                     foreach (string operationId in dynSocial.WitnessedCrimes)
                         dynOverlay.RecordWitnessedCrime(operationId);

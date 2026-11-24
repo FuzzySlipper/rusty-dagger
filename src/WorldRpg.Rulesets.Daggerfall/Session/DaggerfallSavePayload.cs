@@ -621,7 +621,19 @@ internal sealed record DaggerfallSavePayload(
         HashSet<long> inactiveDeterministicIds = [];
         foreach (ActorLedgerEntry entry in ActorLedger)
         {
-            if (entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual) || entry.Origin.IsFixedPlacement)
+            if (entry.Origin.IsFixedPlacement) continue;
+            if (entry.Origin.Kind == ActorOriginKind.Minted)
+            {
+                if (entry.Location?.Kind is ActorLocationKind.OnOverlandBand or ActorLocationKind.WithParty or ActorLocationKind.OffStage)
+                {
+                    if (entry.DurableId <= 0 || !inactiveDynamicActorIds.Add(entry.DurableId))
+                        throw new ArgumentException($"Saved travelling dynamic actor {entry.DurableId} has an invalid or repeated identity.");
+                    if (entry.Vitals is { } travellingVitals)
+                        ValidateStats(travellingVitals.Stats, $"travelling dynamic actor {entry.DurableId}");
+                }
+                continue;
+            }
+            if (entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual))
                 continue;
             if (!DaggerfallPeopleSlots.IsDeterministicId(entry.DurableId))
                 throw new ArgumentException($"Saved deterministic actor {entry.DurableId} does not sit in the deterministic identity band.");
@@ -631,6 +643,10 @@ internal sealed record DaggerfallSavePayload(
                     inactiveDeterministicIds.Add(entry.DurableId);
                 else
                     activeDeterministicIds.Add(entry.DurableId);
+            }
+            else if (entry.Location?.Kind is ActorLocationKind.OnOverlandBand or ActorLocationKind.WithParty or ActorLocationKind.OffStage)
+            {
+                inactiveDeterministicIds.Add(entry.DurableId);
             }
             else if (entry.Location is null && entry.Origin.SiteProfile?.Require() == inputs.ProfileKey
                 || entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } p } && p.Require() == inputs.ProfileKey)
@@ -844,7 +860,7 @@ internal sealed record DaggerfallSavePayload(
         }
         foreach (ActorLedgerEntry entry in ActorLedger)
         {
-            if (entry.Origin.IsFixedPlacement || entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual))
+            if (!HasLedgerOwnedDetachedState(entry))
                 continue;
             if (entry.Combat?.DetachedCorpse is { } detCorpse)
             {
@@ -964,7 +980,7 @@ internal sealed record DaggerfallSavePayload(
         List<DaggerfallUniqueSave> detachedDeterministicUniques = [];
         foreach (ActorLedgerEntry entry in ActorLedger)
         {
-            if (entry.Origin.IsFixedPlacement || entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual))
+            if (!HasLedgerOwnedDetachedState(entry))
                 continue;
             if (entry.Combat?.DetachedInventory is { } detInv)
             {
@@ -994,7 +1010,13 @@ internal sealed record DaggerfallSavePayload(
             .Select(operation => operation.Reward).OfType<DaggerfallQuestRewardState>())
             if (reward is { LootOpened: false, GroundContainer: { } rewardContainer } && !GroundContainers.Any(ground => ground.Id == rewardContainer))
                 throw new ArgumentException("Pending quest reward refers to an unavailable loot container.");
-        DaggerfallActiveEffectSave[] allEffects = [.. ActiveEffects, .. inactiveRuntimeDeltas.SelectMany(delta => delta.Effects)];
+        DaggerfallActiveEffectSave[] allEffects =
+        [
+            .. ActiveEffects,
+            .. inactiveRuntimeDeltas.SelectMany(delta => delta.Effects),
+            .. ActorLedger.Where(entry => HasLedgerOwnedDetachedState(entry) && entry.Combat?.DetachedEffects is { Length: > 0 })
+                .SelectMany(entry => entry.Combat!.DetachedEffects!),
+        ];
         if (uniqueItems.Values.Any(item => item.HealthLeechLastUsedMinute > new World.DaggerfallCalendar(Calendar.Year, Calendar.Month, Calendar.Day, Calendar.Hour, Calendar.Minute, Calendar.Second).ToAbsoluteSeconds() / 60))
             throw new ArgumentException("Saved health-leech last use is later than the current calendar.");
         ValidateActiveEffects(allEffects, combatants, uniqueItems, definitions.Magic);
@@ -1043,6 +1065,11 @@ internal sealed record DaggerfallSavePayload(
     }
 
     internal DurableIdentityState RestoredIdentities() => Identities.Validate().RequireKinds(PersistedKinds);
+
+    private static bool HasLedgerOwnedDetachedState(ActorLedgerEntry entry) =>
+        !entry.Origin.IsFixedPlacement
+        && (entry.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual
+            || entry.Location?.Kind is ActorLocationKind.OnOverlandBand or ActorLocationKind.WithParty or ActorLocationKind.OffStage);
 
     private static void ValidateBanished(long[] removed, IEnumerable<long> placements, IEnumerable<long> live)
     {

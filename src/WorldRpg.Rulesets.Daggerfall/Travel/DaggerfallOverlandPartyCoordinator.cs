@@ -28,9 +28,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     private readonly Func<WorldPoint, WorldPoint> _localToProfile;
     private readonly Func<Vector3> _sceneTranslation;
     private readonly Func<DaggerfallNpc, ActorSocialDiff?, ActorSocialDiff> _toSocialDiff;
+    private readonly Func<long, ActorLedgerEntry?> _captureLiveForCustody;
 
     private readonly List<(string BandId, DaggerfallEncounterStaging Staging)> _pendingIntercepts = [];
-    private readonly Dictionary<long, (ActorPartyRole Role, string? Portrait, int Order)> _stagedPartyMembers = [];
 
     internal DaggerfallOverlandPartyCoordinator(
         DaggerfallExpedition expedition,
@@ -42,7 +42,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         Func<DaggerfallSiteAppearance> activeAppearance,
         Func<WorldPoint, WorldPoint> localToProfile,
         Func<Vector3> sceneTranslation,
-        Func<DaggerfallNpc, ActorSocialDiff?, ActorSocialDiff> toSocialDiff)
+        Func<DaggerfallNpc, ActorSocialDiff?, ActorSocialDiff> toSocialDiff,
+        Func<long, ActorLedgerEntry?> captureLiveForCustody)
     {
         _expedition = expedition ?? throw new ArgumentNullException(nameof(expedition));
         _actorLedger = actorLedger ?? throw new ArgumentNullException(nameof(actorLedger));
@@ -54,9 +55,17 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         _localToProfile = localToProfile ?? throw new ArgumentNullException(nameof(localToProfile));
         _sceneTranslation = sceneTranslation ?? throw new ArgumentNullException(nameof(sceneTranslation));
         _toSocialDiff = toSocialDiff ?? throw new ArgumentNullException(nameof(toSocialDiff));
+        _captureLiveForCustody = captureLiveForCustody ?? throw new ArgumentNullException(nameof(captureLiveForCustody));
     }
 
-    internal IReadOnlyCollection<long> StagedPartyMemberIds => _stagedPartyMembers.Keys;
+    internal IReadOnlyList<long> StagedPartyMemberIds =>
+    [
+        .. _actors.All
+            .Where(a => a.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov)
+                && !string.IsNullOrWhiteSpace(ov.StagedPartyRole))
+            .Select(a => a.DurableId)
+            .Order(),
+    ];
 
     /// <summary>
     /// Dispatches one or more durable actors onto a persistent <see cref="ActorLocationKind.OnOverlandBand"/> party:
@@ -188,7 +197,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 ? existingOrder
                 : (_actorLedger.EntriesWithParty().Select(e => e.Social?.EscortOrder ?? 0).DefaultIfEmpty(0).Max() + 1);
         ActorSocialDiff? social = entry.Social is { } s
-            ? s with { EscortPortrait = portraitMedia ?? s.EscortPortrait, EscortOrder = nextOrder }
+            ? s with { EscortPortrait = portraitMedia ?? s.EscortPortrait, EscortOrder = nextOrder, StagedPartyRole = null }
             : null;
         _actorLedger.Upsert(entry with
         {
@@ -196,13 +205,14 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             Pose = rememberedPose ?? entry.Pose,
             Social = social,
         });
-        _stagedPartyMembers.Remove(actorId);
         _roster.UnloadActor(actorId);
     }
 
     /// <summary>
     /// Materializes matching <see cref="ActorLocationKind.WithParty"/> members into <c>EntityStore</c> beside
     /// <paramref name="anchorLocalPose"/> (e.g., at camp, dungeon exterior, or delivery) as their exact same durable IDs.
+    /// Persists <see cref="ActorSocialDiff.StagedPartyRole"/> on both ledger and live overlay so saving while staged
+    /// preserves party membership across reload (both at home and away from home).
     /// </summary>
     internal IReadOnlyList<long> StagePartyMembers(
         DaggerfallSiteProfile activeProfile,
@@ -222,40 +232,67 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             WorldPoint spot = OffsetBeside(anchorLocalPose, yawRadians, ordinal++, forwardDistance: 2.5f);
             WorldPoint profilePoint = _localToProfile(spot);
             ActorPoseOverride poseOverride = new(profilePoint.X, profilePoint.Y, profilePoint.Z, yawRadians);
-            _stagedPartyMembers[entry.DurableId] = (role, entry.Social?.EscortPortrait, entry.Social?.EscortOrder ?? 0);
 
             bool isHome = entry.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual
                 && entry.Origin.SiteProfile?.Require() == activeProfile.ProfileKey;
+            ActorSocialDiff? updatedSocial = entry.Social is { } s
+                ? s with { StagedPartyRole = role }
+                : null;
             ActorLedgerEntry updated = entry with
             {
                 Location = isHome ? null : ActorLocationOverride.AtSite(activeProfile.ProfileKey, poseOverride, detached: false),
                 Pose = poseOverride,
+                Social = updatedSocial,
             };
             _actorLedger.Upsert(updated);
-            if (_roster.MaterializeLedgerActorAt(updated, activeProfile, spot, yawRadians, _activeAppearance(), _sceneTranslation()) is not null)
+            if (_roster.MaterializeLedgerActorAt(updated, activeProfile, spot, yawRadians, _activeAppearance(), _sceneTranslation()) is { } live)
+            {
+                if (live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov))
+                {
+                    ov.StagedPartyRole = role.ToString();
+                    if (updatedSocial is not null)
+                    {
+                        ov.EscortPortraitMedia = updatedSocial.EscortPortrait;
+                        ov.EscortOrder = updatedSocial.EscortOrder;
+                    }
+                }
                 staged.Add(entry.DurableId);
+            }
         }
         return staged;
     }
 
     /// <summary>
-    /// Returns every staged party member (driver/companion) back to <see cref="ActorLocationKind.WithParty"/>
-    /// and unloads it from <c>EntityStore</c> when opening the expedition map or departing camp.
+    /// Returns every staged party member (driver/companion) back to <see cref="ActorLocationKind.WithParty"/>,
+    /// capturing its live vitals, inventory, combat state, and active effects before unloading it from <c>EntityStore</c>
+    /// when opening the expedition map or departing camp.
     /// </summary>
     internal IReadOnlyList<long> BoardStagedPartyMembers()
     {
-        if (_stagedPartyMembers.Count == 0) return [];
         List<long> boarded = [];
-        foreach ((long actorId, (ActorPartyRole role, string? portrait, int order)) in _stagedPartyMembers.ToArray())
+        foreach (ActorState live in _actors.All.ToArray())
         {
-            if (_actors.TryGet(actorId, out ActorState? live) && live.IsDefeated)
+            if (!live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)
+                || string.IsNullOrWhiteSpace(overlay.StagedPartyRole)
+                || !Enum.TryParse<ActorPartyRole>(overlay.StagedPartyRole, out ActorPartyRole role))
+                continue;
+
+            long actorId = live.DurableId;
+            if (live.IsDefeated)
             {
-                _stagedPartyMembers.Remove(actorId);
+                overlay.StagedPartyRole = null;
                 continue;
             }
+            string? portrait = overlay.EscortPortraitMedia;
+            int order = overlay.EscortOrder;
             ActorLedgerEntry entry = EnsureLedgerEntry(actorId);
             ActorSocialDiff? social = entry.Social is { } s
-                ? s with { EscortPortrait = portrait ?? s.EscortPortrait, EscortOrder = order > 0 ? order : s.EscortOrder }
+                ? s with
+                {
+                    EscortPortrait = portrait ?? s.EscortPortrait,
+                    EscortOrder = order > 0 ? order : s.EscortOrder,
+                    StagedPartyRole = null,
+                }
                 : null;
             _actorLedger.Upsert(entry with
             {
@@ -264,7 +301,6 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 Social = social,
             });
             _roster.UnloadActor(actorId);
-            _stagedPartyMembers.Remove(actorId);
             boarded.Add(actorId);
         }
         return boarded;
@@ -273,7 +309,13 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     /// <summary>Releases a party member permanently at <paramref name="profile"/> (e.g., delivery or dismissal).</summary>
     internal void ReleaseFromParty(long actorId, DaggerfallWorldProfileKey profile, WorldPoint? localPose = null)
     {
-        _stagedPartyMembers.Remove(actorId);
+        if (_actors.TryGet(actorId, out ActorState? live)
+            && live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? liveOverlay))
+        {
+            liveOverlay.StagedPartyRole = null;
+            liveOverlay.EscortPortraitMedia = null;
+            liveOverlay.EscortOrder = 0;
+        }
         if (!_actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) || entry is null) return;
         ActorPoseOverride? pose = null;
         if (localPose is { } lp)
@@ -287,7 +329,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         {
             Location = isHome ? null : ActorLocationOverride.AtSite(profile, pose, detached: false),
             Pose = pose ?? entry.Pose,
-            Social = entry.Social is { } s ? s with { EscortPortrait = null, EscortOrder = 0 } : null,
+            Social = entry.Social is { } s ? s with { EscortPortrait = null, EscortOrder = 0, StagedPartyRole = null } : null,
         };
         _actorLedger.Upsert(released);
         if (profile == _activeProfile().ProfileKey && localPose is { } spot)
@@ -354,42 +396,18 @@ internal sealed class DaggerfallOverlandPartyCoordinator
 
     private ActorLedgerEntry EnsureLedgerEntry(long actorId)
     {
+        if (_captureLiveForCustody(actorId) is { } liveCaptured)
+            return liveCaptured;
+
         _actorLedger.TryGet(actorId, out ActorLedgerEntry? existing);
         ActorOrigin? origin = existing?.Origin;
         ActorSocialDiff? social = existing?.Social;
         ActorReferralDiff? referral = existing?.Referral;
 
-        ActorOverlayComponent? liveOverlay = null;
-        if (_actors.TryGet(actorId, out ActorState? live))
-        {
-            if (live.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp))
-                origin ??= originComp.Origin;
-            if (live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
-                liveOverlay = overlay;
-        }
-
         if (_npcs.TryGet(actorId, out DaggerfallNpc? npc))
         {
             social = _toSocialDiff(npc, social);
-            if (liveOverlay is not null)
-            {
-                string[]? crimes = liveOverlay.WitnessedCrimes.Count > 0
-                    ? [.. liveOverlay.WitnessedCrimes]
-                    : social.WitnessedCrimes;
-                string[]? tags = liveOverlay.ReferralTags.Count > 0
-                    ? [.. liveOverlay.ReferralTags]
-                    : social.ReferralTags;
-                social = social with
-                {
-                    Met = liveOverlay.Met || social.Met,
-                    Muted = liveOverlay.IsMuted || social.Muted,
-                    WitnessedCrimes = crimes,
-                    ReferralTags = tags,
-                };
-                if (tags is { Length: > 0 })
-                    referral = new ActorReferralDiff(tags, referral?.DisplayNameOverride ?? npc.DisplayName);
-            }
-            DaggerfallWorldProfileKey? homeProfile = npc.Profile ?? (_actors.TryGet(actorId, out _) ? _activeProfile().ProfileKey : null);
+            DaggerfallWorldProfileKey? homeProfile = npc.Profile;
             origin ??= new ActorOrigin(
                 DaggerfallPeopleSlots.IsDeterministicId(actorId) ? ActorOriginKind.SeededSlot : ActorOriginKind.Minted,
                 SiteProfile: homeProfile is { } p ? DaggerfallWorldProfileKeySave.Capture(p) : null,

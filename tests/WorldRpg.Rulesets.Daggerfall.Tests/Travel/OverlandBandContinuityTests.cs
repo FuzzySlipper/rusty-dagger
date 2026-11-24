@@ -1,9 +1,13 @@
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Effects;
+using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -285,6 +289,233 @@ public sealed class OverlandBandContinuityTests
         DaggerfallSavePayload tampered = saved with { Expedition = saved.Expedition with { PersistentBands = null } };
         Assert.Throws<ArgumentException>(() =>
             tampered.ResolveRestore(TestPayload.Definitions, fixture.Origin, fixture.Composition.Profiles));
+    }
+
+    [Fact]
+    public void Caught_hostile_persistent_band_saves_cleanly_before_entry_and_materializes_after_reload()
+    {
+        using TwoTownFixture fixture = TwoTownFixture.Create();
+        DaggerfallSession session = fixture.Session;
+
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc raider = session.State.Npcs.All.First(npc =>
+            npc.Kind == DaggerfallNpcKind.Civilian
+            && npc.Profile == fixture.Origin.ProfileKey
+            && DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId)
+            && session.State.Actors.TryGet(npc.DurableId, out _));
+        long raiderId = raider.DurableId;
+        session.State.Npcs.SetDisplayName(raiderId, "Vorn the Highwayman");
+
+        session.OpenExpedition();
+        (double partyX, double partyY) = session.Expedition.Position;
+
+        // Dispatch a hostile persistent band right beside the halted party so it catches the party on advance.
+        session.OverlandParties.DispatchOverlandBand(
+            bandId: "hostile-raiders",
+            name: "Vorn's Marauders",
+            kind: DaggerfallBandKind.Bandits,
+            memberIds: [raiderId],
+            startX: partyX + 0.08,
+            startY: partyY,
+            speedPixelsPerHour: 1.0,
+            hostile: true);
+
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        session.Expedition.SetSpeed(1);
+        _ = session.Expedition.Advance(0.25);
+
+        Assert.True(session.Expedition.EncounterWaiting);
+        Assert.Equal("Vorn's Marauders", session.Expedition.EncounterFoe);
+        // Band remains registered until Entry() so saving while EncounterWaiting keeps ActorLedger/PersistentBands consistent.
+        Assert.Single(session.Expedition.PersistentBands, b => b.BandId == "hostile-raiders");
+
+        RulesetSavePayload savedBeforeEntry = session.CaptureSave();
+        DaggerfallSavePayload decoded = DaggerfallSavePayload.Read(savedBeforeEntry);
+        Assert.Equal("hostile-raiders", decoded.Expedition.PendingPersistentBandId);
+        Assert.Single(decoded.Expedition.PersistentBands!, b => b.BandId == "hostile-raiders");
+
+        using DaggerfallSession restored = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedBeforeEntry);
+        Assert.True(restored.Expedition.Open);
+        Assert.True(restored.Expedition.EncounterWaiting);
+        Assert.Single(restored.Expedition.PersistentBands, b => b.BandId == "hostile-raiders");
+
+        // Entering after reload resolves the pending caught band into EntityStore with zero duplicate bodies.
+        restored.EnterExpedition();
+        Assert.False(restored.Expedition.Open);
+        Assert.Empty(restored.Expedition.PersistentBands);
+        Assert.True(restored.State.Actors.TryGet(raiderId, out _));
+        Assert.Single(restored.State.Actors.All, a => a.DurableId == raiderId);
+        Assert.Equal("Vorn the Highwayman", restored.State.Npcs.Require(raiderId).DisplayName);
+    }
+
+    [Fact]
+    public void Staged_driver_survives_save_reload_both_at_home_and_away_and_reboards_on_open_expedition()
+    {
+        using TwoTownFixture fixture = TwoTownFixture.Create();
+        DaggerfallSession session = fixture.Session;
+
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc driver = session.State.Npcs.All.First(npc =>
+            npc.Kind == DaggerfallNpcKind.Civilian
+            && npc.Profile == fixture.Origin.ProfileKey
+            && DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId)
+            && session.State.Actors.TryGet(npc.DurableId, out _));
+        long driverId = driver.DurableId;
+        session.State.Npcs.SetDisplayName(driverId, "Tarin the Coachman");
+
+        session.OverlandParties.JoinParty(driverId, ActorPartyRole.Driver, portraitMedia: "face-driver-02");
+
+        // Case A: Stage driver at its home site (Origin), save & reload while staged, then open expedition map.
+        session.OpenExpedition();
+        session.EnterExpedition();
+        Assert.True(session.State.Actors.TryGet(driverId, out _));
+        Assert.Contains(driverId, session.OverlandParties.StagedPartyMemberIds);
+
+        RulesetSavePayload savedStagedAtHome = session.CaptureSave();
+        using (DaggerfallSession restoredHome = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedStagedAtHome))
+        {
+            Assert.True(restoredHome.State.Actors.TryGet(driverId, out ActorState? stagedHome));
+            Assert.Equal("Driver", stagedHome!.Actor.Get<ActorOverlayComponent>().StagedPartyRole);
+            Assert.Contains(driverId, restoredHome.OverlandParties.StagedPartyMemberIds);
+
+            restoredHome.OpenExpedition();
+            Assert.False(restoredHome.State.Actors.TryGet(driverId, out _));
+            DaggerfallPartyPortrait portrait = Assert.Single(restoredHome.OverlandParties.PartyPortraits());
+            Assert.Equal(driverId, portrait.DurableId);
+            Assert.Equal(ActorPartyRole.Driver, portrait.Role);
+            Assert.Equal("face-driver-02", portrait.MediaId);
+        }
+
+        // Case B: Board back into WithParty, travel to Destination (away from home), stage there, save & reload, then reboard.
+        session.OpenExpedition();
+        Assert.False(session.State.Actors.TryGet(driverId, out _));
+        session.Expedition.Close();
+        Assert.True(session.TryTransitionTo(fixture.Destination.ProfileKey));
+        session.OpenExpedition();
+        session.EnterExpedition();
+        Assert.True(session.State.Actors.TryGet(driverId, out _));
+        Assert.Contains(driverId, session.OverlandParties.StagedPartyMemberIds);
+
+        RulesetSavePayload savedStagedAway = session.CaptureSave();
+        using DaggerfallSession restoredAway = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedStagedAway);
+        Assert.True(restoredAway.State.Actors.TryGet(driverId, out ActorState? stagedAway));
+        Assert.Equal("Driver", stagedAway!.Actor.Get<ActorOverlayComponent>().StagedPartyRole);
+        Assert.Contains(driverId, restoredAway.OverlandParties.StagedPartyMemberIds);
+
+        restoredAway.OpenExpedition();
+        Assert.False(restoredAway.State.Actors.TryGet(driverId, out _));
+        Assert.Single(restoredAway.OverlandParties.PartyPortraits(), p => p.DurableId == driverId && p.Role == ActorPartyRole.Driver);
+    }
+
+    [Fact]
+    public void Overland_and_party_custody_preserve_vitals_inventory_combat_state_and_active_effects_across_save_reload()
+    {
+        using TwoTownFixture fixture = TwoTownFixture.Create();
+        DaggerfallSession session = fixture.Session;
+
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc[] civilians = session.State.Npcs.All.Where(npc =>
+            npc.Kind == DaggerfallNpcKind.Civilian
+            && npc.Profile == fixture.Origin.ProfileKey
+            && DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId)
+            && session.State.Actors.TryGet(npc.DurableId, out _)).Take(2).ToArray();
+        Assert.Equal(2, civilians.Length);
+        long travellerId = civilians[0].DurableId;
+        long companionId = civilians[1].DurableId;
+
+        // Mutate traveller before dispatching onto OnOverlandBand: vitals, inventory stack, combat state, and active Fortify Strength effect.
+        ActorState liveTraveller = session.State.Actors.Get(travellerId);
+        Track travellerHealth = liveTraveller.Stats.GetTrack(TrackId.Parse("health"));
+        travellerHealth.Maximum.BaseValue = 40;
+        travellerHealth.SetCurrent(17);
+        double baseStrength = liveTraveller.Stats.GetStat(StatId.Parse("strength")).Value;
+
+        InventoryStackId bandGoldStack = InventoryStackId.Parse("test.band.gold");
+        DaggerfallItemDefinition goldDef = TestPayload.Definitions.RequireItem(new DaggerfallItemId("gold-piece"));
+        session.State.ActorInventories.InventoryFor(travellerId)!
+            .Grant(new InventoryGrant(new InventoryItemId(goldDef.Id.Value), bandGoldStack, 77));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(travellerId),
+            new InventoryStack(bandGoldStack, ItemDefinitionId.Parse(goldDef.Id.Value), 77), goldDef);
+
+        liveTraveller.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
+        liveTraveller.Actor.Get<FactionComponent>().SetTeamOverride("bandits");
+
+        DaggerfallSpellEffectDefinition fortifySetting = new("fortify", 9, 0, 10, 0, 1, 0, 0, 1, 12, 12, 0, 0, 1);
+        DaggerfallEffectAdmissionOutcome effectOutcome = session.State.Effects.Start(new(
+            "band-fortify-str", DaggerfallFortifyEffects.Key(0), "fortify", DaggerfallActorIdentity.PlayerEntityId,
+            travellerId, "fortify", "Magic", null, 1, 10,
+            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(fortifySetting, 1, 12, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
+        Assert.Equal(DaggerfallEffectAdmissionOutcome.Started, effectOutcome);
+        double fortifiedStrength = liveTraveller.Stats.GetStat(StatId.Parse("strength")).Value;
+        Assert.Equal(baseStrength + 12, fortifiedStrength);
+
+        // Mutate companion before boarding into WithParty: vitals + inventory stack.
+        ActorState liveCompanion = session.State.Actors.Get(companionId);
+        Track companionHealth = liveCompanion.Stats.GetTrack(TrackId.Parse("health"));
+        companionHealth.Maximum.BaseValue = 35;
+        companionHealth.SetCurrent(19);
+        InventoryStackId companionGoldStack = InventoryStackId.Parse("test.party.gold");
+        session.State.ActorInventories.InventoryFor(companionId)!
+            .Grant(new InventoryGrant(new InventoryItemId(goldDef.Id.Value), companionGoldStack, 33));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(companionId),
+            new InventoryStack(companionGoldStack, ItemDefinitionId.Parse(goldDef.Id.Value), 33), goldDef);
+
+        session.OverlandParties.JoinParty(companionId, ActorPartyRole.Companion, portraitMedia: "face-companion-01");
+
+        session.OpenExpedition();
+        (double partyX, double partyY) = session.Expedition.Position;
+        session.OverlandParties.DispatchOverlandBand(
+            bandId: "buffed-escort",
+            name: "Fortified Escort",
+            kind: DaggerfallBandKind.Travellers,
+            memberIds: [travellerId],
+            startX: partyX + 0.1,
+            startY: partyY,
+            speedPixelsPerHour: 0.2,
+            camp: true);
+
+        // Save and reload while BOTH actors are in travel custody (OnOverlandBand + WithParty).
+        RulesetSavePayload savedInCustody = session.CaptureSave();
+        using DaggerfallSession restored = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedInCustody);
+
+        // Advance one stretch to meet the camped band, then enter the 3D scene to materialize both traveller and companion.
+        restored.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        restored.Expedition.SetSpeed(1);
+        _ = restored.Expedition.Advance(0.25);
+        Assert.NotNull(restored.Expedition.BandAhead);
+        restored.EnterExpedition();
+
+        // Traveller preserves wounded vitals, non-default inventory, combat overrides, and active stat-modifying effect!
+        ActorState restoredTraveller = restored.State.Actors.Get(travellerId);
+        Track restoredTravellerHealth = restoredTraveller.Stats.GetTrack(TrackId.Parse("health"));
+        Assert.Equal(40, restoredTravellerHealth.Maximum.BaseValue);
+        Assert.Equal(17, restoredTravellerHealth.Current);
+        InventoryStack restoredBandStack = Assert.Single(restored.State.ActorInventories.InventoryFor(travellerId)!.Read().Stacks);
+        Assert.Equal(bandGoldStack, restoredBandStack.Id);
+        Assert.Equal(77UL, restoredBandStack.Quantity);
+        Assert.True(restoredTraveller.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        Assert.Equal("bandits", restoredTraveller.Actor.Get<FactionComponent>().TeamOverride);
+        Assert.Contains(restored.State.Effects.Active, e => e.Context.Instance.Value == "band-fortify-str" && e.Context.Target.Value == (ulong)travellerId);
+        Assert.Equal(fortifiedStrength, restoredTraveller.Stats.GetStat(StatId.Parse("strength")).Value);
+        Assert.True(restored.State.Effects.Cancel(EffectInstanceId.Parse("band-fortify-str")));
+        Assert.Equal(baseStrength, restoredTraveller.Stats.GetStat(StatId.Parse("strength")).Value);
+
+        // Companion preserves wounded vitals and non-default inventory across WithParty -> save -> reload -> stage -> wound -> board!
+        ActorState restoredCompanion = restored.State.Actors.Get(companionId);
+        Track restoredCompanionHealth = restoredCompanion.Stats.GetTrack(TrackId.Parse("health"));
+        Assert.Equal(35, restoredCompanionHealth.Maximum.BaseValue);
+        Assert.Equal(19, restoredCompanionHealth.Current);
+        InventoryStack restoredPartyStack = Assert.Single(restored.State.ActorInventories.InventoryFor(companionId)!.Read().Stacks);
+        Assert.Equal(companionGoldStack, restoredPartyStack.Id);
+        Assert.Equal(33UL, restoredPartyStack.Quantity);
+
+        // Wound staged companion further, board back via OpenExpedition, save/reload, stage again: new wound survives!
+        restoredCompanionHealth.SetCurrent(9);
+        restored.OpenExpedition();
+        RulesetSavePayload savedAfterBoard = restored.CaptureSave();
+        using DaggerfallSession reboarded = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedAfterBoard);
+        reboarded.EnterExpedition();
+        Assert.Equal(9, reboarded.State.Actors.Get(companionId).Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
     private sealed class TwoTownFixture : IDisposable

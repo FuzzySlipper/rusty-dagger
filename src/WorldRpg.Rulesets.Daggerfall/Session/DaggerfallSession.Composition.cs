@@ -896,7 +896,9 @@ internal sealed partial class DaggerfallSession
                 () => _sites.Projection.Inputs, () => _appearance,
                 point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector())),
                 () => _exterior.ProfileToLocal(default).ToVector(),
-                DaggerfallSessionPersistence.ToSocialDiff);
+                DaggerfallSessionPersistence.ToSocialDiff,
+                id => _persistence.CaptureLiveActorForCustody(
+                    id, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))));
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),

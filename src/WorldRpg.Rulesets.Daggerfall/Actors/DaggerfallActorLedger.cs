@@ -191,12 +191,15 @@ internal sealed record ActorSocialDiff(
     bool Muted = false,
     string? EscortPortrait = null,
     int EscortOrder = 0,
-    int Presence = 0)
+    int Presence = 0,
+    ActorPartyRole? StagedPartyRole = null)
 {
     internal void Validate()
     {
         if (!Enum.IsDefined((DaggerfallNpcKind)NpcKind) || !Enum.IsDefined((DaggerfallNpcPresence)Presence))
             throw new ArgumentOutOfRangeException(nameof(NpcKind), "Saved social diff names an invalid NPC kind or presence.");
+        if (StagedPartyRole is { } stagedRole && !Enum.IsDefined(stagedRole))
+            throw new ArgumentOutOfRangeException(nameof(StagedPartyRole), "Saved social diff names an invalid staged party role.");
         ArgumentNullException.ThrowIfNull(Services);
         if (DisplayNameOverride is not null) ArgumentException.ThrowIfNullOrWhiteSpace(DisplayNameOverride);
     }

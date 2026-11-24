@@ -963,6 +963,7 @@ internal sealed class DaggerfallActorRoster
                 overlay.IsMuted = social.Muted;
                 overlay.EscortPortraitMedia = social.EscortPortrait;
                 overlay.EscortOrder = social.EscortOrder;
+                overlay.StagedPartyRole = social.StagedPartyRole?.ToString();
                 if (social.WitnessedCrimes is { Length: > 0 })
                     foreach (string operationId in social.WitnessedCrimes)
                         overlay.RecordWitnessedCrime(operationId);
