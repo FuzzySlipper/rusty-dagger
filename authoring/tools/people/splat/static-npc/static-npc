@@ -54,6 +54,10 @@ Steps, in order (each checks that the one before it has run):
             npc.json "core_tris", default 2400 as on npc-023, 0 for none), the overview page, and the CMS link to the character
   status    which steps have their outputs
 
+Hosts: npc.json "gpu_host" (or --gpu) puts every GPU step - clay, clip, bake's lab stages and VACE rings, r1, bound, walk - on a
+Strix Halo (den-m5 or den-nimo) instead of the GPU lab (Patch 2026-11-24: lengthy work on a Halo when he needs the 5090). The CPU
+stages run on npc.json "cpu_host" (default den-m5) either way.
+
 Gate for Patch: the bake in the Workbench after publish (no clip gate since 2026-11-22: clips haven't been rejected in a long time). Long steps
 (clip, bake, bound) run in the foreground for tens of minutes: run them under authoring/tools/people/splat/bake/watchdog.sh.
 """
@@ -70,6 +74,7 @@ AP = Path(os.environ.get('ASSET_PIPELINE') or Path.home() / 'dev/asset-pipeline'
 TEMPLATES = Path(__file__).resolve().parent / 'templates'
 DAGGER = REPO
 LAB_COMFY = 'http://192.168.1.20:8188'
+HALOS = {'den-m5': '192.168.1.24', 'den-nimo': '192.168.1.23'}
 DEFAULTS = {'cms_url': 'http://192.168.1.10:8784', 'tolerance': 9, 'size': 1920, 'mesher': 'meshy', 'bake_to': 'r1data',
             'sizes': [32000], 'face_share': 0.25, 'cpu_host': 'den-m5',
             # the loose head (2026-11-22): 7 cm of shell room round Head, not 2.5, where the mesher's head is too thick. 021's
@@ -131,6 +136,24 @@ class Npc:
     @property
     def walker(self):
         return bool(self.cfg.get('walker'))
+
+    @property
+    def gpu(self):
+        """Where the GPU steps run: npc.json "gpu_host" or --gpu: gpu-lab (the 5090, default) or a Strix Halo, den-m5 or den-nimo
+        (Patch 2026-11-24, npc-468's second run: the lengthy work on a Halo, so the lab stays free for him)."""
+        g = getattr(self, 'gpu_arg', None) or self.cfg.get('gpu_host', 'gpu-lab')
+        if g != 'gpu-lab' and g not in HALOS:
+            raise SystemExit(f'gpu_host {g}: gpu-lab, ' + ' or '.join(HALOS))
+        return g
+
+    @property
+    def comfy(self):
+        return LAB_COMFY if self.gpu == 'gpu-lab' else f'http://{HALOS[self.gpu]}:8188'
+
+    @property
+    def gpu_env(self):
+        """bake.sh, pipeline.sh and bound_run.sh: GPU= and VACE_GPU= put their lab stages on a Halo; guided_clip.sh: HALO=."""
+        return {} if self.gpu == 'gpu-lab' else {'GPU': self.gpu, 'VACE_GPU': self.gpu, 'HALO': self.gpu}
 
     def need(self, *paths, step):
         for p in paths:
@@ -206,9 +229,12 @@ def step_clay(n, a):
     for v in n.views:
         p = n.prompt(f'clay-{v}.txt', a.force)
         shutil.copy(n.keys / f'{v}.png', n.clay / f'key-{v}.png'); shutil.copy(p, n.clay / f'prompt-{v}.txt')
-        sh(f"flock -w 3600 /tmp/gpu-lab-claude.lock asset-resources run --host gpu-lab --resource lab-comfy --owner claude "
-           f"--purpose 'Scaffold clay ({v}) for static NPC {n.id}' -- python3 authoring/tools/people/splat/image/qwen_edit.py --image {n.clay}/key-{v}.png "
-           f"--prompt \"$(cat {n.clay}/prompt-{v}.txt)\" --resolution 1328 --out {n.clay}/{v}.png", log=n.clay / f'{v}.log')
+        lab = n.gpu == 'gpu-lab'
+        lock, res = ('/tmp/gpu-lab-claude.lock', 'lab-comfy') if lab else (f'/tmp/halo-gpu-{n.gpu}.lock', n.gpu.removeprefix('den-') + '-comfy')
+        sh(f"flock -w 3600 {lock} asset-resources run --host {n.gpu} --resource {res} --owner claude "
+           f"--purpose 'Scaffold clay ({v}) for NPC {n.id}' -- python3 authoring/tools/people/splat/image/qwen_edit.py --image {n.clay}/key-{v}.png "
+           f"--prompt \"$(cat {n.clay}/prompt-{v}.txt)\" --resolution 1328 --out {n.clay}/{v}.png", log=n.clay / f'{v}.log',
+           env={'COMFY_URL': n.comfy})
     print(f'{n.id}: clay in {n.clay.relative_to(REPO)}; check it keeps the outline before meshing')
 
 
@@ -288,7 +314,7 @@ def step_clip(n, a):
     sz = int(a.size or n.cfg['size'])
     n.need(n.guide / str(sz), step='guide')
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
-    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env})
+    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env, **n.gpu_env})
     d = n.k / 'guided' / f'stick-{sz}'
     sh(f"ffmpeg -loglevel error -y -framerate 24 -pattern_type glob -i '{d}/frames/*.png' -vf scale=960:960 -c:v libx264 -crf 20 "
        f"-pix_fmt yuv420p {d}/review.mp4")
@@ -301,7 +327,7 @@ def step_bake(n, a):
     (n.k / 'cut').mkdir(parents=True, exist_ok=True); shutil.copy(n.cut / 'front-cut.png', n.k / 'cut/front-cut.png')
     (n.k / 'bake.env').write_text(f"CLIP={d.relative_to(n.work)}\nSIZE={cfg['size']}\n")
     (n.k / 'prompts.json').write_text(json.dumps(rings, indent=1) + '\n')
-    env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': LAB_COMFY}
+    env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': n.comfy, **n.gpu_env}
     if n.key_env:
         env.update(KEY_HOLES=str(cfg.get('key_holes', 60)), DESPILL=str(cfg.get('despill', 2)))
     sh(['authoring/tools/people/splat/bake/bake.sh', n.work, f'{n.rid}-A', 'tools'], env=env)
@@ -313,10 +339,10 @@ def step_bound(n, a):
     b = ['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A']
     yaw = json.loads((n.scaffold / 'scaffold.json').read_text()).get('view_yaw', 0)
     loose = {k: str(cfg[c]) for k, c in (('LOOSE', 'loose'), ('LOOSE_FACTOR', 'loose_factor'), ('SHELL_M', 'shell_m'), ('CLEAN_OPTS', 'clean_opts')) if c in cfg}   # clean_opts: "--no-face --no-crown" for green hair or a crown   # npc.json: "loose": "Head,LeftHand,RightHand"
-    loose.update(n.env)
+    loose.update(n.env); loose.update(n.gpu_env)
     if cfg.get('backdrop'):   # the key colour baked into Gaussians goes in the clean (clean_bound.py --key; npc-468)
         loose['CLEAN_OPTS'] = f"{cfg.get('clean_opts', '')} --key {cfg['backdrop']}".strip()
-    sh(b + ['score'], env={**n.env, 'YAW': str(yaw)})
+    sh(b + ['score'], env={**n.env, **n.gpu_env, 'YAW': str(yaw)})
     sh(b + ['bound'], env=loose)
     sizes = [int(x) for x in a.sizes.split(',')] if a.sizes else cfg['sizes']
     for count in sizes:
@@ -339,7 +365,7 @@ def step_preview(n, a):
         raise SystemExit(f'{n.id} is a walker: the walk step renders its clips')
     n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
     size = f"{(a.sizes and int(a.sizes.split(',')[0]) or n.cfg['sizes'][0]) // 1000}k-face-share-cleaned"
-    sh(['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A', 'idle', size], env=n.env)
+    sh(['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A', 'idle', size], env={**n.env, **n.gpu_env})
 
 
 def walk_names(n, sizes=None):
@@ -357,7 +383,7 @@ def step_walk(n, a):
         raise SystemExit(f'{n.id} is static: preview renders its idle and look clips')
     cfg = n.cfg; n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
     b = ['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A']
-    env = {**n.env, 'SKIRT_BONES': str(cfg.get('skirt_bones', 8)) if cfg.get('skirt') else '', 'SKIRT_OPTS': cfg.get('skirt_opts', '--solid 3'),
+    env = {**n.env, **n.gpu_env, 'SKIRT_BONES': str(cfg.get('skirt_bones', 8)) if cfg.get('skirt') else '', 'SKIRT_OPTS': cfg.get('skirt_opts', '--solid 3'),
            **({'SKIRT_RIG_OPTS': cfg['skirt_rig_opts']} if cfg.get('skirt_rig_opts') else {}),
            **({'SKIRT_DRIVE_OPTS': cfg['skirt_drive_opts']} if cfg.get('skirt_drive_opts') else {})}
     names = walk_names(n, [int(x) for x in a.sizes.split(',')] if a.sizes else None)
@@ -407,7 +433,7 @@ def step_publish(n, a):
 
 def step_r1(n, a):
     n.need(n.k / 'bake/r1-data/views.json', step='bake')
-    env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': LAB_COMFY, **n.env}
+    env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': n.comfy, **n.env, **n.gpu_env}
     sh(['authoring/tools/people/splat/bake/pipeline.sh', n.work, f'{n.rid}-A', n.cfg['cpu_host'], 'r1', 'r1'], env=env)
     print(f'{n.id}: free round-1 fit {(n.k / "bake/r1/splat.npz").relative_to(REPO)}')
 
@@ -485,6 +511,7 @@ def main():
     ap.add_argument('--from', dest='from_dir', help='init: take front.png (and back.png) from this folder instead of the CMS approval')
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
     ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
+    ap.add_argument('--gpu', choices=['gpu-lab', *HALOS], help='clay, clip, bake, r1, bound, walk: where the GPU work runs (npc.json "gpu_host"; default gpu-lab)')
     ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')
     ap.add_argument('--size', help='clip: orbit size in px (default 1920); ship: the runtime size to ship (e.g. 32k-graft)')
     ap.add_argument('--said', help="ship: Patch's words")
@@ -493,7 +520,8 @@ def main():
     ap.add_argument('--sizes', help='bound/preview: runtime Gaussian counts, comma-separated (default npc.json sizes, 32000)')
     ap.add_argument('--force', action='store_true', help='use a prompt that is still 021\'s template')
     a = ap.parse_args()
-    STEPS[a.step](Npc(a.id), a)
+    n = Npc(a.id); n.gpu_arg = a.gpu
+    STEPS[a.step](n, a)
 
 
 if __name__ == '__main__':
