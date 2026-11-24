@@ -201,6 +201,38 @@ public sealed class ReferenceExportTests : IDisposable
         Assert.True(File.Exists(Path.Combine(root, "people-common/texture-182/person/texture-182-record-001-frame-000-source.png")));
     }
 
+    [Fact]
+    public void Npc_reference_merges_apply_merges_retirements_and_reject_retired_keepers()
+    {
+        string arena2 = Path.Combine(root, "arena2");
+        string output = Path.Combine(root, "out");
+        Directory.CreateDirectory(arena2);
+        byte[] pal = new byte[776];
+        pal[0] = 0x08;
+        pal[1] = 0x03;
+        File.WriteAllBytes(Path.Combine(arena2, "ART_PAL.COL"), pal);
+        ReferenceExport export = new(arena2, output);
+        NpcEntry a = new("npc-010", "Keeper", "Named NPC", [], [], new Dictionary<string, string>(),
+            [new NpcLink("See 020", "../npc-020/index.html"), new NpcLink("See 030", "../npc-030/index.html")], ["182-1"]);
+        NpcEntry b = new("npc-020", "Merged", "Billboard", [], [], new Dictionary<string, string>(), [], ["182-2"]);
+        NpcEntry c = new("npc-030", "Retired", "Billboard", [], [], new Dictionary<string, string>(), [], ["182-3"]);
+
+        string mergesPath = Path.Combine(root, "merges.json");
+        File.WriteAllText(mergesPath, """{"npc-020": "npc-010", "npc-030": null}""");
+
+        IReadOnlyList<NpcEntry> applied = NpcReferenceMerges.Apply(export, [a, b, c], mergesPath);
+        NpcEntry keeper = Assert.Single(applied);
+        Assert.Equal("npc-010", keeper.Id);
+        Assert.Contains("npc-020", keeper.Aliases);
+        Assert.Contains("182-2", keeper.Aliases);
+        Assert.DoesNotContain("npc-030", keeper.Aliases);
+        Assert.Empty(keeper.Links);
+
+        string badMergesPath = Path.Combine(root, "bad-merges.json");
+        File.WriteAllText(badMergesPath, """{"npc-020": "npc-030", "npc-030": null}""");
+        Assert.Throws<InvalidDataException>(() => NpcReferenceMerges.Apply(export, [a, b, c], badMergesPath));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(root)) Directory.Delete(root, recursive: true);

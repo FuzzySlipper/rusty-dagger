@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { ASSET_LABELS, type AssetCategory, type CatalogAssetRow, type PipelineSummary } from '../types';
+import {
+  ASSET_LABELS,
+  isCharacterRow,
+  type AssetCategory,
+  type CatalogAssetRow,
+  type CharacterSummary,
+  type PipelineSummary,
+} from '../types';
+import { subjectUrl } from '../router';
 import { useApp } from '../state';
-import { AssetTile, Empty, PageHeading, PipelineTile } from '../components/ui';
+import { PeopleCompareModal, RetireNpcModal, RetiredPeopleModal } from '../components/PeopleCurationModals';
+import { TileReview } from '../components/ReviewControls';
+import { AssetTile, Chip, Empty, PageHeading, PipelineTile, SpritePreview } from '../components/ui';
 
 type SearchableRow = {
   id: string;
@@ -11,6 +21,9 @@ type SearchableRow = {
   brief?: { brief?: string } | null;
   aliases?: string[];
 };
+
+type UsageFilter = '' | 'cast' | 'spawner' | 'used' | 'unused';
+type ArtNeedFilter = '' | 'needs-concept' | 'has-concept' | 'needs-final' | 'has-final';
 
 export function matchRecords<T extends SearchableRow>(rows: T[], query: string): T[] {
   const trimmed = query.trim();
@@ -32,28 +45,111 @@ export function matchRecords<T extends SearchableRow>(rows: T[], query: string):
   });
 }
 
+function PeopleCuratableTile({
+  row,
+  selected,
+  onToggleSelect,
+}: {
+  row: CharacterSummary;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+}) {
+  const curation = row.curation;
+  const status = row.pipelineIds.length
+    ? `${row.pipelineIds.length} linked pipeline${row.pipelineIds.length === 1 ? '' : 's'}`
+    : row.kind;
+
+  return (
+    <article class={`tile${selected ? ' tile-selected' : ''}`} data-npc-id={row.id}>
+      <a class="tile-link" href={subjectUrl(row.id)}>
+        <SpritePreview url={row.classic} alt="" pixel />
+        <div class="tile-info">
+          <code>{row.id}</code>
+          <strong>{row.name}</strong>
+          <small>{status}</small>
+          {curation ? (
+            <div class="tile-badges">
+              {curation.castCount > 0 ? <Chip state="approved" label={`Cast (${curation.castCount})`} /> : null}
+              {curation.spawnerCount > 0 ? (
+                <Chip state="empty" label={`Spawners (${curation.spawnerCount})`} />
+              ) : null}
+              {curation.castCount === 0 && curation.spawnerCount === 0 && curation.slotCount === 0 ? (
+                <Chip state="needs-check" label="Unused" />
+              ) : null}
+              {curation.hasApprovedConcept ? <Chip state="approved" label="Concept" /> : null}
+              {curation.hasFinalAsset ? <Chip state="approved" label="Final" /> : null}
+            </div>
+          ) : null}
+        </div>
+      </a>
+      <div class="tile-curation-bar">
+        <button
+          type="button"
+          data-select-npc={row.id}
+          aria-pressed={selected ? 'true' : 'false'}
+          onClick={() => onToggleSelect(row.id)}
+        >
+          {selected ? 'Selected' : 'Select'}
+        </button>
+      </div>
+      <TileReview category={row.category} id={row.id} />
+    </article>
+  );
+}
+
 export function AssetListingPage({ category }: { category: AssetCategory | 'pipelines' }) {
   const { catalog, reviewFor, markedCount, clearMarks } = useApp();
   const [term, setTerm] = useState('');
   const [facet, setFacet] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
   const [markedOnly, setMarkedOnly] = useState(false);
+  const [usageFilter, setUsageFilter] = useState<UsageFilter>('');
+  const [artFilter, setArtFilter] = useState<ArtNeedFilter>('');
   const [clearing, setClearing] = useState(false);
   const [markStatus, setMarkStatus] = useState('');
+
+  // People curation state (multi-select merge + guarded retire)
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [retireId, setRetireId] = useState<string | null>(null);
+  const [retiredModalOpen, setRetiredModalOpen] = useState(false);
+  const [curationStatus, setCurationStatus] = useState('');
 
   useEffect(() => {
     setTerm('');
     setFacet('');
     setRatingFilter('');
     setMarkedOnly(false);
+    setUsageFilter('');
+    setArtFilter('');
     setMarkStatus('');
+    setSelectedIds([]);
+    setCompareOpen(false);
+    setRetireId(null);
+    setCurationStatus('');
   }, [category]);
 
   if (!catalog) return null;
 
   const isPipelines = category === 'pipelines';
+  const isPeople = category === 'people';
   const label = isPipelines ? 'Character stages' : ASSET_LABELS[category];
   const items: Array<CatalogAssetRow | PipelineSummary> = isPipelines ? catalog.pipelines : catalog[category];
+
+  const peopleStats = useMemo(() => {
+    if (!isPeople) return null;
+    const people = catalog.people;
+    return {
+      total: people.length,
+      cast: people.filter(r => (r.curation?.castCount ?? 0) > 0).length,
+      spawner: people.filter(r => (r.curation?.spawnerCount ?? 0) > 0).length,
+      unused: people.filter(
+        r => (r.curation?.castCount ?? 0) === 0 && (r.curation?.spawnerCount ?? 0) === 0 && (r.curation?.slotCount ?? 0) === 0,
+      ).length,
+      needsConcept: people.filter(r => !r.curation?.hasApprovedConcept).length,
+      hasConcept: people.filter(r => r.curation?.hasApprovedConcept).length,
+    };
+  }, [isPeople, catalog.people]);
 
   const kinds = useMemo(() => {
     if (isPipelines) return [];
@@ -70,11 +166,29 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
         if (ratingFilter === 'unrated' && saved.rating) return false;
         if (ratingFilter !== 'unrated' && saved.rating !== ratingFilter) return false;
       }
+      if (isPeople && isCharacterRow(row as CatalogAssetRow)) {
+        const curation = (row as CharacterSummary).curation;
+        if (curation) {
+          const used = curation.castCount > 0 || curation.spawnerCount > 0 || curation.slotCount > 0;
+          if (usageFilter === 'cast' && curation.castCount === 0) return false;
+          if (usageFilter === 'spawner' && curation.spawnerCount === 0) return false;
+          if (usageFilter === 'used' && !used) return false;
+          if (usageFilter === 'unused' && used) return false;
+          if (artFilter === 'needs-concept' && curation.hasApprovedConcept) return false;
+          if (artFilter === 'has-concept' && !curation.hasApprovedConcept) return false;
+          if (artFilter === 'needs-final' && curation.hasFinalAsset) return false;
+          if (artFilter === 'has-final' && !curation.hasFinalAsset) return false;
+        }
+      }
       return true;
     }) as Array<CatalogAssetRow | PipelineSummary>;
-  }, [items, term, facet, markedOnly, ratingFilter, category, reviewFor]);
+  }, [items, term, facet, markedOnly, ratingFilter, usageFilter, artFilter, category, isPeople, reviewFor]);
 
   const marks = markedCount(category);
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]));
+  }
 
   async function handleClearMarks() {
     setClearing(true);
@@ -94,13 +208,114 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
       <PageHeading
         title={label}
         action={
-          category === 'people' ? (
-            <a class="button primary" href="/media/npc/">
-              Compare &amp; merge NPCs
-            </a>
+          isPeople ? (
+            <div class="actions">
+              <button type="button" onClick={() => setRetiredModalOpen(true)}>
+                Retired records
+              </button>
+              <a class="button" href="/media/npc/">
+                Legacy chart
+              </a>
+            </div>
           ) : undefined
         }
       />
+
+      {isPeople && peopleStats ? (
+        <div class="stat-strip">
+          <button
+            type="button"
+            class={`stat-pill${usageFilter === '' && artFilter === '' ? ' active' : ''}`}
+            onClick={() => {
+              setUsageFilter('');
+              setArtFilter('');
+            }}
+          >
+            <strong>{peopleStats.total}</strong>
+            <span>All people</span>
+          </button>
+          <button
+            type="button"
+            class={`stat-pill${usageFilter === 'cast' ? ' active' : ''}`}
+            onClick={() => setUsageFilter(usageFilter === 'cast' ? '' : 'cast')}
+          >
+            <strong>{peopleStats.cast}</strong>
+            <span>Used by Cast</span>
+          </button>
+          <button
+            type="button"
+            class={`stat-pill${usageFilter === 'spawner' ? ' active' : ''}`}
+            onClick={() => setUsageFilter(usageFilter === 'spawner' ? '' : 'spawner')}
+          >
+            <strong>{peopleStats.spawner}</strong>
+            <span>Used by Spawners</span>
+          </button>
+          <button
+            type="button"
+            class={`stat-pill${usageFilter === 'unused' ? ' active' : ''}`}
+            onClick={() => setUsageFilter(usageFilter === 'unused' ? '' : 'unused')}
+          >
+            <strong>{peopleStats.unused}</strong>
+            <span>Unused in pack</span>
+          </button>
+          <button
+            type="button"
+            class={`stat-pill${artFilter === 'needs-concept' ? ' active' : ''}`}
+            onClick={() => setArtFilter(artFilter === 'needs-concept' ? '' : 'needs-concept')}
+          >
+            <strong>{peopleStats.needsConcept}</strong>
+            <span>Needs concept art</span>
+          </button>
+          <button
+            type="button"
+            class={`stat-pill${artFilter === 'has-concept' ? ' active' : ''}`}
+            onClick={() => setArtFilter(artFilter === 'has-concept' ? '' : 'has-concept')}
+          >
+            <strong>{peopleStats.hasConcept}</strong>
+            <span>Concept approved</span>
+          </button>
+        </div>
+      ) : null}
+
+      {isPeople && (selectedIds.length > 0 || curationStatus) ? (
+        <div class="curation-bar" role="region" aria-label="People curation selection">
+          <div class="curation-bar-items">
+            {selectedIds.map(id => (
+              <button
+                key={id}
+                type="button"
+                class="art-data-chip"
+                title={`Remove ${id} from selection`}
+                onClick={() => toggleSelect(id)}
+              >
+                <code>{id}</code>
+                <span>×</span>
+              </button>
+            ))}
+            {curationStatus ? <output role="status">{curationStatus}</output> : null}
+          </div>
+          {selectedIds.length > 0 ? (
+            <div class="actions">
+              <button
+                type="button"
+                class="primary"
+                disabled={selectedIds.length < 2}
+                onClick={() => setCompareOpen(true)}
+              >
+                Compare &amp; merge ({selectedIds.length})
+              </button>
+              {selectedIds.length === 1 ? (
+                <button type="button" class="danger" onClick={() => setRetireId(selectedIds[0])}>
+                  Retire {selectedIds[0]}…
+                </button>
+              ) : null}
+              <button type="button" onClick={() => setSelectedIds([])}>
+                Clear selection
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div class="filters">
         <label>
@@ -129,6 +344,38 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
               ))}
             </select>
           </label>
+        ) : null}
+        {isPeople ? (
+          <>
+            <label>
+              Game usage
+              <select
+                id="usage-filter"
+                value={usageFilter}
+                onChange={event => setUsageFilter((event.currentTarget as HTMLSelectElement).value as UsageFilter)}
+              >
+                <option value="">All usage</option>
+                <option value="cast">Used by named Cast</option>
+                <option value="spawner">Used by Spawners</option>
+                <option value="used">Any daggerfall.people usage</option>
+                <option value="unused">Unused in daggerfall.people</option>
+              </select>
+            </label>
+            <label>
+              Art status
+              <select
+                id="art-filter"
+                value={artFilter}
+                onChange={event => setArtFilter((event.currentTarget as HTMLSelectElement).value as ArtNeedFilter)}
+              >
+                <option value="">All art states</option>
+                <option value="needs-concept">Needs concept art</option>
+                <option value="has-concept">Has approved concept</option>
+                <option value="needs-final">Needs final game asset</option>
+                <option value="has-final">Has final game asset</option>
+              </select>
+            </label>
+          </>
         ) : null}
         <label>
           Rating
@@ -172,6 +419,15 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
         {matching.length ? (
           isPipelines ? (
             (matching as PipelineSummary[]).map(row => <PipelineTile key={row.id} row={row} />)
+          ) : isPeople ? (
+            (matching as CharacterSummary[]).map(row => (
+              <PeopleCuratableTile
+                key={row.id}
+                row={row}
+                selected={selectedIds.includes(row.id)}
+                onToggleSelect={toggleSelect}
+              />
+            ))
           ) : (
             (matching as CatalogAssetRow[]).map(row => <AssetTile key={row.id} row={row} />)
           )
@@ -179,6 +435,32 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <Empty>No matching records.</Empty>
         )}
       </div>
+
+      {isPeople ? (
+        <>
+          <PeopleCompareModal
+            open={compareOpen}
+            ids={selectedIds}
+            onClose={() => setCompareOpen(false)}
+            onMerged={keeperId => {
+              setCompareOpen(false);
+              setSelectedIds([]);
+              setCurationStatus(`Merged into ${keeperId}.`);
+            }}
+          />
+          <RetireNpcModal
+            open={retireId !== null}
+            npcId={retireId}
+            onClose={() => setRetireId(null)}
+            onRetired={retiredId => {
+              setRetireId(null);
+              setSelectedIds(prev => prev.filter(id => id !== retiredId));
+              setCurationStatus(`Retired ${retiredId}.`);
+            }}
+          />
+          <RetiredPeopleModal open={retiredModalOpen} onClose={() => setRetiredModalOpen(false)} />
+        </>
+      ) : null}
     </>
   );
 }

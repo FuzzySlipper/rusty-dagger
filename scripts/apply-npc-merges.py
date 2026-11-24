@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply downloaded NPC merge candidates and regenerate the local reference chart."""
+"""Apply downloaded NPC merge/retire candidates and regenerate the local reference chart."""
 
 import argparse
 import fcntl
@@ -34,7 +34,40 @@ def registry_aliases():
 def apply_candidate(path, aliases, redirects):
     candidate = json.loads(path.read_text())
     if not isinstance(candidate, dict):
-        raise ValueError("expected a JSON object with keep and merge fields")
+        raise ValueError("expected a JSON object with keep/merge, retire, or restore fields")
+
+    if "retire" in candidate:
+        targets = candidate.get("retire")
+        if not isinstance(targets, list) or not targets:
+            raise ValueError("select at least one NPC to retire")
+        if not all(isinstance(npc, str) and npc in aliases for npc in targets):
+            raise ValueError("candidate names an unknown NPC ID")
+        if len(set(targets)) != len(targets):
+            raise ValueError("each NPC ID must appear once")
+        for npc in targets:
+            canonical = aliases[npc]
+            if canonical != npc or canonical in redirects:
+                raise ValueError(f"{npc} is already merged or retired; review the current chart")
+            merged_into = sorted(src for src, dst in redirects.items() if dst == canonical)
+            if merged_into:
+                raise ValueError(
+                    f"{npc} is the merge keeper for {', '.join(merged_into)} and cannot be retired directly"
+                )
+        for npc in targets:
+            redirects[npc] = None
+        return
+
+    if "restore" in candidate:
+        targets = candidate.get("restore")
+        if not isinstance(targets, list) or not targets:
+            raise ValueError("select at least one retired NPC to restore")
+        for npc in targets:
+            if npc not in redirects or redirects[npc] is not None:
+                raise ValueError(f"{npc} is not currently retired")
+        for npc in targets:
+            del redirects[npc]
+        return
+
     keeper, members = candidate.get("keep"), candidate.get("merge")
     if not isinstance(members, list) or not members:
         raise ValueError("select at least two NPCs")
@@ -43,6 +76,11 @@ def apply_candidate(path, aliases, redirects):
         raise ValueError("candidate names an unknown NPC ID")
     if len(set(requested)) != len(requested):
         raise ValueError("each NPC ID must appear once")
+
+    if keeper in redirects and redirects[keeper] is None:
+        raise ValueError(f"{keeper} is retired; restore it before using it as a keeper")
+    if any(npc in redirects and redirects[npc] is None for npc in members):
+        raise ValueError("cannot merge a retired NPC; restore it first")
 
     current = [redirects.get(aliases[npc], aliases[npc]) for npc in requested]
     if keeper != current[0] or any(npc != resolved and resolved != keeper for npc, resolved in zip(members, current[1:])):
@@ -72,8 +110,13 @@ def publish_chart(output, ledger, original, redirects):
             check=True,
         )
         index = json.loads((rebuilt / "manifest.json").read_text())
-        if any(index["aliases"].get(source) != target for source, target in redirects.items()):
-            raise ValueError("the rebuilt chart is missing a merge; the existing chart and candidates were preserved")
+        entry_ids = {entry["id"] for entry in index.get("entries", [])}
+        for source, target in redirects.items():
+            if target is None:
+                if source in entry_ids:
+                    raise ValueError(f"the rebuilt chart still includes retired {source}; existing files preserved")
+            elif index["aliases"].get(source) != target:
+                raise ValueError("the rebuilt chart is missing a merge; the existing chart and candidates were preserved")
         if ledger.read_bytes() != original:
             raise ValueError("the merge list changed during export; rerun to apply against the current list")
 
@@ -105,10 +148,11 @@ def apply_batch(paths, output, ledger):
     aliases = registry_aliases()
     active = {npc for npc, target in aliases.items() if npc == target}
     if not isinstance(redirects, dict) or any(
-        source not in active or not isinstance(target, str) or target not in active or target in redirects
+        source not in active
+        or (target is not None and (not isinstance(target, str) or target not in active or target in redirects))
         for source, target in redirects.items()
     ):
-        raise ValueError("the merge file must map retired NPC IDs directly to active keepers")
+        raise ValueError("the merge file must map merged NPC IDs to active keepers or null when retired")
 
     accepted = []
     for path in paths:

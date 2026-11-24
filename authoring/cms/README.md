@@ -36,9 +36,13 @@ Use **Link pipeline** on a character to add a relationship, then **Set as canoni
 a depiction. These decisions are stored by stable ID in [links.json](links.json). Pipeline approvals stay in
 the character stage files. A single approved front or game-ready output is shown by default when available.
 
-**NPC compare & merge** opens the existing comparison viewer. Choose the keeper and click **Apply merge** to update
-the same ledger and rebuild the reference pages from the host. Workbench review links open the native
-media and ratings. Nature records of the climate sets show the Engine-rendered images of the flora review.
+On **People** (`#people`), filter by **Game usage** (named Cast, Spawners, Unused) and **Art status** (needs/has concept
+or final asset). Use **Select** on two or more tiles (or **Merge with…** on a character page) to open the in-CMS
+**Compare & combine** view, choose a keeper, and apply merges directly through `NpcReferenceMerges.json`. Use
+**Retire record…** to hide bogus or obsolete `npc-###` entries (stored as `null` in `NpcReferenceMerges.json`, guarded by
+active `daggerfall.people`, pipeline, and concept reference checks, and reversible from **Retired records**). Workbench
+review links open the native media and ratings. Nature records of the climate sets show the Engine-rendered images of the
+flora review.
 
 Use **Mark** on a card or detail page, **Marked only** to browse the selection, and **Clear all marks** to reset that
 catalog. Ratings and notes stay with the record when marks are cleared. **Review in CMS** opens locally filed

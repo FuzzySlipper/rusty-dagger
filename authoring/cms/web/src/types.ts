@@ -68,6 +68,16 @@ export interface BriefInfo {
   [key: string]: unknown;
 }
 
+export interface PeopleCurationSummary {
+  castCount: number;
+  castIds: string[];
+  spawnerCount: number;
+  spawnerIds: string[];
+  slotCount: number;
+  hasApprovedConcept: boolean;
+  hasFinalAsset: boolean;
+}
+
 export interface CharacterSummary {
   id: string;
   category: AssetCategory;
@@ -80,6 +90,7 @@ export interface CharacterSummary {
   pipelineIds: string[];
   missingPipelines: string[];
   climate?: string;
+  curation?: PeopleCurationSummary;
 }
 
 export interface GenericAssetRow {
@@ -433,4 +444,48 @@ export interface StageReviewDetail {
 export interface ValidationIssue {
   field: string;
   message: string;
+}
+
+export interface PeopleCompareItem {
+  id: string;
+  name: string;
+  kind: string;
+  classic: string | null;
+  classicUrl: string;
+  brief: BriefInfo | null;
+  aliases: string[];
+  pipelineIds: string[];
+  concept: PipelineConceptArt | null;
+  final: PipelineFinalOutput | null;
+  conceptStage: {
+    count: number;
+    front: ConceptCandidate | null;
+    back: ConceptCandidate | null;
+  };
+  review: ReviewRow;
+  placementCount: number;
+  peoplePack: CharacterPeoplePackUsage;
+}
+
+export interface PeopleCompareResponse {
+  items: PeopleCompareItem[];
+  warnings: string[];
+}
+
+export interface PeopleReferencesResponse {
+  id: string;
+  name: string;
+  kind: string;
+  classic: string | null;
+  canRetire: boolean;
+  requiresConfirmation: boolean;
+  blockers: string[];
+  warnings: string[];
+  mergedMembers: string[];
+  peoplePack: CharacterPeoplePackUsage;
+  pipelines: string[];
+  conceptCount: number;
+  hasApprovedConcept: boolean;
+  hasFinalAsset: boolean;
+  review: ReviewRow;
 }

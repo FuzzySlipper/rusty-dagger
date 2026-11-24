@@ -5,6 +5,7 @@ import { blocksUrl, castUrl, conceptsUrl, encodeKey, spawnerUrl, stageUrl } from
 import { useApp } from '../state';
 import { ASSET_LABELS, type CharacterDetail, type LinkChoice, type PipelineDetail } from '../types';
 import { ArtDataCard, ArtDataChip } from '../components/ArtDataLink';
+import { MergePartnerPickerModal, PeopleCompareModal, RetireNpcModal } from '../components/PeopleCurationModals';
 import { ReviewBadge, ReviewPanel } from '../components/ReviewControls';
 import { Breadcrumb, Chip, Empty, FactList, PageHeading, SpritePreview } from '../components/ui';
 
@@ -186,6 +187,9 @@ export function CharacterPage({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [actionStatus, setActionStatus] = useState('');
   const [selectedPipeline, setSelectedPipeline] = useState('');
+  const [mergePickerOpen, setMergePickerOpen] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [retireOpen, setRetireOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -309,9 +313,21 @@ export function CharacterPage({ id }: { id: string }) {
         title={subject.name}
         intro={`${subject.id} · ${subject.kind}`}
         action={
-          <a class="button primary" href={conceptsUrl(subject.id)}>
-            Concept art{subject.conceptStage?.count ? ` · ${subject.conceptStage.count}` : ''}
-          </a>
+          <div class="actions">
+            {subject.category === 'people' ? (
+              <>
+                <button type="button" onClick={() => setMergePickerOpen(true)}>
+                  Merge with…
+                </button>
+                <button type="button" class="danger" onClick={() => setRetireOpen(true)}>
+                  Retire record…
+                </button>
+              </>
+            ) : null}
+            <a class="button primary" href={conceptsUrl(subject.id)}>
+              Concept art{subject.conceptStage?.count ? ` · ${subject.conceptStage.count}` : ''}
+            </a>
+          </div>
         }
       />
 
@@ -495,6 +511,39 @@ export function CharacterPage({ id }: { id: string }) {
             </figure>
           </div>
         </section>
+      ) : null}
+
+      {subject.category === 'people' ? (
+        <>
+          <MergePartnerPickerModal
+            open={mergePickerOpen}
+            baseId={subject.id}
+            onClose={() => setMergePickerOpen(false)}
+            onSelectIds={ids => {
+              setMergePickerOpen(false);
+              setCompareIds(ids);
+            }}
+          />
+          <PeopleCompareModal
+            open={compareIds.length >= 2}
+            ids={compareIds}
+            initialKeeper={subject.id}
+            onClose={() => setCompareIds([])}
+            onMerged={keeperId => {
+              setCompareIds([]);
+              window.location.hash = `#character/${encodeKey(keeperId)}`;
+            }}
+          />
+          <RetireNpcModal
+            open={retireOpen}
+            npcId={subject.id}
+            onClose={() => setRetireOpen(false)}
+            onRetired={() => {
+              setRetireOpen(false);
+              window.location.hash = '#people';
+            }}
+          />
+        </>
       ) : null}
     </>
   );

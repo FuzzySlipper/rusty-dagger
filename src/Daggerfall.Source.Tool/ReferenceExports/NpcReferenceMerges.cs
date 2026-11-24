@@ -2,21 +2,32 @@ using System.Text.Json;
 
 namespace Daggerfall.Source.Tool.ReferenceExports;
 
-/// <summary>Applies confirmed catalog merges after classic art and placements have been resolved.</summary>
+/// <summary>Applies confirmed catalog merges and retirements after classic art and placements have been resolved.</summary>
 internal static class NpcReferenceMerges
 {
     public static IReadOnlyList<NpcEntry> Apply(ReferenceExport export, IReadOnlyList<NpcEntry> entries, string path)
     {
-        var filed = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllBytes(path), ReferenceExport.Json) ?? [];
+        var filed = JsonSerializer.Deserialize<Dictionary<string, string?>>(File.ReadAllBytes(path), ReferenceExport.Json) ?? [];
         if (filed.Count == 0) return entries;
 
         HashSet<string> ids = entries.Select(entry => entry.Id).ToHashSet(StringComparer.Ordinal);
         Dictionary<string, string> redirects = new(StringComparer.Ordinal);
-        foreach ((string source, string keeper) in filed)
+        HashSet<string> retired = new(StringComparer.Ordinal);
+        foreach ((string source, string? keeper) in filed)
         {
+            if (keeper is null)
+            {
+                if (!ids.Contains(source))
+                {
+                    export.Warn($"Skipping NPC retirement {source}: the reference is absent in this export.");
+                    continue;
+                }
+                retired.Add(source);
+                continue;
+            }
             if (filed.ContainsKey(keeper))
             {
-                // A keeper that is also retired would have no page for the merged references.
+                // A keeper that is also merged or retired would have no page for the merged references.
                 throw new InvalidDataException($"NPC merge {source} → {keeper} points to a retired keeper.");
             }
             if (!ids.Contains(source) || !ids.Contains(keeper))
@@ -29,12 +40,13 @@ internal static class NpcReferenceMerges
 
         var members = entries.Where(entry => redirects.ContainsKey(entry.Id)).ToLookup(entry => redirects[entry.Id]);
         List<NpcEntry> result = [];
-        foreach (NpcEntry entry in entries.Where(entry => !redirects.ContainsKey(entry.Id)))
+        foreach (NpcEntry entry in entries.Where(entry => !redirects.ContainsKey(entry.Id) && !retired.Contains(entry.Id)))
         {
             NpcEntry[] merged = [.. members[entry.Id].OrderBy(member => member.Id, StringComparer.Ordinal)];
             NpcEntry[] sources = [entry, .. merged];
             NpcLink[] links = [.. sources.SelectMany(source => source.Links)
-                .Select(link => RedirectLink(redirects, link))
+                .Select(link => RedirectLink(redirects, retired, link))
+                .OfType<NpcLink>()
                 .Where(link => link.Href != $"../{entry.Id}/index.html").DistinctBy(link => link.Href)];
             result.Add(merged.Length == 0 ? entry with { Links = links } : entry with
             {
@@ -48,10 +60,16 @@ internal static class NpcReferenceMerges
         return result;
     }
 
-    private static NpcLink RedirectLink(IReadOnlyDictionary<string, string> redirects, NpcLink link) =>
-        link.Href.Split('/') is ["..", var id, "index.html"] && redirects.TryGetValue(id, out string? keeper)
-            ? new($"Related NPC {keeper}", $"../{keeper}/index.html")
-            : link;
+    private static NpcLink? RedirectLink(IReadOnlyDictionary<string, string> redirects, IReadOnlySet<string> retired, NpcLink link)
+    {
+        if (link.Href.Split('/') is ["..", var id, "index.html"])
+        {
+            if (retired.Contains(id)) return null;
+            if (redirects.TryGetValue(id, out string? keeper))
+                return new($"Related NPC {keeper}", $"../{keeper}/index.html");
+        }
+        return link;
+    }
 
     private static IReadOnlyList<NpcArt> MergeArt(string root, NpcEntry keeper, IReadOnlyList<NpcEntry> members)
     {

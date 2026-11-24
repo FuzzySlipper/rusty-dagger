@@ -21,6 +21,7 @@ from library import (
     CMS, DEFAULT_CHARACTERS, DEFAULT_CONCEPTS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library,
 )
 from packs import PackStore
+import people_curation as people_curation_module
 import people_pack as people_pack_module
 from people_pack import PeoplePackStore
 from pipelines import STAGES, stage_row
@@ -106,7 +107,11 @@ class Workspace:
                         stage = self.concept_store.stage(id, aliases)
                         concepts[id] = {"id": id, "name": subject["name"], "count": len(stage["candidates"]),
                                         "approved": stage["approved"]["name"] if stage["approved"] else None}
-        return self.catalog_store.overview() | {
+        overview = self.catalog_store.overview()
+        overview["people"] = people_curation_module.enrich_people_rows(
+            overview["people"], catalog, self.concept_store, self.people_pack,
+        )
+        return overview | {
             "reviews": self.reviews().list(),
             "conceptStages": list(concepts.values()),
             "peoplePack": self.people_pack.summary_counts(catalog, self.concept_store),
@@ -127,7 +132,7 @@ class Workspace:
         identity = self.catalog_store.update_links(key, body)
         return self.character(identity)
 
-    def merge_npcs(self, candidate):
+    def run_npc_ledger_action(self, candidate):
         with TemporaryDirectory(prefix="dagger-authoring-merge-") as directory:
             file = Path(directory) / "npc-merge-candidate.json"
             file.write_text(json.dumps(candidate), encoding="utf-8")
@@ -139,6 +144,10 @@ class Workspace:
         if process.returncode:
             raise ValueError((process.stderr or process.stdout).strip() or "The NPC chart rebuild failed.")
         self.cache.invalidate()
+        return {"message": "NPC chart updated."}
+
+    def merge_npcs(self, candidate):
+        self.run_npc_ledger_action(candidate)
         return {"message": "NPC merge applied."}
 
 
@@ -165,6 +174,7 @@ def create_router(workspace: Workspace) -> Router:
     reviews_module.register_routes(router, workspace)
     concepts_module.register_routes(router, workspace)
     people_pack_module.register_routes(router, workspace)
+    people_curation_module.register_routes(router, workspace)
     return router
 
 
