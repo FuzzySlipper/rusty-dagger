@@ -896,6 +896,13 @@
           "category": null
         },
         {
+          "id": "referral",
+          "label": "Any contacts nearby?",
+          "key": null,
+          "group": "talk",
+          "category": null
+        },
+        {
           "id": "direction:npc:1000000000017",
           "label": "Where is Morganna Hawkwing?",
           "key": null,

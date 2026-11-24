@@ -11,6 +11,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
 {
     private readonly ConditionalWeakTable<ResolvedGameComposition, DaggerfallAdmittedContent> _admittedContent = [];
     private readonly bool _videosEnabled;
+    private readonly ulong? _gameSeed;
     public static readonly RulesetId Identity = new(DaggerfallBaseContent.RulesetName);
 
     /// <summary>The one authored pack carrying the ruleset identity, vocabulary, actors, items, loot and encounters.</summary>
@@ -41,8 +42,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
     /// <summary>Creates the ordinary product ruleset, with its admitted cinematic playback enabled.</summary>
     public DaggerfallRuleset() : this(videosEnabled: true) { }
 
-    /// <summary>Test-only explicit no-video composition; absent admitted content is never interpreted as this setting.</summary>
-    internal DaggerfallRuleset(bool videosEnabled) => _videosEnabled = videosEnabled;
+    /// <summary>Test-only explicit no-video or fixed-seed composition; absent admitted content is never interpreted as this setting.</summary>
+    internal DaggerfallRuleset(bool videosEnabled, ulong? gameSeed = null)
+    {
+        _videosEnabled = videosEnabled;
+        _gameSeed = gameSeed;
+    }
 
     public RulesetId Id => Identity;
 
@@ -136,7 +141,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             ArtReplacements = admitted.ArtReplacements,
             Blocks = admitted.Blocks,
             Loading = context.Loading,
-            GameSeed = DaggerfallGameRandom.NewSeed(),
+            GameSeed = _gameSeed ?? DaggerfallGameRandom.NewSeed(),
         };
 
     private DaggerfallAdmittedContent Admit(ResolvedGameComposition composition) =>

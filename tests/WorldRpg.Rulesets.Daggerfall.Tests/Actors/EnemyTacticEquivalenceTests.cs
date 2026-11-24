@@ -83,7 +83,7 @@ public sealed class EnemyTacticEquivalenceTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service,
             random: HashedRandom.Create());
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), new TestDaggerfallRuleset(videosEnabled: true),
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), new TestDaggerfallRuleset(videosEnabled: true, gameSeed: 0),
             new GameBundleId(Bundle));
         product.Start();
         // Floor a metre below any straight-down look; a body overlaps another actor's clearance box.

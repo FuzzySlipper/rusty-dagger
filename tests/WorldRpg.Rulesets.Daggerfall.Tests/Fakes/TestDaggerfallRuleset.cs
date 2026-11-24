@@ -13,7 +13,7 @@ internal sealed class TestDaggerfallRuleset : ISaveableGameRuleset, IInstalledCo
     // They name disabled videos explicitly so a missing fake Video service cannot masquerade as a
     // successful production-media path.
     private readonly DaggerfallRuleset _inner;
-    internal TestDaggerfallRuleset(bool videosEnabled = false) => _inner = new(videosEnabled);
+    internal TestDaggerfallRuleset(bool videosEnabled = false, ulong? gameSeed = null) => _inner = new(videosEnabled, gameSeed);
     public RulesetId Id => _inner.Id;
 
     /// <summary>The containers the real ruleset reads, which the Host opens for these tests as it does for the product.</summary>
