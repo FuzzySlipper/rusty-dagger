@@ -1,0 +1,122 @@
+{
+  "kind": "rmb-exterior",
+  "blocks": {
+    "SHRIAA00.RMB": [
+      {"slotId":"e:p00","spawner":"temple-priest","position":[50.675,0.1,-54.575],"interaction":"full-dialogue","factionId":813,"visual":{"archive":181,"record":2,"gender":"Male"}}
+    ],
+    "TVRNBL02.RMB": [
+      {"slotId":"e:c00","spawner":"clutter-person","position":[70.9,0.1,-44.775],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":184,"record":6,"gender":"Female"}}
+    ],
+    "TVRNBL04.RMB": [
+      {"slotId":"e:c00","spawner":"clutter-person","position":[60.975,0.1,-21.75],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":182,"record":34,"gender":"Female"}}
+    ],
+    "TVRNGL02.RMB": [
+      {"slotId":"e:c00","spawner":"clutter-person","position":[70.9,0.1,-44.775],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":184,"record":6,"gender":"Female"}}
+    ],
+    "TVRNGL04.RMB": [
+      {"slotId":"e:c00","spawner":"clutter-person","position":[60.975,0.1,-21.75],"interaction":"none","deriveRegionalFaction":true,"visual":{"archive":182,"record":34,"gender":"Female"}}
+    ],
+    "WITCAA00.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[45.125,0,-58.05],"interaction":"full-dialogue","factionId":419,"visual":{"archive":179,"record":2,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[40.45,0.1,-54],"interaction":"full-dialogue","factionId":419,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[49.95,0.1,-60.725],"interaction":"full-dialogue","factionId":419,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[43.75,0.1,-62.525],"interaction":"full-dialogue","factionId":419,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[44.05,0.1,-52.2],"interaction":"full-dialogue","factionId":419,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p05","spawner":"witch","position":[47.175,0.1,-70.475],"interaction":"full-dialogue","factionId":419,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p06","spawner":"witch","position":[53.575,0.1,-67.075],"interaction":"full-dialogue","factionId":419,"visual":{"archive":179,"record":4,"gender":"Female"}}
+    ],
+    "WITCAA01.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[40.45,0.1,-54],"interaction":"full-dialogue","factionId":420,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[49.95,0.1,-60.725],"interaction":"full-dialogue","factionId":420,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[43.75,0.1,-62.525],"interaction":"full-dialogue","factionId":420,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[44.05,0.1,-52.2],"interaction":"full-dialogue","factionId":420,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[47.175,0.1,-70.475],"interaction":"full-dialogue","factionId":420,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p05","spawner":"witch","position":[53.575,0.1,-67.075],"interaction":"full-dialogue","factionId":420,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p06","spawner":"witch","position":[44.9,0,-58.725],"interaction":"full-dialogue","factionId":420,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA02.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[47,0,-59.3],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":2,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[40.375,0.1,-58.075],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[43.35,0.1,-58.725],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[48.35,0.1,-55.525],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[45.35,0.1,-62.725],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p05","spawner":"witch","position":[42.575,0.1,-53.875],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p06","spawner":"witch","position":[46.975,0.1,-52.275],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p07","spawner":"witch","position":[51.775,0.1,-53.875],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p08","spawner":"witch","position":[54.575,0.1,-57.675],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p09","spawner":"witch","position":[53.975,0.1,-63.275],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p10","spawner":"witch","position":[49.575,0.1,-66.475],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p11","spawner":"witch","position":[44.175,0.1,-65.675],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p12","spawner":"witch","position":[40.375,0.1,-62.075],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p13","spawner":"witch","position":[49.95,0.1,-60.725],"interaction":"full-dialogue","factionId":421,"visual":{"archive":179,"record":0,"gender":"Female"}}
+    ],
+    "WITCAA03.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[42.95,0,-51.375],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":3,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[42.15,0,-54.175],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":3,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[43.75,0,-55.975],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":3,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[46.15,0,-56.575],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":3,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[48.35,0,-55.175],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":3,"gender":"Female"}},
+      {"slotId":"e:p05","spawner":"witch","position":[47.35,0,-51.775],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":3,"gender":"Female"}},
+      {"slotId":"e:p06","spawner":"witch","position":[44.95,0,-49.975],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":3,"gender":"Female"}},
+      {"slotId":"e:p07","spawner":"witch","position":[44.95,0,-52.45],"interaction":"full-dialogue","factionId":422,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA04.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[51.2,0,-51.2],"interaction":"full-dialogue","factionId":423,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA05.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[51.2,0,-51.2],"interaction":"full-dialogue","factionId":424,"visual":{"archive":179,"record":2,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[57.3,0,-53.9],"interaction":"full-dialogue","factionId":424,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[54.7,0,-45.1],"interaction":"full-dialogue","factionId":424,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[48.7,0,-45.9],"interaction":"full-dialogue","factionId":424,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[49.3,0,-54.5],"interaction":"full-dialogue","factionId":424,"visual":{"archive":179,"record":4,"gender":"Female"}}
+    ],
+    "WITCAA06.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[45.95,0.1,-61.525],"interaction":"full-dialogue","factionId":425,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[47.35,0.1,-58.925],"interaction":"full-dialogue","factionId":425,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[48.15,0.1,-63.525],"interaction":"full-dialogue","factionId":425,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[49.95,0.1,-60.725],"interaction":"full-dialogue","factionId":425,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[47.525,0,-56.4],"interaction":"full-dialogue","factionId":425,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA07.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[51.2,0,-51.2],"interaction":"full-dialogue","factionId":426,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA08.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[51.2,0,-51.2],"interaction":"full-dialogue","factionId":427,"visual":{"archive":179,"record":2,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[47.45,0,-57.3],"interaction":"full-dialogue","factionId":427,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[56.25,0,-56.7],"interaction":"full-dialogue","factionId":427,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[51.85,0,-46.9],"interaction":"full-dialogue","factionId":427,"visual":{"archive":179,"record":1,"gender":"Female"}}
+    ],
+    "WITCAA09.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[51.2,0,-51.2],"interaction":"full-dialogue","factionId":428,"visual":{"archive":179,"record":2,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[53.8,0,-51.05],"interaction":"full-dialogue","factionId":428,"visual":{"archive":179,"record":3,"gender":"Female"}}
+    ],
+    "WITCAA10.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[40.45,0.1,-54],"interaction":"full-dialogue","factionId":429,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[49.95,0.1,-60.725],"interaction":"full-dialogue","factionId":429,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[43.75,0.1,-62.525],"interaction":"full-dialogue","factionId":429,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[44.05,0.1,-52.2],"interaction":"full-dialogue","factionId":429,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[47.175,0.1,-70.475],"interaction":"full-dialogue","factionId":429,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p05","spawner":"witch","position":[53.575,0.1,-67.075],"interaction":"full-dialogue","factionId":429,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p06","spawner":"witch","position":[44.95,0,-56.2],"interaction":"full-dialogue","factionId":429,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA11.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[53.575,0.1,-67.075],"interaction":"full-dialogue","factionId":430,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[47.175,0.1,-70.475],"interaction":"full-dialogue","factionId":430,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[44.05,0.1,-52.2],"interaction":"full-dialogue","factionId":430,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[43.75,0.1,-62.525],"interaction":"full-dialogue","factionId":430,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[49.95,0.1,-60.725],"interaction":"full-dialogue","factionId":430,"visual":{"archive":179,"record":0,"gender":"Female"}},
+      {"slotId":"e:p05","spawner":"witch","position":[40.45,0.1,-54],"interaction":"full-dialogue","factionId":430,"visual":{"archive":179,"record":1,"gender":"Female"}},
+      {"slotId":"e:p06","spawner":"witch","position":[45.575,0,-59.325],"interaction":"full-dialogue","factionId":430,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA12.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[51.2,0,-44.95],"interaction":"full-dialogue","factionId":431,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p01","spawner":"witch","position":[46.4,0,-51.95],"interaction":"full-dialogue","factionId":431,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p02","spawner":"witch","position":[51.4,0,-60.15],"interaction":"full-dialogue","factionId":431,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p03","spawner":"witch","position":[57.2,0,-51.35],"interaction":"full-dialogue","factionId":431,"visual":{"archive":179,"record":4,"gender":"Female"}},
+      {"slotId":"e:p04","spawner":"witch","position":[51.2,0,-51.2],"interaction":"full-dialogue","factionId":431,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ],
+    "WITCAA13.RMB": [
+      {"slotId":"e:p00","spawner":"witch","position":[51.2,0,-51.2],"interaction":"full-dialogue","factionId":432,"visual":{"archive":179,"record":2,"gender":"Female"}}
+    ]
+  }
+}

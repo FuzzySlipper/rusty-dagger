@@ -1,0 +1,13 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.people",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.people",
+  "dependencies": [
+    {
+      "id": "daggerfall.base"
+    }
+  ],
+  "description": "Owned people placements, genuine unique cast individuals (cast/individuals.json), central regional typed spawner pools (spawners.json), and block slot templates (blocks/). Extracted once from Arena2 BLOCKS.BSA, FACTION.TXT, and FLATS.CFG via daggerfall-source-tool people-extract with known Arena2 people data bugs fixed; edited here in place.",
+  "payload": "worldrpg/packs/daggerfall.people/payload.json"
+}

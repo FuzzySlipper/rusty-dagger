@@ -1,0 +1,114 @@
+{
+  "kind": "rdb-dungeon",
+  "blocks": {
+    "S0000001.RDB": [
+      {"slotId":"d:p00","spawner":"dark-brotherhood-member","position":[14.475,33.05,-27.325],"interaction":"full-dialogue","deriveRegionalFaction":true,"visual":{"archive":176,"record":5,"gender":"Male"}}
+    ],
+    "S0000003.RDB": [
+      {"slotId":"d:p00","spawner":"daedra-summon","position":[26,1,-17.4],"interaction":"full-dialogue","deriveRegionalFaction":true,"visual":{"archive":175,"record":14,"gender":"Male"}}
+    ],
+    "S0000004.RDB": [
+      {"slotId":"d:p00","spawner":"daedra-summon","position":[22,90.85,-48.6],"interaction":"full-dialogue","deriveRegionalFaction":true,"visual":{"archive":175,"record":14,"gender":"Male"}}
+    ],
+    "S0000020.RDB": [
+      {"slotId":"d:p00","castId":"gortwog","position":[17,1.05,-28.75],"interaction":"full-dialogue","factionId":357,"visual":{"archive":183,"record":19,"gender":"Male"}}
+    ],
+    "S0000040.RDB": [
+      {"slotId":"d:p00","spawner":"dungeon-inhabitant","position":[23.025,33.075,-14.25],"interaction":"full-dialogue","deriveRegionalFaction":true,"visual":{"archive":184,"record":21,"gender":"Male"}},
+      {"slotId":"d:p01","spawner":"dungeon-inhabitant","position":[10.6,7.375,-4],"interaction":"full-dialogue","factionId":384,"deriveRegionalFaction":true,"visual":{"archive":357,"record":12,"gender":"Male"}},
+      {"slotId":"d:p02","spawner":"dungeon-inhabitant","position":[1.675,7.475,-15.925],"interaction":"full-dialogue","factionId":511,"deriveRegionalFaction":true,"visual":{"archive":357,"record":9,"gender":"Female"}},
+      {"slotId":"d:p03","spawner":"dungeon-inhabitant","position":[14.775,7.575,-19.525],"interaction":"full-dialogue","factionId":523,"deriveRegionalFaction":true,"visual":{"archive":357,"record":4,"gender":"Male"}},
+      {"slotId":"d:p04","spawner":"dungeon-inhabitant","position":[13.825,7.525,-18.4],"interaction":"full-dialogue","factionId":595,"deriveRegionalFaction":true,"visual":{"archive":357,"record":2,"gender":"Female"}},
+      {"slotId":"d:p05","spawner":"dungeon-inhabitant","position":[28.3,7.475,-10.675],"interaction":"full-dialogue","factionId":158,"deriveRegionalFaction":true,"visual":{"archive":184,"record":5,"gender":"Female"}},
+      {"slotId":"d:p06","spawner":"dungeon-inhabitant","position":[44.55,7.575,-3.35],"interaction":"full-dialogue","factionId":512,"deriveRegionalFaction":true,"visual":{"archive":357,"record":10,"gender":"Male"}},
+      {"slotId":"d:p07","spawner":"child","position":[17.7,7.15,-36.95],"interaction":"full-dialogue","factionId":511,"deriveRegionalFaction":true,"visual":{"archive":357,"record":5,"gender":"Male"}},
+      {"slotId":"d:p08","spawner":"child","position":[17.9,6.95,-33.375],"interaction":"full-dialogue","factionId":514,"deriveRegionalFaction":true,"visual":{"archive":357,"record":6,"gender":"Female"}},
+      {"slotId":"d:p09","castId":"prince-lhotun","position":[16.025,7.075,-33.35],"interaction":"full-dialogue","factionId":382,"visual":{"archive":357,"record":7,"gender":"Male"}},
+      {"slotId":"d:p10","castId":"lady-northbridge","position":[6.575,7.575,-29.6],"interaction":"full-dialogue","factionId":501,"visual":{"archive":357,"record":0,"gender":"Female"}},
+      {"slotId":"d:p11","castId":"lord-vhosek","position":[11.2,7.575,-30.25],"interaction":"full-dialogue","factionId":383,"visual":{"archive":357,"record":3,"gender":"Male"}},
+      {"slotId":"d:p12","spawner":"dungeon-inhabitant","position":[11.325,7.4,-48.2],"interaction":"full-dialogue","factionId":408,"deriveRegionalFaction":true,"visual":{"archive":357,"record":13,"gender":"Male"}},
+      {"slotId":"d:p13","spawner":"child","position":[24.75,33.2,-34.4],"interaction":"full-dialogue","factionId":511,"deriveRegionalFaction":true,"visual":{"archive":357,"record":8,"gender":"Male"}},
+      {"slotId":"d:p14","spawner":"dungeon-inhabitant","position":[33.6,1.05,-28.4],"interaction":"full-dialogue","deriveRegionalFaction":true,"visual":{"archive":346,"record":20,"gender":"Male"}},
+      {"slotId":"d:p15","spawner":"dungeon-inhabitant","position":[27.5,33.175,-35.875],"interaction":"full-dialogue","factionId":523,"deriveRegionalFaction":true,"visual":{"archive":357,"record":10,"gender":"Male"}},
+      {"slotId":"d:p16","spawner":"dungeon-inhabitant","position":[27.425,33.225,-28.3],"interaction":"full-dialogue","factionId":523,"deriveRegionalFaction":true,"visual":{"archive":357,"record":11,"gender":"Male"}},
+      {"slotId":"d:p17","spawner":"dungeon-inhabitant","position":[27.875,7.4,-40.125],"interaction":"full-dialogue","factionId":512,"deriveRegionalFaction":true,"visual":{"archive":184,"record":6,"gender":"Female"}},
+      {"slotId":"d:p18","castId":"lord-k-avar","position":[38.35,7.425,-45.925],"interaction":"full-dialogue","factionId":386,"visual":{"archive":182,"record":25,"gender":"Male"}},
+      {"slotId":"d:p19","spawner":"dungeon-inhabitant","position":[38.675,33.05,-42.25],"interaction":"full-dialogue","factionId":596,"deriveRegionalFaction":true,"visual":{"archive":357,"record":14,"gender":"Male"}},
+      {"slotId":"d:p20","spawner":"dungeon-inhabitant","position":[47.875,33,-41.525],"interaction":"full-dialogue","factionId":512,"deriveRegionalFaction":true,"visual":{"archive":184,"record":12,"gender":"Female"}},
+      {"slotId":"d:p21","castId":"prince-greklith","position":[35.625,39.55,-34.125],"interaction":"full-dialogue","factionId":381,"visual":{"archive":357,"record":1,"gender":"Male"}},
+      {"slotId":"d:p22","castId":"queen-akorithi","position":[34.425,39.425,-32],"interaction":"full-dialogue","factionId":380,"visual":{"archive":357,"record":15,"gender":"Female"}}
+    ],
+    "S0000041.RDB": [
+      {"slotId":"d:p00","spawner":"child","position":[23.25,13.55,-9.625],"interaction":"full-dialogue","factionId":514,"deriveRegionalFaction":true,"visual":{"archive":184,"record":15,"gender":"Male"}},
+      {"slotId":"d:p01","castId":"charvek-si","position":[34.125,13.875,-9.05],"interaction":"full-dialogue","factionId":385,"visual":{"archive":184,"record":1,"gender":"Female"}},
+      {"slotId":"d:p02","spawner":"dungeon-inhabitant","position":[18.775,13.55,-33.575],"interaction":"full-dialogue","factionId":523,"deriveRegionalFaction":true,"visual":{"archive":184,"record":2,"gender":"Male"}},
+      {"slotId":"d:p03","spawner":"dungeon-inhabitant","position":[37.125,13.825,-43.55],"interaction":"full-dialogue","factionId":523,"deriveRegionalFaction":true,"visual":{"archive":184,"record":33,"gender":"Female"}}
+    ],
+    "S0000070.RDB": [
+      {"slotId":"d:p00","castId":"nulfaga","position":[30.8,20.225,-16.8],"interaction":"full-dialogue","factionId":303,"visual":{"archive":183,"record":17,"gender":"Female"}}
+    ],
+    "S0000080.RDB": [
+      {"slotId":"d:p00","castId":"king-eadwyre","position":[2.5,33.35,-23.15],"interaction":"full-dialogue","factionId":390,"visual":{"archive":346,"record":21,"gender":"Male"}},
+      {"slotId":"d:p01","castId":"princess-elysana","position":[16.975,26.825,-15.35],"interaction":"full-dialogue","factionId":392,"visual":{"archive":346,"record":17,"gender":"Female"}},
+      {"slotId":"d:p02","spawner":"child","position":[17.325,26.725,-20.475],"interaction":"full-dialogue","factionId":511,"deriveRegionalFaction":true,"visual":{"archive":346,"record":12,"gender":"Male"}},
+      {"slotId":"d:p03","spawner":"child","position":[16.15,26.45,-21.75],"interaction":"full-dialogue","factionId":514,"deriveRegionalFaction":true,"visual":{"archive":346,"record":18,"gender":"Male"}},
+      {"slotId":"d:p04","spawner":"dungeon-inhabitant","position":[23.9,26.625,-20.95],"interaction":"full-dialogue","factionId":409,"deriveRegionalFaction":true,"visual":{"archive":346,"record":19,"gender":"Male"}},
+      {"slotId":"d:p05","spawner":"child","position":[44.15,26.475,-22.475],"interaction":"full-dialogue","factionId":514,"deriveRegionalFaction":true,"visual":{"archive":346,"record":15,"gender":"Male"}},
+      {"slotId":"d:p06","castId":"queen-barenziah","position":[2.75,33.3,-26.975],"interaction":"full-dialogue","factionId":391,"visual":{"archive":346,"record":22,"gender":"Female"}},
+      {"slotId":"d:p07","castId":"princess-morgiah","position":[3.925,33.025,-30.475],"interaction":"full-dialogue","factionId":394,"visual":{"archive":346,"record":0,"gender":"Female"}},
+      {"slotId":"d:p08","spawner":"child","position":[20.925,26.8,-32.825],"interaction":"full-dialogue","factionId":511,"deriveRegionalFaction":true,"visual":{"archive":346,"record":3,"gender":"Male"}},
+      {"slotId":"d:p09","spawner":"dungeon-inhabitant","position":[9.125,26.8,-33.9],"interaction":"full-dialogue","factionId":499,"deriveRegionalFaction":true,"visual":{"archive":346,"record":10,"gender":"Female"}},
+      {"slotId":"d:p10","spawner":"dungeon-inhabitant","position":[14.6,26.825,-25.7],"interaction":"full-dialogue","factionId":499,"deriveRegionalFaction":true,"visual":{"archive":346,"record":14,"gender":"Male"}},
+      {"slotId":"d:p11","spawner":"dungeon-inhabitant","position":[16.75,26.7,-31.45],"interaction":"full-dialogue","factionId":499,"deriveRegionalFaction":true,"visual":{"archive":346,"record":8,"gender":"Male"}}
+    ],
+    "S0000081.RDB": [
+      {"slotId":"d:p00","spawner":"dungeon-inhabitant","position":[10.2,13.925,-14.025],"interaction":"full-dialogue","factionId":526,"deriveRegionalFaction":true,"visual":{"archive":346,"record":9,"gender":"Female"}},
+      {"slotId":"d:p01","spawner":"dungeon-inhabitant","position":[4.1,13.925,-24.125],"interaction":"full-dialogue","factionId":526,"deriveRegionalFaction":true,"visual":{"archive":346,"record":13,"gender":"Male"}},
+      {"slotId":"d:p02","spawner":"dungeon-inhabitant","position":[4.775,13.475,-19.6],"interaction":"full-dialogue","factionId":526,"deriveRegionalFaction":true,"visual":{"archive":346,"record":6,"gender":"Male"}},
+      {"slotId":"d:p03","spawner":"dungeon-inhabitant","position":[10.4,13.85,-8.275],"interaction":"full-dialogue","factionId":526,"deriveRegionalFaction":true,"visual":{"archive":346,"record":4,"gender":"Male"}},
+      {"slotId":"d:p04","spawner":"dungeon-inhabitant","position":[6.9,13.925,-8.1],"interaction":"full-dialogue","factionId":526,"deriveRegionalFaction":true,"visual":{"archive":346,"record":1,"gender":"Male"}},
+      {"slotId":"d:p05","spawner":"dungeon-inhabitant","position":[10.025,13.85,-16.8],"interaction":"full-dialogue","factionId":526,"deriveRegionalFaction":true,"visual":{"archive":346,"record":5,"gender":"Male"}},
+      {"slotId":"d:p06","castId":"prince-helseth","position":[33.6,27.2,-19.125],"interaction":"full-dialogue","factionId":393,"visual":{"archive":346,"record":16,"gender":"Male"}},
+      {"slotId":"d:p07","castId":"lord-darkworth","position":[28.475,26.6,-16.75],"interaction":"full-dialogue","factionId":397,"visual":{"archive":184,"record":0,"gender":"Male"}},
+      {"slotId":"d:p08","spawner":"dungeon-inhabitant","position":[42.6,26.6,-22.125],"interaction":"full-dialogue","factionId":409,"deriveRegionalFaction":true,"visual":{"archive":346,"record":19,"gender":"Male"}},
+      {"slotId":"d:p09","spawner":"dungeon-inhabitant","position":[36.1,26.65,-36.975],"interaction":"full-dialogue","factionId":154,"deriveRegionalFaction":true,"visual":{"archive":184,"record":7,"gender":"Female"}},
+      {"slotId":"d:p10","spawner":"dungeon-inhabitant","position":[30.875,26.6,-29.975],"interaction":"full-dialogue","factionId":499,"deriveRegionalFaction":true,"visual":{"archive":184,"record":4,"gender":"Male"}},
+      {"slotId":"d:p11","castId":"karethys","position":[27.075,26.75,-25.65],"interaction":"full-dialogue","factionId":396,"visual":{"archive":346,"record":11,"gender":"Female"}}
+    ],
+    "S0000160.RDB": [
+      {"slotId":"d:p00","castId":"cyndassa","position":[15.6,26.675,-19.8],"interaction":"full-dialogue","factionId":500,"visual":{"archive":334,"record":5,"gender":"Female"}},
+      {"slotId":"d:p01","spawner":"dungeon-inhabitant","position":[21.825,26.6,-2.225],"interaction":"full-dialogue","factionId":518,"deriveRegionalFaction":true,"visual":{"archive":334,"record":14,"gender":"Male"}},
+      {"slotId":"d:p02","spawner":"dungeon-inhabitant","position":[17.125,32.975,-16.45],"interaction":"full-dialogue","factionId":368,"deriveRegionalFaction":true,"visual":{"archive":334,"record":16,"gender":"Male"}},
+      {"slotId":"d:p03","castId":"lord-bridwell","position":[13.275,33.1,-17.9],"interaction":"full-dialogue","factionId":367,"visual":{"archive":334,"record":17,"gender":"Male"}},
+      {"slotId":"d:p04","castId":"king-gothryd","position":[11.725,33.325,-23.075],"interaction":"full-dialogue","factionId":364,"visual":{"archive":334,"record":19,"gender":"Male"}},
+      {"slotId":"d:p05","spawner":"child","position":[40.4,26.575,-10.575],"interaction":"full-dialogue","factionId":514,"deriveRegionalFaction":true,"visual":{"archive":334,"record":9,"gender":"Male"}},
+      {"slotId":"d:p06","spawner":"dungeon-inhabitant","position":[39.1,26.275,-1.725],"interaction":"full-dialogue","factionId":518,"deriveRegionalFaction":true,"visual":{"archive":334,"record":7,"gender":"Male"}},
+      {"slotId":"d:p07","spawner":"dungeon-inhabitant","position":[37.9,26.6,-9.625],"interaction":"full-dialogue","factionId":595,"deriveRegionalFaction":true,"visual":{"archive":334,"record":20,"gender":"Male"}},
+      {"slotId":"d:p08","castId":"lord-provlith","position":[25.975,26.725,-17.15],"interaction":"full-dialogue","factionId":387,"visual":{"archive":334,"record":0,"gender":"Male"}},
+      {"slotId":"d:p09","spawner":"dungeon-inhabitant","position":[28.45,26.7,-17.15],"interaction":"full-dialogue","factionId":595,"deriveRegionalFaction":true,"visual":{"archive":334,"record":10,"gender":"Female"}},
+      {"slotId":"d:p10","spawner":"child","position":[41.2,26.725,-14.9],"interaction":"full-dialogue","factionId":595,"deriveRegionalFaction":true,"visual":{"archive":334,"record":6,"gender":"Male"}},
+      {"slotId":"d:p11","castId":"mynisera","position":[12.3,26.725,-40.05],"interaction":"full-dialogue","factionId":366,"visual":{"archive":334,"record":4,"gender":"Female"}},
+      {"slotId":"d:p12","castId":"mobar","position":[16.325,33.125,-34.575],"interaction":"full-dialogue","factionId":371,"visual":{"archive":334,"record":18,"gender":"Male"}},
+      {"slotId":"d:p13","castId":"queen-aubk-i","position":[11.075,33.325,-25.775],"interaction":"full-dialogue","factionId":365,"visual":{"archive":334,"record":21,"gender":"Female"}},
+      {"slotId":"d:p14","castId":"popudax","position":[30.6,26.725,-47.55],"interaction":"full-dialogue","factionId":369,"visual":{"archive":334,"record":1,"gender":"Male"}},
+      {"slotId":"d:p15","spawner":"child","position":[30.775,26.475,-31.2],"interaction":"full-dialogue","factionId":514,"deriveRegionalFaction":true,"visual":{"archive":334,"record":12,"gender":"Female"}},
+      {"slotId":"d:p16","spawner":"dungeon-inhabitant","position":[29.925,26.675,-30.5],"interaction":"full-dialogue","factionId":511,"deriveRegionalFaction":true,"visual":{"archive":334,"record":11,"gender":"Male"}},
+      {"slotId":"d:p17","spawner":"child","position":[27.25,26.75,-29.3],"interaction":"full-dialogue","factionId":511,"deriveRegionalFaction":true,"visual":{"archive":334,"record":3,"gender":"Male"}},
+      {"slotId":"d:p18","castId":"lady-bridwell","position":[37.7,26.7,-35.7],"interaction":"full-dialogue","factionId":377,"visual":{"archive":334,"record":8,"gender":"Female"}},
+      {"slotId":"d:p19","spawner":"dungeon-inhabitant","position":[42.05,26.7,-35.55],"interaction":"full-dialogue","factionId":150,"deriveRegionalFaction":true,"visual":{"archive":334,"record":13,"gender":"Male"}},
+      {"slotId":"d:p20","spawner":"noble","position":[46.5,26.55,-27.35],"interaction":"full-dialogue","deriveRegionalFaction":true,"visual":{"archive":183,"record":3,"gender":"Male"}}
+    ],
+    "S0000180.RDB": [
+      {"slotId":"d:p00","castId":"medora","position":[29.475,20.225,-18.25],"interaction":"full-dialogue","factionId":363,"visual":{"archive":183,"record":14,"gender":"Female"}}
+    ],
+    "S0000205.RDB": [
+      {"slotId":"d:p00","spawner":"necromancer","position":[25.45,12.05,-38.1],"interaction":"full-dialogue","factionId":306,"deriveRegionalFaction":true,"visual":{"archive":178,"record":5,"gender":"Female"}},
+      {"slotId":"d:p01","spawner":"necromancer","position":[22.325,12.275,-26.875],"interaction":"full-dialogue","factionId":306,"deriveRegionalFaction":true,"visual":{"archive":178,"record":3,"gender":"Male"}},
+      {"slotId":"d:p02","spawner":"necromancer","position":[19.925,12.15,-40.475],"interaction":"full-dialogue","factionId":306,"deriveRegionalFaction":true,"visual":{"archive":178,"record":2,"gender":"Male"}},
+      {"slotId":"d:p03","spawner":"necromancer","position":[9.05,14.15,-33.275],"interaction":"full-dialogue","factionId":306,"deriveRegionalFaction":true,"visual":{"archive":178,"record":1,"gender":"Male"}},
+      {"slotId":"d:p04","spawner":"necromancer","position":[25.9,11.9,-33.3],"interaction":"full-dialogue","factionId":306,"deriveRegionalFaction":true,"visual":{"archive":178,"record":6,"gender":"Female"}},
+      {"slotId":"d:p05","spawner":"necromancer","position":[34.8,12.475,-40.6],"interaction":"full-dialogue","factionId":306,"deriveRegionalFaction":true,"visual":{"archive":178,"record":0,"gender":"Female"}},
+      {"slotId":"d:p06","castId":"king-of-worms","position":[29.6,12.6,-31],"interaction":"full-dialogue","factionId":305,"visual":{"archive":178,"record":4,"gender":"Male"}}
+    ]
+  }
+}

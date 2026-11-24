@@ -1,0 +1,2608 @@
+{
+  "spawners": [
+    {
+      "id": "alchemist",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 23,
+          "gender": "Male",
+          "weight": 36
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 12
+        },
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 8
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "armorer",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 50
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 2
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "banker",
+      "role": "bank teller",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 31
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "bookseller",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 22,
+          "gender": "Male",
+          "weight": 18
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 15
+        },
+        {
+          "archive": 182,
+          "record": 24,
+          "gender": "Male",
+          "weight": 10
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "child",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 4,
+          "gender": "Male",
+          "weight": 180
+        },
+        {
+          "archive": 182,
+          "record": 43,
+          "gender": "Male",
+          "weight": 147
+        },
+        {
+          "archive": 182,
+          "record": 18,
+          "gender": "Male",
+          "weight": 142
+        },
+        {
+          "archive": 182,
+          "record": 36,
+          "gender": "Male",
+          "weight": 124
+        },
+        {
+          "archive": 182,
+          "record": 52,
+          "gender": "Male",
+          "weight": 44
+        },
+        {
+          "archive": 182,
+          "record": 5,
+          "gender": "Female",
+          "weight": 34
+        },
+        {
+          "archive": 182,
+          "record": 37,
+          "gender": "Male",
+          "weight": 18
+        },
+        {
+          "archive": 182,
+          "record": 38,
+          "gender": "Female",
+          "weight": 18
+        },
+        {
+          "archive": 182,
+          "record": 42,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 181,
+          "record": 3,
+          "gender": "Male",
+          "weight": 5
+        },
+        {
+          "archive": 182,
+          "record": 53,
+          "gender": "Female",
+          "weight": 5
+        },
+        {
+          "archive": 182,
+          "record": 6,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 15,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 3,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 6,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 9,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 12,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 3,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 12,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 15,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 18,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 5,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 6,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 8,
+          "gender": "Male",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "clothier",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 15,
+          "gender": "Male",
+          "weight": 24
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 182,
+          "record": 26,
+          "gender": "Female",
+          "weight": 6
+        },
+        {
+          "archive": 182,
+          "record": 25,
+          "gender": "Male",
+          "weight": 5
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 4
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "clutter-person",
+      "role": "bystander",
+      "interaction": "none",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 34,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 6,
+          "gender": "Female",
+          "weight": 2
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "courtier",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 17
+        },
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 11
+        },
+        {
+          "archive": 183,
+          "record": 7,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 183,
+          "record": 4,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 5
+        },
+        {
+          "archive": 183,
+          "record": 6,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 183,
+          "record": 9,
+          "gender": "Female",
+          "weight": 2
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "daedra-summon",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "combatant",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 175,
+          "record": 14,
+          "gender": "Male",
+          "weight": 2
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "dark-brotherhood-member",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 176,
+          "record": 5,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 176,
+          "record": 0,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 176,
+          "record": 1,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 176,
+          "record": 2,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 176,
+          "record": 3,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 176,
+          "record": 4,
+          "gender": "Female",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "dungeon-inhabitant",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 346,
+          "record": 19,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 357,
+          "record": 10,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 4,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 5,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 6,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 7,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 12,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 21,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 33,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 7,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 10,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 11,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 13,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 14,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 16,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 334,
+          "record": 20,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 1,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 4,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 5,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 6,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 8,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 9,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 10,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 13,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 14,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 346,
+          "record": 20,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 2,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 4,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 9,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 11,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 12,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 13,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 357,
+          "record": 14,
+          "gender": "Male",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "fighters-guild-member",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 17,
+          "gender": "Male",
+          "weight": 7
+        },
+        {
+          "archive": 182,
+          "record": 20,
+          "gender": "Male",
+          "weight": 7
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 7
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 7
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "furniture-merchant",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 23
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "general-merchant",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 80
+        },
+        {
+          "archive": 184,
+          "record": 17,
+          "gender": "Male",
+          "weight": 5
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "guild-member",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 70
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 37
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 29
+        },
+        {
+          "archive": 182,
+          "record": 11,
+          "gender": "Female",
+          "weight": 25
+        },
+        {
+          "archive": 182,
+          "record": 50,
+          "gender": "Female",
+          "weight": 18
+        },
+        {
+          "archive": 183,
+          "record": 4,
+          "gender": "Male",
+          "weight": 18
+        },
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 16
+        },
+        {
+          "archive": 184,
+          "record": 4,
+          "gender": "Male",
+          "weight": 12
+        },
+        {
+          "archive": 184,
+          "record": 0,
+          "gender": "Male",
+          "weight": 7
+        },
+        {
+          "archive": 182,
+          "record": 40,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 41,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 47,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 51,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 44,
+          "gender": "Female",
+          "weight": 3
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "house-resident",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 184,
+          "record": 20,
+          "gender": "Male",
+          "weight": 680
+        },
+        {
+          "archive": 184,
+          "record": 28,
+          "gender": "Female",
+          "weight": 675
+        },
+        {
+          "archive": 184,
+          "record": 22,
+          "gender": "Female",
+          "weight": 597
+        },
+        {
+          "archive": 184,
+          "record": 29,
+          "gender": "Female",
+          "weight": 459
+        },
+        {
+          "archive": 184,
+          "record": 23,
+          "gender": "Female",
+          "weight": 451
+        },
+        {
+          "archive": 184,
+          "record": 19,
+          "gender": "Female",
+          "weight": 443
+        },
+        {
+          "archive": 184,
+          "record": 25,
+          "gender": "Male",
+          "weight": 419
+        },
+        {
+          "archive": 184,
+          "record": 17,
+          "gender": "Male",
+          "weight": 392
+        },
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 346
+        },
+        {
+          "archive": 184,
+          "record": 7,
+          "gender": "Female",
+          "weight": 335
+        },
+        {
+          "archive": 182,
+          "record": 10,
+          "gender": "Female",
+          "weight": 316
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 277
+        },
+        {
+          "archive": 184,
+          "record": 4,
+          "gender": "Male",
+          "weight": 263
+        },
+        {
+          "archive": 184,
+          "record": 21,
+          "gender": "Male",
+          "weight": 255
+        },
+        {
+          "archive": 184,
+          "record": 33,
+          "gender": "Female",
+          "weight": 241
+        },
+        {
+          "archive": 184,
+          "record": 26,
+          "gender": "Female",
+          "weight": 228
+        },
+        {
+          "archive": 182,
+          "record": 28,
+          "gender": "Female",
+          "weight": 223
+        },
+        {
+          "archive": 182,
+          "record": 47,
+          "gender": "Female",
+          "weight": 223
+        },
+        {
+          "archive": 184,
+          "record": 9,
+          "gender": "Female",
+          "weight": 206
+        },
+        {
+          "archive": 184,
+          "record": 5,
+          "gender": "Female",
+          "weight": 193
+        },
+        {
+          "archive": 182,
+          "record": 24,
+          "gender": "Male",
+          "weight": 190
+        },
+        {
+          "archive": 184,
+          "record": 24,
+          "gender": "Male",
+          "weight": 188
+        },
+        {
+          "archive": 182,
+          "record": 29,
+          "gender": "Male",
+          "weight": 178
+        },
+        {
+          "archive": 182,
+          "record": 39,
+          "gender": "Male",
+          "weight": 169
+        },
+        {
+          "archive": 182,
+          "record": 17,
+          "gender": "Male",
+          "weight": 168
+        },
+        {
+          "archive": 182,
+          "record": 26,
+          "gender": "Female",
+          "weight": 167
+        },
+        {
+          "archive": 182,
+          "record": 12,
+          "gender": "Female",
+          "weight": 147
+        },
+        {
+          "archive": 182,
+          "record": 34,
+          "gender": "Female",
+          "weight": 134
+        },
+        {
+          "archive": 184,
+          "record": 8,
+          "gender": "Female",
+          "weight": 122
+        },
+        {
+          "archive": 182,
+          "record": 20,
+          "gender": "Male",
+          "weight": 118
+        },
+        {
+          "archive": 182,
+          "record": 45,
+          "gender": "Female",
+          "weight": 112
+        },
+        {
+          "archive": 184,
+          "record": 10,
+          "gender": "Female",
+          "weight": 109
+        },
+        {
+          "archive": 184,
+          "record": 0,
+          "gender": "Male",
+          "weight": 102
+        },
+        {
+          "archive": 182,
+          "record": 48,
+          "gender": "Female",
+          "weight": 96
+        },
+        {
+          "archive": 184,
+          "record": 1,
+          "gender": "Female",
+          "weight": 94
+        },
+        {
+          "archive": 182,
+          "record": 15,
+          "gender": "Male",
+          "weight": 87
+        },
+        {
+          "archive": 182,
+          "record": 41,
+          "gender": "Female",
+          "weight": 83
+        },
+        {
+          "archive": 182,
+          "record": 46,
+          "gender": "Male",
+          "weight": 80
+        },
+        {
+          "archive": 182,
+          "record": 35,
+          "gender": "Male",
+          "weight": 79
+        },
+        {
+          "archive": 182,
+          "record": 40,
+          "gender": "Male",
+          "weight": 74
+        },
+        {
+          "archive": 182,
+          "record": 44,
+          "gender": "Female",
+          "weight": 72
+        },
+        {
+          "archive": 184,
+          "record": 12,
+          "gender": "Female",
+          "weight": 65
+        },
+        {
+          "archive": 184,
+          "record": 30,
+          "gender": "Female",
+          "weight": 59
+        },
+        {
+          "archive": 182,
+          "record": 19,
+          "gender": "Male",
+          "weight": 51
+        },
+        {
+          "archive": 182,
+          "record": 21,
+          "gender": "Male",
+          "weight": 42
+        },
+        {
+          "archive": 182,
+          "record": 33,
+          "gender": "Female",
+          "weight": 28
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 27
+        },
+        {
+          "archive": 182,
+          "record": 8,
+          "gender": "Male",
+          "weight": 19
+        },
+        {
+          "archive": 182,
+          "record": 11,
+          "gender": "Female",
+          "weight": 15
+        },
+        {
+          "archive": 182,
+          "record": 25,
+          "gender": "Male",
+          "weight": 15
+        },
+        {
+          "archive": 184,
+          "record": 32,
+          "gender": "Female",
+          "weight": 11
+        },
+        {
+          "archive": 182,
+          "record": 27,
+          "gender": "Female",
+          "weight": 9
+        },
+        {
+          "archive": 182,
+          "record": 13,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 176,
+          "record": 1,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 176,
+          "record": 5,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 184,
+          "record": 14,
+          "gender": "Female",
+          "weight": 6
+        },
+        {
+          "archive": 184,
+          "record": 6,
+          "gender": "Female",
+          "weight": 5
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 3,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 176,
+          "record": 2,
+          "gender": "Female",
+          "weight": 3
+        },
+        {
+          "archive": 182,
+          "record": 14,
+          "gender": "Male",
+          "weight": 3
+        },
+        {
+          "archive": 182,
+          "record": 7,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 1,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 22,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 49,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 50,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 51,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "jeweler",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 33
+        },
+        {
+          "archive": 182,
+          "record": 11,
+          "gender": "Female",
+          "weight": 12
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "knightly-order-member",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 183,
+          "record": 4,
+          "gender": "Male",
+          "weight": 4
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "mage-guild-member",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 177,
+          "record": 4,
+          "gender": "Male",
+          "weight": 27
+        },
+        {
+          "archive": 177,
+          "record": 5,
+          "gender": "Male",
+          "weight": 27
+        },
+        {
+          "archive": 177,
+          "record": 1,
+          "gender": "Male",
+          "weight": 25
+        },
+        {
+          "archive": 182,
+          "record": 25,
+          "gender": "Male",
+          "weight": 17
+        },
+        {
+          "archive": 182,
+          "record": 24,
+          "gender": "Male",
+          "weight": 16
+        },
+        {
+          "archive": 177,
+          "record": 2,
+          "gender": "Male",
+          "weight": 13
+        },
+        {
+          "archive": 184,
+          "record": 0,
+          "gender": "Male",
+          "weight": 13
+        },
+        {
+          "archive": 177,
+          "record": 3,
+          "gender": "Female",
+          "weight": 12
+        },
+        {
+          "archive": 177,
+          "record": 0,
+          "gender": "Male",
+          "weight": 11
+        },
+        {
+          "archive": 182,
+          "record": 23,
+          "gender": "Male",
+          "weight": 11
+        },
+        {
+          "archive": 182,
+          "record": 19,
+          "gender": "Male",
+          "weight": 10
+        },
+        {
+          "archive": 182,
+          "record": 41,
+          "gender": "Female",
+          "weight": 10
+        },
+        {
+          "archive": 182,
+          "record": 40,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 182,
+          "record": 45,
+          "gender": "Female",
+          "weight": 9
+        },
+        {
+          "archive": 183,
+          "record": 4,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 182,
+          "record": 21,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 184,
+          "record": 28,
+          "gender": "Female",
+          "weight": 6
+        },
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 22,
+          "gender": "Male",
+          "weight": 3
+        },
+        {
+          "archive": 182,
+          "record": 15,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 17,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 55,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 21,
+          "gender": "Male",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "necromancer",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "combatant",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 178,
+          "record": 0,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 178,
+          "record": 1,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 178,
+          "record": 2,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 178,
+          "record": 3,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 178,
+          "record": 5,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 178,
+          "record": 6,
+          "gender": "Female",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "noble",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "palace-attendant",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 12
+        },
+        {
+          "archive": 182,
+          "record": 11,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 5,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 28,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 26,
+          "gender": "Female",
+          "weight": 3
+        },
+        {
+          "archive": 182,
+          "record": 7,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 10,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 28,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 29,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 19,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 29,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 32,
+          "gender": "Female",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "pawnbroker",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 22
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "scholar",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 18
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 184,
+          "record": 4,
+          "gender": "Male",
+          "weight": 7
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "shop-patron",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 184,
+          "record": 8,
+          "gender": "Female",
+          "weight": 44
+        },
+        {
+          "archive": 184,
+          "record": 19,
+          "gender": "Female",
+          "weight": 44
+        },
+        {
+          "archive": 184,
+          "record": 17,
+          "gender": "Male",
+          "weight": 25
+        },
+        {
+          "archive": 182,
+          "record": 21,
+          "gender": "Male",
+          "weight": 23
+        },
+        {
+          "archive": 184,
+          "record": 28,
+          "gender": "Female",
+          "weight": 22
+        },
+        {
+          "archive": 182,
+          "record": 11,
+          "gender": "Female",
+          "weight": 21
+        },
+        {
+          "archive": 182,
+          "record": 19,
+          "gender": "Male",
+          "weight": 18
+        },
+        {
+          "archive": 184,
+          "record": 12,
+          "gender": "Female",
+          "weight": 14
+        },
+        {
+          "archive": 182,
+          "record": 35,
+          "gender": "Male",
+          "weight": 10
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 182,
+          "record": 48,
+          "gender": "Female",
+          "weight": 9
+        },
+        {
+          "archive": 184,
+          "record": 20,
+          "gender": "Male",
+          "weight": 9
+        },
+        {
+          "archive": 184,
+          "record": 1,
+          "gender": "Female",
+          "weight": 8
+        },
+        {
+          "archive": 184,
+          "record": 5,
+          "gender": "Female",
+          "weight": 7
+        },
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 184,
+          "record": 21,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 24,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 7,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 9,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 26,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 28,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 29,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 33,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 183,
+          "record": 18,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 29,
+          "gender": "Female",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "tavern-keeper",
+      "role": "tavern keeper",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 1,
+          "gender": "Male",
+          "weight": 126
+        },
+        {
+          "archive": 182,
+          "record": 3,
+          "gender": "Male",
+          "weight": 85
+        },
+        {
+          "archive": 182,
+          "record": 2,
+          "gender": "Male",
+          "weight": 65
+        },
+        {
+          "archive": 184,
+          "record": 16,
+          "gender": "Male",
+          "weight": 29
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "tavern-patron",
+      "role": "person",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 11,
+          "gender": "Female",
+          "weight": 150
+        },
+        {
+          "archive": 184,
+          "record": 9,
+          "gender": "Female",
+          "weight": 116
+        },
+        {
+          "archive": 184,
+          "record": 10,
+          "gender": "Female",
+          "weight": 96
+        },
+        {
+          "archive": 182,
+          "record": 12,
+          "gender": "Female",
+          "weight": 78
+        },
+        {
+          "archive": 182,
+          "record": 13,
+          "gender": "Male",
+          "weight": 62
+        },
+        {
+          "archive": 182,
+          "record": 15,
+          "gender": "Male",
+          "weight": 56
+        },
+        {
+          "archive": 182,
+          "record": 21,
+          "gender": "Male",
+          "weight": 56
+        },
+        {
+          "archive": 184,
+          "record": 4,
+          "gender": "Male",
+          "weight": 48
+        },
+        {
+          "archive": 184,
+          "record": 17,
+          "gender": "Male",
+          "weight": 46
+        },
+        {
+          "archive": 182,
+          "record": 14,
+          "gender": "Male",
+          "weight": 45
+        },
+        {
+          "archive": 184,
+          "record": 12,
+          "gender": "Female",
+          "weight": 37
+        },
+        {
+          "archive": 182,
+          "record": 26,
+          "gender": "Female",
+          "weight": 35
+        },
+        {
+          "archive": 182,
+          "record": 23,
+          "gender": "Male",
+          "weight": 31
+        },
+        {
+          "archive": 184,
+          "record": 3,
+          "gender": "Male",
+          "weight": 29
+        },
+        {
+          "archive": 184,
+          "record": 7,
+          "gender": "Female",
+          "weight": 29
+        },
+        {
+          "archive": 184,
+          "record": 11,
+          "gender": "Female",
+          "weight": 29
+        },
+        {
+          "archive": 184,
+          "record": 29,
+          "gender": "Female",
+          "weight": 29
+        },
+        {
+          "archive": 182,
+          "record": 25,
+          "gender": "Male",
+          "weight": 26
+        },
+        {
+          "archive": 184,
+          "record": 1,
+          "gender": "Female",
+          "weight": 26
+        },
+        {
+          "archive": 182,
+          "record": 39,
+          "gender": "Male",
+          "weight": 19
+        },
+        {
+          "archive": 182,
+          "record": 20,
+          "gender": "Male",
+          "weight": 18
+        },
+        {
+          "archive": 182,
+          "record": 50,
+          "gender": "Female",
+          "weight": 18
+        },
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 17
+        },
+        {
+          "archive": 184,
+          "record": 8,
+          "gender": "Female",
+          "weight": 17
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 17
+        },
+        {
+          "archive": 184,
+          "record": 19,
+          "gender": "Female",
+          "weight": 17
+        },
+        {
+          "archive": 184,
+          "record": 23,
+          "gender": "Female",
+          "weight": 17
+        },
+        {
+          "archive": 184,
+          "record": 25,
+          "gender": "Male",
+          "weight": 17
+        },
+        {
+          "archive": 184,
+          "record": 33,
+          "gender": "Female",
+          "weight": 17
+        },
+        {
+          "archive": 182,
+          "record": 46,
+          "gender": "Male",
+          "weight": 15
+        },
+        {
+          "archive": 184,
+          "record": 28,
+          "gender": "Female",
+          "weight": 15
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 11
+        },
+        {
+          "archive": 184,
+          "record": 6,
+          "gender": "Female",
+          "weight": 11
+        },
+        {
+          "archive": 182,
+          "record": 27,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 40,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 44,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 45,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 47,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 24,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 51,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 22,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 35,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 49,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 20,
+          "gender": "Male",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "temple-priest",
+      "role": "priest",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 10
+        },
+        {
+          "archive": 181,
+          "record": 2,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 182,
+          "record": 17,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 181,
+          "record": 0,
+          "gender": "Male",
+          "weight": 5
+        },
+        {
+          "archive": 182,
+          "record": 28,
+          "gender": "Female",
+          "weight": 5
+        },
+        {
+          "archive": 182,
+          "record": 40,
+          "gender": "Male",
+          "weight": 5
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 5
+        },
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 5
+        },
+        {
+          "archive": 181,
+          "record": 1,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 181,
+          "record": 7,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 9,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 21,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 25,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 183,
+          "record": 5,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 0,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 4,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 5,
+          "gender": "Female",
+          "weight": 4
+        },
+        {
+          "archive": 181,
+          "record": 4,
+          "gender": "Female",
+          "weight": 3
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 3
+        },
+        {
+          "archive": 182,
+          "record": 20,
+          "gender": "Male",
+          "weight": 3
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 3
+        },
+        {
+          "archive": 177,
+          "record": 4,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 177,
+          "record": 5,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 181,
+          "record": 5,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 11,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 22,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 23,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 27,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 44,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 182,
+          "record": 45,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 1,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 21,
+          "gender": "Male",
+          "weight": 2
+        },
+        {
+          "archive": 184,
+          "record": 29,
+          "gender": "Female",
+          "weight": 2
+        },
+        {
+          "archive": 177,
+          "record": 0,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 177,
+          "record": 1,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 177,
+          "record": 2,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 177,
+          "record": 3,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 181,
+          "record": 6,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 10,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 15,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 19,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 24,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 33,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 34,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 48,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 57,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 182,
+          "record": 58,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 183,
+          "record": 4,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 2,
+          "gender": "Male",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 7,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 9,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 10,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 11,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 12,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 14,
+          "gender": "Female",
+          "weight": 1
+        },
+        {
+          "archive": 184,
+          "record": 23,
+          "gender": "Female",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "weaponsmith",
+      "role": "merchant",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 21,
+          "gender": "Male",
+          "weight": 30
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 16
+        },
+        {
+          "archive": 182,
+          "record": 0,
+          "gender": "Male",
+          "weight": 9
+        }
+      ],
+      "regionalPools": {}
+    },
+    {
+      "id": "witch",
+      "role": "witch",
+      "interaction": "full-dialogue",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": true,
+      "visualMode": "classic-slot",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 46,
+          "gender": "Male",
+          "weight": 68
+        },
+        {
+          "archive": 179,
+          "record": 4,
+          "gender": "Female",
+          "weight": 25
+        },
+        {
+          "archive": 179,
+          "record": 0,
+          "gender": "Female",
+          "weight": 16
+        },
+        {
+          "archive": 179,
+          "record": 2,
+          "gender": "Female",
+          "weight": 14
+        },
+        {
+          "archive": 179,
+          "record": 1,
+          "gender": "Female",
+          "weight": 11
+        },
+        {
+          "archive": 179,
+          "record": 3,
+          "gender": "Female",
+          "weight": 8
+        },
+        {
+          "archive": 184,
+          "record": 8,
+          "gender": "Female",
+          "weight": 1
+        }
+      ],
+      "regionalPools": {}
+    }
+  ]
+}

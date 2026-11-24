@@ -42,6 +42,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     IDaggerfallMusicPlace, IPresentationYieldingSession
 {
     private readonly DaggerfallGameRandom _random;
+    private readonly ulong _worldSocialSeed;
+    internal ulong WorldSocialSeed => _worldSocialSeed;
     private readonly IEngineContext _engine;
     private readonly DaggerfallTuning _tuning;
     private readonly DaggerfallViewLight _viewLight;

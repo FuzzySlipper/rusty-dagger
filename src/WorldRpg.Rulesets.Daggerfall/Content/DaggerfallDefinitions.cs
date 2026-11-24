@@ -300,6 +300,18 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
         return replaced;
     }
 
+    /// <summary>The owned <c>daggerfall.people</c> pack (unique cast, regional typed spawners, and block slot templates).</summary>
+    internal DaggerfallPeopleSet People { get; private set; } = DaggerfallPeopleSet.Empty;
+
+    /// <summary>These definitions joined with the owned people pack, every other section shared.</summary>
+    internal DaggerfallDefinitions WithPeople(DaggerfallPeopleSet people)
+    {
+        ArgumentNullException.ThrowIfNull(people);
+        var replaced = (DaggerfallDefinitions)MemberwiseClone();
+        replaced.People = people;
+        return replaced;
+    }
+
     /// <summary>
     /// The cinematic identities, loaded from the pack alone: each file resolves to its digest
     /// and whether a donor caller binds it.

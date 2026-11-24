@@ -14,8 +14,12 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 internal static class TestPayload
 {
     private static readonly SharedFixture<DaggerfallData> SharedData = new(() => TestSessions.Data(TestSessions.StagedContent(TestData.RepositoryRoot, out _)));
-    private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() => DaggerfallBaseContent.Read(Combined.Value, Data)
-        .WithQuestSources(DaggerfallQuestContent.Read([QuestPack()])));
+    private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() =>
+    {
+        DaggerfallDefinitions defs = DaggerfallBaseContent.Read(Combined.Value, Data)
+            .WithQuestSources(DaggerfallQuestContent.Read([QuestPack()]));
+        return defs.WithPeople(DaggerfallPeopleContent.Read(PeoplePack(), defs.Factions));
+    });
     private static readonly SharedFixture<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
         TestContentFiles.Read(TestData.PackPayload("daggerfall.base")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
 
@@ -126,6 +130,19 @@ internal static class TestPayload
             .Select(file => new DaggerfallQuestRecordFile(System.IO.Path.GetRelativePath(QuestPackFolder, file), TestContentFiles.Read(file)))]);
 
     private static string QuestPackFolder => System.IO.Path.GetDirectoryName(TestData.PackPayload("daggerfall.quests"))!;
+
+    /// <summary>The owned people pack, as the ruleset reads it from the checkout's tracked content.</summary>
+    internal static DaggerfallPeoplePackFiles PeoplePack()
+    {
+        string folder = System.IO.Path.GetDirectoryName(TestData.PackPayload("daggerfall.people"))!;
+        return new(
+            "daggerfall.people",
+            TestContentFiles.Read(TestData.PackPayload("daggerfall.people")),
+            TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.CastFile)),
+            TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.SpawnersFile)),
+            [.. Directory.EnumerateFiles(System.IO.Path.Combine(folder, DaggerfallPeopleContent.BlocksFolder), "*.json").Order(StringComparer.Ordinal)
+                .Select(file => new DaggerfallPeopleBlockFile(System.IO.Path.GetRelativePath(folder, file), TestContentFiles.Read(file)))]);
+    }
 
     /// <summary>The classic quest records, parsed afresh for a fact that edits or adds some.</summary>
     internal static System.Text.Json.Nodes.JsonArray QuestRecords() =>

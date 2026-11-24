@@ -43,8 +43,6 @@ internal static class PeopleReferenceExport
             {
                 foreach (RmbFlatPlacement flat in rmb.Buildings.SelectMany(building => building.Exterior.Flats).Concat(rmb.MiscFlats).Where(SceneryReferenceExport.Person))
                     Exterior(flat.TextureArchive, flat.TextureRecord, block.SourceKey);
-                foreach (RmbPeoplePlacement person in rmb.Buildings.SelectMany(building => building.Exterior.People))
-                    Exterior(person.TextureArchive, person.TextureRecord, block.SourceKey);
                 foreach (RmbPeoplePlacement person in rmb.Buildings.SelectMany(building => building.Interior.People))
                     Interior(person.TextureArchive, person.TextureRecord, block.SourceKey);
             }

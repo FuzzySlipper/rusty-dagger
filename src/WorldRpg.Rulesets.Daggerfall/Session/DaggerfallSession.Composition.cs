@@ -120,6 +120,7 @@ internal sealed partial class DaggerfallSession
                     $"viewmodel.style is {tuning.Viewmodel.Style} but {DaggerfallHeldArt.ContainerName} is not installed, so the classic weapon sprites are drawn.",
                     string.Empty));
             _random = new DaggerfallGameRandom(engine.Random, saved?.GameSeed ?? composition.GameSeed);
+            _worldSocialSeed = saved?.WorldSocialSeed ?? tuning.Social.WorldSocialSeed;
             _definitions = definitions;
             _buildingGreeting = new DaggerfallBuildingGreeting(definitions, _random);
             DungeonText = new DaggerfallDungeonText(new DaggerfallTextResolver(definitions.Text));
@@ -902,6 +903,7 @@ internal sealed partial class DaggerfallSession
             _persistence.PendingTeleport = () => TeleportChoice.Pending;
             _persistence.PlaySeconds = () => _playSeconds;
             _persistence.GameSeed = () => _random.Seed;
+            _persistence.WorldSocialSeed = () => _worldSocialSeed;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;

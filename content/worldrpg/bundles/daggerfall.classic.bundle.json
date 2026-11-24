@@ -18,6 +18,9 @@
     },
     {
       "id": "daggerfall.quests"
+    },
+    {
+      "id": "daggerfall.people"
     }
   ],
   "tuning": {

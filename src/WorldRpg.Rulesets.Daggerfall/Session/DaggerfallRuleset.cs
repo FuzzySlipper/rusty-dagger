@@ -1,3 +1,4 @@
+using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using System.Runtime.CompilerServices;
 using WorldRpg.Kit;
@@ -27,6 +28,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
     /// scenario's own.
     /// </summary>
     internal static readonly ContentPackRoleId QuestsRole = new("daggerfall.quests");
+    /// <summary>The owned people pack (<see cref="DaggerfallPeopleContent"/>): unique cast, regional spawners, and block slots.</summary>
+    internal static readonly ContentPackRoleId PeopleRole = new("daggerfall.people");
     /// <summary>
     /// An optional pack that starts a new game elsewhere than the base pack's new-game definition: its own
     /// start, starting gold and opening quests. A bundle selects at most one.
@@ -148,13 +151,18 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             foreach (ContentPack pack in selected.ContentPacks)
             {
                 if (pack.Role != BaseRole && pack.Role != ImportedRole && pack.Role != BlocksRole && pack.Role != QuestsRole
-                    && pack.Role != NewGameStartRole && pack.Role != ArtReplacementsRole)
+                    && pack.Role != PeopleRole && pack.Role != NewGameStartRole && pack.Role != ArtReplacementsRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
             DaggerfallData data = DaggerfallData.For(selected);
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
                 RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload, data)
                 .WithQuestSources(DaggerfallQuestContent.Read([.. roles[QuestsRole].Select(pack => QuestPackFiles(selected, pack))]));
+            ContentPack[] peoplePacks = [.. roles[PeopleRole]];
+            if (peoplePacks.Length > 1)
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {peoplePacks.Length} '{PeopleRole.Value}' content packs; a session reads at most one.");
+            if (peoplePacks.Length == 1)
+                definitions = definitions.WithPeople(DaggerfallPeopleContent.Read(PeoplePackFiles(selected, peoplePacks[0]), definitions.Factions));
             ContentPack[] startPacks = [.. roles[NewGameStartRole]];
             if (startPacks.Length > 1)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {startPacks.Length} '{NewGameStartRole.Value}' content packs; a new game starts in one place.");
@@ -231,6 +239,25 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         return new(pack.Id.Value, pack.Payload, [.. selected.Content.ReadDirectory(folder, false).ToArray()
             .Where(file => file.RelativePath.EndsWith(".json", StringComparison.Ordinal))
             .Select(file => new DaggerfallQuestRecordFile(file.RelativePath, file.Bytes))]);
+    }
+
+    /// <summary>The owned people pack's payload, cast, spawners, and block slot files beside it.</summary>
+    private static DaggerfallPeoplePackFiles PeoplePackFiles(ResolvedGameComposition selected, ContentPack pack)
+    {
+        string root = pack.PayloadPath[..pack.PayloadPath.LastIndexOf('/')];
+        ProductContentFile[] files = selected.Content.ReadDirectory(root, true).ToArray();
+        ProductContentFile[] castFiles = [.. files.Where(file => file.RelativePath.EndsWith("/" + DaggerfallPeopleContent.CastFile, StringComparison.Ordinal))];
+        if (castFiles.Length != 1)
+            throw new InvalidOperationException($"People pack '{pack.Id.Value}' must carry exactly one '{DaggerfallPeopleContent.CastFile}'.");
+        ProductContentFile[] spawnerFiles = [.. files.Where(file => file.RelativePath.EndsWith("/" + DaggerfallPeopleContent.SpawnersFile, StringComparison.Ordinal))];
+        if (spawnerFiles.Length != 1)
+            throw new InvalidOperationException($"People pack '{pack.Id.Value}' must carry exactly one '{DaggerfallPeopleContent.SpawnersFile}'.");
+        DaggerfallPeopleBlockFile[] blocks = [.. files
+            .Where(file => file.RelativePath.Contains("/" + DaggerfallPeopleContent.BlocksFolder + "/", StringComparison.Ordinal)
+                && file.RelativePath.EndsWith(".json", StringComparison.Ordinal))
+            .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
+            .Select(file => new DaggerfallPeopleBlockFile(file.RelativePath, file.Bytes))];
+        return new(pack.Id.Value, pack.Payload, castFiles[0].Bytes, spawnerFiles[0].Bytes, blocks);
     }
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>

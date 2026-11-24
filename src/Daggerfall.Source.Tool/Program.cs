@@ -18,6 +18,8 @@ internal static class Program
         WorldVariantBakeCommand.Command,
         // The base pack's terrain relief and rivers, baked from WOODS.WLD for the pack to commit.
         ReliefBakeCommand.Command,
+        // One-time extraction of Arena2 people placements into the owned daggerfall.people pack.
+        PeopleExtractCommand.Command,
         // Local image-generation reference sets (never product content).
         ReferenceExportCommands.Items,
         ReferenceExportCommands.Spells,

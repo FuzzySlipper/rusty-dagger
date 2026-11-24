@@ -63,6 +63,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal Func<string?> PendingTeleport { get; set; } = () => null;
     internal Func<double> PlaySeconds { get; set; } = () => 0;
     internal Func<ulong> GameSeed { get; set; } = () => 0;
+    internal Func<ulong> WorldSocialSeed { get; set; } = () => 0;
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
     internal DaggerfallSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallEquipmentMoves pack, DaggerfallBookNotebook notebook,
@@ -167,6 +168,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             PendingTeleport = PendingTeleport(),
             PlaySeconds = PlaySeconds(),
             GameSeed = GameSeed(),
+            WorldSocialSeed = WorldSocialSeed(),
             TeleportAnchor = TeleportAnchor(),
             PendingIdentify = PendingIdentify(),
             Tutorial = Tutorial(),

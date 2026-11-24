@@ -1250,5 +1250,8 @@
     "puddleShare": 0.6,
     "wetLook": 0.6,
     "snowLook": 0.65
+  },
+  "social": {
+    "worldSocialSeed": 0
   }
 }

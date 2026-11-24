@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -62,6 +63,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallHazardTuning Hazards { get; init; } = DaggerfallHazardTuning.Default;
     internal DaggerfallRestTuning Rest { get; init; } = DaggerfallRestTuning.Default;
     internal DaggerfallExpeditionTuning Expedition { get; init; } = DaggerfallExpeditionTuning.Default;
+    internal DaggerfallSocialTuning Social { get; init; } = DaggerfallSocialTuning.Default;
 
     internal static DaggerfallTuning Defaults { get; } = new(
         DaggerfallInput.Look,
@@ -175,6 +177,9 @@ internal sealed record DaggerfallTuning(
             Hazards = DaggerfallHazardTuning.Read(root.GetProperty("hazards")),
             Rest = DaggerfallRestTuning.Read(root.GetProperty("rest")),
             Expedition = DaggerfallExpeditionTuning.Read(root.GetProperty("expedition")),
+            Social = root.TryGetProperty("social", out JsonElement social)
+                ? DaggerfallSocialTuning.Read(social)
+                : DaggerfallSocialTuning.Default,
         };
     }
 

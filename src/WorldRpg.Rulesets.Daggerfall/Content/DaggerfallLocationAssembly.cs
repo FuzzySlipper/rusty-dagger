@@ -334,7 +334,6 @@ internal sealed class DaggerfallLocationAssembly
                 PlaceStaticNpcs(document, origin, id => PlaceId(id, block.X, block.Y));
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, id => PlaceId(id, block.X, block.Y)));
                 foreach (JsonNode? billboard in document.Section("billboards")) Append("billboards", Billboard(billboard, origin, id => PlaceId(id, block.X, block.Y)));
-                foreach (JsonNode? person in document.Section("population")) Append("population", Moved(person, origin));
                 if (document.ClearGround is { } bits)
                     for (int index = 0; index < AutomapSide * AutomapSide; index++)
                         if ((bits[index / 8] & (1 << (index % 8))) != 0)
@@ -658,7 +657,7 @@ internal sealed class DaggerfallLocationAssembly
                 DaggerfallStaticNpcPlacement.Read(normalized, _media.BillboardSprites, owner._definitions, key.Site, diagnostics),
                 waterVolumes: DaggerfallDungeonWater.Read(normalized, key.LogicalId, diagnostics),
                 terrainTextures: _media.TerrainTextures,
-                population: [.. DaggerfallSiteContent.ReadNormalizedPopulation(normalized, diagnostics), .. _dynamicPopulation])
+                population: _dynamicPopulation)
             {
                 AmbientZones = DaggerfallAmbientZones.Read(normalized, diagnostics),
                 DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalized, diagnostics),

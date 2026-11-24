@@ -71,6 +71,8 @@ internal sealed record DaggerfallSavePayload(
     [JsonRequired] public double PlaySeconds { get; init; }
     /// <summary>The game's seed for its keyed draws (<see cref="DaggerfallGameRandom"/>), so a load draws as the game did.</summary>
     [JsonRequired] public ulong GameSeed { get; init; }
+    /// <summary>The world social seed snapshotted from <see cref="DaggerfallSocialTuning.WorldSocialSeed"/>, separate from <see cref="GameSeed"/>.</summary>
+    [JsonRequired] public ulong WorldSocialSeed { get; init; }
     [JsonRequired] public DaggerfallTeleportAnchor? TeleportAnchor { get; init; }
     [JsonRequired] public DaggerfallIdentifyRequest? PendingIdentify { get; init; }
     [JsonRequired] public DaggerfallCreateItemRequest? PendingCreateItem { get; init; }
