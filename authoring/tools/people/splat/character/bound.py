@@ -295,11 +295,23 @@ def walker_npc(cid, cfg, k):
             if (W / k / 'bound/sizes' / f'{base}{sk}-tidy' / 'splat.npz').exists():
                 sizes[name] = (f'{k}/bound/sizes/{base}{sk}-tidy', what + (', the robe on skirt bones (skirt_bones.py)' if sk else '')
                                + ', without the Gaussians that came loose in the clips (drop_loose.py)')
+    for name, (path, what) in list(sizes.items()):   # a held prop put in the hand (asset-pipeline tools/splat-prop attach_prop.py): NAME-staff
+        if (W / f'{path}-prop' / 'splat.npz').exists():
+            sizes[f'{name}-prop'] = (f'{path}-prop', what + ', with the prop in the hand (attach_prop.py)')
+    if (W / f'{full}-prop' / 'splat.npz').exists():
+        r['bake'] = (f'{full}-prop', f'{full}-prop/binding.npz', f'{k}/bound/bound-data/shell.npz')
     r['sizes'] = sizes
-    r['default_size'] = next((x for x in (f"{cfg.get('sizes', [16000])[0] // 1000}k-graft-tidy", f"{cfg.get('sizes', [16000])[0] // 1000}k-tidy") if x in sizes), next(iter(sizes)))
+    c0 = cfg.get('sizes', [16000])[0] // 1000
+    r['default_size'] = next((x for x in (f'{c0}k-graft-tidy-prop', f'{c0}k-graft-tidy', f'{c0}k-tidy') if x in sizes), next(iter(sizes)))
     if sk and (W / k / 'bound/skirt-rig/skirt.json').exists():
         r['skirt_rig'] = f'{k}/bound/skirt-rig'
-        r['clips']['walking'] = (str(dc.ROOT / 'batches/clips-skirt/walking.json'), None)   # the gentler walk for a long skirt (Patch 2026-11-21)
+        if cfg.get('walk_clip') == 'gentle':   # the villagers' gentler walk for a long skirt (Patch 2026-11-21); a walker that must keep up
+            r['clips']['walking'] = (str(dc.ROOT / 'batches/clips-skirt/walking.json'), None)   # (npc-468, an enemy) keeps the full walk
+    # npc.json "extra_clips": {name: [clip JSON (fbx_clip_dump.mjs), Mixamo GLB for the Engine fit]}, relative to the character
+    # folder or absolute: a character's own motions, e.g. npc-468's staff walk, strike and cast (PINOC, Patch 2026-11-23)
+    r['fit_extra'] = []
+    for name, (js, glb_) in cfg.get('extra_clips', {}).items():
+        r['clips'][name] = (str(dc.char_dir(cid) / js), None); r['fit_extra'].append((name, str(dc.char_dir(cid) / glb_)))
     v = f"{k}/bound/clips-tidy/data/videos/{cid.removeprefix('npc-')}-400k-and-16k"
     r['game_review'] = [(f'{v}-{c}.png', f'{cid}-400k-and-body-{c}.png') for c in ('walking-f010-quarter', 'walking-f010-close', 'walking-f020-quarter',
                                                                                     'walking-f024-back-quarter', 'around-f120-quarter', 'walking-f010-face')]
@@ -490,11 +502,11 @@ FIT_CLIPS = [
 ]
 
 
-def clip_fit(glb_path, out_json, skirted):
+def clip_fit(glb_path, out_json, skirted, extra=()):
     """Fit FIT_CLIPS to a character's Engine GLB; returns the CompletedProcess. A clip file that's missing is left out."""
     mix = Path('/data/assets/splat-characters/pinoc-clips/mixamo')
     specs = [f"{name}={mix / f}" + (':leg' if leg else '') for name, f, leg, skirt_only in FIT_CLIPS
-             if (mix / f).exists() and (skirted or not skirt_only)]
+             if (mix / f).exists() and (skirted or not skirt_only)] + [f"{name}={path}" for name, path in extra if Path(path).exists()]
     return subprocess.run(['python3', '-I', str(dc.REPO / 'authoring/tools/people/splat/gsplat/splat_glb_clip_fit.py'), str(glb_path), str(out_json), *specs],
                           capture_output=True, text=True)
 
@@ -568,7 +580,7 @@ def glb(cid):
         if c.returncode:
             raise SystemExit(f'{cid}: static_clips failed\n{c.stderr[-1500:]}')
     else:
-        clip_fit(out, fin / f'{cid}-clip-fit.json', sk.exists())
+        clip_fit(out, fin / f'{cid}-clip-fit.json', sk.exists(), run_of(cid).get('fit_extra', []))
     val = subprocess.run('ls -d "$HOME"/.npm/_npx/*/node_modules/gltf-validator 2>/dev/null | head -1', shell=True, capture_output=True, text=True).stdout.strip()
     vr = ''
     if val:

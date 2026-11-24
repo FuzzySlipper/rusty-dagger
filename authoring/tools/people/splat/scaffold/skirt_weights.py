@@ -92,6 +92,11 @@ def main():
     ap.add_argument("--hips", type=float, default=0.0, help="share of every skirt Gaussian's leg weight moved onto Hips, growing from 0 at the top to this at the hem")
     ap.add_argument("--drop-inside", type=float, help="with --bones: metres (default 0.03; 0: off). Drop skirt Gaussians lying this far inside the skirt's outer shell (the legs under a long skirt, which on skirt bones ride the cloth and show at the hem; Patch 2026-11-21)")
     ap.add_argument("--inside-legs", action="store_true", help="with --bones: the Gaussians --drop-inside finds stay on their leg bones instead of being dropped, for a robe short enough that a stride shows the shin above the hem (npc-468)")
+    ap.add_argument("--fill-legs", action="store_true", help="with --bones: add legs under the robe, in the colour of the legging below the hem (npc-468)")
+    ap.add_argument("--fill-top", type=float, help="--fill-legs: metres above the hem the fill reaches (default: up the thigh). 0.10 for npc-468: higher up, the robe's front stretches thin at full stride and the dark legging behind it showed through")
+    ap.add_argument("--fill-step", type=float, default=0.02, help="--fill-legs: ring spacing and disc size in metres (2 cm: about 1,000 Gaussians for two legs)")
+    ap.add_argument("--fill-radius", type=float, help="--fill-legs: shin radius in metres (default: measured from the legging below the hem)")
+    ap.add_argument("--inside-radius", type=float, default=0.0, help="--inside-legs: keep leg-coloured inside Gaussians within this many metres of a thigh or shin bone (in place of --inside-band; 0.08 for npc-468)")
     ap.add_argument("--inside-band", type=float, default=0.12, help="--inside-legs: metres above the hem within which leg-coloured inside Gaussians stay")
     ap.add_argument("--drop-hem-dark", type=float, default=0.0, help="with --bones: luminance (0: off). Drop near-black Gaussians a shin leads within 5 cm of the hem: the shadow under an ankle-length hem baked onto the ankles, which trails the back heel in a stride (453, Patch 2026-11-21)")
     ap.add_argument("--bones", type=Path, help="skirt_bones.py rig's skirt.json: put the skirt on that ring of bones instead (SCAFFOLD is then its rig)")
@@ -155,7 +160,17 @@ def main():
                 legish = np.linalg.norm(c - leg_c, axis=1) < np.linalg.norm(c - cloth_c, axis=1)
                 # and only near the hem: the shin a stride shows. Higher up, dark folds and ink lines of the robe's inside passed as leg and
                 # stuck out of the robe at the knee as dark shards (468's second try)
-                kept = drop & legish & (M[:, 1] < hem + a.inside_band * G["sc"])
+                if a.inside_radius > 0:   # on the leg itself: within R of a thigh or shin bone, up to the hips (npc-468, Patch 2026-11-23: the
+                    # band left the legging cut off between hem and shoe in a stride; he moves faster than a villager)
+                    Jb = G["J"]; dl = np.full(n, np.inf)
+                    for side in ("Left", "Right"):
+                        for j0, j1 in ((side + "UpLeg", side + "Leg"), (side + "Leg", side + "Foot")):
+                            k0, d = Jb[j0], Jb[j1] - Jb[j0]; t = np.clip(((M - k0) @ d) / (d @ d), 0, 1)
+                            dl = np.minimum(dl, np.linalg.norm(M - (k0 + t[:, None] * d), axis=1))
+                    kept = drop & legish & (dl < a.inside_radius * G["sc"])
+                    rep_extra["inside_radius_m"] = a.inside_radius
+                else:
+                    kept = drop & legish & (M[:, 1] < hem + a.inside_band * G["sc"])
                 W2[kept] = 0; W2[np.ix_(kept, np.arange(W.shape[1]))] = W[kept]; skirt = skirt & ~kept; drop = drop & ~kept
                 rep_extra["inside_kept_on_legs"] = int(kept.sum()); rep_extra["dropped_inside"] = int(drop.sum())
                 rep_extra["leg_colour"] = [round(float(x), 3) for x in leg_c]; rep_extra["inside_band_m"] = a.inside_band
@@ -172,6 +187,45 @@ def main():
     if drop.any():
         s = {k: (v[keep] if getattr(v, "shape", ()) and v.shape[0] == n else v) for k, v in s.items()}
         order, tw, skirt = order[keep], tw[keep], skirt[keep]
+    if a.fill_legs:   # legs where the bake has none: under a robe no view saw the shins above the hem, so a stride showed the shoe cut
+        # off from the robe (npc-468, Patch 2026-11-23: "legs disconnect ... he does need to move faster"). Rings of opaque discs
+        # round each shin and the lower thigh, from 3 cm under the hem to 40% up the thigh, in the colour and at the radius of the
+        # legging seen below the hem, each on its own leg bone; the solid robe hides them standing
+        from scipy.spatial.transform import Rotation as Rot
+        Jb = G["J"]; sc = G["sc"]; c = np.clip(s["rgb"].astype(float), 0, 1); Ms = s["means"].astype(float)
+        lead = order[:, 0]; add = {"means": [], "scales": [], "quats": [], "opacities": [], "rgb": []}; ab = []; nfill = 0
+        for side in ("Left", "Right"):
+            k0, k1, kh = Jb[side + "Leg"], Jb[side + "Foot"], Jb[side + "UpLeg"]
+            d = k1 - k0; ln = np.linalg.norm(d); u = d / ln
+            t = ((Ms - k0) @ u); rr = np.linalg.norm(Ms - (k0 + t[:, None] * u), axis=1)
+            vis = (lead == idx[side + "Leg"]) & (Ms[:, 1] < hem) & (Ms[:, 1] > k1[1]) & (rr < 0.12 * sc)
+            rad = float(np.percentile(rr[vis], 60)) if vis.sum() >= 10 else 0.045 * sc
+            col = np.median(c[vis], 0) if vis.sum() >= 10 else np.array([0.08, 0.06, 0.06])
+            if a.fill_radius:
+                rad = a.fill_radius * sc
+            segs = [(k0, k1, idx[side + "Leg"], rad), (kh + 0.6 * (k0 - kh), k0, idx[side + "UpLeg"], rad * 1.3)]
+            for p0, p1, bone, r in segs:
+                dd = p1 - p0; L = np.linalg.norm(dd); ax = dd / L
+                ref = np.array([0, 0, 1.0]) if abs(ax[2]) < 0.9 else np.array([1.0, 0, 0])
+                e1 = np.cross(ax, ref); e1 /= np.linalg.norm(e1); e2 = np.cross(ax, e1)
+                step = a.fill_step * sc; nring = max(2, int(L / step)); nang = max(8, int(2 * np.pi * r / step))
+                for i in range(nring + 1):
+                    q = p0 + ax * (L * i / nring)
+                    if q[1] > (hem + a.fill_top * sc if a.fill_top is not None else hem + 2.0 * (top - hem)) or q[1] < hem - 0.03 * sc:
+                        continue
+                    for j in range(nang):
+                        th = 2 * np.pi * (j + 0.5 * (i % 2)) / nang; nrm = np.cos(th) * e1 + np.sin(th) * e2; tan = np.cross(ax, nrm)
+                        R = np.stack([tan, ax, nrm], 1); qx = Rot.from_matrix(R).as_quat()
+                        add["means"].append(q + r * nrm); add["quats"].append([qx[3], qx[0], qx[1], qx[2]])
+                        add["scales"].append(np.log([0.9 * step, 0.9 * step, 0.25 * step])); add["opacities"].append(2.9); add["rgb"].append(col)
+                        ab.append(bone); nfill += 1
+            rep_extra[f"fill_{side.lower()}"] = {"radius_m": round(rad / sc, 4), "colour": [round(float(x), 3) for x in col], "from_visible": int(vis.sum())}
+        if nfill:
+            for k, v in add.items():
+                arr = np.asarray(v, dtype=s[k].dtype).reshape((-1,) + s[k].shape[1:]); s[k] = np.concatenate([s[k], arr])
+            ob = np.zeros((nfill, order.shape[1]), order.dtype); ob[:, 0] = ab; order = np.concatenate([order, ob])
+            ow = np.zeros((nfill, tw.shape[1]), tw.dtype); ow[:, 0] = 1; tw = np.concatenate([tw, ow]); skirt = np.concatenate([skirt, np.zeros(nfill, bool)])
+        rep_extra["fill_legs"] = nfill
     np.savez_compressed(a.out / "binding.npz", bones=order.astype(b["bones"].dtype), weights=tw.astype(np.float32))
     rep = {"gaussians": n, "skirt": int(skirt.sum()), "hem": round(hem, 4), "top": round(top, 4), **rep_extra}
     out_splat = a.out / "splat.npz"

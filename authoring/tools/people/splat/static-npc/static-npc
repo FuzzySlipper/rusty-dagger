@@ -42,6 +42,8 @@ Steps, in order (each checks that the one before it has run):
   graft     optional: the free r1 fit grafted on the face and hands of each runtime size (graft_free.py, CPU) -> size NNk-graft,
             which publish then shows beside the plain size (npc.json "graft": regions, default "face,hands"; "graft_face_cone", 45).
             Patch shipped npc-023 so (2026-11-23): the bound bake blurs where Meshy's clay is a poor stand-in (mitten hands)
+  hands     walker, optional, after graft: turn_hands.py re-rests open, palm-forward painted hands (along the forearm, thumb forward)
+            so the clips start from a natural hand (npc-468)
   walk      walker: for each runtime size (and its graft): skirt (npc.json "skirt": skirt bones, two-tier XPBD, for a robe or long
             skirt), the Mixamo Walking and Around clips on the GPU lab, tidy (drop_loose.py: Gaussians that come loose in the clips),
             and the clips again on the tidied body for the review stills. Sizes NNk-face-share-cleaned[-skirt]-tidy, NNk-graft[-skirt]-tidy
@@ -373,6 +375,28 @@ def step_walk(n, a):
     print(f'{n.id}: run publish to put the walking sizes in the Workbench')
 
 
+def step_hands(n, a):
+    """Re-rest the hands (turn_hands.py): along the forearm, thumb forward, on the full bake, each runtime size and its graft, after
+    graft and before walk. For a painting with open, palm-forward hands (npc-468, Patch 2026-11-23: a goofy hand orientation in
+    the clips). Needs transplant_hands.py's report, so a walker's rig."""
+    rep = n.scaffold / 'scaffold.json'
+    if 'Left' not in json.loads(rep.read_text()):
+        raise SystemExit(f'{n.id}: no transplanted hands in {rep}: the hands step turns donor hands (a walker\'s rig)')
+    b = n.k / 'bound'; dirs = [b / 'bound-cleaned'] + [b / 'sizes' / x for base, _, _ in walk_names(n) for x in [base]]
+    for d in dirs:
+        if (d / 'turn.json').exists():
+            print(f'{n.id}: {d.name} already turned'); continue
+        tmp = d.with_name(d.name + '.turned'); shutil.rmtree(tmp, ignore_errors=True)
+        sh(['python3', 'authoring/tools/people/splat/scaffold/turn_hands.py', d, n.scaffold / 'scaffold.glb', b / 'score/transform.json', rep, tmp,
+            '--straighten', str(n.cfg.get('hands_straighten', 1.0)), '--turn', str(n.cfg.get('hands_turn', 1.0))], log=b / 'hands.log')
+        for f in d.iterdir():   # what the turn did not write (logs, reports) goes along
+            if not (tmp / f.name).exists():
+                shutil.copy2(f, tmp / f.name)
+        shutil.rmtree(d); tmp.rename(d)
+        print(f"{n.id}: {d.name} hands turned {json.loads((d / 'turn.json').read_text())}")
+    print(f'{n.id}: run walk')
+
+
 def step_publish(n, a):
     n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
     for s in ('adopt', 'playable', 'publish'):
@@ -447,7 +471,7 @@ def step_status(n, a):
 
 
 STEPS = {'init': step_init, 'keys': step_keys, 'clay': step_clay, 'mesh': step_mesh, 'rig': step_rig, 'guide': step_guide,
-         'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'r1': step_r1, 'walk': step_walk,
+         'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'r1': step_r1, 'walk': step_walk, 'hands': step_hands,
          'graft': step_graft, 'publish': step_publish, 'ship': step_ship, 'status': step_status}
 
 
