@@ -315,6 +315,7 @@ def walker_npc(cid, cfg, k):
     v = f"{k}/bound/clips-tidy/data/videos/{cid.removeprefix('npc-')}-400k-and-16k"
     r['game_review'] = [(f'{v}-{c}.png', f'{cid}-400k-and-body-{c}.png') for c in ('walking-f010-quarter', 'walking-f010-close', 'walking-f020-quarter',
                                                                                     'walking-f024-back-quarter', 'around-f120-quarter', 'walking-f010-face')]
+    r['skirt_drive'] = cfg.get('skirt_drive_opts', '').split()   # e.g. "--cloth-gap 0.05": the robe pushed further out by the legs (npc-468)
     r['who'] = 'NPC'
     return r
 
@@ -638,7 +639,7 @@ def playable(cid):
         if r.get('static'):   # a static NPC's short rig has no legs to retarget onto: static_idle.py's procedural clips instead
             sh(['python3', T / 'static_idle.py', prep, rig, g / 'transform.json'] + sum((['--clip', c] for c in r['clips']), []), log)
         if r.get('skirt_rig'):   # the skirt bones' turn per frame, baked into the clips
-            sh(['python3', T / 'skirt_bones.py', 'drive', prep, g / 'skirt-bones.json', '--tags', ','.join(n for n, _, _ in bodies)], log)
+            sh(['python3', T / 'skirt_bones.py', 'drive', prep, g / 'skirt-bones.json', '--tags', ','.join(n for n, _, _ in bodies)] + r.get('skirt_drive', []), log)
         sh(['python3', T / 'export_workbench.py', rig, g / 'transform.json', prep, out] + sum((['--body', f'{n}={n}'] for n, _, _ in bodies), []), log)
         if r.get('layer'):   # a garment baked on the clothed character and cut onto this bare one (bound_layer.py; Patch 2026-11-19)
             name, src, *opts = r['layer']; clothed = dc.char_dir(src) / out.relative_to(d) / f'{bodies[0][0]}.vsplat'
@@ -691,6 +692,8 @@ def publish(cid, only=None):
         ms += [member(Path(b).stem, out / b, ['model'], root) for b in [man['body']] + list(man.get('variants', {}).values())]
         ms += [member(Path(f).stem, out / f, ['model'], root) for L in man.get('layers', {}).values() for f in L['modes'].values()]   # garment layers (bound_layer.py)
         ms += [member(Path(f).stem, out / f, ['model'], root) for f in (man.get('under'), man.get('bodyWhole')) if f and f not in man.get('variants', {}).values()]   # a hood's covered hair
+        if man.get('core'):   # a mesh the viewer draws with the splats (an inset core, or npc-468's staff as a mesh)
+            ms.append(member('core', out / man['core'], ['model'], root))
         req = {'schemaVersion': 1, 'id': rid, 'kind': 'splat-character', 'title': title, 'primary': 'character', 'representative': 'still', 'members': ms,
                'comparison': {'runFamily': f'{pub_name(cid)}-splat-scaffold', 'subjectId': pub_name(cid), 'variantId': rid},
                'provenance': {'producer': 'dagger-char-bound-publish', 'settings': {'rig': f"02-guide/scaffold/scaffold.glb ({json.load(open(d / '02-guide/scaffold/scaffold.json'))['joints']} joints)",

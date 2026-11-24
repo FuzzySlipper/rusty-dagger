@@ -33,6 +33,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('size', type=Path); ap.add_argument('scaffold'); ap.add_argument('transform'); ap.add_argument('report'); ap.add_argument('out', type=Path)
     ap.add_argument('--straighten', type=float, default=1.0); ap.add_argument('--turn', type=float, default=1.0)
+    ap.add_argument('--target', choices=['xbot', 'forward'], default='xbot', help="xbot (default): as retarget_clip.py's X Bot bind hand; forward: thumb straight ahead (npc-468's first try)")
+    ap.add_argument('--from-turned', choices=['forward'], help='the body was already turned with this target: apply only the difference')
     a = ap.parse_args()
     s = dict(np.load(a.size / 'splat.npz')); b = dict(np.load(a.size / 'binding.npz'))
     rig = load_rig(a.scaffold); names = list(rig['names']); J = {n: np.asarray(rig['bind'][i], float) for i, n in enumerate(names)}
@@ -46,12 +48,24 @@ def main():
         sel = np.char.startswith(lead, side + 'Hand')
         f = J[side + 'Hand'] - J[side + 'ForeArm']; f /= np.linalg.norm(f)
         axis = np.asarray(rep[side]['axis'], float); thumb = np.asarray(rep[side]['thumb'], float)
+        xb = np.array([1.0 if side == 'Left' else -1.0, 0, 0])   # X Bot's forearm in its bind (T-pose)
+
+        def rest(target):
+            R1 = between(axis, f)
+            R1 = Rot.from_rotvec(Rot.from_matrix(R1).as_rotvec() * a.straighten).as_matrix()
+            t1 = R1 @ thumb
+            # forward: the thumb straight ahead (the first try). xbot: what retarget_clip.py needs - it swings the forearm onto X Bot's
+            # bind direction and the hand rides with it, so after that swing the hand must lie as X Bot's bind hand does, palm down and
+            # thumb forward: the thumb aims at swing^-1 (+z) (npc-468: the forward rest still left a palm-forward glove in the walk)
+            # X Bot's bind thumb (batches/xbot-bind.json: thumb (+-0.62, -0.4, 0.68) from the wrist, forearm along +-x), squared to its forearm
+            fwd = np.array([0, 0, 1.0]) if target == 'forward' else between(f, xb).T @ (np.array([0, -0.507, 0.862]))
+            p = lambda v: (v - (v @ f) * f) / max(np.linalg.norm(v - (v @ f) * f), 1e-9)
+            ang = float(np.arctan2(np.cross(p(t1), p(fwd)) @ f, p(t1) @ p(fwd)))
+            return Rot.from_rotvec(f * ang * a.turn).as_matrix() @ R1, ang
+        R, ang = rest(a.target)
+        if a.from_turned:   # the body already carries the forward turn: apply the difference
+            R = R @ rest(a.from_turned)[0].T
         R1 = between(axis, f)
-        R1 = Rot.from_rotvec(Rot.from_matrix(R1).as_rotvec() * a.straighten).as_matrix()
-        t1 = R1 @ thumb; fwd = np.array([0, 0, 1.0])
-        p = lambda v: (v - (v @ f) * f) / max(np.linalg.norm(v - (v @ f) * f), 1e-9)
-        ang = float(np.arctan2(np.cross(p(t1), p(fwd)) @ f, p(t1) @ p(fwd)))
-        R2 = Rot.from_rotvec(f * ang * a.turn).as_matrix(); R = R2 @ R1
         Rb = R0 @ R @ R0.T; w = sc * R0 @ J[side + 'Hand'] + t0            # in the bake frame: bake = sc * R0 v + t0
         M[sel] = w + (M[sel] - w) @ Rb.T
         q = s['quats'][sel].astype(np.float64)                             # wxyz

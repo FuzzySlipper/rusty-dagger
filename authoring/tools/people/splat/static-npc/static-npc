@@ -358,7 +358,8 @@ def step_walk(n, a):
     cfg = n.cfg; n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
     b = ['authoring/tools/people/splat/scaffold/bound_run.sh', n.work, f'{n.rid}-A']
     env = {**n.env, 'SKIRT_BONES': str(cfg.get('skirt_bones', 8)) if cfg.get('skirt') else '', 'SKIRT_OPTS': cfg.get('skirt_opts', '--solid 3'),
-           **({'SKIRT_RIG_OPTS': cfg['skirt_rig_opts']} if cfg.get('skirt_rig_opts') else {})}
+           **({'SKIRT_RIG_OPTS': cfg['skirt_rig_opts']} if cfg.get('skirt_rig_opts') else {}),
+           **({'SKIRT_DRIVE_OPTS': cfg['skirt_drive_opts']} if cfg.get('skirt_drive_opts') else {})}
     names = walk_names(n, [int(x) for x in a.sizes.split(',')] if a.sizes else None)
     for base, skirted, tidy in names:
         if skirted != base:
@@ -384,11 +385,12 @@ def step_hands(n, a):
         raise SystemExit(f'{n.id}: no transplanted hands in {rep}: the hands step turns donor hands (a walker\'s rig)')
     b = n.k / 'bound'; dirs = [b / 'bound-cleaned'] + [b / 'sizes' / x for base, _, _ in walk_names(n) for x in [base]]
     for d in dirs:
-        if (d / 'turn.json').exists():
+        if (d / 'turn.json').exists() and not getattr(a, 'from_turned', None):
             print(f'{n.id}: {d.name} already turned'); continue
         tmp = d.with_name(d.name + '.turned'); shutil.rmtree(tmp, ignore_errors=True)
         sh(['python3', 'authoring/tools/people/splat/scaffold/turn_hands.py', d, n.scaffold / 'scaffold.glb', b / 'score/transform.json', rep, tmp,
-            '--straighten', str(n.cfg.get('hands_straighten', 1.0)), '--turn', str(n.cfg.get('hands_turn', 1.0))], log=b / 'hands.log')
+            '--straighten', str(n.cfg.get('hands_straighten', 1.0)), '--turn', str(n.cfg.get('hands_turn', 1.0))]
+           + (['--from-turned', a.from_turned] if getattr(a, 'from_turned', None) else []), log=b / 'hands.log')
         for f in d.iterdir():   # what the turn did not write (logs, reports) goes along
             if not (tmp / f.name).exists():
                 shutil.copy2(f, tmp / f.name)
@@ -486,6 +488,7 @@ def main():
     ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')
     ap.add_argument('--size', help='clip: orbit size in px (default 1920); ship: the runtime size to ship (e.g. 32k-graft)')
     ap.add_argument('--said', help="ship: Patch's words")
+    ap.add_argument('--from-turned', choices=['forward'], help="hands: the bodies carry an earlier turn with this target; apply the difference (npc-468)")
     ap.add_argument('--to', choices=['r1data', 'r1'], help='bake: last stage (default r1data; r1 adds the free round-1 fit)')
     ap.add_argument('--sizes', help='bound/preview: runtime Gaussian counts, comma-separated (default npc.json sizes, 32000)')
     ap.add_argument('--force', action='store_true', help='use a prompt that is still 021\'s template')

@@ -176,7 +176,7 @@ clips)
   python3 $T/clip_compare.py prep $O/data --metres $M --views quarter,close,face,back-quarter \
     --bound bound400k=$SRC/splat.npz:$BIND:$CSC:$TR --bound body=$BD/sizes/$NAME/splat.npz:$BD/sizes/$NAME/binding.npz:$CSC:$TR \
     --clip walking=$CLIPS/walking.json --clip around=$CLIPS/around.json > $O/prep.log 2>&1 || { tail -n 5 $O/prep.log; exit 2; }
-  [ -n "$SKJ" ] && { python3 $T/skirt_bones.py drive $O/data $SKJ >> $O/prep.log 2>&1 || { tail -n 5 $O/prep.log; exit 2; }; }
+  [ -n "$SKJ" ] && { python3 $T/skirt_bones.py drive $O/data $SKJ ${SKIRT_DRIVE_OPTS:-} >> $O/prep.log 2>&1 || { tail -n 5 $O/prep.log; exit 2; }; }
   [ -n "${CAPE:-}" ] && { python3 $T/cape_chain.py sim $O/data $CAPE >> $O/prep.log 2>&1 || { tail -n 5 $O/prep.log; exit 2; }; }   # CAPE=chain.json: swing the cape chain (with SCAFFOLD= its rig)
   TAG=${CLIPS_TAG:-}; cat > $O/render.sh <<EOF
 #!/bin/bash

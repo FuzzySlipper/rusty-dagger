@@ -94,6 +94,7 @@ def main():
     ap.add_argument("--inside-legs", action="store_true", help="with --bones: the Gaussians --drop-inside finds stay on their leg bones instead of being dropped, for a robe short enough that a stride shows the shin above the hem (npc-468)")
     ap.add_argument("--fill-legs", action="store_true", help="with --bones: add legs under the robe, in the colour of the legging below the hem (npc-468)")
     ap.add_argument("--fill-top", type=float, help="--fill-legs: metres above the hem the fill reaches (default: up the thigh). 0.10 for npc-468: higher up, the robe's front stretches thin at full stride and the dark legging behind it showed through")
+    ap.add_argument("--fill-bottom", type=float, default=0.03, help="--fill-legs: metres below the hem the fill reaches (1 = down to the ankle: one even legging from the shoe up, npc-468)")
     ap.add_argument("--fill-step", type=float, default=0.02, help="--fill-legs: ring spacing and disc size in metres (2 cm: about 1,000 Gaussians for two legs)")
     ap.add_argument("--fill-radius", type=float, help="--fill-legs: shin radius in metres (default: measured from the legging below the hem)")
     ap.add_argument("--inside-radius", type=float, default=0.0, help="--inside-legs: keep leg-coloured inside Gaussians within this many metres of a thigh or shin bone (in place of --inside-band; 0.08 for npc-468)")
@@ -204,6 +205,16 @@ def main():
             if a.fill_radius:
                 rad = a.fill_radius * sc
             segs = [(k0, k1, idx[side + "Leg"], rad), (kh + 0.6 * (k0 - kh), k0, idx[side + "UpLeg"], rad * 1.3)]
+            # shading: each ring point takes the colour of the visible legging at the same angle round the shin (8 sectors), so the fill
+            # reads as a lit leg, not a flat dark slab (npc-468's wide stances showed the plain fill beside the robe)
+            ref0 = np.array([0, 0, 1.0]) if abs(u[2]) < 0.9 else np.array([1.0, 0, 0])
+            s1 = np.cross(u, ref0); s1 /= np.linalg.norm(s1); s2 = np.cross(u, s1)
+            rel = Ms - (k0 + t[:, None] * u); ang_v = np.arctan2(rel @ s2, rel @ s1)
+            sector_col = []
+            for q8 in range(8):
+                a0 = -np.pi + q8 * np.pi / 4; m8 = vis & (ang_v >= a0) & (ang_v < a0 + np.pi / 4)
+                sector_col.append(np.median(c[m8], 0) if m8.sum() >= 3 else col)
+            sector_col = np.array(sector_col)
             for p0, p1, bone, r in segs:
                 dd = p1 - p0; L = np.linalg.norm(dd); ax = dd / L
                 ref = np.array([0, 0, 1.0]) if abs(ax[2]) < 0.9 else np.array([1.0, 0, 0])
@@ -211,13 +222,14 @@ def main():
                 step = a.fill_step * sc; nring = max(2, int(L / step)); nang = max(8, int(2 * np.pi * r / step))
                 for i in range(nring + 1):
                     q = p0 + ax * (L * i / nring)
-                    if q[1] > (hem + a.fill_top * sc if a.fill_top is not None else hem + 2.0 * (top - hem)) or q[1] < hem - 0.03 * sc:
+                    if q[1] > (hem + a.fill_top * sc if a.fill_top is not None else hem + 2.0 * (top - hem)) or q[1] < hem - a.fill_bottom * sc:
                         continue
                     for j in range(nang):
                         th = 2 * np.pi * (j + 0.5 * (i % 2)) / nang; nrm = np.cos(th) * e1 + np.sin(th) * e2; tan = np.cross(ax, nrm)
                         R = np.stack([tan, ax, nrm], 1); qx = Rot.from_matrix(R).as_quat()
                         add["means"].append(q + r * nrm); add["quats"].append([qx[3], qx[0], qx[1], qx[2]])
-                        add["scales"].append(np.log([0.9 * step, 0.9 * step, 0.25 * step])); add["opacities"].append(2.9); add["rgb"].append(col)
+                        an = np.arctan2(nrm @ s2, nrm @ s1); q8 = min(7, int((an + np.pi) / (np.pi / 4)))
+                        add["scales"].append(np.log([0.9 * step, 0.9 * step, 0.25 * step])); add["opacities"].append(2.9); add["rgb"].append(sector_col[q8])
                         ab.append(bone); nfill += 1
             rep_extra[f"fill_{side.lower()}"] = {"radius_m": round(rad / sc, 4), "colour": [round(float(x), 3) for x in col], "from_visible": int(vis.sum())}
         if nfill:
