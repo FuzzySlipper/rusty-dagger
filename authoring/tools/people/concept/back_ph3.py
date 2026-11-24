@@ -2,7 +2,8 @@
 """Generate matching back-view turnaround candidates from an approved front painting using MiniMax H3 Image (p-h3-image_w4a8).
 
 Single-stage (~4.6s warm on RTX 5090), preserves exact inked gouache style, true 3D object permanence
-(rotated hood tip, front-side pouches peeking only at the edges), and anatomical 5-finger dorsal gloved hands.
+(rotated hood tip, front-side pouches peeking only at the edges), and anatomical 5-finger hands in the
+canonical 22-degree curled-hand rest pose (or legacy 30-degree open-palm wide-A via --pose wide-a).
 """
 import argparse
 import json
@@ -18,10 +19,18 @@ DEFAULT_PROMPT_BASE = (
     "{extra}"
     "{hands}"
 )
-HANDS_SENTENCE = (
+HANDS_SENTENCE_REST = (
+    "Both hanging hands match the exact reverse of <Picture 1>'s relaxed pose—palms facing inward toward the thighs, "
+    "fingers together and gently curled forward/inward, and thumbs tucked toward the front away from the viewer."
+)
+HANDS_SENTENCE_WIDE_A = (
     "Both hands match the reverse of <Picture 1>'s relaxed open pose, showing the smooth backs of both hands "
     "(palms facing away) with five clear, naturally proportioned fingers and the thumb along the outer upper edge on each hand."
 )
+HAND_CROPS = {
+    "rest": ((0.14, 0.45, 0.36, 0.62), (0.64, 0.45, 0.86, 0.62)),
+    "wide-a": ((0.01, 0.42, 0.24, 0.59), (0.76, 0.42, 0.99, 0.59)),
+}
 
 
 def comfy_upload(comfy: str, path: Path, remote_name: str) -> str:
@@ -67,7 +76,8 @@ def main():
     ap.add_argument("--front", required=True, type=Path, help="Approved front painting (e.g. 832x1216)")
     ap.add_argument("--out", required=True, type=Path, help="Output directory for back candidates")
     ap.add_argument("--extra", default="", help="Optional 1-sentence back costume note (e.g. 'The short teal hood covers the back of his head with no cape.')")
-    ap.add_argument("--omit-hands", action="store_true", help="Omit the open-A-pose dorsal-hands sentence (for cloaked/static poses whose hands are hidden in front)")
+    ap.add_argument("--pose", choices=["rest", "wide-a"], default="rest", help="Front pose style: rest (canonical 22-deg curled palm-inward pose-lock; default) or wide-a (legacy 30-deg open-palm)")
+    ap.add_argument("--omit-hands", action="store_true", help="Omit the default hands sentence (for cloaked/static poses or when specifying custom hand wording in --extra)")
     ap.add_argument("--seeds", default="612001,612002,612003,612004,612005,612006")
     ap.add_argument("--width", type=int, default=832)
     ap.add_argument("--height", type=int, default=1216)
@@ -77,7 +87,8 @@ def main():
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     extra = (args.extra.strip() + " ") if args.extra.strip() else ""
-    hands = "" if args.omit_hands else HANDS_SENTENCE
+    hands_default = HANDS_SENTENCE_REST if args.pose == "rest" else HANDS_SENTENCE_WIDE_A
+    hands = "" if args.omit_hands else hands_default
     prompt = DEFAULT_PROMPT_BASE.format(extra=extra, hands=hands).strip()
     (out / "back.prompt.txt").write_text(prompt + "\n")
 
@@ -130,8 +141,9 @@ def main():
         im = Image.open(p).convert("RGB")
         sheet.paste(im.resize((tw, th), Image.LANCZOS), (x0, y0 + 24))
         w_im, h_im = im.size
-        lh = im.crop((int(w_im * 0.01), int(h_im * 0.42), int(w_im * 0.24), int(h_im * 0.59))).resize((tw // 2, ch), Image.LANCZOS)
-        rh = im.crop((int(w_im * 0.76), int(h_im * 0.42), int(w_im * 0.99), int(h_im * 0.59))).resize((tw // 2, ch), Image.LANCZOS)
+        lbox, rbox = HAND_CROPS[args.pose]
+        lh = im.crop((int(w_im * lbox[0]), int(h_im * lbox[1]), int(w_im * lbox[2]), int(h_im * lbox[3]))).resize((tw // 2, ch), Image.LANCZOS)
+        rh = im.crop((int(w_im * rbox[0]), int(h_im * rbox[1]), int(w_im * rbox[2]), int(h_im * rbox[3]))).resize((tw // 2, ch), Image.LANCZOS)
         sheet.paste(lh, (x0, y0 + 24 + th))
         sheet.paste(rh, (x0 + tw // 2, y0 + 24 + th))
         d.text((x0 + 8, y0 + 5), f"back-ph3 | {tag}", fill=(245, 235, 195))
