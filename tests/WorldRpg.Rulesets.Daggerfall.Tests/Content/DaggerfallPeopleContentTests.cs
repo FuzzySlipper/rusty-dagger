@@ -23,6 +23,11 @@ public sealed class DaggerfallPeopleContentTests
         Assert.Contains("the-night-mother", people.Individuals.Keys);
 
         Assert.True(people.Spawners.Count >= 20);
+        Assert.All(people.Spawners.Values, spawner =>
+        {
+            Assert.Equal("pool", spawner.VisualMode);
+            Assert.NotEmpty(spawner.DefaultPool);
+        });
         Assert.Contains("banker", people.Spawners.Keys);
         Assert.Contains("weaponsmith", people.Spawners.Keys);
         Assert.Contains("alchemist", people.Spawners.Keys);
@@ -115,10 +120,11 @@ public sealed class DaggerfallPeopleContentTests
         DaggerfallSiteId daggerfallSite = new(17, 0);
         DaggerfallSiteId sentinelSite = new(20, 0);
         DaggerfallSiteId wayrestSite = new(16, 0);
+        string placementKey = DaggerfallPeopleSlots.InteriorBuildingSlotKey(0, 0, slot.SlotId);
 
-        DaggerfallResolvedPeopleSlot inDaggerfall = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, daggerfallSite, slot);
-        DaggerfallResolvedPeopleSlot inSentinel = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, sentinelSite, slot);
-        DaggerfallResolvedPeopleSlot inWayrest = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, wayrestSite, slot);
+        DaggerfallResolvedPeopleSlot inDaggerfall = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, daggerfallSite, placementKey, slot);
+        DaggerfallResolvedPeopleSlot inSentinel = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, sentinelSite, placementKey, slot);
+        DaggerfallResolvedPeopleSlot inWayrest = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, wayrestSite, placementKey, slot);
 
         Assert.NotNull(inDaggerfall.PrimaryFactionId);
         Assert.NotNull(inSentinel.PrimaryFactionId);
@@ -132,7 +138,7 @@ public sealed class DaggerfallPeopleContentTests
     }
 
     [Fact]
-    public void Regional_spawner_pools_and_world_social_seed_resolve_deterministically_per_slot()
+    public void Central_default_pool_and_regional_pools_affect_slots_without_editing_blocks()
     {
         DaggerfallPeopleSpawnerDefinition banker = new(
             "banker",
@@ -140,8 +146,8 @@ public sealed class DaggerfallPeopleContentTests
             "full-dialogue",
             "law-protected-civilian",
             DeriveRegionalFaction: true,
-            VisualMode: "classic-slot",
-            DefaultPool: [new(182, 20, "Male", 1)],
+            VisualMode: "pool",
+            DefaultPool: [new(182, 42, "Female", 1)],
             RegionalPools: new Dictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(StringComparer.OrdinalIgnoreCase)
             {
                 ["sentinel"] =
@@ -163,23 +169,82 @@ public sealed class DaggerfallPeopleContentTests
 
         DaggerfallSiteId daggerfall = new(17, 5);
         DaggerfallSiteId sentinel = new(20, 5);
+        string placementKey = DaggerfallPeopleSlots.InteriorBuildingSlotKey(1, 2, slot.SlotId);
 
-        // Region without override falls back to classic slot visual, while keeping explicit service faction + regional people faction.
-        DaggerfallResolvedPeopleSlot dfResolved = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 0UL, daggerfall, slot, "daggerfall");
-        Assert.Equal(new DaggerfallPeopleVisual(182, 20, "Male"), dfResolved.Visual);
+        // Region without override resolves through central defaultPool (not per-slot classic visual),
+        // while keeping explicit service faction + regional people faction.
+        DaggerfallResolvedPeopleSlot dfResolved = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 0UL, daggerfall, placementKey, slot, "daggerfall");
+        Assert.Equal(new DaggerfallPeopleVisual(182, 42, "Female"), dfResolved.Visual);
         Assert.Equal(510, dfResolved.PrimaryFactionId);
         Assert.Equal(17, TestPayload.Definitions.Factions.Factions[dfResolved.RegionalPeopleFactionId!.Value].Region);
 
-        // Region with a regional pool selects deterministically from its pool without editing any block file.
-        DaggerfallResolvedPeopleSlot s1 = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 0UL, sentinel, slot, "sentinel");
-        DaggerfallResolvedPeopleSlot s2 = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 0UL, sentinel, slot, "sentinel");
+        // Editing central defaultPool to a multi-entry pool affects slots deterministically without touching the block slot.
+        DaggerfallPeopleSet multiDefaultPeople = DaggerfallPeopleSet.Empty with
+        {
+            Spawners = new Dictionary<string, DaggerfallPeopleSpawnerDefinition>(StringComparer.Ordinal)
+            {
+                ["banker"] = banker with
+                {
+                    DefaultPool =
+                    [
+                        new(182, 10, "Male", 1),
+                        new(182, 11, "Female", 1),
+                        new(182, 12, "Male", 1),
+                    ],
+                },
+            },
+        };
+        DaggerfallResolvedPeopleSlot m1 = DaggerfallPeopleSlots.ResolveSlot(multiDefaultPeople, TestPayload.Definitions.Factions, 0UL, daggerfall, placementKey, slot, "daggerfall");
+        DaggerfallResolvedPeopleSlot m2 = DaggerfallPeopleSlots.ResolveSlot(multiDefaultPeople, TestPayload.Definitions.Factions, 0UL, daggerfall, placementKey, slot, "daggerfall");
+        Assert.Equal(m1, m2);
+        Assert.Contains(m1.Visual.Record, new[] { 10, 11, 12 });
+
+        // Region with a regional pool selects deterministically from its regional pool.
+        DaggerfallResolvedPeopleSlot s1 = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 0UL, sentinel, placementKey, slot, "sentinel");
+        DaggerfallResolvedPeopleSlot s2 = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 0UL, sentinel, placementKey, slot, "sentinel");
         Assert.Equal(s1, s2);
         Assert.Equal(357, s1.Visual.Archive);
+        Assert.Equal(placementKey, s1.SlotKey);
 
         // Changing WorldSocialSeed changes the per-slot seed while keeping the slot's durable ID stable.
-        DaggerfallResolvedPeopleSlot sOtherSeed = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 999_999UL, sentinel, slot, "sentinel");
+        DaggerfallResolvedPeopleSlot sOtherSeed = DaggerfallPeopleSlots.ResolveSlot(customPeople, TestPayload.Definitions.Factions, 999_999UL, sentinel, placementKey, slot, "sentinel");
         Assert.Equal(s1.DurableId, sOtherSeed.DurableId);
         Assert.NotEqual(s1.SlotSeed, sOtherSeed.SlotSeed);
+    }
+
+    [Fact]
+    public void Site_qualified_placement_keys_prevent_collisions_across_distinct_and_repeated_blocks_in_one_site()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        Assert.True(definitions.People.TryGetRmbInteriorSlots("AAANEW.RMB", 0, out DaggerfallPeopleBuildingSlots? blockA));
+        Assert.True(definitions.People.TryGetRmbInteriorSlots("ALCHAL00.RMB", 0, out DaggerfallPeopleBuildingSlots? blockB));
+        DaggerfallPeopleSlotDefinition slotA = blockA!.Slots[0];
+        DaggerfallPeopleSlotDefinition slotB = blockB!.Slots[0];
+        Assert.Equal("b:0:p00", slotA.SlotId);
+        Assert.Equal("b:0:p00", slotB.SlotId);
+
+        DaggerfallSiteId town = new(17, 42);
+        string keyA0 = DaggerfallPeopleSlots.InteriorBuildingSlotKey(0, 0, slotA.SlotId);
+        string keyB1 = DaggerfallPeopleSlots.InteriorBuildingSlotKey(1, 0, slotB.SlotId);
+        string keyARepeat = DaggerfallPeopleSlots.InteriorBuildingSlotKey(2, 1, slotA.SlotId);
+
+        DaggerfallResolvedPeopleSlot resolvedA0 = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, town, keyA0, slotA);
+        DaggerfallResolvedPeopleSlot resolvedB1 = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, town, keyB1, slotB);
+        DaggerfallResolvedPeopleSlot resolvedARepeat = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, town, keyARepeat, slotA);
+
+        Assert.Equal(keyA0, resolvedA0.SlotKey);
+        Assert.Equal(keyB1, resolvedB1.SlotKey);
+        Assert.Equal(keyARepeat, resolvedARepeat.SlotKey);
+
+        // Distinct blocks and repeated instances of the same template inside one site never collide.
+        Assert.Equal(3, new HashSet<long> { resolvedA0.DurableId, resolvedB1.DurableId, resolvedARepeat.DurableId }.Count);
+        Assert.Equal(3, new HashSet<ulong> { resolvedA0.SlotSeed, resolvedB1.SlotSeed, resolvedARepeat.SlotSeed }.Count);
+
+        // Re-resolving across reload yields identical durable IDs, seeds, and visuals.
+        DaggerfallResolvedPeopleSlot reloadedA0 = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, town, keyA0, slotA);
+        DaggerfallResolvedPeopleSlot reloadedARepeat = DaggerfallPeopleSlots.ResolveSlot(definitions.People, definitions.Factions, 0UL, town, keyARepeat, slotA);
+        Assert.Equal(resolvedA0, reloadedA0);
+        Assert.Equal(resolvedARepeat, reloadedARepeat);
     }
 
     [Fact]

@@ -605,7 +605,7 @@ internal static class PeopleExtractCommand
                 ["interaction"] = spawner.Interaction,
                 ["harm"] = spawner.Harm,
                 ["deriveRegionalFaction"] = spawner.DeriveRegionalFaction,
-                ["visualMode"] = "classic-slot",
+                ["visualMode"] = "pool",
                 ["defaultPool"] = pool,
                 ["regionalPools"] = new JsonObject(),
             });

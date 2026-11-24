@@ -3424,7 +3424,8 @@
       "daggerfall.base",
       "daggerfall.art-replacements",
       "daggerfall.blocks",
-      "daggerfall.quests"
+      "daggerfall.quests",
+      "daggerfall.people"
     ],
     "tuning": "daggerfall.defaults"
   },

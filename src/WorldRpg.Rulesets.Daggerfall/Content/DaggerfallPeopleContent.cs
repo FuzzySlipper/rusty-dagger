@@ -464,6 +464,27 @@ internal static class DaggerfallPeopleSlots
     private const long HighBandBit = 0x4000_0000_0000L;
     private const int RegionalPeopleFactionType = 15;
 
+    /// <summary>Canonical site-qualified slot key for an exterior RMB block person slot at grid cell (<paramref name="blockX"/>, <paramref name="blockY"/>).</summary>
+    internal static string ExteriorBlockSlotKey(int blockX, int blockY, string templateSlotId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(templateSlotId);
+        return string.Create(CultureInfo.InvariantCulture, $"ext:{blockX},{blockY}:{templateSlotId}");
+    }
+
+    /// <summary>Canonical site-qualified slot key for an interior RMB building slot placed on grid cell (<paramref name="blockX"/>, <paramref name="blockY"/>).</summary>
+    internal static string InteriorBuildingSlotKey(int blockX, int blockY, string templateSlotId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(templateSlotId);
+        return string.Create(CultureInfo.InvariantCulture, $"int:{blockX},{blockY}:{templateSlotId}");
+    }
+
+    /// <summary>Canonical site-qualified slot key for an RDB dungeon block slot placed at grid cell (<paramref name="blockX"/>, <paramref name="blockZ"/>).</summary>
+    internal static string DungeonBlockSlotKey(int blockX, int blockZ, string templateSlotId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(templateSlotId);
+        return string.Create(CultureInfo.InvariantCulture, $"dng:{blockX},{blockZ}:{templateSlotId}");
+    }
+
     /// <summary>Canonical slot key for a procedural exterior walker at <paramref name="index"/>.</summary>
     internal static string WalkerSlotKey(int index)
     {
@@ -514,29 +535,33 @@ internal static class DaggerfallPeopleSlots
 
     /// <summary>
     /// Resolves a block slot against <paramref name="people"/>, <paramref name="factions"/>, <paramref name="worldSocialSeed"/>,
-    /// and <paramref name="site"/>. Regional spawner pools override the default pool; otherwise <c>visualMode == "pool"</c>
-    /// draws from <c>defaultPool</c> and <c>visualMode == "classic-slot"</c> keeps the slot's classic visual.
+    /// <paramref name="site"/>, and its canonical site-qualified <paramref name="placementSlotKey"/> (which must qualify
+    /// the placed block/building so repeated or distinct block templates at one site never collide).
+    /// Regional spawner pools override <c>defaultPool</c>; otherwise <c>visualMode == "pool"</c> draws from <c>defaultPool</c>
+    /// and <c>visualMode == "classic-slot"</c> (or an empty pool) falls back to the slot's classic visual.
     /// </summary>
     internal static DaggerfallResolvedPeopleSlot ResolveSlot(
         DaggerfallPeopleSet people,
         DaggerfallFactionsSet factions,
         ulong worldSocialSeed,
         DaggerfallSiteId site,
+        string placementSlotKey,
         DaggerfallPeopleSlotDefinition slot,
         string? regionKey = null)
     {
         ArgumentNullException.ThrowIfNull(people);
         ArgumentNullException.ThrowIfNull(factions);
+        ArgumentException.ThrowIfNullOrWhiteSpace(placementSlotKey);
         ArgumentNullException.ThrowIfNull(slot);
 
-        ulong seed = SlotSeed(worldSocialSeed, site, slot.SlotId);
+        ulong seed = SlotSeed(worldSocialSeed, site, placementSlotKey);
 
         if (slot.CastId is { } castId)
         {
             DaggerfallCastIndividualDefinition cast = people.Individuals[castId];
             return new(
                 CastIndividualIdentity(castId),
-                slot.SlotId,
+                placementSlotKey,
                 seed,
                 castId,
                 SpawnerId: null,
@@ -558,8 +583,8 @@ internal static class DaggerfallPeopleSlots
         int? primaryFactionId = slot.FactionId ?? regionalFactionId;
 
         return new(
-            SeededSlotIdentity(site, slot.SlotId),
-            slot.SlotId,
+            SeededSlotIdentity(site, placementSlotKey),
+            placementSlotKey,
             seed,
             CastId: null,
             SpawnerId: spawner.Id,
