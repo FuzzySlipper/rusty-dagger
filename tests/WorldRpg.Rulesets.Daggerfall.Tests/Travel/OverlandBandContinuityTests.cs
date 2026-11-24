@@ -518,6 +518,124 @@ public sealed class OverlandBandContinuityTests
         Assert.Equal(9, reboarded.State.Actors.Get(companionId).Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
+    [Fact]
+    public void Remote_band_arrival_at_destination_and_home_saves_effect_bearing_member_cleanly_and_restores_single_actor_on_visit()
+    {
+        using TwoTownFixture fixture = TwoTownFixture.Create();
+        DaggerfallSession session = fixture.Session;
+
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallNpc traveller = session.State.Npcs.All.First(npc =>
+            npc.Kind == DaggerfallNpcKind.Civilian
+            && npc.Profile == fixture.Origin.ProfileKey
+            && DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId)
+            && session.State.Actors.TryGet(npc.DurableId, out _));
+        long travellerId = traveller.DurableId;
+        session.State.Npcs.SetDisplayName(travellerId, "Maren the Envoy");
+
+        // Mutate vitals, inventory, combat state, and active stat-modifying Fortify Strength effect before dispatch.
+        ActorState live = session.State.Actors.Get(travellerId);
+        Track health = live.Stats.GetTrack(TrackId.Parse("health"));
+        health.Maximum.BaseValue = 40;
+        health.SetCurrent(18);
+        double baseStrength = live.Stats.GetStat(StatId.Parse("strength")).Value;
+
+        InventoryStackId envoyGold = InventoryStackId.Parse("test.envoy.gold");
+        DaggerfallItemDefinition goldDef = TestPayload.Definitions.RequireItem(new DaggerfallItemId("gold-piece"));
+        session.State.ActorInventories.InventoryFor(travellerId)!
+            .Grant(new InventoryGrant(new InventoryItemId(goldDef.Id.Value), envoyGold, 64));
+        session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(travellerId),
+            new InventoryStack(envoyGold, ItemDefinitionId.Parse(goldDef.Id.Value), 64), goldDef);
+
+        live.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
+
+        DaggerfallSpellEffectDefinition fortifySetting = new("fortify", 9, 0, 10, 0, 1, 0, 0, 1, 10, 10, 0, 0, 1);
+        Assert.Equal(DaggerfallEffectAdmissionOutcome.Started, session.State.Effects.Start(new(
+            "remote-arrival-fortify", DaggerfallFortifyEffects.Key(0), "fortify", DaggerfallActorIdentity.PlayerEntityId,
+            travellerId, "fortify", "Magic", null, 1, 10,
+            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(fortifySetting, 1, 10, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState))));
+        double fortifiedStrength = live.Stats.GetStat(StatId.Parse("strength")).Value;
+        Assert.Equal(baseStrength + 10, fortifiedStrength);
+
+        // Part A: Dispatch toward Destination while player stays at Origin, advance until remote arrival, then save/reload BEFORE visiting Destination.
+        DaggerfallTravelMapPixel destPixel = new(fixture.DestinationRecord.MapPixelX, fixture.DestinationRecord.MapPixelY);
+        session.OverlandParties.DispatchOverlandBand(
+            bandId: "envoy-outbound",
+            name: "Maren's Outbound Party",
+            kind: DaggerfallBandKind.Travellers,
+            memberIds: [travellerId],
+            startX: destPixel.X + 0.55,
+            startY: destPixel.Y + 0.5,
+            speedPixelsPerHour: 1.0,
+            destination: new DaggerfallExpeditionMark(destPixel, fixture.DestinationRecord.Id),
+            destinationProfile: fixture.Destination.ProfileKey);
+
+        session.OpenExpedition();
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        session.Expedition.SetSpeed(1);
+        _ = session.Expedition.Advance(0.25);
+
+        Assert.Empty(session.Expedition.PersistentBands);
+        Assert.True(session.State.ActorLedger.TryGet(travellerId, out ActorLedgerEntry? arrivedAtDest));
+        Assert.Equal(ActorLocationKind.AtSite, arrivedAtDest!.Location?.Kind);
+        Assert.True(arrivedAtDest.Location?.Detached);
+        Assert.Equal(fixture.Destination.ProfileKey, arrivedAtDest.Location?.Profile?.Require());
+        session.Expedition.Close();
+
+        RulesetSavePayload savedAfterRemoteDestArrival = session.CaptureSave();
+        using DaggerfallSession restoredBeforeDestVisit = DaggerfallSession.Restore(
+            fixture.CreateEngine().Context, fixture.Composition, savedAfterRemoteDestArrival);
+
+        Assert.False(restoredBeforeDestVisit.State.Actors.TryGet(travellerId, out _));
+        Assert.True(restoredBeforeDestVisit.TryTransitionTo(fixture.Destination.ProfileKey));
+        ActorState atDest = Assert.Single(restoredBeforeDestVisit.State.Actors.All, a => a.DurableId == travellerId);
+        Assert.Equal("Maren the Envoy", restoredBeforeDestVisit.State.Npcs.Require(travellerId).DisplayName);
+        Assert.Equal(18, atDest.Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(64UL, Assert.Single(restoredBeforeDestVisit.State.ActorInventories.InventoryFor(travellerId)!.Read().Stacks).Quantity);
+        Assert.True(atDest.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        Assert.Contains(restoredBeforeDestVisit.State.Effects.Active, e => e.Context.Instance.Value == "remote-arrival-fortify" && e.Context.Target.Value == (ulong)travellerId);
+        Assert.Equal(fortifiedStrength, atDest.Stats.GetStat(StatId.Parse("strength")).Value);
+
+        // Part B: Dispatch back home (Origin) while player remains at Destination, arrive remotely at home, save/reload, then return home!
+        DaggerfallTravelMapPixel originPixel = new(fixture.OriginRecord.MapPixelX, fixture.OriginRecord.MapPixelY);
+        restoredBeforeDestVisit.OverlandParties.DispatchOverlandBand(
+            bandId: "envoy-homebound",
+            name: "Maren's Return Party",
+            kind: DaggerfallBandKind.Travellers,
+            memberIds: [travellerId],
+            startX: originPixel.X + 0.55,
+            startY: originPixel.Y + 0.5,
+            speedPixelsPerHour: 1.0,
+            destination: new DaggerfallExpeditionMark(originPixel, fixture.OriginRecord.Id),
+            destinationProfile: fixture.Origin.ProfileKey);
+
+        restoredBeforeDestVisit.OpenExpedition();
+        restoredBeforeDestVisit.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        restoredBeforeDestVisit.Expedition.SetSpeed(1);
+        _ = restoredBeforeDestVisit.Expedition.Advance(0.25);
+
+        Assert.Empty(restoredBeforeDestVisit.Expedition.PersistentBands);
+        Assert.True(restoredBeforeDestVisit.State.ActorLedger.TryGet(travellerId, out ActorLedgerEntry? arrivedHomeRemotely));
+        Assert.Equal(ActorLocationKind.AtSite, arrivedHomeRemotely!.Location?.Kind);
+        Assert.True(arrivedHomeRemotely.Location?.Detached);
+        Assert.Equal(fixture.Origin.ProfileKey, arrivedHomeRemotely.Location?.Profile?.Require());
+        restoredBeforeDestVisit.Expedition.Close();
+
+        RulesetSavePayload savedAfterRemoteHomeArrival = restoredBeforeDestVisit.CaptureSave();
+        using DaggerfallSession restoredBeforeHomeReturn = DaggerfallSession.Restore(
+            fixture.CreateEngine().Context, fixture.Composition, savedAfterRemoteHomeArrival);
+
+        Assert.True(restoredBeforeHomeReturn.TryTransitionTo(fixture.Origin.ProfileKey));
+        ActorState backHome = Assert.Single(restoredBeforeHomeReturn.State.Actors.All, a => a.DurableId == travellerId);
+        Assert.Equal("Maren the Envoy", restoredBeforeHomeReturn.State.Npcs.Require(travellerId).DisplayName);
+        Assert.Equal(18, backHome.Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(64UL, Assert.Single(restoredBeforeHomeReturn.State.ActorInventories.InventoryFor(travellerId)!.Read().Stacks).Quantity);
+        Assert.True(backHome.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        Assert.Contains(restoredBeforeHomeReturn.State.Effects.Active, e => e.Context.Instance.Value == "remote-arrival-fortify" && e.Context.Target.Value == (ulong)travellerId);
+        Assert.True(restoredBeforeHomeReturn.State.Effects.Cancel(EffectInstanceId.Parse("remote-arrival-fortify")));
+        Assert.Equal(baseStrength, backHome.Stats.GetStat(StatId.Parse("strength")).Value);
+    }
+
     private sealed class TwoTownFixture : IDisposable
     {
         private TwoTownFixture(

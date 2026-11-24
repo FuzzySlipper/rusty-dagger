@@ -450,16 +450,21 @@ internal sealed class DaggerfallActorLedger
 
     /// <summary>
     /// Clears an actor's <see cref="ActorLocationKind.OnOverlandBand"/> transit override on intercept or destination arrival,
-    /// placing it at <paramref name="arrivalProfile"/> (or restoring home slot null location when arriving home at baseline).
+    /// placing it at <paramref name="arrivalProfile"/> (or restoring home slot null location when arriving live at home).
+    /// When <paramref name="detached"/> is true (arriving at a site the player is not currently visiting), retains an
+    /// explicit detached <see cref="ActorLocationKind.AtSite"/> location (including at home) so saved detached state
+    /// stays in the inactive combatant set until the player next visits <paramref name="arrivalProfile"/>.
     /// </summary>
-    internal void ClearBandLocation(long durableId, DaggerfallWorldProfileKey arrivalProfile, ActorPoseOverride? arrivalPose = null)
+    internal void ClearBandLocation(long durableId, DaggerfallWorldProfileKey arrivalProfile, ActorPoseOverride? arrivalPose = null, bool detached = false)
     {
         if (!_entries.TryGetValue(durableId, out ActorLedgerEntry? existing)) return;
         bool isHome = existing.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual
             && existing.Origin.SiteProfile?.Require() == arrivalProfile;
-        ActorLocationOverride? location = isHome
-            ? null
-            : ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: false);
+        ActorLocationOverride? location = detached
+            ? ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: true)
+            : isHome
+                ? null
+                : ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: false);
         Upsert(existing with
         {
             Location = location,

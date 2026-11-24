@@ -376,7 +376,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 arrivalPose = new(pp.X, pp.Y, pp.Z, landingYaw + MathF.PI);
             }
 
-            _actorLedger.ClearBandLocation(member.DurableId, arrivalProfile, arrivalPose);
+            _actorLedger.ClearBandLocation(member.DurableId, arrivalProfile, arrivalPose, detached: !arrivingAtActive);
             ActorLedgerEntry updated = _actorLedger.TryGet(member.DurableId, out ActorLedgerEntry? after) && after is not null
                 ? after
                 : member with { Location = null, Pose = arrivalPose };

@@ -653,6 +653,11 @@ internal sealed record DaggerfallSavePayload(
             {
                 activeDeterministicIds.Add(entry.DurableId);
             }
+            else if (entry.Location is null && entry.Origin.SiteProfile is { } remoteHome && remoteHome.Require() != inputs.ProfileKey
+                || entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } remoteP } && remoteP.Require() != inputs.ProfileKey)
+            {
+                inactiveDeterministicIds.Add(entry.DurableId);
+            }
         }
         // Dynamic actors are spawn-time registrations, not content placements: each one names
         // the definition it was spawned from, and a definition the selected content cannot
