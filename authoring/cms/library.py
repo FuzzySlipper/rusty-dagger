@@ -34,10 +34,15 @@ class Library:
     world_blocks_root: Path | None = None
     world_shared_root: Path | None = None
     world_classic_shared_root: Path | None = None
+    imported_payload_path: Path | None = None
 
     @property
     def base_payload(self):
         return self.repo / "content/worldrpg/packs/daggerfall.base/payload.json"
+
+    @property
+    def imported_payload(self):
+        return self.imported_payload_path or (self.repo / "local/build/import/staging/worldrpg/payloads/daggerfall.imported.json")
 
     @property
     def people_pack(self):

@@ -655,3 +655,38 @@ button[data-mark][aria-pressed="true"] { color: var(--accent); border-color: var
 .slice-control input[type="range"] {
   width: 84px;
 }
+
+/* --- Town / Dungeon 2D Block Map --- */
+.town-grid-map {
+  display: grid;
+  gap: 3px;
+}
+.town-grid-cell {
+  padding: 6px 2px;
+  font-size: 0.65rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-align: center;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.town-grid-cell:hover {
+  border-color: #4b8d74;
+  color: var(--ink);
+}
+.town-grid-cell.start {
+  border-color: #4de096;
+  color: #b7f5d4;
+}
+.town-grid-cell.active {
+  background: #1f3a31;
+  border-color: #4de096;
+  color: #e6fff2;
+}
+.town-grid-empty {
+  background: transparent;
+}

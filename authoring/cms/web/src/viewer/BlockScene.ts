@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { WorldBlockDetailResponse, WorldBlockGroundTile, WorldBlockModel } from '../types';
 import { daggerfallSourceRotation, parseRstatmsh, type ParsedRstatmsh } from './rstatmsh';
 
-export type LayerName = 'models' | 'ground' | 'doors' | 'people' | 'billboards' | 'markers' | 'water';
+export type LayerName = 'models' | 'ground' | 'doors' | 'people' | 'billboards' | 'markers' | 'water' | 'grid';
 
 export type PickKind =
   | 'model'
@@ -17,7 +17,8 @@ export type PickKind =
   | 'questMarker'
   | 'randomEnemy'
   | 'container'
-  | 'marker';
+  | 'marker'
+  | 'gridCell';
 
 export interface ScenePick {
   pickKey: string;
@@ -28,6 +29,28 @@ export interface ScenePick {
   buildingIndex?: number | null;
   modelId?: string;
   index?: number;
+  blockKey?: string;
+  sourceName?: string;
+  gridX?: number;
+  gridY?: number;
+}
+
+export interface CompositeBlockPlacement {
+  blockKey: string;
+  sourceName: string;
+  gridX: number;
+  gridY: number;
+  origin: [number, number, number];
+  side: number;
+  start?: boolean;
+  detail: WorldBlockDetailResponse;
+}
+
+export interface CompositeBlockGrid {
+  mode: 'exterior' | 'dungeon';
+  terrainArchive: number;
+  mediaUrls: WorldBlockDetailResponse['mediaUrls'];
+  placements: CompositeBlockPlacement[];
 }
 
 export interface SceneLoadProgress {
@@ -45,6 +68,19 @@ export interface BlockSceneCallbacks {
 const MATERIAL_RE = /^material\/(texture-\d+-\d+)$/;
 const SPRITE_RE = /^sprite\/(texture-\d+-\d+)$/;
 const GROUND_TILE_METRES = 6.4;
+
+interface PlacementOffset {
+  ox: number;
+  oy: number;
+  oz: number;
+  prefix: string;
+  blockKey?: string;
+  sourceName?: string;
+  gridX?: number;
+  gridY?: number;
+}
+
+const ZERO_OFFSET: PlacementOffset = { ox: 0, oy: 0, oz: 0, prefix: '' };
 
 function makeFallbackMaterial(wireframe: boolean, color = 0x7c8a96): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
@@ -98,7 +134,7 @@ export class BlockSceneController {
 
     const width = Math.max(container.clientWidth, 320);
     const height = Math.max(container.clientHeight, 320);
-    this.camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 1500);
+    this.camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 3500);
     this.camera.position.copy(this.defaultCameraPos);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -126,6 +162,7 @@ export class BlockSceneController {
       billboards: new THREE.Group(),
       markers: new THREE.Group(),
       water: new THREE.Group(),
+      grid: new THREE.Group(),
     };
     for (const [name, group] of Object.entries(this.layers)) {
       group.name = `layer:${name}`;
@@ -135,7 +172,7 @@ export class BlockSceneController {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
-    this.controls.maxDistance = 600;
+    this.controls.maxDistance = 1600;
     this.controls.minDistance = 0.5;
     this.controls.target.copy(this.defaultTarget);
 
@@ -226,7 +263,8 @@ export class BlockSceneController {
     this.lastFrameTime = now;
 
     if (this.keysPressed.size > 0) {
-      const speed = (this.keysPressed.has('shift') ? 36 : 14) * dt;
+      const baseSpeed = this.currentKind === 'compositeExterior' ? 42 : 14;
+      const speed = (this.keysPressed.has('shift') ? baseSpeed * 2.6 : baseSpeed) * dt;
       const forward = new THREE.Vector3();
       this.camera.getWorldDirection(forward);
       const right = new THREE.Vector3().crossVectors(forward, this.camera.up).normalize();
@@ -271,6 +309,23 @@ export class BlockSceneController {
     this.camera.position.copy(this.defaultCameraPos);
     this.controls.target.copy(this.defaultTarget);
     this.controls.update();
+  }
+
+  focusBox(min: [number, number, number], max: [number, number, number]) {
+    const box = new THREE.Box3(new THREE.Vector3(...min), new THREE.Vector3(...max));
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const radius = Math.max(size.length() * 0.5, 10);
+    const dist = radius * 1.15;
+    this.controls.target.copy(center);
+    this.camera.position.set(center.x + dist * 0.62, center.y + dist * 0.65, center.z + dist * 0.68);
+    this.controls.update();
+    if (this.selectionHelper) {
+      this.scene.remove(this.selectionHelper);
+      this.selectionHelper.dispose();
+    }
+    this.selectionHelper = new THREE.Box3Helper(box, 0x4de096);
+    this.scene.add(this.selectionHelper);
   }
 
   selectByKey(pickKey: string | null, focus = false) {
@@ -535,6 +590,159 @@ export class BlockSceneController {
     report();
   }
 
+  async loadCompositeGrid(grid: CompositeBlockGrid) {
+    const gen = ++this.loadGeneration;
+    this.clearScene();
+    const { mode, mediaUrls, terrainArchive, placements } = grid;
+    this.currentKind = mode === 'exterior' ? 'compositeExterior' : 'compositeDungeon';
+
+    // Compute overall bounds across all placed blocks so camera frames the whole town/dungeon immediately
+    const totalBox = new THREE.Box3();
+    for (const p of placements) {
+      const [ox, oy, oz] = p.origin;
+      const b = p.detail.block.bounds;
+      if (b) {
+        totalBox.expandByPoint(new THREE.Vector3(ox + b.minimum.x, oy + b.minimum.y, oz + b.minimum.z));
+        totalBox.expandByPoint(new THREE.Vector3(ox + b.maximum.x, oy + b.maximum.y, oz + b.maximum.z));
+      } else {
+        totalBox.expandByPoint(new THREE.Vector3(ox, oy, oz - p.side));
+        totalBox.expandByPoint(new THREE.Vector3(ox + p.side, oy + 16, oz));
+      }
+    }
+    if (!totalBox.isEmpty()) {
+      this.currentBounds = totalBox;
+      this.frameFromBox(totalBox, this.currentKind);
+    } else {
+      this.frameFromBounds(null, this.currentKind);
+    }
+
+    // Build block cell outline grid + merged ground tiles + overlays
+    const groundBuckets = new Map<
+      number,
+      { positions: number[]; normals: number[]; uvs: number[]; indices: number[] }
+    >();
+    const gridLinesNormal: number[] = [];
+    const gridLinesStart: number[] = [];
+
+    const artifactSet = new Set<string>();
+
+    for (const p of placements) {
+      const [ox, oy, oz] = p.origin;
+      const offset: PlacementOffset = {
+        ox,
+        oy,
+        oz,
+        prefix: `${p.gridX},${p.gridY}:`,
+        blockKey: p.blockKey,
+        sourceName: p.sourceName,
+        gridX: p.gridX,
+        gridY: p.gridY,
+      };
+      const block = p.detail.block;
+
+      // Grid cell outline (at ground y=0.06 for exteriors, or block minY for RDB)
+      const gy = mode === 'exterior' ? 0.06 : (block.bounds?.minimum.y ?? 0);
+      const x0 = ox;
+      const x1 = ox + p.side;
+      const z0 = oz;
+      const z1 = oz - p.side;
+      const targetArr = p.start ? gridLinesStart : gridLinesNormal;
+      targetArr.push(
+        x0, gy, z0, x1, gy, z0,
+        x1, gy, z0, x1, gy, z1,
+        x1, gy, z1, x0, gy, z1,
+        x0, gy, z1, x0, gy, z0,
+      );
+
+      if (block.ground?.length) {
+        this.appendGroundTiles(groundBuckets, block.ground, ox, oy, oz);
+      }
+      this.buildDoors(p.detail, offset);
+      this.buildPeople(p.detail, offset);
+      this.buildBillboards(p.detail, offset);
+      this.buildMarkers(p.detail, offset);
+      if (typeof block.waterLevel === 'number') {
+        this.buildWater(block.waterLevel, block.bounds, offset);
+      }
+      for (const m of block.models ?? []) {
+        if (m.meshArtifactId) artifactSet.add(m.meshArtifactId);
+      }
+    }
+
+    this.commitGroundBuckets(groundBuckets, terrainArchive, mediaUrls.terrain);
+    this.commitGridLines(gridLinesNormal, 0x3b8698);
+    this.commitGridLines(gridLinesStart, 0x4de096);
+
+    // Stream all unique `.rstatmsh` geometries across the entire town/dungeon
+    const uniqueArtifacts = [...artifactSet];
+    const totalMeshes = uniqueArtifacts.length;
+    let loadedMeshes = 0;
+    let failedMeshes = 0;
+    let triangles = 0;
+
+    const report = () => {
+      if (gen !== this.loadGeneration || this.disposed) return;
+      this.callbacks.onProgress?.({ loadedMeshes, totalMeshes, failedMeshes, triangles });
+    };
+    report();
+
+    const parsedByArtifact = new Map<string, ParsedRstatmsh>();
+    const BATCH = 24;
+    for (let i = 0; i < uniqueArtifacts.length; i += BATCH) {
+      if (gen !== this.loadGeneration || this.disposed) return;
+      const slice = uniqueArtifacts.slice(i, i + BATCH);
+      await Promise.all(
+        slice.map(async artifactId => {
+          try {
+            const parsed = await this.loadMesh(artifactId, mediaUrls.geometry);
+            parsedByArtifact.set(artifactId, parsed);
+            loadedMeshes += 1;
+          } catch {
+            failedMeshes += 1;
+          }
+        }),
+      );
+      report();
+    }
+
+    if (gen !== this.loadGeneration || this.disposed) return;
+
+    for (const p of placements) {
+      const [ox, oy, oz] = p.origin;
+      const offset: PlacementOffset = {
+        ox,
+        oy,
+        oz,
+        prefix: `${p.gridX},${p.gridY}:`,
+        blockKey: p.blockKey,
+        sourceName: p.sourceName,
+        gridX: p.gridX,
+        gridY: p.gridY,
+      };
+      const models = p.detail.block.models ?? [];
+      for (let idx = 0; idx < models.length; idx++) {
+        const m = models[idx];
+        if (!m.meshArtifactId) continue;
+        const parsed = parsedByArtifact.get(m.meshArtifactId);
+        if (!parsed) continue;
+        triangles += (parsed.geometry.index?.count ?? 0) / 3;
+        this.addPlacedModel(m, idx, parsed, mediaUrls.materials, offset);
+      }
+    }
+
+    report();
+  }
+
+  private commitGridLines(coords: number[], color: number) {
+    if (!coords.length) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(coords, 3));
+    const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.72 });
+    const lines = new THREE.LineSegments(geo, mat);
+    lines.userData.ownedMaterial = true;
+    this.layers.grid.add(lines);
+  }
+
   private frameFromBounds(
     bounds: WorldBlockDetailResponse['block']['bounds'],
     kind: string,
@@ -595,13 +803,17 @@ export class BlockSceneController {
     index: number,
     parsed: ParsedRstatmsh,
     materialsBaseUrl: string,
+    off: PlacementOffset = ZERO_OFFSET,
   ) {
     const materials = parsed.materialNames.length
       ? parsed.materialNames.map(name => this.getMaterial(name, materialsBaseUrl))
       : [makeFallbackMaterial(this.wireframe)];
 
     const mesh = new THREE.Mesh(parsed.geometry, materials.length === 1 ? materials[0] : materials);
-    mesh.position.set(model.position.x, model.position.y, model.position.z);
+    const px = off.ox + model.position.x;
+    const py = off.oy + model.position.y;
+    const pz = off.oz + model.position.z;
+    mesh.position.set(px, py, pz);
     mesh.quaternion.copy(daggerfallSourceRotation(model.rotationDegrees));
     mesh.userData.sharedGeometry = true;
 
@@ -611,22 +823,29 @@ export class BlockSceneController {
         : `Model ${model.modelId}`;
 
     this.registerPick(mesh, {
-      pickKey: `model:${model.id}`,
+      pickKey: `${off.prefix}model:${model.id}`,
       kind: 'model',
       id: model.id,
       label,
-      position: [model.position.x, model.position.y, model.position.z],
+      position: [px, py, pz],
       buildingIndex: model.buildingIndex,
       modelId: model.modelId,
       index,
+      blockKey: off.blockKey,
+      sourceName: off.sourceName,
+      gridX: off.gridX,
+      gridY: off.gridY,
     });
     this.layers.models.add(mesh);
   }
 
-  private buildGround(tiles: WorldBlockGroundTile[], terrainArchive: number, terrainBaseUrl: string) {
-    // Group quads by textureRecord so we create <= 56 draw calls for the 256-tile ground grid
-    const byRecord = new Map<number, { positions: number[]; normals: number[]; uvs: number[]; indices: number[] }>();
-
+  private appendGroundTiles(
+    byRecord: Map<number, { positions: number[]; normals: number[]; uvs: number[]; indices: number[] }>,
+    tiles: WorldBlockGroundTile[],
+    ox: number,
+    oy: number,
+    oz: number,
+  ) {
     for (const tile of tiles) {
       const rec = tile.textureRecord < 56 ? tile.textureRecord : 2;
       let bucket = byRecord.get(rec);
@@ -634,19 +853,20 @@ export class BlockSceneController {
         bucket = { positions: [], normals: [], uvs: [], indices: [] };
         byRecord.set(rec, bucket);
       }
-      const x0 = tile.x * GROUND_TILE_METRES;
-      const x1 = (tile.x + 1) * GROUND_TILE_METRES;
+      const x0 = ox + tile.x * GROUND_TILE_METRES;
+      const x1 = ox + (tile.x + 1) * GROUND_TILE_METRES;
       const yRow = 15 - tile.y;
-      const z0 = -(yRow * GROUND_TILE_METRES);
-      const z1 = -((yRow + 1) * GROUND_TILE_METRES);
+      const z0 = oz - yRow * GROUND_TILE_METRES;
+      const z1 = oz - (yRow + 1) * GROUND_TILE_METRES;
 
       const base = bucket.positions.length / 3;
+      const y = oy - 0.02;
       // Right-handed CCW upward (+Y) quad matching RmbBlockContent.GroundTile
       bucket.positions.push(
-        x0, -0.02, z0,
-        x1, -0.02, z0,
-        x1, -0.02, z1,
-        x0, -0.02, z1,
+        x0, y, z0,
+        x1, y, z0,
+        x1, y, z1,
+        x0, y, z1,
       );
       bucket.normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
 
@@ -671,7 +891,13 @@ export class BlockSceneController {
       }
       bucket.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
+  }
 
+  private commitGroundBuckets(
+    byRecord: Map<number, { positions: number[]; normals: number[]; uvs: number[]; indices: number[] }>,
+    terrainArchive: number,
+    terrainBaseUrl: string,
+  ) {
     for (const [rec, bucket] of byRecord.entries()) {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(bucket.positions, 3));
@@ -684,8 +910,21 @@ export class BlockSceneController {
     }
   }
 
-  private buildDoors(detail: WorldBlockDetailResponse) {
+  private buildGround(tiles: WorldBlockGroundTile[], terrainArchive: number, terrainBaseUrl: string) {
+    // Group quads by textureRecord so we create <= 56 draw calls for the 256-tile ground grid
+    const byRecord = new Map<number, { positions: number[]; normals: number[]; uvs: number[]; indices: number[] }>();
+    this.appendGroundTiles(byRecord, tiles, 0, 0, 0);
+    this.commitGroundBuckets(byRecord, terrainArchive, terrainBaseUrl);
+  }
+
+  private buildDoors(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
     const { block } = detail;
+    const meta = {
+      blockKey: off.blockKey,
+      sourceName: off.sourceName,
+      gridX: off.gridX,
+      gridY: off.gridY,
+    };
 
     for (let i = 0; i < (block.doors?.length ?? 0); i++) {
       const door = block.doors![i];
@@ -701,20 +940,24 @@ export class BlockSceneController {
         depthWrite: false,
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(door.position.x, door.position.y, door.position.z);
+      const px = off.ox + door.position.x;
+      const py = off.oy + door.position.y;
+      const pz = off.oz + door.position.z;
+      mesh.position.set(px, py, pz);
       mesh.quaternion.copy(daggerfallSourceRotation(door.rotationDegrees));
       mesh.userData.ownedMaterial = true;
       this.registerPick(mesh, {
-        pickKey: `door:${door.id}`,
+        pickKey: `${off.prefix}door:${door.id}`,
         kind: 'door',
         id: door.id,
         label:
           door.buildingIndex !== null && door.buildingIndex !== undefined
             ? `Door ${door.id} (Building #${door.buildingIndex})`
             : `Door ${door.id}`,
-        position: [door.position.x, door.position.y, door.position.z],
+        position: [px, py, pz],
         buildingIndex: door.buildingIndex,
         index: i,
+        ...meta,
       });
       this.layers.doors.add(mesh);
     }
@@ -733,15 +976,19 @@ export class BlockSceneController {
         depthWrite: false,
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(td.position.x, td.position.y, td.position.z);
+      const px = off.ox + td.position.x;
+      const py = off.oy + td.position.y;
+      const pz = off.oz + td.position.z;
+      mesh.position.set(px, py, pz);
       mesh.userData.ownedMaterial = true;
       this.registerPick(mesh, {
-        pickKey: `transitionDoor:${td.id}`,
+        pickKey: `${off.prefix}transitionDoor:${td.id}`,
         kind: 'transitionDoor',
         id: td.id,
         label: `${td.kind} (${td.id})`,
-        position: [td.position.x, td.position.y, td.position.z],
+        position: [px, py, pz],
         index: i,
+        ...meta,
       });
       this.layers.doors.add(mesh);
     }
@@ -760,24 +1007,34 @@ export class BlockSceneController {
         depthWrite: false,
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(gate.position.x, gate.position.y + sy * 0.5, gate.position.z);
+      const px = off.ox + gate.position.x;
+      const py = off.oy + gate.position.y;
+      const pz = off.oz + gate.position.z;
+      mesh.position.set(px, py + sy * 0.5, pz);
       mesh.quaternion.copy(daggerfallSourceRotation(gate.rotationDegrees));
       mesh.userData.ownedMaterial = true;
       this.registerPick(mesh, {
-        pickKey: `gate:${gate.id}`,
+        pickKey: `${off.prefix}gate:${gate.id}`,
         kind: 'gate',
         id: gate.id,
         label: `City gate ${gate.id}`,
-        position: [gate.position.x, gate.position.y, gate.position.z],
+        position: [px, py, pz],
         index: i,
+        ...meta,
       });
       this.layers.doors.add(mesh);
     }
   }
 
-  private buildPeople(detail: WorldBlockDetailResponse) {
+  private buildPeople(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
     const { block, peopleSlots, mediaUrls } = detail;
     const seenPositions = new Set<string>();
+    const meta = {
+      blockKey: off.blockKey,
+      sourceName: off.sourceName,
+      gridX: off.gridX,
+      gridY: off.gridY,
+    };
 
     const addPersonPin = (
       pick: ScenePick,
@@ -815,7 +1072,10 @@ export class BlockSceneController {
 
     for (let i = 0; i < peopleSlots.length; i++) {
       const slot = peopleSlots[i];
-      const [x, y, z] = slot.position;
+      const [lx, ly, lz] = slot.position;
+      const x = off.ox + lx;
+      const y = off.oy + ly;
+      const z = off.oz + lz;
       seenPositions.add(`${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`);
       const title = slot.castName
         ? `${slot.castName} (cast)`
@@ -824,13 +1084,14 @@ export class BlockSceneController {
           : slot.slotId;
       addPersonPin(
         {
-          pickKey: `peopleSlot:${slot.slotId}:${i}`,
+          pickKey: `${off.prefix}peopleSlot:${slot.slotId}:${i}`,
           kind: 'peopleSlot',
           id: slot.slotId,
           label: title,
           position: [x, y, z],
           buildingIndex: slot.buildingIndex,
           index: i,
+          ...meta,
         },
         slot.visual?.archive,
         slot.visual?.record,
@@ -840,16 +1101,20 @@ export class BlockSceneController {
 
     for (let i = 0; i < (block.staticNpcs?.length ?? 0); i++) {
       const npc = block.staticNpcs![i];
-      const pKey = `${npc.position.x.toFixed(2)},${npc.position.y.toFixed(2)},${npc.position.z.toFixed(2)}`;
+      const x = off.ox + npc.position.x;
+      const y = off.oy + npc.position.y;
+      const z = off.oz + npc.position.z;
+      const pKey = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`;
       if (seenPositions.has(pKey)) continue;
       addPersonPin(
         {
-          pickKey: `staticNpc:${npc.id}`,
+          pickKey: `${off.prefix}staticNpc:${npc.id}`,
           kind: 'staticNpc',
           id: npc.id,
           label: npc.npcName ? `${npc.npcName} (${npc.id})` : `Static NPC ${npc.id}`,
-          position: [npc.position.x, npc.position.y, npc.position.z],
+          position: [x, y, z],
           index: i,
+          ...meta,
         },
         npc.billboardArchive,
         npc.billboardRecord,
@@ -858,8 +1123,14 @@ export class BlockSceneController {
     }
   }
 
-  private buildBillboards(detail: WorldBlockDetailResponse) {
+  private buildBillboards(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
     const { block, mediaUrls } = detail;
+    const meta = {
+      blockKey: off.blockKey,
+      sourceName: off.sourceName,
+      gridX: off.gridX,
+      gridY: off.gridY,
+    };
     for (let i = 0; i < (block.billboards?.length ?? 0); i++) {
       const bb = block.billboards![i];
       const match = SPRITE_RE.exec(bb.spriteResourceId ?? '');
@@ -870,21 +1141,31 @@ export class BlockSceneController {
       const h = Math.max(bb.size?.y || 1.2, 0.25);
       sprite.scale.set(w, h, 1);
       const yOffset = bb.baseAligned ? h * 0.5 : 0;
-      sprite.position.set(bb.position.x, bb.position.y + yOffset, bb.position.z);
+      const px = off.ox + bb.position.x;
+      const py = off.oy + bb.position.y;
+      const pz = off.oz + bb.position.z;
+      sprite.position.set(px, py + yOffset, pz);
       this.registerPick(sprite, {
-        pickKey: `billboard:${bb.id}`,
+        pickKey: `${off.prefix}billboard:${bb.id}`,
         kind: 'billboard',
         id: bb.id,
         label: `Billboard ${match[1]}`,
-        position: [bb.position.x, bb.position.y, bb.position.z],
+        position: [px, py, pz],
         index: i,
+        ...meta,
       });
       this.layers.billboards.add(sprite);
     }
   }
 
-  private buildMarkers(detail: WorldBlockDetailResponse) {
+  private buildMarkers(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
     const { block } = detail;
+    const meta = {
+      blockKey: off.blockKey,
+      sourceName: off.sourceName,
+      gridX: off.gridX,
+      gridY: off.gridY,
+    };
 
     const addOrb = (pick: ScenePick, color: number, radius: number, shape: 'sphere' | 'octa' | 'box' = 'sphere') => {
       const geo =
@@ -905,12 +1186,13 @@ export class BlockSceneController {
       const l = block.lights![i];
       addOrb(
         {
-          pickKey: `light:${l.id}`,
+          pickKey: `${off.prefix}light:${l.id}`,
           kind: 'light',
           id: l.id,
           label: `Light ${l.id} (range ${l.range}m)`,
-          position: [l.position.x, l.position.y, l.position.z],
+          position: [off.ox + l.position.x, off.oy + l.position.y, off.oz + l.position.z],
           index: i,
+          ...meta,
         },
         0xffe37d,
         0.26,
@@ -922,12 +1204,13 @@ export class BlockSceneController {
       const q = block.questMarkers![i];
       addOrb(
         {
-          pickKey: `questMarker:${q.id}`,
+          pickKey: `${off.prefix}questMarker:${q.id}`,
           kind: 'questMarker',
           id: q.id,
           label: `Quest marker (${q.kind ?? 'quest'})`,
-          position: [q.position.x, q.position.y + 0.5, q.position.z],
+          position: [off.ox + q.position.x, off.oy + q.position.y + 0.5, off.oz + q.position.z],
           index: i,
+          ...meta,
         },
         0xffb703,
         0.42,
@@ -939,12 +1222,13 @@ export class BlockSceneController {
       const e = block.randomEnemies![i];
       addOrb(
         {
-          pickKey: `randomEnemy:${e.id}`,
+          pickKey: `${off.prefix}randomEnemy:${e.id}`,
           kind: 'randomEnemy',
           id: e.id,
           label: `Enemy spawn slot ${e.encounterSlot}`,
-          position: [e.position.x, e.position.y + 0.7, e.position.z],
+          position: [off.ox + e.position.x, off.oy + e.position.y + 0.7, off.oz + e.position.z],
           index: i,
+          ...meta,
         },
         0xef476f,
         0.48,
@@ -956,12 +1240,13 @@ export class BlockSceneController {
       const c = block.propertyContainers![i];
       addOrb(
         {
-          pickKey: `container:${c.id}`,
+          pickKey: `${off.prefix}container:${c.id}`,
           kind: 'container',
           id: c.id,
           label: `Container ${c.id}`,
-          position: [c.position.x, c.position.y, c.position.z],
+          position: [off.ox + c.position.x, off.oy + c.position.y, off.oz + c.position.z],
           index: i,
+          ...meta,
         },
         0x2ec4b6,
         0.34,
@@ -977,12 +1262,13 @@ export class BlockSceneController {
       const m = specialMarkers[i];
       addOrb(
         {
-          pickKey: `marker:${m.id}`,
+          pickKey: `${off.prefix}marker:${m.id}`,
           kind: 'marker',
           id: m.id,
           label: `${m.tag} (${m.id})`,
-          position: [m.position.x, m.position.y + 0.8, m.position.z],
+          position: [off.ox + m.position.x, off.oy + m.position.y + 0.8, off.oz + m.position.z],
           index: i,
+          ...meta,
         },
         0x80ed99,
         0.45,
@@ -991,11 +1277,15 @@ export class BlockSceneController {
     }
   }
 
-  private buildWater(waterLevel: number, bounds: WorldBlockDetailResponse['block']['bounds']) {
-    const minX = bounds ? bounds.minimum.x : 0;
-    const maxX = bounds ? bounds.maximum.x : 51.2;
-    const minZ = bounds ? bounds.minimum.z : -51.2;
-    const maxZ = bounds ? bounds.maximum.z : 0;
+  private buildWater(
+    waterLevel: number,
+    bounds: WorldBlockDetailResponse['block']['bounds'],
+    off: PlacementOffset = ZERO_OFFSET,
+  ) {
+    const minX = off.ox + (bounds ? bounds.minimum.x : 0);
+    const maxX = off.ox + (bounds ? bounds.maximum.x : 51.2);
+    const minZ = off.oz + (bounds ? bounds.minimum.z : -51.2);
+    const maxZ = off.oz + (bounds ? bounds.maximum.z : 0);
     const w = Math.max(maxX - minX, 4);
     const d = Math.max(maxZ - minZ, 4);
     const geo = new THREE.PlaneGeometry(w, d);
@@ -1008,7 +1298,7 @@ export class BlockSceneController {
       depthWrite: false,
     });
     const plane = new THREE.Mesh(geo, mat);
-    plane.position.set((minX + maxX) * 0.5, waterLevel, (minZ + maxZ) * 0.5);
+    plane.position.set((minX + maxX) * 0.5, off.oy + waterLevel, (minZ + maxZ) * 0.5);
     plane.userData.ownedMaterial = true;
     this.layers.water.add(plane);
   }

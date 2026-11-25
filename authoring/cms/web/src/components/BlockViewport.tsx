@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { WorldBlockDetailResponse } from '../types';
-import type { BlockSceneController, LayerName, SceneLoadProgress, ScenePick } from '../viewer/BlockScene';
+import type { Bounds3, WorldBlockDetailResponse } from '../types';
+import type {
+  BlockSceneController,
+  CompositeBlockGrid,
+  LayerName,
+  SceneLoadProgress,
+  ScenePick,
+} from '../viewer/BlockScene';
 
-const LAYER_LABELS: Array<{ key: LayerName; label: string }> = [
+const BASE_LAYERS: Array<{ key: LayerName; label: string }> = [
   { key: 'models', label: 'Models' },
   { key: 'ground', label: 'Ground' },
   { key: 'doors', label: 'Doors' },
@@ -12,21 +18,34 @@ const LAYER_LABELS: Array<{ key: LayerName; label: string }> = [
   { key: 'water', label: 'Water' },
 ];
 
+export interface FocusBoxRequest {
+  id: number;
+  min: [number, number, number];
+  max: [number, number, number];
+}
+
 export function BlockViewport({
   detail,
+  compositeGrid,
   selectedPickKey,
   focusRequestId,
+  focusBoxRequest,
   onSelect,
 }: {
-  detail: WorldBlockDetailResponse;
+  detail?: WorldBlockDetailResponse | null;
+  compositeGrid?: CompositeBlockGrid | null;
   selectedPickKey: string | null;
   focusRequestId: number;
+  focusBoxRequest?: FocusBoxRequest | null;
   onSelect: (pick: ScenePick | null) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<BlockSceneController | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+
+  const isComposite = Boolean(compositeGrid);
+  const layerDefs = isComposite ? [...BASE_LAYERS, { key: 'grid' as LayerName, label: 'Grid' }] : BASE_LAYERS;
 
   const [initError, setInitError] = useState<string | null>(null);
   const [engineReady, setEngineReady] = useState(false);
@@ -47,6 +66,7 @@ export function BlockViewport({
     billboards: true,
     markers: true,
     water: true,
+    grid: true,
   });
 
   // Lazily import Three.js chunk only when BlockViewport mounts
@@ -76,11 +96,15 @@ export function BlockViewport({
     };
   }, []);
 
-  // Load block into scene whenever detail changes or controller finishes initializing
+  // Load single block or composite town/dungeon grid into scene
   useEffect(() => {
     if (!engineReady || !controllerRef.current) return;
-    void controllerRef.current.loadBlock(detail);
-  }, [engineReady, detail]);
+    if (compositeGrid) {
+      void controllerRef.current.loadCompositeGrid(compositeGrid);
+    } else if (detail) {
+      void controllerRef.current.loadBlock(detail);
+    }
+  }, [engineReady, detail, compositeGrid]);
 
   // Apply layer toggles
   useEffect(() => {
@@ -96,20 +120,39 @@ export function BlockViewport({
     controllerRef.current?.setWireframe(wireframe);
   }, [engineReady, wireframe]);
 
-  // Apply optional horizontal cutaway slice
+  // Compute aggregate Y bounds for horizontal cutaway slider
+  const activeBounds: Bounds3 | null = detail?.block.bounds
+    ? detail.block.bounds
+    : compositeGrid?.placements.length
+      ? (() => {
+          let minY = Infinity;
+          let maxY = -Infinity;
+          for (const p of compositeGrid.placements) {
+            const b = p.detail.block.bounds;
+            if (b) {
+              minY = Math.min(minY, p.origin[1] + b.minimum.y);
+              maxY = Math.max(maxY, p.origin[1] + b.maximum.y);
+            }
+          }
+          if (!Number.isFinite(minY) || !Number.isFinite(maxY)) return null;
+          return {
+            minimum: { x: 0, y: minY, z: 0 },
+            maximum: { x: 0, y: maxY, z: 0 },
+          };
+        })()
+      : null;
+
   useEffect(() => {
     const ctrl = controllerRef.current;
     if (!ctrl) return;
-    const b = detail.block.bounds;
-    if (!sliceEnabled || !b) {
+    if (!sliceEnabled || !activeBounds) {
       ctrl.setClipHeight(null);
       return;
     }
-    const minY = b.minimum.y;
-    const maxY = b.maximum.y;
-    const y = minY + ((maxY - minY) * slicePct) / 100;
-    ctrl.setClipHeight(y);
-  }, [engineReady, detail, sliceEnabled, slicePct]);
+    const minY = activeBounds.minimum.y;
+    const maxY = activeBounds.maximum.y;
+    ctrl.setClipHeight(minY + ((maxY - minY) * slicePct) / 100);
+  }, [engineReady, activeBounds?.minimum.y, activeBounds?.maximum.y, sliceEnabled, slicePct]);
 
   // Sync external selection / focus request
   useEffect(() => {
@@ -117,17 +160,24 @@ export function BlockViewport({
     controllerRef.current.selectByKey(selectedPickKey, focusRequestId > 0);
   }, [engineReady, selectedPickKey, focusRequestId]);
 
+  // Sync cell/box focus request (e.g. clicking a block on the Town 2D grid map)
+  useEffect(() => {
+    if (!engineReady || !controllerRef.current || !focusBoxRequest) return;
+    controllerRef.current.focusBox(focusBoxRequest.min, focusBoxRequest.max);
+  }, [engineReady, focusBoxRequest?.id]);
+
   function toggleLayer(name: LayerName) {
     setLayers(prev => ({ ...prev, [name]: !prev[name] }));
   }
 
-  const loadingMeshes = progress.totalMeshes > 0 && progress.loadedMeshes + progress.failedMeshes < progress.totalMeshes;
+  const loadingMeshes =
+    progress.totalMeshes > 0 && progress.loadedMeshes + progress.failedMeshes < progress.totalMeshes;
 
   return (
     <div class="block-viewport-shell">
       <div class="block-viewport-toolbar">
         <div class="layer-toggles" role="group" aria-label="3D viewport layers">
-          {LAYER_LABELS.map(item => (
+          {layerDefs.map(item => (
             <button
               key={item.key}
               type="button"
@@ -140,7 +190,7 @@ export function BlockViewport({
           ))}
         </div>
         <div class="actions">
-          {detail.block.bounds ? (
+          {activeBounds ? (
             <label class="slice-control" title="Horizontal cutaway plane to peel off roofs and upper floors">
               <input
                 type="checkbox"
@@ -194,7 +244,7 @@ export function BlockViewport({
               : `${progress.loadedMeshes} unique meshes · ${Math.round(progress.triangles).toLocaleString()} tris`}
             {progress.failedMeshes > 0 ? ` (${progress.failedMeshes} failed)` : ''}
           </span>
-          <span>Orbit: drag · Pan: right-drag · Zoom: wheel · Fly: WASD/QE · Click to inspect</span>
+          <span>Orbit: drag · Pan: right-drag · Zoom: wheel · Fly: WASD/QE (+Shift) · Click to inspect</span>
         </div>
       </div>
     </div>

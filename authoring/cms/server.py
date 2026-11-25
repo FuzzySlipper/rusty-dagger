@@ -22,6 +22,8 @@ from concepts import MEDIA, ConceptStore
 from library import (
     CMS, DEFAULT_CHARACTERS, DEFAULT_CONCEPTS, DEFAULT_MERGES, DEFAULT_NPCS, DEFAULT_REVIEWS, REPO, Library,
 )
+import locations as locations_module
+from locations import LocationsStore
 from packs import PackStore
 import people_curation as people_curation_module
 import people_pack as people_pack_module
@@ -49,6 +51,7 @@ class Workspace:
         self.catalog_store = CatalogStore(library, links, self.cache, self.packs)
         self.people_pack = PeoplePackStore(library, self.cache, self.packs)
         self.world_blocks = WorldBlocksStore(library, self.cache, self.people_pack)
+        self.locations = LocationsStore(library, self.cache, self.world_blocks, self.people_pack)
 
     def catalog(self):
         return self.catalog_store.catalog()
@@ -119,6 +122,7 @@ class Workspace:
             "conceptStages": list(concepts.values()),
             "peoplePack": self.people_pack.summary_counts(catalog, self.concept_store),
             "worldBlocks": self.world_blocks.summary_counts(),
+            "locations": self.locations.summary_counts(),
         }
 
     def stage_review(self, pipeline, stage):
@@ -212,6 +216,7 @@ def create_router(workspace: Workspace) -> Router:
     people_pack_module.register_routes(router, workspace)
     people_curation_module.register_routes(router, workspace)
     blocks_module.register_routes(router, workspace)
+    locations_module.register_routes(router, workspace)
     return router
 
 

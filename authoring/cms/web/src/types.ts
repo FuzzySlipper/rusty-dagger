@@ -192,6 +192,15 @@ export interface WorldBlocksSummaryCounts {
   unplacedRmb: number;
 }
 
+export interface LocationsSummaryCounts {
+  available: boolean;
+  total: number;
+  cities: number;
+  townsAndVillages: number;
+  multiBlock: number;
+  withDungeons: number;
+}
+
 export interface CatalogOverview {
   people: CharacterSummary[];
   creatures: CatalogAssetRow[];
@@ -208,6 +217,7 @@ export interface CatalogOverview {
   conceptStages: ConceptStageSummary[];
   peoplePack?: PeoplePackCounts;
   worldBlocks?: WorldBlocksSummaryCounts;
+  locations?: LocationsSummaryCounts;
 }
 
 export interface LinkChoice {
@@ -711,6 +721,109 @@ export interface WorldBlockDetailResponse {
   interiorKeys: Record<string, string>;
   peopleSlots: WorldBlockPeopleSlot[];
   modelLinks: Record<string, { id: string; name: string; category: AssetCategory }>;
+  terrainArchive: number;
+  mediaUrls: {
+    geometry: string;
+    materials: string;
+    billboards: string;
+    terrain: string;
+  };
+}
+
+export interface WorldBlockBatchResponse {
+  available: boolean;
+  blocks: Record<string, WorldBlockDetailResponse>;
+  missing: string[];
+  terrainArchive: number;
+  mediaUrls: {
+    geometry: string;
+    materials: string;
+    billboards: string;
+    terrain: string;
+  };
+}
+
+export interface LocationListItem {
+  region: number;
+  regionName: string;
+  index: number;
+  name: string;
+  locationType: number | null;
+  locationTypeName: string;
+  climate: number | null;
+  mapPixelX: number | null;
+  mapPixelY: number | null;
+  width: number;
+  height: number;
+  exteriorBlockCount: number;
+  uniqueExteriorBlocks: number;
+  hasDungeon: boolean;
+  dungeonBlockCount: number;
+  dungeonType: number | null;
+  dungeonTypeName: string | null;
+  buildingTypes: number[];
+  discovered: boolean;
+}
+
+export interface LocationsQueryResponse {
+  available: boolean;
+  reason?: string;
+  counts: {
+    total: number;
+    cities: number;
+    townsAndVillages: number;
+    multiBlock: number;
+    withDungeons: number;
+  };
+  regions: Array<{ index: number; name: string; count: number }>;
+  locationTypes: Array<{ id: number; name: string; count: number }>;
+  total: number;
+  offset: number;
+  limit: number;
+  items: LocationListItem[];
+}
+
+export interface LocationExteriorBlockPlacement {
+  x: number;
+  y: number;
+  sourceName: string;
+  blockKey: string | null;
+  interiorCount: number;
+  peopleSlotCount: number;
+}
+
+export interface LocationDungeonBlockPlacement {
+  x: number;
+  z: number;
+  sourceKey: string;
+  blockKey: string | null;
+  start: boolean;
+}
+
+export interface LocationDetailResponse {
+  location: LocationListItem & {
+    mapId?: number | null;
+    longitude?: number | null;
+    latitude?: number | null;
+    buildingTypeLabels: Array<{ id: number; name: string | null }>;
+  };
+  exterior: {
+    locationId?: number | null;
+    width: number;
+    height: number;
+    blocks: LocationExteriorBlockPlacement[];
+    uniqueBlockKeys: string[];
+  };
+  dungeon: {
+    dungeonLocationId?: number | null;
+    dungeonType: number | null;
+    dungeonTypeName: string | null;
+    blockCount: number;
+    uniqueBlocks: number;
+    placements: LocationDungeonBlockPlacement[];
+    textureTable?: { archives: number[]; remaps: Array<{ archive: number; targetArchive: number }> } | null;
+  } | null;
+  worldBlocksAvailable: boolean;
   terrainArchive: number;
   mediaUrls: {
     geometry: string;

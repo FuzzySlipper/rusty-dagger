@@ -1,5 +1,5 @@
 import { ASSET_LABELS, ASSET_PAGES } from '../types';
-import { blocksUrl, castUrl, conceptsUrl, pipelineUrl, spawnerUrl, stageUrl, worldBlocksUrl } from '../router';
+import { blocksUrl, castUrl, conceptsUrl, locationsUrl, pipelineUrl, spawnerUrl, stageUrl, worldBlocksUrl } from '../router';
 import { useApp } from '../state';
 import { ReviewBadge } from '../components/ReviewControls';
 import { Chip, Empty, PageHeading } from '../components/ui';
@@ -65,10 +65,25 @@ export function OverviewPage() {
       {catalog.worldBlocks?.available ? (
         <section class="panel">
           <div class="section-heading">
-            <h2>World blocks (3D)</h2>
-            <span class="muted">{catalog.worldBlocks.total.toLocaleString()} staged blocks ready to inspect in 3D</span>
+            <h2>World blocks &amp; towns (3D)</h2>
+            <span class="muted">
+              {catalog.worldBlocks.total.toLocaleString()} blocks
+              {catalog.locations?.available ? ` · ${catalog.locations.total.toLocaleString()} towns & locations` : ''}
+            </span>
           </div>
           <div class="collections" style={{ marginBottom: 0 }}>
+            {catalog.locations?.available ? (
+              <a class="collection" href={locationsUrl({ multiBlock: '1' })}>
+                <strong>{catalog.locations.multiBlock.toLocaleString()}</strong>
+                <span>Multi-block towns</span>
+              </a>
+            ) : null}
+            {catalog.locations?.available ? (
+              <a class="collection" href={locationsUrl({ hasDungeon: '1' })}>
+                <strong>{catalog.locations.withDungeons.toLocaleString()}</strong>
+                <span>Full dungeons</span>
+              </a>
+            ) : null}
             <a class="collection" href={worldBlocksUrl({ kind: 'rmbExterior' })}>
               <strong>{catalog.worldBlocks.rmbExterior.toLocaleString()}</strong>
               <span>RMB Exteriors</span>

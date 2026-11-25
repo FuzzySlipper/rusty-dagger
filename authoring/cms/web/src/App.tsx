@@ -17,6 +17,7 @@ import { CastPage } from './pages/CastPage';
 import { SpawnersPage } from './pages/SpawnersPage';
 import { BlockSlotsPage } from './pages/BlockSlotsPage';
 import { WorldBlockDetailPage, WorldBlocksListPage } from './pages/WorldBlocksPage';
+import { LocationDetailPage, LocationsListPage } from './pages/LocationsPage';
 
 interface WorkspaceGitStatus {
   gitAvailable: boolean;
@@ -57,6 +58,10 @@ function renderRoute(route: Route) {
       return <WorldBlocksListPage initialQuery={route.query} />;
     case 'world-block':
       return <WorldBlockDetailPage blockKey={route.key} />;
+    case 'locations':
+      return <LocationsListPage initialQuery={route.query} />;
+    case 'location':
+      return <LocationDetailPage region={route.region} index={route.index} mode={route.mode} />;
   }
 }
 
@@ -175,6 +180,13 @@ export function App() {
             aria-current={currentSection === 'world-blocks' ? 'page' : undefined}
           >
             World blocks (3D)
+          </a>
+          <a
+            href="#locations"
+            data-page="locations"
+            aria-current={currentSection === 'locations' ? 'page' : undefined}
+          >
+            Towns &amp; locations (3D)
           </a>
           <div class="nav-group-label">Pipelines</div>
           <a href="#pipelines" data-page="pipelines" aria-current={currentSection === 'pipelines' ? 'page' : undefined}>

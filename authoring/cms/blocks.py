@@ -7,7 +7,7 @@ import re
 
 from cache import FileCache, file_stamp
 from people_pack import building_type_name
-from router import NotFoundError
+from router import BadRequestError, NotFoundError
 
 BLOCK_KINDS = ("rmbExterior", "rmbInterior", "rdb")
 TERRAIN_TEXTURE_RE = re.compile(r"^texture-(\d+)-\d+\.png$")
@@ -369,6 +369,46 @@ class WorldBlocksStore:
         }
 
 
+    def block_batch(self, keys: list[str], catalog, concept_store, catalog_overview: dict) -> dict:
+        """Load multiple block details in one call for multi-block town and dungeon composition."""
+        if not self.available():
+            return {
+                "available": False,
+                "blocks": {},
+                "missing": list(keys),
+                "terrainArchive": 3,
+                "mediaUrls": {
+                    "geometry": "/media/world-geometry/",
+                    "materials": "/media/world-materials/",
+                    "billboards": "/media/world-billboards/",
+                    "terrain": "/media/world-terrain/",
+                },
+            }
+        unique_keys = list(dict.fromkeys(k.strip() for k in keys if isinstance(k, str) and k.strip()))
+        if len(unique_keys) > 128:
+            raise BadRequestError("Batch block request exceeds maximum of 128 unique keys.")
+        loaded = {}
+        missing = []
+        for key in unique_keys:
+            detail = self.block_detail(key, catalog, concept_store, catalog_overview)
+            if detail is None:
+                missing.append(key)
+            else:
+                loaded[key] = detail
+        return {
+            "available": True,
+            "blocks": loaded,
+            "missing": missing,
+            "terrainArchive": self._terrain_archive(),
+            "mediaUrls": {
+                "geometry": "/media/world-geometry/",
+                "materials": "/media/world-materials/",
+                "billboards": "/media/world-billboards/",
+                "terrain": "/media/world-terrain/",
+            },
+        }
+
+
 def _int_param(req, name: str, default: int) -> int:
     raw = req.arg(name, "") or ""
     if not raw:
@@ -415,6 +455,15 @@ def register_routes(router, workspace):
             raise NotFoundError(f"No staged world block found for '{source}'.")
         return resolved
 
+    def post_world_blocks_batch(req):
+        body = req.json()
+        if not isinstance(body, dict) or not isinstance(body.get("keys"), list):
+            raise BadRequestError("Expected JSON body {\"keys\": [...]}.")
+        catalog = workspace.catalog()
+        overview = workspace.catalog_store.overview()
+        return workspace.world_blocks.block_batch(body["keys"], catalog, workspace.concept_store, overview)
+
     router.get("/api/world-blocks", get_world_blocks)
     router.get("/api/world-blocks/detail", get_world_block_detail)
     router.get("/api/world-blocks/resolve", resolve_world_block)
+    router.post("/api/world-blocks/batch", post_world_blocks_batch)

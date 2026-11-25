@@ -13,7 +13,9 @@ export type Route =
   | { page: 'spawners'; id?: string }
   | { page: 'blocks'; query: Record<string, string> }
   | { page: 'world-blocks'; query: Record<string, string> }
-  | { page: 'world-block'; key: string };
+  | { page: 'world-block'; key: string }
+  | { page: 'locations'; query: Record<string, string> }
+  | { page: 'location'; region: number; index: number; mode?: 'exterior' | 'dungeon' };
 
 export const encodeKey = (value: string): string => encodeURIComponent(value);
 
@@ -42,6 +44,16 @@ export const worldBlocksUrl = (filters: Record<string, string | number | undefin
   return qs ? `#world-blocks?${qs}` : '#world-blocks';
 };
 export const worldBlockUrl = (key: string): string => `#world-block/${encodeKey(key)}`;
+export const locationsUrl = (filters: Record<string, string | number | undefined> = {}): string => {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v !== undefined && v !== '') params.set(k, String(v));
+  }
+  const qs = params.toString();
+  return qs ? `#locations?${qs}` : '#locations';
+};
+export const locationUrl = (region: number, index: number, mode?: 'exterior' | 'dungeon'): string =>
+  mode === 'dungeon' ? `#location/${region}/${index}/dungeon` : `#location/${region}/${index}`;
 
 function safeDecode(value: string): string {
   try {
@@ -88,6 +100,23 @@ export function parseHash(hash: string): Route {
     const fullKey = rest.length ? safeDecode([encoded, ...rest].join('/')) : id;
     return { page: 'world-block', key: fullKey };
   }
+  if (page === 'locations') {
+    const query: Record<string, string> = {};
+    if (queryPart) {
+      for (const [k, v] of new URLSearchParams(queryPart).entries()) {
+        query[k] = v;
+      }
+    }
+    return { page: 'locations', query };
+  }
+  if (page === 'location' && encoded && rest.length >= 1) {
+    const region = Number(id);
+    const index = Number(safeDecode(rest[0]));
+    const mode = rest[1] === 'dungeon' ? 'dungeon' : 'exterior';
+    if (Number.isInteger(region) && Number.isInteger(index)) {
+      return { page: 'location', region, index, mode };
+    }
+  }
   if (page === 'pipelines') return { page: 'listing', category: 'pipelines' };
   if ((ASSET_PAGES as string[]).includes(page)) {
     return { page: 'listing', category: page as AssetCategory };
@@ -120,6 +149,9 @@ export function activeSection(
     case 'world-blocks':
     case 'world-block':
       return 'world-blocks';
+    case 'locations':
+    case 'location':
+      return 'locations';
     case 'search':
       return '';
   }
