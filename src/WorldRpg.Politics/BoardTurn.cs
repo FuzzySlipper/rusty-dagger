@@ -3,10 +3,11 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// One weekly turn, resolved on Sunday:
 /// <list type="number">
-/// <item>Upkeep. Conditions that have reached their end are lifted. Each seat is paid: coin of a quarter of the
-/// prosperity of the regions it holds (a famine empties a region's granaries, and a price surge adds its magnitude);
+/// <item>Upkeep. Conditions that have reached their end are lifted, and each region is found fed or cut off from food
+/// (<see cref="Supply"/>); a cut-off region pays its holder nothing and loses order. Each seat is paid, from the regions
+/// it holds that are fed: coin of a quarter of their prosperity (a famine empties a region's granaries, and a price surge adds its magnitude);
 /// favour of a third of
-/// its influence pieces; force of a quarter of its regions' control, each rounded down. A seat's grants
+/// its influence pieces; force of a quarter of their control, each rounded down. A seat's grants
 /// fall due in the weeks their schedules divide, and every <see cref="OfficeWeeks"/>th week each office pays its holder
 /// 1 of its resource. Each region and court condition weighs on its region or crown as
 /// <see cref="Conditions.Weigh(Board, Region)"/> says. A region with order 1 or less loses a point of control to unrest. Every fourth week an
@@ -117,9 +118,11 @@ public static class BoardTurn
     private static void Upkeep(Board board)
     {
         board.ExpireConditions();
+        HashSet<Region> fed = Supply.Fed(board);
+        foreach (Region region in board.Regions) board.SetCut(region, !fed.Contains(region));
         foreach (Seat seat in board.Seats)
         {
-            Region[] held = [.. board.Regions.Where(region => region.Allegiance == seat.Id)];
+            Region[] held = [.. board.Regions.Where(region => region.Allegiance == seat.Id && !region.Cut)];
             board.AdjustResource(seat, Resource.Coin, held.Sum(Conditions.ProsperityIncome) / 4);
             board.AdjustResource(seat, Resource.Favour, board.Regions.Sum(region => region.InfluenceOf(seat.Id)) / 3);
             board.AdjustResource(seat, Resource.Force, held.Sum(region => region.Control) / 4);
@@ -138,6 +141,7 @@ public static class BoardTurn
         foreach (Seat seat in board.Seats) Conditions.Weigh(board, seat);
         foreach (Region region in board.Regions)
         {
+            if (region.Cut && board.Turn % Supply.CutOrderWeeks == 0) board.AdjustOrder(region, -1);
             if (region.Order <= UnrestOrder) board.AdjustControl(region, -1);
             if (region.Allegiance is null && board.Turn % IndependentRecoveryWeeks == 0 && region.Control < IndependentRecoveryControl)
                 board.AdjustControl(region, 1);

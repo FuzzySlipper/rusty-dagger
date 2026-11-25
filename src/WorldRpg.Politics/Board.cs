@@ -376,6 +376,15 @@ public sealed class Board
         changes.Add(new BoardChange(crown.Id, CourtField(condition), Describe(before), Describe(after)));
     }
 
+    /// <summary>Marks <paramref name="region"/> fed or cut off from food.</summary>
+    public void SetCut(Region region, bool cut)
+    {
+        if (region.Cut == cut) return;
+        changes.Add(new BoardChange(region.Id, "supply", region.Cut ? "cut" : "fed", cut ? "cut" : "fed"));
+        region.Cut = cut;
+        Undo(() => region.Cut = !cut);
+    }
+
     /// <summary>Takes every region and court condition that has reached its end turn off the board.</summary>
     public void ExpireConditions()
     {
@@ -549,6 +558,9 @@ public sealed record Region(string Id, string Name, int CatalogRegion, bool Capi
 
     /// <summary>The conditions on the region, in the order they were laid.</summary>
     public List<RegionCondition> Conditions { get; internal init; } = [];
+
+    /// <summary>Whether the region is cut off from food this week (<see cref="Supply"/>).</summary>
+    public bool Cut { get; internal set; }
 
     public int InfluenceOf(string seat) => Influence.GetValueOrDefault(seat);
 }
