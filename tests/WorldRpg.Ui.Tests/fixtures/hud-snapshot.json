@@ -338,6 +338,21 @@
       ]
     },
     "surfaceRelief": null,
+    "interiorExtrude": {
+      "enabled": false,
+      "depth": 1,
+      "depthMinimum": 0.2,
+      "depthMaximum": 2,
+      "depthStep": 0.1,
+      "cutoff": 0.35,
+      "cutoffMinimum": 0.1,
+      "cutoffMaximum": 0.7,
+      "cutoffStep": 0.05,
+      "distance": 1,
+      "distanceMinimum": 0.5,
+      "distanceMaximum": 3,
+      "distanceStep": 0.25
+    },
     "uiScaleRange": {
       "minimum": 0.5,
       "maximum": 3,
@@ -901,6 +916,13 @@
           "key": null,
           "group": "talk",
           "category": null
+        },
+        {
+          "id": "introduce:102584481432964",
+          "label": "Ask for an introduction to King Gothryd",
+          "key": null,
+          "group": "talk",
+          "category": "Introductions"
         },
         {
           "id": "direction:npc:1000000000017",

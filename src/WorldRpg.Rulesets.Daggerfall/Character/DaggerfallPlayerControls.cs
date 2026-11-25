@@ -103,6 +103,10 @@ internal sealed class DaggerfallPlayerControls(IInputService mappings, IAudioSer
                 candidate.SetLampShadows(Settings.LampShadows);
                 candidate.SetSurfaceRelief(Settings.SurfaceRelief);
                 candidate.SetReliefDistance(Settings.ReliefDistance);
+                candidate.SetInteriorExtrude(Settings.InteriorExtrude);
+                candidate.SetInteriorExtrudeDepth(Settings.InteriorExtrudeDepth);
+                candidate.SetInteriorExtrudeCutoff(Settings.InteriorExtrudeCutoff);
+                candidate.SetInteriorExtrudeDistance(Settings.InteriorExtrudeDistance);
                 foreach ((string bus, _) in DaggerfallControlSettings.SoundBuses) candidate.SetVolume(bus, Settings.Volume(bus));
             }
             edit?.Invoke(candidate);

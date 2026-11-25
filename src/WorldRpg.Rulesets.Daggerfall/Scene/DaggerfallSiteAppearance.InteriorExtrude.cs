@@ -17,6 +17,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private RenderResource? interiorExtrudeShader;
     private DaggerfallInteriorExtrudeMode interiorExtrudeMode = DaggerfallInteriorExtrudeMode.Off;
     private DaggerfallInteriorExtrudeMode builtExtrudeMode = DaggerfallInteriorExtrudeMode.Off;
+    private DaggerfallInteriorExtrudeTuning interiorExtrudeTuning = DaggerfallInteriorExtrudeTuning.Default;
     private Material? interiorExtrudeDiscardMaterial;
     private readonly Dictionary<(SurfaceMaterial Surface, int Layer, int Layers, DaggerfallInteriorExtrudeMode Mode), InteriorExtrudeMaterial> interiorExtrudeMaterials = [];
     private readonly Dictionary<ModelVisual, Appearance[]> interiorExtrudeOverlays = [];
@@ -33,9 +34,14 @@ internal sealed partial class DaggerfallSiteAppearance
         internal RenderResource? Current { get; set; }
     }
 
-    internal void UpdateInteriorExtrude(string? shaderPath, ContentSha256 shaderSha256, DaggerfallInteriorExtrudeMode mode)
+    internal void UpdateInteriorExtrude(
+        string? shaderPath,
+        ContentSha256 shaderSha256,
+        DaggerfallInteriorExtrudeMode mode,
+        DaggerfallInteriorExtrudeTuning? tuning = null)
     {
         if (disposed || inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior) return;
+        DaggerfallInteriorExtrudeTuning nextTuning = tuning ?? DaggerfallInteriorExtrudeTuning.Default;
         bool wantsOverlay = mode is DaggerfallInteriorExtrudeMode.SilhouettePom
             or DaggerfallInteriorExtrudeMode.WallShells
             or DaggerfallInteriorExtrudeMode.WallShellsShadow;
@@ -47,10 +53,16 @@ internal sealed partial class DaggerfallSiteAppearance
         DaggerfallInteriorExtrudeMode effective = wantsOverlay && interiorExtrudeShader is not null
             ? mode
             : DaggerfallInteriorExtrudeMode.Off;
-        if (interiorExtrudeMode == effective) return;
+        bool modeChanged = interiorExtrudeMode != effective;
+        bool tuningChanged = interiorExtrudeTuning != nextTuning;
+        if (!modeChanged && !tuningChanged) return;
         interiorExtrudeMode = effective;
+        interiorExtrudeTuning = nextTuning;
         if (effective != DaggerfallInteriorExtrudeMode.Off)
-            EnsureInteriorExtrudeOverlays();
+        {
+            if (modeChanged) EnsureInteriorExtrudeOverlays();
+            if (tuningChanged) ApplyInteriorExtrude(SurfaceSeason, surfacesRefreshed);
+        }
     }
 
     private void EnsureInteriorExtrudeOverlays()
@@ -174,19 +186,22 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         DaggerfallInteriorReliefSettings baseSettings = interiorRelief
             ?? DaggerfallInteriorLook.ResolveRelief("voxel-pulp", inputs.ProfileKind == DaggerfallWorldProfileKind.Dungeon)!;
+        RenderResource? heightMap = InteriorReliefMap(surface, SurfaceSeason);
         return new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false) with
         {
             AlphaMode = MaterialAlphaMode.Mask,
             AlphaCutoff = DaggerfallShellLayer.AlphaCutoff,
             Shader = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
                 interiorExtrudeShader!,
+                heightMap,
                 baseSettings,
                 surface.SurfaceClass,
                 mode,
                 layer,
                 layers,
                 interiorDungeonDampness,
-                interiorWaterLevelY),
+                interiorWaterLevelY,
+                interiorExtrudeTuning),
         };
     }
 

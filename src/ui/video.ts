@@ -1,19 +1,20 @@
 import { mountVideoOptions, type ProductVideoOption, type VideoOptionsMount } from '@rusty-engine/video-options';
-import type { ControlAction, GroundCoverChoice, LampShadowChoice, SurfaceReliefChoice } from './controls.js';
+import type { ControlAction, GroundCoverChoice, InteriorExtrudeChoice, LampShadowChoice, SurfaceReliefChoice } from './controls.js';
 
 /**
  * Settings' video section: the Engine's video options panel, drawn beside the controls. The Engine owns its
  * catalogue, applies a choice at once and keeps it for the install, so no Engine video setting is game state. The game
  * adds its own rows beside them, ground cover and its distance, beside the Engine's shadow budget which lamps cast
- * shadows, in what sectors and whether outdoors, and how deep buildings' relief draws and how far, which it keeps with
- * the player's other preferences. The
+ * shadows, in what sectors and whether outdoors, how deep buildings' relief draws and how far, and outward interior
+ * relief with its depth, cutoff and reach, which it keeps with the player's other preferences. The
  * panel mounts the first time Settings opens and reads the catalogue again each time after, since presets and other
  * pages change it.
  */
 export interface VideoSettings {
   show(): void;
   update(groundCover: GroundCoverChoice | null | undefined, lampShadows: LampShadowChoice | null | undefined,
-    surfaceRelief: SurfaceReliefChoice | null | undefined): void;
+    surfaceRelief: SurfaceReliefChoice | null | undefined,
+    interiorExtrude?: InteriorExtrudeChoice | null | undefined): void;
   dispose(): void;
 }
 
@@ -76,17 +77,45 @@ export function mountVideoSettings(root: HTMLElement, send: (action: ControlActi
       onChange: value => send({ action: 'controls-relief-distance', scale: Number(value) }),
     },
   ] : [];
-  const options = (): ProductVideoOption[] => [...lampOptions(), ...groundOptions(), ...reliefOptions()];
+  let extrude: InteriorExtrudeChoice | null = null;
+  const extrudeOptions = (): ProductVideoOption[] => extrude ? [
+    {
+      id: 'interiorExtrude', label: 'Interior outward relief', group: 'Interiors', kind: 'toggle', value: extrude.enabled,
+      description: 'Project carved stonework, bricks and reliefs outward from interior and dungeon walls.',
+      onChange: value => send({ action: 'controls-interior-extrude', enabled: value === true }),
+    },
+    {
+      id: 'interiorExtrudeDepth', label: 'Outward relief depth', group: 'Interiors', kind: 'range',
+      min: extrude.depthMinimum, max: extrude.depthMaximum, step: extrude.depthStep, unit: '×', value: extrude.depth,
+      description: 'How far interior stonework and carvings project outward from walls.',
+      onChange: value => send({ action: 'controls-interior-extrude-depth', scale: Number(value) }),
+    },
+    {
+      id: 'interiorExtrudeCutoff', label: 'Outward relief cutoff', group: 'Interiors', kind: 'range',
+      min: extrude.cutoffMinimum, max: extrude.cutoffMaximum, step: extrude.cutoffStep, value: extrude.cutoff,
+      description: 'How much of each wall rises outward rather than staying recessed.',
+      onChange: value => send({ action: 'controls-interior-extrude-cutoff', scale: Number(value) }),
+    },
+    {
+      id: 'interiorExtrudeDistance', label: 'Outward relief distance', group: 'Interiors', kind: 'range',
+      min: extrude.distanceMinimum, max: extrude.distanceMaximum, step: extrude.distanceStep, unit: '×', value: extrude.distance,
+      description: 'How far from you outward interior relief reaches before fading back to the wall.',
+      onChange: value => send({ action: 'controls-interior-extrude-distance', scale: Number(value) }),
+    },
+  ] : [];
+  const options = (): ProductVideoOption[] => [...lampOptions(), ...groundOptions(), ...reliefOptions(), ...extrudeOptions()];
   return {
     show() {
       if (panel) void panel.then(mounted => mounted.refresh());
       else panel = mountVideoOptions(root, { hide: HIDDEN, productOptions: options() });
     },
-    update(next, nextLamps, nextRelief) {
-      const changed = JSON.stringify([next ?? null, nextLamps ?? null, nextRelief ?? null]) !== JSON.stringify([ground, lamps, relief]);
+    update(next, nextLamps, nextRelief, nextExtrude) {
+      const changed = JSON.stringify([next ?? null, nextLamps ?? null, nextRelief ?? null, nextExtrude ?? null])
+        !== JSON.stringify([ground, lamps, relief, extrude]);
       ground = next ?? null;
       lamps = nextLamps ?? null;
       relief = nextRelief ?? null;
+      extrude = nextExtrude ?? null;
       if (changed) void panel?.then(mounted => mounted.setProductOptions(options()));
     },
     dispose() {

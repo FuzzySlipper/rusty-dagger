@@ -18,6 +18,8 @@ export interface ControlsProjection {
    * and how far it reaches before it has faded flat, as a share of its tuned reach.
    */
   readonly surfaceRelief?: SurfaceReliefChoice | null;
+  /** Outward silhouette relief on interior and dungeon walls: on/off plus depth, cutoff and distance reach. */
+  readonly interiorExtrude?: InteriorExtrudeChoice | null;
   readonly bindings: readonly ControlBinding[];
   /** The categories in the order the screen groups the bindings, with their headings. */
   readonly categories?: readonly { readonly id: string; readonly label: string }[];
@@ -38,6 +40,22 @@ export interface SurfaceReliefChoice {
   readonly strength: number;
   readonly maximum: number;
   readonly step: number;
+  readonly distance: number;
+  readonly distanceMinimum: number;
+  readonly distanceMaximum: number;
+  readonly distanceStep: number;
+}
+
+export interface InteriorExtrudeChoice {
+  readonly enabled: boolean;
+  readonly depth: number;
+  readonly depthMinimum: number;
+  readonly depthMaximum: number;
+  readonly depthStep: number;
+  readonly cutoff: number;
+  readonly cutoffMinimum: number;
+  readonly cutoffMaximum: number;
+  readonly cutoffStep: number;
   readonly distance: number;
   readonly distanceMinimum: number;
   readonly distanceMaximum: number;

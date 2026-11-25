@@ -572,6 +572,21 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("distanceMinimum", Setting(builder, DaggerfallControlSettings.MinimumReliefDistance)),
             ("distanceMaximum", Setting(builder, DaggerfallControlSettings.MaximumReliefDistance)),
             ("distanceStep", Setting(builder, DaggerfallControlSettings.ReliefDistanceStep))) : builder.Null()),
+        // Outward interior silhouette relief runs on classic and refreshed interior/dungeon surfaces alike.
+        ("interiorExtrude", builder.Object(
+            ("enabled", builder.Boolean(settings.InteriorExtrude)),
+            ("depth", Setting(builder, settings.InteriorExtrudeDepth)),
+            ("depthMinimum", Setting(builder, DaggerfallControlSettings.MinimumInteriorExtrudeDepth)),
+            ("depthMaximum", Setting(builder, DaggerfallControlSettings.MaximumInteriorExtrudeDepth)),
+            ("depthStep", Setting(builder, DaggerfallControlSettings.InteriorExtrudeDepthStep)),
+            ("cutoff", Setting(builder, settings.InteriorExtrudeCutoff)),
+            ("cutoffMinimum", Setting(builder, DaggerfallControlSettings.MinimumInteriorExtrudeCutoff)),
+            ("cutoffMaximum", Setting(builder, DaggerfallControlSettings.MaximumInteriorExtrudeCutoff)),
+            ("cutoffStep", Setting(builder, DaggerfallControlSettings.InteriorExtrudeCutoffStep)),
+            ("distance", Setting(builder, settings.InteriorExtrudeDistance)),
+            ("distanceMinimum", Setting(builder, DaggerfallControlSettings.MinimumInteriorExtrudeDistance)),
+            ("distanceMaximum", Setting(builder, DaggerfallControlSettings.MaximumInteriorExtrudeDistance)),
+            ("distanceStep", Setting(builder, DaggerfallControlSettings.InteriorExtrudeDistanceStep)))),
         ("uiScaleRange", builder.Object(
             ("minimum", Setting(builder, DaggerfallControlSettings.MinimumUiScale)),
             ("maximum", Setting(builder, DaggerfallControlSettings.MaximumUiScale)),

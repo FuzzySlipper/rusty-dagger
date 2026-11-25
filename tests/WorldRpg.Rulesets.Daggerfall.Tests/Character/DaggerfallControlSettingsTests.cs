@@ -259,6 +259,48 @@ public sealed class DaggerfallControlSettingsTests
         Assert.Equal(2.75f, settings.ReliefDistance, 4);
     }
 
+    [Fact]
+    public void Interior_extrude_defaults_round_trip_and_reject_off_step_or_out_of_range_values()
+    {
+        DaggerfallControlSettings settings = new();
+        Assert.False(settings.InteriorExtrude);
+        Assert.Equal(1f, settings.InteriorExtrudeDepth, 4);
+        Assert.Equal(.35f, settings.InteriorExtrudeCutoff, 4);
+        Assert.Equal(1f, settings.InteriorExtrudeDistance, 4);
+
+        DaggerfallControlSettings legacy = DaggerfallControlSettings.Parse(PersistedBindings(new("attack", "Primary")));
+        Assert.False(legacy.InteriorExtrude);
+        Assert.Equal(1f, legacy.InteriorExtrudeDepth, 4);
+        Assert.Equal(.35f, legacy.InteriorExtrudeCutoff, 4);
+        Assert.Equal(1f, legacy.InteriorExtrudeDistance, 4);
+
+        settings.SetInteriorExtrude(true);
+        settings.SetInteriorExtrudeDepth(1.4f);
+        settings.SetInteriorExtrudeCutoff(.45f);
+        settings.SetInteriorExtrudeDistance(2.25f);
+        DaggerfallControlSettings parsed = DaggerfallControlSettings.Parse(settings.Serialize());
+        Assert.True(parsed.InteriorExtrude);
+        Assert.Equal(1.4f, parsed.InteriorExtrudeDepth, 4);
+        Assert.Equal(.45f, parsed.InteriorExtrudeCutoff, 4);
+        Assert.Equal(2.25f, parsed.InteriorExtrudeDistance, 4);
+        Assert.Equal(1.4f, parsed.InteriorExtrudeTuning.DepthScale, 4);
+        Assert.Equal(.45f, parsed.InteriorExtrudeTuning.Cutoff, 4);
+        Assert.Equal(2.25f, parsed.InteriorExtrudeTuning.DistanceScale, 4);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeDepth(.1f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeDepth(2.1f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeDepth(1.05f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeCutoff(.05f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeCutoff(.75f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeCutoff(.33f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeDistance(.25f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeDistance(3.25f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetInteriorExtrudeDistance(1.1f));
+        Assert.Equal(1.4f, settings.InteriorExtrudeDepth, 4);
+        Assert.Equal(.45f, settings.InteriorExtrudeCutoff, 4);
+        Assert.Equal(2.25f, settings.InteriorExtrudeDistance, 4);
+    }
+
     private static string PersistedBindings(KeyValuePair<string, string?> replacement)
     {
         Dictionary<string, List<string>?> bindings = new(StringComparer.Ordinal);

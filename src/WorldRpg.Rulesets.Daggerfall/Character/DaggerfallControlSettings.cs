@@ -267,6 +267,52 @@ public sealed class DaggerfallControlSettings
         ReliefDistance = MathF.Round(share / ReliefDistanceStep) * ReliefDistanceStep;
     }
 
+    /// <summary>Whether interior and dungeon walls project outward silhouette relief (<c>interior-extrude.wgsl</c>, #11043).</summary>
+    public bool InteriorExtrude { get; private set; }
+    public void SetInteriorExtrude(bool enabled) => InteriorExtrude = enabled;
+
+    /// <summary>Outward projection depth scale for interior silhouette relief, in steps of <see cref="InteriorExtrudeDepthStep"/>.</summary>
+    public float InteriorExtrudeDepth { get; private set; } = DefaultInteriorExtrudeDepth;
+    public const float DefaultInteriorExtrudeDepth = 1f, MinimumInteriorExtrudeDepth = .2f, MaximumInteriorExtrudeDepth = 2f, InteriorExtrudeDepthStep = .1f;
+
+    public void SetInteriorExtrudeDepth(float scale)
+    {
+        if (!float.IsFinite(scale) || scale < MinimumInteriorExtrudeDepth - 1e-4f || scale > MaximumInteriorExtrudeDepth + 1e-4f
+            || MathF.Abs(scale / InteriorExtrudeDepthStep - MathF.Round(scale / InteriorExtrudeDepthStep)) > 1e-3f)
+            throw new ArgumentOutOfRangeException(nameof(scale), scale,
+                $"Outward relief depth is {MinimumInteriorExtrudeDepth:0.#} to {MaximumInteriorExtrudeDepth:0.#} times its height, in steps of {InteriorExtrudeDepthStep:0.#}.");
+        InteriorExtrudeDepth = MathF.Round(scale / InteriorExtrudeDepthStep) * InteriorExtrudeDepthStep;
+    }
+
+    /// <summary>Height cutoff separating recessed mortar from projecting interior stonework, in steps of <see cref="InteriorExtrudeCutoffStep"/>.</summary>
+    public float InteriorExtrudeCutoff { get; private set; } = DefaultInteriorExtrudeCutoff;
+    public const float DefaultInteriorExtrudeCutoff = .35f, MinimumInteriorExtrudeCutoff = .1f, MaximumInteriorExtrudeCutoff = .7f, InteriorExtrudeCutoffStep = .05f;
+
+    public void SetInteriorExtrudeCutoff(float cutoff)
+    {
+        if (!float.IsFinite(cutoff) || cutoff < MinimumInteriorExtrudeCutoff - 1e-4f || cutoff > MaximumInteriorExtrudeCutoff + 1e-4f
+            || MathF.Abs(cutoff / InteriorExtrudeCutoffStep - MathF.Round(cutoff / InteriorExtrudeCutoffStep)) > 1e-3f)
+            throw new ArgumentOutOfRangeException(nameof(cutoff), cutoff,
+                $"Outward relief cutoff is {MinimumInteriorExtrudeCutoff:0.##} to {MaximumInteriorExtrudeCutoff:0.##}, in steps of {InteriorExtrudeCutoffStep:0.##}.");
+        InteriorExtrudeCutoff = MathF.Round(cutoff / InteriorExtrudeCutoffStep) * InteriorExtrudeCutoffStep;
+    }
+
+    /// <summary>Distance reach multiplier for outward interior relief fade, in steps of <see cref="InteriorExtrudeDistanceStep"/>.</summary>
+    public float InteriorExtrudeDistance { get; private set; } = DefaultInteriorExtrudeDistance;
+    public const float DefaultInteriorExtrudeDistance = 1f, MinimumInteriorExtrudeDistance = .5f, MaximumInteriorExtrudeDistance = 3f, InteriorExtrudeDistanceStep = .25f;
+
+    public void SetInteriorExtrudeDistance(float share)
+    {
+        if (!float.IsFinite(share) || share < MinimumInteriorExtrudeDistance - 1e-4f || share > MaximumInteriorExtrudeDistance + 1e-4f
+            || MathF.Abs(share / InteriorExtrudeDistanceStep - MathF.Round(share / InteriorExtrudeDistanceStep)) > 1e-3f)
+            throw new ArgumentOutOfRangeException(nameof(share), share,
+                $"Outward relief distance is {MinimumInteriorExtrudeDistance:0.#} to {MaximumInteriorExtrudeDistance:0.#} times its reach, in steps of {InteriorExtrudeDistanceStep:0.##}.");
+        InteriorExtrudeDistance = MathF.Round(share / InteriorExtrudeDistanceStep) * InteriorExtrudeDistanceStep;
+    }
+
+    internal DaggerfallInteriorExtrudeTuning InteriorExtrudeTuning =>
+        new(InteriorExtrudeDepth, InteriorExtrudeCutoff, InteriorExtrudeDistance);
+
     /// <summary>The sound buses the player sets levels for, in the order the settings show them, with their names.</summary>
     public static readonly IReadOnlyList<(string Id, string Label)> SoundBuses =
         [("music", "Music"), ("ambient", "Ambience"), ("effects", "Sound effects"), ("interface", "Interface sounds")];
@@ -313,6 +359,10 @@ public sealed class DaggerfallControlSettings
             preferences.ShadowSectors, preferences.OutdoorLampShadows));
         SetSurfaceRelief(preferences.SurfaceRelief);
         SetReliefDistance(preferences.ReliefDistance);
+        SetInteriorExtrude(preferences.InteriorExtrude);
+        SetInteriorExtrudeDepth(preferences.InteriorExtrudeDepth);
+        SetInteriorExtrudeCutoff(preferences.InteriorExtrudeCutoff);
+        SetInteriorExtrudeDistance(preferences.InteriorExtrudeDistance);
         _controller = preferences.Controller?.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
         foreach ((string bus, float level) in preferences.Volumes ?? []) SetVolume(bus, level);
     }
@@ -382,7 +432,8 @@ public sealed class DaggerfallControlSettings
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
     public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, GroundCover, ClutterDistance,
-        LampShadows.Lamps.ToString().ToLowerInvariant(), LampShadows.SectorShare, LampShadows.Outdoors, SurfaceRelief, ReliefDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+        LampShadows.Lamps.ToString().ToLowerInvariant(), LampShadows.SectorShare, LampShadows.Outdoors, SurfaceRelief, ReliefDistance,
+        InteriorExtrude, InteriorExtrudeDepth, InteriorExtrudeCutoff, InteriorExtrudeDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -559,7 +610,11 @@ internal sealed record DaggerfallControlPreferences(
     float ShadowSectors = 1,
     bool OutdoorLampShadows = false,
     float SurfaceRelief = DaggerfallControlSettings.DefaultSurfaceRelief,
-    float ReliefDistance = 1);
+    float ReliefDistance = 1,
+    bool InteriorExtrude = false,
+    float InteriorExtrudeDepth = DaggerfallControlSettings.DefaultInteriorExtrudeDepth,
+    float InteriorExtrudeCutoff = DaggerfallControlSettings.DefaultInteriorExtrudeCutoff,
+    float InteriorExtrudeDistance = DaggerfallControlSettings.DefaultInteriorExtrudeDistance);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

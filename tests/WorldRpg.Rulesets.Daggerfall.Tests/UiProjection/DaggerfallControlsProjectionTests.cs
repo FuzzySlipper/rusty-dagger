@@ -35,6 +35,10 @@ public sealed class DaggerfallControlsProjectionTests
         settings.SetSurfaceRelief(2);
         settings.SetClutterDistance(1.7F);
         settings.SetReliefDistance(19.75F);
+        settings.SetInteriorExtrude(true);
+        settings.SetInteriorExtrudeDepth(1.4F);
+        settings.SetInteriorExtrudeCutoff(.45F);
+        settings.SetInteriorExtrudeDistance(2.25F);
         settings.SetVolume("music", .35F);
         settings.SetUiScale(1.25F);
         Dictionary<string, object?> controls = Published(settings);
@@ -45,6 +49,18 @@ public sealed class DaggerfallControlsProjectionTests
         Assert.Equal((19.75d, .5d, 20d, .25d), (Number(relief, "distance"), Number(relief, "distanceMinimum"),
             Number(relief, "distanceMaximum"), Number(relief, "distanceStep")));
         WholeSteps(Number(relief, "distanceMinimum"), Number(relief, "distanceMaximum"), Number(relief, "distanceStep"));
+
+        Dictionary<string, object?> extrude = Row(controls, "interiorExtrude");
+        Assert.True(Assert.IsType<bool>(extrude["enabled"]));
+        Assert.Equal((1.4d, .2d, 2d, .1d), (Number(extrude, "depth"), Number(extrude, "depthMinimum"),
+            Number(extrude, "depthMaximum"), Number(extrude, "depthStep")));
+        WholeSteps(Number(extrude, "depthMinimum"), Number(extrude, "depthMaximum"), Number(extrude, "depthStep"));
+        Assert.Equal((.45d, .1d, .7d, .05d), (Number(extrude, "cutoff"), Number(extrude, "cutoffMinimum"),
+            Number(extrude, "cutoffMaximum"), Number(extrude, "cutoffStep")));
+        WholeSteps(Number(extrude, "cutoffMinimum"), Number(extrude, "cutoffMaximum"), Number(extrude, "cutoffStep"));
+        Assert.Equal((2.25d, .5d, 3d, .25d), (Number(extrude, "distance"), Number(extrude, "distanceMinimum"),
+            Number(extrude, "distanceMaximum"), Number(extrude, "distanceStep")));
+        WholeSteps(Number(extrude, "distanceMinimum"), Number(extrude, "distanceMaximum"), Number(extrude, "distanceStep"));
 
         Dictionary<string, object?> ground = Row(controls, "groundCover");
         Assert.Equal((1.7d, .5d, 2d, .1d), (Number(ground, "distance"), Number(ground, "minimum"), Number(ground, "maximum"), Number(ground, "step")));

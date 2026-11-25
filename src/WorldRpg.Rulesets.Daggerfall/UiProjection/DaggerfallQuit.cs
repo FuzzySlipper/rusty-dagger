@@ -38,6 +38,8 @@ internal sealed class DaggerfallQuit(PresentationState presentation)
         DaggerfallUiActionKind.ControlsReset, DaggerfallUiActionKind.ControlsLook, DaggerfallUiActionKind.ControlsUiScale,
         DaggerfallUiActionKind.ControlsGroundCover, DaggerfallUiActionKind.ControlsClutterDistance,
         DaggerfallUiActionKind.ControlsLampShadows, DaggerfallUiActionKind.ControlsSurfaceRelief, DaggerfallUiActionKind.ControlsReliefDistance,
+        DaggerfallUiActionKind.ControlsInteriorExtrude, DaggerfallUiActionKind.ControlsInteriorExtrudeDepth,
+        DaggerfallUiActionKind.ControlsInteriorExtrudeCutoff, DaggerfallUiActionKind.ControlsInteriorExtrudeDistance,
     ];
 
     private bool _available;

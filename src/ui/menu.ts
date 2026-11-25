@@ -564,7 +564,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
         isTutorial(value.tutorial) ? value.tutorial : null);
       if (value.controls) {
         controlsView.update(value.controls, host.uiScale());
-        videoView.update(value.controls.groundCover, value.controls.lampShadows, value.controls.surfaceRelief);
+        videoView.update(value.controls.groundCover, value.controls.lampShadows, value.controls.surfaceRelief, value.controls.interiorExtrude);
       }
       // The modes and their names are the ruleset's, so the menu's choice and the HUD's indicator agree.
       const modes = value.activation?.modes ?? [];

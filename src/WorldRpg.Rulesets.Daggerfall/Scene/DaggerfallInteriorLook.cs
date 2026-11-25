@@ -283,7 +283,9 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         Vector3 playerPosition,
         bool overlandOpen,
         int? dungeonType = null,
-        int? buildingType = null)
+        int? buildingType = null,
+        bool videoExtrudeEnabled = false,
+        DaggerfallInteriorExtrudeTuning? extrudeTuning = null)
     {
         if (_disposed) return;
 
@@ -332,13 +334,14 @@ internal sealed class DaggerfallInteriorLook : IDisposable
             "silhouette-pom" => DaggerfallInteriorExtrudeMode.SilhouettePom,
             "wall-shells" => DaggerfallInteriorExtrudeMode.WallShells,
             "wall-shells-shadow" => DaggerfallInteriorExtrudeMode.WallShellsShadow,
-            _ => DaggerfallInteriorExtrudeMode.Off,
+            _ => videoExtrudeEnabled ? DaggerfallInteriorExtrudeMode.SilhouettePom : DaggerfallInteriorExtrudeMode.Off,
         };
+        DaggerfallInteriorExtrudeTuning activeTuning = extrudeTuning ?? DaggerfallInteriorExtrudeTuning.Default;
         if (indoors && !overlandOpen && extrudeEnum is DaggerfallInteriorExtrudeMode.SilhouettePom or DaggerfallInteriorExtrudeMode.WallShells or DaggerfallInteriorExtrudeMode.WallShellsShadow
             && EnsureExtrudeShaderSha() is { } extrudeSha)
-            appearance.UpdateInteriorExtrude(ExtrudeShaderPath, extrudeSha, extrudeEnum);
+            appearance.UpdateInteriorExtrude(ExtrudeShaderPath, extrudeSha, extrudeEnum, activeTuning);
         else if (indoors)
-            appearance.UpdateInteriorExtrude(null, default, DaggerfallInteriorExtrudeMode.Off);
+            appearance.UpdateInteriorExtrude(null, default, DaggerfallInteriorExtrudeMode.Off, activeTuning);
 
         if (!indoors || overlandOpen || _preset == "baseline")
         {

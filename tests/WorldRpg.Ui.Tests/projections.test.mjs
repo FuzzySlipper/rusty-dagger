@@ -3013,6 +3013,43 @@ test('Settings offers surface relief only with a refreshed art set, as a strengt
   await Promise.resolve(); await Promise.resolve();
 });
 
+test('Settings offers outward interior relief toggle and sliders in Interiors', async () => {
+  const f = fixture();
+  try {
+    f.publish({
+      controls: {
+        diagnostic: '',
+        bindings: [],
+        interiorExtrude: {
+          enabled: false,
+          depth: 1, depthMinimum: 0.2, depthMaximum: 2, depthStep: 0.1,
+          cutoff: 0.35, cutoffMinimum: 0.1, cutoffMaximum: 0.7, cutoffStep: 0.05,
+          distance: 1, distanceMinimum: 0.5, distanceMaximum: 3, distanceStep: 0.25,
+        },
+      },
+    });
+    f.root.querySelector('[data-action="settings"]').click();
+    const rows = video.mounts.at(-1).options.productOptions;
+    const toggle = rows.find(row => row.id === 'interiorExtrude');
+    const depth = rows.find(row => row.id === 'interiorExtrudeDepth');
+    const cutoff = rows.find(row => row.id === 'interiorExtrudeCutoff');
+    const distance = rows.find(row => row.id === 'interiorExtrudeDistance');
+    assert.deepEqual([toggle.group, toggle.kind, toggle.value], ['Interiors', 'toggle', false]);
+    assert.deepEqual([depth.group, depth.kind, depth.min, depth.max, depth.step, depth.value], ['Interiors', 'range', 0.2, 2, 0.1, 1]);
+    assert.deepEqual([cutoff.group, cutoff.kind, cutoff.min, cutoff.max, cutoff.step, cutoff.value], ['Interiors', 'range', 0.1, 0.7, 0.05, 0.35]);
+    assert.deepEqual([distance.group, distance.kind, distance.min, distance.max, distance.step, distance.value], ['Interiors', 'range', 0.5, 3, 0.25, 1]);
+    toggle.onChange(true);
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-interior-extrude', enabled: true });
+    depth.onChange('1.4');
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-interior-extrude-depth', scale: 1.4 });
+    cutoff.onChange('0.45');
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-interior-extrude-cutoff', scale: 0.45 });
+    distance.onChange('2.25');
+    assert.deepEqual(f.actions.at(-1), { action: 'controls-interior-extrude-distance', scale: 2.25 });
+  } finally { f.dispose(); }
+  await Promise.resolve(); await Promise.resolve();
+});
+
 test('activation selection follows product mode and emits only semantic mode changes', () => {
   const f = fixture();
   try {

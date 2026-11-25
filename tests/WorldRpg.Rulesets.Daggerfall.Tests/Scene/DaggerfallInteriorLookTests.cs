@@ -209,5 +209,21 @@ public sealed class DaggerfallInteriorLookTests
         Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.PlushCarpet));
         Assert.True(DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.ArcaneStone) > 1.0f);
         Assert.True(DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.DefaultStone) == 1.0f);
+
+        RenderResource shader = new(new RenderResourceHandle(1), static () => { });
+        RenderResource heightMap = new(new RenderResourceHandle(2), static () => { });
+        DaggerfallInteriorReliefSettings relief = new(0.06f, 20, 10f, 18f, 0.72f, 0.45f, 0.78f, 0.24f, 0.08f, 0.50f, 1.05f, 0.25f);
+        DaggerfallInteriorExtrudeTuning tuning = new(DepthScale: 1.5f, Cutoff: 0.45f, DistanceScale: 2.0f);
+        MaterialShader built = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
+            shader, heightMap, relief, DaggerfallInteriorSurfaceClass.DefaultStone,
+            DaggerfallInteriorExtrudeMode.SilhouettePom, layer: 1, layers: 1,
+            dungeonDampness: 0.2f, waterLevelY: null, tuning);
+        Assert.Equal(1f, built.Parameter0.X);
+        Assert.Equal(0.090f * 1.5f, built.Parameter0.Y, 5);
+        Assert.Equal(0.45f, built.Parameter0.W, 5);
+        Assert.Equal(22f, built.Parameter1.X, 4);
+        Assert.Equal(38f, built.Parameter1.Y, 4);
+        Assert.Equal(1f, built.Parameter3.X);
+        Assert.Equal(new RenderResourceReference(heightMap), built.TextureA);
     }
 }

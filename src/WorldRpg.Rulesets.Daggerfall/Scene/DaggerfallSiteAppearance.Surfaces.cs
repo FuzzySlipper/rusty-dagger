@@ -195,6 +195,19 @@ internal sealed partial class DaggerfallSiteAppearance
                 surface.Relief[season] = (ReliefImage(relief), depth);
     }
 
+    private RenderResource? InteriorReliefMap(SurfaceMaterial surface, int season)
+    {
+        if (!surfacesRefreshed || surfaceArt is null) return null;
+        if (surface.Relief[season] is { } cached) return cached.Image;
+        if (surfaceArt.Relief(surface.Paths[season]) is { Depth: { } depth } relief && surfaceArt.Surface(surface.Paths[season]) is not null)
+        {
+            RenderResource image = ReliefImage(relief);
+            surface.Relief[season] = (image, depth);
+            return image;
+        }
+        return null;
+    }
+
     /// <summary>Draws each surface in the current season, art set and relief choice.</summary>
     private void ApplySurfaces()
     {
@@ -256,7 +269,7 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         else if (interiorRelief is { } relief && interiorReliefShader is { } reliefShader && surface.Frames is null && glass is null)
         {
-            RenderResource? heightMap = surface.Relief[season]?.Image;
+            RenderResource? heightMap = InteriorReliefMap(surface, season);
             shader = DaggerfallInteriorSurfaceMaterials.BuildReliefShader(
                 relief, reliefShader, heightMap, surface.SurfaceClass,
                 interiorMaterialAware, interiorDungeonDampness, interiorWaterLevelY);

@@ -49,6 +49,17 @@ internal enum DaggerfallInteriorExtrudeMode
 }
 
 /// <summary>
+/// Live Video-menu slider parameters driving outward interior relief (<c>interior-extrude.wgsl</c>, #11043).
+/// </summary>
+internal readonly record struct DaggerfallInteriorExtrudeTuning(
+    float DepthScale,
+    float Cutoff,
+    float DistanceScale)
+{
+    internal static DaggerfallInteriorExtrudeTuning Default { get; } = new(1.0f, 0.35f, 1.0f);
+}
+
+/// <summary>
 /// Per-material Pass 3 classification and shader parameter shaping for building interiors and dungeons (#11043).
 /// Handles all four Arena2 climate archive banks (<c>0xx</c>, <c>1xx</c>, <c>3xx</c>, <c>4xx</c>) via <c>archive % 100</c>
 /// for climate-variant interior/dungeon sets, mapping each material family to distinct pulp-fantasy PBR &amp; relief
@@ -451,17 +462,27 @@ internal static class DaggerfallInteriorSurfaceMaterials
 
     internal static MaterialShader BuildExtrudeShader(
         RenderResource shader,
+        RenderResource? authoredHeightMap,
         DaggerfallInteriorReliefSettings baseSettings,
         DaggerfallInteriorSurfaceClass surfaceClass,
         DaggerfallInteriorExtrudeMode mode,
         int layer,
         int layers,
         float dungeonDampness,
-        float? waterLevelY)
+        float? waterLevelY,
+        DaggerfallInteriorExtrudeTuning tuning)
     {
         float scale = ExtrudeScale(surfaceClass);
         if (scale <= 0f || layer <= 0 || layers <= 0)
             return BuildExtrudeDiscardShader(shader);
+
+        float depthScale = Math.Clamp(tuning.DepthScale, 0.1f, 3.0f);
+        float cutoff = Math.Clamp(tuning.Cutoff, 0.05f, 0.85f);
+        float distScale = Math.Clamp(tuning.DistanceScale, 0.25f, 4.0f);
+        float fadeStart = 11f * distScale;
+        float fadeEnd = 19f * distScale;
+        float hasMap = authoredHeightMap is not null ? 1f : 0f;
+        RenderResourceReference heightRef = authoredHeightMap is null ? default : new RenderResourceReference(authoredHeightMap);
 
         float damp = Math.Clamp(dungeonDampness, 0f, 1f);
         float dampRoughScale = 1f - 0.22f * damp;
@@ -483,29 +504,29 @@ internal static class DaggerfallInteriorSurfaceMaterials
 
         if (mode == DaggerfallInteriorExtrudeMode.SilhouettePom)
         {
-            float depth = 0.090f * scale;
+            float depth = 0.090f * scale * depthScale;
             return new MaterialShader(
                 new RenderResourceReference(shader),
-                new Vector4(1f, depth, 24f, 0.34f),
-                new Vector4(11f, 19f, baseRough, rimRough),
+                new Vector4(1f, depth, 24f, cutoff),
+                new Vector4(fadeStart, fadeEnd, baseRough, rimRough),
                 new Vector4(rimMetal, cavity, baseSettings.HeightGamma, baseSettings.MortarThreshold),
-                new Vector4(0f, specialFlags, waterY, hasWater),
-                default,
+                new Vector4(hasMap, specialFlags, waterY, hasWater),
+                heightRef,
                 default,
                 depth + 0.01f);
         }
 
         // Grass-FX-style multi-layer outward wall shells (14 layers @ ~5.6 mm spacing on masonry).
         float frac = (float)layer / layers;
-        float maxHeight = 0.078f * scale;
+        float maxHeight = 0.078f * scale * depthScale;
         float lift = maxHeight * frac;
         return new MaterialShader(
             new RenderResourceReference(shader),
-            new Vector4(2f, lift, frac, 0.30f),
-            new Vector4(11f, 19f, baseRough, rimRough),
+            new Vector4(2f, lift, frac, MathF.Max(0.05f, cutoff - 0.04f)),
+            new Vector4(fadeStart, fadeEnd, baseRough, rimRough),
             new Vector4(rimMetal, cavity, baseSettings.HeightGamma, baseSettings.MortarThreshold),
-            new Vector4(0f, specialFlags, waterY, hasWater),
-            default,
+            new Vector4(hasMap, specialFlags, waterY, hasWater),
+            heightRef,
             default,
             lift + 0.01f);
     }
