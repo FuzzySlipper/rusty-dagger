@@ -78,7 +78,7 @@ so the CMS can find their reviews.
 Use the [people concept recipes](../tools/people/concept/README.md) to prepare classic reference sheets, write
 costume briefs, and generate front or back candidates.
 
-Open **Concept art** from a people or creature record. Candidates are grouped by batch. Open one to inspect the original
+Open **Concept art** from a people or creature record. You can drag and drop ComfyUI PNG/JPEG/WebP renders directly into the upload dropzone on that page (ComfyUI `prompt`, `seed`, `model`, `sampler`, and LoRA metadata are extracted automatically from PNG chunks, with editable fields and optional immediate front/back approval). Candidates are grouped by batch. Open one to inspect the original
 image and its generation details, then choose **Approve as front** or **Approve as back**. Each view has one
 approval. The character page uses the front as its canonical depiction. Both approvals appear on the concept
 art page. Previous candidates remain available.

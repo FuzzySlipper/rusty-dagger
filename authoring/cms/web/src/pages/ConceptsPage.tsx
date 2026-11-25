@@ -4,6 +4,7 @@ import { encodeKey, subjectUrl } from '../router';
 import { useApp } from '../state';
 import type { ConceptCandidate, ConceptStageDetail } from '../types';
 import { Modal } from '../components/Modal';
+import { ConceptUploader } from '../components/ConceptUploader';
 import { Breadcrumb, Empty, PageHeading } from '../components/ui';
 
 type ConceptView = 'front' | 'back';
@@ -198,6 +199,16 @@ export function ConceptsPage({ id }: { id: string }) {
           {status}
         </p>
       ) : null}
+
+      <ConceptUploader
+        subjectId={stage.id}
+        existingNames={new Set(stage.candidates.map(c => c.name))}
+        onUploaded={(nextStage, summary) => {
+          setStage(nextStage);
+          setStatus(summary);
+          void refreshCatalog();
+        }}
+      />
 
       {batches.length ? (
         batches.map(([batch, items]) => (
