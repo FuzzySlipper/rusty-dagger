@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type {
   ArtReplacementModel,
+  Quat,
   WorldBlockCollision,
   WorldBlockDetailResponse,
   WorldBlockGroundTile,
@@ -14,7 +15,7 @@ import {
   resolveSurfaceUrl,
   type RenderAppearanceConfig,
 } from './appearance';
-import { daggerfallSourceRotation, parseRstatmsh, type ParsedRstatmsh } from './rstatmsh';
+import { blockRotation, parseRstatmsh, type ParsedRstatmsh } from './rstatmsh';
 
 export type LayerName =
   | 'models'
@@ -959,7 +960,7 @@ export class BlockSceneController {
     const py = off.oy + model.position.y;
     const pz = off.oz + model.position.z;
     mesh.position.set(px, py, pz);
-    mesh.quaternion.copy(daggerfallSourceRotation(model.rotationDegrees));
+    mesh.quaternion.copy(blockRotation(model.rotation));
     mesh.userData.sharedGeometry = true;
 
     const label =
@@ -1095,7 +1096,7 @@ export class BlockSceneController {
       const py = off.oy + door.position.y;
       const pz = off.oz + door.position.z;
       mesh.position.set(px, py, pz);
-      mesh.quaternion.copy(daggerfallSourceRotation(door.rotationDegrees));
+      mesh.quaternion.copy(blockRotation(door.rotation));
       mesh.userData.ownedMaterial = true;
       this.registerPick(mesh, {
         pickKey: `${off.prefix}door:${door.id}`,
@@ -1162,7 +1163,7 @@ export class BlockSceneController {
       const py = off.oy + gate.position.y;
       const pz = off.oz + gate.position.z;
       mesh.position.set(px, py + sy * 0.5, pz);
-      mesh.quaternion.copy(daggerfallSourceRotation(gate.rotationDegrees));
+      mesh.quaternion.copy(blockRotation(gate.rotation));
       mesh.userData.ownedMaterial = true;
       this.registerPick(mesh, {
         pickKey: `${off.prefix}gate:${gate.id}`,
@@ -1554,7 +1555,7 @@ export class BlockSceneController {
     const addCollisionMesh = (
       col: WorldBlockCollision,
       pos: [number, number, number],
-      rot: { x: number; y: number; z: number },
+      rot: Quat,
       color: number,
     ) => {
       if (!col.vertices?.length || !col.triangles?.length) return;
@@ -1576,7 +1577,7 @@ export class BlockSceneController {
       const mat = new THREE.MeshBasicMaterial({ color, wireframe: true });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(...pos);
-      mesh.quaternion.copy(daggerfallSourceRotation(rot));
+      mesh.quaternion.copy(blockRotation(rot));
       mesh.userData.ownedMaterial = true;
       this.layers.collision.add(mesh);
     };
@@ -1586,7 +1587,7 @@ export class BlockSceneController {
         addCollisionMesh(
           m.collision,
           [off.ox + m.position.x, off.oy + m.position.y, off.oz + m.position.z],
-          m.rotationDegrees,
+          m.rotation,
           0x4de096,
         );
       }
@@ -1597,7 +1598,7 @@ export class BlockSceneController {
         addCollisionMesh(
           g.closed.collision,
           [off.ox + g.position.x, off.oy + g.position.y, off.oz + g.position.z],
-          g.rotationDegrees,
+          g.rotation,
           0xb784ff,
         );
       }
@@ -1616,7 +1617,7 @@ export class BlockSceneController {
       const mat = new THREE.LineBasicMaterial({ color: 0xf5a623 });
       const wire = new THREE.LineSegments(edges, mat);
       wire.position.set(off.ox + d.position.x, off.oy + d.position.y, off.oz + d.position.z);
-      wire.quaternion.copy(daggerfallSourceRotation(d.rotationDegrees));
+      wire.quaternion.copy(blockRotation(d.rotation));
       wire.userData.ownedMaterial = true;
       this.layers.collision.add(wire);
     }

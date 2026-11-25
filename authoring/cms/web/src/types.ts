@@ -547,6 +547,14 @@ export interface Vec3 {
   z: number;
 }
 
+/** A unit rotation in the published right-handed frame, as THREE.Quaternion holds it. */
+export interface Quat {
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+}
+
 export interface Bounds3 {
   minimum: Vec3;
   maximum: Vec3;
@@ -589,7 +597,7 @@ export interface WorldBlockModel {
   modelId: string;
   meshArtifactId: string | null;
   position: Vec3;
-  rotationDegrees: Vec3;
+  rotation: Quat;
   buildingIndex: number | null;
   unresolvedReason: string | null;
   doorId: string | null;
@@ -604,7 +612,7 @@ export interface WorldBlockDoor {
   modelId: string;
   doorResourceId: string;
   position: Vec3;
-  rotationDegrees: Vec3;
+  rotation: Quat;
   plane?: number | null;
   texture?: { archive: number; record: number } | null;
   kind: string;
@@ -628,7 +636,7 @@ export interface WorldBlockGate {
   id: string;
   modelId: string;
   position: Vec3;
-  rotationDegrees: Vec3;
+  rotation: Quat;
   open: { modelId: string; meshArtifactId: string; localBounds: Bounds3; collision?: WorldBlockCollision | null };
   closed: { modelId: string; meshArtifactId: string; localBounds: Bounds3; collision?: WorldBlockCollision | null };
 }

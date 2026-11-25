@@ -142,7 +142,7 @@ class WorldBlocksTests(unittest.TestCase):
                             "modelId": "140",
                             "meshArtifactId": "geometry/mesh-140",
                             "position": {"x": 10, "y": 0, "z": -20},
-                            "rotationDegrees": {"x": 0, "y": -90, "z": 0},
+                            "rotation": {"x": 0, "y": 0.7071068, "z": 0, "w": 0.7071068},
                             "buildingIndex": 0,
                         }
                     ],

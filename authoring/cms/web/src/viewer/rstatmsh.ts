@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Vec3 } from '../types';
+import type { Quat } from '../types';
 
 interface RstatmshDescriptor {
   payload: {
@@ -115,17 +115,7 @@ export function parseRstatmsh(buffer: ArrayBuffer): ParsedRstatmsh {
   return { geometry, materialNames, materialSlots };
 }
 
-/**
- * Exact match for `DaggerfallSiteGeometry.SourceRotation(Vector3 rotationDegrees)`:
- * Donor turns importer-space points by `Rz * Rx * Ry` before the right-handed flip of Z,
- * so in the right-handed frame the same turn is `Rz(z) * Rx(-x) * Ry(-y)`.
- */
-export function daggerfallSourceRotation(deg: Vec3): THREE.Quaternion {
-  const rx = (deg.x * Math.PI) / 180;
-  const ry = (deg.y * Math.PI) / 180;
-  const rz = (deg.z * Math.PI) / 180;
-  const qz = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), rz);
-  const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -rx);
-  const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -ry);
-  return qz.multiply(qx).multiply(qy).normalize();
+/** A published right-handed rotation, which the block documents state for every model, door and gate. */
+export function blockRotation(q: Quat): THREE.Quaternion {
+  return new THREE.Quaternion(q.x, q.y, q.z, q.w);
 }

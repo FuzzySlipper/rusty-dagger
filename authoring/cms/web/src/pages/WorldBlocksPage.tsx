@@ -42,6 +42,10 @@ const DEFAULT_FILTERS: WorldBlockListFilters = {
   page: 1,
 };
 
+function fmtQuat(q: { x: number; y: number; z: number; w: number }): string {
+  return `(${q.x.toFixed(3)}, ${q.y.toFixed(3)}, ${q.z.toFixed(3)}, ${q.w.toFixed(3)})`;
+}
+
 function fmtVec(v: { x: number; y: number; z: number } | [number, number, number]): string {
   if (Array.isArray(v)) {
     return `(${v[0].toFixed(2)}, ${v[1].toFixed(2)}, ${v[2].toFixed(2)})`;
@@ -422,7 +426,7 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
               {selectedModel ? (
                 <div class="usage-pills" style={{ marginBottom: '6px' }}>
                   <span class="chip">ARCH3D {selectedModel.modelId}</span>
-                  <span class="chip">rot {fmtVec(selectedModel.rotationDegrees)}</span>
+                  <span class="chip">rot {fmtQuat(selectedModel.rotation)}</span>
                   {selectedModelAsset ? (
                     <a class="art-data-chip" href={assetUrl(selectedModelAsset.id)}>
                       <span>{selectedModelAsset.name}</span>
