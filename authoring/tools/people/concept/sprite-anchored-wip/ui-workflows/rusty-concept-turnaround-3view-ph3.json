@@ -1,5 +1,5 @@
 {
-  "id": "d927513b-3c34-461b-8f5a-f74fdb269a75",
+  "id": "d98a17ef-83c3-4b76-bc86-e9bef0a758f3",
   "revision": 0,
   "last_node_id": 13,
   "last_link_id": 36,
@@ -204,8 +204,8 @@
         210
       ],
       "size": [
-        560,
-        420
+        580,
+        460
       ],
       "flags": {},
       "order": 15,
@@ -281,16 +281,16 @@
         "Node name for S&R": "PH3ImageConditioning"
       },
       "widgets_values": [
-        "Edit <Picture 1> into a precise three-view orthographic character turnaround sheet of this exact same character on a flat solid dark slate-grey background (RGB 48,52,59). A wide horizontal slate sheet contains three equal vertical columns in a single row, each showing one complete full-length figure from head to boots at the exact same height and scale, with clean empty slate margin between figures and around the outer edges.\n\nFrom left to right:\n1. Straight front view, facing directly toward the viewer\u2014exact match to <Picture 1>, holding the straight medieval steel short sword in her right hand (viewer's left) angled slightly downward and outward, left hand empty.\n2. Exact right-side profile (90-degree turn facing page left), showing her right side edge-on: her right arm hanging relaxed at her side with her right hand naturally gripping the leather hilt of the straight steel short sword pointing forward and slightly downward, her sea-teal pointed hood and short mid-back sea-teal shoulder cape ending cleanly at her mid-back (no long cloak), laced olive leather bodice, moss-green loincloth, and cuffed tan boots.\n3. Straight back view (180-degree turn facing directly away from the viewer): her sea-teal pointed hood flowing into ONLY a short mid-back sea-teal cape ending at her shoulder blades over her laced dark olive-brown leather back corset, narrow moss-green rear loincloth over bare toned legs, tan cuffed boots, empty dark leather brass-tipped scabbard at her left hip (viewer's left) and upper-left arm strap, small leather pouch peeking at her right hip (viewer's right). Her RIGHT hand (viewer's right) grips the exact same steel short sword angling cleanly downward and outward to the viewer's right, viewed strictly from behind showing the smooth back of her hand and knuckles (fingers wrapping forward around the front of the hilt away from the viewer). Her LEFT hand (viewer's left) is empty in a relaxed hanging pose viewed strictly from behind, showing the smooth back of her left hand with five clean fingers curling gently forward away from the viewer.\n\nKeep the exact same standing pose, garment proportions, vivid local pigments, warm-umber inked gouache painting style, and neutral even lighting across all three views. Draw ONLY the three full-length figures on flat slate grey\u2014no labels, no floor, no cast shadows, no grid lines, no close-ups.",
-        2496,
-        1216
+        "Edit <Picture 1> into a precise three-view orthographic character turnaround sheet of this exact same woman on a flat solid dark slate-grey background (RGB 48,52,59), shortening her sea-teal cloak into ONLY a short mid-back hooded cape ending cleanly at her shoulder blades (no long cloak behind her waist or legs) and adding a straight medieval steel short sword held firmly in her right hand.\n\nA wide horizontal slate sheet contains three equal vertical columns in a single row at identical height and scale, with clean empty slate between figures:\n\n1. LEFT COLUMN \u2014 STRAIGHT FRONT VIEW (facing directly toward the viewer): Her arms hang naturally at her sides in the exact relaxed A-pose of <Picture 1>. Her left hand (viewer's right) is empty. Her right fist (viewer's left) grips the weapon aimed STRAIGHT OUT AT THE CAMERA along the line of sight \u2014 seen strictly head-on in extreme end-on perspective so ONLY her wrapped knuckles, the vertical dark iron crossguard, and the tiny foreshortened diamond tip pointing dead-center toward the viewer are visible. Zero sideways or downward-hanging blade length is visible in this front view.\n\n2. MIDDLE COLUMN \u2014 EXACT RIGHT-SIDE PROFILE (90-degree turn facing page RIGHT, showing her right side closest to the camera): Her right arm hangs vertically straight down at her side, and her closed right fist holds a straight double-edged medieval steel short sword extending HORIZONTALLY STRAIGHT FORWARD TO PAGE RIGHT at a strict 90-degree right angle from her vertical forearm (blade parallel to the floor, pointing horizontally right, vertical crossguard). This side profile shows the full un-foreshortened side silhouette of the steel blade, vertical crossguard, leather grip, and round pommel jutting straight forward to page right, along with her short mid-back sea-teal hood/capelet, laced olive leather bodice, moss-green loincloth, and tan cuffed boots.\n\n3. RIGHT COLUMN \u2014 STRAIGHT BACK VIEW (180-degree turn facing directly away from the viewer): Her sea-teal pointed hood ends in a short mid-back cape at her shoulder blades over her laced olive-brown leather back corset, narrow moss-green rear loincloth, bare toned legs, and tan cuffed boots. Her left hand (viewer's left) is empty showing the smooth back of her hand. Her right hand (viewer's right) holds the weapon aimed STRAIGHT FORWARD AWAY FROM THE CAMERA \u2014 seen strictly from behind so ONLY the smooth back of her fist, the round steel pommel cap facing straight at the viewer, and the top and bottom tips of the vertical crossguard are visible; the blade is completely hidden behind her fist pointing away from the viewer (zero blade or bar sticking out sideways or downward).\n\nPreserve <Picture 1>'s exact warm-umber inked gouache brushwork, crisp detail, vivid local pigments, and neutral even overhead lighting across all three views. Only the three full-length figures on flat slate grey; no text, labels, floor, or shadows.",
+        3072,
+        1536
       ],
       "widgets_values_named": {
-        "prompt": "Edit <Picture 1> into a precise three-view orthographic character turnaround sheet of this exact same character on a flat solid dark slate-grey background (RGB 48,52,59). A wide horizontal slate sheet contains three equal vertical columns in a single row, each showing one complete full-length figure from head to boots at the exact same height and scale, with clean empty slate margin between figures and around the outer edges.\n\nFrom left to right:\n1. Straight front view, facing directly toward the viewer\u2014exact match to <Picture 1>, holding the straight medieval steel short sword in her right hand (viewer's left) angled slightly downward and outward, left hand empty.\n2. Exact right-side profile (90-degree turn facing page left), showing her right side edge-on: her right arm hanging relaxed at her side with her right hand naturally gripping the leather hilt of the straight steel short sword pointing forward and slightly downward, her sea-teal pointed hood and short mid-back sea-teal shoulder cape ending cleanly at her mid-back (no long cloak), laced olive leather bodice, moss-green loincloth, and cuffed tan boots.\n3. Straight back view (180-degree turn facing directly away from the viewer): her sea-teal pointed hood flowing into ONLY a short mid-back sea-teal cape ending at her shoulder blades over her laced dark olive-brown leather back corset, narrow moss-green rear loincloth over bare toned legs, tan cuffed boots, empty dark leather brass-tipped scabbard at her left hip (viewer's left) and upper-left arm strap, small leather pouch peeking at her right hip (viewer's right). Her RIGHT hand (viewer's right) grips the exact same steel short sword angling cleanly downward and outward to the viewer's right, viewed strictly from behind showing the smooth back of her hand and knuckles (fingers wrapping forward around the front of the hilt away from the viewer). Her LEFT hand (viewer's left) is empty in a relaxed hanging pose viewed strictly from behind, showing the smooth back of her left hand with five clean fingers curling gently forward away from the viewer.\n\nKeep the exact same standing pose, garment proportions, vivid local pigments, warm-umber inked gouache painting style, and neutral even lighting across all three views. Draw ONLY the three full-length figures on flat slate grey\u2014no labels, no floor, no cast shadows, no grid lines, no close-ups.",
-        "width": 2496,
-        "height": 1216
+        "prompt": "Edit <Picture 1> into a precise three-view orthographic character turnaround sheet of this exact same woman on a flat solid dark slate-grey background (RGB 48,52,59), shortening her sea-teal cloak into ONLY a short mid-back hooded cape ending cleanly at her shoulder blades (no long cloak behind her waist or legs) and adding a straight medieval steel short sword held firmly in her right hand.\n\nA wide horizontal slate sheet contains three equal vertical columns in a single row at identical height and scale, with clean empty slate between figures:\n\n1. LEFT COLUMN \u2014 STRAIGHT FRONT VIEW (facing directly toward the viewer): Her arms hang naturally at her sides in the exact relaxed A-pose of <Picture 1>. Her left hand (viewer's right) is empty. Her right fist (viewer's left) grips the weapon aimed STRAIGHT OUT AT THE CAMERA along the line of sight \u2014 seen strictly head-on in extreme end-on perspective so ONLY her wrapped knuckles, the vertical dark iron crossguard, and the tiny foreshortened diamond tip pointing dead-center toward the viewer are visible. Zero sideways or downward-hanging blade length is visible in this front view.\n\n2. MIDDLE COLUMN \u2014 EXACT RIGHT-SIDE PROFILE (90-degree turn facing page RIGHT, showing her right side closest to the camera): Her right arm hangs vertically straight down at her side, and her closed right fist holds a straight double-edged medieval steel short sword extending HORIZONTALLY STRAIGHT FORWARD TO PAGE RIGHT at a strict 90-degree right angle from her vertical forearm (blade parallel to the floor, pointing horizontally right, vertical crossguard). This side profile shows the full un-foreshortened side silhouette of the steel blade, vertical crossguard, leather grip, and round pommel jutting straight forward to page right, along with her short mid-back sea-teal hood/capelet, laced olive leather bodice, moss-green loincloth, and tan cuffed boots.\n\n3. RIGHT COLUMN \u2014 STRAIGHT BACK VIEW (180-degree turn facing directly away from the viewer): Her sea-teal pointed hood ends in a short mid-back cape at her shoulder blades over her laced olive-brown leather back corset, narrow moss-green rear loincloth, bare toned legs, and tan cuffed boots. Her left hand (viewer's left) is empty showing the smooth back of her hand. Her right hand (viewer's right) holds the weapon aimed STRAIGHT FORWARD AWAY FROM THE CAMERA \u2014 seen strictly from behind so ONLY the smooth back of her fist, the round steel pommel cap facing straight at the viewer, and the top and bottom tips of the vertical crossguard are visible; the blade is completely hidden behind her fist pointing away from the viewer (zero blade or bar sticking out sideways or downward).\n\nPreserve <Picture 1>'s exact warm-umber inked gouache brushwork, crisp detail, vivid local pigments, and neutral even overhead lighting across all three views. Only the three full-length figures on flat slate grey; no text, labels, floor, or shadows.",
+        "width": 3072,
+        "height": 1536
       },
-      "title": "3-View Turnaround Prompt & Conditioning (2496x1216)"
+      "title": "3-View Turnaround Prompt & Conditioning (3072x1536)"
     },
     {
       "id": 5,
@@ -533,11 +533,11 @@
         "ver": "0.43.0"
       },
       "widgets_values": [
-        747101,
+        847101,
         "randomize"
       ],
       "widgets_values_named": {
-        "noise_seed": 747101
+        "noise_seed": 847101
       }
     },
     {
@@ -758,7 +758,7 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "back-ph3-npc471-s47145-front.png",
+        "npc471-empty-front-for-90deg.png",
         "image"
       ]
     }
