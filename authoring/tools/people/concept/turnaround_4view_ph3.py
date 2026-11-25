@@ -68,6 +68,17 @@ def build_turnaround_prompt(extra: str, pronoun: str, right_weapon: str, weapon_
         )
     elif right_weapon.strip():
         wep = right_weapon.strip().rstrip(".")
+        is_hafted = any(k in wep.lower() for k in ("axe", "mace", "hammer", "flail", "club"))
+        front_headon = (
+            "ONLY the wrapped knuckles and the narrow head-on vertical blade/head edge pointing dead-center toward the viewer are visible"
+            if is_hafted
+            else "ONLY the wrapped knuckles, vertical crossguard, and tiny foreshortened tip pointing dead-center toward the viewer are visible"
+        )
+        back_headon = (
+            "ONLY the smooth back of the fist and the butt end of the wooden haft facing straight at the viewer are visible; the shaft and head are completely hidden behind the fist pointing away from the viewer"
+            if is_hafted
+            else "ONLY the smooth back of the fist, the pommel/butt end facing straight at the viewer, and the top and bottom tips of the vertical crossguard are visible; the blade is completely hidden behind the fist pointing away from the viewer"
+        )
         intro = (
             f"Edit <Picture 1> into a precise four-view orthographic character turnaround sheet of this exact same {subj} on a "
             f"flat solid dark slate-grey background (RGB 48,52,59), adding {wep} held firmly in {pos} right hand.{extra_clause}\n\n"
@@ -77,9 +88,8 @@ def build_turnaround_prompt(extra: str, pronoun: str, right_weapon: str, weapon_
         col1 = (
             f"1. COLUMN 1 — STRAIGHT FRONT VIEW (facing directly toward the viewer): {pronoun}'s arms hang naturally at {pos} sides in "
             f"the exact relaxed A-pose of <Picture 1>. {pronoun}'s left hand (viewer's right) is empty. {pronoun}'s right fist (viewer's left) "
-            "grips the weapon aimed STRAIGHT OUT AT THE CAMERA along the line of sight — seen strictly head-on in extreme end-on "
-            "perspective so ONLY the wrapped knuckles, vertical crossguard, and tiny foreshortened tip pointing dead-center toward "
-            "the viewer are visible. Zero sideways or downward-hanging blade or shaft length is visible in this front view.\n\n"
+            f"grips the weapon aimed STRAIGHT OUT AT THE CAMERA along the line of sight — seen strictly head-on in extreme end-on "
+            f"perspective so {front_headon}. Zero sideways or downward-hanging blade or shaft length is visible in this front view.\n\n"
         )
         col2 = (
             f"2. COLUMN 2 — EXACT RIGHT-SIDE PROFILE (90-degree turn facing page RIGHT, showing {pos} right side closest to the "
@@ -90,7 +100,7 @@ def build_turnaround_prompt(extra: str, pronoun: str, right_weapon: str, weapon_
         )
         col3 = (
             f"3. COLUMN 3 — EXACT LEFT-SIDE PROFILE (90-degree turn facing page LEFT, showing {pos} left side closest to the camera): "
-            f"{pronoun}'s empty left arm hangs vertically straight down at {pos} left side in a relaxed empty hanging pose. "
+            f"{pronoun}'s empty left arm hangs vertically straight down at {pos} left side in a relaxed empty hanging pose (no weapon in left hand). "
             f"{pronoun}'s far-side right arm is hidden behind {pos} torso while the front half of the exact same horizontal weapon "
             f"juts cleanly forward to page LEFT past the front of {pos} thigh (parallel to the floor, pointing horizontally left at "
             f"the exact same hip height as Column 2). Shows the exact left-side profile of {pos} costume.{extra_clause}\n\n"
@@ -99,9 +109,7 @@ def build_turnaround_prompt(extra: str, pronoun: str, right_weapon: str, weapon_
             f"4. COLUMN 4 — STRAIGHT BACK VIEW (180-degree turn facing directly away from the viewer):{extra_clause} "
             f"{pronoun}'s left hand (viewer's left) is empty showing the smooth back of {pos} hand with five clean fingers curling "
             f"gently forward away from the camera. {pronoun}'s right hand (viewer's right) holds the weapon aimed STRAIGHT FORWARD "
-            "AWAY FROM THE CAMERA — seen strictly from behind so ONLY the smooth back of the fist, the pommel/butt end facing "
-            "straight at the viewer, and the top and bottom tips of the vertical crossguard are visible; the blade is completely "
-            "hidden behind the fist pointing away from the viewer (zero weapon sticking out sideways or downward).\n\n"
+            f"AWAY FROM THE CAMERA — seen strictly from behind so {back_headon} (zero weapon sticking out sideways or downward).\n\n"
         )
     else:
         intro = (
