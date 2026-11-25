@@ -1137,6 +1137,8 @@ internal sealed partial class DaggerfallSession
             _weatherPresentation = new DaggerfallWeatherPresentation(engine, _random, composition.Sky, tuning.Ambient, tuning.Horizon, tuning.PresentationAudio,
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
+            _interiorLook = new DaggerfallInteriorLook(engine, composition.Data, tuning.SiteLighting);
+            partiallyConstructed.Add(_interiorLook);
             DaggerfallHorizonGround ground = new(definitions.Terrain,
                 (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _exterior.Locations);
             _exterior.UseGround(ground, GroundWalkers);
@@ -1322,7 +1324,8 @@ internal sealed partial class DaggerfallSession
                 definitions, Expedition, MapPosition, Activation, Entrance, _horizon, _time, () => _mode, Presentation, _nearbySpawn.Bring,
                 local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
             DaggerfallDeveloperScene scene = new(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
-                LocalWeather, _weatherPresentation, State.PlayerControl, definitions, UseClassicArt, () => _hanging, LooseItems);   // Developer
+                LocalWeather, _weatherPresentation, State.PlayerControl, definitions, UseClassicArt, () => _hanging, LooseItems,
+                _interiorLook, () => SyncWeatherContext());   // Developer
             DaggerfallDeveloperGrants grants = new(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,
                 () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,

@@ -893,6 +893,7 @@ internal sealed partial class DaggerfallSession
         else _horizon.Hide();                                                                     // Exterior
         DaggerfallSiteProjection site = _sites.Projection;
         DaggerfallWeatherConditions conditions = LocalWeather.Conditions;
+        _interiorLook.Sync(site.Inputs, site.Lighting, site.Appearance, _weatherPresentation, _viewLight, _time.Calendar.Sky, player, _overland.Open); // Scene
         _weatherPresentation.Update(site.Inputs, site.WorldOffset, site.Lighting, site.Appearance, _time.Calendar.Sky,
             _tuning.Weather.Daylight(_time.Calendar, conditions.Kind), _tuning.Weather.Sunlight(_time.Calendar.Season, conditions.Kind),
             LocalWeather.Climate, conditions,

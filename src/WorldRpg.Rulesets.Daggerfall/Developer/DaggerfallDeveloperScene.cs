@@ -25,7 +25,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<long> passTime, DaggerfallHorizon horizon,
     DaggerfallSiteCrossing sites, DaggerfallWeather weather, DaggerfallWeatherPresentation weatherPresentation, PlayerControlState player,
     DaggerfallDefinitions definitions, Func<bool, string?> useClassicArt, Func<DaggerfallHanging?> hanging,
-    DaggerfallLooseItems looseItems) : IDeveloperSceneCommands
+    DaggerfallLooseItems looseItems, DaggerfallInteriorLook? interiorLook = null, Action? syncLook = null) : IDeveloperSceneCommands
 {
     public DebugCommandResult LooseItems() => DebugCommandResult.Success(looseItems.Describe());
 
@@ -158,5 +158,15 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         bool all = named.Contains("all");
         cover.Show(all || named.Contains("grass"), all || named.Contains("relief"), all || named.Contains("tufts"));
         return DebugCommandResult.Success($"Ground cover: {kinds}.");
+    }
+
+    public DebugCommandResult InteriorLook(string preset)
+    {
+        if (interiorLook is null) return Refused("Interior look controls are unavailable in this session.");
+        string trimmed = preset.Trim().ToLowerInvariant();
+        if (trimmed is "status" or "list") return DebugCommandResult.Success(interiorLook.Describe());
+        if (interiorLook.Select(trimmed) is { } refusal) return Refused(refusal);
+        syncLook?.Invoke();
+        return DebugCommandResult.Success(interiorLook.Describe());
     }
 }

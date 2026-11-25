@@ -226,12 +226,15 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         { _sky[id].Dispose(); _sky.Remove(id); }
     }
 
+    /// <summary>Optional distance fog override for building interiors and dungeons, used by interior look presets.</summary>
+    internal FogRequest? InteriorFogOverride { get; set; }
+
     /// <param name="mapHaze">The travel map's haze while it is open, which its land is seen through wherever the player stands.</param>
     private FogRequest Fog(DaggerfallWorldProfileKind kind, DaggerfallWeatherKind weather, float? horizonFog, Color? air, float? mapHaze)
     {
         if (mapHaze is { } map) return new(FogMode.Exponential, Color.FromSrgb(_skyColor.R, _skyColor.G, _skyColor.B), 0, 0, map);
         if (kind != DaggerfallWorldProfileKind.Exterior)
-            return new(FogMode.Exponential, new Color(0,0,0,1), 0, 0,
+            return InteriorFogOverride ?? new(FogMode.Exponential, new Color(0,0,0,1), 0, 0,
                 kind == DaggerfallWorldProfileKind.Dungeon ? _tuning.DungeonFogDensity : _tuning.InteriorFogDensity);
         float density = weather switch
         {

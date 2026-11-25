@@ -47,6 +47,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly IEngineContext _engine;
     private readonly DaggerfallTuning _tuning;
     private readonly DaggerfallViewLight _viewLight;
+    private readonly DaggerfallInteriorLook _interiorLook;
     private PlayerInputSystem _input;
     private ProductMode _mode = ProductMode.Playing;
     // The line a mode change says.
@@ -749,7 +750,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { LooseItems.Dispose(); }                                                              // Items
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _overland, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.Interiors.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _overland, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.Interiors.ActionTriggers, Infections, _horizon, _weatherPresentation, _interiorLook]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _exterior.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

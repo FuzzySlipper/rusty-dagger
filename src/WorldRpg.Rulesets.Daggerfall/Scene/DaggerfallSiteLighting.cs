@@ -21,6 +21,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly long _instance;
     private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
+    private readonly Dictionary<ulong, DaggerfallSiteLight> _authoredLights = [];
     // Each lamp's own level and the phase it flickers on, from its authored id, so it flickers alike in every session.
     private readonly Dictionary<ulong, (float Level, float Phase)> _flames = [];
     // The lamps' flicker clock, in admitted seconds, and when it last changed their brightness.
@@ -43,6 +44,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly ulong _magicCandleId;
     private Light? _ambient;
     private readonly ulong _ambientId;
+    private Light? _hemisphere;
+    private readonly ulong _hemisphereId;
+    private DaggerfallInteriorLightOverride? _lookOverride;
     private Light? _sun;
     private LightRequest? _sunRequest;
     private readonly ulong _sunId;
@@ -74,12 +78,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         long instance = _instance = Interlocked.Increment(ref s_lastInstance);
         _profileId = inputs.ProfileKey.LogicalId;
         _ambientId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "ambient");
+        _hemisphereId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "hemisphere");
         _magicCandleId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "magic-candle");
         _sunId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "sun");
         _ambientLevel = AmbientLevel(sky);
 
         List<Light> created = [];
-        HashSet<ulong> lightIds = [_ambientId, _sunId, _magicCandleId];
+        HashSet<ulong> lightIds = [_ambientId, _hemisphereId, _sunId, _magicCandleId];
         try
         {
             foreach (DaggerfallSiteLight light in inputs.Lights)
@@ -87,24 +92,25 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                 ulong lightId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, $"authored:{light.Id}");
                 if (!lightIds.Add(lightId))
                     throw new InvalidOperationException($"Site light '{light.Id}' collides with another admitted light identity.");
+                _authoredLights.Add(lightId, light);
                 LightRequest request = new(
                     lightId,
                     false,
                     0,
                     new LightDescriptor(
                         LightKind.Point,
-                        light.Color,
+                        LampColor(light),
                         LampIntensity(light),
                         true,
                         light.Position.ToVector(),
                         Vector3.Zero,
                         true,
                         light.Range,
-                        2F,
+                        LampDecay,
                         0F,
                         0F,
                         LightShadowIntent.Disabled));
-                request = request with { Descriptor = request.Descriptor with { ShadowResolution = _tuning.LampShadowResolution } };
+                request = request with { Descriptor = request.Descriptor with { ShadowResolution = _tuning.LampShadowResolution, ShadowSoft = LampShadowSoft } };
                 _flames.Add(lightId, (LampIntensity(light), StableHash.Fnv1a64(light.Id) % 1000 / 1000f));
                 if (light.CityLight)
                 {
@@ -255,7 +261,88 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     /// What this site's sky gives a surface open to it, before the Engine divides by pi: the ambient in its colour and the
     /// sun whatever its angle, as a hand held up takes a low sun as well as a high one.
     /// </summary>
-    internal Vector3 SkyLight => AmbientColor(_ambientLevel) * (_ambientLevel * Scale) + Vector3.One * (_sunRequest?.Descriptor.Intensity ?? 0);
+    internal Vector3 SkyLight
+    {
+        get
+        {
+            Vector3 fill = AmbientColor(_ambientLevel) * AmbientEffectiveIntensity(_ambientLevel) + Vector3.One * (_sunRequest?.Descriptor.Intensity ?? 0);
+            if (_lookOverride is { HemisphereIntensity: > 0f } look)
+                fill += (look.HemisphereSky + look.HemisphereGround) * (0.5f * look.HemisphereIntensity);
+            return fill;
+        }
+    }
+
+    /// <summary>
+    /// Live interior/dungeon look override (Den #11040): swaps point-light colours, attenuation decay, soft shadows and
+    /// chromatic <see cref="LightKind.Hemisphere"/> fill in place without re-importing content. Null restores shipped values.
+    /// </summary>
+    internal void ApplyLookOverride(DaggerfallInteriorLightOverride? look, DaggerfallSkyTime sky)
+    {
+        if (_disposed || _suspended || _profileKind == DaggerfallWorldProfileKind.Exterior) return;
+        if (Equals(_lookOverride, look)) return;
+        _lookOverride = look;
+
+        if (_ambient is { } ambient)
+            _graphics.UpdateLight(new LightUpdateRequest(ambient, AmbientRequest(_ambientLevel)));
+
+        if (_carriesSky)
+        {
+            if (look is { HemisphereIntensity: > 0f })
+            {
+                LightRequest request = HemisphereRequest(look);
+                if (_hemisphere is null)
+                {
+                    _hemisphere = _graphics.CreateLight(request);
+                    _lights.Add(_hemisphere);
+                }
+                else _graphics.UpdateLight(new LightUpdateRequest(_hemisphere, request));
+            }
+            else if (_hemisphere is { } existing)
+            {
+                _lights.Remove(existing);
+                existing.Dispose();
+                _hemisphere = null;
+            }
+        }
+
+        for (int index = 0; index < _points.Count; index++)
+        {
+            (Light light, LightRequest prior) = _points[index];
+            if (!_authoredLights.TryGetValue(prior.LogicalId, out DaggerfallSiteLight? authored)) continue;
+            float baseIntensity = LampIntensity(authored);
+            if (_flames.TryGetValue(prior.LogicalId, out (float Level, float Phase) flame))
+                _flames[prior.LogicalId] = (baseIntensity, flame.Phase);
+            if (_cityIntensities.ContainsKey(prior.LogicalId))
+                _cityIntensities[prior.LogicalId] = baseIntensity;
+            float activeIntensity = _cityIntensities.ContainsKey(prior.LogicalId) && !CityLightsOn(sky) ? 0f : baseIntensity;
+            LightRequest next = prior with
+            {
+                Descriptor = prior.Descriptor with
+                {
+                    Color = LampColor(authored),
+                    Intensity = activeIntensity,
+                    Decay = LampDecay,
+                    ShadowSoft = LampShadowSoft,
+                },
+            };
+            _graphics.UpdateLight(new LightUpdateRequest(light, next));
+            _points[index] = (light, next);
+        }
+
+        if (_magicCandle is { } candle && _magicCandleRequest is { } candleRequest)
+        {
+            LightRequest nextCandle = candleRequest with
+            {
+                Descriptor = candleRequest.Descriptor with
+                {
+                    Color = _lookOverride?.LampWarmColor ?? Vector3.One,
+                    Decay = LampDecay,
+                },
+            };
+            _graphics.UpdateLight(new LightUpdateRequest(candle, nextCandle));
+            _magicCandleRequest = nextCandle;
+        }
+    }
 
     /// <summary>What this site's lamps, glowing mobiles, flying spells and magic candle give <paramref name="at"/>, by the renderer's own falloff.</summary>
     internal Vector3 LampLight(Vector3 at)
@@ -287,7 +374,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             return;
         }
         var request = new LightRequest(_magicCandleId, false, 0, new LightDescriptor(LightKind.Point,
-            Vector3.One, tuning.Intensity, true, value, Vector3.Zero, true, tuning.Range, 2f, 0f, 0f, LightShadowIntent.Disabled));
+            _lookOverride?.LampWarmColor ?? Vector3.One, tuning.Intensity, true, value, Vector3.Zero, true, tuning.Range, LampDecay, 0f, 0f, LightShadowIntent.Disabled));
         if (_magicCandle is null) { _magicCandle = _graphics.CreateLight(request); _lights.Add(_magicCandle); }
         else _graphics.UpdateLight(new(_magicCandle, request));
         _magicCandleRequest = request;
@@ -414,8 +501,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         kind != DaggerfallWorldProfileKind.Exterior || CityLightsOn(sky);
 
     /// <summary>Lights a site's refreshed lamps while they burn.</summary>
-    internal void UpdateLampGlow(DaggerfallSiteAppearance appearance, DaggerfallSkyTime sky) =>
-        appearance.UpdateLampGlow(LampsLit(_profileKind, sky) ? _tuning.LampLevel : 0f);
+    internal void UpdateLampGlow(DaggerfallSiteAppearance appearance, DaggerfallSkyTime sky, float? levelOverride = null) =>
+        appearance.UpdateLampGlow(LampsLit(_profileKind, sky) ? (levelOverride ?? _lookOverride?.LampGlowLevel ?? _tuning.LampLevel) : 0f);
 
     private LightRequest CityRequest(LightRequest request, DaggerfallSkyTime sky) =>
         _cityIntensities.TryGetValue(request.LogicalId, out float intensity)
@@ -466,6 +553,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         foreach (Light light in _lights.AsEnumerable().Reverse()) light.Dispose();
         _lights.Clear();
         _ambient = null;
+        _hemisphere = null;
         _sun = null;
     }
 
@@ -514,14 +602,16 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         }
     }
 
-    private bool IsSky(Light light) => ReferenceEquals(light, _sun) || ReferenceEquals(light, _ambient);
+    private bool IsSky(Light light) => ReferenceEquals(light, _sun) || ReferenceEquals(light, _ambient) || ReferenceEquals(light, _hemisphere);
 
-    /// <summary>Creates whichever of the sun and ambient this site carries and isn't holding.</summary>
+    /// <summary>Creates whichever of the sun, ambient and hemisphere fill this site carries and isn't holding.</summary>
     private void CreateSky(List<Light> created)
     {
         if (!_carriesSky) return;
         if (_sun is null && _sunRequest is { } sunRequest) created.Add(_sun = _graphics.CreateLight(sunRequest));
         if (_ambient is null) created.Add(_ambient = _graphics.CreateLight(AmbientRequest(_ambientLevel)));
+        if (_hemisphere is null && _lookOverride is { HemisphereIntensity: > 0f } look)
+            created.Add(_hemisphere = _graphics.CreateLight(HemisphereRequest(look)));
     }
 
     private void DisposeCreated(List<Light> created)
@@ -530,6 +620,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         {
             if (ReferenceEquals(light, _sun)) _sun = null;
             if (ReferenceEquals(light, _ambient)) _ambient = null;
+            if (ReferenceEquals(light, _hemisphere)) _hemisphere = null;
             light.Dispose();
         }
         _points.Clear();
@@ -545,7 +636,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     private LightRequest AmbientRequest(float level) => new(
         _ambientId, false, 0,
-        new LightDescriptor(LightKind.Ambient, AmbientColor(level), level * Scale, true,
+        new LightDescriptor(LightKind.Ambient, AmbientColor(level), AmbientEffectiveIntensity(level), true,
             Vector3.Zero, Vector3.Zero, false, 0F, 0F, 0F, 0F, LightShadowIntent.Disabled));
 
     /// <summary>
@@ -578,8 +669,26 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             LightShadowIntent.Requested) with { ShadowResolution = _tuning.SunShadowResolution });
     }
 
+    private LightRequest HemisphereRequest(DaggerfallInteriorLightOverride look) => new(
+        _hemisphereId, false, 0,
+        new LightDescriptor(LightKind.Hemisphere, look.HemisphereSky, look.HemisphereIntensity, true,
+            Vector3.Zero, Vector3.Zero, false, 0F, 0F, 0F, 0F, LightShadowIntent.Disabled) with { GroundColor = look.HemisphereGround });
+
+    /// <summary>An authored lamp's linear colour: shipped source value, or remapped warm/hearth/arcane firelight under an active look override.</summary>
+    private Vector3 LampColor(DaggerfallSiteLight light)
+    {
+        if (_lookOverride is not { } look) return light.Color;
+        if (light.Id.StartsWith("light-hearth/", StringComparison.Ordinal)) return look.HearthColor;
+        if (light.Color.Z > light.Color.X * 1.05f || light.Color.Y > light.Color.X * 1.05f) return look.ArcaneColor;
+        return look.LampWarmColor;
+    }
+
     /// <summary>An authored lamp's light at its own level.</summary>
-    private float LampIntensity(DaggerfallSiteLight light) => light.Intensity * LampScale;
+    private float LampIntensity(DaggerfallSiteLight light) => light.Intensity * LampScale * (_lookOverride?.LampIntensityMultiplier ?? 1f);
+
+    private float LampDecay => _lookOverride?.LampDecay ?? 2F;
+
+    private bool LampShadowSoft => _lookOverride?.LampShadowSoft ?? false;
 
     /// <summary>What this kind of place multiplies its lamps by.</summary>
     private float LampScale => _profileKind switch
@@ -589,6 +698,10 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _ => _tuning.DungeonLampScale,
     };
 
+    /// <summary>Effective ambient intensity: shipped level × scale, or explicit chromatic floor under an active look override.</summary>
+    private float AmbientEffectiveIntensity(float level) =>
+        _lookOverride is { } look && _profileKind != DaggerfallWorldProfileKind.Exterior ? look.AmbientIntensity : level * Scale;
+
     /// <summary>What this kind of place multiplies its ambient by.</summary>
     private float Scale => _profileKind switch
     {
@@ -597,8 +710,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _ => _tuning.DungeonScale,
     };
 
-    /// <summary>The ambient's colour at a level: outdoors it cools toward the night's, and indoors it stays white.</summary>
-    private Vector3 AmbientColor(float level) => _profileKind != DaggerfallWorldProfileKind.Exterior ? Vector3.One
+    /// <summary>The ambient's colour at a level: outdoors it cools toward the night's, and indoors it stays white unless a look override tints it.</summary>
+    private Vector3 AmbientColor(float level) => _profileKind != DaggerfallWorldProfileKind.Exterior
+        ? (_lookOverride?.AmbientColor ?? Vector3.One)
         : Vector3.Lerp(_tuning.NightColor, Vector3.One, Math.Clamp((level - _tuning.ExteriorNight) / (_tuning.ExteriorNoon - _tuning.ExteriorNight), 0, 1));
 
     /// <summary>
@@ -640,6 +754,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _lights.Clear();
         _suspendedPoints.Clear();
         _ambient = null;
+        _hemisphere = null;
         _sun = null;
         _magicCandle = null;
         _magicCandleRequest = null;

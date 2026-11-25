@@ -22,13 +22,27 @@ internal sealed class DaggerfallViewLight(DaggerfallSiteLightingTuning tuning)
     /// <summary>The tint drawn now.</summary>
     internal Color Level { get; private set; } = new(1, 1, 1, 1);
 
-    /// <summary>The tint for <paramref name="light"/>: full at the tuned light, kept in hue above it, and never under the tuned floor, so the hands stay readable in the dark.</summary>
-    internal static Vector3 Tint(Vector3 light, DaggerfallSiteLightingTuning tuning)
+    /// <summary>Optional per-site floor override used by interior look experiments; null uses tuning's <see cref="DaggerfallSiteLightingTuning.ViewFloor"/>.</summary>
+    internal float? FloorOverride
     {
+        get => _floorOverride;
+        set
+        {
+            if (_floorOverride == value) return;
+            _floorOverride = value;
+            sinceSample = SampleEvery;
+        }
+    }
+    private float? _floorOverride;
+
+    /// <summary>The tint for <paramref name="light"/>: full at the tuned light, kept in hue above it, and never under the tuned floor, so the hands stay readable in the dark.</summary>
+    internal static Vector3 Tint(Vector3 light, DaggerfallSiteLightingTuning tuning, float? floorOverride = null)
+    {
+        float floor = floorOverride ?? tuning.ViewFloor;
         Vector3 level = light / tuning.ViewFull;
         float peak = Peak(level);
-        if (peak <= 0) return new(tuning.ViewFloor);
-        return peak > 1 ? level / peak : peak < tuning.ViewFloor ? level * (tuning.ViewFloor / peak) : level;
+        if (peak <= 0) return new(floor);
+        return peak > 1 ? level / peak : peak < floor ? level * (floor / peak) : level;
     }
 
     /// <summary>Called each update with how to read the light the eye stands in; reads it when a sample is due.</summary>
@@ -36,7 +50,7 @@ internal sealed class DaggerfallViewLight(DaggerfallSiteLightingTuning tuning)
     {
         if (++sinceSample < SampleEvery) return;
         sinceSample = 0;
-        Vector3 next = Tint(light(), tuning);
+        Vector3 next = Tint(light(), tuning, FloorOverride);
         Vector3 now = new(Level.R, Level.G, Level.B);
         if (Peak(Vector3.Abs(next - now)) >= Step * Peak(now))
             Level = new(next.X, next.Y, next.Z, 1);
