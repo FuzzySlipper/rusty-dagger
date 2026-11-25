@@ -560,6 +560,31 @@ internal sealed partial class DaggerfallSession
                 WorldConditions.Restore(saved.WorldConditions);
             else
                 WorldConditions.SeedAuthored(definitions.NewGame.WorldConditions);
+            WordSpread = new DaggerfallWordSpread(tuning.Social, WorldConditions);
+            if (saved is not null)
+                WordSpread.Restore(saved.WordSpread);
+            social.GuildRankChanged += (factionId, newRank) =>
+            {
+                if (_site.ActiveSite is not { } origin) return;
+                string? factionName = definitions.Factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? fDef)
+                    ? fDef.Name
+                    : null;
+                string? rankTitle = newRank > 0
+                    ? DaggerfallGuildRankTitles.Title(factionId, newRank, character.Identity.Gender == DaggerfallCharacterGender.Female)
+                    : null;
+                string? headline = newRank > 0 && !string.IsNullOrWhiteSpace(rankTitle)
+                    ? $"{factionName ?? "Guild"} Promotion: {rankTitle}"
+                    : null;
+                string? body = newRank > 0 && !string.IsNullOrWhiteSpace(rankTitle)
+                    ? $"Word from {origin.Name}: {character.Identity.Name} now holds the rank of {rankTitle} in {factionName ?? "the guild"}."
+                    : null;
+                WordSpread.RecordFactionStanding(factionId, delta: 0, guildRank: newRank, origin, _time.Calendar.MinuteNumber, headline, body);
+            };
+            social.FactionStandingChanged += (factionId, amount) =>
+            {
+                if (_site.ActiveSite is not { } origin) return;
+                WordSpread.RecordFactionStanding(factionId, delta: amount, guildRank: null, origin, _time.Calendar.MinuteNumber);
+            };
             LegalServices = new DaggerfallLegalServicePolicy(social, crime, assembled.ActorLedger, definitions,
                 id => actors.TryGet(id, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null,
                 CurrentInteriorBuilding,
@@ -571,7 +596,10 @@ internal sealed partial class DaggerfallSession
                 () => checked((int)_time.Calendar.DayNumber),
                 id => actors.TryGet(id, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null,
                 CurrentInteriorBuilding,
-                HasWatchOrRulerVouch);
+                HasWatchOrRulerVouch,
+                wordSpread: WordSpread,
+                currentMinute: () => _time.Calendar.MinuteNumber,
+                activeSite: () => _site.ActiveSite);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
@@ -723,7 +751,18 @@ internal sealed partial class DaggerfallSession
             OfficeHolders.BindOverrideLookup(OfficeLedger.TryGetFactionOverride);
             NoticeBoard = new DaggerfallNoticeBoard(
                 definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
-                () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity);
+                () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,
+                wordSpread: WordSpread);
+            CourierDispatches = new DaggerfallCourierDispatches(
+                definitions, WordSpread, WorldConditions, State.Social, State.ActorLedger,
+                amount => amount <= 0 || State.Currency.TrySpendCarried((ulong)amount),
+                amount => { if (amount > 0) _ = State.Currency.ReceiveGold((ulong)amount); },
+                () => _worldSocialSeed,
+                new DaggerfallNames(definitions, _random).NpcName,
+                () => OverlandParties,
+                () => Expedition);
+            if (saved is not null)
+                CourierDispatches.Restore(saved.CourierDispatches);
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone);
@@ -1097,6 +1136,8 @@ internal sealed partial class DaggerfallSession
             _persistence.WorldSocialSeed = () => _worldSocialSeed;
             _persistence.OfficeLedger = OfficeLedger.Capture;
             _persistence.WorldConditions = WorldConditions.Capture;
+            _persistence.WordSpread = WordSpread.Capture;
+            _persistence.CourierDispatches = CourierDispatches.Capture;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;
@@ -1193,6 +1234,11 @@ internal sealed partial class DaggerfallSession
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
                 promoteGuard: id => _roster.PromoteToCityWatch(id));
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
+            Law.BindCrimeSpread((incident, loss) =>
+            {
+                if (_site.ActiveSite is { } origin)
+                    WordSpread.RecordCrime(incident.OperationId, incident.Region, loss, origin, _time.Calendar.MinuteNumber);
+            });
             crime.IncidentRecorded += Law.Admit;
             GuildProviders = new DaggerfallGuildProviders(State.ConcreteGuildServices, State.ConcreteGuildMembership, State.KnightlyClaimActions,
                 new DaggerfallGuildAdmission(State.ConcreteGuildMembership, State.Social, State.SkillUses, State.Crime,
@@ -1389,7 +1435,7 @@ internal sealed partial class DaggerfallSession
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
                 new DaggerfallExpeditionBandReadout(Expedition, OverlandParties, State.Actors, State.Npcs),
                 new DaggerfallOverlandViewCommands(_overland),
-                new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, _site, () => _time.Calendar),
+                new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, WordSpread, CourierDispatches, definitions, _site, () => _time.Calendar),
             ];                                                                                     // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
@@ -1474,7 +1520,9 @@ internal sealed partial class DaggerfallSession
             curryFavour: (npc, polite, blunt) => Introductions.TryCurryFavour(npc, polite, blunt),
             worldConditions: WorldConditions,
             readNoticeBoard: site => DaggerfallNoticeBoard.FormatBoardText(NoticeBoard.BuildForSite(site, _time.Calendar.MinuteNumber)),
-            evaluateGateScrutiny: Scrutiny.EvaluateGateScrutiny);
+            evaluateGateScrutiny: Scrutiny.EvaluateGateScrutiny,
+            wordSpread: WordSpread,
+            courierDispatches: CourierDispatches);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

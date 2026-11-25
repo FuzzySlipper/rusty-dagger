@@ -55,7 +55,8 @@ internal sealed class DaggerfallNoticeBoard(
     DaggerfallSocialState social,
     Func<int> currentDay,
     Func<DaggerfallTextContext> currentText,
-    Func<DaggerfallCharacterIdentity> playerIdentity)
+    Func<DaggerfallCharacterIdentity> playerIdentity,
+    DaggerfallWordSpread? wordSpread = null)
 {
     private const int MaxClassicSignRumors = 3;
 
@@ -80,10 +81,27 @@ internal sealed class DaggerfallNoticeBoard(
         // 2. Sparse office proclamations (regional throne or local town offices that changed from baseline).
         AddOfficeNotices(entries, site, region, regionName, ruler);
 
-        // 3. Live wanted / bounty posting when the player is wanted, banished, or has pending charges here.
-        AddPlayerBountyNotice(entries, region, regionName, authorityName);
+        // 3. Live wanted / bounty posting when word of the player's crimes/warrant has arrived at this town.
+        AddPlayerBountyNotice(entries, site, region, regionName, authorityName, currentMinute, day);
 
-        // 4. Classic Daggerfall sign-message rumours (rumor.IsSignMessage == true) rendered with live context.
+        // 4. Arrived courier news/standing wavefronts (e.g. leaked board-game dispatches or distant news that reached this town).
+        if (wordSpread is not null)
+        {
+            foreach (DaggerfallWordWavefrontSave arrived in wordSpread.ArrivedNewsAt(site, currentMinute, day).Take(3))
+            {
+                entries.Add(new(
+                    Id: $"notice:word:{arrived.EventId}",
+                    Kind: arrived.Kind == DaggerfallWordEventKind.NewsRumor
+                        ? DaggerfallNoticeEntryKind.Decree
+                        : DaggerfallNoticeEntryKind.SignRumor,
+                    Heading: arrived.Headline ?? "Courier Bulletin",
+                    Body: arrived.Body!,
+                    Region: region,
+                    FactionId: arrived.FactionId));
+            }
+        }
+
+        // 5. Classic Daggerfall sign-message rumours (rumor.IsSignMessage == true) rendered with live context.
         AddClassicSignRumors(entries, site, region, regionName, currentMinute);
 
         return new(site.Id, site.Name, regionName, authorityName, entries);
@@ -231,20 +249,32 @@ internal sealed class DaggerfallNoticeBoard(
 
     private void AddPlayerBountyNotice(
         List<DaggerfallNoticeEntry> entries,
+        DaggerfallSiteRecord site,
         int region,
         string regionName,
-        string? authorityName)
+        string? authorityName,
+        long currentMinute,
+        int currentDay)
     {
         bool banished = crime.BanishedRegions.Contains(region);
-        bool wanted = social.RegionalReputation(region) < DaggerfallLegalServicePolicy.WantedReputationThreshold;
-        IReadOnlyList<DaggerfallCrimeIncidentSave> charges = crime.PendingCharges(region);
-        if (!banished && !wanted && charges.Count == 0)
+        int effectiveRep = social.RegionalReputation(region)
+            + (wordSpread?.UnarrivedCrimePenaltyOffset(site, currentMinute, currentDay) ?? 0);
+        bool wanted = effectiveRep < DaggerfallLegalServicePolicy.WantedReputationThreshold;
+        List<DaggerfallCrimeIncidentSave> knownCharges = [.. crime.PendingCharges(region)
+            .Where(charge =>
+            {
+                if (wordSpread is null) return true;
+                if (!wordSpread.TryGet($"wf:crime:{charge.OperationId}", out DaggerfallWordWavefrontSave? wf) || wf is null)
+                    return true;
+                return wordSpread.EvaluateAt(wf, site, currentMinute, currentDay).HasArrived;
+            })];
+        if (!banished && !wanted && knownCharges.Count == 0)
             return;
 
         string playerName = playerIdentity().Name;
         string status = banished ? "Banished Outlaw" : "Wanted by the Watch";
-        string chargeList = charges.Count > 0
-            ? $" Charges: {string.Join(", ", charges.Select(c => c.Crime.ToString()).Distinct(StringComparer.Ordinal))}."
+        string chargeList = knownCharges.Count > 0
+            ? $" Charges: {string.Join(", ", knownCharges.Select(c => c.Crime.ToString()).Distinct(StringComparer.Ordinal))}."
             : string.Empty;
         string issuer = authorityName ?? $"the Watch of {regionName}";
         entries.Add(new(

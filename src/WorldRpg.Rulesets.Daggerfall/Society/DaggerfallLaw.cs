@@ -68,9 +68,13 @@ internal sealed class DaggerfallLaw(
     Func<long, long?> promoteGuard)
 {
     private Func<int, DaggerfallGateScrutinyAssessment>? _gateScrutiny;
+    private Action<DaggerfallCrimeIncidentSave, int>? _onCrimeReputationLoss;
 
     internal void BindGateScrutiny(Func<int, DaggerfallGateScrutinyAssessment> evaluate) =>
         _gateScrutiny = evaluate ?? throw new ArgumentNullException(nameof(evaluate));
+
+    internal void BindCrimeSpread(Action<DaggerfallCrimeIncidentSave, int> recordCrime) =>
+        _onCrimeReputationLoss = recordCrime ?? throw new ArgumentNullException(nameof(recordCrime));
 
     /// <summary>The case in front of the player: the one holding the legal modal, else the active region's.</summary>
     internal DaggerfallLegalResponseSave? Current => crime.LegalResponses.FirstOrDefault(response => response.Modal)
@@ -96,7 +100,11 @@ internal sealed class DaggerfallLaw(
             && affectedActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? affectedOverlay))
             affectedOverlay.RecordWitnessedCrime(incident.OperationId);
         int loss = DaggerfallCrimePolicy.RegionalReputationLoss(incident.Crime);
-        if (incident.Crime != DaggerfallCrimeKind.CriminalConspiracy) ChangeReputation(incident.Region, -loss);
+        if (incident.Crime != DaggerfallCrimeKind.CriminalConspiracy)
+        {
+            ChangeReputation(incident.Region, -loss);
+            _onCrimeReputationLoss?.Invoke(incident, loss);
+        }
         var response = crime.Response(incident.Region);
         string[] charges = crime.PendingCharges(incident.Region).Select(value => value.OperationId).ToArray();
         if (response is not null)

@@ -70,6 +70,12 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     private Func<long, int>? _actorDisposition;
     private Func<long, int>? _actorVouchBonus;
 
+    /// <summary>Raised when a guild rank changes via join/promotion/demotion: (factionId, newRank).</summary>
+    internal event Action<int, int>? GuildRankChanged;
+
+    /// <summary>Raised when a direct/notable faction reputation change occurs: (factionId, delta).</summary>
+    internal event Action<int, int>? FactionStandingChanged;
+
     internal void BindActorFactions(Func<long, FactionComponent?> lookup) =>
         _actorFactions = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
@@ -265,6 +271,8 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         if (change == DaggerfallFactionReputationChange.Direct)
         {
             ApplyFactionChange(faction.Id, amount);
+            if (Math.Abs(amount) >= 10 && faction.Type != 15)
+                FactionStandingChanged?.Invoke(faction.Id, amount);
             return FactionReputation(faction.Id);
         }
         if (change != DaggerfallFactionReputationChange.Propagate)
@@ -304,6 +312,8 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         // after the deity hierarchy, rather than a universal relationship inference.
         if (root.Type == GodFactionType && _catalog.Factions.ContainsKey(GenericTempleFactionId))
             ChangeFactionReputation(GenericTempleFactionId, amount, DaggerfallFactionReputationChange.Propagate);
+        if (Math.Abs(amount) >= 10 && faction.Type != 15)
+            FactionStandingChanged?.Invoke(faction.Id, amount);
         return FactionReputation(faction.Id);
     }
 
@@ -341,11 +351,22 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
 
         DaggerfallGuildMembership membership = new(faction.GuildGroup, faction.Id, 0, currentDay, 0);
         _memberships.Add(faction.GuildGroup, membership);
+        GuildRankChanged?.Invoke(faction.Id, 0);
         return membership;
     }
 
-    internal DaggerfallGuildMembership PromoteGuild(int factionId, int currentDay) => ChangeGuildRank(factionId, 1, currentDay);
-    internal DaggerfallGuildMembership DemoteGuild(int factionId, int currentDay) => ChangeGuildRank(factionId, -1, currentDay);
+    internal DaggerfallGuildMembership PromoteGuild(int factionId, int currentDay)
+    {
+        DaggerfallGuildMembership updated = ChangeGuildRank(factionId, 1, currentDay);
+        GuildRankChanged?.Invoke(factionId, updated.Rank);
+        return updated;
+    }
+    internal DaggerfallGuildMembership DemoteGuild(int factionId, int currentDay)
+    {
+        DaggerfallGuildMembership updated = ChangeGuildRank(factionId, -1, currentDay);
+        GuildRankChanged?.Invoke(factionId, updated.Rank);
+        return updated;
+    }
 
     /// <summary>Records work the current guild notices; the donor field is byte-bounded.</summary>
     internal DaggerfallGuildMembership ChangeGuildRecognition(int factionId, int amount)

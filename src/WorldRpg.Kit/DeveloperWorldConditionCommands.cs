@@ -20,4 +20,13 @@ public interface IDeveloperWorldConditionCommands : IDebugCommandModule
 
     [DebugCommand("world.notice-board", Description = "Developer: read the active town's public notice board.")]
     DebugCommandResult NoticeBoard();
+
+    [DebugCommand("world.word-spread", Description = "Developer: inspect active news/standing wavefronts and their arrival status at the current site as JSON.")]
+    DebugCommandResult ListWordSpread();
+
+    [DebugCommand("world.dispatches", Description = "Developer: inspect active and resolved board-game courier dispatches as JSON.")]
+    DebugCommandResult ListDispatches();
+
+    [DebugCommand("world.dispatch-send", Description = "Developer: stage a board-game courier dispatch from the active site for SEAT_ID (e.g. crown:daggerfall), ACTION_KIND (e.g. border-posture), to DESTINATION_REGION (0-61).")]
+    DebugCommandResult SendDispatch(string seatId, string actionKind, int destinationRegion);
 }

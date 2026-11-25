@@ -8,12 +8,34 @@ using WorldRpg.Kit.World;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
-/// Central switch for deterministic seeded people generation, separate from <see cref="DaggerfallGameRandom.Seed"/>.
-/// Defaults to zero so seeded townfolk and spawner slots stay stable across games unless a world social seed is chosen.
+/// Central switch for deterministic seeded people generation and news/standing spread, separate from
+/// <see cref="DaggerfallGameRandom.Seed"/>. Defaults keep seeded townfolk stable and give a configurable
+/// instant-news bubble (in world-map pixels) outside which word and standing travel by courier.
 /// </summary>
-internal sealed record DaggerfallSocialTuning(ulong WorldSocialSeed)
+internal sealed record DaggerfallSocialTuning(
+    ulong WorldSocialSeed,
+    double InstantNewsBubblePixels = 8.0,
+    double CourierSpeedPixelsPerHour = 2.1,
+    double WarZoneCourierSpeedMultiplier = 0.35,
+    double MonsterSurgeCourierSpeedMultiplier = 0.50,
+    double PlagueCourierSpeedMultiplier = 0.40)
 {
     internal static DaggerfallSocialTuning Default { get; } = new(0UL);
+
+    internal DaggerfallSocialTuning Validate()
+    {
+        if (!double.IsFinite(InstantNewsBubblePixels) || InstantNewsBubblePixels < 0d)
+            throw new ArgumentOutOfRangeException(nameof(InstantNewsBubblePixels), "Instant news bubble radius must be finite and non-negative.");
+        if (!double.IsFinite(CourierSpeedPixelsPerHour) || CourierSpeedPixelsPerHour <= 0d)
+            throw new ArgumentOutOfRangeException(nameof(CourierSpeedPixelsPerHour), "Courier speed must be positive.");
+        if (!double.IsFinite(WarZoneCourierSpeedMultiplier) || WarZoneCourierSpeedMultiplier is <= 0d or > 1d)
+            throw new ArgumentOutOfRangeException(nameof(WarZoneCourierSpeedMultiplier), "War-zone courier speed multiplier must be in (0, 1].");
+        if (!double.IsFinite(MonsterSurgeCourierSpeedMultiplier) || MonsterSurgeCourierSpeedMultiplier is <= 0d or > 1d)
+            throw new ArgumentOutOfRangeException(nameof(MonsterSurgeCourierSpeedMultiplier), "Monster-surge courier speed multiplier must be in (0, 1].");
+        if (!double.IsFinite(PlagueCourierSpeedMultiplier) || PlagueCourierSpeedMultiplier is <= 0d or > 1d)
+            throw new ArgumentOutOfRangeException(nameof(PlagueCourierSpeedMultiplier), "Plague courier speed multiplier must be in (0, 1].");
+        return this;
+    }
 
     internal static DaggerfallSocialTuning Read(JsonElement element)
     {
@@ -22,7 +44,22 @@ internal sealed record DaggerfallSocialTuning(ulong WorldSocialSeed)
         ulong seed = element.TryGetProperty("worldSocialSeed", out JsonElement value)
             ? value.GetUInt64()
             : 0UL;
-        return new(seed);
+        double bubble = element.TryGetProperty("instantNewsBubblePixels", out JsonElement b)
+            ? b.GetDouble()
+            : 8.0;
+        double speed = element.TryGetProperty("courierSpeedPixelsPerHour", out JsonElement s)
+            ? s.GetDouble()
+            : 2.1;
+        double war = element.TryGetProperty("warZoneCourierSpeedMultiplier", out JsonElement w)
+            ? w.GetDouble()
+            : 0.35;
+        double surge = element.TryGetProperty("monsterSurgeCourierSpeedMultiplier", out JsonElement m)
+            ? m.GetDouble()
+            : 0.50;
+        double plague = element.TryGetProperty("plagueCourierSpeedMultiplier", out JsonElement p)
+            ? p.GetDouble()
+            : 0.40;
+        return new DaggerfallSocialTuning(seed, bubble, speed, war, surge, plague).Validate();
     }
 }
 

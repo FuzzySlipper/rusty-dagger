@@ -7,14 +7,16 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// Live developer commands for authoring, inspecting, and clearing stubbed world-condition tokens and reading
-/// the active town notice board (<c>world.conditions</c>, <c>world.condition-set</c>, <c>world.condition-clear</c>,
-/// <c>world.notice-board</c>).
+/// Live developer commands for authoring, inspecting, and clearing stubbed world-condition tokens, reading
+/// the active town notice board, inspecting word spread, and staging/inspecting board-game courier dispatches.
 /// </summary>
 internal sealed class DaggerfallWorldConditionCommands(
     DaggerfallWorldConditions conditions,
     DaggerfallScrutinyPolicy scrutiny,
     DaggerfallNoticeBoard noticeBoard,
+    DaggerfallWordSpread wordSpread,
+    DaggerfallCourierDispatches courierDispatches,
+    DaggerfallDefinitions definitions,
     DaggerfallSiteContext site,
     Func<DaggerfallCalendar> calendar) : IDeveloperWorldConditionCommands
 {
@@ -117,5 +119,120 @@ internal sealed class DaggerfallWorldConditionCommands(
             return DaggerfallDeveloperReplies.Refused("No active site is loaded.");
         DaggerfallTownNoticeBoardView view = noticeBoard.BuildForSite(active, calendar().MinuteNumber);
         return DebugCommandResult.Success(DaggerfallNoticeBoard.FormatBoardText(view));
+    }
+
+    public DebugCommandResult ListWordSpread()
+    {
+        DaggerfallSiteRecord? active = site.ActiveSite;
+        long nowMinute = calendar().MinuteNumber;
+        int nowDay = checked((int)calendar().DayNumber);
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteNumber("instantBubblePixels", wordSpread.Tuning.InstantNewsBubblePixels);
+            w.WriteNumber("courierSpeedPixelsPerHour", wordSpread.Tuning.CourierSpeedPixelsPerHour);
+            w.WriteNumber("minute", nowMinute);
+            w.WriteStartArray("wavefronts");
+            foreach (DaggerfallWordWavefrontSave wf in wordSpread.Wavefronts.OrderBy(v => v.EmittedAtMinute).ThenBy(v => v.EventId, StringComparer.Ordinal))
+            {
+                w.WriteStartObject();
+                w.WriteString("eventId", wf.EventId);
+                w.WriteString("kind", wf.Kind.ToString());
+                w.WriteNumber("originRegion", wf.OriginRegion);
+                w.WriteNumber("delta", wf.Delta);
+                if (wf.FactionId is int fid) w.WriteNumber("factionId", fid);
+                if (wf.GuildRank is int rank) w.WriteNumber("guildRank", rank);
+                w.WriteBoolean("intercepted", wf.CourierIntercepted);
+                if (active is not null)
+                {
+                    DaggerfallWordArrivalEvaluation eval = wordSpread.EvaluateAt(wf, active, nowMinute, nowDay);
+                    w.WriteString("statusAtActiveSite", eval.Status.ToString());
+                    w.WriteNumber("distancePixels", Math.Round(eval.DistancePixels, 2));
+                    w.WriteNumber("disruptionMultiplier", Math.Round(eval.CourierDisruptionMultiplier, 2));
+                    w.WriteNumber("remainingMinutes", eval.RemainingMinutes == long.MaxValue ? -1 : eval.RemainingMinutes);
+                }
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        });
+    }
+
+    public DebugCommandResult ListDispatches() =>
+        DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteStartArray("dispatches");
+            foreach (DaggerfallCourierDispatchSave d in courierDispatches.All.OrderBy(v => v.DispatchedAtMinute).ThenBy(v => v.DispatchId, StringComparer.Ordinal))
+            {
+                w.WriteStartObject();
+                w.WriteString("dispatchId", d.DispatchId);
+                w.WriteString("seatId", d.SeatId);
+                w.WriteString("actionKind", d.ActionKind);
+                w.WriteString("status", d.Status.ToString());
+                w.WriteNumber("originRegion", d.OriginSite.Require().Region);
+                w.WriteNumber("destinationRegion", d.DestinationSite.Require().Region);
+                w.WriteNumber("expectedArrivalMinute", d.ExpectedArrivalMinute);
+                if (d.CourierActorId is long cid) w.WriteNumber("courierActorId", cid);
+                if (d.OverlandBandId is not null) w.WriteString("overlandBandId", d.OverlandBandId);
+                w.WriteBoolean("deliveredByPlayer", d.DeliveredByPlayer);
+                w.WriteBoolean("revealed", d.Revealed);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteStartArray("resolutions");
+            foreach (DaggerfallDispatchResolution r in courierDispatches.Resolutions)
+            {
+                w.WriteStartObject();
+                w.WriteString("dispatchId", r.DispatchId);
+                w.WriteString("seatId", r.SeatId);
+                w.WriteString("actionKind", r.ActionKind);
+                w.WriteString("outcome", r.Outcome.ToString());
+                w.WriteBoolean("moveCancelled", r.MoveCancelled);
+                w.WriteBoolean("moveAccelerated", r.MoveAccelerated);
+                w.WriteBoolean("moveRevealed", r.MoveRevealed);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        });
+
+    public DebugCommandResult SendDispatch(string seatId, string actionKind, int destinationRegion)
+    {
+        if (site.ActiveSite is not { } origin)
+            return DaggerfallDeveloperReplies.Refused("No active site is loaded.");
+        if (string.IsNullOrWhiteSpace(seatId) || string.IsNullOrWhiteSpace(actionKind))
+            return DaggerfallDeveloperReplies.Refused("Seat id and action kind are required.");
+        if (destinationRegion is < 0 or > 61)
+            return DaggerfallDeveloperReplies.Refused("Destination region must be between 0 and 61.");
+
+        DaggerfallSiteRecord? destination = definitions.Locations.Records
+            .Where(r => r.Id.Region == destinationRegion && r.Id != origin.Id && r.Exterior is not null)
+            .OrderByDescending(r => r.Kind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage)
+            .ThenBy(r => r.Id.Index)
+            .FirstOrDefault();
+        if (destination is null)
+            return DaggerfallDeveloperReplies.Refused($"No exterior town found in region {destinationRegion}.");
+
+        long nowMinute = calendar().MinuteNumber;
+        int nowDay = checked((int)calendar().DayNumber);
+        string trimmedSeat = seatId.Trim();
+        string trimmedAction = actionKind.Trim();
+        int? sourceFactionId = DaggerfallBoardSeatCatalog.TryGetBySeatId(trimmedSeat, out DaggerfallBoardSeatDefinition? seat) && seat is not null
+            ? seat.OfficeFactionId
+            : null;
+        string dispatchId = string.Create(CultureInfo.InvariantCulture, $"dev-dispatch:{trimmedSeat}:{nowMinute}:{courierDispatches.Count + 1}");
+        string summary = $"{trimmedSeat} {trimmedAction} orders bound for {destination.Name}";
+        _ = courierDispatches.StageDispatch(
+            dispatchId: dispatchId,
+            seatId: trimmedSeat,
+            actionKind: trimmedAction,
+            summary: summary,
+            origin: origin,
+            destination: destination,
+            currentMinute: nowMinute,
+            currentDay: nowDay,
+            sourceFactionId: sourceFactionId);
+        return ListDispatches();
     }
 }

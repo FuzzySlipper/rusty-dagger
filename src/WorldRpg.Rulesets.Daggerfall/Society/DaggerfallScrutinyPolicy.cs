@@ -51,18 +51,31 @@ internal sealed class DaggerfallScrutinyPolicy(
     Func<int> currentDay,
     Func<long, FactionComponent?> actorFactions,
     Func<DaggerfallInteriorBuilding?> currentInteriorBuilding,
-    Func<DaggerfallSiteRecord?, bool>? hasWatchOrRulerVouch = null)
+    Func<DaggerfallSiteRecord?, bool>? hasWatchOrRulerVouch = null,
+    DaggerfallWordSpread? wordSpread = null,
+    Func<long>? currentMinute = null,
+    Func<DaggerfallSiteRecord?>? activeSite = null)
 {
     internal const int HighStandingExemptThreshold = 20;
     internal const int HeightenedWantedThreshold = -5;
     internal const int StrictWantedThreshold = 0;
     internal const int GrainShortageSurchargePerSeverity = 150;
 
+    /// <summary>Effective regional reputation known at <paramref name="site"/> (accounting for crimes whose couriers have not arrived yet).</summary>
+    internal int EffectiveRegionalReputation(int region, DaggerfallSiteRecord? site = null)
+    {
+        int raw = social.RegionalReputation(region);
+        DaggerfallSiteRecord? resolvedSite = site ?? activeSite?.Invoke();
+        if (wordSpread is null || currentMinute is null || resolvedSite is null || resolvedSite.Id.Region != region)
+            return raw;
+        return raw + wordSpread.UnarrivedCrimePenaltyOffset(resolvedSite, currentMinute(), currentDay());
+    }
+
     /// <summary>Evaluates gate and watch scrutiny in <paramref name="region"/> (optionally at <paramref name="site"/>).</summary>
     internal DaggerfallGateScrutinyAssessment EvaluateGateScrutiny(int region, DaggerfallSiteRecord? site = null)
     {
         bool banished = crime.BanishedRegions.Contains(region);
-        int regionalRep = social.RegionalReputation(region);
+        int regionalRep = EffectiveRegionalReputation(region, site);
         int day = currentDay();
 
         DaggerfallWorldConditionToken? driving = SelectGateScrutinyCondition(conditions.ActiveForRegion(region, day));
@@ -131,8 +144,11 @@ internal sealed class DaggerfallScrutinyPolicy(
         ArgumentNullException.ThrowIfNull(npc);
         building ??= currentInteriorBuilding();
 
-        // 1. Baseline legal denial (wanted < -10 or banished, respecting outlaw exemptions).
-        if (legalServices.IsWantedOrBanished(npc.Site.Region))
+        // 1. Baseline legal denial (wanted < -10 or banished, respecting outlaw exemptions and courier word spread).
+        int effectiveRep = EffectiveRegionalReputation(npc.Site.Region);
+        bool knownWantedOrBanished = crime.BanishedRegions.Contains(npc.Site.Region)
+            || effectiveRep < DaggerfallLegalServicePolicy.WantedReputationThreshold;
+        if (knownWantedOrBanished)
         {
             if (legalServices.IsOutlawExempt(npc, building) || HasTrustedVouchFor(npc.DurableId))
                 return new(false, DaggerfallServiceDenial.None, null);
@@ -180,7 +196,7 @@ internal sealed class DaggerfallScrutinyPolicy(
         // 3. Heightened / strict regional watch scrutiny tightens lawful service standing threshold from -10 to -5 / 0.
         DaggerfallGateScrutinyAssessment gate = EvaluateGateScrutiny(region);
         if (gate.Level != DaggerfallScrutinyLevel.Normal && !exempt
-            && social.RegionalReputation(region) < gate.EffectiveWantedThreshold)
+            && effectiveRep < gate.EffectiveWantedThreshold)
         {
             return new(true, DaggerfallServiceDenial.UnderScrutiny,
                 gate.Reason ?? "Local authorities have ordered strict scrutiny; I cannot serve you.",
@@ -193,10 +209,17 @@ internal sealed class DaggerfallScrutinyPolicy(
     /// <summary>Whether room rental at <paramref name="building"/> in <paramref name="region"/> is denied under legal standing or active scrutiny.</summary>
     internal bool IsRoomRentalDenied(int region, DaggerfallInteriorBuilding? building, DaggerfallNpc? tavernKeeper = null)
     {
-        if (legalServices.IsRoomRentalDenied(region, building, tavernKeeper))
-            return true;
+        int effectiveRep = EffectiveRegionalReputation(region);
+        bool knownWantedOrBanished = crime.BanishedRegions.Contains(region)
+            || effectiveRep < DaggerfallLegalServicePolicy.WantedReputationThreshold;
+        if (knownWantedOrBanished)
+        {
+            if (tavernKeeper is not null && (legalServices.IsOutlawExempt(tavernKeeper, building) || HasTrustedVouchFor(tavernKeeper.DurableId)))
+                return false;
+            return !legalServices.IsShadyOrCriminalBuilding(building);
+        }
         DaggerfallGateScrutinyAssessment gate = EvaluateGateScrutiny(region);
-        if (gate.Level == DaggerfallScrutinyLevel.Normal || social.RegionalReputation(region) >= gate.EffectiveWantedThreshold)
+        if (gate.Level == DaggerfallScrutinyLevel.Normal || effectiveRep >= gate.EffectiveWantedThreshold)
             return false;
         if (tavernKeeper is not null && (legalServices.IsOutlawExempt(tavernKeeper, building) || HasTrustedVouchFor(tavernKeeper.DurableId)))
             return false;

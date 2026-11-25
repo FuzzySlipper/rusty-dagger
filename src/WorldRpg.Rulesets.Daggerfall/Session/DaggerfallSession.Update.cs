@@ -270,6 +270,8 @@ internal sealed partial class DaggerfallSession
         long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society
+        CourierDispatches.AdvanceToMinute(minuteAfter, checked((int)_time.Calendar.DayNumber));   // Society: elapsed-time board-game couriers
+        WordSpread.PruneExpired(minuteAfter);                                                     // Society: elapsed-time word spread
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar.Sky, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
         _exterior.UpdateResidentCityLights();                                                     // Exterior
@@ -1438,6 +1440,7 @@ internal sealed partial class DaggerfallSession
             fallen.ApplyPose(new ActorPose(_grounding.RestingPosition(fallen.Position), fallen.HeadingYawRadians)); // Actors
             _persistence.RecordActorDeath(fallen, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))); // Session: ActorLedger Dead
             OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite); // Society: OfficeLedger sparse override
+            CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
         }
         _corpseLoot.Create(died);                                                                 // Items

@@ -101,6 +101,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly IDaggerfallWorldConditionSource? _worldConditions;
     private readonly Func<DaggerfallSiteRecord, string>? _readNoticeBoard;
     private readonly Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? _evaluateGateScrutiny;
+    private readonly DaggerfallWordSpread? _wordSpread;
+    private readonly DaggerfallCourierDispatches? _courierDispatches;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -145,7 +147,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, bool, bool, DaggerfallFavourResult>? curryFavour = null,
         IDaggerfallWorldConditionSource? worldConditions = null,
         Func<DaggerfallSiteRecord, string>? readNoticeBoard = null,
-        Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? evaluateGateScrutiny = null)
+        Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? evaluateGateScrutiny = null,
+        DaggerfallWordSpread? wordSpread = null,
+        DaggerfallCourierDispatches? courierDispatches = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
@@ -159,6 +163,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _worldConditions = worldConditions;
         _readNoticeBoard = readNoticeBoard;
         _evaluateGateScrutiny = evaluateGateScrutiny;
+        _wordSpread = wordSpread;
+        _courierDispatches = courierDispatches;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -417,6 +423,34 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallDialogueTopic topic, string? topicTarget, ulong? amount, string? key)
     {
         TalkSession session = _current!;
+        if (topic is DaggerfallDialogueTopic.DispatchAccept or DaggerfallDialogueTopic.DispatchBuy
+            or DaggerfallDialogueTopic.DispatchIntercept or DaggerfallDialogueTopic.DispatchTurnIn)
+        {
+            if (_courierDispatches is null || string.IsNullOrWhiteSpace(topicTarget))
+                return Reject("That dispatch is no longer available.");
+            long nowMinute = _currentCalendarMinute();
+            int nowDay = checked((int)_calendar().DayNumber);
+            DaggerfallDispatchActionResult result = topic switch
+            {
+                DaggerfallDialogueTopic.DispatchAccept => _courierDispatches.AcceptDelivery(topicTarget, nowMinute),
+                DaggerfallDialogueTopic.DispatchBuy => _courierDispatches.BuyDispatch(topicTarget, nowMinute, nowDay),
+                DaggerfallDialogueTopic.DispatchIntercept => _courierDispatches.InterceptDispatch(topicTarget, nowMinute, nowDay),
+                DaggerfallDialogueTopic.DispatchTurnIn => _courierDispatches.TurnInDelivery(topicTarget, site, nowMinute, nowDay),
+                _ => new(false, "That dispatch action is not supported."),
+            };
+            session.Question = topic switch
+            {
+                DaggerfallDialogueTopic.DispatchAccept => "I can carry that sealed dispatch for you.",
+                DaggerfallDialogueTopic.DispatchBuy => "What is worth paying to see inside that pouch?",
+                DaggerfallDialogueTopic.DispatchIntercept => "Hand over the sealed dispatch — now.",
+                _ => "I have a sealed dispatch to deliver here.",
+            };
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
         if (topic is DaggerfallDialogueTopic.HireCompanion or DaggerfallDialogueTopic.HireDriver or DaggerfallDialogueTopic.DismissParty)
         {
             if (_partyHireService is null)
@@ -966,10 +1000,20 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         int standing = _social.FactionReputation(faction.Id);
 
         // 1. Shared guild membership camaraderie (walking sub-faction lineage up to concrete guild root).
+        // Rank recognition requires word of the player's rank to have reached this site (respecting instant bubble & courier spread).
         if (TryResolveConcreteGuild(faction.Id, out Guilds.DaggerfallConcreteGuildDefinition? guild)
             && guild is not null
-            && _social.GuildEligibility(guild.FactionId).IsMember)
+            && _social.GuildEligibility(guild.FactionId) is { IsMember: true } eligibility)
         {
+            if (eligibility.Rank > 0
+                && (_wordSpread is null || site is null
+                    || _wordSpread.IsGuildRankKnownAt(guild.FactionId, eligibility.Rank, site, _currentCalendarMinute(), checked((int)_calendar().DayNumber))))
+            {
+                string? rankTitle = Guilds.DaggerfallGuildRankTitles.Title(
+                    guild.FactionId, eligibility.Rank, _playerIdentity().Gender == DaggerfallCharacterGender.Female);
+                if (!string.IsNullOrWhiteSpace(rankTitle))
+                    return $"Well met, {rankTitle} of {guild.DisplayName}.";
+            }
             return $"Well met, fellow member of {guild.DisplayName}.";
         }
 
@@ -978,9 +1022,16 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             return $"{faction.Name} keeps a wary eye on friends of {enemyDef.Name}.";
 
         // 3. Strong standing or distrust with a non-generic faction (guild, knightly order, temple, noble court, crown).
+        // Unarrived standing wavefronts are subtracted so distant towns don't react before couriers bring word.
         if (!isRegionalPeople)
         {
-            int effectiveStanding = guild is not null ? _social.FactionReputation(guild.FactionId) : standing;
+            int effectiveFactionId = guild?.FactionId ?? faction.Id;
+            int effectiveStanding = _social.FactionReputation(effectiveFactionId);
+            if (_wordSpread is not null && site is not null)
+            {
+                effectiveStanding -= _wordSpread.UnarrivedFactionStandingDelta(
+                    effectiveFactionId, site, _currentCalendarMinute(), checked((int)_calendar().DayNumber));
+            }
             string displayFaction = guild?.DisplayName ?? faction.Name;
             if (effectiveStanding >= 20)
                 return $"Your name stands high with {displayFaction}.";
@@ -1092,9 +1143,15 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             if (TryFindRivalMemberFaction(faction, out DaggerfallFactionDefinition? enemyDef) && enemyDef is not null)
                 return $"Keep moving — {faction.Name} has no love for {enemyDef.Name}.";
 
-            int standing = TryResolveConcreteGuild(primaryFactionId, out Guilds.DaggerfallConcreteGuildDefinition? guild) && guild is not null
-                ? _social.FactionReputation(guild.FactionId)
-                : _social.FactionReputation(primaryFactionId);
+            int standingFactionId = TryResolveConcreteGuild(primaryFactionId, out Guilds.DaggerfallConcreteGuildDefinition? guild) && guild is not null
+                ? guild.FactionId
+                : primaryFactionId;
+            int standing = _social.FactionReputation(standingFactionId);
+            if (_wordSpread is not null && _activeSite() is { } barkSite)
+            {
+                standing -= _wordSpread.UnarrivedFactionStandingDelta(
+                    standingFactionId, barkSite, _currentCalendarMinute(), checked((int)_calendar().DayNumber));
+            }
             string displayFaction = guild?.DisplayName ?? faction.Name;
             if (standing <= -10)
                 return $"{displayFaction} remembers your slights — best walk on.";
@@ -1139,15 +1196,23 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
     private List<string> BuildConditionNewsLines(DaggerfallNpc npc, DaggerfallSiteRecord site)
     {
-        if (_worldConditions is null)
-            return [];
         int day = checked((int)_calendar().DayNumber);
+        List<string> lines = [];
+        if (_wordSpread is not null)
+        {
+            foreach (DaggerfallWordWavefrontSave wf in _wordSpread.ArrivedNewsAt(site, _currentCalendarMinute(), day))
+            {
+                if (!string.IsNullOrWhiteSpace(wf.Body))
+                    lines.Add(wf.Body);
+            }
+        }
+        if (_worldConditions is null)
+            return lines;
         IReadOnlyList<DaggerfallWorldConditionToken> active = _worldConditions.ActiveForRegion(site.Id.Region, day);
         if (active.Count == 0)
-            return [];
+            return lines;
 
         string regionName = _definitions.BuildingNames.RegionName(site.Id.Region);
-        List<string> lines = [];
         foreach (DaggerfallWorldConditionToken token in active)
         {
             string? sourceName = token.SourceFactionId is int sf && sf > 0
@@ -1223,6 +1288,31 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_directionDirectory is not null)
             topics.AddRange(_directionDirectory().Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Places }));
         topics.AddRange(_questTopics(npc.DurableId).Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Quests }));
+        if (_courierDispatches is not null)
+        {
+            if (_courierDispatches.TryGetForCourier(npc.DurableId) is { } carried)
+            {
+                topics.Add(new($"dispatch:deliver:{carried.DispatchId}",
+                    $"Offer to deliver the dispatch ({carried.DeliveryRewardGold}g)",
+                    Group: DaggerfallDialogueTopicGroups.Quests));
+                if (!carried.Revealed)
+                {
+                    topics.Add(new($"dispatch:buy:{carried.DispatchId}",
+                        $"Bribe courier to inspect dispatch ({carried.BribePriceGold}g)",
+                        Group: DaggerfallDialogueTopicGroups.Quests));
+                }
+                topics.Add(new($"dispatch:intercept:{carried.DispatchId}",
+                    "Seize the sealed dispatch",
+                    Group: DaggerfallDialogueTopicGroups.Quests));
+            }
+            if (site is not null && OffersNoticeBoardTopic(npc)
+                && _courierDispatches.TryGetPlayerCarriedFor(site) is { } deliverable)
+            {
+                topics.Add(new($"dispatch:turn-in:{deliverable.DispatchId}",
+                    $"Deliver sealed dispatch ({deliverable.Summary})",
+                    Group: DaggerfallDialogueTopicGroups.Quests));
+            }
+        }
         if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Donate))
             topics.Add(new("donate", "Donate gold"));
         if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Cure))
@@ -1340,6 +1430,30 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             // owner both use the same prefix, and stripping it here made a valid UI directory
             // option fail to resolve while the generic directions topic still worked.
             target = dynamicDirection;
+            return target.Length > 0;
+        }
+        if (value is { Length: > 17 } dynamicDeliver && dynamicDeliver.StartsWith("dispatch:deliver:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.DispatchAccept;
+            target = dynamicDeliver["dispatch:deliver:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 13 } dynamicBuy && dynamicBuy.StartsWith("dispatch:buy:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.DispatchBuy;
+            target = dynamicBuy["dispatch:buy:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 19 } dynamicIntercept && dynamicIntercept.StartsWith("dispatch:intercept:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.DispatchIntercept;
+            target = dynamicIntercept["dispatch:intercept:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 17 } dynamicTurnIn && dynamicTurnIn.StartsWith("dispatch:turn-in:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.DispatchTurnIn;
+            target = dynamicTurnIn["dispatch:turn-in:".Length..];
             return target.Length > 0;
         }
         if (value is { Length: > 11 } dynamicQuest && (dynamicQuest.StartsWith("quest-info:", StringComparison.Ordinal)

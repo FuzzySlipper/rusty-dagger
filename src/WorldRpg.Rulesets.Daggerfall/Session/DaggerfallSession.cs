@@ -870,6 +870,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>Sparse world-condition seam (authored/stubbed tokens now; B2 weekly board game later).</summary>
     internal DaggerfallWorldConditions WorldConditions { get; } = null!;
 
+    /// <summary>Elapsed-time road-distance news and standing spread (instant within bubble, courier-gated outside).</summary>
+    internal DaggerfallWordSpread WordSpread { get; } = null!;
+
+    /// <summary>Sealed board-game courier dispatches that the player can deliver, buy, or intercept.</summary>
+    internal DaggerfallCourierDispatches CourierDispatches { get; } = null!;
+
     /// <summary>Gate, watch, service, and scarcity scrutiny policy driven by standing and active world conditions.</summary>
     internal DaggerfallScrutinyPolicy Scrutiny { get; } = null!;
 

@@ -86,6 +86,12 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Sparse authored/stubbed world-condition tokens driving visible political surfaces; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallWorldConditionsSave WorldConditions { get; init; } = DaggerfallWorldConditionsSave.Empty;
+    /// <summary>Sparse elapsed-time news and standing wavefronts; empty when untouched.</summary>
+    [JsonRequired]
+    public DaggerfallWordSpreadSave WordSpread { get; init; } = DaggerfallWordSpreadSave.Empty;
+    /// <summary>Sparse sealed couriers carrying pending board-game actions or warrants; empty when untouched.</summary>
+    [JsonRequired]
+    public DaggerfallCourierDispatchesSave CourierDispatches { get; init; } = DaggerfallCourierDispatchesSave.Empty;
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];
@@ -1154,6 +1160,10 @@ internal sealed record DaggerfallSavePayload(
         OfficeLedger.Validate();
         ArgumentNullException.ThrowIfNull(WorldConditions);
         WorldConditions.Validate();
+        ArgumentNullException.ThrowIfNull(WordSpread);
+        WordSpread.Validate();
+        ArgumentNullException.ThrowIfNull(CourierDispatches);
+        CourierDispatches.Validate();
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();
         ArgumentNullException.ThrowIfNull(Doors);
