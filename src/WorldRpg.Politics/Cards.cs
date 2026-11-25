@@ -199,8 +199,8 @@ public sealed record Card(
         {
             switch (effect.Kind)
             {
-                case CardEffectKind.Influence when effect.Amount > 0 && board.PiecesPlaced(seat) >= Board.InfluencePieces:
-                case CardEffectKind.ChallengeOffice when board.PiecesPlaced(seat) >= Board.InfluencePieces:
+                case CardEffectKind.Influence when effect.Amount > 0 && board.PiecesLeft(seat) == 0:
+                case CardEffectKind.ChallengeOffice when board.PiecesLeft(seat) == 0:
                     return false;
                 case CardEffectKind.Annex:
                     if (seat.Kind != SeatKind.Crown) return false;
@@ -249,9 +249,7 @@ public sealed record Card(
                     break;
                 case CardEffectKind.RivalInfluence: board.AdjustInfluence(regions[0], board.Seat(targets[1]), effect.Amount); break;
                 case CardEffectKind.MoveInfluence:
-                    int moved = Math.Min(effect.Amount, Math.Min(regions[0].InfluenceOf(seat.Id), Board.InfluenceLimit - regions[1].InfluenceOf(seat.Id)));
-                    board.AdjustInfluence(regions[1], seat, moved);
-                    board.AdjustInfluence(regions[0], seat, -moved);
+                    board.MoveInfluence(regions[0], regions[1], seat, effect.Amount);
                     break;
                 case CardEffectKind.ChallengeOffice: Challenge(board, seat, regions[0], effect.Office!.Value, effect.Amount); break;
                 case CardEffectKind.Relation:
@@ -302,7 +300,7 @@ public sealed record Card(
     private static void Challenge(Board board, Seat seat, Region region, Office office, int strength)
     {
         string? holder = region.Offices.GetValueOrDefault(office);
-        if (holder == seat.Id || (holder is not null && board.Footholds(board.Seat(holder)) == 1)) return;
+        if (holder == seat.Id || board.PiecesLeft(seat) == 0 || (holder is not null && board.Footholds(board.Seat(holder)) == 1)) return;
         int defence = 1 + (holder is null ? 0 : region.InfluenceOf(holder)) + (region.Order >= WatchfulOrder ? 1 : 0);
         if (region.InfluenceOf(seat.Id) + strength <= defence) return;
         board.SetOffice(region, office, seat);

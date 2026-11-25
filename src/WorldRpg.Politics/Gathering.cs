@@ -12,9 +12,8 @@ public static class Gathering
 
     public static void Gather(Board board, Seat seat)
     {
-        Card[] hand = [.. board.Deck(seat).Hand];
         Card[] saving = Saving(board, seat);
-        foreach (Card card in hand.Except(saving)) board.Discard(seat, card);
+        foreach (Card card in board.Deck(seat).Hand.Where(card => !saving.Contains(card)).ToArray()) board.Discard(seat, card);
         board.AdjustResource(seat, Lacking(seat, saving), 1);
     }
 

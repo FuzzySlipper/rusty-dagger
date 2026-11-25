@@ -223,19 +223,34 @@ public sealed class Board
     }
 
     /// <summary>
-    /// Adds or removes <paramref name="seat"/>'s influence pieces in <paramref name="region"/>. A removal never takes a
-    /// seat's last foothold: a body at the table is never driven off the board, so it can always act again.
+    /// Adds or removes <paramref name="seat"/>'s influence pieces in <paramref name="region"/>. A placement takes no
+    /// more pieces than the seat has left in its supply. A removal never takes a seat's last foothold: a body at the
+    /// table is never driven off the board, so it can always act again.
     /// </summary>
     public void AdjustInfluence(Region region, Seat seat, int delta)
     {
         int before = region.InfluenceOf(seat.Id);
         int after = Math.Clamp(before + delta, 0, InfluenceLimit);
+        if (after > before) after = Math.Min(after, before + PiecesLeft(seat));
         if (after < before) after = Math.Max(after, before - (Footholds(seat) - 1));
-        if (after == before) return;
-        SetInfluence(region, seat.Id, after);
-        Undo(() => SetInfluence(region, seat.Id, before));
-        Record(region.Id, $"influence:{seat.Id}", before, after);
+        ChangeInfluence(region, seat, before, after);
     }
+
+    /// <summary>
+    /// Moves up to <paramref name="count"/> of <paramref name="seat"/>'s pieces from <paramref name="from"/> to
+    /// <paramref name="to"/>, as many as the one holds and the other has room for. A move spends no supply and keeps
+    /// the seat's footholds.
+    /// </summary>
+    public void MoveInfluence(Region from, Region to, Seat seat, int count)
+    {
+        int moved = Math.Min(count, Math.Min(from.InfluenceOf(seat.Id), InfluenceLimit - to.InfluenceOf(seat.Id)));
+        if (moved <= 0) return;
+        ChangeInfluence(from, seat, from.InfluenceOf(seat.Id), from.InfluenceOf(seat.Id) - moved);
+        ChangeInfluence(to, seat, to.InfluenceOf(seat.Id), to.InfluenceOf(seat.Id) + moved);
+    }
+
+    /// <summary>How many pieces <paramref name="seat"/> has left in its supply.</summary>
+    public int PiecesLeft(Seat seat) => InfluencePieces - pieces[seat.Id];
 
     public void SetAllegiance(Region region, Seat? seat)
     {
@@ -290,6 +305,14 @@ public sealed class Board
         relations[pair] = after;
         Undo(() => relations[pair] = before);
         Record(pair.Item1, $"relation:{pair.Item2}", before, after);
+    }
+
+    private void ChangeInfluence(Region region, Seat seat, int before, int after)
+    {
+        if (after == before) return;
+        SetInfluence(region, seat.Id, after);
+        Undo(() => SetInfluence(region, seat.Id, before));
+        Record(region.Id, $"influence:{seat.Id}", before, after);
     }
 
     private void SetInfluence(Region region, string seat, int count)

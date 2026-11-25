@@ -84,6 +84,17 @@ public sealed class BoardSetupTests
     }
 
     [Fact]
+    public void A_seat_cannot_start_with_more_pieces_than_its_supply()
+    {
+        Dictionary<Office, string> all = Enum.GetValues<Office>().ToDictionary(office => office, _ => "west");
+        BoardSetup crowded = TestBoards.TwoCrowns(marchInfluence: new Dictionary<string, int> { ["west"] = 3 }, marchOffices: all);
+        crowded = crowded with { Regions = [crowded.Regions[0] with { Offices = all }, crowded.Regions[1], crowded.Regions[2]] };
+
+        // Two pieces and four offices in the capital, three pieces and four offices in the march.
+        Assert.Contains("seat 'west' starts with 13 pieces, more than its supply of 10", crowded.Problems());
+    }
+
+    [Fact]
     public void A_board_file_with_a_missing_or_unknown_field_is_refused_rather_than_defaulted()
     {
         string directory = Directory.CreateTempSubdirectory("politics-").FullName;

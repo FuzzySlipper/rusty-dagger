@@ -100,6 +100,56 @@ public sealed class CardTests
     }
 
     [Fact]
+    public void A_placement_of_several_pieces_takes_only_what_is_left_in_the_supply()
+    {
+        Board board = Board.Create(BoardSetup.Canon(), CardSet.Canon());
+        Seat guild = board.Seat("mages-guild");
+        FillSupply(board, guild, leave: 1);
+
+        Assert.True(TestBoards.Card("plant-cell").Play(board, guild, ["glenpoint"]));
+
+        Assert.Equal(1, board.Region("glenpoint").InfluenceOf("mages-guild"));
+        Assert.Equal(Board.InfluencePieces, board.PiecesPlaced(guild));
+    }
+
+    [Fact]
+    public void A_card_that_places_a_piece_and_takes_an_office_spends_its_supply_once()
+    {
+        Board board = Board.Create(BoardSetup.Canon(), CardSet.Canon());
+        Seat guild = board.Seat("mages-guild");
+        FillSupply(board, guild, leave: 1);
+
+        TestBoards.Card("cell-and-watch").Play(board, guild, ["glenpoint"]);
+
+        // The last piece went to influence, so the office stays with its local holders.
+        Assert.Equal(1, board.Region("glenpoint").InfluenceOf("mages-guild"));
+        Assert.False(board.Region("glenpoint").Offices.ContainsKey(Office.Watch));
+        Assert.Equal(Board.InfluencePieces, board.PiecesPlaced(guild));
+    }
+
+    [Fact]
+    public void A_seat_with_its_whole_supply_on_the_board_can_still_move_its_pieces()
+    {
+        Board board = Board.Create(BoardSetup.Canon(), CardSet.Canon());
+        Seat guild = board.Seat("mages-guild");
+        FillSupply(board, guild, leave: 0);
+        int before = board.Region("daggerfall").InfluenceOf("mages-guild");
+
+        Assert.True(TestBoards.Card("reassign").Play(board, guild, ["daggerfall", "glenpoint"]));
+
+        Assert.Equal((before - 1, 1), (board.Region("daggerfall").InfluenceOf("mages-guild"), board.Region("glenpoint").InfluenceOf("mages-guild")));
+        Assert.Equal(Board.InfluencePieces, board.PiecesPlaced(guild));
+    }
+
+    /// <summary>Places the guild's pieces in the great capitals and Betony until only <paramref name="leave"/> remain.</summary>
+    private static void FillSupply(Board board, Seat guild, int leave)
+    {
+        foreach (string region in new[] { "daggerfall", "wayrest", "sentinel", "betony" })
+            board.AdjustInfluence(board.Region(region), guild, Math.Min(Board.InfluenceLimit, board.PiecesLeft(guild) - leave));
+        Assert.Equal(leave, board.PiecesLeft(guild));
+    }
+
+    [Fact]
     public void Annexing_needs_no_control_left_and_an_influence_lead_of_at_least_two()
     {
         Card annex = TestBoards.Card("annex");

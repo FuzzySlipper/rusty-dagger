@@ -59,6 +59,19 @@ public sealed class DeckTests
     }
 
     [Fact]
+    public void Gathering_sets_aside_every_copy_of_a_card_it_passed_over_and_keeps_every_copy_it_saves_for()
+    {
+        Board board = TestBoards.Create(TestBoards.TwoCrowns().WithGuild());
+        Seat guild = board.Seat("guild");
+        board.Hold("guild", "extort", "guild-secret", "extort", "guild-secret");
+
+        Gathering.Gather(board, guild);
+
+        Assert.Equal(["guild-secret", "guild-secret"], board.Deck(guild).Hand.Select(card => card.Id));
+        Assert.Equal(["extort", "extort"], board.Deck(guild).Discard.Select(card => card.Id));
+    }
+
+    [Fact]
     public void Gathering_with_nothing_to_save_for_adds_to_the_scarcest_resource_and_sets_aside_dead_cards()
     {
         Board board = TestBoards.Create(TestBoards.TwoCrowns().WithGuild());

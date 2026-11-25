@@ -85,6 +85,11 @@ public sealed record BoardSetup(
         }
         foreach (SeatSetup seat in Seats)
         {
+            int placed = Regions.Sum(region => region.Influence.GetValueOrDefault(seat.Id) + (region.Offices ?? new Dictionary<Office, string>()).Values.Count(holder => holder == seat.Id));
+            if (placed > Board.InfluencePieces) problems.Add($"seat '{seat.Id}' starts with {placed} pieces, more than its supply of {Board.InfluencePieces}");
+        }
+        foreach (SeatSetup seat in Seats)
+        {
             if (seat.Kind == SeatKind.Power)
             {
                 if (seat.Home is not null) problems.Add($"seat '{seat.Id}' is a power and holds no capital, but names home '{seat.Home}'");
