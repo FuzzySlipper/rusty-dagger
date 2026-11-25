@@ -11,6 +11,7 @@ export type Route =
   | { page: 'search'; term: string }
   | { page: 'cast'; id?: string }
   | { page: 'spawners'; id?: string }
+  | { page: 'barks' }
   | { page: 'blocks'; query: Record<string, string> }
   | { page: 'world-blocks'; query: Record<string, string> }
   | { page: 'world-block'; key: string }
@@ -27,6 +28,7 @@ export const stageUrl = (id: string, stage: string): string => `#review/${encode
 export const searchUrl = (term: string): string => `#search/${encodeKey(term)}`;
 export const castUrl = (id?: string): string => (id ? `#cast/${encodeKey(id)}` : '#cast');
 export const spawnerUrl = (id?: string): string => (id ? `#spawners/${encodeKey(id)}` : '#spawners');
+export const barksUrl = (): string => '#barks';
 export const blocksUrl = (filters: Record<string, string | number | undefined> = {}): string => {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(filters)) {
@@ -78,6 +80,7 @@ export function parseHash(hash: string): Route {
   if (page === 'search' && id) return { page: 'search', term: id };
   if (page === 'cast') return id ? { page: 'cast', id } : { page: 'cast' };
   if (page === 'spawners') return id ? { page: 'spawners', id } : { page: 'spawners' };
+  if (page === 'barks') return { page: 'barks' };
   if (page === 'blocks') {
     const query: Record<string, string> = {};
     if (queryPart) {
@@ -144,6 +147,8 @@ export function activeSection(
       return 'cast';
     case 'spawners':
       return 'spawners';
+    case 'barks':
+      return 'barks';
     case 'blocks':
       return 'blocks';
     case 'world-blocks':

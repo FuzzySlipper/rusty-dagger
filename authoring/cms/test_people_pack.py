@@ -322,6 +322,59 @@ class PeoplePackTests(TestCase):
         self.assertEqual(status, 400)
         self.assertTrue(err["issues"])
 
+        # HTTP round-trip for spawner climatePools (valid edit + validation error feedback).
+        status, sp_ok = call("PUT", "/api/people-pack/spawners/banker", {
+            "climatePools": {"Desert": [{"archive": 357, "record": 1, "gender": "Male", "weight": 8}]},
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(sp_ok["climatePools"][0]["climate"], "Desert")
+        status, sp_err = call("PUT", "/api/people-pack/spawners/banker", {
+            "climatePools": {"Volcanic": [{"archive": 357, "record": 1, "gender": "Male", "weight": 8}]},
+        })
+        self.assertEqual(status, 400)
+        self.assertTrue(sp_err["issues"])
+
+        # HTTP round-trip for barks.json (valid edit + validation error feedback).
+        self._write(self.library.people_pack / "barks.json", {
+            "defaultBarks": ["Watch your step, traveler."],
+            "byRole": {},
+            "byArchetype": {},
+            "byRegion": {},
+            "byClimate": {},
+            "referrals": {
+                "defaultIssueTemplates": ["Ask {contact} in {target} and say {speaker} sent you."],
+                "defaultResponseTemplates": ["{speaker} heard '{tag}'."],
+                "contactNames": ["Mara"],
+            },
+        })
+        status, barks_get = call("GET", "/api/people-pack/barks")
+        self.assertEqual(status, 200)
+        self.assertEqual(barks_get["defaultBarks"], ["Watch your step, traveler."])
+
+        status, barks_put = call("PUT", "/api/people-pack/barks", {
+            "defaultBarks": ["Watch your step, traveler.", "Fair roads ahead."],
+            "byClimate": {"Desert": ["Drink before you're thirsty."]},
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(len(barks_put["defaultBarks"]), 2)
+        self.assertEqual(barks_put["byClimate"]["Desert"], ["Drink before you're thirsty."])
+
+        status, barks_err = call("PUT", "/api/people-pack/barks", {
+            "referrals": {
+                "defaultIssueTemplates": ["Broken template without placeholders."],
+                "defaultResponseTemplates": ["{speaker} heard '{tag}'."],
+                "contactNames": ["Mara"],
+            },
+        })
+        self.assertEqual(status, 400)
+        self.assertTrue(barks_err["issues"])
+
+        # Built CMS frontend bundle exposes both the #barks editor and climatePools editing controls.
+        app_bundle = (REPO / "authoring/cms/web/dist/app.js").read_text(encoding="utf-8")
+        self.assertIn("/api/people-pack/barks", app_bundle)
+        self.assertIn("Climate pool overrides", app_bundle)
+        self.assertIn("Barks & referrals", app_bundle)
+
         # CLI smoke check.
         cli_out = subprocess.check_output(
             [sys.executable, str(REPO / "authoring/cms/people_cli.py"), "--url", origin, "validate"], text=True

@@ -15,6 +15,7 @@ import { StageReviewPage } from './pages/StageReviewPage';
 import { SearchPage } from './pages/SearchPage';
 import { CastPage } from './pages/CastPage';
 import { SpawnersPage } from './pages/SpawnersPage';
+import { BarksPage } from './pages/BarksPage';
 import { BlockSlotsPage } from './pages/BlockSlotsPage';
 import { WorldBlockDetailPage, WorldBlocksListPage } from './pages/WorldBlocksPage';
 import { LocationDetailPage, LocationsListPage } from './pages/LocationsPage';
@@ -52,6 +53,8 @@ function renderRoute(route: Route) {
       return <CastPage id={route.id} />;
     case 'spawners':
       return <SpawnersPage id={route.id} />;
+    case 'barks':
+      return <BarksPage />;
     case 'blocks':
       return <BlockSlotsPage initialQuery={route.query} />;
     case 'world-blocks':
@@ -170,6 +173,9 @@ export function App() {
           </a>
           <a href="#spawners" data-page="spawners" aria-current={currentSection === 'spawners' ? 'page' : undefined}>
             Typed spawners
+          </a>
+          <a href="#barks" data-page="barks" aria-current={currentSection === 'barks' ? 'page' : undefined}>
+            Barks &amp; referrals
           </a>
           <a href="#blocks" data-page="blocks" aria-current={currentSection === 'blocks' ? 'page' : undefined}>
             Block slots

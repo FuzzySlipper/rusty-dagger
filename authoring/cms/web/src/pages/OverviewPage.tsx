@@ -1,5 +1,5 @@
 import { ASSET_LABELS, ASSET_PAGES } from '../types';
-import { blocksUrl, castUrl, conceptsUrl, locationsUrl, pipelineUrl, spawnerUrl, stageUrl, worldBlocksUrl } from '../router';
+import { barksUrl, blocksUrl, castUrl, conceptsUrl, locationsUrl, pipelineUrl, spawnerUrl, stageUrl, worldBlocksUrl } from '../router';
 import { useApp } from '../state';
 import { ReviewBadge } from '../components/ReviewControls';
 import { Chip, Empty, PageHeading } from '../components/ui';
@@ -53,6 +53,10 @@ export function OverviewPage() {
             <a class="collection" href={spawnerUrl()}>
               <strong>{catalog.peoplePack.spawnerCount}</strong>
               <span>Typed spawners</span>
+            </a>
+            <a class="collection" href={barksUrl()}>
+              <strong>barks.json</strong>
+              <span>Barks &amp; referrals</span>
             </a>
             <a class="collection" href={blocksUrl()}>
               <strong>{catalog.peoplePack.slotCount.toLocaleString()}</strong>

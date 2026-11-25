@@ -14,7 +14,7 @@ import { VisualPickerModal } from '../components/VisualPickerModal';
 import { Breadcrumb, Chip, Empty, PageHeading, SpritePreview } from '../components/ui';
 import { useSessionState } from '../hooks/useSessionState';
 
-type SpawnerAuditFilter = '' | 'single-visual' | 'has-regional' | 'no-regional';
+type SpawnerAuditFilter = '' | 'single-visual' | 'has-regional' | 'no-regional' | 'has-climate';
 
 interface SpawnerFilters {
   query: string;
@@ -65,6 +65,7 @@ function SpawnerBrowserView() {
       if (auditFilter === 'single-visual' && sp.defaultPool.length > 1) return false;
       if (auditFilter === 'has-regional' && sp.regionalPools.length === 0) return false;
       if (auditFilter === 'no-regional' && sp.regionalPools.length > 0) return false;
+      if (auditFilter === 'has-climate' && (sp.climatePools?.length ?? 0) === 0) return false;
       if (!terms.length) return true;
       const hay = [
         sp.id,
@@ -73,6 +74,7 @@ function SpawnerBrowserView() {
         sp.interaction,
         ...sp.defaultPool.map(e => `${e.archive}-${e.record} ${e.art.npcId ?? ''} ${e.art.npcName ?? ''}`),
         ...sp.regionalPools.map(r => `${r.regionKey} ${r.regionName}`),
+        ...(sp.climatePools ?? []).map(c => c.climate),
       ]
         .join(' ')
         .toLowerCase();
@@ -122,6 +124,14 @@ function SpawnerBrowserView() {
           <strong>{data.counts.spawnersWithRegionalPools}</strong>
           <span>With regional overrides</span>
         </button>
+        <button
+          type="button"
+          class={`stat-pill${auditFilter === 'has-climate' ? ' active' : ''}`}
+          onClick={() => patchFilters({ auditFilter: auditFilter === 'has-climate' ? '' : 'has-climate' })}
+        >
+          <strong>{data.counts.spawnersWithClimatePools}</strong>
+          <span>With climate overrides</span>
+        </button>
       </div>
 
       <div class="filters">
@@ -159,6 +169,7 @@ function SpawnerBrowserView() {
             <option value="">All spawners</option>
             <option value="single-visual">Only 1 default visual</option>
             <option value="has-regional">Has regional pools</option>
+            <option value="has-climate">Has climate pools</option>
             <option value="no-regional">No regional overrides yet</option>
           </select>
         </label>
@@ -226,7 +237,8 @@ function SpawnerBrowserView() {
                 {sp.regionalPools.length} regional {sp.regionalPools.length === 1 ? 'override' : 'overrides'}
                 {sp.regionalPools.length
                   ? ` (${sp.regionalPools.map(r => r.regionName).join(', ')})`
-                  : ''}
+                  : ''}{' '}
+                · {sp.climatePools?.length ?? 0} climate {(sp.climatePools?.length ?? 0) === 1 ? 'override' : 'overrides'}
               </p>
             </article>
           ))}
@@ -248,12 +260,14 @@ interface PoolEntryDraft {
 
 interface SpawnerDraft {
   role: string;
+  archetype?: string | null;
   interaction: string;
   harm: string;
   deriveRegionalFaction: boolean;
   visualMode: 'pool' | 'classic-slot';
   defaultPool: PoolEntryDraft[];
   regionalPools: Record<string, PoolEntryDraft[]>;
+  climatePools: Record<string, PoolEntryDraft[]>;
 }
 
 function draftFromSpawner(sp: SpawnerDefinition): SpawnerDraft {
@@ -267,8 +281,19 @@ function draftFromSpawner(sp: SpawnerDefinition): SpawnerDraft {
       art: e.art,
     }));
   }
+  const climatePools: Record<string, PoolEntryDraft[]> = {};
+  for (const group of sp.climatePools ?? []) {
+    climatePools[group.climate] = group.entries.map(e => ({
+      archive: e.archive,
+      record: e.record,
+      gender: e.gender,
+      weight: e.weight,
+      art: e.art,
+    }));
+  }
   return {
     role: sp.role,
+    archetype: sp.archetype ?? null,
     interaction: sp.interaction,
     harm: sp.harm,
     deriveRegionalFaction: sp.deriveRegionalFaction,
@@ -281,6 +306,7 @@ function draftFromSpawner(sp: SpawnerDefinition): SpawnerDraft {
       art: e.art,
     })),
     regionalPools,
+    climatePools,
   };
 }
 
@@ -291,20 +317,32 @@ function serializeSpawnerDraft(draft: SpawnerDraft) {
   for (const [k, v] of Object.entries(draft.regionalPools)) {
     regional[k] = strip(v);
   }
+  const climate: Record<string, ReturnType<typeof strip>> = {};
+  for (const [k, v] of Object.entries(draft.climatePools)) {
+    climate[k] = strip(v);
+  }
   return {
     role: draft.role,
+    ...(draft.archetype ? { archetype: draft.archetype } : {}),
     interaction: draft.interaction,
     harm: draft.harm,
     deriveRegionalFaction: draft.deriveRegionalFaction,
     visualMode: draft.visualMode,
     defaultPool: strip(draft.defaultPool),
     regionalPools: regional,
+    climatePools: climate,
   };
 }
 
+type PoolScopeTarget =
+  | { scope: 'default' }
+  | { scope: 'regional'; key: string }
+  | { scope: 'climate'; key: string };
+
 type PickerTarget =
   | { scope: 'default'; index: number | null }
-  | { scope: 'regional'; regionKey: string; index: number | null };
+  | { scope: 'regional'; regionKey: string; index: number | null }
+  | { scope: 'climate'; climateKey: string; index: number | null };
 
 function SpawnerDetailView({ id }: { id: string }) {
   const [spawner, setSpawner] = useState<SpawnerDefinition | null>(null);
@@ -318,6 +356,7 @@ function SpawnerDetailView({ id }: { id: string }) {
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [addRegionKey, setAddRegionKey] = useState('17');
+  const [addClimateKey, setAddClimateKey] = useState('Desert');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -384,14 +423,19 @@ function SpawnerDetailView({ id }: { id: string }) {
     }
   }
 
-  function updatePoolEntries(target: 'default' | string, updater: (prev: PoolEntryDraft[]) => PoolEntryDraft[]) {
+  function updatePoolEntries(target: PoolScopeTarget, updater: (prev: PoolEntryDraft[]) => PoolEntryDraft[]) {
     if (!draft) return;
-    if (target === 'default') {
+    if (target.scope === 'default') {
       setDraft({ ...draft, defaultPool: updater(draft.defaultPool) });
+    } else if (target.scope === 'regional') {
+      setDraft({
+        ...draft,
+        regionalPools: { ...draft.regionalPools, [target.key]: updater(draft.regionalPools[target.key] ?? []) },
+      });
     } else {
       setDraft({
         ...draft,
-        regionalPools: { ...draft.regionalPools, [target]: updater(draft.regionalPools[target] ?? []) },
+        climatePools: { ...draft.climatePools, [target.key]: updater(draft.climatePools[target.key] ?? []) },
       });
     }
   }
@@ -403,10 +447,22 @@ function SpawnerDetailView({ id }: { id: string }) {
     setDraft({ ...draft, regionalPools: next });
   }
 
+  function removeClimate(climateKey: string) {
+    if (!draft) return;
+    const next = { ...draft.climatePools };
+    delete next[climateKey];
+    setDraft({ ...draft, climatePools: next });
+  }
+
   function handleVisualPicked(visual: VisualOption) {
     if (!pickerTarget || !draft) return;
-    const poolKey = pickerTarget.scope === 'default' ? 'default' : pickerTarget.regionKey;
-    updatePoolEntries(poolKey, prev => {
+    const poolTarget: PoolScopeTarget =
+      pickerTarget.scope === 'default'
+        ? { scope: 'default' }
+        : pickerTarget.scope === 'regional'
+          ? { scope: 'regional', key: pickerTarget.regionKey }
+          : { scope: 'climate', key: pickerTarget.climateKey };
+    updatePoolEntries(poolTarget, prev => {
       if (pickerTarget.index === null) {
         return [...prev, { archive: visual.archive, record: visual.record, gender: 'Male', weight: 10, art: visual }];
       }
@@ -429,6 +485,18 @@ function SpawnerDetailView({ id }: { id: string }) {
     });
   }
 
+  function addClimatePool() {
+    const key = availableClimates.includes(addClimateKey) ? addClimateKey : availableClimates[0];
+    if (!draft || !key || draft.climatePools[key]) return;
+    const seedEntry = draft.defaultPool[0]
+      ? { ...draft.defaultPool[0], weight: 10 }
+      : { archive: 182, record: 0, gender: 'Male' as const, weight: 10 };
+    setDraft({
+      ...draft,
+      climatePools: { ...draft.climatePools, [key]: [seedEntry] },
+    });
+  }
+
   if (loading && !spawner) return <p>Loading spawner…</p>;
   if (error || !spawner || !draft) {
     return (
@@ -442,13 +510,15 @@ function SpawnerDetailView({ id }: { id: string }) {
 
   const enums = overview?.enums;
   const availableRegions = (enums?.regions ?? []).filter(r => !(r.key in draft.regionalPools));
+  const availableClimates = (enums?.climates ?? []).filter(c => !(c in draft.climatePools));
 
-  function renderPoolGrid(entries: PoolEntryDraft[], poolTarget: 'default' | string) {
+  function renderPoolGrid(entries: PoolEntryDraft[], poolTarget: PoolScopeTarget) {
     const totalWeight = entries.reduce((sum, e) => sum + (e.weight > 0 ? e.weight : 0), 0) || 1;
+    const targetId = poolTarget.scope === 'default' ? 'default' : `${poolTarget.scope}:${poolTarget.key}`;
     return (
       <div class="pool-editor-grid">
         {entries.map((entry, idx) => (
-          <article key={`${poolTarget}-${idx}`} class="pool-entry-card">
+          <article key={`${targetId}-${idx}`} class="pool-entry-card">
             <div class="pool-entry-top">
               <SpritePreview url={entry.art?.classic} alt={`${entry.archive}.${entry.record}`} pixel className="pool-entry-thumb" />
               <div class="pool-entry-head">
@@ -471,9 +541,11 @@ function SpawnerDetailView({ id }: { id: string }) {
                     type="button"
                     onClick={() =>
                       setPickerTarget(
-                        poolTarget === 'default'
+                        poolTarget.scope === 'default'
                           ? { scope: 'default', index: idx }
-                          : { scope: 'regional', regionKey: poolTarget, index: idx },
+                          : poolTarget.scope === 'regional'
+                            ? { scope: 'regional', regionKey: poolTarget.key, index: idx }
+                            : { scope: 'climate', climateKey: poolTarget.key, index: idx },
                       )
                     }
                   >
@@ -618,7 +690,7 @@ function SpawnerDetailView({ id }: { id: string }) {
           </button>
         </div>
         {draft.defaultPool.length ? (
-          renderPoolGrid(draft.defaultPool, 'default')
+          renderPoolGrid(draft.defaultPool, { scope: 'default' })
         ) : (
           <Empty>Default pool is empty (pool mode requires at least 1 entry).</Empty>
         )}
@@ -672,12 +744,66 @@ function SpawnerDetailView({ id }: { id: string }) {
                     </button>
                   </div>
                 </div>
-                {renderPoolGrid(entries, regionKey)}
+                {renderPoolGrid(entries, { scope: 'regional', key: regionKey })}
               </div>
             );
           })
         ) : (
-          <Empty>No regional overrides yet — all regions draw from the default pool.</Empty>
+          <Empty>No regional overrides yet — all regions draw from climate or default pools.</Empty>
+        )}
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Climate pool overrides ({Object.keys(draft.climatePools).length})</h2>
+          {availableClimates.length ? (
+            <div class="actions">
+              <select
+                aria-label="Choose climate to override"
+                value={availableClimates.includes(addClimateKey) ? addClimateKey : availableClimates[0]}
+                onChange={event => setAddClimateKey((event.currentTarget as HTMLSelectElement).value)}
+              >
+                {availableClimates.map(c => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <button type="button" onClick={addClimatePool}>
+                Add climate override
+              </button>
+            </div>
+          ) : null}
+        </div>
+        <p class="muted" style={{ marginBottom: '12px' }}>
+          Used when a site&apos;s region has no explicit regional override, before falling back to{' '}
+          <code>defaultPool</code>.
+        </p>
+
+        {Object.keys(draft.climatePools).length ? (
+          Object.entries(draft.climatePools).map(([climateKey, entries]) => (
+            <div key={climateKey} class="regional-block">
+              <div class="section-heading">
+                <h3>
+                  {climateKey} <code>{climateKey}</code>
+                </h3>
+                <div class="actions">
+                  <button
+                    type="button"
+                    onClick={() => setPickerTarget({ scope: 'climate', climateKey, index: null })}
+                  >
+                    Add visual
+                  </button>
+                  <button type="button" onClick={() => removeClimate(climateKey)}>
+                    Remove climate
+                  </button>
+                </div>
+              </div>
+              {renderPoolGrid(entries, { scope: 'climate', key: climateKey })}
+            </div>
+          ))
+        ) : (
+          <Empty>No climate overrides yet — regions without regional overrides draw from the default pool.</Empty>
         )}
       </section>
 

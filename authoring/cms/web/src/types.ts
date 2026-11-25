@@ -386,15 +386,22 @@ export interface RegionalPoolGroup {
   entries: SpawnerPoolEntry[];
 }
 
+export interface ClimatePoolGroup {
+  climate: string;
+  entries: SpawnerPoolEntry[];
+}
+
 export interface SpawnerDefinition {
   id: string;
   role: string;
+  archetype?: string | null;
   interaction: string;
   harm: string;
   deriveRegionalFaction: boolean;
   visualMode: 'pool' | 'classic-slot';
   defaultPool: SpawnerPoolEntry[];
   regionalPools: RegionalPoolGroup[];
+  climatePools: ClimatePoolGroup[];
   usage: {
     slotCount: number;
     blockCount: number;
@@ -415,6 +422,7 @@ export interface PeoplePackEnums {
   harms: string[];
   visualModes: Array<'pool' | 'classic-slot'>;
   races: string[];
+  climates: string[];
   buildingTypes: Array<{ id: number; name: string }>;
   regions: RegionOption[];
 }
@@ -430,10 +438,31 @@ export interface PeoplePackOverview {
     castSharingVisual: number;
     spawnersSingleVisual: number;
     spawnersWithRegionalPools: number;
+    spawnersWithClimatePools: number;
   };
   enums: PeoplePackEnums;
   cast: CastIndividual[];
   spawners: SpawnerDefinition[];
+}
+
+export interface ReferralTemplatesDocument {
+  defaultIssueTemplates: string[];
+  issueTemplatesByClimate?: Record<string, string[]>;
+  issueTemplatesByRegion?: Record<string, string[]>;
+  defaultResponseTemplates: string[];
+  responseTemplatesByRole?: Record<string, string[]>;
+  contactNames: string[];
+  contactNamesByClimate?: Record<string, string[]>;
+  contactNamesByRegion?: Record<string, string[]>;
+}
+
+export interface BarksDocument {
+  defaultBarks: string[];
+  byRole?: Record<string, string[]>;
+  byArchetype?: Record<string, string[]>;
+  byRegion?: Record<string, string[]>;
+  byClimate?: Record<string, string[]>;
+  referrals: ReferralTemplatesDocument;
 }
 
 export interface BlockSlotsResponse {

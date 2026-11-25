@@ -528,4 +528,91 @@ public sealed class DaggerfallPeopleContentTests
         Assert.Contains((inWayrest.Visual.Archive, inWayrest.Visual.Record), expectedWayrest);
         Assert.Contains((inMountainClimate.Visual.Archive, inMountainClimate.Visual.Record), expectedMountain);
     }
+
+    [Fact]
+    public void Assembled_interior_full_dialogue_npcs_apply_regional_and_climate_spawner_pools_while_preserving_ids_and_services()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+
+        // Find a real RMB block + building index placed in both Daggerfall (region 17) and Sentinel (region 20)
+        // whose authored full-dialogue spawner carries distinct regionalPools for regions 17 and 20.
+        (DaggerfallSiteRecord Site, DaggerfallSiteBlock Block, int BuildingIndex, string SpawnerId)? FindPlacedInterior(
+            int region, string? requiredBlock = null, int? requiredBuildingIndex = null)
+        {
+            foreach (DaggerfallSiteRecord site in definitions.Locations.Records)
+            {
+                if (site.Id.Region != region || site.Exterior is not { Blocks.Count: > 0 } ext) continue;
+                foreach (DaggerfallSiteBlock block in ext.Blocks)
+                {
+                    if (requiredBlock is not null && !StringComparer.OrdinalIgnoreCase.Equals(block.SourceName, requiredBlock))
+                        continue;
+                    if (!definitions.People.RmbInteriors.TryGetValue(block.SourceName, out var buildings))
+                        continue;
+                    foreach ((int buildingIndex, DaggerfallPeopleBuildingSlots building) in buildings)
+                    {
+                        if (requiredBuildingIndex is int reqIdx && buildingIndex != reqIdx) continue;
+                        DaggerfallPeopleSlotDefinition? slot = building.Slots.FirstOrDefault(s =>
+                            s.CastId is null
+                            && s.SpawnerId is { } sid
+                            && string.Equals(s.Interaction, "full-dialogue", StringComparison.Ordinal)
+                            && definitions.People.Spawners.TryGetValue(sid, out var sp)
+                            && sp.RegionalPools.ContainsKey("17")
+                            && sp.RegionalPools.ContainsKey("20"));
+                        if (slot is not null)
+                            return (site, block, buildingIndex, slot.SpawnerId!);
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Pair one real building placed in region 17 (Daggerfall) and another placed in region 20 (Sentinel) using the same spawner.
+        var dfMatch = FindPlacedInterior(17);
+        Assert.NotNull(dfMatch);
+        var snMatch = FindPlacedInterior(20, dfMatch!.Value.Block.SourceName, dfMatch.Value.BuildingIndex)
+            ?? FindPlacedInterior(20);
+        Assert.NotNull(snMatch);
+
+        DaggerfallPeopleSpawnerDefinition dfSpawner = definitions.People.Spawners[dfMatch.Value.SpawnerId];
+        DaggerfallPeopleSpawnerDefinition snSpawner = definitions.People.Spawners[snMatch!.Value.SpawnerId];
+        HashSet<(int Archive, int Record)> daggerfallPool =
+            [.. dfSpawner.RegionalPools["17"].Select(e => (e.Archive, e.Record))];
+        HashSet<(int Archive, int Record)> sentinelPool =
+            [.. snSpawner.RegionalPools["20"].Select(e => (e.Archive, e.Record))];
+
+        DaggerfallSiteProfile dfInterior = Assembled(DaggerfallWorldProfileIds.Interior(
+            dfMatch.Value.Site.Id, new DaggerfallSiteBuildingId(dfMatch.Value.Block.X, dfMatch.Value.Block.Y, dfMatch.Value.BuildingIndex)));
+        DaggerfallSiteProfile snInterior = Assembled(DaggerfallWorldProfileIds.Interior(
+            snMatch.Value.Site.Id, new DaggerfallSiteBuildingId(snMatch.Value.Block.X, snMatch.Value.Block.Y, snMatch.Value.BuildingIndex)));
+
+        DaggerfallStaticNpcPlacement dfNpc = dfInterior.StaticNpcs.First(n => n.SpawnerId == dfMatch.Value.SpawnerId);
+        DaggerfallStaticNpcPlacement snNpc = snInterior.StaticNpcs.First(n => n.SpawnerId == snMatch.Value.SpawnerId);
+
+        // Canonical placement IDs and full-dialogue services remain intact while visuals draw from regional pools.
+        Assert.StartsWith("person/", dfNpc.Id, StringComparison.Ordinal);
+        Assert.StartsWith("person/", snNpc.Id, StringComparison.Ordinal);
+        Assert.Equal(ActorInteractionPolicyKind.FullDialogue, dfNpc.Interaction);
+        Assert.Equal(ActorInteractionPolicyKind.FullDialogue, snNpc.Interaction);
+        Assert.Contains("talk", dfNpc.Services);
+        Assert.Contains("talk", snNpc.Services);
+
+        Assert.Contains((dfNpc.Appearance.BillboardArchive, dfNpc.Appearance.BillboardRecord), daggerfallPool);
+        Assert.Contains((snNpc.Appearance.BillboardArchive, snNpc.Appearance.BillboardRecord), sentinelPool);
+
+        // Also verify a region with no regionalPools override (e.g. region 18 Glenpoint) resolves via climatePools.
+        var climateMatch = FindPlacedInterior(18);
+        Assert.NotNull(climateMatch);
+        DaggerfallSiteRecord climateSite = climateMatch!.Value.Site;
+        string climateName = definitions.Grids.Climate.GetCell(climateSite.MapPixelX + 1, climateSite.MapPixelY).Name;
+        DaggerfallPeopleSpawnerDefinition climateSpawner = definitions.People.Spawners[climateMatch.Value.SpawnerId];
+        Assert.False(climateSpawner.RegionalPools.ContainsKey("18"));
+        HashSet<(int Archive, int Record)> expectedClimatePool =
+            [.. climateSpawner.ClimatePools[climateName].Select(e => (e.Archive, e.Record))];
+
+        DaggerfallSiteProfile climateInterior = Assembled(DaggerfallWorldProfileIds.Interior(
+            climateSite.Id, new DaggerfallSiteBuildingId(climateMatch.Value.Block.X, climateMatch.Value.Block.Y, climateMatch.Value.BuildingIndex)));
+        DaggerfallStaticNpcPlacement climateNpc = climateInterior.StaticNpcs.First(n => n.SpawnerId == climateMatch.Value.SpawnerId);
+        Assert.Contains((climateNpc.Appearance.BillboardArchive, climateNpc.Appearance.BillboardRecord), expectedClimatePool);
+        Assert.Contains("talk", climateNpc.Services);
+    }
 }
