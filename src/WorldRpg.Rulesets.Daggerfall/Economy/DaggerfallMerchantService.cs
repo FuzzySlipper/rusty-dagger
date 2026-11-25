@@ -431,7 +431,8 @@ internal sealed class DaggerfallMerchantService
         DaggerfallServiceQueuedWork? pending = _services.Pending.SingleOrDefault(value => value.Id == requestId);
         if (pending is null) return Refused("RepairUnavailable");
         if (CurrentMinute() < pending.CompletesAtMinute) return Refused("RepairNotReady");
-        if (_services.ProviderAvailable(pending.Provider) != DaggerfallServiceDenial.None) return Refused("ProviderUnavailable");
+        DaggerfallServiceDenial availability = _services.ProviderAvailable(pending.Provider);
+        if (availability != DaggerfallServiceDenial.None) return Refused(availability.ToString());
         DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(order.DurableItemId);
         if (metadata.Owner != DaggerfallItemOwner.RepairCustody(binding.CustodyContainerId)) return Refused("RepairUnavailable");
         _ = _conditions.Repair(order.DurableItemId, metadata.Owner);

@@ -15,6 +15,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Travel;
 internal sealed class DaggerfallOverlandTraffic
 {
     internal const string BandIdPrefix = "traffic:";
+    internal const string ReturnBandSuffix = ":return";
     internal const int MaxActiveTrafficBands = 3;
     internal const long DispatchIntervalSeconds = 6L * DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour;
     internal const double MinimumRouteDistancePixels = 2.0;

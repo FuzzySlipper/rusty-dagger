@@ -35,8 +35,10 @@ internal sealed partial class DaggerfallQuestInstances
     private DaggerfallSocialState? _social;
     private DaggerfallCrimeState? _crime;
     private Func<int?>? _socialRegion;
+    private Action<int>? _admitInvitationGuild;
     internal void BindSocial(DaggerfallSocialState social, DaggerfallCrimeState crime, Func<int?> region)
     { _social = social; _crime = crime; _socialRegion = region; }
+    internal void BindGuildInvitationAdmission(Action<int> admit) => _admitInvitationGuild = admit;
 
     bool IDaggerfallQuestTaskLifecycle.SocialAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation)
     {
@@ -85,6 +87,31 @@ internal sealed partial class DaggerfallQuestInstances
         if (instance.FactionId != 0)
             (_social ?? throw new InvalidOperationException("Quest retirement requires the canonical social owner."))
                 .ChangeFactionReputation(instance.FactionId, instance.Succeeded == true ? 5 : -2, DaggerfallFactionReputationChange.Propagate);
+        if (instance.Succeeded == true && TryResolveInvitationGuildFaction(instance, out int invitedGuild))
+            _admitInvitationGuild?.Invoke(invitedGuild);
         instance.FactionSettled = true;
+    }
+
+    private static bool TryResolveInvitationGuildFaction(DaggerfallQuestRuntimeInstance instance, out int factionId)
+    {
+        if (StringComparer.OrdinalIgnoreCase.Equals(instance.SourceFile, "O0A0AL00.txt")
+            || StringComparer.Ordinal.Equals(instance.InstanceId, "crime-invitation:O0A0AL00"))
+        {
+            factionId = Guilds.DaggerfallConcreteGuildCatalog.ThievesFactionId;
+            return true;
+        }
+        if (StringComparer.OrdinalIgnoreCase.Equals(instance.SourceFile, "L0A01L00.txt")
+            || StringComparer.Ordinal.Equals(instance.InstanceId, "crime-invitation:L0A01L00"))
+        {
+            factionId = Guilds.DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId;
+            return true;
+        }
+        if (instance.InstanceId.StartsWith("crime-invitation:", StringComparison.Ordinal) && instance.FactionId != 0)
+        {
+            factionId = instance.FactionId;
+            return true;
+        }
+        factionId = 0;
+        return false;
     }
 }

@@ -148,6 +148,7 @@ internal sealed class DaggerfallSkillTrainingService
                 DaggerfallServiceDenial.NotMember => "You are not a member of the required guild.",
                 DaggerfallServiceDenial.InsufficientRank => "Your guild rank is too low for this service.",
                 DaggerfallServiceDenial.InsufficientFunds => "You do not have enough gold for training.",
+                DaggerfallServiceDenial.WantedOrBanished => "I do not train wanted outlaws.",
                 DaggerfallServiceDenial.ProviderUnavailable or DaggerfallServiceDenial.SiteChanged
                     or DaggerfallServiceDenial.ServiceUnavailable => "That trainer is no longer available.",
                 _ => "Training was refused.",

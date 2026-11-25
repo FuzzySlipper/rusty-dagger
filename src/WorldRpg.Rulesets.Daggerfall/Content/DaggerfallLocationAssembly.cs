@@ -60,11 +60,16 @@ internal sealed class DaggerfallLocationAssembly
     private readonly Func<DaggerfallProductMedia> _media;
     private readonly Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> _meshes;
     private readonly IReadOnlyDictionary<string, DaggerfallArtModel> _models;
+    private readonly ulong _worldSocialSeed;
+
+    /// <summary>The default <c>WorldSocialSeed</c> this assembly uses when no per-session override is supplied.</summary>
+    internal ulong DefaultWorldSocialSeed => _worldSocialSeed;
 
     /// <param name="models">The art pack's remodels by ARCH3D record id (<see cref="DaggerfallArtReplacements.Models"/>), none without one.</param>
     internal DaggerfallLocationAssembly(DaggerfallDefinitions definitions, DaggerfallWorldBlocks blocks,
         Func<DaggerfallProductMedia> media, Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes,
-        IReadOnlyDictionary<string, DaggerfallArtModel>? models = null)
+        IReadOnlyDictionary<string, DaggerfallArtModel>? models = null,
+        ulong worldSocialSeed = 0UL)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         // Streaming asks whether each location in the exterior window places an exterior on every window change.
@@ -73,6 +78,7 @@ internal sealed class DaggerfallLocationAssembly
         _media = media ?? throw new ArgumentNullException(nameof(media));
         _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
         _models = models ?? new Dictionary<string, DaggerfallArtModel>();
+        _worldSocialSeed = worldSocialSeed;
     }
 
     /// <summary>
@@ -129,7 +135,7 @@ internal sealed class DaggerfallLocationAssembly
     /// Daggerfall Unity swaps a location's record or a block's data while a quest holds the variant. Anything the
     /// publication or the packs lack is named.
     /// </summary>
-    internal DaggerfallSiteProfile Assemble(DaggerfallWorldProfileKey key, string? variant = null)
+    internal DaggerfallSiteProfile Assemble(DaggerfallWorldProfileKey key, string? variant = null, ulong? worldSocialSeed = null)
     {
         if (_definitions.AssembledSites is not { } presentation)
             throw new InvalidOperationException($"Profile '{key.LogicalId}' cannot be assembled: the base payload publishes no assembledSites presentation.");
@@ -150,7 +156,7 @@ internal sealed class DaggerfallLocationAssembly
         }
 
         DaggerfallContentDiagnostics diagnostics = new();
-        Builder builder = new(this, key, record, climate, presentation, diagnostics, drawn);
+        Builder builder = new(this, key, record, climate, presentation, diagnostics, drawn, worldSocialSeed ?? _worldSocialSeed);
         switch (key.Kind)
         {
             case DaggerfallWorldProfileKind.Exterior: builder.Exterior(); break;
@@ -270,7 +276,7 @@ internal sealed class DaggerfallLocationAssembly
     /// <param name="variantCells">The exterior cells whose block draws a block variant, each with its name; empty for the base.</param>
     private sealed class Builder(DaggerfallLocationAssembly owner, DaggerfallWorldProfileKey key, DaggerfallSiteRecord record, int climate,
         DaggerfallAssembledSiteDefinition presentation, DaggerfallContentDiagnostics diagnostics,
-        IReadOnlyDictionary<(int X, int Y), string> variantCells)
+        IReadOnlyDictionary<(int X, int Y), string> variantCells, ulong worldSocialSeed)
     {
         private readonly DaggerfallProductMedia _media = owner._media();
         private readonly int _groundClimate = owner._definitions.Grids.ClimateAtWorldPixel(record.MapPixelX, record.MapPixelY).Value;
@@ -356,7 +362,7 @@ internal sealed class DaggerfallLocationAssembly
 
             Vector3? gateAnchor = _gates.Count > 0 ? _gates[0].Pose.Translation : _start;
             _dynamicPopulation = DaggerfallExteriorPopulation.Create(owner._definitions, record, clear,
-                gateAnchor is { } anchor ? new WorldPoint(anchor.X, anchor.Y, anchor.Z) : null);
+                gateAnchor is { } anchor ? new WorldPoint(anchor.X, anchor.Y, anchor.Z) : null, worldSocialSeed);
         }
 
         private void PlaceStaticNpcs(
@@ -444,7 +450,7 @@ internal sealed class DaggerfallLocationAssembly
             if (!owner._definitions.People.Spawners.ContainsKey(slot.SpawnerId)) return;
 
             DaggerfallResolvedPeopleSlot resolved = DaggerfallPeopleSlots.ResolveSlot(
-                owner._definitions.People, owner._definitions.Factions, 0UL, key.Site, placementSlotKey(slot.SlotId), slot,
+                owner._definitions.People, owner._definitions.Factions, worldSocialSeed, key.Site, placementSlotKey(slot.SlotId), slot,
                 regionKey: regionName, climateKey: climateName);
             if (_media.BillboardSprites.ContainsKey((resolved.Visual.Archive, resolved.Visual.Record)))
             {
@@ -452,6 +458,8 @@ internal sealed class DaggerfallLocationAssembly
                 value["billboardRecord"] = resolved.Visual.Record;
                 value["gender"] = resolved.Visual.Gender;
             }
+            int seededName = unchecked((int)(resolved.SlotSeed & 0x7FFF_FFFFUL));
+            value["nameSeed"] = seededName == 0 ? 1 : seededName;
             value["spawnerId"] = resolved.SpawnerId;
             value["interaction"] = resolved.Interaction;
             value["harm"] = resolved.Harm;
@@ -483,14 +491,14 @@ internal sealed class DaggerfallLocationAssembly
                     && owner._definitions.People.Spawners.ContainsKey(slot.SpawnerId))
                 {
                     DaggerfallResolvedPeopleSlot resolved = DaggerfallPeopleSlots.ResolveSlot(
-                        owner._definitions.People, owner._definitions.Factions, 0UL, key.Site, id, slot,
+                        owner._definitions.People, owner._definitions.Factions, worldSocialSeed, key.Site, id, slot,
                         regionKey: regionName, climateKey: climateName);
                     harm = resolved.Harm;
                     if (_media.BillboardSprites.ContainsKey((resolved.Visual.Archive, resolved.Visual.Record)))
                         visual = resolved.Visual;
                 }
                 int nameSeed = unchecked((int)StableHash.NonZeroFnv1a64(
-                    $"clutter-person:{key.Site.Region}:{key.Site.Index}:{id}:{nameSeedSalt}"));
+                    $"clutter-person:{worldSocialSeed}:{key.Site.Region}:{key.Site.Index}:{id}:{nameSeedSalt}"));
                 JsonObject person = new()
                 {
                     ["id"] = id,

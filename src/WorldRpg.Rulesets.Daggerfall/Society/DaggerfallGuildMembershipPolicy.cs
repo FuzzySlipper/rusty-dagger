@@ -284,7 +284,15 @@ internal sealed class DaggerfallGuildMembershipPolicy
 
     /// <summary>Applies donor admission requirements and creates rank-zero membership.</summary>
     internal DaggerfallGuildMembershipResult Admit(int factionId, int currentDay) =>
-        AdmitCore(factionId, currentDay, DaggerfallGuildMembershipChange.Admitted);
+        AdmitCore(factionId, currentDay, DaggerfallGuildMembershipChange.Admitted, bypassRequirements: false);
+
+    /// <summary>
+    /// Grants rank-zero membership upon completing an invitation-only guild's initiation quest
+    /// (Thieves Guild <c>O0A0AL00</c> or Dark Brotherhood <c>L0A01L00</c>), bypassing ordinary
+    /// dialogue skill/reputation admission gates while preserving guild-group exclusivity.
+    /// </summary>
+    internal DaggerfallGuildMembershipResult AdmitByInvitation(int factionId, int currentDay) =>
+        AdmitCore(factionId, currentDay, DaggerfallGuildMembershipChange.Admitted, bypassRequirements: true);
 
     /// <summary>
     /// Reviews promotion, demotion, or donor expulsion after the elapsed rank interval. Thieves and
@@ -356,7 +364,7 @@ internal sealed class DaggerfallGuildMembershipPolicy
             StringComparer.Ordinal.Equals(privilege.Id, privilegeId) && privilege.MinimumRank <= eligibility.Rank);
     }
 
-    private DaggerfallGuildMembershipResult AdmitCore(int factionId, int currentDay, DaggerfallGuildMembershipChange change)
+    private DaggerfallGuildMembershipResult AdmitCore(int factionId, int currentDay, DaggerfallGuildMembershipChange change, bool bypassRequirements)
     {
         DaggerfallGuildPolicyDefinition definition = RequireDefinition(factionId);
         DaggerfallGuildRankAssessment assessment = Assess(factionId);
@@ -364,13 +372,16 @@ internal sealed class DaggerfallGuildMembershipPolicy
         if (eligibility.IsMember)
             return Result(factionId, DaggerfallGuildMembershipChange.None, DaggerfallGuildMembershipDenial.AlreadyMember,
                 eligibility.Rank, currentDay, assessment);
-        DaggerfallGuildRankRequirement admission = definition.RankRequirements[0];
-        if (assessment.Reputation < admission.MinimumReputation)
-            return Result(factionId, DaggerfallGuildMembershipChange.None, DaggerfallGuildMembershipDenial.InsufficientReputation,
-                -1, currentDay, assessment);
-        if (!assessment.MeetsAdmission)
-            return Result(factionId, DaggerfallGuildMembershipChange.None, DaggerfallGuildMembershipDenial.InsufficientSkills,
-                -1, currentDay, assessment);
+        if (!bypassRequirements)
+        {
+            DaggerfallGuildRankRequirement admission = definition.RankRequirements[0];
+            if (assessment.Reputation < admission.MinimumReputation)
+                return Result(factionId, DaggerfallGuildMembershipChange.None, DaggerfallGuildMembershipDenial.InsufficientReputation,
+                    -1, currentDay, assessment);
+            if (!assessment.MeetsAdmission)
+                return Result(factionId, DaggerfallGuildMembershipChange.None, DaggerfallGuildMembershipDenial.InsufficientSkills,
+                    -1, currentDay, assessment);
+        }
 
         try
         {

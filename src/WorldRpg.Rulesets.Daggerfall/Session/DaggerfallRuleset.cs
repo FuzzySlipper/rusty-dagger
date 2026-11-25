@@ -204,7 +204,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             // A quest's world update selects a location variant the quests packs carry, baked as block documents beside them.
             DaggerfallWorldVariantContent variants = DaggerfallWorldVariantContent.Read([.. roles[QuestsRole].Select(pack => DaggerfallWorldVariantContent.Files(selected.Content, pack.Id.Value, pack.PayloadPath, pack.Payload))],
                 definitions.Locations.Records);
-            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data, variants), () => productMedia.Value, () => meshes.Value, art?.Models);
+            DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
+            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data, variants), () => productMedia.Value, () => meshes.Value, art?.Models, tuning.Social.WorldSocialSeed);
             // Every resolved profile names its classic images against the published manifests, and an interior
             // names its building against the block catalog: each is joined when the profile is resolved, before
             // a transition touches the source, so the publication it disagrees with is named.
@@ -233,7 +234,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
             DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected, DaggerfallAttackTuning.Default.Classes.Keys);
-            DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
             return new DaggerfallAdmittedContent(definitions, blocks, inputs, start.Pose, profiles, quests.Receipts, quests.DisabledSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt,
                 DaggerfallAnimations.For(selected), art);
         });

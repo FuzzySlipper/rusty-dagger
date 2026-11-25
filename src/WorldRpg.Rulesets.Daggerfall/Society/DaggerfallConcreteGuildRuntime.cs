@@ -35,6 +35,14 @@ internal sealed class DaggerfallConcreteGuildMembershipRuntime
         return new(definition, admission, _membership.Admit(factionId, currentDay));
     }
 
+    internal DaggerfallGuildMembershipResult AdmitByInvitation(int factionId, int currentDay)
+    {
+        DaggerfallConcreteGuildDefinition definition = DaggerfallConcreteGuildCatalog.ForFaction(factionId);
+        if (definition.InvitationRequirement == DaggerfallGuildInvitationRequirement.None)
+            throw new InvalidOperationException($"Guild '{definition.DisplayName}' does not admit by invitation.");
+        return _membership.AdmitByInvitation(factionId, currentDay);
+    }
+
     internal DaggerfallGuildMembershipView Read(int factionId, int currentDay)
     {
         _ = DaggerfallConcreteGuildCatalog.ForFaction(factionId);

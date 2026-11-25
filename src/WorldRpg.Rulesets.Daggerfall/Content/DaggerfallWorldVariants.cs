@@ -16,11 +16,12 @@ internal sealed partial class DaggerfallSiteProfiles
     private readonly Dictionary<DaggerfallSiteId, string> _selectedVariants = [];
 
     /// <summary>
-    /// This session's view of the shared catalog: the same resolved profiles, with its own selected variants.
+    /// This session's view of the shared catalog: the same resolved profiles, with its own selected variants and
+    /// optional per-session <c>WorldSocialSeed</c>.
     /// </summary>
-    internal DaggerfallSiteProfiles ForSession(DaggerfallWorldVariantSave[]? saved = null)
+    internal DaggerfallSiteProfiles ForSession(DaggerfallWorldVariantSave[]? saved = null, ulong? worldSocialSeed = null)
     {
-        var result = new DaggerfallSiteProfiles(_catalog);
+        var result = new DaggerfallSiteProfiles(_catalog, worldSocialSeed);
         foreach (var entry in saved ?? []) result.SetLocationVariant(new DaggerfallSiteId(entry.Region, entry.Location), entry.Variant);
         return result;
     }

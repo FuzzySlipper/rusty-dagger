@@ -822,6 +822,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallExpedition Expedition { get; }
     internal DaggerfallOverlandPartyCoordinator OverlandParties { get; } = null!;
     internal DaggerfallOverlandTraffic OverlandTraffic { get; } = null!;
+    internal DaggerfallHostileOverlandBands HostileOverlandBands { get; } = null!;
     internal DaggerfallPartyHireService PartyHire { get; } = null!;
 
     /// <summary>The player's crimes: pickpocketing, witnesses, and what an attack on a civilian or a guard charges.</summary>
@@ -829,6 +830,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>The law: the legal response, the court, the sentence and the standing law.</summary>
     internal DaggerfallLaw Law { get; } = null!;
+
+    /// <summary>Service denial policy for wanted and banished characters, with outlaw and ally exemptions.</summary>
+    internal DaggerfallLegalServicePolicy LegalServices { get; } = null!;
+
+    /// <summary>Faction reputation and witness memory consequences when the player kills a faction member.</summary>
+    internal DaggerfallSocialConsequences SocialConsequences { get; } = null!;
 
     /// <summary>The guilds' providers: what a guild's NPC answers to its topics, its welcome and its free passage.</summary>
     internal DaggerfallGuildProviders GuildProviders { get; } = null!;

@@ -179,7 +179,7 @@ internal sealed record DaggerfallSavePayload(
             .Where(entry => entry.Origin.IsFixedPlacement
                 && (entry.Location is null
                     ? entry.Origin.SiteProfile?.Require() == activeProfile
-                    : entry.Location is { Kind: ActorLocationKind.AtSite, Detached: false, Profile: { } p } && p.Require() == activeProfile)
+                    : entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: false, Profile: { } p } && p.Require() == activeProfile)
                 && entry.Vitals is not null && entry.Pose is not null)
             .OrderBy(entry => entry.DurableId)
             .Select(ToActorSave)];
@@ -188,7 +188,7 @@ internal sealed record DaggerfallSavePayload(
     internal DaggerfallDynamicActorSave[] ActiveDynamicActors(DaggerfallWorldProfileKey activeProfile) =>
         [.. ActorLedger
             .Where(entry => entry.Origin.Kind == ActorOriginKind.Minted
-                && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: false, Profile: { } p }
+                && entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: false, Profile: { } p }
                 && p.Require() == activeProfile
                 && entry.Vitals is not null && entry.Pose is not null)
             .OrderBy(entry => entry.DurableId)
@@ -255,7 +255,7 @@ internal sealed record DaggerfallSavePayload(
     private static DaggerfallNpcEntry ToNpcEntry(ActorLedgerEntry entry)
     {
         ActorSocialDiff s = entry.Social!;
-        DaggerfallWorldProfileKeySave? profile = entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } p }
+        DaggerfallWorldProfileKeySave? profile = entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Profile: { } p }
             ? p
             : entry.Origin.Kind == ActorOriginKind.SeededSlot && entry.Location is null
                 ? entry.Origin.SiteProfile
@@ -559,7 +559,7 @@ internal sealed record DaggerfallSavePayload(
         restoredLedgerView.Restore(ActorLedger);
         foreach (ActorLedgerEntry entry in ActorLedger)
         {
-            if (entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } entryProfile })
+            if (entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Profile: { } entryProfile })
             {
                 DaggerfallWorldProfileKey key = entryProfile.Require();
                 if (entry.Origin.Kind == ActorOriginKind.Minted && entry.Vitals is not null)
@@ -584,7 +584,7 @@ internal sealed record DaggerfallSavePayload(
             ? []
             : [.. inputs.Project.Actors.Keys.Where(id => !activeBanished.Contains(id) && !restoredLedgerView.IsHomeSlotSuppressed(id, inputs.ProfileKey))];
         HashSet<long> savedActorIds = [.. activeAuthoredIds];
-        foreach (ActorLedgerEntry entry in ActorLedger.Where(e => e.Origin.IsFixedPlacement && e.Location is null or { Kind: ActorLocationKind.AtSite, Detached: false }))
+        foreach (ActorLedgerEntry entry in ActorLedger.Where(e => e.Origin.IsFixedPlacement && e.Location is null or { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: false }))
         {
             if (entry.Location is { Profile: { } lp } && lp.Require() != inputs.ProfileKey)
                 throw new ArgumentException($"Saved live authored actor {entry.DurableId} names non-active profile '{lp.Require().LogicalId}'.");
@@ -637,7 +637,7 @@ internal sealed record DaggerfallSavePayload(
                 continue;
             if (!DaggerfallPeopleSlots.IsDeterministicId(entry.DurableId))
                 throw new ArgumentException($"Saved deterministic actor {entry.DurableId} does not sit in the deterministic identity band.");
-            if (entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } detP })
+            if (entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: true, Profile: { } detP })
             {
                 if (detP.Require() != inputs.ProfileKey || activeLocationUnloaded)
                     inactiveDeterministicIds.Add(entry.DurableId);
@@ -649,12 +649,12 @@ internal sealed record DaggerfallSavePayload(
                 inactiveDeterministicIds.Add(entry.DurableId);
             }
             else if (entry.Location is null && entry.Origin.SiteProfile?.Require() == inputs.ProfileKey
-                || entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } p } && p.Require() == inputs.ProfileKey)
+                || entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Profile: { } p } && p.Require() == inputs.ProfileKey)
             {
                 activeDeterministicIds.Add(entry.DurableId);
             }
             else if (entry.Location is null && entry.Origin.SiteProfile is { } remoteHome && remoteHome.Require() != inputs.ProfileKey
-                || entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } remoteP } && remoteP.Require() != inputs.ProfileKey)
+                || entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Profile: { } remoteP } && remoteP.Require() != inputs.ProfileKey)
             {
                 inactiveDeterministicIds.Add(entry.DurableId);
             }

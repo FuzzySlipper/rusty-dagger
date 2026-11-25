@@ -9,7 +9,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal static class DaggerfallExteriorPopulation
 {
     internal static IReadOnlyList<DaggerfallPopulationPlacement> Create(DaggerfallDefinitions definitions,
-        DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear, WorldPoint? gateAnchor = null)
+        DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear, WorldPoint? gateAnchor = null,
+        ulong worldSocialSeed = 0UL)
     {
         const int automapSide = 64;
         const float blockSide = DaggerfallWorldGrid.HorizontalSize / 8f;
@@ -58,10 +59,13 @@ internal static class DaggerfallExteriorPopulation
         {
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
             bool isGuard = count > 1 ? Math.Abs(index - gateGuardIndex) % 32 == 0 : index == 0;
-            int sprite = people.Sprites[isGuard ? 0 : index % people.Sprites.Count];
-            byte flags = isGuard ? (byte)0 : (byte)(index % people.Sprites.Count == 1 ? 0x20 : 0);
+            ulong slotSeed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed, location.Id, DaggerfallPeopleSlots.WalkerSlotKey(index));
+            int spriteIndex = isGuard ? 0 : (int)((slotSeed >> 16) % (ulong)people.Sprites.Count);
+            int sprite = people.Sprites[spriteIndex];
+            byte flags = isGuard ? (byte)0 : (byte)(spriteIndex == 1 ? 0x20 : 0);
+            ushort nameSeed = (ushort)((slotSeed & 0xFFFFUL) == 0 ? 1 : (slotSeed & 0xFFFFUL));
             result.Add(new(id, positions[index], sprite >> 7, sprite & 0x7f, people.Id,
-                flags, StableSeed(id))
+                flags, nameSeed)
             {
                 IsGuard = isGuard,
             });

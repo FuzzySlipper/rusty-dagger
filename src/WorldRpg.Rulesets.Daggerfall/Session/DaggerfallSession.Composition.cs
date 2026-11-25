@@ -48,8 +48,10 @@ internal sealed partial class DaggerfallSession
     internal static DaggerfallSession StartNew(IEngineContext engine, DaggerfallSessionComposition composition, DaggerfallWorldVariantSave[]? variants = null)
     {
         ArgumentNullException.ThrowIfNull(composition);
-        composition = composition with { Profiles = composition.Profiles?.ForSession(variants) };
-        DaggerfallSiteProfile start = variants is { Length: > 0 } && composition.Profiles is { } profiles
+        ulong worldSocialSeed = composition.Tuning.Social.WorldSocialSeed;
+        composition = composition with { Profiles = composition.Profiles?.ForSession(variants, worldSocialSeed) };
+        DaggerfallSiteProfile start = composition.Profiles is { } profiles
+            && (variants is { Length: > 0 } || profiles.HasCustomWorldSocialSeed)
             ? profiles.Require(composition.StartSite.ProfileKey)
             : composition.StartSite;
         return new DaggerfallSession(engine, composition, start, restore: null).AdmitComposition(engine, composition);
@@ -64,7 +66,8 @@ internal sealed partial class DaggerfallSession
         ArgumentNullException.ThrowIfNull(composition);
         DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
         if (raw.WorldVariants is null) throw new ArgumentException("Saved world variants must contain the current selection, including an empty list.");
-        composition = composition with { Profiles = composition.Profiles?.ForSession(raw.WorldVariants) };
+        ulong worldSocialSeed = raw.WorldSocialSeed;
+        composition = composition with { Profiles = composition.Profiles?.ForSession(raw.WorldVariants, worldSocialSeed) };
         if (composition.Profiles is null && raw.WorldVariants.Length != 0) throw new ArgumentException("Saved world variants require an admitted site catalog.");
         DaggerfallSiteProfiles? profiles = composition.Profiles;
         DaggerfallSiteProfile activeInputs = profiles is null
@@ -142,6 +145,8 @@ internal sealed partial class DaggerfallSession
                 variables.Restore(restoredVariables.Entries.Select(entry => (entry.Require(), entry.Value)));
             DaggerfallSocialState social = new(definitions.Factions);
             if (saved?.Social is { } restoredSocial) social.Restore(restoredSocial);
+            social.BindActorFactions(id => actors.TryGet(id, out ActorState? actor)
+                && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null);
             DaggerfallQuestInstances quests = new(definitions, _random, composition.QuestAdmission, composition.DisabledQuestSelection);
             DaggerfallQuestTrainingState questTraining = new(saved?.QuestTraining);
             DaggerfallItemInstances itemInstances = assembled.ItemInstances;
@@ -548,10 +553,17 @@ internal sealed partial class DaggerfallSession
             DaggerfallPropertyStorage propertyStorage = new(containers, itemInstances, definitions, _actorIdentities, property, playerEntity, questItemExits);
             if (saved?.Property is { } savedProperty) propertyStorage.Restore(savedProperty);
             DaggerfallCrimeState crime = new(saved?.Crime, () => racialOverrides.Current?.SuppressCrime == true);
+            LegalServices = new DaggerfallLegalServicePolicy(social, crime, assembled.ActorLedger, definitions,
+                id => actors.TryGet(id, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null,
+                CurrentInteriorBuilding,
+                building => _site.TryFind(_activeProfileKey.Site, out _)
+                    ? _site.RequireBuildingSource(_activeProfileKey.Site, new(building.BlockX, building.BlockY, building.Building.Index)).Quality
+                    : 10);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
                     : null, saved?.Services);
+            services.BindLegalServicePolicy(LegalServices.IsProviderDenied);
             DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services.ProviderAvailable);
             DaggerfallTempleServiceRuntime templeServices = new(concreteGuildServices, services, npcs, social,
                 effects, poisons, actors, _random, () => _time);
@@ -640,7 +652,8 @@ internal sealed partial class DaggerfallSession
             RoomRental = new DaggerfallRoomRental(State.Lodging, _site, State.GuildMembership, State.Actors.Player.Stats, State.Currency,
                 calendar: () => _time.Calendar,
                 activeProfile: () => _activeProfileKey,
-                building: CurrentInteriorBuilding);
+                building: CurrentInteriorBuilding,
+                isLegallyDenied: (region, building) => LegalServices.IsRoomRentalDenied(region, building, _dialogue?.CurrentNpc()));
             Holdings = new DaggerfallPropertyHoldings(State.Property, propertyStorage, State.Bank, State.Currency, State.Transport,
                 State.KnightlyClaimActions, _site, _random, State.PlayerControl,
                 calendar: () => _time.Calendar,
@@ -759,6 +772,8 @@ internal sealed partial class DaggerfallSession
             };
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
             State.Quests.BindSocial(State.Social, State.Crime, () => _site.Region);
+            State.Quests.BindGuildInvitationAdmission(factionId =>
+                State.ConcreteGuildMembership.AdmitByInvitation(factionId, checked((int)_time.Calendar.DayNumber)));
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindWorldActions((instance, operation) => _questWorldActions.Apply(instance, operation));
             State.Quests.BindFoeCommands((id, remove) => QuestFoes.Command(id, remove));
@@ -898,10 +913,18 @@ internal sealed partial class DaggerfallSession
                 () => _exterior.ProfileToLocal(default).ToVector(),
                 DaggerfallSessionPersistence.ToSocialDiff,
                 id => _persistence.CaptureLiveActorForCustody(
-                    id, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))));
+                    id, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))),
+                siteCoordinates: siteId => _site.TryFind(siteId, out DaggerfallSiteRecord rec) ? (rec.MapPixelX, rec.MapPixelY) : null,
+                provokeHostile: id => { _enemyBehavior.MakeHostile(id); _enemyBehavior.Provoke(id, _time.Calendar.MinuteNumber); });
             OverlandTraffic = new DaggerfallOverlandTraffic(
                 definitions, State.ActorLedger, actors, State.Npcs, Expedition, OverlandParties,
                 questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
+            HostileOverlandBands = new DaggerfallHostileOverlandBands(
+                definitions, State.ActorLedger, _actorIdentities, Expedition, OverlandParties,
+                ReadHostileStanding, () => State.Progression.Level, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
+            SocialConsequences = new DaggerfallSocialConsequences(
+                State.Social, definitions, State.Actors, State.Npcs, State.ActorLedger,
+                () => Crimes.QueryWitnesses(), Crimes.IsCityWatch, () => _site.Region);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
                 () => _sites.Projection.Inputs, CurrentInteriorBuilding,
@@ -1481,6 +1504,36 @@ internal sealed partial class DaggerfallSession
         .Where(actor => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && !actor.IsDefeated
             && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsCombatant)
         .Select(actor => actor.Position.ToVector());
+
+    private DaggerfallHostileStandingSnapshot ReadHostileStanding(int region)
+    {
+        bool wantedOrBanished = LegalServices.IsWantedOrBanished(region);
+        List<DaggerfallHostileFactionStanding> hostileGuilds = [];
+        foreach (DaggerfallConcreteGuildDefinition guild in DaggerfallConcreteGuildCatalog.All)
+        {
+            int rep = State.Social.FactionReputation(guild.FactionId);
+            if (rep > DaggerfallHostileOverlandBands.GuildHitSquadThreshold) continue;
+            int mobile = guild.Kind switch
+            {
+                DaggerfallConcreteGuildKind.DarkBrotherhood => 139,
+                DaggerfallConcreteGuildKind.Thieves => 138,
+                DaggerfallConcreteGuildKind.Mages => 130,
+                DaggerfallConcreteGuildKind.KnightlyOrder => 145,
+                DaggerfallConcreteGuildKind.Fighters => 144,
+                _ => 129,
+            };
+            hostileGuilds.Add(new(guild.FactionId, guild.DisplayName, rep, mobile));
+        }
+        List<DaggerfallHostileFactionStanding> hostileCourts = [];
+        foreach (DaggerfallFactionDefinition faction in _definitions.Factions.Factions.Values)
+        {
+            if (faction.Region != region || faction.Type is not (1 or 14)) continue;
+            int rep = State.Social.FactionReputation(faction.Id);
+            if (rep <= DaggerfallHostileOverlandBands.RivalPatrolThreshold)
+                hostileCourts.Add(new(faction.Id, faction.Name, rep, 145));
+        }
+        return new(wantedOrBanished, hostileGuilds, hostileCourts);
+    }
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
 }

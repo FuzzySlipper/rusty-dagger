@@ -19,7 +19,8 @@ internal sealed class DaggerfallRoomRental(
     DaggerfallCurrencyService currency,
     Func<DaggerfallCalendar> calendar,
     Func<DaggerfallWorldProfileKey> activeProfile,
-    Func<DaggerfallInteriorBuilding?> building)
+    Func<DaggerfallInteriorBuilding?> building,
+    Func<int, DaggerfallInteriorBuilding, bool>? isLegallyDenied = null)
 {
     private int _days = 1;
 
@@ -61,9 +62,11 @@ internal sealed class DaggerfallRoomRental(
         _days = days;
         DaggerfallLodgingView quote = View!;
         if (!book) return null;
+        DaggerfallInteriorBuilding placed = building()!;
+        if (isLegallyDenied?.Invoke(activeProfile().Site.Region, placed) == true)
+            return "I do not rent rooms to wanted outlaws.";
         if (!quote.CanBook) return "You may rent a room for up to 350 days in total.";
         if (price != quote.Price) return "The room price changed. Please check the new quote.";
-        DaggerfallInteriorBuilding placed = building()!;
         bool booked = lodging.Book(activeProfile().Site, new(placed.BlockX, placed.BlockY, placed.Building.Index),
             quote.Days, calendar().ToAbsoluteSeconds(), quote.Price, currency);
         return booked ? $"Room booked for {quote.Days} more day(s)." : "You do not have enough gold to rent this room.";

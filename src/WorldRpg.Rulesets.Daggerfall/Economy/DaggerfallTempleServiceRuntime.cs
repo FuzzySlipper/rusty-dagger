@@ -19,6 +19,7 @@ internal enum DaggerfallTempleServiceDenial
     InsufficientFunds,
     NoAffliction,
     BlessingUnavailable,
+    WantedOrBanished,
 }
 
 internal sealed record DaggerfallTempleServiceResult(
@@ -359,6 +360,7 @@ internal sealed class DaggerfallTempleServiceRuntime
     private static DaggerfallTempleServiceResult FromServiceOutcome(DaggerfallServiceOutcome outcome) =>
         DaggerfallTempleServiceResult.Refused(outcome.Denial switch
         {
+            DaggerfallServiceDenial.WantedOrBanished => DaggerfallTempleServiceDenial.WantedOrBanished,
             DaggerfallServiceDenial.UnknownProvider => DaggerfallTempleServiceDenial.UnknownProvider,
             DaggerfallServiceDenial.ProviderUnavailable or DaggerfallServiceDenial.SiteChanged => DaggerfallTempleServiceDenial.ProviderUnavailable,
             DaggerfallServiceDenial.ServiceUnavailable => DaggerfallTempleServiceDenial.ServiceUnavailable,

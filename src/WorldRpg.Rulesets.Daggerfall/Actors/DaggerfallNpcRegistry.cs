@@ -364,10 +364,13 @@ public sealed class DaggerfallNpcRegistry
         if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
         {
             bool detached = existing.Location?.Detached == true;
+            ActorLocationOverride nextLocation = existing.Location?.Kind == ActorLocationKind.Dead
+                ? existing.Location
+                : ActorLocationOverride.AtSite(profile, pose, detached);
             _ledger.Upsert(existing with
             {
                 Social = ActorSocialDiff.FromNpc(updated, existing.Social),
-                Location = ActorLocationOverride.AtSite(profile, pose, detached),
+                Location = nextLocation,
             });
         }
         else
@@ -410,7 +413,7 @@ public sealed class DaggerfallNpcRegistry
             }
             ActorLocationOverride? nextLocation = existing.Location switch
             {
-                { Kind: ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.Removed } keep => keep,
+                { Kind: ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.Dead or ActorLocationKind.Removed } keep => keep,
                 { Kind: ActorLocationKind.AtSite } atSite => atSite with { Profile = DaggerfallWorldProfileKeySave.Capture(profile), Pose = null },
                 null when !live || existing.Origin.Kind == ActorOriginKind.Minted => ActorLocationOverride.AtSite(profile, pose: null, detached: false),
                 _ => existing.Location,
@@ -521,10 +524,10 @@ public sealed class DaggerfallNpcRegistry
     internal static DaggerfallNpc? FromLedgerEntry(ActorLedgerEntry entry)
     {
         if (entry.Social is not { } s) return null;
-        DaggerfallWorldProfileKey? profile = entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } p }
+        DaggerfallWorldProfileKey? profile = entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Profile: { } p }
             ? p.Require()
             : null;
-        ActorPoseOverride? pose = entry.Location is { Kind: ActorLocationKind.AtSite, Pose: { } lp } ? lp : null;
+        ActorPoseOverride? pose = entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Pose: { } lp } ? lp : null;
         DaggerfallNpcPresence presence = entry.Location?.Kind == ActorLocationKind.Removed
             ? DaggerfallNpcPresence.Removed
             : (DaggerfallNpcPresence)s.Presence;

@@ -1045,6 +1045,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendar before = _time.Calendar;
         if (Expedition.Advance(realSeconds) <= 0) return;                                         // Travel, through Time
         _ = OverlandTraffic.Step(before, _time.Calendar, Expedition.Position);                    // Travel, Actors
+        _ = HostileOverlandBands.Step(before, _time.Calendar, Expedition.Position);               // Travel, Actors
         State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds()); State.LevelUps.BeginIfEligible();   // Character
         CompleteTimeIncrease();                                                                   // Session: the increase's end
     }
@@ -1396,7 +1397,11 @@ internal sealed partial class DaggerfallSession
             && effect.Context.Target.Value == (ulong)died.ActorId).ToArray()) State.Effects.Cancel(light.Context.Instance); // Magic
         // A corpse rests on the floor: a flyer killed in the air, or a walker on a marker above the floor, falls to it.
         if (died.ActorId != DaggerfallActorIdentity.PlayerEntityId && State.Actors.TryGet(died.ActorId, out ActorState fallen))
+        {
             fallen.ApplyPose(new ActorPose(_grounding.RestingPosition(fallen.Position), fallen.HeadingYawRadians)); // Actors
+            _persistence.RecordActorDeath(fallen, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))); // Session: ActorLedger Dead
+            SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
+        }
         _corpseLoot.Create(died);                                                                 // Items
         _rewards.React(died, _facts);                                                             // Character
     }

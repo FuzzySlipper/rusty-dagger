@@ -42,9 +42,15 @@ internal sealed class DaggerfallTavernService(DaggerfallServiceTransactions serv
         var option = view.Menu.SingleOrDefault(value => value.Id == item);
         if (option is null || option.Price != expectedPrice) return "The tavern menu changed. Check the current price.";
         var quote = services.Quote(request, new(false), new(option.Price));
-        if (quote.Quote is null) return "The purchase was refused. Check your gold and the tavern keeper.";
+        if (quote.Quote is null)
+            return quote.Outcome.Denial == DaggerfallServiceDenial.WantedOrBanished
+                ? DaggerfallServiceOutcomeText.Common(nameof(DaggerfallServiceDenial.WantedOrBanished))
+                : "The purchase was refused. Check your gold and the tavern keeper.";
         var result = services.Commit(quote.Quote);
-        if (!result.Accepted) return "The purchase was refused. Check your gold and the tavern keeper.";
+        if (!result.Accepted)
+            return result.Denial == DaggerfallServiceDenial.WantedOrBanished
+                ? DaggerfallServiceOutcomeText.Common(nameof(DaggerfallServiceDenial.WantedOrBanished))
+                : "The purchase was refused. Check your gold and the tavern keeper.";
         var health = player.GetTrack(TrackId.Parse("health"));
         health.SetCurrent(Math.Min(health.Maximum.Value, health.Current + option.Health));
         LastMealMinute = calendar().ToAbsoluteSeconds() / 60;

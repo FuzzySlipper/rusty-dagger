@@ -29,6 +29,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     private readonly Func<Vector3> _sceneTranslation;
     private readonly Func<DaggerfallNpc, ActorSocialDiff?, ActorSocialDiff> _toSocialDiff;
     private readonly Func<long, ActorLedgerEntry?> _captureLiveForCustody;
+    private readonly Func<DaggerfallSiteId, (int X, int Y)?>? _siteCoordinates;
+    private readonly Action<long>? _provokeHostile;
 
     private readonly List<(string BandId, DaggerfallEncounterStaging Staging)> _pendingIntercepts = [];
 
@@ -43,7 +45,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         Func<WorldPoint, WorldPoint> localToProfile,
         Func<Vector3> sceneTranslation,
         Func<DaggerfallNpc, ActorSocialDiff?, ActorSocialDiff> toSocialDiff,
-        Func<long, ActorLedgerEntry?> captureLiveForCustody)
+        Func<long, ActorLedgerEntry?> captureLiveForCustody,
+        Func<DaggerfallSiteId, (int X, int Y)?>? siteCoordinates = null,
+        Action<long>? provokeHostile = null)
     {
         _expedition = expedition ?? throw new ArgumentNullException(nameof(expedition));
         _actorLedger = actorLedger ?? throw new ArgumentNullException(nameof(actorLedger));
@@ -56,6 +60,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         _sceneTranslation = sceneTranslation ?? throw new ArgumentNullException(nameof(sceneTranslation));
         _toSocialDiff = toSocialDiff ?? throw new ArgumentNullException(nameof(toSocialDiff));
         _captureLiveForCustody = captureLiveForCustody ?? throw new ArgumentNullException(nameof(captureLiveForCustody));
+        _siteCoordinates = siteCoordinates;
+        _provokeHostile = provokeHostile;
     }
 
     internal IReadOnlyList<long> StagedPartyMemberIds =>
@@ -139,7 +145,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
 
     /// <summary>
     /// Transitions a persistent band's members off <see cref="ActorLocationKind.OnOverlandBand"/> upon destination arrival.
-    /// If the player currently stands at that destination profile, materializes them into <c>EntityStore</c> immediately.
+    /// Regional traffic bands complete a two-leg outbound-and-return lifecycle back to their home-town slot (self-pruning
+    /// untouched slots back to zero ledger entries so slots are reused instead of leaking <c>AtSite</c> orphans).
+    /// Unintercepted hostile bands release their minted ledger entries off-screen.
     /// </summary>
     internal IReadOnlyList<long> OnPersistentBandArrived(DaggerfallPersistentOverlandBand band)
     {
@@ -148,8 +156,96 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             ?? (band.Destination is { } dest
                 ? DaggerfallWorldProfileIds.Exterior(_expedition.HostAt(dest.Pixel).Id)
                 : _activeProfile().ProfileKey);
+        DaggerfallSiteProfile active = _activeProfile();
+        bool arrivingAtActive = active.ProfileKey == arrivalProfile;
+
+        if (band.BandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal) && !arrivingAtActive)
+        {
+            foreach (ActorLedgerEntry member in _actorLedger.EntriesOnOverlandBand(band.BandId))
+                _actorLedger.Remove(member.DurableId);
+            return [];
+        }
+
+        if (band.BandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal))
+        {
+            IReadOnlyList<ActorLedgerEntry> members = _actorLedger.EntriesOnOverlandBand(band.BandId);
+            if (members.Count == 0) return [];
+
+            bool isReturnLeg = band.BandId.EndsWith(DaggerfallOverlandTraffic.ReturnBandSuffix, StringComparison.Ordinal);
+            if (!isReturnLeg && !arrivingAtActive)
+            {
+                DaggerfallWorldProfileKey? homeProfile = members[0].Origin.SiteProfile?.Require();
+                if (homeProfile is { } hp && hp != arrivalProfile && _siteCoordinates?.Invoke(hp.Site) is { } homePixel)
+                {
+                    _ = DispatchOverlandBand(
+                        bandId: band.BandId + DaggerfallOverlandTraffic.ReturnBandSuffix,
+                        name: band.Name,
+                        kind: band.Kind,
+                        memberIds: [.. members.Select(m => m.DurableId)],
+                        startX: band.X,
+                        startY: band.Y,
+                        speedPixelsPerHour: band.SpeedPixelsPerHour,
+                        destination: new DaggerfallExpeditionMark(new(homePixel.X, homePixel.Y), hp.Site),
+                        destinationProfile: hp,
+                        camp: false,
+                        hostile: false,
+                        mobile: band.Mobile);
+                    return [];
+                }
+            }
+
+            if (isReturnLeg || !arrivingAtActive)
+                return ReturnTrafficMembersHome(members, active, arrivingAtActive);
+        }
+
         return DeliverBandMembers(band.BandId, arrivalProfile, anchorLocalPose: null, landingYaw: 0f);
     }
+
+    private IReadOnlyList<long> ReturnTrafficMembersHome(
+        IReadOnlyList<ActorLedgerEntry> members,
+        DaggerfallSiteProfile active,
+        bool arrivingAtActive)
+    {
+        List<long> returned = [];
+        foreach (ActorLedgerEntry member in members)
+        {
+            if (!HasPlayerDeltas(member))
+            {
+                _actorLedger.Remove(member.DurableId);
+            }
+            else
+            {
+                _actorLedger.Upsert(member with { Location = null, Pose = null });
+            }
+
+            if (arrivingAtActive && member.Origin.SiteProfile?.Require() == active.ProfileKey)
+            {
+                ActorLedgerEntry entry = _actorLedger.TryGet(member.DurableId, out ActorLedgerEntry? kept) && kept is not null
+                    ? kept
+                    : member with { Location = null, Pose = null };
+                WorldPoint spot = active.Project.PlayerPosition is { } pp
+                    ? DaggerfallSceneOrigin.Shift(pp, _sceneTranslation())
+                    : default;
+                _ = _roster.MaterializeLedgerActorAt(entry, active, spot, 0f, _activeAppearance(), _sceneTranslation());
+            }
+            returned.Add(member.DurableId);
+        }
+        return returned;
+    }
+
+    private static bool HasPlayerDeltas(ActorLedgerEntry entry) =>
+        entry.Vitals is not null
+        || entry.Combat is not null
+        || entry.Referral is not null
+        || entry.Social is { } s && (
+            s.Met
+            || s.DispositionDelta != 0
+            || s.WitnessedCrimes is { Length: > 0 }
+            || s.ReferralTags is { Length: > 0 }
+            || s.Muted
+            || s.EscortPortrait is not null
+            || s.StagedPartyRole is not null
+            || s.Presence != (int)DaggerfallNpcPresence.Active);
 
     /// <summary>
     /// Runs right after <see cref="DaggerfallExpedition"/> relocates the player into a 3D scene: materializes any
@@ -449,8 +545,13 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 WorldPoint materializeSpot = targetLocal
                     ?? (updated.Pose is { } up ? DaggerfallSceneOrigin.Shift(new WorldPoint(up.X, up.Y, up.Z), _sceneTranslation())
                         : active.Project.PlayerPosition is { } pp ? DaggerfallSceneOrigin.Shift(pp, _sceneTranslation()) : default);
-                _ = _roster.MaterializeLedgerActorAt(updated, active, materializeSpot, arrivalPose?.HeadingRadians ?? 0f,
+                ActorState? live = _roster.MaterializeLedgerActorAt(updated, active, materializeSpot, arrivalPose?.HeadingRadians ?? 0f,
                     _activeAppearance(), _sceneTranslation());
+                if (live is not null && (updated.Combat?.ForcedHostile == true
+                    || bandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal)))
+                {
+                    _provokeHostile?.Invoke(live.DurableId);
+                }
             }
             delivered.Add(member.DurableId);
         }

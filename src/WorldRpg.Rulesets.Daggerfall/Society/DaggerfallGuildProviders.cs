@@ -40,6 +40,7 @@ internal enum DaggerfallGuildProviderDenial
     NoHouseAvailable,
     GrantRejected,
     AllocationRejected,
+    WantedOrBanished,
 }
 
 /// <summary>One source-backed choice returned to the ordinary dialogue projection.</summary>
@@ -291,6 +292,7 @@ internal sealed class DaggerfallGuildProviders(
                 {
                     denial = MoreSpecificProviderDenial(denial, availability switch
                     {
+                        DaggerfallServiceDenial.WantedOrBanished => DaggerfallGuildProviderDenial.WantedOrBanished,
                         DaggerfallServiceDenial.ProviderUnavailable => DaggerfallGuildProviderDenial.ProviderUnavailable,
                         DaggerfallServiceDenial.SiteChanged => DaggerfallGuildProviderDenial.SiteChanged,
                         DaggerfallServiceDenial.ServiceUnavailable => DaggerfallGuildProviderDenial.ServiceUnavailable,
@@ -312,6 +314,7 @@ internal sealed class DaggerfallGuildProviders(
 
     private static int ProviderDenialSpecificity(DaggerfallGuildProviderDenial denial) => denial switch
     {
+        DaggerfallGuildProviderDenial.WantedOrBanished => 5,
         DaggerfallGuildProviderDenial.SiteChanged => 4,
         DaggerfallGuildProviderDenial.ProviderUnavailable => 3,
         DaggerfallGuildProviderDenial.ServiceUnavailable => 2,

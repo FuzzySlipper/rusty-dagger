@@ -18,4 +18,5 @@ internal enum DaggerfallServiceDenial
     AlreadySubmitted,
     WorkNotReady,
     WorkUnavailable,
+    WantedOrBanished,
 }

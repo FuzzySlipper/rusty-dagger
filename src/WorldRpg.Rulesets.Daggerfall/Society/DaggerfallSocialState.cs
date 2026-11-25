@@ -66,6 +66,10 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     // exactly the blessing source that admitted it while crime and loans continue to mutate the
     // persistent regional value below.
     private readonly Dictionary<int, Stat> _regionalReputationModifiers = [];
+    private Func<long, FactionComponent?>? _actorFactions;
+
+    internal void BindActorFactions(Func<long, FactionComponent?> lookup) =>
+        _actorFactions = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
     internal DaggerfallSocialState(DaggerfallFactionsSet catalog)
     {
@@ -155,14 +159,33 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         foreach (Stat stat in _reactionModifiers) stat.RemoveSource(identity);
     }
 
-    /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world.</summary>
-    internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc)
+    /// <summary>
+    /// Resolves the canonical catalog faction used for social reaction with <paramref name="npc"/>, preferring the live
+    /// <see cref="FactionComponent"/> (<see cref="FactionComponent.PrimaryFactionId"/>, then
+    /// <see cref="FactionComponent.RegionalPeopleFactionId"/>) before falling back to <see cref="DaggerfallNpcAppearance.FactionId"/>.
+    /// </summary>
+    internal int ResolveNpcReactionFactionId(DaggerfallNpc npc, FactionComponent? factions = null)
     {
         ArgumentNullException.ThrowIfNull(npc);
+        FactionComponent? resolved = factions ?? _actorFactions?.Invoke(npc.DurableId);
+        if (resolved?.PrimaryFactionId is int primary && _catalog.Factions.ContainsKey(primary))
+            return primary;
+        if (resolved?.RegionalPeopleFactionId is int regional && _catalog.Factions.ContainsKey(regional))
+            return regional;
+        if (_catalog.Factions.ContainsKey(npc.Appearance.FactionId))
+            return npc.Appearance.FactionId;
+        return resolved?.PrimaryFactionId ?? resolved?.RegionalPeopleFactionId ?? npc.Appearance.FactionId;
+    }
+
+    /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world.</summary>
+    internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc, FactionComponent? factions = null)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        int factionId = ResolveNpcReactionFactionId(npc, factions);
         // Classic sprite placements also carry faction ids absent from FACTION.TXT. Preserve that source
         // identity, but give people without a catalog faction a neutral social baseline.
-        return !_catalog.Factions.ContainsKey(npc.Appearance.FactionId)
-            ? new(npc.Appearance.FactionId, 0, 0) : ReactionForFaction(npc.Appearance.FactionId);
+        return !_catalog.Factions.ContainsKey(factionId)
+            ? new(factionId, 0, 0) : ReactionForFaction(factionId);
     }
 
     /// <summary>Changes player standing with a social group and clamps it to the current social contract.</summary>

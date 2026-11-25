@@ -803,6 +803,14 @@ internal sealed class DaggerfallActorRoster
         }
 
         DaggerfallNpc? npc = _npcs.TryGet(entry.DurableId, out DaggerfallNpc? registered) ? registered : null;
+        if (npc is null && entry.Origin.Kind == ActorOriginKind.Minted
+            && entry.Origin.DefinitionId is { Length: > 0 } mintedDefId
+            && _definitions.Actors.TryGetValue(new DaggerfallActorId(mintedDefId), out DaggerfallActorDefinition? mintedDef)
+            && mintedDef.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
+        {
+            return MaterializeMintedCombatant(entry, mintedDef, profile, localPose, headingRadians, appearance, translation);
+        }
+
         if (npc is null && entry.Origin.Kind == ActorOriginKind.CastIndividual
             && entry.Origin.CastId is { } cid && _definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? cast))
         {
@@ -846,6 +854,77 @@ internal sealed class DaggerfallActorRoster
         _npcs.Bind(entry.DurableId, profile.ProfileKey);
         _npcs.ReleasePose(entry.DurableId);
         return materialized;
+    }
+
+    private ActorState MaterializeMintedCombatant(
+        ActorLedgerEntry entry,
+        DaggerfallActorDefinition baseDefinition,
+        DaggerfallSiteProfile profile,
+        WorldPoint localPose,
+        float headingRadians,
+        DaggerfallSiteAppearance appearance,
+        Vector3 translation)
+    {
+        long durableId = entry.DurableId;
+        int spawnLevel = entry.Origin.Level
+            ?? baseDefinition.Level
+            ?? (baseDefinition.Kind == DaggerfallActorKinds.EnemyClass ? _actors.Player.Progression.Level : 1);
+        DaggerfallActorDefinition spawnedDefinition = DaggerfallEncounterActors.AtLevel(baseDefinition, _definitions.Vocabulary, spawnLevel);
+        if (entry.Combat?.PlayerAllied == true)
+            spawnedDefinition = spawnedDefinition with { Team = "player-ally" };
+
+        ActorPose pose = new(localPose, headingRadians);
+        StatsComponent stats = _mechanics.CreateStats(spawnedDefinition, SpawnVitals(spawnedDefinition, spawnLevel, durableId));
+        ActorState actor = DaggerfallActorFactory.CreateNonPlayerActor(_actors, durableId, spawnedDefinition, stats, pose);
+        DaggerfallActorFactory.RegisterActorInventory(actor, _inventoryStore);
+
+        if (entry.Vitals is { } vitals)
+        {
+            DaggerfallActorFactory.RestoreStats(actor.Actor, vitals.Stats);
+        }
+        if (entry.Location?.Kind == ActorLocationKind.Dead)
+        {
+            actor.Stats.GetTrack(TrackId.Parse(spawnedDefinition.Combat.Health.Value)).SetCurrent(0, clamp: true);
+        }
+
+        DaggerfallEnemyPerceptionMemory memory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+        if (entry.Combat is { } combat)
+        {
+            memory.SpawnDistance = combat.SpawnDistance;
+            memory.Passive = combat.Passive;
+            memory.SetForcedHostile(combat.ForcedHostile);
+            memory.LanguagePacified = combat.LanguagePacified;
+            memory.MagicallyPacified = combat.MagicallyPacified;
+            if (combat.TeamOverride is not null && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc))
+                fc.SetTeamOverride(combat.TeamOverride);
+            if (combat.DetachedInventory is not null || combat.DetachedCorpse is not null || combat.DetachedEffects is not null)
+                _restoreDetachedState?.Invoke(combat.DetachedInventory, combat.DetachedCorpse, combat.DetachedEffects);
+        }
+
+        if ((_actorInventories.EquipmentFor(durableId)?.Read().Assignments.Count ?? 0) == 0
+            && (_actorInventories.InventoryFor(durableId)?.Read().Stacks.Count ?? 0) == 0
+            && (_actorInventories.InventoryFor(durableId)?.Read().UniqueItems.Count ?? 0) == 0)
+        {
+            GrantSpawnLoadout(actor, spawnedDefinition);
+            GrantStartingEquipment(actor, spawnedDefinition);
+        }
+
+        if (spawnedDefinition.MobileId is int mobileId
+            && profile.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
+        {
+            string resolvedGender = !string.IsNullOrWhiteSpace(entry.Origin.Gender)
+                ? entry.Origin.Gender!
+                : DaggerfallActorGender.Resolve(_random, durableId, "unspecified", sprite);
+            actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
+            appearance.AddActor(durableId, sprite.ForGender(resolvedGender), mobileId);
+        }
+
+        WorldPoint profilePose = DaggerfallSceneOrigin.Shift(localPose, -translation);
+        actor.Actor.Add(new ActorOriginComponent(entry.Origin, profilePose, headingRadians));
+        _definitionsByActor[durableId] = spawnedDefinition;
+        _dynamicActors[durableId] = spawnedDefinition.Id;
+        if (_definitions.Walks(baseDefinition)) _grounding.Ground(actor);
+        return actor;
     }
 
     private static WorldPoint ResolveBaselineProfilePose(DaggerfallSiteProfile profile, ActorLedgerEntry entry, DaggerfallNpc npc)
@@ -905,6 +984,8 @@ internal sealed class DaggerfallActorRoster
             _ = ApplyCityWatchPromotion(actor, grantEquipment: false, swapAppearance: false, siteProfile);
         if (delta.Vitals is { } vitals)
             DaggerfallActorFactory.RestoreStats(actor.Actor, vitals.Stats);
+        if (delta.Location?.Kind == ActorLocationKind.Dead)
+            actor.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).SetCurrent(0, clamp: true);
         if (delta.Pose is { } pose)
             actor.ApplyPose(new ActorPose(DaggerfallSceneOrigin.Shift(new WorldPoint(pose.X, pose.Y, pose.Z), translation), pose.HeadingRadians));
         if (delta.Combat is { } combat)
