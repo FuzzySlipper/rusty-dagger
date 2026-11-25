@@ -77,6 +77,24 @@ class Recipe(unittest.TestCase):
         self.assertEqual(extrude, 0.0)
         self.assertTrue(np.allclose(h, 0.28))
 
+    def test_exterior_frame_raises_dark_beams_and_recesses_plaster_and_glass(self):
+        rgb = np.full((64, 64, 3), 0.78)
+        rgb[:, 0:12] = np.array([0.22, 0.14, 0.08])
+        rgb[0:12, :] = np.array([0.22, 0.14, 0.08])
+        glass = np.zeros((64, 64), dtype=bool)
+        glass[24:44, 24:44] = True
+        h, _ = relief.recipe_height(rgb, relief.RECIPES["roles"]["frame"], db=np.full((64, 64), 0.6), glass=glass)
+        self.assertGreater(h[6, 36], 0.70, "exterior timber beam stands proud")
+        self.assertLess(h[54, 54], 0.35, "exterior plaster stays recessed below extrude cutoff")
+        self.assertTrue((h[glass] == 0.0).all(), "window glass recesses cleanly to floor")
+
+    def test_exterior_plain_plaster_stays_below_extrude_cutoff(self):
+        rng = np.random.default_rng(7)
+        rgb = 0.72 + rng.random((64, 64, 3)) * 0.08
+        h, _ = relief.recipe_height(rgb, relief.RECIPES["roles"]["plaster"])
+        self.assertLess(h.max(), 0.35, "plain exterior plaster stays below outward extrude cutoff")
+        self.assertEqual(relief.RECIPES["roles"]["plaster"]["extrude"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

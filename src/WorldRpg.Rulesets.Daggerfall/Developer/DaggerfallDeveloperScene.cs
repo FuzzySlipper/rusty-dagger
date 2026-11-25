@@ -199,4 +199,14 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         syncLook?.Invoke();
         return DebugCommandResult.Success(interiorLook.DescribeExtrude());
     }
+
+    public DebugCommandResult ExteriorExtrude(string mode)
+    {
+        if (interiorLook is null) return Refused("Exterior extrude controls are unavailable in this session.");
+        string trimmed = mode.Trim().ToLowerInvariant();
+        if (trimmed is "status" or "list") return DebugCommandResult.Success(interiorLook.DescribeExteriorExtrude());
+        if (interiorLook.SelectExteriorExtrude(trimmed) is { } refusal) return Refused(refusal);
+        syncLook?.Invoke();
+        return DebugCommandResult.Success(interiorLook.DescribeExteriorExtrude());
+    }
 }

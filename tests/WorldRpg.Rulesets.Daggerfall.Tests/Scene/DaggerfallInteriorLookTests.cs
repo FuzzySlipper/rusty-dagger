@@ -204,6 +204,13 @@ public sealed class DaggerfallInteriorLookTests
         Assert.Null(look.SelectExtrude("reset"));
         Assert.Equal("off", look.ExtrudeMode);
 
+        Assert.Equal("off", look.ExteriorExtrudeMode);
+        Assert.Null(look.SelectExteriorExtrude("on"));
+        Assert.Equal("on", look.ExteriorExtrudeMode);
+        Assert.NotNull(look.SelectExteriorExtrude("wall-shells"));
+        Assert.Null(look.SelectExteriorExtrude("reset"));
+        Assert.Equal("off", look.ExteriorExtrudeMode);
+
         Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.FlatSolid));
         Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.PaintingOrScroll));
         Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.PlushCarpet));

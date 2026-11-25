@@ -98,10 +98,11 @@ internal sealed partial class DaggerfallSiteAppearance
     /// from with its slots' bindings, what it is to a refusal, its classic appearance once built, and its remodel where the
     /// profile has one. While refreshed art draws the remodel the classic mesh is not built.
     /// </summary>
-    private sealed class ModelVisual(DaggerfallDoorVisual mesh, string owner, Appearance? remodel)
+    private sealed class ModelVisual(DaggerfallDoorVisual mesh, string owner, Appearance? remodel, string? modelId)
     {
         internal DaggerfallDoorVisual Mesh { get; } = mesh;
         internal string Owner { get; } = owner;
+        internal string? ModelId { get; } = modelId;
         internal Appearance? Classic { get; set; }
         internal Appearance? Remodel { get; } = remodel;
     }
@@ -109,7 +110,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>A model drawn by this location, its classic mesh built now unless refreshed art draws its remodel.</summary>
     private ModelVisual PlaceModel(DaggerfallDoorVisual mesh, string owner, string? modelId)
     {
-        ModelVisual model = new(mesh, owner, Remodel(modelId));
+        ModelVisual model = new(mesh, owner, Remodel(modelId), modelId);
         if (model.Remodel is null || !drawRefreshedEffects()) ClassicModel(model);
         return model;
     }

@@ -203,4 +203,54 @@ public sealed class SurfaceReliefPresentationTests
         Assert.Throws<InvalidOperationException>(() => DaggerfallArtReplacements.Read(
             Encoding.UTF8.GetBytes(ArtJson.Replace("\"depth\": 0.02", "\"depth\": 0", StringComparison.Ordinal)), "test.art"));
     }
+
+    [Fact]
+    public void Exterior_silhouette_extrude_overlays_authored_buildings_culls_by_street_distance_and_respects_strength_and_classic_art()
+    {
+        bool refreshed = true;
+        float strength = 1F;
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        foreach (string path in new[] { "mesh/house.rstatmsh", "texture/texture-312-1.png", "texture/texture-313-1.png", "texture/texture-329-0.png",
+                     "surfaces/texture-312-1.png", "surfaces/texture-313-1.png", "surfaces/texture-329-0.png", "relief/relief.wgsl",
+                     "relief/relief-312-1.png", "relief/relief-313-1.png", "relief/relief-329-0.png", "shaders/exterior-extrude.wgsl" })
+            content.Add(path, Hash);
+        AppearanceFake graphics = new(releases);
+        string artJson = ArtJson.Replace("\"depth\": 0.02", "\"depth\": 0.02, \"extrude\": 0.075", StringComparison.Ordinal);
+        using DaggerfallSiteAppearance presentation = new(content, graphics, Profile(DaggerfallWorldProfileKind.Exterior, glass: false));
+        presentation.UseSurfaceRelief(DaggerfallSurfaceReliefTuning.Default, () => (strength, 1F));
+        presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service,
+            DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(artJson), "test.art"), () => refreshed);
+        using var actors = EmptyActors();
+
+        // Off by default: only the base building mesh is published.
+        presentation.Publish(actors);
+        int baseCount = graphics.Snapshots[^1].Length;
+        Assert.Equal(1, baseCount);
+
+        // Enabling near the building adds one non-shadow-casting outward overlay.
+        presentation.UpdateExteriorExtrude("shaders/exterior-extrude.wgsl", Hash, enabled: true, viewpoint: Vector3.Zero);
+        presentation.Publish(actors);
+        Assert.Equal(2, graphics.Snapshots[^1].Length);
+        Assert.Equal(ShadowCasting.None, graphics.Snapshots[^1][^1].ShadowCasting);
+
+        // Moving beyond fadeEnd + 32 m street cull radius drops the overlay fact cleanly.
+        presentation.UpdateExteriorExtrude("shaders/exterior-extrude.wgsl", Hash, enabled: true, viewpoint: new Vector3(120F, 0F, 0F));
+        presentation.Publish(actors);
+        Assert.Single(graphics.Snapshots[^1]);
+
+        // Moving back within street range restores it; classic art or zero strength hides it again.
+        presentation.UpdateExteriorExtrude("shaders/exterior-extrude.wgsl", Hash, enabled: true, viewpoint: new Vector3(10F, 0F, 0F));
+        presentation.Publish(actors);
+        Assert.Equal(2, graphics.Snapshots[^1].Length);
+
+        refreshed = false;
+        presentation.Publish(actors);
+        Assert.Single(graphics.Snapshots[^1]);
+
+        refreshed = true;
+        strength = 0F;
+        presentation.Publish(actors);
+        Assert.Single(graphics.Snapshots[^1]);
+    }
 }

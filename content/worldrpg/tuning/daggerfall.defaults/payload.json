@@ -1143,8 +1143,8 @@
     "tuftScaleMax": 1.4
   },
   "surfaceRelief": {
-    "fadeStart": 8,
-    "fadeEnd": 14,
+    "fadeStart": 12,
+    "fadeEnd": 22,
     "steps": 24,
     "cavity": 0.5,
     "slope": 1

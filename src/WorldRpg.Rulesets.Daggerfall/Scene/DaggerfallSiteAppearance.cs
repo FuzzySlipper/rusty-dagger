@@ -451,6 +451,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         Func<long, DaggerfallGroundItemLook?>? groundLook = null, IReadOnlyList<AppearanceFact>? travelMap = null)
     {
         if (disposed || drawnByActiveSnapshot) return;
+        if (actors.TryGet(DaggerfallActorIdentity.PlayerEntityId, out ActorState? playerActor))
+            exteriorExtrudeViewpoint = playerActor.Position.ToVector();
         if (surfacesRefreshed != drawRefreshedEffects() || surfacesRelief != reliefChoice()) ApplySurfaces();
         ReconcileGroundVisuals(groundContainers, groundLook);
         List<AppearanceFact> facts = [];
@@ -561,6 +563,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 Compose(worldAppearance.Transform, pose), DrawnModel(model, refreshed), worldAppearance.Visible, worldAppearance.Layer));
         AppendInteriorShellFacts(facts, slot);
         AppendInteriorExtrudeFacts(facts, slot);
+        AppendExteriorExtrudeFacts(facts, slot);
         if (parts is null) return;
         // A city has thousands of doors, nearly all of them still: their facts are read again only once one moves.
         int revision = parts.DoorRevision();
@@ -1042,6 +1045,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         ApplySurfaces();
         EnsureInteriorShellOverlays();
         EnsureInteriorExtrudeOverlays();
+        EnsureExteriorExtrudeOverlays();
     }
 
     /// <summary>A static mesh appearance drawing a visual with the location's materials at its slots.</summary>
@@ -1077,6 +1081,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         retired.AddRange(TakeDecorationResources());
         TakeInteriorShellResources(retired);
         TakeInteriorExtrudeResources(retired);
+        TakeExteriorExtrudeResources(retired);
         // A model placed several times shows one appearance, released once.
         retired.AddRange(world.Select(part => part.Model).Distinct().Select(model => model.Classic).OfType<Appearance>().Reverse());
         world.Clear();

@@ -140,23 +140,80 @@ def courses(light):
     return np.repeat(rise[:, None], light.shape[1], 1)
 
 
-def recipe_height(rgb, role):
-    """A texture's heights by a role: (height, colour regions)."""
+def glass_mask(archive, record):
+    """Window glass mask for a refreshed exterior surface (`texture-A-R-glass.png`), or None if the record has none."""
+    path = CONTENT / SURFACES / f"texture-{archive:03d}-{record}-glass.png"
+    if not path.exists():
+        return None
+    arr = np.asarray(Image.open(path).convert("RGB"))
+    mask = arr.max(-1) > 16
+    return mask if mask.any() else None
+
+
+def recipe_height(rgb, role, db=None, glass=None):
+    """A texture's heights by a role: (height, colour regions).
+
+    When `glass` is supplied (from `texture-A-R-glass.png`), window panes recess to 0 and stay out of region
+    clustering so glowing night windows shine cleanly through recessed 3D window frames and shutters.
+    When `db` (DeepBump sculptural height in [0, 1]) is supplied and `role["deepbump"] > 0`, organic stone/wood
+    curvature blends onto raised faces while mortar and openings stay at 0.
+    """
     light = lightness(rgb)
     dark = outlines(light, role["outline"], role.get("run", 3)) | (light < OPENING)
+    if glass is not None:
+        dark = dark | glass
     rise = np.clip(wrapped_distance(~dark) / role["bevel"], 0, 1)
     rise = 1 - (1 - rise) ** 2
+    db_w = role.get("deepbump", 0.0) if db is not None else 0.0
+    db_n = interior_relief._normalize01(db, 0.04, 0.97) if db_w > 0 else None
+
     if role.get("courses"):
         region = np.zeros(light.shape, int)
-        face = .3 + .7 * courses(light)
-    else:
-        levels = np.array(role["levels"])
-        region = regions(rgb, ~dark, len(levels), role.get("smooth", .8), role.get("blur", 0))
+        face = .22 + .78 * courses(light)
+        if db_n is not None:
+            face = face * (1.0 - db_w) + (0.28 + 0.72 * db_n) * db_w
+        detail = light - blur(light, 1.2)
+        detail = np.clip(detail / (detail.std() * 4 + 1e-6), -.5, .5)
+        h = face * rise + role.get("detail", 0) * detail * rise
+        h[dark] = 0
+        return np.clip(h / max(h.max(), 1e-6), 0, 1), region
+
+    levels = np.array(role["levels"], dtype=np.float64)
+    region = regions(rgb, ~dark, len(levels), role.get("smooth", .8), role.get("blur", 0))
+
+    # Proud-on-plaster roles (`frame`, `quoins`) or windowed plaster (`plaster` with `glass`): keep proud beams,
+    # corner quoins, and wooden window shutters cohesive & solid (0.74..1.00) while flat plaster sits cleanly
+    # recessed around 0.26..0.30 below the 0.35 outward extrude cutoff.
+    proud_regions = role.get("proudRegions")
+    if proud_regions is None and role.get("windowExtrude") and glass is not None:
+        proud_regions = [0]
+    if proud_regions is not None:
+        proud_raw = np.isin(region, tuple(proud_regions)) & (~glass if glass is not None else True)
+        proud = ndimage.binary_opening(proud_raw, structure=np.ones((3, 3)))
+        proud = ndimage.binary_closing(proud, structure=np.ones((3, 3)))
+        if glass is not None:
+            proud = proud & ~glass
+        beam_rise = np.clip(wrapped_distance(proud) / max(role["bevel"], 1.2), 0, 1)
+        beam_rise = 1 - (1 - beam_rise) ** 2
         face = levels[region]
+        db_mod = (0.76 + 0.24 * db_n) if db_n is not None else 1.0
+        beam_h = np.where(dark, 0.50 + 0.14 * beam_rise, db_mod * (0.50 + 0.50 * beam_rise))
+        plaster_h = np.where(dark, 0.0, face * rise + (0.04 * (db_n - 0.5) if db_n is not None else 0.0))
+        h = np.where(proud, beam_h, plaster_h)
+        if glass is not None:
+            h[glass] = 0.0
+        return np.clip(h, 0, 1), region
+
+    face = levels[region]
+    if db_n is not None:
+        face = face * (1.0 - db_w) + (0.42 + 0.58 * db_n) * db_w
     detail = light - blur(light, 1.2)
     detail = np.clip(detail / (detail.std() * 4 + 1e-6), -.5, .5)
     h = face * rise + role.get("detail", 0) * detail * rise
     h[dark] = 0
+    # Plain plaster without glass/quoins stays below 0.35 (never renormalized up to 1.0) so it stays flat & subtle.
+    if role.get("extrude", 0.0) == 0.0 and not (role.get("windowExtrude") and glass is not None):
+        return np.clip(h, 0, 1), region
     return np.clip(h / max(h.max(), 1e-6), 0, 1), region
 
 
@@ -234,21 +291,30 @@ def height(archive, record):
         if (snow := snow_over(archive, record)) is not None:
             summer, region, kind, depth, extrude = height(archive - 1, record)
             rise = np.clip(wrapped_distance(snow) / 1.5, 0, 1)
-            return np.maximum(summer, np.where(snow, .85 + .15 * rise, 0)), np.where(snow, region.max() + 1, region), f"{kind}, snowed", depth, extrude
+            snow_extrude = max(extrude or 0.0, 0.050)
+            return np.maximum(summer, np.where(snow, .85 + .15 * rise, 0)), np.where(snow, region.max() + 1, region), f"{kind}, snowed", depth, snow_extrude
     rgb = refreshed(archive, record)
     if (archive, record) in _exterior_set():
+        glass = glass_mask(archive, record)
         if (role := role_of(archive, record)) is not None:
-            h, region = recipe_height(rgb, role)
-            return h, region, role["name"], role["depth"], None
-        h, region = deepbump_height(rgb)
-        return h, region, "deepbump", RECIPES["deepbumpDepth"], None
+            db = interior_relief.deepbump_cached(rgb) if role.get("deepbump", 0.0) > 0 else None
+            h, region = recipe_height(rgb, role, db=db, glass=glass)
+            extrude = role.get("windowExtrude") if (glass is not None and role.get("windowExtrude")) else role.get("extrude")
+            return h, region, role["name"], role["depth"], extrude
+        db = interior_relief.deepbump_cached(rgb)
+        if glass is not None:
+            db = np.where(glass, 0.0, db)
+        return db, np.zeros(db.shape, int), "deepbump", RECIPES["deepbumpDepth"], 0.055
     if (irole := interior_relief.role_of(archive, record)) is not None:
         return interior_relief.interior_height(rgb, irole)
     if (role := role_of(archive, record)) is not None:
-        h, region = recipe_height(rgb, role)
-        return h, region, role["name"], role["depth"], None
+        glass = glass_mask(archive, record)
+        db = interior_relief.deepbump_cached(rgb) if role.get("deepbump", 0.0) > 0 else None
+        h, region = recipe_height(rgb, role, db=db, glass=glass)
+        extrude = role.get("windowExtrude") if (glass is not None and role.get("windowExtrude")) else role.get("extrude")
+        return h, region, role["name"], role["depth"], extrude
     h, region = deepbump_height(rgb)
-    return h, region, "deepbump", RECIPES["deepbumpDepth"], None
+    return h, region, "deepbump", RECIPES["deepbumpDepth"], 0.055
 
 
 _EXTERIOR_CACHE = None
@@ -274,10 +340,14 @@ def covered():
     """Every covered record: each refreshed surface of a covered set's archives, summer and winter, in every climate,
     that a town's exterior blocks draw."""
     archives = {climate + offset + set_ for set_ in RECIPES["sets"] for climate in (0, 100, 300, 400) for offset in (0, 1)}
-    found = sorted((int(path.stem.split("-")[1]), int(path.stem.split("-")[2])) for path in (CONTENT / SURFACES).glob("texture-*.png"))
+    found = sorted({
+        (int(parts[1]), int(parts[2]))
+        for path in (CONTENT / SURFACES).glob("texture-*.png")
+        if len(parts := path.stem.split("-")) == 3
+    })
     drawn = outdoors()
     return [(archive, record) for archive, record in found if (archive, record) in drawn and archive in archives
-            and (archive % 100 in RECIPES["sets"] or winter_of(archive))]
+            and (archive % 100 in RECIPES["sets"] or winter_of(archive) or str(archive) in RECIPES["archives"])]
 
 
 def interior_covered():
@@ -297,7 +367,11 @@ def interior_covered():
         if val["path"].startswith(f"{MEDIA}/") and int(key.split("-")[0]) % 100 in RECIPES["sets"]
     }
     interior_archives = {int(a) for a in interior_relief.INTERIOR_RECIPES["archives"]}
-    found = sorted((int(path.stem.split("-")[1]), int(path.stem.split("-")[2])) for path in (CONTENT / SURFACES).glob("texture-*.png"))
+    found = sorted({
+        (int(parts[1]), int(parts[2]))
+        for path in (CONTENT / SURFACES).glob("texture-*.png")
+        if len(parts := path.stem.split("-")) == 3
+    })
     return [
         (archive, record)
         for archive, record in found
