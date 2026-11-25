@@ -109,8 +109,9 @@ public sealed record BoardSetup(
 }
 
 /// <summary>
-/// A seat at the table: who plays, its kind, the cast individual holding it now (none where the head of the body is
-/// not cast), the home capital a crown holds, its starting resources and the grants it is paid on a schedule.
+/// A seat at the table: who plays, its kind, the cast individual holding it now, the home capital a crown holds, its
+/// starting resources and the grants it is paid on a schedule. A seat whose head is not cast yet has no holder until
+/// intention (#11060) casts one; it then becomes required.
 /// </summary>
 public sealed record SeatSetup(
     string Id,
