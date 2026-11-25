@@ -70,10 +70,19 @@ internal sealed record ActorOrigin(
     string? DefinitionId = null,
     int? Level = null,
     ulong? CreationSeed = null,
-    string? Gender = null)
+    string? Gender = null,
+    string? SpawnerId = null,
+    ActorHarmPolicyKind? HarmPolicy = null,
+    ActorInteractionPolicyKind? InteractionPolicy = null)
 {
-    internal static ActorOrigin Seeded(DaggerfallWorldProfileKey profile, string slotKey) =>
-        new(ActorOriginKind.SeededSlot, DaggerfallWorldProfileKeySave.Capture(profile), slotKey);
+    internal static ActorOrigin Seeded(
+        DaggerfallWorldProfileKey profile,
+        string slotKey,
+        string? spawnerId = null,
+        ActorHarmPolicyKind? harmPolicy = null,
+        ActorInteractionPolicyKind? interactionPolicy = null) =>
+        new(ActorOriginKind.SeededSlot, DaggerfallWorldProfileKeySave.Capture(profile), slotKey,
+            SpawnerId: spawnerId, HarmPolicy: harmPolicy, InteractionPolicy: interactionPolicy);
 
     internal static ActorOrigin FixedPlacement(DaggerfallWorldProfileKey profile, long entityId) =>
         new(ActorOriginKind.SeededSlot, DaggerfallWorldProfileKeySave.Capture(profile), $"fixed:{entityId}");
@@ -81,10 +90,16 @@ internal sealed record ActorOrigin(
     internal bool IsFixedPlacement =>
         Kind == ActorOriginKind.SeededSlot && SlotKey is { } slot && slot.StartsWith("fixed:", StringComparison.Ordinal);
 
-    internal static ActorOrigin Cast(string castId, DaggerfallWorldProfileKey? homeProfile = null) =>
+    internal static ActorOrigin Cast(
+        string castId,
+        DaggerfallWorldProfileKey? homeProfile = null,
+        ActorHarmPolicyKind? harmPolicy = null,
+        ActorInteractionPolicyKind? interactionPolicy = null) =>
         new(ActorOriginKind.CastIndividual,
             SiteProfile: homeProfile is { } hp ? DaggerfallWorldProfileKeySave.Capture(hp) : null,
-            CastId: castId);
+            CastId: castId,
+            HarmPolicy: harmPolicy,
+            InteractionPolicy: interactionPolicy);
 
     internal static ActorOrigin MintedActor(string definitionId, int level = 1, ulong? creationSeed = null, string? gender = null) =>
         new(ActorOriginKind.Minted, DefinitionId: definitionId, Level: level, CreationSeed: creationSeed, Gender: gender);
@@ -93,6 +108,10 @@ internal sealed record ActorOrigin(
     {
         if (!Enum.IsDefined(Kind))
             throw new ArgumentOutOfRangeException(nameof(Kind), "Saved actor origin names an unknown kind.");
+        if (HarmPolicy is { } harm && !Enum.IsDefined(harm))
+            throw new ArgumentOutOfRangeException(nameof(HarmPolicy), "Saved actor origin names an unknown harm policy.");
+        if (InteractionPolicy is { } interaction && !Enum.IsDefined(interaction))
+            throw new ArgumentOutOfRangeException(nameof(InteractionPolicy), "Saved actor origin names an unknown interaction policy.");
         switch (Kind)
         {
             case ActorOriginKind.SeededSlot:

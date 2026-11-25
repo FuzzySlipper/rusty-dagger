@@ -589,7 +589,8 @@ internal sealed class DaggerfallActorRoster
                     {
                         if (!_actors.TryGet(id, out ActorState? actor))
                         {
-                            actor = MaterializeDeterministicNpc(npc, ActorOrigin.Seeded(profile.ProfileKey, placement.Id),
+                            actor = MaterializeDeterministicNpc(npc,
+                                ActorOrigin.Seeded(profile.ProfileKey, placement.Id, placement.SpawnerId, placement.Harm, placement.Interaction),
                                 placement.Position, translation, _actorLedger.TryGet(id, out ActorLedgerEntry? delta) ? delta : null,
                                 siteProfile: profile, staticPlacement: placement);
                             created = true;
@@ -650,8 +651,10 @@ internal sealed class DaggerfallActorRoster
         if (npc.Presence != DaggerfallNpcPresence.Active) return null;
         if (!_actors.TryGet(id, out _))
         {
-            _ = MaterializeDeterministicNpc(npc, ActorOrigin.Cast(castId, profile.ProfileKey), position, translation,
-                _actorLedger.TryGet(id, out ActorLedgerEntry? delta) ? delta : null);
+            ActorHarmPolicyKind harm = sourcePlacement?.Harm ?? DaggerfallPeopleSlots.ParseHarmPolicy(cast.Harm);
+            ActorInteractionPolicyKind interaction = sourcePlacement?.Interaction ?? DaggerfallPeopleSlots.ParseInteractionPolicy(cast.Interaction);
+            _ = MaterializeDeterministicNpc(npc, ActorOrigin.Cast(castId, profile.ProfileKey, harm, interaction), position, translation,
+                _actorLedger.TryGet(id, out ActorLedgerEntry? delta) ? delta : null, siteProfile: profile, staticPlacement: sourcePlacement);
         }
         DaggerfallSiteAppearance appearance = siteAppearance ?? _appearance();
         if (sourcePlacement is not null)
@@ -758,7 +761,10 @@ internal sealed class DaggerfallActorRoster
                 _ => true,
             };
             WorldPoint basePose = ResolveBaselineProfilePose(profile, entry, npc);
-            _ = MaterializeDeterministicNpc(npc, entry.Origin, basePose, translation, entry, isRelocated: !atHomeSite, siteProfile: profile);
+            DaggerfallStaticNpcPlacement? homeStatic = atHomeSite && entry.Origin.Kind == ActorOriginKind.SeededSlot && entry.Origin.SlotKey is { } sk
+                ? profile.StaticNpcs.FirstOrDefault(s => StringComparer.Ordinal.Equals(s.Id, sk))
+                : null;
+            _ = MaterializeDeterministicNpc(npc, entry.Origin, basePose, translation, entry, isRelocated: !atHomeSite, siteProfile: profile, staticPlacement: homeStatic);
             if (npc.Presence == DaggerfallNpcPresence.Active
                 && !TryAdmitDirectionalMobileAppearance(profile, appearance, entry.DurableId)
                 && profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
@@ -819,7 +825,10 @@ internal sealed class DaggerfallActorRoster
         {
             bool atHomeSite = entry.Origin.SiteProfile?.Require() == profile.ProfileKey;
             WorldPoint baseline = ResolveBaselineProfilePose(profile, entry, npc);
-            materialized = MaterializeDeterministicNpc(npc, entry.Origin, baseline, translation, entry, isRelocated: !atHomeSite, siteProfile: profile);
+            DaggerfallStaticNpcPlacement? homeStatic = atHomeSite && entry.Origin.Kind == ActorOriginKind.SeededSlot && entry.Origin.SlotKey is { } sk
+                ? profile.StaticNpcs.FirstOrDefault(s => StringComparer.Ordinal.Equals(s.Id, sk))
+                : null;
+            materialized = MaterializeDeterministicNpc(npc, entry.Origin, baseline, translation, entry, isRelocated: !atHomeSite, siteProfile: profile, staticPlacement: homeStatic);
             materialized.ApplyPose(new ActorPose(localPose, headingRadians));
         }
         else
@@ -862,14 +871,14 @@ internal sealed class DaggerfallActorRoster
         DaggerfallStaticNpcPlacement? staticPlacement = null)
     {
         WorldPoint worldPose = DaggerfallSceneOrigin.Shift(baselineProfilePose, translation);
+        string? spawnerId = staticPlacement?.SpawnerId ?? origin.SpawnerId;
         ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc,
             new ActorPose(worldPose, 0f), _definitions, out DaggerfallActorDefinition definition,
-            spawnerId: staticPlacement?.SpawnerId);
-        if (staticPlacement is not null)
-        {
-            actor.Actor.Get<ActorHarmPolicy>().Set(staticPlacement.Harm);
-            actor.Actor.Get<ActorInteractionPolicy>().Set(staticPlacement.Interaction);
-        }
+            spawnerId: spawnerId);
+        if ((staticPlacement?.Harm ?? origin.HarmPolicy) is { } resolvedHarm)
+            actor.Actor.Get<ActorHarmPolicy>().Set(resolvedHarm);
+        if ((staticPlacement?.Interaction ?? origin.InteractionPolicy) is { } resolvedInteraction)
+            actor.Actor.Get<ActorInteractionPolicy>().Set(resolvedInteraction);
         DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
         actor.Actor.Add(new ActorOriginComponent(origin, baselineProfilePose, 0f, baselineStats, npc, isRelocated));
         try

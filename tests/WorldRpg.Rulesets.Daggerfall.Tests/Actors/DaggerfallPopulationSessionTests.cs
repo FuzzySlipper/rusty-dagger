@@ -701,6 +701,140 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Empty(restored.State.ActorInventories.InventoryFor(bankerNpc.DurableId)!.Read().Stacks);
     }
 
+    [Fact]
+    public void Relocated_and_party_staged_spawner_npc_preserves_archetype_stats_policies_and_loadout_across_unload_and_save_reload()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord[] towns = [.. definitions.Locations.Records
+            .Where(record => record.Exterior is not null
+                && DaggerfallSourcePopulation.TryResolveClimateRace(definitions, record, out _) is not null)
+            .Take(2)];
+        Assert.Equal(2, towns.Length);
+
+        DaggerfallSiteProfile template = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        NormalizedBillboardSprite billboard = new("sprite/population.png", Hash, 8, 8,
+            [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), Vector2.One);
+        Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards = template.BillboardSprites.ToDictionary();
+        billboards[(183, 5)] = billboard;
+
+        DaggerfallStaticNpcPlacement banker = new(
+            "person/bank/0/0/b-0-p00",
+            new WorldPoint(2F, 1F, 2F),
+            new DaggerfallNpcAppearance("breton", "Male", 183, 5, 42, 0),
+            "bank teller",
+            ["talk", "banking"],
+            billboard.Standing((183, 5)),
+            ActorInteractionPolicyKind.AmbientBark,
+            ActorHarmPolicyKind.LawProtectedCivilian,
+            SpawnerId: "banker");
+
+        DaggerfallSiteProfile BuildSite(DaggerfallSiteId siteId, IReadOnlyList<DaggerfallStaticNpcPlacement> statics)
+        {
+            DaggerfallSiteProfile baseExterior = SameContentAt(template, siteId, DaggerfallWorldProfileKind.Exterior,
+                DaggerfallWorldProfileIds.Exterior(siteId).LogicalId);
+            return new DaggerfallSiteProfile(
+                new ProjectFacts(baseExterior.Project.PlayerPosition, new Dictionary<long, AuthoredActor>()),
+                baseExterior.Geometry,
+                baseExterior.WorldAppearance,
+                baseExterior.InitialLook,
+                baseExterior.Materials,
+                baseExterior.ActorSprites,
+                baseExterior.MobileSprites,
+                baseExterior.Audio,
+                baseExterior.ClassicPresentation,
+                baseExterior.Site,
+                baseExterior.Doors,
+                baseExterior.ProfileKind,
+                baseExterior.ProfileKey.LogicalId,
+                Array.Empty<DaggerfallSitePortal>(),
+                baseExterior.Anchors.Values.ToArray(),
+                baseExterior.Lights,
+                baseExterior.GroundContainerSprites,
+                baseExterior.DungeonMap,
+                baseExterior.DungeonActions,
+                baseExterior.DungeonActionModels,
+                baseExterior.InteriorBuilding,
+                baseExterior.QuestMarkers,
+                billboardSprites: billboards,
+                terrainTextures: template.TerrainTextures,
+                staticNpcs: statics);
+        }
+
+        DaggerfallSiteProfile homeSite = BuildSite(towns[0].Id, [banker]);
+        DaggerfallSiteProfile awaySite = BuildSite(towns[1].Id, []);
+
+        DaggerfallSessionComposition composition = new(definitions, homeSite, DaggerfallTuning.Defaults)
+        {
+            Profiles = new DaggerfallSiteProfiles([homeSite, awaySite]),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, homeSite);
+        PopulateContent(content, awaySite);
+        SpatialFake spatial = SpatialFake.Create(homeSite.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+
+        ArchetypeProfile merchant = definitions.People.RequireArchetype("merchant");
+        DaggerfallNpc bankerNpc = Assert.Single(session.State.Npcs.All, npc => npc.StableKey == banker.Id);
+        long bankerId = bankerNpc.DurableId;
+        int expectedMaxHp = merchant.RollDeterministicHealth(bankerId);
+
+        // 1. Party-staging path (MaterializeLedgerActorAt): join WithParty (sparse capture + unload), travel to awaySite, stage into 3D.
+        session.OverlandParties.JoinParty(bankerId, ActorPartyRole.Companion);
+        Assert.False(session.State.Actors.TryGet(bankerId, out _));
+        Assert.True(session.TryTransitionTo(awaySite.ProfileKey));
+
+        IReadOnlyList<long> stagedIds = session.OverlandParties.StagePartyMembers(awaySite, new WorldPoint(4f, 1f, 4f), 0f);
+        Assert.Equal([bankerId], stagedIds);
+        ActorState staged = session.State.Actors.Get(bankerId);
+        Assert.Equal("merchant", staged.Actor.Get<ActorOverlayComponent>().ArchetypeId);
+        Assert.Equal(ActorHarmPolicyKind.LawProtectedCivilian, staged.Actor.Get<ActorHarmPolicy>().Policy);
+        Assert.Equal(ActorInteractionPolicyKind.AmbientBark, staged.Actor.Get<ActorInteractionPolicy>().Policy);
+        Assert.Equal(expectedMaxHp, (int)staged.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value);
+        Assert.Equal(expectedMaxHp, (int)staged.Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(60, (int)staged.Stats.GetStat(StatId.Parse("personality")).BaseValue);
+        Assert.Equal(55, (int)staged.Stats.GetStat(StatId.Parse("intelligence")).BaseValue);
+        Assert.Equal(50, (int)staged.Stats.GetStat(StatId.Parse("mercantile")).BaseValue);
+        var stagedStack = Assert.Single(session.State.ActorInventories.InventoryFor(bankerId)!.Read().Stacks);
+        Assert.Equal("gold-piece", stagedStack.Definition.Value);
+        Assert.Equal(15UL, stagedStack.Quantity);
+
+        // 2. Relocated site-admission path (MaterializeRelocatedLedgerActors across save/reload):
+        // wound the relocated banker at awaySite, save & reload into awaySite.
+        int woundedHp = expectedMaxHp - 5;
+        staged.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(woundedHp, clamp: true);
+
+        RulesetSavePayload relocatedSave = session.CaptureSave();
+        DaggerfallSavePayload capturedPayload = DaggerfallSavePayload.Read(relocatedSave);
+        ActorLedgerEntry savedEntry = Assert.Single(capturedPayload.ActorLedger, e => e.DurableId == bankerId);
+        Assert.Equal("banker", savedEntry.Origin.SpawnerId);
+        Assert.Equal(ActorHarmPolicyKind.LawProtectedCivilian, savedEntry.Origin.HarmPolicy);
+        Assert.Equal(ActorInteractionPolicyKind.AmbientBark, savedEntry.Origin.InteractionPolicy);
+        // Untouched baseline loadout still stays 0 bytes in ActorInventories even after relocation.
+        Assert.DoesNotContain(capturedPayload.ActorInventories, inv => inv.EntityId == bankerId);
+
+        List<string> restoreReleases = [];
+        ContentFake restoreContent = new(restoreReleases);
+        PopulateContent(restoreContent, homeSite);
+        PopulateContent(restoreContent, awaySite);
+        SpatialFake restoreSpatial = SpatialFake.Create(homeSite.Geometry.Spatial[0].Sha256, restoreReleases);
+        EngineContextFake restoreEngine = EngineContextFake.Create(restoreContent, restoreSpatial.Service, new AppearanceFake(restoreReleases));
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoreEngine.Context, composition, relocatedSave);
+
+        ActorState relocated = restored.State.Actors.Get(bankerId);
+        Assert.Equal("merchant", relocated.Actor.Get<ActorOverlayComponent>().ArchetypeId);
+        Assert.Equal(ActorHarmPolicyKind.LawProtectedCivilian, relocated.Actor.Get<ActorHarmPolicy>().Policy);
+        Assert.Equal(ActorInteractionPolicyKind.AmbientBark, relocated.Actor.Get<ActorInteractionPolicy>().Policy);
+        Assert.Equal(expectedMaxHp, (int)relocated.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value);
+        Assert.Equal(woundedHp, (int)relocated.Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(50, (int)relocated.Stats.GetStat(StatId.Parse("mercantile")).BaseValue);
+        var relocatedStack = Assert.Single(restored.State.ActorInventories.InventoryFor(bankerId)!.Read().Stacks);
+        Assert.Equal("gold-piece", relocatedStack.Definition.Value);
+        Assert.Equal(15UL, relocatedStack.Quantity);
+    }
+
     private static DaggerfallSiteProfile PopulationProfile(DaggerfallSiteProfile source, DaggerfallSiteId site,
         bool includeAuthoredActors = true, bool includePopulation = true,
         IReadOnlyList<DaggerfallPopulationPlacement>? customPopulation = null)
