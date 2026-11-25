@@ -59,7 +59,31 @@ python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py npc-1
 
 The same graph is also available as a 1-click stock-ComfyUI browser workflow in [`ui-workflows/rusty-concept-apose-poselock-2stage.json`](ui-workflows/rusty-concept-apose-poselock-2stage.json) (and saved in the `gpu-lab` ComfyUI sidebar).
 
-## Matching Back View (`../back_ph3.py` — MiniMax H3 Image `p-h3-image_w4a8`)
+## Full 4-View Turnaround (`../turnaround_4view_ph3.py` — Recommended Animated Pipeline)
+
+Once a front concept is approved, generate all four aligned orthographic views (`Front | Right Profile | Left Profile | Back`) in one pass with **`turnaround_4view_ph3.py`**:
+1. Runs **MiniMax H3 Image (`p-h3-image_w4a8`)** at `4096×1536` (`4 × 1024×1536` columns, ~`12 s`/sheet warm on RTX 5090), solving both 90° profiles and the 180° back together so hand orientation, cape length, and asymmetric props agree across all four views.
+2. Auto-slices the sheet into four baseline- and height-aligned `832×1216` views (`front`, `right`, `left`, `back`).
+3. Polishes all four views with a light **Krea2-Turbo New B** pass (`--krea-denoise 0.22`, `--krea-style painterly-vivid`, ~`4.8 s`/view) to restore crisp gouache brushwork and warm-umber ink contours without shifting silhouette or geometry, and writes a ready-to-submit `s{i}/batch.json` for `concept_cli.py add`.
+
+```sh
+# Empty-handed animated turnaround
+python3 authoring/tools/people/concept/turnaround_4view_ph3.py \
+  --front /tmp/npc-471-front.png --pronoun She \
+  --extra "Short sea-teal hooded cape ending cleanly at her mid-back over a laced olive leather back corset." \
+  --out local/art/generated/studies/people-concept/npc-471-4view
+
+# Weapon-in-hand (90-degree horizontal forward hold in right hand, end-on in front/back, full profile in right/left)
+python3 authoring/tools/people/concept/turnaround_4view_ph3.py \
+  --front /tmp/npc-471-front.png --pronoun She \
+  --right-weapon "a straight double-edged medieval steel short sword with a vertical dark iron crossguard, leather grip, and round pommel" \
+  --extra "Short sea-teal hooded cape ending cleanly at her mid-back over a laced olive leather back corset." \
+  --out local/art/generated/studies/people-concept/npc-471-4view-sword
+```
+
+The interactive 1-click browser workflows live in [`ui-workflows/rusty-concept-turnaround-4view-ph3.json`](ui-workflows/rusty-concept-turnaround-4view-ph3.json) (`4096×1536` 4-view) and [`ui-workflows/rusty-concept-turnaround-3view-ph3.json`](ui-workflows/rusty-concept-turnaround-3view-ph3.json) (`3072×1536` 3-view), both uploaded to the `gpu-lab` ComfyUI sidebar.
+
+## Single-View Back Only (`../back_ph3.py` — MiniMax H3 Image `p-h3-image_w4a8`)
 
 Use **MiniMax H3 Image (`p-h3-image_w4a8`)** directly from the approved `front.png` with a short 4-sentence prompt (~`4.6 s` warm, single-stage, zero style drift):
 - Avoid over-specifying rear pouches or running a Qwen-Image post-edit (Qwen tends to teleport front-side pouches onto the back and subtly shifts the overall painting finish).
