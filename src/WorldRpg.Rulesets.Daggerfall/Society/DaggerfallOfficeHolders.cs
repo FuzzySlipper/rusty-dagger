@@ -26,7 +26,8 @@ internal sealed record DaggerfallOfficeOverride(
     int? BillboardArchive = null,
     int? BillboardRecord = null,
     string? PreviousHolderName = null,
-    string? PreviousHolderFate = null);
+    string? PreviousHolderFate = null,
+    bool Vacant = false);
 
 /// <summary>Resolved current holder of a regional throne or faction office, plus predecessor info if succession occurred.</summary>
 internal sealed record DaggerfallOfficeHolder(
@@ -241,6 +242,15 @@ internal sealed class DaggerfallOfficeHolders(
 
         if (_overrideLookup?.Invoke(officeFactionId) is { } over)
         {
+            if (over.Vacant)
+            {
+                return DaggerfallOfficeHolder.Vacant(
+                    officeFactionId,
+                    over.Title ?? defaultTitle,
+                    over.PreviousHolderName,
+                    over.PreviousHolderFate);
+            }
+
             DaggerfallOfficeHolder resolvedOverride = ResolveFromOverride(officeFactionId, over, defaultTitle, preferredRegion ?? officeFaction?.Region);
             if (resolvedOverride.HasLivingHolder)
                 return resolvedOverride;
@@ -265,6 +275,8 @@ internal sealed class DaggerfallOfficeHolders(
                 : null;
 
         List<DaggerfallFactionDefinition> individualChildren = [];
+        if (officeFaction.Type == IndividualFactionType)
+            individualChildren.Add(officeFaction);
         foreach (int childId in officeFaction.Children)
         {
             if (definitions.Factions.Factions.TryGetValue(childId, out DaggerfallFactionDefinition? child)
@@ -272,6 +284,14 @@ internal sealed class DaggerfallOfficeHolders(
             {
                 individualChildren.Add(child);
             }
+        }
+        // Some major organizations (e.g. Dark Brotherhood -> The Night Mother) name their individual head as Parent.
+        if (individualChildren.Count == 0
+            && officeFaction.Parent > 0
+            && definitions.Factions.Factions.TryGetValue(officeFaction.Parent, out DaggerfallFactionDefinition? parentFaction)
+            && parentFaction.Type == IndividualFactionType)
+        {
+            individualChildren.Add(parentFaction);
         }
 
         if (individualChildren.Count == 0)

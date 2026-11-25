@@ -704,6 +704,11 @@ internal sealed partial class DaggerfallSession
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
             OfficeHolders = new DaggerfallOfficeHolders(definitions, _site, State.ActorLedger, State.Npcs);
+            OfficeLedger = new DaggerfallOfficeLedger(
+                definitions, OfficeHolders, State.ActorLedger, State.Npcs,
+                () => _worldSocialSeed, new DaggerfallNames(definitions, _random).NpcName);
+            OfficeLedger.Restore(saved?.OfficeLedger);
+            OfficeHolders.BindOverrideLookup(OfficeLedger.TryGetFactionOverride);
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone);
@@ -1075,6 +1080,7 @@ internal sealed partial class DaggerfallSession
             _persistence.PlaySeconds = () => _playSeconds;
             _persistence.GameSeed = () => _random.Seed;
             _persistence.WorldSocialSeed = () => _worldSocialSeed;
+            _persistence.OfficeLedger = OfficeLedger.Capture;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;

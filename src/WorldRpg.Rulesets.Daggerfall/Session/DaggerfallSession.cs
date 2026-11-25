@@ -861,6 +861,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallQuestPlacement QuestPlacement { get; } = null!;
     internal DaggerfallOfficeHolders OfficeHolders { get; } = null!;
 
+    /// <summary>Sparse office ledger connecting local seeded offices and board-game seats to live holders and overrides.</summary>
+    internal DaggerfallOfficeLedger OfficeLedger { get; } = null!;
+
     /// <summary>Social introductions and vouching: prominence gating, social-skill skips, structured vouches, and better terms.</summary>
     internal DaggerfallIntroductions Introductions { get; } = null!;
 

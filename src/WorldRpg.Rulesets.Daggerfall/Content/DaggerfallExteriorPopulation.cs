@@ -8,6 +8,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>The donor PopulationManager's bounded pool, shared by published and assembled exteriors.</summary>
 internal static class DaggerfallExteriorPopulation
 {
+    /// <summary>Canonical placement ID for a town's primary gate guard / watch captain slot (index 0).</summary>
+    internal static string WatchCaptainSlotId(DaggerfallSiteRecord location)
+    {
+        ArgumentNullException.ThrowIfNull(location);
+        string slug = LocationSlug(location.Name);
+        return string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/000");
+    }
+
+    private static string LocationSlug(string name)
+    {
+        string slug = new string(name.Select(character => char.IsAsciiLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-').ToArray()).Trim('-');
+        return slug.Length == 0 ? "source" : slug;
+    }
+
     internal static IReadOnlyList<DaggerfallPopulationPlacement> Create(DaggerfallDefinitions definitions,
         DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear, WorldPoint? gateAnchor = null,
         ulong worldSocialSeed = 0UL)
@@ -25,8 +39,7 @@ internal static class DaggerfallExteriorPopulation
         var cells = clear.Where(cell => blocks.ContainsKey((cell.X / automapSide, cell.Z / automapSide)))
             .OrderBy(cell => cell.X).ThenBy(cell => cell.Z).ToArray();
         int count = Math.Min(Math.Clamp(blocks.Count / 16, 1, 4) * 24, cells.Length);
-        string slug = new string(location.Name.Select(character => char.IsAsciiLetterOrDigit(character) ? char.ToLowerInvariant(character) : '-').ToArray()).Trim('-');
-        if (slug.Length == 0) slug = "source";
+        string slug = LocationSlug(location.Name);
         WorldPoint[] positions = new WorldPoint[count];
         for (int index = 0; index < count; index++)
         {
@@ -38,11 +51,11 @@ internal static class DaggerfallExteriorPopulation
             float z = block.Y * blockSide + (sourceY * automapSide + automapSide / 2) * (cellSize / automapSide);
             positions[index] = new WorldPoint(x, 0f, -z);
         }
-        int gateGuardIndex = count > 1 ? 1 : 0;
+        int gateGuardIndex = 0;
         if (gateAnchor is { } anchor && count > 1)
         {
             float bestDistSq = float.MaxValue;
-            for (int index = 1; index < count; index++)
+            for (int index = 0; index < count; index++)
             {
                 float dx = positions[index].X - anchor.X;
                 float dz = positions[index].Z - anchor.Z;
@@ -53,12 +66,14 @@ internal static class DaggerfallExteriorPopulation
                     gateGuardIndex = index;
                 }
             }
+            if (gateGuardIndex != 0)
+                (positions[0], positions[gateGuardIndex]) = (positions[gateGuardIndex], positions[0]);
         }
         List<DaggerfallPopulationPlacement> result = [];
         for (int index = 0; index < count; index++)
         {
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
-            bool isGuard = count > 1 ? Math.Abs(index - gateGuardIndex) % 32 == 0 : index == 0;
+            bool isGuard = index % 32 == 0;
             ulong slotSeed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed, location.Id, DaggerfallPeopleSlots.WalkerSlotKey(index));
             int spriteIndex = isGuard ? 0 : (int)((slotSeed >> 16) % (ulong)people.Sprites.Count);
             int sprite = people.Sprites[spriteIndex];

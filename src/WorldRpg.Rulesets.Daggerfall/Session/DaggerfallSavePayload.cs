@@ -80,6 +80,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Every current quest instance; an empty collection is meaningful current state.</summary>
     [JsonRequired]
     public DaggerfallQuestInstancesSave Quests { get; init; } = new([]);
+    /// <summary>Sparse office overrides (office -> holder, previous holder, cause); empty when untouched.</summary>
+    [JsonRequired]
+    public DaggerfallOfficeLedgerSave OfficeLedger { get; init; } = DaggerfallOfficeLedgerSave.Empty;
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];
@@ -1144,6 +1147,8 @@ internal sealed record DaggerfallSavePayload(
         SkillUses.Validate();
         ArgumentNullException.ThrowIfNull(Social);
         Social.Validate();
+        ArgumentNullException.ThrowIfNull(OfficeLedger);
+        OfficeLedger.Validate();
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();
         ArgumentNullException.ThrowIfNull(Doors);

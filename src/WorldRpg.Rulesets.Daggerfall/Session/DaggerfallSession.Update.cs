@@ -1436,6 +1436,7 @@ internal sealed partial class DaggerfallSession
         {
             fallen.ApplyPose(new ActorPose(_grounding.RestingPosition(fallen.Position), fallen.HeadingYawRadians)); // Actors
             _persistence.RecordActorDeath(fallen, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))); // Session: ActorLedger Dead
+            OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite); // Society: OfficeLedger sparse override
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
         }
         _corpseLoot.Create(died);                                                                 // Items
