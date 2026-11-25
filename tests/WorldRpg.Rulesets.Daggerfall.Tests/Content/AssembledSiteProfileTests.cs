@@ -111,6 +111,34 @@ public sealed class AssembledSiteProfileTests
         Assert.Equal(water, Assert.Single(Fixture.Value.Assembly.Assemble(assembled.ProfileKey).WaterVolumes));
     }
 
+    /// <summary>
+    /// A door swings about its own up axis from its closed turn, whatever that turn is: a Charing building door, and a
+    /// dungeon action door a main-quest block places turned over, whose up axis is not the world's.
+    /// </summary>
+    [Fact]
+    public void A_door_swings_as_a_pure_turn_about_its_own_up_axis()
+    {
+        DaggerfallRdbDoorDefinition exterior = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)).Doors
+            .First(door => door.LockSurface == DaggerfallLockInteractionSurface.Exterior);
+        string[] turnedOverBlocks = ["S0000004.RDB", "S0000080.RDB", "S0000081.RDB", "S0000101.RDB", "S0000160.RDB"];
+        var castle = TestPayload.Definitions.Locations.Records.First(value => value.DungeonBlocks.Any(block => turnedOverBlocks.Contains(block.SourceKey)));
+        DaggerfallRdbDoorDefinition turnedOver = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(castle.Id)).Doors
+            .First(door => Vector3.Transform(Vector3.UnitY, door.Rotation).Y < .5F);
+        foreach (DaggerfallRdbDoorDefinition door in new[] { exterior, turnedOver })
+        {
+            using WorldRpg.Kit.World.EntityDirectory store = new();
+            using DaggerfallDoorRuntime doors = new(store, RandomMinimum.Create(), [door], "hinge");
+            Assert.Equal(DaggerfallDoorOperationResult.Started, doors.Open(door.Id, DaggerfallDoorOperationSource.DungeonAction));
+            doors.Advance(door.OpenDurationSeconds / 3d);
+            Transform pose = doors.Read(door.Id).Pose;
+            Quaternion swing = Quaternion.Inverse(door.Rotation) * pose.Rotation;
+            Assert.Equal(0F, swing.X, 5);
+            Assert.Equal(0F, swing.Z, 5);
+            Assert.True(MathF.Abs(swing.Y) > .1F, $"Door {door.Id} has not swung.");
+            Assert.Equal(door.Position, pose.Translation);
+        }
+    }
+
     [Fact]
     public void An_assembled_charing_exterior_places_its_doors_people_and_blocks()
     {
