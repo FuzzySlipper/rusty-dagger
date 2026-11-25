@@ -391,6 +391,10 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.UpdateCamera) => null,
                 nameof(ICameraViewService.SetToneMapping) => null,
                 nameof(ICameraViewService.SetBloom) => null,
+                nameof(ICameraViewService.SetAutoExposure) => null,
+                nameof(ICameraViewService.SetVolumetricFog) => null,
+                nameof(ICameraViewService.SetIndirectLight) => null,
+                nameof(ICameraViewService.SetImageEffect) => null,
                 nameof(ICameraViewService.SetPrecipitation) => Record(Precipitation, arguments),
                 nameof(ICameraViewService.SetWetness) => Record(Wetness, arguments),
                 nameof(ICameraViewService.SetSnow) => Record(Snow, arguments),
@@ -544,13 +548,25 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>Renderer settings whose readout holds only the volumetric clouds in effect.</summary>
     private class RendererSettingsFake : DispatchProxy
     {
-        internal VolumetricCloudsQuality VolumetricClouds { get; set; }
+        private RendererSettingsRequest _requested;
+        internal VolumetricCloudsQuality VolumetricClouds
+        {
+            get => _requested.VolumetricClouds;
+            set => _requested = _requested with { VolumetricClouds = value };
+        }
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
-            nameof(IRendererSettingsService.Read) => Readout(default(RendererSettingsRequest) with { VolumetricClouds = VolumetricClouds }),
+            nameof(IRendererSettingsService.Read) => Readout(_requested),
+            nameof(IRendererSettingsService.Set) => Apply((RendererSettingsRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
+
+        private RendererSettingsReadout Apply(RendererSettingsRequest request)
+        {
+            _requested = request;
+            return Readout(_requested);
+        }
 
         private static RendererSettingsReadout Readout(RendererSettingsRequest settings) =>
             new(settings, settings, default, default, default, default, default, default, default, default, default, default, default, default);

@@ -698,9 +698,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _ => _tuning.DungeonLampScale,
     };
 
-    /// <summary>Effective ambient intensity: shipped level × scale, or explicit chromatic floor under an active look override.</summary>
+    /// <summary>Effective ambient intensity: shipped level × scale, or chromatic floor scaled gently by authored dungeon ambient zones.</summary>
     private float AmbientEffectiveIntensity(float level) =>
-        _lookOverride is { } look && _profileKind != DaggerfallWorldProfileKind.Exterior ? look.AmbientIntensity : level * Scale;
+        _lookOverride is { } look && _profileKind != DaggerfallWorldProfileKind.Exterior
+            ? (_profileKind == DaggerfallWorldProfileKind.Dungeon && _dungeonLevel is { } zone && _tuning.Dungeon > 0f
+                ? look.AmbientIntensity * Math.Clamp(zone / _tuning.Dungeon, 0.75f, 1.50f)
+                : look.AmbientIntensity)
+            : level * Scale;
 
     /// <summary>What this kind of place multiplies its ambient by.</summary>
     private float Scale => _profileKind switch

@@ -38,6 +38,9 @@ internal sealed partial class DaggerfallSiteAppearance
     private RenderResource? surfaceShader;
     private RenderResource? interiorReliefShader;
     private DaggerfallInteriorReliefSettings? interiorRelief;
+    private bool interiorMaterialAware;
+    private float interiorDungeonDampness;
+    private float? interiorWaterLevelY;
     private DaggerfallSurfaceReliefTuning reliefTuning = DaggerfallSurfaceReliefTuning.Default;
     private Func<(float Strength, float Distance)> reliefChoice = () => (0F, 1F);
     private (float Strength, float Distance) surfacesRelief;
@@ -54,6 +57,13 @@ internal sealed partial class DaggerfallSiteAppearance
     private sealed class SurfaceMaterial(NormalizedMaterial source)
     {
         internal NormalizedMaterial Source { get; } = source;
+        internal (int Archive, int Record)? TextureRecord { get; } = DaggerfallInteriorSurfaceMaterials.TryParseTextureRecord(source.TexturePath);
+        internal DaggerfallInteriorSurfaceClass SurfaceClass { get; } = DaggerfallInteriorSurfaceMaterials.TryParseTextureRecord(source.TexturePath) is { } rec
+            ? DaggerfallInteriorSurfaceMaterials.Classify(rec.Archive, rec.Record)
+            : DaggerfallInteriorSurfaceClass.DefaultStone;
+        internal DaggerfallInteriorShellKind ShellKind { get; } = DaggerfallInteriorSurfaceMaterials.TryParseTextureRecord(source.TexturePath) is { } rec
+            ? DaggerfallInteriorSurfaceMaterials.ShellKind(rec.Archive, rec.Record)
+            : DaggerfallInteriorShellKind.None;
         internal RenderResource?[]? Frames { get; } = source.Frames is { } frames ? new RenderResource?[frames.Textures.Count] : null;
         internal int Frame { get; set; }
         internal Material Material { get; set; } = null!;
@@ -193,19 +203,33 @@ internal sealed partial class DaggerfallSiteAppearance
         int season = SurfaceSeason;
         foreach (SurfaceMaterial surface in surfaceMaterials) ApplySurface(surface, season);
         ApplyShells(season, surfacesRefreshed);
+        ApplyInteriorShells(season, surfacesRefreshed);
     }
 
     private int SurfaceSeason => materialSeason switch { DaggerfallExteriorSeason.Winter => 1, DaggerfallExteriorSeason.Rain => 2, _ => 0 };
 
     /// <summary>
-    /// Applies Pass 2 interior/dungeon voxel relief &amp; stylized specular settings (<c>interior-relief.wgsl</c>, #11043)
-    /// to non-animated opaque surfaces inside interiors and dungeons; null restores flat surfaces.
+    /// Applies Pass 2/3 interior/dungeon voxel relief, stylized specular, material-class PBR, and waterline wetness
+    /// (<c>interior-relief.wgsl</c>, #11043) to non-animated opaque surfaces indoors &amp; in dungeons; null restores flat surfaces.
     /// </summary>
-    internal void UpdateInteriorRelief(string? shaderPath, ContentSha256 shaderSha256, DaggerfallInteriorReliefSettings? settings)
+    internal void UpdateInteriorRelief(
+        string? shaderPath,
+        ContentSha256 shaderSha256,
+        DaggerfallInteriorReliefSettings? settings,
+        bool materialAware = false,
+        float dungeonDampness = 0f,
+        float? waterLevelY = null)
     {
         if (disposed || inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior) return;
-        if (Equals(interiorRelief, settings)) return;
+        if (Equals(interiorRelief, settings)
+            && interiorMaterialAware == materialAware
+            && interiorDungeonDampness == dungeonDampness
+            && interiorWaterLevelY == waterLevelY)
+            return;
         interiorRelief = settings;
+        interiorMaterialAware = materialAware;
+        interiorDungeonDampness = dungeonDampness;
+        interiorWaterLevelY = waterLevelY;
         if (settings is not null && interiorReliefShader is null && shaderPath is not null)
         {
             interiorReliefShader = appearance.OpenShader(content, shaderPath, shaderSha256);
@@ -232,7 +256,9 @@ internal sealed partial class DaggerfallSiteAppearance
         else if (interiorRelief is { } relief && interiorReliefShader is { } reliefShader && surface.Frames is null && glass is null)
         {
             RenderResource? heightMap = surface.Relief[season]?.Image;
-            shader = relief.Shader(reliefShader, heightMap);
+            shader = DaggerfallInteriorSurfaceMaterials.BuildReliefShader(
+                relief, reliefShader, heightMap, surface.SurfaceClass,
+                interiorMaterialAware, interiorDungeonDampness, interiorWaterLevelY);
         }
         if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) return;
         appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));

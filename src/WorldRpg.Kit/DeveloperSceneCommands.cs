@@ -70,4 +70,7 @@ public interface IDeveloperSceneCommands : IDebugCommandModule
 
     [DebugCommand("world.interior-relief", Description = "Developer: select Pass 2 interior & dungeon voxel-relief + stylized specular mode for this run (off, specular-only, voxel-subtle, voxel-pulp, voxel-crisp, voxel-wet, or status/list).")]
     DebugCommandResult InteriorRelief(string mode);
+
+    [DebugCommand("world.interior-surfaces", Description = "Developer: select Pass 3 interior & dungeon material-aware PBR/relief and volumetric 3D moss/carpet shell mode for this run (off, materials, shells, full, or status/list).")]
+    DebugCommandResult InteriorSurfaces(string mode);
 }

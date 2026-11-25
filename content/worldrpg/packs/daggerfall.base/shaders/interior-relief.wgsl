@@ -11,7 +11,9 @@
 // parameters[0]: (depth_metres, max_steps, fade_start, fade_end)
 // parameters[1]: (cavity_darkness, top_slope_strength, base_roughness, rim_roughness)
 // parameters[2]: (rim_metalness, self_shadow_strength, height_gamma, mortar_threshold)
-// parameters[3]: (has_authored_map, 0, 0, 0)
+// parameters[3]: (has_authored_map, special_flags, water_level_y, has_water)
+//   special_flags: 0=stone/default, 1=gold/brass inlay, 2=forged iron+brass, 3=wet blood,
+//                  4=velvet carpet/tapestry + gold embroidery, 5=mossy stone (matte moss + damp stone)
 
 #import rusty::types::Surface
 #import rusty::material::{material, albedo, albedo_sampler, product_map_a}
@@ -278,10 +280,79 @@ fn shade(given: Surface) -> vec4<f32> {
 
     var lit = surface;
     lit.normal = normal;
-    lit.roughness = clamp(rough, 0.08, 1.0);
-    lit.metalness = clamp(metal, 0.0, 0.5);
+    let special = i32(round(material.parameters[3].y));
+    let water_y = material.parameters[3].z;
+    let has_water = material.parameters[3].w > 0.5;
+
+    var final_base = surface.tint.rgb * color.rgb;
+    var final_rough = clamp(rough, 0.08, 1.0);
+    var final_metal = clamp(metal, 0.0, 0.5);
+
+    // Pass 3 material-specific pulp-fantasy surface responses (#11043):
+    let s_col = sqrt(max(color.rgb, vec3<f32>(0.0)));
+    let top_face = select(1.0, 0.25, side != 0);
+    let aa_var = kernel_rough + spec_aa * spec_aa;
+    if special == 1 || special == 2 || special == 4 {
+        // Warm gold / brass inlays, studs, medallions, organ pipes, heraldic embroidery.
+        let gold_m = smoothstep(0.12, 0.24, color.r)
+            * smoothstep(0.07, 0.16, color.g)
+            * smoothstep(1.9, 3.0, color.g / max(color.b, 0.015))
+            * smoothstep(2.3, 1.35, color.r / max(color.g, 0.015))
+            * (1.0 - hollow_matte) * top_face;
+        final_metal = max(final_metal, gold_m * 0.46 * (1.0 - smoothstep(0.60, 1.8, footprint) * 0.55));
+        let gold_rough = max(sqrt(clamp(0.24 * 0.24 + aa_var, 0.0, 1.0)), side_floor);
+        final_rough = mix(final_rough, gold_rough, gold_m * 0.85);
+    }
+    if special == 2 {
+        // Forged dark iron bars, door bands, hinges & rivets (neutral low-chroma dark-to-mid metal).
+        let max_c = max(max(s_col.r, s_col.g), s_col.b);
+        let min_c = min(min(s_col.r, s_col.g), s_col.b);
+        let chroma = max_c - min_c;
+        let iron_m = smoothstep(0.10, 0.03, chroma) * smoothstep(0.12, 0.24, max_c) * smoothstep(0.66, 0.46, max_c) * (1.0 - hollow_matte) * top_face;
+        final_metal = max(final_metal, iron_m * 0.44 * (1.0 - smoothstep(0.60, 1.8, footprint) * 0.55));
+        let iron_rough = max(sqrt(clamp(0.28 * 0.28 + aa_var, 0.0, 1.0)), side_floor);
+        final_rough = mix(final_rough, iron_rough, iron_m * 0.78);
+    }
+    if special == 3 {
+        // Wet crimson dungeon blood splatters catch slick dark glossy specular glints.
+        let blood_m = smoothstep(0.04, 0.12, color.r)
+            * smoothstep(1.9, 3.2, color.r / max(color.g, 0.01))
+            * smoothstep(2.2, 3.6, color.r / max(color.b, 0.01))
+            * top_face;
+        let blood_rough = max(sqrt(clamp(0.18 * 0.18 + aa_var, 0.0, 1.0)), side_floor);
+        final_rough = mix(final_rough, blood_rough, blood_m * 0.92);
+        final_base = mix(final_base, final_base * vec3<f32>(1.08, 0.82, 0.82), blood_m * 0.45);
+    }
+    if special == 4 {
+        // Soft grazing velvet / heavy woven fabric Fresnel sheen on carpets, banners & drapes.
+        let view = normalize(frame.camera.xyz - surface.world_position);
+        let velvet_f = pow(1.0 - max(dot(normal, view), 0.0), 3.0);
+        final_base += final_base * (velvet_f * 0.22);
+    }
+    if special == 5 {
+        // Keep organic moss & lichen patches soft matte while surrounding damp dungeon stone gleams.
+        let green_m = clamp((s_col.g - max(s_col.r * 0.96, s_col.b * 1.12)) * 7.5, 0.0, 1.0);
+        let olive_m = smoothstep(0.70, 0.86, s_col.g / max(s_col.r, 1e-4))
+            * smoothstep(1.60, 2.50, s_col.g / max(s_col.b, 0.04));
+        let moss_m = max(green_m, olive_m) * smoothstep(0.14, 0.26, s_col.g);
+        final_rough = mix(final_rough, 0.88, moss_m * 0.85);
+        final_metal *= 1.0 - moss_m * 0.90;
+    }
+
+    // Flooded dungeon capillary waterline wetness: stone within 0.85m above water darkens and glistens wet.
+    if has_water {
+        let wet = smoothstep(water_y + 0.85, water_y - 0.15, surface.world_position.y);
+        if wet > 0.005 {
+            final_base *= mix(1.0, 0.64, wet);
+            let wet_rough = max(0.22, sqrt(0.22 * 0.22 + kernel_rough + spec_aa * spec_aa));
+            final_rough = mix(final_rough, min(final_rough, wet_rough), wet * 0.88);
+        }
+    }
+
+    lit.roughness = clamp(final_rough, 0.08, 1.0);
+    lit.metalness = clamp(final_metal, 0.0, 0.55);
     let cavity_base = 1.0 - 0.52 * p1.x * hollow;
-    lit.base = vec4<f32>(surface.tint.rgb * color.rgb * cavity_base * self_shadow, surface.base.a);
+    lit.base = vec4<f32>(final_base * cavity_base * self_shadow, surface.base.a);
     lit.occlusion *= (1.0 - p1.x * hollow) * mix(1.0, self_shadow, 0.45);
     return standard_shade(lit);
 }

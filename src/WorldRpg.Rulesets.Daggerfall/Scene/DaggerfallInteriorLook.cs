@@ -104,6 +104,7 @@ internal sealed class DaggerfallInteriorLook : IDisposable
 {
     private const string ShaderPath = "worldrpg/packs/daggerfall.base/shaders/interior-look.wgsl";
     private const string ReliefShaderPath = "worldrpg/packs/daggerfall.base/shaders/interior-relief.wgsl";
+    private const string ShellShaderPath = "worldrpg/packs/daggerfall.base/shaders/interior-shells.wgsl";
     private const float ProbeSnapMetres = 8f;
     // Engine requires volumetric fog Distance > 0 even when density is 0 (disabled).
     private static readonly VolumetricFogRequest VolumetricFogOff = new(0f, Vector3.One, 0f, 0f, 0f, 96f, 0f);
@@ -113,12 +114,15 @@ internal sealed class DaggerfallInteriorLook : IDisposable
     private readonly DaggerfallSiteLightingTuning _lightingTuning;
     private readonly RendererSettingsRequest _baselineRenderer;
 
-    private string _preset = "baseline";
-    private string _reliefMode = "off";
+    private string _preset = "auto";
+    private string _reliefMode = "voxel-pulp";
+    private string _surfaceMode = "full";
     private RenderResource? _shader;
     private bool _shaderAttempted;
     private ContentSha256? _reliefShaderSha;
     private bool _reliefShaderChecked;
+    private ContentSha256? _shellShaderSha;
+    private bool _shellShaderChecked;
     private bool _activeOnCamera;
     private bool _rendererModified;
     private DaggerfallInteriorLookProfile? _appliedProfile;
@@ -136,6 +140,7 @@ internal sealed class DaggerfallInteriorLook : IDisposable
 
     internal string Preset => _preset;
     internal string ReliefMode => _reliefMode;
+    internal string SurfaceMode => _surfaceMode;
 
     internal static IReadOnlyList<string> PresetNames { get; } =
     [
@@ -168,6 +173,14 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         "voxel-wet",
     ];
 
+    internal static IReadOnlyList<string> SurfaceModeNames { get; } =
+    [
+        "off",
+        "materials",
+        "shells",
+        "full",
+    ];
+
     internal string? Select(string name)
     {
         string normalized = name.Trim().ToLowerInvariant();
@@ -190,11 +203,24 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         return null;
     }
 
+    internal string? SelectSurfaces(string mode)
+    {
+        string normalized = mode.Trim().ToLowerInvariant();
+        if (normalized == "reset") normalized = "off";
+        if (!SurfaceModeNames.Contains(normalized))
+            return $"Unknown interior surfaces mode '{mode}'. Valid modes: {string.Join(", ", SurfaceModeNames)}.";
+        _surfaceMode = normalized;
+        return null;
+    }
+
     internal string Describe() =>
-        $"interior-look preset={_preset} active={_activeOnCamera} shaderLoaded={_shader is not null} relief={_reliefMode} available=[{string.Join(", ", PresetNames)}]";
+        $"interior-look preset={_preset} active={_activeOnCamera} shaderLoaded={_shader is not null} relief={_reliefMode} surfaces={_surfaceMode} available=[{string.Join(", ", PresetNames)}]";
 
     internal string DescribeRelief() =>
         $"interior-relief mode={_reliefMode} shaderReady={EnsureReliefShaderSha() is not null} available=[{string.Join(", ", ReliefModeNames)}]";
+
+    internal string DescribeSurfaces() =>
+        $"interior-surfaces mode={_surfaceMode} shellShaderReady={EnsureShellShaderSha() is not null} available=[{string.Join(", ", SurfaceModeNames)}]";
 
     /// <summary>
     /// Maps Daggerfall's <c>DFRegion.DungeonTypes</c> ordinal (<c>0..18</c>) to Patch's approved dungeon mood preset:
@@ -237,11 +263,29 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         bool indoors = site.ProfileKind is DaggerfallWorldProfileKind.Interior or DaggerfallWorldProfileKind.Dungeon;
         bool isDungeon = site.ProfileKind == DaggerfallWorldProfileKind.Dungeon;
 
-        // Pass 2 interior/dungeon voxel relief & stylized specular syncs independently of lighting preset.
+        // Pass 2/3 interior/dungeon voxel relief, material-class PBR, waterline wetness & volumetric shells.
+        bool materialAware = _surfaceMode is "materials" or "full";
+        bool shellsWanted = _surfaceMode is "shells" or "full";
+        float dampness = isDungeon ? DaggerfallInteriorSurfaceMaterials.DungeonDampnessFor(dungeonType) : 0f;
+        float? waterLevelY = null;
+        if (isDungeon && site.WaterVolumes.Count > 0)
+        {
+            float maxY = float.NegativeInfinity;
+            foreach (var vol in site.WaterVolumes)
+                if (vol.Maximum.Y > maxY) maxY = vol.Maximum.Y;
+            if (float.IsFinite(maxY)) waterLevelY = maxY;
+        }
+
         if (indoors && !overlandOpen && _reliefMode != "off" && EnsureReliefShaderSha() is { } reliefSha)
-            appearance.UpdateInteriorRelief(ReliefShaderPath, reliefSha, ResolveRelief(_reliefMode, isDungeon));
+            appearance.UpdateInteriorRelief(ReliefShaderPath, reliefSha, ResolveRelief(_reliefMode, isDungeon),
+                materialAware, dampness, waterLevelY);
         else if (indoors)
             appearance.UpdateInteriorRelief(null, default, null);
+
+        if (indoors && !overlandOpen && shellsWanted && EnsureShellShaderSha() is { } shellSha)
+            appearance.UpdateInteriorShells(ShellShaderPath, shellSha, enabled: true);
+        else if (indoors)
+            appearance.UpdateInteriorShells(null, default, enabled: false);
 
         if (!indoors || overlandOpen || _preset == "baseline")
         {
@@ -413,6 +457,15 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         if (_data.TryReadFile(ReliefShaderPath, out ReadOnlyMemory<byte> bytes))
             _reliefShaderSha = Hash(bytes.Span);
         return _reliefShaderSha;
+    }
+
+    private ContentSha256? EnsureShellShaderSha()
+    {
+        if (_shellShaderChecked || _data is null) return _shellShaderSha;
+        _shellShaderChecked = true;
+        if (_data.TryReadFile(ShellShaderPath, out ReadOnlyMemory<byte> bytes))
+            _shellShaderSha = Hash(bytes.Span);
+        return _shellShaderSha;
     }
 
     private static ContentSha256 Hash(ReadOnlySpan<byte> bytes)

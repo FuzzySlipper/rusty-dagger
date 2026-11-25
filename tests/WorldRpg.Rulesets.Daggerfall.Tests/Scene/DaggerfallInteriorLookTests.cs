@@ -29,9 +29,9 @@ public sealed class DaggerfallInteriorLookTests
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, new AppearanceFake(releases));
         using DaggerfallInteriorLook look = new(engine.Context, null, Tuning);
 
-        Assert.Equal("baseline", look.Preset);
-        Assert.Null(look.Select("auto"));
         Assert.Equal("auto", look.Preset);
+        Assert.Null(look.Select("baseline"));
+        Assert.Equal("baseline", look.Preset);
         Assert.Null(look.Select("dungeon-cobalt"));
         Assert.Equal("dungeon-cobalt", look.Preset);
         Assert.Null(look.Select("RESET"));
@@ -39,13 +39,55 @@ public sealed class DaggerfallInteriorLookTests
         Assert.Contains("Unknown interior look", look.Select("neon-lasers"));
         Assert.Equal("baseline", look.Preset);
 
-        Assert.Equal("off", look.ReliefMode);
-        Assert.Null(look.SelectRelief("voxel-pulp"));
         Assert.Equal("voxel-pulp", look.ReliefMode);
+        Assert.Null(look.SelectRelief("voxel-wet"));
+        Assert.Equal("voxel-wet", look.ReliefMode);
         Assert.Null(look.SelectRelief("reset"));
         Assert.Equal("off", look.ReliefMode);
         Assert.Contains("Unknown interior relief mode", look.SelectRelief("bumps"));
         Assert.Equal("off", look.ReliefMode);
+
+        Assert.Equal("full", look.SurfaceMode);
+        Assert.Null(look.SelectSurfaces("materials"));
+        Assert.Equal("materials", look.SurfaceMode);
+        Assert.Null(look.SelectSurfaces("shells"));
+        Assert.Equal("shells", look.SurfaceMode);
+        Assert.Null(look.SelectSurfaces("reset"));
+        Assert.Equal("off", look.SurfaceMode);
+        Assert.Contains("Unknown interior surfaces mode", look.SelectSurfaces("chrome"));
+        Assert.Equal("off", look.SurfaceMode);
+    }
+
+    [Fact]
+    public void Pass3_surface_materials_classify_arena2_textures_and_shell_eligibility()
+    {
+        Assert.Equal((123, 0), DaggerfallInteriorSurfaceMaterials.TryParseTextureRecord("worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-123-0.png"));
+        Assert.Equal((49, 6), DaggerfallInteriorSurfaceMaterials.TryParseTextureRecord("textures/texture-049-6.png"));
+        Assert.Null(DaggerfallInteriorSurfaceMaterials.TryParseTextureRecord("custom/stone.png"));
+
+        Assert.Equal(DaggerfallInteriorSurfaceClass.MossyStone, DaggerfallInteriorSurfaceMaterials.Classify(23, 0));
+        Assert.Equal(DaggerfallInteriorShellKind.MossOlive, DaggerfallInteriorSurfaceMaterials.ShellKind(23, 0));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.MossyStone, DaggerfallInteriorSurfaceMaterials.Classify(123, 1));
+        Assert.Equal(DaggerfallInteriorShellKind.MossGreen, DaggerfallInteriorSurfaceMaterials.ShellKind(123, 1));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PlushCarpet, DaggerfallInteriorSurfaceMaterials.Classify(49, 6));
+        Assert.Equal(DaggerfallInteriorShellKind.PlushCarpet, DaggerfallInteriorSurfaceMaterials.ShellKind(49, 6));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.WovenTapestry, DaggerfallInteriorSurfaceMaterials.Classify(57, 0));
+        Assert.Equal(DaggerfallInteriorShellKind.WovenTapestry, DaggerfallInteriorSurfaceMaterials.ShellKind(57, 0));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PolishedMarble, DaggerfallInteriorSurfaceMaterials.Classify(63, 0));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PolishedMarble, DaggerfallInteriorSurfaceMaterials.Classify(363, 3)); // Temperate Temple
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PolishedMarble, DaggerfallInteriorSurfaceMaterials.Classify(41, 2));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PolishedMarble, DaggerfallInteriorSurfaceMaterials.Classify(341, 1));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.ArcaneStone, DaggerfallInteriorSurfaceMaterials.Classify(337, 0));    // Temperate Mages Guild
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PlushCarpet, DaggerfallInteriorSurfaceMaterials.Classify(349, 6));    // Temperate Carpet
+        Assert.Equal(DaggerfallInteriorShellKind.PlushCarpet, DaggerfallInteriorSurfaceMaterials.ShellKind(349, 6));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PaintingOrScroll, DaggerfallInteriorSurfaceMaterials.Classify(48, 3));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.PaintingOrScroll, DaggerfallInteriorSurfaceMaterials.Classify(348, 1));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.BloodAndGore, DaggerfallInteriorSurfaceMaterials.Classify(93, 0));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.IronAndDoors, DaggerfallInteriorSurfaceMaterials.Classify(74, 0));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.WetSewerCave, DaggerfallInteriorSurfaceMaterials.Classify(47, 1));
+        Assert.Equal(DaggerfallInteriorSurfaceClass.FlatSolid, DaggerfallInteriorSurfaceMaterials.Classify(0, 40));
+
+        Assert.True(DaggerfallInteriorSurfaceMaterials.DungeonDampnessFor(6) > DaggerfallInteriorSurfaceMaterials.DungeonDampnessFor(2));
     }
 
     [Fact]
