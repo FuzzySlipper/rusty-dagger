@@ -81,7 +81,7 @@ internal static partial class DaggerfallQuestResourceDeclarations
             kind == "foe" ? new(After("is") is { } count && int.TryParse(count, CultureInfo.InvariantCulture, out int amount) ? amount : 1) : null,
             kind == "item" ? new(Has("artifact"), Number("class"), Number("subclass"), Number("template"), Number("key"), Number("range"), Number("to"), After("used"), After("anyInfo")) : null,
             kind == "person" ? new(After("named"), After("faction"), After("factiontype"), After("group"), Number("face"),
-                Has("female") ? "female" : Has("male") ? "male" : null, Has("local") ? "local" : Has("remote") ? "remote" : null, Has("athome")) : null,
+                Has("female") ? "female" : Has("male") ? "male" : null, Has("local") ? "local" : Has("remote") ? "remote" : null, Has("athome"), After("office")) : null,
             kind == "place" ? [.. (target ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(Canonical)] : null);
     }
 
@@ -109,7 +109,8 @@ internal static partial class DaggerfallQuestResourceDeclarations
             case "person":
             {
                 int target = Array.FindIndex(words, word => word.Equals("named", StringComparison.OrdinalIgnoreCase) || word.Equals("faction", StringComparison.OrdinalIgnoreCase)
-                    || word.Equals("factiontype", StringComparison.OrdinalIgnoreCase) || word.Equals("group", StringComparison.OrdinalIgnoreCase));
+                    || word.Equals("factiontype", StringComparison.OrdinalIgnoreCase) || word.Equals("group", StringComparison.OrdinalIgnoreCase)
+                    || word.Equals("office", StringComparison.OrdinalIgnoreCase));
                 return target >= 0 && target + 1 < words.Length ? (words[target + 1], null, words.Where((_, index) => index != target + 1).ToArray()) : (null, null, words);
             }
             default:

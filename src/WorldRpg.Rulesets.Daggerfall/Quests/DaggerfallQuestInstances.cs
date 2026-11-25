@@ -232,6 +232,8 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
             if (resource.SelectedPerson is { } person && (person.FactionId < 0 || string.IsNullOrWhiteSpace(person.Race)
                 || person.Gender is not ("Male" or "Female") || person.HudFace is < 0 or > 9
                 || string.IsNullOrWhiteSpace(person.DisplayName) || person.QuestorId is <= 0 || person.VampireClanFactionId is <= 0
+                || person.CastId is not null && string.IsNullOrWhiteSpace(person.CastId)
+                || person.OfficeFactionId is <= 0 || person.OfficeActorId is <= 0
                 || person.Appearance is { } appearance && (appearance.Race != person.Race || appearance.Gender != person.Gender
                     || appearance.FactionId != person.FactionId || appearance.NameSeed != person.NameSeed
                     || appearance.BillboardArchive < 0 || appearance.BillboardRecord is < 0 or > 127)))
@@ -318,7 +320,11 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                 if (declared.Kind != "person" || !definitions.Factions.Factions.ContainsKey(person.FactionId)
                     || !definitions.Catalogs.TryGetRace(person.Race, out _)
                     || person.VampireClanFactionId is int clan && (!definitions.Factions.Factions.TryGetValue(clan, out var faction) || faction.Type != 6)
-                    || person.QuestorId is long questor && !resource.Binding.ActorIds.Contains(questor))
+                    || person.QuestorId is long questor && !resource.Binding.ActorIds.Contains(questor)
+                    || person.CastId is { } castId && (!definitions.People.Individuals.ContainsKey(castId)
+                        || !resource.Binding.ActorIds.Contains(DaggerfallPeopleSlots.CastIndividualIdentity(castId)))
+                    || person.OfficeFactionId is int officeFaction && !definitions.Factions.Factions.ContainsKey(officeFaction)
+                    || person.OfficeActorId is long officeActor && !resource.Binding.ActorIds.Contains(officeActor))
                     throw new ArgumentException($"Quest resource '{symbol}' has incompatible selected Person meaning.");
             }
         }
@@ -469,11 +475,22 @@ internal sealed record DaggerfallQuestInstancesSave(DaggerfallQuestInstanceSave[
                     {
                         if (person)
                         {
+                            bool isCast = resource.SelectedPerson?.CastId is { } castId
+                                && actorId == DaggerfallPeopleSlots.CastIndividualIdentity(castId);
+                            bool isBoundWorldActor = resource.SelectedPerson?.QuestorId == actorId
+                                || resource.SelectedPerson?.OfficeActorId == actorId
+                                || isCast;
                             if (!npcs.TryGetValue(actorId, out var npc))
-                                throw new ArgumentException($"Quest Person '{resource.Symbol}' requires a registered NPC identity, not actor {actorId}.");
-                            // Validate(definitions) already requires the exact selected giver.
-                            if (resource.SelectedPerson?.QuestorId is null && (DaggerfallNpcKind)npc.Kind != DaggerfallNpcKind.Questor)
+                            {
+                                // Untouched canonical CastIndividuals remain sparse (zero ledger/NPC bytes) until
+                                // visited or relocated; Validate(definitions) already verified the exact cast ID.
+                                if (!isCast)
+                                    throw new ArgumentException($"Quest Person '{resource.Symbol}' requires a registered NPC identity, not actor {actorId}.");
+                            }
+                            else if (!isBoundWorldActor && (DaggerfallNpcKind)npc.Kind != DaggerfallNpcKind.Questor)
+                            {
                                 throw new ArgumentException($"Generated quest Person '{resource.Symbol}' requires a Questor NPC identity.");
+                            }
                             // Hidden/removed resources retain their identity and text. Their canonical
                             // registry presence and allocator tombstone govern projection, not the binding.
                         }
@@ -988,7 +1005,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         if (!_instances.TryAdd(started.InstanceId, started)) throw new ArgumentException($"Quest instance '{started.InstanceId}' already exists.");
         if (_definitions.QuestSources.Catalog.Rows.Any(row => row.OneTime && started.SourceFile == row.Name + ".txt"))
             _acceptedOneTimeSources.Add(started.SourceFile);
-        foreach (var resource in started.Resources.Where(value => value.SelectedPerson is { Home: not null, QuestorId: null }))
+        foreach (var resource in started.Resources.Where(value => value.SelectedPerson is { Home: not null, QuestorId: null, CastId: null, OfficeActorId: null }))
             RequestPlacement(started.InstanceId, "person-home:" + DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home"), resource.Symbol,
                 DaggerfallQuestInstanceSave.Canonical(resource.Symbol, "Person home") + ".home", automaticHome: true);
         return started.Capture();

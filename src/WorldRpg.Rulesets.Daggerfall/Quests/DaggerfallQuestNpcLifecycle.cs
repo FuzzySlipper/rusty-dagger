@@ -48,14 +48,16 @@ internal sealed partial class DaggerfallQuestInstances
                 // Only a person minted for this quest may become permanently removed in the
                 // registry. A reference to an authored provider never destroys that definition.
                 foreach (long id in resource.Binding.ActorIds)
-                    if (_placementNpcs?.Require(id) is { Kind: DaggerfallNpcKind.Questor } npc
+                    if (_placementNpcs is not null && _placementNpcs.TryGet(id, out var npc)
+                        && npc.Kind == DaggerfallNpcKind.Questor
                         && npc.StableKey == instance.InstanceId + "/" + resource.Symbol)
                         _placementNpcs.SetPresence(id, DaggerfallNpcPresence.Removed);
                 break;
             case DaggerfallQuestTaskOperationKind.CreateNpc:
                 // Source CreateNpc places a generic Person at its allocated home. It cannot
-                // resurrect a destroyed resource or move an individual/quest giver home.
-                if (resource.IsNpcDestroyed || resource.SelectedPerson!.Individual || resource.SelectedPerson.QuestorId is not null) return;
+                // resurrect a destroyed resource or move an individual/quest giver/office holder home.
+                if (resource.IsNpcDestroyed || resource.SelectedPerson!.Individual || resource.SelectedPerson.QuestorId is not null
+                    || resource.SelectedPerson.CastId is not null || resource.SelectedPerson.OfficeActorId is not null) return;
                 if (resource.SelectedPerson.Home is null)
                     throw new NotSupportedException($"Person '{resource.Symbol}' has no allocated home for create npc.");
                 RequestPlacement(instance.InstanceId, $"task:{task}:{index}", resource.Symbol, resource.Symbol + ".home", reapply: true);

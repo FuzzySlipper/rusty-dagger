@@ -17,15 +17,17 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitions, DaggerfallSiteContext sites, DaggerfallNpcRegistry npcs,
     DaggerfallItemInstances items, Func<DaggerfallCreatedItem, string> describeItem, Func<DaggerfallTextContext> current,
     Func<DaggerfallInteriorBuilding?> building, IRandomService random, Func<int, string?> guildTitle,
-    Func<DaggerfallSiteId, DaggerfallSiteBuildingId?, string?> direction)
+    Func<DaggerfallSiteId, DaggerfallSiteBuildingId?, string?> direction,
+    DaggerfallOfficeHolders? officeHolders = null)
 {
     private const int TempleBuildingType = 15;
     private const int ProvinceFactionType = 7;
-    private const int IndividualFactionType = 4;
     private const string RandomScope = "daggerfall.quest.text";
     // A province's ruler code names its title (MacroHelper.GetRulerTitle); an unknown code is a Lord.
     private static readonly string[] RulerTitles = ["King", "Queen", "Duke", "Duchess", "Marquis", "Marquise", "Count", "Countess", "Baron", "Baroness", "Lord", "Lady"];
+    private static readonly HashSet<string> KnownRulerTitleKeys = new(RulerTitles, StringComparer.Ordinal);
     private readonly DaggerfallNames _names = new(definitions, random);
+    private readonly DaggerfallOfficeHolders _officeHolders = officeHolders ?? new DaggerfallOfficeHolders(definitions, sites, null, npcs);
 
     internal DaggerfallQuestMessageContext For(DaggerfallQuestRuntimeInstance instance)
     {
@@ -72,19 +74,27 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
         DaggerfallTextContext text = current();
         DaggerfallFactionDefinition? province = sites.Region is int region ? definitions.Factions.Factions.Values
             .Where(value => value.Type == ProvinceFactionType && value.Region == region).OrderBy(value => value.Id).FirstOrDefault() : null;
-        string? ruler = province?.Children.Select(child => definitions.Factions.Factions.GetValueOrDefault(child))
-            .FirstOrDefault(child => child?.Type == IndividualFactionType)?.Name;
+        DaggerfallOfficeHolder? regionalRuler = sites.Region is int currentRegion ? _officeHolders.ResolveRegionalRuler(currentRegion) : null;
+        DaggerfallOfficeHolder? factionLeader = instance.FactionId != 0
+            ? _officeHolders.ResolveOffice(instance.FactionId, sites.Region) ?? regionalRuler
+            : regionalRuler;
+        string? ruler = regionalRuler is { DisplayName.Length: > 0 } ? regionalRuler.DisplayName : null;
+        string? regentTitleKey = regionalRuler?.Title ?? DaggerfallOfficeHolders.DefaultTitle(province);
+        string? leaderTitleKey = factionLeader?.Title;
         return new(text with
         {
             Player = text.Player with { GuildTitle = instance.FactionId == 0 ? text.Player.Name : guildTitle(instance.FactionId) ?? text.Player.Name },
             Faction = text.Faction with
             {
                 Oath = Oath(instance), God = God(instance), RegionInContext = text.Faction.RegionInContext ?? text.Location.Region,
-                RegentTitle = province is null ? null : Internal(RulerTitles.ElementAtOrDefault(province.Ruler - 1) ?? "Lord"),
+                RegentTitle = regentTitleKey is null ? null : FormatOfficeTitle(regentTitleKey),
                 RegentName = ruler ?? Name(instance, "regent", Draw(instance, "regent/gender", 2) == 1),
-                // The region's lord is the province's first individual, else a name of the ruler's gender (GetLordNameForFaction).
-                CurrentRegionLeader = province is null ? null : province.Children.Select(child => definitions.Factions.Factions.GetValueOrDefault(child))
-                    .FirstOrDefault() is { Type: IndividualFactionType } first ? first.Name : Name(instance, "lord", province.Ruler % 2 == 0),
+                // The region's lord is the current office holder, else a name of the ruler's gender (GetLordNameForFaction).
+                CurrentRegionLeader = ruler ?? (province is null ? null : Name(instance, "lord", province.Ruler % 2 == 0)),
+                FactionLeaderOne = factionLeader is { DisplayName.Length: > 0 } ? factionLeader.DisplayName : text.Faction.FactionLeaderOne,
+                FactionLeaderTitle = leaderTitleKey is { Length: > 0 } ? FormatOfficeTitle(leaderTitleKey) : text.Faction.FactionLeaderTitle,
+                OldFactionLeader = factionLeader?.PreviousHolderName ?? regionalRuler?.PreviousHolderName ?? text.Faction.OldFactionLeader,
+                OldLeaderFate = factionLeader?.PreviousHolderFate ?? regionalRuler?.PreviousHolderFate ?? text.Faction.OldLeaderFate,
                 FactionOrder = definitions.Factions.Factions.GetValueOrDefault(instance.FactionId)?.Name is { } order
                     ? order.StartsWith("The ", StringComparison.Ordinal) ? order[4..] : order : null,
             },
@@ -112,6 +122,7 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
         DaggerfallNpc? person = resource.Binding.ActorIds.Select(id => npcs.All.FirstOrDefault(npc => npc.DurableId == id))
             .FirstOrDefault(value => value is not null);
         bool female = person is not null ? person.Appearance.Gender == "Female"
+            : resource.SelectedPerson is not null ? resource.SelectedPerson.Gender == "Female"
             : string.Equals(declared?.Person?.Gender, "female", StringComparison.OrdinalIgnoreCase);
         // A place resource's site and building; a person's home, which its __name_ names: the one the quest allocated, else
         // where the person lives.
@@ -137,6 +148,8 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
     }
 
     private string Internal(string key) => DaggerfallTextContexts.Internal(definitions, key);
+
+    private string FormatOfficeTitle(string title) => KnownRulerTitleKeys.Contains(title) ? Internal(title) : title;
 
     /// <summary>%jok: one of the jokes of text record 200 (MacroHelper.Joke).</summary>
     private string? Joke(DaggerfallQuestRuntimeInstance instance) =>

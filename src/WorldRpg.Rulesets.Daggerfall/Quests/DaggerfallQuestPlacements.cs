@@ -135,7 +135,8 @@ internal sealed partial class DaggerfallQuestInstances
         if (!correctKind) throw new ArgumentException($"Quest placement at line {operation.SourceLine} does not name the required resource kind.");
         if (resource.IsNpcDestroyed) return;
         if (resource.SelectedPerson is not null && resource.Binding.ActorIds.Length == 1
-            && _placementNpcs?.Require(resource.Binding.ActorIds[0]).Presence == DaggerfallNpcPresence.Removed) return;
+            && _placementNpcs is not null && _placementNpcs.TryGet(resource.Binding.ActorIds[0], out var placementNpc)
+            && placementNpc.Presence == DaggerfallNpcPresence.Removed) return;
         if (resource.SelectedPerson?.Individual == true && _definitions.QuestSources.Resources.Single(value => value.SourceFile == instance.SourceFile
             && value.CanonicalId == symbol && value.Kind == "person").Person?.AtHome == true)
         {

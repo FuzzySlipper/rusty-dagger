@@ -194,7 +194,7 @@ public sealed class QuestNpcAdmissionTests
     {
         JsonArray root = TestPayload.QuestRecords();
         string symbol = explicitGiver ? "questgiver" : "ruler";
-        string person = explicitGiver ? "Person _questgiver_ group Questor female" : "Person _ruler_ named Queen_Akorithi atHome female";
+        string person = explicitGiver ? "Person _questgiver_ group Questor female" : "Person _ruler_ named Br'itsa atHome female";
         root.Add(JsonNode.Parse("""
             {"name":"npc","displayName":"","sourceFile":"npc.txt","messages":[],"blocks":[]}
             """));

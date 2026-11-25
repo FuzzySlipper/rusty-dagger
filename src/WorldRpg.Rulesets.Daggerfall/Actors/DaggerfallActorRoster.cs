@@ -509,18 +509,25 @@ internal sealed class DaggerfallActorRoster
 
         foreach (ActorState actor in _actors.All.ToArray())
         {
-            if (!actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay) || !overlay.IsQuestor)
-                continue;
-            if (!shouldBeLive.ContainsKey(actor.DurableId))
+            if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay) && overlay.IsQuestor)
             {
-                if (_npcs.TryGet(actor.DurableId, out DaggerfallNpc? npc)
-                    && npc.Profile is { } npcProfile
-                    && npc.Presence != DaggerfallNpcPresence.Removed
-                    && isWithParty?.Invoke(actor.DurableId) != true
-                    && npc.X is null)
+                if (!shouldBeLive.ContainsKey(actor.DurableId))
                 {
-                    _npcs.Place(npc.DurableId, npcProfile, localToProfile?.Invoke(actor.Position) ?? actor.Position);
+                    if (_npcs.TryGet(actor.DurableId, out DaggerfallNpc? npc)
+                        && npc.Profile is { } npcProfile
+                        && npc.Presence != DaggerfallNpcPresence.Removed
+                        && isWithParty?.Invoke(actor.DurableId) != true
+                        && npc.X is null)
+                    {
+                        _npcs.Place(npc.DurableId, npcProfile, localToProfile?.Invoke(actor.Position) ?? actor.Position);
+                    }
+                    UnloadActor(actor.DurableId, appearance);
                 }
+                continue;
+            }
+            if (_npcs.TryGet(actor.DurableId, out DaggerfallNpc? worldNpc)
+                && (worldNpc.Presence == DaggerfallNpcPresence.Removed || isWithParty?.Invoke(actor.DurableId) == true))
+            {
                 UnloadActor(actor.DurableId, appearance);
             }
         }
@@ -662,6 +669,82 @@ internal sealed class DaggerfallActorRoster
         else if (profile.BillboardSprites.TryGetValue((cast.Archive, cast.Record), out NormalizedBillboardSprite? sprite))
             appearance.AdmitActor(id, sprite.Standing((cast.Archive, cast.Record)));
         _npcs.Bind(id, profile.ProfileKey);
+        return id;
+    }
+
+    /// <summary>
+    /// Relocates or materializes a unique <c>cast/individuals.json</c> individual at <paramref name="profile"/> under
+    /// its canonical deterministic identity, recording an <see cref="ActorLocationOverride.AtSite"/> relocation in
+    /// <see cref="DaggerfallActorLedger"/> whenever <paramref name="profile"/> differs from its home site so Step 1
+    /// suppresses its home slot and no duplicate body can exist.
+    /// </summary>
+    internal long? RelocateCastIndividual(
+        string castId,
+        DaggerfallSiteProfile profile,
+        WorldPoint localPose,
+        DaggerfallNpcAppearance appearance,
+        string? displayName,
+        DaggerfallWorldProfileKey? homeProfile,
+        Vector3 translation = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(castId);
+        ArgumentNullException.ThrowIfNull(profile);
+        if (!_definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast))
+            throw new KeyNotFoundException($"Cast individual '{castId}' is not defined in daggerfall.people.");
+
+        long id = DaggerfallPeopleSlots.CastIndividualIdentity(castId);
+        if (BanishedActors.Contains(id))
+            return null;
+        ActorLedgerEntry? priorEntry = _actorLedger.TryGet(id, out ActorLedgerEntry? found) ? found : null;
+        if (priorEntry?.Location?.Kind == ActorLocationKind.Dead)
+            return null;
+        if (_npcs.TryGet(id, out DaggerfallNpc? existingNpc) && existingNpc.Presence == DaggerfallNpcPresence.Removed)
+            return null;
+
+        DaggerfallSiteId site = profile.Site!.Value;
+        DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
+        DaggerfallNpcSite binding = new(site.Region, location.Name,
+            profile.InteriorBuilding is { } building ? $"{building.BlockX}/{building.BlockY}/{building.Building.Index}" : string.Empty,
+            profile.ProfileKey.LogicalId);
+        DaggerfallWorldProfileKey? originHome = priorEntry?.Origin.SiteProfile?.Require() ?? homeProfile;
+        bool isHomeSite = originHome == profile.ProfileKey;
+
+        _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Static, $"cast:{castId}", binding, appearance,
+            "person", ["talk"], displayName ?? cast.Name, originHome ?? profile.ProfileKey);
+        DaggerfallNpc npc = _npcs.Require(id);
+        if (npc.Presence == DaggerfallNpcPresence.Removed)
+            return null;
+        if (npc.Presence != DaggerfallNpcPresence.Active)
+            _npcs.SetPresence(id, DaggerfallNpcPresence.Active);
+
+        WorldPoint profilePose = DaggerfallSceneOrigin.Shift(localPose, -translation);
+        ActorOrigin origin = priorEntry?.Origin
+            ?? ActorOrigin.Cast(castId, originHome, DaggerfallPeopleSlots.ParseHarmPolicy(cast.Harm), DaggerfallPeopleSlots.ParseInteractionPolicy(cast.Interaction));
+        ActorLedgerEntry updatedEntry = priorEntry is not null
+            ? priorEntry with
+            {
+                Origin = origin,
+                Pose = new ActorPoseOverride(profilePose.X, profilePose.Y, profilePose.Z, 0f),
+                Location = isHomeSite ? null : ActorLocationOverride.AtSite(profile.ProfileKey),
+                Social = priorEntry.Social is { } s
+                    ? s with { DisplayNameOverride = npc.DisplayName, Presence = (int)DaggerfallNpcPresence.Active }
+                    : ActorSocialDiff.FromNpc(npc),
+            }
+            : new ActorLedgerEntry(
+                id,
+                origin,
+                Pose: new ActorPoseOverride(profilePose.X, profilePose.Y, profilePose.Z, 0f),
+                Social: ActorSocialDiff.FromNpc(npc),
+                Location: isHomeSite ? null : ActorLocationOverride.AtSite(profile.ProfileKey));
+        _actorLedger.Upsert(updatedEntry);
+
+        ActorState? materialized = MaterializeLedgerActorAt(updatedEntry, profile, localPose, 0f, translation: translation);
+        if (materialized is null)
+            return null;
+        if (!string.IsNullOrWhiteSpace(displayName))
+            _npcs.SetDisplayName(id, displayName);
+        _npcs.Bind(id, profile.ProfileKey);
+        _npcs.ReleasePose(id);
         return id;
     }
 

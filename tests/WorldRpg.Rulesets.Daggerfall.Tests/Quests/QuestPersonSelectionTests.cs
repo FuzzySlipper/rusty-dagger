@@ -37,7 +37,12 @@ public sealed class QuestPersonSelectionTests
                 Assert.Equal(person.Race, appearance.Race);
                 Assert.Equal(person.Gender, appearance.Gender);
                 Assert.Equal(person.FactionId, appearance.FactionId);
-                if (person.QuestorId is null)
+                if (person.CastId is { } castId)
+                {
+                    var cast = definitions.People.Individuals[castId];
+                    Assert.Equal((cast.Archive, cast.Record), (appearance.BillboardArchive, appearance.BillboardRecord));
+                }
+                else if (person.QuestorId is null)
                 {
                     var sprite = definitions.Factions.Factions[person.FactionId].SpriteVisuals[person.Gender == "Female" ? 1 : 0];
                     Assert.Equal((sprite.Archive, sprite.Record), (appearance.BillboardArchive, appearance.BillboardRecord));
@@ -50,6 +55,11 @@ public sealed class QuestPersonSelectionTests
                 Assert.Equal(giver.DisplayName, person.DisplayName);
                 Assert.Equal(giver.Appearance.NameSeed, person.NameSeed);
                 Assert.Equal(new[] { giver.DurableId }, selected.Binding.ActorIds);
+            }
+            else if (person.CastId is { } boundCastId)
+            {
+                Assert.Equal(DaggerfallQuestResourceBindingKind.Actor, selected.Binding.Kind);
+                Assert.Equal(new[] { DaggerfallPeopleSlots.CastIndividualIdentity(boundCastId) }, selected.Binding.ActorIds);
             }
             else
             {

@@ -151,13 +151,21 @@ internal sealed class DaggerfallQuestPlaceAllocator(
         return Selected(resource.CanonicalId, identity, site, building, kind, magic);
     }
 
+    internal DaggerfallSiteContext Sites => sites;
+
     internal DaggerfallQuestResourceState? AllocatePersonHome(string instanceId, DaggerfallQuestResourceDefinition person,
         bool individual, bool questor, DaggerfallWorldProfileKey currentProfile, DaggerfallInteriorBuilding? currentInterior,
-        IEnumerable<DaggerfallQuestResourceState> parentResources, IEnumerable<DaggerfallQuestResourceState> activeResources)
+        IEnumerable<DaggerfallQuestResourceState> parentResources, IEnumerable<DaggerfallQuestResourceState> activeResources,
+        DaggerfallCastHomeLocation? castHome = null)
     {
         var options = person.Person ?? throw new ArgumentException("Person home selection requires its source options.");
         string symbol = person.CanonicalId + ".home", identity = instanceId + "/" + symbol;
-        if (questor || individual && options.AtHome)
+        if (castHome is not null && (options.AtHome || options.Office is not null))
+        {
+            string? homeDisplay = castHome.Building is null ? castHome.Site.Name : null;
+            return Selected(symbol, identity, castHome.Site, castHome.Building, castHome.ProfileKind, 0, homeDisplay);
+        }
+        if (questor || (individual || options.Office is not null) && options.AtHome)
         {
             var site = sites.ActiveSite ?? throw new NotSupportedException("A quest giver home requires the actual current site.");
             if (currentProfile.Site != site.Id) throw new ArgumentException("The current Person home profile does not project the current site.");
@@ -168,7 +176,7 @@ internal sealed class DaggerfallQuestPlaceAllocator(
             return Selected(symbol, identity, site, building, currentProfile.Kind, 0,
                 building is null ? null : sites.RequireBuilding(site.Id, building.Id).Name);
         }
-        if (individual) return null; // Explicit place-at supplies this individual's dialog place later.
+        if (individual || options.Office is not null) return null; // Explicit place-at supplies this individual's dialog place later.
         var current = sites.ActiveSite ?? throw new NotSupportedException("Person home selection requires the current region.");
         string scope = options.Scope ?? (current.Exterior?.Buildings.Count > 0
             && random.DrawKeyed(new(0, "daggerfall.quest.person-home", identity + "/scope", 0, 1)).Value == 0 ? "local" : "remote");

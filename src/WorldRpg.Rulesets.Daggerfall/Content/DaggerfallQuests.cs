@@ -61,7 +61,7 @@ internal sealed record DaggerfallQuestResourceDefinition(string Quest, string So
     DaggerfallQuestPersonOptions? Person = null, IReadOnlyList<string>? Sites = null);
 internal sealed record DaggerfallQuestFoeOptions(int Count);
 internal sealed record DaggerfallQuestItemOptions(bool Artifact, int? Class, int? Subclass, int? Template, int? Key, int? RangeLow, int? RangeHigh, string? UsedMessage, string? AnyInfoMessage);
-internal sealed record DaggerfallQuestPersonOptions(string? Named, string? Faction, string? FactionType, string? Group, int? Face, string? Gender, string? Scope, bool AtHome);
+internal sealed record DaggerfallQuestPersonOptions(string? Named, string? Faction, string? FactionType, string? Group, int? Face, string? Gender, string? Scope, bool AtHome, string? Office = null);
 internal sealed record DaggerfallQuestUnresolvedReferenceDefinition(string Quest, string SourceFile, int SourceLine, string SourceSpelling, string CanonicalId);
 
 /// <summary>

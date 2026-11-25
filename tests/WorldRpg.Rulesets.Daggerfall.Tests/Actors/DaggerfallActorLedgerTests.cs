@@ -600,7 +600,7 @@ public sealed class DaggerfallActorLedgerTests
               "sourceFile": "escort.txt",
               "messages": [],
               "blocks": [
-                { "kind": "person", "firstLine": 1, "lines": ["Person _vip_ named Queen_Akorithi atHome female"] },
+                { "kind": "person", "firstLine": 1, "lines": ["Person _vip_ named Br'itsa atHome female"] },
                 { "kind": "task", "firstLine": 10, "lines": ["_join_ task:", "add _vip_ face"] },
                 { "kind": "task", "firstLine": 20, "lines": ["_deliver_ task:", "drop _vip_ face", "place npc _vip_ at _vip_.home"] }
               ]

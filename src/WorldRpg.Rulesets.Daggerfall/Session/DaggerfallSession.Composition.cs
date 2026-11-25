@@ -687,11 +687,12 @@ internal sealed partial class DaggerfallSession
                 key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar);
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
+            OfficeHolders = new DaggerfallOfficeHolders(definitions, _site, State.ActorLedger, State.Npcs);
             _questTexts = new DaggerfallQuestTextContext(definitions, _site, State.Npcs, State.ItemInstances,
                 item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, _random,
                 faction => State.Social.GuildEligibility(faction) is { IsMember: true } membership
                     ? DaggerfallGuildRankTitles.Title(faction, membership.Rank, State.Character.Identity.Gender == DaggerfallCharacterGender.Female) : null,
-                (place, building) => DialogueDirections.QuestPlace(place, building));
+                (place, building) => DialogueDirections.QuestPlace(place, building), OfficeHolders);
             State.Quests.BindTextContext(_questTexts.For);
             State.Quests.BindCalendar(() => _time.Calendar);
             DaggerfallNames questNames = new(definitions, _random);
@@ -745,7 +746,7 @@ internal sealed partial class DaggerfallSession
                     instance.QuestorId is long giver ? State.Npcs.Require(giver) : null,
                     PermanentPlayerClanFactionId: State.RacialOverrides.Current?.State.Vampire?.Clan, CurrentProfile: _sites.ActiveProfile,
                     Interior: _sites.Projection.Inputs.InteriorBuilding),
-                State.Npcs.SetDisplayName, questPlaces));
+                State.Npcs.SetDisplayName, questPlaces, OfficeHolders));
             _inventoryUi.UseBank(State.Bank, () => Banking.ActiveRegion, () => State.Bank.DepositableGold(State.Wagon, TransportAccess()));
             _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
@@ -1080,7 +1081,16 @@ internal sealed partial class DaggerfallSession
                         State.ActorLedger.Upsert(entry with { Location = ActorLocationOverride.AtSite(profile.ProfileKey) });
                     }
                     _roster.MaterializeQuestor(npc, profile, new ActorPose(pose, 0f), sprite);
-                }, BringOutRetainedQuestActor);
+                }, BringOutRetainedQuestActor,
+                (castId, profile, floor, appearance, displayName) =>
+                {
+                    DaggerfallCastHomeLocation? home = definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? castDef)
+                        && DaggerfallCastHomes.TryResolve(_site, castDef, profile.Site?.Region, out DaggerfallCastHomeLocation? resolvedHome)
+                            ? resolvedHome
+                            : null;
+                    return _roster.RelocateCastIndividual(castId, profile, floor, appearance, displayName,
+                        DaggerfallCastHomes.ResolveProfileKey(home), _exterior.ProfileToLocal(default).ToVector());
+                }, OfficeHolders.IsActorDead);
             QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, () => Expedition.Open, _roster.Definitions, _placement, _vitality,
                 tuning.QuestSpawning, () => _sites.ReadQuestLocation(), (definition, pose) => _roster.Spawn(definition, pose),
                 _roster.RemoveQuestActor, (id, allies) => _enemyBehavior.MakeHostile(id, includePlayerAllies: allies),

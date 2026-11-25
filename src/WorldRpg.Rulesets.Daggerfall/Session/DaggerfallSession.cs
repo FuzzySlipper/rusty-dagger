@@ -858,6 +858,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Where a quest's resources stand once their site is loaded.</summary>
     internal DaggerfallQuestPlacement QuestPlacement { get; } = null!;
+    internal DaggerfallOfficeHolders OfficeHolders { get; } = null!;
 
     /// <summary>A quest's foes as actors: their team and target, the commands over them, and spawning.</summary>
     internal DaggerfallQuestFoes QuestFoes { get; } = null!;

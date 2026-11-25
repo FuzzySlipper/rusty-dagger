@@ -17,7 +17,9 @@ internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpc
     Func<WorldPoint, WorldPoint> profileToLocal, Func<Vector3, Vector3> localToProfile, Func<WorldPoint, double, WorldPoint> groundPosition,
     Func<string, ActorPose, long> spawn, Func<DaggerfallCreatedItem, WorldPoint, DaggerfallPlacedItem> createItem,
     Func<DaggerfallQuestResourceBinding, WorldPoint, DaggerfallQuestResourceBinding> placeBoundItem,
-    Action<DaggerfallNpc, DaggerfallSiteProfile, WorldPoint, NormalizedBillboardSprite> materializeQuestor, Action<long, WorldPoint> bringOutRetained) : IDaggerfallQuestWorldAdmission
+    Action<DaggerfallNpc, DaggerfallSiteProfile, WorldPoint, NormalizedBillboardSprite> materializeQuestor, Action<long, WorldPoint> bringOutRetained,
+    Func<string, DaggerfallSiteProfile, WorldPoint, DaggerfallNpcAppearance, string, long?>? materializeCastIndividual = null,
+    Func<long, bool>? isActorDead = null) : IDaggerfallQuestWorldAdmission
 {
     /// <summary>Places a quest resource at a marker: its foes spawned or moved there, its item created or placed, its person placed.</summary>
     public DaggerfallQuestResourceBinding? Place(string instanceId, DaggerfallQuestResourceState resource,
@@ -50,7 +52,12 @@ internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpc
         }
         if (resource.SelectedPerson is not null)
         {
-            if (resource.Binding.ActorIds.Length == 1 && npcs.Require(resource.Binding.ActorIds[0]).Presence == DaggerfallNpcPresence.Removed) return null;
+            if (resource.Binding.ActorIds.Length == 1)
+            {
+                long boundId = resource.Binding.ActorIds[0];
+                if (isActorDead?.Invoke(boundId) == true) return null;
+                if (npcs.TryGet(boundId, out var existingNpc) && existingNpc.Presence == DaggerfallNpcPresence.Removed) return null;
+            }
             return PlaceQuestPerson(instanceId, resource, profile, position);
         }
         throw new ArgumentException($"Quest resource '{resource.Symbol}' has no selected physical meaning.");
@@ -66,24 +73,29 @@ internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpc
         bringOutRetained(id, position);
     }
 
-    /// <summary>Places a quest person: a civilian actor moves, a live actor turns in place, anyone else is projected.</summary>
-    private DaggerfallQuestResourceBinding PlaceQuestPerson(string instanceId, DaggerfallQuestResourceState resource,
+    /// <summary>Places a quest person: a cast individual relocates under its canonical ID, a civilian actor moves, a live actor turns in place, anyone else is projected.</summary>
+    private DaggerfallQuestResourceBinding? PlaceQuestPerson(string instanceId, DaggerfallQuestResourceState resource,
         DaggerfallSiteProfile profile, WorldPoint position)
     {
         var person = resource.SelectedPerson!;
         var appearance = person.Appearance ?? throw new NotSupportedException($"Quest Person '{resource.Symbol}' has no selected billboard appearance.");
         if (!profile.BillboardSprites.TryGetValue((appearance.BillboardArchive, appearance.BillboardRecord), out var sprite))
             throw new NotSupportedException($"Quest Person '{resource.Symbol}' has no published billboard {appearance.BillboardArchive}/{appearance.BillboardRecord}.");
+        var probe = position;
+        if (profile.ProfileKind != DaggerfallWorldProfileKind.Dungeon)
+            probe = WorldPoint.From(position.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y / 2));
+        var floor = groundPosition(probe, 4);
+        if (person.CastId is { Length: > 0 } castId && materializeCastIndividual is not null)
+        {
+            long? placedCastId = materializeCastIndividual(castId, profile, floor, appearance, person.DisplayName);
+            return placedCastId is long castActorId ? DaggerfallQuestResourceBinding.Actors(castActorId) : null;
+        }
         long id = resource.Binding.ActorIds.Length == 1 ? resource.Binding.ActorIds[0]
             : person.QuestorId ?? npcs.RegisterStable(DaggerfallNpcKind.Questor, instanceId + "/" + resource.Symbol,
                 new(profile.Site!.Value.Region, directory.Require(profile.Site.Value).Name, profile.ProfileKey.LogicalId), appearance, "quest person", ["talk"]);
         var npc = npcs.Require(id);
         // Every placed quest person is a canonical ActorState standing on the floor (onBase: true),
         // unified with static NPCs and civilians under EntityStore and Tier-2 ActorRenderComponent.
-        var probe = position;
-        if (profile.ProfileKind != DaggerfallWorldProfileKind.Dungeon)
-            probe = WorldPoint.From(position.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y / 2));
-        var floor = groundPosition(probe, 4);
         if (npc.Kind == DaggerfallNpcKind.Civilian) RelocateQuestActor(id, floor);
         else if (actors.TryGet(id, out var actor)) actor.ApplyPose(new(floor, actor.HeadingYawRadians));
         else materializeQuestor(npc, profile, floor, sprite);
