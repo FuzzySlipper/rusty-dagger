@@ -104,7 +104,8 @@ internal sealed class DaggerfallPropertyLoot(
             FactionId: interior.FactionId > 0 ? interior.FactionId : null,
             BuildingKey: $"{interior.BlockX}/{interior.BlockY}/{interior.Building.Index}",
             Region: profile.Site.Region,
-            Location: site.TryFind(profile.Site, out DaggerfallSiteRecord? loc) ? loc.Name : null);
+            Location: site.TryFind(profile.Site, out DaggerfallSiteRecord? loc) ? loc.Name : null,
+            BuildingType: interior.BuildingType);
         DaggerfallCrimeWitnessEvidence reportingWitnesses = crimes.EvaluateWitnesses(
             operation, DaggerfallCrimeKind.Theft, victim, witnesses).ReportingEvidence;
         crimes.Report(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed,

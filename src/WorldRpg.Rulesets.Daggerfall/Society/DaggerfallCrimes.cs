@@ -52,6 +52,13 @@ internal sealed class DaggerfallCrimes(
     internal void Report(DaggerfallCrimeIncidentSave incident) => crime.RecordIncident(incident);
 
     /// <summary>
+    /// Captures live witness classification data (watch/guard, NPC, family, guild, disposition) before a scene transition
+    /// unloads the source scene's actors.
+    /// </summary>
+    internal IReadOnlyDictionary<long, DaggerfallWitnessObservation> CaptureWitnessObservations(DaggerfallCrimeWitnessEvidence rawWitnesses) =>
+        DaggerfallWitnessDiscretion.CaptureObservations(rawWitnesses, definitions, actors, npcs, actorLedger, IsCityWatch);
+
+    /// <summary>
     /// Evaluates witness discretion for <paramref name="rawWitnesses"/>: guards, victims, family members, and fellow
     /// guild members always report; unconnected bystanders roll against the player's social skills and standing.
     /// </summary>
@@ -59,10 +66,11 @@ internal sealed class DaggerfallCrimes(
         string operation,
         DaggerfallCrimeKind kind,
         DaggerfallCrimeVictimContext? victim,
-        DaggerfallCrimeWitnessEvidence rawWitnesses)
+        DaggerfallCrimeWitnessEvidence rawWitnesses,
+        IReadOnlyDictionary<long, DaggerfallWitnessObservation>? capturedObservations = null)
     {
         DaggerfallWitnessDiscretionResult result = DaggerfallWitnessDiscretion.Evaluate(
-            operation, kind, victim, rawWitnesses, definitions, actors, npcs, actorLedger, IsCityWatch, Roll);
+            operation, kind, victim, rawWitnesses, definitions, actors, npcs, actorLedger, IsCityWatch, Roll, capturedObservations);
         LastWitnessDecisions = result.Decisions;
         return result;
     }
@@ -74,14 +82,14 @@ internal sealed class DaggerfallCrimes(
     /// </summary>
     /// <param name="witnesses">Who saw it, queried before the player went in.</param>
     internal void ReportEntry(long owner, int region, DaggerfallActivationMode? forceMode, DaggerfallCrimeWitnessEvidence witnesses,
-        DaggerfallCrimeVictimContext? victim = null)
+        DaggerfallCrimeVictimContext? victim = null, IReadOnlyDictionary<long, DaggerfallWitnessObservation>? capturedObservations = null)
     {
         string operation = $"entry:{crime.Attempts.Count + 1}";
         long minute = calendar().MinuteNumber;
         DaggerfallCrimeKind kind = forceMode is not null ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing;
         crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
             owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
-        DaggerfallWitnessDiscretionResult discretion = EvaluateWitnesses(operation, kind, victim, witnesses);
+        DaggerfallWitnessDiscretionResult discretion = EvaluateWitnesses(operation, kind, victim, witnesses, capturedObservations);
         Report(new(operation, kind,
             DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
             DaggerfallCrimeTargetKind.Other, discretion.ReportingEvidence, DaggerfallCrimeGuildCredit.None,

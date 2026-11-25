@@ -13,7 +13,20 @@ internal sealed record DaggerfallCrimeVictimContext(
     string? FamilyId = null,
     string? DisplayName = null,
     int? Region = null,
-    string? Location = null);
+    string? Location = null,
+    int? BuildingType = null);
+
+/// <summary>
+/// Witness classification attributes captured while the source scene is live, so scene transitions that unload
+/// source actors (such as exterior-to-interior building entry) preserve city-watch, guild, family, and disposition data.
+/// </summary>
+internal sealed record DaggerfallWitnessObservation(
+    long ActorId,
+    bool IsGuard,
+    DaggerfallNpc? Npc,
+    string? FamilyId,
+    IReadOnlySet<int> GuildRoots,
+    int DispositionDelta);
 
 /// <summary>Why a witness chose to report or ignore a witnessed crime.</summary>
 internal enum DaggerfallWitnessReportReason
@@ -111,6 +124,44 @@ internal static class DaggerfallWitnessDiscretion
     }
 
     /// <summary>
+    /// Captures live guard, NPC, family, guild, and disposition metadata for every witness in
+    /// <paramref name="rawWitnesses"/> before a scene transition unloads the source actors.
+    /// </summary>
+    internal static IReadOnlyDictionary<long, DaggerfallWitnessObservation> CaptureObservations(
+        DaggerfallCrimeWitnessEvidence rawWitnesses,
+        DaggerfallDefinitions definitions,
+        ActorsState actors,
+        DaggerfallNpcRegistry npcs,
+        DaggerfallActorLedger? actorLedger,
+        Func<long, bool> isCityWatch)
+    {
+        ArgumentNullException.ThrowIfNull(rawWitnesses);
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(actors);
+        ArgumentNullException.ThrowIfNull(npcs);
+        ArgumentNullException.ThrowIfNull(isCityWatch);
+
+        Dictionary<long, DaggerfallWitnessObservation> captured = [];
+        if (rawWitnesses.Query != DaggerfallCrimeWitnessQuery.CompletedWithWitnesses
+            || rawWitnesses.WitnessActorIds.Length == 0)
+            return captured;
+
+        foreach (long witnessId in rawWitnesses.WitnessActorIds)
+        {
+            DaggerfallNpc? witnessNpc = npcs.TryGet(witnessId, out DaggerfallNpc? wn) ? wn : null;
+            bool guard = IsGuard(witnessId, actors, npcs, isCityWatch);
+            string? familyId = ResolveActorFamilyId(witnessId, actors, actorLedger);
+            HashSet<int> guildRoots = CollectActorGuildRoots(witnessId, witnessNpc, definitions, actors);
+            int dispositionDelta = actorLedger is not null && actorLedger.TryGet(witnessId, out ActorLedgerEntry? ledgerEntry)
+                && ledgerEntry?.Social is { } socialDiff
+                ? socialDiff.DispositionDelta
+                : 0;
+            captured[witnessId] = new DaggerfallWitnessObservation(witnessId, guard, witnessNpc, familyId, guildRoots, dispositionDelta);
+        }
+        return captured;
+    }
+
+    /// <summary>
     /// Evaluates every witness in <paramref name="rawWitnesses"/> and returns only the witnesses who choose to report.
     /// </summary>
     internal static DaggerfallWitnessDiscretionResult Evaluate(
@@ -123,7 +174,8 @@ internal static class DaggerfallWitnessDiscretion
         DaggerfallNpcRegistry npcs,
         DaggerfallActorLedger? actorLedger,
         Func<long, bool> isCityWatch,
-        Func<string, string, int, int, int> roll)
+        Func<string, string, int, int, int> roll,
+        IReadOnlyDictionary<long, DaggerfallWitnessObservation>? capturedObservations = null)
     {
         ArgumentNullException.ThrowIfNull(rawWitnesses);
         ArgumentNullException.ThrowIfNull(definitions);
@@ -145,6 +197,7 @@ internal static class DaggerfallWitnessDiscretion
         string? victimFamilyId = ResolveVictimFamilyId(victim, actors, actorLedger);
         string? victimDisplayName = victim?.DisplayName ?? victimNpc?.DisplayName;
         string? victimBuilding = !string.IsNullOrWhiteSpace(victim?.BuildingKey) ? victim.BuildingKey : victimNpc?.Site.Building;
+        int? victimBuildingType = victim?.BuildingType;
         int? victimRegion = victim?.Region ?? victimNpc?.Site.Region;
         string? victimLocation = victim?.Location ?? victimNpc?.Site.Location;
 
@@ -153,7 +206,13 @@ internal static class DaggerfallWitnessDiscretion
 
         foreach (long witnessId in rawWitnesses.WitnessActorIds)
         {
-            if (IsGuard(witnessId, actors, npcs, isCityWatch))
+            DaggerfallWitnessObservation? observed = capturedObservations is not null
+                && capturedObservations.TryGetValue(witnessId, out DaggerfallWitnessObservation? snapshot)
+                ? snapshot
+                : null;
+
+            bool isGuard = observed?.IsGuard ?? IsGuard(witnessId, actors, npcs, isCityWatch);
+            if (isGuard)
             {
                 reporting.Add(witnessId);
                 decisions.Add(new(witnessId, true, DaggerfallWitnessReportReason.CityWatchDuty, 100));
@@ -167,10 +226,10 @@ internal static class DaggerfallWitnessDiscretion
                 continue;
             }
 
-            DaggerfallNpc? witnessNpc = npcs.TryGet(witnessId, out DaggerfallNpc? wn) ? wn : null;
-            string? witnessFamilyId = ResolveActorFamilyId(witnessId, actors, actorLedger);
+            DaggerfallNpc? witnessNpc = observed is not null ? observed.Npc : (npcs.TryGet(witnessId, out DaggerfallNpc? wn) ? wn : null);
+            string? witnessFamilyId = observed is not null ? observed.FamilyId : ResolveActorFamilyId(witnessId, actors, actorLedger);
 
-            if (AreFamily(witnessNpc, witnessFamilyId, victimFamilyId, victimDisplayName, victimBuilding, victimRegion, victimLocation))
+            if (AreFamily(witnessNpc, witnessFamilyId, victimFamilyId, victimDisplayName, victimBuilding, victimBuildingType, victimRegion, victimLocation))
             {
                 reporting.Add(witnessId);
                 decisions.Add(new(witnessId, true, DaggerfallWitnessReportReason.FamilyMember, 100));
@@ -179,8 +238,10 @@ internal static class DaggerfallWitnessDiscretion
 
             if (victimGuildRoots.Count > 0)
             {
-                HashSet<int> witnessGuildRoots = CollectActorGuildRoots(witnessId, witnessNpc, definitions, actors);
-                if (witnessGuildRoots.Overlaps(victimGuildRoots))
+                IReadOnlySet<int> witnessGuildRoots = observed is not null
+                    ? observed.GuildRoots
+                    : CollectActorGuildRoots(witnessId, witnessNpc, definitions, actors);
+                if (victimGuildRoots.Any(witnessGuildRoots.Contains))
                 {
                     reporting.Add(witnessId);
                     decisions.Add(new(witnessId, true, DaggerfallWitnessReportReason.FellowGuildMember, 100));
@@ -188,10 +249,12 @@ internal static class DaggerfallWitnessDiscretion
                 }
             }
 
-            int dispositionDelta = actorLedger is not null && actorLedger.TryGet(witnessId, out ActorLedgerEntry? ledgerEntry)
-                && ledgerEntry?.Social is { } socialDiff
-                ? socialDiff.DispositionDelta
-                : 0;
+            int dispositionDelta = observed is not null
+                ? observed.DispositionDelta
+                : actorLedger is not null && actorLedger.TryGet(witnessId, out ActorLedgerEntry? ledgerEntry)
+                    && ledgerEntry?.Social is { } socialDiff
+                    ? socialDiff.DispositionDelta
+                    : 0;
             int chance = CalculateUnconnectedReportChance(crime, etiquette, streetwise, personality, dispositionDelta);
             int rolled = roll(operation, $"witness-report:{witnessId}", 1, 100);
             bool reported = rolled <= chance;
@@ -211,19 +274,23 @@ internal static class DaggerfallWitnessDiscretion
         return new(evidence, decisions);
     }
 
+    /// <summary>House1..House4 building types (private residences, never public taverns, shops, guilds, or temples).</summary>
+    internal static bool IsPrivateResidence(int? buildingType) => buildingType is >= 17 and <= 20;
+
     internal static bool AreFamily(
         DaggerfallNpc? witnessNpc,
         string? witnessFamilyId,
         string? victimFamilyId,
         string? victimDisplayName,
         string? victimBuilding,
+        int? victimBuildingType,
         int? victimRegion,
         string? victimLocation)
     {
-        if (!string.IsNullOrWhiteSpace(witnessFamilyId)
-            && !string.IsNullOrWhiteSpace(victimFamilyId)
-            && string.Equals(witnessFamilyId, victimFamilyId, StringComparison.OrdinalIgnoreCase))
-            return true;
+        bool witnessHasFamily = !string.IsNullOrWhiteSpace(witnessFamilyId);
+        bool victimHasFamily = !string.IsNullOrWhiteSpace(victimFamilyId);
+        if (witnessHasFamily && victimHasFamily)
+            return string.Equals(witnessFamilyId, victimFamilyId, StringComparison.OrdinalIgnoreCase);
 
         if (witnessNpc is null)
             return false;
@@ -232,7 +299,10 @@ internal static class DaggerfallWitnessDiscretion
             && !string.IsNullOrWhiteSpace(victimLocation)
             && string.Equals(witnessNpc.Site.Location, victimLocation, StringComparison.OrdinalIgnoreCase);
 
-        if (sameSite && !string.IsNullOrWhiteSpace(victimBuilding)
+        // Only a private residence (House1..House4) implies a shared household; occupants of public buildings
+        // (taverns, shops, guild halls, temples, banks) share a placement address without being family.
+        if (sameSite && IsPrivateResidence(victimBuildingType)
+            && !string.IsNullOrWhiteSpace(victimBuilding)
             && !string.IsNullOrWhiteSpace(witnessNpc.Site.Building)
             && string.Equals(witnessNpc.Site.Building, victimBuilding, StringComparison.OrdinalIgnoreCase))
             return true;

@@ -761,6 +761,9 @@ internal sealed partial class DaggerfallSession
         if (plan.Greeting is { } greeting) DungeonText.Greet(greeting);                          // Text
         if (plan.Outcome is { } said) return said;
         var witnesses = plan.Crime is not null ? Crimes.QueryWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;   // Society
+        // Capture live witness classifications (city watch, guards, family, guild, disposition) BEFORE TryEnterBuilding
+        // unloads the exterior scene's actors and actor definitions.
+        var capturedWitnesses = plan.Crime is not null ? Crimes.CaptureWitnessObservations(witnesses) : null;   // Society
         DaggerfallCrimeVictimContext? victim = plan.Crime is not null ? ExteriorDoorVictimContext(door) : null;   // Society
         DaggerfallSiteAnchor landing = BuildingLanding(plan.Inside!, door);                       // Interiors
         if (StagesSlowWork)
@@ -770,13 +773,13 @@ internal sealed partial class DaggerfallSession
             StageWorldChange($"Entering {place}", [new($"Entering {place}", () =>
             {
                 if (!_sites.TryEnterBuilding(plan.Destination, landing)) Presentation.SetOutcome("The building entrance cannot be used.");   // Interiors, its line UiProjection
-                else if (plan.Crime is { } crime) Crimes.ReportEntry(crime.Owner, crime.Region, forceMode, witnesses, victim);   // Society
+                else if (plan.Crime is { } crime) Crimes.ReportEntry(crime.Owner, crime.Region, forceMode, witnesses, victim, capturedWitnesses);   // Society
             })], error => error.Message);
             return new(true, "You pass through the building entrance.");
         }
         if (!_sites.TryEnterBuilding(plan.Destination, landing))                                  // Interiors
             return new(false, "The building entrance cannot be used.");
-        if (plan.Crime is { } entered) Crimes.ReportEntry(entered.Owner, entered.Region, forceMode, witnesses, victim);   // Society
+        if (plan.Crime is { } entered) Crimes.ReportEntry(entered.Owner, entered.Region, forceMode, witnesses, victim, capturedWitnesses);   // Society
         return new(true, "You pass through the building entrance.");
     }
 
@@ -828,21 +831,24 @@ internal sealed partial class DaggerfallSession
         if (_doors.ExteriorBuildingOf(door) is not { } buildingId)
             return null;
         int? factionId = null;
+        int? buildingType = null;
         string? locationName = null;
         if (_site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord? location))
         {
             locationName = location.Name;
-            if (location.Exterior?.Buildings.TryGetValue(buildingId, out DaggerfallSiteBuildingSource? source) == true
-                && source.Source.FactionId > 0)
+            if (location.Exterior?.Buildings.TryGetValue(buildingId, out DaggerfallSiteBuildingSource? source) == true)
             {
-                factionId = source.Source.FactionId;
+                buildingType = source.Source.BuildingType;
+                if (source.Source.FactionId > 0)
+                    factionId = source.Source.FactionId;
             }
         }
         return new DaggerfallCrimeVictimContext(
             FactionId: factionId,
             BuildingKey: $"{buildingId.BlockX}/{buildingId.BlockY}/{buildingId.Index}",
             Region: _activeProfileKey.Site.Region,
-            Location: locationName);
+            Location: locationName,
+            BuildingType: buildingType);
     }
 
     /// <summary>

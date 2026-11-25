@@ -507,7 +507,8 @@ internal sealed class DaggerfallMerchantService
             BuildingKey: $"{binding.Context.BlockX}/{binding.Context.BlockY}/{binding.Context.BuildingIndex}",
             DisplayName: shopkeeper?.DisplayName,
             Region: binding.Context.Provider.Site.Region,
-            Location: binding.Context.Provider.Site.Location);
+            Location: binding.Context.Provider.Site.Location,
+            BuildingType: binding.Context.BuildingType);
         DaggerfallCrimeWitnessEvidence reportingWitnesses = _evaluateWitnesses is not null
             ? _evaluateWitnesses(operation, DaggerfallCrimeKind.Theft, victim, witnesses)
             : witnesses;

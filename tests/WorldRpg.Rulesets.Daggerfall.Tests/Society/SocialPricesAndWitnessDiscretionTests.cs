@@ -260,6 +260,186 @@ public sealed class SocialPricesAndWitnessDiscretionTests
         Assert.NotNull(fixture.Session.Law.Current);
     }
 
+    [Fact]
+    public void Unrelated_occupants_of_public_building_use_discretion_while_actual_relatives_and_private_house_residents_always_report()
+    {
+        // R11048-1: Sharing Site.Building inside a public building (tavern = 15, shop = 13) must NOT classify
+        // unrelated patrons/occupants as family; only explicit family, surnames, or private-residence households do.
+        using var fixture = CreateExteriorWitnessFixture(rollValue: 100);
+        fixture.Session.State.Actors.Player.Stats.GetStat(StatId.Parse("etiquette")).BaseValue = 100;
+        fixture.Session.State.Actors.Player.Stats.GetStat(StatId.Parse("streetwise")).BaseValue = 100;
+        fixture.Session.State.Actors.Player.Stats.GetStat(StatId.Parse("personality")).BaseValue = 100;
+
+        const string tavernBuilding = "1/1/0";
+        long unrelatedPatron = fixture.AddBystander("Bram Turner", factionId: 0, buildingKey: tavernBuilding);
+        long distinctFamilyPatron = fixture.AddBystander("Caleb Ashford", factionId: 0, familyId: "family:distinct", buildingKey: tavernBuilding);
+        long actualRelative = fixture.AddBystander("Elara Ashford", factionId: 0, familyId: "family:innkeeper", buildingKey: tavernBuilding);
+
+        DaggerfallSiteRecord site = fixture.Session.Site.ActiveSite!;
+        DaggerfallCrimeVictimContext tavernVictim = new(
+            FactionId: null,
+            BuildingKey: tavernBuilding,
+            FamilyId: "family:innkeeper",
+            DisplayName: "Gareth Ashford",
+            Region: site.Id.Region,
+            Location: site.Name,
+            BuildingType: DaggerfallLodgingState.TavernBuildingType);
+        DaggerfallCrimeWitnessEvidence raw = new(
+            DaggerfallCrimeWitnessQuery.CompletedWithWitnesses,
+            [unrelatedPatron, distinctFamilyPatron, actualRelative]);
+
+        DaggerfallWitnessDiscretionResult result = fixture.Session.Crimes.EvaluateWitnesses(
+            "tavern-theft:1", DaggerfallCrimeKind.Theft, tavernVictim, raw);
+
+        Assert.Equal(DaggerfallWitnessReportReason.DiscretionRollIgnored, result.Decisions.Single(d => d.WitnessActorId == unrelatedPatron).Reason);
+        Assert.False(result.Decisions.Single(d => d.WitnessActorId == unrelatedPatron).Reported);
+        Assert.Equal(DaggerfallWitnessReportReason.DiscretionRollIgnored, result.Decisions.Single(d => d.WitnessActorId == distinctFamilyPatron).Reason);
+        Assert.False(result.Decisions.Single(d => d.WitnessActorId == distinctFamilyPatron).Reported);
+        Assert.Equal(DaggerfallWitnessReportReason.FamilyMember, result.Decisions.Single(d => d.WitnessActorId == actualRelative).Reason);
+        Assert.True(result.Decisions.Single(d => d.WitnessActorId == actualRelative).Reported);
+        Assert.Equal([actualRelative], result.ReportingEvidence.WitnessActorIds);
+
+        // Contrast: a resident sharing Site.Building of a private house (BuildingType = 17, House1) IS household family.
+        const string privateHouse = "2/2/0";
+        long resident = fixture.AddBystander("Maren Holt", factionId: 0, buildingKey: privateHouse);
+        DaggerfallCrimeVictimContext houseVictim = new(
+            FactionId: null,
+            BuildingKey: privateHouse,
+            Region: site.Id.Region,
+            Location: site.Name,
+            BuildingType: 17);
+        DaggerfallWitnessDiscretionResult houseResult = fixture.Session.Crimes.EvaluateWitnesses(
+            "house-pick:1", DaggerfallCrimeKind.AttemptedBreakingAndEntering, houseVictim,
+            new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [resident]));
+        Assert.Equal(DaggerfallWitnessReportReason.FamilyMember, Assert.Single(houseResult.Decisions).Reason);
+        Assert.True(Assert.Single(houseResult.Decisions).Reported);
+    }
+
+    [Fact]
+    public void Exterior_to_interior_forced_entry_preserves_city_watch_witness_classification_after_exterior_unload()
+    {
+        // R11048-2: When a city-watch mobile (146, no NPC registry entry) witnesses a forced exterior-to-interior entry,
+        // TryEnterBuilding unloads the exterior actors before ReportEntry commits. Witness classification MUST be
+        // preserved before unload so the city watchman never falls through to an unconnected bystander roll.
+        DaggerfallSiteBuildingId residence = new(1, 1, 0); // Charing House2, locked at midnight
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, residence));
+        DaggerfallSiteProfiles profiles = new([exterior, interior]);
+
+        long watchId = 0;
+        ulong doorEntity = 0;
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, interior);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
+        spatial.KeepPosition = true;
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Responder = request =>
+        {
+            List<PerceptionPair> pairs = [];
+            foreach (PerceptionObserver observer in request.Observers.Span)
+            {
+                if (observer.Entity == 1)
+                {
+                    foreach (PerceptionTarget target in request.Targets.Span)
+                    {
+                        PerceptionPairKind kind = target.Entity == doorEntity
+                            ? PerceptionPairKind.Visible
+                            : PerceptionPairKind.Occluded;
+                        pairs.Add(new PerceptionPair(observer.Entity, target.Entity, 1d, 1d, kind, 1d));
+                    }
+                }
+                else if (watchId > 0 && checked((long)observer.Entity) == watchId)
+                {
+                    foreach (PerceptionTarget target in request.Targets.Span)
+                        pairs.Add(new PerceptionPair(observer.Entity, target.Entity, 2d, 1d, PerceptionPairKind.Visible, 1d));
+                }
+            }
+            return Receipt([.. pairs]);
+        };
+
+        // Roll = 100 + maxed social skills (100/100/100): an unconnected witness would ALWAYS ignore (100 > chance).
+        // SplitEntryRandom returns 1 for lockpick checks (so forced entry succeeds) and 100 for witness-report rolls.
+        var random = new SplitEntryRandom(lockpickRoll: 1, witnessRoll: 100);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service, random: random);
+        DaggerfallSessionComposition composition = new(TestPayload.Definitions, exterior, DaggerfallTuning.Defaults)
+        {
+            Profiles = profiles,
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))),
+        };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).BaseValue = 100;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("etiquette")).BaseValue = 100;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("streetwise")).BaseValue = 100;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("personality")).BaseValue = 100;
+
+        // Spawn a real city-watch mobile (146, no NPC registry entry) standing beside the residence door.
+        string watchDefId = TestPayload.Definitions.Actors.Values.Single(a => a.MobileId == 146).Id.Value;
+        DaggerfallRdbDoorId doorId = exterior.Doors.First(d => d.ExteriorBuilding == residence).Id;
+        DaggerfallDoorView door = session.Sites.Projection.Doors.Read(doorId);
+        doorEntity = door.Entity.Value;
+        Vector3 doorPos = door.Pose.Translation;
+        watchId = session.SpawnActor(watchDefId, new ActorPose(WorldPoint.From(doorPos + new Vector3(1.5f, 0f, 1.5f)), 0f));
+        Assert.True(session.Crimes.IsCityWatch(watchId));
+        Assert.False(session.State.Npcs.TryGet(watchId, out _));
+
+        // Position player at the locked residence door, switch to Steal mode (lockpick -> no bash alarm), and enter!
+        session.State.PlayerControl.MoveTo(doorPos + Vector3.UnitZ);
+        session.State.PlayerControl.YawRadians = 0;
+        session.State.PlayerControl.PitchRadians = 0;
+        spatial.FloorHit = request => request.Direction.Y < -.5 ? default : new SpatialHit
+        {
+            Present = true,
+            Kind = SpatialHitKind.Entity,
+            Entity = doorEntity,
+            Point = doorPos,
+            Distance = 1f,
+        };
+        session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"activation-mode\",\"mode\":\"steal\"}")]));
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
+
+        Assert.True(session.ActivationPanel.View.Applied, session.ActivationPanel.View.Message);
+        Assert.Equal(interior.ProfileKey, session.Sites.ActiveProfile);
+        // Exterior watchman was unloaded during TryEnterBuilding!
+        Assert.False(session.State.Actors.TryGet(watchId, out _));
+        Assert.False(session.Crimes.IsCityWatch(watchId));
+
+        // Preserved witness classification still recognized the city watchman as CityWatchDuty (100% reported)!
+        DaggerfallWitnessDecision watchDecision = Assert.Single(session.Crimes.LastWitnessDecisions);
+        Assert.Equal(watchId, watchDecision.WitnessActorId);
+        Assert.True(watchDecision.Reported);
+        Assert.Equal(DaggerfallWitnessReportReason.CityWatchDuty, watchDecision.Reason);
+        Assert.Equal(100, watchDecision.ReportChancePercent);
+
+        DaggerfallCrimeIncidentSave breakIn = Assert.Single(session.State.Crime.Incidents, i => i.Crime == DaggerfallCrimeKind.BreakingAndEntering);
+        Assert.Equal([watchId], breakIn.Witnesses.WitnessActorIds);
+        Assert.NotNull(session.Law.Current);
+    }
+
+    private sealed class SplitEntryRandom(int lockpickRoll, int witnessRoll) : IRandomService
+    {
+        private readonly IRandomService _fallback = RandomMinimum.Create();
+
+        public KeyedRngReceipt DrawKeyed(KeyedRngRequest request)
+        {
+            if (request.Key.Contains("witness-report", StringComparison.Ordinal))
+                return new KeyedRngReceipt(Math.Clamp(witnessRoll, request.Minimum, request.Maximum));
+            if (request.Scope.Contains("lock", StringComparison.OrdinalIgnoreCase)
+                || request.Key.Contains("lock", StringComparison.OrdinalIgnoreCase))
+                return new KeyedRngReceipt(Math.Clamp(lockpickRoll, request.Minimum, request.Maximum));
+            return _fallback.DrawKeyed(request);
+        }
+
+        public Lcg15Receipt DrawLcg15(Lcg15Request request) => _fallback.DrawLcg15(request);
+        public Rng CreateScoped(ScopedRngCreateRequest request) => _fallback.CreateScoped(request);
+        public Rng ForkScoped(ScopedRngForkRequest request) => _fallback.ForkScoped(request);
+        public RngValue NextU64(Rng rng) => _fallback.NextU64(rng);
+        public RngValue NextBoundedU32(ScopedRngBoundedRequest request) => _fallback.NextBoundedU32(request);
+        public RngValue NextBool(Rng rng) => _fallback.NextBool(rng);
+    }
+
     private static void SetSellerDisposition(DaggerfallSession session, long npcId, int dispositionDelta)
     {
         DaggerfallNpc npc = session.State.Npcs.Require(npcId);
