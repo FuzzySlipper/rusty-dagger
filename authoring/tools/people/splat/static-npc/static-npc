@@ -281,7 +281,10 @@ def step_rig(n, a):
         '--stick', n.guide / 'fit-static.json', '--view-yaw', str(n.cfg.get('view_yaw', 'auto')),
         '--front', n.cut / 'front-cut.png'] + (['--back', n.cut / 'back-cut.png'] if 'back' in n.views else [])
        + (['--head-axis', str(n.cfg['head_axis'])] if n.cfg.get('head_axis') else [])
-       + ['--hands', str(n.cfg.get('hands', 'front'))], log=n.scaffold / 'rig.log')
+       + ['--hands', str(n.cfg.get('hands', 'front'))]
+       + (['--body-axis'] if n.cfg.get('body_axis') else []) + (['--prop-hand', n.cfg['prop_hand']] if n.cfg.get('prop_hand') else [])
+       + (['--wide', str(n.cfg['head_wide'])] if n.cfg.get('head_wide') else []) + (['--elbows', n.cfg['elbows']] if n.cfg.get('elbows') else []),
+       log=n.scaffold / 'rig.log')   # npc.json body_axis, prop_hand: a staff held to one side and above the head (npc-026)
     rep = json.loads((n.scaffold / 'scaffold.json').read_text())
     print(f"{n.id}: {rep['joints']} joints, {rep['triangles']:,} triangles; mesh vertices each joint leads: {rep['dominant']}")
     print(f"  paintings' view {rep['view_yaw']} degrees round to the right of the mesh's front"

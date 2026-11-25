@@ -96,7 +96,7 @@ def turn_stick(fit, deg):
     return fit
 
 
-def stick(J, height, mesh):
+def stick(J, height, mesh, P=None, prop=None, elbows=None):
     """stick_fit.py's joints for a figure with no limbs, from the short chain (1.72 m, front +z)."""
     s = 1.72 / height
     p = lambda v: [round(float(x), 3) for x in v]
@@ -105,7 +105,12 @@ def stick(J, height, mesh):
     for side, sx, hand in (('r', -1, 'RightHand'), ('l', 1, 'LeftHand')):
         w = J[hand] * s
         out[side + 'sho'] = p([0.17 * sx, sho_y, 0.0])
-        if w[1] < sho_y - 0.35:   # a hanging arm (023): the elbow halfway down it, a little out
+        if elbows and hand in elbows:   # --elbows: read off the mesh (npc-026's akimbo and staff arms)
+            out[side + 'elb'] = p(np.asarray(elbows[hand]) * s)
+        elif P is not None:   # --body-axis (npc-026): the elbow halfway between shoulder and wrist, pushed 10 cm out and 5 cm down
+            sh = np.array([0.17 * sx, sho_y, 0.0])
+            out[side + 'elb'] = p((sh + w) / 2 + [0.10 * sx, -0.05, 0.0])
+        elif w[1] < sho_y - 0.35:   # a hanging arm (023): the elbow halfway down it, a little out
             out[side + 'elb'] = p([(0.17 * sx + w[0]) / 2 + 0.02 * sx, (sho_y + w[1]) / 2, w[2] * 0.5])
         else:
             out[side + 'elb'] = p([0.20 * sx, min(sho_y, w[1]) - 0.12, w[2] * 0.2])
@@ -114,6 +119,14 @@ def stick(J, height, mesh):
         out[side + 'hip'] = p([0.09 * sx, hy, 0.0])
         out[side + 'kne'] = p([0.10 * sx, hy * 0.53, 0.0])
         out[side + 'ank'] = p([0.10 * sx, 0.08, 0.0])
+        if P is not None:   # --body-axis: ankles over the feet (a wide stance), knees between hip and ankle
+            q = (P[:, 1] < 0.08) & (sx * P[:, 0] > 0.02)
+            if prop is not None and np.sign(prop[0]) == sx:
+                q &= sx * P[:, 0] < sx * prop[0] - 0.08          # not the staff's foot
+            if q.sum() > 20:
+                ft = P[q].mean(0) * s
+                out[side + 'ank'] = p([ft[0], 0.08, ft[2]])
+                out[side + 'kne'] = p([(0.09 * sx + ft[0]) / 2, hy * 0.53, ft[2] / 2])
     return {'joints': out, 'source': f'static_rig.py --stick from {mesh}: the short chain\'s Neck, Spine2, Hips and hands, the limbs laid out as for 021'}
 
 
@@ -128,6 +141,13 @@ def main():
     ap.add_argument('--hands', default='front', help="front (held before the body: 021, 017), sides (hanging at the thighs: 023) or "
                     "'X,Y,Z;X,Y,Z' metres, left then right")
     ap.add_argument('--head-axis', help='X,Z metres: the Neck/Head turning axis, 11 cm behind the baked face (017: -0.02,0.26)')
+    ap.add_argument('--wide', type=float, default=0.17, help='metres from the head\'s middle beyond which the shoulder zone goes to Spine2 '
+                    '(a cloak\'s shoulder points); wider for big hair, which should turn with the head (npc-026: 0.30)')
+    ap.add_argument('--elbows', help="'X,Y,Z;X,Y,Z' metres, left then right: the stick's elbows (default: laid out from shoulder and wrist)")
+    ap.add_argument('--body-axis', action='store_true', help='centre on the body (median at 0.25-0.55 of the height) and take the '
+                    'height from the crown, not the bounding box: a prop held to one side and above the head (npc-026)')
+    ap.add_argument('--prop-hand', choices=['LeftHand', 'RightHand'], help='a staff held to that side: everything beyond the hand\'s '
+                    'inner edge on that side goes wholly to that hand, so it stays rigid (npc-026)')
     a = ap.parse_args()
     with tempfile.TemporaryDirectory() as td:
         script = Path(td) / 'dec.py'; script.write_text(BLENDER); tmp = Path(td) / 'dec.glb'
@@ -147,7 +167,13 @@ def main():
         P = P @ (Rm @ S).T; N = N @ Rm.T
     lo, hi = P.min(0), P.max(0); k = a.height / (hi[1] - lo[1])
     P = (P - [(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2]) * k
-    H = a.height; y = P[:, 1]
+    H = a.height
+    if a.body_axis:   # npc-026: her staff stands beside her and its bat rises above her head; the box would shrink and shift her
+        mid = (P[:, 1] > 0.25 * H) & (P[:, 1] < 0.55 * H)
+        P[:, [0, 2]] -= np.median(P[mid][:, [0, 2]], 0)
+        crown = np.percentile(P[np.hypot(P[:, 0], P[:, 2]) < 0.15, 1], 99.5)
+        P *= H / crown; k *= H / crown
+    y = P[:, 1]
     hands = {}
     if a.hands == 'front':   # the hands held in front (021's staff, 017's claw): the most forward surface in the hands' band, each side
         band = (y > 0.62 * H) & (y < 0.80 * H)
@@ -195,7 +221,7 @@ def main():
         Wt[kk, ix[seq[i0[kk]]]] += 1 - f[kk]; Wt[kk, ix[seq[i1[kk]]]] += f[kk]
     # the head's own axis: the middle of the figure at 0.9 of its height (a hood hangs forward of the body's axis)
     hs = np.abs(y - 0.9 * H) < 0.02 * H; hc = np.array([(P[hs, 0].min() + P[hs, 0].max()) / 2, (P[hs, 2].min() + P[hs, 2].max()) / 2])
-    wide = (y > J['Neck'][1] - 0.06) & (np.abs(P[:, 0] - hc[0]) > 0.17)   # shoulder points / cloak at the shoulders, beside the head
+    wide = (y > J['Neck'][1] - 0.06) & (np.abs(P[:, 0] - hc[0]) > a.wide)   # shoulder points / cloak at the shoulders, beside the head
     Wt[wide] = 0; Wt[wide, ix['Spine2']] = 1
     hd = (y > J['Neck'][1]) & ~wide                        # the head and the whole hood
     fh = np.clip((y - J['Neck'][1]) / 0.04, 0, 1)
@@ -215,6 +241,10 @@ def main():
         else:
             near &= P[:, 0] < 0
         Wt[near] = 0; Wt[near, ix[side]] = 1
+    if a.prop_hand:   # a staff to one side (npc-026): beyond the hand's inner edge, the hand's alone, so it does not bend
+        sg = 1 if a.prop_hand == 'LeftHand' else -1
+        prop = sg * P[:, 0] > sg * J[a.prop_hand][0] - 0.06
+        Wt[prop] = 0; Wt[prop, ix[a.prop_hand]] = 1
     top = np.argsort(-Wt, 1)[:, :4]; tw = np.take_along_axis(Wt, top, 1); tw /= tw.sum(1, keepdims=True)
     # write the glTF: mesh, armature, skin
     out = {'asset': {'version': '2.0', 'generator': 'static_rig.py',
@@ -272,7 +302,10 @@ def main():
     if a.report:
         Path(a.report).write_text(json.dumps(rep, indent=1) + '\n')
     if a.stick:
-        Path(a.stick).write_text(json.dumps(turn_stick(stick(J, a.height, a.mesh), rep['view_yaw']), indent=1) + '\n')
+        Path(a.stick).write_text(json.dumps(turn_stick(stick(J, a.height, a.mesh, P if a.body_axis else None,
+                                                             J[a.prop_hand] if a.prop_hand else None,
+                                                             {h: [float(t) for t in v.split(',')] for h, v in zip(('LeftHand', 'RightHand'), a.elbows.split(';'))} if a.elbows else None),
+                                                       rep['view_yaw']), indent=1) + '\n')
     print(json.dumps(rep))
 
 
