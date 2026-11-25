@@ -22,7 +22,8 @@ Every file lives in the character's folder, local/art/generated/people/dagger-ch
 
 Steps, in order (each checks that the one before it has run):
   init      dagger-char init, the approved front (and back, if approved) from the CMS (--cms, default ID), npc.json, prompt templates
-            Experiment (npc-471, 2026-11-25): init --from DIR with a side.png too (a three-view sheet split in three; --side right|left)
+            Experiment (npc-471, 2026-11-25): init --from DIR with a side.png too (a three-view sheet split in three; --side right|left),
+            or right.png and/or left.png (a four-view sheet: npc.json "sides"; they follow the back as <Picture 3>, <Picture 4>)
             sets npc.json "side": keys, clay (00-brief/clay-side.txt), Meshy and the orbit take it as a third view (<Picture 3>), and
             "side_guide": true also pins it at its frame of the orbit
   keys      cut both paintings from their background (flood_cut, --tolerance) and make the 1920 px keyframes
@@ -182,7 +183,9 @@ class Npc:
     def views(self):
         """The paintings this character has: front, back unless it is front-only, and a side painting when npc.json "side" names
         which side it shows (right or left; experiment, npc-471 2026-11-25: Patch's three-view sheet split in three)."""
-        return (('front',) if self.cfg.get('front_only') else ('front', 'back')) + (('side',) if self.cfg.get('side') else ())
+        # "sides": ["right", "left"] - named side paintings right.png / left.png (a four-view sheet, npc-471's second test)
+        return (('front',) if self.cfg.get('front_only') else ('front', 'back')) + (('side',) if self.cfg.get('side') else ()) \
+            + tuple(self.cfg.get('sides', ()))
 
     def clip_dir(self):
         return self.k / 'guided' / f"stick-{self.cfg['size']}"
@@ -218,13 +221,18 @@ def step_init(n, a):
     if a.from_dir and (Path(a.from_dir) / 'side.png').exists():   # a side painting (experiment, npc-471): which side it shows
         shutil.copy(Path(a.from_dir) / 'side.png', ap / 'side.png'); cfg['side'] = a.side or cfg.get('side') or 'right'
         print(f"{n.id}: side painting ({cfg['side']} side) from {a.from_dir}")
+    named = [v for v in ('right', 'left') if a.from_dir and (Path(a.from_dir) / f'{v}.png').exists()]   # her right / left side, by name
+    for v in named:
+        shutil.copy(Path(a.from_dir) / f'{v}.png', ap / f'{v}.png')
+    if named:
+        cfg['sides'] = named; print(f'{n.id}: side paintings {named} from {a.from_dir}')
     n.brief.mkdir(parents=True, exist_ok=True)
     (n.brief / 'npc.json').write_text(json.dumps(cfg, indent=1) + '\n')
-    for name in BRIEF + (('clay-side.txt',) if cfg.get('side') else ()):
+    for name in BRIEF + (('clay-side.txt',) if cfg.get('side') else ()) + tuple(f'clay-{v}.txt' for v in cfg.get('sides', ())):
         if name == 'clay-back.txt' and cfg.get('front_only'):
             continue
         if not (n.brief / name).exists():
-            shutil.copy(TEMPLATES / ('clay-front.txt' if name == 'clay-side.txt' else name), n.brief / name)
+            shutil.copy(TEMPLATES / ('clay-front.txt' if name in ('clay-side.txt', 'clay-right.txt', 'clay-left.txt') else name), n.brief / name)
     print(f'{n.id}: paintings in 01-concept/approved; edit 00-brief/{", ".join(BRIEF)} for this character (they are 021\'s)')
 
 
@@ -348,6 +356,8 @@ def step_clip(n, a):
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
     # npc.json "side_guide": true also pins the side painting at the frame that side faces the camera (18 right, 54 left; experiment, npc-471)
     side = {'SIDE_FRAME': '18' if n.cfg['side'] == 'right' else '54'} if n.cfg.get('side') and n.cfg.get('side_guide') else {}
+    if n.cfg.get('sides') and n.cfg.get('side_guide'):   # named sides: right at 18, left at 54
+        side['SIDE_GUIDES'] = ' '.join(f"{v}:{18 if v == 'right' else 54}" for v in n.cfg['sides'])
     sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env, **n.gpu_env, **side})
     d = n.k / 'guided' / f'stick-{sz}'
     sh(f"ffmpeg -loglevel error -y -framerate 24 -pattern_type glob -i '{d}/frames/*.png' -vf scale=960:960 -c:v libx264 -crf 20 "
