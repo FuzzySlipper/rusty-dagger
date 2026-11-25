@@ -247,8 +247,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         // TalkManager refuses a target whose persistent faction reaction is below -20 before it
         // opens the modal. Faction-zero civilians remain neutral through ReactionForNpc and can
-        // still answer; no window-local reaction shadow is created here.
-        if (_social.ReactionForNpc(npc!).Value < -20)
+        // still answer; unarrived faction standing wavefronts are subtracted outside the bubble.
+        if (EffectiveReactionValue(npc!, _activeSite()) < -20)
             return new(false, "That person refuses to respond.");
 
         ActorOverlayComponent? overlay = null;
@@ -380,10 +380,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
     private void Open(DaggerfallNpc npc, DaggerfallDialogueNpc actor)
     {
-        DaggerfallFactionReaction reaction = _social.ReactionForNpc(npc);
-        int greetingId = reaction.Value >= 30 ? 7209 : reaction.Value >= 10 ? 7208 : reaction.Value >= 0 ? 7207 : 7206;
+        DaggerfallSiteRecord? activeSite = _activeSite();
+        int reactionValue = EffectiveReactionValue(npc, activeSite);
+        int greetingId = reactionValue >= 30 ? 7209 : reactionValue >= 10 ? 7208 : reactionValue >= 0 ? 7207 : 7206;
         DaggerfallTextKey greetingKey = Resource(greetingId);
-        DaggerfallTextContext greetingContext = Context(npc, _activeSite(), "");
+        DaggerfallTextContext greetingContext = Context(npc, activeSite, "");
         (string greeting, IReadOnlyList<string> diagnostics) = RenderSelectedRun(
             greetingKey,
             greetingContext,
@@ -392,7 +393,6 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         var benefit = _guildWelcome?.Invoke(npc);
         if (!string.IsNullOrEmpty(benefit?.Message)) greeting += "\n" + benefit.Message;
-        DaggerfallSiteRecord? activeSite = _activeSite();
         string? factionLine = ResolveFactionGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(factionLine)) greeting += "\n" + factionLine;
         string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
@@ -975,6 +975,19 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         string line = _definitions.People.Barks.ResolveBarkLine(
             barkSeed, npc.Role, overlay?.ArchetypeId, regionIndex, regionName, climateName);
         return $"{speaker}: \"{line}\"";
+    }
+
+    private int EffectiveReactionValue(DaggerfallNpc npc, DaggerfallSiteRecord? site)
+    {
+        int raw = _social.ReactionForNpc(npc).Value;
+        if (_wordSpread is null || site is null)
+            return raw;
+        int reactionFactionId = _social.ResolveNpcReactionFactionId(npc);
+        if (reactionFactionId <= 0)
+            return raw;
+        int unarrived = _wordSpread.UnarrivedFactionStandingDelta(
+            reactionFactionId, site, _currentCalendarMinute(), checked((int)_calendar().DayNumber));
+        return raw - unarrived;
     }
 
     private (int PrimaryFactionId, string? CreatureFactionId) ResolveLiveFaction(DaggerfallNpc npc)

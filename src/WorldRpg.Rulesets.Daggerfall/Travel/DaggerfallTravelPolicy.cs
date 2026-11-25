@@ -189,6 +189,55 @@ internal sealed class DaggerfallTravelPolicy
         return path;
     }
 
+    /// <summary>
+    /// Computes the overland courier route distance in equivalent flat-road map pixels from
+    /// <paramref name="origin"/> to <paramref name="destination"/> by walking <see cref="Path"/> over the
+    /// admitted climate/terrain grid and weighting each step by <see cref="PixelMinutes"/> (normalized
+    /// against fast flat land) plus a harbor/ferry boarding cost when entering open sea. Two sites equally
+    /// far in straight-line map coordinates therefore differ whenever one crosses mountains, swamps, deserts,
+    /// or open water.
+    /// </summary>
+    internal double CourierRouteDistancePixels(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination)
+    {
+        origin.RequireInBounds(nameof(origin));
+        destination.RequireInBounds(nameof(destination));
+        if (origin == destination)
+            return 0d;
+
+        double baselineFlatLandMinutes = (((102 * _transport.HorseTravelModifier) >> 8) * (256 - TerrainMovementModifiers[5] + 256)) >> 8;
+        if (baselineFlatLandMinutes <= 0d)
+            baselineFlatLandMinutes = 1d;
+
+        const double SeaBoardingPenaltyPixels = 2.0;
+        DaggerfallTravelMapPixel previous = origin;
+        bool previousOcean = IsOcean(origin);
+        double totalEquivalentPixels = 0d;
+
+        foreach (DaggerfallTravelMapPixel step in Path(origin, destination))
+        {
+            double dx = step.X - previous.X;
+            double dy = step.Y - previous.Y;
+            double stepLength = Math.Sqrt(dx * dx + dy * dy);
+            if (stepLength <= 0d)
+                continue;
+
+            bool ocean = IsOcean(step);
+            int pixelMinutes = PixelMinutes(step, DaggerfallTransportMode.Horse, aboard: true);
+            double terrainFactor = Math.Max(1.0, pixelMinutes / baselineFlatLandMinutes);
+            totalEquivalentPixels += stepLength * terrainFactor;
+            if (ocean && !previousOcean)
+                totalEquivalentPixels += SeaBoardingPenaltyPixels;
+
+            previous = step;
+            previousOcean = ocean;
+        }
+
+        double directDistance = Math.Sqrt(
+            (destination.X - origin.X) * (double)(destination.X - origin.X)
+            + (destination.Y - origin.Y) * (double)(destination.Y - origin.Y));
+        return Math.Max(totalEquivalentPixels, directDistance);
+    }
+
     /// <summary>Whether a map pixel is open sea, which only a ship crosses at speed.</summary>
     internal bool IsOcean(DaggerfallTravelMapPixel pixel) => ClimateAt(pixel.X, pixel.Y).Value == OceanClimate;
 

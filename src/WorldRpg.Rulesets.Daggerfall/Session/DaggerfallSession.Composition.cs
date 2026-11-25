@@ -560,9 +560,10 @@ internal sealed partial class DaggerfallSession
                 WorldConditions.Restore(saved.WorldConditions);
             else
                 WorldConditions.SeedAuthored(definitions.NewGame.WorldConditions);
-            WordSpread = new DaggerfallWordSpread(tuning.Social, WorldConditions);
+            WordSpread = new DaggerfallWordSpread(tuning.Social, WorldConditions, travelPolicy);
             if (saved is not null)
                 WordSpread.Restore(saved.WordSpread);
+            WorldConditions.BeforeMutation += () => WordSpread.CheckpointAll(_time.Calendar.MinuteNumber);
             social.GuildRankChanged += (factionId, newRank) =>
             {
                 if (_site.ActiveSite is not { } origin) return;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -24,7 +25,7 @@ internal enum DaggerfallWordArrivalStatus
     /// <summary>Target site lies within the configurable instant-news bubble around the origin.</summary>
     InstantBubble = 0,
 
-    /// <summary>Couriers have had enough elapsed road-travel time to reach the target site.</summary>
+    /// <summary>Couriers have had enough elapsed road-distance travel time to reach the target site.</summary>
     ArrivedByCourier = 1,
 
     /// <summary>A sparse override (such as player-delivered dispatch) accelerated arrival here.</summary>
@@ -53,9 +54,27 @@ internal sealed record DaggerfallWordArrivalEvaluation(
 }
 
 /// <summary>
-/// One sparse persisted wavefront event (<c>origin pixel + emission time + delta/news + sparse overrides</c>).
-/// Advances strictly from elapsed calendar time and road distance, so time spent in a dungeon advances word
-/// naturally with zero off-screen stepping.
+/// Sparse per-region accumulated courier route reach (in equivalent road-distance map pixels) persisted only for
+/// regions whose disruption history diverged from unaffected regions.
+/// </summary>
+internal sealed record DaggerfallWordRegionProgressSave(
+    [property: JsonRequired] int Region,
+    [property: JsonRequired] double ReachedRadiusPixels)
+{
+    internal DaggerfallWordRegionProgressSave Validate()
+    {
+        if (Region is < 0 or > 61)
+            throw new ArgumentOutOfRangeException(nameof(Region), Region, "Word progress region is outside 0..61.");
+        if (!double.IsFinite(ReachedRadiusPixels) || ReachedRadiusPixels < 0d)
+            throw new ArgumentOutOfRangeException(nameof(ReachedRadiusPixels), ReachedRadiusPixels, "Reached radius must be finite and non-negative.");
+        return this;
+    }
+}
+
+/// <summary>
+/// One sparse persisted wavefront event (<c>origin pixel + emission time + delta/news + monotonic checkpoints + sparse overrides</c>).
+/// Advances strictly from elapsed calendar time and route distance, preserving accumulated progress monotonically
+/// across condition changes and timed expirations so arrived news is never retroactively retracted.
 /// </summary>
 internal sealed record DaggerfallWordWavefrontSave(
     [property: JsonRequired] string EventId,
@@ -72,7 +91,10 @@ internal sealed record DaggerfallWordWavefrontSave(
     int[]? SuppressedRegions = null,
     int[]? AcceleratedRegions = null,
     bool CourierIntercepted = false,
-    double? FrozenRadiusPixels = null)
+    double? FrozenRadiusPixels = null,
+    long? LastCheckpointMinute = null,
+    double? BaseReachedRadiusPixels = null,
+    DaggerfallWordRegionProgressSave[]? RegionProgress = null)
 {
     internal DaggerfallWordWavefrontSave Validate()
     {
@@ -87,6 +109,10 @@ internal sealed record DaggerfallWordWavefrontSave(
             throw new ArgumentOutOfRangeException(nameof(FactionId), FactionId, $"Word wavefront '{EventId}' cannot have a negative faction id.");
         if (FrozenRadiusPixels is double fr && (!double.IsFinite(fr) || fr < 0d))
             throw new ArgumentOutOfRangeException(nameof(FrozenRadiusPixels), FrozenRadiusPixels, $"Word wavefront '{EventId}' frozen radius must be finite and non-negative.");
+        if (LastCheckpointMinute is long lcm && lcm < EmittedAtMinute)
+            throw new ArgumentOutOfRangeException(nameof(LastCheckpointMinute), LastCheckpointMinute, $"Word wavefront '{EventId}' checkpoint precedes emission.");
+        if (BaseReachedRadiusPixels is double br && (!double.IsFinite(br) || br < 0d))
+            throw new ArgumentOutOfRangeException(nameof(BaseReachedRadiusPixels), BaseReachedRadiusPixels, $"Word wavefront '{EventId}' reached radius must be finite and non-negative.");
         if (SuppressedRegions is not null)
         {
             foreach (int r in SuppressedRegions)
@@ -96,6 +122,17 @@ internal sealed record DaggerfallWordWavefrontSave(
         {
             foreach (int r in AcceleratedRegions)
                 if (r is < 0 or > 61) throw new ArgumentOutOfRangeException(nameof(AcceleratedRegions), r, "Accelerated region is outside 0..61.");
+        }
+        if (RegionProgress is not null)
+        {
+            HashSet<int> seen = [];
+            foreach (DaggerfallWordRegionProgressSave rp in RegionProgress)
+            {
+                ArgumentNullException.ThrowIfNull(rp);
+                rp.Validate();
+                if (!seen.Add(rp.Region))
+                    throw new ArgumentException($"Word wavefront '{EventId}' repeats region progress for region {rp.Region}.", nameof(RegionProgress));
+            }
         }
         return this;
     }
@@ -122,27 +159,52 @@ internal sealed record DaggerfallWordSpreadSave(DaggerfallWordWavefrontSave[] Wa
 }
 
 /// <summary>
-/// Owns elapsed-time road-distance news and standing spread (good and bad). Within <see cref="DaggerfallSocialTuning.InstantNewsBubblePixels"/>
-/// of an event's origin, word is instant; outside the bubble, word advances by courier speed modified by active
-/// regional <see cref="IDaggerfallWorldConditionSource"/> disruptions (war zones, monster surges, plague quarantines)
-/// and sparse overrides (intercepted or player-delivered couriers).
+/// Owns elapsed-time overland route-distance news and standing spread (good and bad). Within
+/// <see cref="DaggerfallSocialTuning.InstantNewsBubblePixels"/> of an event's origin, word is instant; outside
+/// the bubble, word advances along <see cref="DaggerfallTravelPolicy.CourierRouteDistancePixels"/> at courier
+/// speed modified by active regional <see cref="IDaggerfallWorldConditionSource"/> disruptions (war zones,
+/// monster surges, plague quarantines) and sparse overrides (intercepted or player-delivered couriers).
+/// Progress is integrated monotonically across condition changes and expirations so arrived news never retracts.
 /// </summary>
 internal sealed class DaggerfallWordSpread(
     DaggerfallSocialTuning tuning,
-    IDaggerfallWorldConditionSource conditions)
+    IDaggerfallWorldConditionSource conditions,
+    DaggerfallTravelPolicy? travelPolicy = null)
 {
     internal const long MaxRetainedWavefrontMinutes = 30L * DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour;
     internal const double MinCourierDisruptionMultiplier = 0.10;
     private const double GrainShortageCourierMultiplier = 0.75;
+    private const long MinutesPerDay = DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour;
 
     private readonly DaggerfallSocialTuning _tuning = tuning.Validate();
     private readonly IDaggerfallWorldConditionSource _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
+    private readonly DaggerfallTravelPolicy? _travelPolicy = travelPolicy;
     private readonly Dictionary<string, DaggerfallWordWavefrontSave> _wavefronts = new(StringComparer.Ordinal);
     private int _nextSequence;
 
     internal DaggerfallSocialTuning Tuning => _tuning;
     internal int Count => _wavefronts.Count;
     internal IReadOnlyCollection<DaggerfallWordWavefrontSave> Wavefronts => _wavefronts.Values;
+
+    /// <summary>
+    /// Computes overland route distance in equivalent flat-road map pixels via <see cref="DaggerfallTravelPolicy"/>
+    /// (accounting for terrain, climate, and water crossings along the donor route walk).
+    /// </summary>
+    internal double RouteDistancePixels(int originX, int originY, int targetX, int targetY)
+    {
+        if (originX == targetX && originY == targetY)
+            return 0d;
+        if (_travelPolicy is not null)
+        {
+            DaggerfallTravelMapPixel from = new(originX, originY);
+            DaggerfallTravelMapPixel to = new(targetX, targetY);
+            if (from.IsInBounds && to.IsInBounds)
+                return _travelPolicy.CourierRouteDistancePixels(from, to);
+        }
+        double dx = targetX - originX;
+        double dy = targetY - originY;
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
 
     /// <summary>Records a reported regional crime penalty wavefront originating at <paramref name="originSite"/>.</summary>
     internal DaggerfallWordWavefrontSave RecordCrime(
@@ -169,7 +231,11 @@ internal sealed class DaggerfallWordSpread(
         return wf;
     }
 
-    /// <summary>Records a faction standing change or guild rank promotion spreading outward from <paramref name="originSite"/>.</summary>
+    /// <summary>
+    /// Records a faction standing change (actual clamped delta) or guild rank promotion spreading outward from
+    /// <paramref name="originSite"/>. Plain standing deltas emitted at the same origin and minute for the same
+    /// faction coalesce cleanly into one wavefront.
+    /// </summary>
     internal DaggerfallWordWavefrontSave RecordFactionStanding(
         int factionId,
         int delta,
@@ -181,6 +247,35 @@ internal sealed class DaggerfallWordSpread(
         string? eventId = null)
     {
         ArgumentNullException.ThrowIfNull(originSite);
+
+        if (guildRank is null && string.IsNullOrWhiteSpace(headline) && string.IsNullOrWhiteSpace(body) && string.IsNullOrWhiteSpace(eventId))
+        {
+            DaggerfallWordWavefrontSave? existing = _wavefronts.Values.FirstOrDefault(w =>
+                w.Kind == DaggerfallWordEventKind.FactionStanding
+                && w.FactionId == factionId
+                && w.OriginRegion == originSite.Id.Region
+                && w.OriginPixelX == originSite.MapPixelX
+                && w.OriginPixelY == originSite.MapPixelY
+                && w.EmittedAtMinute == currentMinute
+                && w.GuildRank is null
+                && w.Headline is null
+                && w.Body is null
+                && !w.CourierIntercepted
+                && (w.LastCheckpointMinute is null || w.LastCheckpointMinute == w.EmittedAtMinute));
+            if (existing is not null)
+            {
+                int combined = checked(existing.Delta + delta);
+                if (combined == 0)
+                {
+                    _wavefronts.Remove(existing.EventId);
+                    return existing with { Delta = 0 };
+                }
+                DaggerfallWordWavefrontSave merged = existing with { Delta = combined };
+                _wavefronts[existing.EventId] = merged;
+                return merged;
+            }
+        }
+
         string id = string.IsNullOrWhiteSpace(eventId)
             ? string.Create(CultureInfo.InvariantCulture, $"wf:standing:{factionId}:{currentMinute}:{++_nextSequence}")
             : eventId;
@@ -233,20 +328,37 @@ internal sealed class DaggerfallWordSpread(
         _wavefronts.TryGetValue(eventId, out wavefront);
 
     /// <summary>
-    /// Sparse override: intercepting a courier freezes this wavefront at the radius it had reached at
+    /// Bakes accumulated courier spread progress up to <paramref name="currentMinute"/> using the currently active
+    /// world conditions. Invoked immediately before any condition mutation or expiry prune so past disrupted or
+    /// peaceful intervals are preserved monotonically and already-arrived news can never be retracted.
+    /// </summary>
+    internal void CheckpointAll(long currentMinute)
+    {
+        if (_wavefronts.Count == 0)
+            return;
+
+        foreach (DaggerfallWordWavefrontSave wf in _wavefronts.Values.ToArray())
+        {
+            DaggerfallWordWavefrontSave updated = CheckpointWavefront(wf, currentMinute);
+            if (!ReferenceEquals(updated, wf))
+                _wavefronts[wf.EventId] = updated;
+        }
+    }
+
+    /// <summary>
+    /// Sparse override: intercepting a courier freezes this wavefront at the exact route reach accumulated by
     /// <paramref name="currentMinute"/> (at least the instant bubble), preventing word from reaching further towns.
     /// </summary>
     internal bool InterceptWavefront(string eventId, long currentMinute, int? currentDay = null)
     {
+        _ = currentDay;
         if (!_wavefronts.TryGetValue(eventId, out DaggerfallWordWavefrontSave? wf))
             return false;
 
-        int day = currentDay ?? checked((int)(currentMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
-        (double multiplier, _) = CourierDisruption(wf.OriginRegion, wf.OriginRegion, day);
-        double elapsedHours = Math.Max(0d, (currentMinute - wf.EmittedAtMinute) / 60d);
-        double reachedRadius = _tuning.InstantNewsBubblePixels + elapsedHours * (_tuning.CourierSpeedPixelsPerHour * multiplier);
-        double frozen = wf.FrozenRadiusPixels is double existing ? Math.Min(existing, reachedRadius) : reachedRadius;
-        _wavefronts[eventId] = wf with { CourierIntercepted = true, FrozenRadiusPixels = frozen };
+        DaggerfallWordWavefrontSave checkpointed = CheckpointWavefront(wf, currentMinute);
+        double reachedBase = checkpointed.BaseReachedRadiusPixels ?? _tuning.InstantNewsBubblePixels;
+        double frozen = wf.FrozenRadiusPixels is double existing ? Math.Min(existing, reachedBase) : reachedBase;
+        _wavefronts[eventId] = checkpointed with { CourierIntercepted = true, FrozenRadiusPixels = frozen };
         return true;
     }
 
@@ -296,52 +408,68 @@ internal sealed class DaggerfallWordSpread(
         int targetRegion = targetSite.Id.Region;
         double dx = targetSite.MapPixelX - wavefront.OriginPixelX;
         double dy = targetSite.MapPixelY - wavefront.OriginPixelY;
-        double distance = Math.Sqrt(dx * dx + dy * dy);
-        int day = currentDay ?? checked((int)(currentMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        double directDistance = Math.Sqrt(dx * dx + dy * dy);
+        double routeDistance = RouteDistancePixels(
+            wavefront.OriginPixelX, wavefront.OriginPixelY, targetSite.MapPixelX, targetSite.MapPixelY);
+        int day = currentDay ?? MinuteToDay(currentMinute);
         (double disruption, string? reason) = CourierDisruption(wavefront.OriginRegion, targetRegion, day);
         double effectiveSpeed = _tuning.CourierSpeedPixelsPerHour * disruption;
 
         // 1. Sparse overrides take precedence.
         if (wavefront.AcceleratedRegions is { Length: > 0 } acc && acc.Contains(targetRegion))
-            return new(wavefront.EventId, DaggerfallWordArrivalStatus.AcceleratedOverride, distance, effectiveSpeed, disruption, 0, reason);
+            return new(wavefront.EventId, DaggerfallWordArrivalStatus.AcceleratedOverride, routeDistance, effectiveSpeed, disruption, 0, reason);
         if (wavefront.SuppressedRegions is { Length: > 0 } sup && sup.Contains(targetRegion))
-            return new(wavefront.EventId, DaggerfallWordArrivalStatus.Blocked, distance, effectiveSpeed, disruption, long.MaxValue, "suppressed");
+            return new(wavefront.EventId, DaggerfallWordArrivalStatus.Blocked, routeDistance, effectiveSpeed, disruption, long.MaxValue, "suppressed");
 
-        // 2. Instant bubble: within configurable radius of origin, word is immediate.
-        if (distance <= _tuning.InstantNewsBubblePixels + 1e-9)
-            return new(wavefront.EventId, DaggerfallWordArrivalStatus.InstantBubble, distance, effectiveSpeed, disruption, 0, reason);
+        // 2. Instant bubble: within configurable direct radius of origin, word is immediate.
+        if (directDistance <= _tuning.InstantNewsBubblePixels + 1e-9)
+            return new(wavefront.EventId, DaggerfallWordArrivalStatus.InstantBubble, directDistance, effectiveSpeed, disruption, 0, reason);
 
-        // 3. Intercepted courier stops further spread beyond the frozen radius.
+        // 3. Intercepted courier stops further spread beyond the frozen route reach.
         if (wavefront.CourierIntercepted)
         {
-            double frozen = wavefront.FrozenRadiusPixels ?? _tuning.InstantNewsBubblePixels;
-            return distance <= frozen + 1e-9
-                ? new(wavefront.EventId, DaggerfallWordArrivalStatus.ArrivedByCourier, distance, effectiveSpeed, disruption, 0, reason)
-                : new(wavefront.EventId, DaggerfallWordArrivalStatus.Blocked, distance, effectiveSpeed, disruption, long.MaxValue, "courier intercepted");
+            double frozen = LookupRegionReached(wavefront, targetRegion)
+                ?? wavefront.FrozenRadiusPixels
+                ?? wavefront.BaseReachedRadiusPixels
+                ?? _tuning.InstantNewsBubblePixels;
+            return routeDistance <= frozen + 1e-9
+                ? new(wavefront.EventId, DaggerfallWordArrivalStatus.ArrivedByCourier, routeDistance, effectiveSpeed, disruption, 0, reason)
+                : new(wavefront.EventId, DaggerfallWordArrivalStatus.Blocked, routeDistance, effectiveSpeed, disruption, long.MaxValue, "courier intercepted");
         }
 
-        // 4. Elapsed-time road-distance courier spread outside the bubble.
-        double roadDistance = Math.Max(0d, distance - _tuning.InstantNewsBubblePixels);
-        long travelMinutes = checked((long)Math.Ceiling((roadDistance / effectiveSpeed) * 60d));
-        long elapsedMinutes = Math.Max(0L, currentMinute - wavefront.EmittedAtMinute);
-        if (elapsedMinutes >= travelMinutes)
-            return new(wavefront.EventId, DaggerfallWordArrivalStatus.ArrivedByCourier, distance, effectiveSpeed, disruption, 0, reason);
+        // 4. Monotonic piecewise-integrated overland route-distance courier spread outside the bubble.
+        long fromMinute = wavefront.LastCheckpointMinute ?? wavefront.EmittedAtMinute;
+        double reachedAtCheckpoint = LookupRegionReached(wavefront, targetRegion)
+            ?? wavefront.BaseReachedRadiusPixels
+            ?? _tuning.InstantNewsBubblePixels;
+        double additional = currentMinute > fromMinute
+            ? IntegrateEffectivePixels(wavefront.OriginRegion, targetRegion, fromMinute, currentMinute)
+            : 0d;
+        double totalReached = reachedAtCheckpoint + additional;
 
-        return new(wavefront.EventId, DaggerfallWordArrivalStatus.InTransit, distance, effectiveSpeed, disruption,
-            travelMinutes - elapsedMinutes, reason);
+        if (totalReached >= routeDistance - 1e-9)
+            return new(wavefront.EventId, DaggerfallWordArrivalStatus.ArrivedByCourier, routeDistance, effectiveSpeed, disruption, 0, reason);
+
+        double remainingPixels = routeDistance - totalReached;
+        long remainingMinutes = Math.Max(1L, checked((long)Math.Ceiling((remainingPixels / effectiveSpeed) * 60d)));
+        return new(wavefront.EventId, DaggerfallWordArrivalStatus.InTransit, routeDistance, effectiveSpeed, disruption,
+            remainingMinutes, reason);
     }
 
     /// <summary>
     /// Computes the combined courier speed multiplier in [<see cref="MinCourierDisruptionMultiplier"/>, 1.0] from
     /// active world conditions in either the origin or destination region. Both crimes committed inside a war zone /
     /// monster surge and good news (like Mages Guild rank gossip) heading to a front-line town share this disruption.
+    /// Pass <paramref name="targetRegion"/> &lt; 0 to evaluate origin + Bay-wide disruption only.
     /// </summary>
     internal (double Multiplier, string? Reason) CourierDisruption(int originRegion, int targetRegion, int currentDay)
     {
         double multiplier = 1.0;
         List<string> reasons = [];
 
-        int[] regions = originRegion == targetRegion ? [originRegion] : [originRegion, targetRegion];
+        int[] regions = targetRegion < 0 || originRegion == targetRegion
+            ? [originRegion]
+            : [originRegion, targetRegion];
         int warSeverity = 0;
         int surgeSeverity = 0;
         int plagueSeverity = 0;
@@ -406,7 +534,7 @@ internal sealed class DaggerfallWordSpread(
 
     /// <summary>
     /// Total unarrived faction standing delta for <paramref name="factionId"/> at <paramref name="targetSite"/>:
-    /// subtracting this from raw standing gives what <paramref name="targetSite"/> has actually heard so far
+    /// subtracting this from raw standing reconstructs what <paramref name="targetSite"/> has actually heard so far
     /// (both positive renown/guild promotions and negative faction infamy wait on couriers outside the bubble).
     /// </summary>
     internal int UnarrivedFactionStandingDelta(int factionId, DaggerfallSiteRecord? targetSite, long currentMinute, int? currentDay = null)
@@ -483,4 +611,103 @@ internal sealed class DaggerfallWordSpread(
         foreach (DaggerfallWordWavefrontSave wf in saved.Wavefronts)
             _wavefronts[wf.EventId] = wf;
     }
+
+    private DaggerfallWordWavefrontSave CheckpointWavefront(DaggerfallWordWavefrontSave wf, long currentMinute)
+    {
+        if (wf.CourierIntercepted)
+            return wf;
+        long fromMinute = wf.LastCheckpointMinute ?? wf.EmittedAtMinute;
+        if (currentMinute <= fromMinute)
+            return wf;
+
+        double baseStart = wf.BaseReachedRadiusPixels ?? _tuning.InstantNewsBubblePixels;
+        double newBase = baseStart + IntegrateEffectivePixels(wf.OriginRegion, targetRegion: -1, fromMinute, currentMinute);
+
+        List<DaggerfallWordRegionProgressSave>? sparse = null;
+        for (int region = 0; region <= 61; region++)
+        {
+            double prev = LookupRegionReached(wf, region) ?? baseStart;
+            double gain = IntegrateEffectivePixels(wf.OriginRegion, region, fromMinute, currentMinute);
+            double next = prev + gain;
+            if (Math.Abs(next - newBase) > 1e-6)
+                (sparse ??= []).Add(new DaggerfallWordRegionProgressSave(region, next));
+        }
+
+        return wf with
+        {
+            LastCheckpointMinute = currentMinute,
+            BaseReachedRadiusPixels = newBase,
+            RegionProgress = sparse is { Count: > 0 } ? [.. sparse] : null,
+        };
+    }
+
+    private double IntegrateEffectivePixels(int originRegion, int targetRegion, long fromMinute, long toMinute)
+    {
+        if (toMinute <= fromMinute)
+            return 0d;
+
+        SortedSet<long>? boundaries = null;
+        CollectTokenBoundaries(originRegion, fromMinute, toMinute, ref boundaries);
+        if (targetRegion >= 0 && targetRegion != originRegion)
+            CollectTokenBoundaries(targetRegion, fromMinute, toMinute, ref boundaries);
+
+        if (boundaries is null || boundaries.Count == 0)
+        {
+            (double mult, _) = CourierDisruption(originRegion, targetRegion, MinuteToDay(fromMinute));
+            return ((toMinute - fromMinute) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
+        }
+
+        double total = 0d;
+        long segStart = fromMinute;
+        foreach (long split in boundaries)
+        {
+            (double mult, _) = CourierDisruption(originRegion, targetRegion, MinuteToDay(segStart));
+            total += ((split - segStart) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
+            segStart = split;
+        }
+        if (toMinute > segStart)
+        {
+            (double mult, _) = CourierDisruption(originRegion, targetRegion, MinuteToDay(segStart));
+            total += ((toMinute - segStart) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
+        }
+        return total;
+    }
+
+    private void CollectTokenBoundaries(int region, long fromMinute, long toMinute, ref SortedSet<long>? boundaries)
+    {
+        if (region is < 0 or > 61)
+            return;
+        foreach (DaggerfallWorldConditionToken token in _conditions.ActiveForRegion(region, currentDay: null))
+        {
+            if (token.Kind is not (DaggerfallWorldConditionKind.BorderTension
+                or DaggerfallWorldConditionKind.MonsterSurge
+                or DaggerfallWorldConditionKind.PlagueScare
+                or DaggerfallWorldConditionKind.GrainShortage))
+            {
+                continue;
+            }
+            long startMin = checked((long)token.StartedDay * MinutesPerDay);
+            if (startMin > fromMinute && startMin < toMinute)
+                (boundaries ??= []).Add(startMin);
+            if (token.ExpiresDay is int exp)
+            {
+                long expMin = checked((long)exp * MinutesPerDay);
+                if (expMin > fromMinute && expMin < toMinute)
+                    (boundaries ??= []).Add(expMin);
+            }
+        }
+    }
+
+    private static double? LookupRegionReached(DaggerfallWordWavefrontSave wf, int region)
+    {
+        if (wf.RegionProgress is not { Length: > 0 } entries)
+            return null;
+        foreach (DaggerfallWordRegionProgressSave entry in entries)
+            if (entry.Region == region)
+                return entry.ReachedRadiusPixels;
+        return null;
+    }
+
+    private static int MinuteToDay(long minute) =>
+        checked((int)Math.Floor(minute / (double)MinutesPerDay));
 }

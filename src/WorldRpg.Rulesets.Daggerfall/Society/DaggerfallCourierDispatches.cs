@@ -187,15 +187,14 @@ internal sealed class DaggerfallCourierDispatches(
             .OrderByDescending(d => d.DispatchedAtMinute)
             .FirstOrDefault();
 
-    /// <summary>Returns a player-carried dispatch addressed to <paramref name="site"/> (matching site or destination region).</summary>
+    /// <summary>Returns a player-carried dispatch addressed to <paramref name="site"/> (exact destination site match).</summary>
     internal DaggerfallCourierDispatchSave? TryGetPlayerCarriedFor(DaggerfallSiteRecord site)
     {
         ArgumentNullException.ThrowIfNull(site);
         return _dispatches.Values
             .Where(d => d.Status == DaggerfallDispatchStatus.CarriedByPlayer
-                && (d.DestinationSite.Require() == site.Id || d.DestinationSite.Region == site.Id.Region))
-            .OrderBy(d => d.DestinationSite.Require() == site.Id ? 0 : 1)
-            .ThenBy(d => d.DispatchedAtMinute)
+                && d.DestinationSite.Require() == site.Id)
+            .OrderBy(d => d.DispatchedAtMinute)
             .FirstOrDefault();
     }
 
@@ -236,12 +235,11 @@ internal sealed class DaggerfallCourierDispatches(
         ArgumentNullException.ThrowIfNull(origin);
         ArgumentNullException.ThrowIfNull(destination);
 
-        double dx = destination.MapPixelX - origin.MapPixelX;
-        double dy = destination.MapPixelY - origin.MapPixelY;
-        double distance = Math.Sqrt(dx * dx + dy * dy);
+        double routeDistance = wordSpread.RouteDistancePixels(
+            origin.MapPixelX, origin.MapPixelY, destination.MapPixelX, destination.MapPixelY);
         (double disruption, _) = wordSpread.CourierDisruption(origin.Id.Region, destination.Id.Region, currentDay);
         double effectiveSpeed = wordSpread.Tuning.CourierSpeedPixelsPerHour * disruption;
-        long travelMinutes = Math.Max(60L, checked((long)Math.Ceiling((distance / effectiveSpeed) * 60d)));
+        long travelMinutes = Math.Max(60L, checked((long)Math.Ceiling((routeDistance / effectiveSpeed) * 60d)));
         long expectedArrival = checked(currentMinute + travelMinutes);
 
         string? overlandBandId = null;
@@ -375,8 +373,8 @@ internal sealed class DaggerfallCourierDispatches(
             return new(false, "You are not carrying that dispatch.");
 
         DaggerfallSiteId destId = dispatch.DestinationSite.Require();
-        if (atSite.Id != destId && atSite.Id.Region != destId.Region)
-            return new(false, $"That dispatch is addressed to {ResolveSiteName(destId)}, not here.");
+        if (atSite.Id != destId)
+            return new(false, $"That dispatch is addressed to {ResolveSiteName(destId)}, not {atSite.Name}.");
 
         DaggerfallCourierDispatchSave delivered = dispatch with
         {

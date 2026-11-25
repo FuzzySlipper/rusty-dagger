@@ -4,11 +4,11 @@ using Rusty.Engine.Debugging;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
-using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -16,8 +16,9 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// Political layer A7 (#11052): elapsed-time news &amp; standing spread (instant bubble vs. disrupted courier spread
-/// affecting crimes and guild standing symmetrically) and board-game courier dispatches (deliver, buy, intercept, kill).
+/// Political layer A7 (#11052): elapsed-time overland route-distance news &amp; standing spread (instant bubble vs.
+/// monotonic piecewise-integrated courier spread affecting crimes, small/propagated standing, and guild ranks
+/// symmetrically) and board-game courier dispatches (deliver at destination, buy, intercept, kill).
 /// </summary>
 public sealed class WordSpreadAndCouriersTests
 {
@@ -89,6 +90,232 @@ public sealed class WordSpreadAndCouriersTests
         DaggerfallTownNoticeBoardView distantBoardAfter = session.NoticeBoard.BuildForSite(distant, afterMinute);
         Assert.Contains(distantBoardAfter.Entries, e => e.Kind == DaggerfallNoticeEntryKind.Bounty);
         Assert.True(session.Scrutiny.EvaluateGateScrutiny(DaggerfallRegion, distant).WatchChallengeActive);
+    }
+
+    [Fact]
+    public void Route_distance_weights_terrain_and_water_crossings_beyond_straight_line_pixels_for_word_spread_and_dispatches()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+
+        DaggerfallSiteRecord origin = session.Site.ActiveSite!;
+        // Find a destination across the Iliac Bay / rough terrain whose overland route distance strictly exceeds straight-line distance.
+        DaggerfallSiteRecord seaOrMountainTarget = TestPayload.Definitions.Locations.Records
+            .Where(r => r.Exterior is not null && r.Id != origin.Id)
+            .Select(r => (
+                Site: r,
+                Direct: DirectDistance(origin, r),
+                Route: session.WordSpread.RouteDistancePixels(origin.MapPixelX, origin.MapPixelY, r.MapPixelX, r.MapPixelY)))
+            .Where(x => x.Direct >= 20.0 && x.Route >= x.Direct + 5.0)
+            .OrderByDescending(x => x.Route - x.Direct)
+            .First()
+            .Site;
+
+        double direct = DirectDistance(origin, seaOrMountainTarget);
+        double route = session.WordSpread.RouteDistancePixels(
+            origin.MapPixelX, origin.MapPixelY, seaOrMountainTarget.MapPixelX, seaOrMountainTarget.MapPixelY);
+        Assert.True(route > direct + 4.9,
+            $"Expected overland route distance ({route:F2}) to exceed straight-line distance ({direct:F2}) by at least 5 pixels.");
+
+        long nowMinute = CurrentMinute(session);
+        int nowDay = checked((int)(nowMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        DaggerfallWordWavefrontSave wf = session.WordSpread.RecordNews(
+            "wf:route-check", "Bay Route Bulletin", "Overland courier route verification.", origin, nowMinute);
+
+        DaggerfallWordArrivalEvaluation eval = session.WordSpread.EvaluateAt(wf, seaOrMountainTarget, nowMinute, nowDay);
+        Assert.Equal(route, eval.DistancePixels, precision: 4);
+        long straightLineMinutes = checked((long)Math.Ceiling(((direct - session.WordSpread.Tuning.InstantNewsBubblePixels) / session.WordSpread.Tuning.CourierSpeedPixelsPerHour) * 60d));
+        Assert.True(eval.RemainingMinutes > straightLineMinutes + 60,
+            $"Expected route arrival ({eval.RemainingMinutes}m) to strictly exceed straight-line arrival ({straightLineMinutes}m).");
+
+        // StageDispatch also computes arrival from route distance rather than straight-line distance.
+        DaggerfallCourierDispatchSave dispatch = session.CourierDispatches.StageDispatch(
+            dispatchId: "disp:route-check",
+            seatId: "crown:daggerfall",
+            actionKind: "bay-envoy",
+            summary: "Cross-bay sealed envoy",
+            origin: origin,
+            destination: seaOrMountainTarget,
+            currentMinute: nowMinute,
+            currentDay: nowDay,
+            stageOverlandBand: false);
+        long directDispatchMinutes = checked((long)Math.Ceiling((direct / session.WordSpread.Tuning.CourierSpeedPixelsPerHour) * 60d));
+        long actualDispatchMinutes = dispatch.ExpectedArrivalMinute - dispatch.DispatchedAtMinute;
+        Assert.True(actualDispatchMinutes > directDispatchMinutes + 60,
+            $"Expected dispatch route duration ({actualDispatchMinutes}m) to strictly exceed straight-line duration ({directDispatchMinutes}m).");
+    }
+
+    [Fact]
+    public void Condition_changes_never_retract_arrived_news_and_preserve_mid_journey_disruption_across_save_load()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+
+        DaggerfallSiteRecord origin = session.Site.ActiveSite!;
+        DaggerfallSiteRecord distant = FindDistantTownInRegion(origin, minDistancePixels: 18.0);
+        long startMinute = CurrentMinute(session);
+        int startDay = checked((int)(startMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+
+        // Part A: News/crime arrives in peacetime -> adding BorderTension afterward MUST NOT retract arrival!
+        session.State.Crime.RecordIncident(new DaggerfallCrimeIncidentSave(
+            OperationId: "a7-monotonic-crime",
+            Crime: DaggerfallCrimeKind.Murder,
+            Stage: DaggerfallCrimeStage.Completed,
+            PerpetratorActorId: DaggerfallActorIdentity.PlayerEntityId,
+            AffectedActorOrOwnerId: 9021,
+            Region: DaggerfallRegion,
+            GameMinute: startMinute,
+            TargetKind: DaggerfallCrimeTargetKind.Civilian,
+            Witnesses: new DaggerfallCrimeWitnessEvidence(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [9022]),
+            GuildCredit: DaggerfallCrimeGuildCredit.CivilianMurder,
+            Reported: true));
+        Assert.True(session.WordSpread.TryGet("wf:crime:a7-monotonic-crime", out DaggerfallWordWavefrontSave? crimeWf));
+        DaggerfallWordArrivalEvaluation initialEval = session.WordSpread.EvaluateAt(crimeWf!, distant, startMinute, startDay);
+        Assert.False(initialEval.HasArrived);
+        long peacefulMinutes = initialEval.RemainingMinutes;
+
+        session.AdvanceElapsedTime(checked((peacefulMinutes + 5) * DaggerfallCalendar.SecondsPerMinute));
+        long arrivedMinute = CurrentMinute(session);
+        int arrivedDay = checked((int)(arrivedMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        Assert.True(session.WordSpread.TryGet("wf:crime:a7-monotonic-crime", out crimeWf));
+        Assert.True(session.WordSpread.EvaluateAt(crimeWf!, distant, arrivedMinute, arrivedDay).HasArrived);
+        Assert.Contains(session.NoticeBoard.BuildForSite(distant, arrivedMinute).Entries, e => e.Kind == DaggerfallNoticeEntryKind.Bounty);
+
+        // Now start a severe BorderTension war zone: already-arrived bounty MUST remain arrived!
+        string warTokenId = DaggerfallWorldConditions.RegionTokenId(DaggerfallWorldConditionKind.BorderTension, DaggerfallRegion);
+        session.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            warTokenId, DaggerfallWorldConditionKind.BorderTension, DaggerfallRegion, Severity: 2, StartedDay: arrivedDay));
+        Assert.True(session.WordSpread.TryGet("wf:crime:a7-monotonic-crime", out crimeWf));
+        Assert.Equal(DaggerfallWordArrivalStatus.ArrivedByCourier,
+            session.WordSpread.EvaluateAt(crimeWf!, distant, arrivedMinute, arrivedDay).Status);
+        Assert.Contains(session.NoticeBoard.BuildForSite(distant, arrivedMinute).Entries, e => e.Kind == DaggerfallNoticeEntryKind.Bounty);
+        Assert.True(session.Scrutiny.EvaluateGateScrutiny(DaggerfallRegion, distant).WatchChallengeActive);
+
+        // Part B: Mid-journey disruption -> clear condition -> save/load -> past disrupted hours MUST NOT be rewritten as peaceful!
+        long disruptedStart = CurrentMinute(session);
+        int disruptedDay = checked((int)(disruptedStart / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        DaggerfallWordWavefrontSave midWf = session.WordSpread.RecordNews(
+            "wf:mid-journey", "Mid-Journey Dispatch", "Courier left during border war.", origin, disruptedStart);
+        Assert.False(session.WordSpread.EvaluateAt(midWf, distant, disruptedStart, disruptedDay).HasArrived);
+
+        // Advance half the peaceful duration while BorderTension (0.35x speed) is active, then lift the condition.
+        long halfPeaceful = peacefulMinutes / 2;
+        session.AdvanceElapsedTime(checked(halfPeaceful * DaggerfallCalendar.SecondsPerMinute));
+        Assert.True(session.WorldConditions.Remove(warTokenId));
+
+        // Save and reload right after lifting the condition!
+        RulesetSavePayload saved = session.CaptureSave();
+        using DaggerfallSession restored = fixture.Restore(saved);
+        Assert.True(restored.WordSpread.TryGet("wf:mid-journey", out DaggerfallWordWavefrontSave? restoredMidWf));
+        Assert.NotNull(restoredMidWf!.LastCheckpointMinute);
+
+        // Advance the OTHER half of peaceful duration (+10m): if the first half had been rewritten as peaceful, it would have arrived!
+        // Because the first half ran at 0.35x speed, it MUST still be InTransit!
+        restored.AdvanceElapsedTime(checked((peacefulMinutes - halfPeaceful + 10) * DaggerfallCalendar.SecondsPerMinute));
+        long checkMinute = CurrentMinute(restored);
+        int checkDay = checked((int)(checkMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        DaggerfallWordArrivalEvaluation midCheck = restored.WordSpread.EvaluateAt(restoredMidWf, distant, checkMinute, checkDay);
+        Assert.Equal(DaggerfallWordArrivalStatus.InTransit, midCheck.Status);
+        Assert.True(midCheck.RemainingMinutes > 30,
+            $"Expected mid-journey courier slowed by earlier BorderTension to still need >30m, got {midCheck.RemainingMinutes}m.");
+
+        // Advancing the remaining peaceful minutes finishes delivery cleanly.
+        restored.AdvanceElapsedTime(checked((midCheck.RemainingMinutes + 5) * DaggerfallCalendar.SecondsPerMinute));
+        long doneMinute = CurrentMinute(restored);
+        int doneDay = checked((int)(doneMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        Assert.Equal(DaggerfallWordArrivalStatus.ArrivedByCourier,
+            restored.WordSpread.EvaluateAt(restoredMidWf, distant, doneMinute, doneDay).Status);
+
+        // Part C: Timed expiry mid-journey (spending days in a dungeon across ExpiresDay) integrates both segments!
+        long timedStart = CurrentMinute(restored);
+        int timedDay = checked((int)(timedStart / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        restored.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            "cond:timed-war", DaggerfallWorldConditionKind.BorderTension, DaggerfallRegion,
+            Severity: 2, StartedDay: timedDay, ExpiresDay: timedDay + 1));
+        DaggerfallWordWavefrontSave timedWf = restored.WordSpread.RecordNews(
+            "wf:timed-expiry", "Timed War Bulletin", "News emitted before truce.", origin, timedStart);
+        // Jump across ExpiresDay (1 war day + enough peaceful time to finish the remaining distance):
+        long timedJumpSeconds = checked((peacefulMinutes + DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour + 60) * DaggerfallCalendar.SecondsPerMinute);
+        restored.AdvanceElapsedTime(timedJumpSeconds);
+        int timedEndDay = checked((int)(CurrentMinute(restored) / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        Assert.False(restored.WorldConditions.HasActive(DaggerfallRegion, DaggerfallWorldConditionKind.BorderTension, timedEndDay));
+        Assert.True(restored.WordSpread.TryGet("wf:timed-expiry", out DaggerfallWordWavefrontSave? afterTimed));
+        Assert.True(restored.WordSpread.EvaluateAt(afterTimed!, distant, CurrentMinute(restored), timedEndDay).HasArrived);
+    }
+
+    [Fact]
+    public void Ordinary_quest_standing_and_propagated_reputation_including_clamped_deltas_wait_for_couriers_outside_bubble()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+
+        DaggerfallSiteRecord origin = session.Site.ActiveSite!;
+        DaggerfallSiteRecord distant = FindDistantTownInRegion(origin, minDistancePixels: 18.0);
+        long nowMinute = CurrentMinute(session);
+        int nowDay = checked((int)(nowMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+
+        // Pick a non-regional faction with both authored allies and enemies, plus a Knightly Order (GuildGroup == 9).
+        var allFactions = TestPayload.Definitions.Factions.Factions;
+        DaggerfallFactionDefinition primary = allFactions.Values
+            .OrderBy(f => f.Id)
+            .First(f => f.Type != 15 && f.GuildGroup != 9
+                && f.Allies.Any(id => id != f.Id && allFactions.ContainsKey(id))
+                && f.Enemies.Any(id => id != f.Id && allFactions.ContainsKey(id)));
+        int allyId = primary.Allies.First(id => id != primary.Id && allFactions.ContainsKey(id));
+        int enemyId = primary.Enemies.First(id => id != primary.Id && allFactions.ContainsKey(id));
+        int knightlyId = allFactions.Values.OrderBy(f => f.Id).First(f => f.GuildGroup == 9 && f.Id != 844).Id;
+
+        int primaryBefore = session.State.Social.FactionReputation(primary.Id);
+        int allyBefore = session.State.Social.FactionReputation(allyId);
+        int enemyBefore = session.State.Social.FactionReputation(enemyId);
+
+        // 1. Ordinary quest-sized propagated reward (+5) & penalty (-2), plus Knightly Order (+5)!
+        session.State.Social.ChangeFactionReputation(primary.Id, +5, DaggerfallFactionReputationChange.Propagate);
+        session.State.Social.ChangeFactionReputation(primary.Id, +5, DaggerfallFactionReputationChange.Propagate);
+        session.State.Social.ChangeFactionReputation(primary.Id, -2, DaggerfallFactionReputationChange.Direct);
+        int knightBefore = session.State.Social.FactionReputation(knightlyId);
+        int genericKnightBefore = session.State.Social.FactionReputation(844);
+        int knightKnownBefore = knightBefore - session.WordSpread.UnarrivedFactionStandingDelta(knightlyId, distant, nowMinute, nowDay);
+        int genericKnightKnownBefore = genericKnightBefore - session.WordSpread.UnarrivedFactionStandingDelta(844, distant, nowMinute, nowDay);
+        session.State.Social.ChangeFactionReputation(knightlyId, +5, DaggerfallFactionReputationChange.Propagate);
+
+        // Raw standing changed locally (and at origin inside bubble, UnarrivedFactionStandingDelta == 0).
+        Assert.NotEqual(primaryBefore, session.State.Social.FactionReputation(primary.Id));
+        Assert.NotEqual(allyBefore, session.State.Social.FactionReputation(allyId));
+        Assert.NotEqual(enemyBefore, session.State.Social.FactionReputation(enemyId));
+        Assert.Equal(knightBefore + 5, session.State.Social.FactionReputation(knightlyId));
+        Assert.Equal(genericKnightBefore + 5, session.State.Social.FactionReputation(844));
+        Assert.Equal(0, session.WordSpread.UnarrivedFactionStandingDelta(primary.Id, origin, nowMinute, nowDay));
+
+        // At distant town outside bubble: subtracting UnarrivedFactionStandingDelta reconstructs the EXACT prior standing
+        // for the initiator, propagated ally, propagated enemy, knightly order, AND generic knightly order!
+        Assert.Equal(primaryBefore,
+            session.State.Social.FactionReputation(primary.Id) - session.WordSpread.UnarrivedFactionStandingDelta(primary.Id, distant, nowMinute, nowDay));
+        Assert.Equal(allyBefore,
+            session.State.Social.FactionReputation(allyId) - session.WordSpread.UnarrivedFactionStandingDelta(allyId, distant, nowMinute, nowDay));
+        Assert.Equal(enemyBefore,
+            session.State.Social.FactionReputation(enemyId) - session.WordSpread.UnarrivedFactionStandingDelta(enemyId, distant, nowMinute, nowDay));
+        Assert.Equal(knightKnownBefore,
+            session.State.Social.FactionReputation(knightlyId) - session.WordSpread.UnarrivedFactionStandingDelta(knightlyId, distant, nowMinute, nowDay));
+        Assert.Equal(genericKnightKnownBefore,
+            session.State.Social.FactionReputation(844) - session.WordSpread.UnarrivedFactionStandingDelta(844, distant, nowMinute, nowDay));
+
+        // 2. Clamped delta near +100: requesting +200 only moves standing to +100; subtracting unarrived delta still reconstructs exact prior standing!
+        int preClamp = session.State.Social.FactionReputation(primary.Id)
+            - session.WordSpread.UnarrivedFactionStandingDelta(primary.Id, distant, nowMinute, nowDay);
+        session.State.Social.ChangeFactionReputation(primary.Id, +200, DaggerfallFactionReputationChange.Direct);
+        Assert.Equal(100, session.State.Social.FactionReputation(primary.Id));
+        Assert.Equal(preClamp,
+            session.State.Social.FactionReputation(primary.Id) - session.WordSpread.UnarrivedFactionStandingDelta(primary.Id, distant, nowMinute, nowDay));
+
+        // 3. After enough elapsed time for couriers to arrive, distant town knows the new standing!
+        session.AdvanceElapsedTime(checked(5L * DaggerfallCalendar.SecondsPerDay));
+        long laterMinute = CurrentMinute(session);
+        int laterDay = checked((int)(laterMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        Assert.Equal(0, session.WordSpread.UnarrivedFactionStandingDelta(primary.Id, distant, laterMinute, laterDay));
+        Assert.Equal(0, session.WordSpread.UnarrivedFactionStandingDelta(allyId, distant, laterMinute, laterDay));
+        Assert.Equal(0, session.WordSpread.UnarrivedFactionStandingDelta(enemyId, distant, laterMinute, laterDay));
+        Assert.Equal(0, session.WordSpread.UnarrivedFactionStandingDelta(knightlyId, distant, laterMinute, laterDay));
     }
 
     [Fact]
@@ -183,13 +410,13 @@ public sealed class WordSpreadAndCouriersTests
     }
 
     [Fact]
-    public void Board_game_couriers_support_deliver_buy_intercept_slain_courier_commands_and_save_reload()
+    public void Board_game_couriers_require_destination_delivery_and_support_buy_intercept_slain_courier_commands_and_save_reload()
     {
-        using var fixture = SourceBackedGuildBankSessionFixture.Create();
-        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        using TwoTownFixture fixture = TwoTownFixture.Create();
+        DaggerfallSession session = fixture.Session;
 
-        DaggerfallSiteRecord origin = session.Site.ActiveSite!;
-        DaggerfallSiteRecord destination = FindDistantTownInRegion(origin, minDistancePixels: 18.0);
+        DaggerfallSiteRecord origin = fixture.OriginSite;
+        DaggerfallSiteRecord destination = fixture.DestinationSite;
         List<DaggerfallDispatchResolution> boardMoves = [];
         session.CourierDispatches.BindBoardMoveCallback(boardMoves.Add);
 
@@ -216,7 +443,7 @@ public sealed class WordSpreadAndCouriersTests
         }
 
         // Meeting that persistent overland courier band and entering the scene materializes the courier as a live talkable NPC!
-        Travel.DaggerfallPersistentOverlandBand stagedBand = session.Expedition.PersistentBands.Single(b => b.BandId == devBandId);
+        DaggerfallPersistentOverlandBand stagedBand = session.Expedition.PersistentBands.Single(b => b.BandId == devBandId);
         session.OverlandParties.OnMeetPersistentBand(stagedBand, new(origin.MapPixelX, origin.MapPixelY), default);
         session.OverlandParties.OnEnterSceneFromExpedition(
             session.Sites.Projection.Inputs,
@@ -229,11 +456,12 @@ public sealed class WordSpreadAndCouriersTests
         Assert.Contains(metBandView.Topics, t => t.Id == $"dispatch:intercept:{devDispatchId}");
         session.Dialogue.Close();
 
-        // Helper to place a live talkable courier actor in the current scene for direct dialogue testing.
-        long PlaceLiveCourier(string stableKey, string role = "courier")
+        // Helper to place a live talkable civilian actor in the currently active site for dialogue testing.
+        long PlaceLiveCivilianAtActiveSite(string stableKey, string role = "courier")
         {
-            DaggerfallNpcSite npcSite = new(origin.Id.Region, origin.Name, string.Empty, session.Sites.ActiveProfile.LogicalId);
-            long deterministicId = DaggerfallPeopleSlots.SeededSlotIdentity(origin.Id, $"{session.Sites.ActiveProfile.LogicalId}/test/{stableKey}");
+            DaggerfallSiteRecord activeSite = session.Site.ActiveSite!;
+            DaggerfallNpcSite npcSite = new(activeSite.Id.Region, activeSite.Name, string.Empty, session.Sites.ActiveProfile.LogicalId);
+            long deterministicId = DaggerfallPeopleSlots.SeededSlotIdentity(activeSite.Id, $"{session.Sites.ActiveProfile.LogicalId}/test/{stableKey}");
             long id = session.State.Npcs.RegisterDeterministic(
                 deterministicId,
                 DaggerfallNpcKind.Civilian,
@@ -256,8 +484,8 @@ public sealed class WordSpreadAndCouriersTests
             return id;
         }
 
-        // 2. DELIVER path through real dialogue topics (dispatch:deliver -> dispatch:turn-in)!
-        long deliverCourierId = PlaceLiveCourier("a7-courier-deliver");
+        // 2. DELIVER path: accept at origin -> REJECTED at origin guard -> travel to addressed destination -> ACCEPTED at destination guard!
+        long deliverCourierId = PlaceLiveCivilianAtActiveSite("a7-courier-deliver");
         long nowMinute = CurrentMinute(session);
         int nowDay = checked((int)(nowMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
         DaggerfallWordWavefrontSave linkedStanding = session.WordSpread.RecordNews(
@@ -290,25 +518,40 @@ public sealed class WordSpreadAndCouriersTests
         Assert.Equal(DaggerfallDispatchStatus.CarriedByPlayer, session.CourierDispatches.TryGet(deliverDispatch.DispatchId, out var carried) ? carried!.Status : default);
         session.Dialogue.Close();
 
-        // Turn in to an official/guard in the destination region via real dialogue topic dispatch:turn-in!
-        long guardId = PlaceLiveCourier("a7-garrison-guard", role: "guard");
+        // Talking to a guard at ORIGIN (same region, wrong town!) MUST NOT offer turn-in, and direct TurnInDelivery at origin MUST fail!
+        long originGuardId = PlaceLiveCivilianAtActiveSite("a7-origin-guard", role: "guard");
+        Assert.True(ActivateNpc(session, originGuardId).Applied);
+        DaggerfallDialogueView originGuardView = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+        Assert.DoesNotContain(originGuardView.Topics, t => t.Id.StartsWith("dispatch:turn-in:", StringComparison.Ordinal));
+        DaggerfallActivationOutcome refusedAtOrigin = session.Dialogue.Ask(originGuardView.Revision, $"dispatch:turn-in:{deliverDispatch.DispatchId}", null, null);
+        Assert.False(refusedAtOrigin.Applied);
+        Assert.Contains(destination.Name, refusedAtOrigin.Message, StringComparison.Ordinal);
+        session.Dialogue.Close();
+        Assert.Equal(DaggerfallDispatchStatus.CarriedByPlayer, session.CourierDispatches.TryGet(deliverDispatch.DispatchId, out var stillCarried) ? stillCarried!.Status : default);
+        Assert.Equal(goldBeforeDelivery, session.State.Currency.Read().Gold);
+        Assert.Empty(boardMoves);
 
-        Assert.True(ActivateNpc(session, guardId).Applied);
-        DaggerfallDialogueView guardView = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
-        Assert.Contains(guardView.Topics, t => t.Id == $"dispatch:turn-in:{deliverDispatch.DispatchId}");
-        DaggerfallActivationOutcome turnedIn = session.Dialogue.Ask(guardView.Revision, $"dispatch:turn-in:{deliverDispatch.DispatchId}", null, null);
+        // Travel to the addressed destination town -> talk to a guard there -> turn-in succeeds!
+        Assert.True(session.TryTransitionTo(fixture.DestinationProfile.ProfileKey));
+        long destGuardId = PlaceLiveCivilianAtActiveSite("a7-dest-guard", role: "guard");
+        Assert.True(ActivateNpc(session, destGuardId).Applied);
+        DaggerfallDialogueView destGuardView = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+        Assert.Contains(destGuardView.Topics, t => t.Id == $"dispatch:turn-in:{deliverDispatch.DispatchId}");
+        DaggerfallActivationOutcome turnedIn = session.Dialogue.Ask(destGuardView.Revision, $"dispatch:turn-in:{deliverDispatch.DispatchId}", null, null);
         Assert.True(turnedIn.Applied, turnedIn.Message);
         session.Dialogue.Close();
 
         Assert.Equal(goldBeforeDelivery + 120UL, session.State.Currency.Read().Gold);
         Assert.True(session.State.Social.FactionReputation(201) > repBeforeDelivery);
         Assert.Contains(boardMoves, m => m.DispatchId == deliverDispatch.DispatchId && m.MoveAccelerated && m.DeliveredByPlayer && !m.MoveCancelled);
-        // Linked wavefront is now accelerated at destination immediately!
         Assert.Equal(DaggerfallWordArrivalStatus.AcceleratedOverride,
             session.WordSpread.EvaluateAt(session.WordSpread.TryGet(linkedStanding.EventId, out var accWf) ? accWf! : linkedStanding, destination, nowMinute, nowDay).Status);
 
+        // Return to origin for remaining courier tests.
+        Assert.True(session.TryTransitionTo(fixture.OriginProfile.ProfileKey));
+
         // 3. BUY path through real dialogue topic (dispatch:buy) charges real gold and leaks intelligence onto the notice board!
-        long buyCourierId = PlaceLiveCourier("a7-courier-buy");
+        long buyCourierId = PlaceLiveCivilianAtActiveSite("a7-courier-buy");
         DaggerfallCourierDispatchSave buyDispatch = session.CourierDispatches.StageDispatch(
             dispatchId: "disp:buy-1",
             seatId: "crown:wayrest",
@@ -335,7 +578,7 @@ public sealed class WordSpreadAndCouriersTests
         Assert.Contains(leakedBoard.Entries, e => e.Body.Contains("harbor tariff", StringComparison.OrdinalIgnoreCase));
 
         // 4. INTERCEPT path through real dialogue topic (dispatch:intercept) cancels move, strips condition, and freezes linked crime wavefront!
-        long interceptCourierId = PlaceLiveCourier("a7-courier-intercept");
+        long interceptCourierId = PlaceLiveCivilianAtActiveSite("a7-courier-intercept");
         string condTokenId = DaggerfallWorldConditions.RegionTokenId(DaggerfallWorldConditionKind.CrimeCrackdown, DaggerfallRegion, "dispatch");
         session.WorldConditions.Set(new DaggerfallWorldConditionToken(
             condTokenId, DaggerfallWorldConditionKind.CrimeCrackdown, DaggerfallRegion, Severity: 1, StartedDay: 0));
@@ -362,14 +605,13 @@ public sealed class WordSpreadAndCouriersTests
 
         Assert.Contains(boardMoves, m => m.DispatchId == interceptDispatch.DispatchId && m.MoveCancelled);
         Assert.False(session.WorldConditions.HasActive(DaggerfallRegion, DaggerfallWorldConditionKind.CrimeCrackdown, nowDay));
-        // Even 10 days later, the intercepted crime wavefront stays Blocked at the distant town!
         long tenDaysLater = nowMinute + 10L * DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour;
         Assert.True(session.WordSpread.TryGet(crimeWf.EventId, out DaggerfallWordWavefrontSave? frozenWf));
         Assert.Equal(DaggerfallWordArrivalStatus.Blocked,
             session.WordSpread.EvaluateAt(frozenWf!, destination, tenDaysLater, nowDay + 10).Status);
 
         // 5. SLAIN COURIER path: ReactToCourierDeath cancels the dispatch automatically!
-        long slainCourierId = PlaceLiveCourier("a7-courier-slain");
+        long slainCourierId = PlaceLiveCivilianAtActiveSite("a7-courier-slain");
         DaggerfallCourierDispatchSave slainDispatch = session.CourierDispatches.StageDispatch(
             dispatchId: "disp:slain-1",
             seatId: "guild:mages",
@@ -425,13 +667,16 @@ public sealed class WordSpreadAndCouriersTests
     }
 
     private static long CurrentMinute(DaggerfallSession session) =>
-        ((Travel.IDaggerfallExpeditionSurroundings)session).Calendar.MinuteNumber;
+        ((IDaggerfallExpeditionSurroundings)session).Calendar.MinuteNumber;
+
+    private static double DirectDistance(DaggerfallSiteRecord a, DaggerfallSiteRecord b) =>
+        Math.Sqrt(Math.Pow(b.MapPixelX - a.MapPixelX, 2) + Math.Pow(b.MapPixelY - a.MapPixelY, 2));
 
     private static DaggerfallSiteRecord FindDistantTownInRegion(DaggerfallSiteRecord origin, double minDistancePixels)
     {
         return TestPayload.Definitions.Locations.Records
             .Where(r => r.Id.Region == origin.Id.Region && r.Id != origin.Id && r.Exterior is not null)
-            .Select(r => (Site: r, Dist: Math.Sqrt(Math.Pow(r.MapPixelX - origin.MapPixelX, 2) + Math.Pow(r.MapPixelY - origin.MapPixelY, 2))))
+            .Select(r => (Site: r, Dist: DirectDistance(origin, r)))
             .Where(x => x.Dist >= minDistancePixels)
             .OrderByDescending(x => x.Dist)
             .First()
@@ -444,5 +689,85 @@ public sealed class WordSpreadAndCouriersTests
             session.Dialogue.NpcTargets(),
             t => checked((long)t.Identity.Value) == durableId);
         return session.Dialogue.ActivateNpc(new DaggerfallActivationSelection(DaggerfallActivationMode.Talk, target));
+    }
+
+    private sealed class TwoTownFixture : IDisposable
+    {
+        private readonly DaggerfallSessionComposition _composition;
+        internal DaggerfallSiteRecord OriginSite { get; }
+        internal DaggerfallSiteRecord DestinationSite { get; }
+        internal DaggerfallSiteProfile OriginProfile { get; }
+        internal DaggerfallSiteProfile DestinationProfile { get; }
+        internal DaggerfallSession Session { get; }
+
+        private TwoTownFixture(
+            DaggerfallSiteRecord originSite,
+            DaggerfallSiteRecord destinationSite,
+            DaggerfallSiteProfile originProfile,
+            DaggerfallSiteProfile destinationProfile,
+            DaggerfallSessionComposition composition,
+            DaggerfallSession session)
+        {
+            OriginSite = originSite;
+            DestinationSite = destinationSite;
+            OriginProfile = originProfile;
+            DestinationProfile = destinationProfile;
+            _composition = composition;
+            Session = session;
+        }
+
+        internal static TwoTownFixture Create()
+        {
+            using var templateFixture = SourceBackedGuildBankSessionFixture.Create();
+            DaggerfallDefinitions defs = TestPayload.Definitions;
+            DaggerfallSiteProfile originProfile = templateFixture.ExteriorProfile;
+            DaggerfallSiteRecord originSite = defs.Locations.Records.Single(r => r.Id == originProfile.Site);
+            int originClimate = defs.Grids.ClimateAtWorldPixel(originSite.MapPixelX, originSite.MapPixelY).Value;
+            bool SameNeighborhoodClimate(DaggerfallSiteRecord site)
+            {
+                for (int dy = -2; dy <= 2; dy++)
+                    for (int dx = -2; dx <= 2; dx++)
+                        if (defs.Grids.ClimateAtWorldPixel(site.MapPixelX + dx, site.MapPixelY + dy).Value != originClimate)
+                            return false;
+                return true;
+            }
+            DaggerfallSiteRecord destinationSite = defs.Locations.Records
+                .Where(r => r.Id.Region == originSite.Id.Region && r.Id != originSite.Id && r.Exterior is not null
+                    && SameNeighborhoodClimate(r))
+                .Select(r => (Site: r, Dist: DirectDistance(originSite, r)))
+                .Where(x => x.Dist >= 10.0)
+                .OrderBy(x => x.Dist)
+                .First()
+                .Site;
+
+            DaggerfallSiteProfile destinationProfile = Assembled(DaggerfallWorldProfileIds.Exterior(destinationSite.Id));
+
+            DaggerfallSessionComposition composition = new(defs, originProfile, DaggerfallTuning.Defaults)
+            {
+                Profiles = new DaggerfallSiteProfiles([originProfile, destinationProfile]),
+            };
+            EngineContextFake engine = BuildEngine(originProfile, destinationProfile);
+            DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+            session.Update(new ProductUpdate(OuterUpdate(1), []));
+            return new(originSite, destinationSite, originProfile, destinationProfile, composition, session);
+        }
+
+        internal DaggerfallSession Restore(RulesetSavePayload saved)
+        {
+            EngineContextFake engine = BuildEngine(OriginProfile, DestinationProfile);
+            return DaggerfallSession.Restore(engine.Context, _composition, saved);
+        }
+
+        private static EngineContextFake BuildEngine(params DaggerfallSiteProfile[] profiles)
+        {
+            List<string> releases = [];
+            ContentFake content = new(releases);
+            foreach (DaggerfallSiteProfile profile in profiles)
+                PopulateContent(content, profile);
+            SpatialFake spatial = SpatialFake.Create(profiles[0].Geometry.Spatial[0].Sha256, releases);
+            return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        }
+
+        public void Dispose() => Session.Dispose();
     }
 }

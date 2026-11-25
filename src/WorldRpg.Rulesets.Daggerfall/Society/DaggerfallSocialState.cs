@@ -271,8 +271,6 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         if (change == DaggerfallFactionReputationChange.Direct)
         {
             ApplyFactionChange(faction.Id, amount);
-            if (Math.Abs(amount) >= 10 && faction.Type != 15)
-                FactionStandingChanged?.Invoke(faction.Id, amount);
             return FactionReputation(faction.Id);
         }
         if (change != DaggerfallFactionReputationChange.Propagate)
@@ -312,8 +310,6 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         // after the deity hierarchy, rather than a universal relationship inference.
         if (root.Type == GodFactionType && _catalog.Factions.ContainsKey(GenericTempleFactionId))
             ChangeFactionReputation(GenericTempleFactionId, amount, DaggerfallFactionReputationChange.Propagate);
-        if (Math.Abs(amount) >= 10 && faction.Type != 15)
-            FactionStandingChanged?.Invoke(faction.Id, amount);
         return FactionReputation(faction.Id);
     }
 
@@ -439,8 +435,16 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         return changed;
     }
 
-    private void ApplyFactionChange(int factionId, int amount) =>
-        _factionReputations[factionId] = Clamp(checked(_factionReputations[factionId] + amount));
+    private void ApplyFactionChange(int factionId, int amount)
+    {
+        int before = _factionReputations[factionId];
+        int after = Clamp(checked(before + amount));
+        int actualDelta = after - before;
+        if (actualDelta == 0)
+            return;
+        _factionReputations[factionId] = after;
+        FactionStandingChanged?.Invoke(factionId, actualDelta);
+    }
 
     private DaggerfallFactionDefinition FindDonorPropagationRoot(DaggerfallFactionDefinition faction)
     {

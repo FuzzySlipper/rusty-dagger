@@ -166,12 +166,21 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     private readonly Dictionary<string, DaggerfallWorldConditionToken> _tokens = new(StringComparer.Ordinal);
     private Func<int, IReadOnlyList<DaggerfallWorldConditionToken>>? _externalSource;
 
+    /// <summary>Fired immediately before authored or external world conditions change so elapsed-time spread can checkpoint accumulated progress.</summary>
+    internal event Action? BeforeMutation;
+
     internal int Count => _tokens.Count;
     internal IReadOnlyCollection<DaggerfallWorldConditionToken> AuthoredTokens => _tokens.Values;
 
     /// <summary>Binds an external live provider (such as the B2 weekly board game) alongside sparse stored tokens.</summary>
-    internal void BindExternalSource(Func<int, IReadOnlyList<DaggerfallWorldConditionToken>>? provider) =>
+    internal void BindExternalSource(Func<int, IReadOnlyList<DaggerfallWorldConditionToken>>? provider)
+    {
+        BeforeMutation?.Invoke();
         _externalSource = provider;
+    }
+
+    /// <summary>Notifies listeners immediately before an external condition provider updates its active tokens.</summary>
+    internal void NotifyBeforeExternalMutation() => BeforeMutation?.Invoke();
 
     /// <summary>Seeds initial authored/scenario condition tokens on new game start (empty when baseline has none).</summary>
     internal void SeedAuthored(IEnumerable<DaggerfallWorldConditionToken>? tokens)
@@ -191,20 +200,36 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     {
         ArgumentNullException.ThrowIfNull(token);
         token.Validate();
+        BeforeMutation?.Invoke();
         _tokens[token.TokenId] = token;
         return token;
     }
 
     /// <summary>Removes an authored/stubbed condition token by id.</summary>
-    internal bool Remove(string tokenId) => !string.IsNullOrWhiteSpace(tokenId) && _tokens.Remove(tokenId);
+    internal bool Remove(string tokenId)
+    {
+        if (string.IsNullOrWhiteSpace(tokenId) || !_tokens.ContainsKey(tokenId))
+            return false;
+        BeforeMutation?.Invoke();
+        return _tokens.Remove(tokenId);
+    }
 
     /// <summary>Clears all authored/stubbed condition tokens.</summary>
-    internal void Clear() => _tokens.Clear();
+    internal void Clear()
+    {
+        if (_tokens.Count == 0)
+            return;
+        BeforeMutation?.Invoke();
+        _tokens.Clear();
+    }
 
     /// <summary>Removes expired authored tokens at or after <paramref name="currentDay"/>.</summary>
     internal int PruneExpired(int currentDay)
     {
         List<string> expired = [.. _tokens.Values.Where(token => token.IsExpired(currentDay)).Select(token => token.TokenId)];
+        if (expired.Count == 0)
+            return 0;
+        BeforeMutation?.Invoke();
         foreach (string id in expired) _tokens.Remove(id);
         return expired.Count;
     }
@@ -220,7 +245,7 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
             foreach (DaggerfallWorldConditionToken token in external(region))
             {
                 if (token is null || !token.AppliesToRegion(region)) continue;
-                if (currentDay is int d && token.IsExpired(d)) continue;
+                if (currentDay is int d && (d < token.StartedDay || token.IsExpired(d))) continue;
                 merged[token.TokenId] = token;
             }
         }
@@ -228,7 +253,7 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         foreach (DaggerfallWorldConditionToken token in _tokens.Values)
         {
             if (!token.AppliesToRegion(region)) continue;
-            if (currentDay is int d && token.IsExpired(d)) continue;
+            if (currentDay is int d && (d < token.StartedDay || token.IsExpired(d))) continue;
             merged[token.TokenId] = token;
         }
 
