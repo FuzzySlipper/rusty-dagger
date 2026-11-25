@@ -36,6 +36,16 @@ class Library:
     world_classic_shared_root: Path | None = None
     imported_payload_path: Path | None = None
     art_pack_dir: Path | None = None
+    packs_dir: Path | None = None
+    arena2_dir: Path | None = None
+
+    @property
+    def packs_root(self):
+        return self.packs_dir or (self.repo / "content/worldrpg/packs")
+
+    @property
+    def arena2(self):
+        return self.arena2_dir or (self.repo / "local/inputs/arena2")
 
     @property
     def base_payload(self):

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type {
   ArtReplacementModel,
   Quat,
@@ -7,6 +8,7 @@ import type {
   WorldBlockDetailResponse,
   WorldBlockGroundTile,
   WorldBlockModel,
+  WorldBlockVariantModel,
 } from '../types';
 import {
   resolveBillboardUrl,
@@ -31,6 +33,7 @@ export type LayerName =
 
 export type PickKind =
   | 'model'
+  | 'variantAdd'
   | 'door'
   | 'transitionDoor'
   | 'gate'
@@ -44,6 +47,18 @@ export type PickKind =
   | 'marker'
   | 'gridCell'
   | 'action';
+
+export interface VariantPreviewOverlay {
+  enabled: boolean;
+  remove: string[];
+  add: WorldBlockVariantModel[];
+  showRemovedGhosts?: boolean;
+}
+
+export interface TransformCommitPayload {
+  position: [number, number, number];
+  yawDegrees?: number;
+}
 
 export interface ScenePick {
   pickKey: string;
@@ -89,6 +104,7 @@ export interface SceneLoadProgress {
 export interface BlockSceneCallbacks {
   onSelect: (pick: ScenePick | null) => void;
   onProgress?: (progress: SceneLoadProgress) => void;
+  onTransformCommit?: (pickKey: string, payload: TransformCommitPayload) => void;
 }
 
 const MATERIAL_RE = /^material\/texture-(\d+)-(\d+)$/;
@@ -134,15 +150,20 @@ export class BlockSceneController {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private controls: OrbitControls;
+  private transformControls: TransformControls;
   private resizeObserver: ResizeObserver;
   private rafId = 0;
   private disposed = false;
 
   private layers: Record<LayerName, THREE.Group>;
+  private variantGroup = new THREE.Group();
+  private variantGhostGroup = new THREE.Group();
   private wireframe = false;
   private allMeshMaterials = new Set<THREE.MeshStandardMaterial>();
   private pickableObjects: THREE.Object3D[] = [];
   private pickByKey = new Map<string, { object: THREE.Object3D; pick: ScenePick }>();
+  private baseModelMeshes = new Map<string, THREE.Object3D>();
+  private peopleSlotVisuals = new Map<string, { object: THREE.Object3D; ring: THREE.Object3D; yOffset: number }>();
   private selectionHelper: THREE.Box3Helper | null = null;
 
   private meshCache = new Map<string, Promise<ParsedRstatmsh>>();
@@ -154,11 +175,19 @@ export class BlockSceneController {
   private defaultCameraPos = new THREE.Vector3(24, 18, 24);
   private currentKind: string = '';
   private currentBounds: THREE.Box3 | null = null;
+  private currentMediaUrls: WorldBlockDetailResponse['mediaUrls'] | null = null;
+  private currentAppearance: RenderAppearanceConfig = DEFAULT_APPEARANCE;
+  private lastVariantOverlay: VariantPreviewOverlay | null = null;
   private clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1000);
   private keysPressed = new Set<string>();
   private lastFrameTime = performance.now();
   private pointerDownPos: { x: number; y: number } | null = null;
   private loadGeneration = 0;
+  private variantGeneration = 0;
+  private transformDragging = false;
+  private suppressNextClick = false;
+  private attachedGizmoKey: string | null = null;
+  private gizmoMode: 'translate' | 'rotate' = 'translate';
 
   constructor(container: HTMLElement, callbacks: BlockSceneCallbacks) {
     this.container = container;
@@ -206,6 +235,10 @@ export class BlockSceneController {
       group.name = `layer:${name}`;
       this.scene.add(group);
     }
+    this.variantGroup.name = 'layer:variantAdd';
+    this.variantGhostGroup.name = 'layer:variantGhosts';
+    this.scene.add(this.variantGroup);
+    this.scene.add(this.variantGhostGroup);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
@@ -213,6 +246,22 @@ export class BlockSceneController {
     this.controls.maxDistance = 1600;
     this.controls.minDistance = 0.5;
     this.controls.target.copy(this.defaultTarget);
+
+    this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
+    this.transformControls.setSpace('world');
+    this.scene.add(this.transformControls.getHelper());
+    this.transformControls.addEventListener('dragging-changed', event => {
+      const dragging = Boolean((event as { value?: boolean }).value);
+      this.transformDragging = dragging;
+      this.controls.enabled = !dragging;
+      if (!dragging) {
+        this.suppressNextClick = true;
+        this.commitAttachedTransform();
+      }
+    });
+    this.transformControls.addEventListener('objectChange', () => {
+      this.syncAttachedVisuals();
+    });
 
     this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown);
     this.renderer.domElement.addEventListener('pointerup', this.onPointerUp);
@@ -254,6 +303,15 @@ export class BlockSceneController {
   };
 
   private onPointerUp = (event: PointerEvent) => {
+    if (this.suppressNextClick) {
+      this.suppressNextClick = false;
+      this.pointerDownPos = null;
+      return;
+    }
+    if (this.transformDragging) {
+      this.pointerDownPos = null;
+      return;
+    }
     if (event.button !== 0 || !this.pointerDownPos) return;
     const dx = event.clientX - this.pointerDownPos.x;
     const dy = event.clientY - this.pointerDownPos.y;
@@ -325,6 +383,268 @@ export class BlockSceneController {
 
   setLayerVisible(layer: LayerName, visible: boolean) {
     this.layers[layer].visible = visible;
+    if (layer === 'models') {
+      this.variantGroup.visible = visible;
+      this.variantGhostGroup.visible = visible;
+    }
+  }
+
+  setTransformMode(mode: 'translate' | 'rotate') {
+    this.gizmoMode = mode;
+    this.applyGizmoModeAndAxes();
+  }
+
+  setTransformSnap(enabled: boolean, translateStep = 0.25, rotateDeg = 15) {
+    this.transformControls.setTranslationSnap(enabled ? translateStep : null);
+    this.transformControls.setRotationSnap(enabled ? (rotateDeg * Math.PI) / 180 : null);
+  }
+
+  attachGizmo(pickKey: string | null) {
+    this.attachedGizmoKey = pickKey;
+    if (!pickKey) {
+      this.transformControls.detach();
+      return;
+    }
+    const entry = this.pickByKey.get(pickKey);
+    if (!entry) {
+      this.transformControls.detach();
+      return;
+    }
+    this.transformControls.attach(entry.object);
+    this.applyGizmoModeAndAxes();
+  }
+
+  private applyGizmoModeAndAxes() {
+    const entry = this.attachedGizmoKey ? this.pickByKey.get(this.attachedGizmoKey) : null;
+    const isRotate = this.gizmoMode === 'rotate' && entry?.pick.kind === 'variantAdd';
+    this.transformControls.setMode(isRotate ? 'rotate' : 'translate');
+    if (isRotate) {
+      // WorldBlockVariantRecipe only stores yawDegrees around +Y
+      this.transformControls.showX = false;
+      this.transformControls.showY = true;
+      this.transformControls.showZ = false;
+    } else {
+      this.transformControls.showX = true;
+      this.transformControls.showY = true;
+      this.transformControls.showZ = true;
+    }
+  }
+
+  private syncAttachedVisuals() {
+    if (!this.attachedGizmoKey) return;
+    const entry = this.pickByKey.get(this.attachedGizmoKey);
+    if (!entry) return;
+    const person = this.peopleSlotVisuals.get(this.attachedGizmoKey);
+    if (person) {
+      person.ring.position.set(
+        entry.object.position.x,
+        entry.object.position.y - person.yOffset + 0.04,
+        entry.object.position.z,
+      );
+    }
+    this.highlightObject(entry.object);
+  }
+
+  private commitAttachedTransform() {
+    if (!this.attachedGizmoKey) return;
+    const pickKey = this.attachedGizmoKey;
+    const entry = this.pickByKey.get(pickKey);
+    if (!entry) return;
+
+    const round3 = (n: number) => {
+      const r = Math.round(n * 1000) / 1000;
+      return r === 0 ? 0 : r;
+    };
+
+    if (entry.pick.kind === 'peopleSlot') {
+      const person = this.peopleSlotVisuals.get(pickKey);
+      const yOffset = person?.yOffset ?? 0;
+      const pos: [number, number, number] = [
+        round3(entry.object.position.x),
+        round3(entry.object.position.y - yOffset),
+        round3(entry.object.position.z),
+      ];
+      entry.pick.position = pos;
+      this.callbacks.onTransformCommit?.(pickKey, { position: pos });
+      return;
+    }
+
+    if (entry.pick.kind === 'variantAdd') {
+      const pos: [number, number, number] = [
+        round3(entry.object.position.x),
+        round3(entry.object.position.y),
+        round3(entry.object.position.z),
+      ];
+      const euler = new THREE.Euler().setFromQuaternion(entry.object.quaternion, 'YXZ');
+      let yawDeg = Math.round(((euler.y * 180) / Math.PI) * 10) / 10;
+      yawDeg = ((yawDeg % 360) + 360) % 360;
+      if (yawDeg === 360) yawDeg = 0;
+      // Keep pure Y rotation with zero pitch/roll drift
+      entry.object.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (yawDeg * Math.PI) / 180);
+      entry.pick.position = pos;
+      this.callbacks.onTransformCommit?.(pickKey, { position: pos, yawDegrees: yawDeg });
+    }
+  }
+
+  updatePeopleSlotPosition(pickKey: string, pos: [number, number, number]) {
+    const entry = this.pickByKey.get(pickKey);
+    const person = this.peopleSlotVisuals.get(pickKey);
+    if (!entry || !person) return;
+    entry.object.position.set(pos[0], pos[1] + person.yOffset, pos[2]);
+    person.ring.position.set(pos[0], pos[1] + 0.04, pos[2]);
+    entry.pick.position = [...pos];
+    if (this.attachedGizmoKey === pickKey) {
+      this.highlightObject(entry.object);
+    }
+  }
+
+  private clearGroup(group: THREE.Group) {
+    while (group.children.length > 0) {
+      const child = group.children[group.children.length - 1];
+      group.remove(child);
+      if ((child as THREE.Mesh).geometry && !child.userData.sharedGeometry) {
+        (child as THREE.Mesh).geometry.dispose();
+      }
+      if (child.userData.ownedMaterial) {
+        const mat = (child as THREE.Mesh).material;
+        if (Array.isArray(mat)) mat.forEach(m => m.dispose());
+        else if (mat) mat.dispose();
+      }
+    }
+  }
+
+  async applyVariantOverlay(overlay: VariantPreviewOverlay | null) {
+    this.lastVariantOverlay = overlay;
+    const gen = ++this.variantGeneration;
+
+    // Restore base model visibility first
+    for (const mesh of this.baseModelMeshes.values()) {
+      mesh.visible = true;
+    }
+
+    // Clear previous variant overlay meshes & picks
+    if (this.attachedGizmoKey?.startsWith('variantAdd:')) {
+      this.transformControls.detach();
+    }
+    this.pickableObjects = this.pickableObjects.filter(
+      obj => (obj.userData.pick as ScenePick | undefined)?.kind !== 'variantAdd',
+    );
+    for (const key of [...this.pickByKey.keys()]) {
+      if (key.startsWith('variantAdd:')) {
+        this.pickByKey.delete(key);
+      }
+    }
+    this.clearGroup(this.variantGroup);
+    this.clearGroup(this.variantGhostGroup);
+
+    if (!overlay || !overlay.enabled || !this.currentMediaUrls) return;
+
+    const removeSet = new Set(overlay.remove);
+    for (const [id, mesh] of this.baseModelMeshes.entries()) {
+      const removed = removeSet.has(id);
+      mesh.visible = !removed;
+      if (removed && overlay.showRemovedGhosts) {
+        const box = new THREE.Box3().setFromObject(mesh);
+        if (!box.isEmpty()) {
+          const size = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+          const boxGeo = new THREE.BoxGeometry(
+            Math.max(size.x, 0.25),
+            Math.max(size.y, 0.25),
+            Math.max(size.z, 0.25),
+          );
+          const edges = new THREE.EdgesGeometry(boxGeo);
+          boxGeo.dispose();
+          const mat = new THREE.LineBasicMaterial({ color: 0xff5964, transparent: true, opacity: 0.78 });
+          const wire = new THREE.LineSegments(edges, mat);
+          wire.position.copy(center);
+          wire.userData.ownedMaterial = true;
+          this.variantGhostGroup.add(wire);
+        }
+      }
+    }
+
+    const mediaUrls = this.currentMediaUrls;
+    const appearance = this.currentAppearance;
+    const resolvedItems: Array<{
+      item: WorldBlockVariantModel;
+      index: number;
+      url: string;
+      override: ArtReplacementModel | null;
+    }> = [];
+    const urlSet = new Set<string>();
+    for (let i = 0; i < overlay.add.length; i++) {
+      const item = overlay.add[i];
+      const override = resolveModelOverride(item.model, appearance);
+      const url = override ? override.meshUrl : `${mediaUrls.geometry}mesh-${item.model}.rstatmsh`;
+      resolvedItems.push({ item, index: i, url, override });
+      urlSet.add(url);
+    }
+
+    const parsedByUrl = new Map<string, ParsedRstatmsh>();
+    await Promise.all(
+      [...urlSet].map(async url => {
+        try {
+          parsedByUrl.set(url, await this.loadMeshByUrl(url));
+        } catch {
+          // Missing mesh falls back to a visible marker cube below
+        }
+      }),
+    );
+    if (gen !== this.variantGeneration || this.disposed) return;
+
+    const up = new THREE.Vector3(0, 1, 0);
+    for (const { item, index, url, override } of resolvedItems) {
+      const parsed = parsedByUrl.get(url);
+      let mesh: THREE.Mesh;
+      if (parsed) {
+        const materials = parsed.materialNames.length
+          ? parsed.materialNames.map((name, groupIdx) => {
+              const slotNum = parsed.materialSlots[groupIdx];
+              const slotOverride = override?.slots?.[String(slotNum)];
+              if (slotOverride?.textureUrl) {
+                return this.getCustomTextureMaterial(slotOverride.textureUrl);
+              }
+              const matName = slotOverride?.material ?? name;
+              return this.getSurfaceMaterial(matName, mediaUrls.materials, appearance);
+            })
+          : [makeFallbackMaterial(this.wireframe, 0x4de096)];
+        mesh = new THREE.Mesh(parsed.geometry, materials.length === 1 ? materials[0] : materials);
+        mesh.userData.sharedGeometry = true;
+      } else {
+        const geo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x4de096, roughness: 0.7 });
+        mesh = new THREE.Mesh(geo, mat);
+        mesh.userData.ownedMaterial = true;
+      }
+
+      const px = item.position.x;
+      const py = item.position.y;
+      const pz = item.position.z;
+      mesh.position.set(px, py, pz);
+      mesh.quaternion.setFromAxisAngle(up, (item.yawDegrees * Math.PI) / 180);
+
+      const pickKey = `variantAdd:${index}`;
+      this.registerPick(mesh, {
+        pickKey,
+        kind: 'variantAdd',
+        id: pickKey,
+        label: `Added ARCH3D ${item.model} (#${index + 1})`,
+        position: [px, py, pz],
+        modelId: item.model,
+        index,
+      });
+      this.variantGroup.add(mesh);
+    }
+
+    if (this.attachedGizmoKey?.startsWith('variantAdd:')) {
+      const target = this.pickByKey.get(this.attachedGizmoKey);
+      if (target) {
+        this.transformControls.attach(target.object);
+        this.applyGizmoModeAndAxes();
+        this.highlightObject(target.object);
+      }
+    }
   }
 
   setWireframe(wireframe: boolean) {
@@ -420,23 +740,16 @@ export class BlockSceneController {
   }
 
   private clearScene() {
+    this.transformControls.detach();
     this.highlightObject(null);
     this.pickableObjects = [];
     this.pickByKey.clear();
+    this.baseModelMeshes.clear();
+    this.peopleSlotVisuals.clear();
+    this.clearGroup(this.variantGroup);
+    this.clearGroup(this.variantGhostGroup);
     for (const group of Object.values(this.layers)) {
-      while (group.children.length > 0) {
-        const child = group.children[group.children.length - 1];
-        group.remove(child);
-        // Dispose non-cached geometries owned by overlay/ground meshes
-        if ((child as THREE.Mesh).geometry && !child.userData.sharedGeometry) {
-          (child as THREE.Mesh).geometry.dispose();
-        }
-        if (child.userData.ownedMaterial) {
-          const mat = (child as THREE.Mesh).material;
-          if (Array.isArray(mat)) mat.forEach(m => m.dispose());
-          else if (mat) mat.dispose();
-        }
-      }
+      this.clearGroup(group);
     }
   }
 
@@ -604,6 +917,8 @@ export class BlockSceneController {
     const gen = ++this.loadGeneration;
     this.clearScene();
     const { block, mediaUrls, terrainArchive } = detail;
+    this.currentMediaUrls = mediaUrls;
+    this.currentAppearance = appearance;
 
     // 1. Frame camera from block bounds immediately unless preserving camera for appearance toggle
     this.currentKind = block.kind;
@@ -706,6 +1021,13 @@ export class BlockSceneController {
       if (!box.isEmpty()) {
         this.frameFromBox(box, block.kind);
       }
+    }
+
+    // Re-apply active variant preview overlay & gizmo attachment if present
+    if (this.lastVariantOverlay?.enabled) {
+      await this.applyVariantOverlay(this.lastVariantOverlay);
+    } else if (this.attachedGizmoKey) {
+      this.attachGizmo(this.attachedGizmoKey);
     }
 
     report();
@@ -866,6 +1188,13 @@ export class BlockSceneController {
       }
     }
 
+    // Re-apply active variant preview overlay & gizmo attachment if present
+    if (this.lastVariantOverlay?.enabled) {
+      await this.applyVariantOverlay(this.lastVariantOverlay);
+    } else if (this.attachedGizmoKey) {
+      this.attachGizmo(this.attachedGizmoKey);
+    }
+
     report();
   }
 
@@ -983,6 +1312,9 @@ export class BlockSceneController {
       gridY: off.gridY,
     });
     this.layers.models.add(mesh);
+    if (!off.prefix) {
+      this.baseModelMeshes.set(model.id, mesh);
+    }
   }
 
   private appendGroundTiles(
@@ -1195,21 +1527,27 @@ export class BlockSceneController {
       ringColor: number,
     ) => {
       const [x, y, z] = pick.position;
+      let visualObj: THREE.Object3D;
+      let yOffset: number;
       if (typeof archive === 'number' && typeof record === 'number') {
         const url = `${mediaUrls.billboards}texture-${archive}-${record}.png`;
         const sprite = new THREE.Sprite(this.getSpriteMaterial(url));
         sprite.scale.set(1.05, 1.85, 1);
-        sprite.position.set(x, y + 0.95, z);
+        yOffset = 0.95;
+        sprite.position.set(x, y + yOffset, z);
         this.registerPick(sprite, pick);
         this.layers.people.add(sprite);
+        visualObj = sprite;
       } else {
         const geo = new THREE.CylinderGeometry(0.32, 0.32, 1.75, 10);
         const mat = new THREE.MeshStandardMaterial({ color: ringColor, roughness: 0.5 });
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(x, y + 0.88, z);
+        yOffset = 0.88;
+        mesh.position.set(x, y + yOffset, z);
         mesh.userData.ownedMaterial = true;
         this.registerPick(mesh, pick);
         this.layers.people.add(mesh);
+        visualObj = mesh;
       }
 
       // Ground halo ring so people stand out clearly from architecture
@@ -1220,6 +1558,9 @@ export class BlockSceneController {
       ring.position.set(x, y + 0.04, z);
       ring.userData.ownedMaterial = true;
       this.layers.people.add(ring);
+      if (pick.kind === 'peopleSlot') {
+        this.peopleSlotVisuals.set(pick.pickKey, { object: visualObj, ring, yOffset });
+      }
     };
 
     for (let i = 0; i < peopleSlots.length; i++) {
@@ -1687,6 +2028,8 @@ export class BlockSceneController {
     this.spriteMaterialCache.clear();
     this.allMeshMaterials.clear();
     this.meshCache.clear();
+    this.transformControls.detach();
+    this.transformControls.dispose();
     this.controls.dispose();
     this.renderer.dispose();
   }

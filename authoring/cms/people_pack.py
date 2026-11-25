@@ -1,6 +1,7 @@
 """Inspect, cross-link, validate, and edit the git-tracked daggerfall.people content pack."""
 
 from collections import Counter, defaultdict
+import math
 from pathlib import Path
 import re
 
@@ -1164,6 +1165,175 @@ class PeoplePackStore:
         self.packs.update_json(barks_path, mutate, validator=validator, sort_keys=False)
         return self.get_barks()
 
+    def update_block_slot(self, body: dict, catalog, concept_store) -> dict:
+        """Update position and/or binding fields of a single slot in blocks/{rmb-interiors,rmb-exteriors,rdb-dungeons}.json."""
+        if not isinstance(body, dict):
+            raise ValidationError("Expected a JSON object for block slot update.")
+
+        kind = (body.get("kind") or "").strip()
+        file_by_kind = {
+            "rmb-interior": "rmb-interiors.json",
+            "rmb-exterior": "rmb-exteriors.json",
+            "rdb-dungeon": "rdb-dungeons.json",
+        }
+        if kind not in file_by_kind:
+            raise ValidationError(
+                f"Unsupported block slot kind '{kind}'.",
+                [ValidationIssue("kind", "Kind must be rmb-interior, rmb-exterior, or rdb-dungeon.")],
+            )
+        block_key = (body.get("block") or "").strip()
+        slot_id = (body.get("slotId") or "").strip()
+        if not block_key or not slot_id:
+            raise ValidationError(
+                "Both 'block' and 'slotId' are required.",
+                [ValidationIssue("slotId", "Block and slotId are required.")],
+            )
+        building_index = body.get("buildingIndex")
+        if kind == "rmb-interior":
+            if not _is_int(building_index) or building_index < 0:
+                raise ValidationError(
+                    "buildingIndex must be a non-negative integer for rmb-interior slots.",
+                    [ValidationIssue("buildingIndex", "buildingIndex is required for rmb-interior.")],
+                )
+
+        cast_path, spawners_path, blocks_dir = self._paths()
+        target_path = blocks_dir / file_by_kind[kind]
+        if not target_path.is_file():
+            raise NotFoundError(f"Block slots file '{file_by_kind[kind]}' not found.")
+
+        index = self._index()
+        individuals_by_id = index["individuals_by_id"]
+        spawners_by_id = index["spawners_by_id"]
+        factions = self._base_lookups()["factions"]
+
+        def mutate(doc: dict):
+            blocks = doc.get("blocks") if isinstance(doc, dict) else None
+            if not isinstance(blocks, dict) or block_key not in blocks:
+                raise NotFoundError(f"Block '{block_key}' not found in {file_by_kind[kind]}.")
+
+            if kind == "rmb-interior":
+                buildings = blocks[block_key]
+                bkey = str(building_index)
+                if not isinstance(buildings, dict) or bkey not in buildings:
+                    raise NotFoundError(f"Building #{building_index} not found in '{block_key}'.")
+                slot_list = buildings[bkey].get("slots")
+            else:
+                slot_list = blocks[block_key]
+
+            if not isinstance(slot_list, list):
+                raise NotFoundError(f"Slot list missing for '{block_key}'.")
+
+            slot = next((item for item in slot_list if isinstance(item, dict) and item.get("slotId") == slot_id), None)
+            if slot is None:
+                raise NotFoundError(f"Slot '{slot_id}' not found in '{block_key}'.")
+
+            issues: list[ValidationIssue] = []
+
+            if "position" in body:
+                pos = body["position"]
+                if (
+                    not isinstance(pos, list)
+                    or len(pos) != 3
+                    or not all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in pos)
+                ):
+                    issues.append(ValidationIssue("position", "Position must be an array of 3 finite numbers [x, y, z]."))
+                else:
+                    slot["position"] = [round(float(v), 3) for v in pos]
+
+            if "spawner" in body or "castId" in body:
+                next_spawner = (body.get("spawner") or "").strip() if isinstance(body.get("spawner"), str) else None
+                next_cast = (body.get("castId") or "").strip() if isinstance(body.get("castId"), str) else None
+                if next_spawner == "":
+                    next_spawner = None
+                if next_cast == "":
+                    next_cast = None
+                if (next_spawner is None) == (next_cast is None):
+                    issues.append(ValidationIssue("spawner", "Slot must specify exactly one of spawner or castId."))
+                elif next_spawner is not None:
+                    if next_spawner not in spawners_by_id:
+                        issues.append(ValidationIssue("spawner", f"Unknown spawner '{next_spawner}'."))
+                    else:
+                        slot["spawner"] = next_spawner
+                        slot.pop("castId", None)
+                elif next_cast is not None:
+                    if next_cast not in individuals_by_id:
+                        issues.append(ValidationIssue("castId", f"Unknown castId '{next_cast}'."))
+                    else:
+                        slot["castId"] = next_cast
+                        slot.pop("spawner", None)
+
+            if "interaction" in body:
+                interaction = body["interaction"]
+                if interaction not in INTERACTIONS:
+                    issues.append(ValidationIssue("interaction", f"Interaction must be one of {', '.join(INTERACTIONS)}."))
+                else:
+                    slot["interaction"] = interaction
+
+            if "deriveRegionalFaction" in body:
+                derive = body["deriveRegionalFaction"]
+                if not isinstance(derive, bool):
+                    issues.append(ValidationIssue("deriveRegionalFaction", "deriveRegionalFaction must be a boolean."))
+                else:
+                    slot["deriveRegionalFaction"] = derive
+
+            if "factionId" in body:
+                fid = body["factionId"]
+                if fid is None or fid == "":
+                    slot.pop("factionId", None)
+                elif not _is_int(fid):
+                    issues.append(ValidationIssue("factionId", "factionId must be an integer or null."))
+                elif factions and fid not in factions:
+                    issues.append(ValidationIssue("factionId", f"Unknown faction ID {fid}."))
+                else:
+                    slot["factionId"] = fid
+
+            # Verify slot-level faction invariant (spawner slots may not carry Type-4 Individual factions)
+            effective_fid = slot.get("factionId")
+            if _is_int(effective_fid) and factions and slot.get("castId") is None:
+                faction = factions.get(effective_fid)
+                if faction and faction.get("type") == INDIVIDUAL_FACTION_TYPE:
+                    issues.append(
+                        ValidationIssue(
+                            "factionId",
+                            f"Non-cast spawner slot cannot carry Type-4 Individual faction {effective_fid}.",
+                        ),
+                    )
+
+            if issues:
+                raise ValidationError(issues[0].message, issues)
+
+            return doc, slot_id
+
+        self.packs.update_json(target_path, mutate, sort_keys=False)
+
+        # Return the updated enriched slot from the refreshed index
+        refreshed = self._index()
+        target_bidx = building_index if kind == "rmb-interior" else None
+        for slot in refreshed["slots"]:
+            if (
+                slot["kind"] == kind
+                and slot["block"] == block_key
+                and slot["buildingIndex"] == target_bidx
+                and slot["slotId"] == slot_id
+            ):
+                vis = slot["visual"]
+                archive = vis.get("archive")
+                record = vis.get("record")
+                art = (
+                    self.enrich_visual(catalog, concept_store, archive, record)
+                    if isinstance(archive, int) and isinstance(record, int)
+                    else self._npc_art_info(catalog, concept_store, None)
+                )
+                cast_id = slot.get("castId")
+                cast_name = (
+                    refreshed["individuals_by_id"][cast_id]["name"]
+                    if cast_id and cast_id in refreshed["individuals_by_id"]
+                    else None
+                )
+                return {**slot, "castName": cast_name, "art": art}
+
+        raise NotFoundError(f"Updated slot '{slot_id}' could not be reloaded.")
+
     def query_blocks(
         self,
         catalog,
@@ -1524,6 +1694,9 @@ def register_routes(router, workspace):
     def get_validate(_req):
         return workspace.people_pack.validate_all()
 
+    def put_block_slot(req):
+        return workspace.people_pack.update_block_slot(req.json(), workspace.catalog(), workspace.concept_store)
+
     router.get("/api/people-pack/overview", get_overview)
     router.get("/api/people-pack/cast", get_cast_list)
     router.get("/api/people-pack/cast/{id}", get_cast_item)
@@ -1537,5 +1710,6 @@ def register_routes(router, workspace):
     router.get("/api/people-pack/barks", get_barks)
     router.put("/api/people-pack/barks", put_barks)
     router.get("/api/people-pack/blocks", get_blocks)
+    router.put("/api/people-pack/blocks/slot", put_block_slot)
     router.get("/api/people-pack/visuals", get_visuals)
     router.get("/api/people-pack/validate", get_validate)

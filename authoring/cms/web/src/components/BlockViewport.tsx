@@ -7,7 +7,25 @@ import type {
   LayerName,
   SceneLoadProgress,
   ScenePick,
+  TransformCommitPayload,
+  VariantPreviewOverlay,
 } from '../viewer/BlockScene';
+
+export interface ViewportEditControls {
+  enabled: boolean;
+  mode: 'translate' | 'rotate';
+  snap: boolean;
+  gizmoTargetKey: string | null;
+  gizmoTargetLabel?: string | null;
+  canRotate: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  onModeChange: (mode: 'translate' | 'rotate') => void;
+  onSnapChange: (snap: boolean) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onTransformCommit: (pickKey: string, payload: TransformCommitPayload) => void;
+}
 
 const BASE_LAYERS: Array<{ key: LayerName; label: string }> = [
   { key: 'models', label: 'Models' },
@@ -36,6 +54,9 @@ export function BlockViewport({
   defaultClimate,
   defaultDungeonRemaps,
   defaultDungeonLabel,
+  variantOverlay,
+  editControls,
+  peopleSlotPositionOverrides,
   onSelect,
 }: {
   detail?: WorldBlockDetailResponse | null;
@@ -46,12 +67,17 @@ export function BlockViewport({
   defaultClimate?: number | null;
   defaultDungeonRemaps?: Record<string, number> | null;
   defaultDungeonLabel?: string | null;
+  variantOverlay?: VariantPreviewOverlay | null;
+  editControls?: ViewportEditControls | null;
+  peopleSlotPositionOverrides?: Record<string, [number, number, number]> | null;
   onSelect: (pick: ScenePick | null) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<BlockSceneController | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const editControlsRef = useRef(editControls);
+  editControlsRef.current = editControls;
   const lastSceneIdentityRef = useRef<string>('');
 
   const isComposite = Boolean(compositeGrid);
@@ -148,6 +174,9 @@ export function BlockViewport({
           onProgress: p => {
             if (!cancelled) setProgress(p);
           },
+          onTransformCommit: (pickKey, payload) => {
+            editControlsRef.current?.onTransformCommit(pickKey, payload);
+          },
         });
         controllerRef.current = ctrl;
         setEngineReady(true);
@@ -240,6 +269,71 @@ export function BlockViewport({
     if (!engineReady || !controllerRef.current || !focusBoxRequest) return;
     controllerRef.current.focusBox(focusBoxRequest.min, focusBoxRequest.max);
   }, [engineReady, focusBoxRequest?.id]);
+
+  // Sync live variant overlay (hidden misc models + added models)
+  useEffect(() => {
+    if (!engineReady || !controllerRef.current) return;
+    void controllerRef.current.applyVariantOverlay(variantOverlay ?? null);
+  }, [engineReady, variantOverlay]);
+
+  // Sync TransformControls gizmo attachment, mode, and snapping
+  useEffect(() => {
+    const ctrl = controllerRef.current;
+    if (!engineReady || !ctrl) return;
+    ctrl.setTransformMode(editControls?.mode ?? 'translate');
+    ctrl.setTransformSnap(Boolean(editControls?.snap));
+    ctrl.attachGizmo(editControls?.enabled ? editControls.gizmoTargetKey : null);
+  }, [
+    engineReady,
+    editControls?.enabled,
+    editControls?.mode,
+    editControls?.snap,
+    editControls?.gizmoTargetKey,
+  ]);
+
+  // Sync live people-slot pin position overrides (from numeric input or undo/redo)
+  useEffect(() => {
+    const ctrl = controllerRef.current;
+    if (!engineReady || !ctrl || !peopleSlotPositionOverrides) return;
+    for (const [pickKey, pos] of Object.entries(peopleSlotPositionOverrides)) {
+      ctrl.updatePeopleSlotPosition(pickKey, pos);
+    }
+  }, [engineReady, peopleSlotPositionOverrides]);
+
+  // Keyboard shortcuts while 3D edit mode is active
+  useEffect(() => {
+    if (!editControls?.enabled) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const tag = (event.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const ec = editControlsRef.current;
+      if (!ec?.enabled) return;
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          if (ec.canRedo) ec.onRedo();
+        } else if (ec.canUndo) {
+          ec.onUndo();
+        }
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && key === 'y') {
+        event.preventDefault();
+        if (ec.canRedo) ec.onRedo();
+        return;
+      }
+      if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (key === 'g') {
+          ec.onModeChange('translate');
+        } else if (key === 'r' && ec.canRotate) {
+          ec.onModeChange('rotate');
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editControls?.enabled]);
 
   function toggleLayer(name: LayerName) {
     setLayers(prev => ({ ...prev, [name]: !prev[name] }));
@@ -382,6 +476,67 @@ export function BlockViewport({
               </select>
             </label>
           )}
+        </div>
+      ) : null}
+
+      {editControls?.enabled ? (
+        <div class="edit-bar" role="region" aria-label="3D transform editing controls">
+          <div class="art-mode-toggle" role="group" aria-label="Transform mode">
+            <button
+              type="button"
+              class={editControls.mode === 'translate' ? 'active' : undefined}
+              aria-pressed={editControls.mode === 'translate' ? 'true' : 'false'}
+              onClick={() => editControls.onModeChange('translate')}
+              title="Move along X/Y/Z axes (shortcut: G)"
+            >
+              Translate (G)
+            </button>
+            <button
+              type="button"
+              class={editControls.mode === 'rotate' ? 'active' : undefined}
+              aria-pressed={editControls.mode === 'rotate' ? 'true' : 'false'}
+              disabled={!editControls.canRotate}
+              onClick={() => editControls.onModeChange('rotate')}
+              title={
+                editControls.canRotate
+                  ? 'Rotate yaw around +Y (shortcut: R)'
+                  : 'Yaw rotation is available on added variant models'
+              }
+            >
+              Rotate Yaw (R)
+            </button>
+          </div>
+          <label class="slice-control">
+            <input
+              type="checkbox"
+              checked={editControls.snap}
+              onChange={event => editControls.onSnapChange((event.currentTarget as HTMLInputElement).checked)}
+            />{' '}
+            Snap (0.25m / 15°)
+          </label>
+          <div class="actions">
+            <button
+              type="button"
+              disabled={!editControls.canUndo}
+              onClick={() => editControls.onUndo()}
+              title="Undo (Ctrl+Z)"
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              disabled={!editControls.canRedo}
+              onClick={() => editControls.onRedo()}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              Redo
+            </button>
+          </div>
+          <span class="muted" style={{ fontSize: '0.8rem', marginLeft: 'auto' }}>
+            {editControls.gizmoTargetKey
+              ? `Gizmo: ${editControls.gizmoTargetLabel ?? editControls.gizmoTargetKey}`
+              : 'Select a variant model or people slot to drag in 3D'}
+          </span>
         </div>
       ) : null}
 

@@ -928,3 +928,36 @@ export interface LocationDetailResponse {
     terrain: string;
   };
 }
+
+export interface WorldBlockVariantModel {
+  model: string;
+  position: Vec3;
+  yawDegrees: number;
+}
+
+export interface WorldBlockVariantRecipe {
+  packId: string;
+  block: string;
+  variant: string;
+  remove: string[];
+  add: WorldBlockVariantModel[];
+  bakedExists: boolean;
+  bakedPath: string;
+  baseDigest: string | null;
+  bakedModelCount: number | null;
+}
+
+export interface WorldVariantsResponse {
+  packs: Array<{ id: string; variantCount: number }>;
+  variants: WorldBlockVariantRecipe[];
+  arena2Available: boolean;
+}
+
+export interface Arch3dModelOption {
+  modelId: string;
+  meshArtifactId: string;
+  name: string | null;
+  category: AssetCategory | null;
+  cmsId: string | null;
+  hasRemodel: boolean;
+}

@@ -26,6 +26,8 @@ import locations as locations_module
 from locations import LocationsStore
 import world_appearance as world_appearance_module
 from world_appearance import WorldAppearanceStore
+import variants as variants_module
+from variants import WorldVariantsStore
 from packs import PackStore
 import people_curation as people_curation_module
 import people_pack as people_pack_module
@@ -55,6 +57,7 @@ class Workspace:
         self.world_blocks = WorldBlocksStore(library, self.cache, self.people_pack)
         self.locations = LocationsStore(library, self.cache, self.world_blocks, self.people_pack)
         self.world_appearance = WorldAppearanceStore(library, self.cache)
+        self.world_variants = WorldVariantsStore(library, self.cache, self.packs)
 
     def catalog(self):
         return self.catalog_store.catalog()
@@ -167,10 +170,11 @@ class Workspace:
         if not (repo / ".git").exists():
             return {"gitAvailable": False, "modified": []}
         tracked_targets = []
-        for path in (self.library.people_pack, self.links, self.merges):
+        for path in (self.library.people_pack, self.library.packs_root, self.links, self.merges):
             try:
                 rel = path.resolve().relative_to(repo.resolve()).as_posix()
-                tracked_targets.append(rel)
+                if rel not in tracked_targets:
+                    tracked_targets.append(rel)
             except ValueError:
                 continue
         if not tracked_targets:
@@ -221,6 +225,7 @@ def create_router(workspace: Workspace) -> Router:
     blocks_module.register_routes(router, workspace)
     locations_module.register_routes(router, workspace)
     world_appearance_module.register_routes(router, workspace)
+    variants_module.register_routes(router, workspace)
     return router
 
 
@@ -333,6 +338,8 @@ def main():
                         help="override the repo-local character stage root")
     parser.add_argument("--people-pack", type=Path, default=None,
                         help="override the daggerfall.people content pack directory")
+    parser.add_argument("--packs-root", type=Path, default=None,
+                        help="override the content/worldrpg/packs directory for variant authoring")
     args = parser.parse_args()
     character_root = args.characters or DEFAULT_CHARACTERS
     library = Library(
@@ -341,6 +348,7 @@ def main():
         character_root.resolve() if args.characters or character_root.is_dir() else None,
         repo=args.repo.resolve(),
         people_pack_root=args.people_pack.resolve() if args.people_pack else None,
+        packs_dir=args.packs_root.resolve() if args.packs_root else None,
     )
     workspace = Workspace(
         library,

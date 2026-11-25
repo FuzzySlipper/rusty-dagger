@@ -11,13 +11,26 @@ import {
 } from '../router';
 import { useSessionState } from '../hooks/useSessionState';
 import type {
+  PeoplePackOverview,
   WorldBlockDetailResponse,
   WorldBlockKind,
   WorldBlockListItem,
+  WorldBlockPeopleSlot,
   WorldBlocksQueryResponse,
+  WorldBlockVariantModel,
+  WorldBlockVariantRecipe,
+  WorldVariantsResponse,
 } from '../types';
-import type { ScenePick } from '../viewer/BlockScene';
-import { BlockViewport } from '../components/BlockViewport';
+import type { ScenePick, TransformCommitPayload, VariantPreviewOverlay } from '../viewer/BlockScene';
+import { BlockViewport, type ViewportEditControls } from '../components/BlockViewport';
+import {
+  makeSlotDraft,
+  ModelPickerModal,
+  PeopleSlotEditorForm,
+  VariantEditorPanel,
+  type PeopleSlotDraft,
+  type VariantDraft,
+} from '../components/WorldBlockEditors';
 import { ArtDataChip } from '../components/ArtDataLink';
 import { DataTable, type DataColumn } from '../components/DataTable';
 import { Chip, Empty, FactList, PageHeading } from '../components/ui';
@@ -267,7 +280,49 @@ export function WorldBlocksListPage({ initialQuery }: { initialQuery: Record<str
   );
 }
 
-type InspectorTab = 'summary' | 'buildings' | 'people' | 'models' | 'doors' | 'objects';
+type InspectorTab = 'summary' | 'buildings' | 'people' | 'models' | 'doors' | 'objects' | 'variants';
+
+function draftFromRecipe(recipe: WorldBlockVariantRecipe): VariantDraft {
+  return {
+    packId: recipe.packId,
+    block: recipe.block,
+    variant: recipe.variant,
+    originalVariant: recipe.variant,
+    isNew: false,
+    remove: [...recipe.remove],
+    add: recipe.add.map(a => ({
+      model: a.model,
+      position: { ...a.position },
+      yawDegrees: a.yawDegrees,
+    })),
+  };
+}
+
+function cloneVariantDraft(d: VariantDraft): VariantDraft {
+  return {
+    ...d,
+    remove: [...d.remove],
+    add: d.add.map(a => ({ model: a.model, position: { ...a.position }, yawDegrees: a.yawDegrees })),
+  };
+}
+
+function serializeVariantDraft(d: VariantDraft | null): string {
+  if (!d) return '';
+  return JSON.stringify({ packId: d.packId, block: d.block, variant: d.variant, remove: d.remove, add: d.add });
+}
+
+function serializeSlotDraft(d: PeopleSlotDraft | null): string {
+  if (!d) return '';
+  return JSON.stringify({
+    position: d.position,
+    bindingKind: d.bindingKind,
+    spawner: d.bindingKind === 'spawner' ? d.spawner : null,
+    castId: d.bindingKind === 'cast' ? d.castId : null,
+    interaction: d.interaction,
+    deriveRegionalFaction: d.deriveRegionalFaction,
+    factionId: d.factionId.trim(),
+  });
+}
 
 export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
   const [detail, setDetail] = useState<WorldBlockDetailResponse | null>(null);
@@ -278,6 +333,35 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
   const [focusRequestId, setFocusRequestId] = useState(0);
   const [modelFilter, setModelFilter] = useState('');
 
+  // Tier 3: 3D edit mode state
+  const [editMode, setEditMode] = useState(false);
+  const [transformMode, setTransformMode] = useState<'translate' | 'rotate'>('translate');
+  const [snap, setSnap] = useState(true);
+
+  // Tier 3: Block variant recipe authoring state (RMB exteriors)
+  const [variantsData, setVariantsData] = useState<WorldVariantsResponse | null>(null);
+  const [variantDraft, setVariantDraft] = useState<VariantDraft | null>(null);
+  const [variantBaseline, setVariantBaseline] = useState('');
+  const [variantPast, setVariantPast] = useState<VariantDraft[]>([]);
+  const [variantFuture, setVariantFuture] = useState<VariantDraft[]>([]);
+  const [variantPreviewEnabled, setVariantPreviewEnabled] = useState(true);
+  const [showRemovedGhosts, setShowRemovedGhosts] = useState(true);
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  const [variantSaving, setVariantSaving] = useState(false);
+  const [variantBaking, setVariantBaking] = useState(false);
+  const [variantStatus, setVariantStatus] = useState<string | null>(null);
+  const [variantError, setVariantError] = useState<string | null>(null);
+
+  // Tier 3: People-slot spatial editing state
+  const [peopleOverview, setPeopleOverview] = useState<PeoplePackOverview | null>(null);
+  const [slotDraft, setSlotDraft] = useState<PeopleSlotDraft | null>(null);
+  const [slotBaseline, setSlotBaseline] = useState('');
+  const [slotPast, setSlotPast] = useState<PeopleSlotDraft[]>([]);
+  const [slotFuture, setSlotFuture] = useState<PeopleSlotDraft[]>([]);
+  const [slotSaving, setSlotSaving] = useState(false);
+  const [slotStatus, setSlotStatus] = useState<string | null>(null);
+  const [slotError, setSlotError] = useState<string | null>(null);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -285,12 +369,36 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
     setSelectedPick(null);
     setFocusRequestId(0);
     setModelFilter('');
+    setVariantsData(null);
+    setVariantDraft(null);
+    setVariantBaseline('');
+    setVariantPast([]);
+    setVariantFuture([]);
+    setVariantStatus(null);
+    setVariantError(null);
+    setSlotDraft(null);
+    setSlotBaseline('');
+    setSlotPast([]);
+    setSlotFuture([]);
+    setSlotStatus(null);
+    setSlotError(null);
+
     apiRequest<WorldBlockDetailResponse>(`/api/world-blocks/detail?key=${encodeURIComponent(blockKey)}`, {
       signal: controller.signal,
     })
       .then(data => {
         setDetail(data);
         setTab(data.block.kind === 'rmbExterior' && data.block.buildings?.length ? 'buildings' : 'summary');
+        if (data.block.kind === 'rmbExterior') {
+          apiRequest<WorldVariantsResponse>(
+            `/api/world-variants?block=${encodeURIComponent(data.block.sourceKey)}`,
+            { signal: controller.signal },
+          )
+            .then(vdata => setVariantsData(vdata))
+            .catch(err => {
+              if (!isAbortError(err)) setVariantsData(null);
+            });
+        }
       })
       .catch(err => {
         if (!isAbortError(err)) setError(err instanceof Error ? err.message : String(err));
@@ -300,6 +408,53 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
       });
     return () => controller.abort();
   }, [blockKey]);
+
+  // Lazily load people-pack overview (spawner & cast dropdowns) when Edit 3D is activated
+  useEffect(() => {
+    if (!editMode || peopleOverview) return;
+    const controller = new AbortController();
+    apiRequest<PeoplePackOverview>('/api/people-pack/overview', { signal: controller.signal })
+      .then(data => setPeopleOverview(data))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [editMode, peopleOverview]);
+
+  // Sync slotDraft whenever a peopleSlot is selected
+  useEffect(() => {
+    if (selectedPick?.kind !== 'peopleSlot' || selectedPick.index === undefined || !detail) {
+      setSlotDraft(null);
+      setSlotBaseline('');
+      setSlotPast([]);
+      setSlotFuture([]);
+      setSlotStatus(null);
+      setSlotError(null);
+      return;
+    }
+    const slot = detail.peopleSlots[selectedPick.index];
+    if (!slot) return;
+    const nextDraft = makeSlotDraft(slot, selectedPick.pickKey);
+    setSlotDraft(nextDraft);
+    setSlotBaseline(serializeSlotDraft(nextDraft));
+    setSlotPast([]);
+    setSlotFuture([]);
+    setSlotStatus(null);
+    setSlotError(null);
+  }, [selectedPick?.pickKey, detail?.block.key]);
+
+  const variantOverlay = useMemo<VariantPreviewOverlay | null>(() => {
+    if (!variantDraft) return null;
+    return {
+      enabled: variantPreviewEnabled,
+      remove: variantDraft.remove,
+      add: variantDraft.add,
+      showRemovedGhosts,
+    };
+  }, [variantDraft, variantPreviewEnabled, showRemovedGhosts]);
+
+  const peopleSlotPositionOverrides = useMemo<Record<string, [number, number, number]> | null>(() => {
+    if (!slotDraft) return null;
+    return { [slotDraft.pickKey]: slotDraft.position };
+  }, [slotDraft?.pickKey, slotDraft?.position[0], slotDraft?.position[1], slotDraft?.position[2]]);
 
   const filteredModels = useMemo(() => {
     const models = detail?.block.models ?? [];
@@ -370,6 +525,381 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
     selectedPick?.kind === 'staticNpc'
       ? block.staticNpcs?.find(n => n.id === selectedPick.id) ?? null
       : null;
+  const selectedVariantAddIndex =
+    selectedPick?.kind === 'variantAdd' && selectedPick.index !== undefined ? selectedPick.index : null;
+
+  const isExterior = block.kind === 'rmbExterior';
+  const variantDirty = Boolean(variantDraft && (variantDraft.isNew || serializeVariantDraft(variantDraft) !== variantBaseline));
+  const slotDirty = Boolean(slotDraft && serializeSlotDraft(slotDraft) !== slotBaseline);
+
+  function loadSavedVariant(recipe: WorldBlockVariantRecipe | null) {
+    setVariantStatus(null);
+    setVariantError(null);
+    setVariantPast([]);
+    setVariantFuture([]);
+    if (!recipe) {
+      setVariantDraft(null);
+      setVariantBaseline('');
+      if (selectedPick?.kind === 'variantAdd') setSelectedPick(null);
+      return;
+    }
+    const next = draftFromRecipe(recipe);
+    setVariantDraft(next);
+    setVariantBaseline(serializeVariantDraft(next));
+    setVariantPreviewEnabled(true);
+  }
+
+  function createNewVariantDraft(packId: string, variantName: string) {
+    setVariantStatus(null);
+    setVariantError(null);
+    setVariantPast([]);
+    setVariantFuture([]);
+    const next: VariantDraft = {
+      packId,
+      block: block.sourceKey,
+      variant: variantName,
+      originalVariant: null,
+      isNew: true,
+      remove: [],
+      add: [],
+    };
+    setVariantDraft(next);
+    setVariantBaseline('');
+    setVariantPreviewEnabled(true);
+    setEditMode(true);
+  }
+
+  function commitVariantChange(next: VariantDraft) {
+    if (variantDraft) {
+      if (serializeVariantDraft(next) === serializeVariantDraft(variantDraft)) return;
+      setVariantPast(prev => [...prev.slice(-39), cloneVariantDraft(variantDraft)]);
+    }
+    setVariantFuture([]);
+    setVariantDraft(next);
+    setVariantStatus(null);
+    setVariantError(null);
+  }
+
+  function toggleHideMiscModel(placementId: string) {
+    if (!variantDraft) return;
+    const exists = variantDraft.remove.includes(placementId);
+    const nextRemove = exists
+      ? variantDraft.remove.filter(id => id !== placementId)
+      : [...variantDraft.remove, placementId];
+    commitVariantChange({ ...variantDraft, remove: nextRemove });
+    if (!exists && selectedPick?.id === placementId) {
+      setSelectedPick(null);
+    }
+  }
+
+  function addModelToVariant(modelId: string) {
+    if (!variantDraft) return;
+    const defaultPos = selectedPick
+      ? { x: selectedPick.position[0], y: Math.max(0, selectedPick.position[1]), z: selectedPick.position[2] }
+      : block.bounds
+        ? {
+            x: Math.round(((block.bounds.minimum.x + block.bounds.maximum.x) * 0.5) * 4) / 4,
+            y: 0.5,
+            z: Math.round(((block.bounds.minimum.z + block.bounds.maximum.z) * 0.5) * 4) / 4,
+          }
+        : { x: 51.2, y: 0.5, z: -51.2 };
+    const nextIndex = variantDraft.add.length;
+    const nextAdd: WorldBlockVariantModel[] = [
+      ...variantDraft.add,
+      { model: modelId, position: defaultPos, yawDegrees: 0 },
+    ];
+    commitVariantChange({ ...variantDraft, add: nextAdd });
+    setVariantPreviewEnabled(true);
+    setEditMode(true);
+    setSelectedPick({
+      pickKey: `variantAdd:${nextIndex}`,
+      kind: 'variantAdd',
+      id: `variantAdd:${nextIndex}`,
+      label: `Added ARCH3D ${modelId} (#${nextIndex + 1})`,
+      position: [defaultPos.x, defaultPos.y, defaultPos.z],
+      modelId,
+      index: nextIndex,
+    });
+    setFocusRequestId(prev => prev + 1);
+  }
+
+  function updateVariantAddedModel(index: number, nextItem: WorldBlockVariantModel) {
+    if (!variantDraft || index < 0 || index >= variantDraft.add.length) return;
+    const nextAdd = variantDraft.add.map((item, i) => (i === index ? nextItem : item));
+    commitVariantChange({ ...variantDraft, add: nextAdd });
+  }
+
+  function duplicateVariantAddedModel(index: number) {
+    if (!variantDraft || index < 0 || index >= variantDraft.add.length) return;
+    const src = variantDraft.add[index];
+    const nextIndex = variantDraft.add.length;
+    const copy: WorldBlockVariantModel = {
+      model: src.model,
+      position: { x: Math.round((src.position.x + 1.5) * 1000) / 1000, y: src.position.y, z: src.position.z },
+      yawDegrees: src.yawDegrees,
+    };
+    commitVariantChange({ ...variantDraft, add: [...variantDraft.add, copy] });
+    setEditMode(true);
+    setSelectedPick({
+      pickKey: `variantAdd:${nextIndex}`,
+      kind: 'variantAdd',
+      id: `variantAdd:${nextIndex}`,
+      label: `Added ARCH3D ${copy.model} (#${nextIndex + 1})`,
+      position: [copy.position.x, copy.position.y, copy.position.z],
+      modelId: copy.model,
+      index: nextIndex,
+    });
+  }
+
+  function deleteVariantAddedModel(index: number) {
+    if (!variantDraft || index < 0 || index >= variantDraft.add.length) return;
+    const nextAdd = variantDraft.add.filter((_, i) => i !== index);
+    commitVariantChange({ ...variantDraft, add: nextAdd });
+    if (selectedPick?.kind === 'variantAdd') setSelectedPick(null);
+  }
+
+  async function saveVariantRecipe() {
+    if (!variantDraft) return;
+    setVariantSaving(true);
+    setVariantError(null);
+    setVariantStatus(null);
+    try {
+      const res = await apiRequest<WorldVariantsResponse & { recipe: WorldBlockVariantRecipe }>(
+        '/api/world-variants',
+        {
+          method: 'PUT',
+          body: {
+            packId: variantDraft.packId,
+            block: variantDraft.block,
+            variant: variantDraft.variant,
+            originalVariant: variantDraft.originalVariant,
+            remove: variantDraft.remove,
+            add: variantDraft.add,
+          },
+        },
+      );
+      setVariantsData({
+        packs: res.packs,
+        variants: res.variants,
+        arena2Available: res.arena2Available,
+      });
+      const synced = draftFromRecipe(res.recipe);
+      setVariantDraft(synced);
+      setVariantBaseline(serializeVariantDraft(synced));
+      setVariantStatus(`Saved '${res.recipe.variant}' to ${res.recipe.packId}/payload.json.`);
+    } catch (err) {
+      setVariantError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVariantSaving(false);
+    }
+  }
+
+  async function bakeVariantPack() {
+    if (!variantDraft) return;
+    setVariantBaking(true);
+    setVariantError(null);
+    setVariantStatus(null);
+    try {
+      const res = await apiRequest<WorldVariantsResponse & { ok: boolean; output: string }>(
+        '/api/world-variants/bake',
+        {
+          method: 'POST',
+          body: { packId: variantDraft.packId, block: variantDraft.block },
+        },
+      );
+      setVariantsData({
+        packs: res.packs,
+        variants: res.variants,
+        arena2Available: res.arena2Available,
+      });
+      setVariantStatus(res.output ? `Baked ${variantDraft.packId}: ${res.output.split('\n')[0]}` : `Baked ${variantDraft.packId}.`);
+    } catch (err) {
+      setVariantError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVariantBaking(false);
+    }
+  }
+
+  async function deleteVariantRecipe() {
+    if (!variantDraft || variantDraft.isNew) return;
+    const confirmed = window.confirm(
+      `Delete variant '${variantDraft.variant}' on ${variantDraft.block} from ${variantDraft.packId}?`,
+    );
+    if (!confirmed) return;
+    setVariantSaving(true);
+    setVariantError(null);
+    setVariantStatus(null);
+    try {
+      const params = new URLSearchParams({
+        packId: variantDraft.packId,
+        block: variantDraft.block,
+        variant: variantDraft.originalVariant ?? variantDraft.variant,
+      });
+      const res = await apiRequest<WorldVariantsResponse & { deleted: boolean }>(
+        `/api/world-variants?${params.toString()}`,
+        { method: 'DELETE' },
+      );
+      setVariantsData({
+        packs: res.packs,
+        variants: res.variants,
+        arena2Available: res.arena2Available,
+      });
+      setVariantDraft(null);
+      setVariantBaseline('');
+      setVariantPast([]);
+      setVariantFuture([]);
+      if (selectedPick?.kind === 'variantAdd') setSelectedPick(null);
+      setVariantStatus(`Deleted variant '${variantDraft.variant}'.`);
+    } catch (err) {
+      setVariantError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVariantSaving(false);
+    }
+  }
+
+  function commitSlotChange(next: PeopleSlotDraft) {
+    if (slotDraft) {
+      if (serializeSlotDraft(next) === serializeSlotDraft(slotDraft)) return;
+      setSlotPast(prev => [...prev.slice(-39), { ...slotDraft, position: [...slotDraft.position] }]);
+    }
+    setSlotFuture([]);
+    setSlotDraft(next);
+    setSlotStatus(null);
+    setSlotError(null);
+  }
+
+  function revertSlotDraft() {
+    if (!selectedPeopleSlot || !selectedPick) return;
+    const fresh = makeSlotDraft(selectedPeopleSlot, selectedPick.pickKey);
+    setSlotDraft(fresh);
+    setSlotBaseline(serializeSlotDraft(fresh));
+    setSlotPast([]);
+    setSlotFuture([]);
+    setSlotError(null);
+    setSlotStatus(null);
+  }
+
+  async function saveSlotEdit() {
+    if (!slotDraft || selectedPick?.kind !== 'peopleSlot' || selectedPick.index === undefined) return;
+    setSlotSaving(true);
+    setSlotError(null);
+    setSlotStatus(null);
+    try {
+      const rawFaction = slotDraft.factionId.trim();
+      const factionId = rawFaction === '' ? null : Number(rawFaction);
+      const updated = await apiRequest<WorldBlockPeopleSlot>('/api/people-pack/blocks/slot', {
+        method: 'PUT',
+        body: {
+          kind: slotDraft.kind,
+          block: slotDraft.block,
+          buildingIndex: slotDraft.buildingIndex,
+          slotId: slotDraft.slotId,
+          position: slotDraft.position,
+          spawner: slotDraft.bindingKind === 'spawner' ? slotDraft.spawner : null,
+          castId: slotDraft.bindingKind === 'cast' ? slotDraft.castId : null,
+          interaction: slotDraft.interaction,
+          deriveRegionalFaction: slotDraft.deriveRegionalFaction,
+          factionId,
+        },
+      });
+      const slotIdx = selectedPick.index;
+      setDetail(prev => {
+        if (!prev) return prev;
+        const nextSlots = prev.peopleSlots.map((s, i) => (i === slotIdx ? updated : s));
+        return { ...prev, peopleSlots: nextSlots };
+      });
+      const synced = makeSlotDraft(updated, slotDraft.pickKey);
+      setSlotDraft(synced);
+      setSlotBaseline(serializeSlotDraft(synced));
+      setSlotStatus(`Saved slot ${updated.slotId} to daggerfall.people.`);
+    } catch (err) {
+      setSlotError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSlotSaving(false);
+    }
+  }
+
+  function handleTransformCommit(pickKey: string, payload: TransformCommitPayload) {
+    if (pickKey.startsWith('variantAdd:') && variantDraft) {
+      const idx = Number(pickKey.slice('variantAdd:'.length));
+      if (Number.isInteger(idx) && idx >= 0 && idx < variantDraft.add.length) {
+        const cur = variantDraft.add[idx];
+        updateVariantAddedModel(idx, {
+          ...cur,
+          position: { x: payload.position[0], y: payload.position[1], z: payload.position[2] },
+          yawDegrees: payload.yawDegrees !== undefined ? payload.yawDegrees : cur.yawDegrees,
+        });
+      }
+      return;
+    }
+    if (pickKey.startsWith('peopleSlot:') && slotDraft && slotDraft.pickKey === pickKey) {
+      commitSlotChange({ ...slotDraft, position: [...payload.position] });
+    }
+  }
+
+  const editingSlot = Boolean(editMode && selectedPick?.kind === 'peopleSlot' && slotDraft);
+  const canUndo = editingSlot ? slotPast.length > 0 : variantPast.length > 0;
+  const canRedo = editingSlot ? slotFuture.length > 0 : variantFuture.length > 0;
+
+  function handleUndo() {
+    if (editingSlot && slotDraft && slotPast.length > 0) {
+      const prev = slotPast[slotPast.length - 1];
+      setSlotPast(p => p.slice(0, -1));
+      setSlotFuture(f => [{ ...slotDraft, position: [...slotDraft.position] }, ...f]);
+      setSlotDraft(prev);
+      return;
+    }
+    if (variantDraft && variantPast.length > 0) {
+      const prev = variantPast[variantPast.length - 1];
+      setVariantPast(p => p.slice(0, -1));
+      setVariantFuture(f => [cloneVariantDraft(variantDraft), ...f]);
+      setVariantDraft(prev);
+    }
+  }
+
+  function handleRedo() {
+    if (editingSlot && slotDraft && slotFuture.length > 0) {
+      const next = slotFuture[0];
+      setSlotFuture(f => f.slice(1));
+      setSlotPast(p => [...p, { ...slotDraft, position: [...slotDraft.position] }]);
+      setSlotDraft(next);
+      return;
+    }
+    if (variantDraft && variantFuture.length > 0) {
+      const next = variantFuture[0];
+      setVariantFuture(f => f.slice(1));
+      setVariantPast(p => [...p, cloneVariantDraft(variantDraft)]);
+      setVariantDraft(next);
+    }
+  }
+
+  const gizmoTargetKey =
+    editMode && selectedPick && (selectedPick.kind === 'variantAdd' || selectedPick.kind === 'peopleSlot')
+      ? selectedPick.pickKey
+      : null;
+
+  const viewportEditControls: ViewportEditControls = {
+    enabled: editMode,
+    mode: selectedPick?.kind === 'peopleSlot' ? 'translate' : transformMode,
+    snap,
+    gizmoTargetKey,
+    gizmoTargetLabel: selectedPick?.label ?? null,
+    canRotate: selectedPick?.kind === 'variantAdd',
+    canUndo,
+    canRedo,
+    onModeChange: next => setTransformMode(next),
+    onSnapChange: next => setSnap(next),
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onTransformCommit: handleTransformCommit,
+  };
+
+  function openVariantsTab() {
+    setTab('variants');
+    if (!variantDraft && variantsData?.variants.length) {
+      loadSavedVariant(variantsData.variants[0]);
+    }
+  }
 
   const title =
     block.buildingIndex !== null
@@ -385,6 +915,14 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
         intro={`${KIND_LABELS[block.kind]} · ${block.key}`}
         action={
           <div class="actions">
+            <button
+              type="button"
+              class={editMode ? 'primary' : undefined}
+              aria-pressed={editMode ? 'true' : 'false'}
+              onClick={() => setEditMode(prev => !prev)}
+            >
+              {editMode ? 'Done editing 3D' : 'Edit 3D'}
+            </button>
             {parentExteriorKey ? (
               <a class="button primary" href={worldBlockUrl(parentExteriorKey)}>
                 ← Exterior ({block.sourceKey})
@@ -406,6 +944,9 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
             detail={detail}
             selectedPickKey={selectedPick?.pickKey ?? null}
             focusRequestId={focusRequestId}
+            variantOverlay={variantOverlay}
+            editControls={viewportEditControls}
+            peopleSlotPositionOverrides={peopleSlotPositionOverrides}
             onSelect={pick => setSelectedPick(pick)}
           />
         </div>
@@ -424,15 +965,44 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
               </div>
 
               {selectedModel ? (
-                <div class="usage-pills" style={{ marginBottom: '6px' }}>
-                  <span class="chip">ARCH3D {selectedModel.modelId}</span>
-                  <span class="chip">rot {fmtQuat(selectedModel.rotation)}</span>
-                  {selectedModelAsset ? (
-                    <a class="art-data-chip" href={assetUrl(selectedModelAsset.id)}>
-                      <span>{selectedModelAsset.name}</span>
-                      <code>{selectedModelAsset.category}</code>
-                    </a>
+                <>
+                  <div class="usage-pills" style={{ marginBottom: '6px' }}>
+                    <span class="chip">ARCH3D {selectedModel.modelId}</span>
+                    <span class="chip">rot {fmtQuat(selectedModel.rotation)}</span>
+                    {selectedModelAsset ? (
+                      <a class="art-data-chip" href={assetUrl(selectedModelAsset.id)}>
+                        <span>{selectedModelAsset.name}</span>
+                        <code>{selectedModelAsset.category}</code>
+                      </a>
+                    ) : null}
+                  </div>
+                  {isExterior && selectedModel.buildingIndex === null && variantDraft ? (
+                    <div class="actions" style={{ marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        class={variantDraft.remove.includes(selectedModel.id) ? undefined : 'primary'}
+                        onClick={() => toggleHideMiscModel(selectedModel.id)}
+                      >
+                        {variantDraft.remove.includes(selectedModel.id)
+                          ? `Restore in '${variantDraft.variant}'`
+                          : `Hide in '${variantDraft.variant}'`}
+                      </button>
+                    </div>
                   ) : null}
+                </>
+              ) : null}
+
+              {selectedVariantAddIndex !== null && variantDraft?.add[selectedVariantAddIndex] ? (
+                <div class="actions" style={{ marginTop: '6px' }}>
+                  <button type="button" onClick={() => setTab('variants')}>
+                    Edit in Variants tab
+                  </button>
+                  <button type="button" onClick={() => duplicateVariantAddedModel(selectedVariantAddIndex)}>
+                    Duplicate
+                  </button>
+                  <button type="button" onClick={() => deleteVariantAddedModel(selectedVariantAddIndex)}>
+                    Remove
+                  </button>
                 </div>
               ) : null}
 
@@ -446,28 +1016,49 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
               ) : null}
 
               {selectedPeopleSlot ? (
-                <div class="usage-pills" style={{ marginTop: '6px' }}>
-                  {selectedPeopleSlot.castId ? (
-                    <a class="art-data-chip" href={castUrl(selectedPeopleSlot.castId)}>
-                      <span>{selectedPeopleSlot.castName ?? selectedPeopleSlot.castId}</span>
-                      <code>cast</code>
-                    </a>
-                  ) : null}
-                  {selectedPeopleSlot.spawner ? (
-                    <a class="art-data-chip" href={spawnerUrl(selectedPeopleSlot.spawner)}>
-                      <span>{selectedPeopleSlot.spawner}</span>
-                      <code>spawner</code>
-                    </a>
-                  ) : null}
-                  {selectedPeopleSlot.art?.npcId ? (
-                    <ArtDataChip
-                      href={subjectUrl(selectedPeopleSlot.art.npcId)}
-                      id={selectedPeopleSlot.art.npcId}
-                      label={selectedPeopleSlot.art.npcName ?? selectedPeopleSlot.art.npcId}
-                      thumbnail={selectedPeopleSlot.art.classic}
+                <>
+                  <div class="usage-pills" style={{ marginTop: '6px' }}>
+                    {selectedPeopleSlot.castId ? (
+                      <a class="art-data-chip" href={castUrl(selectedPeopleSlot.castId)}>
+                        <span>{selectedPeopleSlot.castName ?? selectedPeopleSlot.castId}</span>
+                        <code>cast</code>
+                      </a>
+                    ) : null}
+                    {selectedPeopleSlot.spawner ? (
+                      <a class="art-data-chip" href={spawnerUrl(selectedPeopleSlot.spawner)}>
+                        <span>{selectedPeopleSlot.spawner}</span>
+                        <code>spawner</code>
+                      </a>
+                    ) : null}
+                    {selectedPeopleSlot.art?.npcId ? (
+                      <ArtDataChip
+                        href={subjectUrl(selectedPeopleSlot.art.npcId)}
+                        id={selectedPeopleSlot.art.npcId}
+                        label={selectedPeopleSlot.art.npcName ?? selectedPeopleSlot.art.npcId}
+                        thumbnail={selectedPeopleSlot.art.classic}
+                      />
+                    ) : null}
+                  </div>
+                  {editMode && slotDraft ? (
+                    <PeopleSlotEditorForm
+                      draft={slotDraft}
+                      peopleOverview={peopleOverview}
+                      dirty={slotDirty}
+                      saving={slotSaving}
+                      errorMessage={slotError}
+                      statusMessage={slotStatus}
+                      onChange={next => commitSlotChange(next)}
+                      onSave={() => void saveSlotEdit()}
+                      onRevert={revertSlotDraft}
                     />
-                  ) : null}
-                </div>
+                  ) : (
+                    <div class="actions" style={{ marginTop: '6px' }}>
+                      <button type="button" onClick={() => setEditMode(true)}>
+                        Edit slot position & binding
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : null}
 
               {selectedStaticNpc ? (
@@ -550,6 +1141,17 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
             >
               Objects ({objectCount})
             </button>
+            {isExterior ? (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'variants' ? 'true' : 'false'}
+                class={tab === 'variants' ? 'active' : undefined}
+                onClick={openVariantsTab}
+              >
+                Variants ({variantsData?.variants.length ?? 0})
+              </button>
+            ) : null}
           </div>
 
           <div class="inspector-scroll">
@@ -1025,9 +1627,56 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
                 </ul>
               )
             ) : null}
+            {tab === 'variants' && isExterior ? (
+              <VariantEditorPanel
+                detail={detail}
+                variantsData={variantsData}
+                draft={variantDraft}
+                previewEnabled={variantPreviewEnabled}
+                showRemovedGhosts={showRemovedGhosts}
+                dirty={variantDirty}
+                saving={variantSaving}
+                baking={variantBaking}
+                statusMessage={variantStatus}
+                errorMessage={variantError}
+                selectedAddIndex={selectedVariantAddIndex}
+                onSelectSavedVariant={loadSavedVariant}
+                onCreateNewDraft={createNewVariantDraft}
+                onTogglePreview={setVariantPreviewEnabled}
+                onToggleGhosts={setShowRemovedGhosts}
+                onRestoreRemoved={id => toggleHideMiscModel(id)}
+                onOpenModelPicker={() => setModelPickerOpen(true)}
+                onSelectAddedModel={idx => {
+                  const item = variantDraft?.add[idx];
+                  if (!item) return;
+                  setEditMode(true);
+                  selectAndFocus({
+                    pickKey: `variantAdd:${idx}`,
+                    kind: 'variantAdd',
+                    id: `variantAdd:${idx}`,
+                    label: `Added ARCH3D ${item.model} (#${idx + 1})`,
+                    position: [item.position.x, item.position.y, item.position.z],
+                    modelId: item.model,
+                    index: idx,
+                  });
+                }}
+                onUpdateAddedModel={updateVariantAddedModel}
+                onDuplicateAddedModel={duplicateVariantAddedModel}
+                onDeleteAddedModel={deleteVariantAddedModel}
+                onSave={() => void saveVariantRecipe()}
+                onBake={() => void bakeVariantPack()}
+                onDeleteVariant={() => void deleteVariantRecipe()}
+              />
+            ) : null}
           </div>
         </aside>
       </div>
+
+      <ModelPickerModal
+        open={modelPickerOpen}
+        onClose={() => setModelPickerOpen(false)}
+        onPick={addModelToVariant}
+      />
     </>
   );
 }
