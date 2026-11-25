@@ -17,9 +17,9 @@ internal sealed record DaggerfallGuildMembership(int GuildGroup, int FactionId, 
 internal sealed record DaggerfallSocialAffiliationView(string Faction, string GuildGroup, int Rank, int Reputation, int Recognition, int FactionId = 0);
 
 /// <summary>The reusable reaction answer for a faction, NPC talk, a service, or a quest condition.</summary>
-internal readonly record struct DaggerfallFactionReaction(int FactionId, int FactionReputation, int PersonalReputation)
+internal readonly record struct DaggerfallFactionReaction(int FactionId, int FactionReputation, int PersonalReputation, int ActorDisposition = 0)
 {
-    internal int Value => FactionReputation + PersonalReputation;
+    internal int Value => checked(FactionReputation + PersonalReputation + ActorDisposition);
 }
 
 /// <summary>The shared guild eligibility answer; service and quest policy supply their own thresholds.</summary>
@@ -67,9 +67,13 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     // persistent regional value below.
     private readonly Dictionary<int, Stat> _regionalReputationModifiers = [];
     private Func<long, FactionComponent?>? _actorFactions;
+    private Func<long, int>? _actorDisposition;
 
     internal void BindActorFactions(Func<long, FactionComponent?> lookup) =>
         _actorFactions = lookup ?? throw new ArgumentNullException(nameof(lookup));
+
+    internal void BindActorDisposition(Func<long, int> lookup) =>
+        _actorDisposition = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
     internal DaggerfallSocialState(DaggerfallFactionsSet catalog)
     {
@@ -177,16 +181,22 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         return resolved?.PrimaryFactionId ?? resolved?.RegionalPeopleFactionId ?? npc.Appearance.FactionId;
     }
 
-    /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world.</summary>
+    /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world, combining faction standing and personal seller disposition.</summary>
     internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc, FactionComponent? factions = null)
     {
         ArgumentNullException.ThrowIfNull(npc);
         int factionId = ResolveNpcReactionFactionId(npc, factions);
+        int disposition = _actorDisposition?.Invoke(npc.DurableId) ?? 0;
         // Classic sprite placements also carry faction ids absent from FACTION.TXT. Preserve that source
-        // identity, but give people without a catalog faction a neutral social baseline.
+        // identity, give people without a catalog faction a neutral faction baseline, and still honor personal disposition.
         return !_catalog.Factions.ContainsKey(factionId)
-            ? new(factionId, 0, 0) : ReactionForFaction(factionId);
+            ? new(factionId, 0, 0, disposition)
+            : ReactionForFaction(factionId) with { ActorDisposition = disposition };
     }
+
+    /// <summary>Bounded trade reaction in [-100, 100] combining the seller's personal standing and faction standing.</summary>
+    internal int TradeReactionForNpc(DaggerfallNpc npc, FactionComponent? factions = null) =>
+        Math.Clamp(ReactionForNpc(npc, factions).Value, MinimumReputation, MaximumReputation);
 
     /// <summary>Changes player standing with a social group and clamps it to the current social contract.</summary>
     internal int ChangePersonalReputation(int socialGroup, int amount)

@@ -401,6 +401,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 EscortPortrait = liveOverlay.EscortPortraitMedia ?? social.EscortPortrait,
                 EscortOrder = liveOverlay.EscortOrder > 0 ? liveOverlay.EscortOrder : social.EscortOrder,
                 StagedPartyRole = liveStagedRole,
+                FamilyId = !string.IsNullOrWhiteSpace(liveOverlay.FamilyId) ? liveOverlay.FamilyId : social.FamilyId,
             };
         }
         return social;
@@ -504,10 +505,13 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             int escortOrder = overlay is not null && stagedPartyRole is not null && overlay.EscortOrder > 0
                 ? overlay.EscortOrder
                 : priorLedger?.Social?.EscortOrder ?? 0;
+            string? familyId = !string.IsNullOrWhiteSpace(overlay?.FamilyId)
+                ? overlay.FamilyId
+                : priorLedger?.Social?.FamilyId;
             bool hasPriorSocialDelta = priorLedger?.Social is { } ps
-                && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 } || ps.EscortPortrait is not null || ps.StagedPartyRole is not null);
+                && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 } || ps.EscortPortrait is not null || ps.StagedPartyRole is not null || ps.FamilyId is not null);
             bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || promotedArchetype is not null
-                || stagedPartyRole is not null || nameChanged || presenceChanged || hasPriorSocialDelta
+                || stagedPartyRole is not null || familyId is not null || nameChanged || presenceChanged || hasPriorSocialDelta
                 || relocated || referencedNpcs.Contains(actor.DurableId);
             if (mustKeepSocial)
             {
@@ -520,6 +524,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     EscortPortrait = escortPortrait,
                     EscortOrder = escortOrder,
                     StagedPartyRole = stagedPartyRole,
+                    FamilyId = familyId,
                 };
             }
         }
@@ -742,6 +747,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 ReferralTags = overlay is { ReferralTags.Count: > 0 } ? [.. overlay.ReferralTags] : priorLedger?.Social?.ReferralTags,
                 EscortPortrait = overlay?.EscortPortraitMedia ?? priorLedger?.Social?.EscortPortrait,
                 EscortOrder = overlay is { EscortOrder: > 0 } ? overlay.EscortOrder : priorLedger?.Social?.EscortOrder ?? 0,
+                FamilyId = !string.IsNullOrWhiteSpace(overlay?.FamilyId) ? overlay.FamilyId : priorLedger?.Social?.FamilyId,
             };
         }
         return sparse with { Combat = combat, Social = social };
@@ -982,6 +988,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             if (restoredDynamicSocial.TryGetValue(spawned.EntityId, out ActorSocialDiff? dynSocial)
                 && current.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? dynOverlay))
             {
+                dynOverlay.FamilyId = dynSocial.FamilyId;
                 dynOverlay.Met = dynSocial.Met;
                 dynOverlay.IsMuted = dynSocial.Muted;
                 dynOverlay.EscortPortraitMedia = dynSocial.EscortPortrait;

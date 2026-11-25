@@ -154,6 +154,7 @@ internal sealed class ActorOverlayComponent
     private readonly List<string> _referralTags = [];
 
     internal string? ArchetypeId { get; set; }
+    internal string? FamilyId { get; set; }
     internal bool Met { get; set; }
     internal bool IsMuted { get; set; }
     internal bool IsQuestor { get; set; }

@@ -211,7 +211,8 @@ internal sealed record ActorSocialDiff(
     string? EscortPortrait = null,
     int EscortOrder = 0,
     int Presence = 0,
-    ActorPartyRole? StagedPartyRole = null)
+    ActorPartyRole? StagedPartyRole = null,
+    string? FamilyId = null)
 {
     internal void Validate()
     {
@@ -221,6 +222,7 @@ internal sealed record ActorSocialDiff(
             throw new ArgumentOutOfRangeException(nameof(StagedPartyRole), "Saved social diff names an invalid staged party role.");
         ArgumentNullException.ThrowIfNull(Services);
         if (DisplayNameOverride is not null) ArgumentException.ThrowIfNullOrWhiteSpace(DisplayNameOverride);
+        if (FamilyId is not null) ArgumentException.ThrowIfNullOrWhiteSpace(FamilyId);
     }
 
     /// <summary>Builds a canonical <see cref="ActorSocialDiff"/> from an NPC snapshot, preserving prior social deltas.</summary>
@@ -249,7 +251,8 @@ internal sealed record ActorSocialDiff(
             EscortPortrait: prior?.EscortPortrait,
             EscortOrder: prior?.EscortOrder ?? 0,
             Presence: (int)npc.Presence,
-            StagedPartyRole: prior?.StagedPartyRole);
+            StagedPartyRole: prior?.StagedPartyRole,
+            FamilyId: prior?.FamilyId);
 }
 
 /// <summary>Where an actor currently resides in the world.</summary>

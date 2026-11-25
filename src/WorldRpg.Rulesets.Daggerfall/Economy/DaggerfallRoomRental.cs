@@ -20,7 +20,8 @@ internal sealed class DaggerfallRoomRental(
     Func<DaggerfallCalendar> calendar,
     Func<DaggerfallWorldProfileKey> activeProfile,
     Func<DaggerfallInteriorBuilding?> building,
-    Func<int, DaggerfallInteriorBuilding, bool>? isLegallyDenied = null)
+    Func<int, DaggerfallInteriorBuilding, bool>? isLegallyDenied = null,
+    Func<int, DaggerfallInteriorBuilding, int>? tradeReaction = null)
 {
     private int _days = 1;
 
@@ -41,9 +42,10 @@ internal sealed class DaggerfallRoomRental(
                 return DaggerfallConcreteGuildPolicy.EvaluateService(guild, DaggerfallConcreteGuildService.FreeTavernRooms,
                     new DaggerfallGuildServiceContext(member.IsMember, member.Rank, CurrentRegion: profile.Site.Region)).Eligible;
             });
+            int reaction = tradeReaction?.Invoke(profile.Site.Region, placed) ?? 0;
             ulong price = DaggerfallLodgingState.Quote(_days, now, source.Quality,
                 Math.Clamp(player.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100),
-                Math.Clamp(player.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), free);
+                Math.Clamp(player.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), free, reaction);
             long seconds = now.ToAbsoluteSeconds();
             long remaining = lodging.RemainingSeconds(profile.Site, id, seconds);
             return new(DaggerfallLodgingState.Key(profile.Site, id), site.RequireBuilding(profile.Site, id).Name,

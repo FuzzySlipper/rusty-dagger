@@ -218,6 +218,7 @@ internal sealed class DaggerfallMerchantService
     private readonly DaggerfallSkillUseReactions _skillUses;
     private readonly DaggerfallCrimeState _crime;
     private readonly Func<DaggerfallCrimeWitnessEvidence> _crimeWitnesses;
+    private readonly Func<string, DaggerfallCrimeKind, DaggerfallCrimeVictimContext?, DaggerfallCrimeWitnessEvidence, DaggerfallCrimeWitnessEvidence>? _evaluateWitnesses;
     private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<DaggerfallNpcSite?> _currentSite;
     private readonly Dictionary<string, Binding> _bindings = new(StringComparer.Ordinal);
@@ -263,7 +264,8 @@ internal sealed class DaggerfallMerchantService
         Func<DaggerfallCalendar> calendar,
         Func<DaggerfallNpcSite?> currentSite,
         IEnumerable<DaggerfallMerchantSave>? restored = null,
-        Func<DaggerfallCrimeWitnessEvidence>? crimeWitnesses = null)
+        Func<DaggerfallCrimeWitnessEvidence>? crimeWitnesses = null,
+        Func<string, DaggerfallCrimeKind, DaggerfallCrimeVictimContext?, DaggerfallCrimeWitnessEvidence, DaggerfallCrimeWitnessEvidence>? evaluateWitnesses = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _random = random ?? throw new ArgumentNullException(nameof(random));
@@ -287,6 +289,7 @@ internal sealed class DaggerfallMerchantService
         _crime = crime ?? throw new ArgumentNullException(nameof(crime));
         _exits = exits ?? throw new ArgumentNullException(nameof(exits));
         _crimeWitnesses = crimeWitnesses ?? (() => DaggerfallCrimeWitnessEvidence.NotQueried);
+        _evaluateWitnesses = evaluateWitnesses;
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         _currentSite = currentSite ?? throw new ArgumentNullException(nameof(currentSite));
         foreach (DaggerfallMerchantSave save in restored ?? []) MaterializeSaved(save);
@@ -497,6 +500,17 @@ internal sealed class DaggerfallMerchantService
         _ = _skillUses.Record(new("pickpocket", DaggerfallSkillUseReason.ShopliftingAttempt, DaggerfallSkillUseOutcome.Attempted));
         bool caught = roll < chance;
         DaggerfallCrimeWitnessEvidence witnesses = _crimeWitnesses();
+        DaggerfallNpc? shopkeeper = _npcs.TryGet(binding.Context.Provider.NpcId, out DaggerfallNpc? foundShopkeeper) ? foundShopkeeper : null;
+        DaggerfallCrimeVictimContext victim = new(
+            ActorId: binding.Context.Provider.NpcId,
+            FactionId: shopkeeper is { Appearance.FactionId: > 0 } ? shopkeeper.Appearance.FactionId : null,
+            BuildingKey: $"{binding.Context.BlockX}/{binding.Context.BlockY}/{binding.Context.BuildingIndex}",
+            DisplayName: shopkeeper?.DisplayName,
+            Region: binding.Context.Provider.Site.Region,
+            Location: binding.Context.Provider.Site.Location);
+        DaggerfallCrimeWitnessEvidence reportingWitnesses = _evaluateWitnesses is not null
+            ? _evaluateWitnesses(operation, DaggerfallCrimeKind.Theft, victim, witnesses)
+            : witnesses;
         if (caught)
         {
             _crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Shoplifting, DaggerfallActorIdentity.PlayerEntityId,
@@ -504,7 +518,7 @@ internal sealed class DaggerfallMerchantService
                 DaggerfallCrimeAttemptOutcome.Failed, witnesses));
             _crime.RecordIncident(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Attempted,
                 DaggerfallActorIdentity.PlayerEntityId, binding.MerchantContainerId, binding.Context.Provider.Site.Region,
-                minute, DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
+                minute, DaggerfallCrimeTargetKind.Other, reportingWitnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
             return Refused("Caught");
         }
         InventoryContainerSelection transfer = PrepareDestination(selection, merchantOwner, DaggerfallItemOwner.Player,
@@ -526,7 +540,7 @@ internal sealed class DaggerfallMerchantService
             DaggerfallCrimeAttemptOutcome.PropertyTransferred, witnesses));
         _ = _crime.RecordIncident(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed,
             DaggerfallActorIdentity.PlayerEntityId, binding.MerchantContainerId, binding.Context.Provider.Site.Region, minute,
-            DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.Thieving));
+            DaggerfallCrimeTargetKind.Other, reportingWitnesses, DaggerfallCrimeGuildCredit.Thieving));
         return new(true, "Stolen");
     }
 
@@ -682,10 +696,10 @@ internal sealed class DaggerfallMerchantService
     private DaggerfallTradeQuote? Quote(Binding binding, DaggerfallTradeSide side, DaggerfallTradeLine line)
     {
         DaggerfallNpc npc = _npcs.Require(binding.Context.Provider.NpcId);
-        DaggerfallFactionReaction reaction = _social.ReactionForNpc(npc);
+        int reaction = _social.TradeReactionForNpc(npc);
         DaggerfallTradeQuoteResult quote = _tradeQuotes.Quote(side, [line], binding.Context.Quality,
             Math.Clamp(_playerStats.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100),
-            Math.Clamp(_playerStats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), reaction.Value,
+            Math.Clamp(_playerStats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), reaction,
             binding.Context.Provider.Site.Region);
         return quote.Quote;
     }

@@ -84,11 +84,12 @@ internal sealed class DaggerfallLodgingState
             throw new ArgumentOutOfRangeException(nameof(days));
         return 7 * (dayOfYear <= 46 && dayOfYear + days > 46 ? days - 1 : days);
     }
-    internal static ulong Quote(int days, DaggerfallCalendar calendar, int quality, int mercantile, int personality, bool free)
+    internal static ulong Quote(int days, DaggerfallCalendar calendar, int quality, int mercantile, int personality, bool free, int reaction = 0)
     {
         int cost = CalculateRoomCost(days, calendar.DayOfYear);
+        int boundedReaction = Math.Clamp(reaction, DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
         return free ? 0 : checked((ulong)DaggerfallRegionalEconomyPolicy.CalculateTradePrice(
-            cost, quality, false, mercantile, personality, 0));
+            cost, quality, false, mercantile, personality, boundedReaction));
     }
 }
 

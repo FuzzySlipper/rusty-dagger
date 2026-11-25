@@ -147,6 +147,8 @@ internal sealed partial class DaggerfallSession
             if (saved?.Social is { } restoredSocial) social.Restore(restoredSocial);
             social.BindActorFactions(id => actors.TryGet(id, out ActorState? actor)
                 && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null);
+            social.BindActorDisposition(id => assembled.ActorLedger.TryGet(id, out ActorLedgerEntry? entry)
+                && entry?.Social is { } s ? s.DispositionDelta : 0);
             DaggerfallQuestInstances quests = new(definitions, _random, composition.QuestAdmission, composition.DisabledQuestSelection);
             DaggerfallQuestTrainingState questTraining = new(saved?.QuestTraining);
             DaggerfallItemInstances itemInstances = assembled.ItemInstances;
@@ -580,7 +582,8 @@ internal sealed partial class DaggerfallSession
                 inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
                 regionalPrices, _itemCondition, skillUses, crime, questItemExits, () => _time.Calendar,
                 () => _dialogue?.CurrentNpc()?.Site,
-                saved?.Merchants, () => Crimes.QueryWitnesses());
+                saved?.Merchants, () => Crimes.QueryWitnesses(),
+                (op, kind, victim, raw) => Crimes.EvaluateWitnesses(op, kind, victim, raw).ReportingEvidence);
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport, questItemExits);
@@ -653,7 +656,19 @@ internal sealed partial class DaggerfallSession
                 calendar: () => _time.Calendar,
                 activeProfile: () => _activeProfileKey,
                 building: CurrentInteriorBuilding,
-                isLegallyDenied: (region, building) => LegalServices.IsRoomRentalDenied(region, building, _dialogue?.CurrentNpc()));
+                isLegallyDenied: (region, building) => LegalServices.IsRoomRentalDenied(region, building, _dialogue?.CurrentNpc()),
+                tradeReaction: (region, building) =>
+                {
+                    if (_dialogue?.CurrentNpc() is { } keeper)
+                        return State.Social.TradeReactionForNpc(keeper);
+                    if (building.FactionId > 0 && definitions.Factions.Factions.ContainsKey(building.FactionId))
+                        return Math.Clamp(State.Social.ReactionForFaction(building.FactionId).Value,
+                            DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
+                    if (DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, region) is { } people)
+                        return Math.Clamp(State.Social.ReactionForFaction(people.Id).Value,
+                            DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
+                    return 0;
+                });
             Holdings = new DaggerfallPropertyHoldings(State.Property, propertyStorage, State.Bank, State.Currency, State.Transport,
                 State.KnightlyClaimActions, _site, _random, State.PlayerControl,
                 calendar: () => _time.Calendar,
@@ -684,7 +699,8 @@ internal sealed partial class DaggerfallSession
                 State.Containers, State.Wagon, State.ItemInstances, _random, () => _time.Calendar);
             SpellSales = new DaggerfallSpellSales(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
                 State.Character, State.Inventory, State.Actors.Player.Stats,
-                key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar);
+                key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar,
+                npc => State.Social.TradeReactionForNpc(npc));
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
             OfficeHolders = new DaggerfallOfficeHolders(definitions, _site, State.ActorLedger, State.Npcs);
@@ -889,7 +905,8 @@ internal sealed partial class DaggerfallSession
                 {
                     if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
                     _enemyBehavior.MakeHostile(target);
-                });
+                },
+                actorLedger: State.ActorLedger);
             PropertyLoot = new DaggerfallPropertyLoot(_groundContainers, definitions, _random, _uniqueItems, Crimes, State.Crime,
                 State.ItemInstances, State.Actors, State.Progression, State.Character, State.SkillUses, State.PlayerControl, _site,
                 calendar: () => _time.Calendar,

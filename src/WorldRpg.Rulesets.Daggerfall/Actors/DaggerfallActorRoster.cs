@@ -1139,6 +1139,7 @@ internal sealed class DaggerfallActorRoster
                 _npcs.SetDisplayName(npc.DurableId, social.DisplayNameOverride);
             if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
             {
+                overlay.FamilyId = social.FamilyId;
                 overlay.Met = social.Met;
                 overlay.IsMuted = social.Muted;
                 overlay.EscortPortraitMedia = social.EscortPortrait;
@@ -1324,6 +1325,7 @@ internal sealed class DaggerfallActorRoster
                 && retainedLedger?.Social is { } retainedSocial
                 && actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? retainedOverlay))
             {
+                retainedOverlay.FamilyId = retainedSocial.FamilyId;
                 retainedOverlay.Met = retainedSocial.Met;
                 retainedOverlay.IsMuted = retainedSocial.Muted;
                 retainedOverlay.EscortPortraitMedia = retainedSocial.EscortPortrait;

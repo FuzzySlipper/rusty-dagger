@@ -324,6 +324,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             || s.Muted
             || s.EscortPortrait is not null
             || s.StagedPartyRole is not null
+            || s.FamilyId is not null
             || s.Presence != (int)DaggerfallNpcPresence.Active);
 
     /// <summary>

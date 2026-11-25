@@ -35,8 +35,12 @@ internal sealed class DaggerfallCrimes(
     Func<SpatialSession> spatial,
     Func<DaggerfallCalendar> calendar,
     Action<InventoryAtomicGrant> grantGold,
-    Action<long> provoke)
+    Action<long> provoke,
+    DaggerfallActorLedger? actorLedger = null)
 {
+    /// <summary>Per-witness reporting decisions from the most recent evaluated crime (transient runtime readout).</summary>
+    internal IReadOnlyList<DaggerfallWitnessDecision> LastWitnessDecisions { get; private set; } = [];
+
     /// <summary>Whether this actor is the city watch.</summary>
     internal bool IsCityWatch(long actor) => actorDefinitions.GetValueOrDefault(actor)?.MobileId == 146;
 
@@ -48,30 +52,51 @@ internal sealed class DaggerfallCrimes(
     internal void Report(DaggerfallCrimeIncidentSave incident) => crime.RecordIncident(incident);
 
     /// <summary>
+    /// Evaluates witness discretion for <paramref name="rawWitnesses"/>: guards, victims, family members, and fellow
+    /// guild members always report; unconnected bystanders roll against the player's social skills and standing.
+    /// </summary>
+    internal DaggerfallWitnessDiscretionResult EvaluateWitnesses(
+        string operation,
+        DaggerfallCrimeKind kind,
+        DaggerfallCrimeVictimContext? victim,
+        DaggerfallCrimeWitnessEvidence rawWitnesses)
+    {
+        DaggerfallWitnessDiscretionResult result = DaggerfallWitnessDiscretion.Evaluate(
+            operation, kind, victim, rawWitnesses, definitions, actors, npcs, actorLedger, IsCityWatch, Roll);
+        LastWitnessDecisions = result.Decisions;
+        return result;
+    }
+
+    /// <summary>
     /// The player has just entered a building by force or while its entry rule held it shut: the accepted entry is an
-    /// attempt and a completed break-in (forced) or trespass, reported when a bash was noticed, one time in ten.
+    /// attempt and a completed break-in (forced) or trespass, reported when a bash was noticed (one time in ten) or
+    /// when any witnessing observer chooses to report it under witness discretion.
     /// </summary>
     /// <param name="witnesses">Who saw it, queried before the player went in.</param>
-    internal void ReportEntry(long owner, int region, DaggerfallActivationMode? forceMode, DaggerfallCrimeWitnessEvidence witnesses)
+    internal void ReportEntry(long owner, int region, DaggerfallActivationMode? forceMode, DaggerfallCrimeWitnessEvidence witnesses,
+        DaggerfallCrimeVictimContext? victim = null)
     {
         string operation = $"entry:{crime.Attempts.Count + 1}";
         long minute = calendar().MinuteNumber;
+        DaggerfallCrimeKind kind = forceMode is not null ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing;
         crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
             owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
-        Report(new(operation, forceMode is not null ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing,
+        DaggerfallWitnessDiscretionResult discretion = EvaluateWitnesses(operation, kind, victim, witnesses);
+        Report(new(operation, kind,
             DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
-            DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None,
+            DaggerfallCrimeTargetKind.Other, discretion.ReportingEvidence, DaggerfallCrimeGuildCredit.None,
             Reported: forceMode == DaggerfallActivationMode.Bash && Roll(operation, "noticed", 0, 99) < 10));
     }
 
     /// <summary>
     /// What a pick or a bash on an exterior door's lock means to the law: an accepted pick counts toward the Thieves
-    /// Guild's requirement; an unsuccessful attempt is recorded, and a failed bash is noticed one time in ten. An
-    /// accepted attempt is no crime here: the building entry that follows reports the break-in.
+    /// Guild's requirement; any witnessing observer evaluates witness discretion (unconnected neighbours may shrug off
+    /// lockpicking, while guards, family, and fellow guild members always report); a failed bash also keeps its 10%
+    /// noise alarm roll.
     /// </summary>
     /// <param name="door">The door's durable identity, which names the building's owner.</param>
     internal void ObserveLock(DaggerfallLockInteractionDecision decision, DaggerfallDoorOperationResult result,
-        DurableIdentityReference door, int region)
+        DurableIdentityReference door, int region, DaggerfallCrimeVictimContext? victim = null)
     {
         if (decision.Surface != DaggerfallLockInteractionSurface.Exterior || !decision.ConsumedAttempt) return;
         string operation = $"lock:{crime.OperationCount + 1}";
@@ -80,15 +105,36 @@ internal sealed class DaggerfallCrimes(
         bool accepted = decision.Applied && result == DaggerfallDoorOperationResult.Started;
         if (accepted && decision.Kind == DaggerfallLockInteractionKind.Lockpick)
             crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
-        // An unsuccessful pick is discrete in the donor; only a failed bash has a 10% alarm roll.
-        if (accepted) return;
-        var witnesses = QueryWitnesses();
+
+        var rawWitnesses = QueryWitnesses();
+        if (accepted)
+        {
+            if (decision.Kind == DaggerfallLockInteractionKind.Lockpick
+                && rawWitnesses.Query == DaggerfallCrimeWitnessQuery.CompletedWithWitnesses)
+            {
+                DaggerfallWitnessDiscretionResult pickDiscretion = EvaluateWitnesses(
+                    operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, victim, rawWitnesses);
+                if (pickDiscretion.ReportingEvidence.Query == DaggerfallCrimeWitnessQuery.CompletedWithWitnesses)
+                {
+                    crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
+                        owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, rawWitnesses));
+                    Report(new(operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, DaggerfallCrimeStage.Attempted,
+                        DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
+                        DaggerfallCrimeTargetKind.Other, pickDiscretion.ReportingEvidence, DaggerfallCrimeGuildCredit.None, Reported: false));
+                }
+            }
+            return;
+        }
+
         crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
-            owner, region, minute, DaggerfallCrimeAttemptOutcome.Failed, witnesses));
-        if (decision.Kind == DaggerfallLockInteractionKind.Bash && Roll(operation, "noticed", 0, 99) < 10)
+            owner, region, minute, DaggerfallCrimeAttemptOutcome.Failed, rawWitnesses));
+        DaggerfallWitnessDiscretionResult discretion = EvaluateWitnesses(
+            operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, victim, rawWitnesses);
+        bool bashAlarm = decision.Kind == DaggerfallLockInteractionKind.Bash && Roll(operation, "noticed", 0, 99) < 10;
+        if (bashAlarm || discretion.ReportingEvidence.Query == DaggerfallCrimeWitnessQuery.CompletedWithWitnesses)
             Report(new(operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, DaggerfallCrimeStage.Attempted,
                 DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
-                DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
+                DaggerfallCrimeTargetKind.Other, discretion.ReportingEvidence, DaggerfallCrimeGuildCredit.None, Reported: bashAlarm));
     }
 
     internal DaggerfallActivationOutcome Pickpocket(long targetId)
@@ -139,8 +185,19 @@ internal sealed class DaggerfallCrimes(
             targetId, region.Value, minute, outcome, witnesses));
         if (gold > 0) crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
         if (!success && npc is not null)
+        {
+            DaggerfallCrimeVictimContext victim = new(
+                ActorId: targetId,
+                FactionId: npc.Appearance.FactionId > 0 ? npc.Appearance.FactionId : null,
+                BuildingKey: npc.Site.Building,
+                DisplayName: npc.DisplayName,
+                Region: npc.Site.Region,
+                Location: npc.Site.Location);
+            DaggerfallWitnessDiscretionResult discretion = EvaluateWitnesses(operation, DaggerfallCrimeKind.Pickpocketing, victim, witnesses);
             Report(new(operation, DaggerfallCrimeKind.Pickpocketing, DaggerfallCrimeStage.Attempted,
-                DaggerfallActorIdentity.PlayerEntityId, targetId, region.Value, minute, DaggerfallCrimeTargetKind.Civilian, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
+                DaggerfallActorIdentity.PlayerEntityId, targetId, region.Value, minute, DaggerfallCrimeTargetKind.Civilian,
+                discretion.ReportingEvidence, DaggerfallCrimeGuildCredit.None, Reported: true));
+        }
         else if (!success) provoke(targetId);
         return new(true, transferRefusal ?? (!success ? "Your pickpocket attempt failed." : gold > 0 ? $"You pinched {gold} gold pieces." : "You found nothing valuable."));
     }
@@ -230,7 +287,15 @@ internal sealed class DaggerfallCrimes(
         long minute = calendar().MinuteNumber;
         crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Assault, attacker,
             target, region.Value, minute, DaggerfallCrimeAttemptOutcome.DamageAccepted, witnesses));
+        DaggerfallCrimeVictimContext victim = new(
+            ActorId: target,
+            FactionId: npc is { Appearance.FactionId: > 0 } ? npc.Appearance.FactionId : null,
+            BuildingKey: npc?.Site.Building,
+            DisplayName: npc?.DisplayName,
+            Region: npc?.Site.Region ?? region.Value,
+            Location: npc?.Site.Location ?? site.ActiveSite?.Name);
+        DaggerfallWitnessDiscretionResult discretion = EvaluateWitnesses(operation, kind, victim, witnesses);
         Report(new(operation, kind, DaggerfallCrimeStage.Completed, attacker, target,
-            region.Value, minute, targetKind, witnesses, credit));
+            region.Value, minute, targetKind, discretion.ReportingEvidence, credit));
     }
 }

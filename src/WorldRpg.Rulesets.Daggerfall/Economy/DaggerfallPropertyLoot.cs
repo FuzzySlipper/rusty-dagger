@@ -100,9 +100,16 @@ internal sealed class DaggerfallPropertyLoot(
         long minute = calendar().MinuteNumber;
         crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Theft, DaggerfallActorIdentity.PlayerEntityId,
             source.Id, profile.Site.Region, minute, DaggerfallCrimeAttemptOutcome.PropertyTransferred, witnesses));
+        DaggerfallCrimeVictimContext victim = new(
+            FactionId: interior.FactionId > 0 ? interior.FactionId : null,
+            BuildingKey: $"{interior.BlockX}/{interior.BlockY}/{interior.Building.Index}",
+            Region: profile.Site.Region,
+            Location: site.TryFind(profile.Site, out DaggerfallSiteRecord? loc) ? loc.Name : null);
+        DaggerfallCrimeWitnessEvidence reportingWitnesses = crimes.EvaluateWitnesses(
+            operation, DaggerfallCrimeKind.Theft, victim, witnesses).ReportingEvidence;
         crimes.Report(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed,
             DaggerfallActorIdentity.PlayerEntityId, source.Id, profile.Site.Region, minute,
-            DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.Thieving, Reported: caught));
+            DaggerfallCrimeTargetKind.Other, reportingWitnesses, DaggerfallCrimeGuildCredit.Thieving, Reported: caught));
         if (!caught) skillUses.Record(new("pickpocket", DaggerfallSkillUseReason.ShopliftingAttempt, DaggerfallSkillUseOutcome.Attempted));
     }
 
