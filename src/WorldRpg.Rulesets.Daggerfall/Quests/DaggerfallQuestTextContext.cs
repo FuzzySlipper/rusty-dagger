@@ -78,9 +78,11 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
         DaggerfallOfficeHolder? factionLeader = instance.FactionId != 0
             ? _officeHolders.ResolveOffice(instance.FactionId, sites.Region) ?? regionalRuler
             : regionalRuler;
-        string? ruler = regionalRuler is { DisplayName.Length: > 0 } ? regionalRuler.DisplayName : null;
-        string? regentTitleKey = regionalRuler?.Title ?? DaggerfallOfficeHolders.DefaultTitle(province);
-        string? leaderTitleKey = factionLeader?.Title;
+        bool regionVacant = regionalRuler is { HasLivingHolder: false };
+        string? ruler = regionalRuler is { HasLivingHolder: true } ? regionalRuler.DisplayName : null;
+        string? regentTitleKey = regionVacant ? null : (regionalRuler?.Title ?? DaggerfallOfficeHolders.DefaultTitle(province));
+        string? leaderName = factionLeader is { HasLivingHolder: true } ? factionLeader.DisplayName : null;
+        string? leaderTitleKey = factionLeader is { HasLivingHolder: true } ? factionLeader.Title : null;
         return new(text with
         {
             Player = text.Player with { GuildTitle = instance.FactionId == 0 ? text.Player.Name : guildTitle(instance.FactionId) ?? text.Player.Name },
@@ -88,10 +90,11 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
             {
                 Oath = Oath(instance), God = God(instance), RegionInContext = text.Faction.RegionInContext ?? text.Location.Region,
                 RegentTitle = regentTitleKey is null ? null : FormatOfficeTitle(regentTitleKey),
-                RegentName = ruler ?? Name(instance, "regent", Draw(instance, "regent/gender", 2) == 1),
-                // The region's lord is the current office holder, else a name of the ruler's gender (GetLordNameForFaction).
-                CurrentRegionLeader = ruler ?? (province is null ? null : Name(instance, "lord", province.Ruler % 2 == 0)),
-                FactionLeaderOne = factionLeader is { DisplayName.Length: > 0 } ? factionLeader.DisplayName : text.Faction.FactionLeaderOne,
+                RegentName = regionVacant ? null : (ruler ?? Name(instance, "regent", Draw(instance, "regent/gender", 2) == 1)),
+                // The region's lord is the current living office holder, else a name of the ruler's gender for provinces
+                // without published holders; a vacant throne never announces a dead or fabricated ruler.
+                CurrentRegionLeader = regionVacant ? null : (ruler ?? (province is null ? null : Name(instance, "lord", province.Ruler % 2 == 0))),
+                FactionLeaderOne = leaderName ?? text.Faction.FactionLeaderOne,
                 FactionLeaderTitle = leaderTitleKey is { Length: > 0 } ? FormatOfficeTitle(leaderTitleKey) : text.Faction.FactionLeaderTitle,
                 OldFactionLeader = factionLeader?.PreviousHolderName ?? regionalRuler?.PreviousHolderName ?? text.Faction.OldFactionLeader,
                 OldLeaderFate = factionLeader?.PreviousHolderFate ?? regionalRuler?.PreviousHolderFate ?? text.Faction.OldLeaderFate,

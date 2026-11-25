@@ -43,7 +43,32 @@ internal sealed record DaggerfallOfficeHolder(
     DaggerfallCastHomeLocation? Home,
     bool IsAlive,
     string? PreviousHolderName = null,
-    string? PreviousHolderFate = null);
+    string? PreviousHolderFate = null)
+{
+    /// <summary>True only when the office is held by a living person (never a dead or vacant placeholder).</summary>
+    internal bool HasLivingHolder => IsAlive && !string.IsNullOrWhiteSpace(DisplayName);
+
+    internal static DaggerfallOfficeHolder Vacant(
+        int officeFactionId,
+        string? defaultTitle,
+        string? previousHolderName,
+        string? previousHolderFate) =>
+        new(
+            OfficeFactionId: officeFactionId,
+            HolderFactionId: null,
+            ActorId: null,
+            CastId: null,
+            DisplayName: string.Empty,
+            Title: defaultTitle,
+            Gender: null,
+            Race: null,
+            BillboardArchive: null,
+            BillboardRecord: null,
+            Home: null,
+            IsAlive: false,
+            PreviousHolderName: previousHolderName,
+            PreviousHolderFate: previousHolderFate);
+}
 
 /// <summary>
 /// Resolves canonical home locations for unique cast individuals (<c>cast/individuals.json</c>) against the site catalog.
@@ -211,14 +236,33 @@ internal sealed class DaggerfallOfficeHolders(
 
         definitions.Factions.Factions.TryGetValue(officeFactionId, out DaggerfallFactionDefinition? officeFaction);
         string? defaultTitle = DefaultTitle(officeFaction);
+        string? deadPredecessor = null;
+        string? deadPredecessorFate = null;
 
         if (_overrideLookup?.Invoke(officeFactionId) is { } over)
         {
-            return ResolveFromOverride(officeFactionId, over, defaultTitle, preferredRegion ?? officeFaction?.Region);
+            DaggerfallOfficeHolder resolvedOverride = ResolveFromOverride(officeFactionId, over, defaultTitle, preferredRegion ?? officeFaction?.Region);
+            if (resolvedOverride.HasLivingHolder)
+                return resolvedOverride;
+
+            // An overridden holder who has died cannot remain the current holder; record them as
+            // predecessor and fall through to resolve a living successor (or represent a vacant office).
+            if (!string.IsNullOrWhiteSpace(resolvedOverride.DisplayName))
+            {
+                deadPredecessor = resolvedOverride.DisplayName;
+                deadPredecessorFate = "was slain";
+            }
+            else
+            {
+                deadPredecessor = resolvedOverride.PreviousHolderName;
+                deadPredecessorFate = resolvedOverride.PreviousHolderFate;
+            }
         }
 
         if (officeFaction is null)
-            return null;
+            return deadPredecessor is not null
+                ? DaggerfallOfficeHolder.Vacant(officeFactionId, defaultTitle, deadPredecessor, deadPredecessorFate)
+                : null;
 
         List<DaggerfallFactionDefinition> individualChildren = [];
         foreach (int childId in officeFaction.Children)
@@ -231,23 +275,26 @@ internal sealed class DaggerfallOfficeHolders(
         }
 
         if (individualChildren.Count == 0)
-            return null;
+            return deadPredecessor is not null
+                ? DaggerfallOfficeHolder.Vacant(officeFactionId, defaultTitle, deadPredecessor, deadPredecessorFate)
+                : null;
 
-        string? deadPredecessor = null;
-        DaggerfallOfficeHolder? lastDead = null;
         int? regionHint = preferredRegion ?? (officeFaction.Region >= 0 ? officeFaction.Region : null);
 
         foreach (DaggerfallFactionDefinition candidate in individualChildren)
         {
-            DaggerfallOfficeHolder holder = BuildFromIndividualFaction(officeFactionId, candidate, defaultTitle, regionHint, deadPredecessor);
-            if (holder.IsAlive)
+            DaggerfallOfficeHolder holder = BuildFromIndividualFaction(officeFactionId, candidate, defaultTitle, regionHint, deadPredecessor, deadPredecessorFate);
+            if (holder.HasLivingHolder)
                 return holder;
 
-            deadPredecessor ??= holder.DisplayName;
-            lastDead = holder;
+            if (deadPredecessor is null && !string.IsNullOrWhiteSpace(holder.DisplayName))
+            {
+                deadPredecessor = holder.DisplayName;
+                deadPredecessorFate = "was slain";
+            }
         }
 
-        return lastDead;
+        return DaggerfallOfficeHolder.Vacant(officeFactionId, defaultTitle, deadPredecessor, deadPredecessorFate);
     }
 
     /// <summary>Default ruler title key for a province faction (matching classic <c>MacroHelper.GetRulerTitle</c>).</summary>
@@ -313,7 +360,8 @@ internal sealed class DaggerfallOfficeHolders(
         DaggerfallFactionDefinition individual,
         string? defaultTitle,
         int? preferredRegion,
-        string? deadPredecessor)
+        string? deadPredecessor,
+        string? deadPredecessorFate)
     {
         if (TryResolveCastIndividual(individual.Id, preferredRegion, out DaggerfallCastIndividualDefinition? cast, out DaggerfallCastHomeLocation? home)
             && cast is not null)
@@ -335,7 +383,7 @@ internal sealed class DaggerfallOfficeHolders(
                 Home: home,
                 IsAlive: alive,
                 PreviousHolderName: deadPredecessor,
-                PreviousHolderFate: deadPredecessor is not null ? "was slain" : null);
+                PreviousHolderFate: deadPredecessor is not null ? (deadPredecessorFate ?? "was slain") : null);
         }
 
         DaggerfallFactionSpriteDefinition? sprite = individual.SpriteVisuals.FirstOrDefault();
@@ -355,6 +403,6 @@ internal sealed class DaggerfallOfficeHolders(
             Home: null,
             IsAlive: true,
             PreviousHolderName: deadPredecessor,
-            PreviousHolderFate: deadPredecessor is not null ? "was slain" : null);
+            PreviousHolderFate: deadPredecessor is not null ? (deadPredecessorFate ?? "was slain") : null);
     }
 }

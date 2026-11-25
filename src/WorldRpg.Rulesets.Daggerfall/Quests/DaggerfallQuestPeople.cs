@@ -53,6 +53,8 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         {
             officeFactionId = ResolveOfficeFaction(options.Office!, region);
             officeHolder = _officeHolders.ResolveOffice(officeFactionId.Value, region);
+            if (officeHolder is not { HasLivingHolder: true })
+                throw new NotSupportedException($"Quest Person '{declaration.CanonicalId}' office faction {officeFactionId.Value} has no living office holder.");
         }
 
         int factionId = existing?.Appearance.FactionId

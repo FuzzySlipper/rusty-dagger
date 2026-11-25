@@ -317,6 +317,61 @@ public sealed class QuestIndividualAndOfficeBindingTests
         Assert.True(restored.State.Quests.TryGet("office:3", out DaggerfallQuestInstanceSave? restoredQ3));
         Assert.Equal([akorithiId], restoredQ3!.Resources.Single().Binding.ActorIds);
         Assert.Equal(201, restoredQ3.Resources.Single().SelectedPerson!.OfficeFactionId);
+
+        // 4. R11047-1 dead-override regression: if the overridden holder (Akorithi) dies while living successors remain,
+        //    office 201 must succeed to the living candidate (Mobar) rather than binding or naming the dead override!
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            akorithiId,
+            ActorOrigin.Cast("queen-akorithi"),
+            Location: ActorLocationOverride.Dead(town.ProfileKey)));
+        DaggerfallQuestInstanceSave q4 = session.State.Quests.Start(new(
+            "office:4", "office-petition.txt", "office-petition", DaggerfallQuestLifecycle.Active, null, [], [])
+        { FactionId = 201 });
+        DaggerfallQuestResourceState r4 = q4.Resources.Single();
+        Assert.Equal([mobarId], r4.Binding.ActorIds);
+        Assert.Equal("mobar", r4.SelectedPerson!.CastId);
+        Assert.Equal("Mobar", r4.SelectedPerson.DisplayName);
+        Assert.Contains("King Mobar (leader: Mobar / Mobar).",
+            session.State.Quests.RenderMessage(q4, 1000, DaggerfallQuestMessageDelivery.Popup, 0).Text);
+        Assert.Contains("New King Mobar succeeds Regent Akorithi, who was slain.",
+            session.State.Quests.RenderMessage(q4, 1001, DaggerfallQuestMessageDelivery.Popup, 0).Text);
+
+        // 5. R11047-1 no-living-candidate regression: once EVERY candidate in office 201 is dead, the office is explicitly
+        //    vacant: new office quests refuse to bind a dead or fabricated person, and macros do not announce a dead ruler.
+        foreach (string remainingCastId in new[] { "mobar", "queen-aubk-i", "mynisera", "lord-bridwell", "lady-northbridge" })
+        {
+            long remainingId = DaggerfallPeopleSlots.CastIndividualIdentity(remainingCastId);
+            session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+                remainingId,
+                ActorOrigin.Cast(remainingCastId),
+                Location: ActorLocationOverride.Dead(town.ProfileKey)));
+        }
+        DaggerfallOfficeHolder? vacant = session.OfficeHolders.ResolveRegionalRuler(17);
+        Assert.NotNull(vacant);
+        Assert.False(vacant!.HasLivingHolder);
+        Assert.False(vacant.IsAlive);
+        Assert.Null(vacant.ActorId);
+        Assert.Null(vacant.CastId);
+        Assert.Equal("Regent Akorithi", vacant.PreviousHolderName);
+        Assert.Equal("was slain", vacant.PreviousHolderFate);
+
+        Assert.Contains("no living office holder", Assert.Throws<NotSupportedException>(() =>
+            session.State.Quests.Start(new(
+                "office:5", "office-petition.txt", "office-petition", DaggerfallQuestLifecycle.Active, null, [], [])
+            { FactionId = 201 })).Message);
+
+        DaggerfallQuestTextContext textContext = new(definitions, session.Site, session.State.Npcs, session.State.ItemInstances,
+            _ => string.Empty, () => DaggerfallTextContext.Empty, () => null, RandomMinimum.Create(), _ => null, (_, _) => null, session.OfficeHolders);
+        DaggerfallQuestSourceDefinition petitionSource = definitions.QuestSources.Resolve("office-petition.txt");
+        DaggerfallQuestRuntimeInstance vacantProbe = new(q4, DaggerfallQuestTaskCompiler.Compile(petitionSource));
+        var vacantFactionText = textContext.For(vacantProbe).Text.Faction;
+        Assert.Null(vacantFactionText.RegentName);
+        Assert.Null(vacantFactionText.RegentTitle);
+        Assert.Null(vacantFactionText.CurrentRegionLeader);
+        Assert.Null(vacantFactionText.FactionLeaderOne);
+        Assert.Null(vacantFactionText.FactionLeaderTitle);
+        Assert.Equal("Regent Akorithi", vacantFactionText.OldFactionLeader);
+        Assert.Equal("was slain", vacantFactionText.OldLeaderFate);
     }
 
     [Fact]
