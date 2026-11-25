@@ -2,5 +2,6 @@
   "castFile": "cast/individuals.json",
   "spawnersFile": "spawners.json",
   "archetypesFile": "archetypes.json",
+  "barksFile": "barks.json",
   "blocksFolder": "blocks"
 }

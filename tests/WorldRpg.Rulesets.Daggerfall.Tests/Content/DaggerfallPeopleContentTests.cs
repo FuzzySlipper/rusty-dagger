@@ -48,6 +48,30 @@ public sealed class DaggerfallPeopleContentTests
         Assert.Contains("house-resident", people.Spawners.Keys);
         Assert.Contains("clutter-person", people.Spawners.Keys);
 
+        // Authored regional & climate spawner pools are populated with zero cast-individual visual clashes.
+        HashSet<(int Archive, int Record)> castVisuals =
+            [.. people.Individuals.Values.Select(c => (c.Archive, c.Record))];
+        Assert.True(people.Spawners.Values.Count(s => s.RegionalPools.Count >= 4) >= 20);
+        Assert.True(people.Spawners.Values.Count(s => s.ClimatePools.Count >= 4) >= 20);
+        foreach (DaggerfallPeopleSpawnerDefinition spawner in people.Spawners.Values)
+        {
+            foreach (DaggerfallPeoplePoolEntry poolEntry in spawner.RegionalPools.Values.SelectMany(p => p)
+                .Concat(spawner.ClimatePools.Values.SelectMany(p => p)))
+            {
+                Assert.DoesNotContain((poolEntry.Archive, poolEntry.Record), castVisuals);
+            }
+        }
+
+        // Authored ambient barks and referral templates are populated.
+        Assert.NotEmpty(people.Barks.DefaultBarks);
+        Assert.NotEmpty(people.Barks.ByRole);
+        Assert.NotEmpty(people.Barks.ByArchetype);
+        Assert.NotEmpty(people.Barks.ByRegion);
+        Assert.NotEmpty(people.Barks.ByClimate);
+        Assert.NotEmpty(people.Barks.Referrals.DefaultIssueTemplates);
+        Assert.NotEmpty(people.Barks.Referrals.DefaultResponseTemplates);
+        Assert.NotEmpty(people.Barks.Referrals.ContactNames);
+
         Assert.NotEmpty(people.RmbInteriors);
         Assert.NotEmpty(people.RmbExteriors);
         Assert.NotEmpty(people.RdbDungeons);
@@ -79,7 +103,7 @@ public sealed class DaggerfallPeopleContentTests
     {
         DaggerfallPeoplePackFiles tampered = new(
             "tampered.people",
-            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","blocksFolder":"blocks"}"""),
+            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","barksFile":"barks.json","blocksFolder":"blocks"}"""),
             Encoding.UTF8.GetBytes("""{"individuals":[]}"""),
             Encoding.UTF8.GetBytes("""
             {
@@ -116,7 +140,8 @@ public sealed class DaggerfallPeopleContentTests
                 }
                 """)),
             ],
-            TestPayload.PeoplePack().ArchetypesBytes);
+            TestPayload.PeoplePack().ArchetypesBytes,
+            TestPayload.PeoplePack().BarksBytes);
 
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
             DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
@@ -128,7 +153,7 @@ public sealed class DaggerfallPeopleContentTests
     {
         DaggerfallPeoplePackFiles tampered = new(
             "bad-archetypes.people",
-            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","blocksFolder":"blocks"}"""),
+            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","barksFile":"barks.json","blocksFolder":"blocks"}"""),
             Encoding.UTF8.GetBytes("""{"individuals":[]}"""),
             Encoding.UTF8.GetBytes("""
             {
@@ -169,7 +194,8 @@ public sealed class DaggerfallPeopleContentTests
                 }
               ]
             }
-            """));
+            """),
+            TestPayload.PeoplePack().BarksBytes);
 
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
             DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
@@ -372,5 +398,134 @@ public sealed class DaggerfallPeopleContentTests
         DaggerfallSavePayload restoredDecoded = DaggerfallSavePayload.Read(restored.CaptureSave());
         Assert.Equal(41UL, restoredDecoded.GameSeed);
         Assert.Equal(777_123UL, restoredDecoded.WorldSocialSeed);
+    }
+
+    [Fact]
+    public void Pack_reader_rejects_invalid_barks_and_spawner_climate_pools()
+    {
+        DaggerfallPeoplePackFiles tampered = new(
+            "bad-barks.people",
+            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","barksFile":"barks.json","blocksFolder":"blocks"}"""),
+            Encoding.UTF8.GetBytes("""{"individuals":[]}"""),
+            Encoding.UTF8.GetBytes("""
+            {
+              "spawners": [
+                {
+                  "id": "house-resident",
+                  "role": "person",
+                  "archetype": "civilian",
+                  "interaction": "full-dialogue",
+                  "harm": "law-protected-civilian",
+                  "deriveRegionalFaction": true,
+                  "visualMode": "pool",
+                  "defaultPool": [{"archive":182,"record":0,"gender":"Male","weight":1}],
+                  "regionalPools": {},
+                  "climatePools": {
+                    "Volcanic": [{"archive":182,"record":0,"gender":"Male","weight":1}]
+                  }
+                }
+              ]
+            }
+            """),
+            [],
+            TestPayload.PeoplePack().ArchetypesBytes,
+            Encoding.UTF8.GetBytes("""
+            {
+              "defaultBarks": [],
+              "byArchetype": { "missing-archetype": ["Hello"] },
+              "byClimate": { "Tundra": ["Cold"] },
+              "referrals": {
+                "defaultIssueTemplates": ["Go to {target} and talk to someone."],
+                "defaultResponseTemplates": ["I heard something."],
+                "contactNames": []
+              }
+            }
+            """));
+
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
+        Assert.Contains("unknown climate 'Volcanic'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("barks.defaultBarks", error.Message, StringComparison.Ordinal);
+        Assert.Contains("unknown archetype 'missing-archetype'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("unknown climate 'Tundra'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("placeholder '{contact}'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("placeholder '{tag}'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("referrals.contactNames", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Data_driven_barks_and_referrals_resolve_by_role_archetype_region_climate_and_fallback()
+    {
+        DaggerfallPeopleBarks barks = TestPayload.Definitions.People.Barks;
+
+        // Specificity cascade: role -> archetype -> region -> climate -> defaultBarks.
+        string merchantLine = barks.ResolveBarkLine(42UL, role: "merchant", archetypeId: "noble", regionIndex: 17, climateName: "Desert");
+        Assert.Contains(merchantLine, barks.ByRole["merchant"]);
+
+        string nobleLine = barks.ResolveBarkLine(42UL, role: "person", archetypeId: "noble", regionIndex: 17, climateName: "Desert");
+        Assert.Contains(nobleLine, barks.ByArchetype["noble"]);
+
+        string daggerfallLine = barks.ResolveBarkLine(42UL, role: "bystander", archetypeId: "civilian", regionIndex: 17, climateName: "Desert");
+        Assert.Contains(daggerfallLine, barks.ByRegion["17"]);
+
+        string desertLine = barks.ResolveBarkLine(42UL, role: "bystander", archetypeId: "civilian", regionIndex: 43, climateName: "Desert");
+        Assert.Contains(desertLine, barks.ByClimate["Desert"]);
+
+        string fallbackLine = barks.ResolveBarkLine(42UL, role: "bystander", archetypeId: "civilian", regionIndex: 43, climateName: null);
+        Assert.Contains(fallbackLine, barks.DefaultBarks);
+
+        // Referral contact names and templates resolve regionally and fall back deterministically.
+        string dfContact = barks.Referrals.ResolveContactName(7UL, regionIndex: 17, climateName: "Woodlands");
+        Assert.Contains(dfContact, barks.Referrals.ContactNamesByRegion["17"]);
+        string sentinelContact = barks.Referrals.ResolveContactName(7UL, regionIndex: 20, climateName: "Subtropical");
+        Assert.Contains(sentinelContact, barks.Referrals.ContactNamesByRegion["20"]);
+        string desertContact = barks.Referrals.ResolveContactName(7UL, regionIndex: 43, climateName: "Desert");
+        Assert.Contains(desertContact, barks.Referrals.ContactNamesByClimate["Desert"]);
+        string defaultContact = barks.Referrals.ResolveContactName(7UL, regionIndex: 43, climateName: null);
+        Assert.Contains(defaultContact, barks.Referrals.ContactNames);
+
+        string issue = barks.Referrals.FormatIssueLine(3UL, "Gothway Garden", dfContact, "Alena", regionIndex: 17, climateName: "Woodlands");
+        Assert.Contains("Gothway Garden", issue, StringComparison.Ordinal);
+        Assert.Contains(dfContact, issue, StringComparison.Ordinal);
+        Assert.Contains("Alena", issue, StringComparison.Ordinal);
+
+        string response = barks.Referrals.FormatResponseLine(3UL, dfContact, "referred-from:Charing", role: "bystander");
+        Assert.Contains(dfContact, response, StringComparison.Ordinal);
+        Assert.Contains("referred-from:Charing", response, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Regional_and_climate_spawner_pools_resolve_distinct_visuals_across_regions_and_climates()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallPeopleSpawnerDefinition resident = definitions.People.Spawners["house-resident"];
+        DaggerfallPeopleSlotDefinition slot = new(
+            "b:0:p00", CastId: null, SpawnerId: "house-resident", new WorldPoint(1, 0, 2),
+            "full-dialogue", FactionId: null, DeriveRegionalFaction: true,
+            new DaggerfallPeopleVisual(182, 0, "Male"), BuildingType: 17, BuildingFactionId: 0);
+
+        HashSet<(int Archive, int Record)> expectedHammerfell = [.. resident.RegionalPools["20"].Select(e => (e.Archive, e.Record))];
+        HashSet<(int Archive, int Record)> expectedDaggerfall = [.. resident.RegionalPools["17"].Select(e => (e.Archive, e.Record))];
+        HashSet<(int Archive, int Record)> expectedWayrest = [.. resident.RegionalPools["23"].Select(e => (e.Archive, e.Record))];
+        HashSet<(int Archive, int Record)> expectedMountain = [.. resident.ClimatePools["Mountain"].Select(e => (e.Archive, e.Record))];
+
+        DaggerfallResolvedPeopleSlot inSentinel = DaggerfallPeopleSlots.ResolveSlot(
+            definitions.People, definitions.Factions, 0UL, new DaggerfallSiteId(20, 1), "int:0,0:b:0:p00", slot,
+            regionKey: "Sentinel", climateKey: "Subtropical");
+        DaggerfallResolvedPeopleSlot inDaggerfall = DaggerfallPeopleSlots.ResolveSlot(
+            definitions.People, definitions.Factions, 0UL, new DaggerfallSiteId(17, 1), "int:0,0:b:0:p00", slot,
+            regionKey: "Daggerfall", climateKey: "Woodlands");
+        DaggerfallResolvedPeopleSlot inWayrest = DaggerfallPeopleSlots.ResolveSlot(
+            definitions.People, definitions.Factions, 0UL, new DaggerfallSiteId(23, 1), "int:0,0:b:0:p00", slot,
+            regionKey: "Wayrest", climateKey: "Swamp");
+        // Region 38 (Phrygias) has no explicit regionalPool override -> resolves cleanly via Mountain climatePool!
+        DaggerfallResolvedPeopleSlot inMountainClimate = DaggerfallPeopleSlots.ResolveSlot(
+            definitions.People, definitions.Factions, 0UL, new DaggerfallSiteId(38, 1), "int:0,0:b:0:p00", slot,
+            regionKey: "Phrygias", climateKey: "Mountain");
+
+        Assert.Contains((inSentinel.Visual.Archive, inSentinel.Visual.Record), expectedHammerfell);
+        Assert.Contains((inDaggerfall.Visual.Archive, inDaggerfall.Visual.Record), expectedDaggerfall);
+        Assert.Contains((inWayrest.Visual.Archive, inWayrest.Visual.Record), expectedWayrest);
+        Assert.Contains((inMountainClimate.Visual.Archive, inMountainClimate.Visual.Record), expectedMountain);
     }
 }

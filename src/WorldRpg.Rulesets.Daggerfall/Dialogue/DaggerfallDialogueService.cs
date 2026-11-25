@@ -237,7 +237,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         if (interactionKind == ActorInteractionPolicyKind.AmbientBark)
         {
-            string bark = ResolveAmbientBark(npc!, overlay);
+            string bark = ResolveAmbientBark(npc!, overlay, _activeSite());
             return Report(new(true, bark));
         }
 
@@ -816,29 +816,25 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         && (npc.Profile is { } profile ? profile.Site == site.Id
             : npc.Site.Region == site.Id.Region && string.Equals(npc.Site.Location, site.Name, StringComparison.Ordinal));
 
-    // Test-data ambient barks (final writing deferred): deterministic per actor, with referral awareness.
-    private static readonly string[] DefaultAmbientBarks =
-    [
-        "Busy day on the streets. Watch your step.",
-        "Keep moving, traveler — plenty to do before sundown.",
-        "Quiet enough around here, if you don't look for trouble.",
-        "Mind the cobblestones; they're slick after rain.",
-    ];
-
-    private static string ResolveAmbientBark(DaggerfallNpc npc, ActorOverlayComponent? overlay)
+    private string ResolveAmbientBark(DaggerfallNpc npc, ActorOverlayComponent? overlay, DaggerfallSiteRecord? site)
     {
         string speaker = npc.DisplayName ?? npc.Role;
         if (overlay is { ReferralTags.Count: > 0 })
             return $"{speaker}: \"{FormatReferralLine(npc, overlay.ReferralTags[0])}\"";
-        int index = (int)(unchecked((ulong)npc.DurableId) % (ulong)DefaultAmbientBarks.Length);
-        return $"{speaker}: \"{DefaultAmbientBarks[index]}\"";
+
+        int regionIndex = site?.Id.Region ?? npc.Site.Region;
+        string regionName = _definitions.BuildingNames.RegionName(regionIndex);
+        string? climateName = site is not null
+            ? _definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY).Name
+            : null;
+        string line = _definitions.People.Barks.ResolveBarkLine(
+            unchecked((ulong)npc.DurableId), npc.Role, overlay?.ArchetypeId, regionIndex, regionName, climateName);
+        return $"{speaker}: \"{line}\"";
     }
 
-    private static string FormatReferralLine(DaggerfallNpc npc, string referralTag)
-    {
-        string speaker = npc.DisplayName ?? npc.Role;
-        return $"You're looking for {speaker}? Word reached me about '{referralTag}'.";
-    }
+    private string FormatReferralLine(DaggerfallNpc npc, string referralTag) =>
+        _definitions.People.Barks.Referrals.FormatResponseLine(
+            unchecked((ulong)npc.DurableId), npc.DisplayName ?? npc.Role, referralTag, npc.Role);
 
     private bool MatchesRevision(string? revision) =>
         _current is { } current && string.Equals(current.Revision, revision, StringComparison.Ordinal);

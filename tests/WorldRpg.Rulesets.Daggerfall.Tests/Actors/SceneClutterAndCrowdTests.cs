@@ -193,11 +193,17 @@ public sealed class SceneClutterAndCrowdTests
         Assert.False(noneOutcome.Applied);
         Assert.Null(session.Dialogue.CurrentNpc());
 
-        // AmbientBark emits a test-data bark line and marks Met without opening the dialogue modal.
+        // AmbientBark emits an authored pack bark line (matching region/climate/role) and marks Met without opening the dialogue modal.
         DaggerfallActivationOutcome barkOutcome = session.Dialogue.ActivateNpc(
             new DaggerfallActivationSelection(DaggerfallActivationMode.Talk, barkTarget));
         Assert.True(barkOutcome.Applied);
         Assert.Contains("\"", barkOutcome.Message, StringComparison.Ordinal);
+        DaggerfallPeopleBarks barks = TestPayload.Definitions.People.Barks;
+        int activeRegion = active.Site!.Value.Region;
+        IEnumerable<string> authoredPool = barks.ByRegion.TryGetValue(activeRegion.ToString(System.Globalization.CultureInfo.InvariantCulture), out var regPool)
+            ? regPool
+            : barks.DefaultBarks;
+        Assert.Contains(authoredPool, line => barkOutcome.Message.Contains(line, StringComparison.Ordinal));
         Assert.Null(session.Dialogue.CurrentNpc());
         Assert.True(session.State.Actors.Get(barkId).Actor.Get<ActorOverlayComponent>().Met);
 
@@ -382,6 +388,7 @@ public sealed class SceneClutterAndCrowdTests
         Assert.NotEmpty(targetNeighborIds);
 
         RulesetSavePayload savedBeforeVisit;
+        string referredContactName;
         using (DaggerfallSession first = DaggerfallSession.StartNew(CreateEngine().Context, composition))
         {
             // Advance to daytime so Charing's real townspeople are live and talkable.
@@ -398,7 +405,6 @@ public sealed class SceneClutterAndCrowdTests
             DaggerfallActivationOutcome referralReply = first.Dialogue.Ask(openingView.Revision, "referral", null, null);
             Assert.True(referralReply.Applied);
             Assert.Contains(targetRecord.Name, referralReply.Message, StringComparison.Ordinal);
-            Assert.Contains("Mara", referralReply.Message, StringComparison.Ordinal);
             first.Dialogue.Close();
 
             // Save BEFORE ever visiting targetProfileKey: only the referred slot enters ActorLedger for the target town.
@@ -411,7 +417,18 @@ public sealed class SceneClutterAndCrowdTests
             Assert.Equal(expectedSlotId, referralEntry.Origin.SlotKey);
             Assert.NotNull(referralEntry.Referral);
             Assert.Contains(expectedTag, referralEntry.Referral!.Tags);
-            Assert.Equal("Mara", referralEntry.Referral.DisplayNameOverride);
+            referredContactName = referralEntry.Referral.DisplayNameOverride!;
+            Assert.False(string.IsNullOrWhiteSpace(referredContactName));
+            Assert.Contains(referredContactName, referralReply.Message, StringComparison.Ordinal);
+            string targetClimate = definitions.Grids.Climate.GetCell(targetRecord.MapPixelX + 1, targetRecord.MapPixelY).Name;
+            IReadOnlyList<string> expectedContactPool = DaggerfallPeopleReferralTemplates.SelectByRegionOrClimate(
+                definitions.People.Barks.Referrals.ContactNamesByRegion,
+                definitions.People.Barks.Referrals.ContactNamesByClimate,
+                definitions.People.Barks.Referrals.ContactNames,
+                targetRecord.Id.Region,
+                definitions.BuildingNames.RegionName(targetRecord.Id.Region),
+                targetClimate);
+            Assert.Contains(referredContactName, expectedContactPool);
             foreach (long neighborId in targetNeighborIds)
                 Assert.DoesNotContain(decodedBefore.ActorLedger, entry => entry.DurableId == neighborId);
         }
@@ -434,21 +451,21 @@ public sealed class SceneClutterAndCrowdTests
             Assert.Equal(expectedTargetRegionFaction, maraActor.Actor.Get<FactionComponent>().RegionalPeopleFactionId);
 
             DaggerfallNpc maraNpc = reloaded.State.Npcs.Require(expectedMaraId);
-            Assert.Equal("Mara", maraNpc.DisplayName);
+            Assert.Equal(referredContactName, maraNpc.DisplayName);
             Assert.True(maraActor.Actor.Get<ActorOverlayComponent>().HasReferralTag(expectedTag));
 
             // Real target-town neighbors are also live in EntityStore.
             long[] liveNeighbors = [.. targetNeighborIds.Where(id => reloaded.State.Actors.TryGet(id, out _))];
             Assert.NotEmpty(liveNeighbors);
 
-            // Activating Mara triggers her referral-aware AmbientBark without opening a full dialogue modal.
+            // Activating the referred contact triggers their referral-aware AmbientBark without opening a full dialogue modal.
             DaggerfallActivationTarget maraTarget = Assert.Single(
                 reloaded.Dialogue.NpcTargets(),
                 t => (long)t.Identity.Value == expectedMaraId);
             DaggerfallActivationOutcome barkOutcome = reloaded.Dialogue.ActivateNpc(
                 new DaggerfallActivationSelection(DaggerfallActivationMode.Talk, maraTarget));
             Assert.True(barkOutcome.Applied);
-            Assert.Contains("Mara", barkOutcome.Message, StringComparison.Ordinal);
+            Assert.Contains(referredContactName, barkOutcome.Message, StringComparison.Ordinal);
             Assert.Contains(expectedTag, barkOutcome.Message, StringComparison.Ordinal);
             Assert.Null(reloaded.Dialogue.CurrentNpc());
 

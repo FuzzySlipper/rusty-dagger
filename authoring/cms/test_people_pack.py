@@ -342,7 +342,69 @@ class PeoplePackTests(TestCase):
         self.assertEqual(report["counts"]["cast"], 28)
         self.assertEqual(report["counts"]["spawners"], 30)
         self.assertGreaterEqual(report["counts"]["archetypes"], 6)
+        self.assertGreaterEqual(report["counts"]["barks"], 1)
         self.assertGreater(report["counts"]["slots"], 14000)
+
+    def test_barks_and_spawner_climate_pools_validation_and_round_trip_edit(self):
+        pack = self.library.people_pack
+        self._write(pack / "payload.json", {
+            "castFile": "cast/individuals.json",
+            "spawnersFile": "spawners.json",
+            "barksFile": "barks.json",
+            "blocksFolder": "blocks",
+        })
+        self._write(pack / "barks.json", {
+            "defaultBarks": ["Watch your step, traveler."],
+            "byRole": {"merchant": ["Step inside if you're buying."]},
+            "byClimate": {"Desert": ["Drink before you're thirsty."]},
+            "referrals": {
+                "defaultIssueTemplates": ["Ask {contact} in {target} and say {speaker} sent you."],
+                "defaultResponseTemplates": ["{speaker} here — heard about '{tag}'."],
+                "contactNames": ["Mara"],
+            },
+        })
+        self.workspace.cache.invalidate(("people-pack-index", pack, self.library.base_payload))
+
+        report = self.workspace.people_pack.validate_all()
+        self.assertTrue(report["valid"], report["issues"])
+        self.assertEqual(report["counts"]["barks"], 1)
+
+        updated_barks = self.workspace.people_pack.update_barks({
+            "defaultBarks": ["Watch your step, traveler.", "Fair roads ahead."],
+        })
+        self.assertEqual(len(updated_barks["defaultBarks"]), 2)
+
+        # Reject missing placeholder or unknown climate in barks.json.
+        with self.assertRaises(ValidationError):
+            self.workspace.people_pack.update_barks({
+                "byClimate": {"Volcanic": ["Hot!"]},
+            })
+        with self.assertRaises(ValidationError):
+            self.workspace.people_pack.update_barks({
+                "referrals": {
+                    "defaultIssueTemplates": ["Missing placeholders here."],
+                    "defaultResponseTemplates": ["{speaker} heard '{tag}'."],
+                    "contactNames": ["Mara"],
+                },
+            })
+
+        # Edit climatePools on a spawner and verify unknown climates are rejected.
+        updated_spawner = self.workspace.people_pack.update_spawner(
+            "banker",
+            {"climatePools": {"Desert": [{"archive": 357, "record": 1, "gender": "Male", "weight": 5}]}},
+            self.workspace.catalog(),
+            self.workspace.concept_store,
+        )
+        self.assertEqual(len(updated_spawner["climatePools"]), 1)
+        self.assertEqual(updated_spawner["climatePools"][0]["climate"], "Desert")
+
+        with self.assertRaises(ValidationError):
+            self.workspace.people_pack.update_spawner(
+                "banker",
+                {"climatePools": {"Tundra": [{"archive": 357, "record": 1, "gender": "Male", "weight": 5}]}},
+                self.workspace.catalog(),
+                self.workspace.concept_store,
+            )
 
     def test_archetypes_validation_and_round_trip_edit(self):
         pack = self.library.people_pack

@@ -168,10 +168,11 @@ internal sealed class DaggerfallOverlandTraffic
 
     private long? TryStageTrafficMember(DaggerfallSiteRecord origin, bool isCaravan, ulong seed)
     {
-        string? race = DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, origin, out _);
+        string? race = DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, origin, out DaggerfallClimateCell climate);
         if (race is null) return null;
 
         DaggerfallWorldProfileKey originProfile = DaggerfallWorldProfileIds.Exterior(origin.Id);
+        string regionName = _definitions.BuildingNames.RegionName(origin.Id.Region);
         string[] preferredSpawners = isCaravan ? CaravanSpawners : CourierSpawners;
 
         if (origin.Exterior is { Blocks.Count: > 0 })
@@ -186,7 +187,8 @@ internal sealed class DaggerfallOverlandTraffic
 
                     string placementKey = DaggerfallPeopleSlots.ExteriorBlockSlotKey(block.X, block.Y, slot.SlotId);
                     DaggerfallResolvedPeopleSlot resolved = DaggerfallPeopleSlots.ResolveSlot(
-                        _definitions.People, _definitions.Factions, _worldSocialSeed(), origin.Id, placementKey, slot);
+                        _definitions.People, _definitions.Factions, _worldSocialSeed(), origin.Id, placementKey, slot,
+                        regionKey: regionName, climateKey: climate.Name);
                     string placedId = DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(block.SourceName, block.X, block.Y, slot.SlotId);
                     string slotKey = $"{originProfile.LogicalId}/{placedId}";
                     long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(origin.Id, slotKey);

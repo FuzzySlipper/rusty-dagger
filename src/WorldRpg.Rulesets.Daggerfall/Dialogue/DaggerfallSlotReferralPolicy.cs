@@ -1,3 +1,4 @@
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -44,7 +45,11 @@ internal sealed class DaggerfallSlotReferralPolicy(
         string placedSlotId = DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(
             block.SourceName, block.X, block.Y, slot.SlotId);
         string speakerName = speaker.DisplayName ?? speaker.Role;
-        string contactName = "Mara";
+        DaggerfallPeopleReferralTemplates referrals = _definitions.People.Barks.Referrals;
+        string targetRegionName = _definitions.BuildingNames.RegionName(target.Id.Region);
+        string targetClimateName = _definitions.Grids.Climate.GetCell(target.MapPixelX + 1, target.MapPixelY).Name;
+        ulong contactSeed = StableHash.NonZeroFnv1a64($"daggerfall.referral.contact:{target.Id.Region}:{target.Id.Index}:{placedSlotId}");
+        string contactName = referrals.ResolveContactName(contactSeed, target.Id.Region, targetRegionName, targetClimateName);
         string referralTag = $"referred-from:{currentSite.Name}";
 
         long durableId = _actorLedger.RegisterSlotReferral(
@@ -53,7 +58,11 @@ internal sealed class DaggerfallSlotReferralPolicy(
             referralTag,
             displayNameOverride: contactName);
 
-        string message = $"If you travel to {target.Name}, ask {contactName} outside the tavern — tell her {speakerName} sent you.";
+        string currentRegionName = _definitions.BuildingNames.RegionName(currentSite.Id.Region);
+        string currentClimateName = _definitions.Grids.Climate.GetCell(currentSite.MapPixelX + 1, currentSite.MapPixelY).Name;
+        ulong issueSeed = StableHash.NonZeroFnv1a64($"daggerfall.referral.issue:{currentSite.Id.Region}:{currentSite.Id.Index}:{speaker.DurableId}:{target.Id.Index}");
+        string message = referrals.FormatIssueLine(issueSeed, target.Name, contactName, speakerName,
+            currentSite.Id.Region, currentRegionName, currentClimateName);
         return new(durableId, target.Id, targetProfile, placedSlotId, contactName, referralTag, message);
     }
 

@@ -12,6 +12,11 @@ GENDERS = ("Male", "Female")
 INTERACTIONS = ("none", "ambient-bark", "full-dialogue")
 HARMS = ("protected", "law-protected-civilian", "combatant")
 VISUAL_MODES = ("pool", "classic-slot")
+CLIMATE_NAMES = (
+    "Ocean", "Desert", "Desert2", "Mountain", "Rainforest",
+    "Swamp", "Subtropical", "MountainWoods", "Woodlands", "HauntedWoodlands",
+)
+CLIMATE_NAMES_LOWER = frozenset(name.lower() for name in CLIMATE_NAMES)
 REQUIRED_ARCHETYPES = ("civilian", "static-npc", "clutter-person", "questor", "guard", "combatant")
 MAX_ARCHETYPE_VITAL = 10_000
 KNOWN_RACES = (
@@ -318,6 +323,116 @@ def validate_spawners_document(doc, archetypes: dict[str, dict] | None = None) -
                     issues.append(ValidationIssue(f"{path}.regionalPools", "Region key must be non-empty text."))
                     continue
                 _validate_pool(pool, f"{path}.regionalPools.{region_key}", issues, require_non_empty=True)
+
+        climate_pools = entry.get("climatePools")
+        if climate_pools is not None:
+            if not isinstance(climate_pools, dict):
+                issues.append(ValidationIssue(f"{path}.climatePools", "climatePools must be an object."))
+            else:
+                for climate_key, pool in climate_pools.items():
+                    if not isinstance(climate_key, str) or climate_key.lower() not in CLIMATE_NAMES_LOWER:
+                        issues.append(ValidationIssue(f"{path}.climatePools.{climate_key}", f"Unknown climate '{climate_key}'."))
+                        continue
+                    _validate_pool(pool, f"{path}.climatePools.{climate_key}", issues, require_non_empty=True)
+    return issues
+
+
+def _validate_text_list(
+    entries,
+    field_prefix: str,
+    issues: list[ValidationIssue],
+    *,
+    require_non_empty: bool = True,
+    required_tokens: tuple[str, ...] = (),
+):
+    if not isinstance(entries, list):
+        issues.append(ValidationIssue(field_prefix, "Must be a list of non-empty strings."))
+        return
+    if require_non_empty and not entries:
+        issues.append(ValidationIssue(field_prefix, "Must contain at least one line."))
+        return
+    for index, line in enumerate(entries):
+        path = f"{field_prefix}[{index}]"
+        if not isinstance(line, str) or not line.strip():
+            issues.append(ValidationIssue(path, "Must be non-empty text."))
+            continue
+        for token in required_tokens:
+            if token not in line:
+                issues.append(ValidationIssue(path, f"Must contain placeholder '{token}'."))
+
+
+def _validate_text_map(
+    mapping,
+    field_prefix: str,
+    issues: list[ValidationIssue],
+    *,
+    valid_keys: set[str] | frozenset[str] | None = None,
+    case_insensitive_keys: bool = False,
+    required_tokens: tuple[str, ...] = (),
+):
+    if mapping is None:
+        return
+    if not isinstance(mapping, dict):
+        issues.append(ValidationIssue(field_prefix, "Must be an object mapping keys to string lists."))
+        return
+    for key, lines in mapping.items():
+        if not isinstance(key, str) or not key.strip():
+            issues.append(ValidationIssue(field_prefix, "Map key must be non-empty text."))
+            continue
+        if valid_keys is not None:
+            check_key = key.lower() if case_insensitive_keys else key
+            if check_key not in valid_keys:
+                issues.append(ValidationIssue(f"{field_prefix}.{key}", f"References unknown key '{key}'."))
+        _validate_text_list(lines, f"{field_prefix}.{key}", issues, require_non_empty=True, required_tokens=required_tokens)
+
+
+def validate_barks_document(doc, archetypes: dict[str, dict] | None = None) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    if not isinstance(doc, dict):
+        return [ValidationIssue("barks", "Barks file must be a JSON object.")]
+    _validate_text_list(doc.get("defaultBarks"), "defaultBarks", issues, require_non_empty=True)
+    _validate_text_map(doc.get("byRole"), "byRole", issues)
+    _validate_text_map(
+        doc.get("byArchetype"),
+        "byArchetype",
+        issues,
+        valid_keys=set(archetypes.keys()) if archetypes is not None else None,
+    )
+    _validate_text_map(doc.get("byRegion"), "byRegion", issues)
+    _validate_text_map(
+        doc.get("byClimate"),
+        "byClimate",
+        issues,
+        valid_keys=CLIMATE_NAMES_LOWER,
+        case_insensitive_keys=True,
+    )
+    referrals = doc.get("referrals")
+    if not isinstance(referrals, dict):
+        issues.append(ValidationIssue("referrals", "referrals must be an object."))
+    else:
+        issue_tokens = ("{target}", "{contact}", "{speaker}")
+        resp_tokens = ("{speaker}", "{tag}")
+        _validate_text_list(referrals.get("defaultIssueTemplates"), "referrals.defaultIssueTemplates", issues, require_non_empty=True, required_tokens=issue_tokens)
+        _validate_text_map(referrals.get("issueTemplatesByRegion"), "referrals.issueTemplatesByRegion", issues, required_tokens=issue_tokens)
+        _validate_text_map(
+            referrals.get("issueTemplatesByClimate"),
+            "referrals.issueTemplatesByClimate",
+            issues,
+            valid_keys=CLIMATE_NAMES_LOWER,
+            case_insensitive_keys=True,
+            required_tokens=issue_tokens,
+        )
+        _validate_text_list(referrals.get("defaultResponseTemplates"), "referrals.defaultResponseTemplates", issues, require_non_empty=True, required_tokens=resp_tokens)
+        _validate_text_map(referrals.get("responseTemplatesByRole"), "referrals.responseTemplatesByRole", issues, required_tokens=resp_tokens)
+        _validate_text_list(referrals.get("contactNames"), "referrals.contactNames", issues, require_non_empty=True)
+        _validate_text_map(referrals.get("contactNamesByRegion"), "referrals.contactNamesByRegion", issues)
+        _validate_text_map(
+            referrals.get("contactNamesByClimate"),
+            "referrals.contactNamesByClimate",
+            issues,
+            valid_keys=CLIMATE_NAMES_LOWER,
+            case_insensitive_keys=True,
+        )
     return issues
 
 
@@ -351,6 +466,14 @@ class PeoplePackStore:
         if arch_rel:
             return self.root / arch_rel
         default_path = self.root / "archetypes.json"
+        return default_path if default_path.is_file() else None
+
+    def _barks_path(self) -> Path | None:
+        payload = self.packs.read_json(self.root / "payload.json", {}) or {}
+        barks_rel = payload.get("barksFile")
+        if barks_rel:
+            return self.root / barks_rel
+        default_path = self.root / "barks.json"
         return default_path if default_path.is_file() else None
 
     def available(self) -> bool:
@@ -462,6 +585,14 @@ class PeoplePackStore:
                             visual_spawner_refs[(entry["archive"], entry["record"])].append({
                                 "spawnerId": sid, "role": sp.get("role", ""), "pool": rkey,
                                 "regionName": rinfo["name"], "weight": entry.get("weight", 0),
+                                "gender": entry.get("gender", ""),
+                            })
+                for ckey, entries in (sp.get("climatePools") or {}).items():
+                    for entry in entries or []:
+                        if _is_int(entry.get("archive")) and _is_int(entry.get("record")):
+                            visual_spawner_refs[(entry["archive"], entry["record"])].append({
+                                "spawnerId": sid, "role": sp.get("role", ""), "pool": f"climate:{ckey}",
+                                "regionName": ckey, "weight": entry.get("weight", 0),
                                 "gender": entry.get("gender", ""),
                             })
 
@@ -674,6 +805,13 @@ class PeoplePackStore:
                 "entries": self._enrich_pool(entries or [], catalog, concept_store, memo),
             })
         regional_pools.sort(key=lambda item: (item["regionIndex"] is None, item["regionIndex"] or 0, item["regionName"]))
+        climate_pools = [
+            {
+                "climate": ckey,
+                "entries": self._enrich_pool(entries or [], catalog, concept_store, memo),
+            }
+            for ckey, entries in sorted((sp.get("climatePools") or {}).items())
+        ]
         usage = index["spawner_usage"].get(sp["id"], {"slotCount": 0, "blockCount": 0, "byKind": {}, "byBuildingType": []})
         return {
             "id": sp["id"],
@@ -685,6 +823,7 @@ class PeoplePackStore:
             "visualMode": sp["visualMode"],
             "defaultPool": default_pool,
             "regionalPools": regional_pools,
+            "climatePools": climate_pools,
             "usage": usage,
         }
 
@@ -724,6 +863,7 @@ class PeoplePackStore:
                 "castSharingVisual": sum(1 for c in cast if c["sharedVisualWith"]),
                 "spawnersSingleVisual": sum(1 for s in spawners if len(s["defaultPool"]) <= 1),
                 "spawnersWithRegionalPools": sum(1 for s in spawners if len(s["regionalPools"]) > 0),
+                "spawnersWithClimatePools": sum(1 for s in spawners if len(s["climatePools"]) > 0),
             },
             "enums": {
                 "genders": list(GENDERS),
@@ -731,6 +871,7 @@ class PeoplePackStore:
                 "harms": list(HARMS),
                 "visualModes": list(VISUAL_MODES),
                 "races": list(KNOWN_RACES),
+                "climates": list(CLIMATE_NAMES),
                 "buildingTypes": [{"id": k, "name": v} for k, v in sorted(BUILDING_TYPES.items())],
                 "regions": lookups["regions"],
             },
@@ -828,7 +969,7 @@ class PeoplePackStore:
         if not isinstance(body, dict):
             raise ValidationError("Spawner update must be a JSON object.")
         _, spawners_path, _ = self._paths()
-        allowed = {"role", "archetype", "interaction", "harm", "deriveRegionalFaction", "visualMode", "defaultPool", "regionalPools"}
+        allowed = {"role", "archetype", "interaction", "harm", "deriveRegionalFaction", "visualMode", "defaultPool", "regionalPools", "climatePools"}
         unknown = sorted(set(body) - allowed)
         if unknown:
             raise ValidationError(
@@ -884,6 +1025,14 @@ class PeoplePackStore:
                             }
                         else:
                             next_entry["regionalPools"] = rp
+                    if "climatePools" in body:
+                        cp = body["climatePools"]
+                        if isinstance(cp, dict):
+                            next_entry["climatePools"] = {
+                                str(k): normalize_pool(v) for k, v in sorted(cp.items())
+                            }
+                        else:
+                            next_entry["climatePools"] = cp
                     updated_list.append(next_entry)
                 else:
                     updated_list.append(entry)
@@ -970,6 +1119,50 @@ class PeoplePackStore:
         self.packs.update_json(arch_path, mutate, validator=validator, sort_keys=False)
         self.cache.invalidate(("people-pack-index", self.root, self.library.base_payload))
         return self.get_archetype(archetype_id)
+
+    def get_barks(self) -> dict | None:
+        barks_path = self._barks_path()
+        if barks_path is None or not barks_path.is_file():
+            return None
+        return self.packs.read_json(barks_path, None)
+
+    def update_barks(self, body) -> dict:
+        if not isinstance(body, dict):
+            raise ValidationError("Barks update must be a JSON object.")
+        barks_path = self._barks_path()
+        if barks_path is None or not barks_path.is_file():
+            raise NotFoundError("People pack has no barks.json.")
+        allowed = {"defaultBarks", "byRole", "byArchetype", "byRegion", "byClimate", "referrals"}
+        unknown = sorted(set(body) - allowed)
+        if unknown:
+            raise ValidationError(
+                f"Unsupported barks fields: {', '.join(unknown)}.",
+                [ValidationIssue(field, "This field cannot be edited here.") for field in unknown],
+            )
+
+        def mutate(doc):
+            if not isinstance(doc, dict):
+                raise ValidationError("Barks file is malformed.")
+            next_doc = dict(doc)
+            for key in allowed:
+                if key in body:
+                    next_doc[key] = body[key]
+            return next_doc, "barks"
+
+        def validator(doc):
+            arch_path = self._archetypes_path()
+            archetypes_by_id = None
+            if arch_path is not None and arch_path.is_file():
+                arch_doc = self.packs.read_json(arch_path, {}) or {}
+                archetypes_by_id = {
+                    row["id"]: row for row in arch_doc.get("archetypes", [])
+                    if isinstance(row, dict) and isinstance(row.get("id"), str)
+                }
+            issues = validate_barks_document(doc, archetypes_by_id)
+            _raise_if_issues("Barks validation failed.", issues)
+
+        self.packs.update_json(barks_path, mutate, validator=validator, sort_keys=False)
+        return self.get_barks()
 
     def query_blocks(
         self,
@@ -1071,6 +1264,9 @@ class PeoplePackStore:
             for entries in (sp.get("regionalPools") or {}).values():
                 for entry in entries or []:
                     pairs.add((entry["archive"], entry["record"]))
+            for entries in (sp.get("climatePools") or {}).values():
+                for entry in entries or []:
+                    pairs.add((entry["archive"], entry["record"]))
 
         terms = q.lower().split() if q and q.strip() else []
         memo: dict = {}
@@ -1164,6 +1360,10 @@ class PeoplePackStore:
             }
         issues += validate_cast_document(cast_doc, factions, archetypes_by_id)
         issues += validate_spawners_document(spawners_doc, archetypes_by_id)
+        barks_path = self._barks_path()
+        barks_doc = self.packs.read_json(barks_path, None) if barks_path is not None else None
+        if barks_path is not None:
+            issues += validate_barks_document(barks_doc, archetypes_by_id)
 
         individuals_by_id = {
             row["id"]: row for row in (cast_doc or {}).get("individuals", [])
@@ -1225,6 +1425,7 @@ class PeoplePackStore:
                 "cast": len(individuals_by_id),
                 "spawners": len(spawners_by_id),
                 "archetypes": len(archetypes_by_id or {}),
+                "barks": len((barks_doc or {}).get("defaultBarks") or []),
                 "slots": slot_count,
             },
         }
@@ -1311,6 +1512,15 @@ def register_routes(router, workspace):
     def put_archetype_item(req):
         return workspace.people_pack.update_archetype(req.params["id"], req.json())
 
+    def get_barks(_req):
+        doc = workspace.people_pack.get_barks()
+        if doc is None:
+            raise NotFoundError("People pack has no barks.json.")
+        return doc
+
+    def put_barks(req):
+        return workspace.people_pack.update_barks(req.json())
+
     def get_validate(_req):
         return workspace.people_pack.validate_all()
 
@@ -1324,6 +1534,8 @@ def register_routes(router, workspace):
     router.get("/api/people-pack/archetypes", get_archetypes_list)
     router.get("/api/people-pack/archetypes/{id}", get_archetype_item)
     router.put("/api/people-pack/archetypes/{id}", put_archetype_item)
+    router.get("/api/people-pack/barks", get_barks)
+    router.put("/api/people-pack/barks", put_barks)
     router.get("/api/people-pack/blocks", get_blocks)
     router.get("/api/people-pack/visuals", get_visuals)
     router.get("/api/people-pack/validate", get_validate)

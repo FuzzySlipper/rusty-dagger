@@ -1,0 +1,293 @@
+{
+  "defaultBarks": [
+    "Busy day on the streets. Watch your step.",
+    "Keep moving, traveler — plenty to do before sundown.",
+    "Quiet enough around here, if you don't look for trouble.",
+    "Mind the cobblestones; they're slick after rain."
+  ],
+  "byRole": {
+    "merchant": [
+      "Step inside if you're buying; window-shopping doesn't pay the guild dues.",
+      "Caravans came in light this week, so prices are holding firm.",
+      "Coin on the counter and I'll wrap whatever you need."
+    ],
+    "tavern keeper": [
+      "Hearth's lit and the kegs are tapped — pull up a stool inside.",
+      "Keep steel sheathed in my taproom and we'll get along fine.",
+      "Rooms go fast when the road-mud gets knee-deep."
+    ],
+    "bank teller": [
+      "Letters of credit and deeds are handled strictly inside the counting house.",
+      "Every copper is tallied to the ledger before sundown.",
+      "The bank keeps its doors open for honest accounts."
+    ],
+    "guard": [
+      "Keep your blade sheathed and move along, citizen.",
+      "The watch sees more than folks give us credit for.",
+      "Stay out of the alleys after dark if you value your purse."
+    ],
+    "priest": [
+      "May the Divines steady your road, traveler.",
+      "The sanctuary doors are open to the faithful and the wounded alike.",
+      "Walk gently; grace is quieter than thunder."
+    ],
+    "witch": [
+      "Not every omen belongs in broad daylight.",
+      "The hills remember older oaths than any court.",
+      "Mind what you promise beneath a thin moon."
+    ]
+  },
+  "byArchetype": {
+    "noble": [
+      "Mind your manners — the court has little patience for muddy boots.",
+      "Every banner in the Bay watches every other.",
+      "Speak to a steward if you have business with the house."
+    ],
+    "mage": [
+      "Careful — a half-bound ward does not care who trips over it.",
+      "The Guild's lamps burn late when the sky turns strange.",
+      "If you're bringing curious relics, keep them wrapped."
+    ],
+    "warrior": [
+      "Good steel beats loud bragging every time.",
+      "Keep your edge oiled; the roads outside the walls aren't tame.",
+      "Looking for a contract? Check the Guild hall."
+    ],
+    "assassin": [
+      "You didn't see me, and I didn't see you.",
+      "Crowded streets make quiet work.",
+      "Best not to linger where shadows cross."
+    ],
+    "child": [
+      "Bet I can run to the market gate faster than you!",
+      "Did you see the riders come through the gate?",
+      "Mother says not to wander near the old walls after dusk."
+    ]
+  },
+  "byRegion": {
+    "0": [
+      "Carry two waterskins past the last oasis, or don't leave the walls at all.",
+      "The Alik'r swallows careless caravans whole.",
+      "Redguard guides know every dune ridge between here and Sentinel."
+    ],
+    "16": [
+      "Stone walls hold against the Wrothgarian gales, barely.",
+      "Snow lingers in the high passes long after the Bay thaws.",
+      "Watch the ridges — mountain bandits love a slow wagon."
+    ],
+    "17": [
+      "Fog off the Bay clings to Daggerfall's towers half the morning.",
+      "Folk still whisper about the old king's ghost after midnight.",
+      "Between Castle Daggerfall and the harbor, there's never a dull hour."
+    ],
+    "19": [
+      "Salt wind off Betony's cliffs cuts right through wool.",
+      "Half the harbor still argues over the last war with Sentinel.",
+      "Tides turn quick along the strait — check the piers."
+    ],
+    "20": [
+      "Keep to the shaded arcades in Sentinel once the noon sun climbs.",
+      "Ships from across the Iliac crowd Sentinel's docks from dawn till dusk.",
+      "Queen Akorithi's banners fly high over the palace quarter today."
+    ],
+    "22": [
+      "Lainlyn's traders watch both the desert road and the Bay.",
+      "Dust on the wind means another Hammerfell caravan's nearing the gate.",
+      "Keep your cloak tight; the cliff breeze bites at dusk."
+    ],
+    "23": [
+      "Coin moves fast in Wayrest — watch both your purse and your tongue.",
+      "The Bjoulsae barges bring silk, spice, and palace gossip in equal measure.",
+      "Wayrest's spires gleam brightest when the river mist lifts."
+    ],
+    "26": [
+      "Out near Orsinium, folks judge you by your nerve, not your lineage.",
+      "Keep your wits sharp on the mountain roads.",
+      "Iron and stubbornness keep these valleys standing."
+    ]
+  },
+  "byClimate": {
+    "Desert": [
+      "Drink before you're thirsty; the desert sun gives no second warning.",
+      "Sand finds its way into every buckle and boot by noon.",
+      "Travel at dawn or dusk if you want your mount to last."
+    ],
+    "Desert2": [
+      "Dry wind off the dunes carries grit all the way to the market square.",
+      "Shade's worth more than silver when the glare hits the sandstone.",
+      "Caravans hug the wells along these desert tracks."
+    ],
+    "Subtropical": [
+      "Warm sea air off the southern coast keeps the markets lively till late.",
+      "Spices and citrus dry along the rooftops all afternoon.",
+      "The breeze off the Bay cools the stone once the sun dips."
+    ],
+    "Mountain": [
+      "Thin air and steep trails — keep your footing on the scree.",
+      "Hearths burn all day up here, even when the sky looks clear.",
+      "Wrap your shoulders; mountain weather turns in a heartbeat."
+    ],
+    "MountainWoods": [
+      "Pine smoke and damp timber — you can smell the high woods from the square.",
+      "Loggers and hunters trade down here before the passes freeze.",
+      "Keep to the marked track through the evergreens."
+    ],
+    "Swamp": [
+      "Mire-fog settles before sunset; don't lose sight of the lanterns.",
+      "Dry boots are a rare luxury anywhere near the fens.",
+      "Keep off the soft turf outside the causeway."
+    ],
+    "Rainforest": [
+      "Green canopy holds the mist long after the rain stops.",
+      "Everything stays damp here — oil your blade twice as often.",
+      "The jungle road grows back fast if caravans skip a week."
+    ],
+    "Woodlands": [
+      "Clear sky over the woods today — good weather for the road.",
+      "Carts roll through the market from every village in the shire.",
+      "Mind the ruts outside the gate after a heavy shower."
+    ],
+    "HauntedWoodlands": [
+      "Folks bar their shutters early when mist creeps out of the barrows.",
+      "Don't follow stray lights off the road after sundown.",
+      "The old trees around here keep an uneasy quiet."
+    ]
+  },
+  "referrals": {
+    "defaultIssueTemplates": [
+      "If you travel to {target}, ask {contact} outside the tavern — tell them {speaker} sent you.",
+      "Should your road take you to {target}, look for {contact} near the tavern and say {speaker} sent word.",
+      "Heading toward {target}? Find {contact} outside the tavern and mention {speaker}."
+    ],
+    "issueTemplatesByClimate": {
+      "Desert": [
+        "If your caravan reaches {target}, seek out {contact} in the shade outside the tavern — say {speaker} sent you."
+      ],
+      "Subtropical": [
+        "When you make port or road for {target}, ask {contact} outside the tavern and name {speaker}."
+      ],
+      "Mountain": [
+        "If you brave the pass to {target}, look for {contact} by the tavern doors — tell them {speaker} sent you."
+      ],
+      "Swamp": [
+        "Once you cross the causeway to {target}, find {contact} outside the tavern and say {speaker} sent word."
+      ],
+      "Woodlands": [
+        "If you follow the shire road to {target}, ask {contact} outside the tavern — tell them {speaker} sent you."
+      ]
+    },
+    "issueTemplatesByRegion": {
+      "17": [
+        "If you travel to {target}, ask {contact} outside the tavern — tell them {speaker} sent you."
+      ],
+      "20": [
+        "Should you ride to {target}, look for {contact} outside the tavern courtyard and say {speaker} sent you."
+      ],
+      "23": [
+        "Next time business takes you to {target}, speak with {contact} outside the tavern — mention {speaker}."
+      ]
+    },
+    "defaultResponseTemplates": [
+      "You're looking for {speaker}? Word reached me about '{tag}'.",
+      "So you're the traveler sent about '{tag}'? You've found {speaker}."
+    ],
+    "responseTemplatesByRole": {
+      "bystander": [
+        "You're looking for {speaker}? Word reached me about '{tag}'."
+      ],
+      "clutter-person": [
+        "You're looking for {speaker}? Word reached me about '{tag}'."
+      ],
+      "merchant": [
+        "{speaker}'s the name — I heard tell of '{tag}' before you arrived."
+      ],
+      "tavern keeper": [
+        "Pull up a chair — {speaker} already got word about '{tag}'."
+      ]
+    },
+    "contactNames": [
+      "Mara",
+      "Beren",
+      "Sabine",
+      "Taren",
+      "Alena",
+      "Garrick"
+    ],
+    "contactNamesByClimate": {
+      "Desert": [
+        "Amina",
+        "Hakim",
+        "Zara",
+        "Rashid"
+      ],
+      "Desert2": [
+        "Nadira",
+        "Tariq",
+        "Salma",
+        "Karim"
+      ],
+      "Subtropical": [
+        "Yasmin",
+        "Farid",
+        "Samira",
+        "Malik"
+      ],
+      "Mountain": [
+        "Torvald",
+        "Astrid",
+        "Bram",
+        "Freya"
+      ],
+      "Swamp": [
+        "Corin",
+        "Mirella",
+        "Davin",
+        "Lina"
+      ],
+      "Woodlands": [
+        "Mara",
+        "Beren",
+        "Sabine",
+        "Edric"
+      ]
+    },
+    "contactNamesByRegion": {
+      "0": [
+        "Amina",
+        "Hakim",
+        "Zara",
+        "Tariq"
+      ],
+      "16": [
+        "Torvald",
+        "Astrid",
+        "Bram",
+        "Sigrid"
+      ],
+      "17": [
+        "Mara",
+        "Beren",
+        "Edric",
+        "Sabine"
+      ],
+      "20": [
+        "Amina",
+        "Hakim",
+        "Zara",
+        "Rashid"
+      ],
+      "23": [
+        "Liana",
+        "Corvus",
+        "Talia",
+        "Garrick"
+      ],
+      "26": [
+        "Ghorak",
+        "Bagrak",
+        "Urzul",
+        "Morgul"
+      ]
+    }
+  }
+}

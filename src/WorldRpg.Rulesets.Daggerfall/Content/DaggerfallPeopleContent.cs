@@ -33,7 +33,8 @@ internal sealed record DaggerfallPeoplePackFiles(
     ReadOnlyMemory<byte> CastBytes,
     ReadOnlyMemory<byte> SpawnersBytes,
     IReadOnlyList<DaggerfallPeopleBlockFile> BlockFiles,
-    ReadOnlyMemory<byte>? ArchetypesBytes = null);
+    ReadOnlyMemory<byte>? ArchetypesBytes = null,
+    ReadOnlyMemory<byte>? BarksBytes = null);
 
 /// <summary>One block-slot file under a people pack's <c>blocks/</c> folder.</summary>
 internal sealed record DaggerfallPeopleBlockFile(string Path, ReadOnlyMemory<byte> Bytes);
@@ -44,7 +45,7 @@ internal sealed record DaggerfallPeopleVisual(int Archive, int Record, string Ge
 /// <summary>Weighted visual candidate inside a typed spawner pool.</summary>
 internal sealed record DaggerfallPeoplePoolEntry(int Archive, int Record, string Gender, int Weight);
 
-/// <summary>Central typed spawner pool resolved by region and <see cref="DaggerfallSocialTuning.WorldSocialSeed"/>.</summary>
+/// <summary>Central typed spawner pool resolved by region, climate, and <see cref="DaggerfallSocialTuning.WorldSocialSeed"/>.</summary>
 internal sealed record DaggerfallPeopleSpawnerDefinition(
     string Id,
     string Role,
@@ -54,7 +55,138 @@ internal sealed record DaggerfallPeopleSpawnerDefinition(
     string VisualMode,
     IReadOnlyList<DaggerfallPeoplePoolEntry> DefaultPool,
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> RegionalPools,
-    string? ArchetypeId = null);
+    string? ArchetypeId = null,
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>? ClimatePoolsMap = null)
+{
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> EmptyPools =
+        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(
+            new Dictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(StringComparer.OrdinalIgnoreCase));
+
+    internal IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> ClimatePools =>
+        ClimatePoolsMap ?? EmptyPools;
+}
+
+/// <summary>Authored referral phrasing templates and regional contact names loaded from <c>daggerfall.people/barks.json</c>.</summary>
+internal sealed record DaggerfallPeopleReferralTemplates(
+    IReadOnlyList<string> DefaultIssueTemplates,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> IssueTemplatesByRegion,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> IssueTemplatesByClimate,
+    IReadOnlyList<string> DefaultResponseTemplates,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ResponseTemplatesByRole,
+    IReadOnlyList<string> ContactNames,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ContactNamesByRegion,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ContactNamesByClimate)
+{
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> EmptyMap =
+        new ReadOnlyDictionary<string, IReadOnlyList<string>>(
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase));
+
+    internal static DaggerfallPeopleReferralTemplates Empty { get; } = new(
+        [], EmptyMap, EmptyMap, [], EmptyMap, [], EmptyMap, EmptyMap);
+
+    internal string ResolveContactName(ulong seed, int? regionIndex = null, string? regionName = null, string? climateName = null)
+    {
+        IReadOnlyList<string> pool = SelectByRegionOrClimate(ContactNamesByRegion, ContactNamesByClimate, ContactNames,
+            regionIndex, regionName, climateName);
+        if (pool.Count == 0)
+            throw new InvalidOperationException("People pack barks.json defines no referral contactNames.");
+        return pool[(int)(seed % (ulong)pool.Count)];
+    }
+
+    internal string FormatIssueLine(
+        ulong seed,
+        string targetName,
+        string contactName,
+        string speakerName,
+        int? regionIndex = null,
+        string? regionName = null,
+        string? climateName = null)
+    {
+        IReadOnlyList<string> pool = SelectByRegionOrClimate(IssueTemplatesByRegion, IssueTemplatesByClimate, DefaultIssueTemplates,
+            regionIndex, regionName, climateName);
+        if (pool.Count == 0)
+            throw new InvalidOperationException("People pack barks.json defines no referral defaultIssueTemplates.");
+        string template = pool[(int)(seed % (ulong)pool.Count)];
+        return template
+            .Replace("{target}", targetName, StringComparison.Ordinal)
+            .Replace("{contact}", contactName, StringComparison.Ordinal)
+            .Replace("{speaker}", speakerName, StringComparison.Ordinal);
+    }
+
+    internal string FormatResponseLine(ulong seed, string speakerName, string referralTag, string? role = null)
+    {
+        IReadOnlyList<string> pool = !string.IsNullOrWhiteSpace(role)
+            && ResponseTemplatesByRole.TryGetValue(role, out IReadOnlyList<string>? byRole)
+            && byRole.Count > 0
+                ? byRole
+                : DefaultResponseTemplates;
+        if (pool.Count == 0)
+            throw new InvalidOperationException("People pack barks.json defines no referral defaultResponseTemplates.");
+        string template = pool[(int)(seed % (ulong)pool.Count)];
+        return template
+            .Replace("{speaker}", speakerName, StringComparison.Ordinal)
+            .Replace("{tag}", referralTag, StringComparison.Ordinal);
+    }
+
+    internal static IReadOnlyList<string> SelectByRegionOrClimate(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> byRegion,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> byClimate,
+        IReadOnlyList<string> fallback,
+        int? regionIndex,
+        string? regionName,
+        string? climateName)
+    {
+        if (!string.IsNullOrWhiteSpace(regionName) && byRegion.TryGetValue(regionName, out IReadOnlyList<string>? named) && named.Count > 0)
+            return named;
+        if (regionIndex is int r && byRegion.TryGetValue(r.ToString(CultureInfo.InvariantCulture), out IReadOnlyList<string>? indexed) && indexed.Count > 0)
+            return indexed;
+        if (!string.IsNullOrWhiteSpace(climateName) && byClimate.TryGetValue(climateName, out IReadOnlyList<string>? climate) && climate.Count > 0)
+            return climate;
+        return fallback;
+    }
+}
+
+/// <summary>Authored ambient bark pools and referral templates loaded from <c>daggerfall.people/barks.json</c>.</summary>
+internal sealed record DaggerfallPeopleBarks(
+    IReadOnlyList<string> DefaultBarks,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ByRole,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ByArchetype,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ByRegion,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> ByClimate,
+    DaggerfallPeopleReferralTemplates Referrals)
+{
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> EmptyMap =
+        new ReadOnlyDictionary<string, IReadOnlyList<string>>(
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase));
+
+    internal static DaggerfallPeopleBarks Empty { get; } = new(
+        [], EmptyMap, EmptyMap, EmptyMap, EmptyMap, DaggerfallPeopleReferralTemplates.Empty);
+
+    /// <summary>
+    /// Resolves one deterministic ambient bark line with specificity precedence:
+    /// role -&gt; archetype -&gt; region -&gt; climate -&gt; defaultBarks.
+    /// </summary>
+    internal string ResolveBarkLine(
+        ulong seed,
+        string? role = null,
+        string? archetypeId = null,
+        int? regionIndex = null,
+        string? regionName = null,
+        string? climateName = null)
+    {
+        IReadOnlyList<string>? pool = null;
+        if (!string.IsNullOrWhiteSpace(role) && ByRole.TryGetValue(role, out IReadOnlyList<string>? rolePool) && rolePool.Count > 0)
+            pool = rolePool;
+        else if (!string.IsNullOrWhiteSpace(archetypeId) && ByArchetype.TryGetValue(archetypeId, out IReadOnlyList<string>? archPool) && archPool.Count > 0)
+            pool = archPool;
+        else
+            pool = DaggerfallPeopleReferralTemplates.SelectByRegionOrClimate(ByRegion, ByClimate, DefaultBarks, regionIndex, regionName, climateName);
+
+        if (pool.Count == 0)
+            throw new InvalidOperationException("People pack barks.json defines no defaultBarks.");
+        return pool[(int)(seed % (ulong)pool.Count)];
+    }
+}
 
 /// <summary>Genuine unique named individual authored in <c>cast/individuals.json</c>.</summary>
 internal sealed record DaggerfallCastIndividualDefinition(
@@ -91,19 +223,21 @@ internal sealed record DaggerfallPeopleBuildingSlots(
     int BuildingFactionId,
     IReadOnlyList<DaggerfallPeopleSlotDefinition> Slots);
 
-/// <summary>The admitted <c>daggerfall.people</c> pack: unique cast, central spawners, archetypes, and block slot templates.</summary>
+/// <summary>The admitted <c>daggerfall.people</c> pack: unique cast, central spawners, archetypes, barks, and block slot templates.</summary>
 internal sealed record DaggerfallPeopleSet(
     IReadOnlyDictionary<string, DaggerfallCastIndividualDefinition> Individuals,
     IReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition> Spawners,
     IReadOnlyDictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>> RmbInteriors,
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RmbExteriors,
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RdbDungeons,
-    IReadOnlyDictionary<string, ArchetypeProfile>? ArchetypesMap = null)
+    IReadOnlyDictionary<string, ArchetypeProfile>? ArchetypesMap = null,
+    DaggerfallPeopleBarks? BarksData = null)
 {
     private static readonly IReadOnlyDictionary<string, ArchetypeProfile> EmptyArchetypes =
         new ReadOnlyDictionary<string, ArchetypeProfile>(new Dictionary<string, ArchetypeProfile>(StringComparer.Ordinal));
 
     internal IReadOnlyDictionary<string, ArchetypeProfile> Archetypes => ArchetypesMap ?? EmptyArchetypes;
+    internal DaggerfallPeopleBarks Barks => BarksData ?? DaggerfallPeopleBarks.Empty;
 
     internal static DaggerfallPeopleSet Empty { get; } = new(
         new ReadOnlyDictionary<string, DaggerfallCastIndividualDefinition>(new Dictionary<string, DaggerfallCastIndividualDefinition>(StringComparer.Ordinal)),
@@ -111,7 +245,8 @@ internal sealed record DaggerfallPeopleSet(
         new ReadOnlyDictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>>(new Dictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(new Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(new Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(StringComparer.Ordinal)),
-        EmptyArchetypes);
+        EmptyArchetypes,
+        DaggerfallPeopleBarks.Empty);
 
     internal ArchetypeProfile RequireArchetype(string archetypeId)
     {
@@ -197,9 +332,23 @@ internal static class DaggerfallPeopleContent
     internal const string CastFile = "cast/individuals.json";
     internal const string SpawnersFile = "spawners.json";
     internal const string ArchetypesFile = "archetypes.json";
+    internal const string BarksFile = "barks.json";
     internal const string BlocksFolder = "blocks";
     private const int IndividualFactionType = 4;
     private const int MaximumArchetypeVital = 10_000;
+    internal static readonly IReadOnlySet<string> ValidClimateNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Ocean",
+        "Desert",
+        "Desert2",
+        "Mountain",
+        "Rainforest",
+        "Swamp",
+        "Subtropical",
+        "MountainWoods",
+        "Woodlands",
+        "HauntedWoodlands",
+    };
 
     internal static DaggerfallPeopleSet Read(
         DaggerfallPeoplePackFiles pack,
@@ -218,6 +367,7 @@ internal static class DaggerfallPeopleContent
             _ = DaggerfallBaseContent.Text(root, "castFile", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "spawnersFile", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "archetypesFile", diagnostics);
+            _ = DaggerfallBaseContent.Text(root, "barksFile", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "blocksFolder", diagnostics);
         }
         catch (JsonException exception)
@@ -226,6 +376,7 @@ internal static class DaggerfallPeopleContent
         }
 
         Dictionary<string, ArchetypeProfile> archetypes = ReadArchetypes(pack.PackId, pack.ArchetypesBytes, vocabulary, items, diagnostics);
+        DaggerfallPeopleBarks barks = ReadBarks(pack.PackId, pack.BarksBytes, archetypes, diagnostics);
         Dictionary<string, DaggerfallCastIndividualDefinition> individuals = ReadIndividuals(pack.PackId, pack.CastBytes, factions, archetypes, diagnostics);
         Dictionary<string, DaggerfallPeopleSpawnerDefinition> spawners = ReadSpawners(pack.PackId, pack.SpawnersBytes, archetypes, diagnostics);
 
@@ -243,7 +394,162 @@ internal static class DaggerfallPeopleContent
             new ReadOnlyDictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>>(rmbInteriors),
             new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rmbExteriors),
             new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rdbDungeons),
-            new ReadOnlyDictionary<string, ArchetypeProfile>(archetypes));
+            new ReadOnlyDictionary<string, ArchetypeProfile>(archetypes),
+            barks);
+    }
+
+    private static DaggerfallPeopleBarks ReadBarks(
+        string packId,
+        ReadOnlyMemory<byte>? bytes,
+        IReadOnlyDictionary<string, ArchetypeProfile> archetypes,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        if (bytes is null || bytes.Value.IsEmpty)
+        {
+            diagnostics.Add($"People pack '{packId}' is missing '{BarksFile}'.");
+            return DaggerfallPeopleBarks.Empty;
+        }
+
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(bytes.Value);
+            JsonElement root = DaggerfallBaseContent.Object(doc.RootElement, $"People pack '{packId}' barks", diagnostics);
+            IReadOnlyList<string> defaultBarks = ReadTextList(root, "defaultBarks", $"People pack '{packId}' barks.defaultBarks", requiredNonEmpty: true, diagnostics);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> byRole = ReadTextMap(root, "byRole", $"People pack '{packId}' barks.byRole", diagnostics);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> byArchetype = ReadTextMap(root, "byArchetype", $"People pack '{packId}' barks.byArchetype", diagnostics,
+                validateKey: key => archetypes.ContainsKey(key) ? null : $"references unknown archetype '{key}'");
+            IReadOnlyDictionary<string, IReadOnlyList<string>> byRegion = ReadTextMap(root, "byRegion", $"People pack '{packId}' barks.byRegion", diagnostics);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> byClimate = ReadTextMap(root, "byClimate", $"People pack '{packId}' barks.byClimate", diagnostics,
+                validateKey: key => ValidClimateNames.Contains(key) ? null : $"references unknown climate '{key}'");
+
+            JsonElement refEl = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "referrals", diagnostics), $"People pack '{packId}' barks.referrals", diagnostics);
+            IReadOnlyList<string> defaultIssue = ReadTextList(refEl, "defaultIssueTemplates", $"People pack '{packId}' referrals.defaultIssueTemplates", requiredNonEmpty: true, diagnostics,
+                requiredTokens: ["{target}", "{contact}", "{speaker}"]);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> issueByRegion = ReadTextMap(refEl, "issueTemplatesByRegion", $"People pack '{packId}' referrals.issueTemplatesByRegion", diagnostics,
+                requiredTokens: ["{target}", "{contact}", "{speaker}"]);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> issueByClimate = ReadTextMap(refEl, "issueTemplatesByClimate", $"People pack '{packId}' referrals.issueTemplatesByClimate", diagnostics,
+                validateKey: key => ValidClimateNames.Contains(key) ? null : $"references unknown climate '{key}'",
+                requiredTokens: ["{target}", "{contact}", "{speaker}"]);
+
+            IReadOnlyList<string> defaultResp = ReadTextList(refEl, "defaultResponseTemplates", $"People pack '{packId}' referrals.defaultResponseTemplates", requiredNonEmpty: true, diagnostics,
+                requiredTokens: ["{speaker}", "{tag}"]);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> respByRole = ReadTextMap(refEl, "responseTemplatesByRole", $"People pack '{packId}' referrals.responseTemplatesByRole", diagnostics,
+                requiredTokens: ["{speaker}", "{tag}"]);
+
+            IReadOnlyList<string> contactNames = ReadTextList(refEl, "contactNames", $"People pack '{packId}' referrals.contactNames", requiredNonEmpty: true, diagnostics);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> contactsByRegion = ReadTextMap(refEl, "contactNamesByRegion", $"People pack '{packId}' referrals.contactNamesByRegion", diagnostics);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> contactsByClimate = ReadTextMap(refEl, "contactNamesByClimate", $"People pack '{packId}' referrals.contactNamesByClimate", diagnostics,
+                validateKey: key => ValidClimateNames.Contains(key) ? null : $"references unknown climate '{key}'");
+
+            return new DaggerfallPeopleBarks(
+                defaultBarks,
+                byRole,
+                byArchetype,
+                byRegion,
+                byClimate,
+                new DaggerfallPeopleReferralTemplates(
+                    defaultIssue,
+                    issueByRegion,
+                    issueByClimate,
+                    defaultResp,
+                    respByRole,
+                    contactNames,
+                    contactsByRegion,
+                    contactsByClimate));
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"People pack '{packId}' barks file is malformed: {exception.Message}");
+            return DaggerfallPeopleBarks.Empty;
+        }
+    }
+
+    private static IReadOnlyList<string> ReadTextList(
+        JsonElement parent,
+        string propertyName,
+        string context,
+        bool requiredNonEmpty,
+        DaggerfallContentDiagnostics diagnostics,
+        string[]? requiredTokens = null)
+    {
+        if (!parent.TryGetProperty(propertyName, out JsonElement el))
+        {
+            if (requiredNonEmpty)
+                diagnostics.Add($"{context} is required and must be a non-empty string array.");
+            return [];
+        }
+        return ReadTextArray(el, context, requiredNonEmpty, diagnostics, requiredTokens);
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ReadTextMap(
+        JsonElement parent,
+        string propertyName,
+        string context,
+        DaggerfallContentDiagnostics diagnostics,
+        Func<string, string?>? validateKey = null,
+        string[]? requiredTokens = null)
+    {
+        Dictionary<string, IReadOnlyList<string>> map = new(StringComparer.OrdinalIgnoreCase);
+        if (!parent.TryGetProperty(propertyName, out JsonElement el))
+            return new ReadOnlyDictionary<string, IReadOnlyList<string>>(map);
+        if (el.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add($"{context} must be an object mapping keys to string arrays.");
+            return new ReadOnlyDictionary<string, IReadOnlyList<string>>(map);
+        }
+        foreach (JsonProperty prop in el.EnumerateObject())
+        {
+            if (string.IsNullOrWhiteSpace(prop.Name))
+            {
+                diagnostics.Add($"{context} contains an empty key.");
+                continue;
+            }
+            if (validateKey?.Invoke(prop.Name) is { } keyError)
+                diagnostics.Add($"{context}.'{prop.Name}' {keyError}.");
+            IReadOnlyList<string> lines = ReadTextArray(prop.Value, $"{context}.'{prop.Name}'", requiredNonEmpty: true, diagnostics, requiredTokens);
+            map[prop.Name] = lines;
+        }
+        return new ReadOnlyDictionary<string, IReadOnlyList<string>>(map);
+    }
+
+    private static IReadOnlyList<string> ReadTextArray(
+        JsonElement el,
+        string context,
+        bool requiredNonEmpty,
+        DaggerfallContentDiagnostics diagnostics,
+        string[]? requiredTokens = null)
+    {
+        if (el.ValueKind != JsonValueKind.Array)
+        {
+            diagnostics.Add($"{context} must be an array of strings.");
+            return [];
+        }
+        List<string> list = [];
+        int idx = 0;
+        foreach (JsonElement item in el.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(item.GetString()))
+            {
+                diagnostics.Add($"{context}[{idx}] must be non-empty text.");
+            }
+            else
+            {
+                string line = item.GetString()!.Trim();
+                if (requiredTokens is not null)
+                {
+                    foreach (string token in requiredTokens)
+                    {
+                        if (!line.Contains(token, StringComparison.Ordinal))
+                            diagnostics.Add($"{context}[{idx}] must contain placeholder '{token}'.");
+                    }
+                }
+                list.Add(line);
+            }
+            idx++;
+        }
+        if (requiredNonEmpty && list.Count == 0)
+            diagnostics.Add($"{context} must contain at least one entry.");
+        return list.AsReadOnly();
     }
 
     private static Dictionary<string, ArchetypeProfile> ReadArchetypes(
@@ -514,8 +820,40 @@ internal static class DaggerfallPeopleContent
                     }
                 }
 
+                Dictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> climatePools = new(StringComparer.OrdinalIgnoreCase);
+                if (obj.TryGetProperty("climatePools", out JsonElement climateObj))
+                {
+                    if (climateObj.ValueKind != JsonValueKind.Object)
+                    {
+                        diagnostics.Add($"Spawner '{id}' climatePools must be an object.");
+                    }
+                    else
+                    {
+                        foreach (JsonProperty climateProp in climateObj.EnumerateObject())
+                        {
+                            if (!ValidClimateNames.Contains(climateProp.Name))
+                                diagnostics.Add($"Spawner '{id}' climatePools references unknown climate '{climateProp.Name}'.");
+                            if (climateProp.Value.ValueKind != JsonValueKind.Array)
+                            {
+                                diagnostics.Add($"Spawner '{id}' climatePools.'{climateProp.Name}' must be an array.");
+                            }
+                            else
+                            {
+                                IReadOnlyList<DaggerfallPeoplePoolEntry> pool = ReadPool(
+                                    climateProp.Value.EnumerateArray(),
+                                    $"spawner '{id}' climatePools.{climateProp.Name}", diagnostics);
+                                if (pool.Count == 0)
+                                    diagnostics.Add($"Spawner '{id}' climatePools.'{climateProp.Name}' must contain at least one entry.");
+                                else
+                                    climatePools[climateProp.Name] = pool;
+                            }
+                        }
+                    }
+                }
+
                 if (!result.TryAdd(id, new(id, role, interaction, harm, deriveRegional, visualMode, defaultPool,
-                        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(regionalPools), archetypeId)))
+                        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(regionalPools), archetypeId,
+                        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(climatePools))))
                     diagnostics.Add($"People pack '{packId}' repeats spawner '{id}'.");
             }
         }
@@ -853,7 +1191,8 @@ internal static class DaggerfallPeopleSlots
         DaggerfallSiteId site,
         string placementSlotKey,
         DaggerfallPeopleSlotDefinition slot,
-        string? regionKey = null)
+        string? regionKey = null,
+        string? climateKey = null)
     {
         ArgumentNullException.ThrowIfNull(people);
         ArgumentNullException.ThrowIfNull(factions);
@@ -882,7 +1221,7 @@ internal static class DaggerfallPeopleSlots
         }
 
         DaggerfallPeopleSpawnerDefinition spawner = people.Spawners[slot.SpawnerId!];
-        DaggerfallPeopleVisual visual = PickVisual(spawner, slot.ClassicVisual, seed, site.Region, regionKey);
+        DaggerfallPeopleVisual visual = PickVisual(spawner, slot.ClassicVisual, seed, site.Region, regionKey, climateKey);
         int? regionalFactionId = slot.DeriveRegionalFaction || spawner.DeriveRegionalFaction
             ? ResolveRegionalPeopleFaction(factions, site.Region)?.Id
             : null;
@@ -909,13 +1248,16 @@ internal static class DaggerfallPeopleSlots
         DaggerfallPeopleVisual fallback,
         ulong seed,
         int regionIndex,
-        string? regionKey)
+        string? regionKey,
+        string? climateKey)
     {
         IReadOnlyList<DaggerfallPeoplePoolEntry>? pool = null;
         if (!string.IsNullOrWhiteSpace(regionKey) && spawner.RegionalPools.TryGetValue(regionKey, out IReadOnlyList<DaggerfallPeoplePoolEntry>? byName) && byName.Count > 0)
             pool = byName;
         else if (spawner.RegionalPools.TryGetValue(regionIndex.ToString(CultureInfo.InvariantCulture), out IReadOnlyList<DaggerfallPeoplePoolEntry>? byIndex) && byIndex.Count > 0)
             pool = byIndex;
+        else if (!string.IsNullOrWhiteSpace(climateKey) && spawner.ClimatePools.TryGetValue(climateKey, out IReadOnlyList<DaggerfallPeoplePoolEntry>? byClimate) && byClimate.Count > 0)
+            pool = byClimate;
         else if (spawner.VisualMode == "pool" && spawner.DefaultPool.Count > 0)
             pool = spawner.DefaultPool;
 

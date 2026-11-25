@@ -261,12 +261,15 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         ProductContentFile[] archetypeFiles = [.. files.Where(file => file.RelativePath.EndsWith("/" + DaggerfallPeopleContent.ArchetypesFile, StringComparison.Ordinal))];
         if (archetypeFiles.Length != 1)
             throw new InvalidOperationException($"People pack '{pack.Id.Value}' must carry exactly one '{DaggerfallPeopleContent.ArchetypesFile}'.");
+        ProductContentFile[] barkFiles = [.. files.Where(file => file.RelativePath.EndsWith("/" + DaggerfallPeopleContent.BarksFile, StringComparison.Ordinal))];
+        if (barkFiles.Length != 1)
+            throw new InvalidOperationException($"People pack '{pack.Id.Value}' must carry exactly one '{DaggerfallPeopleContent.BarksFile}'.");
         DaggerfallPeopleBlockFile[] blocks = [.. files
             .Where(file => file.RelativePath.Contains("/" + DaggerfallPeopleContent.BlocksFolder + "/", StringComparison.Ordinal)
                 && file.RelativePath.EndsWith(".json", StringComparison.Ordinal))
             .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
             .Select(file => new DaggerfallPeopleBlockFile(file.RelativePath, file.Bytes))];
-        return new(pack.Id.Value, pack.Payload, castFiles[0].Bytes, spawnerFiles[0].Bytes, blocks, archetypeFiles[0].Bytes);
+        return new(pack.Id.Value, pack.Payload, castFiles[0].Bytes, spawnerFiles[0].Bytes, blocks, archetypeFiles[0].Bytes, barkFiles[0].Bytes);
     }
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>

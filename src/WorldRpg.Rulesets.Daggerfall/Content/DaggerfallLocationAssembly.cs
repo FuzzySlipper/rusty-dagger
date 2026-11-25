@@ -374,6 +374,8 @@ internal sealed class DaggerfallLocationAssembly
             int nameSeedSalt)
         {
             bool emittedAny = false;
+            string regionName = owner._definitions.BuildingNames.RegionName(key.Site.Region);
+            string climateName = owner._definitions.Grids.Climate.GetCell(record.MapPixelX + 1, record.MapPixelY).Name;
             foreach (DaggerfallPeopleSlotDefinition slot in slots)
             {
                 if (string.Equals(slot.Interaction, "full-dialogue", StringComparison.Ordinal)
@@ -383,22 +385,30 @@ internal sealed class DaggerfallLocationAssembly
                 string id = placeSlotId is not null
                     ? placeSlotId(slot.SlotId)
                     : $"person/{slot.SlotId.Replace(':', '-')}";
-                string harm = slot.SpawnerId is not null
-                    && owner._definitions.People.Spawners.TryGetValue(slot.SpawnerId, out DaggerfallPeopleSpawnerDefinition? spawner)
-                    ? spawner.Harm
-                    : "law-protected-civilian";
+                DaggerfallPeopleVisual visual = slot.ClassicVisual;
+                string harm = "law-protected-civilian";
+                if (slot.SpawnerId is not null
+                    && owner._definitions.People.Spawners.ContainsKey(slot.SpawnerId))
+                {
+                    DaggerfallResolvedPeopleSlot resolved = DaggerfallPeopleSlots.ResolveSlot(
+                        owner._definitions.People, owner._definitions.Factions, 0UL, key.Site, id, slot,
+                        regionKey: regionName, climateKey: climateName);
+                    harm = resolved.Harm;
+                    if (_media.BillboardSprites.ContainsKey((resolved.Visual.Archive, resolved.Visual.Record)))
+                        visual = resolved.Visual;
+                }
                 int nameSeed = unchecked((int)StableHash.NonZeroFnv1a64(
                     $"clutter-person:{key.Site.Region}:{key.Site.Index}:{id}:{nameSeedSalt}"));
                 JsonObject person = new()
                 {
                     ["id"] = id,
                     ["position"] = Vector(slot.Position.ToVector() + origin),
-                    ["billboardArchive"] = slot.ClassicVisual.Archive,
-                    ["billboardRecord"] = slot.ClassicVisual.Record,
+                    ["billboardArchive"] = visual.Archive,
+                    ["billboardRecord"] = visual.Record,
                     ["factionId"] = slot.FactionId ?? 0,
                     ["deriveRegionalFaction"] = slot.DeriveRegionalFaction,
                     ["race"] = null,
-                    ["gender"] = slot.ClassicVisual.Gender,
+                    ["gender"] = visual.Gender,
                     ["nameSeed"] = nameSeed,
                     ["interaction"] = slot.Interaction,
                     ["harm"] = harm,

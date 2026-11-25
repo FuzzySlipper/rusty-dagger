@@ -142,7 +142,8 @@ internal static class TestPayload
             TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.SpawnersFile)),
             [.. Directory.EnumerateFiles(System.IO.Path.Combine(folder, DaggerfallPeopleContent.BlocksFolder), "*.json").Order(StringComparer.Ordinal)
                 .Select(file => new DaggerfallPeopleBlockFile(System.IO.Path.GetRelativePath(folder, file), TestContentFiles.Read(file)))],
-            TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.ArchetypesFile)));
+            TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.ArchetypesFile)),
+            TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.BarksFile)));
     }
 
     /// <summary>The classic quest records, parsed afresh for a fact that edits or adds some.</summary>
