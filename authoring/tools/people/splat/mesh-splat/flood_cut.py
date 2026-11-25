@@ -14,7 +14,8 @@ dark background stays attached as long as it does not touch the border through
 background-coloured pixels, so it suits dark-ground paintings. The alpha is
 binary; check the cut-out on a contrasting ground before using it, since a
 background gap between arm and body that is fully enclosed would be filled as
-a hole (use --keep-holes for figures where that matters).
+a hole. --open-holes MIN_PX makes every enclosed background-coloured patch of at least MIN_PX
+pixels background too: the gap inside an arm with its hand on the hip (npc-026, 2026-11-24).
 
 `keyframes` scales every cut-out by one common factor, so that the tallest
 cut-out is HEIGHT pixels tall, and pastes each centred horizontally with its
@@ -33,7 +34,7 @@ from PIL import Image
 from scipy import ndimage
 
 
-def figure_mask(rgb, tolerance=16, speck=400, border=4, keep_holes=False):
+def figure_mask(rgb, tolerance=16, speck=400, border=4, keep_holes=False, open_holes=0):
     px = rgb.astype(np.int16)
     frame = np.concatenate([px[:border].reshape(-1, 3), px[-border:].reshape(-1, 3),
                             px[:, :border].reshape(-1, 3), px[:, -border:].reshape(-1, 3)])
@@ -46,6 +47,9 @@ def figure_mask(rgb, tolerance=16, speck=400, border=4, keep_holes=False):
     fig = ~background
     if not keep_holes:
         fig = ndimage.binary_fill_holes(fig)
+    if open_holes:   # background-coloured patches the figure closes in (an arm akimbo: npc-026) are background too
+        sizes = ndimage.sum(near, labels, range(1, labels.max() + 1))
+        fig &= ~(np.isin(labels, 1 + np.nonzero(sizes >= open_holes)[0]) & near)
     labels, n = ndimage.label(fig)
     if n:
         sizes = ndimage.sum(fig, labels, range(1, n + 1))
@@ -56,7 +60,7 @@ def figure_mask(rgb, tolerance=16, speck=400, border=4, keep_holes=False):
 def cut(args):
     im = Image.open(args.painting).convert('RGB')
     rgb = np.asarray(im)
-    fig = figure_mask(rgb, args.tolerance, args.speck, args.border, args.keep_holes)
+    fig = figure_mask(rgb, args.tolerance, args.speck, args.border, args.keep_holes, args.open_holes)
     ys, xs = np.nonzero(fig)
     y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
     out = np.dstack([rgb, fig.astype(np.uint8) * 255])[y0:y1, x0:x1]
@@ -102,6 +106,7 @@ def main():
     c.add_argument('--speck', type=int, default=400)
     c.add_argument('--border', type=int, default=4)
     c.add_argument('--keep-holes', action='store_true')
+    c.add_argument('--open-holes', type=int, default=0, help='MIN_PX: enclosed background-coloured patches this large are background too (an arm akimbo). It opens clothing of the background colour as well: npc-026 lost leggings highlights at tolerance 9. Check the cut.')
     k = sub.add_parser('keyframes')
     k.add_argument('out_dir')
     k.add_argument('views', nargs='+')

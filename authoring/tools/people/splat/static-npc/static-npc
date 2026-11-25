@@ -225,7 +225,8 @@ def step_keys(n, a):
     ap = n.ch / '01-concept/approved'; n.need(*(ap / f'{v}.png' for v in n.views), step='init')
     tol = a.tolerance or n.cfg['tolerance']; n.cut.mkdir(parents=True, exist_ok=True)
     for v in n.views:
-        sh(['python3', 'authoring/tools/people/splat/mesh-splat/flood_cut.py', 'cut', ap / f'{v}.png', n.cut / f'{v}-cut.png', '--tolerance', str(tol)])
+        sh(['python3', 'authoring/tools/people/splat/mesh-splat/flood_cut.py', 'cut', ap / f'{v}.png', n.cut / f'{v}-cut.png', '--tolerance', str(tol)]
+           + (['--open-holes', str(n.cfg['open_holes'])] if n.cfg.get('open_holes') else []))   # npc.json "open_holes": an arm akimbo
     sh(['python3', 'authoring/tools/people/splat/mesh-splat/flood_cut.py', 'keyframes', n.keys] + [f"{v}={n.cut / f'{v}-cut.png'}" for v in n.views]
        + ['--size', '1920', '--height', '1675', '--floor', '1799', '--equal-height'])
     print(f'{n.id}: check the cut-outs ({n.cut.relative_to(REPO)}) at full size: tolerance 16 ate a robe edge on 128, 9 is the default')

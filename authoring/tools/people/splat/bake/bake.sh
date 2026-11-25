@@ -63,7 +63,7 @@ PY=/workspace/splat-probe/venv/bin/python; SPY=python; SOLV3R=/workspace/solv3r;
 GPU=${GPU:-gpu-lab}; GS=/home/agent/.local/state/asset-gpu; GRES=${GPU#den-}-comfy
 # GPU=runpod-*: a rented RunPod pod reached by that ssh alias, its environment in /workspace/asset-gpu (hosts/runpod/setup.sh;
 # asset-pipeline docs/runpod-bake-pods.md). Only the gsplat stages belong there; VACE stays on the 5090.
-case $GPU in runpod*) GS=/workspace/asset-gpu; GRES=$GPU ;; esac
+case $GPU in runpod*|colab*) GS=/workspace/asset-gpu; GRES=$GPU ;; esac   # colab-*: a Google Colab runtime over `colab ssh --proxy-mode` (hosts/colab/README.md)
 GW=$GS/work/$B/$ID${BAKE#bake}; export GRES
 if [ "$GPU" != gpu-lab ]; then PY=$GS/venv/bin/python; SPY=$PY; SOLV3R=$GS/solv3r; SOLV3R_W=$GS/hf/solv3r-c95998a.safetensors; fi
 # EXTRA_RING=NAME:LOW,HIGH:FOV:TARGET_Y (bake.env): a fourth close-up repaint ring, rendered, referenced, repainted by VACE

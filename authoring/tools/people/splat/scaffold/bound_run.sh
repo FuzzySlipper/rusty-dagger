@@ -40,7 +40,7 @@ SC=${SCAFFOLD:-$CH/02-guide/scaffold/scaffold.glb}; TR=$BD/score/transform.json 
 LAB=/workspace/$B/$ID${BK#bake}; L=~/server-access/gpu-lab/connect; GPY=/workspace/splat-probe/venv/bin/python
 # GPU=den-m5|den-nimo: the lab steps on a Strix Halo's GPU (authoring/tools/people/splat/hosts/strix-gpu/setup.sh; bake.sh GPU=... stages the tools there)
 GPU=${GPU:-gpu-lab}; GS=/home/agent/.local/state/asset-gpu; LOCKF=/tmp/gpu-lab-claude.lock; GRES=${GPU#den-}-comfy
-case $GPU in runpod*) GS=/workspace/asset-gpu; GRES=$GPU ;; esac   # a rented RunPod pod (ssh alias runpod-*; bake.sh says more)
+case $GPU in runpod*|colab*) GS=/workspace/asset-gpu; GRES=$GPU ;; esac   # colab-*: a Google Colab runtime over `colab ssh --proxy-mode` (hosts/colab/README.md)   # a rented RunPod pod (ssh alias runpod-*; bake.sh says more)
 export GRES
 if [ "$GPU" != gpu-lab ]; then LAB=$GS/work/$B/$ID${BK#bake}; GPY=$GS/venv/bin/python; LOCKF=/tmp/halo-gpu-$GPU.lock; fi
 rx() { if [ "$GPU" = gpu-lab ]; then $L "gpu-lab exec $*"; else ssh -o BatchMode=yes $GPU "$*"; fi; }   # one simple command on the GPU host
