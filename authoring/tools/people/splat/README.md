@@ -105,6 +105,31 @@ the PINOC staff walk turns the feet and doesn't loop). These are still experimen
 - **Staff:** `tools/splat-prop/prop_mesh.py ... --girth 0.5 --grip-from BODY --transform T`. The shaft goes through the middle
   of the bake's hand Gaussians. The old X Bot palm guess only fits hands that turn_hands re-rested.
 
+Weapons painted in hand, from four-view sheets (npc-471 sword, npc-467 staff; Patch 2026-11-25). The weapon is in the
+paintings, carved into the clay mesh and baked with the hand, so there is no prop to fit:
+- **Four views.** `static-npc init npc-NNN --walker --from DIR` with `front.png`, `back.png`, `right.png` and `left.png` (her
+  right and left; the CMS's `turnaround-4view-*` candidates) sets npc.json `"sides"`. Keys, clay (`clay-right.txt`,
+  `clay-left.txt`), Meshy (four images) and the orbit (`<Picture 3>` right, `<Picture 4>` left; name them in orbit.txt) all
+  take them. Pinning them as guide frames (`"side_guide": true`: right at 18, left at 54) made no visible difference on
+  npc-471, so it is off by default. Four references don't fit the 5090 at 1920 px: run the clip on a Halo (`HALO=den-m5`
+  guided_clip.sh, about 2 h 50 min). A three-view sheet (`side.png`, one side) worked too, but the sword swung through the
+  front frames where the front painting drew it pointing down.
+- **Clay of a foreshortened weapon.** Qwen draws a sword that points at the viewer as lying sideways in the front and back
+  clay. Say in clay-front/back.txt that only the fist, guard and pommel show, then check: the back clay still needed the blade
+  masked out (every pixel outside the painting's own outline, dilated 8 px, set to the background).
+- **Rig.** A Meshy rig weighted npc-471's blade wholly to the hand. When Meshy refuses the clay (a content block: npc-467),
+  the walker rig now falls back to `fit_rig.py`, and npc.json `"rigid_prop": "Right"` passes `--rigid-prop`: the staff is left
+  out of the arm trace (which otherwise ran down the staff and put the hand at mid-thigh), the arm is set by its grip, and
+  every vertex of the staff is bound wholly to that hand.
+- **Walk.** The retarget swings a painted bent arm onto X Bot's arm direction, which turned npc-471's blade up across her
+  chest. `layer_clip.py CLIP.json - OUT.json --hold rig --rig SCAFFOLD.glb --weights 'RightShoulder=0.6,RightArm=1,RightForeArm=1,RightHand=1'`
+  gives the held bones the X Bot rotations that the retarget turns into the chest's own turn, so the weapon arm rides the
+  chest exactly as painted. Do walking, around and idle into `09-game/wip/clips-held/` and set npc.json `"clips_dir"`: the
+  walk step and the playable sets then use them.
+- **Bake.** A weapon held out in front moves the bake's centre forward, so the face region now uses `bone_region.py --front
+  auto` (the head's own median depth; with 0, npc-471's whole head sat behind it). The rings draw an overhead blade long:
+  that is foreshortening of the body, not an error.
+
 Two walker settings npc-468 needed:
 - `"skirt_opts": "--solid 3 --inside-legs"` for a robe that ends above the ankle. The skirt step drops the legs inside the
   robe's bell (on skirt bones they rode the cloth). For a mid-shin robe, that made the shin vanish when a stride swung it out
@@ -117,7 +142,8 @@ With a `backdrop`, the bound step's clean also drops Gaussians coloured like the
 specks inside npc-468's robe, 1.2% of the 400k.
 
 A walker binds as the villagers did: 2.5 cm of shell, 16k for a crowd, with the hands and a hooded head loose at 2.4 times
-the shell. The rig step needs a Meshy mesh task: a Hunyuan3D-2mv mesh has no API rig here. Use the back painting when the
+the shell. Without a Meshy mesh task (a Hunyuan3D-2mv mesh after a content block) the rig step fits the target skeleton
+instead (`fit_rig.py`). Use the back painting when the
 pair is solid: same pose, items on the right sides seen from behind, outlines that agree. A back that drifts from the front
 makes H3 morph during the orbit, and front-only is better then (Patch 2026-11-23).
 
@@ -130,13 +156,17 @@ Settings live in `00-brief/npc.json`:
 | Key | What it does |
 | --- | --- |
 | `view_yaw` | The paintings' angle, measured from the outlines when not set. With one painting the measure can be fooled: npc-024's ragged hem gave -35 degrees for a square-on front (outline IoU 0.763 against 0.742 at 0), so compare the mesh's outline at 0 before the guide and set 0 when the painting is square. |
-| `backdrop` | `"R,G,B"`: a chroma-key clip. The keyframes and the lit guide sit on that colour (say it in orbit.txt too), and the bake's mattes open every enclosed patch near it and take its spill off the edge (`key_holes`, default 60; `despill`, default 2 px). Pick the colour furthest from the painting's palette in OKLab. npc-024 used magenta (his hair is green); H3 drew it as a flat (247,94,184), spread about 2, and the cuts opened between claws and hem tatters with no pink rim. **Green does not hold:** npc-026's keyframes and guide were bright green and H3 painted a white studio with floor shadows (the mattes still cut her clean, 2026-11-24); use magenta. |
+| `backdrop` | `"R,G,B"`: a chroma-key clip. The keyframes and the lit guide sit on that colour (say it in orbit.txt too), and the bake's mattes open every enclosed patch near it and take its spill off the edge (`key_holes`, default 60; `despill`, default 2 px). Pick the colour furthest from the painting's palette in OKLab. npc-024 used magenta (his hair is green); H3 drew it as a flat (247,94,184), spread about 2, and the cuts opened between claws and hem tatters with no pink rim. **Green does not hold:** npc-026's keyframes and guide were bright green and H3 painted a white studio with floor shadows (the mattes still cut her clean, 2026-11-24); use magenta. The clips do not always come back on the key (457 pale grey, 459-461 pinks), so a key-coloured patch now opens only where BiRefNet too sees background: before that, pale skin and armour highlights were opened and baked as holes (457's arms and face, 2026-11-25). |
 | `clean_opts` | Options for `clean_bound.py`: `"--no-face --no-crown"` for green hair or a crown. Its face rule removes greenish Gaussians on the head and its crown rule recolours the top of the head to the hair, both made for 381's strays (npc-024: they took his hair and his gold crown). |
 | `hands` | `front` (the default) when the hands are held in front, as on a staff; `sides` when the arms hang. |
 | `head_axis` | The head's turning axis, for a far-forward head. |
-| `loose`, `loose_factor`, `shell_m` | How much room the bound bake gives the scaffold. |
+| `loose`, `loose_factor`, `shell_m` | How much room the bound bake gives the scaffold. A bone name takes its descendants; `Hips=` is that bone alone (458's kilt panel below the belt; plain `Hips` is the whole body). |
 | `sizes` | The runtime sizes to distil. |
 | `front_only` | No back painting. The orbit's back is H3's own. Patch prefers this to drift from an angled back painting. |
+| `sides` | `["right", "left"]`: side paintings from a four-view sheet (set by `init --from`). `side_guide` also pins them in the orbit. |
+| `rigid_prop` | `Right` or `Left`: a staff painted in that hand, bound wholly to it by `fit_rig.py --rigid-prop`. |
+| `clips_dir` | The character's own walking/around/idle clip JSONs (e.g. the weapon arm held as painted, `layer_clip.py --hold rig`). |
+| `rigger` | `fit` to fit the target skeleton instead of Meshy's rig (automatic without a Meshy task). |
 
 `ship` runs `dagger-char bound ID --step choose --size NAME --patch-said "..."`, which writes `ID.glb` (with the eye mask
 when `character/eye_picks.json` has the character's eye centres) and the static NPC's own clips, `ID-idle.glb` and
