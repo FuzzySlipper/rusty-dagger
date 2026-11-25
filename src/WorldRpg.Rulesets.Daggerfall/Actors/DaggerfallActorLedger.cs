@@ -278,10 +278,11 @@ internal sealed record ActorLocationOverride(
     ActorPartyRole? PartyRole = null,
     string? BandId = null,
     ActorPoseOverride? Pose = null,
-    bool Detached = false)
+    bool Detached = false,
+    bool TrafficVisitor = false)
 {
-    internal static ActorLocationOverride AtSite(DaggerfallWorldProfileKey profile, ActorPoseOverride? pose = null, bool detached = false) =>
-        new(ActorLocationKind.AtSite, DaggerfallWorldProfileKeySave.Capture(profile), Pose: pose, Detached: detached);
+    internal static ActorLocationOverride AtSite(DaggerfallWorldProfileKey profile, ActorPoseOverride? pose = null, bool detached = false, bool trafficVisitor = false) =>
+        new(ActorLocationKind.AtSite, DaggerfallWorldProfileKeySave.Capture(profile), Pose: pose, Detached: detached, TrafficVisitor: trafficVisitor);
 
     internal static ActorLocationOverride WithParty(ActorPartyRole role = ActorPartyRole.Escort) =>
         new(ActorLocationKind.WithParty, PartyRole: role);
@@ -450,15 +451,16 @@ internal sealed class DaggerfallActorLedger
             ActorLocationKind.OnOverlandBand => true,
             ActorLocationKind.OffStage => true,
             ActorLocationKind.Removed => true,
-            ActorLocationKind.Dead => false,
+            ActorLocationKind.Dead => location.Profile is { } deadProfile && deadProfile.Require() != homeProfile,
             _ => false,
         };
     }
 
-    /// <summary>All ledger entries explicitly residing at <paramref name="profile"/>.</summary>
+    /// <summary>All ledger entries explicitly residing at <paramref name="profile"/> (living or dead).</summary>
     internal IReadOnlyList<ActorLedgerEntry> EntriesAtSite(DaggerfallWorldProfileKey profile) =>
         [.. _entries.Values
-            .Where(entry => entry.Location?.Kind == ActorLocationKind.AtSite && entry.Location.Profile?.Require() == profile)
+            .Where(entry => entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Profile: { } p }
+                && p.Require() == profile)
             .OrderBy(entry => entry.DurableId)];
 
     /// <summary>All ledger entries currently travelling with the player party (HUD escorts, drivers, companions).</summary>
@@ -502,16 +504,16 @@ internal sealed class DaggerfallActorLedger
     /// explicit detached <see cref="ActorLocationKind.AtSite"/> location (including at home) so saved detached state
     /// stays in the inactive combatant set until the player next visits <paramref name="arrivalProfile"/>.
     /// </summary>
-    internal void ClearBandLocation(long durableId, DaggerfallWorldProfileKey arrivalProfile, ActorPoseOverride? arrivalPose = null, bool detached = false)
+    internal void ClearBandLocation(long durableId, DaggerfallWorldProfileKey arrivalProfile, ActorPoseOverride? arrivalPose = null, bool detached = false, bool trafficVisitor = false)
     {
         if (!_entries.TryGetValue(durableId, out ActorLedgerEntry? existing)) return;
         bool isHome = existing.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual
             && existing.Origin.SiteProfile?.Require() == arrivalProfile;
         ActorLocationOverride? location = detached
-            ? ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: true)
+            ? ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: true, trafficVisitor: trafficVisitor && !isHome)
             : isHome
                 ? null
-                : ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: false);
+                : ActorLocationOverride.AtSite(arrivalProfile, arrivalPose, detached: false, trafficVisitor: trafficVisitor);
         Upsert(existing with
         {
             Location = location,
@@ -523,7 +525,7 @@ internal sealed class DaggerfallActorLedger
     internal (DaggerfallWorldProfileKey Profile, ActorLedgerEntry Entry)? FindDetachedAtInactiveSite(long durableId, DaggerfallWorldProfileKey activeProfile)
     {
         if (!_entries.TryGetValue(durableId, out ActorLedgerEntry? entry)) return null;
-        if (entry.Location?.Kind != ActorLocationKind.AtSite || entry.Location.Profile is null) return null;
+        if (entry.Location?.Kind is not (ActorLocationKind.AtSite or ActorLocationKind.Dead) || entry.Location.Profile is null) return null;
         DaggerfallWorldProfileKey profile = entry.Location.Profile.Require();
         return profile == activeProfile ? null : (profile, entry);
     }

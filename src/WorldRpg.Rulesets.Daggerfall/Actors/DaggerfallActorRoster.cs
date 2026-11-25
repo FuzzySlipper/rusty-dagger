@@ -1014,22 +1014,28 @@ internal sealed class DaggerfallActorRoster
                 {
                     clearedCombat = null;
                 }
-                ActorLocationOverride? clearedLocation = delta.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } locProfile }
-                    ? (delta.Origin.SiteProfile?.Require() == locProfile.Require() ? null : delta.Location with { Detached = false })
-                    : delta.Location;
+                ActorLocationOverride? clearedLocation = delta.Location switch
+                {
+                    { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } locProfile } =>
+                        delta.Origin.SiteProfile?.Require() == locProfile.Require() ? null : delta.Location with { Detached = false },
+                    { Kind: ActorLocationKind.Dead, Detached: true } => delta.Location with { Detached = false },
+                    _ => delta.Location,
+                };
                 _actorLedger.Upsert(delta with { Combat = clearedCombat, Location = clearedLocation });
             }
-            else if (delta.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } detProfile })
+            else if (delta.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: true })
             {
-                ActorLocationOverride? clearedLocation = delta.Origin.SiteProfile?.Require() == detProfile.Require()
+                ActorLocationOverride? clearedLocation = delta.Location is { Kind: ActorLocationKind.AtSite, Profile: { } detProfile }
+                    && delta.Origin.SiteProfile?.Require() == detProfile.Require()
                     ? null
                     : delta.Location with { Detached = false };
                 _actorLedger.Upsert(delta with { Location = clearedLocation });
             }
         }
-        else if (delta.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } detProfile })
+        else if (delta.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: true })
         {
-            ActorLocationOverride? clearedLocation = delta.Origin.SiteProfile?.Require() == detProfile.Require()
+            ActorLocationOverride? clearedLocation = delta.Location is { Kind: ActorLocationKind.AtSite, Profile: { } detProfile }
+                && delta.Origin.SiteProfile?.Require() == detProfile.Require()
                 ? null
                 : delta.Location with { Detached = false };
             _actorLedger.Upsert(delta with { Location = clearedLocation });

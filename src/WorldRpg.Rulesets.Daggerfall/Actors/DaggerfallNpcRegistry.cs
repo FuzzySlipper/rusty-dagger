@@ -364,9 +364,10 @@ public sealed class DaggerfallNpcRegistry
         if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
         {
             bool detached = existing.Location?.Detached == true;
+            bool trafficVisitor = existing.Location?.TrafficVisitor == true;
             ActorLocationOverride nextLocation = existing.Location?.Kind == ActorLocationKind.Dead
                 ? existing.Location
-                : ActorLocationOverride.AtSite(profile, pose, detached);
+                : ActorLocationOverride.AtSite(profile, pose, detached, trafficVisitor);
             _ledger.Upsert(existing with
             {
                 Social = ActorSocialDiff.FromNpc(updated, existing.Social),

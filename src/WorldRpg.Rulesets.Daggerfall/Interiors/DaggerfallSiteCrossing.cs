@@ -195,7 +195,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                 banished.Add(entry.DurableId);
                 continue;
             }
-            if (entry.Location is not { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } savedProfile }
+            if (entry.Location is not { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: true, Profile: { } savedProfile }
                 || savedProfile.Require() != profile
                 || entry.Vitals is not { } vitals
                 || entry.Pose is not { } pose)

@@ -377,8 +377,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation() => Population.Reconcile();
 
-    IReadOnlyList<long> IDaggerfallSiteTransitionHost.BeforeSiteTransition() =>
-        OverlandParties.StagedPartyMemberIds.Count > 0 ? OverlandParties.BoardStagedPartyMembers() : [];
+    IReadOnlyList<long> IDaggerfallSiteTransitionHost.BeforeSiteTransition()
+    {
+        IReadOnlyList<long> boarded = OverlandParties.StagedPartyMemberIds.Count > 0 ? OverlandParties.BoardStagedPartyMembers() : [];
+        _ = OverlandParties.ReleaseDepartingTrafficVisitors(_activeProfileKey, dispatchReturnBand: false);
+        return boarded;
+    }
 
     void IDaggerfallSiteTransitionHost.AfterSiteTransition(IReadOnlyList<long> boardedPartyIds)
     {

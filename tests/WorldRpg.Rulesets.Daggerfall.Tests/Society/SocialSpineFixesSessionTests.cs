@@ -419,6 +419,152 @@ public sealed class SocialSpineFixesSessionTests
         Assert.Equal(14, returnedWithDelta.Social.DispositionDelta);
     }
 
+    [Fact]
+    public void Fix7_Active_site_arrivals_and_encountered_traffic_retain_return_lifecycle_across_unload_and_save_reload()
+    {
+        // Part A: Active-site visible arrival -> save/reload -> player delta -> site transition returns home without AtSite orphan.
+        using (SpineFixture fixture = SpineFixture.Create())
+        {
+            DaggerfallSession session = fixture.Session;
+            session.ApplyProductMode(ProductMode.Playing);
+            session.AdvanceElapsedTime(8 * 60 * 60);
+
+            DaggerfallPersistentOverlandBand? outbound = session.OverlandTraffic.TryDispatchWindow(301L, session.Expedition.Position);
+            Assert.NotNull(outbound);
+            ActorLedgerEntry member = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(outbound!.BandId));
+            long memberId = member.DurableId;
+
+            // Force arrival at the player's currently active exterior profile so the traveller materializes visibly.
+            DaggerfallPersistentOverlandBand visibleArrival = new(
+                outbound.BandId, outbound.DisplayId, outbound.Name, outbound.Kind, outbound.X, outbound.Y, outbound.Heading,
+                outbound.SpeedPixelsPerHour, outbound.Destination,
+                DaggerfallWorldProfileKeySave.Capture(fixture.Origin.ProfileKey),
+                camp: false, spotted: false, hostile: false, mobile: outbound.Mobile);
+            _ = session.OverlandParties.OnPersistentBandArrived(visibleArrival);
+            Assert.True(session.State.Actors.TryGet(memberId, out ActorState? liveVisitor));
+            Assert.True(session.State.ActorLedger.TryGet(memberId, out ActorLedgerEntry? visitorEntry));
+            Assert.True(visitorEntry!.Location?.TrafficVisitor);
+
+            // Record player interaction (Met + DispositionDelta) and save/reload while visitor is still present.
+            liveVisitor!.Actor.Get<ActorOverlayComponent>().Met = true;
+            session.State.ActorLedger.Upsert(visitorEntry with
+            {
+                Social = visitorEntry.Social! with { Met = true, DispositionDelta = 9 },
+            });
+            RulesetSavePayload savedMidVisit = session.CaptureSave();
+            using DaggerfallSession restored = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedMidVisit);
+            Assert.True(restored.State.Actors.TryGet(memberId, out _));
+            Assert.True(restored.State.ActorLedger.TryGet(memberId, out ActorLedgerEntry? restoredVisitor));
+            Assert.True(restoredVisitor!.Location?.TrafficVisitor);
+
+            // Leaving the site via TryTransitionTo releases the visitor home: Location clears to null and deltas survive.
+            Assert.True(restored.TryTransitionTo(fixture.Destination.ProfileKey));
+            Assert.False(restored.State.Actors.TryGet(memberId, out _));
+            Assert.True(restored.State.ActorLedger.TryGet(memberId, out ActorLedgerEntry? afterDepart));
+            Assert.Null(afterDepart!.Location);
+            Assert.True(afterDepart.Social!.Met);
+            Assert.Equal(9, afterDepart.Social.DispositionDelta);
+        }
+
+        // Part B: Player encounter with untouched traffic -> save/reload -> OpenExpedition dispatches :return leg -> self-prunes to 0 entries.
+        using (SpineFixture encounterFixture = SpineFixture.Create())
+        {
+            DaggerfallSession session = encounterFixture.Session;
+            session.ApplyProductMode(ProductMode.Playing);
+            session.AdvanceElapsedTime(8 * 60 * 60);
+            session.OpenExpedition();
+
+            DaggerfallPersistentOverlandBand? outbound = session.OverlandTraffic.TryDispatchWindow(305L, session.Expedition.Position);
+            Assert.NotNull(outbound);
+            ActorLedgerEntry member = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(outbound!.BandId));
+            long memberId = member.DurableId;
+
+            session.OverlandParties.OnMeetPersistentBand(outbound, session.Expedition.Party, DaggerfallEncounterStaging.Travelling);
+            session.EnterExpedition();
+            Assert.True(session.State.Actors.TryGet(memberId, out _));
+            Assert.True(session.State.ActorLedger.TryGet(memberId, out ActorLedgerEntry? metEntry));
+            Assert.True(metEntry!.Location?.TrafficVisitor);
+
+            // Save/reload while standing in the encounter scene, then open expedition: a :return band is dispatched.
+            RulesetSavePayload savedEncounter = session.CaptureSave();
+            using DaggerfallSession restored = DaggerfallSession.Restore(encounterFixture.CreateEngine().Context, encounterFixture.Composition, savedEncounter);
+            Assert.True(restored.State.Actors.TryGet(memberId, out _));
+            restored.OpenExpedition();
+            Assert.False(restored.State.Actors.TryGet(memberId, out _));
+
+            DaggerfallPersistentOverlandBand returnBand = Assert.Single(restored.Expedition.PersistentBands,
+                b => b.BandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal)
+                    && b.BandId.EndsWith(DaggerfallOverlandTraffic.ReturnBandSuffix, StringComparison.Ordinal));
+            Assert.Single(restored.State.ActorLedger.EntriesOnOverlandBand(returnBand.BandId), e => e.DurableId == memberId);
+
+            // When the return band reaches home, the untouched traveller self-prunes back to zero ActorLedger bytes.
+            _ = restored.OverlandParties.OnPersistentBandArrived(returnBand);
+            Assert.False(restored.State.ActorLedger.TryGet(memberId, out _));
+        }
+    }
+
+    [Fact]
+    public void Fix6_Dead_relocated_actor_suppresses_home_slot_and_stays_corpse_at_death_site_across_transitions_and_save_reload()
+    {
+        using SpineFixture fixture = SpineFixture.Create();
+        DaggerfallSession session = fixture.Session;
+        session.ApplyProductMode(ProductMode.Playing);
+        session.AdvanceElapsedTime(8 * 60 * 60);
+
+        DaggerfallNpc traveller = session.State.Npcs.All
+            .First(npc => npc.Kind == DaggerfallNpcKind.Civilian
+                && npc.Profile == fixture.Origin.ProfileKey
+                && !string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
+                && DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId)
+                && session.State.Actors.TryGet(npc.DurableId, out _));
+        long actorId = traveller.DurableId;
+
+        // Relocate the seeded townsperson from home A (Origin) to site B (Destination).
+        session.OverlandParties.JoinParty(actorId, ActorPartyRole.Companion);
+        Assert.True(session.TryTransitionTo(fixture.Destination.ProfileKey));
+        WorldPoint deathLocalPose = new(9.5f, 1.0f, -6.25f);
+        session.OverlandParties.ReleaseFromParty(actorId, fixture.Destination.ProfileKey, deathLocalPose);
+        Assert.True(session.State.Actors.TryGet(actorId, out ActorState? atB));
+
+        // Kill the relocated actor at site B and record death at B.
+        atB!.ApplyPose(new ActorPose(deathLocalPose, 1.25f));
+        atB.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        RulesetSavePayload saveAtB = session.CaptureSave();
+        ActorLedgerEntry deadAtBEntry = Assert.Single(DaggerfallSavePayload.Read(saveAtB).ActorLedger, e => e.DurableId == actorId);
+        Assert.Equal(ActorLocationKind.Dead, deadAtBEntry.Location?.Kind);
+        Assert.Equal(fixture.Destination.ProfileKey, deadAtBEntry.Location!.Profile!.Require());
+
+        // Transition from B -> home A: home slot A MUST be suppressed; no corpse or clone appears at A.
+        Assert.True(session.TryTransitionTo(fixture.Origin.ProfileKey));
+        Assert.True(session.State.ActorLedger.IsHomeSlotSuppressed(actorId, fixture.Origin.ProfileKey));
+        Assert.False(session.State.Actors.TryGet(actorId, out _));
+
+        // Save and reload while at home A: still suppressed at A and ledger still names death profile B.
+        RulesetSavePayload saveAtA = session.CaptureSave();
+        using DaggerfallSession restoredAtA = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, saveAtA);
+        Assert.True(restoredAtA.State.ActorLedger.IsHomeSlotSuppressed(actorId, fixture.Origin.ProfileKey));
+        Assert.False(restoredAtA.State.Actors.TryGet(actorId, out _));
+        Assert.True(restoredAtA.State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? ledgerAtA));
+        Assert.Equal(ActorLocationKind.Dead, ledgerAtA!.Location?.Kind);
+        Assert.Equal(fixture.Destination.ProfileKey, ledgerAtA.Location!.Profile!.Require());
+
+        // Revisit site B: corpse MUST be admitted at B (defeated, at its B-local death pose), and survive save/reload at B.
+        Assert.True(restoredAtA.TryTransitionTo(fixture.Destination.ProfileKey));
+        Assert.Contains(restoredAtA.State.ActorLedger.EntriesAtSite(fixture.Destination.ProfileKey), e => e.DurableId == actorId);
+        Assert.True(restoredAtA.State.Actors.TryGet(actorId, out ActorState? corpseAtB));
+        Assert.True(corpseAtB!.IsDefeated);
+        Assert.Equal(deathLocalPose.X, corpseAtB.Position.X, precision: 2);
+        Assert.Equal(deathLocalPose.Z, corpseAtB.Position.Z, precision: 2);
+
+        RulesetSavePayload saveBackAtB = restoredAtA.CaptureSave();
+        using DaggerfallSession restoredBackAtB = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, saveBackAtB);
+        Assert.True(restoredBackAtB.State.Actors.TryGet(actorId, out ActorState? reloadedCorpse));
+        Assert.True(reloadedCorpse!.IsDefeated);
+        Assert.True(restoredBackAtB.State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? finalEntry));
+        Assert.Equal(ActorLocationKind.Dead, finalEntry!.Location?.Kind);
+        Assert.Equal(fixture.Destination.ProfileKey, finalEntry.Location!.Profile!.Require());
+    }
+
     private sealed class SpineFixture : IDisposable
     {
         private static readonly Lazy<DaggerfallBlocksSnapshot> SharedBlocks = new(() =>

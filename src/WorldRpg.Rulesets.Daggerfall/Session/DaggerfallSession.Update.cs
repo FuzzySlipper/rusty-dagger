@@ -1030,7 +1030,10 @@ internal sealed partial class DaggerfallSession
             : _encounters.HasPending(_activeProfileKey.LogicalId) ? "Something approaches. Move or turn to let the encounter arrive before travelling."
             : _senses.EnemyNearby() ? "Nearby enemies prevent travel." : null;                  // Actors
         if (held is null)
+        {
             _ = OverlandParties.BoardStagedPartyMembers();                                        // Travel, Actors
+            _ = OverlandParties.ReleaseDepartingTrafficVisitors(_activeProfileKey, dispatchReturnBand: true); // Travel, Actors
+        }
         Expedition.Begin(MapPosition.Position(), State.Transport.OnShip, held);                   // Travel
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
         _hud.RequestTravelPlaces();                                                               // UiProjection

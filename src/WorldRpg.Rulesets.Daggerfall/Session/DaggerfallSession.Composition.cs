@@ -904,8 +904,7 @@ internal sealed partial class DaggerfallSession
                 RetireActor, id => RetireDetachedActor(id, DaggerfallActorKinds.Civilian),
                 (npc, origin, baseline, pose, frameOffset) => _roster.MaterializeDeterministicCivilian(npc, origin, baseline, pose, frameOffset),
                 id => State.Quests.IsEscortWithParty(id)
-                    || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry)
-                        && entry?.Location?.Kind is ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.OffStage or ActorLocationKind.Removed));
+                    || State.ActorLedger.IsHomeSlotSuppressed(id, _activeProfileKey));
             OverlandParties = new DaggerfallOverlandPartyCoordinator(
                 Expedition, State.ActorLedger, actors, State.Npcs, _roster,
                 () => _sites.Projection.Inputs, () => _appearance,

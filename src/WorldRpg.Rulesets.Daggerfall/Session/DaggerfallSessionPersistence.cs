@@ -463,11 +463,13 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 PromotedArchetype: promotedArchetype)
             : null;
 
+        State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorLocationLedger);
+        bool trafficVisitor = priorLocationLedger?.Location?.TrafficVisitor == true && !actor.IsDefeated;
         ActorPoseOverride currentPoseOverride = new(currentPos.X, currentPos.Y, currentPos.Z, actor.HeadingYawRadians);
         ActorLocationOverride? location = actor.IsDefeated
             ? ActorLocationOverride.Dead(activeProfile, currentPoseOverride)
             : relocated
-                ? ActorLocationOverride.AtSite(activeProfile)
+                ? ActorLocationOverride.AtSite(activeProfile, trafficVisitor: trafficVisitor)
                 : null;
 
         ActorSocialDiff? social = null;
@@ -791,7 +793,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             ActorLocationOverride location = sparse.Location is { Kind: ActorLocationKind.Dead }
                 ? sparse.Location with { Detached = true }
                 : sparse.Location is { Kind: ActorLocationKind.AtSite, Profile: { } locProfile }
-                    ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true)
+                    ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true, trafficVisitor: sparse.Location.TrafficVisitor)
                     : ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true);
             ActorSocialDiff? social = sparse.Social;
             if (social is null && actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? detachedPerson))
@@ -1004,7 +1006,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             if (entry.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual) || entry.Origin.IsFixedPlacement)
                 continue;
             if (entry.Location is null && entry.Origin.SiteProfile?.Require() == activeProfile
-                || entry.Location is { Kind: ActorLocationKind.AtSite, Detached: false, Profile: { } p } && p.Require() == activeProfile)
+                || entry.Location is { Kind: ActorLocationKind.AtSite or ActorLocationKind.Dead, Detached: false, Profile: { } p } && p.Require() == activeProfile)
                 requiredActiveDeterministicIds.Add(entry.DurableId);
         }
         foreach (DaggerfallActorInventorySave inv in saved.ActorInventories)
