@@ -30,12 +30,40 @@ public sealed class DaggerfallInteriorLookTests
         using DaggerfallInteriorLook look = new(engine.Context, null, Tuning);
 
         Assert.Equal("baseline", look.Preset);
+        Assert.Null(look.Select("auto"));
+        Assert.Equal("auto", look.Preset);
         Assert.Null(look.Select("dungeon-cobalt"));
         Assert.Equal("dungeon-cobalt", look.Preset);
         Assert.Null(look.Select("RESET"));
         Assert.Equal("baseline", look.Preset);
         Assert.Contains("Unknown interior look", look.Select("neon-lasers"));
         Assert.Equal("baseline", look.Preset);
+
+        Assert.Equal("off", look.ReliefMode);
+        Assert.Null(look.SelectRelief("voxel-pulp"));
+        Assert.Equal("voxel-pulp", look.ReliefMode);
+        Assert.Null(look.SelectRelief("reset"));
+        Assert.Equal("off", look.ReliefMode);
+        Assert.Contains("Unknown interior relief mode", look.SelectRelief("bumps"));
+        Assert.Equal("off", look.ReliefMode);
+    }
+
+    [Fact]
+    public void Auto_mood_mapping_assigns_distinct_palettes_by_dungeon_and_building_type()
+    {
+        Assert.Equal("dungeon-cobalt", DaggerfallInteriorLook.DungeonPresetFor(2));   // HumanStronghold (Privateer's Hold)
+        Assert.Equal("dungeon-cobalt", DaggerfallInteriorLook.DungeonPresetFor(11));  // RuinedCastle (Castle Necromoghan)
+        Assert.Equal("dungeon-violet", DaggerfallInteriorLook.DungeonPresetFor(0));   // Crypt
+        Assert.Equal("dungeon-violet", DaggerfallInteriorLook.DungeonPresetFor(8));   // VampireHaunt
+        Assert.Equal("dungeon-teal", DaggerfallInteriorLook.DungeonPresetFor(6));     // NaturalCave
+        Assert.Equal("dungeon-teal", DaggerfallInteriorLook.DungeonPresetFor(5));     // Mine
+        Assert.Equal("dungeon-emerald", DaggerfallInteriorLook.DungeonPresetFor(1));  // OrcStronghold
+        Assert.Equal("dungeon-emerald", DaggerfallInteriorLook.DungeonPresetFor(12)); // SpiderNest
+
+        Assert.Equal("interior-cozy", DaggerfallInteriorLook.InteriorPresetFor(15));     // Tavern
+        Assert.Equal("interior-dramatic", DaggerfallInteriorLook.InteriorPresetFor(18)); // Residence
+        Assert.Equal("interior-dramatic", DaggerfallInteriorLook.InteriorPresetFor(14)); // Temple
+        Assert.Equal("interior-dramatic", DaggerfallInteriorLook.InteriorPresetFor(null));
     }
 
     [Fact]

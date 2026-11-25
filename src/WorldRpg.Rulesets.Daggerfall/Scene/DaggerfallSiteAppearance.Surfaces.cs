@@ -36,6 +36,8 @@ internal sealed partial class DaggerfallSiteAppearance
     // The set's surface shader, once an art set with one is admitted outdoors, the tuning its relief draws by, and the
     // player's strength and share of the tuned reach, read live, with the choice the surfaces draw now.
     private RenderResource? surfaceShader;
+    private RenderResource? interiorReliefShader;
+    private DaggerfallInteriorReliefSettings? interiorRelief;
     private DaggerfallSurfaceReliefTuning reliefTuning = DaggerfallSurfaceReliefTuning.Default;
     private Func<(float Strength, float Distance)> reliefChoice = () => (0F, 1F);
     private (float Strength, float Distance) surfacesRelief;
@@ -195,6 +197,23 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private int SurfaceSeason => materialSeason switch { DaggerfallExteriorSeason.Winter => 1, DaggerfallExteriorSeason.Rain => 2, _ => 0 };
 
+    /// <summary>
+    /// Applies Pass 2 interior/dungeon voxel relief &amp; stylized specular settings (<c>interior-relief.wgsl</c>, #11043)
+    /// to non-animated opaque surfaces inside interiors and dungeons; null restores flat surfaces.
+    /// </summary>
+    internal void UpdateInteriorRelief(string? shaderPath, ContentSha256 shaderSha256, DaggerfallInteriorReliefSettings? settings)
+    {
+        if (disposed || inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior) return;
+        if (Equals(interiorRelief, settings)) return;
+        interiorRelief = settings;
+        if (settings is not null && interiorReliefShader is null && shaderPath is not null)
+        {
+            interiorReliefShader = appearance.OpenShader(content, shaderPath, shaderSha256);
+            ownedResources.Add(interiorReliefShader);
+        }
+        ApplySurfaces();
+    }
+
     /// <summary>Draws one surface in a season, the current art set and relief choice, updating its material only where that changes it.</summary>
     private void ApplySurface(SurfaceMaterial surface, int season)
     {
@@ -202,10 +221,19 @@ internal sealed partial class DaggerfallSiteAppearance
         RenderResource? glass = DrawnGlass(surface, season, surfacesRefreshed);
         float level = glass is null ? 0F : windowLevel;
         Vector2 flicker = level > 0 ? windowFlicker : default;
-        MaterialShader shader = surfaceShader is not { } surfaces ? default
-            : surfacesRefreshed && surfacesRelief.Strength > 0 && surface.Relief[season] is { } height
-                ? reliefTuning.Shader(surfaces, height.Image, height.Depth * surfacesRelief.Strength, surfacesRelief.Distance, flicker)
-                : flicker.X > 0 ? reliefTuning.Shader(surfaces, null, 0, 1, flicker) : default;
+        MaterialShader shader = default;
+        if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior)
+        {
+            shader = surfaceShader is not { } surfaces ? default
+                : surfacesRefreshed && surfacesRelief.Strength > 0 && surface.Relief[season] is { } height
+                    ? reliefTuning.Shader(surfaces, height.Image, height.Depth * surfacesRelief.Strength, surfacesRelief.Distance, flicker)
+                    : flicker.X > 0 ? reliefTuning.Shader(surfaces, null, 0, 1, flicker) : default;
+        }
+        else if (interiorRelief is { } relief && interiorReliefShader is { } reliefShader && surface.Frames is null && glass is null)
+        {
+            RenderResource? heightMap = surface.Relief[season]?.Image;
+            shader = relief.Shader(reliefShader, heightMap);
+        }
         if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) return;
         appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));
         (surface.Current, surface.CurrentGlass, surface.Level, surface.Shader) = (wanted, glass, level, shader);

@@ -169,4 +169,14 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         syncLook?.Invoke();
         return DebugCommandResult.Success(interiorLook.Describe());
     }
+
+    public DebugCommandResult InteriorRelief(string mode)
+    {
+        if (interiorLook is null) return Refused("Interior relief controls are unavailable in this session.");
+        string trimmed = mode.Trim().ToLowerInvariant();
+        if (trimmed is "status" or "list") return DebugCommandResult.Success(interiorLook.DescribeRelief());
+        if (interiorLook.SelectRelief(trimmed) is { } refusal) return Refused(refusal);
+        syncLook?.Invoke();
+        return DebugCommandResult.Success(interiorLook.DescribeRelief());
+    }
 }

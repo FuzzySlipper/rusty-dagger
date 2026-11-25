@@ -65,6 +65,9 @@ public interface IDeveloperSceneCommands : IDebugCommandModule
     [DebugCommand("world.groundcover", Description = "Developer: draw only these KINDS of ground cover for this run: grass, relief and tufts, separated by commas, or all or none.")]
     DebugCommandResult GroundCover(string kinds);
 
-    [DebugCommand("world.interior-look", Description = "Developer: select an interior & dungeon look preset for this run (baseline, step1-light, step2-gi-ao, step3-fog, pulp-rolloff, pulp-neutral, pulp-aces, pulp-aces-grain, pulp-aces-grain-bold, pulp-aces-autoexp, dungeon-cobalt, dungeon-violet, dungeon-teal, dungeon-emerald, interior-cozy, interior-dramatic, or status/list).")]
+    [DebugCommand("world.interior-look", Description = "Developer: select an interior & dungeon look preset for this run (auto, baseline, step1-light, step2-gi-ao, step3-fog, pulp-rolloff, pulp-neutral, pulp-aces, pulp-aces-grain, pulp-aces-grain-bold, pulp-aces-autoexp, dungeon-cobalt, dungeon-violet, dungeon-teal, dungeon-emerald, interior-cozy, interior-dramatic, or status/list).")]
     DebugCommandResult InteriorLook(string preset);
+
+    [DebugCommand("world.interior-relief", Description = "Developer: select Pass 2 interior & dungeon voxel-relief + stylized specular mode for this run (off, specular-only, voxel-subtle, voxel-pulp, voxel-crisp, voxel-wet, or status/list).")]
+    DebugCommandResult InteriorRelief(string mode);
 }
