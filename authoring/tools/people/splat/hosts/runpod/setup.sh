@@ -15,5 +15,6 @@ uv pip install -q --index-url https://download.pytorch.org/whl/$CU torch
 uv pip install -q numpy scipy pillow trimesh ninja setuptools wheel jaxtyping rich
 [ -d gsplat ] || git clone -q --recursive --branch v1.5.3 https://github.com/nerfstudio-project/gsplat.git
 cd gsplat; git checkout -q -- setup.py; [ "$CU" = cu128 ] || sed -i "s/-std=c++17/-std=c++20/" setup.py   # torch 2.14 (CUDA 13) headers need C++20 (Colab)
-export TORCH_CUDA_ARCH_LIST="${ARCHS:-8.0;8.6;8.9;9.0}" MAX_JOBS=$(nproc)   # A100, 3090/A5000, 4090/L4, H100
+CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1); case ";8.0;8.6;8.9;9.0;" in *";$CAP;"*) CAP= ;; *) CAP=";$CAP" ;; esac   # the card'"'"'s own too (a Colab G4 is Blackwell, 12.0; 2026-11-25)
+export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0$CAP" MAX_JOBS=$(nproc)   # A100, 3090/A5000, 4090/L4, H100
 uv pip install -q --no-build-isolation . && python -c "import gsplat, torch; print(\"gsplat\", gsplat.__version__, torch.__version__, torch.cuda.get_device_name(0))"'
