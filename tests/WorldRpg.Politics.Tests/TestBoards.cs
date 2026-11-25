@@ -1,35 +1,85 @@
 namespace WorldRpg.Politics.Tests;
 
-/// <summary>Small boards built in code: two crowns, each with a capital, and a march between them, and a guild.</summary>
+/// <summary>
+/// Small boards built in code: two crowns, each with a capital, and a march between them, and a guild; and a small
+/// card set whose numbers stay put while the canon cards are tuned.
+/// </summary>
 internal static class TestBoards
 {
+    public static readonly CardSet Cards = new(
+    [
+        new("garrison", "Garrison", CardFamily.Force, 0, 0, 2, CardTarget.OwnRegion, Visibility.Public, [new(CardEffectKind.Control, 1)]),
+        new("keep-the-peace", "Keep the Peace", CardFamily.Court, 1, 0, 0, CardTarget.OwnRegion, Visibility.Public, [new(CardEffectKind.Order, 1)]),
+        new("trade-charter", "Trade Charter", CardFamily.Trade, 2, 0, 0, CardTarget.OwnRegion, Visibility.Public, [new(CardEffectKind.Prosperity, 1)]),
+        new("levy", "Levy", CardFamily.Force, 0, 0, 0, CardTarget.OwnRegion, Visibility.Public,
+            [new(CardEffectKind.Gain, 2, Resource.Coin), new(CardEffectKind.Gain, 1, Resource.Force), new(CardEffectKind.Order, -1)]),
+        new("install-factor", "Install a Factor", CardFamily.Court, 0, 2, 0, CardTarget.ReachableRegion, Visibility.Public, [new(CardEffectKind.Influence, 1)]),
+        new("discredit", "Discredit", CardFamily.Court, 0, 2, 0, CardTarget.ContestedRegion, Visibility.Public,
+            [new(CardEffectKind.HolderInfluence, -1), new(CardEffectKind.Order, -1), new(CardEffectKind.Relation, -1)]),
+        new("press-claim", "Press a Claim", CardFamily.Force, 0, 1, 1, CardTarget.ContestedRegion, Visibility.Public,
+            [new(CardEffectKind.Control, -1), new(CardEffectKind.Relation, -1)]),
+        new("annex", "Annex", CardFamily.Force, 0, 0, 4, CardTarget.ContestedRegion, Visibility.Public, [new(CardEffectKind.Annex)]),
+        new("envoy", "Envoy", CardFamily.Court, 0, 1, 0, CardTarget.OtherSeat, Visibility.Public, [new(CardEffectKind.Relation, 1)]),
+        new("march-on", "March On", CardFamily.Force, 0, 0, 3, CardTarget.ContestedRegion, Visibility.Public, [new(CardEffectKind.Control, -2)], Weeks: 2),
+        new("reassign", "Reassign", CardFamily.Court, 0, 1, 0, CardTarget.RegionPair, Visibility.Public, [new(CardEffectKind.MoveInfluence, 1)]),
+        new("open-route", "Open a Route", CardFamily.Trade, 3, 0, 0, CardTarget.RegionPair, Visibility.Public, [new(CardEffectKind.Prosperity, 1)]),
+        new("undercut", "Undercut", CardFamily.Trade, 1, 0, 0, CardTarget.RegionRival, Visibility.Public,
+            [new(CardEffectKind.RivalInfluence, -1), new(CardEffectKind.Relation, -1)]),
+        new("suborn", "Suborn the Watch", CardFamily.Shadow, 2, 0, 0, CardTarget.ReachableRegion, Visibility.Secret,
+            [new(CardEffectKind.ChallengeOffice, 1, Office: Office.Watch)]),
+        new("extort", "Extort", CardFamily.Shadow, 1, 0, 0, CardTarget.OtherSeat, Visibility.Secret, [new(CardEffectKind.Take, 3, Resource.Coin)], Weeks: 1),
+        new("guild-secret", "Guild Secret", CardFamily.Shadow, 0, 0, 8, CardTarget.None, Visibility.Secret, [new(CardEffectKind.Gain, 4, Resource.Favour)], Seat: "guild"),
+    ]);
+
+    /// <summary>A board from <paramref name="setup"/> with the test cards, less the signatures of seats not at its table.</summary>
+    public static Board Create(BoardSetup setup, ulong? seed = null) =>
+        Board.Create(setup, new CardSet([.. Cards.Cards.Where(card => card.Seat is null || setup.Seats.Any(seat => seat.Id == card.Seat))]), seed);
+
+    /// <summary>The setup with <paramref name="seat"/> at the top of every resource, so no cost weighs on its choices.</summary>
+    public static BoardSetup Rich(this BoardSetup setup, string seat) => setup with
+    {
+        Seats = [.. setup.Seats.Select(other => other.Id == seat
+            ? other with { Coin = Board.ResourceLimit, Favour = Board.ResourceLimit, Force = Board.ResourceLimit }
+            : other)],
+    };
+
     public static BoardSetup TwoCrowns(
         string? marchAllegiance = "west",
         int marchControl = 2,
         int marchOrder = 3,
         IReadOnlyDictionary<string, int>? marchInfluence = null,
-        int relation = 0) => new(
+        int relation = 0,
+        IReadOnlyDictionary<Office, string>? marchOffices = null) => new(
         7,
         [
-            new SeatSetup("west", "West", SeatKind.Crown, "west-holder", "west-capital", 4, 4, 4),
-            new SeatSetup("east", "East", SeatKind.Crown, "east-holder", "east-capital", 4, 4, 4),
+            new SeatSetup("west", "West", SeatKind.Crown, "west-holder", "west-capital", 4, 4, 4, [CardFamily.Trade, CardFamily.Court, CardFamily.Force]),
+            new SeatSetup("east", "East", SeatKind.Crown, "east-holder", "east-capital", 4, 4, 4, [CardFamily.Trade, CardFamily.Court, CardFamily.Force]),
         ],
         [
             Region("west-capital", true, "west", 5, 4, 4, new Dictionary<string, int> { ["west"] = 2 }, ["march"]),
-            Region("march", false, marchAllegiance, marchControl, 2, marchOrder, marchInfluence ?? new Dictionary<string, int>(), ["west-capital", "east-capital"]),
+            Region("march", false, marchAllegiance, marchControl, 2, marchOrder, marchInfluence ?? new Dictionary<string, int>(), ["west-capital", "east-capital"])
+                with { Offices = marchOffices },
             Region("east-capital", true, "east", 5, 4, 4, new Dictionary<string, int> { ["east"] = 2 }, ["march"]),
         ],
         relation == 0 ? [] : [new RelationSetup("west", "east", relation)]);
 
-    /// <summary>The setup with a guild seated: a power with no holder, no home and the given grants.</summary>
+    /// <summary>The setup with a guild seated: a power with no holder or home, drawing shadow cards, with the given grants.</summary>
     public static BoardSetup WithGuild(this BoardSetup setup, IReadOnlyList<SeatGrant>? grants = null) => setup with
     {
-        Seats = [.. setup.Seats, new SeatSetup("guild", "Guild", SeatKind.Power, null, null, 4, 4, 4, grants)],
+        Seats = [.. setup.Seats, new SeatSetup("guild", "Guild", SeatKind.Power, null, null, 4, 4, 4, [CardFamily.Shadow], grants)],
     };
 
     public static RegionSetup Region(string id, bool capital, string? allegiance, int control, int prosperity, int order,
         IReadOnlyDictionary<string, int> influence, IReadOnlyList<string> borders) =>
         new(id, id, 0, capital, allegiance, control, prosperity, order, influence, borders);
 
-    public static Card Card(string id) => StarterCards.All.Single(card => card.Id == id);
+    public static Card Card(string id) => Cards.ById(id);
+
+    /// <summary>Replaces <paramref name="seat"/>'s hand with the named cards, as if it had drawn them.</summary>
+    public static void Hold(this Board board, string seat, params string[] cards)
+    {
+        SeatDeck deck = board.Deck(board.Seat(seat));
+        deck.hand.Clear();
+        deck.hand.AddRange(cards.Select(Card));
+    }
 }

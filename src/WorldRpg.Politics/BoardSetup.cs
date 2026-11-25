@@ -70,6 +70,8 @@ public sealed record BoardSetup(
                 if (!seats.Contains(seat)) problems.Add($"region '{region.Id}' holds influence of unknown seat '{seat}'");
                 if (pieces is < 0 or > Board.InfluenceLimit) problems.Add($"region '{region.Id}' influence of '{seat}' {pieces} is outside 0..{Board.InfluenceLimit}");
             }
+            foreach ((Office office, string seat) in region.Offices ?? new Dictionary<Office, string>())
+                if (!seats.Contains(seat)) problems.Add($"region '{region.Id}' {office} is held by unknown seat '{seat}'");
         }
         foreach (RegionSetup region in Regions)
         {
@@ -110,8 +112,8 @@ public sealed record BoardSetup(
 
 /// <summary>
 /// A seat at the table: who plays, its kind, the cast individual holding it now, the home capital a crown holds, its
-/// starting resources and the grants it is paid on a schedule. A seat whose head is not cast yet has no holder until
-/// intention (#11060) casts one; it then becomes required.
+/// starting resources, the card families its deck is drawn from and the grants it is paid on a schedule. A seat whose
+/// head is not cast yet has no holder until intention (#11060) casts one; it then becomes required.
 /// </summary>
 public sealed record SeatSetup(
     string Id,
@@ -122,6 +124,7 @@ public sealed record SeatSetup(
     int Coin,
     int Favour,
     int Force,
+    IReadOnlyList<CardFamily> Families,
     IReadOnlyList<SeatGrant>? Grants = null);
 
 /// <summary>
@@ -133,7 +136,8 @@ public sealed record SeatGrant(Resource Resource, int Amount, int EveryWeeks);
 /// <summary>
 /// A region on the board. <paramref name="CatalogRegion"/> is the region's index in the Daggerfall catalog, which the
 /// session uses to place the board's conditions in the world. <paramref name="Borders"/> lists the regions it touches
-/// by land or a short sea crossing; a border is listed on both sides.
+/// by land or a short sea crossing; a border is listed on both sides. <paramref name="Offices"/> names the seats holding
+/// its local offices; the rest are held by local people.
 /// </summary>
 public sealed record RegionSetup(
     string Id,
@@ -145,7 +149,8 @@ public sealed record RegionSetup(
     int Prosperity,
     int Order,
     IReadOnlyDictionary<string, int> Influence,
-    IReadOnlyList<string> Borders);
+    IReadOnlyList<string> Borders,
+    IReadOnlyDictionary<Office, string>? Offices = null);
 
 /// <summary>The standing between two seats, from -3 (at war) to +3 (pact); an unlisted pair starts at 0.</summary>
 public sealed record RelationSetup(string A, string B, int Value);

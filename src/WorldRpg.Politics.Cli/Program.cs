@@ -3,10 +3,10 @@ using WorldRpg.Politics;
 
 return PoliticsCommand.Run(args, Console.Out, Console.Error);
 
-/// <summary><c>politics run [--years N] [--seed S] [--format text|jsonl] [--board FILE]</c>: plays the board and prints each week.</summary>
+/// <summary><c>politics run [--years N] [--seed S] [--format text|jsonl] [--board FILE] [--cards FILE]</c>: plays the board and prints each week.</summary>
 internal static class PoliticsCommand
 {
-    private const string Usage = "usage: politics run [--years N] [--seed S] [--format text|jsonl] [--board FILE]";
+    private const string Usage = "usage: politics run [--years N] [--seed S] [--format text|jsonl] [--board FILE] [--cards FILE]";
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
     {
@@ -15,6 +15,7 @@ internal static class PoliticsCommand
         ulong? seed = null;
         string format = "text";
         string? boardFile = null;
+        string? cardsFile = null;
         for (int index = 1; index < args.Length; index += 2)
         {
             if (index + 1 >= args.Length) return Fail(error, $"{args[index]} needs a value{Environment.NewLine}{Usage}");
@@ -25,21 +26,23 @@ internal static class PoliticsCommand
                 case "--seed" when ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out ulong parsed): seed = parsed; break;
                 case "--format" when value is "text" or "jsonl": format = value; break;
                 case "--board": boardFile = value; break;
+                case "--cards": cardsFile = value; break;
                 default: return Fail(error, $"bad option {args[index]} {value}{Environment.NewLine}{Usage}");
             }
         }
 
-        BoardSetup setup;
+        Board board;
         try
         {
-            setup = boardFile is null ? BoardSetup.Canon() : BoardSetup.Load(boardFile);
+            BoardSetup setup = boardFile is null ? BoardSetup.Canon() : BoardSetup.Load(boardFile);
+            CardSet cards = cardsFile is null ? CardSet.Canon() : CardSet.Load(cardsFile);
+            board = Board.Create(setup, cards, seed);
         }
         catch (Exception exception) when (exception is BoardSetupException or IOException or UnauthorizedAccessException)
         {
             return Fail(error, exception.Message);
         }
 
-        Board board = Board.Create(setup, seed);
         for (int turn = 0; turn < TurnTrace.TurnsIn(years); turn++)
         {
             TurnTrace trace = BoardTurn.Play(board);
