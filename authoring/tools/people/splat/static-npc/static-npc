@@ -146,8 +146,8 @@ class Npc:
         """Where the GPU steps run: npc.json "gpu_host" or --gpu: gpu-lab (the 5090, default) or a Strix Halo, den-m5 or den-nimo
         (Patch 2026-11-24, npc-468's second run: the lengthy work on a Halo, so the lab stays free for him)."""
         g = getattr(self, 'gpu_arg', None) or self.cfg.get('gpu_host', 'gpu-lab')
-        if g != 'gpu-lab' and g not in HALOS and not g.startswith('runpod'):
-            raise SystemExit(f'gpu_host {g}: gpu-lab, ' + ', '.join(HALOS) + ' or a RunPod ssh alias runpod-* (hosts/runpod/setup.sh)')
+        if g != 'gpu-lab' and g not in HALOS and not g.startswith(('runpod', 'colab')):
+            raise SystemExit(f'gpu_host {g}: gpu-lab, ' + ', '.join(HALOS) + ' or a RunPod or Colab ssh alias runpod-*, colab-* (hosts/runpod/setup.sh)')
         return g
 
     @property
