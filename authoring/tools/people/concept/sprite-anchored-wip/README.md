@@ -75,7 +75,7 @@ python3 authoring/tools/people/concept/back_ph3.py \
 ```
 
 Submit the back candidates to the same [CMS concept stage](../../../../cms/README.md#concept-art) and select
-**Approve as back**. Retrieve it with `concept_cli.py approved mobile-128 --view back`. The same single-stage MiniMax H3 back-view graph is also exported as a 1-click browser workflow in [`ui-workflows/rusty-concept-back-ph3.json`](ui-workflows/rusty-concept-back-ph3.json) (and saved in the `gpu-lab` ComfyUI sidebar).
+**Approve as back**. Retrieve it with `concept_cli.py approved mobile-128 --view back`. The same single-stage MiniMax H3 back-view graph is also exported as a 1-click browser workflow in [`ui-workflows/rusty-concept-back-ph3.json`](ui-workflows/rusty-concept-back-ph3.json) — and for weapon-in-hand or asymmetric props where an explicit 90° side profile helps MiniMax H3 orient hands correctly from behind, use the 3-view `2496×1216` sheet workflow [`ui-workflows/rusty-concept-turnaround-3view-ph3.json`](ui-workflows/rusty-concept-turnaround-3view-ph3.json) (both saved in the `gpu-lab` ComfyUI sidebar).
 
 ## Earlier History (2026-11-08)
 

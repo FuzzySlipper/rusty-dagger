@@ -1,0 +1,892 @@
+{
+  "id": "d927513b-3c34-461b-8f5a-f74fdb269a75",
+  "revision": 0,
+  "last_node_id": 13,
+  "last_link_id": 36,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        0,
+        20
+      ],
+      "size": [
+        340,
+        82
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "unet_name",
+          "name": "unet_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "unet_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "weight_dtype",
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "weight_dtype"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            26
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "p-h3-image_w4a8.safetensors",
+            "url": "https://huggingface.co/PrunaAI/P-H3-Image-Comfy/resolve/44a0fb73f299da1bb715bdb5ff59ce3fd3c6f543/diffusion_models/p-h3-image_w4a8.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "p-h3-image_w4a8.safetensors",
+        "default"
+      ],
+      "widgets_values_named": {
+        "unet_name": "p-h3-image_bf16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        0,
+        210
+      ],
+      "size": [
+        340,
+        106
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip_name",
+          "name": "clip_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "clip_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "type",
+          "name": "type",
+          "type": "COMBO",
+          "widget": {
+            "name": "type"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "device",
+          "name": "device",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            29
+          ]
+        }
+      ],
+      "title": "p-h3-image text encoder",
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "p-h3-image_text_encoder_w4a8.safetensors",
+            "url": "https://huggingface.co/PrunaAI/P-H3-Image-Comfy/resolve/44a0fb73f299da1bb715bdb5ff59ce3fd3c6f543/text_encoders/p-h3-image_text_encoder_w4a8.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "p-h3-image_text_encoder_w4a8.safetensors",
+        "minimax",
+        "default"
+      ],
+      "widgets_values_named": {
+        "clip_name": "p-h3-image_text_encoder_bf16.safetensors",
+        "type": "minimax",
+        "device": "default"
+      }
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        1630,
+        310
+      ],
+      "size": [
+        340,
+        58
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "vae_name",
+          "name": "vae_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "vae_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            28,
+            35
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "p-h3-image_vae_int8_convrot.safetensors",
+            "url": "https://huggingface.co/PrunaAI/P-H3-Image-Comfy/resolve/44a0fb73f299da1bb715bdb5ff59ce3fd3c6f543/vae/p-h3-image_vae_int8_convrot.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "p-h3-image_vae_int8_convrot.safetensors"
+      ],
+      "widgets_values_named": {
+        "vae_name": "p-h3-image_vae_bf16.safetensors"
+      }
+    },
+    {
+      "id": 4,
+      "type": "PH3ImageConditioning",
+      "pos": [
+        390,
+        210
+      ],
+      "size": [
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 29
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": 35
+        },
+        {
+          "localized_name": "image_1",
+          "name": "images.image_1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 36
+        },
+        {
+          "localized_name": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            33
+          ]
+        },
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            34
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PH3ImageConditioning"
+      },
+      "widgets_values": [
+        "Edit <Picture 1> into a precise three-view orthographic character turnaround sheet of this exact same character on a flat solid dark slate-grey background (RGB 48,52,59). A wide horizontal slate sheet contains three equal vertical columns in a single row, each showing one complete full-length figure from head to boots at the exact same height and scale, with clean empty slate margin between figures and around the outer edges.\n\nFrom left to right:\n1. Straight front view, facing directly toward the viewer\u2014exact match to <Picture 1>, holding the straight medieval steel short sword in her right hand (viewer's left) angled slightly downward and outward, left hand empty.\n2. Exact right-side profile (90-degree turn facing page left), showing her right side edge-on: her right arm hanging relaxed at her side with her right hand naturally gripping the leather hilt of the straight steel short sword pointing forward and slightly downward, her sea-teal pointed hood and short mid-back sea-teal shoulder cape ending cleanly at her mid-back (no long cloak), laced olive leather bodice, moss-green loincloth, and cuffed tan boots.\n3. Straight back view (180-degree turn facing directly away from the viewer): her sea-teal pointed hood flowing into ONLY a short mid-back sea-teal cape ending at her shoulder blades over her laced dark olive-brown leather back corset, narrow moss-green rear loincloth over bare toned legs, tan cuffed boots, empty dark leather brass-tipped scabbard at her left hip (viewer's left) and upper-left arm strap, small leather pouch peeking at her right hip (viewer's right). Her RIGHT hand (viewer's right) grips the exact same steel short sword angling cleanly downward and outward to the viewer's right, viewed strictly from behind showing the smooth back of her hand and knuckles (fingers wrapping forward around the front of the hilt away from the viewer). Her LEFT hand (viewer's left) is empty in a relaxed hanging pose viewed strictly from behind, showing the smooth back of her left hand with five clean fingers curling gently forward away from the viewer.\n\nKeep the exact same standing pose, garment proportions, vivid local pigments, warm-umber inked gouache painting style, and neutral even lighting across all three views. Draw ONLY the three full-length figures on flat slate grey\u2014no labels, no floor, no cast shadows, no grid lines, no close-ups.",
+        2496,
+        1216
+      ],
+      "widgets_values_named": {
+        "prompt": "Edit <Picture 1> into a precise three-view orthographic character turnaround sheet of this exact same character on a flat solid dark slate-grey background (RGB 48,52,59). A wide horizontal slate sheet contains three equal vertical columns in a single row, each showing one complete full-length figure from head to boots at the exact same height and scale, with clean empty slate margin between figures and around the outer edges.\n\nFrom left to right:\n1. Straight front view, facing directly toward the viewer\u2014exact match to <Picture 1>, holding the straight medieval steel short sword in her right hand (viewer's left) angled slightly downward and outward, left hand empty.\n2. Exact right-side profile (90-degree turn facing page left), showing her right side edge-on: her right arm hanging relaxed at her side with her right hand naturally gripping the leather hilt of the straight steel short sword pointing forward and slightly downward, her sea-teal pointed hood and short mid-back sea-teal shoulder cape ending cleanly at her mid-back (no long cloak), laced olive leather bodice, moss-green loincloth, and cuffed tan boots.\n3. Straight back view (180-degree turn facing directly away from the viewer): her sea-teal pointed hood flowing into ONLY a short mid-back sea-teal cape ending at her shoulder blades over her laced dark olive-brown leather back corset, narrow moss-green rear loincloth over bare toned legs, tan cuffed boots, empty dark leather brass-tipped scabbard at her left hip (viewer's left) and upper-left arm strap, small leather pouch peeking at her right hip (viewer's right). Her RIGHT hand (viewer's right) grips the exact same steel short sword angling cleanly downward and outward to the viewer's right, viewed strictly from behind showing the smooth back of her hand and knuckles (fingers wrapping forward around the front of the hilt away from the viewer). Her LEFT hand (viewer's left) is empty in a relaxed hanging pose viewed strictly from behind, showing the smooth back of her left hand with five clean fingers curling gently forward away from the viewer.\n\nKeep the exact same standing pose, garment proportions, vivid local pigments, warm-umber inked gouache painting style, and neutral even lighting across all three views. Draw ONLY the three full-length figures on flat slate grey\u2014no labels, no floor, no cast shadows, no grid lines, no close-ups.",
+        "width": 2496,
+        "height": 1216
+      },
+      "title": "3-View Turnaround Prompt & Conditioning (2496x1216)"
+    },
+    {
+      "id": 5,
+      "type": "MiniMaxH3SigmaShift",
+      "pos": [
+        390,
+        20
+      ],
+      "size": [
+        277.2857421875,
+        82
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 26
+        },
+        {
+          "localized_name": "shift_video",
+          "name": "shift_video",
+          "type": "FLOAT",
+          "widget": {
+            "name": "shift_video"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "shift_audio",
+          "name": "shift_audio",
+          "type": "FLOAT",
+          "widget": {
+            "name": "shift_audio"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MiniMaxH3SigmaShift"
+      },
+      "widgets_values": [
+        1,
+        1
+      ],
+      "widgets_values_named": {
+        "shift_video": 1,
+        "shift_audio": 1
+      }
+    },
+    {
+      "id": 6,
+      "type": "BasicGuider",
+      "pos": [
+        950,
+        20
+      ],
+      "size": [
+        240,
+        46
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 27
+        },
+        {
+          "localized_name": "conditioning",
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 33
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "GUIDER",
+          "name": "GUIDER",
+          "type": "GUIDER",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BasicGuider",
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0"
+      }
+    },
+    {
+      "id": 7,
+      "type": "ManualSigmas",
+      "pos": [
+        950,
+        185
+      ],
+      "size": [
+        320,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "sigmas",
+          "name": "sigmas",
+          "type": "STRING",
+          "widget": {
+            "name": "sigmas"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "SIGMAS",
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ManualSigmas",
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0"
+      },
+      "widgets_values": [
+        "1.0, 0.984753, 0.967905, 0.951688, 0.925372, 0.881923, 0.810083, 0.528718, 0.0"
+      ],
+      "widgets_values_named": {
+        "sigmas": "1.0, 0.984753, 0.967905, 0.951688, 0.925372, 0.881923, 0.810083, 0.528718, 0.0"
+      }
+    },
+    {
+      "id": 8,
+      "type": "KSamplerSelect",
+      "pos": [
+        950,
+        330
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "sampler_name",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "SAMPLER",
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSamplerSelect",
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0"
+      },
+      "widgets_values": [
+        "euler"
+      ],
+      "widgets_values_named": {
+        "sampler_name": "euler"
+      }
+    },
+    {
+      "id": 9,
+      "type": "RandomNoise",
+      "pos": [
+        950,
+        460
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "noise_seed",
+          "name": "noise_seed",
+          "type": "INT",
+          "widget": {
+            "name": "noise_seed"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "NOISE",
+          "name": "NOISE",
+          "type": "NOISE",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RandomNoise",
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0"
+      },
+      "widgets_values": [
+        747101,
+        "randomize"
+      ],
+      "widgets_values_named": {
+        "noise_seed": 747101
+      }
+    },
+    {
+      "id": 10,
+      "type": "SamplerCustomAdvanced",
+      "pos": [
+        1340,
+        20
+      ],
+      "size": [
+        270,
+        330
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "noise",
+          "name": "noise",
+          "type": "NOISE",
+          "link": 4
+        },
+        {
+          "localized_name": "guider",
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 5
+        },
+        {
+          "localized_name": "sampler",
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 6
+        },
+        {
+          "localized_name": "sigmas",
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 7
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 34
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "LATENT",
+          "links": [
+            9
+          ]
+        },
+        {
+          "localized_name": "denoised_output",
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SamplerCustomAdvanced",
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0"
+      }
+    },
+    {
+      "id": 11,
+      "type": "VAEDecode",
+      "pos": [
+        1630,
+        20
+      ],
+      "size": [
+        210,
+        46
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 9
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 28
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode",
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0"
+      }
+    },
+    {
+      "id": 12,
+      "type": "SaveImage",
+      "pos": [
+        1980,
+        20
+      ],
+      "size": [
+        520,
+        560
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0"
+      },
+      "widgets_values": [
+        "concept/turnaround-3view-ui"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "concept/turnaround-3view-ui"
+      }
+    },
+    {
+      "id": 13,
+      "type": "LoadImage",
+      "pos": [
+        0,
+        480
+      ],
+      "size": [
+        340,
+        340
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "title": "Approved Front Concept (<Picture 1>)",
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "choose file to upload",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            36
+          ]
+        },
+        {
+          "localized_name": "MASK",
+          "name": "MASK",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "back-ph3-npc471-s47145-front.png",
+        "image"
+      ]
+    }
+  ],
+  "links": [
+    [
+      4,
+      9,
+      0,
+      10,
+      0,
+      "NOISE"
+    ],
+    [
+      5,
+      6,
+      0,
+      10,
+      1,
+      "GUIDER"
+    ],
+    [
+      6,
+      8,
+      0,
+      10,
+      2,
+      "SAMPLER"
+    ],
+    [
+      7,
+      7,
+      0,
+      10,
+      3,
+      "SIGMAS"
+    ],
+    [
+      9,
+      10,
+      0,
+      11,
+      0,
+      "LATENT"
+    ],
+    [
+      11,
+      11,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      26,
+      1,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      27,
+      5,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      28,
+      3,
+      0,
+      11,
+      1,
+      "VAE"
+    ],
+    [
+      29,
+      2,
+      0,
+      4,
+      0,
+      "CLIP"
+    ],
+    [
+      33,
+      4,
+      0,
+      6,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      34,
+      4,
+      1,
+      10,
+      4,
+      "LATENT"
+    ],
+    [
+      35,
+      3,
+      0,
+      4,
+      1,
+      "VAE"
+    ],
+    [
+      36,
+      13,
+      0,
+      4,
+      2,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.5,
+      "offset": [
+        80,
+        180
+      ]
+    }
+  },
+  "version": 0.4
+}
