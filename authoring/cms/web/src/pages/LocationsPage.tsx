@@ -489,6 +489,16 @@ export function LocationDetailPage({
     return { minX, maxX, minY, maxY, cellMap, side: RMB_SIDE };
   }, [detail, activeMode]);
 
+  const dungeonRemapTable = useMemo<Record<string, number> | null>(() => {
+    const remaps = detail?.dungeon?.textureTable?.remaps;
+    if (!remaps?.length) return null;
+    const out: Record<string, number> = {};
+    for (const r of remaps) {
+      out[String(r.archive)] = r.targetArchive;
+    }
+    return out;
+  }, [detail?.dungeon]);
+
   if (loading && !detail) {
     return (
       <>
@@ -613,6 +623,13 @@ export function LocationDetailPage({
                 selectedPickKey={selectedPick?.pickKey ?? null}
                 focusRequestId={0}
                 focusBoxRequest={focusBoxRequest}
+                defaultClimate={location.climate}
+                defaultDungeonRemaps={activeMode === 'dungeon' ? dungeonRemapTable : null}
+                defaultDungeonLabel={
+                  dungeon?.dungeonTypeName
+                    ? `${location.name} (${dungeon.dungeonTypeName})`
+                    : `${location.name} texture table`
+                }
                 onSelect={pick => {
                   setSelectedPick(pick);
                   if (pick && pick.gridX !== undefined && pick.gridY !== undefined) {

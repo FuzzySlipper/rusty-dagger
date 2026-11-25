@@ -35,6 +35,7 @@ class Library:
     world_shared_root: Path | None = None
     world_classic_shared_root: Path | None = None
     imported_payload_path: Path | None = None
+    art_pack_dir: Path | None = None
 
     @property
     def base_payload(self):
@@ -43,6 +44,10 @@ class Library:
     @property
     def imported_payload(self):
         return self.imported_payload_path or (self.repo / "local/build/import/staging/worldrpg/payloads/daggerfall.imported.json")
+
+    @property
+    def art_pack_root(self):
+        return self.art_pack_dir or (self.repo / "content/worldrpg/packs/daggerfall.art-replacements")
 
     @property
     def people_pack(self):
@@ -78,7 +83,7 @@ class Library:
 
     @property
     def art_payload(self):
-        return self.repo / "content/worldrpg/packs/daggerfall.art-replacements/payload.json"
+        return self.art_pack_root / "payload.json"
 
     @property
     def model_notes(self):
@@ -132,6 +137,7 @@ class Library:
                 self.world_shared / "media/dungeon/terrain",
                 self.world_classic_shared / "media/dungeon/terrain",
             ),
+            "/media/art-pack/": self.art_pack_root,
         }
 
 

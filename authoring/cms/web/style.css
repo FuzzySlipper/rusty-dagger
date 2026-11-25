@@ -690,3 +690,49 @@ button[data-mark][aria-pressed="true"] { color: var(--accent); border-color: var
 .town-grid-empty {
   background: transparent;
 }
+
+/* --- Tier 2 Appearance Bar (Classic/Refreshed + Climate/Season + Dungeon Presets) --- */
+.appearance-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.art-mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.art-mode-toggle button {
+  border: 0;
+  border-radius: 0;
+  padding: 5px 10px;
+  font-size: 0.82rem;
+  background: transparent;
+  color: var(--muted);
+}
+.art-mode-toggle button + button {
+  border-left: 1px solid var(--line);
+}
+.art-mode-toggle button.active {
+  background: #233c34;
+  color: #d6fbe8;
+  font-weight: 600;
+}
+.appearance-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.appearance-select select {
+  padding: 4px 8px;
+  font-size: 0.82rem;
+}

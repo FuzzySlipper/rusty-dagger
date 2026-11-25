@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Bounds3, WorldBlockDetailResponse } from '../types';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { ArtMode, Bounds3, SeasonName, WorldAppearanceData, WorldBlockDetailResponse } from '../types';
+import { fetchWorldAppearance, type RenderAppearanceConfig } from '../viewer/appearance';
 import type {
   BlockSceneController,
   CompositeBlockGrid,
@@ -16,6 +17,8 @@ const BASE_LAYERS: Array<{ key: LayerName; label: string }> = [
   { key: 'billboards', label: 'Billboards' },
   { key: 'markers', label: 'Markers' },
   { key: 'water', label: 'Water' },
+  { key: 'actions', label: 'Actions' },
+  { key: 'collision', label: 'Collision' },
 ];
 
 export interface FocusBoxRequest {
@@ -30,6 +33,9 @@ export function BlockViewport({
   selectedPickKey,
   focusRequestId,
   focusBoxRequest,
+  defaultClimate,
+  defaultDungeonRemaps,
+  defaultDungeonLabel,
   onSelect,
 }: {
   detail?: WorldBlockDetailResponse | null;
@@ -37,23 +43,38 @@ export function BlockViewport({
   selectedPickKey: string | null;
   focusRequestId: number;
   focusBoxRequest?: FocusBoxRequest | null;
+  defaultClimate?: number | null;
+  defaultDungeonRemaps?: Record<string, number> | null;
+  defaultDungeonLabel?: string | null;
   onSelect: (pick: ScenePick | null) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<BlockSceneController | null>(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const lastSceneIdentityRef = useRef<string>('');
 
   const isComposite = Boolean(compositeGrid);
+  const isDungeon = compositeGrid ? compositeGrid.mode === 'dungeon' : detail?.block.kind === 'rdb';
+  const isExterior = compositeGrid
+    ? compositeGrid.mode === 'exterior'
+    : detail?.block.kind === 'rmbExterior';
   const layerDefs = isComposite ? [...BASE_LAYERS, { key: 'grid' as LayerName, label: 'Grid' }] : BASE_LAYERS;
 
   const [initError, setInitError] = useState<string | null>(null);
   const [engineReady, setEngineReady] = useState(false);
+  const [appearanceData, setAppearanceData] = useState<WorldAppearanceData | null>(null);
+  const [artMode, setArtMode] = useState<ArtMode>('classic');
+  const [climateValue, setClimateValue] = useState<number>(defaultClimate ?? 231);
+  const [season, setSeason] = useState<SeasonName>('summer');
+  const [dungeonPresetId, setDungeonPresetId] = useState<string>(defaultDungeonRemaps ? '__location__' : '');
+
   const [progress, setProgress] = useState<SceneLoadProgress>({
     loadedMeshes: 0,
     totalMeshes: 0,
     failedMeshes: 0,
     triangles: 0,
+    remodelsUsed: 0,
   });
   const [wireframe, setWireframe] = useState(false);
   const [sliceEnabled, setSliceEnabled] = useState(false);
@@ -67,7 +88,53 @@ export function BlockViewport({
     markers: true,
     water: true,
     grid: true,
+    actions: true,
+    collision: false,
   });
+
+  // Load cached world appearance tables (climate swaps, dungeon presets, art replacements)
+  useEffect(() => {
+    let cancelled = false;
+    fetchWorldAppearance()
+      .then(data => {
+        if (!cancelled) setAppearanceData(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Sync climate / dungeon table defaults when switching to a new location
+  useEffect(() => {
+    if (defaultClimate !== undefined && defaultClimate !== null) {
+      setClimateValue(defaultClimate);
+    }
+  }, [defaultClimate]);
+
+  useEffect(() => {
+    setDungeonPresetId(defaultDungeonRemaps ? '__location__' : '');
+  }, [defaultDungeonRemaps]);
+
+  const activeDungeonRemaps = useMemo<Record<string, number> | null>(() => {
+    if (!isDungeon) return null;
+    if (dungeonPresetId === '__location__') return defaultDungeonRemaps ?? null;
+    if (!dungeonPresetId) return null;
+    const preset = appearanceData?.dungeonPresets.find(p => p.id === dungeonPresetId);
+    return preset?.remaps ?? null;
+  }, [isDungeon, dungeonPresetId, defaultDungeonRemaps, appearanceData]);
+
+  const appearanceConfig = useMemo<RenderAppearanceConfig>(
+    () => ({
+      data: appearanceData,
+      artMode,
+      climateValue: isDungeon ? null : climateValue,
+      season,
+      dungeonRemaps: activeDungeonRemaps,
+      isExterior,
+    }),
+    [appearanceData, artMode, isDungeon, climateValue, season, activeDungeonRemaps, isExterior],
+  );
 
   // Lazily import Three.js chunk only when BlockViewport mounts
   useEffect(() => {
@@ -96,15 +163,23 @@ export function BlockViewport({
     };
   }, []);
 
-  // Load single block or composite town/dungeon grid into scene
+  const sceneIdentity = compositeGrid
+    ? `composite:${compositeGrid.mode}:${compositeGrid.placements.map(p => `${p.gridX},${p.gridY}:${p.blockKey}`).join('|')}`
+    : detail
+      ? `single:${detail.block.key}`
+      : '';
+
+  // Load single block or composite town/dungeon grid into scene, preserving camera when only appearance changes
   useEffect(() => {
-    if (!engineReady || !controllerRef.current) return;
+    if (!engineReady || !controllerRef.current || !sceneIdentity) return;
+    const preserveCamera = lastSceneIdentityRef.current === sceneIdentity;
+    lastSceneIdentityRef.current = sceneIdentity;
     if (compositeGrid) {
-      void controllerRef.current.loadCompositeGrid(compositeGrid);
+      void controllerRef.current.loadCompositeGrid(compositeGrid, appearanceConfig, preserveCamera);
     } else if (detail) {
-      void controllerRef.current.loadBlock(detail);
+      void controllerRef.current.loadBlock(detail, appearanceConfig, preserveCamera);
     }
-  }, [engineReady, detail, compositeGrid]);
+  }, [engineReady, detail, compositeGrid, sceneIdentity, appearanceConfig]);
 
   // Apply layer toggles
   useEffect(() => {
@@ -172,6 +247,7 @@ export function BlockViewport({
 
   const loadingMeshes =
     progress.totalMeshes > 0 && progress.loadedMeshes + progress.failedMeshes < progress.totalMeshes;
+  const refreshedAvailable = Boolean(appearanceData?.artReplacements.available);
 
   return (
     <div class="block-viewport-shell">
@@ -229,6 +305,86 @@ export function BlockViewport({
         </div>
       </div>
 
+      {appearanceData ? (
+        <div class="appearance-bar" role="region" aria-label="Appearance and climate controls">
+          <div class="art-mode-toggle" role="group" aria-label="Art style">
+            <button
+              type="button"
+              class={artMode === 'classic' ? 'active' : undefined}
+              aria-pressed={artMode === 'classic' ? 'true' : 'false'}
+              onClick={() => setArtMode('classic')}
+            >
+              Classic art
+            </button>
+            <button
+              type="button"
+              class={artMode === 'refreshed' ? 'active' : undefined}
+              aria-pressed={artMode === 'refreshed' ? 'true' : 'false'}
+              disabled={!refreshedAvailable}
+              onClick={() => setArtMode('refreshed')}
+              title={
+                refreshedAvailable
+                  ? `Overlay ${appearanceData.artReplacements.counts.surfaces} refreshed surfaces, ${appearanceData.artReplacements.counts.scenery} scenery sprites, and ${appearanceData.artReplacements.counts.models} ARCH3D remodels`
+                  : 'daggerfall.art-replacements pack not found'
+              }
+            >
+              Refreshed art
+            </button>
+          </div>
+
+          {!isDungeon ? (
+            <>
+              <label class="appearance-select">
+                Climate
+                <select
+                  aria-label="Climate"
+                  value={String(climateValue)}
+                  onChange={event => setClimateValue(Number((event.currentTarget as HTMLSelectElement).value))}
+                >
+                  {appearanceData.climates.map(c => (
+                    <option key={c.value} value={String(c.value)}>
+                      {c.name} ({c.climateBase})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div class="art-mode-toggle" role="group" aria-label="Season">
+                {(['summer', 'winter', 'rain'] as SeasonName[]).map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    class={season === s ? 'active' : undefined}
+                    aria-pressed={season === s ? 'true' : 'false'}
+                    onClick={() => setSeason(s)}
+                  >
+                    {s[0].toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <label class="appearance-select">
+              Dungeon texture table
+              <select
+                aria-label="Dungeon texture table"
+                value={dungeonPresetId}
+                onChange={event => setDungeonPresetId((event.currentTarget as HTMLSelectElement).value)}
+              >
+                {defaultDungeonRemaps ? (
+                  <option value="__location__">{defaultDungeonLabel ?? 'Location texture table'}</option>
+                ) : null}
+                <option value="">Raw base archives (no remap)</option>
+                {appearanceData.dungeonPresets.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      ) : null}
+
       <div class="block-canvas-wrap">
         <div ref={hostRef} class="block-canvas-host" />
         {!engineReady && !initError ? <div class="block-canvas-overlay">Initializing 3D viewport…</div> : null}
@@ -241,7 +397,9 @@ export function BlockViewport({
           <span>
             {loadingMeshes
               ? `Loading meshes ${progress.loadedMeshes}/${progress.totalMeshes}…`
-              : `${progress.loadedMeshes} unique meshes · ${Math.round(progress.triangles).toLocaleString()} tris`}
+              : `${progress.loadedMeshes} unique meshes${
+                  progress.remodelsUsed > 0 ? ` (${progress.remodelsUsed} remodels)` : ''
+                } · ${Math.round(progress.triangles).toLocaleString()} tris`}
             {progress.failedMeshes > 0 ? ` (${progress.failedMeshes} failed)` : ''}
           </span>
           <span>Orbit: drag · Pan: right-drag · Zoom: wheel · Fly: WASD/QE (+Shift) · Click to inspect</span>

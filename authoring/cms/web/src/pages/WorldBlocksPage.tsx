@@ -343,7 +343,8 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
     (block.lights?.length ?? 0) +
     (block.questMarkers?.length ?? 0) +
     (block.randomEnemies?.length ?? 0) +
-    (block.propertyContainers?.length ?? 0);
+    (block.propertyContainers?.length ?? 0) +
+    (block.actions?.length ?? 0);
 
   function selectAndFocus(pick: ScenePick) {
     setSelectedPick(pick);
@@ -857,6 +858,37 @@ export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
                 <Empty>No billboards, lights, containers, or markers in this block.</Empty>
               ) : (
                 <ul class="inspector-list">
+                  {(block.actions ?? []).map((act, idx) => {
+                    const aid = act.id ?? act.actionId ?? `action-${idx}`;
+                    const pickKey = `action:${aid}`;
+                    const pos: [number, number, number] = act.position
+                      ? [act.position.x, act.position.y, act.position.z]
+                      : [0, 0, 0];
+                    return (
+                      <li key={pickKey} class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}>
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'action',
+                              id: aid,
+                              label: `Action ${aid} (flag ${act.actionFlag ?? 0})`,
+                              position: pos,
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>Action: {aid}</strong>
+                          <div class="muted">
+                            flag {act.actionFlag ?? 0} · trigger {act.triggerFlag ?? 0}
+                            {act.nextActionId ? ` → ${act.nextActionId}` : ''}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
                   {(block.randomEnemies ?? []).map((e, idx) => {
                     const pickKey = `randomEnemy:${e.id}`;
                     return (

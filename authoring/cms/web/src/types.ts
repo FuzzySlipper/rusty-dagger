@@ -550,6 +550,11 @@ export interface WorldBlocksQueryResponse {
   items: WorldBlockListItem[];
 }
 
+export interface WorldBlockCollision {
+  vertices: Vec3[];
+  triangles: Array<{ a: number; b: number; c: number }>;
+}
+
 export interface WorldBlockModel {
   id: string;
   modelId: string;
@@ -562,6 +567,7 @@ export interface WorldBlockModel {
   action?: { actionId: string; description: string; modelIndex: number; rawIndex: number } | null;
   bounds?: Bounds3 | null;
   localBounds?: Bounds3 | null;
+  collision?: WorldBlockCollision | null;
 }
 
 export interface WorldBlockDoor {
@@ -594,8 +600,8 @@ export interface WorldBlockGate {
   modelId: string;
   position: Vec3;
   rotationDegrees: Vec3;
-  open: { modelId: string; meshArtifactId: string; localBounds: Bounds3 };
-  closed: { modelId: string; meshArtifactId: string; localBounds: Bounds3 };
+  open: { modelId: string; meshArtifactId: string; localBounds: Bounds3; collision?: WorldBlockCollision | null };
+  closed: { modelId: string; meshArtifactId: string; localBounds: Bounds3; collision?: WorldBlockCollision | null };
 }
 
 export interface WorldBlockBuilding {
@@ -678,6 +684,17 @@ export interface WorldBlockPropertyContainer {
 export interface WorldBlockAction {
   id?: string;
   actionId?: string;
+  sourceOffset?: number;
+  triggerFlag?: number;
+  actionFlag?: number;
+  axis?: number;
+  duration?: number;
+  magnitude?: number;
+  nextActionId?: string | null;
+  doorId?: string | null;
+  isFlat?: boolean;
+  position?: Vec3 | null;
+  nextObjectPosition?: Vec3 | null;
   [key: string]: unknown;
 }
 
@@ -727,6 +744,48 @@ export interface WorldBlockDetailResponse {
     materials: string;
     billboards: string;
     terrain: string;
+  };
+}
+
+export type ArtMode = 'classic' | 'refreshed';
+export type SeasonName = 'summer' | 'winter' | 'rain';
+
+export interface ClimateOption {
+  value: number;
+  name: string;
+  climateBase: string;
+  ground: Record<SeasonName, number>;
+  nature: Record<SeasonName, number>;
+}
+
+export interface DungeonPreset {
+  id: string;
+  dungeonType: number;
+  name: string;
+  remaps: Record<string, number>;
+}
+
+export interface ArtReplacementModelSlot {
+  material?: string;
+  textureUrl?: string;
+}
+
+export interface ArtReplacementModel {
+  meshUrl: string;
+  slots: Record<string, ArtReplacementModelSlot>;
+}
+
+export interface WorldAppearanceData {
+  climates: ClimateOption[];
+  seasons: SeasonName[];
+  swaps: Record<string, Record<string, Record<string, Array<[number, number, number]>>>>;
+  dungeonPresets: DungeonPreset[];
+  artReplacements: {
+    available: boolean;
+    surfaces: Record<string, string>;
+    scenery: Record<string, string>;
+    models: Record<string, ArtReplacementModel>;
+    counts: { surfaces: number; scenery: number; models: number };
   };
 }
 

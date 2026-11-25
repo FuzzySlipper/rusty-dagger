@@ -29,6 +29,7 @@ interface RstatmshDescriptor {
 export interface ParsedRstatmsh {
   geometry: THREE.BufferGeometry;
   materialNames: string[];
+  materialSlots: number[];
 }
 
 const MAGIC = 'RSTATMSH';
@@ -95,6 +96,7 @@ export function parseRstatmsh(buffer: ArrayBuffer): ParsedRstatmsh {
   }
 
   const materialNames: string[] = [];
+  const materialSlots: number[] = [];
   const slotToIndex = new Map<number, number>();
   for (const group of groups ?? []) {
     let matIdx = slotToIndex.get(group.materialSlot);
@@ -102,6 +104,7 @@ export function parseRstatmsh(buffer: ArrayBuffer): ParsedRstatmsh {
       matIdx = materialNames.length;
       slotToIndex.set(group.materialSlot, matIdx);
       materialNames.push(slotToMaterial.get(group.materialSlot) ?? '');
+      materialSlots.push(group.materialSlot);
     }
     geometry.addGroup(group.start, group.count, matIdx);
   }
@@ -109,7 +112,7 @@ export function parseRstatmsh(buffer: ArrayBuffer): ParsedRstatmsh {
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
 
-  return { geometry, materialNames };
+  return { geometry, materialNames, materialSlots };
 }
 
 /**

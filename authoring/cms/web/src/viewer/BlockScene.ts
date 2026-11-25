@@ -1,9 +1,32 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { WorldBlockDetailResponse, WorldBlockGroundTile, WorldBlockModel } from '../types';
+import type {
+  ArtReplacementModel,
+  WorldBlockCollision,
+  WorldBlockDetailResponse,
+  WorldBlockGroundTile,
+  WorldBlockModel,
+} from '../types';
+import {
+  resolveBillboardUrl,
+  resolveGroundUrl,
+  resolveModelOverride,
+  resolveSurfaceUrl,
+  type RenderAppearanceConfig,
+} from './appearance';
 import { daggerfallSourceRotation, parseRstatmsh, type ParsedRstatmsh } from './rstatmsh';
 
-export type LayerName = 'models' | 'ground' | 'doors' | 'people' | 'billboards' | 'markers' | 'water' | 'grid';
+export type LayerName =
+  | 'models'
+  | 'ground'
+  | 'doors'
+  | 'people'
+  | 'billboards'
+  | 'markers'
+  | 'water'
+  | 'grid'
+  | 'actions'
+  | 'collision';
 
 export type PickKind =
   | 'model'
@@ -18,7 +41,8 @@ export type PickKind =
   | 'randomEnemy'
   | 'container'
   | 'marker'
-  | 'gridCell';
+  | 'gridCell'
+  | 'action';
 
 export interface ScenePick {
   pickKey: string;
@@ -58,6 +82,7 @@ export interface SceneLoadProgress {
   totalMeshes: number;
   failedMeshes: number;
   triangles: number;
+  remodelsUsed: number;
 }
 
 export interface BlockSceneCallbacks {
@@ -65,9 +90,18 @@ export interface BlockSceneCallbacks {
   onProgress?: (progress: SceneLoadProgress) => void;
 }
 
-const MATERIAL_RE = /^material\/(texture-\d+-\d+)$/;
-const SPRITE_RE = /^sprite\/(texture-\d+-\d+)$/;
+const MATERIAL_RE = /^material\/texture-(\d+)-(\d+)$/;
+const SPRITE_RE = /^sprite\/texture-(\d+)-(\d+)$/;
 const GROUND_TILE_METRES = 6.4;
+
+const DEFAULT_APPEARANCE: RenderAppearanceConfig = {
+  data: null,
+  artMode: 'classic',
+  climateValue: 231,
+  season: 'summer',
+  dungeonRemaps: null,
+  isExterior: true,
+};
 
 interface PlacementOffset {
   ox: number;
@@ -163,7 +197,10 @@ export class BlockSceneController {
       markers: new THREE.Group(),
       water: new THREE.Group(),
       grid: new THREE.Group(),
+      actions: new THREE.Group(),
+      collision: new THREE.Group(),
     };
+    this.layers.collision.visible = false;
     for (const [name, group] of Object.entries(this.layers)) {
       group.name = `layer:${name}`;
       this.scene.add(group);
@@ -408,27 +445,37 @@ export class BlockSceneController {
     this.pickByKey.set(pick.pickKey, { object, pick });
   }
 
-  private getMaterial(materialName: string, materialsBaseUrl: string): THREE.MeshStandardMaterial {
+  private getSurfaceMaterial(
+    materialName: string,
+    materialsBaseUrl: string,
+    appearance: RenderAppearanceConfig,
+  ): THREE.MeshStandardMaterial {
     const match = MATERIAL_RE.exec(materialName);
-    const key = match ? match[1] : '__fallback__';
-    const existing = this.materialCache.get(key);
+    if (!match) {
+      const existingFallback = this.materialCache.get('__fallback__');
+      if (existingFallback) {
+        existingFallback.wireframe = this.wireframe;
+        return existingFallback;
+      }
+      const mat = makeFallbackMaterial(this.wireframe);
+      this.materialCache.set('__fallback__', mat);
+      this.allMeshMaterials.add(mat);
+      return mat;
+    }
+
+    const archive = Number(match[1]);
+    const record = Number(match[2]);
+    const resolved = resolveSurfaceUrl(archive, record, materialsBaseUrl, appearance);
+    const existing = this.materialCache.get(resolved.cacheKey);
     if (existing) {
       existing.wireframe = this.wireframe;
       return existing;
     }
 
-    if (!match) {
-      const mat = makeFallbackMaterial(this.wireframe);
-      this.materialCache.set(key, mat);
-      this.allMeshMaterials.add(mat);
-      return mat;
-    }
-
-    const url = `${materialsBaseUrl}${match[1]}.png`;
-    const texture = this.textureLoader.load(url);
+    const texture = this.textureLoader.load(resolved.url);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.magFilter = THREE.NearestFilter;
+    texture.magFilter = resolved.refreshed ? THREE.LinearFilter : THREE.NearestFilter;
     texture.minFilter = THREE.NearestMipmapLinearFilter;
     texture.flipY = false;
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -440,23 +487,54 @@ export class BlockSceneController {
       wireframe: this.wireframe,
       alphaTest: 0.25,
     });
-    this.materialCache.set(key, mat);
+    this.materialCache.set(resolved.cacheKey, mat);
     this.allMeshMaterials.add(mat);
     return mat;
   }
 
-  private getTerrainMaterial(archive: number, record: number, terrainBaseUrl: string): THREE.MeshStandardMaterial {
-    const key = `terrain-${archive}-${record}`;
+  private getCustomTextureMaterial(textureUrl: string): THREE.MeshStandardMaterial {
+    const key = `custom:${textureUrl}`;
     const existing = this.materialCache.get(key);
     if (existing) {
       existing.wireframe = this.wireframe;
       return existing;
     }
-    const url = `${terrainBaseUrl}texture-${archive}-${record}.png`;
-    const texture = this.textureLoader.load(url);
+    const texture = this.textureLoader.load(textureUrl);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.flipY = false;
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const mat = new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.9,
+      metalness: 0.0,
+      wireframe: this.wireframe,
+      alphaTest: 0.25,
+    });
+    this.materialCache.set(key, mat);
+    this.allMeshMaterials.add(mat);
+    return mat;
+  }
+
+  private getTerrainMaterial(
+    fallbackArchive: number,
+    record: number,
+    terrainBaseUrl: string,
+    appearance: RenderAppearanceConfig,
+  ): THREE.MeshStandardMaterial {
+    const resolved = resolveGroundUrl(record, fallbackArchive, terrainBaseUrl, appearance);
+    const existing = this.materialCache.get(resolved.cacheKey);
+    if (existing) {
+      existing.wireframe = this.wireframe;
+      return existing;
+    }
+    const texture = this.textureLoader.load(resolved.url);
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
-    texture.magFilter = THREE.NearestFilter;
+    texture.magFilter = resolved.refreshed ? THREE.LinearFilter : THREE.NearestFilter;
     texture.minFilter = THREE.NearestMipmapLinearFilter;
     texture.flipY = false;
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -467,18 +545,18 @@ export class BlockSceneController {
       metalness: 0.0,
       wireframe: this.wireframe,
     });
-    this.materialCache.set(key, mat);
+    this.materialCache.set(resolved.cacheKey, mat);
     this.allMeshMaterials.add(mat);
     return mat;
   }
 
-  private getSpriteMaterial(url: string, tint = 0xffffff): THREE.SpriteMaterial {
-    const key = `${url}#${tint}`;
+  private getSpriteMaterial(url: string, tint = 0xffffff, smooth = false): THREE.SpriteMaterial {
+    const key = `${url}#${tint}#${smooth ? 1 : 0}`;
     const existing = this.spriteMaterialCache.get(key);
     if (existing) return existing;
     const texture = this.textureLoader.load(url);
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = smooth ? THREE.LinearFilter : THREE.NearestFilter;
+    texture.minFilter = smooth ? THREE.LinearFilter : THREE.NearestFilter;
     texture.colorSpace = THREE.SRGBColorSpace;
     const mat = new THREE.SpriteMaterial({
       map: texture,
@@ -490,14 +568,12 @@ export class BlockSceneController {
     return mat;
   }
 
-  private loadMesh(meshArtifactId: string, geometryBaseUrl: string): Promise<ParsedRstatmsh> {
-    const fileName = `${meshArtifactId.replace(/^geometry\//, '')}.rstatmsh`;
-    const url = `${geometryBaseUrl}${fileName}`;
+  private loadMeshByUrl(url: string): Promise<ParsedRstatmsh> {
     const cached = this.meshCache.get(url);
     if (cached) return cached;
     const promise = fetch(url)
       .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status} loading ${fileName}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
         return res.arrayBuffer();
       })
       .then(buf => parseRstatmsh(buf));
@@ -505,18 +581,38 @@ export class BlockSceneController {
     return promise;
   }
 
-  async loadBlock(detail: WorldBlockDetailResponse) {
+  private meshUrlForModel(
+    model: WorldBlockModel,
+    geometryBaseUrl: string,
+    appearance: RenderAppearanceConfig,
+  ): { url: string; override: ArtReplacementModel | null } | null {
+    const override = resolveModelOverride(model.modelId, appearance);
+    if (override) {
+      return { url: override.meshUrl, override };
+    }
+    if (!model.meshArtifactId) return null;
+    const fileName = `${model.meshArtifactId.replace(/^geometry\//, '')}.rstatmsh`;
+    return { url: `${geometryBaseUrl}${fileName}`, override: null };
+  }
+
+  async loadBlock(
+    detail: WorldBlockDetailResponse,
+    appearance: RenderAppearanceConfig = DEFAULT_APPEARANCE,
+    preserveCamera = false,
+  ) {
     const gen = ++this.loadGeneration;
     this.clearScene();
     const { block, mediaUrls, terrainArchive } = detail;
 
-    // 1. Frame camera from block bounds immediately so viewport is centered even before meshes arrive
+    // 1. Frame camera from block bounds immediately unless preserving camera for appearance toggle
     this.currentKind = block.kind;
-    this.frameFromBounds(block.bounds, block.kind, block.enterMarker?.position ?? null);
+    if (!preserveCamera) {
+      this.frameFromBounds(block.bounds, block.kind, block.enterMarker?.position ?? null);
+    }
 
     // 2. Build RMB ground grid if present
     if (block.ground?.length) {
-      this.buildGround(block.ground, terrainArchive, mediaUrls.terrain);
+      this.buildGround(block.ground, terrainArchive, mediaUrls.terrain, appearance);
     }
 
     // 3. Build doors, transition doors, gates
@@ -525,41 +621,66 @@ export class BlockSceneController {
     // 4. Build people (daggerfall.people slots + staticNpcs)
     this.buildPeople(detail);
 
-    // 5. Build billboards
-    this.buildBillboards(detail);
+    // 5. Build billboards (with climate nature & refreshed scenery swaps)
+    this.buildBillboards(detail, appearance);
 
     // 6. Build markers (lights, quest markers, random enemies, containers, start/enter)
     this.buildMarkers(detail);
 
-    // 7. Build water plane if present
+    // 7. Build RDB action graph & door normal arrows
+    this.buildActions(detail);
+
+    // 8. Build collision wireframe overlays (action models, gates, doors)
+    this.buildCollision(detail);
+
+    // 9. Build water plane if present
     if (typeof block.waterLevel === 'number') {
       this.buildWater(block.waterLevel, block.bounds);
     }
 
-    // 8. Stream placed `.rstatmsh` models in deduplicated batches
-    const placeableModels = (block.models ?? []).filter(m => Boolean(m.meshArtifactId));
-    const uniqueArtifacts = [...new Set(placeableModels.map(m => m.meshArtifactId as string))];
-    const totalMeshes = uniqueArtifacts.length;
+    // 10. Stream placed `.rstatmsh` models (classic or refreshed remodels) in deduplicated batches
+    const resolvedModels: Array<{
+      model: WorldBlockModel;
+      index: number;
+      url: string;
+      override: ArtReplacementModel | null;
+    }> = [];
+    const urlSet = new Set<string>();
+    let remodelsUsed = 0;
+    const remodelUrlSet = new Set<string>();
+
+    for (let idx = 0; idx < (block.models?.length ?? 0); idx++) {
+      const m = block.models[idx];
+      const info = this.meshUrlForModel(m, mediaUrls.geometry, appearance);
+      if (!info) continue;
+      resolvedModels.push({ model: m, index: idx, url: info.url, override: info.override });
+      urlSet.add(info.url);
+      if (info.override) remodelUrlSet.add(info.url);
+    }
+    remodelsUsed = remodelUrlSet.size;
+
+    const uniqueUrls = [...urlSet];
+    const totalMeshes = uniqueUrls.length;
     let loadedMeshes = 0;
     let failedMeshes = 0;
     let triangles = 0;
 
     const report = () => {
       if (gen !== this.loadGeneration || this.disposed) return;
-      this.callbacks.onProgress?.({ loadedMeshes, totalMeshes, failedMeshes, triangles });
+      this.callbacks.onProgress?.({ loadedMeshes, totalMeshes, failedMeshes, triangles, remodelsUsed });
     };
     report();
 
-    const parsedByArtifact = new Map<string, ParsedRstatmsh>();
+    const parsedByUrl = new Map<string, ParsedRstatmsh>();
     const BATCH = 16;
-    for (let i = 0; i < uniqueArtifacts.length; i += BATCH) {
+    for (let i = 0; i < uniqueUrls.length; i += BATCH) {
       if (gen !== this.loadGeneration || this.disposed) return;
-      const slice = uniqueArtifacts.slice(i, i + BATCH);
+      const slice = uniqueUrls.slice(i, i + BATCH);
       await Promise.all(
-        slice.map(async artifactId => {
+        slice.map(async url => {
           try {
-            const parsed = await this.loadMesh(artifactId, mediaUrls.geometry);
-            parsedByArtifact.set(artifactId, parsed);
+            const parsed = await this.loadMeshByUrl(url);
+            parsedByUrl.set(url, parsed);
             loadedMeshes += 1;
           } catch {
             failedMeshes += 1;
@@ -571,16 +692,15 @@ export class BlockSceneController {
 
     if (gen !== this.loadGeneration || this.disposed) return;
 
-    for (let idx = 0; idx < placeableModels.length; idx++) {
-      const m = placeableModels[idx];
-      const parsed = parsedByArtifact.get(m.meshArtifactId as string);
+    for (const item of resolvedModels) {
+      const parsed = parsedByUrl.get(item.url);
       if (!parsed) continue;
       triangles += (parsed.geometry.index?.count ?? 0) / 3;
-      this.addPlacedModel(m, idx, parsed, mediaUrls.materials);
+      this.addPlacedModel(item.model, item.index, parsed, mediaUrls.materials, appearance, item.override);
     }
 
     // If block lacked explicit bounds, frame from loaded models
-    if (!block.bounds && this.layers.models.children.length > 0) {
+    if (!preserveCamera && !block.bounds && this.layers.models.children.length > 0) {
       const box = new THREE.Box3().setFromObject(this.layers.models);
       if (!box.isEmpty()) {
         this.frameFromBox(box, block.kind);
@@ -590,7 +710,11 @@ export class BlockSceneController {
     report();
   }
 
-  async loadCompositeGrid(grid: CompositeBlockGrid) {
+  async loadCompositeGrid(
+    grid: CompositeBlockGrid,
+    appearance: RenderAppearanceConfig = DEFAULT_APPEARANCE,
+    preserveCamera = false,
+  ) {
     const gen = ++this.loadGeneration;
     this.clearScene();
     const { mode, mediaUrls, terrainArchive, placements } = grid;
@@ -609,11 +733,13 @@ export class BlockSceneController {
         totalBox.expandByPoint(new THREE.Vector3(ox + p.side, oy + 16, oz));
       }
     }
-    if (!totalBox.isEmpty()) {
-      this.currentBounds = totalBox;
-      this.frameFromBox(totalBox, this.currentKind);
-    } else {
-      this.frameFromBounds(null, this.currentKind);
+    if (!preserveCamera) {
+      if (!totalBox.isEmpty()) {
+        this.currentBounds = totalBox;
+        this.frameFromBox(totalBox, this.currentKind);
+      } else {
+        this.frameFromBounds(null, this.currentKind);
+      }
     }
 
     // Build block cell outline grid + merged ground tiles + overlays
@@ -624,7 +750,8 @@ export class BlockSceneController {
     const gridLinesNormal: number[] = [];
     const gridLinesStart: number[] = [];
 
-    const artifactSet = new Set<string>();
+    const urlSet = new Set<string>();
+    const remodelUrlSet = new Set<string>();
 
     for (const p of placements) {
       const [ox, oy, oz] = p.origin;
@@ -659,43 +786,50 @@ export class BlockSceneController {
       }
       this.buildDoors(p.detail, offset);
       this.buildPeople(p.detail, offset);
-      this.buildBillboards(p.detail, offset);
+      this.buildBillboards(p.detail, appearance, offset);
       this.buildMarkers(p.detail, offset);
+      this.buildActions(p.detail, offset);
+      this.buildCollision(p.detail, offset);
       if (typeof block.waterLevel === 'number') {
         this.buildWater(block.waterLevel, block.bounds, offset);
       }
       for (const m of block.models ?? []) {
-        if (m.meshArtifactId) artifactSet.add(m.meshArtifactId);
+        const info = this.meshUrlForModel(m, mediaUrls.geometry, appearance);
+        if (info) {
+          urlSet.add(info.url);
+          if (info.override) remodelUrlSet.add(info.url);
+        }
       }
     }
 
-    this.commitGroundBuckets(groundBuckets, terrainArchive, mediaUrls.terrain);
+    this.commitGroundBuckets(groundBuckets, terrainArchive, mediaUrls.terrain, appearance);
     this.commitGridLines(gridLinesNormal, 0x3b8698);
     this.commitGridLines(gridLinesStart, 0x4de096);
 
     // Stream all unique `.rstatmsh` geometries across the entire town/dungeon
-    const uniqueArtifacts = [...artifactSet];
-    const totalMeshes = uniqueArtifacts.length;
+    const uniqueUrls = [...urlSet];
+    const totalMeshes = uniqueUrls.length;
+    const remodelsUsed = remodelUrlSet.size;
     let loadedMeshes = 0;
     let failedMeshes = 0;
     let triangles = 0;
 
     const report = () => {
       if (gen !== this.loadGeneration || this.disposed) return;
-      this.callbacks.onProgress?.({ loadedMeshes, totalMeshes, failedMeshes, triangles });
+      this.callbacks.onProgress?.({ loadedMeshes, totalMeshes, failedMeshes, triangles, remodelsUsed });
     };
     report();
 
-    const parsedByArtifact = new Map<string, ParsedRstatmsh>();
+    const parsedByUrl = new Map<string, ParsedRstatmsh>();
     const BATCH = 24;
-    for (let i = 0; i < uniqueArtifacts.length; i += BATCH) {
+    for (let i = 0; i < uniqueUrls.length; i += BATCH) {
       if (gen !== this.loadGeneration || this.disposed) return;
-      const slice = uniqueArtifacts.slice(i, i + BATCH);
+      const slice = uniqueUrls.slice(i, i + BATCH);
       await Promise.all(
-        slice.map(async artifactId => {
+        slice.map(async url => {
           try {
-            const parsed = await this.loadMesh(artifactId, mediaUrls.geometry);
-            parsedByArtifact.set(artifactId, parsed);
+            const parsed = await this.loadMeshByUrl(url);
+            parsedByUrl.set(url, parsed);
             loadedMeshes += 1;
           } catch {
             failedMeshes += 1;
@@ -722,11 +856,12 @@ export class BlockSceneController {
       const models = p.detail.block.models ?? [];
       for (let idx = 0; idx < models.length; idx++) {
         const m = models[idx];
-        if (!m.meshArtifactId) continue;
-        const parsed = parsedByArtifact.get(m.meshArtifactId);
+        const info = this.meshUrlForModel(m, mediaUrls.geometry, appearance);
+        if (!info) continue;
+        const parsed = parsedByUrl.get(info.url);
         if (!parsed) continue;
         triangles += (parsed.geometry.index?.count ?? 0) / 3;
-        this.addPlacedModel(m, idx, parsed, mediaUrls.materials, offset);
+        this.addPlacedModel(m, idx, parsed, mediaUrls.materials, appearance, info.override, offset);
       }
     }
 
@@ -803,10 +938,20 @@ export class BlockSceneController {
     index: number,
     parsed: ParsedRstatmsh,
     materialsBaseUrl: string,
+    appearance: RenderAppearanceConfig,
+    override: ArtReplacementModel | null = null,
     off: PlacementOffset = ZERO_OFFSET,
   ) {
     const materials = parsed.materialNames.length
-      ? parsed.materialNames.map(name => this.getMaterial(name, materialsBaseUrl))
+      ? parsed.materialNames.map((name, groupIdx) => {
+          const slotNum = parsed.materialSlots[groupIdx];
+          const slotOverride = override?.slots?.[String(slotNum)];
+          if (slotOverride?.textureUrl) {
+            return this.getCustomTextureMaterial(slotOverride.textureUrl);
+          }
+          const matName = slotOverride?.material ?? name;
+          return this.getSurfaceMaterial(matName, materialsBaseUrl, appearance);
+        })
       : [makeFallbackMaterial(this.wireframe)];
 
     const mesh = new THREE.Mesh(parsed.geometry, materials.length === 1 ? materials[0] : materials);
@@ -897,6 +1042,7 @@ export class BlockSceneController {
     byRecord: Map<number, { positions: number[]; normals: number[]; uvs: number[]; indices: number[] }>,
     terrainArchive: number,
     terrainBaseUrl: string,
+    appearance: RenderAppearanceConfig,
   ) {
     for (const [rec, bucket] of byRecord.entries()) {
       const geo = new THREE.BufferGeometry();
@@ -904,17 +1050,22 @@ export class BlockSceneController {
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(bucket.normals, 3));
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(bucket.uvs, 2));
       geo.setIndex(bucket.indices);
-      const mat = this.getTerrainMaterial(terrainArchive, rec, terrainBaseUrl);
+      const mat = this.getTerrainMaterial(terrainArchive, rec, terrainBaseUrl, appearance);
       const mesh = new THREE.Mesh(geo, mat);
       this.layers.ground.add(mesh);
     }
   }
 
-  private buildGround(tiles: WorldBlockGroundTile[], terrainArchive: number, terrainBaseUrl: string) {
+  private buildGround(
+    tiles: WorldBlockGroundTile[],
+    terrainArchive: number,
+    terrainBaseUrl: string,
+    appearance: RenderAppearanceConfig,
+  ) {
     // Group quads by textureRecord so we create <= 56 draw calls for the 256-tile ground grid
     const byRecord = new Map<number, { positions: number[]; normals: number[]; uvs: number[]; indices: number[] }>();
     this.appendGroundTiles(byRecord, tiles, 0, 0, 0);
-    this.commitGroundBuckets(byRecord, terrainArchive, terrainBaseUrl);
+    this.commitGroundBuckets(byRecord, terrainArchive, terrainBaseUrl, appearance);
   }
 
   private buildDoors(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
@@ -1123,7 +1274,11 @@ export class BlockSceneController {
     }
   }
 
-  private buildBillboards(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
+  private buildBillboards(
+    detail: WorldBlockDetailResponse,
+    appearance: RenderAppearanceConfig,
+    off: PlacementOffset = ZERO_OFFSET,
+  ) {
     const { block, mediaUrls } = detail;
     const meta = {
       blockKey: off.blockKey,
@@ -1135,8 +1290,10 @@ export class BlockSceneController {
       const bb = block.billboards![i];
       const match = SPRITE_RE.exec(bb.spriteResourceId ?? '');
       if (!match) continue;
-      const url = `${mediaUrls.billboards}${match[1]}.png`;
-      const sprite = new THREE.Sprite(this.getSpriteMaterial(url));
+      const arch = Number(match[1]);
+      const rec = Number(match[2]);
+      const resolved = resolveBillboardUrl(arch, rec, Boolean(bb.climateNature), mediaUrls.billboards, appearance);
+      const sprite = new THREE.Sprite(this.getSpriteMaterial(resolved.url, 0xffffff, resolved.refreshed));
       const w = Math.max(bb.size?.x || 0.8, 0.25);
       const h = Math.max(bb.size?.y || 1.2, 0.25);
       sprite.scale.set(w, h, 1);
@@ -1149,7 +1306,7 @@ export class BlockSceneController {
         pickKey: `${off.prefix}billboard:${bb.id}`,
         kind: 'billboard',
         id: bb.id,
-        label: `Billboard ${match[1]}`,
+        label: `Billboard texture-${arch}-${rec}`,
         position: [px, py, pz],
         index: i,
         ...meta,
@@ -1274,6 +1431,210 @@ export class BlockSceneController {
         0.45,
         'octa',
       );
+    }
+  }
+
+  private buildActions(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
+    const { block } = detail;
+    const meta = {
+      blockKey: off.blockKey,
+      sourceName: off.sourceName,
+      gridX: off.gridX,
+      gridY: off.gridY,
+    };
+
+    // Index positions for every action ID (from action.position, linked model, or linked door)
+    const modelPosByActionId = new Map<string, [number, number, number]>();
+    for (const m of block.models ?? []) {
+      if (m.action?.actionId) {
+        const b = m.localBounds;
+        const cy = b ? (b.minimum.y + b.maximum.y) * 0.5 : 1.0;
+        modelPosByActionId.set(m.action.actionId, [off.ox + m.position.x, off.oy + m.position.y + cy, off.oz + m.position.z]);
+      }
+    }
+    const doorPosById = new Map<string, [number, number, number]>();
+    for (const d of block.doors ?? []) {
+      doorPosById.set(d.id, [off.ox + d.position.x, off.oy + d.position.y, off.oz + d.position.z]);
+    }
+
+    const actionPos = new Map<string, [number, number, number]>();
+    const actions = block.actions ?? [];
+    for (const act of actions) {
+      const aid = act.id ?? act.actionId;
+      if (!aid) continue;
+      let pos: [number, number, number] | null = null;
+      if (act.position) {
+        pos = [off.ox + act.position.x, off.oy + act.position.y, off.oz + act.position.z];
+      } else if (modelPosByActionId.has(aid)) {
+        pos = modelPosByActionId.get(aid)!;
+      } else if (act.doorId && doorPosById.has(act.doorId)) {
+        pos = doorPosById.get(act.doorId)!;
+      }
+      if (pos) actionPos.set(aid, pos);
+    }
+
+    const addDirectedLink = (from: [number, number, number], to: [number, number, number], color: number) => {
+      const a = new THREE.Vector3(...from);
+      const b = new THREE.Vector3(...to);
+      const dir = b.clone().sub(a);
+      const len = dir.length();
+      if (len < 0.05) return;
+
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([a, b]);
+      const lineMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 });
+      const line = new THREE.Line(lineGeo, lineMat);
+      line.userData.ownedMaterial = true;
+      this.layers.actions.add(line);
+
+      // Small cone arrowhead positioned at 70% along the link
+      const coneGeo = new THREE.ConeGeometry(0.2, 0.55, 6);
+      const coneMat = new THREE.MeshBasicMaterial({ color });
+      const cone = new THREE.Mesh(coneGeo, coneMat);
+      cone.position.copy(a).lerp(b, 0.72);
+      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+      cone.userData.ownedMaterial = true;
+      this.layers.actions.add(cone);
+    };
+
+    for (let i = 0; i < actions.length; i++) {
+      const act = actions[i];
+      const aid = act.id ?? act.actionId;
+      if (!aid) continue;
+      const pos = actionPos.get(aid);
+      if (!pos) continue;
+
+      const geo = new THREE.OctahedronGeometry(0.38);
+      const mat = new THREE.MeshBasicMaterial({ color: act.isFlat ? 0xe040fb : 0x00e5ff });
+      const node = new THREE.Mesh(geo, mat);
+      node.position.set(...pos);
+      node.userData.ownedMaterial = true;
+      this.registerPick(node, {
+        pickKey: `${off.prefix}action:${aid}`,
+        kind: 'action',
+        id: aid,
+        label: `Action ${aid} (flag ${act.actionFlag ?? 0} · trigger ${act.triggerFlag ?? 0})`,
+        position: pos,
+        index: i,
+        ...meta,
+      });
+      this.layers.actions.add(node);
+
+      if (act.nextActionId && actionPos.has(act.nextActionId)) {
+        addDirectedLink(pos, actionPos.get(act.nextActionId)!, 0xe040fb);
+      }
+      if (act.nextObjectPosition) {
+        const dst: [number, number, number] = [
+          off.ox + act.nextObjectPosition.x,
+          off.oy + act.nextObjectPosition.y,
+          off.oz + act.nextObjectPosition.z,
+        ];
+        addDirectedLink(pos, dst, 0xffd166);
+      }
+    }
+
+    // Also render transition door normals so exit/entrance orientation is unmistakable
+    for (const td of block.transitionDoors ?? []) {
+      const start: [number, number, number] = [
+        off.ox + td.position.x,
+        off.oy + td.position.y,
+        off.oz + td.position.z,
+      ];
+      const end: [number, number, number] = [
+        start[0] + td.normal.x * 1.8,
+        start[1] + td.normal.y * 1.8,
+        start[2] + td.normal.z * 1.8,
+      ];
+      addDirectedLink(start, end, 0x38d9f5);
+    }
+  }
+
+  private buildCollision(detail: WorldBlockDetailResponse, off: PlacementOffset = ZERO_OFFSET) {
+    const { block } = detail;
+
+    const addCollisionMesh = (
+      col: WorldBlockCollision,
+      pos: [number, number, number],
+      rot: { x: number; y: number; z: number },
+      color: number,
+    ) => {
+      if (!col.vertices?.length || !col.triangles?.length) return;
+      const positions = new Float32Array(col.vertices.length * 3);
+      for (let i = 0; i < col.vertices.length; i++) {
+        positions[i * 3] = col.vertices[i].x;
+        positions[i * 3 + 1] = col.vertices[i].y;
+        positions[i * 3 + 2] = col.vertices[i].z;
+      }
+      const indices = new Uint32Array(col.triangles.length * 3);
+      for (let i = 0; i < col.triangles.length; i++) {
+        indices[i * 3] = col.triangles[i].a;
+        indices[i * 3 + 1] = col.triangles[i].b;
+        indices[i * 3 + 2] = col.triangles[i].c;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setIndex(new THREE.BufferAttribute(indices, 1));
+      const mat = new THREE.MeshBasicMaterial({ color, wireframe: true });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(...pos);
+      mesh.quaternion.copy(daggerfallSourceRotation(rot));
+      mesh.userData.ownedMaterial = true;
+      this.layers.collision.add(mesh);
+    };
+
+    for (const m of block.models ?? []) {
+      if (m.collision) {
+        addCollisionMesh(
+          m.collision,
+          [off.ox + m.position.x, off.oy + m.position.y, off.oz + m.position.z],
+          m.rotationDegrees,
+          0x4de096,
+        );
+      }
+    }
+
+    for (const g of block.gates ?? []) {
+      if (g.closed?.collision) {
+        addCollisionMesh(
+          g.closed.collision,
+          [off.ox + g.position.x, off.oy + g.position.y, off.oz + g.position.z],
+          g.rotationDegrees,
+          0xb784ff,
+        );
+      }
+    }
+
+    for (const d of block.doors ?? []) {
+      if (!d.collisionBounds) continue;
+      const cb = d.collisionBounds;
+      const boxGeo = new THREE.BoxGeometry(
+        Math.max(cb.maximum.x - cb.minimum.x, 0.2),
+        Math.max(cb.maximum.y - cb.minimum.y, 0.2),
+        Math.max(cb.maximum.z - cb.minimum.z, 0.2),
+      );
+      const edges = new THREE.EdgesGeometry(boxGeo);
+      boxGeo.dispose();
+      const mat = new THREE.LineBasicMaterial({ color: 0xf5a623 });
+      const wire = new THREE.LineSegments(edges, mat);
+      wire.position.set(off.ox + d.position.x, off.oy + d.position.y, off.oz + d.position.z);
+      wire.quaternion.copy(daggerfallSourceRotation(d.rotationDegrees));
+      wire.userData.ownedMaterial = true;
+      this.layers.collision.add(wire);
+    }
+
+    for (const td of block.transitionDoors ?? []) {
+      const b = td.bounds;
+      const boxGeo = new THREE.BoxGeometry(
+        Math.max(b.maximum.x - b.minimum.x, 0.2),
+        Math.max(b.maximum.y - b.minimum.y, 0.2),
+        Math.max(b.maximum.z - b.minimum.z, 0.2),
+      );
+      const edges = new THREE.EdgesGeometry(boxGeo);
+      boxGeo.dispose();
+      const mat = new THREE.LineBasicMaterial({ color: 0x38d9f5 });
+      const wire = new THREE.LineSegments(edges, mat);
+      wire.position.set(off.ox + td.position.x, off.oy + td.position.y, off.oz + td.position.z);
+      wire.userData.ownedMaterial = true;
+      this.layers.collision.add(wire);
     }
   }
 
