@@ -481,8 +481,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     void IDaggerfallExpeditionSurroundings.MeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) =>
         OverlandParties.OnMeetPersistentBand(band, pixel, staging);
 
-    void IDaggerfallExpeditionSurroundings.PersistentBandArrived(DaggerfallPersistentOverlandBand band) =>
+    void IDaggerfallExpeditionSurroundings.PersistentBandArrived(DaggerfallPersistentOverlandBand band)
+    {
+        if (CourierDispatches.OnOverlandBandArrived(band.BandId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)) is not null)
+            return;
         _ = OverlandParties.OnPersistentBandArrived(band);
+    }
 
     IReadOnlyList<DaggerfallWorldConditionToken> IDaggerfallExpeditionSurroundings.WorldConditions(int region) =>
         WorldConditions.ActiveForRegion(region, checked((int)_time.Calendar.DayNumber));

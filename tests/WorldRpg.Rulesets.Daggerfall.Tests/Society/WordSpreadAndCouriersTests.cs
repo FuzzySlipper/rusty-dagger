@@ -95,11 +95,20 @@ public sealed class WordSpreadAndCouriersTests
     [Fact]
     public void Route_distance_weights_terrain_and_water_crossings_beyond_straight_line_pixels_for_word_spread_and_dispatches()
     {
-        using var fixture = SourceBackedGuildBankSessionFixture.Create();
-        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        // Use a faster courier speed so a 25+ pixel cross-bay/mountain route completes within daytime (06:00..18:00)
+        // on the live expedition map without random nighttime town encounters interrupting the test.
+        DaggerfallTuning fastCourierTuning = DaggerfallTuning.Defaults with
+        {
+            Social = DaggerfallTuning.Defaults.Social with { CourierSpeedPixelsPerHour = 6.0 },
+        };
+        using TwoTownFixture fixture = TwoTownFixture.Create(fastCourierTuning);
+        DaggerfallSession session = fixture.Session;
 
-        DaggerfallSiteRecord origin = session.Site.ActiveSite!;
-        // Find a destination across the Iliac Bay / rough terrain whose overland route distance strictly exceeds straight-line distance.
+        // Start at 6:00 AM so daytime town expedition advancement runs cleanly without nighttime random town encounters.
+        session.AdvanceElapsedTime(5L * DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute);
+
+        DaggerfallSiteRecord origin = fixture.OriginSite;
+        // Find the shortest rough/sea route whose overland route distance strictly exceeds straight-line distance by >= 5 pixels.
         DaggerfallSiteRecord seaOrMountainTarget = TestPayload.Definitions.Locations.Records
             .Where(r => r.Exterior is not null && r.Id != origin.Id)
             .Select(r => (
@@ -107,14 +116,14 @@ public sealed class WordSpreadAndCouriersTests
                 Direct: DirectDistance(origin, r),
                 Route: session.WordSpread.RouteDistancePixels(origin.MapPixelX, origin.MapPixelY, r.MapPixelX, r.MapPixelY)))
             .Where(x => x.Direct >= 20.0 && x.Route >= x.Direct + 5.0)
-            .OrderByDescending(x => x.Route - x.Direct)
+            .OrderBy(x => x.Route)
             .First()
             .Site;
 
         double direct = DirectDistance(origin, seaOrMountainTarget);
         double route = session.WordSpread.RouteDistancePixels(
             origin.MapPixelX, origin.MapPixelY, seaOrMountainTarget.MapPixelX, seaOrMountainTarget.MapPixelY);
-        Assert.True(route > direct + 4.9,
+        Assert.True(route >= direct + 5.0,
             $"Expected overland route distance ({route:F2}) to exceed straight-line distance ({direct:F2}) by at least 5 pixels.");
 
         long nowMinute = CurrentMinute(session);
@@ -125,10 +134,13 @@ public sealed class WordSpreadAndCouriersTests
         DaggerfallWordArrivalEvaluation eval = session.WordSpread.EvaluateAt(wf, seaOrMountainTarget, nowMinute, nowDay);
         Assert.Equal(route, eval.DistancePixels, precision: 4);
         long straightLineMinutes = checked((long)Math.Ceiling(((direct - session.WordSpread.Tuning.InstantNewsBubblePixels) / session.WordSpread.Tuning.CourierSpeedPixelsPerHour) * 60d));
-        Assert.True(eval.RemainingMinutes > straightLineMinutes + 60,
+        Assert.True(eval.RemainingMinutes >= straightLineMinutes + 45,
             $"Expected route arrival ({eval.RemainingMinutes}m) to strictly exceed straight-line arrival ({straightLineMinutes}m).");
 
-        // StageDispatch also computes arrival from route distance rather than straight-line distance.
+        // StageDispatch with live overland band enabled: both ExpectedArrivalMinute and the physical overland band's
+        // speed reflect route distance, so the courier stays en route past straight-line arrival and settles cleanly on arrival!
+        List<DaggerfallDispatchResolution> routeResolutions = [];
+        session.CourierDispatches.BindBoardMoveCallback(routeResolutions.Add);
         DaggerfallCourierDispatchSave dispatch = session.CourierDispatches.StageDispatch(
             dispatchId: "disp:route-check",
             seatId: "crown:daggerfall",
@@ -138,11 +150,62 @@ public sealed class WordSpreadAndCouriersTests
             destination: seaOrMountainTarget,
             currentMinute: nowMinute,
             currentDay: nowDay,
-            stageOverlandBand: false);
+            stageOverlandBand: true);
         long directDispatchMinutes = checked((long)Math.Ceiling((direct / session.WordSpread.Tuning.CourierSpeedPixelsPerHour) * 60d));
         long actualDispatchMinutes = dispatch.ExpectedArrivalMinute - dispatch.DispatchedAtMinute;
-        Assert.True(actualDispatchMinutes > directDispatchMinutes + 60,
+        Assert.True(actualDispatchMinutes >= directDispatchMinutes + 45,
             $"Expected dispatch route duration ({actualDispatchMinutes}m) to strictly exceed straight-line duration ({directDispatchMinutes}m).");
+        Assert.NotNull(dispatch.OverlandBandId);
+        DaggerfallPersistentOverlandBand liveBand = Assert.Single(
+            session.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
+        Assert.True(liveBand.SpeedPixelsPerHour < session.WordSpread.Tuning.CourierSpeedPixelsPerHour,
+            $"Expected band Euclidean speed ({liveBand.SpeedPixelsPerHour:F3}) to be scaled below flat courier speed ({session.WordSpread.Tuning.CourierSpeedPixelsPerHour:F3}) for rough/sea route.");
+
+        // Advance actual expedition travel past straight-line arrival time: courier MUST still be en route & interceptable!
+        session.ApplyProductMode(ProductMode.Playing);
+        session.OpenExpedition();
+        Assert.Null(session.Expedition.Message);
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        session.Expedition.SetSpeed(1);
+        long targetMidMinute = dispatch.DispatchedAtMinute + directDispatchMinutes + 30;
+        Assert.True(targetMidMinute < dispatch.ExpectedArrivalMinute);
+        for (int guard = 0; guard < 2000 && CurrentMinute(session) < targetMidMinute; guard++)
+        {
+            if (!session.Expedition.Running)
+                session.Expedition.SetSpeed(1);
+            if (session.Expedition.Advance(0.1) <= 0)
+                break;
+        }
+        Assert.True(CurrentMinute(session) >= targetMidMinute && CurrentMinute(session) < dispatch.ExpectedArrivalMinute,
+            $"Expected expedition to sit strictly between straight-line arrival ({targetMidMinute}) and route arrival ({dispatch.ExpectedArrivalMinute}), reached {CurrentMinute(session)} (running={session.Expedition.Running}, msg='{session.Expedition.Message}').");
+        Assert.Contains(session.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
+        Assert.True(session.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? midDispatch));
+        Assert.Equal(DaggerfallDispatchStatus.InTransit, midDispatch!.Status);
+        Assert.Empty(routeResolutions);
+
+        // Continue actual expedition travel through route-based arrival: band arrives/retires and dispatch resolves cleanly!
+        long targetEndMinute = dispatch.ExpectedArrivalMinute + 15;
+        for (int guard = 0; guard < 2000 && CurrentMinute(session) < targetEndMinute; guard++)
+        {
+            if (!session.Expedition.Running)
+                session.Expedition.SetSpeed(1);
+            if (session.Expedition.Advance(0.1) <= 0)
+                break;
+        }
+        Assert.True(CurrentMinute(session) >= dispatch.ExpectedArrivalMinute);
+        Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
+        Assert.True(session.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? arrivedDispatch));
+        Assert.Equal(DaggerfallDispatchStatus.Delivered, arrivedDispatch!.Status);
+        DaggerfallDispatchResolution arrivedResolution = Assert.Single(routeResolutions);
+        Assert.Equal(dispatch.DispatchId, arrivedResolution.DispatchId);
+        Assert.Equal(DaggerfallDispatchStatus.Delivered, arrivedResolution.Outcome);
+
+        // Save and reload after band arrival succeeds cleanly with zero orphaned OnOverlandBand references!
+        session.Expedition.Close();
+        RulesetSavePayload savedAfterArrival = session.CaptureSave();
+        using DaggerfallSession restoredAfterArrival = fixture.Restore(savedAfterArrival);
+        Assert.True(restoredAfterArrival.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? reloadedDispatch));
+        Assert.Equal(DaggerfallDispatchStatus.Delivered, reloadedDispatch!.Status);
     }
 
     [Fact]
@@ -716,7 +779,7 @@ public sealed class WordSpreadAndCouriersTests
             Session = session;
         }
 
-        internal static TwoTownFixture Create()
+        internal static TwoTownFixture Create(DaggerfallTuning? tuning = null)
         {
             using var templateFixture = SourceBackedGuildBankSessionFixture.Create();
             DaggerfallDefinitions defs = TestPayload.Definitions;
@@ -742,7 +805,7 @@ public sealed class WordSpreadAndCouriersTests
 
             DaggerfallSiteProfile destinationProfile = Assembled(DaggerfallWorldProfileIds.Exterior(destinationSite.Id));
 
-            DaggerfallSessionComposition composition = new(defs, originProfile, DaggerfallTuning.Defaults)
+            DaggerfallSessionComposition composition = new(defs, originProfile, tuning ?? DaggerfallTuning.Defaults)
             {
                 Profiles = new DaggerfallSiteProfiles([originProfile, destinationProfile]),
             };

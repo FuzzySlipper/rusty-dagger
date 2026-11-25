@@ -235,12 +235,21 @@ internal sealed class DaggerfallCourierDispatches(
         ArgumentNullException.ThrowIfNull(origin);
         ArgumentNullException.ThrowIfNull(destination);
 
+        double dx = destination.MapPixelX - origin.MapPixelX;
+        double dy = destination.MapPixelY - origin.MapPixelY;
+        double directDistance = Math.Sqrt(dx * dx + dy * dy);
         double routeDistance = wordSpread.RouteDistancePixels(
             origin.MapPixelX, origin.MapPixelY, destination.MapPixelX, destination.MapPixelY);
         (double disruption, _) = wordSpread.CourierDisruption(origin.Id.Region, destination.Id.Region, currentDay);
         double effectiveSpeed = wordSpread.Tuning.CourierSpeedPixelsPerHour * disruption;
         long travelMinutes = Math.Max(60L, checked((long)Math.Ceiling((routeDistance / effectiveSpeed) * 60d)));
         long expectedArrival = checked(currentMinute + travelMinutes);
+        // Scale the physical persistent band's Euclidean map speed so traversing directDistance takes the
+        // exact route-weighted travelMinutes (preventing premature arrival before ExpectedArrivalMinute).
+        double travelHours = travelMinutes / 60d;
+        double bandSpeedPixelsPerHour = directDistance > 0d
+            ? Math.Max(1e-6, directDistance / travelHours)
+            : effectiveSpeed;
 
         string? overlandBandId = null;
         long? resolvedCourierId = courierActorId;
@@ -263,7 +272,7 @@ internal sealed class DaggerfallCourierDispatches(
                     memberIds: [cid],
                     startX: origin.MapPixelX + 0.5,
                     startY: origin.MapPixelY + 0.5,
-                    speedPixelsPerHour: effectiveSpeed,
+                    speedPixelsPerHour: bandSpeedPixelsPerHour,
                     destination: new DaggerfallExpeditionMark(destPixel, destination.Id),
                     destinationProfile: destProfile,
                     camp: false,
@@ -317,10 +326,11 @@ internal sealed class DaggerfallCourierDispatches(
             {
                 Status = DaggerfallDispatchStatus.Delivered,
                 DeliveredByPlayer = false,
+                OverlandBandId = null,
                 ResolvedMinute = currentMinute,
             };
             _dispatches[dispatch.DispatchId] = delivered;
-            RetireOverlandBand(dispatch.OverlandBandId);
+            RetireOverlandBand(dispatch.OverlandBandId, dispatch.CourierActorId);
 
             DaggerfallDispatchResolution resolution = RecordResolution(new(
                 DispatchId: dispatch.DispatchId,
@@ -337,6 +347,44 @@ internal sealed class DaggerfallCourierDispatches(
         return newlyResolved;
     }
 
+    /// <summary>
+    /// Settles an active dispatch immediately when its live <see cref="ActorLocationKind.OnOverlandBand"/> courier
+    /// reaches the addressed destination during overland expedition travel, keeping physical band arrival and
+    /// dispatch resolution synchronized (idempotent with <see cref="AdvanceToMinute"/>).
+    /// </summary>
+    internal DaggerfallDispatchResolution? OnOverlandBandArrived(string bandId, long currentMinute, int currentDay)
+    {
+        if (string.IsNullOrWhiteSpace(bandId) || _dispatches.Count == 0)
+            return null;
+
+        DaggerfallCourierDispatchSave? dispatch = _dispatches.Values.FirstOrDefault(d =>
+            StringComparer.Ordinal.Equals(d.OverlandBandId, bandId)
+            && d.Status is DaggerfallDispatchStatus.InTransit or DaggerfallDispatchStatus.BoughtAndRevealed);
+        if (dispatch is null)
+            return null;
+
+        DaggerfallCourierDispatchSave delivered = dispatch with
+        {
+            Status = DaggerfallDispatchStatus.Delivered,
+            DeliveredByPlayer = false,
+            OverlandBandId = null,
+            ResolvedMinute = currentMinute,
+        };
+        _dispatches[dispatch.DispatchId] = delivered;
+        RetireCourierLedgerMember(bandId, dispatch.CourierActorId);
+
+        return RecordResolution(new(
+            DispatchId: dispatch.DispatchId,
+            SeatId: dispatch.SeatId,
+            ActionKind: dispatch.ActionKind,
+            Outcome: DaggerfallDispatchStatus.Delivered,
+            ResolvedDay: currentDay,
+            MoveCancelled: false,
+            MoveAccelerated: false,
+            MoveRevealed: dispatch.Revealed,
+            DeliveredByPlayer: false));
+    }
+
     /// <summary>Player takes part by offering to carry the sealed dispatch personally to its destination.</summary>
     internal DaggerfallDispatchActionResult AcceptDelivery(string dispatchId, long currentMinute)
     {
@@ -351,7 +399,7 @@ internal sealed class DaggerfallCourierDispatches(
             OverlandBandId = null,
         };
         _dispatches[dispatchId] = updated;
-        RetireOverlandBand(dispatch.OverlandBandId);
+        RetireOverlandBand(dispatch.OverlandBandId, dispatch.CourierActorId);
 
         string destName = ResolveSiteName(dispatch.DestinationSite.Require());
         return new(true,
@@ -484,7 +532,7 @@ internal sealed class DaggerfallCourierDispatches(
             ResolvedMinute = currentMinute,
         };
         _dispatches[dispatchId] = intercepted;
-        RetireOverlandBand(dispatch.OverlandBandId);
+        RetireOverlandBand(dispatch.OverlandBandId, dispatch.CourierActorId);
 
         if (!string.IsNullOrWhiteSpace(dispatch.LinkedWavefrontId))
             wordSpread.InterceptWavefront(dispatch.LinkedWavefrontId, currentMinute, currentDay);
@@ -551,11 +599,41 @@ internal sealed class DaggerfallCourierDispatches(
         return resolution;
     }
 
-    private void RetireOverlandBand(string? bandId)
+    private void RetireOverlandBand(string? bandId, long? courierActorId)
     {
         if (string.IsNullOrWhiteSpace(bandId))
             return;
-        expedition?.Invoke()?.RemovePersistentBand(bandId);
+
+        _ = expedition?.Invoke()?.RemovePersistentBand(bandId);
+        RetireCourierLedgerMember(bandId, courierActorId);
+    }
+
+    private void RetireCourierLedgerMember(string bandId, long? courierActorId)
+    {
+        // Release any OnOverlandBand members of this retired dispatch band so saves neither keep orphaned
+        // OnOverlandBand references nor leak permanent AtSite entries at off-screen destinations.
+        foreach (ActorLedgerEntry member in actorLedger.EntriesOnOverlandBand(bandId))
+            ReleaseOffStageOrPrune(member);
+
+        if (courierActorId is long cid && actorLedger.TryGet(cid, out ActorLedgerEntry? entry)
+            && entry?.Location is { Kind: ActorLocationKind.OnOverlandBand, BandId: { } memberBandId }
+            && StringComparer.Ordinal.Equals(memberBandId, bandId))
+        {
+            ReleaseOffStageOrPrune(entry);
+        }
+    }
+
+    private void ReleaseOffStageOrPrune(ActorLedgerEntry entry)
+    {
+        bool untouchedStagedCourier = entry.Origin.SlotKey is { } slotKey
+            && slotKey.StartsWith("population/dispatch/", StringComparison.Ordinal)
+            && entry.Vitals is null
+            && entry.Combat is null
+            && entry.Referral is null;
+        if (untouchedStagedCourier)
+            actorLedger.Remove(entry.DurableId);
+        else
+            actorLedger.Upsert(entry with { Location = ActorLocationOverride.OffStage });
     }
 
     private long? StageCourierActor(DaggerfallSiteRecord origin, string dispatchId, int? sourceFactionId)
