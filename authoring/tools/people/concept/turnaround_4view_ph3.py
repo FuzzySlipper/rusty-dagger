@@ -24,14 +24,49 @@ import sprite_front as sf
 VIEWS = ("front", "right", "left", "back")
 
 
-def build_turnaround_prompt(extra: str, pronoun: str, right_weapon: str) -> str:
+def build_turnaround_prompt(extra: str, pronoun: str, right_weapon: str, weapon_hold: str = "horizontal") -> str:
     pos = "his" if pronoun == "He" else ("her" if pronoun == "She" else "its")
     obj = "him" if pronoun == "He" else ("her" if pronoun == "She" else "it")
     subj = "man" if pronoun == "He" else ("woman" if pronoun == "She" else "character")
     extra_clean = extra.strip()
     extra_clause = f" {extra_clean.rstrip('.')}." if extra_clean else ""
 
-    if right_weapon.strip():
+    if right_weapon.strip() and weapon_hold == "vertical":
+        wep = right_weapon.strip().rstrip(".")
+        intro = (
+            f"Edit <Picture 1> into a precise four-view orthographic character turnaround sheet of this exact same {subj} on a "
+            f"flat solid dark slate-grey background (RGB 48,52,59), adding {wep} held straight vertically upright in {pos} right hand.{extra_clause}\n\n"
+            "A wide horizontal slate sheet contains four equal vertical columns in a single straight row, all four figures standing "
+            "at the exact same head-to-boot height and scale on the same baseline, with clean empty slate between figures:\n\n"
+        )
+        col1 = (
+            f"1. COLUMN 1 — STRAIGHT FRONT VIEW (facing directly toward the viewer): {pronoun}'s arms hang naturally at {pos} sides in "
+            f"the exact relaxed A-pose of <Picture 1>. {pronoun}'s left hand (viewer's right) is empty. {pronoun}'s right hand (viewer's left) "
+            f"firmly grips the middle shaft of {wep} held strictly STRAIGHT VERTICAL and upright beside {pos} right side (parallel to {pos} body, "
+            f"with a clean gap of background slate between the vertical shaft and {pos} arm/hip/leg; bottom tip ending at boot-sole level, top finial "
+            "rising just above head height inside Column 1).\n\n"
+        )
+        col2 = (
+            f"2. COLUMN 2 — EXACT RIGHT-SIDE PROFILE (90-degree turn facing page RIGHT, showing {pos} right side closest to the "
+            f"camera): {pronoun}'s right arm hangs relaxed at {pos} side gripping the middle shaft of {wep} held strictly STRAIGHT VERTICAL "
+            f"and upright right beside {obj} in full clear side profile (bottom tip at boot-sole level, top finial just above head height), "
+            f"showing the exact right-side profile of {pos} costume.{extra_clause}\n\n"
+        )
+        col3 = (
+            f"3. COLUMN 3 — EXACT LEFT-SIDE PROFILE (90-degree turn facing page LEFT, showing {pos} left side closest to the camera): "
+            f"{pronoun}'s empty left arm hangs vertically straight down at {pos} left side in a relaxed empty hanging pose (no weapon in left hand). "
+            f"On {pos} far right side (slightly forward of {pos} torso/body), the straight vertical shaft and top finial of {wep} are cleanly "
+            f"visible standing upright at the exact same vertical height as Column 2. Shows the exact left-side profile of {pos} costume.{extra_clause}\n\n"
+        )
+        col4 = (
+            f"4. COLUMN 4 — STRAIGHT BACK VIEW (180-degree turn facing directly away from the viewer):{extra_clause} "
+            f"{pronoun}'s left hand (viewer's left) is empty showing the smooth back of {pos} hand with five clean fingers curling "
+            f"gently forward away from the camera. {pronoun}'s right hand (viewer's right) grips the middle shaft of the exact same "
+            f"straight vertical {wep} standing upright beside {pos} right side (viewer's right, exact 180-degree mirror of Column 1, "
+            "bottom tip at boot-sole level, top finial just above head height), viewed strictly from behind showing the smooth back of "
+            "the gripping hand and knuckles facing the viewer.\n\n"
+        )
+    elif right_weapon.strip():
         wep = right_weapon.strip().rstrip(".")
         intro = (
             f"Edit <Picture 1> into a precise four-view orthographic character turnaround sheet of this exact same {subj} on a "
@@ -194,7 +229,8 @@ def main():
     ap.add_argument("--out", required=True, type=Path, help="Output directory")
     ap.add_argument("--extra", default="", help="Back/side costume note (cape length, back armor/corset, hair, scabbard, etc.)")
     ap.add_argument("--pronoun", choices=["He", "She", "It"], default="He")
-    ap.add_argument("--right-weapon", default="", help="Optional weapon held in right hand at a 90-degree horizontal forward hold (omit for empty-handed rest pose)")
+    ap.add_argument("--right-weapon", default="", help="Optional weapon held in right hand (omit for empty-handed rest pose)")
+    ap.add_argument("--weapon-hold", choices=["horizontal", "vertical"], default="horizontal", help="With --right-weapon: horizontal (90-deg forward hold for swords/maces/daggers; default) or vertical (straight upright mid-shaft hold for staves/polearms)")
     ap.add_argument("--seeds", default="910001,910002,910003,910004")
     ap.add_argument("--width", type=int, default=4096, help="4-view sheet width (default 4096 = 4 x 1024)")
     ap.add_argument("--height", type=int, default=1536, help="4-view sheet height (default 1536)")
@@ -207,7 +243,7 @@ def main():
 
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    prompt = build_turnaround_prompt(args.extra, args.pronoun, args.right_weapon)
+    prompt = build_turnaround_prompt(args.extra, args.pronoun, args.right_weapon, args.weapon_hold)
     (out / "turnaround.prompt.txt").write_text(prompt + "\n")
 
     up_front = bp.comfy_upload(args.comfy, args.front.resolve(), f"turn4-{out.name}-front.png")
