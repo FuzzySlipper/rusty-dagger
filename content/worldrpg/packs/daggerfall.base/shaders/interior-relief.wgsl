@@ -231,7 +231,12 @@ fn shade(given: Surface) -> vec4<f32> {
 
     let at = (vec2<f32>(cell) + 0.5) / texels;
     let color = select(surface.base, textureSampleGrad(albedo, albedo_sampler, at, dt_dx, dt_dy), depth > 1e-4);
-    let hollow = select(1.0 - hit_h, clamp(hit / max(p0.x, 1e-4), 0.0, 1.0), depth > 1e-4);
+    let hollow_raw = select(1.0 - hit_h, clamp(hit / max(p0.x, 1e-4), 0.0, 1.0), depth > 1e-4);
+    // Authored interior heightmaps place flat background planes (plaster behind timber, painting canvas
+    // inside a 3D frame) around 0.24..0.34 so they stay flush below the 0.35 extrude cutoff; concentrate
+    // ink-dark cavity occlusion on true mortar cracks & recesses (< 0.22) so flat panels stay crisp.
+    let authored_crevice = clamp((1.0 - smoothstep(0.02, 0.22, hit_h)) * 0.88 + hollow_raw * 0.18, 0.0, 1.0);
+    let hollow = select(hollow_raw, authored_crevice, has_map);
 
     // Stylized PBR specular rim-catch: broad raised brick/cobble top bevels catch gleaming warm
     // firelight & cool blue fills; razor-thin 90-degree voxel side walls stay satin to prevent

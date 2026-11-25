@@ -182,10 +182,16 @@ internal static class DaggerfallInteriorSurfaceMaterials
         DaggerfallInteriorSurfaceClass surfaceClass,
         bool materialAware,
         float dungeonDampness,
-        float? waterLevelY)
+        float? waterLevelY,
+        float? authoredDepthMetres = null)
     {
         if (!materialAware)
-            return baseSettings.Shader(shader, authoredHeightMap);
+        {
+            DaggerfallInteriorReliefSettings effective = authoredDepthMetres is { } rawDepth && baseSettings.DepthMetres > 1e-4f
+                ? baseSettings with { DepthMetres = Math.Clamp(rawDepth, 0f, 0.095f) }
+                : baseSettings;
+            return effective.Shader(shader, authoredHeightMap);
+        }
 
         float damp = Math.Clamp(dungeonDampness, 0f, 1f);
         float dampRoughScale = 1f - 0.22f * damp;
@@ -303,11 +309,14 @@ internal static class DaggerfallInteriorSurfaceMaterials
                 }, 0, true),
         };
 
+        float finalDepth = authoredDepthMetres is { } authoredDepth && baseSettings.DepthMetres > 1e-4f
+            ? Math.Clamp(authoredDepth * (capBoost > 1.5f ? 1.8f : 1f), 0f, 0.16f)
+            : tuned.DepthMetres;
         float hasWater = waterSensitive && waterLevelY.HasValue ? 1f : 0f;
         float waterY = waterLevelY ?? 0f;
         return new MaterialShader(
             new RenderResourceReference(shader),
-            new Vector4(tuned.DepthMetres, tuned.MaxSteps, tuned.FadeStart, tuned.FadeEnd),
+            new Vector4(finalDepth, tuned.MaxSteps, tuned.FadeStart, tuned.FadeEnd),
             new Vector4(tuned.CavityDarkness, tuned.TopSlopeStrength, tuned.BaseRoughness, tuned.RimRoughness),
             new Vector4(tuned.RimMetalness, tuned.SelfShadowStrength, tuned.HeightGamma, tuned.MortarThreshold),
             new Vector4(authoredHeightMap is not null ? 1f : 0f, specialFlags, waterY, hasWater),
@@ -470,10 +479,11 @@ internal static class DaggerfallInteriorSurfaceMaterials
         int layers,
         float dungeonDampness,
         float? waterLevelY,
-        DaggerfallInteriorExtrudeTuning tuning)
+        DaggerfallInteriorExtrudeTuning tuning,
+        float? authoredExtrudeMetres = null)
     {
-        float scale = ExtrudeScale(surfaceClass);
-        if (scale <= 0f || layer <= 0 || layers <= 0)
+        float baseSilhouetteDepth = authoredExtrudeMetres ?? (0.090f * ExtrudeScale(surfaceClass));
+        if (baseSilhouetteDepth <= 0f || layer <= 0 || layers <= 0)
             return BuildExtrudeDiscardShader(shader);
 
         float depthScale = Math.Clamp(tuning.DepthScale, 0.1f, 3.0f);
@@ -496,6 +506,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
             DaggerfallInteriorSurfaceClass.BloodAndGore => (baseSettings.BaseRoughness * dampRoughScale, baseSettings.RimRoughness, baseSettings.RimMetalness, baseSettings.CavityDarkness, 3, true),
             DaggerfallInteriorSurfaceClass.PlasterAndTimber => (MathF.Max(baseSettings.BaseRoughness, 0.64f), baseSettings.RimRoughness, baseSettings.RimMetalness, 0.62f, 1, false),
             DaggerfallInteriorSurfaceClass.WoodAndFurniture => (0.54f, 0.26f, 0.10f, 0.58f, 1, false),
+            DaggerfallInteriorSurfaceClass.PaintingOrScroll => (0.46f, 0.24f, 0.14f, 0.48f, 1, false),
             _ => (MathF.Max(0.36f, baseSettings.BaseRoughness * dampRoughScale), MathF.Max(0.20f, baseSettings.RimRoughness * (1f - 0.14f * damp)), baseSettings.RimMetalness, baseSettings.CavityDarkness, 0, true),
         };
 
@@ -504,7 +515,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
 
         if (mode == DaggerfallInteriorExtrudeMode.SilhouettePom)
         {
-            float depth = 0.090f * scale * depthScale;
+            float depth = baseSilhouetteDepth * depthScale;
             return new MaterialShader(
                 new RenderResourceReference(shader),
                 new Vector4(1f, depth, 24f, cutoff),
@@ -518,7 +529,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
 
         // Grass-FX-style multi-layer outward wall shells (14 layers @ ~5.6 mm spacing on masonry).
         float frac = (float)layer / layers;
-        float maxHeight = 0.078f * scale * depthScale;
+        float maxHeight = baseSilhouetteDepth * (0.078f / 0.090f) * depthScale;
         float lift = maxHeight * frac;
         return new MaterialShader(
             new RenderResourceReference(shader),

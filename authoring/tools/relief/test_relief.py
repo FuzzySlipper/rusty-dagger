@@ -8,6 +8,7 @@ import unittest
 
 import numpy as np
 
+import interior_relief
 import relief
 
 
@@ -39,6 +40,42 @@ class Recipe(unittest.TestCase):
         column = h[:, 8]
         self.assertEqual(column[16], 0)
         self.assertTrue(np.all(np.diff(column[18:31]) > 0), "a course rises toward its lower edge")
+
+    def test_framed_art_raises_outer_frame_and_keeps_canvas_below_extrude_cutoff(self):
+        rgb = np.full((64, 80, 3), 0.5)
+        h, _, kind, depth, extrude = interior_relief.interior_height(
+            rgb, interior_relief.role_of(348, 0), db=np.full((64, 80), 0.5))
+        self.assertEqual(kind, "framed-art")
+        self.assertGreater(depth, 0)
+        self.assertGreater(extrude, 0)
+        self.assertGreater(h[3, 40], 0.70, "frame moulding stands proud")
+        self.assertLess(h[32, 40], 0.35, "painting canvas stays flush below default extrude cutoff")
+
+    def test_timber_plaster_raises_dark_beams_above_light_plaster(self):
+        rgb = np.full((64, 64, 3), 0.78)
+        rgb[:, 0:12] = np.array([0.24, 0.16, 0.10])
+        rgb[0:12, :] = np.array([0.24, 0.16, 0.10])
+        h, _, _, _, extrude = interior_relief.interior_height(
+            rgb, interior_relief.role_of(360, 0), db=np.full((64, 64), 0.6))
+        self.assertGreater(extrude, 0)
+        self.assertGreater(h[6, 36], 0.70, "dark timber beam stands proud")
+        self.assertLess(h[36, 36], 0.35, "light plaster panel stays flush below default extrude cutoff")
+
+    def test_niche_shelf_recesses_box_while_surrounding_masonry_stands_proud(self):
+        rgb = stones()
+        role = interior_relief.role_of(337, 0) | {"recessBox": [16, 16, 48, 48]}
+        h, _, _, _, extrude = interior_relief.interior_height(rgb, role, db=np.full((64, 64), 0.7))
+        self.assertGreater(extrude, 0)
+        self.assertLess(h[32, 32], 0.32, "recessed niche stays below default extrude cutoff")
+        self.assertGreater(h[8, 8], 0.60, "surrounding masonry stands proud")
+
+    def test_flat_role_stays_flush_with_zero_extrude_and_no_exterior_depth(self):
+        rgb = np.full((32, 32, 3), 0.5)
+        h, _, kind, depth, extrude = interior_relief.interior_height(rgb, interior_relief.role_of(57, 0))
+        self.assertEqual(kind, "flat")
+        self.assertIsNone(depth)
+        self.assertEqual(extrude, 0.0)
+        self.assertTrue(np.allclose(h, 0.28))
 
 
 if __name__ == "__main__":

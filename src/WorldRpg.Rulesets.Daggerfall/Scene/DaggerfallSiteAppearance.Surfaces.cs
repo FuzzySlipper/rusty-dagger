@@ -76,7 +76,7 @@ internal sealed partial class DaggerfallSiteAppearance
         internal RenderResource?[]? RefreshedGlass { get; set; }
         internal RenderResource? CurrentGlass { get; set; }
         internal float Level { get; set; }
-        internal (RenderResource Image, float Depth)?[] Relief { get; } = new (RenderResource, float)?[3];
+        internal (RenderResource Image, float? Depth, float? Extrude)?[] Relief { get; } = new (RenderResource, float?, float?)?[3];
         internal MaterialShader Shader { get; set; }
     }
 
@@ -192,18 +192,20 @@ internal sealed partial class DaggerfallSiteAppearance
         if (surfaceShader is null) return;
         for (int season = 0; season < surface.Relief.Length; season++)
             if (surfaceArt.Relief(surface.Paths[season]) is { Depth: { } depth } relief && surfaceArt.Surface(surface.Paths[season]) is not null)
-                surface.Relief[season] = (ReliefImage(relief), depth);
+                surface.Relief[season] = (ReliefImage(relief), depth, relief.Extrude);
     }
 
-    private RenderResource? InteriorReliefMap(SurfaceMaterial surface, int season)
+    private (RenderResource Image, float? Depth, float? Extrude)? InteriorReliefEntry(SurfaceMaterial surface, int season)
     {
         if (!surfacesRefreshed || surfaceArt is null) return null;
-        if (surface.Relief[season] is { } cached) return cached.Image;
-        if (surfaceArt.Relief(surface.Paths[season]) is { Depth: { } depth } relief && surfaceArt.Surface(surface.Paths[season]) is not null)
+        if (surface.Relief[season] is { } cached) return cached;
+        if (surfaceArt.Relief(surface.Paths[season]) is { } relief
+            && (relief.Depth is not null || relief.Extrude is not null)
+            && surfaceArt.Surface(surface.Paths[season]) is not null)
         {
-            RenderResource image = ReliefImage(relief);
-            surface.Relief[season] = (image, depth);
-            return image;
+            var entry = (ReliefImage(relief), relief.Depth, relief.Extrude);
+            surface.Relief[season] = entry;
+            return entry;
         }
         return null;
     }
@@ -263,16 +265,17 @@ internal sealed partial class DaggerfallSiteAppearance
         if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior)
         {
             shader = surfaceShader is not { } surfaces ? default
-                : surfacesRefreshed && surfacesRelief.Strength > 0 && surface.Relief[season] is { } height
-                    ? reliefTuning.Shader(surfaces, height.Image, height.Depth * surfacesRelief.Strength, surfacesRelief.Distance, flicker)
+                : surfacesRefreshed && surfacesRelief.Strength > 0 && surface.Relief[season] is { Depth: { } depth } height
+                    ? reliefTuning.Shader(surfaces, height.Image, depth * surfacesRelief.Strength, surfacesRelief.Distance, flicker)
                     : flicker.X > 0 ? reliefTuning.Shader(surfaces, null, 0, 1, flicker) : default;
         }
         else if (interiorRelief is { } relief && interiorReliefShader is { } reliefShader && surface.Frames is null && glass is null)
         {
-            RenderResource? heightMap = InteriorReliefMap(surface, season);
+            var authored = InteriorReliefEntry(surface, season);
             shader = DaggerfallInteriorSurfaceMaterials.BuildReliefShader(
-                relief, reliefShader, heightMap, surface.SurfaceClass,
-                interiorMaterialAware, interiorDungeonDampness, interiorWaterLevelY);
+                relief, reliefShader, authored?.Image, surface.SurfaceClass,
+                interiorMaterialAware, interiorDungeonDampness, interiorWaterLevelY,
+                authored?.Depth);
         }
         if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) return;
         appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));

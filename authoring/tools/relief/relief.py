@@ -39,7 +39,8 @@ Every filter wraps, so the heights tile as their textures do. The tool writes on
 by hand beside the reliefs, into `groundCover.surfaceShader`.
 
     relief.py KEY...            make and record these, KEY an archive (every covered record of it) or ARCHIVE-RECORD
-    relief.py --all             every covered record
+    relief.py --all             every covered exterior building record
+    relief.py --interiors       every covered interior and dungeon record not owned by exterior sets
     relief.py --look KEY...     only draw the check sheets
 
 Each run draws a check sheet per archive under local/art/review/relief/: per record the texture, its regions, its height
@@ -55,6 +56,8 @@ from scipy import ndimage
 HERE = Path(__file__).resolve().parent
 REPOSITORY = HERE.parents[2]
 sys.path.insert(0, str(HERE.parent / "surfaces"))
+sys.path.insert(0, str(HERE))
+import interior_relief  # noqa: E402
 import reduce, tiling  # noqa: E402,E401
 
 CONTENT = REPOSITORY / "content"
@@ -226,17 +229,36 @@ def role_of(archive, record):
 
 
 def height(archive, record):
-    """(height, regions, how it was made, depth in metres) for one record."""
-    if (snow := snow_over(archive, record)) is not None:
-        summer, region, kind, depth = height(archive - 1, record)
-        rise = np.clip(wrapped_distance(snow) / 1.5, 0, 1)
-        return np.maximum(summer, np.where(snow, .85 + .15 * rise, 0)), np.where(snow, region.max() + 1, region), f"{kind}, snowed", depth
+    """(height, regions, how it was made, depth in metres or None, extrude in metres or None) for one record."""
+    if (archive, record) in _exterior_set() or interior_relief.role_of(archive, record) is None:
+        if (snow := snow_over(archive, record)) is not None:
+            summer, region, kind, depth, extrude = height(archive - 1, record)
+            rise = np.clip(wrapped_distance(snow) / 1.5, 0, 1)
+            return np.maximum(summer, np.where(snow, .85 + .15 * rise, 0)), np.where(snow, region.max() + 1, region), f"{kind}, snowed", depth, extrude
     rgb = refreshed(archive, record)
+    if (archive, record) in _exterior_set():
+        if (role := role_of(archive, record)) is not None:
+            h, region = recipe_height(rgb, role)
+            return h, region, role["name"], role["depth"], None
+        h, region = deepbump_height(rgb)
+        return h, region, "deepbump", RECIPES["deepbumpDepth"], None
+    if (irole := interior_relief.role_of(archive, record)) is not None:
+        return interior_relief.interior_height(rgb, irole)
     if (role := role_of(archive, record)) is not None:
         h, region = recipe_height(rgb, role)
-        return h, region, role["name"], role["depth"]
+        return h, region, role["name"], role["depth"], None
     h, region = deepbump_height(rgb)
-    return h, region, "deepbump", RECIPES["deepbumpDepth"]
+    return h, region, "deepbump", RECIPES["deepbumpDepth"], None
+
+
+_EXTERIOR_CACHE = None
+
+
+def _exterior_set():
+    global _EXTERIOR_CACHE
+    if _EXTERIOR_CACHE is None:
+        _EXTERIOR_CACHE = set(covered())
+    return _EXTERIOR_CACHE
 
 
 def outdoors():
@@ -258,8 +280,37 @@ def covered():
             and (archive % 100 in RECIPES["sets"] or winter_of(archive))]
 
 
+def interior_covered():
+    """Every covered interior/dungeon record: each refreshed surface whose archive has an interior recipe and is not
+    already owned by an exterior building relief or another tool's relief (groundcover)."""
+    ext = _exterior_set()
+    payload = json.loads(PAYLOAD.read_text())
+    existing_relief = payload["artReplacements"]["groundCover"]["relief"]
+    other_tool = {
+        tuple(int(p) for p in key.split("-"))
+        for key, val in existing_relief.items()
+        if not val["path"].startswith(f"{MEDIA}/")
+    }
+    ext_owned = {
+        tuple(int(p) for p in key.split("-"))
+        for key, val in existing_relief.items()
+        if val["path"].startswith(f"{MEDIA}/") and int(key.split("-")[0]) % 100 in RECIPES["sets"]
+    }
+    interior_archives = {int(a) for a in interior_relief.INTERIOR_RECIPES["archives"]}
+    found = sorted((int(path.stem.split("-")[1]), int(path.stem.split("-")[2])) for path in (CONTENT / SURFACES).glob("texture-*.png"))
+    return [
+        (archive, record)
+        for archive, record in found
+        if archive in interior_archives
+        and (archive, record) not in ext
+        and (archive, record) not in ext_owned
+        and (archive, record) not in other_tool
+        and interior_relief.role_of(archive, record) is not None
+    ]
+
+
 def chosen(keys):
-    every = covered()
+    every = sorted(set(covered()) | set(interior_covered()))
     picked = []
     for key in keys:
         parts = [int(part) for part in key.split("-")]
@@ -283,7 +334,7 @@ def sheet(archive, made):
     """Per record the texture, its regions, its height and the height lit, two texels to a pixel."""
     palette = np.array([[.1, .1, .4], [.2, .6, .3], [.9, .7, .2], [.8, .3, .3], [.9, .9, 1]])
     rows = []
-    for record, (h, region, _, _) in sorted(made.items()):
+    for record, (h, region, _, _, _) in sorted(made.items()):
         rgb = refreshed(archive, record)
         shown = palette[np.clip(region, 0, len(palette) - 1)] * (h[..., None] > 0)
         lit = np.clip(rgb * (.35 + .9 * shading(h)[..., None]), 0, 1)
@@ -306,26 +357,33 @@ def hashed(path, data=None):
     return {"path": path, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def publish(archive, record, h, kind, depth):
+def publish(archive, record, h, kind, depth, extrude=None):
     """Writes the record's relief PNG, its texture with the height as alpha, and returns its entry."""
     rgba = np.dstack([(refreshed(archive, record) * 255 + .5).astype(np.uint8), (h * 255 + .5).astype(np.uint8)])
     path = CONTENT / MEDIA / f"relief-{archive:03d}-{record}.png"
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(rgba, "RGBA").save(path, optimize=True)
-    return hashed(f"{MEDIA}/{path.name}", path.read_bytes()) | {
+    entry = hashed(f"{MEDIA}/{path.name}", path.read_bytes()) | {
         "width": rgba.shape[1], "height": rgba.shape[0], "kind": kind, "tallest": round(float(rgba[..., 3].max()) / 255, 4),
-        "depth": depth} | LOOK
+    } | LOOK
+    if depth is not None:
+        entry["depth"] = depth
+    if extrude is not None:
+        entry["extrude"] = extrude
+    return entry
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("keys", nargs="*", help="an archive (every covered record of it) or ARCHIVE-RECORD")
-    ap.add_argument("--all", action="store_true", help="every covered record")
+    ap.add_argument("--all", action="store_true", help="every covered exterior building record")
+    ap.add_argument("--interiors", action="store_true", help="every covered interior and dungeon record")
     ap.add_argument("--look", action="store_true", help="only draw the check sheets")
     a = ap.parse_args()
-    if bool(a.keys) == a.all:
-        ap.error("name the records to make, or --all")
-    records = covered() if a.all else chosen(a.keys)
+    modes = int(bool(a.keys)) + int(a.all) + int(a.interiors)
+    if modes != 1:
+        ap.error("name the records to make, --all, or --interiors")
+    records = covered() if a.all else interior_covered() if a.interiors else chosen(a.keys)
     made = {}
     for archive, record in records:
         made.setdefault(archive, {})[record] = height(archive, record)
@@ -337,11 +395,11 @@ def main():
     payload = json.loads(PAYLOAD.read_text())
     cover = payload["artReplacements"]["groundCover"]
     for archive, by_record in made.items():
-        for record, (h, _, kind, depth) in by_record.items():
+        for record, (h, _, kind, depth, extrude) in by_record.items():
             key = f"{archive}-{record}"
             if key in cover["relief"] and not cover["relief"][key]["path"].startswith(f"{MEDIA}/"):
                 raise SystemExit(f"{key}'s relief is another tool's ({cover['relief'][key]['path']}): one record has one relief.")
-            cover["relief"][key] = publish(archive, record, h, kind, depth)
+            cover["relief"][key] = publish(archive, record, h, kind, depth, extrude)
     cover["surfaceShader"] = hashed(f"{MEDIA}/{SHADER}")
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
     print(f"{sum(len(r) for r in made.values())} reliefs recorded")

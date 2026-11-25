@@ -105,7 +105,7 @@ internal sealed partial class DaggerfallSiteAppearance
                 {
                     if (!materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)) continue;
                     if (!surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)) continue;
-                    if (IsExtrudable(sm)) { anyExtrudable = true; break; }
+                    if (IsExtrudable(sm, season)) { anyExtrudable = true; break; }
                 }
                 if (!anyExtrudable) continue;
 
@@ -119,7 +119,7 @@ internal sealed partial class DaggerfallSiteAppearance
                         DaggerfallMeshMaterialBinding src = model.Mesh.Materials[i];
                         Material mat = materialsBySlot.TryGetValue(src.WorldMaterialSlot, out Material? worldMat)
                             && surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)
-                            && IsExtrudable(sm)
+                            && IsExtrudable(sm, season)
                             ? GetOrCreateInteriorExtrudeMaterial(sm, layer, targetLayers, interiorExtrudeMode, season, refreshed)
                             : GetOrCreateInteriorExtrudeDiscardMaterial();
                         bindings[i] = new MeshMaterialBinding(src.MeshSlot, mat);
@@ -144,12 +144,17 @@ internal sealed partial class DaggerfallSiteAppearance
         _ => 0,
     };
 
-    private static bool IsExtrudable(SurfaceMaterial sm) =>
-        sm.Source.Frames is null
-        && sm.ClassicGlassFiles[0] is null
-        && sm.ClassicGlassFiles[1] is null
-        && sm.ClassicGlassFiles[2] is null
-        && DaggerfallInteriorSurfaceMaterials.ExtrudeScale(sm.SurfaceClass) > 0f;
+    private bool IsExtrudable(SurfaceMaterial sm, int season)
+    {
+        if (sm.Source.Frames is not null
+            || sm.ClassicGlassFiles[0] is not null
+            || sm.ClassicGlassFiles[1] is not null
+            || sm.ClassicGlassFiles[2] is not null)
+            return false;
+        if (InteriorReliefEntry(sm, season) is { Extrude: { } authoredExtrude })
+            return authoredExtrude > 0f;
+        return DaggerfallInteriorSurfaceMaterials.ExtrudeScale(sm.SurfaceClass) > 0f;
+    }
 
     private Material GetOrCreateInteriorExtrudeDiscardMaterial()
     {
@@ -186,14 +191,14 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         DaggerfallInteriorReliefSettings baseSettings = interiorRelief
             ?? DaggerfallInteriorLook.ResolveRelief("voxel-pulp", inputs.ProfileKind == DaggerfallWorldProfileKind.Dungeon)!;
-        RenderResource? heightMap = InteriorReliefMap(surface, SurfaceSeason);
+        var authored = InteriorReliefEntry(surface, SurfaceSeason);
         return new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false) with
         {
             AlphaMode = MaterialAlphaMode.Mask,
             AlphaCutoff = DaggerfallShellLayer.AlphaCutoff,
             Shader = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
                 interiorExtrudeShader!,
-                heightMap,
+                authored?.Image,
                 baseSettings,
                 surface.SurfaceClass,
                 mode,
@@ -201,7 +206,8 @@ internal sealed partial class DaggerfallSiteAppearance
                 layers,
                 interiorDungeonDampness,
                 interiorWaterLevelY,
-                interiorExtrudeTuning),
+                interiorExtrudeTuning,
+                authored?.Extrude),
         };
     }
 

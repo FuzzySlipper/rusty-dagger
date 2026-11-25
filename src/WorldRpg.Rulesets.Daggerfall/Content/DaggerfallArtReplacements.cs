@@ -274,7 +274,7 @@ internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeigh
 /// metres, which a location's face marches into near the camera. A relief without a depth draws on no face.
 /// </summary>
 internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Tallest, int Width, int Height, float Sway, Vector3 Shade, float Glints, bool SinksUnderSnow,
-    float? Depth = null);
+    float? Depth = null, float? Extrude = null);
 
 /// <summary>
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames, each the same box, and
@@ -752,10 +752,13 @@ internal sealed class DaggerfallArtReplacements
                     float? depth = layer.Value.TryGetProperty("depth", out JsonElement metres) ? metres.GetSingle() : null;
                     if (depth is { } deep && (!float.IsFinite(deep) || deep <= 0))
                         throw new InvalidOperationException($"Content pack '{packId}' sinks relief '{layer.Name}' {deep} metres under a face.");
+                    float? extrude = layer.Value.TryGetProperty("extrude", out JsonElement extMetres) ? extMetres.GetSingle() : null;
+                    if (extrude is { } ext && (!float.IsFinite(ext) || ext < 0))
+                        throw new InvalidOperationException($"Content pack '{packId}' projects relief '{layer.Name}' {ext} metres outward from a face.");
                     relief.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
                         new(File(layer.Value, $"The relief {layer.Name}"), tallest, width, height, layer.Value.GetProperty("sway").GetSingle(),
                             Tint(layer.Value.GetProperty("shade")), layer.Value.GetProperty("glints").GetSingle(),
-                            layer.Value.GetProperty("sinksUnderSnow").GetBoolean(), depth));
+                            layer.Value.GetProperty("sinksUnderSnow").GetBoolean(), depth, extrude));
                 }
                 DaggerfallArtFile? surfaceShader = cover.TryGetProperty("surfaceShader", out JsonElement faces) ? File(faces, "The surfaces' relief shader") : null;
                 // A face draws its relief only through the shader, so depths without it would ship relief nothing draws.

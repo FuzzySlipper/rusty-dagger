@@ -1,0 +1,167 @@
+{
+ "roles": {
+  "dungeon-stone":  {"depth": 0.060, "extrude": 0.095, "outline": 0.58, "run": 10, "bevel": 2.4, "floorBias": 0.44, "ceilingCap": 1.0},
+  "sewer-brick":    {"depth": 0.060, "extrude": 0.092, "outline": 0.62, "run": 7,  "bevel": 2.0, "floorBias": 0.46, "ceilingCap": 1.0},
+  "cave-rock":      {"depth": 0.068, "extrude": 0.095, "outline": 0.54, "run": 12, "bevel": 2.8, "floorBias": 0.38, "ceilingCap": 1.0},
+  "stone-floor":    {"depth": 0.036, "extrude": 0.048, "outline": 0.60, "run": 9,  "bevel": 2.0, "floorBias": 0.46, "ceilingCap": 0.88},
+  "wood-floor":     {"depth": 0.028, "extrude": 0.042, "outline": 0.58, "run": 8,  "bevel": 1.6, "floorBias": 0.46, "ceilingCap": 0.86},
+  "timber-plaster": {"depth": 0.042, "extrude": 0.075, "outline": 0.58, "run": 8,  "bevel": 1.8, "smooth": 1.4, "spread": 1.2, "levels": [0.96, 0.30, 0.26], "proudRegions": [0]},
+  "window-wall":    {"depth": 0.045, "extrude": 0.075, "outline": 0.60, "run": 8,  "bevel": 1.8, "levels": [0.94, 0.64, 0.48]},
+  "hero-carving":   {"depth": 0.055, "extrude": 0.115, "outline": 0.56, "run": 8,  "bevel": 2.2},
+  "niche-shelf":    {"depth": 0.050, "extrude": 0.085, "outline": 0.60, "run": 8,  "bevel": 2.2},
+  "bookshelf":      {"depth": 0.045, "extrude": 0.070, "frameWidth": 5, "topArchFrac": 0.24},
+  "framed-art":     {"depth": 0.028, "extrude": 0.050},
+  "furniture":      {"depth": 0.036, "extrude": 0.060, "outline": 0.58, "run": 7,  "bevel": 1.6, "floorBias": 0.44, "ceilingCap": 0.94},
+  "marble-tile":    {"depth": 0.022, "extrude": 0.035, "outline": 0.56, "run": 10, "bevel": 1.8},
+  "flat":           {"depth": null,  "extrude": 0.0}
+ },
+ "archives": {
+  "6":   {"*": "flat"},
+
+  "16":  {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "116": {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor",  "4": "wood-floor"},
+  "316": {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor",  "4": "wood-floor"},
+  "416": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+
+  "19":  {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "119": {"*": "dungeon-stone", "2": "stone-floor", "3": "stone-floor"},
+  "319": {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "419": {"*": "dungeon-stone", "2": "wood-floor",  "3": "dungeon-stone"},
+
+  "20":  {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "120": {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "320": {"*": "dungeon-stone", "2": "stone-floor", "3": "dungeon-stone"},
+  "420": {"*": "dungeon-stone", "2": "stone-floor", "3": "dungeon-stone"},
+
+  "22":  {"*": "dungeon-stone", "2": "stone-floor", "3": "marble-tile"},
+  "122": {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "322": {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "422": {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+
+  "23":  {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "123": {"*": "dungeon-stone", "2": "stone-floor", "3": "stone-floor"},
+  "323": {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+  "423": {"*": "dungeon-stone", "2": "stone-floor", "3": "wood-floor"},
+
+  "24":  {"*": "dungeon-stone", "2": "stone-floor", "4": "wood-floor"},
+  "124": {"*": "dungeon-stone", "2": "stone-floor"},
+  "324": {"*": "dungeon-stone", "2": "stone-floor"},
+  "424": {"*": "dungeon-stone", "2": "stone-floor"},
+
+  "125": {"*": "hero-carving", "1": {"role": "hero-carving", "extrude": 0.125}},
+
+  "28":  {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor", "4": "wood-floor"},
+  "128": {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor", "4": "wood-floor"},
+  "328": {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor", "4": "wood-floor"},
+  "428": {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor", "4": "wood-floor"},
+
+  "131": {"*": "dungeon-stone"},
+  "331": {"*": "dungeon-stone"},
+  "431": {"*": "stone-floor", "0": "wood-floor", "3": "wood-floor"},
+  "132": {"*": "stone-floor", "0": "wood-floor", "4": "wood-floor"},
+  "134": {"*": "dungeon-stone", "1": "marble-tile"},
+
+  "37":  {"*": "sewer-brick",   "1": {"role": "hero-carving", "heroBox": [22, 16, 108, 134], "extrude": 0.095}, "2": {"role": "window-wall", "recessBox": [10, 74, 116, 142]}, "3": "stone-floor", "4": "marble-tile"},
+  "137": {"*": "dungeon-stone", "1": {"role": "hero-carving", "heroBox": [18, 22, 104, 116], "extrude": 0.095}, "2": "window-wall", "3": "marble-tile", "4": "flat"},
+  "337": {"*": "sewer-brick",   "0": {"role": "niche-shelf",  "recessBox": [14, 84, 114, 124]}, "1": {"role": "hero-carving", "heroBox": [20, 22, 108, 134], "extrude": 0.098}, "2": "window-wall", "3": "stone-floor", "4": "marble-tile"},
+  "437": {"*": "sewer-brick",   "0": {"role": "niche-shelf",  "recessBox": [14, 84, 114, 124]}, "1": {"role": "hero-carving", "heroBox": [20, 22, 108, 134], "extrude": 0.098}, "2": "window-wall", "3": "stone-floor", "4": "marble-tile"},
+
+  "40":  {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "140": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "340": {"*": "sewer-brick",    "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "440": {"*": "marble-tile",    "2": {"role": "window-wall", "recessBox": [10, 74, 116, 146]}, "3": "stone-floor", "4": "marble-tile"},
+
+  "41":  {"*": "marble-tile"},
+  "141": {"*": "marble-tile"},
+  "341": {"*": "marble-tile"},
+
+  "44":  {"*": "timber-plaster", "2": {"role": "window-wall", "recessBox": [8, 66, 120, 144]}, "3": "stone-floor", "4": "wood-floor"},
+  "144": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "344": {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor",  "4": "wood-floor"},
+  "444": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+
+  "46":  {"*": "furniture", "2": "flat"},
+  "146": {"*": "furniture", "2": "dungeon-stone", "3": "dungeon-stone"},
+
+  "47":  {"*": "cave-rock"},
+  "147": {"*": "cave-rock"},
+
+  "48":  {"*": "framed-art"},
+  "148": {"*": "framed-art"},
+  "348": {"*": "framed-art"},
+  "448": {"*": "framed-art"},
+
+  "49":  {"*": "flat", "9": "furniture", "10": "furniture"},
+  "149": {"*": "dungeon-stone", "3": "window-wall"},
+  "349": {"*": "dungeon-stone", "3": "window-wall"},
+  "449": {"*": "flat"},
+
+  "50":  {"*": "wood-floor", "7": "flat"},
+  "150": {"*": "dungeon-stone", "1": "marble-tile", "2": "stone-floor", "3": "wood-floor"},
+  "350": {"*": "dungeon-stone", "1": "marble-tile", "2": "stone-floor"},
+  "450": {"*": "flat"},
+
+  "152": {"*": "dungeon-stone", "1": "marble-tile", "3": "wood-floor"},
+  "352": {"*": "dungeon-stone", "1": "marble-tile", "2": "wood-floor"},
+  "153": {"*": "dungeon-stone", "1": "marble-tile", "2": "stone-floor", "3": "wood-floor"},
+  "354": {"*": "dungeon-stone", "1": "marble-tile", "2": "marble-tile", "3": "sewer-brick"},
+
+  "55":  {"*": "window-wall"},
+  "155": {"*": "dungeon-stone", "1": "stone-floor", "2": "stone-floor"},
+  "355": {"*": "flat"},
+
+  "56":  {"*": "furniture"},
+  "156": {"*": "furniture"},
+  "356": {"*": "flat", "1": "dungeon-stone"},
+
+  "57":  {"*": "flat"},
+
+  "60":  {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "160": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "360": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "460": {"*": "sewer-brick",    "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+
+  "63":  {"*": "hero-carving",   "2": {"role": "window-wall", "recessBox": [32, 32, 96, 152]}, "3": {"role": "hero-carving", "extrude": 0.060}, "4": "marble-tile"},
+  "163": {"*": "dungeon-stone",  "0": {"role": "hero-carving", "heroBox": [20, 20, 104, 232], "extrude": 0.120}, "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "363": {"*": "hero-carving",   "2": {"role": "window-wall", "recessBox": [32, 32, 96, 152]}, "3": {"role": "hero-carving", "extrude": 0.060}, "4": "marble-tile"},
+  "463": {"*": "timber-plaster", "1": {"role": "hero-carving", "heroBox": [24, 34, 102, 134], "plasterBg": true, "extrude": 0.110}, "2": "window-wall", "3": "marble-tile", "4": "timber-plaster"},
+
+  "66":  {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor",  "4": "wood-floor"},
+  "166": {"*": "timber-plaster", "2": "window-wall", "3": "wood-floor",  "4": "wood-floor"},
+  "366": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+  "466": {"*": "timber-plaster", "2": "window-wall", "3": "stone-floor", "4": "wood-floor"},
+
+  "67":  {"*": "wood-floor"},
+  "167": {"*": "dungeon-stone"},
+  "467": {"*": "furniture", "5": "window-wall", "6": "window-wall"},
+
+  "68":  {"*": "sewer-brick", "2": "stone-floor", "3": "wood-floor", "9": "stone-floor"},
+  "168": {"*": "dungeon-stone", "2": "marble-tile", "3": "wood-floor", "4": "wood-floor", "8": "marble-tile", "9": "flat"},
+  "368": {"*": "dungeon-stone", "2": "stone-floor", "3": "stone-floor", "9": "stone-floor"},
+  "468": {"*": "sewer-brick", "2": "stone-floor", "3": "wood-floor", "9": "stone-floor"},
+
+  "71":  {"*": "bookshelf"},
+  "171": {"*": "wood-floor", "2": "flat"},
+  "371": {"*": "marble-tile", "3": "window-wall"},
+  "72":  {"*": "bookshelf"},
+  "372": {"*": "marble-tile"},
+  "73":  {"*": "flat", "0": "dungeon-stone"},
+  "74":  {"*": "furniture"},
+  "174": {"*": "furniture"},
+  "374": {"*": "furniture"},
+  "474": {"*": "furniture"},
+
+  "121": {"*": "wood-floor"},
+  "321": {"*": "wood-floor"},
+
+  "85":  {"*": "wood-floor", "0": "flat", "2": "stone-floor"},
+  "86":  {"*": "wood-floor", "2": "framed-art", "4": "flat"},
+  "87":  {"*": "furniture", "0": {"role": "niche-shelf", "recessBox": [22, 26, 106, 76]}, "2": "dungeon-stone", "3": {"role": "bookshelf", "recessBoxes": [[8, 10, 120, 62], [8, 70, 120, 122]], "topArchFrac": 0.08}, "5": "dungeon-stone"},
+  "89":  {"*": "flat", "4": "furniture"},
+  "90":  {"*": "furniture", "5": "flat", "6": "flat", "7": "flat"},
+  "92":  {"*": "furniture"},
+  "93":  {"*": "flat"},
+  "94":  {"*": "furniture", "0": "sewer-brick"},
+  "95":  {"*": "niche-shelf", "0": {"role": "niche-shelf", "recessBox": [30, 32, 98, 174], "extrude": 0.110}}
+ }
+}

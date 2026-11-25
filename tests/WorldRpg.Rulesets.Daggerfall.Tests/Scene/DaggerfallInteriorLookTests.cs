@@ -225,5 +225,25 @@ public sealed class DaggerfallInteriorLookTests
         Assert.Equal(38f, built.Parameter1.Y, 4);
         Assert.Equal(1f, built.Parameter3.X);
         Assert.Equal(new RenderResourceReference(heightMap), built.TextureA);
+
+        // Authored extrude metadata controls per-record projection: 0 discards, positive unlocks framed paintings.
+        MaterialShader discarded = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
+            shader, heightMap, relief, DaggerfallInteriorSurfaceClass.DefaultStone,
+            DaggerfallInteriorExtrudeMode.SilhouettePom, layer: 1, layers: 1,
+            dungeonDampness: 0f, waterLevelY: null, tuning, authoredExtrudeMetres: 0f);
+        Assert.Equal(0f, discarded.Parameter0.X);
+
+        MaterialShader paintingFrame = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
+            shader, heightMap, relief, DaggerfallInteriorSurfaceClass.PaintingOrScroll,
+            DaggerfallInteriorExtrudeMode.SilhouettePom, layer: 1, layers: 1,
+            dungeonDampness: 0f, waterLevelY: null, tuning, authoredExtrudeMetres: 0.05f);
+        Assert.Equal(1f, paintingFrame.Parameter0.X);
+        Assert.Equal(0.05f * 1.5f, paintingFrame.Parameter0.Y, 5);
+
+        MaterialShader authoredRelief = DaggerfallInteriorSurfaceMaterials.BuildReliefShader(
+            relief, shader, heightMap, DaggerfallInteriorSurfaceClass.DefaultStone,
+            materialAware: true, dungeonDampness: 0.2f, waterLevelY: null, authoredDepthMetres: 0.042f);
+        Assert.Equal(0.042f, authoredRelief.Parameter0.X, 5);
+        Assert.Equal(1f, authoredRelief.Parameter3.X);
     }
 }
