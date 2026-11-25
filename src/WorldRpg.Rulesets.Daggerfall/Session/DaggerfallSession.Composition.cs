@@ -899,6 +899,16 @@ internal sealed partial class DaggerfallSession
                 DaggerfallSessionPersistence.ToSocialDiff,
                 id => _persistence.CaptureLiveActorForCustody(
                     id, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))));
+            OverlandTraffic = new DaggerfallOverlandTraffic(
+                definitions, State.ActorLedger, actors, Expedition, OverlandParties,
+                questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
+            PartyHire = new DaggerfallPartyHireService(
+                definitions, actors, State.ActorLedger, OverlandParties,
+                () => _sites.Projection.Inputs, CurrentInteriorBuilding,
+                () => State.Transport.HasCart(State.Inventory.Read()),
+                () => State.Currency.Read().Gold,
+                amount => State.Currency.TrySpendGold(amount, []),
+                id => State.Quests.IsNpcMuted(id) || State.Quests.IsEscortWithParty(id));
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),
@@ -1369,7 +1379,9 @@ internal sealed partial class DaggerfallSession
             activeProfile: () => _sites.ActiveProfile,
             discloseDirection: DialogueDirections.Disclose,
             dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true,
-            issueReferral: (site, npc) => new DaggerfallSlotReferralPolicy(_definitions, State.ActorLedger).TryIssuePreVisitReferral(site, npc)?.Message);
+            issueReferral: (site, npc) => new DaggerfallSlotReferralPolicy(_definitions, State.ActorLedger).TryIssuePreVisitReferral(site, npc)?.Message,
+            partyHireTopics: npc => PartyHire.TopicsFor(npc),
+            partyHireService: (npc, topic) => PartyHire.Resolve(npc, topic));
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

@@ -32,6 +32,12 @@ internal interface IDaggerfallSiteTransitionHost : IDaggerfallExteriorHost
 
     /// <summary>The departing projection is about to be released; retire what it was still timing.</summary>
     void RetireDepartingProjection(DaggerfallSiteProjection source);
+
+    /// <summary>Boards any staged hired party members into <c>WithParty</c> before departing a site.</summary>
+    IReadOnlyList<long> BeforeSiteTransition() => [];
+
+    /// <summary>Re-stages previously staged party members beside the player after arriving at (or rolling back to) a site.</summary>
+    void AfterSiteTransition(IReadOnlyList<long> boardedPartyIds) { }
 }
 
 /// <summary>
@@ -456,6 +462,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         CharacterStance sourceStance = player.Motion.Stance;
         bool sourceLocationLoaded = _exterior.ActiveLocationLoaded;
         DaggerfallExteriorCellId? sourceLocationCell = _exterior.LocationCell;
+        IReadOnlyList<long> boardedPartyIds = _host.BeforeSiteTransition();
         IReadOnlySet<long> sourceDynamicActorIds = _exterior.ActiveDynamicActorIds();
         Vector3 sourceFrameOffset = sourceProfile.Kind == DaggerfallWorldProfileKind.Exterior
             ? _exterior.ExteriorProfileTranslation(source.Inputs)
@@ -616,6 +623,8 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             ReturnProfile = !walking && returnDestination is null ? sourceProfile : null;
             _enemyBehavior.ClearPerceptionMemory();
             Interiors.Enter(destination, target);
+            if (boardedPartyIds.Count > 0)
+                _host.AfterSiteTransition(boardedPartyIds);
         }
         catch (Exception failure)
         {
@@ -678,6 +687,11 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             _deltas.Clear();
             foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteRuntimeDelta delta) in sourceDeltas) _deltas.Add(key, delta);
             ActiveProfile = sourceProfile;
+            if (boardedPartyIds.Count > 0)
+            {
+                try { _host.AfterSiteTransition(boardedPartyIds); }
+                catch (Exception partyFailure) { failures.Add(partyFailure); }
+            }
             _exterior.RecordLocation(sourceLocationLoaded, sourceLocationCell);
             ReturnProfile = sourceReturnProfile;
             BankProvider = sourceBankProvider;

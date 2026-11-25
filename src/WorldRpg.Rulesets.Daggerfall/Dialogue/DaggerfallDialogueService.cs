@@ -91,6 +91,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<bool> _suppressTalk;
     private readonly Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? _guildWelcome;
     private readonly Func<DaggerfallSiteRecord, DaggerfallNpc, string?>? _issueReferral;
+    private readonly Func<DaggerfallNpc, IReadOnlyList<DaggerfallDialogueTopicOption>>? _partyHireTopics;
+    private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, DaggerfallPartyHireResult>? _partyHireService;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -125,10 +127,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<int, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null,
         Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? guildWelcome = null,
         Func<DaggerfallTextContext>? currentText = null,
-        Func<DaggerfallSiteRecord, DaggerfallNpc, string?>? issueReferral = null)
+        Func<DaggerfallSiteRecord, DaggerfallNpc, string?>? issueReferral = null,
+        Func<DaggerfallNpc, IReadOnlyList<DaggerfallDialogueTopicOption>>? partyHireTopics = null,
+        Func<DaggerfallNpc, DaggerfallDialogueTopic, DaggerfallPartyHireResult>? partyHireService = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
+        _partyHireTopics = partyHireTopics;
+        _partyHireService = partyHireService;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -380,6 +386,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallDialogueTopic topic, string? topicTarget, ulong? amount, string? key)
     {
         TalkSession session = _current!;
+        if (topic is DaggerfallDialogueTopic.HireCompanion or DaggerfallDialogueTopic.HireDriver or DaggerfallDialogueTopic.DismissParty)
+        {
+            if (_partyHireService is null)
+                return Reject("Party hiring is not available here.");
+            DaggerfallPartyHireResult result = _partyHireService(npc, topic);
+            session.Question = result.Question;
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
         if (topic is DaggerfallDialogueTopic.Donate or DaggerfallDialogueTopic.Cure)
         {
             if (_templeService is null || !OffersTopic(npc, topic))
@@ -841,6 +859,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             topics.Add(new("donate", "Donate gold"));
         if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Cure))
             topics.Add(new("cure", "Cure afflictions"));
+        if (_partyHireTopics is not null)
+            topics.AddRange(_partyHireTopics(npc));
         if (session.ProviderTopics.Count != 0)
             topics.AddRange(session.ProviderTopics);
         else
@@ -923,9 +943,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "join" => DaggerfallDialogueTopic.Join,
             "teleport" => DaggerfallDialogueTopic.Teleport,
             "spymaster" => DaggerfallDialogueTopic.Spymaster,
+            "hire-companion" => DaggerfallDialogueTopic.HireCompanion,
+            "hire-driver" => DaggerfallDialogueTopic.HireDriver,
+            "dismiss-party" => DaggerfallDialogueTopic.DismissParty,
             _ => default,
         };
-        if (value is "directions" or "news" or "referral" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes") return true;
+        if (value is "directions" or "news" or "referral" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
         if (value is { Length: > 10 } dynamicDirection && dynamicDirection.StartsWith("direction:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Directions;

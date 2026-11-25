@@ -1,7 +1,7 @@
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal enum DaggerfallDialogueTone { Polite, Normal, Blunt }
-internal enum DaggerfallDialogueTopic { Directions, News, Referral, Work, QuestInfo, Donate, Cure, RankReview, Armor, House, Join, Teleport, Spymaster, RestoreAttributes }
+internal enum DaggerfallDialogueTopic { Directions, News, Referral, Work, QuestInfo, Donate, Cure, RankReview, Armor, House, Join, Teleport, Spymaster, RestoreAttributes, HireCompanion, HireDriver, DismissParty }
 
 /// <param name="Group">The heading the conversation lists the topic under (<see cref="DaggerfallDialogueTopicGroups"/>).</param>
 /// <param name="Category">The list inside that heading the topic belongs to, such as a kind of building; null when the heading has no lists.</param>

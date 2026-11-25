@@ -1042,7 +1042,9 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private void AdvanceExpedition(double realSeconds)
     {
+        DaggerfallCalendar before = _time.Calendar;
         if (Expedition.Advance(realSeconds) <= 0) return;                                         // Travel, through Time
+        _ = OverlandTraffic.Step(before, _time.Calendar, Expedition.Position);                    // Travel, Actors
         State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds()); State.LevelUps.BeginIfEligible();   // Character
         CompleteTimeIncrease();                                                                   // Session: the increase's end
     }
