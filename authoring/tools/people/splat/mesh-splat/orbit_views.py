@@ -128,7 +128,7 @@ def matte(image, threshold, open_holes=0, flat=(6, 3.5), report=None, large=None
             trimmed = int((subject & ~cap).sum()); subject &= cap
         if report is not None:
             report.update(removed=removed, kept=kept, opened=opened, regained=int(held.sum()), trimmed=trimmed, maps=(opened_map, kept_map))
-        return edge(key_holes(subject, distance, key, report))
+        return edge(key_holes(subject, distance, key, report, b))
     if open_holes:
         scale = (pixels.shape[1] / 2176) ** 2
         labels, count = ndimage.label(subject & ~closed)
@@ -174,10 +174,13 @@ def edge(subject):
     return np.where(subject, np.maximum(soft, 0.55), soft * 0.5)
 
 
-def key_holes(subject, distance, key, report):
+def key_holes(subject, distance, key, report, bmask=None):
     """--key-holes DIST: on a chroma-key backdrop (guided_clip.sh BACKDROP, npc-024 2026-11-23) every patch inside the figure within DIST
     of the border colour is backdrop, whatever its size - between fingers, under an arm, through a torn robe - as the key colour was
-    chosen to be absent from the character. Patches under 12 px (at 1088) are left: single pixels of noise, not holes."""
+    chosen to be absent from the character. Patches under 12 px (at 1088) are left: single pixels of noise, not holes.
+    With BiRefNet masks (bmask), a patch opens only where BiRefNet too sees background (mean under 0.5). The clips do not always come
+    back on the key colour: 457's on pale grey, 459-461's on pinks (2026-11-25), so the distance is to whatever the border is, and pale
+    skin and armour highlights within DIST of it were opened - holes in the bake (Patch: 457's arms and face)."""
     if not key:
         return subject
     near = subject & (distance <= key)
@@ -185,12 +188,15 @@ def key_holes(subject, distance, key, report):
     labels, count = ndimage.label(near)
     small = 12 * (subject.shape[1] / 1088) ** 2
     out, n = subject.copy(), 0
+    kept = 0
     for index, box in enumerate(ndimage.find_objects(labels), 1):
         hole = labels[box] == index
         if hole.sum() >= small:
+            if bmask is not None and float(bmask[box][hole].mean()) >= 0.5:
+                kept += int(hole.sum()); continue
             out[box][hole] = False; n += int(hole.sum())
     if report is not None:
-        report.update(key_opened=n)
+        report.update(key_opened=n, key_kept=kept)
     return out
 
 
