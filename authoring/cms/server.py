@@ -150,12 +150,44 @@ class Workspace:
         self.run_npc_ledger_action(candidate)
         return {"message": "NPC merge applied."}
 
+    def authoring_git_status(self):
+        """Report uncommitted changes on git-tracked files the CMS edits directly."""
+        repo = self.library.repo
+        if not (repo / ".git").exists():
+            return {"gitAvailable": False, "modified": []}
+        tracked_targets = []
+        for path in (self.library.people_pack, self.links, self.merges):
+            try:
+                rel = path.resolve().relative_to(repo.resolve()).as_posix()
+                tracked_targets.append(rel)
+            except ValueError:
+                continue
+        if not tracked_targets:
+            return {"gitAvailable": True, "modified": []}
+        try:
+            proc = subprocess.run(
+                ["git", "status", "--porcelain", "--", *tracked_targets],
+                cwd=repo, capture_output=True, text=True, timeout=5,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return {"gitAvailable": False, "modified": []}
+        if proc.returncode != 0:
+            return {"gitAvailable": False, "modified": []}
+        modified = []
+        for line in proc.stdout.splitlines():
+            if len(line) >= 4:
+                code = line[:2].strip() or "M"
+                file_path = line[3:].strip()
+                modified.append({"status": code, "path": file_path})
+        return {"gitAvailable": True, "modified": modified}
+
 
 def create_router(workspace: Workspace) -> Router:
     """Assemble the CMS route table from each domain module."""
     router = Router()
 
     router.get("/health", lambda _req: {"service": "Rusty Dagger Authoring"})
+    router.get("/api/workspace/status", lambda _req: workspace.authoring_git_status())
 
     def npc_chart_html(_req):
         page = (workspace.library.npcs / "index.html").read_text(encoding="utf-8")

@@ -221,3 +221,29 @@ manifest_path.write_text(json.dumps(manifest, indent=2) + "\\n")
         status, restored = self._request("POST", "/api/people/npc-099/restore", {})
         self.assertEqual(status, 200)
         self.assertEqual(restored["restored"], ["npc-099"])
+
+    def test_batch_retire_guards_blockers_and_references_and_workspace_status_responds(self):
+        # Batch with a merge keeper (npc-010) is hard-blocked even with force=True.
+        status, report = self._request("POST", "/api/people/references-batch", {"ids": ["npc-010", "npc-099"]})
+        self.assertEqual(status, 200)
+        self.assertFalse(report["canRetireAll"])
+        self.assertEqual([i["id"] for i in report["items"]], ["npc-010", "npc-099"])
+
+        status, blocked = self._request("POST", "/api/people/retire-batch", {"ids": ["npc-010", "npc-099"], "force": True})
+        self.assertEqual(status, 409)
+        self.assertIn("npc-010", blocked["error"])
+
+        # Batch with active reference (npc-020) + unused (npc-099) requires force=True.
+        status, guarded = self._request("POST", "/api/people/retire-batch", {"ids": ["npc-020", "npc-099"], "force": False})
+        self.assertEqual(status, 409)
+        self.assertIn("npc-020", guarded["error"])
+
+        # Forced batch retires both in one action.
+        status, done = self._request("POST", "/api/people/retire-batch", {"ids": ["npc-020", "npc-099"], "force": True})
+        self.assertEqual(status, 200)
+        self.assertEqual(done["retired"], ["npc-020", "npc-099"])
+
+        status, ws = self._request("GET", "/api/workspace/status")
+        self.assertEqual(status, 200)
+        self.assertIn("gitAvailable", ws)
+        self.assertIn("modified", ws)

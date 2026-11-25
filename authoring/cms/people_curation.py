@@ -273,6 +273,53 @@ def retire_record(npc_id: str, body, workspace) -> dict:
     return {"message": f"Retired {refs['id']}.", "retired": [refs["id"]]}
 
 
+def references_batch(body, workspace) -> dict:
+    if not isinstance(body, dict) or not isinstance(body.get("ids"), list) or not body["ids"]:
+        raise ValueError("Provide a non-empty 'ids' array of People records.")
+    seen = []
+    for raw in body["ids"]:
+        if isinstance(raw, str) and raw.strip() and raw not in seen:
+            seen.append(raw)
+    if not seen:
+        raise ValueError("Provide a non-empty 'ids' array of People records.")
+    items = [references_for(npc_id, workspace) for npc_id in seen]
+    # Deduplicate after canonical resolution.
+    unique = []
+    unique_ids = set()
+    for item in items:
+        if item["id"] not in unique_ids:
+            unique_ids.add(item["id"])
+            unique.append(item)
+    return {
+        "items": unique,
+        "canRetireAll": all(item["canRetire"] for item in unique),
+        "requiresConfirmation": any(item["requiresConfirmation"] for item in unique),
+    }
+
+
+def retire_batch(body, workspace) -> dict:
+    report = references_batch(body, workspace)
+    items = report["items"]
+    blocked = [item for item in items if not item["canRetire"]]
+    if blocked:
+        names = ", ".join(item["id"] for item in blocked)
+        raise ConflictError(
+            f"Cannot retire merge keeper record(s): {names}. Remove them from the selection first.",
+            details={"items": items},
+        )
+    force = isinstance(body, dict) and body.get("force") is True
+    guarded = [item for item in items if item["requiresConfirmation"]]
+    if guarded and not force:
+        names = ", ".join(item["id"] for item in guarded)
+        raise ConflictError(
+            f"Active references found on {names}. Review them and pass force=true to confirm batch retirement.",
+            details={"items": items},
+        )
+    ids = [item["id"] for item in items]
+    workspace.run_npc_ledger_action({"retire": ids})
+    return {"message": f"Retired {len(ids)} record(s): {', '.join(ids)}.", "retired": ids}
+
+
 def retired_records(workspace) -> dict:
     ledger = read_json(workspace.merges, {})
     retired = sorted(src for src, dst in ledger.items() if dst is None) if isinstance(ledger, dict) else []
@@ -291,6 +338,8 @@ def register_routes(router, workspace):
     """Register in-CMS People comparison, merge, retirement, and restore routes."""
     router.post("/api/people/compare", lambda req: compare_records(req.json(), workspace))
     router.post("/api/people/merge", lambda req: merge_records(req.json(), workspace))
+    router.post("/api/people/references-batch", lambda req: references_batch(req.json(), workspace))
+    router.post("/api/people/retire-batch", lambda req: retire_batch(req.json(), workspace))
     router.get("/api/people/retired", lambda _req: retired_records(workspace))
     router.get("/api/people/{id}/references", lambda req: references_for(req.params["id"], workspace))
     router.post("/api/people/{id}/retire", lambda req: retire_record(req.params["id"], req.json() if req.raw_body else {}, workspace))

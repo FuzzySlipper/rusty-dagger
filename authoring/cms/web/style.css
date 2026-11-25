@@ -466,3 +466,15 @@ button[data-mark][aria-pressed="true"] { color: var(--accent); border-color: var
   border-radius: 6px;
   background: var(--panel);
 }
+
+/* Polish: batch retire list, search sections, and topbar status/validate pills */
+.retire-items { display: flex; flex-direction: column; gap: 10px; }
+.retire-item-card { margin-bottom: 0; }
+.retire-notes { margin: 8px 0 0 18px; padding: 0; font-size: .86rem; color: var(--muted); }
+.search-section { margin-bottom: 20px; }
+.search-section h2 { margin-bottom: 10px; }
+.topbar-tools { flex-wrap: nowrap; }
+.topbar-pill { font-size: .84rem; }
+.topbar-pill.dirty { color: #f6d9a2; border-color: #8c6d36; background: #3a2f1d; }
+.topbar-pill.valid { color: #d1f0d7; border-color: #356e4d; background: #1f3b2b; }
+.topbar-pill.invalid { color: #ffb5ac; border-color: #8a443d; background: #3b201d; }

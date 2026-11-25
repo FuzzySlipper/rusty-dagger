@@ -204,33 +204,48 @@ export function PeopleCompareModal({
 
 export function RetireNpcModal({
   open,
-  npcId,
+  npcIds,
   onClose,
   onRetired,
 }: {
   open: boolean;
-  npcId: string | null;
+  npcIds: string[];
   onClose: () => void;
-  onRetired: (retiredId: string) => void;
+  onRetired: (retiredIds: string[]) => void;
 }) {
   const { refreshCatalog } = useApp();
-  const [refs, setRefs] = useState<PeopleReferencesResponse | null>(null);
+  const [activeIds, setActiveIds] = useState<string[]>(npcIds);
+  const [items, setItems] = useState<PeopleReferencesResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [retiring, setRetiring] = useState(false);
   const [retireError, setRetireError] = useState<string | null>(null);
 
+  const idsKey = npcIds.join(',');
+
   useEffect(() => {
-    if (!open || !npcId) return;
+    setActiveIds(npcIds);
+  }, [open, idsKey]);
+
+  const activeKey = activeIds.join(',');
+
+  useEffect(() => {
+    if (!open || activeIds.length === 0) {
+      setItems([]);
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setError(null);
     setRetireError(null);
     setConfirmed(false);
-    setRefs(null);
-    apiRequest<PeopleReferencesResponse>(`/api/people/${encodeKey(npcId)}/references`, { signal: controller.signal })
-      .then(res => setRefs(res))
+    apiRequest<{ items: PeopleReferencesResponse[] }>('/api/people/references-batch', {
+      method: 'POST',
+      body: { ids: activeIds },
+      signal: controller.signal,
+    })
+      .then(res => setItems(res.items))
       .catch(err => {
         if (!isAbortError(err)) setError(err instanceof Error ? err.message : String(err));
       })
@@ -238,20 +253,37 @@ export function RetireNpcModal({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [open, npcId]);
+  }, [open, activeKey]);
+
+  const blocked = items.filter(item => !item.canRetire);
+  const guarded = items.filter(item => item.canRetire && item.requiresConfirmation);
+  const canRetireAll = items.length > 0 && blocked.length === 0;
+  const requiresConfirmation = guarded.length > 0;
+  const isBatch = items.length > 1;
+
+  function dropFromBatch(id: string) {
+    setActiveIds(prev => prev.filter(item => item !== id));
+  }
 
   async function doRetire() {
-    if (!npcId || !refs || !refs.canRetire) return;
-    if (refs.requiresConfirmation && !confirmed) return;
+    if (!canRetireAll || (requiresConfirmation && !confirmed)) return;
+    const ids = items.map(item => item.id);
     setRetiring(true);
     setRetireError(null);
     try {
-      await apiRequest(`/api/people/${encodeKey(npcId)}/retire`, {
-        method: 'POST',
-        body: { force: refs.requiresConfirmation },
-      });
+      if (ids.length === 1) {
+        await apiRequest(`/api/people/${encodeKey(ids[0])}/retire`, {
+          method: 'POST',
+          body: { force: requiresConfirmation },
+        });
+      } else {
+        await apiRequest('/api/people/retire-batch', {
+          method: 'POST',
+          body: { ids, force: requiresConfirmation },
+        });
+      }
       await refreshCatalog();
-      onRetired(npcId);
+      onRetired(ids);
     } catch (err) {
       setRetireError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -259,99 +291,140 @@ export function RetireNpcModal({
     }
   }
 
+  const single = items.length === 1 ? items[0] : null;
+  const modalTitle = single
+    ? `Retire ${single.name} (${single.id})`
+    : `Retire ${items.length || activeIds.length} People records`;
+
   return (
     <Modal
       open={open}
-      title={refs ? `Retire ${refs.name} (${refs.id})` : `Retire ${npcId ?? ''}`}
-      subtitle="Retiring removes this record from the active People catalog via NpcReferenceMerges.json (reversible)."
+      title={modalTitle}
+      subtitle="Retiring removes record(s) from the active People catalog via NpcReferenceMerges.json (single rebuild, reversible)."
       onClose={onClose}
     >
       <div class="curation-modal-body">
-        {loading && !refs ? <p>Checking active references…</p> : null}
+        {loading && !items.length ? <p>Checking active references…</p> : null}
         {error ? <Empty>{error}</Empty> : null}
         {retireError ? (
           <div class="validation-summary" role="alert">
-            <strong>Could not retire record:</strong> {retireError}
+            <strong>Could not retire record(s):</strong> {retireError}
           </div>
         ) : null}
 
-        {refs ? (
-          <>
-            <div class="retire-head">
-              <SpritePreview url={refs.classic} alt={refs.name} pixel className="picker-thumb" />
-              <div>
-                <strong>{refs.name}</strong> <code>{refs.id}</code>
-                <p class="muted">{refs.kind}</p>
-              </div>
-            </div>
+        {!loading && activeIds.length === 0 ? <Empty>No records left in this batch.</Empty> : null}
 
-            {!refs.canRetire ? (
+        {items.length > 0 ? (
+          <>
+            {blocked.length > 0 ? (
               <div class="validation-summary" role="alert">
-                <strong>Cannot retire this record:</strong>
-                <ul>
-                  {refs.blockers.map((b, idx) => (
-                    <li key={idx}>{b}</li>
-                  ))}
-                </ul>
+                <strong>
+                  {blocked.length} merge keeper {blocked.length === 1 ? 'record' : 'records'} cannot be retired directly:
+                </strong>{' '}
+                remove {blocked.map(b => b.id).join(', ')} from the batch to retire the remaining records.
               </div>
-            ) : refs.requiresConfirmation ? (
+            ) : requiresConfirmation ? (
               <div class="curation-warning" role="alert">
-                <strong>Active references found:</strong>
-                <ul>
-                  {refs.warnings.map((w, idx) => (
-                    <li key={idx}>{w}</li>
-                  ))}
-                </ul>
-                {refs.peoplePack.cast.length ? (
-                  <p>
-                    Cast links:{' '}
-                    {refs.peoplePack.cast.map((c, idx) => (
-                      <span key={c.id}>
-                        {idx > 0 ? ', ' : ''}
-                        <a href={castUrl(c.id)} onClick={onClose}>
-                          {c.name}
-                        </a>
-                      </span>
-                    ))}
-                  </p>
-                ) : null}
-                {refs.peoplePack.spawners.length ? (
-                  <p>
-                    Spawner links:{' '}
-                    {[...new Set(refs.peoplePack.spawners.map(s => s.spawnerId))].map((sid, idx) => (
-                      <span key={sid}>
-                        {idx > 0 ? ', ' : ''}
-                        <a href={spawnerUrl(sid)} onClick={onClose}>
-                          {sid}
-                        </a>
-                      </span>
-                    ))}
-                  </p>
-                ) : null}
+                <strong>
+                  Active references found on {guarded.length} of {items.length}{' '}
+                  {items.length === 1 ? 'record' : 'records'}:
+                </strong>
                 <label class="confirm-checkbox">
                   <input
                     type="checkbox"
                     checked={confirmed}
                     onChange={event => setConfirmed((event.currentTarget as HTMLInputElement).checked)}
                   />{' '}
-                  I understand this record still has active references and want to retire it anyway.
+                  I understand {isBatch ? 'these records still have' : 'this record still has'} active references and
+                  want to retire {isBatch ? 'them' : 'it'} anyway.
                 </label>
               </div>
             ) : (
               <div class="curation-safe">
                 <strong>Safe to retire:</strong> No cast individuals, spawner pools, block slots, pipelines, or concept
-                art reference this record.
+                art reference {isBatch ? 'any of these records' : 'this record'}.
               </div>
             )}
+
+            <div class="retire-items">
+              {items.map(refs => (
+                <article key={refs.id} class="panel retire-item-card">
+                  <div class="section-heading">
+                    <div class="retire-head" style={{ marginBottom: 0 }}>
+                      <SpritePreview url={refs.classic} alt={refs.name} pixel className="picker-thumb" />
+                      <div>
+                        <strong>{refs.name}</strong> <code>{refs.id}</code>
+                        <p class="muted">{refs.kind}</p>
+                        <div class="cast-badges">
+                          {!refs.canRetire ? (
+                            <Chip state="failed" label="Blocked: merge keeper" />
+                          ) : refs.requiresConfirmation ? (
+                            <Chip state="needs-check" label={`${refs.warnings.length} reference warning(s)`} />
+                          ) : (
+                            <Chip state="approved" label="Safe to retire" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {isBatch ? (
+                      <button type="button" disabled={retiring} onClick={() => dropFromBatch(refs.id)}>
+                        Skip
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {refs.blockers.length ? (
+                    <ul class="retire-notes">
+                      {refs.blockers.map((b, idx) => (
+                        <li key={idx}>{b}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {refs.warnings.length ? (
+                    <ul class="retire-notes">
+                      {refs.warnings.map((w, idx) => (
+                        <li key={idx}>{w}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+
+                  {refs.peoplePack.cast.length || refs.peoplePack.spawners.length ? (
+                    <div class="usage-pills" style={{ marginTop: '6px' }}>
+                      {refs.peoplePack.cast.map(c => (
+                        <a key={c.id} class="art-data-chip" href={castUrl(c.id)} onClick={onClose}>
+                          <span>{c.name}</span>
+                          <code>cast</code>
+                        </a>
+                      ))}
+                      {[...new Set(refs.peoplePack.spawners.map(s => s.spawnerId))].map(sid => (
+                        <a key={sid} class="art-data-chip" href={spawnerUrl(sid)} onClick={onClose}>
+                          <span>{sid}</span>
+                          <code>spawner</code>
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
 
             <div class="actions" style={{ marginTop: '14px' }}>
               <button
                 type="button"
                 class="danger"
-                disabled={retiring || !refs.canRetire || (refs.requiresConfirmation && !confirmed)}
+                disabled={retiring || !canRetireAll || (requiresConfirmation && !confirmed)}
                 onClick={() => void doRetire()}
               >
-                {retiring ? 'Retiring & rebuilding chart…' : refs.requiresConfirmation ? 'Retire anyway' : 'Retire record'}
+                {retiring
+                  ? 'Retiring & rebuilding chart…'
+                  : requiresConfirmation
+                    ? isBatch
+                      ? `Retire ${items.length} records anyway`
+                      : 'Retire anyway'
+                    : isBatch
+                      ? `Retire ${items.length} records`
+                      : 'Retire record'}
               </button>
               <button type="button" disabled={retiring} onClick={onClose}>
                 Cancel

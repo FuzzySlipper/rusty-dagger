@@ -12,6 +12,21 @@ import { ArtDataChip } from '../components/ArtDataLink';
 import { DirtyBar, FieldRow, ValidationSummary } from '../components/FormControls';
 import { VisualPickerModal } from '../components/VisualPickerModal';
 import { Breadcrumb, Chip, Empty, PageHeading, SpritePreview } from '../components/ui';
+import { useSessionState } from '../hooks/useSessionState';
+
+type SpawnerAuditFilter = '' | 'single-visual' | 'has-regional' | 'no-regional';
+
+interface SpawnerFilters {
+  query: string;
+  harmFilter: string;
+  auditFilter: SpawnerAuditFilter;
+}
+
+const DEFAULT_SPAWNER_FILTERS: SpawnerFilters = {
+  query: '',
+  harmFilter: '',
+  auditFilter: '',
+};
 
 export function SpawnersPage({ id }: { id?: string }) {
   if (id) return <SpawnerDetailView id={id} />;
@@ -22,9 +37,10 @@ function SpawnerBrowserView() {
   const [data, setData] = useState<PeoplePackOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [harmFilter, setHarmFilter] = useState('');
-  const [auditFilter, setAuditFilter] = useState<'' | 'single-visual' | 'has-regional' | 'no-regional'>('');
+  const [filters, setFilters] = useSessionState<SpawnerFilters>('cms.spawners.filters', DEFAULT_SPAWNER_FILTERS);
+  const { query, harmFilter, auditFilter } = filters;
+  const patchFilters = (change: Partial<SpawnerFilters>) => setFilters(prev => ({ ...prev, ...change }));
+  const hasFilters = Boolean(query || harmFilter || auditFilter);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -82,14 +98,18 @@ function SpawnerBrowserView() {
       />
 
       <div class="stat-strip">
-        <button type="button" class={`stat-pill${auditFilter === '' ? ' active' : ''}`} onClick={() => setAuditFilter('')}>
+        <button
+          type="button"
+          class={`stat-pill${auditFilter === '' ? ' active' : ''}`}
+          onClick={() => patchFilters({ auditFilter: '' })}
+        >
           <strong>{data.counts.spawners}</strong>
           <span>Typed spawners</span>
         </button>
         <button
           type="button"
           class={`stat-pill${auditFilter === 'single-visual' ? ' active' : ''}`}
-          onClick={() => setAuditFilter(auditFilter === 'single-visual' ? '' : 'single-visual')}
+          onClick={() => patchFilters({ auditFilter: auditFilter === 'single-visual' ? '' : 'single-visual' })}
         >
           <strong>{data.counts.spawnersSingleVisual}</strong>
           <span>Single-visual default</span>
@@ -97,7 +117,7 @@ function SpawnerBrowserView() {
         <button
           type="button"
           class={`stat-pill${auditFilter === 'has-regional' ? ' active' : ''}`}
-          onClick={() => setAuditFilter(auditFilter === 'has-regional' ? '' : 'has-regional')}
+          onClick={() => patchFilters({ auditFilter: auditFilter === 'has-regional' ? '' : 'has-regional' })}
         >
           <strong>{data.counts.spawnersWithRegionalPools}</strong>
           <span>With regional overrides</span>
@@ -111,12 +131,15 @@ function SpawnerBrowserView() {
             type="search"
             value={query}
             placeholder="Spawner ID, role, sprite, npc-###, region"
-            onInput={event => setQuery((event.currentTarget as HTMLInputElement).value)}
+            onInput={event => patchFilters({ query: (event.currentTarget as HTMLInputElement).value })}
           />
         </label>
         <label>
           Harm policy
-          <select value={harmFilter} onChange={event => setHarmFilter((event.currentTarget as HTMLSelectElement).value)}>
+          <select
+            value={harmFilter}
+            onChange={event => patchFilters({ harmFilter: (event.currentTarget as HTMLSelectElement).value })}
+          >
             <option value="">All policies</option>
             {data.enums.harms.map(h => (
               <option key={h} value={h}>
@@ -130,7 +153,7 @@ function SpawnerBrowserView() {
           <select
             value={auditFilter}
             onChange={event =>
-              setAuditFilter((event.currentTarget as HTMLSelectElement).value as typeof auditFilter)
+              patchFilters({ auditFilter: (event.currentTarget as HTMLSelectElement).value as SpawnerAuditFilter })
             }
           >
             <option value="">All spawners</option>
@@ -139,6 +162,11 @@ function SpawnerBrowserView() {
             <option value="no-regional">No regional overrides yet</option>
           </select>
         </label>
+        {hasFilters ? (
+          <button type="button" onClick={() => setFilters(DEFAULT_SPAWNER_FILTERS)}>
+            Reset filters
+          </button>
+        ) : null}
         <output>
           {filtered.length} of {data.spawners.length} spawners
         </output>

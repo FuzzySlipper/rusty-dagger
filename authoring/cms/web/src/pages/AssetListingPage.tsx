@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { subjectUrl } from '../router';
 import { useApp } from '../state';
+import { useSessionState } from '../hooks/useSessionState';
 import { PeopleCompareModal, RetireNpcModal, RetiredPeopleModal } from '../components/PeopleCurationModals';
 import { TileReview } from '../components/ReviewControls';
 import { AssetTile, Chip, Empty, PageHeading, PipelineTile, SpritePreview } from '../components/ui';
@@ -97,35 +98,49 @@ function PeopleCuratableTile({
   );
 }
 
+interface ListingFilters {
+  term: string;
+  facet: string;
+  ratingFilter: string;
+  markedOnly: boolean;
+  usageFilter: UsageFilter;
+  artFilter: ArtNeedFilter;
+}
+
+const DEFAULT_LISTING_FILTERS: ListingFilters = {
+  term: '',
+  facet: '',
+  ratingFilter: '',
+  markedOnly: false,
+  usageFilter: '',
+  artFilter: '',
+};
+
 export function AssetListingPage({ category }: { category: AssetCategory | 'pipelines' }) {
   const { catalog, reviewFor, markedCount, clearMarks } = useApp();
-  const [term, setTerm] = useState('');
-  const [facet, setFacet] = useState('');
-  const [ratingFilter, setRatingFilter] = useState('');
-  const [markedOnly, setMarkedOnly] = useState(false);
-  const [usageFilter, setUsageFilter] = useState<UsageFilter>('');
-  const [artFilter, setArtFilter] = useState<ArtNeedFilter>('');
+  const [filters, setFilters] = useSessionState<ListingFilters>(
+    `cms.listing.filters.${category}`,
+    DEFAULT_LISTING_FILTERS,
+  );
+  const { term, facet, ratingFilter, markedOnly, usageFilter, artFilter } = filters;
+  const patchFilters = (change: Partial<ListingFilters>) => setFilters(prev => ({ ...prev, ...change }));
+  const hasActiveFilters = Boolean(term || facet || ratingFilter || markedOnly || usageFilter || artFilter);
+
   const [clearing, setClearing] = useState(false);
   const [markStatus, setMarkStatus] = useState('');
 
-  // People curation state (multi-select merge + guarded retire)
+  // People curation state (multi-select merge + batch guarded retire)
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
-  const [retireId, setRetireId] = useState<string | null>(null);
+  const [retireIds, setRetireIds] = useState<string[]>([]);
   const [retiredModalOpen, setRetiredModalOpen] = useState(false);
   const [curationStatus, setCurationStatus] = useState('');
 
   useEffect(() => {
-    setTerm('');
-    setFacet('');
-    setRatingFilter('');
-    setMarkedOnly(false);
-    setUsageFilter('');
-    setArtFilter('');
     setMarkStatus('');
     setSelectedIds([]);
     setCompareOpen(false);
-    setRetireId(null);
+    setRetireIds([]);
     setCurationStatus('');
   }, [category]);
 
@@ -226,10 +241,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <button
             type="button"
             class={`stat-pill${usageFilter === '' && artFilter === '' ? ' active' : ''}`}
-            onClick={() => {
-              setUsageFilter('');
-              setArtFilter('');
-            }}
+            onClick={() => patchFilters({ usageFilter: '', artFilter: '' })}
           >
             <strong>{peopleStats.total}</strong>
             <span>All people</span>
@@ -237,7 +249,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <button
             type="button"
             class={`stat-pill${usageFilter === 'cast' ? ' active' : ''}`}
-            onClick={() => setUsageFilter(usageFilter === 'cast' ? '' : 'cast')}
+            onClick={() => patchFilters({ usageFilter: usageFilter === 'cast' ? '' : 'cast' })}
           >
             <strong>{peopleStats.cast}</strong>
             <span>Used by Cast</span>
@@ -245,7 +257,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <button
             type="button"
             class={`stat-pill${usageFilter === 'spawner' ? ' active' : ''}`}
-            onClick={() => setUsageFilter(usageFilter === 'spawner' ? '' : 'spawner')}
+            onClick={() => patchFilters({ usageFilter: usageFilter === 'spawner' ? '' : 'spawner' })}
           >
             <strong>{peopleStats.spawner}</strong>
             <span>Used by Spawners</span>
@@ -253,7 +265,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <button
             type="button"
             class={`stat-pill${usageFilter === 'unused' ? ' active' : ''}`}
-            onClick={() => setUsageFilter(usageFilter === 'unused' ? '' : 'unused')}
+            onClick={() => patchFilters({ usageFilter: usageFilter === 'unused' ? '' : 'unused' })}
           >
             <strong>{peopleStats.unused}</strong>
             <span>Unused in pack</span>
@@ -261,7 +273,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <button
             type="button"
             class={`stat-pill${artFilter === 'needs-concept' ? ' active' : ''}`}
-            onClick={() => setArtFilter(artFilter === 'needs-concept' ? '' : 'needs-concept')}
+            onClick={() => patchFilters({ artFilter: artFilter === 'needs-concept' ? '' : 'needs-concept' })}
           >
             <strong>{peopleStats.needsConcept}</strong>
             <span>Needs concept art</span>
@@ -269,7 +281,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <button
             type="button"
             class={`stat-pill${artFilter === 'has-concept' ? ' active' : ''}`}
-            onClick={() => setArtFilter(artFilter === 'has-concept' ? '' : 'has-concept')}
+            onClick={() => patchFilters({ artFilter: artFilter === 'has-concept' ? '' : 'has-concept' })}
           >
             <strong>{peopleStats.hasConcept}</strong>
             <span>Concept approved</span>
@@ -304,11 +316,9 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
               >
                 Compare &amp; merge ({selectedIds.length})
               </button>
-              {selectedIds.length === 1 ? (
-                <button type="button" class="danger" onClick={() => setRetireId(selectedIds[0])}>
-                  Retire {selectedIds[0]}…
-                </button>
-              ) : null}
+              <button type="button" class="danger" onClick={() => setRetireIds([...selectedIds])}>
+                {selectedIds.length === 1 ? `Retire ${selectedIds[0]}…` : `Retire selected (${selectedIds.length})…`}
+              </button>
               <button type="button" onClick={() => setSelectedIds([])}>
                 Clear selection
               </button>
@@ -325,7 +335,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
             id="filter"
             value={term}
             placeholder="ID, name, or description"
-            onInput={event => setTerm((event.currentTarget as HTMLInputElement).value)}
+            onInput={event => patchFilters({ term: (event.currentTarget as HTMLInputElement).value })}
           />
         </label>
         {kinds.length > 1 ? (
@@ -334,7 +344,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
             <select
               id="facet"
               value={facet}
-              onChange={event => setFacet((event.currentTarget as HTMLSelectElement).value)}
+              onChange={event => patchFilters({ facet: (event.currentTarget as HTMLSelectElement).value })}
             >
               <option value="">All</option>
               {kinds.map(value => (
@@ -352,7 +362,9 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
               <select
                 id="usage-filter"
                 value={usageFilter}
-                onChange={event => setUsageFilter((event.currentTarget as HTMLSelectElement).value as UsageFilter)}
+                onChange={event =>
+                  patchFilters({ usageFilter: (event.currentTarget as HTMLSelectElement).value as UsageFilter })
+                }
               >
                 <option value="">All usage</option>
                 <option value="cast">Used by named Cast</option>
@@ -366,7 +378,9 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
               <select
                 id="art-filter"
                 value={artFilter}
-                onChange={event => setArtFilter((event.currentTarget as HTMLSelectElement).value as ArtNeedFilter)}
+                onChange={event =>
+                  patchFilters({ artFilter: (event.currentTarget as HTMLSelectElement).value as ArtNeedFilter })
+                }
               >
                 <option value="">All art states</option>
                 <option value="needs-concept">Needs concept art</option>
@@ -382,7 +396,7 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
           <select
             id="rating-filter"
             value={ratingFilter}
-            onChange={event => setRatingFilter((event.currentTarget as HTMLSelectElement).value)}
+            onChange={event => patchFilters({ ratingFilter: (event.currentTarget as HTMLSelectElement).value })}
           >
             <option value="">All ratings</option>
             <option value="good">Good</option>
@@ -396,10 +410,15 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
             type="checkbox"
             id="marked-filter"
             checked={markedOnly}
-            onChange={event => setMarkedOnly((event.currentTarget as HTMLInputElement).checked)}
+            onChange={event => patchFilters({ markedOnly: (event.currentTarget as HTMLInputElement).checked })}
           />{' '}
           Marked only
         </label>
+        {hasActiveFilters ? (
+          <button type="button" onClick={() => setFilters(DEFAULT_LISTING_FILTERS)}>
+            Reset filters
+          </button>
+        ) : null}
         <output id="results" aria-live="polite">
           {matching.length} {matching.length === 1 ? 'record' : 'records'}
         </output>
@@ -449,13 +468,16 @@ export function AssetListingPage({ category }: { category: AssetCategory | 'pipe
             }}
           />
           <RetireNpcModal
-            open={retireId !== null}
-            npcId={retireId}
-            onClose={() => setRetireId(null)}
-            onRetired={retiredId => {
-              setRetireId(null);
-              setSelectedIds(prev => prev.filter(id => id !== retiredId));
-              setCurationStatus(`Retired ${retiredId}.`);
+            open={retireIds.length > 0}
+            npcIds={retireIds}
+            onClose={() => setRetireIds([])}
+            onRetired={doneIds => {
+              setRetireIds([]);
+              const doneSet = new Set(doneIds);
+              setSelectedIds(prev => prev.filter(id => !doneSet.has(id)));
+              setCurationStatus(
+                doneIds.length === 1 ? `Retired ${doneIds[0]}.` : `Retired ${doneIds.length} records (${doneIds.join(', ')}).`,
+              );
             }}
           />
           <RetiredPeopleModal open={retiredModalOpen} onClose={() => setRetiredModalOpen(false)} />

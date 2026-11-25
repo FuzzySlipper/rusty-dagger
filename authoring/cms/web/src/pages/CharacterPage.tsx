@@ -536,7 +536,7 @@ export function CharacterPage({ id }: { id: string }) {
           />
           <RetireNpcModal
             open={retireOpen}
-            npcId={subject.id}
+            npcIds={retireOpen ? [subject.id] : []}
             onClose={() => setRetireOpen(false)}
             onRetired={() => {
               setRetireOpen(false);

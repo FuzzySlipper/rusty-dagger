@@ -11,8 +11,23 @@ import { ArtDataCard, ArtDataChip } from '../components/ArtDataLink';
 import { DirtyBar, FieldRow, ValidationSummary } from '../components/FormControls';
 import { VisualPickerModal } from '../components/VisualPickerModal';
 import { Breadcrumb, Chip, Empty, FactList, PageHeading, SpritePreview } from '../components/ui';
+import { useSessionState } from '../hooks/useSessionState';
 
 type ArtFilter = '' | 'needs-concept' | 'needs-final' | 'shared-visual' | 'has-concept';
+
+interface CastFilters {
+  query: string;
+  artFilter: ArtFilter;
+  raceFilter: string;
+  harmFilter: string;
+}
+
+const DEFAULT_CAST_FILTERS: CastFilters = {
+  query: '',
+  artFilter: '',
+  raceFilter: '',
+  harmFilter: '',
+};
 
 export function CastPage({ id }: { id?: string }) {
   if (id) return <CastDetailView id={id} />;
@@ -23,10 +38,10 @@ function CastBrowserView() {
   const [data, setData] = useState<PeoplePackOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [artFilter, setArtFilter] = useState<ArtFilter>('');
-  const [raceFilter, setRaceFilter] = useState('');
-  const [harmFilter, setHarmFilter] = useState('');
+  const [filters, setFilters] = useSessionState<CastFilters>('cms.cast.filters', DEFAULT_CAST_FILTERS);
+  const { query, artFilter, raceFilter, harmFilter } = filters;
+  const patchFilters = (change: Partial<CastFilters>) => setFilters(prev => ({ ...prev, ...change }));
+  const hasFilters = Boolean(query || artFilter || raceFilter || harmFilter);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,7 +121,7 @@ function CastBrowserView() {
         <button
           type="button"
           class={`stat-pill${artFilter === '' ? ' active' : ''}`}
-          onClick={() => setArtFilter('')}
+          onClick={() => patchFilters({ artFilter: '' })}
         >
           <strong>{data.counts.cast}</strong>
           <span>Named cast</span>
@@ -114,7 +129,7 @@ function CastBrowserView() {
         <button
           type="button"
           class={`stat-pill${artFilter === 'needs-concept' ? ' active' : ''}`}
-          onClick={() => setArtFilter(artFilter === 'needs-concept' ? '' : 'needs-concept')}
+          onClick={() => patchFilters({ artFilter: artFilter === 'needs-concept' ? '' : 'needs-concept' })}
         >
           <strong>{data.counts.castNeedingConceptArt}</strong>
           <span>Need concept art</span>
@@ -122,7 +137,7 @@ function CastBrowserView() {
         <button
           type="button"
           class={`stat-pill${artFilter === 'needs-final' ? ' active' : ''}`}
-          onClick={() => setArtFilter(artFilter === 'needs-final' ? '' : 'needs-final')}
+          onClick={() => patchFilters({ artFilter: artFilter === 'needs-final' ? '' : 'needs-final' })}
         >
           <strong>{data.counts.castNeedingFinalArt}</strong>
           <span>Need final asset</span>
@@ -130,7 +145,7 @@ function CastBrowserView() {
         <button
           type="button"
           class={`stat-pill${artFilter === 'shared-visual' ? ' active' : ''}`}
-          onClick={() => setArtFilter(artFilter === 'shared-visual' ? '' : 'shared-visual')}
+          onClick={() => patchFilters({ artFilter: artFilter === 'shared-visual' ? '' : 'shared-visual' })}
         >
           <strong>{data.counts.castSharingVisual}</strong>
           <span>Sharing sprite</span>
@@ -144,14 +159,14 @@ function CastBrowserView() {
             type="search"
             value={query}
             placeholder="Name, ID, faction, block, npc-###"
-            onInput={event => setQuery((event.currentTarget as HTMLInputElement).value)}
+            onInput={event => patchFilters({ query: (event.currentTarget as HTMLInputElement).value })}
           />
         </label>
         <label>
           Art status
           <select
             value={artFilter}
-            onChange={event => setArtFilter((event.currentTarget as HTMLSelectElement).value as ArtFilter)}
+            onChange={event => patchFilters({ artFilter: (event.currentTarget as HTMLSelectElement).value as ArtFilter })}
           >
             <option value="">All cast</option>
             <option value="needs-concept">Needs concept art</option>
@@ -162,7 +177,10 @@ function CastBrowserView() {
         </label>
         <label>
           Race
-          <select value={raceFilter} onChange={event => setRaceFilter((event.currentTarget as HTMLSelectElement).value)}>
+          <select
+            value={raceFilter}
+            onChange={event => patchFilters({ raceFilter: (event.currentTarget as HTMLSelectElement).value })}
+          >
             <option value="">All races</option>
             {races.map(value => (
               <option key={value} value={value}>
@@ -173,7 +191,10 @@ function CastBrowserView() {
         </label>
         <label>
           Harm policy
-          <select value={harmFilter} onChange={event => setHarmFilter((event.currentTarget as HTMLSelectElement).value)}>
+          <select
+            value={harmFilter}
+            onChange={event => patchFilters({ harmFilter: (event.currentTarget as HTMLSelectElement).value })}
+          >
             <option value="">All policies</option>
             {data.enums.harms.map(h => (
               <option key={h} value={h}>
@@ -182,6 +203,11 @@ function CastBrowserView() {
             ))}
           </select>
         </label>
+        {hasFilters ? (
+          <button type="button" onClick={() => setFilters(DEFAULT_CAST_FILTERS)}>
+            Reset filters
+          </button>
+        ) : null}
         <output>
           {filtered.length} of {data.cast.length} individuals
         </output>

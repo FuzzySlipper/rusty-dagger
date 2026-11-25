@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'preact/hooks';
-import { ASSET_LABELS, ASSET_PAGES } from './types';
+import { useCallback, useEffect, useState } from 'preact/hooks';
+import { apiRequest } from './api';
+import { ASSET_LABELS, ASSET_PAGES, type ValidationIssue } from './types';
 import { activeSection, parseHash, searchUrl, type Route } from './router';
 import { useApp } from './state';
+import { Modal } from './components/Modal';
 import { Empty, PageHeading } from './components/ui';
 import { OverviewPage } from './pages/OverviewPage';
 import { AssetListingPage } from './pages/AssetListingPage';
@@ -14,6 +16,17 @@ import { SearchPage } from './pages/SearchPage';
 import { CastPage } from './pages/CastPage';
 import { SpawnersPage } from './pages/SpawnersPage';
 import { BlockSlotsPage } from './pages/BlockSlotsPage';
+
+interface WorkspaceGitStatus {
+  gitAvailable: boolean;
+  modified: Array<{ status: string; path: string }>;
+}
+
+interface PackValidationReport {
+  valid: boolean;
+  issues: ValidationIssue[];
+  counts: { cast: number; spawners: number; slots: number };
+}
 
 function renderRoute(route: Route) {
   switch (route.page) {
@@ -48,6 +61,25 @@ export function App() {
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
+  const [gitStatus, setGitStatus] = useState<WorkspaceGitStatus | null>(null);
+  const [gitModalOpen, setGitModalOpen] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validation, setValidation] = useState<PackValidationReport | null>(null);
+  const [validationOpen, setValidationOpen] = useState(false);
+
+  const loadGitStatus = useCallback(async () => {
+    try {
+      const status = await apiRequest<WorkspaceGitStatus>('/api/workspace/status');
+      setGitStatus(status);
+    } catch {
+      setGitStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadGitStatus();
+  }, [loadGitStatus, route.page]);
+
   useEffect(() => {
     function onHashChange() {
       setRoute(parseHash(window.location.hash));
@@ -70,11 +102,31 @@ export function App() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      await refreshCatalog();
+      await Promise.all([refreshCatalog(), loadGitStatus()]);
     } finally {
       setRefreshing(false);
     }
   }
+
+  async function handleValidatePack() {
+    setValidating(true);
+    try {
+      const report = await apiRequest<PackValidationReport>('/api/people-pack/validate');
+      setValidation(report);
+      if (!report.valid) setValidationOpen(true);
+    } catch (err) {
+      setValidation({
+        valid: false,
+        issues: [{ field: 'pack', message: err instanceof Error ? err.message : String(err) }],
+        counts: { cast: 0, spawners: 0, slots: 0 },
+      });
+      setValidationOpen(true);
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  const modifiedCount = gitStatus?.modified.length ?? 0;
 
   return (
     <div class="shell">
@@ -125,28 +177,55 @@ export function App() {
         <header class="topbar">
           <form id="asset-search" role="search" onSubmit={submitSearch}>
             <label class="visually-hidden" for="query">
-              Find any asset
+              Find any asset or game data
             </label>
             <input
               id="query"
               name="query"
               type="search"
               autocomplete="off"
-              placeholder="Find any asset by ID or name"
+              placeholder="Find assets, cast, or spawners by ID or name"
               value={query}
               onInput={event => setQuery((event.currentTarget as HTMLInputElement).value)}
             />
             <button type="submit">Search</button>
           </form>
-          <button
-            type="button"
-            class="topbar-refresh"
-            disabled={refreshing || loading}
-            onClick={() => void handleRefresh()}
-            title="Reload catalog data from disk"
-          >
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
+          <div class="actions topbar-tools">
+            {modifiedCount > 0 ? (
+              <button
+                type="button"
+                class="topbar-pill dirty"
+                onClick={() => setGitModalOpen(true)}
+                title="Uncommitted edits in CMS-managed pack/ledger files"
+              >
+                {modifiedCount} edited {modifiedCount === 1 ? 'file' : 'files'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              class={`topbar-pill${validation ? (validation.valid ? ' valid' : ' invalid') : ''}`}
+              disabled={validating}
+              onClick={() => (validation && !validation.valid ? setValidationOpen(true) : void handleValidatePack())}
+              title="Validate daggerfall.people against schema invariants"
+            >
+              {validating
+                ? 'Validating…'
+                : validation
+                  ? validation.valid
+                    ? 'Pack valid'
+                    : `${validation.issues.length} pack issue${validation.issues.length === 1 ? '' : 's'}`
+                  : 'Validate pack'}
+            </button>
+            <button
+              type="button"
+              class="topbar-refresh"
+              disabled={refreshing || loading}
+              onClick={() => void handleRefresh()}
+              title="Reload catalog data from disk"
+            >
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
         </header>
         <div id="content" aria-live="polite">
           {loading && !catalog ? (
@@ -161,6 +240,68 @@ export function App() {
           )}
         </div>
       </main>
+
+      <Modal
+        open={gitModalOpen}
+        title="Uncommitted CMS changes"
+        subtitle="Git-tracked authoring files modified in this working copy."
+        onClose={() => setGitModalOpen(false)}
+        headerActions={
+          <button type="button" onClick={() => void loadGitStatus()}>
+            Re-check
+          </button>
+        }
+      >
+        <div class="curation-modal-body">
+          {gitStatus?.modified.length ? (
+            <ul class="retired-list">
+              {gitStatus.modified.map(item => (
+                <li key={item.path}>
+                  <code>{item.path}</code>
+                  <span class="chip needs-check">{item.status}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty>All CMS-managed pack and ledger files are clean in git.</Empty>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
+        open={validationOpen}
+        title="daggerfall.people validation"
+        subtitle={
+          validation
+            ? `${validation.counts.cast} cast · ${validation.counts.spawners} spawners · ${validation.counts.slots.toLocaleString()} slots`
+            : undefined
+        }
+        onClose={() => setValidationOpen(false)}
+        headerActions={
+          <button type="button" disabled={validating} onClick={() => void handleValidatePack()}>
+            {validating ? 'Validating…' : 'Re-validate'}
+          </button>
+        }
+      >
+        <div class="curation-modal-body">
+          {validation?.valid ? (
+            <div class="curation-safe">
+              <strong>Pack is valid.</strong> Zero schema or cross-reference issues found.
+            </div>
+          ) : validation ? (
+            <div class="validation-summary" role="alert">
+              <strong>Found {validation.issues.length} issue(s):</strong>
+              <ul>
+                {validation.issues.map((issue, idx) => (
+                  <li key={`${issue.field}-${idx}`}>
+                    <code>{issue.field}</code>: {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 }
