@@ -1,9 +1,13 @@
 using Rusty.Engine;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -140,6 +144,107 @@ public sealed class DaggerfallNpcRegistryTests
         npcs.SetPresence(id, DaggerfallNpcPresence.Hidden);
         Assert.False(npcs.IsGameplayActive(id));
         Assert.True(npcs.IsGameplayActive(DaggerfallActorIdentity.PlayerEntityId));
+    }
+
+    [Fact]
+    public void Live_townspeople_project_from_EntityStore_ActorPersonComponent_with_zero_untouched_ActorLedger_entries()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile charing = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, charing);
+        SpatialFake spatial = SpatialFake.Create(charing.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, charing, DaggerfallTuning.Defaults)
+        {
+            Profiles = new([charing]),
+        };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        session.AdvanceElapsedTime(8 * 60 * 60);
+
+        DaggerfallNpc[] liveWalkers = [.. session.State.Npcs.All.Where(npc =>
+            npc.Kind == DaggerfallNpcKind.Civilian
+            && npc.Profile == charing.ProfileKey
+            && DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId))];
+        Assert.NotEmpty(liveWalkers);
+
+        // Every live townsperson carries ActorPersonComponent directly on EntityStore, and untouched baselines keep 0 ledger entries.
+        Assert.All(liveWalkers, walker =>
+        {
+            Assert.True(session.State.Actors.TryGet(walker.DurableId, out ActorState? actor));
+            Assert.True(actor!.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person));
+            Assert.Equal(walker.DurableId, person!.Snapshot.DurableId);
+            Assert.Equal(charing.ProfileKey, person.Snapshot.Profile);
+        });
+        Assert.Equal(0, session.State.ActorLedger.Count);
+
+        // Mutating display name on one live townsperson updates ActorPersonComponent immediately and saves ONLY that one actor.
+        long namedId = liveWalkers[0].DurableId;
+        session.State.Npcs.SetDisplayName(namedId, "Talia the Weaver");
+        Assert.Equal("Talia the Weaver", session.State.Actors.Get(namedId).Actor.Get<ActorPersonComponent>().Snapshot.DisplayName);
+        Assert.Equal("Talia the Weaver", session.State.Npcs.Require(namedId).DisplayName);
+
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
+        ActorLedgerEntry onlySaved = Assert.Single(saved.ActorLedger);
+        Assert.Equal(namedId, onlySaved.DurableId);
+        Assert.Equal("Talia the Weaver", onlySaved.Social?.DisplayNameOverride);
+    }
+
+    [Fact]
+    public void Minted_npc_live_overlay_flushes_to_ActorLedger_on_site_unload_and_survives_save_reload_and_return()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile hold = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfiles profiles = new([hold, castle]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, hold);
+        PopulateContent(content, castle);
+        SpatialFake spatial = SpatialFake.Create(hold.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, hold, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        DaggerfallSiteRecord site = definitions.Locations.Records.Single(record => record.Id == hold.Site!.Value);
+        (int archive, int record) = hold.BillboardSprites.Keys.First();
+        long mintedId = session.State.Npcs.RegisterCivilian(
+            new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
+            new DaggerfallNpcAppearance("Breton", "Female", archive, record, 17, 0), "civilian", ["talk"]);
+        session.State.Npcs.SetDisplayName(mintedId, "Sera the Traveller");
+        session.Civilians.Materialize(mintedId, new ActorPose(hold.Project.PlayerPosition ?? default, 0f));
+        session.State.Npcs.Bind(mintedId, hold.ProfileKey);
+
+        ActorState live = session.State.Actors.Get(mintedId);
+        Assert.True(live.Actor.Has<ActorPersonComponent>());
+        ActorOverlayComponent overlay = live.Actor.Get<ActorOverlayComponent>();
+        overlay.Met = true;
+        overlay.IsMuted = true;
+
+        // Leaving site unloads EntityStore entity, flushes overlay metadata into ActorLedger, and keeps State.Npcs coherent.
+        Assert.True(session.TryTransitionTo(castle.ProfileKey));
+        Assert.False(session.State.Actors.TryGet(mintedId, out _));
+        Assert.Equal("Sera the Traveller", session.State.Npcs.Require(mintedId).DisplayName);
+
+        RulesetSavePayload savedAway = session.CaptureSave();
+        ContentFake reloadContent = new(releases);
+        PopulateContent(reloadContent, hold);
+        PopulateContent(reloadContent, castle);
+        SpatialFake reloadSpatial = SpatialFake.Create(hold.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake reloadEngine = EngineContextFake.Create(reloadContent, reloadSpatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession restored = DaggerfallSession.Restore(reloadEngine.Context, composition, savedAway);
+        Assert.Equal("Sera the Traveller", restored.State.Npcs.Require(mintedId).DisplayName);
+        Assert.True(restored.TryTransitionTo(hold.ProfileKey));
+
+        ActorState returned = Assert.Single(restored.State.Actors.All, a => a.DurableId == mintedId);
+        Assert.Equal("Sera the Traveller", returned.Actor.Get<ActorPersonComponent>().Snapshot.DisplayName);
+        ActorOverlayComponent restoredOverlay = returned.Actor.Get<ActorOverlayComponent>();
+        Assert.True(restoredOverlay.Met);
+        Assert.True(restoredOverlay.IsMuted);
     }
 
     private static DaggerfallNpcRegistry Registry()

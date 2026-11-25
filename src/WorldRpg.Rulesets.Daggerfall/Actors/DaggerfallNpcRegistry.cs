@@ -1,8 +1,9 @@
 using Rusty.Engine;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
-using WorldRpg.Rulesets.Daggerfall.World;
-using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -62,33 +63,63 @@ public sealed record DaggerfallNpc(
 }
 
 /// <summary>
-/// Static NPC, questor and civilian identity with site binding: one durable identity per person
-/// that talk, damage, quests and saves all share. Statics and questors register under a
-/// site-stable key, so re-entering a site finds the same person. Source-authored population records
-/// also use their source placement key so repeated admission does not clone a live civilian; callers
-/// that need an incidental passer-by can continue using the fresh-identity overload. Presence changes
-/// hide, remove or relocate without duplicating the actor; the allocator that mints civilian identities
-/// is wired once by the session that owns it.
+/// Live person metadata attached directly to materialized person entities in <c>EntityStore</c>.
+/// Eliminates any separate runtime NPC dictionary beside <c>EntityStore</c> and <see cref="DaggerfallActorLedger"/>.
+/// </summary>
+internal sealed class ActorPersonComponent(DaggerfallNpc snapshot)
+{
+    internal DaggerfallNpc Snapshot { get; set; } = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
+}
+
+/// <summary>
+/// Thin stateless view and person-registration facade over <c>EntityStore</c> (<see cref="ActorPersonComponent"/>)
+/// and <see cref="DaggerfallActorLedger"/>. Holds zero duplicated mutable NPC dictionaries: live active-scene
+/// people live on their Engine entities in <c>EntityStore</c>, while off-scene, unmaterialized, detached,
+/// travelling, and removed people live in <see cref="DaggerfallActorLedger"/>.
 /// </summary>
 public sealed class DaggerfallNpcRegistry
 {
+    private readonly ActorsState? _actors;
+    private readonly DaggerfallActorLedger _ledger;
     private Func<DaggerfallNpc, string>? _name;
+    private Func<long, bool> _questUnavailable = _ => false;
+
+    /// <summary>Standalone constructor for unit tests without a session <c>EntityStore</c>; backed by a local ledger.</summary>
+    public DaggerfallNpcRegistry() : this(null, new DaggerfallActorLedger()) { }
+
+    /// <summary>Session constructor projecting directly over the canonical <c>EntityStore</c> and <see cref="DaggerfallActorLedger"/>.</summary>
+    internal DaggerfallNpcRegistry(ActorsState? actors, DaggerfallActorLedger ledger)
+    {
+        _actors = actors;
+        _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
+    }
+
     internal void BindNames(Func<DaggerfallNpc, string> name)
     {
         _name = name;
-        foreach (long id in _npcs.Keys.ToArray()) Name(id);
-    }
-    private void Name(long id)
-    {
-        DaggerfallNpc npc = _npcs[id];
-        if (npc.DisplayName is null && _name is not null) _npcs[id] = npc with { DisplayName = _name(npc) };
+        if (_actors is not null)
+        {
+            foreach (ActorState actor in _actors.All)
+            {
+                if (actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person)
+                    && person.Snapshot.DisplayName is null)
+                {
+                    person.Snapshot = person.Snapshot with { DisplayName = name(person.Snapshot) };
+                }
+            }
+        }
+        foreach (ActorLedgerEntry entry in _ledger.All.ToArray())
+        {
+            if (entry.Social is { DisplayNameOverride: null } social
+                && FromLedgerEntry(entry) is { } npc)
+            {
+                string resolved = name(npc);
+                _ledger.Upsert(entry with { Social = social with { DisplayNameOverride = resolved } });
+            }
+        }
     }
 
-    private Func<long, bool> _questUnavailable = _ => false;
     internal void BindQuestPresence(Func<long, bool> unavailable) => _questUnavailable = unavailable;
-
-    private readonly Dictionary<long, DaggerfallNpc> _npcs = new();
-    private readonly Dictionary<string, long> _stable = new(StringComparer.Ordinal);
 
     /// <summary>The identity allocator the session wires once; civilians cannot mint without it.</summary>
     public DurableIdentityAllocator? Identities { get; set; }
@@ -100,26 +131,22 @@ public sealed class DaggerfallNpcRegistry
     public long RegisterStable(DaggerfallNpcKind kind, string stableKey, DaggerfallNpcSite site, DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services)
     {
         if (kind == DaggerfallNpcKind.Civilian)
-        {
             throw new ArgumentOutOfRangeException(nameof(kind), kind, "Civilians regenerate; they never hold a stable key.");
-        }
 
         ArgumentException.ThrowIfNullOrWhiteSpace(stableKey);
         ValidateSite(site);
         ValidateAppearance(appearance);
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentNullException.ThrowIfNull(services);
-        string key = StableIdentityKey(kind, site, stableKey);
-        if (_stable.TryGetValue(key, out long existing))
-        {
+        if (FindByStableKey(kind, site, stableKey) is long existing)
             return existing;
-        }
 
         DurableIdentityAllocator allocator = Identities ?? throw new InvalidOperationException("The NPC registry mints no identity before the session wires its allocator.");
         long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
-        _npcs.Add(durableId, new DaggerfallNpc(durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
-        _stable.Add(key, durableId);
-        Name(durableId);
+        DaggerfallNpc created = ApplyDefaultName(new DaggerfallNpc(
+            durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
+        ActorOrigin origin = ActorOrigin.MintedActor(DaggerfallActorKinds.StaticNpc, gender: appearance.Gender);
+        _ledger.Upsert(new ActorLedgerEntry(durableId, origin, Social: ActorSocialDiff.FromNpc(created)));
         return durableId;
     }
 
@@ -128,7 +155,8 @@ public sealed class DaggerfallNpcRegistry
     /// high-band <paramref name="durableId"/> without allocating from the monotonic identity ledger.
     /// </summary>
     internal long RegisterDeterministic(long durableId, DaggerfallNpcKind kind, string stableKey, DaggerfallNpcSite site,
-        DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services, string? displayName = null)
+        DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services, string? displayName = null,
+        DaggerfallWorldProfileKey? homeProfile = null)
     {
         if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
         ArgumentException.ThrowIfNullOrWhiteSpace(stableKey);
@@ -136,19 +164,42 @@ public sealed class DaggerfallNpcRegistry
         ValidateAppearance(appearance);
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentNullException.ThrowIfNull(services);
-        string key = StableIdentityKey(kind, site, stableKey);
-        if (_npcs.ContainsKey(durableId))
+
+        if (TryGetLivePerson(durableId, out ActorPersonComponent? livePerson))
         {
-            _stable.TryAdd(key, durableId);
-            if (!string.IsNullOrWhiteSpace(displayName)) SetDisplayName(durableId, displayName);
+            if (!string.IsNullOrWhiteSpace(displayName))
+                SetDisplayName(durableId, displayName);
             return durableId;
         }
-        _npcs.Add(durableId, new DaggerfallNpc(durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null)
+
+        if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+        {
+            if (existing.Social is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(displayName))
+                    SetDisplayName(durableId, displayName);
+                return durableId;
+            }
+            // Existing entry without Social (e.g., pre-visit ActorReferralDiff): hydrate baseline Social while preserving Referral/Location/etc.
+            string? resolvedName = !string.IsNullOrWhiteSpace(displayName)
+                ? displayName
+                : existing.Referral?.DisplayNameOverride;
+            DaggerfallNpc hydrated = ApplyDefaultName(new DaggerfallNpc(
+                durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null)
+            {
+                DisplayName = resolvedName,
+            });
+            _ledger.Upsert(existing with { Social = ActorSocialDiff.FromNpc(hydrated) });
+            return durableId;
+        }
+
+        DaggerfallNpc staged = ApplyDefaultName(new DaggerfallNpc(
+            durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null)
         {
             DisplayName = displayName,
         });
-        _stable[key] = durableId;
-        Name(durableId);
+        ActorOrigin origin = ResolveDeterministicOrigin(kind, stableKey, homeProfile, appearance.Gender);
+        _ledger.Upsert(new ActorLedgerEntry(durableId, origin, Social: ActorSocialDiff.FromNpc(staged)));
         return durableId;
     }
 
@@ -161,8 +212,10 @@ public sealed class DaggerfallNpcRegistry
         ArgumentNullException.ThrowIfNull(services);
         DurableIdentityAllocator allocator = Identities ?? throw new InvalidOperationException("The NPC registry mints no identity before the session wires its allocator.");
         long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
-        _npcs.Add(durableId, new DaggerfallNpc(durableId, DaggerfallNpcKind.Civilian, string.Empty, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
-        Name(durableId);
+        DaggerfallNpc created = ApplyDefaultName(new DaggerfallNpc(
+            durableId, DaggerfallNpcKind.Civilian, string.Empty, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
+        ActorOrigin origin = ActorOrigin.MintedActor(DaggerfallActorKinds.Civilian, gender: appearance.Gender);
+        _ledger.Upsert(new ActorLedgerEntry(durableId, origin, Social: ActorSocialDiff.FromNpc(created)));
         return durableId;
     }
 
@@ -178,14 +231,15 @@ public sealed class DaggerfallNpcRegistry
         ValidateAppearance(appearance);
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentNullException.ThrowIfNull(services);
-        string key = StableIdentityKey(DaggerfallNpcKind.Civilian, site, sourceKey);
-        if (_stable.TryGetValue(key, out long existing)) return existing;
+        if (FindByStableKey(DaggerfallNpcKind.Civilian, site, sourceKey) is long existing)
+            return existing;
 
         DurableIdentityAllocator allocator = Identities ?? throw new InvalidOperationException("The NPC registry mints no identity before the session wires its allocator.");
         long durableId = checked((long)allocator.Allocate(DurableIdentityKind.Actor).Value);
-        _npcs.Add(durableId, new DaggerfallNpc(durableId, DaggerfallNpcKind.Civilian, sourceKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
-        _stable.Add(key, durableId);
-        Name(durableId);
+        DaggerfallNpc created = ApplyDefaultName(new DaggerfallNpc(
+            durableId, DaggerfallNpcKind.Civilian, sourceKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null));
+        ActorOrigin origin = ActorOrigin.MintedActor(DaggerfallActorKinds.Civilian, gender: appearance.Gender);
+        _ledger.Upsert(new ActorLedgerEntry(durableId, origin, Social: ActorSocialDiff.FromNpc(created)));
         return durableId;
     }
 
@@ -202,47 +256,86 @@ public sealed class DaggerfallNpcRegistry
         ValidateAppearance(appearance);
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentNullException.ThrowIfNull(services);
-        _npcs[durableId] = npc with { Appearance = appearance, Role = role, Services = [.. services] };
+        Mutate(durableId, current => current with { Appearance = appearance, Role = role, Services = [.. services] }, updateLocation: null);
     }
 
     /// <summary>Reads one NPC by its durable identity.</summary>
     public DaggerfallNpc Require(long durableId) =>
-        _npcs.TryGetValue(durableId, out DaggerfallNpc? npc) ? npc : throw new InvalidOperationException($"No NPC answers durable identity {durableId}.");
+        TryGet(durableId, out DaggerfallNpc? npc)
+            ? npc
+            : throw new InvalidOperationException($"No NPC answers durable identity {durableId}.");
 
-    /// <summary>Reads one NPC by its durable identity, if the registry has them.</summary>
-    internal bool TryGet(long durableId, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out DaggerfallNpc? npc) => _npcs.TryGetValue(durableId, out npc);
+    /// <summary>Reads one NPC by its durable identity, preferring live <c>EntityStore</c> metadata and falling back to <see cref="DaggerfallActorLedger"/>.</summary>
+    internal bool TryGet(long durableId, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out DaggerfallNpc? npc)
+    {
+        if (TryGetLivePerson(durableId, out ActorPersonComponent? person))
+        {
+            npc = person.Snapshot;
+            return true;
+        }
+        if (_ledger.TryGet(durableId, out ActorLedgerEntry? entry) && entry is not null
+            && FromLedgerEntry(entry) is { } ledgerNpc)
+        {
+            npc = ledgerNpc;
+            return true;
+        }
+        npc = null;
+        return false;
+    }
 
-    internal bool IsStatic(long durableId) => _npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
-        && npc.Kind == DaggerfallNpcKind.Static;
+    internal bool IsStatic(long durableId) => TryGet(durableId, out DaggerfallNpc? npc) && npc.Kind == DaggerfallNpcKind.Static;
 
     /// <summary>
-    /// Reads the registry's presence for a live actor. Actors with no NPC entry are ordinary
+    /// Reads presence for a live or off-scene actor. Actors with no person record are ordinary
     /// authored or encounter actors and remain eligible; an admitted civilian becomes ineligible
     /// as soon as the population owner hides it for night or unload.
     /// </summary>
     internal bool IsGameplayActive(long durableId) =>
-        (!_npcs.TryGetValue(durableId, out DaggerfallNpc? npc)
-        || npc.Presence == DaggerfallNpcPresence.Active) && !_questUnavailable(durableId);
+        (!TryGet(durableId, out DaggerfallNpc? npc) || npc.Presence == DaggerfallNpcPresence.Active)
+        && !_questUnavailable(durableId);
 
-    /// <summary>Every registered NPC.</summary>
-    public IReadOnlyList<DaggerfallNpc> All => [.. _npcs.Values.OrderBy(npc => npc.DurableId)];
+    /// <summary>Every known NPC projected from live <c>EntityStore</c> people and <see cref="DaggerfallActorLedger"/> social records.</summary>
+    public IReadOnlyList<DaggerfallNpc> All
+    {
+        get
+        {
+            Dictionary<long, DaggerfallNpc> merged = [];
+            if (_actors is not null)
+            {
+                foreach (ActorState actor in _actors.All)
+                {
+                    if (actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person))
+                        merged[actor.DurableId] = person.Snapshot;
+                }
+            }
+            foreach (ActorLedgerEntry entry in _ledger.All)
+            {
+                if (merged.ContainsKey(entry.DurableId)) continue;
+                if (FromLedgerEntry(entry) is { } ledgerNpc)
+                    merged[entry.DurableId] = ledgerNpc;
+            }
+            return [.. merged.Values.OrderBy(npc => npc.DurableId)];
+        }
+    }
 
     /// <summary>Retains the selected display name on the canonical NPC identity.</summary>
     public void SetDisplayName(long durableId, string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        _npcs[durableId] = Require(durableId) with { DisplayName = name };
+        Mutate(durableId, current => current with { DisplayName = name }, updateLocation: null);
     }
 
     /// <summary>Hides or reveals one NPC without duplicating it.</summary>
     public void SetPresence(long durableId, DaggerfallNpcPresence presence)
     {
         if (!Enum.IsDefined(presence))
-        {
             throw new ArgumentOutOfRangeException(nameof(presence), presence, "An NPC presence names a state the contract does not declare.");
-        }
 
-        _npcs[durableId] = Require(durableId) with { Presence = presence };
+        Mutate(durableId,
+            current => current with { Presence = presence },
+            updateLocation: existing => presence == DaggerfallNpcPresence.Removed
+                ? ActorLocationOverride.Removed
+                : existing.Location?.Kind == ActorLocationKind.Removed ? null : existing.Location);
     }
 
     /// <summary>
@@ -255,65 +348,315 @@ public sealed class DaggerfallNpcRegistry
         profile.Validate();
         if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
             throw new ArgumentException("NPC profile position must be finite.");
-        _npcs[durableId] = Require(durableId) with { Profile = profile, X = position.X, Y = position.Y, Z = position.Z,
-            Presence = DaggerfallNpcPresence.Active };
+
+        DaggerfallNpc updated = Require(durableId) with
+        {
+            Profile = profile,
+            X = position.X,
+            Y = position.Y,
+            Z = position.Z,
+            Presence = DaggerfallNpcPresence.Active,
+        };
+        if (TryGetLivePerson(durableId, out ActorPersonComponent? person))
+            person.Snapshot = updated;
+
+        ActorPoseOverride pose = new(position.X, position.Y, position.Z, 0f);
+        if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+        {
+            bool detached = existing.Location?.Detached == true;
+            _ledger.Upsert(existing with
+            {
+                Social = ActorSocialDiff.FromNpc(updated, existing.Social),
+                Location = ActorLocationOverride.AtSite(profile, pose, detached),
+            });
+        }
+        else
+        {
+            ActorOrigin origin = ResolveOriginForActor(durableId, updated, profile);
+            _ledger.Upsert(new ActorLedgerEntry(
+                durableId,
+                origin,
+                Social: ActorSocialDiff.FromNpc(updated),
+                Location: ActorLocationOverride.AtSite(profile, pose, detached: false)));
+        }
     }
 
     /// <summary>
     /// Binds one NPC to the physical profile where its live actor stands. The live actor's Transform
-    /// is the only pose owner, so any detached registry pose is dropped.
+    /// is the only pose owner, so any detached registry pose is dropped. Untouched deterministic staging
+    /// entries prune from <see cref="DaggerfallActorLedger"/> once live in <c>EntityStore</c>.
     /// </summary>
     internal void Bind(long durableId, DaggerfallWorldProfileKey profile)
     {
         profile.Validate();
-        _npcs[durableId] = Require(durableId) with { Profile = profile, X = null, Y = null, Z = null,
-            Presence = DaggerfallNpcPresence.Active };
+        DaggerfallNpc updated = Require(durableId) with
+        {
+            Profile = profile,
+            X = null,
+            Y = null,
+            Z = null,
+            Presence = DaggerfallNpcPresence.Active,
+        };
+        bool live = TryGetLivePerson(durableId, out ActorPersonComponent? person);
+        if (live)
+            person!.Snapshot = updated;
+
+        if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+        {
+            if (live && IsUntouchedDeterministicStagingEntry(existing, durableId, profile))
+            {
+                _ledger.Remove(durableId);
+                return;
+            }
+            ActorLocationOverride? nextLocation = existing.Location switch
+            {
+                { Kind: ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.Removed } keep => keep,
+                { Kind: ActorLocationKind.AtSite } atSite => atSite with { Profile = DaggerfallWorldProfileKeySave.Capture(profile), Pose = null },
+                null when !live || existing.Origin.Kind == ActorOriginKind.Minted => ActorLocationOverride.AtSite(profile, pose: null, detached: false),
+                _ => existing.Location,
+            };
+            _ledger.Upsert(existing with
+            {
+                Social = ActorSocialDiff.FromNpc(updated, existing.Social),
+                Location = nextLocation,
+            });
+        }
+        else if (!live)
+        {
+            ActorOrigin origin = ResolveOriginForActor(durableId, updated, profile);
+            _ledger.Upsert(new ActorLedgerEntry(
+                durableId,
+                origin,
+                Social: ActorSocialDiff.FromNpc(updated),
+                Location: ActorLocationOverride.AtSite(profile, pose: null, detached: false)));
+        }
     }
 
     /// <summary>Drops the detached pose once a live actor owns this NPC's pose.</summary>
     internal void ReleasePose(long durableId)
     {
-        if (!_npcs.TryGetValue(durableId, out DaggerfallNpc? npc) || npc.X is null && npc.Y is null && npc.Z is null) return;
-        _npcs[durableId] = npc with { X = null, Y = null, Z = null };
+        if (TryGetLivePerson(durableId, out ActorPersonComponent? person)
+            && (person.Snapshot.X is not null || person.Snapshot.Y is not null || person.Snapshot.Z is not null))
+        {
+            person.Snapshot = person.Snapshot with { X = null, Y = null, Z = null };
+        }
+        if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+        {
+            if (_actors is not null && _actors.TryGet(durableId, out ActorState? liveActor)
+                && liveActor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? livePerson)
+                && livePerson.Snapshot.Profile is { } liveProfile
+                && IsUntouchedDeterministicStagingEntry(existing, durableId, liveProfile))
+            {
+                _ledger.Remove(durableId);
+                return;
+            }
+            if (existing.Location is { Kind: ActorLocationKind.AtSite, Pose: not null } loc)
+                _ledger.Upsert(existing with { Location = loc with { Pose = null } });
+        }
     }
 
-    /// <summary>Removes a failed admission's current placement while retaining its stable identity.</summary>
-    internal void Unplace(long durableId) =>
-        _npcs[durableId] = Require(durableId) with { Profile = null, X = null, Y = null, Z = null };
+    /// <summary>Removes a failed admission's current placement while retaining its stable identity in the ledger.</summary>
+    internal void Unplace(long durableId)
+    {
+        DaggerfallNpc updated = Require(durableId) with { Profile = null, X = null, Y = null, Z = null };
+        if (TryGetLivePerson(durableId, out ActorPersonComponent? person))
+            person.Snapshot = updated;
+
+        if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+        {
+            _ledger.Upsert(existing with
+            {
+                Social = ActorSocialDiff.FromNpc(updated, existing.Social),
+                Location = null,
+            });
+        }
+        else
+        {
+            ActorOrigin origin = ResolveOriginForActor(durableId, updated, fallbackProfile: null);
+            _ledger.Upsert(new ActorLedgerEntry(durableId, origin, Social: ActorSocialDiff.FromNpc(updated), Location: null));
+        }
+    }
 
     internal IReadOnlyList<DaggerfallNpc> Capture() => All;
 
-    /// <summary>Restores NPCs; refuses a record the registry would not accept live.</summary>
+    /// <summary>Restores NPCs into the backing ledger; refuses a record the contract would not accept live.</summary>
     internal void Restore(IEnumerable<DaggerfallNpc> npcs)
     {
         ArgumentNullException.ThrowIfNull(npcs);
-        _npcs.Clear();
-        _stable.Clear();
+        _ledger.Clear();
+        HashSet<string> seenStable = new(StringComparer.Ordinal);
         foreach (DaggerfallNpc npc in npcs)
         {
             ArgumentNullException.ThrowIfNull(npc);
             ValidateSite(npc.Site);
             ValidateAppearance(npc.Appearance);
             npc.Profile?.Validate();
-            // A profile binding without a pose is valid: the NPC's live or site-retained actor owns it.
             if ((npc.X is null) != (npc.Y is null) || (npc.X is null) != (npc.Z is null)
                 || npc.X is float x && !float.IsFinite(x) || npc.Y is float y && !float.IsFinite(y) || npc.Z is float z && !float.IsFinite(z))
                 throw new ArgumentException($"NPC {npc.DurableId} has invalid current profile coordinates.");
             if (npc.DisplayName is not null) ArgumentException.ThrowIfNullOrWhiteSpace(npc.DisplayName);
             if (!Enum.IsDefined(npc.Kind) || !Enum.IsDefined(npc.Presence))
-            {
                 throw new ArgumentOutOfRangeException(nameof(npcs), npc.Kind, "A saved NPC names a kind or presence the contract does not declare.");
-            }
 
             if (npc.Kind != DaggerfallNpcKind.Civilian || !string.IsNullOrWhiteSpace(npc.StableKey))
             {
                 ArgumentException.ThrowIfNullOrWhiteSpace(npc.StableKey);
-                _stable.Add(StableIdentityKey(npc.Kind, npc.Site, npc.StableKey), npc.DurableId);
+                if (!seenStable.Add(StableIdentityKey(npc.Kind, npc.Site, npc.StableKey)))
+                    throw new ArgumentException($"Duplicate restored stable NPC key '{npc.StableKey}'.");
             }
 
-            _npcs.Add(npc.DurableId, npc);
+            ActorOrigin origin = ResolveOriginForActor(npc.DurableId, npc, npc.Profile);
+            ActorPoseOverride? detachedPose = npc.X is float px && npc.Y is float py && npc.Z is float pz
+                ? new ActorPoseOverride(px, py, pz, 0f)
+                : null;
+            ActorLocationOverride? location = npc.Presence == DaggerfallNpcPresence.Removed
+                ? ActorLocationOverride.Removed
+                : npc.Profile is { } p
+                    ? ActorLocationOverride.AtSite(p, detachedPose, detached: false)
+                    : null;
+            _ledger.Upsert(new ActorLedgerEntry(npc.DurableId, origin, Social: ActorSocialDiff.FromNpc(npc), Location: location));
         }
     }
+
+    internal static DaggerfallNpc? FromLedgerEntry(ActorLedgerEntry entry)
+    {
+        if (entry.Social is not { } s) return null;
+        DaggerfallWorldProfileKey? profile = entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } p }
+            ? p.Require()
+            : null;
+        ActorPoseOverride? pose = entry.Location is { Kind: ActorLocationKind.AtSite, Pose: { } lp } ? lp : null;
+        DaggerfallNpcPresence presence = entry.Location?.Kind == ActorLocationKind.Removed
+            ? DaggerfallNpcPresence.Removed
+            : (DaggerfallNpcPresence)s.Presence;
+        return new DaggerfallNpc(
+            entry.DurableId,
+            (DaggerfallNpcKind)s.NpcKind,
+            s.StableKey,
+            new DaggerfallNpcSite(s.Region, s.Location, s.Building, s.ProfileId),
+            new DaggerfallNpcAppearance(s.Race, s.Gender, s.BillboardArchive, s.BillboardRecord, s.NameSeed, s.FactionId),
+            s.Role,
+            s.Services,
+            presence,
+            pose?.X,
+            pose?.Y,
+            pose?.Z)
+        {
+            DisplayName = s.DisplayNameOverride,
+            Profile = profile,
+        };
+    }
+
+    private void Mutate(long durableId, Func<DaggerfallNpc, DaggerfallNpc> update,
+        Func<ActorLedgerEntry, ActorLocationOverride?>? updateLocation)
+    {
+        DaggerfallNpc updated = update(Require(durableId));
+        bool live = TryGetLivePerson(durableId, out ActorPersonComponent? person);
+        if (live)
+            person!.Snapshot = updated;
+
+        if (_ledger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+        {
+            ActorLocationOverride? nextLocation = updateLocation is not null ? updateLocation(existing) : existing.Location;
+            _ledger.Upsert(existing with
+            {
+                Social = ActorSocialDiff.FromNpc(updated, existing.Social),
+                Location = nextLocation,
+            });
+        }
+        else if (!live || updated.Presence == DaggerfallNpcPresence.Removed)
+        {
+            ActorOrigin origin = ResolveOriginForActor(durableId, updated, updated.Profile);
+            ActorLocationOverride? location = updated.Presence == DaggerfallNpcPresence.Removed
+                ? ActorLocationOverride.Removed
+                : updated.Profile is { } p
+                    ? ActorLocationOverride.AtSite(p,
+                        updated.X is float px && updated.Y is float py && updated.Z is float pz ? new ActorPoseOverride(px, py, pz, 0f) : null,
+                        detached: false)
+                    : null;
+            _ledger.Upsert(new ActorLedgerEntry(durableId, origin, Social: ActorSocialDiff.FromNpc(updated), Location: location));
+        }
+    }
+
+    private bool TryGetLivePerson(long durableId, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out ActorPersonComponent? person)
+    {
+        if (_actors is not null
+            && _actors.TryGet(durableId, out ActorState? actor)
+            && actor.Actor.TryGet<ActorPersonComponent>(out person))
+        {
+            return true;
+        }
+        person = null;
+        return false;
+    }
+
+    private bool IsUntouchedDeterministicStagingEntry(ActorLedgerEntry entry, long durableId, DaggerfallWorldProfileKey activeProfile)
+    {
+        if (!DaggerfallPeopleSlots.IsDeterministicId(durableId)) return false;
+        if (entry.Vitals is not null || entry.Pose is not null || entry.Combat is not null || entry.Referral is not null)
+            return false;
+        if (entry.Location is { Kind: not ActorLocationKind.AtSite })
+            return false;
+        if (entry.Location is { Kind: ActorLocationKind.AtSite, Profile: { } lp } && lp.Require() != activeProfile)
+            return false;
+        if (entry.Social is { } s
+            && (s.Met || s.Muted || s.DispositionDelta != 0 || s.WitnessedCrimes is { Length: > 0 }
+                || s.ReferralTags is { Length: > 0 } || s.EscortPortrait is not null || s.StagedPartyRole is not null
+                || s.Presence != (int)DaggerfallNpcPresence.Active))
+            return false;
+        if (_actors is not null && _actors.TryGet(durableId, out ActorState? actor)
+            && actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp))
+        {
+            if (originComp.IsRelocated) return false;
+            if (originComp.Origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile) return false;
+            if (originComp.BaselineNpc is { DisplayName: not null } baseNpc
+                && entry.Social?.DisplayNameOverride is { } savedName
+                && !StringComparer.Ordinal.Equals(savedName, baseNpc.DisplayName))
+                return false;
+        }
+        return true;
+    }
+
+    private ActorOrigin ResolveOriginForActor(long durableId, DaggerfallNpc npc, DaggerfallWorldProfileKey? fallbackProfile)
+    {
+        if (_actors is not null && _actors.TryGet(durableId, out ActorState? live)
+            && live.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp))
+        {
+            return originComp.Origin;
+        }
+        if (DaggerfallPeopleSlots.IsDeterministicId(durableId))
+            return ResolveDeterministicOrigin(npc.Kind, npc.StableKey, fallbackProfile, npc.Appearance.Gender);
+        return ActorOrigin.MintedActor(
+            npc.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc,
+            gender: npc.Appearance.Gender);
+    }
+
+    private static ActorOrigin ResolveDeterministicOrigin(DaggerfallNpcKind kind, string stableKey,
+        DaggerfallWorldProfileKey? homeProfile, string gender)
+    {
+        if (stableKey.StartsWith("cast:", StringComparison.Ordinal))
+            return ActorOrigin.Cast(stableKey["cast:".Length..], homeProfile);
+        if (homeProfile is { } hp)
+            return ActorOrigin.Seeded(hp, stableKey);
+        return ActorOrigin.MintedActor(
+            kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc,
+            gender: gender);
+    }
+
+    private long? FindByStableKey(DaggerfallNpcKind kind, DaggerfallNpcSite site, string stableKey)
+    {
+        string target = StableIdentityKey(kind, site, stableKey);
+        foreach (DaggerfallNpc npc in All)
+        {
+            if (StringComparer.Ordinal.Equals(StableIdentityKey(npc.Kind, npc.Site, npc.StableKey), target))
+                return npc.DurableId;
+        }
+        return null;
+    }
+
+    private DaggerfallNpc ApplyDefaultName(DaggerfallNpc npc) =>
+        npc.DisplayName is null && _name is not null
+            ? npc with { DisplayName = _name(npc) }
+            : npc;
 
     private static string StableIdentityKey(DaggerfallNpcKind kind, DaggerfallNpcSite site, string stableKey) =>
         $"{kind}\0{site.Region}\0{site.Location}\0{site.Building}\0{site.ProfileId}\0{stableKey}";
@@ -321,21 +664,15 @@ public sealed class DaggerfallNpcRegistry
     private static void ValidateSite(DaggerfallNpcSite site)
     {
         if (site.Region is < 0 or > 61 || string.IsNullOrWhiteSpace(site.Location))
-        {
             throw new ArgumentOutOfRangeException(nameof(site), site.Region, "An NPC site names no classic region or location.");
-        }
     }
 
     private static void ValidateAppearance(DaggerfallNpcAppearance appearance)
     {
         if (string.IsNullOrWhiteSpace(appearance.Race) || (appearance.Gender != "Male" && appearance.Gender != "Female"))
-        {
             throw new ArgumentOutOfRangeException(nameof(appearance), appearance.Race, "An NPC appearance states no race or gender.");
-        }
 
         if (appearance.BillboardArchive < 0 || appearance.BillboardRecord < 0 || appearance.FactionId < 0)
-        {
             throw new ArgumentOutOfRangeException(nameof(appearance), appearance.BillboardArchive, "An NPC appearance states no billboard or faction.");
-        }
     }
 }

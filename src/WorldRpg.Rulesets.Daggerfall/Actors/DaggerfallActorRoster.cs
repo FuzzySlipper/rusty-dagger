@@ -376,6 +376,14 @@ internal sealed class DaggerfallActorRoster
         }
 
         ActorOrigin? deterministicOrigin = isDeterministic ? detOriginComp?.Origin : null;
+        ActorPersonComponent? retiringPerson = _actors.TryGet(durableId, out ActorState? retiringActor)
+            && retiringActor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? pc)
+            ? pc
+            : null;
+        ActorOrigin? personOrigin = deterministicOrigin
+            ?? (retiringActor is not null && retiringActor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? anyOc)
+                ? anyOc.Origin
+                : null);
         _definitionsByActor.Remove(durableId);
         Appearance.RetireActor(durableId);
         _closeLoot(durableId);
@@ -385,12 +393,26 @@ internal sealed class DaggerfallActorRoster
         _actors.Entities.Destroy(ActorsState.Identity(durableId));
         if (wasDynamic)
             _identities.Remove(new DurableIdentityReference(DurableIdentityKind.Actor, checked((ulong)durableId)));
-        if (_npcs.All.Any(npc => npc.DurableId == durableId && npc.Kind is DaggerfallNpcKind.Civilian or DaggerfallNpcKind.Static or DaggerfallNpcKind.Questor))
-            _npcs.SetPresence(durableId, DaggerfallNpcPresence.Removed);
-        if (isDeterministic && deterministicOrigin is not null)
+        if (retiringPerson is not null)
+        {
+            _actorLedger.TryGet(durableId, out ActorLedgerEntry? priorPerson);
+            ActorOrigin resolvedOrigin = personOrigin
+                ?? priorPerson?.Origin
+                ?? ActorOrigin.MintedActor(
+                    retiringPerson.Snapshot.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc,
+                    gender: retiringPerson.Snapshot.Appearance.Gender);
+            ActorSocialDiff removedSocial = ActorSocialDiff.FromNpc(
+                retiringPerson.Snapshot with { Presence = DaggerfallNpcPresence.Removed }, priorPerson?.Social);
+            _actorLedger.MarkRemoved(durableId, resolvedOrigin, removedSocial);
+        }
+        else if (isDeterministic && deterministicOrigin is not null)
+        {
             _actorLedger.MarkRemoved(durableId, deterministicOrigin);
+        }
         else
+        {
             _actorLedger.Remove(durableId);
+        }
         _actorLedger.StripDetachedEffectsOf(durableId);
         ActorRetired?.Invoke(durableId);
     }
@@ -558,7 +580,7 @@ internal sealed class DaggerfallActorRoster
                         continue;
 
                     _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Static, placement.Id, binding,
-                        placement.Appearance, placement.Role, placement.Services);
+                        placement.Appearance, placement.Role, placement.Services, homeProfile: profile.ProfileKey);
                     DaggerfallNpc npc = _npcs.Require(id);
                     if (npc.Presence != DaggerfallNpcPresence.Active) continue;
                     bool created = false;
@@ -622,7 +644,7 @@ internal sealed class DaggerfallActorRoster
             ?? new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.FactionId);
         string role = sourcePlacement?.Role ?? "person";
         IReadOnlyList<string> services = sourcePlacement?.Services ?? ["talk"];
-        _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Static, $"cast:{castId}", binding, look, role, services, cast.Name);
+        _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Static, $"cast:{castId}", binding, look, role, services, cast.Name, profile.ProfileKey);
         DaggerfallNpc npc = _npcs.Require(id);
         if (npc.Presence != DaggerfallNpcPresence.Active) return null;
         if (!_actors.TryGet(id, out _))
@@ -688,7 +710,7 @@ internal sealed class DaggerfallActorRoster
                 string race = _definitions.Catalogs.Races.FirstOrDefault()?.Id ?? "breton";
                 DaggerfallNpcAppearance look = new(race, (placement.Flags & 0x20) != 0 ? "Female" : "Male",
                     placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
-                _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Civilian, placement.Id, npcSite, look, role, services);
+                _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Civilian, placement.Id, npcSite, look, role, services, homeProfile: profile.ProfileKey);
                 npc = _npcs.Require(id);
             }
             if (npc.Presence == DaggerfallNpcPresence.Removed) continue;
@@ -715,15 +737,7 @@ internal sealed class DaggerfallActorRoster
             if (entry.Location?.Detached == true && entry.Vitals is null && entry.Pose is null && entry.Social is null && entry.Combat is null) continue;
 
             DaggerfallNpc? npc = _npcs.TryGet(entry.DurableId, out DaggerfallNpc? existing) ? existing : null;
-            if (npc is null && entry.Social is { } s)
-            {
-                _npcs.RegisterDeterministic(entry.DurableId, (DaggerfallNpcKind)s.NpcKind, s.StableKey,
-                    new DaggerfallNpcSite(s.Region, s.Location, s.Building, s.ProfileId),
-                    new DaggerfallNpcAppearance(s.Race, s.Gender, s.BillboardArchive, s.BillboardRecord, s.NameSeed, s.FactionId),
-                    s.Role, s.Services, s.DisplayNameOverride);
-                npc = _npcs.Require(entry.DurableId);
-            }
-            else if (npc is null && entry.Origin.Kind == ActorOriginKind.CastIndividual
+            if (npc is null && entry.Origin.Kind == ActorOriginKind.CastIndividual
                 && entry.Origin.CastId is { } cid && _definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? cast))
             {
                 DaggerfallSiteId site = profile.Site!.Value;
@@ -731,7 +745,7 @@ internal sealed class DaggerfallActorRoster
                 _npcs.RegisterDeterministic(entry.DurableId, DaggerfallNpcKind.Static, $"cast:{cid}",
                     new DaggerfallNpcSite(site.Region, location.Name, string.Empty, profile.ProfileKey.LogicalId),
                     new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.FactionId),
-                    "person", ["talk"], cast.Name);
+                    "person", ["talk"], cast.Name, profile.ProfileKey);
                 npc = _npcs.Require(entry.DurableId);
             }
             if (npc is null || npc.Presence == DaggerfallNpcPresence.Removed) continue;
@@ -786,18 +800,7 @@ internal sealed class DaggerfallActorRoster
         }
 
         DaggerfallNpc? npc = _npcs.TryGet(entry.DurableId, out DaggerfallNpc? registered) ? registered : null;
-        if (npc is null && entry.Social is { } s)
-        {
-            if (DaggerfallPeopleSlots.IsDeterministicId(entry.DurableId))
-            {
-                _npcs.RegisterDeterministic(entry.DurableId, (DaggerfallNpcKind)s.NpcKind, s.StableKey,
-                    new DaggerfallNpcSite(s.Region, s.Location, s.Building, s.ProfileId),
-                    new DaggerfallNpcAppearance(s.Race, s.Gender, s.BillboardArchive, s.BillboardRecord, s.NameSeed, s.FactionId),
-                    s.Role, s.Services, s.DisplayNameOverride);
-            }
-            npc = _npcs.TryGet(entry.DurableId, out DaggerfallNpc? afterReg) ? afterReg : null;
-        }
-        else if (npc is null && entry.Origin.Kind == ActorOriginKind.CastIndividual
+        if (npc is null && entry.Origin.Kind == ActorOriginKind.CastIndividual
             && entry.Origin.CastId is { } cid && _definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? cast))
         {
             DaggerfallSiteId site = profile.Site!.Value;
@@ -805,7 +808,7 @@ internal sealed class DaggerfallActorRoster
             _npcs.RegisterDeterministic(entry.DurableId, DaggerfallNpcKind.Static, $"cast:{cid}",
                 new DaggerfallNpcSite(site.Region, location.Name, string.Empty, profile.ProfileKey.LogicalId),
                 new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.FactionId),
-                "person", ["talk"], cast.Name);
+                "person", ["talk"], cast.Name, profile.ProfileKey);
             npc = _npcs.Require(entry.DurableId);
         }
 
@@ -1057,7 +1060,10 @@ internal sealed class DaggerfallActorRoster
         DurableIdentityReference actorIdentity = ActorsState.Identity(npcId);
         if (_identities.Classify(actorIdentity) == DurableIdentityClassification.Live)
             _identities.Remove(actorIdentity);
-        _actorLedger.Remove(npcId);
+        if (_actorLedger.TryGet(npcId, out ActorLedgerEntry? detachedPerson) && detachedPerson is { Social: not null })
+            _actorLedger.MarkRemoved(npcId, detachedPerson.Origin, detachedPerson.Social);
+        else
+            _actorLedger.Remove(npcId);
         _actorLedger.StripDetachedEffectsOf(npcId);
     }
 
@@ -1137,6 +1143,22 @@ internal sealed class DaggerfallActorRoster
             var actor = DaggerfallActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _actors, _inventoryStore,
                 _definitionsByActor, saved, _npcs);
             _dynamicActors.Add(saved.EntityId, new DaggerfallActorId(saved.Definition));
+            if (_actorLedger.TryGet(saved.EntityId, out ActorLedgerEntry? retainedLedger)
+                && retainedLedger?.Social is { } retainedSocial
+                && actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? retainedOverlay))
+            {
+                retainedOverlay.Met = retainedSocial.Met;
+                retainedOverlay.IsMuted = retainedSocial.Muted;
+                retainedOverlay.EscortPortraitMedia = retainedSocial.EscortPortrait;
+                retainedOverlay.EscortOrder = retainedSocial.EscortOrder;
+                retainedOverlay.StagedPartyRole = retainedSocial.StagedPartyRole?.ToString();
+                if (retainedSocial.WitnessedCrimes is { Length: > 0 })
+                    foreach (string operationId in retainedSocial.WitnessedCrimes)
+                        retainedOverlay.RecordWitnessedCrime(operationId);
+                if (retainedSocial.ReferralTags is { Length: > 0 })
+                    foreach (string tag in retainedSocial.ReferralTags)
+                        retainedOverlay.RecordReferralTag(tag);
+            }
             if (projectAppearance && _definitionsByActor[saved.EntityId].MobileId is int mobileId)
             {
                 DaggerfallSiteProfile presentation = siteProfile ?? _profile();

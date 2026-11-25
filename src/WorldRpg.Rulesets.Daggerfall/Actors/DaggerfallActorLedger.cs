@@ -203,6 +203,34 @@ internal sealed record ActorSocialDiff(
         ArgumentNullException.ThrowIfNull(Services);
         if (DisplayNameOverride is not null) ArgumentException.ThrowIfNullOrWhiteSpace(DisplayNameOverride);
     }
+
+    /// <summary>Builds a canonical <see cref="ActorSocialDiff"/> from an NPC snapshot, preserving prior social deltas.</summary>
+    internal static ActorSocialDiff FromNpc(DaggerfallNpc npc, ActorSocialDiff? prior = null) =>
+        new(
+            (int)npc.Kind,
+            npc.StableKey,
+            npc.Site.Region,
+            npc.Site.Location,
+            npc.Site.Building,
+            npc.Site.ProfileId,
+            npc.Appearance.Race,
+            npc.Appearance.Gender,
+            npc.Appearance.BillboardArchive,
+            npc.Appearance.BillboardRecord,
+            npc.Appearance.NameSeed,
+            npc.Appearance.FactionId,
+            npc.Role,
+            [.. npc.Services],
+            DisplayNameOverride: npc.DisplayName ?? prior?.DisplayNameOverride,
+            Met: prior?.Met ?? false,
+            DispositionDelta: prior?.DispositionDelta ?? 0,
+            WitnessedCrimes: prior?.WitnessedCrimes,
+            ReferralTags: prior?.ReferralTags,
+            Muted: prior?.Muted ?? false,
+            EscortPortrait: prior?.EscortPortrait,
+            EscortOrder: prior?.EscortOrder ?? 0,
+            Presence: (int)npc.Presence,
+            StagedPartyRole: prior?.StagedPartyRole);
 }
 
 /// <summary>Where an actor currently resides in the world.</summary>
@@ -531,13 +559,30 @@ internal sealed class DaggerfallActorLedger
         return durableId;
     }
 
-    /// <summary>Marks a deterministic slot or authored placement permanently removed (banished).</summary>
-    internal void MarkRemoved(long durableId, ActorOrigin origin)
+    /// <summary>Marks a deterministic slot or authored placement permanently removed (banished), retaining any social tombstone.</summary>
+    internal void MarkRemoved(long durableId, ActorOrigin origin, ActorSocialDiff? social = null)
     {
         if (_entries.TryGetValue(durableId, out ActorLedgerEntry? existing))
-            _entries[durableId] = existing with { Location = ActorLocationOverride.Removed, Vitals = null, Pose = null, Combat = null };
+        {
+            ActorSocialDiff? removedSocial = (social ?? existing.Social) is { } s
+                ? s with { Presence = (int)DaggerfallNpcPresence.Removed }
+                : null;
+            _entries[durableId] = existing with
+            {
+                Location = ActorLocationOverride.Removed,
+                Vitals = null,
+                Pose = null,
+                Combat = null,
+                Social = removedSocial,
+            };
+        }
         else
-            _entries[durableId] = new(durableId, origin, Location: ActorLocationOverride.Removed);
+        {
+            ActorSocialDiff? removedSocial = social is { } s
+                ? s with { Presence = (int)DaggerfallNpcPresence.Removed }
+                : null;
+            _entries[durableId] = new(durableId, origin, Social: removedSocial, Location: ActorLocationOverride.Removed);
+        }
     }
 
     /// <summary>Moves an actor onto <see cref="ActorLocationKind.WithParty"/> (HUD escort/companion mode).</summary>

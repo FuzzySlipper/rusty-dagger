@@ -50,7 +50,7 @@ internal sealed record DaggerfallActorAssembly(
 /// spawned actors, the people and the character. A new game has none.
 /// </summary>
 internal sealed record DaggerfallActorSaves(DaggerfallPlayerSave Player, DaggerfallActorSave[] Actors, long[] BanishedActors,
-    DaggerfallDynamicActorSave[] DynamicActors, DaggerfallNpcSave Npcs, DaggerfallCharacterSave? Character,
+    DaggerfallDynamicActorSave[] DynamicActors, DaggerfallCharacterSave? Character,
     ActorLedgerEntry[]? Ledger = null, IReadOnlySet<long>? SavedInventoryIds = null);
 
 /// <summary>
@@ -207,20 +207,7 @@ internal static class DaggerfallActorFactory
                     }
                 }
             }
-            DaggerfallNpcRegistry npcs = new();
-            if (saved?.Npcs is { } restoredNpcs)
-            {
-                npcs.Restore(restoredNpcs.Entries.Select(entry => new DaggerfallNpc(
-                    entry.DurableId,
-                    (DaggerfallNpcKind)entry.Kind,
-                    entry.StableKey,
-                    new DaggerfallNpcSite(entry.Region, entry.Location, entry.Building, entry.ProfileId),
-                    new DaggerfallNpcAppearance(entry.Race, entry.Gender, entry.BillboardArchive, entry.BillboardRecord, entry.NameSeed, entry.FactionId),
-                    entry.Role,
-                    entry.Services,
-                    (DaggerfallNpcPresence)entry.Presence,
-                    entry.X, entry.Y, entry.Z) { Profile = entry.Profile?.Require(), DisplayName = entry.DisplayName }));
-            }
+            DaggerfallNpcRegistry npcs = new(actors, actorLedger);
 
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
@@ -362,6 +349,12 @@ internal static class DaggerfallActorFactory
         overlay.ArchetypeId = profile.Id;
         overlay.IsQuestor = npc.Kind == DaggerfallNpcKind.Questor;
 
+        DaggerfallNpc liveSnapshot = npc with { X = null, Y = null, Z = null };
+        if (actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? existingPerson))
+            existingPerson.Snapshot = liveSnapshot;
+        else
+            actor.Actor.Add(new ActorPersonComponent(liveSnapshot));
+
         ActorVisualSpec visual = npc.Kind == DaggerfallNpcKind.Civilian
             ? ActorVisualSpec.SplatCivilian(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, npc.Appearance.Gender)
             : ActorVisualSpec.Billboard(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, onBase: true);
@@ -406,7 +399,7 @@ internal static class DaggerfallActorFactory
         actor.Actor.Add(new ActorOriginComponent(
             ActorOrigin.MintedActor(saved.Definition, saved.Level, gender: saved.Gender),
             new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
-        if (npcs is not null && npcs.All.FirstOrDefault(n => n.DurableId == saved.EntityId) is { } restoredNpc)
+        if (npcs is not null && npcs.TryGet(saved.EntityId, out DaggerfallNpc? restoredNpc))
         {
             bool promotedGuard = string.Equals(saved.PromotedArchetype, ArchetypeProfile.Guard.Id, StringComparison.Ordinal)
                 || definition.MobileId == 146;

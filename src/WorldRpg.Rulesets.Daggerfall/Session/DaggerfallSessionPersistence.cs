@@ -88,30 +88,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal static ActorSocialDiff ToSocialDiff(DaggerfallNpc npc, ActorSocialDiff? prior = null)
     {
         ArgumentNullException.ThrowIfNull(npc);
-        return new ActorSocialDiff(
-            (int)npc.Kind,
-            npc.StableKey,
-            npc.Site.Region,
-            npc.Site.Location,
-            npc.Site.Building,
-            npc.Site.ProfileId,
-            npc.Appearance.Race,
-            npc.Appearance.Gender,
-            npc.Appearance.BillboardArchive,
-            npc.Appearance.BillboardRecord,
-            npc.Appearance.NameSeed,
-            npc.Appearance.FactionId,
-            npc.Role,
-            [.. npc.Services],
-            DisplayNameOverride: npc.DisplayName,
-            Met: prior?.Met ?? false,
-            DispositionDelta: prior?.DispositionDelta ?? 0,
-            WitnessedCrimes: prior?.WitnessedCrimes,
-            ReferralTags: prior?.ReferralTags,
-            Muted: prior?.Muted ?? false,
-            EscortPortrait: prior?.EscortPortrait,
-            EscortOrder: prior?.EscortOrder ?? 0,
-            Presence: (int)npc.Presence);
+        return ActorSocialDiff.FromNpc(npc, prior);
     }
 
     internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, DaggerfallSiteDeltaSave[] siteDeltas, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> inactiveDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions, DaggerfallDungeonMotionSnapshot dungeonMotion, DaggerfallExteriorCellResidencySave? exteriorResidency, DaggerfallExteriorLocationResidencySave? exteriorLocationResidency = null, Func<WorldPoint, WorldPoint>? localToProfile = null)
@@ -274,17 +251,21 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 prunedDeterministicIds.Add(actor.DurableId);
         }
 
-        // 2. Active-site live dynamically minted actors
+        // 2. Active-site live dynamically minted actors (reading live person/overlay metadata directly from EntityStore)
         foreach (KeyValuePair<long, DaggerfallActorId> dynEntry in dynamicActors.OrderBy(entry => entry.Key))
         {
             DaggerfallDynamicActorSave dyn = CaptureDynamicActor(dynEntry.Key, dynEntry.Value.Value);
+            State.ActorLedger.TryGet(dyn.EntityId, out ActorLedgerEntry? priorDynLedger);
+            ActorSocialDiff? dynSocial = CaptureLiveDynamicSocial(dyn.EntityId, priorDynLedger?.Social);
             entries[dyn.EntityId] = new ActorLedgerEntry(
                 dyn.EntityId,
                 ActorOrigin.MintedActor(dyn.Definition, dyn.Level, gender: dyn.Gender),
                 Vitals: new ActorVitalsDiff(dyn.Stats),
                 Pose: new ActorPoseOverride(dyn.X, dyn.Y, dyn.Z, dyn.HeadingRadians),
                 Combat: ToDynamicCombatDiff(dyn),
-                Location: ActorLocationOverride.AtSite(activeProfile));
+                Social: dynSocial,
+                Location: ActorLocationOverride.AtSite(activeProfile),
+                Referral: priorDynLedger?.Referral);
         }
 
         // 3. Inactive-site (and unloaded active exterior) detached actors + banished placements
@@ -331,13 +312,16 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 inventoriesByActor.TryGetValue(dyn.EntityId, out DaggerfallActorInventorySave? inv);
                 corpsesByActor.TryGetValue(dyn.EntityId, out DaggerfallCorpseSave? corpse);
                 effectsByActor.TryGetValue(dyn.EntityId, out DaggerfallActiveEffectSave[]? effects);
+                State.ActorLedger.TryGet(dyn.EntityId, out ActorLedgerEntry? priorDetachedLedger);
                 entries[dyn.EntityId] = new ActorLedgerEntry(
                     dyn.EntityId,
                     ActorOrigin.MintedActor(dyn.Definition, dyn.Level, gender: dyn.Gender),
                     Vitals: new ActorVitalsDiff(dyn.Stats),
                     Pose: new ActorPoseOverride(dyn.X, dyn.Y, dyn.Z, dyn.HeadingRadians),
                     Combat: ToDynamicCombatDiff(dyn, inv, corpse, effects),
-                    Location: ActorLocationOverride.AtSite(profile, detached: true));
+                    Social: priorDetachedLedger?.Social,
+                    Location: ActorLocationOverride.AtSite(profile, detached: true),
+                    Referral: priorDetachedLedger?.Referral);
             }
 
             foreach (long banishedId in delta.BanishedActors.Order())
@@ -359,85 +343,63 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 Location: ActorLocationOverride.Removed);
         }
 
-        // 5. NPC social records (skipping untouched deterministic SeededSlot/CastIndividual actors pruned in step 1)
-        foreach (DaggerfallNpc npc in State.Npcs.Capture())
-        {
-            if (prunedDeterministicIds.Contains(npc.DurableId)) continue;
-            State.ActorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? priorLedger);
-            bool deterministic = DaggerfallPeopleSlots.IsDeterministicId(npc.DurableId);
-            if (deterministic && !entries.ContainsKey(npc.DurableId)
-                && (priorLedger is null || priorLedger.IsEmptyBaseline)
-                && !referencedNpcs.Contains(npc.DurableId)
-                && npc.Presence == DaggerfallNpcPresence.Active)
-                continue;
-
-            ActorOverlayComponent? liveOverlay = State.Actors.TryGet(npc.DurableId, out ActorState? liveNpcActor)
-                && liveNpcActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov)
-                ? ov
-                : null;
-            ActorSocialDiff social = ToSocialDiff(npc, priorLedger?.Social);
-            if (liveOverlay is not null)
-            {
-                string[]? liveWitnessed = liveOverlay.WitnessedCrimes.Count > 0
-                    ? [.. liveOverlay.WitnessedCrimes]
-                    : social.WitnessedCrimes;
-                ActorPartyRole? liveStagedRole = liveOverlay.StagedPartyRole is { Length: > 0 } rawDynRole
-                    && Enum.TryParse<ActorPartyRole>(rawDynRole, out ActorPartyRole parsedDynRole)
-                    ? parsedDynRole
-                    : social.StagedPartyRole;
-                social = social with
-                {
-                    Met = liveOverlay.Met || social.Met,
-                    Muted = liveOverlay.IsMuted,
-                    WitnessedCrimes = liveWitnessed,
-                    EscortPortrait = liveOverlay.EscortPortraitMedia ?? social.EscortPortrait,
-                    EscortOrder = liveOverlay.EscortOrder > 0 ? liveOverlay.EscortOrder : social.EscortOrder,
-                    StagedPartyRole = liveStagedRole,
-                };
-            }
-            if (entries.TryGetValue(npc.DurableId, out ActorLedgerEntry? existing))
-            {
-                if (existing.Social is null && !deterministic)
-                    entries[npc.DurableId] = existing with { Social = social };
-                continue;
-            }
-            ActorOrigin origin = priorLedger?.Origin
-                ?? ActorOrigin.MintedActor(npc.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc);
-            ActorLocationOverride location = npc.Presence == DaggerfallNpcPresence.Removed
-                ? ActorLocationOverride.Removed
-                : priorLedger?.Location is { } priorLocation
-                    ? priorLocation
-                    : npc.Profile is { } npcProfile
-                        ? ActorLocationOverride.AtSite(npcProfile,
-                            npc.X is float x && npc.Y is float y && npc.Z is float z ? new ActorPoseOverride(x, y, z, 0f) : null,
-                            detached: true)
-                        : ActorLocationOverride.OffStage;
-            entries[npc.DurableId] = new ActorLedgerEntry(
-                npc.DurableId,
-                origin,
-                Vitals: priorLedger?.Vitals,
-                Pose: priorLedger?.Pose,
-                Combat: priorLedger?.Combat,
-                Social: social,
-                Location: location,
-                Referral: priorLedger?.Referral);
-        }
-
-        // 6. Carry forward non-empty sparse ledger entries (SeededSlot/CastIndividual across sites, WithParty,
-        // OnOverlandBand, OffStage), never resurrecting retired Minted AtSite entries or stale entries for
-        // live deterministic actors whose current state was freshly captured/pruned in Step 1.
+        // 5. Carry forward remaining non-empty sparse ledger entries (off-scene SeededSlot/CastIndividual,
+        // unmaterialized/hidden/removed NPCs, WithParty, OnOverlandBand, OffStage, pre-visit referrals),
+        // never resurrecting retired non-person Minted AtSite entries or stale entries for live deterministic
+        // actors whose current state was freshly captured/pruned in Step 1.
         foreach (ActorLedgerEntry extra in State.ActorLedger.All)
         {
             if (extra.IsEmptyBaseline || entries.ContainsKey(extra.DurableId)
                 || capturedLiveDeterministicIds.Contains(extra.DurableId))
                 continue;
-            if (extra.Origin.Kind == ActorOriginKind.Minted
+            if (extra.Origin.Kind == ActorOriginKind.Minted && extra.Social is null
                 && extra.Location?.Kind is not (ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.OffStage))
                 continue;
+            if (extra.Location is null && extra.Social is not null && extra.Origin.Kind == ActorOriginKind.Minted)
+            {
+                entries[extra.DurableId] = extra with
+                {
+                    Location = extra.Social.Presence == (int)DaggerfallNpcPresence.Removed
+                        ? ActorLocationOverride.Removed
+                        : ActorLocationOverride.OffStage,
+                };
+                continue;
+            }
             entries[extra.DurableId] = extra;
         }
 
         return ([.. entries.Values.Where(entry => !entry.IsEmptyBaseline).OrderBy(entry => entry.DurableId)], prunedDeterministicIds);
+    }
+
+    private ActorSocialDiff? CaptureLiveDynamicSocial(long actorId, ActorSocialDiff? priorSocial)
+    {
+        if (!State.Actors.TryGet(actorId, out ActorState? liveActor)) return priorSocial;
+        if (!liveActor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person)) return priorSocial;
+        ActorSocialDiff social = ActorSocialDiff.FromNpc(person.Snapshot, priorSocial);
+        if (liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? liveOverlay))
+        {
+            string[]? liveWitnessed = liveOverlay.WitnessedCrimes.Count > 0
+                ? [.. liveOverlay.WitnessedCrimes]
+                : social.WitnessedCrimes;
+            string[]? liveReferrals = liveOverlay.ReferralTags.Count > 0
+                ? [.. liveOverlay.ReferralTags]
+                : social.ReferralTags;
+            ActorPartyRole? liveStagedRole = liveOverlay.StagedPartyRole is { Length: > 0 } rawDynRole
+                && Enum.TryParse<ActorPartyRole>(rawDynRole, out ActorPartyRole parsedDynRole)
+                ? parsedDynRole
+                : social.StagedPartyRole;
+            social = social with
+            {
+                Met = liveOverlay.Met || social.Met,
+                Muted = liveOverlay.IsMuted,
+                WitnessedCrimes = liveWitnessed,
+                ReferralTags = liveReferrals,
+                EscortPortrait = liveOverlay.EscortPortraitMedia ?? social.EscortPortrait,
+                EscortOrder = liveOverlay.EscortOrder > 0 ? liveOverlay.EscortOrder : social.EscortOrder,
+                StagedPartyRole = liveStagedRole,
+            };
+        }
+        return social;
     }
 
     private HashSet<long> CollectReferencedNpcs()
@@ -762,7 +724,13 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             ActorLocationOverride location = sparse.Location is { Kind: ActorLocationKind.AtSite, Profile: { } locProfile }
                 ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true)
                 : ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true);
-            State.ActorLedger.Upsert(sparse with { Combat = combat, Location = location });
+            ActorSocialDiff? social = sparse.Social;
+            if (social is null && actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? detachedPerson))
+            {
+                State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorDet);
+                social = ActorSocialDiff.FromNpc(detachedPerson.Snapshot, priorDet?.Social);
+            }
+            State.ActorLedger.Upsert(sparse with { Combat = combat, Social = social, Location = location });
         }
         long[] authoredIds = [.. inputs.Project.Actors.Keys.Where(id => !BanishedActors().Contains(id) && State.Actors.TryGet(id, out _)).OrderBy(id => id)];
         DaggerfallActorSave[] actors = authoredIds.Select(id =>
@@ -778,6 +746,17 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             .Where(entry => actorFilter is null || actorFilter.Contains(entry.Key))
             .OrderBy(entry => entry.Key)
             .Select(entry => CaptureDynamicActor(entry.Key, entry.Value.Value, actorFrameOffset)).ToArray();
+        // Flush live overlay/person metadata for dynamically minted NPCs leaving this site into ActorLedger
+        // before UnloadSite destroys their EntityStore entities, so Met/Muted/WitnessedCrimes/StagedPartyRole survive.
+        foreach (DaggerfallDynamicActorSave dyn in spawned)
+        {
+            State.ActorLedger.TryGet(dyn.EntityId, out ActorLedgerEntry? priorDyn);
+            if (CaptureLiveDynamicSocial(dyn.EntityId, priorDyn?.Social) is not { } liveSocial) continue;
+            ActorOrigin origin = priorDyn?.Origin ?? ActorOrigin.MintedActor(dyn.Definition, dyn.Level, gender: dyn.Gender);
+            State.ActorLedger.Upsert(priorDyn is not null
+                ? priorDyn with { Social = liveSocial, Location = ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true) }
+                : new ActorLedgerEntry(dyn.EntityId, origin, Social: liveSocial, Location: ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true)));
+        }
         long[] ids = [.. authoredIds, .. spawned.Select(actor => actor.EntityId)];
         DaggerfallActorInventorySave[] inventories = ids.Select(id => new DaggerfallActorInventorySave(
             id,

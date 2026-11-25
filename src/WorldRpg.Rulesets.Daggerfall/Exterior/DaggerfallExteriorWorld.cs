@@ -1179,6 +1179,23 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
                 .Where(npc => npc.Profile == key && DaggerfallCivilians.IsSourcePopulation(npc) && npc.Presence != DaggerfallNpcPresence.Removed)
                 .Select(npc => npc.DurableId)
                 .ToHashSet();
+            if (_time.Calendar.IsDay && profile.Site is { } residentSiteId && profile.Population.Count > 0)
+            {
+                DaggerfallSiteRecord residentSite = _site.Require(residentSiteId);
+                int capacity = DaggerfallSourcePopulation.Capacity(residentSite, profile.Population.Count);
+                foreach (DaggerfallPopulationPlacement pop in profile.Population
+                    .OrderBy(p => p.Id, StringComparer.Ordinal)
+                    .Take(capacity))
+                {
+                    long popId = DaggerfallPeopleSlots.SeededSlotIdentity(residentSiteId, $"{key.LogicalId}/{pop.Id}");
+                    if (!_npcs.TryGet(popId, out DaggerfallNpc? existingPop)
+                        || (existingPop.Presence == DaggerfallNpcPresence.Active
+                            && (existingPop.Profile is null || existingPop.Profile == key)))
+                    {
+                        residentPopulationIds.Add(popId);
+                    }
+                }
+            }
             _roster.MaterializeActiveRestoredPopulation(profile, residentPopulationIds, projection.Appearance);
             HashSet<long> actorIds = profile.Project.Actors.Keys.ToHashSet();
             foreach (DaggerfallNpc npc in _npcs.All.Where(npc => npc.Profile == key))

@@ -141,7 +141,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             long npcId = existing?.DurableId ?? deterministicId;
             if (existing is null)
             {
-                npcs.RegisterDeterministic(deterministicId, DaggerfallNpcKind.Civilian, placement.Id, npcSite, look, role, services);
+                npcs.RegisterDeterministic(deterministicId, DaggerfallNpcKind.Civilian, placement.Id, npcSite, look, role, services,
+                    homeProfile: active.ProfileKey);
             }
             else
             {

@@ -220,7 +220,7 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Constructs the factory restore bundle from the single <see cref="ActorLedger"/>.</summary>
     internal DaggerfallActorSaves ToActorSaves(DaggerfallWorldProfileKey activeProfile) =>
         new(Player, ActiveAuthoredActors(activeProfile), ActiveBanishedActors(activeProfile),
-            ActiveDynamicActors(activeProfile), RestoredNpcs(), Character, ActorLedger,
+            ActiveDynamicActors(activeProfile), Character, ActorLedger,
             ActorInventories.Select(inv => inv.EntityId).ToHashSet());
 
     private static DaggerfallActorSave ToActorSave(ActorLedgerEntry entry) =>
