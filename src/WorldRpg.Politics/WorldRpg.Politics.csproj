@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The political board game: seats playing cards on the Bay's regions, one turn a week. It stands alone, with no
+       Engine, Kit or ruleset reference, so it runs and is tested without the game; the session drives it later. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="WorldRpg.Politics.Tests" />
+    <!-- The canon start is loaded, not compiled: it travels beside the library into every output that uses it. -->
+    <None Include="canon/iliac-bay.board.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

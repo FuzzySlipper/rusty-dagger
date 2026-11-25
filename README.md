@@ -260,6 +260,13 @@ rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj
 
 Controls and screens are described on the wiki page `wiki/rusty-dagger/game-ui`.
 
+The political board game runs on its own, without the game or its data, and
+prints each week's moves (`--format jsonl` for one JSON object per turn):
+
+```bash
+dotnet run --project src/WorldRpg.Politics.Cli -- run --years 10
+```
+
 ## Verify
 
 ```bash

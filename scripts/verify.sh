@@ -119,12 +119,13 @@ else
   echo "skipped the art pipeline's tests: python3 lacks numpy, scipy or Pillow"
 fi
 
-# The importer's tools are products of their own and nothing else in this script compiles them, so a
+# The importer's tools and the politics CLI are products of their own and nothing else in this script compiles them, so a
 # change to the import API could leave it broken while every test and build here stayed green. That
 # happened: a new field in an import record was passed by the tests and missed by the tool, and the
 # error sat unnoticed until someone ran the tool by hand.
 dotnet build src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj --configuration Release
 dotnet build src/Daggerfall.Source.Tool/Daggerfall.Source.Tool.csproj --configuration Release
+dotnet build src/WorldRpg.Politics.Cli/WorldRpg.Politics.Cli.csproj --configuration Release
 dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj --no-restore
 
 # The behavior suites, because compiling projects is not the same as exercising them: a pin move that
@@ -168,6 +169,7 @@ else
 fi
 dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
 dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
+dotnet test tests/WorldRpg.Politics.Tests/WorldRpg.Politics.Tests.csproj
 
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
 

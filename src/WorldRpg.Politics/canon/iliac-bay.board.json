@@ -1,0 +1,25 @@
+{
+  "seed": 405,
+  "seats": [
+    {"id": "daggerfall", "name": "Kingdom of Daggerfall", "holder": "king-gothryd", "home": "daggerfall", "coin": 4, "favour": 3, "force": 4},
+    {"id": "wayrest", "name": "Kingdom of Wayrest", "holder": "king-eadwyre", "home": "wayrest", "coin": 5, "favour": 4, "force": 2},
+    {"id": "sentinel", "name": "Kingdom of Sentinel", "holder": "queen-akorithi", "home": "sentinel", "coin": 4, "favour": 3, "force": 4},
+    {"id": "orsinium", "name": "Orsinium", "holder": "gortwog", "home": "orsinium", "coin": 2, "favour": 1, "force": 5}
+  ],
+  "regions": [
+    {"id": "daggerfall", "name": "Daggerfall", "catalogRegion": 17, "capital": true, "allegiance": "daggerfall", "control": 5, "prosperity": 4, "order": 4, "influence": {"daggerfall": 2}, "borders": ["betony", "glenpoint", "ilessan-hills"]},
+    {"id": "betony", "name": "Betony", "catalogRegion": 19, "capital": false, "allegiance": "daggerfall", "control": 2, "prosperity": 2, "order": 3, "influence": {"daggerfall": 1, "sentinel": 1}, "borders": ["daggerfall", "sentinel"]},
+    {"id": "glenpoint", "name": "Glenpoint", "catalogRegion": 18, "capital": false, "allegiance": null, "control": 3, "prosperity": 3, "order": 3, "influence": {}, "borders": ["daggerfall", "ilessan-hills", "anticlere"]},
+    {"id": "ilessan-hills", "name": "Ilessan Hills", "catalogRegion": 60, "capital": false, "allegiance": null, "control": 3, "prosperity": 3, "order": 3, "influence": {}, "borders": ["daggerfall", "glenpoint", "menevia"]},
+    {"id": "wayrest", "name": "Wayrest", "catalogRegion": 23, "capital": true, "allegiance": "wayrest", "control": 5, "prosperity": 5, "order": 4, "influence": {"wayrest": 2}, "borders": ["menevia", "anticlere", "orsinium"]},
+    {"id": "menevia", "name": "Menevia", "catalogRegion": 33, "capital": false, "allegiance": null, "control": 3, "prosperity": 3, "order": 3, "influence": {}, "borders": ["ilessan-hills", "wayrest", "orsinium"]},
+    {"id": "anticlere", "name": "Anticlere", "catalogRegion": 21, "capital": false, "allegiance": null, "control": 3, "prosperity": 3, "order": 3, "influence": {}, "borders": ["glenpoint", "wayrest"]},
+    {"id": "sentinel", "name": "Sentinel", "catalogRegion": 20, "capital": true, "allegiance": "sentinel", "control": 5, "prosperity": 4, "order": 4, "influence": {"sentinel": 2}, "borders": ["betony", "abibon-gora"]},
+    {"id": "abibon-gora", "name": "Abibon-Gora", "catalogRegion": 43, "capital": false, "allegiance": null, "control": 3, "prosperity": 3, "order": 3, "influence": {}, "borders": ["sentinel"]},
+    {"id": "orsinium", "name": "Orsinium", "catalogRegion": 26, "capital": true, "allegiance": "orsinium", "control": 4, "prosperity": 2, "order": 3, "influence": {"orsinium": 2}, "borders": ["wayrest", "menevia"]}
+  ],
+  "relations": [
+    {"a": "daggerfall", "b": "sentinel", "value": -1},
+    {"a": "daggerfall", "b": "orsinium", "value": -1}
+  ]
+}

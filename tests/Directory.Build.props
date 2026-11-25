@@ -8,7 +8,7 @@
     <Using Include="WorldRpg.Tests.Support" />
   </ItemGroup>
   <!-- The real data containers, read through the Engine's test host, for the suites that reference the Engine. -->
-  <ItemGroup Condition="'$(MSBuildProjectName)' != 'WorldRpg.Architecture.Tests'">
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'WorldRpg.Architecture.Tests' and '$(MSBuildProjectName)' != 'WorldRpg.Politics.Tests'">
     <Compile Include="$(MSBuildThisFileDirectory)SharedEngine/**/*.cs" LinkBase="SharedEngine" />
   </ItemGroup>
 </Project>
