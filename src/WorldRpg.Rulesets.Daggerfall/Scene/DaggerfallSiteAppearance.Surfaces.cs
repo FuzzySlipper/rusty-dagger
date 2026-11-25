@@ -204,6 +204,7 @@ internal sealed partial class DaggerfallSiteAppearance
         foreach (SurfaceMaterial surface in surfaceMaterials) ApplySurface(surface, season);
         ApplyShells(season, surfacesRefreshed);
         ApplyInteriorShells(season, surfacesRefreshed);
+        ApplyInteriorExtrude(season, surfacesRefreshed);
     }
 
     private int SurfaceSeason => materialSeason switch { DaggerfallExteriorSeason.Winter => 1, DaggerfallExteriorSeason.Rain => 2, _ => 0 };

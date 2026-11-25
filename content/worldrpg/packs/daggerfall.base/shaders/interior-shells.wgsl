@@ -59,7 +59,7 @@ fn displace(vertex: Vertex) -> vec3<f32> {
     let lift = material.parameters[0].y;
     let h = material.parameters[0].z;
     let droop = material.parameters[1].x;
-    let n = normalize(vertex.normal);
+    let n = normalize(vertex.world_normal);
     // Vertical walls & overhanging ceilings droop gently downward under gravity; floors rise straight up.
     let wall_factor = smoothstep(0.65, 0.15, n.y);
     let sag = vec3<f32>(0.0, -droop * h * h * wall_factor, 0.0);

@@ -136,8 +136,9 @@ fn shade(given: Surface) -> vec4<f32> {
     let tv = select(vec3<f32>(0.0, 0.0, 1.0), normalize(tv_raw), dot(tv_raw, tv_raw) > 1e-12);
 
     // Cap physical extrusion relative to physical texel width so narrow UV-squished strips (door jambs,
-    // thin trim boards) never over-extrude across dozens of tiny wood-grain texels.
-    let texel_cap = min(metres.x, metres.y) * 1.35;
+    // thin trim boards) never over-extrude across dozens of tiny wood-grain texels; deep-pom (>10cm) relaxes cap.
+    let cap_mult = select(1.35, 3.20, p0.x > 0.10);
+    let texel_cap = min(metres.x, metres.y) * cap_mult;
     let depth = select(0.0, min(p0.x, texel_cap) * fade * ceiling_scale, good_det);
 
     var cell = vec2<i32>(floor(uv * texels));

@@ -37,6 +37,18 @@ internal enum DaggerfallInteriorShellKind
 }
 
 /// <summary>
+/// Experimental outward 3D architectural extrusion mode (<c>world.interior-extrude</c>, #11043).
+/// </summary>
+internal enum DaggerfallInteriorExtrudeMode
+{
+    Off = 0,
+    DeepPom = 1,
+    SilhouettePom = 2,
+    WallShells = 3,
+    WallShellsShadow = 4,
+}
+
+/// <summary>
 /// Per-material Pass 3 classification and shader parameter shaping for building interiors and dungeons (#11043).
 /// Handles all four Arena2 climate archive banks (<c>0xx</c>, <c>1xx</c>, <c>3xx</c>, <c>4xx</c>) via <c>archive % 100</c>
 /// for climate-variant interior/dungeon sets, mapping each material family to distinct pulp-fantasy PBR &amp; relief
@@ -167,6 +179,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
         float damp = Math.Clamp(dungeonDampness, 0f, 1f);
         float dampRoughScale = 1f - 0.22f * damp;
         float depthScale = baseSettings.DepthMetres > 1e-4f ? 1f : 0f;
+        float capBoost = baseSettings.DepthMetres > 0.10f ? 2.2f : 1f;
 
         // Special shader flags (parameters[3].y):
         // 0 = stone/default, 1 = gold/brass inlay, 2 = forged iron + brass, 3 = wet crimson blood,
@@ -183,7 +196,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
             DaggerfallInteriorSurfaceClass.PolishedMarble => (
                 baseSettings with
                 {
-                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.024f),
+                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.024f * capBoost),
                     CavityDarkness = MathF.Min(baseSettings.CavityDarkness, 0.44f),
                     TopSlopeStrength = baseSettings.TopSlopeStrength * 0.55f,
                     BaseRoughness = 0.22f, RimRoughness = 0.14f, RimMetalness = 0.10f,
@@ -193,7 +206,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
             DaggerfallInteriorSurfaceClass.ArcaneStone => (
                 baseSettings with
                 {
-                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.036f),
+                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.036f * capBoost),
                     CavityDarkness = MathF.Min(baseSettings.CavityDarkness, 0.66f),
                     BaseRoughness = 0.48f, RimRoughness = 0.28f, RimMetalness = 0.12f,
                 }, 1, false),
@@ -218,7 +231,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
             DaggerfallInteriorSurfaceClass.IronAndDoors => (
                 baseSettings with
                 {
-                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.048f),
+                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.048f * capBoost),
                     BaseRoughness = 0.60f, RimRoughness = 0.24f, RimMetalness = 0.22f,
                 }, 2, true),
 
@@ -258,7 +271,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
             DaggerfallInteriorSurfaceClass.PlasterAndTimber => (
                 baseSettings with
                 {
-                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.050f),
+                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.050f * capBoost),
                     CavityDarkness = MathF.Min(baseSettings.CavityDarkness, 0.62f),
                     BaseRoughness = MathF.Max(baseSettings.BaseRoughness, 0.64f),
                 }, 1, false),
@@ -266,7 +279,7 @@ internal static class DaggerfallInteriorSurfaceMaterials
             DaggerfallInteriorSurfaceClass.WoodAndFurniture => (
                 baseSettings with
                 {
-                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.040f),
+                    DepthMetres = depthScale * MathF.Min(baseSettings.DepthMetres, 0.040f * capBoost),
                     CavityDarkness = MathF.Min(baseSettings.CavityDarkness, 0.58f),
                     BaseRoughness = 0.54f, RimRoughness = 0.26f, RimMetalness = 0.10f,
                 }, 1, false),
@@ -410,4 +423,90 @@ internal static class DaggerfallInteriorSurfaceMaterials
         11 => 0.45f,                          // RuinedCastle (Castle Necromoghan)
         _ => 0.20f,                           // HumanStronghold (Privateer's Hold), Prison, etc.
     };
+
+    /// <summary>
+    /// Outward extrusion height multiplier for each semantic surface class under experimental
+    /// <c>world.interior-extrude</c> (<c>0</c> skips flat paintings, solids, carpets, and tapestries).
+    /// </summary>
+    internal static float ExtrudeScale(DaggerfallInteriorSurfaceClass surfaceClass) => surfaceClass switch
+    {
+        DaggerfallInteriorSurfaceClass.FlatSolid
+            or DaggerfallInteriorSurfaceClass.PaintingOrScroll
+            or DaggerfallInteriorSurfaceClass.PlushCarpet
+            or DaggerfallInteriorSurfaceClass.WovenTapestry => 0f,
+        DaggerfallInteriorSurfaceClass.ArcaneStone => 1.15f,
+        DaggerfallInteriorSurfaceClass.DefaultStone
+            or DaggerfallInteriorSurfaceClass.WetSewerCave
+            or DaggerfallInteriorSurfaceClass.MossyStone
+            or DaggerfallInteriorSurfaceClass.BloodAndGore => 1.0f,
+        DaggerfallInteriorSurfaceClass.PlasterAndTimber => 0.85f,
+        DaggerfallInteriorSurfaceClass.IronAndDoors
+            or DaggerfallInteriorSurfaceClass.WoodAndFurniture => 0.65f,
+        DaggerfallInteriorSurfaceClass.PolishedMarble => 0.45f,
+        _ => 0.85f,
+    };
+
+    internal static MaterialShader BuildExtrudeDiscardShader(RenderResource shader) =>
+        new(new RenderResourceReference(shader), Vector4.Zero, Vector4.Zero, Vector4.Zero, Vector4.Zero, default, default);
+
+    internal static MaterialShader BuildExtrudeShader(
+        RenderResource shader,
+        DaggerfallInteriorReliefSettings baseSettings,
+        DaggerfallInteriorSurfaceClass surfaceClass,
+        DaggerfallInteriorExtrudeMode mode,
+        int layer,
+        int layers,
+        float dungeonDampness,
+        float? waterLevelY)
+    {
+        float scale = ExtrudeScale(surfaceClass);
+        if (scale <= 0f || layer <= 0 || layers <= 0)
+            return BuildExtrudeDiscardShader(shader);
+
+        float damp = Math.Clamp(dungeonDampness, 0f, 1f);
+        float dampRoughScale = 1f - 0.22f * damp;
+        (float baseRough, float rimRough, float rimMetal, float cavity, int specialFlags, bool waterSensitive) = surfaceClass switch
+        {
+            DaggerfallInteriorSurfaceClass.PolishedMarble => (0.22f, 0.14f, 0.10f, 0.44f, 1, true),
+            DaggerfallInteriorSurfaceClass.ArcaneStone => (0.48f, 0.28f, 0.12f, 0.66f, 1, false),
+            DaggerfallInteriorSurfaceClass.WetSewerCave => (0.34f, 0.20f, 0.15f, 0.84f, 0, true),
+            DaggerfallInteriorSurfaceClass.MossyStone => (MathF.Max(0.46f, baseSettings.BaseRoughness * 0.86f), MathF.Max(0.26f, baseSettings.RimRoughness * 0.90f), baseSettings.RimMetalness, 0.80f, 5, true),
+            DaggerfallInteriorSurfaceClass.IronAndDoors => (0.60f, 0.24f, 0.22f, baseSettings.CavityDarkness, 2, true),
+            DaggerfallInteriorSurfaceClass.BloodAndGore => (baseSettings.BaseRoughness * dampRoughScale, baseSettings.RimRoughness, baseSettings.RimMetalness, baseSettings.CavityDarkness, 3, true),
+            DaggerfallInteriorSurfaceClass.PlasterAndTimber => (MathF.Max(baseSettings.BaseRoughness, 0.64f), baseSettings.RimRoughness, baseSettings.RimMetalness, 0.62f, 1, false),
+            DaggerfallInteriorSurfaceClass.WoodAndFurniture => (0.54f, 0.26f, 0.10f, 0.58f, 1, false),
+            _ => (MathF.Max(0.36f, baseSettings.BaseRoughness * dampRoughScale), MathF.Max(0.20f, baseSettings.RimRoughness * (1f - 0.14f * damp)), baseSettings.RimMetalness, baseSettings.CavityDarkness, 0, true),
+        };
+
+        float hasWater = waterSensitive && waterLevelY.HasValue ? 1f : 0f;
+        float waterY = waterLevelY ?? 0f;
+
+        if (mode == DaggerfallInteriorExtrudeMode.SilhouettePom)
+        {
+            float depth = 0.090f * scale;
+            return new MaterialShader(
+                new RenderResourceReference(shader),
+                new Vector4(1f, depth, 24f, 0.34f),
+                new Vector4(11f, 19f, baseRough, rimRough),
+                new Vector4(rimMetal, cavity, baseSettings.HeightGamma, baseSettings.MortarThreshold),
+                new Vector4(0f, specialFlags, waterY, hasWater),
+                default,
+                default,
+                depth + 0.01f);
+        }
+
+        // Grass-FX-style multi-layer outward wall shells (14 layers @ ~5.6 mm spacing on masonry).
+        float frac = (float)layer / layers;
+        float maxHeight = 0.078f * scale;
+        float lift = maxHeight * frac;
+        return new MaterialShader(
+            new RenderResourceReference(shader),
+            new Vector4(2f, lift, frac, 0.30f),
+            new Vector4(11f, 19f, baseRough, rimRough),
+            new Vector4(rimMetal, cavity, baseSettings.HeightGamma, baseSettings.MortarThreshold),
+            new Vector4(0f, specialFlags, waterY, hasWater),
+            default,
+            default,
+            lift + 0.01f);
+    }
 }

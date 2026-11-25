@@ -184,4 +184,30 @@ public sealed class DaggerfallInteriorLookTests
         view.Update(() => Vector3.Zero);
         Assert.Equal(Tuning.ViewFloor, view.Level.R, 4);
     }
+
+    [Fact]
+    public void Interior_extrude_modes_validate_and_scale_surface_classes()
+    {
+        List<string> releases = [];
+        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, new AppearanceFake(releases));
+        using DaggerfallInteriorLook look = new(engine.Context, data: null, Tuning);
+        Assert.Equal("off", look.ExtrudeMode);
+        Assert.Null(look.SelectExtrude("deep-pom"));
+        Assert.Equal("deep-pom", look.ExtrudeMode);
+        Assert.Null(look.SelectExtrude("silhouette-pom"));
+        Assert.Equal("silhouette-pom", look.ExtrudeMode);
+        Assert.Null(look.SelectExtrude("wall-shells"));
+        Assert.Equal("wall-shells", look.ExtrudeMode);
+        Assert.Null(look.SelectExtrude("wall-shells-shadow"));
+        Assert.Equal("wall-shells-shadow", look.ExtrudeMode);
+        Assert.NotNull(look.SelectExtrude("not-a-mode"));
+        Assert.Null(look.SelectExtrude("reset"));
+        Assert.Equal("off", look.ExtrudeMode);
+
+        Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.FlatSolid));
+        Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.PaintingOrScroll));
+        Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.PlushCarpet));
+        Assert.True(DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.ArcaneStone) > 1.0f);
+        Assert.True(DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.DefaultStone) == 1.0f);
+    }
 }

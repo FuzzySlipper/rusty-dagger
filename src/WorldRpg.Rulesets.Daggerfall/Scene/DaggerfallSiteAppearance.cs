@@ -560,6 +560,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
                 Compose(worldAppearance.Transform, pose), DrawnModel(model, refreshed), worldAppearance.Visible, worldAppearance.Layer));
         AppendInteriorShellFacts(facts, slot);
+        AppendInteriorExtrudeFacts(facts, slot);
         if (parts is null) return;
         // A city has thousands of doors, nearly all of them still: their facts are read again only once one moves.
         int revision = parts.DoorRevision();
@@ -1040,6 +1041,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         // A reloaded location starts in its admitted season and the current art set.
         ApplySurfaces();
         EnsureInteriorShellOverlays();
+        EnsureInteriorExtrudeOverlays();
     }
 
     /// <summary>A static mesh appearance drawing a visual with the location's materials at its slots.</summary>
@@ -1074,6 +1076,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         List<IDisposable> retired = [];
         retired.AddRange(TakeDecorationResources());
         TakeInteriorShellResources(retired);
+        TakeInteriorExtrudeResources(retired);
         // A model placed several times shows one appearance, released once.
         retired.AddRange(world.Select(part => part.Model).Distinct().Select(model => model.Classic).OfType<Appearance>().Reverse());
         world.Clear();
