@@ -22,6 +22,9 @@ Every file lives in the character's folder, local/art/generated/people/dagger-ch
 
 Steps, in order (each checks that the one before it has run):
   init      dagger-char init, the approved front (and back, if approved) from the CMS (--cms, default ID), npc.json, prompt templates
+            Experiment (npc-471, 2026-11-25): init --from DIR with a side.png too (a three-view sheet split in three; --side right|left)
+            sets npc.json "side": keys, clay (00-brief/clay-side.txt), Meshy and the orbit take it as a third view (<Picture 3>), and
+            "side_guide": true also pins it at its frame of the orbit
   keys      cut both paintings from their background (flood_cut, --tolerance) and make the 1920 px keyframes
   clay      Qwen edits both keyframes to plain grey clay on the GPU lab (00-brief/clay-*.txt)
   mesh      Meshy multi-view mesh of the clay pair, untextured (20 credits); on a content block, local Hunyuan3D-2mv instead
@@ -177,8 +180,9 @@ class Npc:
 
     @property
     def views(self):
-        """The paintings this character has: front, and back unless it is front-only."""
-        return ('front',) if self.cfg.get('front_only') else ('front', 'back')
+        """The paintings this character has: front, back unless it is front-only, and a side painting when npc.json "side" names
+        which side it shows (right or left; experiment, npc-471 2026-11-25: Patch's three-view sheet split in three)."""
+        return (('front',) if self.cfg.get('front_only') else ('front', 'back')) + (('side',) if self.cfg.get('side') else ())
 
     def clip_dir(self):
         return self.k / 'guided' / f"stick-{self.cfg['size']}"
@@ -211,13 +215,16 @@ def step_init(n, a):
                 cfg['front_only'] = True
                 print(f'{n.id}: no approved back in the CMS; front-only (every step takes the front alone)'); continue
             raise SystemExit(f'CMS fetch of {a.cms} {v} failed: {r.stdout[-400:]} {r.stderr[-400:]}')
+    if a.from_dir and (Path(a.from_dir) / 'side.png').exists():   # a side painting (experiment, npc-471): which side it shows
+        shutil.copy(Path(a.from_dir) / 'side.png', ap / 'side.png'); cfg['side'] = a.side or cfg.get('side') or 'right'
+        print(f"{n.id}: side painting ({cfg['side']} side) from {a.from_dir}")
     n.brief.mkdir(parents=True, exist_ok=True)
     (n.brief / 'npc.json').write_text(json.dumps(cfg, indent=1) + '\n')
-    for name in BRIEF:
+    for name in BRIEF + (('clay-side.txt',) if cfg.get('side') else ()):
         if name == 'clay-back.txt' and cfg.get('front_only'):
             continue
         if not (n.brief / name).exists():
-            shutil.copy(TEMPLATES / name, n.brief / name)
+            shutil.copy(TEMPLATES / ('clay-front.txt' if name == 'clay-side.txt' else name), n.brief / name)
     print(f'{n.id}: paintings in 01-concept/approved; edit 00-brief/{", ".join(BRIEF)} for this character (they are 021\'s)')
 
 
@@ -339,7 +346,9 @@ def step_clip(n, a):
     sz = int(a.size or n.cfg['size'])
     n.need(n.guide / str(sz), step='guide')
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
-    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env, **n.gpu_env})
+    # npc.json "side_guide": true also pins the side painting at the frame that side faces the camera (18 right, 54 left; experiment, npc-471)
+    side = {'SIDE_FRAME': '18' if n.cfg['side'] == 'right' else '54'} if n.cfg.get('side') and n.cfg.get('side_guide') else {}
+    sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env, **n.gpu_env, **side})
     d = n.k / 'guided' / f'stick-{sz}'
     sh(f"ffmpeg -loglevel error -y -framerate 24 -pattern_type glob -i '{d}/frames/*.png' -vf scale=960:960 -c:v libx264 -crf 20 "
        f"-pix_fmt yuv420p {d}/review.mp4")
@@ -533,7 +542,8 @@ def main():
     ap.add_argument('step', choices=list(STEPS)); ap.add_argument('id')
     ap.add_argument('--cms', help='init: the CMS character id (default ID when it is npc-NNN)');
     ap.add_argument('--walker', action='store_true', help='init: a figure that walks (Meshy API rig, Mixamo clips, the walk step)')
-    ap.add_argument('--from', dest='from_dir', help='init: take front.png (and back.png) from this folder instead of the CMS approval')
+    ap.add_argument('--from', dest='from_dir', help='init: take front.png (and back.png, side.png) from this folder instead of the CMS approval')
+    ap.add_argument('--side', choices=('right', 'left'), help='init --from with a side.png: which side of the figure it shows (default right)')
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
     ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
     ap.add_argument('--gpu', help='clay, clip, bake, r1, bound, walk: where the GPU work runs (npc.json "gpu_host"; default gpu-lab; den-m5, den-nimo, or runpod-* for the gsplat steps)')

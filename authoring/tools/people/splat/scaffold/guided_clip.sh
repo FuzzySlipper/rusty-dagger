@@ -6,6 +6,9 @@
 # NNN, the folder npc-NNN). With no back painting (023) the keyframes
 # and REF2VA take the front alone. BACKDROP=R,G,B (with the export) puts the keyframes and the lit guide on that colour, a chroma
 # key absent from the character, for a cleaner matte (npc-024, 2026-11-23; say the colour in orbit.txt too).
+# A side painting (01-concept/wip/cut/side-cut.png; static-npc npc.json "side", experiment, npc-471 2026-11-25: Patch's three-view sheet)
+# is keyframed with the others and goes to REF2VA as the third reference (<Picture 3>); SIDE_FRAME=N also pins it at frame N
+# (MiniMaxH3AddGuide; 18 is his right side on the eyelevel path, 54 his left).
 #   guide  the stick figure from the scaffold's joints (stick_fit.py; FIT=joints.json gives them instead), its lit-clay (L11 key and fills) and depth orbits at eye level
 #          (27 degree lens, 73 frames) rendered with Blender on den-m5's CPU, and the keyframes at SIZE
 #   clip   H3 REF2VA on the GPU lab: the lit stick video as <Video 1>, depth control 0.5 from the same camera, the two keyframes as
@@ -42,7 +45,7 @@ for f in sorted(glob.glob(f'{d}/shaded/*.png')):
 PY
   for v in "$G/$SZ/stick/depth $G/$SZ/stick/depth.mp4" "$G/$SZ/stick-L11/shaded-flat $G/$SZ/stick-L11/shaded.mp4"; do set -- $v; ffmpeg -loglevel error -y -framerate 24 -i $1/%03d.png -c:v libx264 -qp 0 -pix_fmt yuv444p $2; done
   Hh=$(python3 -c "print(round(1898/2176*$SZ))"); Fl=$(python3 -c "print(round(2039/2176*$SZ))")
-  python3 authoring/tools/people/splat/mesh-splat/flood_cut.py keyframes $C/wip/keys-$SZ front=$C/wip/cut/front-cut.png $([ -f $C/wip/cut/back-cut.png ] && echo back=$C/wip/cut/back-cut.png) ${BACKDROP:+--bg $BACKDROP} --size $SZ --height $Hh --floor $Fl --equal-height > /dev/null || exit 4
+  python3 authoring/tools/people/splat/mesh-splat/flood_cut.py keyframes $C/wip/keys-$SZ front=$C/wip/cut/front-cut.png $([ -f $C/wip/cut/back-cut.png ] && echo back=$C/wip/cut/back-cut.png) $([ -f $C/wip/cut/side-cut.png ] && echo side=$C/wip/cut/side-cut.png) ${BACKDROP:+--bg $BACKDROP} --size $SZ --height $Hh --floor $Fl --equal-height > /dev/null || exit 4
   echo "guide $SZ: $(ffprobe -v error -count_frames -select_streams v -show_entries stream=nb_read_frames,width -of csv=p=0 $G/$SZ/stick-L11/shaded.mp4) $(ffprobe -v error -count_frames -select_streams v -show_entries stream=nb_read_frames,width -of csv=p=0 $G/$SZ/stick/depth.mp4)" ;;
 clip)
   [ -f $G/prompt.txt ] || { echo "guided_clip.sh: no $G/prompt.txt" >&2; exit 2; }
@@ -53,12 +56,12 @@ clip)
     echo "guided $N start $(date +%s) size $SZ seed $SEED host $HALO unet ${H3_UNET:-default} lora ${LORA:-none} steps ${STEPS:-4}" >> $R/times.txt; rc=0
     COMFY_URL=http://$ip:8188 H3_CLIP=${H3_CLIP:-qwen3vl_32b_minimax_h3_int8_convrot.safetensors} \
     asset-resources run --host $HALO --resource $res --owner claude --purpose "Villager $ID stick-guided orbit $N ($SZ px, REF2VA) on $HALO" -- \
-      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
+      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) $([ -f $K/side.png ] && echo --image $K/side.png) ${SIDE_FRAME:+--guide $K/side.png:$SIDE_FRAME} --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
         --size $SZ --frames 73 --seed $SEED --steps ${STEPS:-4} ${LORA_ARG[@]+"${LORA_ARG[@]}"} --sampler res_multistep --scheduler simple \
         --control depth:$G/$SZ/stick/depth.mp4:0.5 --free-after-encode --deadline ${DEADLINE:-43200} || rc=$?
     echo "guided $N end $(date +%s) rc $rc host $HALO" >> $R/times.txt; exit $rc
   fi
-  export R ID N SZ G H0 T K=$C/wip/keys-$SZ SEED=${SEED:-$((610000000 + 10#$(echo ${ID%%-*} | tr -dc 0-9) * 1000))}
+  export R ID N SZ G H0 T SIDE_FRAME=${SIDE_FRAME:-} K=$C/wip/keys-$SZ SEED=${SEED:-$((610000000 + 10#$(echo ${ID%%-*} | tr -dc 0-9) * 1000))}
   mkdir -p $R/$ID/A/guided; echo "guided $N waiting-for-lock $(date +%s)" >> $R/times.txt
   flock -w 7200 /tmp/gpu-lab-claude.lock bash -c '
     if [ $SZ -gt 1088 ]; then t0=$(date +%s); while [ "$(python3 $H0/queue.py)" != "running 0 pending 0" ]; do
@@ -67,7 +70,7 @@ clip)
     $H0/vram.sh $R/$ID/A/guided/vram-$N.log & mon=$!; trap "pkill -P $mon 2>/dev/null; kill $mon 2>/dev/null" EXIT
     echo "guided $N start $(date +%s) size $SZ seed $SEED" >> $R/times.txt; rc=0
     asset-resources run --host gpu-lab --resource lab-comfy --owner claude --purpose "Villager $ID stick-guided orbit $N ($SZ px, REF2VA)" -- \
-      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
+      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) $([ -f $K/side.png ] && echo --image $K/side.png) ${SIDE_FRAME:+--guide $K/side.png:$SIDE_FRAME} --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
         --size $SZ --frames 73 --seed $SEED --steps 4 --lora minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors --sampler res_multistep --scheduler simple \
         --control depth:$G/$SZ/stick/depth.mp4:0.5 --free-after-encode || rc=$?
     echo "guided $N end $(date +%s) rc $rc queue $(python3 $H0/queue.py) peak-vram-MiB $(sort -k2 -n $R/$ID/A/guided/vram-$N.log | tail -1 | cut -d" " -f2)" >> $R/times.txt; exit $rc' ;;
