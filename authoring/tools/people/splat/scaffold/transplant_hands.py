@@ -65,14 +65,17 @@ def dense(J, W, n):
 
 
 def led_by(path, bones):
-    """Vertices, triangles and which triangles the named bones and their descendants lead (over half the weight at every corner)."""
+    """Vertices, triangles and which triangles the named bones and their descendants lead (over half the weight at every corner).
+    A name ending in '=' is that bone alone, without its descendants (npc-458, 2026-11-25: 'Hips=' for a kilt panel below the belt;
+    plain 'Hips' is the whole body)."""
     doc, acc = read_glb(path)
     names, parents, _ = rig(doc, acc)
     V, _, F, J, W = skinned(doc, acc, next(nd for nd in doc["nodes"] if nd.get("skin") is not None))
-    fam = set(names.index(b) for b in bones)
+    fam = set(names.index(b) for b in bones if not b.endswith('='))
     for j in range(len(names)):                      # parents come before children in every rig read here
         if parents[j] in fam:
             fam.add(j)
+    fam |= set(names.index(b[:-1]) for b in bones if b.endswith('='))
     led = dense(J, W, len(names))[:, sorted(fam)].sum(1) > 0.5
     return V, F, led[F].all(1)
 
