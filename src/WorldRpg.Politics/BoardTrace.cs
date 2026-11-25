@@ -41,10 +41,16 @@ public sealed record ArrivalTrace(
     IReadOnlyList<BoardChange> Changes);
 
 /// <summary>
-/// One week's record: the upkeep's changes, the slow moves arriving, then each seat's move in table order. Turn 1 is
-/// the first Sunday; <see cref="Year"/> and <see cref="Day"/> place it in the Tamrielic year of twelve 30-day months.
+/// One week's record: the upkeep's changes, the World card turned, the slow moves arriving, then each seat's move in
+/// table order. Turn 1 is the first Sunday; <see cref="Year"/> and <see cref="Day"/> place it in the Tamrielic year of
+/// twelve 30-day months.
 /// </summary>
-public sealed record TurnTrace(int Turn, IReadOnlyList<BoardChange> Upkeep, IReadOnlyList<ArrivalTrace> Arrivals, IReadOnlyList<MoveTrace> Moves)
+public sealed record TurnTrace(
+    int Turn,
+    IReadOnlyList<BoardChange> Upkeep,
+    WorldTrace? World,
+    IReadOnlyList<ArrivalTrace> Arrivals,
+    IReadOnlyList<MoveTrace> Moves)
 {
     public const int DaysPerWeek = 7;
     public const int DaysPerYear = 360;
@@ -75,6 +81,11 @@ public static class BoardTraceWriter
     {
         writer.WriteLine(string.Create(CultureInfo.InvariantCulture, $"== Week {turn.Turn} (year {turn.Year}, day {turn.Day}) =="));
         if (turn.Upkeep.Count > 0) writer.WriteLine($"  upkeep: {Changes(turn.Upkeep)}");
+        if (turn.World is { } world)
+        {
+            writer.WriteLine($"  world: {world.Card} -> {world.Region}{(world.Actor is null ? "" : ", by " + world.Actor)}");
+            if (world.Changes.Count > 0) writer.WriteLine($"      {Changes(world.Changes)}");
+        }
         foreach (ArrivalTrace arrival in turn.Arrivals)
         {
             writer.WriteLine($"  arrives {arrival.Id}: {arrival.Seat} {arrival.Card}{Targets(arrival.Targets)}{Secret(arrival.Visibility)}: {arrival.Outcome.ToString().ToLowerInvariant()}");

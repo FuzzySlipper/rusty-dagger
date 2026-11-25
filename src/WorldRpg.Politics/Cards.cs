@@ -111,6 +111,25 @@ public enum CardEffectKind
     Take,
 
     /// <summary>
+    /// Lays <see cref="CardEffect.Condition"/> on the target region at magnitude <see cref="CardEffect.Amount"/> for
+    /// <see cref="CardEffect.Weeks"/> weeks, with <see cref="CardEffect.Detail"/> and the player as its source.
+    /// </summary>
+    AddCondition,
+
+    /// <summary>
+    /// Lifts every <see cref="CardEffect.Condition"/> from the target region. A card that lifts conditions fits only a
+    /// region with at least one of them.
+    /// </summary>
+    RemoveCondition,
+
+    /// <summary>
+    /// Lays <see cref="CardEffect.Court"/> on the target crown's court at magnitude <see cref="CardEffect.Amount"/> for
+    /// <see cref="CardEffect.Weeks"/> weeks, with the player as its source. Only a crown has a court, and a plot needs the
+    /// player to reach the crown's capital.
+    /// </summary>
+    AddCourtCondition,
+
+    /// <summary>
     /// The target region changes allegiance to the player at control <see cref="Card.AnnexedControl"/> and is
     /// consolidated for <see cref="Card.ConsolidationWeeks"/> weeks, during which no seat may contest it. Its former
     /// seat's factors are expelled (its influence there goes to 0) and its relation with the player falls by 2.
@@ -120,8 +139,19 @@ public enum CardEffectKind
     Annex,
 }
 
-/// <summary>One effect of a card. <see cref="Resource"/> is set for gaining and taking, <see cref="Office"/> for a challenge.</summary>
-public sealed record CardEffect(CardEffectKind Kind, int Amount = 0, Resource? Resource = null, Office? Office = null);
+/// <summary>
+/// One effect of a card. <see cref="Resource"/> is set for gaining and taking, <see cref="Office"/> for a challenge,
+/// <see cref="Condition"/> or <see cref="Court"/> with <see cref="Weeks"/> and any <see cref="Detail"/> for a condition.
+/// </summary>
+public sealed record CardEffect(
+    CardEffectKind Kind,
+    int Amount = 0,
+    Resource? Resource = null,
+    Office? Office = null,
+    ConditionKind? Condition = null,
+    CourtConditionKind? Court = null,
+    int Weeks = 0,
+    string? Detail = null);
 
 /// <summary>
 /// A card: its family, what it costs, what it is played on, who sees it and what it does. A card of
@@ -195,12 +225,16 @@ public sealed record Card(
             _ => false,
         };
         if (!fits) return false;
+        CardEffect[] lifts = [.. Effects.Where(effect => effect.Kind == CardEffectKind.RemoveCondition)];
+        if (lifts.Length > 0 && !board.Region(targets[0]).Conditions.Any(held => lifts.Any(lift => lift.Condition == held.Kind))) return false;
         foreach (CardEffect effect in Effects)
         {
             switch (effect.Kind)
             {
                 case CardEffectKind.Influence when effect.Amount > 0 && board.PiecesLeft(seat) == 0:
                 case CardEffectKind.ChallengeOffice when board.PiecesLeft(seat) == 0:
+                case CardEffectKind.AddCourtCondition when board.Seat(targets[0]) is not { Kind: SeatKind.Crown, Home: { } home }
+                    || !board.Reaches(seat, board.Region(home)):
                     return false;
                 case CardEffectKind.Annex:
                     if (seat.Kind != SeatKind.Crown) return false;
@@ -267,6 +301,13 @@ public sealed record Card(
                     int taken = Math.Min(effect.Amount, victim.Amount(effect.Resource!.Value));
                     board.AdjustResource(victim, effect.Resource.Value, -taken);
                     board.AdjustResource(seat, effect.Resource.Value, taken);
+                    break;
+                case CardEffectKind.AddCondition:
+                    board.AddCondition(regions[0], new RegionCondition(effect.Condition!.Value, effect.Detail, effect.Amount, seat.Id, board.Turn, board.Turn + effect.Weeks));
+                    break;
+                case CardEffectKind.RemoveCondition: board.RemoveConditions(regions[0], effect.Condition!.Value); break;
+                case CardEffectKind.AddCourtCondition:
+                    board.AddCourtCondition(board.Seat(targets[0]), new CourtCondition(effect.Court!.Value, effect.Amount, seat.Id, board.Turn, board.Turn + effect.Weeks));
                     break;
                 case CardEffectKind.Annex:
                     Region annexed = regions[0];

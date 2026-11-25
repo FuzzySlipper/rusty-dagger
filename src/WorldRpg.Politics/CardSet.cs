@@ -3,11 +3,12 @@ using System.Text.Json;
 namespace WorldRpg.Politics;
 
 /// <summary>
-/// The cards a table plays with: the shared families and every seat's signature cards. The canon set is
-/// <c>canon/iliac-bay.cards.json</c> beside this library. A seat's deck is every shared card of its families and its
-/// own signature cards, each as many times as the card's copies.
+/// The cards a table plays with: the shared families and every seat's signature cards, and the World deck no seat
+/// plays. The canon set is <c>canon/iliac-bay.cards.json</c> beside this library. A seat's deck is every shared card of
+/// its families and its own signature cards, each as many times as the card's copies; the World deck is every World
+/// card, as many times as its copies. A set with no World cards turns none.
 /// </summary>
-public sealed record CardSet(IReadOnlyList<Card> Cards)
+public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>? World = null)
 {
     /// <summary>The canon card set's file name in the build output.</summary>
     public const string CanonFile = "canon/iliac-bay.cards.json";
@@ -34,6 +35,9 @@ public sealed record CardSet(IReadOnlyList<Card> Cards)
 
     public Card ById(string id) => Cards.Single(card => card.Id == id);
 
+    /// <summary>The World deck before its shuffle, in card set order.</summary>
+    public IEnumerable<WorldCard> WorldDeck() => (World ?? []).SelectMany(card => Enumerable.Repeat(card, card.Copies));
+
     /// <summary>The deck <paramref name="seat"/> starts with, in card set order before its shuffle.</summary>
     public IEnumerable<Card> Deck(SeatSetup seat) => Cards
         .Where(card => card.Seat is null ? seat.Families.Contains(card.Family) : card.Seat == seat.Id)
@@ -58,7 +62,22 @@ public sealed record CardSet(IReadOnlyList<Card> Cards)
             foreach (CardEffect effect in card.Effects)
                 if (EffectProblem(card, effect) is { } problem) problems.Add($"card '{card.Id}' {effect.Kind}: {problem}");
         }
+        HashSet<string> worldIds = new(StringComparer.Ordinal);
+        foreach (WorldCard card in World ?? [])
+        {
+            if (!worldIds.Add(card.Id)) problems.Add($"world card '{card.Id}' is listed twice");
+            if (card.Magnitude is < 1 or > Conditions.MaxMagnitude) problems.Add($"world card '{card.Id}' magnitude {card.Magnitude} is outside 1..{Conditions.MaxMagnitude}");
+            if (card.Weeks < 1) problems.Add($"world card '{card.Id}' lasts no weeks");
+            if (card.Copies < 1) problems.Add($"world card '{card.Id}' has {card.Copies} copies");
+            if (ConditionDetailProblem(card.Condition, card.Detail) is { } detail) problems.Add($"world card '{card.Id}': {detail}");
+        }
         if (table is null) return problems;
+        HashSet<string> seats = [.. table.Seats.Select(seat => seat.Id)];
+        foreach (Card card in Cards)
+            foreach (CardEffect effect in card.Effects.Where(effect => effect.Condition == ConditionKind.Persecution && effect.Detail is not null && !seats.Contains(effect.Detail)))
+                problems.Add($"card '{card.Id}' persecutes unknown seat '{effect.Detail}'");
+        foreach (WorldCard card in (World ?? []).Where(card => card.Condition == ConditionKind.Persecution && card.Detail is not null && !seats.Contains(card.Detail)))
+            problems.Add($"world card '{card.Id}' persecutes unknown seat '{card.Detail}'");
         foreach (Card card in Cards)
             if (card.Seat is not null && table.Seats.All(seat => seat.Id != card.Seat))
                 problems.Add($"card '{card.Id}' is the signature of unknown seat '{card.Seat}'");
@@ -70,13 +89,36 @@ public sealed record CardSet(IReadOnlyList<Card> Cards)
         return problems;
     }
 
+    /// <summary>
+    /// What is wrong with a condition's detail: price surges, monster surges and persecutions name what they concern;
+    /// a war front's seats are named when a war lays it; the rest name nothing. A persecuted seat is checked against
+    /// the table.
+    /// </summary>
+    internal static string? ConditionDetailProblem(ConditionKind kind, string? detail)
+    {
+        bool needs = kind is ConditionKind.PriceSurge or ConditionKind.MonsterSurge or ConditionKind.Persecution;
+        return needs && string.IsNullOrWhiteSpace(detail) ? $"a {kind} names no detail"
+            : !needs && kind != ConditionKind.WarFront && detail is not null ? $"a {kind} names a detail it does not use"
+            : null;
+    }
+
     private static string? EffectProblem(Card card, CardEffect effect)
     {
         bool region = card.Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion or CardTarget.RegionRival;
         bool needsResource = effect.Kind is CardEffectKind.Gain or CardEffectKind.Take;
         bool needsOffice = effect.Kind == CardEffectKind.ChallengeOffice;
+        bool needsCondition = effect.Kind is CardEffectKind.AddCondition or CardEffectKind.RemoveCondition;
+        bool needsCourt = effect.Kind == CardEffectKind.AddCourtCondition;
+        bool lasts = effect.Kind is CardEffectKind.AddCondition or CardEffectKind.AddCourtCondition;
         if (needsResource != effect.Resource.HasValue) return needsResource ? "names no resource" : "names a resource it does not use";
         if (needsOffice != effect.Office.HasValue) return needsOffice ? "names no office" : "names an office it does not use";
+        if (needsCondition != effect.Condition.HasValue) return needsCondition ? "names no condition" : "names a condition it does not use";
+        if (needsCourt != effect.Court.HasValue) return needsCourt ? "names no court condition" : "names a court condition it does not use";
+        if (lasts && effect.Weeks < 1) return "lasts no weeks";
+        if (!lasts && effect.Weeks != 0) return "names weeks it does not use";
+        if (lasts && effect.Amount is < 1 or > Conditions.MaxMagnitude) return $"magnitude {effect.Amount} is outside 1..{Conditions.MaxMagnitude}";
+        if (effect.Kind != CardEffectKind.AddCondition && effect.Detail is not null) return "names a detail it does not use";
+        if (effect.Kind == CardEffectKind.AddCondition && ConditionDetailProblem(effect.Condition!.Value, effect.Detail) is { } detail) return detail;
         return effect.Kind switch
         {
             CardEffectKind.Control or CardEffectKind.Prosperity or CardEffectKind.Order when !region && card.Target != CardTarget.RegionPair =>
@@ -87,6 +129,8 @@ public sealed record CardSet(IReadOnlyList<Card> Cards)
             CardEffectKind.Relation when card.Target is CardTarget.None or CardTarget.RegionPair => "needs a seat or a single region target",
             CardEffectKind.Take when card.Target != CardTarget.OtherSeat => "needs a seat target",
             CardEffectKind.Annex when card.Target != CardTarget.ContestedRegion => "needs a contested region",
+            CardEffectKind.AddCondition or CardEffectKind.RemoveCondition when !region => "needs a single region target",
+            CardEffectKind.AddCourtCondition when card.Target != CardTarget.OtherSeat => "needs a seat target",
             CardEffectKind.MoveInfluence or CardEffectKind.Take when effect.Amount < 1 => "moves nothing",
             CardEffectKind.ChallengeOffice when effect.Amount < 0 => "has a negative strength",
             _ => null,

@@ -23,7 +23,7 @@ public sealed class DeterminismTests
     {
         string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Trace(seed: null, years: 20))));
 
-        Assert.Equal("a90dd127461c5dda0e8ec38a52ce3c5211ed7f26db473fc09b34f6c21d369e80", hash);
+        Assert.Equal("44a04887652470c343bf333d9fe6c68620e747a5f9cf4f32093ddff41124f27c", hash);
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class DeterminismTests
     {
         Assert.Equal(52, TurnTrace.TurnsIn(1));
         Assert.Equal(515, TurnTrace.TurnsIn(10));
-        TurnTrace turn = new(53, [], [], []);
+        TurnTrace turn = new(53, [], null, [], []);
         Assert.Equal(2, turn.Year);
         Assert.Equal(5, turn.Day);
     }
