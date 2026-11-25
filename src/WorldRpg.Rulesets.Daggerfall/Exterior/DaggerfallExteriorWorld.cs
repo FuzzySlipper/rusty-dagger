@@ -1182,17 +1182,21 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
             if (_time.Calendar.IsDay && profile.Site is { } residentSiteId && profile.Population.Count > 0)
             {
                 DaggerfallSiteRecord residentSite = _site.Require(residentSiteId);
-                int capacity = DaggerfallSourcePopulation.Capacity(residentSite, profile.Population.Count);
-                foreach (DaggerfallPopulationPlacement pop in profile.Population
-                    .OrderBy(p => p.Id, StringComparer.Ordinal)
-                    .Take(capacity))
+                if (DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, residentSite, out _) is not null)
                 {
-                    long popId = DaggerfallPeopleSlots.SeededSlotIdentity(residentSiteId, $"{key.LogicalId}/{pop.Id}");
-                    if (!_npcs.TryGet(popId, out DaggerfallNpc? existingPop)
-                        || (existingPop.Presence == DaggerfallNpcPresence.Active
-                            && (existingPop.Profile is null || existingPop.Profile == key)))
+                    int capacity = DaggerfallSourcePopulation.Capacity(residentSite, profile.Population.Count);
+                    foreach (DaggerfallPopulationPlacement pop in profile.Population
+                        .Where(p => DaggerfallSourcePopulation.IsEligiblePlacement(profile, _definitions, p))
+                        .OrderBy(p => p.Id, StringComparer.Ordinal)
+                        .Take(capacity))
                     {
-                        residentPopulationIds.Add(popId);
+                        long popId = DaggerfallPeopleSlots.SeededSlotIdentity(residentSiteId, $"{key.LogicalId}/{pop.Id}");
+                        if (!_npcs.TryGet(popId, out DaggerfallNpc? existingPop)
+                            || (existingPop.Presence == DaggerfallNpcPresence.Active
+                                && (existingPop.Profile is null || existingPop.Profile == key)))
+                        {
+                            residentPopulationIds.Add(popId);
+                        }
                     }
                 }
             }

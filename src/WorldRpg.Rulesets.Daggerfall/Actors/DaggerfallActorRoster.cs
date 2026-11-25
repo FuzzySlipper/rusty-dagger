@@ -690,6 +690,7 @@ internal sealed class DaggerfallActorRoster
         DaggerfallSiteRecord site = _definitions.Locations.Records.Single(record => record.Id == siteId);
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, string.Empty);
         DaggerfallSiteAppearance appearance = siteAppearance ?? _appearance();
+        string? climateRace = DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, site, out _);
 
         foreach (DaggerfallPopulationPlacement placement in profile.Population)
         {
@@ -701,15 +702,10 @@ internal sealed class DaggerfallActorRoster
             DaggerfallNpc? npc = _npcs.TryGet(id, out DaggerfallNpc? existing) ? existing : null;
             if (npc is null)
             {
-                DaggerfallFactionDefinition? faction = placement.FactionId == 0
-                    ? null
-                    : _definitions.Factions.Factions.GetValueOrDefault(placement.FactionId);
-                (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
-                    _definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId,
-                    placement.IsGuard ? "guard" : "civilian");
-                string race = _definitions.Catalogs.Races.FirstOrDefault()?.Id ?? "breton";
-                DaggerfallNpcAppearance look = new(race, (placement.Flags & 0x20) != 0 ? "Female" : "Male",
-                    placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
+                if (climateRace is null || !DaggerfallSourcePopulation.IsEligiblePlacement(profile, _definitions, placement))
+                    continue;
+                (DaggerfallNpcAppearance look, string role, IReadOnlyList<string> services) =
+                    DaggerfallSourcePopulation.ResolvePlacementIdentity(_definitions, placement, climateRace);
                 _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Civilian, placement.Id, npcSite, look, role, services, homeProfile: profile.ProfileKey);
                 npc = _npcs.Require(id);
             }

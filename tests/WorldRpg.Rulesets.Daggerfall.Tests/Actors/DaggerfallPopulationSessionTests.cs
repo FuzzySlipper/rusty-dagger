@@ -322,8 +322,201 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(returned.Position, restored.State.Actors.Get(id).Position);
     }
 
+    [Theory]
+    [InlineData(17, "Daggerfall", "breton")]
+    [InlineData(20, "Sentinel", "redguard")]
+    [InlineData(16, "Wrothgaria", "nord")]
+    public void Untouched_resident_exterior_admits_daytime_population_with_climate_race_and_eligibility_before_reconcile(
+        int region, string townName, string expectedRace)
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord residentRecord = definitions.Locations.Records.Single(record =>
+            record.Id.Region == region && record.Name == townName && record.Exterior is not null);
+        Assert.Equal(expectedRace,
+            definitions.Grids.Climate.GetCell(residentRecord.MapPixelX + 1, residentRecord.MapPixelY).People,
+            StringComparer.OrdinalIgnoreCase);
+
+        DaggerfallSiteRecord sourceRecord = definitions.Locations.Records.First(candidate =>
+            candidate.Exterior is not null
+            && candidate.Id != residentRecord.Id
+            && (candidate.MapPixelX != residentRecord.MapPixelX || candidate.MapPixelY != residentRecord.MapPixelY)
+            && Math.Abs(candidate.MapPixelX - residentRecord.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
+            && Math.Abs(candidate.MapPixelY - residentRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
+
+        int validFactionId = definitions.Factions.Factions.Values.First(faction => faction.Id > 0
+            && definitions.Catalogs.Races.Any(race => race.DonorRaceId == faction.Race)).Id;
+        DaggerfallPopulationPlacement[] residentPlacements =
+        [
+            new("population/source/0/0", new WorldPoint(1F, 1F, 1F), 210, 4, validFactionId, 0x00, 1007),
+            new("population/source/0/1", new WorldPoint(3F, 1F, 2F), 210, 4, validFactionId, 0x20, 1044),
+            new("population/source/0/missing-billboard", new WorldPoint(5F, 1F, 2F), 999, 99, validFactionId, 0x00, 1081),
+            new("population/source/0/missing-faction", new WorldPoint(6F, 1F, 2F), 210, 4, 999999, 0x00, 1118),
+        ];
+
+        DaggerfallSiteProfile template = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
+            includeAuthoredActors: false, includePopulation: false);
+        DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,
+            includeAuthoredActors: false, customPopulation: residentPlacements);
+        DaggerfallSiteProfile interior = SameContentAt(template, sourceRecord.Id,
+            DaggerfallWorldProfileKind.Interior, "resident-climate-race-interior");
+
+        DaggerfallSessionComposition composition = new(definitions, interior, DaggerfallTuning.Defaults)
+        {
+            Profiles = new DaggerfallSiteProfiles([interior, source, resident]),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, interior);
+        PopulateContent(content, source);
+        PopulateContent(content, resident);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.AdvanceElapsedTime(8 * 60 * 60);
+
+        // Transitioning into the neighboring exterior during daytime admits the untouched town as a resident
+        // exterior without active-site DaggerfallSourcePopulation.Reconcile ever running on it.
+        Assert.True(session.TryTransitionTo(source.ProfileKey));
+        Assert.True(session.Exterior.HoldsResidentLocation(resident.ProfileKey));
+
+        ActorPersonComponent[] residentPeople = [.. session.State.Actors.All
+            .Select(actor => actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person) ? person : null)
+            .Where(person => person is not null && person.Snapshot.Profile == resident.ProfileKey)!];
+
+        // Only the two eligible placements are admitted; missing billboard and unknown faction entries are skipped.
+        Assert.Equal(2, residentPeople.Length);
+        DaggerfallRaceDefinition raceDefinition = definitions.Catalogs.RequireRace(expectedRace);
+        Dictionary<string, (long Id, string? Name, DaggerfallNpcAppearance Appearance, string Role)> admittedBeforeReconcile = [];
+        foreach (DaggerfallPopulationPlacement placement in residentPlacements.Take(2))
+        {
+            ActorPersonComponent person = Assert.Single(residentPeople, p => p.Snapshot.StableKey == placement.Id);
+            string expectedGender = (placement.Flags & 0x20) != 0 ? "Female" : "Male";
+            Assert.Equal(expectedRace, person.Snapshot.Appearance.Race);
+            Assert.Equal(expectedGender, person.Snapshot.Appearance.Gender);
+            Assert.Equal((int)placement.NameSeed, person.Snapshot.Appearance.NameSeed);
+            Assert.False(string.IsNullOrWhiteSpace(person.Snapshot.DisplayName));
+            Assert.Equal(
+                new DaggerfallNames(definitions, engine.Context.Random).NpcName(person.Snapshot.Appearance, residentRecord.Id.Region),
+                person.Snapshot.DisplayName);
+            Assert.Equal(raceDefinition.Townsperson(expectedGender, placement.NameSeed),
+                session.Population.Townsperson(person.Snapshot.DurableId));
+            admittedBeforeReconcile[placement.Id] = (person.Snapshot.DurableId, person.Snapshot.DisplayName,
+                person.Snapshot.Appearance, person.Snapshot.Role);
+        }
+
+        // Entering the resident town runs active-site reconciliation and keeps the exact same identities, races, and names.
+        Assert.True(session.TryTransitionTo(resident.ProfileKey));
+        foreach ((string stableKey, (long id, string? name, DaggerfallNpcAppearance appearance, string role)) in admittedBeforeReconcile)
+        {
+            DaggerfallNpc reconciled = session.State.Npcs.Require(id);
+            Assert.Equal(stableKey, reconciled.StableKey);
+            Assert.Equal(appearance, reconciled.Appearance);
+            Assert.Equal(name, reconciled.DisplayName);
+            Assert.Equal(role, reconciled.Role);
+        }
+    }
+
+    [Fact]
+    public void Untouched_resident_exterior_with_raceless_climate_admits_zero_population_during_daytime()
+    {
+        DaggerfallDefinitions sourceDefinitions = TestPayload.Definitions;
+        DaggerfallSiteRecord[] exteriorRecords = [.. sourceDefinitions.Locations.Records.Where(record => record.Exterior is not null)];
+        DaggerfallSiteRecord sourceRecord = exteriorRecords.First(record => exteriorRecords.Any(candidate =>
+            candidate.Id != record.Id
+            && (candidate.MapPixelX != record.MapPixelX || candidate.MapPixelY != record.MapPixelY)
+            && Math.Abs(candidate.MapPixelX - record.MapPixelX) <= 1
+            && Math.Abs(candidate.MapPixelY - record.MapPixelY) <= 1));
+        DaggerfallSiteRecord residentRecord = exteriorRecords.First(record =>
+            record.Id != sourceRecord.Id
+            && (record.MapPixelX != sourceRecord.MapPixelX || record.MapPixelY != sourceRecord.MapPixelY)
+            && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= 1
+            && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= 1);
+
+        // Clear the People race on the resident cell's climate value while keeping both sites in-bounds
+        // and Catalogs.Races populated, so a fallback to Races.FirstOrDefault() would have minted townspeople.
+        int residentClimateValue = sourceDefinitions.Grids.Climate.GetCell(residentRecord.MapPixelX + 1, residentRecord.MapPixelY).Value;
+        DaggerfallClimateGridDefinition racelessClimate = sourceDefinitions.Grids.Climate with
+        {
+            Values = [.. sourceDefinitions.Grids.Climate.Values.Select(value =>
+                value.Value == residentClimateValue ? value with { People = string.Empty } : value)],
+        };
+        DaggerfallWorldGridsSet racelessGrids = sourceDefinitions.Grids with { Climate = racelessClimate };
+        DaggerfallLocationSet locations = sourceDefinitions.Locations with
+        {
+            Keys = [(sourceRecord.Id.Region, sourceRecord.Id.Index), (residentRecord.Id.Region, residentRecord.Id.Index)],
+            Records = [sourceRecord, residentRecord],
+        };
+        DaggerfallDefinitions definitions = new(
+            sourceDefinitions.Catalogs,
+            sourceDefinitions.Vocabulary,
+            sourceDefinitions.Actors,
+            sourceDefinitions.Items,
+            sourceDefinitions.EquipmentSlots,
+            sourceDefinitions.ArmorValuesByMaterial,
+            sourceDefinitions.Actions,
+            sourceDefinitions.LootTables,
+            sourceDefinitions.HudResources,
+            sourceDefinitions.CharacterPresentation,
+            locations,
+            sourceDefinitions.Text,
+            sourceDefinitions.Magic,
+            sourceDefinitions.Mobiles,
+            sourceDefinitions.Names,
+            sourceDefinitions.Rumors,
+            sourceDefinitions.Biographies,
+            racelessGrids,
+            sourceDefinitions.Books,
+            sourceDefinitions.Factions,
+            sourceDefinitions.Terrain,
+            sourceDefinitions.ItemTemplateCatalog,
+            sourceDefinitions.QuestSources,
+            sourceDefinitions.Cinematics,
+            sourceDefinitions.Encounters)
+        {
+            EnemySpells = sourceDefinitions.EnemySpells,
+            EnemyRanged = sourceDefinitions.EnemyRanged,
+            NewGame = sourceDefinitions.NewGame,
+            BuildingNames = sourceDefinitions.BuildingNames,
+            DialogueWorldRules = sourceDefinitions.DialogueWorldRules,
+        };
+        Assert.Null(DaggerfallSourcePopulation.TryResolveClimateRace(definitions, residentRecord, out _));
+
+        DaggerfallSiteProfile template = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
+            includeAuthoredActors: false, includePopulation: false);
+        DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,
+            includeAuthoredActors: false, includePopulation: true);
+        DaggerfallSiteProfile interior = SameContentAt(template, sourceRecord.Id,
+            DaggerfallWorldProfileKind.Interior, "raceless-resident-interior");
+
+        DaggerfallSessionComposition composition = new(definitions, interior, DaggerfallTuning.Defaults)
+        {
+            Profiles = new DaggerfallSiteProfiles([interior, source, resident]),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, interior);
+        PopulateContent(content, source);
+        PopulateContent(content, resident);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        Assert.True(session.TryTransitionTo(source.ProfileKey));
+        Assert.True(session.Exterior.HoldsResidentLocation(resident.ProfileKey));
+
+        Assert.DoesNotContain(session.State.Actors.All, actor =>
+            actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person)
+            && person.Snapshot.Profile == resident.ProfileKey);
+        Assert.DoesNotContain(session.State.Npcs.All, npc => npc.Profile == resident.ProfileKey);
+    }
+
     private static DaggerfallSiteProfile PopulationProfile(DaggerfallSiteProfile source, DaggerfallSiteId site,
-        bool includeAuthoredActors = true, bool includePopulation = true)
+        bool includeAuthoredActors = true, bool includePopulation = true,
+        IReadOnlyList<DaggerfallPopulationPlacement>? customPopulation = null)
     {
         // An exterior is named by its location, as the window streams it.
         DaggerfallSiteProfile exterior = SameContentAt(source, site, DaggerfallWorldProfileKind.Exterior, DaggerfallWorldProfileIds.Exterior(site).LogicalId);
@@ -332,11 +525,12 @@ public sealed class DaggerfallPopulationSessionTests
             : new ProjectFacts(exterior.Project.PlayerPosition, new Dictionary<long, AuthoredActor>());
         NormalizedBillboardSprite billboard = new("sprite/population.png", Hash, 8, 8,
             [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), Vector2.One);
-        IReadOnlyList<DaggerfallPopulationPlacement> population = includePopulation
-            ? [new DaggerfallPopulationPlacement("population/source/0/0", new WorldPoint(1F, 1F, 1F), 210, 4,
-                TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Id > 0
-                    && TestPayload.Definitions.Catalogs.Races.Any(race => race.DonorRaceId == faction.Race)).Id, 0, 7)]
-            : [];
+        IReadOnlyList<DaggerfallPopulationPlacement> population = customPopulation
+            ?? (includePopulation
+                ? [new DaggerfallPopulationPlacement("population/source/0/0", new WorldPoint(1F, 1F, 1F), 210, 4,
+                    TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Id > 0
+                        && TestPayload.Definitions.Catalogs.Races.Any(race => race.DonorRaceId == faction.Race)).Id, 0, 7)]
+                : []);
         Dictionary<(int Archive, int Record), NormalizedBillboardSprite> billboardSprites = source.BillboardSprites.ToDictionary();
         billboardSprites[(210, 4)] = billboard;
         return new DaggerfallSiteProfile(

@@ -104,8 +104,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
         Dictionary<string, DaggerfallNpc> existingByKey = sourceNpcs.ToDictionary(npc => npc.StableKey, StringComparer.Ordinal);
         DaggerfallPopulationPlacement[] candidates = [.. active.Population
-            .Where(placement => active.BillboardSprites.ContainsKey((placement.BillboardArchive, placement.BillboardRecord))
-                && (placement.FactionId == 0 || definitions.Factions.Factions.ContainsKey(placement.FactionId)))
+            .Where(placement => IsEligiblePlacement(active, definitions, placement))
             .Where(placement => IsPlacementAdmitted(placement, existingByKey.GetValueOrDefault(placement.Id), playerProfile))
             // Preserve already active source identities through normal wandering. Stable source
             // order remains the tie-breaker for newly admitted people.
@@ -124,14 +123,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             if (_actorLedger.IsHomeSlotSuppressed(deterministicId, active.ProfileKey) || _isWithParty(deterministicId))
                 continue;
 
-            DaggerfallFactionDefinition? faction = placement.FactionId == 0
-                ? null
-                : definitions.Factions.Factions[placement.FactionId];
-            DaggerfallNpcAppearance look = new(race, (placement.Flags & FemalePopulationFlag) != 0 ? "Female" : "Male",
-                placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
-            (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
-                definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId,
-                placement.IsGuard ? "guard" : "civilian");
+            (DaggerfallNpcAppearance look, string role, IReadOnlyList<string> services) =
+                ResolvePlacementIdentity(definitions, placement, race);
 
             DaggerfallNpc? existing = sourceNpcs.FirstOrDefault(npc =>
                 npc.DurableId == deterministicId || StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
@@ -306,15 +299,45 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     }
 
     /// <summary>
+    /// Resolves the race <paramref name="site"/>'s townsfolk are from the climate cell the site lies in.
+    /// Returns <see langword="null"/> when the climate names no race or a race the catalog lacks.
+    /// </summary>
+    internal static string? TryResolveClimateRace(DaggerfallDefinitions definitions, DaggerfallSiteRecord site, out DaggerfallClimateCell climate)
+    {
+        climate = definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY);
+        string people = climate.People;
+        return definitions.Catalogs.Races.FirstOrDefault(race => StringComparer.OrdinalIgnoreCase.Equals(race.Id, people))?.Id;
+    }
+
+    /// <summary>Whether <paramref name="placement"/> carries a resolvable billboard and faction for population admission.</summary>
+    internal static bool IsEligiblePlacement(DaggerfallSiteProfile profile, DaggerfallDefinitions definitions, DaggerfallPopulationPlacement placement) =>
+        profile.BillboardSprites.ContainsKey((placement.BillboardArchive, placement.BillboardRecord))
+        && (placement.FactionId == 0 || definitions.Factions.Factions.ContainsKey(placement.FactionId));
+
+    /// <summary>Builds the canonical appearance, role, and service facts for an eligible source population placement.</summary>
+    internal static (DaggerfallNpcAppearance Appearance, string Role, IReadOnlyList<string> Services) ResolvePlacementIdentity(
+        DaggerfallDefinitions definitions, DaggerfallPopulationPlacement placement, string race)
+    {
+        DaggerfallFactionDefinition? faction = placement.FactionId == 0
+            ? null
+            : definitions.Factions.Factions.GetValueOrDefault(placement.FactionId);
+        DaggerfallNpcAppearance look = new(race, (placement.Flags & FemalePopulationFlag) != 0 ? "Female" : "Male",
+            placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
+        (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
+            definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId,
+            placement.IsGuard ? "guard" : "civilian");
+        return (look, role, services);
+    }
+
+    /// <summary>
     /// The race <paramref name="site"/>'s townsfolk are, as the donor's PopulationManager takes it: the People of the
     /// climate cell the site lies in. A site whose climate names none, or a race the catalog lacks, has no townsfolk,
     /// said once; no race is made up for it.
     /// </summary>
     private string? Race(DaggerfallSiteRecord site)
     {
-        DaggerfallClimateCell climate = definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY);
-        if (definitions.Catalogs.Races.FirstOrDefault(race => StringComparer.OrdinalIgnoreCase.Equals(race.Id, climate.People)) is { } race)
-            return race.Id;
+        if (TryResolveClimateRace(definitions, site, out DaggerfallClimateCell climate) is { } race)
+            return race;
         if (raceless.Add(site.Id))
             report($"{site.Name} ({site.Id}) has no townsfolk: its climate {climate.Value} ({climate.Name}) names " +
                 (string.IsNullOrWhiteSpace(climate.People) ? "no race for them." : $"the race '{climate.People}', which the race catalog lacks."));
