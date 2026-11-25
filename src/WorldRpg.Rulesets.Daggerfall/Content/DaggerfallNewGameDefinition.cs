@@ -39,6 +39,8 @@ internal sealed record DaggerfallNewGameDefinition(int Gold, int SpellbookTempla
     internal bool Armed { get; init; }
     /// <summary>The foes the new game begins with near the player, if any.</summary>
     internal DaggerfallStartFoes? Foes { get; init; }
+    /// <summary>Optional authored/stubbed world-condition tokens active at new game start (empty for baseline canon start).</summary>
+    internal DaggerfallWorldConditionToken[] WorldConditions { get; init; } = [];
 }
 
 internal static partial class DaggerfallBaseContent
@@ -103,9 +105,12 @@ internal static partial class DaggerfallBaseContent
         string[] quests = [.. Array(section, "quests", diagnostics).Select(value => value.GetString() ?? string.Empty)];
         if (quests.Any(string.IsNullOrWhiteSpace) || quests.Distinct(StringComparer.Ordinal).Count() != quests.Length)
             diagnostics.Add("New-game quests must name distinct quest sources.");
+        DaggerfallWorldConditionToken[] worldConditions = section.TryGetProperty("worldConditions", out JsonElement baseConditions)
+            ? ReadWorldConditions(baseConditions, "newGame", diagnostics)
+            : [];
         return new(gold, Template("spellbookTemplate", "MiscItems"), Template("maleShirtTemplate", "MensClothing", "chest-clothes"), Template("malePantsTemplate", "MensClothing", "legs-clothes"),
             Template("femaleShirtTemplate", "WomensClothing", "chest-clothes"), Template("femalePantsTemplate", "WomensClothing", "legs-clothes"), careers,
-            Items(section, "customItems"), Spells(section, "customMagicSpells")) { Start = start, Quests = quests };
+            Items(section, "customItems"), Spells(section, "customMagicSpells")) { Start = start, Quests = quests, WorldConditions = worldConditions };
     }
 
     /// <summary>
@@ -138,11 +143,14 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add($"New-game start pack '{packId}' names quick career '{quickCareer}', which has no starting loadout.");
             bool armed = root.TryGetProperty("armed", out JsonElement arming) && arming.GetBoolean();
             DaggerfallStartFoes? foes = root.TryGetProperty("foes", out JsonElement foesValue) ? ReadStartFoes(foesValue, packId, diagnostics) : null;
+            DaggerfallWorldConditionToken[] worldConditions = root.TryGetProperty("worldConditions", out JsonElement condValue)
+                ? ReadWorldConditions(condValue, $"new-game start pack '{packId}'", diagnostics)
+                : baseline.WorldConditions;
             diagnostics.ThrowIfAny();
             return baseline with
             {
                 Gold = gold, Start = start, Quests = quests, StartHour = startHour, QuickEntry = quickEntry,
-                QuickCareer = quickCareer, Armed = armed, Foes = foes,
+                QuickCareer = quickCareer, Armed = armed, Foes = foes, WorldConditions = worldConditions,
             };
         }
         catch (JsonException error)
@@ -189,5 +197,76 @@ internal static partial class DaggerfallBaseContent
         if (values.Any(value => !float.IsFinite(value))) diagnostics.Add($"The {what} start position must be three finite numbers.");
         float yaw = Number(start, "yawRadians", diagnostics);
         return new(profile, new("new-game", new WorldPoint(values[0], values[1], values[2]), yaw, 0F));
+    }
+
+    private static DaggerfallWorldConditionToken[] ReadWorldConditions(JsonElement value, string what, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (value.ValueKind != JsonValueKind.Array)
+        {
+            diagnostics.Add($"The {what} worldConditions must be a JSON array.");
+            return [];
+        }
+
+        List<DaggerfallWorldConditionToken> tokens = [];
+        HashSet<string> ids = new(StringComparer.Ordinal);
+        int index = 0;
+        foreach (JsonElement entry in value.EnumerateArray())
+        {
+            string context = $"{what} worldConditions[{index++}]";
+            JsonElement obj = Object(entry, context, diagnostics);
+            if (obj.ValueKind != JsonValueKind.Object) continue;
+            RejectDuplicateProperties(obj, context, diagnostics);
+            string tokenId = Text(obj, "tokenId", diagnostics);
+            string kindText = Text(obj, "kind", diagnostics);
+            if (!DaggerfallWorldConditionToken.TryParseKind(kindText, out DaggerfallWorldConditionKind kind))
+                diagnostics.Add($"{context} names unknown condition kind '{kindText}'.");
+
+            int? region = OptionalNullableInt(obj, "region", context, diagnostics);
+            int? sourceFactionId = OptionalNullableInt(obj, "sourceFactionId", context, diagnostics);
+            int? targetFactionId = OptionalNullableInt(obj, "targetFactionId", context, diagnostics);
+            string? subjectTag = OptionalNullableText(obj, "subjectTag", context, diagnostics);
+            int severity = OptionalInteger(obj, "severity", diagnostics) ?? 1;
+            int startedDay = OptionalInteger(obj, "startedDay", diagnostics) ?? 0;
+            int? expiresDay = OptionalNullableInt(obj, "expiresDay", context, diagnostics);
+            string? headline = OptionalNullableText(obj, "headline", context, diagnostics);
+            string? body = OptionalNullableText(obj, "body", context, diagnostics);
+
+            if (!string.IsNullOrWhiteSpace(tokenId) && !ids.Add(tokenId))
+                diagnostics.Add($"{context} repeats world condition tokenId '{tokenId}'.");
+
+            DaggerfallWorldConditionToken candidate = new(
+                tokenId, kind, region, sourceFactionId, targetFactionId, subjectTag, severity, startedDay, expiresDay, headline, body);
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(tokenId) && Enum.IsDefined(kind))
+                    candidate.Validate();
+            }
+            catch (ArgumentException error)
+            {
+                diagnostics.Add($"{context}: {error.Message}");
+            }
+            tokens.Add(candidate);
+        }
+        return [.. tokens];
+
+        static int? OptionalNullableInt(JsonElement obj, string name, string context, DaggerfallContentDiagnostics diagnostics)
+        {
+            if (!obj.TryGetProperty(name, out JsonElement prop) || prop.ValueKind == JsonValueKind.Null)
+                return null;
+            if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out int parsed))
+                return parsed;
+            diagnostics.Add($"{context}.{name} must be an integer or null.");
+            return null;
+        }
+
+        static string? OptionalNullableText(JsonElement obj, string name, string context, DaggerfallContentDiagnostics diagnostics)
+        {
+            if (!obj.TryGetProperty(name, out JsonElement prop) || prop.ValueKind == JsonValueKind.Null)
+                return null;
+            if (prop.ValueKind == JsonValueKind.String)
+                return prop.GetString();
+            diagnostics.Add($"{context}.{name} must be a string or null.");
+            return null;
+        }
     }
 }

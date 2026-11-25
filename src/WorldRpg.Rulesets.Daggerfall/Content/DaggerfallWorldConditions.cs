@@ -97,6 +97,31 @@ internal sealed record DaggerfallWorldConditionToken(
         DaggerfallWorldConditionKind.Decree => "decree",
         _ => "decree",
     };
+
+    internal static bool TryParseKind(string? value, out DaggerfallWorldConditionKind kind)
+    {
+        kind = default;
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+        string normalized = value.Trim();
+        if (Enum.TryParse(normalized, ignoreCase: true, out DaggerfallWorldConditionKind parsed) && Enum.IsDefined(parsed))
+        {
+            kind = parsed;
+            return true;
+        }
+        switch (normalized.ToLowerInvariant())
+        {
+            case "grain-shortage": kind = DaggerfallWorldConditionKind.GrainShortage; return true;
+            case "border-tension": kind = DaggerfallWorldConditionKind.BorderTension; return true;
+            case "monster-surge": kind = DaggerfallWorldConditionKind.MonsterSurge; return true;
+            case "crime-crackdown": kind = DaggerfallWorldConditionKind.CrimeCrackdown; return true;
+            case "guild-embargo": kind = DaggerfallWorldConditionKind.GuildEmbargo; return true;
+            case "succession-crisis": kind = DaggerfallWorldConditionKind.SuccessionCrisis; return true;
+            case "plague-scare": kind = DaggerfallWorldConditionKind.PlagueScare; return true;
+            case "decree": kind = DaggerfallWorldConditionKind.Decree; return true;
+            default: return false;
+        }
+    }
 }
 
 /// <summary>Sparse persisted world-condition tokens. Empty when no authored/stubbed condition tokens are active.</summary>
@@ -147,6 +172,19 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     /// <summary>Binds an external live provider (such as the B2 weekly board game) alongside sparse stored tokens.</summary>
     internal void BindExternalSource(Func<int, IReadOnlyList<DaggerfallWorldConditionToken>>? provider) =>
         _externalSource = provider;
+
+    /// <summary>Seeds initial authored/scenario condition tokens on new game start (empty when baseline has none).</summary>
+    internal void SeedAuthored(IEnumerable<DaggerfallWorldConditionToken>? tokens)
+    {
+        if (tokens is null)
+            return;
+        foreach (DaggerfallWorldConditionToken token in tokens)
+        {
+            ArgumentNullException.ThrowIfNull(token);
+            token.Validate();
+            _tokens[token.TokenId] = token;
+        }
+    }
 
     /// <summary>Adds or replaces a sparse authored/stubbed condition token.</summary>
     internal DaggerfallWorldConditionToken Set(DaggerfallWorldConditionToken token)

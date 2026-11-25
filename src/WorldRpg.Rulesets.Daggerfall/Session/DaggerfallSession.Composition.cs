@@ -556,7 +556,10 @@ internal sealed partial class DaggerfallSession
             if (saved?.Property is { } savedProperty) propertyStorage.Restore(savedProperty);
             DaggerfallCrimeState crime = new(saved?.Crime, () => racialOverrides.Current?.SuppressCrime == true);
             WorldConditions = new DaggerfallWorldConditions();
-            WorldConditions.Restore(saved?.WorldConditions);
+            if (saved is not null)
+                WorldConditions.Restore(saved.WorldConditions);
+            else
+                WorldConditions.SeedAuthored(definitions.NewGame.WorldConditions);
             LegalServices = new DaggerfallLegalServicePolicy(social, crime, assembled.ActorLedger, definitions,
                 id => actors.TryGet(id, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null,
                 CurrentInteriorBuilding,
@@ -1386,6 +1389,7 @@ internal sealed partial class DaggerfallSession
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
                 new DaggerfallExpeditionBandReadout(Expedition, OverlandParties, State.Actors, State.Npcs),
                 new DaggerfallOverlandViewCommands(_overland),
+                new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, _site, () => _time.Calendar),
             ];                                                                                     // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,

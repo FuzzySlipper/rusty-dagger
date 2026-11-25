@@ -1,4 +1,6 @@
+using System.Text;
 using Rusty.Engine;
+using Rusty.Engine.Debugging;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
@@ -357,6 +359,168 @@ public sealed class PoliticalVisibleSurfacesTests
                 .Any(line => watchBark.Message.Contains(line, StringComparison.Ordinal)),
             $"Expected city-watch faction bark, got: {watchBark.Message}");
         interactionPolicy.Set(originalPolicy);
+    }
+
+    [Fact]
+    public void Authored_start_pack_world_conditions_seed_fresh_game_and_drive_notice_board_prices_scrutiny_and_talk()
+    {
+        // Real daggerfall.new-game-start pack payload authoring worldConditions (zero test-only WorldConditions.Set calls!).
+        byte[] startPackJson = Encoding.UTF8.GetBytes("""
+            {
+              "ruleset": "daggerfall",
+              "start": { "profile": "17/4/exterior", "position": [312.4, 0, -362.8], "yawRadians": 0 },
+              "gold": 5000,
+              "quests": [],
+              "startHour": 9,
+              "quickEntry": true,
+              "worldConditions": [
+                {
+                  "tokenId": "scenario:undead-surge:17",
+                  "kind": "monster-surge",
+                  "region": 17,
+                  "sourceFactionId": 41,
+                  "subjectTag": "undead",
+                  "severity": 2,
+                  "startedDay": 0,
+                  "expiresDay": 21
+                },
+                {
+                  "tokenId": "scenario:grain-shortage:17",
+                  "kind": "grain-shortage",
+                  "region": 17,
+                  "severity": 2,
+                  "startedDay": 0,
+                  "expiresDay": 14
+                },
+                {
+                  "tokenId": "scenario:crackdown:17",
+                  "kind": "crime-crackdown",
+                  "region": 17,
+                  "severity": 2,
+                  "startedDay": 0
+                }
+              ]
+            }
+            """);
+
+        DaggerfallNewGameDefinition authoredNewGame = DaggerfallBaseContent.ReadNewGameStart(
+            startPackJson, TestPayload.Definitions.NewGame, "daggerfall.political-crisis-start");
+        Assert.Equal(3, authoredNewGame.WorldConditions.Length);
+
+        DaggerfallDefinitions scenarioDefs = TestPayload.Definitions.WithNewGame(authoredNewGame);
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+
+        // Compare baseline quote (no start-pack conditions) against authored scenario start quote.
+        ulong baselinePrice;
+        using (DaggerfallSession baseline = fixture.Start(fixture.ExteriorProfile))
+        {
+            baseline.AdvanceElapsedTime(6 * 60 * 60);
+            baseline.State.Actors.Player.Stats.GetStat(StatId.Parse("mercantile")).BaseValue = 50;
+            baseline.State.Actors.Player.Stats.GetStat(StatId.Parse("personality")).BaseValue = 50;
+            DaggerfallSiteRecord baseSite = baseline.Site.ActiveSite!;
+            DaggerfallNpcSite baseNpcSite = new(baseSite.Id.Region, baseSite.Name, string.Empty, baseline.Sites.ActiveProfile.LogicalId);
+            long baseMerchant = baseline.State.Npcs.RegisterStable(
+                DaggerfallNpcKind.Static, "r2-base-merchant", baseNpcSite,
+                new("breton", "Male", 182, 0, 7, DaggerfallConcreteGuildCatalog.MagesFactionId), "merchant", ["shop"]);
+            DaggerfallMerchantView baseView = baseline.State.Merchants.Read(new(new(baseMerchant, baseNpcSite, "shop"), 10, 13, 1, 1, 0));
+            baselinePrice = baseView.Stock.First(item => item.UnitPrice >= 20).UnitPrice;
+        }
+
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, fixture.ExteriorProfile);
+        PopulateContent(content, fixture.MagesProfile);
+        SpatialFake spatial = SpatialFake.Create(fixture.ExteriorProfile.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(scenarioDefs, fixture.ExteriorProfile, DaggerfallTuning.Defaults)
+        {
+            Profiles = new DaggerfallSiteProfiles([fixture.ExteriorProfile, fixture.MagesProfile]),
+        };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.AdvanceElapsedTime(8 * 60 * 60);
+
+        // 1. Authored start-pack tokens are live immediately without any test Set call.
+        Assert.Equal(3, session.WorldConditions.Count);
+        DaggerfallTownNoticeBoardView board = session.ReadTownNoticeBoard()!;
+        Assert.Contains(board.Entries, e => e.Kind == DaggerfallNoticeEntryKind.Bounty && e.ConditionTokenId == "scenario:undead-surge:17");
+        Assert.Contains(board.Entries, e => e.Kind == DaggerfallNoticeEntryKind.Decree && e.ConditionTokenId == "scenario:grain-shortage:17");
+        Assert.Contains(board.Entries, e => e.Kind == DaggerfallNoticeEntryKind.Decree && e.ConditionTokenId == "scenario:crackdown:17");
+
+        // 2. Authored GrainShortage raises merchant buy quotes cleanly.
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("mercantile")).BaseValue = 50;
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("personality")).BaseValue = 50;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, string.Empty, session.Sites.ActiveProfile.LogicalId);
+        long merchantId = session.State.Npcs.RegisterStable(
+            DaggerfallNpcKind.Static, "r2-base-merchant", npcSite,
+            new("breton", "Male", 182, 0, 7, DaggerfallConcreteGuildCatalog.MagesFactionId), "merchant", ["shop"]);
+        DaggerfallMerchantView scenarioShop = session.State.Merchants.Read(new(new(merchantId, npcSite, "shop"), 10, 13, 1, 1, 0));
+        ulong scenarioPrice = scenarioShop.Stock.First(item => item.UnitPrice >= 20).UnitPrice;
+        Assert.True(scenarioPrice > baselinePrice, $"Expected authored GrainShortage price ({scenarioPrice}) > baseline ({baselinePrice}).");
+
+        // 3. Authored CrimeCrackdown tightens gate scrutiny and drives guard talk immediately!
+        session.State.Social.ChangeRegionalReputation(DaggerfallRegion, -6);
+        DaggerfallGateScrutinyAssessment gate = session.Scrutiny.EvaluateGateScrutiny(DaggerfallRegion, site);
+        Assert.Equal(DaggerfallScrutinyLevel.Strict, gate.Level);
+        Assert.True(gate.WatchChallengeActive);
+
+        DaggerfallLocalOffice watchCaptain = session.OfficeLedger.ResolveWatchCaptain(site);
+        ActorState guardActor = session.State.Actors.Get(watchCaptain.HolderActorId!.Value);
+        guardActor.Actor.Get<ActorInteractionPolicy>().Set(ActorInteractionPolicyKind.AmbientBark);
+        DaggerfallActivationOutcome bark = ActivateNpc(session, watchCaptain.HolderActorId.Value);
+        Assert.True(bark.Applied, bark.Message);
+        Assert.Contains("Daggerfall", bark.Message, StringComparison.Ordinal);
+
+        // 4. Authored tokens survive CaptureSave / Restore cleanly!
+        RulesetSavePayload saved = session.CaptureSave();
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, saved);
+        Assert.Equal(3, restored.WorldConditions.Count);
+        Assert.True(restored.WorldConditions.HasActive(DaggerfallRegion, DaggerfallWorldConditionKind.MonsterSurge, currentDay: 1));
+    }
+
+    [Fact]
+    public void Developer_world_condition_commands_author_inspect_and_clear_tokens_driving_live_consumers()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.MagesProfile);
+
+        // Resolve the real registered developer command module from session.DebugCommands (zero test-only Set calls!).
+        IDeveloperWorldConditionCommands commands = Assert.Single(
+            session.DebugCommands.OfType<IDeveloperWorldConditionCommands>());
+
+        DaggerfallNpc magesProvider = session.State.Npcs.All.First(npc =>
+            npc.Profile == fixture.MagesProfile.ProfileKey
+            && npc.Services.Contains("training", StringComparer.Ordinal));
+        DaggerfallServiceProvider trainingProvider = new(magesProvider.DurableId, magesProvider.Site, "training");
+        Assert.Equal(DaggerfallServiceDenial.None, session.State.Services.ProviderAvailable(trainingProvider));
+
+        // 1. Author stubbed conditions via world.condition-set (guild-embargo on 40 + monster-surge undead).
+        DebugCommandResult embargoResult = commands.SetCondition("guild-embargo", 1, "40", 0);
+        Assert.True(embargoResult.Succeeded, embargoResult.Message);
+        Assert.Contains("guild-embargo", embargoResult.Message, StringComparison.Ordinal);
+
+        DebugCommandResult surgeResult = commands.SetCondition("monster-surge", 2, "undead", 7);
+        Assert.True(surgeResult.Succeeded, surgeResult.Message);
+        Assert.Contains("monster-surge", surgeResult.Message, StringComparison.Ordinal);
+
+        // 2. Real consumers react immediately: Mages Guild service denied, notice board updated, list JSON reflects both!
+        Assert.Equal(DaggerfallServiceDenial.UnderScrutiny, session.State.Services.ProviderAvailable(trainingProvider));
+        DebugCommandResult boardResult = commands.NoticeBoard();
+        Assert.True(boardResult.Succeeded, boardResult.Message);
+        Assert.Contains("Embargo", boardResult.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Undead", boardResult.Message, StringComparison.OrdinalIgnoreCase);
+
+        DebugCommandResult listed = commands.ListConditions();
+        Assert.True(listed.Succeeded, listed.Message);
+        Assert.Contains("cond:guild-embargo:r17:40", listed.Message, StringComparison.Ordinal);
+        Assert.Contains("cond:monster-surge:r17:undead", listed.Message, StringComparison.Ordinal);
+
+        // 3. Clearing via world.condition-clear restores baseline immediately!
+        DebugCommandResult cleared = commands.ClearCondition("all");
+        Assert.True(cleared.Succeeded, cleared.Message);
+        Assert.Equal(0, session.WorldConditions.Count);
+        Assert.Equal(DaggerfallServiceDenial.None, session.State.Services.ProviderAvailable(trainingProvider));
     }
 
     private static DaggerfallActivationOutcome ActivateNpc(DaggerfallSession session, long npcId)
