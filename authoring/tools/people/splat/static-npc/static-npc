@@ -314,10 +314,10 @@ def step_rig(n, a):
 def rig_walker(n, a):
     """Meshy's API rig (it needs the Meshy task of the mesh step: a Hunyuan3D-2mv mesh has none) and donor hands at the cuffs,
     as batch 2's scaffold.sh did."""
-    if not (n.mesh / 'task.json').exists():
-        raise SystemExit(f'{n.id}: the walker rig needs a Meshy mesh task ({n.mesh}/task.json); a Hunyuan3D-2mv mesh has no API rig here')
     rig = n.ch / '02-guide/wip/rig-meshy'; log = n.scaffold / 'rig.log'
     rigger = getattr(a, 'rigger', None) or n.cfg.get('rigger', 'meshy')
+    if rigger == 'meshy' and not (n.mesh / 'task.json').exists():   # a Hunyuan3D-2mv mesh (Meshy's content block) has no Meshy task to rig
+        print(f'{n.id}: no Meshy mesh task ({n.mesh}/task.json): fitting the target skeleton instead (fit_rig.py; npc-467, 2026-11-25)'); rigger = 'fit'
     if rigger == 'meshy':
         rc = sh(['python3', 'authoring/tools/people/splat/mesh/meshy_rig.py', n.mesh, rig], log=log, check=False)
         if rc:
@@ -328,7 +328,8 @@ def rig_walker(n, a):
     if rigger == 'fit':
         src = rig / 'remesh.glb' if (rig / 'remesh.glb').exists() else n.mesh / 'model.glb'
         rig.mkdir(parents=True, exist_ok=True)
-        sh(['blender', '-b', '-P', AP / 'tools/splat-rig/fit_rig.py', '--', src, FIT_TEMPLATE, rig / 'rigged-glb.glb', '--report', rig / 'fit.json'], log=log)
+        sh(['blender', '-b', '-P', AP / 'tools/splat-rig/fit_rig.py', '--', src, FIT_TEMPLATE, rig / 'rigged-glb.glb', '--report', rig / 'fit.json']
+           + (['--rigid-prop', n.cfg['rigid_prop']] if n.cfg.get('rigid_prop') else []), log=log)   # npc.json "rigid_prop": Right|Left, a staff painted in hand (npc-467)
     # donor hands replace a mesher's mitten hands (Meshy, batch 2); a fitted rig keeps the mesher's own hands, which follow a
     # pose-locked painting's relaxed hands (npc-468, 2026-11-24; the Engine GLB has no finger joints either way). npc.json "donor_hands"
     donor = n.cfg.get('donor_hands', rigger == 'meshy')
