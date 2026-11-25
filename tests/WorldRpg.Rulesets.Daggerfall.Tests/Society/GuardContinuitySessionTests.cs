@@ -65,7 +65,7 @@ public sealed class GuardContinuitySessionTests
         ActorOverlayComponent overlay = guardAfter.Actor.Get<ActorOverlayComponent>();
         Assert.True(overlay.Met);
         Assert.Contains("crime:gate-theft", overlay.WitnessedCrimes);
-        Assert.Equal(ArchetypeProfile.Guard.Id, overlay.ArchetypeId);
+        Assert.Equal(DaggerfallArchetypeIds.Guard, overlay.ArchetypeId);
         Assert.True(guardAfter.Actor.Get<ActorHarmPolicy>().IsCombatant);
         Assert.Equal(146, s.DefinitionsByActor[guardId].MobileId);
         ActorVisualSpec visual = guardAfter.Actor.Get<ActorRenderComponent>().Spec;
@@ -138,7 +138,7 @@ public sealed class GuardContinuitySessionTests
         Assert.NotNull(sparseGuard.Pose);
         Assert.Equal(expectedPursuitProfile.X, sparseGuard.Pose!.X, 3);
         Assert.Equal(expectedPursuitProfile.Z, sparseGuard.Pose.Z, 3);
-        Assert.Equal(ArchetypeProfile.Guard.Id, sparseGuard.Combat?.PromotedArchetype);
+        Assert.Equal(DaggerfallArchetypeIds.Guard, sparseGuard.Combat?.PromotedArchetype);
         Assert.True(sparseGuard.Combat?.ForcedHostile);
         Assert.True(sparseGuard.Social?.Met);
         Assert.Contains("crime:pursuit-theft", sparseGuard.Social?.WitnessedCrimes ?? []);
@@ -180,7 +180,7 @@ public sealed class GuardContinuitySessionTests
         Assert.NotNull(detachedGuard.Pose);
         Assert.Equal(expectedPursuitProfile.X, detachedGuard.Pose!.X, 3);
         Assert.Equal(expectedPursuitProfile.Z, detachedGuard.Pose.Z, 3);
-        Assert.Equal(ArchetypeProfile.Guard.Id, detachedGuard.Combat?.PromotedArchetype);
+        Assert.Equal(DaggerfallArchetypeIds.Guard, detachedGuard.Combat?.PromotedArchetype);
         Assert.NotNull(detachedGuard.Combat?.DetachedInventory);
         Assert.True(detachedGuard.Social?.Met);
         Assert.Contains("crime:pursuit-theft", detachedGuard.Social?.WitnessedCrimes ?? []);

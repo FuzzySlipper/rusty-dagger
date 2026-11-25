@@ -203,10 +203,11 @@ internal sealed class DaggerfallActorRoster
         if (_dynamicActors.ContainsKey(actorId))
             _dynamicActors[actorId] = watchDef.Id;
 
-        actor.Actor.Get<ActorHarmPolicy>().Set(ArchetypeProfile.Guard.DefaultHarm);
-        actor.Actor.Get<ActorInteractionPolicy>().Set(ArchetypeProfile.Guard.DefaultInteraction);
+        ArchetypeProfile guardProfile = _definitions.People.RequireArchetype(DaggerfallArchetypeIds.Guard);
+        actor.Actor.Get<ActorHarmPolicy>().Set(guardProfile.DefaultHarm);
+        actor.Actor.Get<ActorInteractionPolicy>().Set(guardProfile.DefaultInteraction);
         actor.Actor.Get<FactionComponent>().SetCreatureFaction("city-watch");
-        actor.Actor.Get<ActorOverlayComponent>().ArchetypeId = ArchetypeProfile.Guard.Id;
+        actor.Actor.Get<ActorOverlayComponent>().ArchetypeId = guardProfile.Id;
         actor.Actor.Get<ActorRenderComponent>().SetVisual(ActorVisualSpec.DirectionalMobile(146, gender));
         if (actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander))
             wander.MarkUnloaded();
@@ -429,8 +430,7 @@ internal sealed class DaggerfallActorRoster
         if (_identities.Classify(identity) != DurableIdentityClassification.Live)
             throw new InvalidOperationException($"NPC {npcId} does not own a live actor identity.");
 
-        DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npcId, npc.Kind != DaggerfallNpcKind.Civilian);
-        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, pose, _definitions);
+        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, pose, _definitions, out DaggerfallActorDefinition definition);
         actor.Actor.Add(new ActorOriginComponent(
             ActorOrigin.MintedActor(definition.Id.Value, gender: npc.Appearance.Gender),
             pose.Position, pose.HeadingYawRadians));
@@ -440,6 +440,7 @@ internal sealed class DaggerfallActorRoster
                 throw new InvalidOperationException($"NPC {npcId} already has a runtime actor definition.");
             if (!_dynamicActors.TryAdd(npcId, definition.Id))
                 throw new InvalidOperationException($"NPC {npcId} already has a runtime actor binding.");
+            GrantInitialLoadout(actor, definition);
             return actor.DurableId;
         }
         catch
@@ -860,15 +861,14 @@ internal sealed class DaggerfallActorRoster
         Vector3 translation, ActorLedgerEntry? delta, bool isRelocated = false, DaggerfallSiteProfile? siteProfile = null,
         DaggerfallStaticNpcPlacement? staticPlacement = null)
     {
-        DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npc.DurableId, npc.Kind != DaggerfallNpcKind.Civilian);
         WorldPoint worldPose = DaggerfallSceneOrigin.Shift(baselineProfilePose, translation);
-        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, new ActorPose(worldPose, 0f), _definitions);
+        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc,
+            new ActorPose(worldPose, 0f), _definitions, out DaggerfallActorDefinition definition,
+            spawnerId: staticPlacement?.SpawnerId);
         if (staticPlacement is not null)
         {
             actor.Actor.Get<ActorHarmPolicy>().Set(staticPlacement.Harm);
             actor.Actor.Get<ActorInteractionPolicy>().Set(staticPlacement.Interaction);
-            if (!string.IsNullOrWhiteSpace(staticPlacement.SpawnerId))
-                actor.Actor.Get<ActorOverlayComponent>().ArchetypeId = staticPlacement.SpawnerId;
         }
         DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
         actor.Actor.Add(new ActorOriginComponent(origin, baselineProfilePose, 0f, baselineStats, npc, isRelocated));
@@ -876,6 +876,8 @@ internal sealed class DaggerfallActorRoster
         {
             if (!_definitionsByActor.TryAdd(npc.DurableId, definition))
                 throw new InvalidOperationException($"Deterministic NPC {npc.DurableId} already has a runtime actor definition.");
+            if (delta?.Combat?.DetachedInventory is null)
+                GrantInitialLoadout(actor, definition);
             if (delta is not null) ApplySparseLedgerDelta(actor, npc, delta, translation, siteProfile);
             return actor;
         }
@@ -890,7 +892,7 @@ internal sealed class DaggerfallActorRoster
     private void ApplySparseLedgerDelta(ActorState actor, DaggerfallNpc npc, ActorLedgerEntry delta, Vector3 translation,
         DaggerfallSiteProfile? siteProfile = null)
     {
-        if (string.Equals(delta.Combat?.PromotedArchetype, ArchetypeProfile.Guard.Id, StringComparison.Ordinal))
+        if (string.Equals(delta.Combat?.PromotedArchetype, DaggerfallArchetypeIds.Guard, StringComparison.Ordinal))
             _ = ApplyCityWatchPromotion(actor, grantEquipment: false, swapAppearance: false, siteProfile);
         if (delta.Vitals is { } vitals)
             DaggerfallActorFactory.RestoreStats(actor.Actor, vitals.Stats);
@@ -1279,6 +1281,23 @@ internal sealed class DaggerfallActorRoster
             actorInventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value), stackId, entry.Quantity));
             _itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(actor.DurableId),
                 new InventoryStack(stackId, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), _definitions.Items[entry.ItemId]);
+        }
+    }
+
+    private void GrantInitialLoadout(ActorState actor, DaggerfallActorDefinition definition)
+    {
+        if (definition.Loadout.Count == 0) return;
+        MechanicsInventoryCoordinator? actorInventory = _actorInventories.InventoryFor(actor.DurableId);
+        if (actorInventory is null) return;
+        int ordinal = 0;
+        foreach (DaggerfallLoadoutEntry entry in definition.Loadout)
+        {
+            if (!_definitions.Items.TryGetValue(entry.ItemId, out DaggerfallItemDefinition? item) || !item.IsFungible)
+                continue;
+            InventoryStackId stackId = DaggerfallInventoryStackIds.ForInitialLoadout(actor.DurableId, ordinal++);
+            actorInventory.Grant(new InventoryGrant(new InventoryItemId(entry.ItemId.Value), stackId, entry.Quantity));
+            _itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Actor(actor.DurableId),
+                new InventoryStack(stackId, ItemDefinitionId.Parse(entry.ItemId.Value), entry.Quantity), item);
         }
     }
 

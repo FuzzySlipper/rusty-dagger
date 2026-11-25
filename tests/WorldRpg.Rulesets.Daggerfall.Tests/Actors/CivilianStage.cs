@@ -67,7 +67,7 @@ internal sealed class CivilianStage : IDisposable
 
     private long Materialize(DaggerfallNpc npc, ActorPose pose)
     {
-        DaggerfallActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, npc, pose);
+        DaggerfallActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, npc, pose, TestPayload.Definitions, out _);
         Materialized.Add((npc.DurableId, pose));
         return npc.DurableId;
     }

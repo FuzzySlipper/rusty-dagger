@@ -1,5 +1,6 @@
 {
   "castFile": "cast/individuals.json",
   "spawnersFile": "spawners.json",
+  "archetypesFile": "archetypes.json",
   "blocksFolder": "blocks"
 }

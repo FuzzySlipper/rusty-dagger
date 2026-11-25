@@ -150,6 +150,6 @@ public sealed class HudSnapshotContractTests
             NewGame = source.NewGame,
             BuildingNames = source.BuildingNames,
             DialogueWorldRules = source.DialogueWorldRules,
-        };
+        }.WithPeople(source.People);
     }
 }

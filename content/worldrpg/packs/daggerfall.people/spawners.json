@@ -3,6 +3,7 @@
     {
       "id": "alchemist",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -38,6 +39,7 @@
     {
       "id": "armorer",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -61,6 +63,7 @@
     {
       "id": "banker",
       "role": "bank teller",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -78,6 +81,7 @@
     {
       "id": "bookseller",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -107,6 +111,7 @@
     {
       "id": "child",
       "role": "person",
+      "archetype": "child",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -262,6 +267,7 @@
     {
       "id": "clothier",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -303,6 +309,7 @@
     {
       "id": "clutter-person",
       "role": "bystander",
+      "archetype": "clutter-person",
       "interaction": "none",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -326,6 +333,7 @@
     {
       "id": "courtier",
       "role": "person",
+      "archetype": "noble",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -379,6 +387,7 @@
     {
       "id": "daedra-summon",
       "role": "person",
+      "archetype": "combatant",
       "interaction": "full-dialogue",
       "harm": "combatant",
       "deriveRegionalFaction": true,
@@ -396,6 +405,7 @@
     {
       "id": "dark-brotherhood-member",
       "role": "person",
+      "archetype": "assassin",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -443,6 +453,7 @@
     {
       "id": "dungeon-inhabitant",
       "role": "person",
+      "archetype": "civilian",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -658,6 +669,7 @@
     {
       "id": "fighters-guild-member",
       "role": "person",
+      "archetype": "warrior",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -693,6 +705,7 @@
     {
       "id": "furniture-merchant",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -710,6 +723,7 @@
     {
       "id": "general-merchant",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -733,6 +747,7 @@
     {
       "id": "guild-member",
       "role": "person",
+      "archetype": "civilian",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -834,6 +849,7 @@
     {
       "id": "house-resident",
       "role": "person",
+      "archetype": "civilian",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1259,6 +1275,7 @@
     {
       "id": "jeweler",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1282,6 +1299,7 @@
     {
       "id": "knightly-order-member",
       "role": "person",
+      "archetype": "warrior",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1323,6 +1341,7 @@
     {
       "id": "mage-guild-member",
       "role": "person",
+      "archetype": "mage",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1496,6 +1515,7 @@
     {
       "id": "necromancer",
       "role": "person",
+      "archetype": "mage",
       "interaction": "full-dialogue",
       "harm": "combatant",
       "deriveRegionalFaction": true,
@@ -1543,6 +1563,7 @@
     {
       "id": "noble",
       "role": "person",
+      "archetype": "noble",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1560,6 +1581,7 @@
     {
       "id": "palace-attendant",
       "role": "person",
+      "archetype": "noble",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1649,6 +1671,7 @@
     {
       "id": "pawnbroker",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1666,6 +1689,7 @@
     {
       "id": "scholar",
       "role": "person",
+      "archetype": "mage",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1695,6 +1719,7 @@
     {
       "id": "shop-patron",
       "role": "person",
+      "archetype": "civilian",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1862,6 +1887,7 @@
     {
       "id": "tavern-keeper",
       "role": "tavern keeper",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -1897,6 +1923,7 @@
     {
       "id": "tavern-patron",
       "role": "person",
+      "archetype": "civilian",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -2178,6 +2205,7 @@
     {
       "id": "temple-priest",
       "role": "priest",
+      "archetype": "priest",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -2525,6 +2553,7 @@
     {
       "id": "weaponsmith",
       "role": "merchant",
+      "archetype": "merchant",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,
@@ -2554,6 +2583,7 @@
     {
       "id": "witch",
       "role": "witch",
+      "archetype": "mage",
       "interaction": "full-dialogue",
       "harm": "law-protected-civilian",
       "deriveRegionalFaction": true,

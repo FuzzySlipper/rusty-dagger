@@ -341,4 +341,50 @@ class PeoplePackTests(TestCase):
         self.assertTrue(report["valid"], f"Unexpected pack validation issues: {report['issues']}")
         self.assertEqual(report["counts"]["cast"], 28)
         self.assertEqual(report["counts"]["spawners"], 30)
+        self.assertGreaterEqual(report["counts"]["archetypes"], 6)
         self.assertGreater(report["counts"]["slots"], 14000)
+
+    def test_archetypes_validation_and_round_trip_edit(self):
+        pack = self.library.people_pack
+        self._write(pack / "payload.json", {
+            "castFile": "cast/individuals.json",
+            "spawnersFile": "spawners.json",
+            "archetypesFile": "archetypes.json",
+            "blocksFolder": "blocks",
+        })
+        archetypes = [
+            {
+                "id": aid,
+                "health": {"min": 20, "max": 30},
+                "fatigue": 50,
+                "magicka": 0,
+                "armor": 0,
+                "level": 1,
+                "baseAttribute": 50,
+                "attributes": {},
+                "skills": {},
+                "defaultHarm": "law-protected-civilian",
+                "defaultInteraction": "full-dialogue",
+                "walks": True,
+                "loadout": [],
+            }
+            for aid in ("civilian", "static-npc", "clutter-person", "questor", "guard", "combatant", "merchant")
+        ]
+        self._write(pack / "archetypes.json", {"archetypes": archetypes})
+        self.workspace.cache.invalidate(("people-pack-index", pack, self.library.base_payload))
+
+        report = self.workspace.people_pack.validate_all()
+        self.assertTrue(report["valid"], report["issues"])
+        self.assertEqual(report["counts"]["archetypes"], 7)
+
+        updated = self.workspace.people_pack.update_archetype("merchant", {"health": {"min": 24, "max": 34}})
+        self.assertEqual(updated["health"], {"min": 24, "max": 34})
+
+        with self.assertRaises(ValidationError):
+            self.workspace.people_pack.update_archetype("merchant", {"health": {"min": 40, "max": 10}})
+
+        with self.assertRaises(ValidationError):
+            self.workspace.people_pack.update_spawner(
+                "banker", {"archetype": "missing-archetype"},
+                self.workspace.catalog(), self.workspace.concept_store,
+            )

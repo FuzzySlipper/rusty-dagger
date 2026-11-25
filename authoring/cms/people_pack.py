@@ -12,6 +12,8 @@ GENDERS = ("Male", "Female")
 INTERACTIONS = ("none", "ambient-bark", "full-dialogue")
 HARMS = ("protected", "law-protected-civilian", "combatant")
 VISUAL_MODES = ("pool", "classic-slot")
+REQUIRED_ARCHETYPES = ("civilian", "static-npc", "clutter-person", "questor", "guard", "combatant")
+MAX_ARCHETYPE_VITAL = 10_000
 KNOWN_RACES = (
     "breton", "redguard", "nord", "dark-elf", "high-elf", "wood-elf", "khajiit", "argonian", "orc",
 )
@@ -89,7 +91,116 @@ def _validate_pool(entries, field_prefix: str, issues: list[ValidationIssue], *,
             issues.append(ValidationIssue(f"{path}.weight", "Weight must be a positive integer."))
 
 
-def validate_cast_document(doc, factions: dict[int, dict] | None = None) -> list[ValidationIssue]:
+def validate_archetypes_document(
+    doc,
+    *,
+    valid_attributes: set[str] | None = None,
+    valid_skills: set[str] | None = None,
+    items: dict[str, dict] | None = None,
+) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    if not isinstance(doc, dict) or not isinstance(doc.get("archetypes"), list):
+        return [ValidationIssue("archetypes", "Archetypes file must contain an 'archetypes' array.")]
+    seen: set[str] = set()
+    for index, entry in enumerate(doc["archetypes"]):
+        path = f"archetypes[{index}]"
+        if not isinstance(entry, dict):
+            issues.append(ValidationIssue(path, "Archetype must be an object."))
+            continue
+        aid = entry.get("id")
+        if not valid_id(aid):
+            issues.append(ValidationIssue(f"{path}.id", "ID must be lowercase kebab/identifier characters."))
+        elif aid in seen:
+            issues.append(ValidationIssue(f"{path}.id", f"Duplicate archetype ID '{aid}'."))
+        else:
+            seen.add(aid)
+
+        health = entry.get("health")
+        if not isinstance(health, dict):
+            issues.append(ValidationIssue(f"{path}.health", "Health must be an object with min and max."))
+        else:
+            hmin = health.get("min")
+            hmax = health.get("max")
+            if not _is_int(hmin) or not _is_int(hmax) or hmin < 1 or hmax < hmin or hmax > MAX_ARCHETYPE_VITAL:
+                issues.append(ValidationIssue(f"{path}.health", f"Invalid health range [{hmin}, {hmax}]."))
+
+        for vital in ("fatigue", "magicka"):
+            val = entry.get(vital)
+            if not _is_int(val) or val < 0 or val > MAX_ARCHETYPE_VITAL:
+                issues.append(ValidationIssue(f"{path}.{vital}", f"{vital} must be an integer in 0..{MAX_ARCHETYPE_VITAL}."))
+
+        armor = entry.get("armor", 0)
+        if not _is_int(armor) or armor < -100 or armor > 100:
+            issues.append(ValidationIssue(f"{path}.armor", "armor must be an integer in -100..100."))
+
+        level = entry.get("level", 1)
+        if not _is_int(level) or level < 1 or level > 100:
+            issues.append(ValidationIssue(f"{path}.level", "level must be an integer in 1..100."))
+
+        base_attr = entry.get("baseAttribute")
+        if not _is_int(base_attr) or base_attr < 1 or base_attr > 100:
+            issues.append(ValidationIssue(f"{path}.baseAttribute", "baseAttribute must be an integer in 1..100."))
+
+        attrs = entry.get("attributes", {})
+        if not isinstance(attrs, dict):
+            issues.append(ValidationIssue(f"{path}.attributes", "attributes must be an object."))
+        else:
+            for k, v in attrs.items():
+                if valid_attributes and k not in valid_attributes:
+                    issues.append(ValidationIssue(f"{path}.attributes.{k}", f"Unknown attribute '{k}'."))
+                if not _is_int(v) or v < 1 or v > 100:
+                    issues.append(ValidationIssue(f"{path}.attributes.{k}", "Attribute value must be an integer in 1..100."))
+
+        skills = entry.get("skills", {})
+        if not isinstance(skills, dict):
+            issues.append(ValidationIssue(f"{path}.skills", "skills must be an object."))
+        else:
+            for k, v in skills.items():
+                if valid_skills and k not in valid_skills:
+                    issues.append(ValidationIssue(f"{path}.skills.{k}", f"Unknown skill '{k}'."))
+                if not _is_int(v) or v < 0 or v > 100:
+                    issues.append(ValidationIssue(f"{path}.skills.{k}", "Skill value must be an integer in 0..100."))
+
+        if entry.get("defaultHarm") not in HARMS:
+            issues.append(ValidationIssue(f"{path}.defaultHarm", f"defaultHarm must be one of {', '.join(HARMS)}."))
+        if entry.get("defaultInteraction") not in INTERACTIONS:
+            issues.append(ValidationIssue(f"{path}.defaultInteraction", f"defaultInteraction must be one of {', '.join(INTERACTIONS)}."))
+        if type(entry.get("walks")) is not bool:
+            issues.append(ValidationIssue(f"{path}.walks", "walks must be true or false."))
+
+        loadout = entry.get("loadout", [])
+        if not isinstance(loadout, list):
+            issues.append(ValidationIssue(f"{path}.loadout", "loadout must be an array."))
+        else:
+            for lidx, litem in enumerate(loadout):
+                lpath = f"{path}.loadout[{lidx}]"
+                if not isinstance(litem, dict):
+                    issues.append(ValidationIssue(lpath, "Loadout entry must be an object."))
+                    continue
+                item_id = litem.get("itemId")
+                qty = litem.get("quantity")
+                if not isinstance(item_id, str) or not item_id.strip():
+                    issues.append(ValidationIssue(f"{lpath}.itemId", "itemId must be non-empty text."))
+                elif items:
+                    item_def = items.get(item_id)
+                    if item_def is None:
+                        issues.append(ValidationIssue(f"{lpath}.itemId", f"References unknown item '{item_id}'."))
+                    elif item_def.get("kind") != "fungible":
+                        issues.append(ValidationIssue(f"{lpath}.itemId", f"Item '{item_id}' must be fungible."))
+                if not _is_int(qty) or qty <= 0:
+                    issues.append(ValidationIssue(f"{lpath}.quantity", "quantity must be a positive integer."))
+
+    for req_id in REQUIRED_ARCHETYPES:
+        if req_id not in seen:
+            issues.append(ValidationIssue("archetypes", f"Missing required archetype '{req_id}'."))
+    return issues
+
+
+def validate_cast_document(
+    doc,
+    factions: dict[int, dict] | None = None,
+    archetypes: dict[str, dict] | None = None,
+) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     if not isinstance(doc, dict) or not isinstance(doc.get("individuals"), list):
         return [ValidationIssue("individuals", "Cast file must contain an 'individuals' array.")]
@@ -149,10 +260,16 @@ def validate_cast_document(doc, factions: dict[int, dict] | None = None) -> list
             issues.append(ValidationIssue(f"{path}.interaction", f"Interaction must be one of {', '.join(INTERACTIONS)}."))
         if entry.get("harm") not in HARMS:
             issues.append(ValidationIssue(f"{path}.harm", f"Harm must be one of {', '.join(HARMS)}."))
+        arch = entry.get("archetype")
+        if arch is not None:
+            if not valid_id(arch):
+                issues.append(ValidationIssue(f"{path}.archetype", "Archetype ID must be lowercase kebab/identifier characters."))
+            elif archetypes is not None and arch not in archetypes:
+                issues.append(ValidationIssue(f"{path}.archetype", f"References unknown archetype '{arch}'."))
     return issues
 
 
-def validate_spawners_document(doc) -> list[ValidationIssue]:
+def validate_spawners_document(doc, archetypes: dict[str, dict] | None = None) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     if not isinstance(doc, dict) or not isinstance(doc.get("spawners"), list):
         return [ValidationIssue("spawners", "Spawners file must contain a 'spawners' array.")]
@@ -173,6 +290,12 @@ def validate_spawners_document(doc) -> list[ValidationIssue]:
         role = entry.get("role")
         if not isinstance(role, str) or not role.strip():
             issues.append(ValidationIssue(f"{path}.role", "Role must be non-empty text."))
+        arch = entry.get("archetype")
+        if arch is not None:
+            if not valid_id(arch):
+                issues.append(ValidationIssue(f"{path}.archetype", "Archetype ID must be lowercase kebab/identifier characters."))
+            elif archetypes is not None and arch not in archetypes:
+                issues.append(ValidationIssue(f"{path}.archetype", f"References unknown archetype '{arch}'."))
         if entry.get("interaction") not in INTERACTIONS:
             issues.append(ValidationIssue(f"{path}.interaction", f"Interaction must be one of {', '.join(INTERACTIONS)}."))
         if entry.get("harm") not in HARMS:
@@ -222,6 +345,14 @@ class PeoplePackStore:
         blocks_rel = payload.get("blocksFolder", "blocks")
         return self.root / cast_rel, self.root / spawners_rel, self.root / blocks_rel
 
+    def _archetypes_path(self) -> Path | None:
+        payload = self.packs.read_json(self.root / "payload.json", {}) or {}
+        arch_rel = payload.get("archetypesFile")
+        if arch_rel:
+            return self.root / arch_rel
+        default_path = self.root / "archetypes.json"
+        return default_path if default_path.is_file() else None
+
     def available(self) -> bool:
         cast_path, spawners_path, _ = self._paths()
         return cast_path.is_file() and spawners_path.is_file()
@@ -250,7 +381,22 @@ class PeoplePackStore:
             for entry in regions:
                 region_by_key[entry["key"]] = entry
                 region_by_key[entry["name"].lower()] = entry
-            return {"factions": factions, "regions": regions, "region_by_key": region_by_key}
+            vocab = base.get("vocabulary") or {}
+            valid_attributes = set(vocab.get("attributes") or [])
+            valid_skills = set(vocab.get("skills") or [])
+            items = {
+                row["id"]: row
+                for row in (base.get("items") or [])
+                if isinstance(row, dict) and isinstance(row.get("id"), str)
+            }
+            return {
+                "factions": factions,
+                "regions": regions,
+                "region_by_key": region_by_key,
+                "attributes": valid_attributes,
+                "skills": valid_skills,
+                "items": items,
+            }
 
         return self.cache.get(("people-base-lookups", base_path), stamp, build)
 
@@ -532,6 +678,7 @@ class PeoplePackStore:
         return {
             "id": sp["id"],
             "role": sp["role"],
+            "archetype": sp.get("archetype"),
             "interaction": sp["interaction"],
             "harm": sp["harm"],
             "deriveRegionalFaction": bool(sp.get("deriveRegionalFaction", False)),
@@ -681,7 +828,7 @@ class PeoplePackStore:
         if not isinstance(body, dict):
             raise ValidationError("Spawner update must be a JSON object.")
         _, spawners_path, _ = self._paths()
-        allowed = {"role", "interaction", "harm", "deriveRegionalFaction", "visualMode", "defaultPool", "regionalPools"}
+        allowed = {"role", "archetype", "interaction", "harm", "deriveRegionalFaction", "visualMode", "defaultPool", "regionalPools"}
         unknown = sorted(set(body) - allowed)
         if unknown:
             raise ValidationError(
@@ -713,6 +860,12 @@ class PeoplePackStore:
                     next_entry = dict(entry)
                     if "role" in body:
                         next_entry["role"] = body["role"].strip() if isinstance(body["role"], str) else body["role"]
+                    if "archetype" in body:
+                        arch = body["archetype"]
+                        if arch is None or (isinstance(arch, str) and not arch.strip()):
+                            next_entry.pop("archetype", None)
+                        else:
+                            next_entry["archetype"] = arch.strip() if isinstance(arch, str) else arch
                     if "interaction" in body:
                         next_entry["interaction"] = body["interaction"]
                     if "harm" in body:
@@ -739,12 +892,84 @@ class PeoplePackStore:
             return {"spawners": updated_list}, spawner_id
 
         def validator(doc):
-            issues = validate_spawners_document(doc)
+            arch_path = self._archetypes_path()
+            archetypes_by_id = None
+            if arch_path is not None and arch_path.is_file():
+                arch_doc = self.packs.read_json(arch_path, {}) or {}
+                archetypes_by_id = {
+                    row["id"]: row for row in arch_doc.get("archetypes", [])
+                    if isinstance(row, dict) and isinstance(row.get("id"), str)
+                }
+            issues = validate_spawners_document(doc, archetypes_by_id)
             _raise_if_issues("Spawner validation failed.", issues)
 
         self.packs.update_json(spawners_path, mutate, validator=validator, sort_keys=False)
         self.cache.invalidate(("people-pack-index", self.root, self.library.base_payload))
         return self.get_spawner(spawner_id, catalog, concept_store)
+
+    def list_archetypes(self) -> list[dict]:
+        arch_path = self._archetypes_path()
+        if arch_path is None or not arch_path.is_file():
+            return []
+        doc = self.packs.read_json(arch_path, {"archetypes": []}) or {"archetypes": []}
+        return list(doc.get("archetypes") or [])
+
+    def get_archetype(self, archetype_id: str) -> dict | None:
+        for entry in self.list_archetypes():
+            if isinstance(entry, dict) and entry.get("id") == archetype_id:
+                return entry
+        return None
+
+    def update_archetype(self, archetype_id: str, body) -> dict:
+        if not isinstance(body, dict):
+            raise ValidationError("Archetype update must be a JSON object.")
+        arch_path = self._archetypes_path()
+        if arch_path is None or not arch_path.is_file():
+            raise NotFoundError("People pack has no archetypes.json.")
+        lookups = self._base_lookups()
+        allowed = {
+            "health", "fatigue", "magicka", "armor", "level",
+            "baseAttribute", "attributes", "skills",
+            "defaultHarm", "defaultInteraction", "walks", "loadout",
+        }
+        unknown = sorted(set(body) - allowed)
+        if unknown:
+            raise ValidationError(
+                f"Unsupported archetype fields: {', '.join(unknown)}.",
+                [ValidationIssue(field, "This field cannot be edited here.") for field in unknown],
+            )
+
+        def mutate(doc):
+            if not isinstance(doc, dict) or not isinstance(doc.get("archetypes"), list):
+                raise ValidationError("Archetypes file is malformed.")
+            found = False
+            updated_list = []
+            for entry in doc["archetypes"]:
+                if isinstance(entry, dict) and entry.get("id") == archetype_id:
+                    found = True
+                    next_entry = dict(entry)
+                    for key in allowed:
+                        if key in body:
+                            next_entry[key] = body[key]
+                    updated_list.append(next_entry)
+                else:
+                    updated_list.append(entry)
+            if not found:
+                raise NotFoundError(f"Archetype '{archetype_id}' not found.")
+            return {"archetypes": updated_list}, archetype_id
+
+        def validator(doc):
+            issues = validate_archetypes_document(
+                doc,
+                valid_attributes=lookups["attributes"] or None,
+                valid_skills=lookups["skills"] or None,
+                items=lookups["items"] or None,
+            )
+            _raise_if_issues("Archetype validation failed.", issues)
+
+        self.packs.update_json(arch_path, mutate, validator=validator, sort_keys=False)
+        self.cache.invalidate(("people-pack-index", self.root, self.library.base_payload))
+        return self.get_archetype(archetype_id)
 
     def query_blocks(
         self,
@@ -922,7 +1147,23 @@ class PeoplePackStore:
 
         cast_doc = self.packs.read_json(cast_path, None)
         spawners_doc = self.packs.read_json(spawners_path, None)
-        issues = validate_cast_document(cast_doc, factions) + validate_spawners_document(spawners_doc)
+        arch_path = self._archetypes_path()
+        archetypes_doc = self.packs.read_json(arch_path, None) if arch_path is not None else None
+        issues: list[ValidationIssue] = []
+        archetypes_by_id: dict[str, dict] | None = None
+        if arch_path is not None:
+            issues += validate_archetypes_document(
+                archetypes_doc,
+                valid_attributes=lookups["attributes"] or None,
+                valid_skills=lookups["skills"] or None,
+                items=lookups["items"] or None,
+            )
+            archetypes_by_id = {
+                row["id"]: row for row in (archetypes_doc or {}).get("archetypes", [])
+                if isinstance(row, dict) and isinstance(row.get("id"), str)
+            }
+        issues += validate_cast_document(cast_doc, factions, archetypes_by_id)
+        issues += validate_spawners_document(spawners_doc, archetypes_by_id)
 
         individuals_by_id = {
             row["id"]: row for row in (cast_doc or {}).get("individuals", [])
@@ -983,6 +1224,7 @@ class PeoplePackStore:
             "counts": {
                 "cast": len(individuals_by_id),
                 "spawners": len(spawners_by_id),
+                "archetypes": len(archetypes_by_id or {}),
                 "slots": slot_count,
             },
         }
@@ -1057,6 +1299,18 @@ def register_routes(router, workspace):
     def get_visuals(req):
         return workspace.people_pack.visual_options(workspace.catalog(), workspace.concept_store, q=req.arg("q"))
 
+    def get_archetypes_list(_req):
+        return workspace.people_pack.list_archetypes()
+
+    def get_archetype_item(req):
+        item = workspace.people_pack.get_archetype(req.params["id"])
+        if item is None:
+            raise NotFoundError(f"Archetype '{req.params['id']}' not found.")
+        return item
+
+    def put_archetype_item(req):
+        return workspace.people_pack.update_archetype(req.params["id"], req.json())
+
     def get_validate(_req):
         return workspace.people_pack.validate_all()
 
@@ -1067,6 +1321,9 @@ def register_routes(router, workspace):
     router.get("/api/people-pack/spawners", get_spawner_list)
     router.get("/api/people-pack/spawners/{id}", get_spawner_item)
     router.put("/api/people-pack/spawners/{id}", put_spawner_item)
+    router.get("/api/people-pack/archetypes", get_archetypes_list)
+    router.get("/api/people-pack/archetypes/{id}", get_archetype_item)
+    router.put("/api/people-pack/archetypes/{id}", put_archetype_item)
     router.get("/api/people-pack/blocks", get_blocks)
     router.get("/api/people-pack/visuals", get_visuals)
     router.get("/api/people-pack/validate", get_validate)

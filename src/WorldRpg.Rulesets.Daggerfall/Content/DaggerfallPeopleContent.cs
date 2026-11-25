@@ -32,7 +32,8 @@ internal sealed record DaggerfallPeoplePackFiles(
     ReadOnlyMemory<byte> Payload,
     ReadOnlyMemory<byte> CastBytes,
     ReadOnlyMemory<byte> SpawnersBytes,
-    IReadOnlyList<DaggerfallPeopleBlockFile> BlockFiles);
+    IReadOnlyList<DaggerfallPeopleBlockFile> BlockFiles,
+    ReadOnlyMemory<byte>? ArchetypesBytes = null);
 
 /// <summary>One block-slot file under a people pack's <c>blocks/</c> folder.</summary>
 internal sealed record DaggerfallPeopleBlockFile(string Path, ReadOnlyMemory<byte> Bytes);
@@ -52,7 +53,8 @@ internal sealed record DaggerfallPeopleSpawnerDefinition(
     bool DeriveRegionalFaction,
     string VisualMode,
     IReadOnlyList<DaggerfallPeoplePoolEntry> DefaultPool,
-    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> RegionalPools);
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> RegionalPools,
+    string? ArchetypeId = null);
 
 /// <summary>Genuine unique named individual authored in <c>cast/individuals.json</c>.</summary>
 internal sealed record DaggerfallCastIndividualDefinition(
@@ -66,7 +68,8 @@ internal sealed record DaggerfallCastIndividualDefinition(
     string HomeBlock,
     string HomeSlotId,
     string Interaction,
-    string Harm);
+    string Harm,
+    string? ArchetypeId = null);
 
 /// <summary>One authored people slot in an RMB interior, RMB exterior, or RDB dungeon block.</summary>
 internal sealed record DaggerfallPeopleSlotDefinition(
@@ -88,20 +91,58 @@ internal sealed record DaggerfallPeopleBuildingSlots(
     int BuildingFactionId,
     IReadOnlyList<DaggerfallPeopleSlotDefinition> Slots);
 
-/// <summary>The admitted <c>daggerfall.people</c> pack: unique cast, central spawners, and block slot templates.</summary>
+/// <summary>The admitted <c>daggerfall.people</c> pack: unique cast, central spawners, archetypes, and block slot templates.</summary>
 internal sealed record DaggerfallPeopleSet(
     IReadOnlyDictionary<string, DaggerfallCastIndividualDefinition> Individuals,
     IReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition> Spawners,
     IReadOnlyDictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>> RmbInteriors,
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RmbExteriors,
-    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RdbDungeons)
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RdbDungeons,
+    IReadOnlyDictionary<string, ArchetypeProfile>? ArchetypesMap = null)
 {
+    private static readonly IReadOnlyDictionary<string, ArchetypeProfile> EmptyArchetypes =
+        new ReadOnlyDictionary<string, ArchetypeProfile>(new Dictionary<string, ArchetypeProfile>(StringComparer.Ordinal));
+
+    internal IReadOnlyDictionary<string, ArchetypeProfile> Archetypes => ArchetypesMap ?? EmptyArchetypes;
+
     internal static DaggerfallPeopleSet Empty { get; } = new(
         new ReadOnlyDictionary<string, DaggerfallCastIndividualDefinition>(new Dictionary<string, DaggerfallCastIndividualDefinition>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition>(new Dictionary<string, DaggerfallPeopleSpawnerDefinition>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>>(new Dictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(new Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(StringComparer.Ordinal)),
-        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(new Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(StringComparer.Ordinal)));
+        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(new Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(StringComparer.Ordinal)),
+        EmptyArchetypes);
+
+    internal ArchetypeProfile RequireArchetype(string archetypeId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(archetypeId);
+        return Archetypes.TryGetValue(archetypeId, out ArchetypeProfile? profile)
+            ? profile
+            : throw new InvalidOperationException($"Archetype '{archetypeId}' is not defined in daggerfall.people/archetypes.json.");
+    }
+
+    internal ArchetypeProfile ResolveArchetype(
+        string defaultArchetypeId,
+        string? explicitArchetypeId = null,
+        string? spawnerId = null,
+        string? castId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(defaultArchetypeId);
+        if (!string.IsNullOrWhiteSpace(explicitArchetypeId)
+            && Archetypes.TryGetValue(explicitArchetypeId, out ArchetypeProfile? explicitProfile))
+            return explicitProfile;
+        if (!string.IsNullOrWhiteSpace(spawnerId)
+            && Spawners.TryGetValue(spawnerId, out DaggerfallPeopleSpawnerDefinition? spawner)
+            && !string.IsNullOrWhiteSpace(spawner.ArchetypeId)
+            && Archetypes.TryGetValue(spawner.ArchetypeId, out ArchetypeProfile? spawnerProfile))
+            return spawnerProfile;
+        if (!string.IsNullOrWhiteSpace(castId)
+            && Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast)
+            && !string.IsNullOrWhiteSpace(cast.ArchetypeId)
+            && Archetypes.TryGetValue(cast.ArchetypeId, out ArchetypeProfile? castProfile))
+            return castProfile;
+        return RequireArchetype(defaultArchetypeId);
+    }
 
     internal bool TryGetRmbInteriorSlots(string blockSourceKey, int buildingIndex, out DaggerfallPeopleBuildingSlots? building)
     {
@@ -155,10 +196,16 @@ internal static class DaggerfallPeopleContent
 {
     internal const string CastFile = "cast/individuals.json";
     internal const string SpawnersFile = "spawners.json";
+    internal const string ArchetypesFile = "archetypes.json";
     internal const string BlocksFolder = "blocks";
     private const int IndividualFactionType = 4;
+    private const int MaximumArchetypeVital = 10_000;
 
-    internal static DaggerfallPeopleSet Read(DaggerfallPeoplePackFiles pack, DaggerfallFactionsSet? factions = null)
+    internal static DaggerfallPeopleSet Read(
+        DaggerfallPeoplePackFiles pack,
+        DaggerfallFactionsSet? factions = null,
+        DaggerfallVocabulary? vocabulary = null,
+        IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>? items = null)
     {
         ArgumentNullException.ThrowIfNull(pack);
         DaggerfallContentDiagnostics diagnostics = new();
@@ -170,6 +217,7 @@ internal static class DaggerfallPeopleContent
             JsonElement root = DaggerfallBaseContent.Object(payloadDoc.RootElement, $"People pack '{pack.PackId}' payload", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "castFile", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "spawnersFile", diagnostics);
+            _ = DaggerfallBaseContent.Text(root, "archetypesFile", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "blocksFolder", diagnostics);
         }
         catch (JsonException exception)
@@ -177,8 +225,9 @@ internal static class DaggerfallPeopleContent
             diagnostics.Add($"People pack '{pack.PackId}' payload is malformed: {exception.Message}");
         }
 
-        Dictionary<string, DaggerfallCastIndividualDefinition> individuals = ReadIndividuals(pack.PackId, pack.CastBytes, factions, diagnostics);
-        Dictionary<string, DaggerfallPeopleSpawnerDefinition> spawners = ReadSpawners(pack.PackId, pack.SpawnersBytes, diagnostics);
+        Dictionary<string, ArchetypeProfile> archetypes = ReadArchetypes(pack.PackId, pack.ArchetypesBytes, vocabulary, items, diagnostics);
+        Dictionary<string, DaggerfallCastIndividualDefinition> individuals = ReadIndividuals(pack.PackId, pack.CastBytes, factions, archetypes, diagnostics);
+        Dictionary<string, DaggerfallPeopleSpawnerDefinition> spawners = ReadSpawners(pack.PackId, pack.SpawnersBytes, archetypes, diagnostics);
 
         Dictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>> rmbInteriors = new(StringComparer.Ordinal);
         Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> rmbExteriors = new(StringComparer.Ordinal);
@@ -193,11 +242,179 @@ internal static class DaggerfallPeopleContent
             new ReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition>(spawners),
             new ReadOnlyDictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>>(rmbInteriors),
             new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rmbExteriors),
-            new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rdbDungeons));
+            new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rdbDungeons),
+            new ReadOnlyDictionary<string, ArchetypeProfile>(archetypes));
+    }
+
+    private static Dictionary<string, ArchetypeProfile> ReadArchetypes(
+        string packId,
+        ReadOnlyMemory<byte>? bytes,
+        DaggerfallVocabulary? vocabulary,
+        IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>? items,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<string, ArchetypeProfile> result = new(StringComparer.Ordinal);
+        if (bytes is null || bytes.Value.IsEmpty)
+        {
+            diagnostics.Add($"People pack '{packId}' is missing '{ArchetypesFile}'.");
+            return result;
+        }
+        HashSet<string>? validAttributes = vocabulary?.Attributes.Select(a => a.Value).ToHashSet(StringComparer.Ordinal);
+        HashSet<string>? validSkills = vocabulary?.Skills.Select(s => s.Value).ToHashSet(StringComparer.Ordinal);
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(bytes.Value);
+            JsonElement root = DaggerfallBaseContent.Object(doc.RootElement, $"People pack '{packId}' archetypes", diagnostics);
+            foreach (JsonElement item in DaggerfallBaseContent.Array(root, "archetypes", diagnostics))
+            {
+                JsonElement obj = DaggerfallBaseContent.Object(item, "people archetype", diagnostics);
+                string id = DaggerfallBaseContent.Text(obj, "id", diagnostics);
+                if (!DaggerfallBaseContent.ValidId(id))
+                    diagnostics.Add($"People archetype '{id}' has an invalid id.");
+
+                JsonElement healthObj = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(obj, "health", diagnostics), $"archetype '{id}' health", diagnostics);
+                int healthMin = DaggerfallBaseContent.Integer(healthObj, "min", diagnostics);
+                int healthMax = DaggerfallBaseContent.Integer(healthObj, "max", diagnostics);
+                if (healthMin < 1 || healthMax < healthMin || healthMax > MaximumArchetypeVital)
+                    diagnostics.Add($"People archetype '{id}' has invalid health range [{healthMin}, {healthMax}].");
+
+                int fatigue = DaggerfallBaseContent.Integer(obj, "fatigue", diagnostics);
+                int magicka = DaggerfallBaseContent.Integer(obj, "magicka", diagnostics);
+                if (fatigue < 0 || fatigue > MaximumArchetypeVital)
+                    diagnostics.Add($"People archetype '{id}' has invalid fatigue {fatigue}.");
+                if (magicka < 0 || magicka > MaximumArchetypeVital)
+                    diagnostics.Add($"People archetype '{id}' has invalid magicka {magicka}.");
+
+                int armor = obj.TryGetProperty("armor", out JsonElement armorEl) && armorEl.ValueKind == JsonValueKind.Number
+                    ? armorEl.GetInt32()
+                    : 0;
+                if (armor is < -100 or > 100)
+                    diagnostics.Add($"People archetype '{id}' has out-of-range armor {armor}.");
+
+                int level = obj.TryGetProperty("level", out JsonElement levelEl) && levelEl.ValueKind == JsonValueKind.Number
+                    ? levelEl.GetInt32()
+                    : 1;
+                if (level < 1 || level > 100)
+                    diagnostics.Add($"People archetype '{id}' has invalid level {level}.");
+
+                int baseAttribute = DaggerfallBaseContent.Integer(obj, "baseAttribute", diagnostics);
+                if (baseAttribute is < 1 or > 100)
+                    diagnostics.Add($"People archetype '{id}' has invalid baseAttribute {baseAttribute}.");
+
+                Dictionary<DaggerfallStatId, int> attributes = new();
+                if (obj.TryGetProperty("attributes", out JsonElement attrsEl))
+                {
+                    if (attrsEl.ValueKind != JsonValueKind.Object)
+                        diagnostics.Add($"People archetype '{id}' attributes must be an object.");
+                    else
+                    {
+                        foreach (JsonProperty prop in attrsEl.EnumerateObject())
+                        {
+                            if (validAttributes is not null && !validAttributes.Contains(prop.Name))
+                                diagnostics.Add($"People archetype '{id}' references unknown attribute '{prop.Name}'.");
+                            if (prop.Value.ValueKind != JsonValueKind.Number || !prop.Value.TryGetInt32(out int val) || val is < 1 or > 100)
+                                diagnostics.Add($"People archetype '{id}' attribute '{prop.Name}' must be an integer in 1..100.");
+                            else
+                                attributes[new DaggerfallStatId(prop.Name)] = val;
+                        }
+                    }
+                }
+
+                Dictionary<DaggerfallStatId, int> skills = new();
+                if (obj.TryGetProperty("skills", out JsonElement skillsEl))
+                {
+                    if (skillsEl.ValueKind != JsonValueKind.Object)
+                        diagnostics.Add($"People archetype '{id}' skills must be an object.");
+                    else
+                    {
+                        foreach (JsonProperty prop in skillsEl.EnumerateObject())
+                        {
+                            if (validSkills is not null && !validSkills.Contains(prop.Name))
+                                diagnostics.Add($"People archetype '{id}' references unknown skill '{prop.Name}'.");
+                            if (prop.Value.ValueKind != JsonValueKind.Number || !prop.Value.TryGetInt32(out int val) || val is < 0 or > 100)
+                                diagnostics.Add($"People archetype '{id}' skill '{prop.Name}' must be an integer in 0..100.");
+                            else
+                                skills[new DaggerfallStatId(prop.Name)] = val;
+                        }
+                    }
+                }
+
+                string harmRaw = DaggerfallBaseContent.Text(obj, "defaultHarm", diagnostics);
+                string interactionRaw = DaggerfallBaseContent.Text(obj, "defaultInteraction", diagnostics);
+                if (!ValidHarm(harmRaw))
+                    diagnostics.Add($"People archetype '{id}' has invalid defaultHarm '{harmRaw}'.");
+                if (!ValidInteraction(interactionRaw))
+                    diagnostics.Add($"People archetype '{id}' has invalid defaultInteraction '{interactionRaw}'.");
+
+                if (!obj.TryGetProperty("walks", out JsonElement walksEl) || walksEl.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    diagnostics.Add($"People archetype '{id}' walks must be a boolean.");
+                bool walks = walksEl.ValueKind == JsonValueKind.True;
+
+                List<DaggerfallLoadoutEntry> loadout = [];
+                if (obj.TryGetProperty("loadout", out JsonElement loadoutEl))
+                {
+                    if (loadoutEl.ValueKind != JsonValueKind.Array)
+                        diagnostics.Add($"People archetype '{id}' loadout must be an array.");
+                    else
+                    {
+                        foreach (JsonElement entryEl in loadoutEl.EnumerateArray())
+                        {
+                            JsonElement entryObj = DaggerfallBaseContent.Object(entryEl, $"archetype '{id}' loadout entry", diagnostics);
+                            string itemIdRaw = DaggerfallBaseContent.Text(entryObj, "itemId", diagnostics);
+                            int qty = DaggerfallBaseContent.Integer(entryObj, "quantity", diagnostics);
+                            if (qty <= 0)
+                            {
+                                diagnostics.Add($"People archetype '{id}' loadout item '{itemIdRaw}' must have positive quantity.");
+                                continue;
+                            }
+                            DaggerfallItemId itemId = new(itemIdRaw);
+                            if (items is not null)
+                            {
+                                if (!items.TryGetValue(itemId, out DaggerfallItemDefinition? itemDef))
+                                    diagnostics.Add($"People archetype '{id}' loadout references unknown item '{itemIdRaw}'.");
+                                else if (!itemDef.IsFungible)
+                                    diagnostics.Add($"People archetype '{id}' loadout item '{itemIdRaw}' must be fungible for deterministic baseline spawning.");
+                            }
+                            loadout.Add(new DaggerfallLoadoutEntry(itemId, (ulong)qty, UniqueEntityId: null, EquipSlot: null));
+                        }
+                    }
+                }
+
+                ArchetypeProfile profile = new(
+                    id,
+                    new DaggerfallVitalRange(Math.Max(1, healthMin), Math.Max(Math.Max(1, healthMin), healthMax)),
+                    Math.Max(0, fatigue),
+                    Math.Max(0, magicka),
+                    Math.Clamp(baseAttribute, 1, 100),
+                    new ReadOnlyDictionary<DaggerfallStatId, int>(attributes),
+                    new ReadOnlyDictionary<DaggerfallStatId, int>(skills),
+                    DaggerfallPeopleSlots.ParseHarmPolicy(harmRaw, ActorHarmPolicyKind.LawProtectedCivilian),
+                    DaggerfallPeopleSlots.ParseInteractionPolicy(interactionRaw),
+                    Walks: walks,
+                    Armor: armor,
+                    Level: Math.Max(1, level),
+                    Loadout: loadout.AsReadOnly());
+
+                if (!result.TryAdd(id, profile))
+                    diagnostics.Add($"People pack '{packId}' repeats archetype '{id}'.");
+            }
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"People pack '{packId}' archetypes file is malformed: {exception.Message}");
+        }
+
+        foreach (string requiredId in DaggerfallArchetypeIds.Required)
+        {
+            if (!result.ContainsKey(requiredId))
+                diagnostics.Add($"People pack '{packId}' archetypes must define required archetype '{requiredId}'.");
+        }
+        return result;
     }
 
     private static Dictionary<string, DaggerfallCastIndividualDefinition> ReadIndividuals(
-        string packId, ReadOnlyMemory<byte> bytes, DaggerfallFactionsSet? factions, DaggerfallContentDiagnostics diagnostics)
+        string packId, ReadOnlyMemory<byte> bytes, DaggerfallFactionsSet? factions,
+        IReadOnlyDictionary<string, ArchetypeProfile> archetypes, DaggerfallContentDiagnostics diagnostics)
     {
         Dictionary<string, DaggerfallCastIndividualDefinition> result = new(StringComparer.Ordinal);
         try
@@ -221,12 +438,17 @@ internal static class DaggerfallPeopleContent
                 string homeSlotId = DaggerfallBaseContent.Text(obj, "homeSlotId", diagnostics);
                 string interaction = DaggerfallBaseContent.Text(obj, "interaction", diagnostics);
                 string harm = DaggerfallBaseContent.Text(obj, "harm", diagnostics);
+                string? archetypeId = obj.TryGetProperty("archetype", out JsonElement archEl) && archEl.ValueKind != JsonValueKind.Null
+                    ? archEl.GetString()
+                    : null;
 
                 if (!DaggerfallBaseContent.ValidId(id)) diagnostics.Add($"Cast individual '{id}' has an invalid id.");
                 if (gender is not ("Male" or "Female")) diagnostics.Add($"Cast individual '{id}' has invalid gender '{gender}'.");
                 if (!ValidInteraction(interaction)) diagnostics.Add($"Cast individual '{id}' has invalid interaction '{interaction}'.");
                 if (!ValidHarm(harm)) diagnostics.Add($"Cast individual '{id}' has invalid harm '{harm}'.");
                 if (archive < 0 || record < 0 || factionId <= 0) diagnostics.Add($"Cast individual '{id}' has invalid visual or factionId.");
+                if (archetypeId is not null && !archetypes.ContainsKey(archetypeId))
+                    diagnostics.Add($"Cast individual '{id}' references unknown archetype '{archetypeId}'.");
                 if (factions is not null)
                 {
                     if (!factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction))
@@ -234,7 +456,7 @@ internal static class DaggerfallPeopleContent
                     else if (faction.Type != IndividualFactionType)
                         diagnostics.Add($"Cast individual '{id}' references faction {factionId} ('{faction.Name}') of type {faction.Type}, expected Individual (4).");
                 }
-                if (!result.TryAdd(id, new(id, factionId, name, race, gender, archive, record, homeBlock, homeSlotId, interaction, harm)))
+                if (!result.TryAdd(id, new(id, factionId, name, race, gender, archive, record, homeBlock, homeSlotId, interaction, harm, archetypeId)))
                     diagnostics.Add($"People pack '{packId}' repeats cast individual '{id}'.");
             }
         }
@@ -246,7 +468,8 @@ internal static class DaggerfallPeopleContent
     }
 
     private static Dictionary<string, DaggerfallPeopleSpawnerDefinition> ReadSpawners(
-        string packId, ReadOnlyMemory<byte> bytes, DaggerfallContentDiagnostics diagnostics)
+        string packId, ReadOnlyMemory<byte> bytes, IReadOnlyDictionary<string, ArchetypeProfile> archetypes,
+        DaggerfallContentDiagnostics diagnostics)
     {
         Dictionary<string, DaggerfallPeopleSpawnerDefinition> result = new(StringComparer.Ordinal);
         try
@@ -258,12 +481,17 @@ internal static class DaggerfallPeopleContent
                 JsonElement obj = DaggerfallBaseContent.Object(item, "people spawner", diagnostics);
                 string id = DaggerfallBaseContent.Text(obj, "id", diagnostics);
                 string role = DaggerfallBaseContent.Text(obj, "role", diagnostics);
+                string? archetypeId = obj.TryGetProperty("archetype", out JsonElement archEl) && archEl.ValueKind != JsonValueKind.Null
+                    ? archEl.GetString()
+                    : null;
                 string interaction = DaggerfallBaseContent.Text(obj, "interaction", diagnostics);
                 string harm = DaggerfallBaseContent.Text(obj, "harm", diagnostics);
                 bool deriveRegional = obj.TryGetProperty("deriveRegionalFaction", out JsonElement drv) && drv.ValueKind == JsonValueKind.True;
                 string visualMode = DaggerfallBaseContent.Text(obj, "visualMode", diagnostics);
 
                 if (!DaggerfallBaseContent.ValidId(id)) diagnostics.Add($"People spawner '{id}' has an invalid id.");
+                if (archetypeId is not null && !archetypes.ContainsKey(archetypeId))
+                    diagnostics.Add($"People spawner '{id}' references unknown archetype '{archetypeId}'.");
                 if (!ValidInteraction(interaction)) diagnostics.Add($"People spawner '{id}' has invalid interaction '{interaction}'.");
                 if (!ValidHarm(harm)) diagnostics.Add($"People spawner '{id}' has invalid harm '{harm}'.");
                 if (visualMode is not ("classic-slot" or "pool")) diagnostics.Add($"People spawner '{id}' has invalid visualMode '{visualMode}'.");
@@ -287,7 +515,7 @@ internal static class DaggerfallPeopleContent
                 }
 
                 if (!result.TryAdd(id, new(id, role, interaction, harm, deriveRegional, visualMode, defaultPool,
-                        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(regionalPools))))
+                        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(regionalPools), archetypeId)))
                     diagnostics.Add($"People pack '{packId}' repeats spawner '{id}'.");
             }
         }

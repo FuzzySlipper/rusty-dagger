@@ -445,8 +445,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         string? wabbajack = DaggerfallWabbajack.DefinitionOf(actor.Actor);
         string? teamOverride = actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction) ? faction.TeamOverride : null;
         ActorOverlayComponent? overlay = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov) ? ov : null;
-        string? promotedArchetype = string.Equals(overlay?.ArchetypeId, ArchetypeProfile.Guard.Id, StringComparison.Ordinal)
-            ? ArchetypeProfile.Guard.Id
+        string? promotedArchetype = string.Equals(overlay?.ArchetypeId, DaggerfallArchetypeIds.Guard, StringComparison.Ordinal)
+            ? DaggerfallArchetypeIds.Guard
             : null;
         ActorCombatStateDiff? combat = wabbajack is not null || memory.ForcedHostile || memory.LanguagePacified
             || memory.MagicallyPacified || teamOverride is not null || promotedArchetype is not null
@@ -526,11 +526,10 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     {
         if (saved is null) return true;
         if (saved.Inventory.Equipment.Length > 0 || saved.Inventory.UniqueItems.Length > 0) return false;
-        if (!origin.IsFixedPlacement)
-            return saved.Inventory.Stacks.Length == 0;
         if (!_actorDefinitions.TryGetValue(actorId, out DaggerfallActorDefinition? definition))
             return saved.Inventory.Stacks.Length == 0;
         var expected = definition.Loadout
+            .Where(entry => entry.UniqueEntityId is null)
             .Select((entry, ordinal) => (StackId: DaggerfallInventoryStackIds.ForInitialLoadout(actorId, ordinal).Value, ItemId: entry.ItemId.Value, entry.Quantity))
             .ToArray();
         if (saved.Inventory.Stacks.Length != expected.Length) return false;
@@ -785,8 +784,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             MagicallyPacified = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified,
             TeamOverride = actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction) ? faction.TeamOverride : null,
             PromotedArchetype = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)
-                && string.Equals(overlay.ArchetypeId, ArchetypeProfile.Guard.Id, StringComparison.Ordinal)
-                ? ArchetypeProfile.Guard.Id
+                && string.Equals(overlay.ArchetypeId, DaggerfallArchetypeIds.Guard, StringComparison.Ordinal)
+                ? DaggerfallArchetypeIds.Guard
                 : null,
             EncounterBandId = actor.Actor.TryGet<DaggerfallEncounterBandMember>(out var bandMember) ? bandMember.BandId : null,
             EncounterGeneration = bandMember?.Generation,
@@ -1031,7 +1030,14 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         {
             MechanicsInventoryCoordinator inventory = State.ActorInventories.InventoryFor(section.EntityId)
                 ?? throw new ArgumentException($"Saved inventory owner {section.EntityId} is missing.");
-            ApplyInventory(section.Inventory, inventory, State.ActorInventories.EquipmentFor(section.EntityId), DaggerfallItemOwner.Actor(section.EntityId));
+            DaggerfallItemOwner owner = DaggerfallItemOwner.Actor(section.EntityId);
+            foreach (InventoryStack existing in inventory.Read().Stacks.ToArray())
+            {
+                inventory.Consume(new InventoryConsume(existing.Id, existing.Quantity));
+                if (State.ItemInstances.ContainsStack(owner, existing.Id))
+                    State.ItemInstances.RemoveStack(owner, existing.Id);
+            }
+            ApplyInventory(section.Inventory, inventory, State.ActorInventories.EquipmentFor(section.EntityId), owner);
         }
     }
 }

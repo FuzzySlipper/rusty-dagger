@@ -1,4 +1,29 @@
+using System.Collections.ObjectModel;
+using WorldRpg.Kit;
+using WorldRpg.Kit.World;
+
 namespace WorldRpg.Rulesets.Daggerfall.Content;
+
+/// <summary>Well-known structural archetype IDs resolved from <c>daggerfall.people/archetypes.json</c>.</summary>
+internal static class DaggerfallArchetypeIds
+{
+    internal const string Civilian = "civilian";
+    internal const string StaticNpc = "static-npc";
+    internal const string ClutterPerson = "clutter-person";
+    internal const string Questor = "questor";
+    internal const string Guard = "guard";
+    internal const string Combatant = "combatant";
+
+    internal static readonly IReadOnlyList<string> Required =
+    [
+        Civilian,
+        StaticNpc,
+        ClutterPerson,
+        Questor,
+        Guard,
+        Combatant,
+    ];
+}
 
 /// <summary>How combat, spells, and law enforcement may harm an actor, independent of gameplay kind.</summary>
 internal enum ActorHarmPolicyKind
@@ -48,42 +73,78 @@ internal sealed class ActorInteractionPolicy(ActorInteractionPolicyKind policy)
 }
 
 /// <summary>
-/// Content/tuning-shaped baseline profile used to materialize a real <c>StatsComponent</c> and default capability
-/// policies on every live actor in <c>EntityStore</c>. Sparsity stays at the <c>ActorLedger</c>/save boundary.
+/// Authored baseline profile loaded from <c>daggerfall.people/archetypes.json</c> and used to materialize a real
+/// <c>StatsComponent</c>, default capability policies, and initial fungible loadout on every live NPC in
+/// <c>EntityStore</c>. Sparsity stays at the <c>ActorLedger</c>/save boundary.
 /// </summary>
 internal sealed record ArchetypeProfile(
     string Id,
-    int BaseHealth,
-    int BaseFatigue,
-    int BaseMagicka,
+    DaggerfallVitalRange Health,
+    int Fatigue,
+    int Magicka,
     int BaseAttribute,
+    IReadOnlyDictionary<DaggerfallStatId, int> Attributes,
+    IReadOnlyDictionary<DaggerfallStatId, int> Skills,
     ActorHarmPolicyKind DefaultHarm,
     ActorInteractionPolicyKind DefaultInteraction,
-    bool Walks = true)
+    bool Walks = true,
+    int Armor = 0,
+    int Level = 1,
+    IReadOnlyList<DaggerfallLoadoutEntry>? Loadout = null)
 {
-    internal static ArchetypeProfile Civilian { get; } = new(
-        "civilian", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
-        ActorHarmPolicyKind.LawProtectedCivilian, ActorInteractionPolicyKind.FullDialogue, Walks: true);
+    private static readonly IReadOnlyDictionary<DaggerfallStatId, int> EmptyStats =
+        new ReadOnlyDictionary<DaggerfallStatId, int>(new Dictionary<DaggerfallStatId, int>());
 
-    internal static ArchetypeProfile StaticNpc { get; } = new(
-        "static-npc", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
-        ActorHarmPolicyKind.Protected, ActorInteractionPolicyKind.FullDialogue, Walks: false);
+    internal IReadOnlyList<DaggerfallLoadoutEntry> EffectiveLoadout => Loadout ?? [];
 
-    internal static ArchetypeProfile ClutterPerson { get; } = new(
-        "clutter-person", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
-        ActorHarmPolicyKind.LawProtectedCivilian, ActorInteractionPolicyKind.None, Walks: false);
+    /// <summary>
+    /// Deterministically picks an initial maximum health within <see cref="Health"/> from the actor's durable ID
+    /// without touching runtime RNG, so untouched seeded townspeople re-materialize identical baseline stats across
+    /// save/reload and keep 0-byte sparse <c>ActorLedger</c> diffs.
+    /// </summary>
+    internal int RollDeterministicHealth(long durableId)
+    {
+        if (Health.Maximum <= Health.Minimum)
+            return Health.Minimum;
+        ulong span = (ulong)(Health.Maximum - Health.Minimum) + 1UL;
+        ulong hash = StableHash.NonZeroFnv1a64($"daggerfall.archetype-hp:{Id}:{durableId}");
+        return checked(Health.Minimum + (int)(hash % span));
+    }
 
-    internal static ArchetypeProfile Questor { get; } = new(
-        "questor", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
-        ActorHarmPolicyKind.Protected, ActorInteractionPolicyKind.FullDialogue, Walks: false);
+    /// <summary>Builds the canonical <see cref="DaggerfallActorDefinition"/> backing mechanics, combat, and loadout checks.</summary>
+    internal DaggerfallActorDefinition ToActorDefinition(string kind)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(kind);
+        Dictionary<DaggerfallStatId, int> stats = new();
+        foreach (DaggerfallStatId attr in DaggerfallMechanicsIds.Attributes)
+            stats[attr] = BaseAttribute;
+        foreach ((DaggerfallStatId attr, int value) in Attributes ?? EmptyStats)
+            stats[attr] = value;
+        foreach ((DaggerfallStatId skill, int value) in Skills ?? EmptyStats)
+            stats[skill] = value;
 
-    internal static ArchetypeProfile Guard { get; } = new(
-        "guard", BaseHealth: 40, BaseFatigue: 80, BaseMagicka: 0, BaseAttribute: 55,
-        ActorHarmPolicyKind.Combatant, ActorInteractionPolicyKind.FullDialogue, Walks: true);
-
-    internal static ArchetypeProfile Combatant { get; } = new(
-        "combatant", BaseHealth: 1, BaseFatigue: 0, BaseMagicka: 0, BaseAttribute: 50,
-        ActorHarmPolicyKind.Combatant, ActorInteractionPolicyKind.None, Walks: true);
+        return new DaggerfallActorDefinition(
+            new DaggerfallActorId(kind),
+            kind,
+            new DaggerfallStatBases(stats),
+            Health,
+            new DaggerfallCombatProfile(DaggerfallMechanicsIds.Health, null),
+            new DaggerfallRewardPolicy(0),
+            Armor: Armor,
+            MobileId: null,
+            HitPointsPerLevel: null,
+            Attacks: [],
+            Team: null,
+            MinimumMaterial: null,
+            LootTableKey: null,
+            Level: Level,
+            Weight: 0,
+            ActionId: null,
+            Loadout: EffectiveLoadout,
+            Presentation: DaggerfallActorPresentationDefinition.None,
+            Race: null,
+            Career: null);
+    }
 }
 
 /// <summary>Attached social/quest overlay state on a live actor (HUD escort portrait, mute, archetype id, witness memory, referrals).</summary>

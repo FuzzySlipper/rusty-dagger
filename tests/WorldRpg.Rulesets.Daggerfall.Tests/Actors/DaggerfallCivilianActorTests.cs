@@ -31,10 +31,17 @@ public sealed class DaggerfallCivilianActorTests
             actors,
             inventoryStore,
             npc,
-            new ActorPose(new WorldPoint(2f, 0f, -3f), 0.25f));
+            new ActorPose(new WorldPoint(2f, 0f, -3f), 0.25f),
+            TestPayload.Definitions,
+            out DaggerfallActorDefinition definition);
 
+        ArchetypeProfile civilian = TestPayload.Definitions.People.RequireArchetype(DaggerfallArchetypeIds.Civilian);
         Assert.Equal(npc.DurableId, actor.DurableId);
-        Assert.Equal(DaggerfallActorKinds.Civilian, DaggerfallActorFactory.CivilianDefinition(npc.DurableId).Kind);
+        Assert.Equal(DaggerfallActorKinds.Civilian, definition.Kind);
+        Assert.Equal(civilian.RollDeterministicHealth(npc.DurableId), (int)actor.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value);
+        Assert.True(actor.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value >= civilian.Health.Minimum);
+        Assert.True(actor.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value <= civilian.Health.Maximum);
+        Assert.Equal(civilian.Fatigue, (int)actor.Stats.GetTrack(TrackId.Parse("fatigue")).Maximum.Value);
         Assert.False(actor.IsDefeated);
         Assert.Empty(actor.Inventory.View().Stacks);
         Assert.Empty(actor.Inventory.View().UniqueItems);

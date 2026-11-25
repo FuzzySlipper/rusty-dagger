@@ -22,11 +22,22 @@ public sealed class DaggerfallPeopleContentTests
         Assert.Contains("queen-aubk-i", people.Individuals.Keys);
         Assert.Contains("the-night-mother", people.Individuals.Keys);
 
+        Assert.True(people.Archetypes.Count >= DaggerfallArchetypeIds.Required.Count);
+        foreach (string requiredId in DaggerfallArchetypeIds.Required)
+            Assert.Contains(requiredId, people.Archetypes.Keys);
+        Assert.All(people.Archetypes.Values, archetype =>
+        {
+            Assert.True(archetype.Health.Minimum > 1, $"Archetype '{archetype.Id}' should have real HP (> 1), not 1-HP stub.");
+            Assert.True(archetype.Health.Maximum >= archetype.Health.Minimum);
+        });
+
         Assert.True(people.Spawners.Count >= 20);
         Assert.All(people.Spawners.Values, spawner =>
         {
             Assert.Equal("pool", spawner.VisualMode);
             Assert.NotEmpty(spawner.DefaultPool);
+            Assert.False(string.IsNullOrWhiteSpace(spawner.ArchetypeId));
+            Assert.Contains(spawner.ArchetypeId!, people.Archetypes.Keys);
         });
         Assert.Contains("banker", people.Spawners.Keys);
         Assert.Contains("weaponsmith", people.Spawners.Keys);
@@ -68,7 +79,7 @@ public sealed class DaggerfallPeopleContentTests
     {
         DaggerfallPeoplePackFiles tampered = new(
             "tampered.people",
-            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","blocksFolder":"blocks"}"""),
+            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","blocksFolder":"blocks"}"""),
             Encoding.UTF8.GetBytes("""{"individuals":[]}"""),
             Encoding.UTF8.GetBytes("""
             {
@@ -76,6 +87,7 @@ public sealed class DaggerfallPeopleContentTests
                 {
                   "id": "house-resident",
                   "role": "person",
+                  "archetype": "civilian",
                   "interaction": "full-dialogue",
                   "harm": "law-protected-civilian",
                   "deriveRegionalFaction": true,
@@ -103,11 +115,71 @@ public sealed class DaggerfallPeopleContentTests
                   }
                 }
                 """)),
-            ]);
+            ],
+            TestPayload.PeoplePack().ArchetypesBytes);
 
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
-            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions));
+            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
         Assert.Contains("illegally carries Type-4 Individual faction 406", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Pack_reader_rejects_invalid_archetypes_missing_required_unknown_skill_bad_item_and_unknown_spawner_ref()
+    {
+        DaggerfallPeoplePackFiles tampered = new(
+            "bad-archetypes.people",
+            Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","blocksFolder":"blocks"}"""),
+            Encoding.UTF8.GetBytes("""{"individuals":[]}"""),
+            Encoding.UTF8.GetBytes("""
+            {
+              "spawners": [
+                {
+                  "id": "banker",
+                  "role": "bank teller",
+                  "archetype": "nonexistent-archetype",
+                  "interaction": "full-dialogue",
+                  "harm": "law-protected-civilian",
+                  "deriveRegionalFaction": true,
+                  "visualMode": "pool",
+                  "defaultPool": [{"archive":183,"record":5,"gender":"Male","weight":1}],
+                  "regionalPools": {}
+                }
+              ]
+            }
+            """),
+            [],
+            Encoding.UTF8.GetBytes("""
+            {
+              "archetypes": [
+                {
+                  "id": "civilian",
+                  "health": { "min": 20, "max": 10 },
+                  "fatigue": 50,
+                  "magicka": 0,
+                  "baseAttribute": 45,
+                  "attributes": { "not-an-attr": 50 },
+                  "skills": { "not-a-skill": 25 },
+                  "defaultHarm": "law-protected-civilian",
+                  "defaultInteraction": "full-dialogue",
+                  "walks": true,
+                  "loadout": [
+                    { "itemId": "missing-item", "quantity": 5 },
+                    { "itemId": "iron-dagger", "quantity": 1 }
+                  ]
+                }
+              ]
+            }
+            """));
+
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
+        Assert.Contains("invalid health range", error.Message, StringComparison.Ordinal);
+        Assert.Contains("unknown attribute 'not-an-attr'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("unknown skill 'not-a-skill'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("unknown item 'missing-item'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("must be fungible", error.Message, StringComparison.Ordinal);
+        Assert.Contains("required archetype 'guard'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("unknown archetype 'nonexistent-archetype'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

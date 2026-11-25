@@ -266,68 +266,59 @@ internal static class DaggerfallActorFactory
     }
 
     /// <summary>
-    /// Builds the one runtime definition shared by every materialized NPC. NPC
-    /// appearance and social meaning remain in the registry; this definition
-    /// supplies only the mechanics contract needed by ActorsState, combat
-    /// eligibility, and corpse policy.
+    /// Builds the runtime mechanics definition for one NPC from its content-authored <see cref="ArchetypeProfile"/>.
+    /// Appearance and social meaning remain on the person component; this definition supplies the archetype's
+    /// authored attributes, skills, vital range, armor, level, and baseline fungible loadout.
     /// </summary>
-    internal static DaggerfallActorDefinition CivilianDefinition(long durableId, bool isStatic = false)
+    internal static DaggerfallActorDefinition ArchetypeActorDefinition(ArchetypeProfile profile, bool isStatic = false)
     {
-        if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
-        Dictionary<DaggerfallStatId, int> stats = new()
-        {
-            [DaggerfallMechanicsIds.Strength] = 50,
-            [DaggerfallMechanicsIds.Intelligence] = 50,
-            [DaggerfallMechanicsIds.Willpower] = 50,
-            [DaggerfallMechanicsIds.Agility] = 50,
-            [DaggerfallMechanicsIds.Endurance] = 50,
-            [DaggerfallMechanicsIds.Personality] = 50,
-            [DaggerfallMechanicsIds.Speed] = 50,
-            [DaggerfallMechanicsIds.Luck] = 50,
-        };
-        return new DaggerfallActorDefinition(
-            new DaggerfallActorId(isStatic ? DaggerfallActorKinds.StaticNpc : DaggerfallActorKinds.Civilian),
-            isStatic ? DaggerfallActorKinds.StaticNpc : DaggerfallActorKinds.Civilian,
-            new DaggerfallStatBases(stats),
-            // DFU CivilianEntity defaults to one health point; retain that
-            // lightweight non-combat entity policy without inventing a combat
-            // profile or authored civilian record.
-            new DaggerfallVitalRange(1, 1),
-            new DaggerfallCombatProfile(DaggerfallMechanicsIds.Health, null),
-            new DaggerfallRewardPolicy(0),
-            Armor: 0,
-            MobileId: null,
-            HitPointsPerLevel: null,
-            Attacks: [],
-            Team: null,
-            MinimumMaterial: null,
-            LootTableKey: null,
-            Level: 1,
-            Weight: 0,
-            ActionId: null,
-            Loadout: [],
-            Presentation: DaggerfallActorPresentationDefinition.None,
-            Race: null,
-            Career: null);
+        ArgumentNullException.ThrowIfNull(profile);
+        return profile.ToActorDefinition(isStatic ? DaggerfallActorKinds.StaticNpc : DaggerfallActorKinds.Civilian);
     }
 
-    /// <summary>Materializes one registry NPC (civilian, static, or questor) as a canonical actor with real stats, faction, capability, and render components.</summary>
+    internal static ArchetypeProfile ResolveNpcArchetype(DaggerfallDefinitions definitions, DaggerfallNpc npc,
+        string? explicitArchetypeId = null, string? spawnerId = null)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(npc);
+        string? castId = npc.StableKey.StartsWith("cast:", StringComparison.Ordinal)
+            ? npc.StableKey["cast:".Length..]
+            : null;
+        string defaultId = npc.Kind switch
+        {
+            DaggerfallNpcKind.Static => DaggerfallArchetypeIds.StaticNpc,
+            DaggerfallNpcKind.Questor => DaggerfallArchetypeIds.Questor,
+            _ => DaggerfallArchetypeIds.Civilian,
+        };
+        return definitions.People.ResolveArchetype(defaultId, explicitArchetypeId, spawnerId, castId);
+    }
+
+    /// <summary>
+    /// Materializes one registry NPC (civilian, static, or questor) as a canonical actor with real stats,
+    /// faction, capability, and render components derived from its content-authored <see cref="ArchetypeProfile"/>.
+    /// </summary>
     internal static ActorState CreateCivilianActor(DaggerfallMechanicsState mechanics, ActorsState actors,
-        InventoryStore inventoryStore, DaggerfallNpc npc, ActorPose pose, DaggerfallDefinitions? definitions = null)
+        InventoryStore inventoryStore, DaggerfallNpc npc, ActorPose pose, DaggerfallDefinitions definitions,
+        out DaggerfallActorDefinition definition, string? explicitArchetypeId = null, string? spawnerId = null)
+    {
+        ArchetypeProfile profile = ResolveNpcArchetype(definitions, npc, explicitArchetypeId, spawnerId);
+        return CreateCivilianActor(mechanics, actors, inventoryStore, npc, pose, profile, definitions, out definition);
+    }
+
+    /// <summary>Materializes one registry NPC from an explicit <see cref="ArchetypeProfile"/>.</summary>
+    internal static ActorState CreateCivilianActor(DaggerfallMechanicsState mechanics, ActorsState actors,
+        InventoryStore inventoryStore, DaggerfallNpc npc, ActorPose pose, ArchetypeProfile profile,
+        DaggerfallDefinitions? definitions, out DaggerfallActorDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(mechanics);
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(inventoryStore);
         ArgumentNullException.ThrowIfNull(npc);
-        ArchetypeProfile profile = npc.Kind switch
-        {
-            DaggerfallNpcKind.Static => ArchetypeProfile.StaticNpc,
-            DaggerfallNpcKind.Questor => ArchetypeProfile.Questor,
-            _ => ArchetypeProfile.Civilian,
-        };
-        DaggerfallActorDefinition definition = CivilianDefinition(npc.DurableId, npc.Kind != DaggerfallNpcKind.Civilian);
+        ArgumentNullException.ThrowIfNull(profile);
+        definition = ArchetypeActorDefinition(profile, npc.Kind != DaggerfallNpcKind.Civilian);
+        int health = profile.RollDeterministicHealth(npc.DurableId);
         ActorState actor = CreateNonPlayerActor(actors, npc.DurableId, definition,
-            mechanics.CreateStats(definition, new DaggerfallVitalValues(profile.BaseHealth, profile.BaseFatigue, profile.BaseMagicka)), pose);
+            mechanics.CreateStats(definition, new DaggerfallVitalValues(health, profile.Fatigue, profile.Magicka)), pose);
         ApplyNpcComponents(actor, npc, profile, definitions);
         RegisterActorInventory(actor, inventoryStore);
         return actor;
@@ -361,12 +352,27 @@ internal static class DaggerfallActorFactory
         actor.Actor.Get<ActorRenderComponent>().SetVisual(visual);
     }
 
-    /// <summary>Resolves authored encounter definitions and the explicit runtime civilian definition.</summary>
-    private static DaggerfallActorDefinition ResolveDynamicDefinition(DaggerfallDefinitions definitions, DaggerfallDynamicActorSave saved)
+    /// <summary>Resolves authored encounter definitions and content-backed NPC archetype definitions.</summary>
+    private static DaggerfallActorDefinition ResolveDynamicDefinition(DaggerfallDefinitions definitions, DaggerfallDynamicActorSave saved,
+        DaggerfallNpc? restoredNpc)
     {
-        DaggerfallActorDefinition definition = saved.Definition is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
-            ? CivilianDefinition(saved.EntityId, saved.Definition == DaggerfallActorKinds.StaticNpc)
-            : definitions.RequireActor(new DaggerfallActorId(saved.Definition));
+        DaggerfallActorDefinition definition;
+        if (saved.Definition is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc)
+        {
+            ArchetypeProfile archetype = restoredNpc is not null
+                ? ResolveNpcArchetype(definitions, restoredNpc, saved.PromotedArchetype)
+                : definitions.People.RequireArchetype(
+                    !string.IsNullOrWhiteSpace(saved.PromotedArchetype)
+                        ? saved.PromotedArchetype
+                        : saved.Definition == DaggerfallActorKinds.StaticNpc
+                            ? DaggerfallArchetypeIds.StaticNpc
+                            : DaggerfallArchetypeIds.Civilian);
+            definition = ArchetypeActorDefinition(archetype, saved.Definition == DaggerfallActorKinds.StaticNpc);
+        }
+        else
+        {
+            definition = definitions.RequireActor(new DaggerfallActorId(saved.Definition));
+        }
         definition = definition with { Level = saved.Level };
         if (saved.PlayerAllied) definition = definition with { Team = "player-ally" };
         return definition.Kind is DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc
@@ -381,10 +387,13 @@ internal static class DaggerfallActorFactory
         DaggerfallNpcRegistry? npcs = null)
     {
         ArgumentNullException.ThrowIfNull(saved);
+        DaggerfallNpc? restoredNpc = npcs is not null && npcs.TryGet(saved.EntityId, out DaggerfallNpc? existingNpc)
+            ? existingNpc
+            : null;
         // Encounter class actors carry a spawn-time policy adjustment (including the thief
         // action identity and zero flat reward).  The save intentionally stores the canonical
         // definition identity, so reapply that pure policy while rebuilding the runtime binding.
-        DaggerfallActorDefinition definition = ResolveDynamicDefinition(definitions, saved);
+        DaggerfallActorDefinition definition = ResolveDynamicDefinition(definitions, saved, restoredNpc);
         ActorState actor = CreateNonPlayerActor(actors, saved.EntityId, definition,
             mechanics.CreateStats(definition, InitialVitals(random, definition, saved.EntityId)),
             new ActorPose(new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
@@ -399,18 +408,14 @@ internal static class DaggerfallActorFactory
         actor.Actor.Add(new ActorOriginComponent(
             ActorOrigin.MintedActor(saved.Definition, saved.Level, gender: saved.Gender),
             new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));
-        if (npcs is not null && npcs.TryGet(saved.EntityId, out DaggerfallNpc? restoredNpc))
+        if (restoredNpc is not null)
         {
-            bool promotedGuard = string.Equals(saved.PromotedArchetype, ArchetypeProfile.Guard.Id, StringComparison.Ordinal)
+            bool promotedGuard = string.Equals(saved.PromotedArchetype, DaggerfallArchetypeIds.Guard, StringComparison.Ordinal)
                 || definition.MobileId == 146;
-            ArchetypeProfile npcProfile = promotedGuard
-                ? ArchetypeProfile.Guard
-                : restoredNpc.Kind switch
-                {
-                    DaggerfallNpcKind.Static => ArchetypeProfile.StaticNpc,
-                    DaggerfallNpcKind.Questor => ArchetypeProfile.Questor,
-                    _ => ArchetypeProfile.Civilian,
-                };
+            ArchetypeProfile npcProfile = ResolveNpcArchetype(
+                definitions,
+                restoredNpc,
+                promotedGuard ? DaggerfallArchetypeIds.Guard : saved.PromotedArchetype);
             ApplyNpcComponents(actor, restoredNpc, npcProfile, definitions);
             if (promotedGuard && definition.MobileId is int watchMobile)
             {

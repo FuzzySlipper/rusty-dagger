@@ -104,7 +104,7 @@ internal sealed class SocietyStage : IDisposable
     internal long Civilian(string role = "civilian", params string[] services)
     {
         long id = Npcs.RegisterCivilian(NpcSite, new DaggerfallNpcAppearance("breton", "Male", 210, 4, 7, 0), role, services);
-        DaggerfallActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, Npcs.Require(id), default);
+        DaggerfallActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, Npcs.Require(id), default, Definitions, out _);
         return id;
     }
 
