@@ -501,6 +501,46 @@ public sealed class SocialSpineFixesSessionTests
             _ = restored.OverlandParties.OnPersistentBandArrived(returnBand);
             Assert.False(restored.State.ActorLedger.TryGet(memberId, out _));
         }
+
+        // Part C: Encountering a :return leg away from home retains TrafficVisitor across save/reload and completes return home on departure.
+        using (SpineFixture returnEncounterFixture = SpineFixture.Create())
+        {
+            DaggerfallSession session = returnEncounterFixture.Session;
+            session.ApplyProductMode(ProductMode.Playing);
+            session.AdvanceElapsedTime(8 * 60 * 60);
+            session.OpenExpedition();
+
+            DaggerfallPersistentOverlandBand? outbound = session.OverlandTraffic.TryDispatchWindow(309L, session.Expedition.Position);
+            Assert.NotNull(outbound);
+            ActorLedgerEntry member = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(outbound!.BandId));
+            long memberId = member.DurableId;
+
+            // Outbound finishes off-screen and starts its :return leg back to Origin.SiteProfile.
+            _ = session.OverlandParties.OnPersistentBandArrived(outbound);
+            string returnBandId = outbound.BandId + DaggerfallOverlandTraffic.ReturnBandSuffix;
+            DaggerfallPersistentOverlandBand returnLeg = Assert.Single(session.Expedition.PersistentBands, b => b.BandId == returnBandId);
+
+            // Player intercepts the :return leg mid-route away from its home site and enters 3D.
+            session.OverlandParties.OnMeetPersistentBand(returnLeg, session.Expedition.Party, DaggerfallEncounterStaging.Travelling);
+            session.EnterExpedition();
+            Assert.True(session.State.Actors.TryGet(memberId, out _));
+            Assert.True(session.State.ActorLedger.TryGet(memberId, out ActorLedgerEntry? midReturnEntry));
+            Assert.True(midReturnEntry!.Location?.TrafficVisitor);
+
+            // Save/reload while in the encounter scene, then open expedition: a fresh :return leg resumes and self-prunes at home.
+            RulesetSavePayload savedMidReturn = session.CaptureSave();
+            using DaggerfallSession restored = DaggerfallSession.Restore(returnEncounterFixture.CreateEngine().Context, returnEncounterFixture.Composition, savedMidReturn);
+            Assert.True(restored.State.Actors.TryGet(memberId, out _));
+            restored.OpenExpedition();
+            Assert.False(restored.State.Actors.TryGet(memberId, out _));
+
+            DaggerfallPersistentOverlandBand resumedReturn = Assert.Single(restored.Expedition.PersistentBands,
+                b => b.BandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal)
+                    && b.BandId.EndsWith(DaggerfallOverlandTraffic.ReturnBandSuffix, StringComparison.Ordinal)
+                    && restored.State.ActorLedger.EntriesOnOverlandBand(b.BandId).Any(e => e.DurableId == memberId));
+            _ = restored.OverlandParties.OnPersistentBandArrived(resumedReturn);
+            Assert.False(restored.State.ActorLedger.TryGet(memberId, out _));
+        }
     }
 
     [Fact]

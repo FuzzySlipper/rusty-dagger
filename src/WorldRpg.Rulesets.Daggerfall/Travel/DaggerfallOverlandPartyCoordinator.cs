@@ -599,8 +599,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
 
         DaggerfallSiteProfile active = _activeProfile();
         bool arrivingAtActive = active.ProfileKey == arrivalProfile;
-        bool isTrafficVisitor = bandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal)
-            && !bandId.EndsWith(DaggerfallOverlandTraffic.ReturnBandSuffix, StringComparison.Ordinal);
+        bool isTrafficVisitor = bandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal);
         List<long> delivered = [];
 
         for (int i = 0; i < members.Count; i++)

@@ -81,7 +81,7 @@ public sealed class DaggerfallPopulationSessionTests
         RulesetSavePayload save = session.CaptureSave();
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
         Assert.Contains(captured.ActorLedger, entry => entry.DurableId == sourceNpc.DurableId
-            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p }
+            && entry.Location is { Kind: ActorLocationKind.Dead, Detached: true, Profile: { } p }
             && p.Require() == fixture.Source.ProfileKey);
         DaggerfallNpcEntry savedNpc = Assert.Single(captured.RestoredNpcs().Entries,
             entry => entry.DurableId == sourceNpc.DurableId);
