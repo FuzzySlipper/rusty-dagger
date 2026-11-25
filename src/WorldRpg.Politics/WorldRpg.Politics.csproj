@@ -13,7 +13,8 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="WorldRpg.Politics.Tests" />
-    <!-- The canon start is loaded, not compiled: it travels beside the library into every output that uses it. -->
+    <!-- The canon start and cards are loaded, not compiled: it travels beside the library into every output that uses it. -->
     <None Include="canon/iliac-bay.board.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="canon/iliac-bay.cards.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

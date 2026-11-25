@@ -1,6 +1,17 @@
 namespace WorldRpg.Politics;
 
-/// <summary>What a card may be played on.</summary>
+/// <summary>The shared families seats draw their decks from. A signature card belongs to one too.</summary>
+public enum CardFamily
+{
+    Trade,
+    Court,
+    Force,
+    Shadow,
+    Arcane,
+    Faith,
+}
+
+/// <summary>What a card is played on. Its targets are given in this order.</summary>
 public enum CardTarget
 {
     /// <summary>Played without a target.</summary>
@@ -9,7 +20,7 @@ public enum CardTarget
     /// <summary>A region owing allegiance to the player.</summary>
     OwnRegion,
 
-    /// <summary>A region the player reaches: one it holds or has influence in, or one bordering such a region.</summary>
+    /// <summary>A region the player reaches: one it is present in, or one bordering such a region.</summary>
     ReachableRegion,
 
     /// <summary>
@@ -20,40 +31,84 @@ public enum CardTarget
 
     /// <summary>Another seat.</summary>
     OtherSeat,
+
+    /// <summary>Two regions: one the player is present in, then one bordering it.</summary>
+    RegionPair,
+
+    /// <summary>A region the player reaches, then another seat with influence there: a rival on its own ground.</summary>
+    RegionRival,
 }
 
-/// <summary>The fixed set of things a card can do. Amounts apply to the target region or to the player.</summary>
+/// <summary>
+/// Whether the world sees who made a move. A secret move's record still keeps its true seat; which surfaces show a
+/// cover story, and who counts as an insider, is the world's to decide.
+/// </summary>
+public enum Visibility
+{
+    Public,
+    Secret,
+}
+
+/// <summary>A local office in a region, held by a seat or by local people with no seat. Each pays its holder one resource.</summary>
+public enum Office
+{
+    /// <summary>The watch captain; pays force.</summary>
+    Watch,
+
+    /// <summary>The court factor, who keeps the region's purse; pays coin.</summary>
+    Factor,
+
+    /// <summary>The head of the region's temple; pays favour.</summary>
+    Temple,
+
+    /// <summary>The master of the region's chief guild hall; pays coin.</summary>
+    Hall,
+}
+
+/// <summary>The fixed set of things a card can do.</summary>
 public enum CardEffectKind
 {
-    /// <summary>The target region's control.</summary>
+    /// <summary>Each target region's control.</summary>
     Control,
 
-    /// <summary>The target region's prosperity.</summary>
+    /// <summary>Each target region's prosperity.</summary>
     Prosperity,
 
-    /// <summary>The target region's order.</summary>
+    /// <summary>Each target region's order.</summary>
     Order,
 
     /// <summary>The player's influence in the target region; placing a piece needs one left in its supply.</summary>
     Influence,
 
-    /// <summary>The influence of the target region's seat in that region.</summary>
+    /// <summary>The influence of the target region's crown in that region.</summary>
     HolderInfluence,
 
-    /// <summary>The player's relation with the target seat, or with the seat the target region owes allegiance to.</summary>
+    /// <summary>The influence of the targeted rival in the target region.</summary>
+    RivalInfluence,
+
+    /// <summary>Moves up to the amount of the player's pieces from the first region of a pair to the second.</summary>
+    MoveInfluence,
+
+    /// <summary>
+    /// Challenges the target region's office. The challenge carries the player's influence there plus the amount; the
+    /// office is defended by 1, plus its holder's influence there if a seat holds it, plus 1 where the region's order
+    /// is <see cref="Card.WatchfulOrder"/> or more. A stronger challenge takes the office, and the seat that lost it
+    /// thinks 1 worse of the player. Taking an office puts one of the player's pieces on it, so a challenge needs a piece
+    /// left in the supply. An office that is its holder's last foothold on the board cannot be taken. Cast holders are
+    /// never challenged: offices are local people.
+    /// </summary>
+    ChallengeOffice,
+
+    /// <summary>
+    /// The player's relation with the target seat or rival, or else with the crown the target region owes allegiance to.
+    /// </summary>
     Relation,
 
-    /// <summary>The player's coin.</summary>
-    Coin,
+    /// <summary>The player gains the resource.</summary>
+    Gain,
 
-    /// <summary>The player's favour.</summary>
-    Favour,
-
-    /// <summary>The player's force.</summary>
-    Force,
-
-    /// <summary>The player's scarcest resource.</summary>
-    Bank,
+    /// <summary>The player takes up to the amount of the resource from the target seat.</summary>
+    Take,
 
     /// <summary>
     /// The target region changes allegiance to the player at control <see cref="Card.AnnexedControl"/> and is
@@ -65,118 +120,192 @@ public enum CardEffectKind
     Annex,
 }
 
-public sealed record CardEffect(CardEffectKind Kind, int Amount = 0);
+/// <summary>One effect of a card. <see cref="Resource"/> is set for gaining and taking, <see cref="Office"/> for a challenge.</summary>
+public sealed record CardEffect(CardEffectKind Kind, int Amount = 0, Resource? Resource = null, Office? Office = null);
 
-/// <summary>A card: what it costs, what it is played on and what it does.</summary>
-public sealed record Card(string Id, string Name, int Coin, int Favour, int Force, CardTarget Target, IReadOnlyList<CardEffect> Effects)
+/// <summary>
+/// A card: its family, what it costs, what it is played on, who sees it and what it does. A card of
+/// <see cref="Weeks"/> above 0 is slow: it is paid when played and resolves that many Sundays later. A signature card
+/// names its <see cref="Seat"/>, the only seat that draws it. A deck holds <see cref="Copies"/> of the card.
+/// </summary>
+public sealed record Card(
+    string Id,
+    string Name,
+    CardFamily Family,
+    int Coin,
+    int Favour,
+    int Force,
+    CardTarget Target,
+    Visibility Visibility,
+    IReadOnlyList<CardEffect> Effects,
+    int Weeks = 0,
+    string? Seat = null,
+    int Copies = 1)
 {
     public const int AnnexInfluence = 2;
     public const int AnnexedControl = 2;
     public const int ConsolidationWeeks = 52;
+    public const int WatchfulOrder = 4;
 
     public bool Affordable(Seat seat) => seat.Coin >= Coin && seat.Favour >= Favour && seat.Force >= Force;
 
-    /// <summary>Whether <paramref name="seat"/> can play this card on <paramref name="target"/> now.</summary>
-    public bool Playable(Board board, Seat seat, string? target)
+    public int Cost(Resource resource) => resource switch
     {
-        if (!Affordable(seat)) return false;
+        Resource.Coin => Coin,
+        Resource.Favour => Favour,
+        Resource.Force => Force,
+        _ => throw new ArgumentOutOfRangeException(nameof(resource), resource, null),
+    };
+
+    /// <summary>
+    /// The targets worth checking for <paramref name="seat"/>, in board order: every seat or region for a single
+    /// target, and for a pair each region the seat is present in with each of its borders. <see cref="Fits"/> decides.
+    /// </summary>
+    public IEnumerable<IReadOnlyList<string>> Candidates(Board board, Seat seat) => Target switch
+    {
+        CardTarget.None => [[]],
+        CardTarget.OtherSeat => board.Seats.Select(other => (IReadOnlyList<string>)[other.Id]),
+        CardTarget.RegionPair => board.Regions.Where(region => board.Present(seat, region))
+            .SelectMany(region => region.Borders.Select(border => (IReadOnlyList<string>)[region.Id, border])),
+        CardTarget.RegionRival => board.Regions
+            .SelectMany(region => region.Influence.Keys.Where(rival => rival != seat.Id).Select(rival => (IReadOnlyList<string>)[region.Id, rival])),
+        _ => board.Regions.Select(region => (IReadOnlyList<string>)[region.Id]),
+    };
+
+    /// <summary>Whether <paramref name="seat"/> can afford this card and play it on <paramref name="targets"/> now.</summary>
+    public bool Playable(Board board, Seat seat, IReadOnlyList<string> targets) => Affordable(seat) && Fits(board, seat, targets);
+
+    /// <summary>
+    /// Whether <paramref name="targets"/> are a legal target for <paramref name="seat"/> now, cost aside: checked when a
+    /// card is played and again when a slow card arrives.
+    /// </summary>
+    public bool Fits(Board board, Seat seat, IReadOnlyList<string> targets)
+    {
         bool fits = Target switch
         {
-            CardTarget.None => target is null,
-            CardTarget.OwnRegion => target is not null && board.Region(target).Allegiance == seat.Id,
-            CardTarget.ReachableRegion => target is not null && board.Reaches(seat, board.Region(target)),
-            CardTarget.ContestedRegion => target is not null && !board.Region(target).Capital && board.Region(target).Allegiance != seat.Id
-                && board.Turn >= board.Region(target).ContestableFrom && board.Reaches(seat, board.Region(target)),
-            CardTarget.OtherSeat => target is not null && target != seat.Id,
+            CardTarget.None => targets.Count == 0,
+            CardTarget.OwnRegion => targets.Count == 1 && board.Region(targets[0]).Allegiance == seat.Id,
+            CardTarget.ReachableRegion => targets.Count == 1 && board.Reaches(seat, board.Region(targets[0])),
+            CardTarget.ContestedRegion => targets.Count == 1 && Contestable(board, seat, board.Region(targets[0])),
+            CardTarget.OtherSeat => targets.Count == 1 && targets[0] != seat.Id,
+            CardTarget.RegionPair => targets.Count == 2 && board.Present(seat, board.Region(targets[0]))
+                && board.Region(targets[0]).Borders.Contains(targets[1]),
+            CardTarget.RegionRival => targets.Count == 2 && targets[1] != seat.Id && board.Reaches(seat, board.Region(targets[0]))
+                && board.Region(targets[0]).InfluenceOf(targets[1]) > 0,
             _ => false,
         };
         if (!fits) return false;
-        if (Effects.Any(effect => effect.Kind == CardEffectKind.Influence && effect.Amount > 0) && board.PiecesPlaced(seat) >= Board.InfluencePieces)
-            return false;
-        if (Effects.Any(effect => effect.Kind == CardEffectKind.Annex))
-        {
-            if (seat.Kind != SeatKind.Crown) return false;
-            Region region = board.Region(target!);
-            int own = region.InfluenceOf(seat.Id);
-            int holder = region.Allegiance is null ? 0 : region.InfluenceOf(region.Allegiance);
-            if (region.Control > 0 || own < AnnexInfluence || own <= holder) return false;
-        }
-        return true;
-    }
-
-    /// <summary>
-    /// Pays for and applies the card; the caller has checked <see cref="Playable"/>. Returns whether it changed
-    /// anything beyond its payment: a garrison in a region already at full control does not.
-    /// </summary>
-    public bool Play(Board board, Seat seat, string? target)
-    {
-        board.AdjustResource(seat, Resource.Coin, -Coin);
-        board.AdjustResource(seat, Resource.Favour, -Favour);
-        board.AdjustResource(seat, Resource.Force, -Force);
-        int paid = board.ChangeCount;
-        Region? region = Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion ? board.Region(target!) : null;
         foreach (CardEffect effect in Effects)
         {
             switch (effect.Kind)
             {
-                case CardEffectKind.Control: board.AdjustControl(region!, effect.Amount); break;
-                case CardEffectKind.Prosperity: board.AdjustProsperity(region!, effect.Amount); break;
-                case CardEffectKind.Order: board.AdjustOrder(region!, effect.Amount); break;
-                case CardEffectKind.Influence: board.AdjustInfluence(region!, seat, effect.Amount); break;
-                case CardEffectKind.HolderInfluence:
-                    if (region!.Allegiance is not null) board.AdjustInfluence(region, board.Seat(region.Allegiance), effect.Amount);
+                case CardEffectKind.Influence when effect.Amount > 0 && board.PiecesPlaced(seat) >= Board.InfluencePieces:
+                case CardEffectKind.ChallengeOffice when board.PiecesPlaced(seat) >= Board.InfluencePieces:
+                    return false;
+                case CardEffectKind.Annex:
+                    if (seat.Kind != SeatKind.Crown) return false;
+                    Region region = board.Region(targets[0]);
+                    int own = region.InfluenceOf(seat.Id);
+                    int holder = region.Allegiance is null ? 0 : region.InfluenceOf(region.Allegiance);
+                    if (region.Control > 0 || own < AnnexInfluence || own <= holder) return false;
                     break;
+            }
+        }
+        return true;
+    }
+
+    public void Pay(Board board, Seat seat)
+    {
+        board.AdjustResource(seat, Resource.Coin, -Coin);
+        board.AdjustResource(seat, Resource.Favour, -Favour);
+        board.AdjustResource(seat, Resource.Force, -Force);
+    }
+
+    /// <summary>Pays for the card and applies it at once, slow or not; returns whether its effects changed anything.</summary>
+    public bool Play(Board board, Seat seat, IReadOnlyList<string> targets)
+    {
+        Pay(board, seat);
+        return Apply(board, seat, targets);
+    }
+
+    /// <summary>
+    /// Applies the card's effects; the caller has checked <see cref="Fits"/>. Returns whether it changed anything: a
+    /// garrison in a region already at full control, or a challenge that falls short, does not.
+    /// </summary>
+    public bool Apply(Board board, Seat seat, IReadOnlyList<string> targets)
+    {
+        int before = board.ChangeCount;
+        IReadOnlyList<Region> regions = TargetRegions(board, targets);
+        foreach (CardEffect effect in Effects)
+        {
+            switch (effect.Kind)
+            {
+                case CardEffectKind.Control: foreach (Region region in regions) board.AdjustControl(region, effect.Amount); break;
+                case CardEffectKind.Prosperity: foreach (Region region in regions) board.AdjustProsperity(region, effect.Amount); break;
+                case CardEffectKind.Order: foreach (Region region in regions) board.AdjustOrder(region, effect.Amount); break;
+                case CardEffectKind.Influence: board.AdjustInfluence(regions[0], seat, effect.Amount); break;
+                case CardEffectKind.HolderInfluence:
+                    if (regions[0].Allegiance is not null) board.AdjustInfluence(regions[0], board.Seat(regions[0].Allegiance!), effect.Amount);
+                    break;
+                case CardEffectKind.RivalInfluence: board.AdjustInfluence(regions[0], board.Seat(targets[1]), effect.Amount); break;
+                case CardEffectKind.MoveInfluence:
+                    int moved = Math.Min(effect.Amount, Math.Min(regions[0].InfluenceOf(seat.Id), Board.InfluenceLimit - regions[1].InfluenceOf(seat.Id)));
+                    board.AdjustInfluence(regions[1], seat, moved);
+                    board.AdjustInfluence(regions[0], seat, -moved);
+                    break;
+                case CardEffectKind.ChallengeOffice: Challenge(board, seat, regions[0], effect.Office!.Value, effect.Amount); break;
                 case CardEffectKind.Relation:
-                    string? other = region is null ? target : region.Allegiance;
+                    string? other = Target switch
+                    {
+                        CardTarget.OtherSeat => targets[0],
+                        CardTarget.RegionRival => targets[1],
+                        _ => regions[0].Allegiance,
+                    };
                     if (other is not null && other != seat.Id) board.AdjustRelation(seat, board.Seat(other), effect.Amount);
                     break;
-                case CardEffectKind.Coin: board.AdjustResource(seat, Resource.Coin, effect.Amount); break;
-                case CardEffectKind.Favour: board.AdjustResource(seat, Resource.Favour, effect.Amount); break;
-                case CardEffectKind.Force: board.AdjustResource(seat, Resource.Force, effect.Amount); break;
-                case CardEffectKind.Bank:
-                    Resource scarcest = Enum.GetValues<Resource>().MinBy(seat.Amount);
-                    board.AdjustResource(seat, scarcest, 1);
+                case CardEffectKind.Gain: board.AdjustResource(seat, effect.Resource!.Value, effect.Amount); break;
+                case CardEffectKind.Take:
+                    Seat victim = board.Seat(targets[0]);
+                    int taken = Math.Min(effect.Amount, victim.Amount(effect.Resource!.Value));
+                    board.AdjustResource(victim, effect.Resource.Value, -taken);
+                    board.AdjustResource(seat, effect.Resource.Value, taken);
                     break;
                 case CardEffectKind.Annex:
-                    Seat? former = region!.Allegiance is null ? null : board.Seat(region.Allegiance);
-                    board.SetAllegiance(region, seat);
-                    board.AdjustControl(region, AnnexedControl - region.Control);
-                    board.Consolidate(region, board.Turn + ConsolidationWeeks);
+                    Region annexed = regions[0];
+                    Seat? former = annexed.Allegiance is null ? null : board.Seat(annexed.Allegiance);
+                    board.SetAllegiance(annexed, seat);
+                    board.AdjustControl(annexed, AnnexedControl - annexed.Control);
+                    board.Consolidate(annexed, board.Turn + ConsolidationWeeks);
                     if (former is not null)
                     {
-                        board.AdjustInfluence(region, former, -region.InfluenceOf(former.Id));
+                        board.AdjustInfluence(annexed, former, -annexed.InfluenceOf(former.Id));
                         board.AdjustRelation(seat, former, -2);
                     }
                     break;
                 default: throw new InvalidOperationException($"card '{Id}' has unknown effect {effect.Kind}");
             }
         }
-        return board.ChangeCount > paid;
+        return board.ChangeCount > before;
     }
-}
 
-/// <summary>
-/// The starting card set every seat may play each week. Decks, hands and seat-specific cards come later (#11058),
-/// when cards become content.
-/// </summary>
-public static class StarterCards
-{
-    public static readonly Card Bank = new("bank", "Bank", 0, 0, 0, CardTarget.None, [new(CardEffectKind.Bank)]);
+    /// <summary>The regions among <paramref name="targets"/>: the only regions a card's effects change.</summary>
+    public IReadOnlyList<Region> TargetRegions(Board board, IReadOnlyList<string> targets) => Target switch
+    {
+        CardTarget.None or CardTarget.OtherSeat => [],
+        CardTarget.RegionRival => [board.Region(targets[0])],
+        _ => [.. targets.Select(board.Region)],
+    };
 
-    public static readonly IReadOnlyList<Card> All =
-    [
-        new("garrison", "Garrison", 0, 0, 2, CardTarget.OwnRegion, [new(CardEffectKind.Control, 1)]),
-        new("keep-the-peace", "Keep the Peace", 1, 0, 0, CardTarget.OwnRegion, [new(CardEffectKind.Order, 1)]),
-        new("trade-charter", "Trade Charter", 2, 0, 0, CardTarget.OwnRegion, [new(CardEffectKind.Prosperity, 1)]),
-        new("levy", "Levy", 0, 0, 0, CardTarget.OwnRegion,
-            [new(CardEffectKind.Coin, 2), new(CardEffectKind.Force, 1), new(CardEffectKind.Order, -1)]),
-        new("install-factor", "Install a Factor", 0, 2, 0, CardTarget.ReachableRegion, [new(CardEffectKind.Influence, 1)]),
-        new("discredit", "Discredit", 0, 2, 0, CardTarget.ContestedRegion,
-            [new(CardEffectKind.HolderInfluence, -1), new(CardEffectKind.Order, -1), new(CardEffectKind.Relation, -1)]),
-        new("press-claim", "Press a Claim", 0, 1, 1, CardTarget.ContestedRegion,
-            [new(CardEffectKind.Control, -1), new(CardEffectKind.Relation, -1)]),
-        new("annex", "Annex", 0, 0, 4, CardTarget.ContestedRegion, [new(CardEffectKind.Annex)]),
-        new("envoy", "Envoy", 0, 1, 0, CardTarget.OtherSeat, [new(CardEffectKind.Relation, 1)]),
-        Bank,
-    ];
+    private static bool Contestable(Board board, Seat seat, Region region) =>
+        !region.Capital && region.Allegiance != seat.Id && board.Turn >= region.ContestableFrom && board.Reaches(seat, region);
+
+    private static void Challenge(Board board, Seat seat, Region region, Office office, int strength)
+    {
+        string? holder = region.Offices.GetValueOrDefault(office);
+        if (holder == seat.Id || (holder is not null && board.Footholds(board.Seat(holder)) == 1)) return;
+        int defence = 1 + (holder is null ? 0 : region.InfluenceOf(holder)) + (region.Order >= WatchfulOrder ? 1 : 0);
+        if (region.InfluenceOf(seat.Id) + strength <= defence) return;
+        board.SetOffice(region, office, seat);
+        if (holder is not null) board.AdjustRelation(seat, board.Seat(holder), -1);
+    }
 }

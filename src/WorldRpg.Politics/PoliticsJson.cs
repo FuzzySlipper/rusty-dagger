@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace WorldRpg.Politics;
 
 /// <summary>
-/// The board's JSON: board files and trace lines. A missing field or an unknown one is an error rather than a
+/// The board's JSON: board and card files, and trace lines. A missing field or an unknown one is an error rather than a
 /// default, so a typo in a board file is reported instead of starting a region at zero.
 /// </summary>
 [JsonSourceGenerationOptions(
@@ -14,5 +14,6 @@ namespace WorldRpg.Politics;
     UseStringEnumConverter = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(BoardSetup))]
+[JsonSerializable(typeof(CardSet))]
 [JsonSerializable(typeof(TurnTrace))]
 internal sealed partial class PoliticsJson : JsonSerializerContext;

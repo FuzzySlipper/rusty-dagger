@@ -23,7 +23,7 @@ public sealed class DeterminismTests
     {
         string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Trace(seed: null, years: 20))));
 
-        Assert.Equal("51986b5df2952e3594715f993f6794ae0b8d437dc11d1d675ae34f8f98f629c6", hash);
+        Assert.Equal("6c080bb2959cdafa18a80d66bd2f179f0025a607dc5da2346a21cdd02042c55f", hash);
     }
 
     [Fact]
@@ -31,14 +31,14 @@ public sealed class DeterminismTests
     {
         Assert.Equal(52, TurnTrace.TurnsIn(1));
         Assert.Equal(515, TurnTrace.TurnsIn(10));
-        TurnTrace turn = new(53, [], []);
+        TurnTrace turn = new(53, [], [], []);
         Assert.Equal(2, turn.Year);
         Assert.Equal(5, turn.Day);
     }
 
     private static string Trace(ulong? seed, int years)
     {
-        Board board = Board.Create(BoardSetup.Canon(), seed);
+        Board board = Board.Create(BoardSetup.Canon(), CardSet.Canon(), seed);
         using StringWriter writer = new();
         for (int turn = 0; turn < TurnTrace.TurnsIn(years); turn++) BoardTraceWriter.WriteJsonLine(writer, BoardTurn.Play(board));
         return writer.ToString();

@@ -24,6 +24,8 @@ public sealed class BoardSetupTests
         // Every power starts with a foothold to act from.
         Assert.All(canon.Seats.Where(seat => seat.Kind == SeatKind.Power),
             seat => Assert.Contains(canon.Regions, region => region.Influence.GetValueOrDefault(seat.Id) > 0));
+        // The canon cards deal every seat a deck.
+        Assert.Empty(CardSet.Canon().Problems(canon));
     }
 
     [Fact]
@@ -60,7 +62,8 @@ public sealed class BoardSetupTests
                 TestBoards.Region("west-capital", true, "west", 6, 4, 4, new Dictionary<string, int> { ["north"] = 1 }, ["march"]),
                 TestBoards.Region("march", false, "nobody", 2, 2, 3, new Dictionary<string, int> { ["west"] = 4 }, ["west-capital", "east-capital"]),
                 TestBoards.Region("east-capital", true, null, 5, 4, 4, new Dictionary<string, int>(), []),
-                TestBoards.Region("march", false, null, 2, 2, 3, new Dictionary<string, int>(), []),
+                TestBoards.Region("march", false, null, 2, 2, 3, new Dictionary<string, int>(), [])
+                    with { Offices = new Dictionary<Office, string> { [Office.Watch] = "nobody" } },
             ],
             Relations = [new RelationSetup("west", "west", 0), new RelationSetup("east", "west", 4)],
         };
@@ -77,6 +80,7 @@ public sealed class BoardSetupTests
         Assert.Contains("seat 'east' home 'east-capital' is not a capital it holds", problems);
         Assert.Contains("relation west/west relates a seat to itself", problems);
         Assert.Contains("relation east/west 4 is outside -3..3", problems);
+        Assert.Contains("region 'march' Watch is held by unknown seat 'nobody'", problems);
     }
 
     [Fact]
