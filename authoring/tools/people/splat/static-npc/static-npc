@@ -146,20 +146,21 @@ class Npc:
         """Where the GPU steps run: npc.json "gpu_host" or --gpu: gpu-lab (the 5090, default) or a Strix Halo, den-m5 or den-nimo
         (Patch 2026-11-24, npc-468's second run: the lengthy work on a Halo, so the lab stays free for him)."""
         g = getattr(self, 'gpu_arg', None) or self.cfg.get('gpu_host', 'gpu-lab')
-        if g != 'gpu-lab' and g not in HALOS:
-            raise SystemExit(f'gpu_host {g}: gpu-lab, ' + ' or '.join(HALOS))
+        if g != 'gpu-lab' and g not in HALOS and not g.startswith('runpod'):
+            raise SystemExit(f'gpu_host {g}: gpu-lab, ' + ', '.join(HALOS) + ' or a RunPod ssh alias runpod-* (hosts/runpod/setup.sh)')
         return g
 
     @property
     def comfy(self):
-        return LAB_COMFY if self.gpu == 'gpu-lab' else f'http://{HALOS[self.gpu]}:8188'
+        return f'http://{HALOS[self.gpu]}:8188' if self.gpu in HALOS else LAB_COMFY   # a RunPod pod has no ComfyUI: the 5090's
 
     @property
     def gpu_env(self):
         """bake.sh, pipeline.sh and bound_run.sh: GPU= puts their gsplat stages on a Halo; guided_clip.sh: HALO=."""
         # VACE stays on the 5090 (bake.sh's own rule: about 4 min a ring there, a short lab job Patch allows; den-m5's ComfyUI crashed on
         # model loads after gsplat work three times on 2026-11-24)
-        return {} if self.gpu == 'gpu-lab' else {'GPU': self.gpu, 'HALO': self.gpu}
+        # a RunPod pod takes only the gsplat stages (GPU=); the clip (guided_clip.sh HALO=) needs a ComfyUI, so it stays on the 5090 there
+        return {} if self.gpu == 'gpu-lab' else {'GPU': self.gpu, **({'HALO': self.gpu} if self.gpu in HALOS else {})}
 
     def need(self, *paths, step):
         for p in paths:
@@ -531,7 +532,7 @@ def main():
     ap.add_argument('--from', dest='from_dir', help='init: take front.png (and back.png) from this folder instead of the CMS approval')
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
     ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
-    ap.add_argument('--gpu', choices=['gpu-lab', *HALOS], help='clay, clip, bake, r1, bound, walk: where the GPU work runs (npc.json "gpu_host"; default gpu-lab)')
+    ap.add_argument('--gpu', help='clay, clip, bake, r1, bound, walk: where the GPU work runs (npc.json "gpu_host"; default gpu-lab; den-m5, den-nimo, or runpod-* for the gsplat steps)')
     ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')
     ap.add_argument('--rigger', choices=['meshy', 'fit'], help="rig (walker): meshy (API rig, default; falls back to fit when Meshy can't estimate the pose) or fit (fit_rig.py: the target skeleton fitted to the mesh)")
     ap.add_argument('--size', help='clip: orbit size in px (default 1920); ship: the runtime size to ship (e.g. 32k-graft)')
