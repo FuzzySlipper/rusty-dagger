@@ -263,23 +263,23 @@ public sealed class DaggerfallControlSettingsTests
     public void Interior_extrude_defaults_round_trip_and_reject_off_step_or_out_of_range_values()
     {
         DaggerfallControlSettings settings = new();
-        Assert.False(settings.InteriorExtrude);
+        Assert.True(settings.InteriorExtrude);
         Assert.Equal(1f, settings.InteriorExtrudeDepth, 4);
         Assert.Equal(.35f, settings.InteriorExtrudeCutoff, 4);
         Assert.Equal(1f, settings.InteriorExtrudeDistance, 4);
 
         DaggerfallControlSettings legacy = DaggerfallControlSettings.Parse(PersistedBindings(new("attack", "Primary")));
-        Assert.False(legacy.InteriorExtrude);
+        Assert.True(legacy.InteriorExtrude);
         Assert.Equal(1f, legacy.InteriorExtrudeDepth, 4);
         Assert.Equal(.35f, legacy.InteriorExtrudeCutoff, 4);
         Assert.Equal(1f, legacy.InteriorExtrudeDistance, 4);
 
-        settings.SetInteriorExtrude(true);
+        settings.SetInteriorExtrude(false);
         settings.SetInteriorExtrudeDepth(1.4f);
         settings.SetInteriorExtrudeCutoff(.45f);
         settings.SetInteriorExtrudeDistance(2.25f);
         DaggerfallControlSettings parsed = DaggerfallControlSettings.Parse(settings.Serialize());
-        Assert.True(parsed.InteriorExtrude);
+        Assert.False(parsed.InteriorExtrude);
         Assert.Equal(1.4f, parsed.InteriorExtrudeDepth, 4);
         Assert.Equal(.45f, parsed.InteriorExtrudeCutoff, 4);
         Assert.Equal(2.25f, parsed.InteriorExtrudeDistance, 4);

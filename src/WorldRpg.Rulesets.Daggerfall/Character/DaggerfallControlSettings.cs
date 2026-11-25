@@ -267,8 +267,9 @@ public sealed class DaggerfallControlSettings
         ReliefDistance = MathF.Round(share / ReliefDistanceStep) * ReliefDistanceStep;
     }
 
-    /// <summary>Whether interior and dungeon walls project outward silhouette relief (<c>interior-extrude.wgsl</c>, #11043).</summary>
-    public bool InteriorExtrude { get; private set; }
+    /// <summary>Whether interior and dungeon walls project outward silhouette relief (<c>interior-extrude.wgsl</c>, #11043, #11067).</summary>
+    public bool InteriorExtrude { get; private set; } = DefaultInteriorExtrude;
+    public const bool DefaultInteriorExtrude = true;
     public void SetInteriorExtrude(bool enabled) => InteriorExtrude = enabled;
 
     /// <summary>Outward projection depth scale for interior silhouette relief, in steps of <see cref="InteriorExtrudeDepthStep"/>.</summary>
@@ -611,7 +612,7 @@ internal sealed record DaggerfallControlPreferences(
     bool OutdoorLampShadows = false,
     float SurfaceRelief = DaggerfallControlSettings.DefaultSurfaceRelief,
     float ReliefDistance = 1,
-    bool InteriorExtrude = false,
+    bool InteriorExtrude = DaggerfallControlSettings.DefaultInteriorExtrude,
     float InteriorExtrudeDepth = DaggerfallControlSettings.DefaultInteriorExtrudeDepth,
     float InteriorExtrudeCutoff = DaggerfallControlSettings.DefaultInteriorExtrudeCutoff,
     float InteriorExtrudeDistance = DaggerfallControlSettings.DefaultInteriorExtrudeDistance);

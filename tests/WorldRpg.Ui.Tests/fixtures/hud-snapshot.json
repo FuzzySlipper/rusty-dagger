@@ -339,7 +339,7 @@
     },
     "surfaceRelief": null,
     "interiorExtrude": {
-      "enabled": false,
+      "enabled": true,
       "depth": 1,
       "depthMinimum": 0.2,
       "depthMaximum": 2,
