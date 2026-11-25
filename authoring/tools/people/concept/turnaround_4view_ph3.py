@@ -99,11 +99,12 @@ def build_turnaround_prompt(extra: str, pronoun: str, right_weapon: str, weapon_
             f"horizontally forward to page right, along with the exact right-side profile of {pos} costume.{extra_clause}\n\n"
         )
         col3 = (
-            f"3. COLUMN 3 — EXACT LEFT-SIDE PROFILE (90-degree turn facing page LEFT, showing {pos} left side closest to the camera): "
-            f"{pronoun}'s empty left arm hangs vertically straight down at {pos} left side in a relaxed empty hanging pose (no weapon in left hand). "
-            f"{pronoun}'s far-side right arm is hidden behind {pos} torso while the front half of the exact same horizontal weapon "
-            f"juts cleanly forward to page LEFT past the front of {pos} thigh (parallel to the floor, pointing horizontally left at "
-            f"the exact same hip height as Column 2). Shows the exact left-side profile of {pos} costume.{extra_clause}\n\n"
+            f"3. COLUMN 3 — EXACT LEFT-SIDE PROFILE (90-degree turn facing page LEFT, showing {pos} empty left side closest to the camera): "
+            f"CRITICAL OCCLUSION: {pronoun}'s near-side left arm hangs straight down completely EMPTY and open-handed IN FRONT of {pos} thigh "
+            f"(holding NOTHING—the left hand is open and relaxed with fingers pointing down, NOT gripping any handle, hilt, or shaft); "
+            f"BEHIND {pos} thigh on {pos} far right side, the front blade/head of the exact same horizontal weapon protrudes cleanly forward "
+            f"to page LEFT at the exact same hip height as Column 2 (with only the rear pommel/butt peeking behind {pos} hip if long). "
+            f"Shows the exact left-side profile of {pos} costume.{extra_clause}\n\n"
         )
         col4 = (
             f"4. COLUMN 4 — STRAIGHT BACK VIEW (180-degree turn facing directly away from the viewer):{extra_clause} "
