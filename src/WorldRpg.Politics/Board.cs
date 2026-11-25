@@ -9,6 +9,12 @@ public sealed class Board
 {
     public const int TrackLimit = 5;
     public const int InfluenceLimit = 3;
+
+    /// <summary>
+    /// Each seat's supply of influence pieces. A seat with every piece on the board must take one back, or lose one, before
+    /// it can place another, so influence spreads only as far as a seat can hold it.
+    /// </summary>
+    public const int InfluencePieces = 10;
     public const int ResourceLimit = 12;
     public const int RelationLimit = 3;
 
@@ -44,7 +50,7 @@ public sealed class Board
     {
         IReadOnlyList<string> problems = setup.Problems();
         if (problems.Count > 0) throw new BoardSetupException("board setup", problems);
-        Seat[] seats = [.. setup.Seats.Select(seat => new Seat(seat.Id, seat.Name, seat.Holder, seat.Home)
+        Seat[] seats = [.. setup.Seats.Select(seat => new Seat(seat.Id, seat.Name, seat.Kind, seat.Holder, seat.Home, seat.Grants ?? [])
             { Coin = seat.Coin, Favour = seat.Favour, Force = seat.Force })];
         Region[] regions = [.. setup.Regions.Select(region => new Region(region.Id, region.Name, region.CatalogRegion, region.Capital, [.. region.Borders])
         {
@@ -65,9 +71,17 @@ public sealed class Board
 
     public int Relation(string a, string b) => relations.GetValueOrDefault(Pair(a, b));
 
-    /// <summary>Whether <paramref name="seat"/> holds <paramref name="region"/> or a region bordering it.</summary>
+    /// <summary>
+    /// Whether <paramref name="seat"/> can act in <paramref name="region"/>: it holds the region or has influence there,
+    /// or it does either in a region bordering it. Influence is how a power without territory reaches the board.
+    /// </summary>
     public bool Reaches(Seat seat, Region region) =>
-        region.Allegiance == seat.Id || region.Borders.Any(border => regionsById[border].Allegiance == seat.Id);
+        Present(seat, region) || region.Borders.Any(border => Present(seat, regionsById[border]));
+
+    /// <summary>How many of <paramref name="seat"/>'s influence pieces are on the board.</summary>
+    public int PiecesPlaced(Seat seat) => Regions.Sum(region => region.InfluenceOf(seat.Id));
+
+    private static bool Present(Seat seat, Region region) => region.Allegiance == seat.Id || region.InfluenceOf(seat.Id) > 0;
 
     /// <summary>An independent copy for weighing a move; it shares nothing with this board, its chance included.</summary>
     public Board Clone() => new(
@@ -166,8 +180,21 @@ public enum Resource
     Force,
 }
 
-/// <summary>A player at the table. <see cref="Holder"/> is the cast individual who holds the seat now.</summary>
-public sealed record Seat(string Id, string Name, string Holder, string Home)
+/// <summary>
+/// What a seat is at the table. A crown holds a capital and regions by allegiance; a power holds no territory and
+/// acts through influence.
+/// </summary>
+public enum SeatKind
+{
+    Crown,
+    Power,
+}
+
+/// <summary>
+/// A player at the table. <see cref="Holder"/> is the cast individual who holds the seat now, if the head of the body
+/// is cast; <see cref="Home"/> is a crown's capital.
+/// </summary>
+public sealed record Seat(string Id, string Name, SeatKind Kind, string? Holder, string? Home, IReadOnlyList<SeatGrant> Grants)
 {
     public int Coin { get; internal set; }
 

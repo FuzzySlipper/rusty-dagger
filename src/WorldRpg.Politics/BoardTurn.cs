@@ -6,7 +6,7 @@ namespace WorldRpg.Politics;
 /// <item>Upkeep. Each seat is paid: coin of a quarter of the prosperity of the regions it holds; favour of 1 plus a
 /// third of its influence pieces; force of 1 plus a fifth of its regions' control, each rounded down. A region with order 1 or less loses a point of
 /// control to unrest. Every fourth week an independent region below control 3 regains one, as its own lords
-/// reassert themselves.</item>
+/// reassert themselves. A seat's grants fall due in the weeks their schedules divide.</item>
 /// <item>Each seat plays one move, the table's order turning by one seat each week.</item>
 /// </list>
 /// </summary>
@@ -45,6 +45,8 @@ public static class BoardTurn
             board.AdjustResource(seat, Resource.Coin, held.Sum(region => region.Prosperity) / 4);
             board.AdjustResource(seat, Resource.Favour, 1 + board.Regions.Sum(region => region.InfluenceOf(seat.Id)) / 3);
             board.AdjustResource(seat, Resource.Force, 1 + held.Sum(region => region.Control) / 5);
+            foreach (SeatGrant grant in seat.Grants)
+                if (board.Turn % grant.EveryWeeks == 0) board.AdjustResource(seat, grant.Resource, grant.Amount);
         }
         foreach (Region region in board.Regions)
         {

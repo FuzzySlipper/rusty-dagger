@@ -11,6 +11,7 @@ namespace WorldRpg.Politics;
     RespectRequiredConstructorParameters = true,
     RespectNullableAnnotations = true,
     UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+    UseStringEnumConverter = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(BoardSetup))]
 [JsonSerializable(typeof(TurnTrace))]

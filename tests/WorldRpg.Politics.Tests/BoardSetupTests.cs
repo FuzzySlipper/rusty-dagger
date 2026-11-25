@@ -5,14 +5,49 @@ namespace WorldRpg.Politics.Tests;
 public sealed class BoardSetupTests
 {
     [Fact]
-    public void The_canon_start_loads_with_its_four_crowns_and_their_capitals()
+    public void The_canon_start_seats_every_great_power_on_every_political_region_of_the_bay()
     {
         BoardSetup canon = BoardSetup.Canon();
 
         Assert.Empty(canon.Problems());
-        Assert.Equal(["daggerfall", "wayrest", "sentinel", "orsinium"], canon.Seats.Select(seat => seat.Id));
-        Assert.All(canon.Seats, seat => Assert.Equal(seat.Id, canon.Regions.Single(region => region.Id == seat.Home).Allegiance));
+        Assert.Equal(["daggerfall", "wayrest", "sentinel", "orsinium"], canon.Seats.Where(seat => seat.Kind == SeatKind.Crown).Select(seat => seat.Id));
+        Assert.Equal(
+            ["empire", "necromancers", "underking", "mages-guild", "fighters-guild", "thieves-guild", "dark-brotherhood", "temples", "balfiera"],
+            canon.Seats.Where(seat => seat.Kind == SeatKind.Power).Select(seat => seat.Id));
+        // The regions are the 44 with a court in the catalog, each once.
+        Assert.Equal(44, canon.Regions.Select(region => region.CatalogRegion).Distinct().Count());
+        Assert.Equal(44, canon.Regions.Count);
         Assert.Equal("daggerfall", canon.Regions.Single(region => region.Id == "betony").Allegiance);
+        Assert.Equal(["betony", "daggerfall", "orsinium", "sentinel", "wayrest"],
+            canon.Regions.Where(region => region.Allegiance is not null).Select(region => region.Id).Order(StringComparer.Ordinal));
+        Assert.All(canon.Regions.Where(region => region.Allegiance is null), region => Assert.Equal(3, region.Control));
+        // Every power starts with a foothold to act from.
+        Assert.All(canon.Seats.Where(seat => seat.Kind == SeatKind.Power),
+            seat => Assert.Contains(canon.Regions, region => region.Influence.GetValueOrDefault(seat.Id) > 0));
+    }
+
+    [Fact]
+    public void Crowns_hold_a_home_capital_and_powers_hold_no_territory()
+    {
+        BoardSetup setup = TestBoards.TwoCrowns(marchAllegiance: "guild").WithGuild([new SeatGrant(Resource.Coin, 0, 0)]) with { };
+        setup = setup with
+        {
+            Seats =
+            [
+                setup.Seats[0] with { Home = null },
+                setup.Seats[1],
+                setup.Seats[2] with { Home = "march" },
+            ],
+        };
+
+        IReadOnlyList<string> problems = setup.Problems();
+
+        Assert.Contains("crown 'west' has no home capital", problems);
+        Assert.Contains("seat 'guild' is a power and holds no capital, but names home 'march'", problems);
+        Assert.Contains("region 'march' owes allegiance to 'guild', which is not a crown", problems);
+        Assert.Contains("seat 'guild' grant of 0 Coin is outside 1..12", problems);
+        Assert.Contains("seat 'guild' grant of Coin every 0 weeks is not a schedule", problems);
+        Assert.Empty(TestBoards.TwoCrowns().WithGuild().Problems());
     }
 
     [Fact]

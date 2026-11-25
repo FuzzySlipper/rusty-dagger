@@ -27,10 +27,10 @@ public static class MoveChooser
                 Board trial = board.Clone();
                 if (!card.Play(trial, trial.Seat(seat.Id), target) && card != StarterCards.Bank) continue;
                 int score = 0;
-                foreach (Seat other in board.Seats)
+                foreach (string other in Touched(board, trial, seat))
                 {
-                    int gain = Prestige(trial, trial.Seat(other.Id)) - before[other.Id];
-                    score += other.Id == seat.Id ? 4 * gain : -RivalWeight(board.Relation(seat.Id, other.Id)) * gain;
+                    int gain = Prestige(trial, trial.Seat(other)) - before[other];
+                    score += other == seat.Id ? 4 * gain : -RivalWeight(board.Relation(seat.Id, other)) * gain;
                 }
                 options.Add(new MoveOption(card.Id, target, score));
             }
@@ -48,9 +48,9 @@ public static class MoveChooser
     /// <summary>
     /// A seat's standing on the board, in half points: 20 per region held; 4 per point of control and prosperity
     /// and 2 per point of order in those regions; 6 per influence piece anywhere; 2 per point of relation; and 1 per
-    /// point of each resource up to 6, beyond which a hoard is worth nothing more. Influence leading a contested
-    /// region's own seat adds its lead times the region's missing control, so pressing a claim where the seat is
-    /// ahead is worth something before the annexation it leads to.
+    /// point of each resource up to 6, beyond which a hoard is worth nothing more. A crown's influence leading a
+    /// contested region's own seat adds its lead times the region's missing control, so pressing a claim where the
+    /// crown is ahead is worth something before the annexation it leads to.
     /// </summary>
     public static int Prestige(Board board, Seat seat)
     {
@@ -63,7 +63,7 @@ public static class MoveChooser
             {
                 prestige += 20 + 4 * region.Control + 4 * region.Prosperity + 2 * region.Order;
             }
-            else if (!region.Capital)
+            else if (seat.Kind == SeatKind.Crown && !region.Capital)
             {
                 int lead = influence - (region.Allegiance is null ? 0 : region.InfluenceOf(region.Allegiance));
                 if (lead > 0) prestige += 2 * lead * (Board.TrackLimit - region.Control);
@@ -74,6 +74,36 @@ public static class MoveChooser
         foreach (Resource resource in Enum.GetValues<Resource>())
             prestige += Math.Min(seat.Amount(resource), 6);
         return prestige;
+    }
+
+    /// <summary>
+    /// The seats whose prestige a trial move can have changed: the player, the seats it changed directly, and every seat
+    /// present before or after in a region it changed. Any other seat's gain is exactly 0, so it is not weighed.
+    /// </summary>
+    private static IEnumerable<string> Touched(Board board, Board trial, Seat player)
+    {
+        SortedSet<string> touched = new(StringComparer.Ordinal) { player.Id };
+        foreach (BoardChange change in trial.TakeChanges())
+        {
+            if (change.Field.StartsWith("relation:", StringComparison.Ordinal))
+            {
+                touched.Add(change.Subject);
+                touched.Add(change.Field["relation:".Length..]);
+            }
+            else if (change.Field is not ("coin" or "favour" or "force"))
+            {
+                foreach (Region side in new[] { board.Region(change.Subject), trial.Region(change.Subject) })
+                {
+                    if (side.Allegiance is not null) touched.Add(side.Allegiance);
+                    touched.UnionWith(side.Influence.Keys);
+                }
+            }
+            else
+            {
+                touched.Add(change.Subject);
+            }
+        }
+        return touched;
     }
 
     private static int RivalWeight(int relation) => relation < 0 ? 2 : relation == 0 ? 1 : 0;

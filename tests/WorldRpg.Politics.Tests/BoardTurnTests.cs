@@ -22,6 +22,19 @@ public sealed class BoardTurnTests
     }
 
     [Fact]
+    public void A_seats_grants_fall_due_on_their_schedule()
+    {
+        Board board = Board.Create(TestBoards.TwoCrowns().WithGuild([new SeatGrant(Resource.Force, 2, 3)]));
+
+        // Before its third week the guild is paid only its income of 1 force; in the third, the grant of 2 follows it.
+        Assert.Contains(new BoardChange("guild", "force", "4", "5"), BoardTurn.Play(board).Upkeep);
+        board.Turn = 2;
+        Seat guild = board.Seat("guild");
+        int force = guild.Force;
+        Assert.Contains(new BoardChange("guild", "force", $"{force + 1}", $"{force + 3}"), BoardTurn.Play(board).Upkeep);
+    }
+
+    [Fact]
     public void Unrest_wears_down_control_and_independent_regions_recover_every_fourth_week()
     {
         Board unrest = Board.Create(TestBoards.TwoCrowns(marchOrder: BoardTurn.UnrestOrder));
@@ -60,6 +73,6 @@ public sealed class BoardTurnTests
 
         for (int turn = 0; turn < TurnTrace.TurnsIn(50); turn++) BoardTurn.Play(board);
 
-        Assert.All(board.Seats, seat => Assert.Equal(seat.Id, board.Region(seat.Home).Allegiance));
+        Assert.All(board.Seats.Where(seat => seat.Kind == SeatKind.Crown), seat => Assert.Equal(seat.Id, board.Region(seat.Home!).Allegiance));
     }
 }

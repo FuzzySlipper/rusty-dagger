@@ -9,11 +9,11 @@ public enum CardTarget
     /// <summary>A region owing allegiance to the player.</summary>
     OwnRegion,
 
-    /// <summary>A region the player holds or borders.</summary>
+    /// <summary>A region the player reaches: one it holds or has influence in, or one bordering such a region.</summary>
     ReachableRegion,
 
     /// <summary>
-    /// A region the player borders that is not a capital, does not owe it allegiance and is not consolidated after an
+    /// A region the player reaches that is not a capital, does not owe it allegiance and is not consolidated after an
     /// annexation.
     /// </summary>
     ContestedRegion,
@@ -34,7 +34,7 @@ public enum CardEffectKind
     /// <summary>The target region's order.</summary>
     Order,
 
-    /// <summary>The player's influence in the target region.</summary>
+    /// <summary>The player's influence in the target region; placing a piece needs one left in its supply.</summary>
     Influence,
 
     /// <summary>The influence of the target region's seat in that region.</summary>
@@ -59,7 +59,7 @@ public enum CardEffectKind
     /// The target region changes allegiance to the player at control <see cref="Card.AnnexedControl"/> and is
     /// consolidated for <see cref="Card.ConsolidationWeeks"/> weeks, during which no seat may contest it. Its former
     /// seat's factors are expelled (its influence there goes to 0) and its relation with the player falls by 2.
-    /// Only playable where the region's control is 0 and the player holds at least 2 influence
+    /// Only a crown may annex, and only where the region's control is 0 and the player holds at least 2 influence
     /// there and more than its current seat.
     /// </summary>
     Annex,
@@ -91,8 +91,11 @@ public sealed record Card(string Id, string Name, int Coin, int Favour, int Forc
             _ => false,
         };
         if (!fits) return false;
+        if (Effects.Any(effect => effect.Kind == CardEffectKind.Influence && effect.Amount > 0) && board.PiecesPlaced(seat) >= Board.InfluencePieces)
+            return false;
         if (Effects.Any(effect => effect.Kind == CardEffectKind.Annex))
         {
+            if (seat.Kind != SeatKind.Crown) return false;
             Region region = board.Region(target!);
             int own = region.InfluenceOf(seat.Id);
             int holder = region.Allegiance is null ? 0 : region.InfluenceOf(region.Allegiance);

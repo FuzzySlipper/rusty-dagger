@@ -41,6 +41,37 @@ public sealed class CardTests
     }
 
     [Fact]
+    public void A_power_reaches_the_board_through_its_influence_and_never_annexes()
+    {
+        Board nowhere = Board.Create(TestBoards.TwoCrowns().WithGuild());
+        Assert.False(TestBoards.Card("install-factor").Playable(nowhere, nowhere.Seat("guild"), "march"));
+
+        Board board = Board.Create(TestBoards.TwoCrowns(marchControl: 0, marchInfluence: new Dictionary<string, int> { ["guild"] = 3 }).WithGuild());
+        Seat guild = board.Seat("guild");
+
+        Assert.True(TestBoards.Card("discredit").Playable(board, guild, "march"));
+        Assert.True(TestBoards.Card("install-factor").Playable(board, guild, "west-capital"));
+        Assert.False(TestBoards.Card("annex").Playable(board, guild, "march"));
+        Assert.DoesNotContain(MoveChooser.Options(board, guild), option => option.Card == "annex");
+    }
+
+    [Fact]
+    public void A_seat_with_its_whole_supply_of_pieces_on_the_board_places_no_more()
+    {
+        Board board = Board.Create(BoardSetup.Canon());
+        Seat guild = board.Seat("mages-guild");
+        Card factor = TestBoards.Card("install-factor");
+        Assert.True(factor.Playable(board, guild, "glenpoint"));
+
+        foreach (string region in new[] { "daggerfall", "wayrest", "sentinel", "betony" })
+            board.AdjustInfluence(board.Region(region), guild, Math.Min(Board.InfluenceLimit, Board.InfluencePieces - board.PiecesPlaced(guild)));
+
+        Assert.Equal(Board.InfluencePieces, board.PiecesPlaced(guild));
+        Assert.False(factor.Playable(board, guild, "glenpoint"));
+        Assert.DoesNotContain(MoveChooser.Options(board, guild), option => option.Card == "install-factor");
+    }
+
+    [Fact]
     public void Annexing_needs_no_control_left_and_an_influence_lead_of_at_least_two()
     {
         Card annex = TestBoards.Card("annex");
