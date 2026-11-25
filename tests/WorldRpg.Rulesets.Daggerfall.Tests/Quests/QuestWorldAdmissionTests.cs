@@ -624,7 +624,9 @@ public sealed class QuestWorldAdmissionTests
         // Rumors are read against the text section, so a rumor edit reads the whole spliced payload.
         var root = TestPayload.Sections("rumors");
         foreach (var rumor in root["rumors"]!["entries"]!.AsArray()) rumor!["region"] = 0;
-        return DaggerfallBaseContent.Read(TestPayload.Splice(root), TestPayload.Data).WithQuestSources(withQuests.QuestSources);
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root), TestPayload.Data)
+            .WithQuestSources(withQuests.QuestSources)
+            .WithPeople(withQuests.People);
     }
 
     internal static DaggerfallSiteProfile WithMarker(DaggerfallSiteProfile source)
