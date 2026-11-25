@@ -22,7 +22,11 @@ public sealed record TurnTrace(int Turn, IReadOnlyList<BoardChange> Upkeep, IRea
 
     public int Day => (Turn - 1) * DaysPerWeek % DaysPerYear + 1;
 
-    /// <summary>The number of weekly turns in <paramref name="years"/> years, rounded up to a whole week.</summary>
+    /// <summary>
+    /// The number of weekly turns in <paramref name="years"/> Tamrielic years: every Sunday whose day falls inside the
+    /// span, so a run ends on the span's last Sunday and the next turn is the first of the following year. A year
+    /// holds 51 or 52 Sundays, so this is not 52 times the years: ten years are 515 turns, not 520.
+    /// </summary>
     public static int TurnsIn(int years) => (years * DaysPerYear + DaysPerWeek - 1) / DaysPerWeek;
 }
 

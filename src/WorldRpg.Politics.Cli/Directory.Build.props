@@ -1,0 +1,4 @@
+<Project>
+  <!-- The political board game stands alone. This file stops MSBuild's search before the repository's
+       Directory.Build.props, which pins the Engine pair and refuses to restore without it. -->
+</Project>

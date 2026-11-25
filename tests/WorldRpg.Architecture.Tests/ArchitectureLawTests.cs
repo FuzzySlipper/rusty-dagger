@@ -24,6 +24,14 @@ public sealed class ArchitectureLawTests
         Assert.Empty(XDocument.Load(ProjectFile("WorldRpg.Politics")).Descendants("PackageReference"));
         AssertProjectReferences("WorldRpg.Politics.Cli", ["WorldRpg.Politics"]);
         Assert.Empty(XDocument.Load(ProjectFile("WorldRpg.Politics.Cli")).Descendants("PackageReference"));
+        // Each politics project has its own Directory.Build.props, which imports nothing, so MSBuild never reaches the
+        // repository's props and their Engine pair requirement: the board restores and builds where the Engine is absent.
+        foreach (string folder in new[] { "src/WorldRpg.Politics", "src/WorldRpg.Politics.Cli", "tests/WorldRpg.Politics.Tests" })
+        {
+            string props = Path.Combine(RepositoryRoot, folder, "Directory.Build.props");
+            Assert.True(File.Exists(props), $"{folder} has no Directory.Build.props of its own and inherits the Engine pair requirement");
+            Assert.Empty(XDocument.Load(props).Descendants("Import"));
+        }
     }
 
     [Fact]
