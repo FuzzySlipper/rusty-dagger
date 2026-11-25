@@ -178,6 +178,31 @@ def build_krea_polish_prompt(extra: str, style_variant: str) -> str:
     )
 
 
+def _find_column_splits(fg_mask: np.ndarray, n_cols: int = 4) -> list[int]:
+    """Find n_cols-1 vertical split x-coordinates centered in the empty-slate valleys between figures."""
+    w = fg_mask.shape[1]
+    col_density = fg_mask.sum(axis=0)
+    splits = [0]
+    for k in range(1, n_cols):
+        nominal = int(round(w * k / n_cols))
+        lo = max(splits[-1] + w // (n_cols * 2), nominal - w // (n_cols * 2))
+        hi = min(w - w // (n_cols * 2), nominal + w // (n_cols * 2))
+        window = col_density[lo:hi]
+        min_val = window.min()
+        # Pick the midpoint of the widest contiguous minimum-density run (typically exact 0-pixel slate gap)
+        best_x = lo + int(np.argmin(window))
+        zeros = np.where(window == min_val)[0]
+        if len(zeros):
+            # Split into contiguous runs and take the longest run's midpoint
+            breaks = np.where(np.diff(zeros) > 1)[0] + 1
+            runs = np.split(zeros, breaks)
+            longest = max(runs, key=len)
+            best_x = lo + int((longest[0] + longest[-1]) // 2)
+        splits.append(best_x)
+    splits.append(w)
+    return splits
+
+
 def slice_4view_sheet(sheet_path: Path, out_dir: Path, prefix: str, slice_w: int = 832, slice_h: int = 1216) -> dict[str, Path]:
     """Slice a 4-column 1-row turnaround sheet into 4 aligned views sharing exact baseline & height."""
     im = Image.open(sheet_path).convert("RGB")
@@ -194,11 +219,10 @@ def slice_4view_sheet(sheet_path: Path, out_dir: Path, prefix: str, slice_w: int
     base_scale = target_h / gh
     top_pad = (slice_h - target_h) // 2
 
-    col_w = im.width // 4
+    splits = _find_column_splits(fg_all, 4)
     results: dict[str, Path] = {}
     for idx, view in enumerate(VIEWS):
-        x_start = idx * col_w
-        x_end = im.width if idx == 3 else (idx + 1) * col_w
+        x_start, x_end = splits[idx], splits[idx + 1]
         col = im.crop((x_start, 0, x_end, im.height))
         carr = np.asarray(col, dtype=np.float32)
         cfg = np.abs(carr - bg).mean(axis=2) > 14
@@ -206,7 +230,7 @@ def slice_4view_sheet(sheet_path: Path, out_dir: Path, prefix: str, slice_w: int
         if len(cxs):
             cx0, cx1 = int(cxs.min()), int(cxs.max())
             cw = cx1 - cx0 + 1
-            sc = base_scale if view in ("front", "back") else min(base_scale, (slice_w - 32) / max(cw, 1))
+            sc = min(base_scale, (slice_w - 28) / max(cw, 1))
             fig_cx = int(round(((cx0 + cx1) / 2) * sc))
         else:
             sc = base_scale
