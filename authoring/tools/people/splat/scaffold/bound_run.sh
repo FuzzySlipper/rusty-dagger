@@ -106,7 +106,7 @@ EOF
   grep -E "SCORE" $BD/bound.log | tail -n 1 | cut -c1-400; cat $BD/binding.json ;;
 distil)
   N=${1:-16000}; SH=${2:-0.25}; NAME=$((N / 1000))k-face-share; REACH=$(reach); O=$BD/sizes/$NAME; mkdir -p $O
-  python3 $T/bone_region.py $BD/$BN/splat.npz $BD/binding.npz $SC $BD/face.npy --bones Head --front 0 > $BD/face.json || exit 2
+  python3 $T/bone_region.py $BD/$BN/splat.npz $BD/binding.npz $SC $BD/face.npy --bones Head --front auto > $BD/face.json || exit 2
   DD=dist-data-$(md5sum < $BD/$BN/splat.npz | cut -c1-8)   # views of this bake only (391-A's re-bound body was once trained on the old bake's views, 2026-11-18)
   cat > $BD/lab-distil.sh <<EOF
 #!/bin/bash
