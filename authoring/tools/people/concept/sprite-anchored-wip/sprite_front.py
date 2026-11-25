@@ -113,7 +113,7 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
             f"elbows softly bent slightly forward, wrists straight, palms facing inward toward {pos} thighs, thumbs pointing forward, fingers together "
             f"and gently curled in a relaxed hanging hand (nothing held, empty hands, not spread open). {leg_clause}"
         )
-        if style_variant in ("crunchy", "crunchy-warm"):
+        if style_variant in ("crunchy", "crunchy-warm", "painterly-vivid"):
             task_line = (
                 "Task: Paint a full-length high-resolution classic dark-fantasy RPG character sheet for the person whose face is shown in the small portrait reference. "
                 "Reconstruct natural high-resolution anatomy and costume detail; do not enlarge or trace the pixel blocks.\n\n"
@@ -128,6 +128,32 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
                 else "Input image: costume and colour-blocking reference only. Follow the exact pose skeleton (22-degree hanging arms, relaxed palm-inward "
                 f"thumb-forward curled empty hands, parallel hip-width feet) while preserving the classic sprite's costume, colours and proportions. {face_q}\n\n"
             )
+            if style_variant == "painterly-vivid":
+                qwen_p = (
+                    f"{task_line}{input_line}"
+                    f"Subject and composition: {brief.rstrip('.')}. {pose_text}\n\n"
+                    "Style: ART DIRECTION — CLASSIC 1990s FANTASY BOOK-COVER GOUACHE WITH FINE WARM-UMBER INK CONTOURS\n\n"
+                    "Draw and paint the character as a classic hand-painted dark-fantasy RPG illustration in the tradition of Larry Elmore, "
+                    "Akihiko Yoshida (Vagrant Story), and classic tabletop RPG manuals, finished with lush opaque gouache brushwork. Build a "
+                    "confident underlying ink drawing with fine warm dark-umber contours (never harsh thick pure-black comic outlines), delicate "
+                    "directional crosshatching inside cloth folds and shadows, and weathered dry-brush fabric and metal grain. Render clean, vivid "
+                    "local pigments true to each material—true cool steel and silver metal, deep teal, rich moss-green, vivid crimson or purple, "
+                    "warm natural skin and rich leather—anchored by warm dark-umber shadow contours without any global ochre or sepia wash over "
+                    "cool materials and without glossy 3D shading.\n\n"
+                    "Presentation: Full-length isolated figure filling ~88% of the vertical 832x1216 portrait frame on a perfectly flat solid dark slate grey "
+                    "background, RGB 48,52,59. Clean neutral even overhead daylight equal on both sides. No floor, no cast shadow, no border."
+                )
+                krea_p = (
+                    "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+                    "Drawn and painted as a vivid, richly textured 1990s PC fantasy role-playing game character illustration: fine warm dark-umber "
+                    "pen-and-ink contour lines (never thick pure-black comic outlines), delicate crosshatching inside cloth folds, lush weathered "
+                    "dry-brush gouache brushwork, and clean, vivid local pigments true to each material—true cool steel, deep teal, rich green, "
+                    "warm skin and leather—with warm dark-umber shadow contours and no global ochre or sepia tint over cool materials (4 to 6 "
+                    f"painted value groups per material). {face_q}"
+                    "Clean neutral even overhead daylight equal on both sides. Plain flat solid dark slate-grey background, RGB 48,52,59, no floor or border.\n\n"
+                    f"Subject and composition: {brief.rstrip('.')}. {pose_text}"
+                )
+                return qwen_p, krea_p
             if style_variant == "crunchy-warm":
                 qwen_p = (
                     f"{task_line}{input_line}"
@@ -341,17 +367,17 @@ def main():
     ap.add_argument("--portrait-trim", type=int, default=3, help="Pixels to trim off each edge of a classic framed portrait (default 3)")
     ap.add_argument("--pose-lock", action="store_true", help="Canonical X Bot rest-pose lock (default: universal DWPose stick figure + built-in #30343b slate lock)")
     ap.add_argument("--pose-mode", choices=["stick", "depth-female", "depth-male"], default="stick", help="With --pose-lock: stick (universal DWPose, zero proportion bias; default), depth-female (X Bot depth), or depth-male (Y Bot depth)")
-    ap.add_argument("--style-variant", choices=["clean", "crunchy", "crunchy-warm"], default="clean", help="With --pose-lock: clean (smoother ink-gouache, end=0.95, d=0.38), crunchy (cool tabletop-manual crosshatch/dry-brush matching original 128, end=0.60, d=0.46), or crunchy-warm (warm ochre-and-umber book-cover gouache matching static NPCs, end=0.60, d=0.42)")
+    ap.add_argument("--style-variant", choices=["clean", "crunchy", "crunchy-warm", "painterly-vivid"], default="clean", help="With --pose-lock: clean (smoother ink-gouache, end=0.95, d=0.38), crunchy (cool tabletop-manual crosshatch/dry-brush matching original 128, end=0.60, d=0.46), crunchy-warm (warm ochre-and-umber gouache, end=0.60, d=0.42), or painterly-vivid (warm-umber contours + lush gouache with clean vivid local pigments under neutral light, end=0.60, d=0.42)")
     ap.add_argument("--pose-garment", choices=["auto", "open", "draped"], default="auto", help="With --pose-lock, leg prompt phrasing (auto detects robes/dresses/gowns)")
     ap.add_argument("--pose-control", type=Path, default=None, help="Override pose control map path for --pose-lock")
     ap.add_argument("--pose-slate", type=Path, default=POSE_LOCK_DIR / "slate-bg-832x1216.png", help="Slate background image for --pose-lock built-in border lock")
     ap.add_argument("--pose-mask", type=Path, default=None, help="Override dilated figure regenerate mask path for --pose-lock")
     ap.add_argument("--pose-s1-strength", type=float, default=None, help="Stage 1 Fun ControlNet Union strength (defaults: stick=1.00, depth-female=0.95, depth-male=0.90)")
-    ap.add_argument("--pose-s1-end", type=float, default=None, help="Stage 1 Fun ControlNet Union end_percent (defaults: stick clean=0.95 / crunchy*=0.60, depth-female=0.90, depth-male=0.75)")
+    ap.add_argument("--pose-s1-end", type=float, default=None, help="Stage 1 Fun ControlNet Union end_percent (defaults: stick clean=0.95 / crunchy*&painterly-vivid=0.60, depth-female=0.90, depth-male=0.75)")
     ap.add_argument("--pose-s2-strength", type=float, default=None, help="Stage 2 Krea2 Depth Control-LoRA strength (defaults: stick=0.0, depth-female=0.70, depth-male=0.45)")
     ap.add_argument("--pose-s2-end", type=float, default=None, help="Stage 2 Krea2 Depth Control-LoRA end_percent (defaults: stick=1.0, depth-female=0.75, depth-male=0.65)")
     ap.add_argument("--seeds", default="42201,42202,42203")
-    ap.add_argument("--denoise", type=float, default=None, help="Stage 2 Krea2 New B denoise (default 0.46 crunchy, 0.42 crunchy-warm, 0.40 depth-female, else 0.38)")
+    ap.add_argument("--denoise", type=float, default=None, help="Stage 2 Krea2 New B denoise (default 0.46 crunchy, 0.42 crunchy-warm/painterly-vivid, 0.40 depth-female, else 0.38)")
     ap.add_argument("--width", type=int, default=832)
     ap.add_argument("--height", type=int, default=1216)
     ap.add_argument("--out", type=Path, default=None)
@@ -363,10 +389,10 @@ def main():
         "depth-male":   ("ybot-depth-832x1216.png", "rusty-poselock-ybot-depth.png", "ybot-regen-mask-832x1216.png", "rusty-poselock-ybot-regen-mask.png", 0.90, 0.75, 0.45, 0.65, 0.38),
     }
     p_ctrl_fn, p_ctrl_rem, p_mask_fn, p_mask_rem, d_s1, d_e1, d_s2, d_e2, d_den = pose_presets[args.pose_mode]
-    if args.pose_lock and args.style_variant in ("crunchy", "crunchy-warm"):
+    if args.pose_lock and args.style_variant in ("crunchy", "crunchy-warm", "painterly-vivid"):
         if args.pose_mode == "stick":
             d_e1 = 0.60
-        d_den = 0.42 if args.style_variant == "crunchy-warm" else 0.46
+        d_den = 0.42 if args.style_variant in ("crunchy-warm", "painterly-vivid") else 0.46
     if args.pose_control is None: args.pose_control = POSE_LOCK_DIR / p_ctrl_fn
     if args.pose_mask is None: args.pose_mask = POSE_LOCK_DIR / p_mask_fn
     if args.pose_s1_strength is None: args.pose_s1_strength = d_s1
