@@ -120,7 +120,7 @@ internal sealed class DaggerfallInteriorLook : IDisposable
     private string _reliefMode = "voxel-pulp";
     private string _surfaceMode = "full";
     private string _extrudeMode = "off";
-    private string _exteriorExtrudeMode = "off";
+    private string _exteriorExtrudeMode = "on";
     private RenderResource? _shader;
     private bool _shaderAttempted;
     private ContentSha256? _reliefShaderSha;

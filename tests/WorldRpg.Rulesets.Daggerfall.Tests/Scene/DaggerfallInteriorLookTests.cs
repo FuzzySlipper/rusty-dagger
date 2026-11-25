@@ -204,6 +204,8 @@ public sealed class DaggerfallInteriorLookTests
         Assert.Null(look.SelectExtrude("reset"));
         Assert.Equal("off", look.ExtrudeMode);
 
+        Assert.Equal("on", look.ExteriorExtrudeMode);
+        Assert.Null(look.SelectExteriorExtrude("off"));
         Assert.Equal("off", look.ExteriorExtrudeMode);
         Assert.Null(look.SelectExteriorExtrude("on"));
         Assert.Equal("on", look.ExteriorExtrudeMode);
