@@ -116,7 +116,8 @@ The CMS reads and validates `content/worldrpg/packs/daggerfall.people/` directly
 
 - **Cast individuals** (`#cast`, `#cast/<id>`): inspect all unique cast records from `cast/individuals.json`, cross-linked to their `npc-###` art record and concept-art/final status, with focused metadata and sprite editing.
 - **Typed spawners** (`#spawners`, `#spawners/<id>`): inspect and edit `defaultPool`, per-region `regionalPools` (stored under canonical numeric region index keys such as `"17"` for Daggerfall or `"20"` for Sentinel, displaying region names from `daggerfall.base`), and spawner policies in `spawners.json`.
-- **Block slots** (`#blocks`): server-filtered, paginated cross-reference over `blocks/*.json` (RMB interiors, RMB exteriors, RDB dungeons) by spawner, cast, building type, regional faction derivation, interaction, and effective harm.
+- **Block slots** (`#blocks`): server-filtered, paginated cross-reference over `blocks/*.json` (RMB interiors, RMB exteriors, RDB dungeons) by spawner, cast, building type, regional faction derivation, interaction, and effective harm, with direct **3D** links into the block viewer.
+- **World blocks (3D)** (`#world-blocks`, `#world-block/<key>`): browse and inspect all staged RMB exteriors, RMB interiors, and RDB dungeons (`local/build/import/staging/worldrpg/imports/world-blocks`, falling back to `local/build/import/classic-art/worldrpg/imports/shared` for split classic meshes/textures) in a lazy-loaded Three.js viewport with direct `.rstatmsh` loading, layer toggles, cutaway slice, and two-way cross-links to buildings, models, and `daggerfall.people` slots.
 - **Reverse links on People (`npc-###`) pages**: each character detail page lists every cast individual, spawner pool, and block-slot count referencing its `(archive, record)` aliases.
 
 Use `people_cli.py` from scripts or agents against `DAGGER_CMS_URL` (pass `--people-pack` to `server.py` when testing against a scratch copy):

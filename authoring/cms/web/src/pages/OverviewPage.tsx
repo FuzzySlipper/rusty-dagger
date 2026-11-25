@@ -1,5 +1,5 @@
 import { ASSET_LABELS, ASSET_PAGES } from '../types';
-import { blocksUrl, castUrl, conceptsUrl, pipelineUrl, spawnerUrl, stageUrl } from '../router';
+import { blocksUrl, castUrl, conceptsUrl, pipelineUrl, spawnerUrl, stageUrl, worldBlocksUrl } from '../router';
 import { useApp } from '../state';
 import { ReviewBadge } from '../components/ReviewControls';
 import { Chip, Empty, PageHeading } from '../components/ui';
@@ -57,6 +57,29 @@ export function OverviewPage() {
             <a class="collection" href={blocksUrl()}>
               <strong>{catalog.peoplePack.slotCount.toLocaleString()}</strong>
               <span>Block slots</span>
+            </a>
+          </div>
+        </section>
+      ) : null}
+
+      {catalog.worldBlocks?.available ? (
+        <section class="panel">
+          <div class="section-heading">
+            <h2>World blocks (3D)</h2>
+            <span class="muted">{catalog.worldBlocks.total.toLocaleString()} staged blocks ready to inspect in 3D</span>
+          </div>
+          <div class="collections" style={{ marginBottom: 0 }}>
+            <a class="collection" href={worldBlocksUrl({ kind: 'rmbExterior' })}>
+              <strong>{catalog.worldBlocks.rmbExterior.toLocaleString()}</strong>
+              <span>RMB Exteriors</span>
+            </a>
+            <a class="collection" href={worldBlocksUrl({ kind: 'rmbInterior' })}>
+              <strong>{catalog.worldBlocks.rmbInterior.toLocaleString()}</strong>
+              <span>RMB Interiors</span>
+            </a>
+            <a class="collection" href={worldBlocksUrl({ kind: 'rdb' })}>
+              <strong>{catalog.worldBlocks.rdb.toLocaleString()}</strong>
+              <span>RDB Dungeons</span>
             </a>
           </div>
         </section>

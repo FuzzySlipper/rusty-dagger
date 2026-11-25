@@ -31,6 +31,9 @@ class Library:
     character_root: Path | None = None
     repo: Path = REPO
     people_pack_root: Path | None = None
+    world_blocks_root: Path | None = None
+    world_shared_root: Path | None = None
+    world_classic_shared_root: Path | None = None
 
     @property
     def base_payload(self):
@@ -39,6 +42,18 @@ class Library:
     @property
     def people_pack(self):
         return self.people_pack_root or (self.repo / "content/worldrpg/packs/daggerfall.people")
+
+    @property
+    def world_blocks(self):
+        return self.world_blocks_root or (self.repo / "local/build/import/staging/worldrpg/imports/world-blocks")
+
+    @property
+    def world_shared(self):
+        return self.world_shared_root or (self.repo / "local/build/import/staging/worldrpg/imports/shared")
+
+    @property
+    def world_classic_shared(self):
+        return self.world_classic_shared_root or (self.repo / "local/build/import/classic-art/worldrpg/imports/shared")
 
     @property
     def mobiles(self):
@@ -99,6 +114,19 @@ class Library:
             STAGE_MOUNT: self.characters,
             "/asset-pipeline/outputs/dagger-characters/": self.characters,
             "/media/turnarounds/": self.turnarounds,
+            "/media/world-geometry/": (self.world_shared / "geometry", self.world_classic_shared / "geometry"),
+            "/media/world-materials/": (
+                self.world_shared / "media/dungeon/materials",
+                self.world_classic_shared / "media/dungeon/materials",
+            ),
+            "/media/world-billboards/": (
+                self.world_shared / "media/dungeon/billboards",
+                self.world_classic_shared / "media/dungeon/billboards",
+            ),
+            "/media/world-terrain/": (
+                self.world_shared / "media/dungeon/terrain",
+                self.world_classic_shared / "media/dungeon/terrain",
+            ),
         }
 
 

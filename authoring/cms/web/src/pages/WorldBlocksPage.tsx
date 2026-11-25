@@ -1,0 +1,997 @@
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { apiRequest, isAbortError } from '../api';
+import {
+  assetUrl,
+  blocksUrl,
+  castUrl,
+  spawnerUrl,
+  subjectUrl,
+  worldBlocksUrl,
+  worldBlockUrl,
+} from '../router';
+import { useSessionState } from '../hooks/useSessionState';
+import type {
+  WorldBlockDetailResponse,
+  WorldBlockKind,
+  WorldBlockListItem,
+  WorldBlocksQueryResponse,
+} from '../types';
+import type { ScenePick } from '../viewer/BlockScene';
+import { BlockViewport } from '../components/BlockViewport';
+import { ArtDataChip } from '../components/ArtDataLink';
+import { DataTable, type DataColumn } from '../components/DataTable';
+import { Chip, Empty, FactList, PageHeading } from '../components/ui';
+
+const KIND_LABELS: Record<WorldBlockKind, string> = {
+  rmbExterior: 'RMB Exterior',
+  rmbInterior: 'RMB Interior',
+  rdb: 'RDB Dungeon',
+};
+
+interface WorldBlockListFilters {
+  q: string;
+  kind: string;
+  hasPeople: boolean;
+  page: number;
+}
+
+const DEFAULT_FILTERS: WorldBlockListFilters = {
+  q: '',
+  kind: '',
+  hasPeople: false,
+  page: 1,
+};
+
+function fmtVec(v: { x: number; y: number; z: number } | [number, number, number]): string {
+  if (Array.isArray(v)) {
+    return `(${v[0].toFixed(2)}, ${v[1].toFixed(2)}, ${v[2].toFixed(2)})`;
+  }
+  return `(${v.x.toFixed(2)}, ${v.y.toFixed(2)}, ${v.z.toFixed(2)})`;
+}
+
+export function WorldBlocksListPage({ initialQuery }: { initialQuery: Record<string, string> }) {
+  const [filters, setFilters] = useSessionState<WorldBlockListFilters>('cms.worldBlocks.filters', DEFAULT_FILTERS);
+  const [result, setResult] = useState<WorldBlocksQueryResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const pageSize = 50;
+
+  useEffect(() => {
+    if (initialQuery.kind || initialQuery.q) {
+      setFilters(prev => ({
+        ...prev,
+        kind: initialQuery.kind ?? prev.kind,
+        q: initialQuery.q ?? prev.q,
+        page: 1,
+      }));
+    }
+  }, [initialQuery.kind, initialQuery.q]);
+
+  const { q, kind, hasPeople, page } = filters;
+  const patch = (change: Partial<WorldBlockListFilters>) =>
+    setFilters(prev => ({ ...prev, ...change, page: change.page ?? 1 }));
+  const hasActiveFilters = Boolean(q || kind || hasPeople);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    const params = new URLSearchParams();
+    if (q.trim()) params.set('q', q.trim());
+    if (kind) params.set('kind', kind);
+    if (hasPeople) params.set('hasPeople', '1');
+    params.set('offset', String((page - 1) * pageSize));
+    params.set('limit', String(pageSize));
+
+    apiRequest<WorldBlocksQueryResponse>(`/api/world-blocks?${params.toString()}`, { signal: controller.signal })
+      .then(data => setResult(data))
+      .catch(err => {
+        if (!isAbortError(err)) setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [q, kind, hasPeople, page]);
+
+  const columns: Array<DataColumn<WorldBlockListItem>> = [
+    {
+      key: 'source',
+      header: 'Block',
+      render: row => (
+        <div>
+          <a href={worldBlockUrl(row.key)}>
+            <strong>{row.sourceKey}</strong>
+            {row.buildingIndex !== null ? ` · Building #${row.buildingIndex}` : ''}
+          </a>
+          <div>
+            <code class="muted">{row.key}</code>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'kind',
+      header: 'Kind',
+      render: row => <Chip state="empty" label={KIND_LABELS[row.kind]} />,
+    },
+    {
+      key: 'interiors',
+      header: 'Interiors',
+      render: row =>
+        row.kind === 'rmbExterior' ? (
+          <span>{row.interiorCount}</span>
+        ) : (
+          <span class="muted">—</span>
+        ),
+    },
+    {
+      key: 'people',
+      header: 'People slots',
+      render: row =>
+        row.totalPeopleSlotCount > 0 ? (
+          <span>
+            <strong>{row.peopleSlotCount}</strong>
+            {row.kind === 'rmbExterior' && row.totalPeopleSlotCount > row.peopleSlotCount ? (
+              <small class="muted"> ({row.totalPeopleSlotCount} incl. interiors)</small>
+            ) : null}
+          </span>
+        ) : (
+          <span class="muted">0</span>
+        ),
+    },
+    {
+      key: 'action',
+      header: '',
+      render: row => (
+        <a class="button" href={worldBlockUrl(row.key)}>
+          Open 3D
+        </a>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <PageHeading
+        title="World blocks (3D)"
+        intro="Browse and inspect every staged RMB exterior, RMB interior, and RDB dungeon block in 3D with cross-links to models and daggerfall.people slots."
+      />
+
+      {result && !result.available ? (
+        <Empty>{result.reason ?? 'Staged world-blocks data is not available.'}</Empty>
+      ) : (
+        <>
+          {result ? (
+            <div class="stat-strip">
+              <button
+                type="button"
+                class={`stat-pill${kind === '' && !hasPeople ? ' active' : ''}`}
+                onClick={() => patch({ kind: '', hasPeople: false })}
+              >
+                <strong>{result.counts.total.toLocaleString()}</strong>
+                <span>All blocks</span>
+              </button>
+              <button
+                type="button"
+                class={`stat-pill${kind === 'rmbExterior' ? ' active' : ''}`}
+                onClick={() => patch({ kind: kind === 'rmbExterior' ? '' : 'rmbExterior' })}
+              >
+                <strong>{result.counts.rmbExterior.toLocaleString()}</strong>
+                <span>RMB Exteriors</span>
+              </button>
+              <button
+                type="button"
+                class={`stat-pill${kind === 'rmbInterior' ? ' active' : ''}`}
+                onClick={() => patch({ kind: kind === 'rmbInterior' ? '' : 'rmbInterior' })}
+              >
+                <strong>{result.counts.rmbInterior.toLocaleString()}</strong>
+                <span>RMB Interiors</span>
+              </button>
+              <button
+                type="button"
+                class={`stat-pill${kind === 'rdb' ? ' active' : ''}`}
+                onClick={() => patch({ kind: kind === 'rdb' ? '' : 'rdb' })}
+              >
+                <strong>{result.counts.rdb.toLocaleString()}</strong>
+                <span>RDB Dungeons</span>
+              </button>
+            </div>
+          ) : null}
+
+          <div class="filters">
+            <label>
+              Search block
+              <input
+                type="search"
+                value={q}
+                placeholder="ALCHAL00.RMB, B0000000.RDB, interior-0"
+                onInput={event => patch({ q: (event.currentTarget as HTMLInputElement).value })}
+              />
+            </label>
+            <label>
+              Kind
+              <select
+                value={kind}
+                onChange={event => patch({ kind: (event.currentTarget as HTMLSelectElement).value })}
+              >
+                <option value="">All kinds</option>
+                <option value="rmbExterior">RMB Exterior</option>
+                <option value="rmbInterior">RMB Interior</option>
+                <option value="rdb">RDB Dungeon</option>
+              </select>
+            </label>
+            <label class="mark-filter">
+              <input
+                type="checkbox"
+                checked={hasPeople}
+                onChange={event => patch({ hasPeople: (event.currentTarget as HTMLInputElement).checked })}
+              />{' '}
+              Has daggerfall.people slots
+            </label>
+            {hasActiveFilters ? (
+              <button type="button" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                Reset filters
+              </button>
+            ) : null}
+            <output>{result ? `${result.total.toLocaleString()} matching` : ''}</output>
+          </div>
+
+          {error ? (
+            <Empty>{error}</Empty>
+          ) : result ? (
+            <section class="panel">
+              <DataTable
+                rows={result.items}
+                columns={columns}
+                rowKey={row => row.key}
+                emptyMessage="No world blocks match the current filters."
+                pagination={{
+                  page,
+                  pageSize,
+                  total: result.total,
+                  onPageChange: next => setFilters(prev => ({ ...prev, page: next })),
+                }}
+              />
+            </section>
+          ) : loading ? (
+            <p>Loading world blocks…</p>
+          ) : null}
+        </>
+      )}
+    </>
+  );
+}
+
+type InspectorTab = 'summary' | 'buildings' | 'people' | 'models' | 'doors' | 'objects';
+
+export function WorldBlockDetailPage({ blockKey }: { blockKey: string }) {
+  const [detail, setDetail] = useState<WorldBlockDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<InspectorTab>('summary');
+  const [selectedPick, setSelectedPick] = useState<ScenePick | null>(null);
+  const [focusRequestId, setFocusRequestId] = useState(0);
+  const [modelFilter, setModelFilter] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    setSelectedPick(null);
+    setFocusRequestId(0);
+    setModelFilter('');
+    apiRequest<WorldBlockDetailResponse>(`/api/world-blocks/detail?key=${encodeURIComponent(blockKey)}`, {
+      signal: controller.signal,
+    })
+      .then(data => {
+        setDetail(data);
+        setTab(data.block.kind === 'rmbExterior' && data.block.buildings?.length ? 'buildings' : 'summary');
+      })
+      .catch(err => {
+        if (!isAbortError(err)) setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [blockKey]);
+
+  const filteredModels = useMemo(() => {
+    const models = detail?.block.models ?? [];
+    const term = modelFilter.trim().toLowerCase();
+    if (!term) return models;
+    return models.filter(
+      m =>
+        m.modelId.toLowerCase().includes(term) ||
+        m.id.toLowerCase().includes(term) ||
+        (m.buildingIndex !== null && `building ${m.buildingIndex}`.includes(term)),
+    );
+  }, [detail, modelFilter]);
+
+  if (loading && !detail) {
+    return (
+      <>
+        <PageHeading title="Loading block…" />
+        <p>Fetching block geometry and metadata…</p>
+      </>
+    );
+  }
+
+  if (error || !detail) {
+    return (
+      <>
+        <PageHeading
+          title="Block not found"
+          action={
+            <a class="button" href={worldBlocksUrl()}>
+              Back to World blocks
+            </a>
+          }
+        />
+        <Empty>{error ?? `Could not open block '${blockKey}'.`}</Empty>
+      </>
+    );
+  }
+
+  const { block, parentExteriorKey, peopleSlots, modelLinks } = detail;
+  const doorCount =
+    (block.doors?.length ?? 0) + (block.transitionDoors?.length ?? 0) + (block.gates?.length ?? 0);
+  const peopleCount = peopleSlots.length + (block.staticNpcs?.length ?? 0);
+  const objectCount =
+    (block.billboards?.length ?? 0) +
+    (block.lights?.length ?? 0) +
+    (block.questMarkers?.length ?? 0) +
+    (block.randomEnemies?.length ?? 0) +
+    (block.propertyContainers?.length ?? 0);
+
+  function selectAndFocus(pick: ScenePick) {
+    setSelectedPick(pick);
+    setFocusRequestId(prev => prev + 1);
+  }
+
+  const selectedModel =
+    selectedPick?.kind === 'model' ? block.models.find(m => m.id === selectedPick.id) ?? null : null;
+  const selectedModelAsset = selectedModel ? modelLinks[selectedModel.modelId] ?? null : null;
+  const selectedBuilding =
+    selectedPick?.buildingIndex !== null && selectedPick?.buildingIndex !== undefined
+      ? block.buildings?.find(b => b.index === selectedPick.buildingIndex) ?? null
+      : null;
+  const selectedPeopleSlot =
+    selectedPick?.kind === 'peopleSlot' && selectedPick.index !== undefined
+      ? peopleSlots[selectedPick.index] ?? null
+      : null;
+  const selectedStaticNpc =
+    selectedPick?.kind === 'staticNpc'
+      ? block.staticNpcs?.find(n => n.id === selectedPick.id) ?? null
+      : null;
+
+  const title =
+    block.buildingIndex !== null
+      ? `${block.sourceKey} · Building #${block.buildingIndex}${
+          block.interiorBuilding?.buildingTypeName ? ` (${block.interiorBuilding.buildingTypeName})` : ''
+        }`
+      : block.sourceKey;
+
+  return (
+    <>
+      <PageHeading
+        title={title}
+        intro={`${KIND_LABELS[block.kind]} · ${block.key}`}
+        action={
+          <div class="actions">
+            {parentExteriorKey ? (
+              <a class="button primary" href={worldBlockUrl(parentExteriorKey)}>
+                ← Exterior ({block.sourceKey})
+              </a>
+            ) : null}
+            <a class="button" href={blocksUrl({ q: block.sourceKey })}>
+              People slots table
+            </a>
+            <a class="button" href={worldBlocksUrl()}>
+              All blocks
+            </a>
+          </div>
+        }
+      />
+
+      <div class="block-viewer-layout">
+        <div class="block-viewer-main">
+          <BlockViewport
+            detail={detail}
+            selectedPickKey={selectedPick?.pickKey ?? null}
+            focusRequestId={focusRequestId}
+            onSelect={pick => setSelectedPick(pick)}
+          />
+        </div>
+
+        <aside class="block-inspector panel">
+          {selectedPick ? (
+            <div class="selected-pick-card">
+              <div class="section-heading" style={{ marginBottom: '6px' }}>
+                <strong>{selectedPick.label}</strong>
+                <button type="button" onClick={() => setSelectedPick(null)}>
+                  Clear
+                </button>
+              </div>
+              <div class="muted" style={{ fontSize: '0.85rem', marginBottom: '8px' }}>
+                <code>{selectedPick.id}</code> · {fmtVec(selectedPick.position)}
+              </div>
+
+              {selectedModel ? (
+                <div class="usage-pills" style={{ marginBottom: '6px' }}>
+                  <span class="chip">ARCH3D {selectedModel.modelId}</span>
+                  <span class="chip">rot {fmtVec(selectedModel.rotationDegrees)}</span>
+                  {selectedModelAsset ? (
+                    <a class="art-data-chip" href={assetUrl(selectedModelAsset.id)}>
+                      <span>{selectedModelAsset.name}</span>
+                      <code>{selectedModelAsset.category}</code>
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {selectedBuilding?.interiorKey ? (
+                <div class="actions" style={{ marginTop: '6px' }}>
+                  <a class="button primary" href={worldBlockUrl(selectedBuilding.interiorKey)}>
+                    Enter Building #{selectedBuilding.index}
+                    {selectedBuilding.buildingTypeName ? ` (${selectedBuilding.buildingTypeName})` : ''} →
+                  </a>
+                </div>
+              ) : null}
+
+              {selectedPeopleSlot ? (
+                <div class="usage-pills" style={{ marginTop: '6px' }}>
+                  {selectedPeopleSlot.castId ? (
+                    <a class="art-data-chip" href={castUrl(selectedPeopleSlot.castId)}>
+                      <span>{selectedPeopleSlot.castName ?? selectedPeopleSlot.castId}</span>
+                      <code>cast</code>
+                    </a>
+                  ) : null}
+                  {selectedPeopleSlot.spawner ? (
+                    <a class="art-data-chip" href={spawnerUrl(selectedPeopleSlot.spawner)}>
+                      <span>{selectedPeopleSlot.spawner}</span>
+                      <code>spawner</code>
+                    </a>
+                  ) : null}
+                  {selectedPeopleSlot.art?.npcId ? (
+                    <ArtDataChip
+                      href={subjectUrl(selectedPeopleSlot.art.npcId)}
+                      id={selectedPeopleSlot.art.npcId}
+                      label={selectedPeopleSlot.art.npcName ?? selectedPeopleSlot.art.npcId}
+                      thumbnail={selectedPeopleSlot.art.classic}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+
+              {selectedStaticNpc ? (
+                <div class="usage-pills" style={{ marginTop: '6px' }}>
+                  <span class="chip">
+                    {selectedStaticNpc.billboardArchive}.{selectedStaticNpc.billboardRecord} ({selectedStaticNpc.gender})
+                  </span>
+                  {selectedStaticNpc.npcId ? (
+                    <ArtDataChip
+                      href={subjectUrl(selectedStaticNpc.npcId)}
+                      id={selectedStaticNpc.npcId}
+                      label={selectedStaticNpc.npcName ?? selectedStaticNpc.npcId}
+                      thumbnail={selectedStaticNpc.classic ?? null}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p class="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
+              Click any mesh, door, person, or marker in 3D — or pick a row below — to inspect and jump to linked CMS
+              records.
+            </p>
+          )}
+
+          <div class="inspector-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'summary' ? 'true' : 'false'}
+              class={tab === 'summary' ? 'active' : undefined}
+              onClick={() => setTab('summary')}
+            >
+              Summary
+            </button>
+            {block.buildings?.length ? (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === 'buildings' ? 'true' : 'false'}
+                class={tab === 'buildings' ? 'active' : undefined}
+                onClick={() => setTab('buildings')}
+              >
+                Buildings ({block.buildings.length})
+              </button>
+            ) : null}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'people' ? 'true' : 'false'}
+              class={tab === 'people' ? 'active' : undefined}
+              onClick={() => setTab('people')}
+            >
+              People ({peopleCount})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'models' ? 'true' : 'false'}
+              class={tab === 'models' ? 'active' : undefined}
+              onClick={() => setTab('models')}
+            >
+              Models ({block.models.length})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'doors' ? 'true' : 'false'}
+              class={tab === 'doors' ? 'active' : undefined}
+              onClick={() => setTab('doors')}
+            >
+              Doors ({doorCount})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'objects' ? 'true' : 'false'}
+              class={tab === 'objects' ? 'active' : undefined}
+              onClick={() => setTab('objects')}
+            >
+              Objects ({objectCount})
+            </button>
+          </div>
+
+          <div class="inspector-scroll">
+            {tab === 'summary' ? (
+              <>
+                <FactList
+                  facts={{
+                    Kind: KIND_LABELS[block.kind],
+                    'Source key': block.sourceKey,
+                    Models: block.models.length,
+                    'Doors / transitions': doorCount,
+                    'People slots (pack)': peopleSlots.length,
+                    'Static NPCs (source)': block.staticNpcs?.length ?? 0,
+                    Billboards: block.billboards?.length ?? 0,
+                    Lights: block.lights?.length ?? 0,
+                    ...(block.ground?.length ? { 'Ground tiles': block.ground.length } : {}),
+                    ...(block.interiorBuilding
+                      ? {
+                          'Building type':
+                            block.interiorBuilding.buildingTypeName ?? `Type ${block.interiorBuilding.buildingType}`,
+                          Quality: block.interiorBuilding.quality,
+                          'Faction ID': block.interiorBuilding.factionId,
+                        }
+                      : {}),
+                    ...(typeof block.waterLevel === 'number' ? { 'Water level': `${block.waterLevel.toFixed(2)} m` } : {}),
+                    ...(block.ambientZone ? { 'Ambient zone': block.ambientZone } : {}),
+                    ...(block.bounds
+                      ? {
+                          'Bounds min': fmtVec(block.bounds.minimum),
+                          'Bounds max': fmtVec(block.bounds.maximum),
+                        }
+                      : {}),
+                  }}
+                />
+                {block.sourceWarnings?.length ? (
+                  <div class="curation-warning" style={{ marginTop: '12px' }}>
+                    <strong>Source warnings ({block.sourceWarnings.length})</strong>
+                    <ul class="retire-notes">
+                      {block.sourceWarnings.map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+
+            {tab === 'buildings' ? (
+              <ul class="inspector-list">
+                {(block.buildings ?? []).map(b => (
+                  <li key={b.index} class="inspector-row">
+                    <div>
+                      <strong>
+                        #{b.index} · {b.buildingTypeName ?? `Type ${b.buildingType}`}
+                      </strong>
+                      <div class="muted">
+                        Quality {b.quality} · Faction {b.factionId}
+                      </div>
+                    </div>
+                    {b.interiorKey ? (
+                      <a class="button" href={worldBlockUrl(b.interiorKey)}>
+                        Interior →
+                      </a>
+                    ) : (
+                      <span class="muted">Exterior only</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {tab === 'people' ? (
+              peopleSlots.length === 0 && !(block.staticNpcs?.length) ? (
+                <Empty>No people slots or static NPCs in this block.</Empty>
+              ) : (
+                <ul class="inspector-list">
+                  {peopleSlots.map((slot, idx) => {
+                    const pickKey = `peopleSlot:${slot.slotId}:${idx}`;
+                    return (
+                      <li
+                        key={pickKey}
+                        class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'peopleSlot',
+                              id: slot.slotId,
+                              label: slot.castName ?? slot.spawner ?? slot.slotId,
+                              position: slot.position,
+                              buildingIndex: slot.buildingIndex,
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>{slot.castName ?? slot.spawner ?? slot.slotId}</strong>
+                          <div class="muted">
+                            <code>{slot.slotId}</code> · {slot.interaction}
+                          </div>
+                        </button>
+                        <div class="actions">
+                          {slot.castId ? <a href={castUrl(slot.castId)}>Cast</a> : null}
+                          {slot.spawner ? <a href={spawnerUrl(slot.spawner)}>Spawner</a> : null}
+                          {slot.art?.npcId ? <a href={subjectUrl(slot.art.npcId)}>{slot.art.npcId}</a> : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {(block.staticNpcs ?? []).map((npc, idx) => {
+                    const pickKey = `staticNpc:${npc.id}`;
+                    return (
+                      <li
+                        key={pickKey}
+                        class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'staticNpc',
+                              id: npc.id,
+                              label: npc.npcName ?? npc.id,
+                              position: [npc.position.x, npc.position.y, npc.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>{npc.npcName ?? `Static NPC ${npc.id}`}</strong>
+                          <div class="muted">
+                            {npc.billboardArchive}.{npc.billboardRecord} · {npc.gender} · Faction {npc.factionId}
+                          </div>
+                        </button>
+                        {npc.npcId ? <a href={subjectUrl(npc.npcId)}>{npc.npcId}</a> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )
+            ) : null}
+
+            {tab === 'models' ? (
+              <>
+                <div style={{ marginBottom: '8px' }}>
+                  <input
+                    type="search"
+                    value={modelFilter}
+                    placeholder="Filter by ARCH3D ID or building…"
+                    style={{ width: '100%' }}
+                    onInput={event => setModelFilter((event.currentTarget as HTMLInputElement).value)}
+                  />
+                </div>
+                <ul class="inspector-list">
+                  {filteredModels.slice(0, 200).map((m, idx) => {
+                    const pickKey = `model:${m.id}`;
+                    const asset = modelLinks[m.modelId];
+                    return (
+                      <li
+                        key={m.id}
+                        class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'model',
+                              id: m.id,
+                              label: `Model ${m.modelId}`,
+                              position: [m.position.x, m.position.y, m.position.z],
+                              buildingIndex: m.buildingIndex,
+                              modelId: m.modelId,
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>ARCH3D {m.modelId}</strong>
+                          {m.buildingIndex !== null ? <small class="muted"> · Bldg #{m.buildingIndex}</small> : null}
+                          <div class="muted">
+                            {fmtVec(m.position)}
+                            {m.unresolvedReason ? ` · ${m.unresolvedReason}` : ''}
+                          </div>
+                        </button>
+                        {asset ? <a href={assetUrl(asset.id)}>CMS</a> : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {filteredModels.length > 200 ? (
+                  <p class="muted" style={{ fontSize: '0.82rem' }}>
+                    Showing first 200 of {filteredModels.length} models. Use filter above to narrow.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+
+            {tab === 'doors' ? (
+              doorCount === 0 ? (
+                <Empty>No doors, transitions, or gates in this block.</Empty>
+              ) : (
+                <ul class="inspector-list">
+                  {(block.doors ?? []).map((d, idx) => {
+                    const pickKey = `door:${d.id}`;
+                    const targetInterior =
+                      d.buildingIndex !== null && d.buildingIndex !== undefined
+                        ? detail.interiorKeys[String(d.buildingIndex)]
+                        : null;
+                    return (
+                      <li
+                        key={pickKey}
+                        class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'door',
+                              id: d.id,
+                              label: `Door ${d.id}`,
+                              position: [d.position.x, d.position.y, d.position.z],
+                              buildingIndex: d.buildingIndex,
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>{d.id}</strong>
+                          <div class="muted">
+                            {d.kind} · lock {d.startingLockValue}
+                            {d.buildingIndex !== null && d.buildingIndex !== undefined
+                              ? ` · Bldg #${d.buildingIndex}`
+                              : ''}
+                          </div>
+                        </button>
+                        {targetInterior ? <a href={worldBlockUrl(targetInterior)}>Interior →</a> : null}
+                      </li>
+                    );
+                  })}
+                  {(block.transitionDoors ?? []).map((td, idx) => {
+                    const pickKey = `transitionDoor:${td.id}`;
+                    return (
+                      <li
+                        key={pickKey}
+                        class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'transitionDoor',
+                              id: td.id,
+                              label: `${td.kind} (${td.id})`,
+                              position: [td.position.x, td.position.y, td.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>{td.kind}</strong>
+                          <div class="muted">
+                            <code>{td.id}</code> · {fmtVec(td.position)}
+                          </div>
+                        </button>
+                        {td.kind === 'buildingExit' && parentExteriorKey ? (
+                          <a href={worldBlockUrl(parentExteriorKey)}>Exterior →</a>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                  {(block.gates ?? []).map((g, idx) => {
+                    const pickKey = `gate:${g.id}`;
+                    return (
+                      <li
+                        key={pickKey}
+                        class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'gate',
+                              id: g.id,
+                              label: `City gate ${g.id}`,
+                              position: [g.position.x, g.position.y, g.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>City gate {g.id}</strong>
+                          <div class="muted">{fmtVec(g.position)}</div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )
+            ) : null}
+
+            {tab === 'objects' ? (
+              objectCount === 0 ? (
+                <Empty>No billboards, lights, containers, or markers in this block.</Empty>
+              ) : (
+                <ul class="inspector-list">
+                  {(block.randomEnemies ?? []).map((e, idx) => {
+                    const pickKey = `randomEnemy:${e.id}`;
+                    return (
+                      <li key={pickKey} class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}>
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'randomEnemy',
+                              id: e.id,
+                              label: `Enemy spawn slot ${e.encounterSlot}`,
+                              position: [e.position.x, e.position.y + 0.7, e.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>Random enemy (slot {e.encounterSlot})</strong>
+                          <div class="muted">
+                            {e.passive ? 'passive · ' : ''}
+                            {e.underwater ? 'underwater · ' : ''}
+                            {fmtVec(e.position)}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {(block.questMarkers ?? []).map((q, idx) => {
+                    const pickKey = `questMarker:${q.id}`;
+                    return (
+                      <li key={pickKey} class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}>
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'questMarker',
+                              id: q.id,
+                              label: `Quest marker (${q.kind ?? 'quest'})`,
+                              position: [q.position.x, q.position.y + 0.5, q.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>Quest marker: {q.kind ?? q.id}</strong>
+                          <div class="muted">{fmtVec(q.position)}</div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {(block.propertyContainers ?? []).map((c, idx) => {
+                    const pickKey = `container:${c.id}`;
+                    return (
+                      <li key={pickKey} class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}>
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'container',
+                              id: c.id,
+                              label: `Container ${c.id}`,
+                              position: [c.position.x, c.position.y, c.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>Container {c.id}</strong>
+                          <div class="muted">{(c.itemGroups ?? []).join(', ') || fmtVec(c.position)}</div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {(block.lights ?? []).map((l, idx) => {
+                    const pickKey = `light:${l.id}`;
+                    return (
+                      <li key={pickKey} class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}>
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'light',
+                              id: l.id,
+                              label: `Light ${l.id}`,
+                              position: [l.position.x, l.position.y, l.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>Light {l.id}</strong>
+                          <div class="muted">
+                            range {l.range}m · intensity {l.intensity}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                  {(block.billboards ?? []).slice(0, 100).map((bb, idx) => {
+                    const pickKey = `billboard:${bb.id}`;
+                    return (
+                      <li key={pickKey} class={`inspector-row${selectedPick?.pickKey === pickKey ? ' active' : ''}`}>
+                        <button
+                          type="button"
+                          class="inspector-focus-btn"
+                          onClick={() =>
+                            selectAndFocus({
+                              pickKey,
+                              kind: 'billboard',
+                              id: bb.id,
+                              label: `Billboard ${bb.spriteResourceId}`,
+                              position: [bb.position.x, bb.position.y, bb.position.z],
+                              index: idx,
+                            })
+                          }
+                        >
+                          <strong>{bb.spriteResourceId}</strong>
+                          <div class="muted">
+                            {bb.lamp ? 'lamp · ' : ''}
+                            {fmtVec(bb.position)}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )
+            ) : null}
+          </div>
+        </aside>
+      </div>
+    </>
+  );
+}

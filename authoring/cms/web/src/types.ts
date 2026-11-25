@@ -181,6 +181,17 @@ export interface PeoplePackCounts {
   castNeedingArt: number;
 }
 
+export type WorldBlockKind = 'rmbExterior' | 'rmbInterior' | 'rdb';
+
+export interface WorldBlocksSummaryCounts {
+  available: boolean;
+  rmbExterior: number;
+  rmbInterior: number;
+  rdb: number;
+  total: number;
+  unplacedRmb: number;
+}
+
 export interface CatalogOverview {
   people: CharacterSummary[];
   creatures: CatalogAssetRow[];
@@ -196,6 +207,7 @@ export interface CatalogOverview {
   reviews: ReviewRow[];
   conceptStages: ConceptStageSummary[];
   peoplePack?: PeoplePackCounts;
+  worldBlocks?: WorldBlocksSummaryCounts;
 }
 
 export interface LinkChoice {
@@ -488,4 +500,222 @@ export interface PeopleReferencesResponse {
   hasApprovedConcept: boolean;
   hasFinalAsset: boolean;
   review: ReviewRow;
+}
+
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface Bounds3 {
+  minimum: Vec3;
+  maximum: Vec3;
+}
+
+export interface WorldBlockListItem {
+  key: string;
+  kind: WorldBlockKind;
+  sourceKey: string;
+  buildingIndex: number | null;
+  interiorCount: number;
+  peopleSlotCount: number;
+  totalPeopleSlotCount: number;
+  hasSpatial: boolean;
+}
+
+export interface WorldBlocksQueryResponse {
+  available: boolean;
+  reason?: string;
+  counts: {
+    rmbExterior: number;
+    rmbInterior: number;
+    rdb: number;
+    total: number;
+    unplacedRmb: number;
+  };
+  total: number;
+  offset: number;
+  limit: number;
+  items: WorldBlockListItem[];
+}
+
+export interface WorldBlockModel {
+  id: string;
+  modelId: string;
+  meshArtifactId: string | null;
+  position: Vec3;
+  rotationDegrees: Vec3;
+  buildingIndex: number | null;
+  unresolvedReason: string | null;
+  doorId: string | null;
+  action?: { actionId: string; description: string; modelIndex: number; rawIndex: number } | null;
+  bounds?: Bounds3 | null;
+  localBounds?: Bounds3 | null;
+}
+
+export interface WorldBlockDoor {
+  id: string;
+  modelId: string;
+  doorResourceId: string;
+  position: Vec3;
+  rotationDegrees: Vec3;
+  plane?: number | null;
+  texture?: { archive: number; record: number } | null;
+  kind: string;
+  startingLockValue: number;
+  buildingIndex?: number | null;
+  collisionBounds?: Bounds3 | null;
+}
+
+export interface WorldBlockTransitionDoor {
+  id: string;
+  modelId: string;
+  kind: string;
+  position: Vec3;
+  normal: Vec3;
+  bounds: Bounds3;
+  plane: number;
+  texture: { archive: number; record: number };
+}
+
+export interface WorldBlockGate {
+  id: string;
+  modelId: string;
+  position: Vec3;
+  rotationDegrees: Vec3;
+  open: { modelId: string; meshArtifactId: string; localBounds: Bounds3 };
+  closed: { modelId: string; meshArtifactId: string; localBounds: Bounds3 };
+}
+
+export interface WorldBlockBuilding {
+  index: number;
+  buildingType: number;
+  buildingTypeName?: string | null;
+  factionId: number;
+  quality: number;
+  nameSeed: number;
+  hasInterior: boolean;
+  interiorKey?: string | null;
+}
+
+export interface WorldBlockGroundTile {
+  x: number;
+  y: number;
+  textureRecord: number;
+  rotated: boolean;
+  flipped: boolean;
+}
+
+export interface WorldBlockStaticNpc {
+  id: string;
+  position: Vec3;
+  billboardArchive: number;
+  billboardRecord: number;
+  factionId: number;
+  race: string | null;
+  gender: string;
+  sourceOffset: number;
+  npcId?: string | null;
+  npcName?: string | null;
+  classic?: string | null;
+}
+
+export interface WorldBlockBillboard {
+  id: string;
+  spriteResourceId: string;
+  position: Vec3;
+  size: { x: number; y: number };
+  baseAligned?: boolean;
+  climateNature?: boolean;
+  lamp?: boolean;
+  light?: string | null;
+}
+
+export interface WorldBlockLight {
+  id: string;
+  position: Vec3;
+  range: number;
+  intensity: number;
+  color?: Vec3 | null;
+  cityLight?: boolean;
+}
+
+export interface WorldBlockMarker {
+  id: string;
+  position: Vec3;
+  kind?: string;
+  sourceOrdinal?: number;
+}
+
+export interface WorldBlockRandomEnemy {
+  id: string;
+  position: Vec3;
+  encounterSlot: number;
+  spawnDistance: number;
+  passive: boolean;
+  actionId?: string | null;
+  underwater?: boolean;
+  aquaticSpawnAllowed?: boolean;
+}
+
+export interface WorldBlockPropertyContainer {
+  id: string;
+  position: Vec3;
+  itemGroups?: string[];
+}
+
+export interface WorldBlockAction {
+  id?: string;
+  actionId?: string;
+  [key: string]: unknown;
+}
+
+export interface WorldBlockDocument {
+  key: string;
+  kind: WorldBlockKind;
+  sourceKey: string;
+  sourceOrdinal: number;
+  buildingIndex: number | null;
+  bounds: Bounds3 | null;
+  sourceWarnings?: string[];
+  models: WorldBlockModel[];
+  doors?: WorldBlockDoor[];
+  transitionDoors?: WorldBlockTransitionDoor[];
+  gates?: WorldBlockGate[];
+  buildings?: WorldBlockBuilding[];
+  interiorBuilding?: WorldBlockBuilding | null;
+  ground?: WorldBlockGroundTile[];
+  staticNpcs?: WorldBlockStaticNpc[];
+  billboards?: WorldBlockBillboard[];
+  lights?: WorldBlockLight[];
+  questMarkers?: WorldBlockMarker[];
+  randomEnemies?: WorldBlockRandomEnemy[];
+  treasures?: WorldBlockMarker[];
+  propertyContainers?: WorldBlockPropertyContainer[];
+  actions?: WorldBlockAction[];
+  startMarker?: WorldBlockMarker | null;
+  startMarkers?: WorldBlockMarker[];
+  enterMarker?: WorldBlockMarker | null;
+  waterLevel?: number | null;
+  ambientZone?: string | null;
+}
+
+export interface WorldBlockPeopleSlot extends BlockSlotItem {
+  castName?: string | null;
+}
+
+export interface WorldBlockDetailResponse {
+  block: WorldBlockDocument;
+  parentExteriorKey: string | null;
+  interiorKeys: Record<string, string>;
+  peopleSlots: WorldBlockPeopleSlot[];
+  modelLinks: Record<string, { id: string; name: string; category: AssetCategory }>;
+  terrainArchive: number;
+  mediaUrls: {
+    geometry: string;
+    materials: string;
+    billboards: string;
+    terrain: string;
+  };
 }

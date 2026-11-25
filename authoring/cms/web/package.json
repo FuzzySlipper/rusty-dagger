@@ -4,11 +4,13 @@
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
-    "build": "esbuild src/main.tsx --bundle --format=esm --target=es2022 --jsx=automatic --jsx-import-source=preact --minify --outfile=dist/app.js",
-    "watch": "esbuild src/main.tsx --bundle --format=esm --target=es2022 --jsx=automatic --jsx-import-source=preact --sourcemap --watch --outfile=dist/app.js"
+    "build": "rm -rf dist && esbuild src/main.tsx --bundle --splitting --format=esm --target=es2022 --jsx=automatic --jsx-import-source=preact --minify --outdir=dist --entry-names=app",
+    "watch": "esbuild src/main.tsx --bundle --splitting --format=esm --target=es2022 --jsx=automatic --jsx-import-source=preact --sourcemap --watch --outdir=dist --entry-names=app"
   },
   "dependencies": {
-    "preact": "^10.26.4"
+    "@types/three": "^0.187.0",
+    "preact": "^10.26.4",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

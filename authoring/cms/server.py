@@ -13,6 +13,8 @@ from tempfile import TemporaryDirectory
 from urllib.parse import unquote, urlsplit
 
 from cache import FileCache
+import blocks as blocks_module
+from blocks import WorldBlocksStore
 import catalog as catalog_module
 from catalog import CatalogStore
 import concepts as concepts_module
@@ -46,6 +48,7 @@ class Workspace:
         self.packs = packs if packs is not None else PackStore(self.cache)
         self.catalog_store = CatalogStore(library, links, self.cache, self.packs)
         self.people_pack = PeoplePackStore(library, self.cache, self.packs)
+        self.world_blocks = WorldBlocksStore(library, self.cache, self.people_pack)
 
     def catalog(self):
         return self.catalog_store.catalog()
@@ -115,6 +118,7 @@ class Workspace:
             "reviews": self.reviews().list(),
             "conceptStages": list(concepts.values()),
             "peoplePack": self.people_pack.summary_counts(catalog, self.concept_store),
+            "worldBlocks": self.world_blocks.summary_counts(),
         }
 
     def stage_review(self, pipeline, stage):
@@ -207,6 +211,7 @@ def create_router(workspace: Workspace) -> Router:
     concepts_module.register_routes(router, workspace)
     people_pack_module.register_routes(router, workspace)
     people_curation_module.register_routes(router, workspace)
+    blocks_module.register_routes(router, workspace)
     return router
 
 
@@ -235,10 +240,20 @@ class Handler(SimpleHTTPRequestHandler):
         mounts = dict(self.workspace.library.mounts)
         if self.workspace.concept_store is not None:
             mounts[MEDIA] = self.workspace.concept_store.images
-        for mount, root in mounts.items():
+        for mount, roots in mounts.items():
             if path.startswith(mount):
-                file = (root / path.removeprefix(mount)).resolve()
-                return str(file if file.is_relative_to(root.resolve()) else WEB / "missing")
+                rel = path.removeprefix(mount)
+                candidates = roots if isinstance(roots, (tuple, list)) else (roots,)
+                fallback = WEB / "missing"
+                for root in candidates:
+                    root_resolved = root.resolve()
+                    file = (root_resolved / rel).resolve()
+                    if not file.is_relative_to(root_resolved):
+                        return str(WEB / "missing")
+                    if file.exists():
+                        return str(file)
+                    fallback = file
+                return str(fallback)
         file = (WEB / path.lstrip("/")).resolve()
         return str(file if file.is_relative_to(WEB) else WEB / "missing")
 

@@ -1,10 +1,24 @@
 import { useEffect, useState } from 'preact/hooks';
 import { apiRequest, isAbortError } from '../api';
-import { blocksUrl, castUrl, spawnerUrl, subjectUrl } from '../router';
+import { blocksUrl, castUrl, spawnerUrl, subjectUrl, worldBlockUrl } from '../router';
 import type { BlockSlotItem, BlockSlotsResponse, PeoplePackOverview } from '../types';
 import { ArtDataChip } from '../components/ArtDataLink';
 import { DataTable, type DataColumn } from '../components/DataTable';
 import { Chip, Empty, PageHeading } from '../components/ui';
+
+function slotToWorldBlockKey(row: BlockSlotItem): string {
+  const slug = row.block
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  if (row.kind === 'rmb-interior' && row.buildingIndex !== null) {
+    return `rmb/${slug}/interior-${row.buildingIndex}`;
+  }
+  if (row.kind === 'rmb-exterior') {
+    return `rmb/${slug}/exterior`;
+  }
+  return `rdb/${slug}`;
+}
 
 export function BlockSlotsPage({ initialQuery }: { initialQuery: Record<string, string> }) {
   const [overview, setOverview] = useState<PeoplePackOverview | null>(null);
@@ -80,7 +94,12 @@ export function BlockSlotsPage({ initialQuery }: { initialQuery: Record<string, 
       header: 'Block / Slot',
       render: row => (
         <div>
-          <code>{row.block}</code>
+          <a href={worldBlockUrl(slotToWorldBlockKey(row))} title="Inspect block in 3D viewer">
+            <code>{row.block}</code>
+          </a>{' '}
+          <a class="chip" href={worldBlockUrl(slotToWorldBlockKey(row))}>
+            3D
+          </a>
           <div>
             <small class="muted">
               {row.slotId} · {row.kind}

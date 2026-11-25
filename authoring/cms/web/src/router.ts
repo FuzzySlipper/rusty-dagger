@@ -11,7 +11,9 @@ export type Route =
   | { page: 'search'; term: string }
   | { page: 'cast'; id?: string }
   | { page: 'spawners'; id?: string }
-  | { page: 'blocks'; query: Record<string, string> };
+  | { page: 'blocks'; query: Record<string, string> }
+  | { page: 'world-blocks'; query: Record<string, string> }
+  | { page: 'world-block'; key: string };
 
 export const encodeKey = (value: string): string => encodeURIComponent(value);
 
@@ -31,6 +33,15 @@ export const blocksUrl = (filters: Record<string, string | number | undefined> =
   const qs = params.toString();
   return qs ? `#blocks?${qs}` : '#blocks';
 };
+export const worldBlocksUrl = (filters: Record<string, string | number | undefined> = {}): string => {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(filters)) {
+    if (v !== undefined && v !== '') params.set(k, String(v));
+  }
+  const qs = params.toString();
+  return qs ? `#world-blocks?${qs}` : '#world-blocks';
+};
+export const worldBlockUrl = (key: string): string => `#world-block/${encodeKey(key)}`;
 
 function safeDecode(value: string): string {
   try {
@@ -64,6 +75,19 @@ export function parseHash(hash: string): Route {
     }
     return { page: 'blocks', query };
   }
+  if (page === 'world-blocks') {
+    const query: Record<string, string> = {};
+    if (queryPart) {
+      for (const [k, v] of new URLSearchParams(queryPart).entries()) {
+        query[k] = v;
+      }
+    }
+    return { page: 'world-blocks', query };
+  }
+  if (page === 'world-block' && encoded) {
+    const fullKey = rest.length ? safeDecode([encoded, ...rest].join('/')) : id;
+    return { page: 'world-block', key: fullKey };
+  }
   if (page === 'pipelines') return { page: 'listing', category: 'pipelines' };
   if ((ASSET_PAGES as string[]).includes(page)) {
     return { page: 'listing', category: page as AssetCategory };
@@ -93,6 +117,9 @@ export function activeSection(
       return 'spawners';
     case 'blocks':
       return 'blocks';
+    case 'world-blocks':
+    case 'world-block':
+      return 'world-blocks';
     case 'search':
       return '';
   }
