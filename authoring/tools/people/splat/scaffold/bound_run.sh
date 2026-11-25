@@ -1,4 +1,5 @@
 #!/bin/bash
+# --no-same-owner on remote extracts: a Secure Cloud RunPod container may not chown (2026-11-24, npc-468)
 # bound_run.sh RUN ID STEP [ARGS]: the bound route's steps after a character's bake has reached round 1 (bake.sh ... r1), as run for
 # villagers 381 and 454 (docs/splat-scaffold.md). RUN is the run folder, ID is NNN-X (the bake is RUN/NNN/X/bake); results go to
 # RUN/NNN/X/bound. BAKE=bake-m3 takes the bake from RUN/NNN/X/bake-m3 and the lab folder /workspace/RUN/NNN-X-m3, as bake.sh names them.
@@ -53,7 +54,7 @@ lab() {   # lab PURPOSE PUT_DIR PUT_FILES SCRIPT LOG FETCH: tar PUT_FILES (under
   export BD LAB L pd put script log fetch purpose GPU
   flock -w ${LOCK_WAIT:-7200} $LOCKF bash -c '
     rx "mkdir -p $LAB" 2>&1 | grep -v Container
-    tar czf - -C $pd $put | rx "tar xzf - -C $LAB" 2>&1 | grep -v Container
+    tar czf - -C $pd $put | rx "tar xzf - --no-same-owner -C $LAB" 2>&1 | grep -v Container
     if [ "$GPU" = gpu-lab ]; then
       asset-resources run --host gpu-lab --resource lab-gsplat --owner claude --purpose "$purpose" -- \
         $L "gpu-lab exec bash -c \"echo 1000 > /proc/self/oom_score_adj; export TORCH_EXTENSIONS_DIR=/cache/torch_extensions/py312_cu130 OMP_NUM_THREADS=2; cd $LAB && bash $script\"" 2>&1 | grep --line-buffered -v -e Container -e "^resource-board" >> $log
@@ -98,7 +99,7 @@ EOF
   flock -w ${LOCK_WAIT:-7200} $LOCKF bash -c "[ \"\$(rx 'cat $LAB/$DATA/.stamp' 2>/dev/null | grep -v Container)\" = $STAMP ] || { rx 'mkdir -p $LAB' 2>&1 | grep -v Container; rx 'rm -rf $LAB/$DATA' 2>&1 | grep -v Container; tar czf - -C $D $DATA | rx 'tar xzf - -C $LAB' 2>&1 | grep -v Container; echo 'staged $DATA ($STAMP) to $GPU'; }" >> $BD/bound.log
   [ -n "${VRAM_PEAK:-}" ] && cp $T/vram_peak.py $BD/   # VRAM_PEAK=1: the trainer's peak GPU memory in the log (vram_peak.py)
   # the review compares with the free fit ($FIT), which a host that never ran it (a fresh RunPod pod, npc-023 2026-11-22) lacks
-  [ "$GPU" != gpu-lab ] && { rx "test -f $LAB/$FIT/splat.npz" || tar czf - -C $D $FIT/splat.npz | rx "mkdir -p $LAB && tar xzf - -C $LAB"; }
+  [ "$GPU" != gpu-lab ] && { rx "test -f $LAB/$FIT/splat.npz" || tar czf - -C $D $FIT/splat.npz | rx "mkdir -p $LAB && tar xzf - --no-same-owner -C $LAB"; }
   lab "Villager $ID bound bake on the scaffold" $BD "lab-bound.sh $BN-data/shell.npz $BN-data/init_points.npz${VRAM_PEAK:+ vram_peak.py}" lab-bound.sh $BD/bound.log "$BN/splat.npz $BN/score.json $BN/poses.npz $BN.log review-$BN" || exit 4
   [ -f $BD/$BN/splat.npz ] || exit 5
   python3 $T/export_bound.py $BD/$BN/splat.npz $SC $TR $BD/discs.bin --binding $BD/binding.npz --loose-bones $LOOSE --loose-factor $LOOSE_FACTOR > $BD/binding.json 2>> $BD/bound.log || exit 6

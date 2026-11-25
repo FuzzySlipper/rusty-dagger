@@ -1,4 +1,5 @@
 #!/bin/bash
+# --no-same-owner on remote extracts: a Secure Cloud RunPod container may not chown (2026-11-24, npc-468)
 # bake.sh RUN ID STAGE [HALO]: one stage of a character's splat bake from its orbit clip (the batch route, docs/mesh-pinned-splat.md
 # "Batch route: villager batch 1"; townsman 385's route with round 1 at --anchor-weight 4, the reduced repaint - three rings, VACE
 # at 1024² - and the batch-1 fixes: --open-holes mattes, repaint colour match, ignore masks).
@@ -123,7 +124,7 @@ lab() {    # lab RESOURCE PURPOSE PUT FETCH CMD: CMD is written to bake/lab-STAG
     export D GW GPU p put fetch ID STAGE
     flock -w ${LOCK_WAIT:-7200} /tmp/halo-gpu-$GPU.lock bash -c '
       echo "$(date +%s) before $ID $STAGE on $GPU" >> $D/vram.log
-      ssh -o BatchMode=yes $GPU "mkdir -p $GW" && tar czf - -C $D $put | ssh -o BatchMode=yes $GPU "tar xzf - -C $GW"
+      ssh -o BatchMode=yes $GPU "mkdir -p $GW" && tar czf - -C $D $put | ssh -o BatchMode=yes $GPU "tar xzf - --no-same-owner -C $GW"
       asset-resources run --host $GPU --resource $GRES --owner claude --purpose "Villager $ID bake on the Halo GPU: $p" -- \
         ssh -o BatchMode=yes $GPU "export OMP_NUM_THREADS=8; cd $GW && nice -n 5 bash lab-$STAGE.sh" 2>&1 | grep -v "^resource-board"
       rc=${PIPESTATUS[0]}
@@ -153,7 +154,7 @@ tools)     # the lab copies, from the repository, to /workspace/$B/tools, under 
   S=$(mktemp -d); mkdir $S/tools
   cp $LAB_TOOLS $S/tools/
   [ -n "${DRY:-}" ] && { ls $S/tools; rm -rf $S; exit 0; }
-  if [ "$GPU" != gpu-lab ]; then tar czf - -C $S tools | ssh -o BatchMode=yes $GPU "mkdir -p $GS/work/$B && tar xzf - -C $GS/work/$B && ls $GS/work/$B/tools | wc -l"; rm -rf $S; exit 0; fi
+  if [ "$GPU" != gpu-lab ]; then tar czf - -C $S tools | ssh -o BatchMode=yes $GPU "mkdir -p $GS/work/$B && tar xzf - --no-same-owner -C $GS/work/$B && ls $GS/work/$B/tools | wc -l"; rm -rf $S; exit 0; fi
   export L B S; flock -w ${LOCK_WAIT:-7200} /tmp/gpu-lab-claude.lock bash -c 'tar czf - -C $S tools | $L "gpu-lab exec bash -c \"mkdir -p /workspace/$B && tar xzf - -C /workspace/$B && ls /workspace/$B/tools | wc -l\"" 2>&1 | grep -v Container'
   rm -rf $S ;;
 frames)
