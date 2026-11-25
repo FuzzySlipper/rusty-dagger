@@ -310,17 +310,25 @@ internal sealed class DaggerfallOfficeLedger(
         }
 
         string? resolvedName = holderDisplayName;
-        if (string.IsNullOrWhiteSpace(resolvedName) && !string.IsNullOrWhiteSpace(holderCastId)
-            && definitions.People.Individuals.TryGetValue(holderCastId, out DaggerfallCastIndividualDefinition? cast))
+        if (!string.IsNullOrWhiteSpace(holderCastId))
         {
-            resolvedName = cast.Name;
-            holderActorId ??= DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
-            holderFactionId ??= cast.FactionId;
+            if (definitions.People.Individuals.TryGetValue(holderCastId, out DaggerfallCastIndividualDefinition? cast))
+            {
+                holderActorId ??= DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
+                holderFactionId ??= cast.FactionId;
+                if (string.IsNullOrWhiteSpace(resolvedName))
+                    resolvedName = cast.Name;
+            }
+            else
+            {
+                holderActorId ??= DaggerfallPeopleSlots.CastIndividualIdentity(holderCastId);
+            }
         }
-        else if (string.IsNullOrWhiteSpace(resolvedName) && holderActorId is long id && npcs.TryGet(id, out DaggerfallNpc? npc) && npc is not null)
+        if (holderActorId is long id && npcs.TryGet(id, out DaggerfallNpc? npc) && npc is not null)
         {
-            resolvedName = npc.DisplayName ?? npc.Role;
             holderFactionId ??= npc.Appearance.FactionId > 0 ? npc.Appearance.FactionId : null;
+            if (string.IsNullOrWhiteSpace(resolvedName))
+                resolvedName = npc.DisplayName ?? npc.Role;
         }
 
         DaggerfallOfficeOverrideSave saved = new(
@@ -645,14 +653,27 @@ internal sealed class DaggerfallOfficeLedger(
         List<DaggerfallOfficeOverrideSave> recorded = [];
 
         // 1. Check all existing overridden offices first (covers any previously appointed/succeeded holder).
+        // Any office present in _overrides (appointed OR explicitly vacant) is governed solely by this pass so
+        // the death of a previously deposed default holder never overwrites an active appointment or vacancy.
         foreach (DaggerfallOfficeOverrideSave existing in _overrides.Values.ToArray())
         {
-            if (existing.Vacant || existing.HolderActorId != deadActorId)
+            long? existingActorId = existing.HolderActorId
+                ?? (!string.IsNullOrWhiteSpace(existing.HolderCastId)
+                    ? DaggerfallPeopleSlots.CastIndividualIdentity(existing.HolderCastId)
+                    : null);
+            if (existing.Vacant || existingActorId != deadActorId)
                 continue;
+
+            string? existingSlainName = !string.IsNullOrWhiteSpace(existing.HolderDisplayName)
+                ? existing.HolderDisplayName
+                : (!string.IsNullOrWhiteSpace(existing.HolderCastId)
+                    && definitions.People.Individuals.TryGetValue(existing.HolderCastId, out DaggerfallCastIndividualDefinition? slainCast)
+                    ? slainCast.Name
+                    : null);
 
             if (existing.OfficeFactionId is int fid && existing.Kind is DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.MajorSeat)
             {
-                recorded.Add(RecordFactionHolderDeath(fid, existing.Kind, deadActorId, existing.HolderDisplayName, currentDay));
+                recorded.Add(RecordFactionHolderDeath(fid, existing.Kind, deadActorId, existingSlainName, currentDay));
             }
             else if (activeSite is not null
                 && ResolveLocalOffices(activeSite, ignoreDeadActorId: deadActorId)
@@ -660,7 +681,7 @@ internal sealed class DaggerfallOfficeLedger(
             {
                 recorded.Add(RecordLocalHolderDeath(
                     activeSite,
-                    local with { HolderActorId = deadActorId, DisplayName = existing.HolderDisplayName ?? local.DisplayName },
+                    local with { HolderActorId = deadActorId, DisplayName = existingSlainName ?? local.DisplayName },
                     deadActorId,
                     currentDay));
             }
@@ -685,11 +706,11 @@ internal sealed class DaggerfallOfficeLedger(
             }
         }
 
-        // 2. Check canonical major seats and regional province rulers.
-        HashSet<int> checkedFactions = [.. recorded.Where(r => r.OfficeFactionId.HasValue).Select(r => r.OfficeFactionId!.Value)];
+        // 2. Check untouched baseline canonical major seats and regional province rulers.
+        HashSet<int> checkedFactions = [];
         foreach (DaggerfallBoardSeatDefinition seat in DaggerfallBoardSeatCatalog.All)
         {
-            if (!checkedFactions.Add(seat.OfficeFactionId))
+            if (!checkedFactions.Add(seat.OfficeFactionId) || _overrides.ContainsKey(FactionOfficeKey(seat.OfficeFactionId)))
                 continue;
             if (MatchesHolderActor(seat.OfficeFactionId, seat.HomeRegion, deadActorId, out string? slainName))
                 recorded.Add(RecordFactionHolderDeath(seat.OfficeFactionId, seat.Kind, deadActorId, slainName, currentDay));
@@ -699,21 +720,20 @@ internal sealed class DaggerfallOfficeLedger(
             .Where(f => f.Type == ProvinceFactionType)
             .OrderBy(f => f.Id))
         {
-            if (!checkedFactions.Add(province.Id))
+            if (!checkedFactions.Add(province.Id) || _overrides.ContainsKey(FactionOfficeKey(province.Id)))
                 continue;
             if (MatchesHolderActor(province.Id, province.Region >= 0 ? province.Region : null, deadActorId, out string? slainName))
                 recorded.Add(RecordFactionHolderDeath(province.Id, DaggerfallOfficeKind.Ruler, deadActorId, slainName, currentDay));
         }
 
-        // 3. Check deterministic local offices at the active site (guildhall master, temple head, watch captain, court factor).
+        // 3. Check untouched baseline local offices at the active site (guildhall master, temple head, watch captain, court factor).
         // Pass ignoreDeadActorId so we evaluate who held each local office immediately before this actor's death
         // (ActorLedger.Dead is recorded by SessionPersistence right before ReactToDeath runs).
         if (activeSite is not null)
         {
-            HashSet<string> handledKeys = [.. recorded.Select(r => r.OfficeKey)];
             foreach (DaggerfallLocalOffice local in ResolveLocalOffices(activeSite, ignoreDeadActorId: deadActorId))
             {
-                if (handledKeys.Contains(local.OfficeKey) || local.IsVacant)
+                if (_overrides.ContainsKey(local.OfficeKey) || local.IsVacant)
                     continue;
                 if (local.HolderActorId == deadActorId)
                 {

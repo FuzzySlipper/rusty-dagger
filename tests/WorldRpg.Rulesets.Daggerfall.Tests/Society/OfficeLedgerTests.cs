@@ -316,4 +316,136 @@ public sealed class OfficeLedgerTests
         Assert.Equal("Mobar", restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall").DisplayName);
         Assert.Equal("King Gothryd", restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall").PreviousHolderName);
     }
+
+    [Fact]
+    public void Named_cast_appointment_normalizes_identity_and_reacts_to_holder_death_across_save_reload()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        DaggerfallSiteRecord charing = session.Site.ActiveSite!;
+        long bridwellId = DaggerfallPeopleSlots.CastIndividualIdentity("lord-bridwell");
+
+        // Appoint cast individual WITH an explicit display name and null holderActorId (R11050-1).
+        DaggerfallOfficeOverrideSave appointed = session.OfficeLedger.SetBoardSeatHolder(
+            seatId: "daggerfall",
+            holderActorId: null,
+            holderCastId: "lord-bridwell",
+            holderFactionId: 367,
+            holderDisplayName: "Regent Bridwell",
+            cause: DaggerfallOfficeChangeCause.CardMove,
+            changedDay: 14,
+            causeDetail: "seized the throne");
+
+        Assert.Equal(bridwellId, appointed.HolderActorId);
+        Assert.Equal("Regent Bridwell", appointed.HolderDisplayName);
+
+        // Save and reload before killing Bridwell while King Gothryd is still alive.
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        restored.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            bridwellId,
+            ActorOrigin.Cast("lord-bridwell"),
+            Location: ActorLocationOverride.Dead(fixture.ExteriorProfile.ProfileKey)));
+
+        IReadOnlyList<DaggerfallOfficeOverrideSave> recorded =
+            restored.OfficeLedger.ReactToDeath(bridwellId, currentDay: 15, charing);
+        DaggerfallOfficeOverrideSave deathOverride = Assert.Single(recorded);
+        Assert.Equal(DaggerfallOfficeLedger.FactionOfficeKey(DaggerfallProvinceFaction), deathOverride.OfficeKey);
+        Assert.Equal(DaggerfallOfficeChangeCause.Death, deathOverride.Cause);
+        Assert.Equal("was slain", deathOverride.CauseDetail);
+        Assert.Equal(bridwellId, deathOverride.PreviousHolderActorId);
+        Assert.Equal("Regent Bridwell", deathOverride.PreviousHolderName);
+        Assert.Equal("King Gothryd", deathOverride.HolderDisplayName);
+        Assert.False(deathOverride.Vacant);
+
+        // Verify death succession & predecessor history survive a second save/reload.
+        using DaggerfallSession reloaded = fixture.Restore(restored.CaptureSave());
+        DaggerfallSeatLeaderPersona persona = reloaded.OfficeLedger.ResolveBoardSeatPersona("daggerfall");
+        Assert.Equal("King Gothryd", persona.DisplayName);
+        Assert.Equal("Regent Bridwell", persona.PreviousHolderName);
+        Assert.Equal(DaggerfallOfficeChangeCause.Death, persona.ChangeCause);
+        Assert.Equal("was slain", persona.CauseDetail);
+    }
+
+    [Fact]
+    public void Death_of_deposed_or_former_holder_leaves_active_appointment_and_explicit_vacancy_unchanged()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        DaggerfallSiteRecord charing = session.Site.ActiveSite!;
+        long gothrydId = DaggerfallPeopleSlots.CastIndividualIdentity("king-gothryd");
+        long akorithiId = DaggerfallPeopleSlots.CastIndividualIdentity("queen-akorithi");
+
+        // 1. Appoint Lord Bridwell on Daggerfall's throne, then kill deposed King Gothryd (R11050-2).
+        session.OfficeLedger.SetBoardSeatHolder(
+            seatId: "daggerfall",
+            holderActorId: null,
+            holderCastId: "lord-bridwell",
+            holderFactionId: 367,
+            holderDisplayName: "Lord Bridwell",
+            cause: DaggerfallOfficeChangeCause.CardMove,
+            changedDay: 14,
+            causeDetail: "was deposed in a palace coup");
+
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            gothrydId,
+            ActorOrigin.Cast("king-gothryd"),
+            Location: ActorLocationOverride.Dead(fixture.ExteriorProfile.ProfileKey)));
+        Assert.Empty(session.OfficeLedger.ReactToDeath(gothrydId, currentDay: 15, charing));
+
+        // 2. Explicitly vacate Sentinel's throne (204), then kill former Queen Akorithi (R11050-2).
+        session.OfficeLedger.VacateFactionOffice(
+            officeFactionId: 204,
+            cause: DaggerfallOfficeChangeCause.CardMove,
+            changedDay: 16,
+            causeDetail: "fled into exile");
+
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            akorithiId,
+            ActorOrigin.Cast("queen-akorithi"),
+            Location: ActorLocationOverride.Dead(fixture.ExteriorProfile.ProfileKey)));
+        Assert.Empty(session.OfficeLedger.ReactToDeath(akorithiId, currentDay: 17, charing));
+
+        // 3. Replace Charing's Mages Guild Hall Master via quest, then kill the deposed original holder.
+        DaggerfallLocalOffice originalMaster = session.OfficeLedger.ResolveLocalOffices(charing)
+            .Single(o => o.Kind == DaggerfallOfficeKind.GuildHallMaster && o.ProfileKey == fixture.MagesProfile.ProfileKey);
+        long originalMasterId = originalMaster.HolderActorId!.Value;
+        long replacementId = session.State.Npcs.RegisterCivilian(
+            new DaggerfallNpcSite(charing.Id.Region, charing.Name, string.Empty),
+            new DaggerfallNpcAppearance("breton", "Female", 182, 0, 77, 40),
+            "mage", ["talk"]);
+        session.State.Npcs.SetDisplayName(replacementId, "Archmagister Vaelen");
+        session.OfficeLedger.SetLocalOfficeHolder(
+            originalMaster, replacementId, "Archmagister Vaelen",
+            DaggerfallOfficeChangeCause.Quest, changedDay: 18, causeDetail: "installed by guild tribunal");
+
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            originalMasterId,
+            ActorOrigin.Seeded(fixture.MagesProfile.ProfileKey, originalMaster.SlotId),
+            Location: ActorLocationOverride.Dead(fixture.MagesProfile.ProfileKey)));
+        Assert.Empty(session.OfficeLedger.ReactToDeath(originalMasterId, currentDay: 19, charing));
+
+        // Verify all three overrides and their histories remain intact live AND after save/reload.
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Equal(3, restored.OfficeLedger.OverrideCount);
+
+        DaggerfallSeatLeaderPersona daggerfall = restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall");
+        Assert.False(daggerfall.IsVacant);
+        Assert.Equal("Lord Bridwell", daggerfall.DisplayName);
+        Assert.Equal("King Gothryd", daggerfall.PreviousHolderName);
+        Assert.Equal(DaggerfallOfficeChangeCause.CardMove, daggerfall.ChangeCause);
+        Assert.Equal("was deposed in a palace coup", daggerfall.CauseDetail);
+
+        DaggerfallSeatLeaderPersona sentinel = restored.OfficeLedger.ResolveBoardSeatPersona("sentinel");
+        Assert.True(sentinel.IsVacant);
+        Assert.Equal("Queen Akorithi", sentinel.PreviousHolderName);
+        Assert.Equal(DaggerfallOfficeChangeCause.CardMove, sentinel.ChangeCause);
+        Assert.Equal("fled into exile", sentinel.CauseDetail);
+
+        DaggerfallLocalOffice restoredMaster = restored.OfficeLedger.ResolveLocalOffices(charing)
+            .Single(o => o.OfficeKey == originalMaster.OfficeKey);
+        Assert.False(restoredMaster.IsVacant);
+        Assert.Equal(replacementId, restoredMaster.HolderActorId);
+        Assert.Equal("Archmagister Vaelen", restoredMaster.DisplayName);
+        Assert.Equal(DaggerfallOfficeChangeCause.Quest, restoredMaster.ChangeCause);
+    }
 }
