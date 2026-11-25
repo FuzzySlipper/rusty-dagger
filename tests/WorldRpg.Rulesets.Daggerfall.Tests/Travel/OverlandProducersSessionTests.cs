@@ -8,6 +8,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Travel;
@@ -216,6 +217,194 @@ public sealed class OverlandProducersSessionTests
         Assert.True(restored.State.Actors.TryGet(member.DurableId, out ActorState? metTraveller));
         Assert.Equal(member.Social!.DisplayNameOverride, restored.State.Npcs.Require(member.DurableId).DisplayName);
         Assert.True(metTraveller!.Stats.GetTrack(TrackId.Parse("health")).Maximum.Value > 1);
+    }
+
+    [Fact]
+    public void Overland_traffic_dispatch_preserves_existing_actor_ledger_deltas_across_save_and_reload()
+    {
+        const long windowIndex = 101L;
+        ActorLedgerEntry baselineEntry;
+        (double X, double Y) partyPosition;
+
+        // Discover the deterministic home-slot candidate selected for this traffic window on a clean probe session.
+        using (ProducerFixture probe = ProducerFixture.Create())
+        {
+            probe.Session.ApplyProductMode(ProductMode.Playing);
+            partyPosition = probe.Session.Expedition.Position;
+            DaggerfallPersistentOverlandBand? probeBand = probe.Session.OverlandTraffic.TryDispatchWindow(windowIndex, partyPosition);
+            Assert.NotNull(probeBand);
+            baselineEntry = Assert.Single(probe.Session.State.ActorLedger.EntriesOnOverlandBand(probeBand!.BandId));
+        }
+
+        // Case 1: existing inactive home-slot actor with prior Social, Vitals, Combat, and Referral deltas.
+        using (ProducerFixture fixture = ProducerFixture.Create())
+        {
+            DaggerfallSession session = fixture.Session;
+            session.ApplyProductMode(ProductMode.Playing);
+            session.AdvanceElapsedTime(8 * 60 * 60);
+
+            // Capture a real injured vitals snapshot (4 HP remaining) from an active civilian actor.
+            ActorState sampleActor = session.State.Actors.All.First(a => a.DurableId != DaggerfallActorIdentity.PlayerEntityId);
+            sampleActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(4.0, clamp: true);
+            DaggerfallStatsSave injuredStats = DaggerfallStatsSaveBoundary.Capture(sampleActor.Stats, sampleActor.Actor.Entity);
+
+            ActorSocialDiff priorSocial = baselineEntry.Social! with
+            {
+                DisplayNameOverride = "Mara the Witness",
+                Met = true,
+                DispositionDelta = 17,
+                WitnessedCrimes = ["crime:42"],
+                ReferralTags = ["quest:caravan-clue"],
+                Muted = true,
+                Presence = (int)DaggerfallNpcPresence.Active,
+            };
+            ActorReferralDiff priorReferral = new(["quest:caravan-clue"], "Mara the Witness");
+            ActorCombatStateDiff priorCombat = new(LanguagePacified: true);
+            ActorVitalsDiff priorVitals = new(injuredStats);
+            session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+                baselineEntry.DurableId,
+                baselineEntry.Origin,
+                Vitals: priorVitals,
+                Combat: priorCombat,
+                Social: priorSocial,
+                Location: null,
+                Referral: priorReferral));
+
+            DaggerfallPersistentOverlandBand? dispatched = session.OverlandTraffic.TryDispatchWindow(windowIndex, partyPosition);
+            Assert.NotNull(dispatched);
+
+            ActorLedgerEntry onBand = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(dispatched!.BandId));
+            Assert.Equal(baselineEntry.DurableId, onBand.DurableId);
+            Assert.Equal(baselineEntry.Origin, onBand.Origin);
+            Assert.NotNull(onBand.Vitals);
+            Assert.Equal(4.0, onBand.Vitals!.Stats.Snapshot.Tracks.Single(t => t.Id == DaggerfallMechanicsIds.Health.Value).Current);
+            Assert.NotNull(onBand.Combat);
+            Assert.True(onBand.Combat!.LanguagePacified);
+            Assert.NotNull(onBand.Referral);
+            Assert.Equal(["quest:caravan-clue"], onBand.Referral!.Tags);
+            Assert.Equal("Mara the Witness", onBand.Referral.DisplayNameOverride);
+            Assert.NotNull(onBand.Social);
+            Assert.Equal("Mara the Witness", onBand.Social!.DisplayNameOverride);
+            Assert.True(onBand.Social.Met);
+            Assert.Equal(17, onBand.Social.DispositionDelta);
+            Assert.Equal(["crime:42"], onBand.Social.WitnessedCrimes!);
+            Assert.Equal(["quest:caravan-clue"], onBand.Social.ReferralTags!);
+            Assert.True(onBand.Social.Muted);
+
+            // Save, reload, and intercept: every delta survives persistence and materializes onto the live 3D actor.
+            RulesetSavePayload saved = session.CaptureSave();
+            using DaggerfallSession restored = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, saved);
+            ActorLedgerEntry restoredOnBand = Assert.Single(restored.State.ActorLedger.EntriesOnOverlandBand(dispatched.BandId));
+            Assert.Equal(4.0, restoredOnBand.Vitals!.Stats.Snapshot.Tracks.Single(t => t.Id == DaggerfallMechanicsIds.Health.Value).Current);
+            Assert.True(restoredOnBand.Combat!.LanguagePacified);
+            Assert.Equal(["quest:caravan-clue"], restoredOnBand.Referral!.Tags);
+            Assert.Equal("Mara the Witness", restoredOnBand.Social!.DisplayNameOverride);
+            Assert.True(restoredOnBand.Social.Met);
+            Assert.Equal(17, restoredOnBand.Social.DispositionDelta);
+            Assert.Equal(["crime:42"], restoredOnBand.Social.WitnessedCrimes!);
+            Assert.Equal(["quest:caravan-clue"], restoredOnBand.Social.ReferralTags!);
+            Assert.True(restoredOnBand.Social.Muted);
+
+            DaggerfallPersistentOverlandBand restoredBand = Assert.Single(restored.Expedition.PersistentBands, b => b.BandId == dispatched.BandId);
+            restored.OpenExpedition();
+            restored.OverlandParties.OnMeetPersistentBand(restoredBand, restored.Expedition.Party,
+                WorldRpg.Rulesets.Daggerfall.Modules.Encounters.DaggerfallEncounterStaging.Travelling);
+            restored.EnterExpedition();
+
+            Assert.True(restored.State.Actors.TryGet(baselineEntry.DurableId, out ActorState? live));
+            Assert.Equal(4.0, live!.Stats.GetTrack(TrackId.Parse("health")).Current);
+            Assert.True(live.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified);
+            ActorOverlayComponent overlay = live.Actor.Get<ActorOverlayComponent>();
+            Assert.True(overlay.Met);
+            Assert.True(overlay.IsMuted);
+            Assert.Contains("crime:42", overlay.WitnessedCrimes);
+            Assert.Contains("quest:caravan-clue", overlay.ReferralTags);
+            Assert.Equal("Mara the Witness", restored.State.Npcs.Require(baselineEntry.DurableId).DisplayName);
+        }
+
+        // Case 2: pre-visit referral-only entry (Social == null, Origin missing SpawnerId) preserves Referral,
+        // backfills spawner metadata, initializes Social with referral name/tags, and materializes cleanly.
+        using (ProducerFixture fixture = ProducerFixture.Create())
+        {
+            DaggerfallSession session = fixture.Session;
+            session.ApplyProductMode(ProductMode.Playing);
+
+            long referredId = session.State.ActorLedger.RegisterSlotReferral(
+                baselineEntry.Origin.SiteProfile!.Require(),
+                baselineEntry.Origin.SlotKey!,
+                "quest:pre-visit-referral",
+                "Aldric the Factor");
+            Assert.Equal(baselineEntry.DurableId, referredId);
+
+            DaggerfallPersistentOverlandBand? dispatched = session.OverlandTraffic.TryDispatchWindow(windowIndex, partyPosition);
+            Assert.NotNull(dispatched);
+
+            ActorLedgerEntry onBand = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(dispatched!.BandId));
+            Assert.Equal(baselineEntry.DurableId, onBand.DurableId);
+            Assert.Equal(baselineEntry.Origin.SpawnerId, onBand.Origin.SpawnerId);
+            Assert.NotNull(onBand.Referral);
+            Assert.Equal(["quest:pre-visit-referral"], onBand.Referral!.Tags);
+            Assert.Equal("Aldric the Factor", onBand.Referral.DisplayNameOverride);
+            Assert.NotNull(onBand.Social);
+            Assert.Equal("Aldric the Factor", onBand.Social!.DisplayNameOverride);
+            Assert.Equal(["quest:pre-visit-referral"], onBand.Social.ReferralTags!);
+        }
+    }
+
+    [Fact]
+    public void Overland_traffic_dispatch_excludes_unavailable_saved_actors()
+    {
+        const long windowIndex = 101L;
+        ActorLedgerEntry baselineEntry;
+        (double X, double Y) partyPosition;
+
+        using (ProducerFixture probe = ProducerFixture.Create())
+        {
+            probe.Session.ApplyProductMode(ProductMode.Playing);
+            partyPosition = probe.Session.Expedition.Position;
+            DaggerfallPersistentOverlandBand? probeBand = probe.Session.OverlandTraffic.TryDispatchWindow(windowIndex, partyPosition);
+            Assert.NotNull(probeBand);
+            baselineEntry = Assert.Single(probe.Session.State.ActorLedger.EntriesOnOverlandBand(probeBand!.BandId));
+        }
+
+        // Verify each unavailable saved state excludes the actor from being drafted onto regional traffic:
+        // Hidden presence, staged party member, forced hostile, defeated/zero health.
+        Func<DaggerfallSession, ActorLedgerEntry>[] unavailableFactories =
+        [
+            _ => new ActorLedgerEntry(baselineEntry.DurableId, baselineEntry.Origin,
+                Social: baselineEntry.Social! with { Presence = (int)DaggerfallNpcPresence.Hidden }),
+            _ => new ActorLedgerEntry(baselineEntry.DurableId, baselineEntry.Origin,
+                Social: baselineEntry.Social! with { StagedPartyRole = ActorPartyRole.Companion }),
+            _ => new ActorLedgerEntry(baselineEntry.DurableId, baselineEntry.Origin,
+                Combat: new ActorCombatStateDiff(ForcedHostile: true),
+                Social: baselineEntry.Social),
+            session =>
+            {
+                session.AdvanceElapsedTime(8 * 60 * 60);
+                ActorState sample = session.State.Actors.All.First(a => a.DurableId != DaggerfallActorIdentity.PlayerEntityId);
+                sample.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0.0, clamp: true);
+                DaggerfallStatsSave zeroHp = DaggerfallStatsSaveBoundary.Capture(sample.Stats, sample.Actor.Entity);
+                return new ActorLedgerEntry(baselineEntry.DurableId, baselineEntry.Origin,
+                    Vitals: new ActorVitalsDiff(zeroHp),
+                    Social: baselineEntry.Social);
+            },
+        ];
+
+        foreach (Func<DaggerfallSession, ActorLedgerEntry> makeUnavailable in unavailableFactories)
+        {
+            using ProducerFixture fixture = ProducerFixture.Create();
+            DaggerfallSession session = fixture.Session;
+            session.ApplyProductMode(ProductMode.Playing);
+            session.State.ActorLedger.Upsert(makeUnavailable(session));
+
+            DaggerfallPersistentOverlandBand? dispatched = session.OverlandTraffic.TryDispatchWindow(windowIndex, partyPosition);
+            if (dispatched is not null)
+            {
+                Assert.DoesNotContain(session.State.ActorLedger.EntriesOnOverlandBand(dispatched.BandId),
+                    e => e.DurableId == baselineEntry.DurableId);
+            }
+            Assert.Null(session.State.ActorLedger.Require(baselineEntry.DurableId).Location);
+        }
     }
 
     private static DaggerfallDialogueView? TalkTo(DaggerfallSession session, long npcId)

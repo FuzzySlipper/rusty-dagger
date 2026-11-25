@@ -29,6 +29,7 @@ internal sealed class DaggerfallOverlandTraffic
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallActorLedger _actorLedger;
     private readonly ActorsState _actors;
+    private readonly DaggerfallNpcRegistry _npcs;
     private readonly DaggerfallExpedition _expedition;
     private readonly DaggerfallOverlandPartyCoordinator _overlandParties;
     private readonly Func<DaggerfallNpcAppearance, int, string> _generateName;
@@ -39,6 +40,7 @@ internal sealed class DaggerfallOverlandTraffic
         DaggerfallDefinitions definitions,
         DaggerfallActorLedger actorLedger,
         ActorsState actors,
+        DaggerfallNpcRegistry npcs,
         DaggerfallExpedition expedition,
         DaggerfallOverlandPartyCoordinator overlandParties,
         Func<DaggerfallNpcAppearance, int, string> generateName,
@@ -48,6 +50,7 @@ internal sealed class DaggerfallOverlandTraffic
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _actorLedger = actorLedger ?? throw new ArgumentNullException(nameof(actorLedger));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
+        _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _expedition = expedition ?? throw new ArgumentNullException(nameof(expedition));
         _overlandParties = overlandParties ?? throw new ArgumentNullException(nameof(overlandParties));
         _generateName = generateName ?? throw new ArgumentNullException(nameof(generateName));
@@ -212,7 +215,7 @@ internal sealed class DaggerfallOverlandTraffic
                         isCaravan ? "merchant" : "courier",
                         ["talk"],
                         DisplayNameOverride: displayName);
-                    _actorLedger.Upsert(new ActorLedgerEntry(durableId, actorOrigin, Social: social));
+                    StageLedgerEntry(durableId, actorOrigin, social);
                     return durableId;
                 }
             }
@@ -250,19 +253,59 @@ internal sealed class DaggerfallOverlandTraffic
                 isCaravan ? "merchant" : "courier",
                 ["talk"],
                 DisplayNameOverride: displayName);
-            _actorLedger.Upsert(new ActorLedgerEntry(durableId, actorOrigin, Social: social));
+            StageLedgerEntry(durableId, actorOrigin, social);
             return durableId;
         }
         return null;
     }
 
+    private void StageLedgerEntry(long durableId, ActorOrigin baselineOrigin, ActorSocialDiff baselineSocial)
+    {
+        if (_actorLedger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+        {
+            ActorOrigin preservedOrigin = existing.Origin.Kind == ActorOriginKind.SeededSlot
+                ? existing.Origin with
+                {
+                    SpawnerId = existing.Origin.SpawnerId ?? baselineOrigin.SpawnerId,
+                    HarmPolicy = existing.Origin.HarmPolicy ?? baselineOrigin.HarmPolicy,
+                    InteractionPolicy = existing.Origin.InteractionPolicy ?? baselineOrigin.InteractionPolicy,
+                }
+                : existing.Origin;
+            ActorSocialDiff preservedSocial = existing.Social ?? baselineSocial with
+            {
+                DisplayNameOverride = existing.Referral?.DisplayNameOverride ?? baselineSocial.DisplayNameOverride,
+                ReferralTags = existing.Referral is { Tags.Length: > 0 } referral ? [.. referral.Tags] : null,
+            };
+            _actorLedger.Upsert(existing with
+            {
+                Origin = preservedOrigin,
+                Social = preservedSocial,
+            });
+            return;
+        }
+
+        _actorLedger.Upsert(new ActorLedgerEntry(durableId, baselineOrigin, Social: baselineSocial));
+    }
+
     private bool IsAvailableForDispatch(long durableId)
     {
         if (_actors.TryGet(durableId, out _)) return false;
+        if (!_npcs.IsGameplayActive(durableId)) return false;
         if (_actorLedger.TryGet(durableId, out ActorLedgerEntry? entry) && entry is not null)
         {
             if (entry.Location is not null) return false;
-            if (entry.Social is { Presence: (int)DaggerfallNpcPresence.Removed }) return false;
+            if (entry.Social is { Presence: not (int)DaggerfallNpcPresence.Active }) return false;
+            if (entry.Social is { StagedPartyRole: not null }) return false;
+            if (entry.Combat is { DetachedCorpse: not null }
+                || entry.Combat is { ForcedHostile: true }
+                || entry.Combat is { PromotedArchetype: not null }
+                || entry.Combat is { EncounterBandId: not null }
+                || entry.Combat is { WabbajackActive: true }
+                || entry.Combat is { WabbajackDefinition: not null })
+                return false;
+            if (entry.Vitals?.Stats.Snapshot.Tracks.Any(track =>
+                StringComparer.Ordinal.Equals(track.Id, DaggerfallMechanicsIds.Health.Value) && track.Current <= 0.0) == true)
+                return false;
         }
         return true;
     }

@@ -900,7 +900,7 @@ internal sealed partial class DaggerfallSession
                 id => _persistence.CaptureLiveActorForCustody(
                     id, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))));
             OverlandTraffic = new DaggerfallOverlandTraffic(
-                definitions, State.ActorLedger, actors, Expedition, OverlandParties,
+                definitions, State.ActorLedger, actors, State.Npcs, Expedition, OverlandParties,
                 questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
