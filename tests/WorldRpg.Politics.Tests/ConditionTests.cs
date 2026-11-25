@@ -129,6 +129,60 @@ public sealed class ConditionTests
     }
 
     [Fact]
+    public void Hostages_lift_a_hostile_relation_to_neutral_and_a_trial_puts_it_back()
+    {
+        Board board = TestBoards.Create(TestBoards.TwoCrowns(relation: -2));
+        Seat west = board.Seat("west");
+        Seat east = board.Seat("east");
+
+        board.Trial(() => TestBoards.Card("hostages").Play(board, west, ["east"]));
+        Assert.Equal(-2, board.Relation("west", "east"));
+        Assert.Empty(east.Court);
+
+        TestBoards.Card("hostages").Play(board, west, ["east"]);
+        Assert.Equal(0, board.Relation("west", "east"));
+        board.AdjustRelation(west, east, -1);
+        Assert.Equal(0, board.Relation("west", "east"));
+        // At neutral, the two crowns pass each other food again.
+        board.AddCondition(board.Region("march"), new RegionCondition(ConditionKind.Famine, null, 1, null, 0, 100));
+        board.AddCondition(board.Region("west-capital"), new RegionCondition(ConditionKind.Raiders, null, 1, null, 0, 100));
+        Assert.Contains(board.Region("march"), Supply.Fed(board));
+    }
+
+    [Fact]
+    public void A_trial_that_lifts_conditions_leaves_them_in_their_order_and_upkeep_unchanged()
+    {
+        static Board Afflicted()
+        {
+            Board board = TestBoards.Create(TestBoards.TwoCrowns(marchOrder: 0));
+            Region march = board.Region("march");
+            // In this order upkeep takes order 0 to 0, 0 and then 1; with the lifted two put back last, it would end at 0.
+            board.AddCondition(march, new RegionCondition(ConditionKind.CrimeWave, null, 3, null, 0, 100));
+            board.AddCondition(march, new RegionCondition(ConditionKind.Plague, null, 3, null, 0, 100));
+            board.AddCondition(march, new RegionCondition(ConditionKind.Festival, null, 3, null, 0, 100));
+            board.Turn = 1;
+            return board;
+        }
+
+        Board untouched = Afflicted();
+        Board weighed = Afflicted();
+        Region march = weighed.Region("march");
+        RegionCondition[] before = [.. march.Conditions];
+
+        weighed.Trial(() =>
+        {
+            weighed.RemoveConditions(march, ConditionKind.Plague);
+            weighed.RemoveConditions(march, ConditionKind.CrimeWave);
+            return true;
+        });
+
+        Assert.Equal(before, march.Conditions);
+        Conditions.Weigh(untouched, untouched.Region("march"));
+        Conditions.Weigh(weighed, march);
+        Assert.Equal((1, 1), (untouched.Region("march").Order, march.Order));
+    }
+
+    [Fact]
     public void A_corrupt_advisor_skims_the_crowns_coin_for_the_seat_that_planted_it()
     {
         Board board = TestBoards.Create(TestBoards.TwoCrowns().WithGuild());

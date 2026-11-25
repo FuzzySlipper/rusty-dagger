@@ -23,7 +23,7 @@ public sealed class DeterminismTests
     {
         string hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Trace(seed: null, years: 20))));
 
-        Assert.Equal("44a04887652470c343bf333d9fe6c68620e747a5f9cf4f32093ddff41124f27c", hash);
+        Assert.Equal("39b80a3482508dfc304f65d8cc75dfc80c34ae44d00224f89ff77e88cf9b469d", hash);
     }
 
     [Fact]

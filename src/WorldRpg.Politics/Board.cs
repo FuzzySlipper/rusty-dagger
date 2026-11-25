@@ -334,7 +334,7 @@ public sealed class Board
         (string, string) pair = Pair(a.Id, b.Id);
         int before = relations.GetValueOrDefault(pair);
         int after = Math.Clamp(before + delta, -RelationLimit, RelationLimit);
-        if (after < 0 && after < before && Hostages(a, b)) after = Math.Min(before, 0);
+        if (Hostages(a, b)) after = Math.Max(after, 0);
         if (after == before) return;
         relations[pair] = after;
         Undo(() => relations[pair] = before);
@@ -374,6 +374,7 @@ public sealed class Board
         ReplaceCondition(crown.Court, before, after);
         Undo(() => ReplaceCondition(crown.Court, after, before));
         changes.Add(new BoardChange(crown.Id, CourtField(condition), Describe(before), Describe(after)));
+        if (condition.Kind == CourtConditionKind.HostageTreaty) AdjustRelation(crown, Seat(condition.Source), 0);
     }
 
     /// <summary>Marks <paramref name="region"/> fed or cut off from food.</summary>
@@ -394,23 +395,32 @@ public sealed class Board
         {
             foreach (CourtCondition condition in seat.Court.Where(held => held.End <= Turn).ToArray())
             {
-                ReplaceCondition(seat.Court, condition, null);
-                Undo(() => ReplaceCondition(seat.Court, null, condition));
+                RemoveInPlace(seat.Court, condition);
                 changes.Add(new BoardChange(seat.Id, CourtField(condition), Describe(condition), "none"));
             }
         }
     }
 
-    /// <summary>Whether either seat has given the other hostages, so their relation cannot sink below 0.</summary>
+    /// <summary>
+    /// Whether either seat has given the other hostages: their relation is raised to 0 when the treaty is laid and
+    /// cannot sink below it while the treaty lasts.
+    /// </summary>
     private static bool Hostages(Seat a, Seat b) =>
         a.Court.Any(held => held.Kind == CourtConditionKind.HostageTreaty && held.Source == b.Id)
         || b.Court.Any(held => held.Kind == CourtConditionKind.HostageTreaty && held.Source == a.Id);
 
     private void Lift(Region region, RegionCondition condition)
     {
-        ReplaceCondition(region.Conditions, condition, null);
-        Undo(() => ReplaceCondition(region.Conditions, null, condition));
+        RemoveInPlace(region.Conditions, condition);
         changes.Add(new BoardChange(region.Id, ConditionField(condition.Kind, condition.Detail), Describe(condition), "none"));
+    }
+
+    /// <summary>Removes <paramref name="condition"/>; undoing it puts the condition back where it was, since order decides how conditions weigh.</summary>
+    private void RemoveInPlace<T>(List<T> held, T condition)
+    {
+        int index = held.IndexOf(condition);
+        held.RemoveAt(index);
+        Undo(() => held.Insert(index, condition));
     }
 
     private static void ReplaceCondition<T>(List<T> held, T? before, T? after) where T : class
