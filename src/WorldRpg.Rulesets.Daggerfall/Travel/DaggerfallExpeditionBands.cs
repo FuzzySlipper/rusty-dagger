@@ -17,9 +17,9 @@ internal enum DaggerfallBandKind { Bandits, Travellers, Beasts, Undead, Monsters
 internal sealed class DaggerfallExpeditionBand
 {
     internal DaggerfallExpeditionBand(int id, DaggerfallEncounterRequest request, DaggerfallEncounterChoice choice, string name,
-        DaggerfallBandKind kind, int size, bool camp, double x, double y, long leaves)
+        DaggerfallBandKind kind, int size, bool camp, double x, double y, long leaves, string? conditionTokenId = null)
     {
-        Id = id; Request = request; Choice = choice; Name = name; Kind = kind; Size = size; Camp = camp; X = TargetX = x; Y = TargetY = y; Leaves = leaves;
+        Id = id; Request = request; Choice = choice; Name = name; Kind = kind; Size = size; Camp = camp; X = TargetX = x; Y = TargetY = y; Leaves = leaves; ConditionTokenId = conditionTokenId;
     }
 
     internal int Id { get; }
@@ -30,6 +30,9 @@ internal sealed class DaggerfallExpeditionBand
     internal string Name { get; }
     internal DaggerfallBandKind Kind { get; }
     internal int Size { get; }
+
+    /// <summary>Non-null when this band was staged in response to a <see cref="DaggerfallWorldConditionToken"/>.</summary>
+    internal string? ConditionTokenId { get; }
 
     /// <summary>A camp stays put; any other band wanders, and pursues the party once it has spotted it.</summary>
     internal bool Camp { get; set; }
@@ -256,12 +259,12 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
     /// <param name="now">The absolute second the stretch ended.</param>
     /// <param name="draw">A keyed draw from <c>minimum</c> to <c>maximum</c> inclusive.</param>
     internal DaggerfallBandEvent? Step(long seconds, long now, (double X, double Y) party, DaggerfallBandSightConditions conditions,
-        int playerLevel, Func<string, int, int, int> draw)
+        int playerLevel, Func<string, int, int, int> draw, IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions = null)
     {
         if (_nextStaging < 0) _nextStaging = now - seconds + (long)(tuning.StageEveryHours * SecondsPerHour);
         while (now >= _nextStaging)
         {
-            TryStage(_nextStaging, party, playerLevel, draw, null, null);
+            TryStage(_nextStaging, party, playerLevel, draw, null, null, worldConditions);
             _nextStaging += (long)(tuning.StageEveryHours * SecondsPerHour);
         }
         _bands.RemoveAll(band => now >= band.Leaves || band.Distance(party.X, party.Y) > tuning.StageDistance.Maximum * 2);
@@ -293,21 +296,27 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
     /// party, camped or wandering. Null with the reason when nothing fits there.
     /// </summary>
     internal (DaggerfallExpeditionBand? Band, string? Refusal) StageAt(long now, (double X, double Y) party, int playerLevel,
-        Func<string, int, int, int> draw, double distance, double bearing, bool camp)
+        Func<string, int, int, int> draw, double distance, double bearing, bool camp,
+        IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions = null)
     {
-        DaggerfallExpeditionBand? band = TryStage(now, party, playerLevel, draw, (distance, bearing), camp);
+        DaggerfallExpeditionBand? band = TryStage(now, party, playerLevel, draw, (distance, bearing), camp, worldConditions);
         return band is null ? (null, "No band can be staged there: open sea, a location, or a foe the tables do not publish.") : (band, null);
     }
 
     private DaggerfallExpeditionBand? TryStage(long when, (double X, double Y) party, int playerLevel, Func<string, int, int, int> draw,
-        (double Distance, double Bearing)? at, bool? camp)
+        (double Distance, double Bearing)? at, bool? camp, IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions = null)
     {
-        if (tables.Tables.Count == 0) return null;
+        DaggerfallWorldConditionToken? drivingCondition = SelectBandCondition(worldConditions);
+        if (tables.Tables.Count == 0 && drivingCondition is null) return null;
         int id = _nextId;
         string key = $"band:{id}:at:{when}";
         if (at is null)
         {
-            if (_bands.Count >= tuning.MaximumBands || draw($"{key}:chance", 1, 100) > tuning.StageChance) return null;
+            int effectiveMax = drivingCondition is { Severity: >= 2 } ? tuning.MaximumBands + 1 : tuning.MaximumBands;
+            int effectiveChance = drivingCondition is not null
+                ? Math.Min(95, tuning.StageChance + 15 * drivingCondition.Severity)
+                : tuning.StageChance;
+            if (_bands.Count >= effectiveMax || draw($"{key}:chance", 1, 100) > effectiveChance) return null;
         }
         (double distance, double bearing) = at ?? (draw($"{key}:distance", (int)(tuning.StageDistance.Minimum * 100), (int)(tuning.StageDistance.Maximum * 100)) / 100d,
             draw($"{key}:bearing", 0, 359));
@@ -320,16 +329,128 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
         bool day = timeOfDay is >= 360 and <= 1080;
         DaggerfallEncounterRequest request = new(day ? DaggerfallEncounterContext.WildernessDay : DaggerfallEncounterContext.WildernessNight,
             Math.Max(1, playerLevel), Climate: climate);
-        DaggerfallEncounterChoice choice = DaggerfallEncounterPolicy.Pick(tables, request, (roll, minimum, maximum) => draw($"{key}:{roll}", minimum, maximum));
-        if (choice.MobileId is not int mobileId || !mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile) || !mobile.IsPublished)
-            return null;
+
+        DaggerfallEncounterChoice choice;
+        DaggerfallMobileDefinition? mobile = null;
+        string? conditionTag = null;
+        string? conditionTokenId = null;
+        DaggerfallBandKind? overrideKind = null;
+
+        if (drivingCondition is not null
+            && (tables.Tables.Count == 0 || draw($"{key}:condition", 1, 100) <= 50 + 15 * drivingCondition.Severity)
+            && TryPickConditionMobile(drivingCondition, key, draw, out int condMobileId, out DaggerfallMobileDefinition? condMobile, out DaggerfallBandKind condKind, out string labelTag))
+        {
+            choice = new DaggerfallEncounterChoice(request.Context, null, null, condMobileId, null, null, null, $"world-condition:{drivingCondition.TokenId}");
+            mobile = condMobile;
+            overrideKind = condKind;
+            conditionTag = labelTag;
+            conditionTokenId = drivingCondition.TokenId;
+        }
+        else
+        {
+            if (tables.Tables.Count == 0) return null;
+            choice = DaggerfallEncounterPolicy.Pick(tables, request, (roll, minimum, maximum) => draw($"{key}:{roll}", minimum, maximum));
+            if (choice.MobileId is not int mobileId || !mobiles.Mobiles.TryGetValue(mobileId, out mobile) || !mobile.IsPublished)
+                return null;
+        }
+
         int size = draw($"{key}:size", tuning.Size.Minimum, tuning.Size.Maximum);
         bool camped = camp ?? draw($"{key}:camp", 1, 100) <= tuning.CampShare;
-        DaggerfallExpeditionBand band = new(id, request, choice, size == 1 ? mobile.DonorName : $"{size} {Plural(mobile.DonorName)}",
-            KindOf(mobile), size, camped, x, y, when + (long)(tuning.LifetimeHours * SecondsPerHour));
+        string baseName = size == 1 ? mobile!.DonorName : $"{size} {Plural(mobile!.DonorName)}";
+        string bandName = string.IsNullOrWhiteSpace(conditionTag) ? baseName : $"{baseName} ({conditionTag})";
+        DaggerfallExpeditionBand band = new(id, request, choice, bandName,
+            overrideKind ?? KindOf(mobile!), size, camped, x, y, when + (long)(tuning.LifetimeHours * SecondsPerHour), conditionTokenId);
         _nextId++;
         _bands.Add(band);
         return band;
+    }
+
+    private static DaggerfallWorldConditionToken? SelectBandCondition(IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions)
+    {
+        if (worldConditions is null || worldConditions.Count == 0)
+            return null;
+        return worldConditions.FirstOrDefault(token => token.Kind is DaggerfallWorldConditionKind.MonsterSurge
+            or DaggerfallWorldConditionKind.BorderTension
+            or DaggerfallWorldConditionKind.GrainShortage
+            or DaggerfallWorldConditionKind.CrimeCrackdown);
+    }
+
+    private bool TryPickConditionMobile(
+        DaggerfallWorldConditionToken condition,
+        string key,
+        Func<string, int, int, int> draw,
+        out int mobileId,
+        out DaggerfallMobileDefinition? mobile,
+        out DaggerfallBandKind bandKind,
+        out string labelTag)
+    {
+        mobileId = 0;
+        mobile = null;
+        bandKind = DaggerfallBandKind.Bandits;
+        labelTag = string.Empty;
+
+        string subject = condition.SubjectTag?.Trim().ToLowerInvariant() ?? string.Empty;
+        Func<KeyValuePair<int, DaggerfallMobileDefinition>, bool> predicate;
+        switch (condition.Kind)
+        {
+            case DaggerfallWorldConditionKind.MonsterSurge when subject is "undead":
+                predicate = pair => pair.Value.IsPublished && (pair.Value.Affinity == "Undead" || pair.Value.Team == "Undead");
+                bandKind = DaggerfallBandKind.Undead;
+                labelTag = "Undead Surge";
+                break;
+            case DaggerfallWorldConditionKind.MonsterSurge when subject is "orcs" or "orc":
+                predicate = pair => pair.Value.IsPublished && pair.Value.DonorName.Contains("Orc", StringComparison.OrdinalIgnoreCase);
+                bandKind = DaggerfallBandKind.Monsters;
+                labelTag = "Orc Surge";
+                break;
+            case DaggerfallWorldConditionKind.MonsterSurge when subject is "beasts" or "animals":
+                predicate = pair => pair.Value.IsPublished && pair.Value.Affinity == "Animal";
+                bandKind = DaggerfallBandKind.Beasts;
+                labelTag = "Beast Surge";
+                break;
+            case DaggerfallWorldConditionKind.MonsterSurge when subject is "bandits" or "criminals":
+                predicate = pair => pair.Value.IsPublished && pair.Value.Team == "Criminals";
+                bandKind = DaggerfallBandKind.Bandits;
+                labelTag = "Bandit Surge";
+                break;
+            case DaggerfallWorldConditionKind.MonsterSurge:
+                predicate = pair => pair.Value.IsPublished && (pair.Value.Team is "Monsters" or "Undead" || pair.Value.Affinity == "Undead");
+                bandKind = DaggerfallBandKind.Monsters;
+                labelTag = "Monster Surge";
+                break;
+            case DaggerfallWorldConditionKind.BorderTension:
+                predicate = pair => pair.Value.IsPublished && pair.Value.Affinity == "Human"
+                    && (pair.Value.DonorName.Contains("Knight", StringComparison.OrdinalIgnoreCase)
+                        || pair.Value.DonorName.Contains("Warrior", StringComparison.OrdinalIgnoreCase)
+                        || pair.Value.DonorName.Contains("Archer", StringComparison.OrdinalIgnoreCase));
+                bandKind = DaggerfallBandKind.Travellers;
+                labelTag = "Border Patrol";
+                break;
+            case DaggerfallWorldConditionKind.CrimeCrackdown:
+                predicate = pair => pair.Value.IsPublished && pair.Value.Affinity == "Human"
+                    && (pair.Value.DonorName.Contains("Knight", StringComparison.OrdinalIgnoreCase)
+                        || pair.Value.DonorName.Contains("Warrior", StringComparison.OrdinalIgnoreCase));
+                bandKind = DaggerfallBandKind.Travellers;
+                labelTag = "Watch Patrol";
+                break;
+            case DaggerfallWorldConditionKind.GrainShortage:
+                predicate = pair => pair.Value.IsPublished && pair.Value.Team == "Criminals";
+                bandKind = DaggerfallBandKind.Bandits;
+                labelTag = "Supply Raiders";
+                break;
+            default:
+                return false;
+        }
+
+        List<KeyValuePair<int, DaggerfallMobileDefinition>> matches = [.. mobiles.Mobiles.Where(predicate).OrderBy(pair => pair.Key)];
+        if (matches.Count == 0)
+            return false;
+
+        int picked = matches.Count == 1 ? 0 : draw($"{key}:cond-mobile", 0, matches.Count - 1);
+        KeyValuePair<int, DaggerfallMobileDefinition> chosen = matches[Math.Clamp(picked, 0, matches.Count - 1)];
+        mobileId = chosen.Key;
+        mobile = chosen.Value;
+        return true;
     }
 
     private void Move(DaggerfallExpeditionBand band, (double X, double Y) party, double hours, Func<string, int, int, int> draw)

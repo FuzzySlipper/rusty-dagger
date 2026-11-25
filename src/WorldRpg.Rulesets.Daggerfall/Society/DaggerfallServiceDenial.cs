@@ -19,4 +19,5 @@ internal enum DaggerfallServiceDenial
     WorkNotReady,
     WorkUnavailable,
     WantedOrBanished,
+    UnderScrutiny,
 }

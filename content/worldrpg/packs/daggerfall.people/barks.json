@@ -153,6 +153,93 @@
       "The old trees around here keep an uneasy quiet."
     ]
   },
+  "byFaction": {
+    "40": [
+      "The Mages Guild watches every ward across the Bay, traveler.",
+      "Arcane business belongs inside the guildhall, not whispered on the cobbles.",
+      "Mind your scrolls — the Mages Guild remembers who keeps its confidence."
+    ],
+    "41": [
+      "The Fighters Guild takes clean contracts and sharper blades.",
+      "If the roads turn rough, the Fighters Guild hall always needs steady hands.",
+      "Good steel and guild discipline keep this town standing."
+    ],
+    "42": [
+      "Keep your voice down — the Guild doesn't advertise on the notice board.",
+      "Gold moves faster in the alleys than in the counting house.",
+      "Watch your pockets and mind who you name on the street."
+    ],
+    "108": [
+      "The Night Mother hears more than the city watch ever will.",
+      "Walk past and keep your eyes forward.",
+      "Some contracts are never posted in daylight."
+    ],
+    "450": [
+      "The Temples stand open to all who seek grace and healing.",
+      "Bring your tithes and your ailments to the sanctuary, traveler.",
+      "May the Divines keep our shrines and roads in peace."
+    ],
+    "city-watch": [
+      "The watch keeps order from the gates to the palace steps — move along.",
+      "Keep steel sheathed inside the walls, citizen.",
+      "Check the town notice board if you want to know what the watch is looking for."
+    ],
+    "201": [
+      "Castle Daggerfall's banners still rule these walls.",
+      "Every road in the shire answers to Daggerfall's court."
+    ],
+    "204": [
+      "Sentinel's fleets and banners watch the whole southern Bay.",
+      "Mind the palace decrees while you're in Sentinel's lands."
+    ],
+    "207": [
+      "Wayrest's court weighs coin and loyalty on the same scale.",
+      "The Bjoulsae tolls keep Wayrest's coffers full."
+    ],
+    "358": [
+      "Orsinium's iron holds the mountain passes against all comers.",
+      "Respect the banners of Orsinium while you walk these stones."
+    ]
+  },
+  "byCondition": {
+    "grain-shortage": [
+      "Grain carts into {region} came in half-empty again — prices are climbing by the hour.",
+      "Speculators are squeezing every loaf in {region}; check the notice board for escort pay.",
+      "With the shortage hitting {region}, merchants aren't parting with stock cheaply."
+    ],
+    "border-tension": [
+      "Riders have been massing near {region}'s borders — the watch is checking everyone at the gates.",
+      "Folk in {region} are keeping blades close with border patrols out on the highways.",
+      "Don't linger near the gates of {region} if your papers or standing are thin."
+    ],
+    "monster-surge": [
+      "Roads outside {region} aren't safe — monsters have been raiding right up to the farms.",
+      "Check the town notice board; {faction} is paying bounties on the surge out in {region}.",
+      "Caravans won't ride after dusk in {region} until someone clears the wilds."
+    ],
+    "crime-crackdown": [
+      "The watch in {region} is sweeping every street and checking names at the gates.",
+      "Lawful shops in {region} won't serve anyone with a bad name while the crackdown lasts.",
+      "Keep your head down in {region} — the crackdown has the guards jumpy."
+    ],
+    "guild-embargo": [
+      "{faction} has shut its services to outsiders across {region} under the embargo.",
+      "Word on the square is {faction}'s embargo is squeezing half the trade in {region}.",
+      "Unless you wear {faction}'s colours or hold a friend's vouch, don't expect favours today."
+    ],
+    "succession-crisis": [
+      "Nobody in {region} knows who'll hold the throne by next moon — the guards are on edge.",
+      "Court factions in {region} are watching every newcomer while the succession drags on."
+    ],
+    "plague-scare": [
+      "Gate wardens in {region} are turning back folk who look feverish — check the temples.",
+      "Keep clear of crowded inns in {region} until the quarantine decree lifts."
+    ],
+    "decree": [
+      "Have you read the latest decree posted on the notice board in {region}?",
+      "Word from {faction} is posted fresh on the town notice board today."
+    ]
+  },
   "referrals": {
     "defaultIssueTemplates": [
       "If you travel to {target}, ask {contact} outside the tavern — tell them {speaker} sent you.",

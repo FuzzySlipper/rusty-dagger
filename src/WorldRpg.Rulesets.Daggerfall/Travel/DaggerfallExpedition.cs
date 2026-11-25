@@ -90,6 +90,9 @@ internal interface IDaggerfallExpeditionSurroundings
 
     /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party reached its destination pixel.</summary>
     void PersistentBandArrived(DaggerfallPersistentOverlandBand band) { }
+
+    /// <summary>Active world-condition tokens affecting <paramref name="region"/> (stubbed/authored or B2 board-driven).</summary>
+    IReadOnlyList<DaggerfallWorldConditionToken> WorldConditions(int region) => [];
 }
 
 /// <summary>Where Enter puts the player: the party's pixel, the location standing there if any, and the pixel the party came from.</summary>
@@ -104,6 +107,9 @@ internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, 
 
     /// <summary>Non-null when this token represents a persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party.</summary>
     internal string? PersistentBandId { get; init; }
+
+    /// <summary>Non-null when this band was staged in response to a <see cref="DaggerfallWorldConditionToken"/>.</summary>
+    internal string? ConditionTokenId { get; init; }
 }
 
 /// <summary>
@@ -848,14 +854,15 @@ internal sealed class DaggerfallExpedition
     internal string? StageBand(double distance, double bearing, bool camp)
     {
         if (!_open || _teleport is not null || _held is not null) return "Open the travel map outdoors first.";
-        return _bands.StageAt(_world.Calendar.ToAbsoluteSeconds(), Position, _world.PlayerLevel, _world.Roll, distance, bearing, camp).Refusal;
+        return _bands.StageAt(_world.Calendar.ToAbsoluteSeconds(), Position, _world.PlayerLevel, _world.Roll, distance, bearing, camp,
+            _world.WorldConditions(HostAt(_party).Id.Region)).Refusal;
     }
 
     private DaggerfallExpeditionBandView View(DaggerfallExpeditionBand band)
     {
         (double x, double y) = Position;
         return new(band.Id, band.X, band.Y, band.Heading, band.Kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y))
-            { Mobile = band.Choice.MobileId };
+            { Mobile = band.Choice.MobileId, ConditionTokenId = band.ConditionTokenId };
     }
 
     private DaggerfallExpeditionBandView ViewPersistent(DaggerfallPersistentOverlandBand band)
@@ -880,7 +887,8 @@ internal sealed class DaggerfallExpedition
         if (StepPersistentBands(seconds)) return true;
         if (_policy.IsOcean(_party)) return false;
         double partySight = PartySight;
-        if (_bands.Step(seconds, after.ToAbsoluteSeconds(), Position, SightConditions(), _world.PlayerLevel, _world.Roll) is not { } found)
+        IReadOnlyList<DaggerfallWorldConditionToken> activeConditions = _world.WorldConditions(HostAt(_party).Id.Region);
+        if (_bands.Step(seconds, after.ToAbsoluteSeconds(), Position, SightConditions(), _world.PlayerLevel, _world.Roll, activeConditions) is not { } found)
             return false;
         DaggerfallExpeditionBand band = found.Band;
         bool many = band.Size > 1;

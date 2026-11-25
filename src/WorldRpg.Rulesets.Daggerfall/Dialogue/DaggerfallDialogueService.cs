@@ -98,6 +98,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallIntroductionResult>? _requestIntroduction;
     private readonly Func<DaggerfallNpc, bool>? _canCurryFavour;
     private readonly Func<DaggerfallNpc, bool, bool, DaggerfallFavourResult>? _curryFavour;
+    private readonly IDaggerfallWorldConditionSource? _worldConditions;
+    private readonly Func<DaggerfallSiteRecord, string>? _readNoticeBoard;
+    private readonly Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? _evaluateGateScrutiny;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -139,7 +142,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallIntroductionTarget>>? introductionTargets = null,
         Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallIntroductionResult>? requestIntroduction = null,
         Func<DaggerfallNpc, bool>? canCurryFavour = null,
-        Func<DaggerfallNpc, bool, bool, DaggerfallFavourResult>? curryFavour = null)
+        Func<DaggerfallNpc, bool, bool, DaggerfallFavourResult>? curryFavour = null,
+        IDaggerfallWorldConditionSource? worldConditions = null,
+        Func<DaggerfallSiteRecord, string>? readNoticeBoard = null,
+        Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? evaluateGateScrutiny = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
@@ -150,6 +156,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _requestIntroduction = requestIntroduction;
         _canCurryFavour = canCurryFavour;
         _curryFavour = curryFavour;
+        _worldConditions = worldConditions;
+        _readNoticeBoard = readNoticeBoard;
+        _evaluateGateScrutiny = evaluateGateScrutiny;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -377,6 +386,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         var benefit = _guildWelcome?.Invoke(npc);
         if (!string.IsNullOrEmpty(benefit?.Message)) greeting += "\n" + benefit.Message;
+        DaggerfallSiteRecord? activeSite = _activeSite();
+        string? factionLine = ResolveFactionGreetingLine(npc, activeSite);
+        if (!string.IsNullOrWhiteSpace(factionLine)) greeting += "\n" + factionLine;
+        string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
+        if (!string.IsNullOrWhiteSpace(scrutinyLine)) greeting += "\n" + scrutinyLine;
         if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
             && liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? openOverlay))
         {
@@ -564,6 +578,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             session.Reply = questAnswer.Text;
             session.Diagnostics.AddRange(questAnswer.Diagnostics);
         }
+        else if (topic == DaggerfallDialogueTopic.NoticeBoard)
+        {
+            session.Question = "What's posted on the town notice board?";
+            session.Reply = _readNoticeBoard is not null
+                ? _readNoticeBoard(site)
+                : "There is no notice board posted here.";
+        }
         else if (topic == DaggerfallDialogueTopic.Referral)
         {
             string? referralMessage = _issueReferral?.Invoke(site, npc);
@@ -646,7 +667,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             }
         }
         candidates.RemoveAll(candidate => candidate.TimeLimit > 0 && candidate.TimeLimit <= currentMinute);
+        List<string> conditionNews = BuildConditionNewsLines(npc, site);
         int questRumors = _resolveQuestRumor is null ? 0 : _questRumorCount();
+        if (conditionNews.Count > 0 && (candidates.Count + questRumors == 0 || Draw(session, $"{session.QuestionCount}:news:condition-priority", 1, 100) <= 65))
+        {
+            int picked = conditionNews.Count == 1 ? 0 : Draw(session, $"{session.QuestionCount}:news:condition-select", 0, conditionNews.Count - 1);
+            diagnostics = [];
+            return conditionNews[picked];
+        }
         if (candidates.Count + questRumors == 0)
         {
             (string empty, diagnostics) = RenderSelectedRun(Resource(1457), context,
@@ -878,12 +906,283 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         int regionIndex = site?.Id.Region ?? npc.Site.Region;
         string regionName = _definitions.BuildingNames.RegionName(regionIndex);
+        ulong barkSeed = unchecked((ulong)npc.DurableId);
+
+        (int primaryFactionId, string? creatureFactionId) = ResolveLiveFaction(npc);
+
+        // 1. Active regional or faction world conditions drive condition-aware ambient barks.
+        if (_worldConditions is not null)
+        {
+            int day = checked((int)_calendar().DayNumber);
+            IReadOnlyList<DaggerfallWorldConditionToken> active = _worldConditions.ActiveForRegion(regionIndex, day);
+            DaggerfallWorldConditionToken? matched = SelectMatchingBarkCondition(npc, primaryFactionId, creatureFactionId, active);
+            if (matched is not null)
+            {
+                string? condFactionName = matched.SourceFactionId is int sf && sf > 0
+                    && _definitions.Factions.Factions.TryGetValue(sf, out DaggerfallFactionDefinition? sfDef)
+                        ? sfDef.Name
+                        : null;
+                if (_definitions.People.Barks.TryResolveConditionBarkLine(barkSeed, matched.Kind, regionName, condFactionName, out string? condLine)
+                    && !string.IsNullOrWhiteSpace(condLine))
+                {
+                    return $"{speaker}: \"{condLine}\"";
+                }
+            }
+        }
+
+        // 2. Faction-aware ambient barks: faction standing note or authored byFaction line.
+        string? factionBark = ResolveFactionAmbientBark(npc, barkSeed, primaryFactionId, creatureFactionId);
+        if (!string.IsNullOrWhiteSpace(factionBark))
+            return $"{speaker}: \"{factionBark}\"";
+
         string? climateName = site is not null
             ? _definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY).Name
             : null;
         string line = _definitions.People.Barks.ResolveBarkLine(
-            unchecked((ulong)npc.DurableId), npc.Role, overlay?.ArchetypeId, regionIndex, regionName, climateName);
+            barkSeed, npc.Role, overlay?.ArchetypeId, regionIndex, regionName, climateName);
         return $"{speaker}: \"{line}\"";
+    }
+
+    private (int PrimaryFactionId, string? CreatureFactionId) ResolveLiveFaction(DaggerfallNpc npc)
+    {
+        if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
+            && liveActor.Actor.TryGet<FactionComponent>(out FactionComponent? fc))
+        {
+            return (fc.PrimaryFactionId ?? npc.Appearance.FactionId, fc.CreatureFactionId);
+        }
+        return (npc.Appearance.FactionId, null);
+    }
+
+    private string? ResolveFactionGreetingLine(DaggerfallNpc npc, DaggerfallSiteRecord? site)
+    {
+        (int factionId, string? creatureFactionId) = ResolveLiveFaction(npc);
+        if (factionId <= 0)
+            return null;
+        if (!_definitions.Factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction))
+            return null;
+
+        // Skip generic regional people factions unless the player has extreme standing.
+        bool isRegionalPeople = faction.Type == 15;
+        int standing = _social.FactionReputation(faction.Id);
+
+        // 1. Shared guild membership camaraderie (walking sub-faction lineage up to concrete guild root).
+        if (TryResolveConcreteGuild(faction.Id, out Guilds.DaggerfallConcreteGuildDefinition? guild)
+            && guild is not null
+            && _social.GuildEligibility(guild.FactionId).IsMember)
+        {
+            return $"Well met, fellow member of {guild.DisplayName}.";
+        }
+
+        // 2. Rival-faction friction: check if the player belongs to an authored enemy of this NPC's faction or parent guild.
+        if (TryFindRivalMemberFaction(faction, out DaggerfallFactionDefinition? enemyDef) && enemyDef is not null)
+            return $"{faction.Name} keeps a wary eye on friends of {enemyDef.Name}.";
+
+        // 3. Strong standing or distrust with a non-generic faction (guild, knightly order, temple, noble court, crown).
+        if (!isRegionalPeople)
+        {
+            int effectiveStanding = guild is not null ? _social.FactionReputation(guild.FactionId) : standing;
+            string displayFaction = guild?.DisplayName ?? faction.Name;
+            if (effectiveStanding >= 20)
+                return $"Your name stands high with {displayFaction}.";
+            if (effectiveStanding <= -10)
+                return $"{displayFaction} has little patience for you right now.";
+        }
+
+        // 4. Acute faction-specific world condition note (e.g. GuildEmbargo on this NPC's faction).
+        if (_worldConditions is not null && site is not null)
+        {
+            int day = checked((int)_calendar().DayNumber);
+            foreach (DaggerfallWorldConditionToken token in _worldConditions.ActiveForRegion(site.Id.Region, day))
+            {
+                if (token.Kind == DaggerfallWorldConditionKind.GuildEmbargo && MatchesFactionLineage(faction.Id, token.SourceFactionId))
+                    return $"Mind the {guild?.DisplayName ?? faction.Name} embargo — we are keeping close watch on who enters our halls.";
+            }
+        }
+
+        _ = creatureFactionId;
+        return null;
+    }
+
+    private bool TryResolveConcreteGuild(int factionId, out Guilds.DaggerfallConcreteGuildDefinition? guild)
+    {
+        guild = null;
+        int current = factionId;
+        for (int depth = 0; depth < 8 && current > 0; depth++)
+        {
+            if (Guilds.DaggerfallConcreteGuildCatalog.TryGet(current, out Guilds.DaggerfallConcreteGuildDefinition? found))
+            {
+                guild = found;
+                return true;
+            }
+            if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def) || def.Parent == current)
+                break;
+            current = def.Parent;
+        }
+        return false;
+    }
+
+    private bool TryFindRivalMemberFaction(DaggerfallFactionDefinition startFaction, out DaggerfallFactionDefinition? enemyDef)
+    {
+        enemyDef = null;
+        int current = startFaction.Id;
+        for (int depth = 0; depth < 6 && current > 0; depth++)
+        {
+            if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
+                break;
+            if (def.Type == 15)
+                break;
+            foreach (int enemyId in def.Enemies)
+            {
+                if (enemyId > 0
+                    && _definitions.Factions.Factions.TryGetValue(enemyId, out DaggerfallFactionDefinition? matched)
+                    && _social.GuildEligibility(enemyId).IsMember)
+                {
+                    enemyDef = matched;
+                    return true;
+                }
+            }
+            if (def.Parent == current) break;
+            current = def.Parent;
+        }
+        return false;
+    }
+
+    private string? ResolveGuardScrutinyGreetingLine(DaggerfallNpc npc, DaggerfallSiteRecord? site)
+    {
+        if (_evaluateGateScrutiny is null || site is null)
+            return null;
+        (_, string? creatureFactionId) = ResolveLiveFaction(npc);
+        bool isGuard = string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(creatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase);
+        if (!isGuard)
+            return null;
+
+        DaggerfallGateScrutinyAssessment assessment = _evaluateGateScrutiny(site.Id.Region, site);
+        return assessment.Level == DaggerfallScrutinyLevel.Normal ? null : assessment.Reason;
+    }
+
+    private string? ResolveFactionAmbientBark(DaggerfallNpc npc, ulong seed, int primaryFactionId, string? creatureFactionId)
+    {
+        bool isRegionalPeople = primaryFactionId > 0
+            && _definitions.Factions.Factions.TryGetValue(primaryFactionId, out DaggerfallFactionDefinition? primaryDef)
+            && primaryDef.Type == 15;
+
+        List<string> keys = [];
+        // Generic regional townsfolk (Type 15) speak regional/climate/role barks unless they hold a specific
+        // non-generic institutional identity (such as "city-watch"); non-generic factions walk up their guild/court lineage.
+        if (!isRegionalPeople)
+        {
+            int current = primaryFactionId;
+            for (int depth = 0; depth < 6 && current > 0; depth++)
+            {
+                keys.Add(current.ToString(CultureInfo.InvariantCulture));
+                if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
+                    break;
+                if (def.Parent == current) break;
+                current = def.Parent;
+            }
+        }
+        if (!string.IsNullOrWhiteSpace(creatureFactionId))
+            keys.Add(creatureFactionId);
+
+        // If the NPC belongs to a specific non-generic faction and the player has notable standing or rivalry, speak to it!
+        if (!isRegionalPeople && primaryFactionId > 0
+            && _definitions.Factions.Factions.TryGetValue(primaryFactionId, out DaggerfallFactionDefinition? faction))
+        {
+            if (TryFindRivalMemberFaction(faction, out DaggerfallFactionDefinition? enemyDef) && enemyDef is not null)
+                return $"Keep moving — {faction.Name} has no love for {enemyDef.Name}.";
+
+            int standing = TryResolveConcreteGuild(primaryFactionId, out Guilds.DaggerfallConcreteGuildDefinition? guild) && guild is not null
+                ? _social.FactionReputation(guild.FactionId)
+                : _social.FactionReputation(primaryFactionId);
+            string displayFaction = guild?.DisplayName ?? faction.Name;
+            if (standing <= -10)
+                return $"{displayFaction} remembers your slights — best walk on.";
+            if (standing >= 20)
+                return $"Good day — folk in {displayFaction} speak well of you.";
+        }
+
+        return keys.Count > 0 && _definitions.People.Barks.TryResolveFactionBarkLine(seed, keys, out string? line) ? line : null;
+    }
+
+    private DaggerfallWorldConditionToken? SelectMatchingBarkCondition(
+        DaggerfallNpc npc,
+        int primaryFactionId,
+        string? creatureFactionId,
+        IReadOnlyList<DaggerfallWorldConditionToken> active)
+    {
+        if (active.Count == 0)
+            return null;
+
+        bool isGuard = string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(creatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase);
+        bool isMerchantOrTavern = string.Equals(npc.Role, "merchant", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(npc.Role, "tavern keeper", StringComparison.OrdinalIgnoreCase);
+        bool isPriest = string.Equals(npc.Role, "priest", StringComparison.OrdinalIgnoreCase);
+
+        foreach (DaggerfallWorldConditionToken token in active)
+        {
+            if (token.Kind == DaggerfallWorldConditionKind.GuildEmbargo
+                && MatchesFactionLineage(primaryFactionId, token.SourceFactionId))
+                return token;
+            if (isGuard && token.Kind is DaggerfallWorldConditionKind.CrimeCrackdown or DaggerfallWorldConditionKind.BorderTension or DaggerfallWorldConditionKind.SuccessionCrisis or DaggerfallWorldConditionKind.PlagueScare)
+                return token;
+            if (isMerchantOrTavern && token.Kind is DaggerfallWorldConditionKind.GrainShortage or DaggerfallWorldConditionKind.GuildEmbargo)
+                return token;
+            if (isPriest && token.Kind is DaggerfallWorldConditionKind.PlagueScare or DaggerfallWorldConditionKind.MonsterSurge)
+                return token;
+        }
+
+        // Severe regional conditions (severity >= 2) are talked about on the street by everyone.
+        return active.FirstOrDefault(token => token.Severity >= 2);
+    }
+
+    private List<string> BuildConditionNewsLines(DaggerfallNpc npc, DaggerfallSiteRecord site)
+    {
+        if (_worldConditions is null)
+            return [];
+        int day = checked((int)_calendar().DayNumber);
+        IReadOnlyList<DaggerfallWorldConditionToken> active = _worldConditions.ActiveForRegion(site.Id.Region, day);
+        if (active.Count == 0)
+            return [];
+
+        string regionName = _definitions.BuildingNames.RegionName(site.Id.Region);
+        List<string> lines = [];
+        foreach (DaggerfallWorldConditionToken token in active)
+        {
+            string? sourceName = token.SourceFactionId is int sf && sf > 0
+                && _definitions.Factions.Factions.TryGetValue(sf, out DaggerfallFactionDefinition? sfDef)
+                    ? sfDef.Name
+                    : null;
+            if (!string.IsNullOrWhiteSpace(token.Body))
+            {
+                lines.Add(token.Body);
+                continue;
+            }
+            if (_definitions.People.Barks.TryResolveConditionBarkLine(
+                unchecked((ulong)npc.DurableId + (ulong)token.Kind), token.Kind, regionName, sourceName, out string? line)
+                && !string.IsNullOrWhiteSpace(line))
+            {
+                lines.Add(line);
+            }
+        }
+        return lines;
+    }
+
+    private bool MatchesFactionLineage(int candidateFactionId, int? targetFactionId)
+    {
+        if (targetFactionId is not int wanted || wanted <= 0 || candidateFactionId <= 0)
+            return false;
+        int current = candidateFactionId;
+        for (int depth = 0; depth < 8 && current > 0; depth++)
+        {
+            if (current == wanted) return true;
+            if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
+                break;
+            if (def.Parent == current) break;
+            current = def.Parent;
+        }
+        return false;
     }
 
     private string FormatReferralLine(DaggerfallNpc npc, string referralTag) =>
@@ -898,6 +1197,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_current is not { } session) { _publish(null); return; }
         const string Talk = DaggerfallDialogueTopicGroups.Talk;
         List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?", Group: Talk), new("news", "Any news?", Group: Talk)];
+        if (_readNoticeBoard is not null && site is { Exterior: not null } && OffersNoticeBoardTopic(npc))
+            topics.Add(new("notice-board", "What's on the notice board?", Group: Talk));
         if (_issueReferral is not null)
             topics.Add(new("referral", "Any contacts nearby?", Group: Talk));
         DaggerfallIntroductionAccess? access = _introductionAccess?.Invoke(npc);
@@ -956,6 +1257,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             [.. session.Diagnostics]) { QuestContacts = _questContacts(npc.DurableId) });
     }
 
+    private static bool OffersNoticeBoardTopic(DaggerfallNpc npc) =>
+        npc.Role.Equals("guard", StringComparison.OrdinalIgnoreCase)
+        || npc.Role.Equals("tavern keeper", StringComparison.OrdinalIgnoreCase)
+        || npc.Role.Equals("merchant", StringComparison.OrdinalIgnoreCase)
+        || npc.Role.Equals("priest", StringComparison.OrdinalIgnoreCase)
+        || npc.Services.Contains("tavern", StringComparer.OrdinalIgnoreCase)
+        || npc.Services.Contains("quests", StringComparer.OrdinalIgnoreCase);
+
     private static bool OffersTopic(DaggerfallNpc npc, DaggerfallDialogueTopic topic) =>
         npc.Services.Contains(topic == DaggerfallDialogueTopic.Donate ? "donate" : "cure-disease", StringComparer.Ordinal);
 
@@ -999,6 +1308,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             "directions" => DaggerfallDialogueTopic.Directions,
             "news" => DaggerfallDialogueTopic.News,
+            "notice-board" => DaggerfallDialogueTopic.NoticeBoard,
             "referral" => DaggerfallDialogueTopic.Referral,
             "curry-favour" => DaggerfallDialogueTopic.CurryFavour,
             "work" => DaggerfallDialogueTopic.Work,
@@ -1016,7 +1326,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "dismiss-party" => DaggerfallDialogueTopic.DismissParty,
             _ => default,
         };
-        if (value is "directions" or "news" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
+        if (value is "directions" or "news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
         if (value is { Length: > 10 } dynamicIntroduce && dynamicIntroduce.StartsWith("introduce:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Introduce;

@@ -83,6 +83,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Sparse office overrides (office -> holder, previous holder, cause); empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallOfficeLedgerSave OfficeLedger { get; init; } = DaggerfallOfficeLedgerSave.Empty;
+    /// <summary>Sparse authored/stubbed world-condition tokens driving visible political surfaces; empty when untouched.</summary>
+    [JsonRequired]
+    public DaggerfallWorldConditionsSave WorldConditions { get; init; } = DaggerfallWorldConditionsSave.Empty;
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];
@@ -1149,6 +1152,8 @@ internal sealed record DaggerfallSavePayload(
         Social.Validate();
         ArgumentNullException.ThrowIfNull(OfficeLedger);
         OfficeLedger.Validate();
+        ArgumentNullException.ThrowIfNull(WorldConditions);
+        WorldConditions.Validate();
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();
         ArgumentNullException.ThrowIfNull(Doors);

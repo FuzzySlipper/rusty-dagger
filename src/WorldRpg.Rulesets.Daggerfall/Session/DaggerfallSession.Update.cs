@@ -269,6 +269,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendar after = _time.Calendar;
         long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
+        WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar.Sky, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
         _exterior.UpdateResidentCityLights();                                                     // Exterior

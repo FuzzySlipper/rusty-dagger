@@ -484,6 +484,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     void IDaggerfallExpeditionSurroundings.PersistentBandArrived(DaggerfallPersistentOverlandBand band) =>
         _ = OverlandParties.OnPersistentBandArrived(band);
 
+    IReadOnlyList<DaggerfallWorldConditionToken> IDaggerfallExpeditionSurroundings.WorldConditions(int region) =>
+        WorldConditions.ActiveForRegion(region, checked((int)_time.Calendar.DayNumber));
+
     bool IDaggerfallExpeditionSurroundings.EncounterArrives(DaggerfallTravelMapPixel pixel, bool atLocation, long minute) =>
         WorldEncounters.Overland(minute, _definitions.Grids.ClimateAtWorldPixel(pixel.X, pixel.Y).Value, atLocation) is { } request
         && WorldEncounters.Queue(request, DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId)
@@ -863,6 +866,19 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Sparse office ledger connecting local seeded offices and board-game seats to live holders and overrides.</summary>
     internal DaggerfallOfficeLedger OfficeLedger { get; } = null!;
+
+    /// <summary>Sparse world-condition seam (authored/stubbed tokens now; B2 weekly board game later).</summary>
+    internal DaggerfallWorldConditions WorldConditions { get; } = null!;
+
+    /// <summary>Gate, watch, service, and scarcity scrutiny policy driven by standing and active world conditions.</summary>
+    internal DaggerfallScrutinyPolicy Scrutiny { get; } = null!;
+
+    /// <summary>Town public notice board assembling classic sign rumours, bounties, office notices, and condition decrees.</summary>
+    internal DaggerfallNoticeBoard NoticeBoard { get; } = null!;
+
+    /// <summary>Reads the active town's notice board (null when no site is active).</summary>
+    internal DaggerfallTownNoticeBoardView? ReadTownNoticeBoard() =>
+        _site.ActiveSite is { } active ? NoticeBoard.BuildForSite(active, _time.Calendar.MinuteNumber) : null;
 
     /// <summary>Social introductions and vouching: prominence gating, social-skill skips, structured vouches, and better terms.</summary>
     internal DaggerfallIntroductions Introductions { get; } = null!;

@@ -153,14 +153,19 @@ internal sealed record DaggerfallPeopleBarks(
     IReadOnlyDictionary<string, IReadOnlyList<string>> ByArchetype,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ByRegion,
     IReadOnlyDictionary<string, IReadOnlyList<string>> ByClimate,
-    DaggerfallPeopleReferralTemplates Referrals)
+    DaggerfallPeopleReferralTemplates Referrals,
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? ByFactionMap = null,
+    IReadOnlyDictionary<string, IReadOnlyList<string>>? ByConditionMap = null)
 {
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> EmptyMap =
         new ReadOnlyDictionary<string, IReadOnlyList<string>>(
             new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase));
 
+    internal IReadOnlyDictionary<string, IReadOnlyList<string>> ByFaction => ByFactionMap ?? EmptyMap;
+    internal IReadOnlyDictionary<string, IReadOnlyList<string>> ByCondition => ByConditionMap ?? EmptyMap;
+
     internal static DaggerfallPeopleBarks Empty { get; } = new(
-        [], EmptyMap, EmptyMap, EmptyMap, EmptyMap, DaggerfallPeopleReferralTemplates.Empty);
+        [], EmptyMap, EmptyMap, EmptyMap, EmptyMap, DaggerfallPeopleReferralTemplates.Empty, EmptyMap, EmptyMap);
 
     /// <summary>
     /// Resolves one deterministic ambient bark line with specificity precedence:
@@ -185,6 +190,41 @@ internal sealed record DaggerfallPeopleBarks(
         if (pool.Count == 0)
             throw new InvalidOperationException("People pack barks.json defines no defaultBarks.");
         return pool[(int)(seed % (ulong)pool.Count)];
+    }
+
+    /// <summary>Tries to resolve a faction-specific ambient bark line from <see cref="ByFaction"/>.</summary>
+    internal bool TryResolveFactionBarkLine(ulong seed, IEnumerable<string> factionKeys, out string? line)
+    {
+        line = null;
+        foreach (string key in factionKeys)
+        {
+            if (string.IsNullOrWhiteSpace(key)) continue;
+            if (ByFaction.TryGetValue(key, out IReadOnlyList<string>? pool) && pool.Count > 0)
+            {
+                line = pool[(int)(seed % (ulong)pool.Count)];
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Tries to resolve a world-condition ambient bark line from <see cref="ByCondition"/>.</summary>
+    internal bool TryResolveConditionBarkLine(
+        ulong seed,
+        DaggerfallWorldConditionKind kind,
+        string regionName,
+        string? factionName,
+        out string? line)
+    {
+        line = null;
+        string slug = DaggerfallWorldConditionToken.KindSlug(kind);
+        if (!ByCondition.TryGetValue(slug, out IReadOnlyList<string>? pool) || pool.Count == 0)
+            return false;
+        string template = pool[(int)(seed % (ulong)pool.Count)];
+        line = template
+            .Replace("{region}", regionName, StringComparison.Ordinal)
+            .Replace("{faction}", string.IsNullOrWhiteSpace(factionName) ? "the authorities" : factionName, StringComparison.Ordinal);
+        return true;
     }
 }
 
@@ -421,6 +461,8 @@ internal static class DaggerfallPeopleContent
             IReadOnlyDictionary<string, IReadOnlyList<string>> byRegion = ReadTextMap(root, "byRegion", $"People pack '{packId}' barks.byRegion", diagnostics);
             IReadOnlyDictionary<string, IReadOnlyList<string>> byClimate = ReadTextMap(root, "byClimate", $"People pack '{packId}' barks.byClimate", diagnostics,
                 validateKey: key => ValidClimateNames.Contains(key) ? null : $"references unknown climate '{key}'");
+            IReadOnlyDictionary<string, IReadOnlyList<string>> byFaction = ReadTextMap(root, "byFaction", $"People pack '{packId}' barks.byFaction", diagnostics);
+            IReadOnlyDictionary<string, IReadOnlyList<string>> byCondition = ReadTextMap(root, "byCondition", $"People pack '{packId}' barks.byCondition", diagnostics);
 
             JsonElement refEl = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "referrals", diagnostics), $"People pack '{packId}' barks.referrals", diagnostics);
             IReadOnlyList<string> defaultIssue = ReadTextList(refEl, "defaultIssueTemplates", $"People pack '{packId}' referrals.defaultIssueTemplates", requiredNonEmpty: true, diagnostics,
@@ -455,7 +497,9 @@ internal static class DaggerfallPeopleContent
                     respByRole,
                     contactNames,
                     contactsByRegion,
-                    contactsByClimate));
+                    contactsByClimate),
+                byFaction,
+                byCondition);
         }
         catch (JsonException exception)
         {

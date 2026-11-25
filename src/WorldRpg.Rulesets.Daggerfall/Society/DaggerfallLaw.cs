@@ -67,6 +67,11 @@ internal sealed class DaggerfallLaw(
     Action<long> makeHostile,
     Func<long, long?> promoteGuard)
 {
+    private Func<int, DaggerfallGateScrutinyAssessment>? _gateScrutiny;
+
+    internal void BindGateScrutiny(Func<int, DaggerfallGateScrutinyAssessment> evaluate) =>
+        _gateScrutiny = evaluate ?? throw new ArgumentNullException(nameof(evaluate));
+
     /// <summary>The case in front of the player: the one holding the legal modal, else the active region's.</summary>
     internal DaggerfallLegalResponseSave? Current => crime.LegalResponses.FirstOrDefault(response => response.Modal)
         ?? (site.Region is int region ? crime.Response(region) : null);
@@ -135,18 +140,24 @@ internal sealed class DaggerfallLaw(
         if (people is not null) social.ChangeFactionReputation(people.Id, change / 2, DaggerfallFactionReputationChange.Propagate);
     }
 
-    /// <summary>Each passing minute in a region that wants or banished the player may report them to the watch.</summary>
+    /// <summary>Each passing minute in a region that wants, banished, or scrutinizes the player may report them to the watch.</summary>
     internal void CheckStanding(long minuteBefore, long minuteAfter)
     {
         if (site.Region is not int region || Current is not null || ModalOpen
             || activeProfile().Kind == DaggerfallWorldProfileKind.Dungeon || racialOverrides.Current?.SuppressCrime == true) return;
         bool banished = crime.BanishedRegions.Contains(region);
-        bool wanted = social.RegionalReputation(region) < -10;
+        DaggerfallGateScrutinyAssessment? scrutiny = _gateScrutiny?.Invoke(region);
+        bool wanted = scrutiny is not null
+            ? scrutiny.WatchChallengeActive && !banished
+            : social.RegionalReputation(region) < -10;
         if (!banished && !wanted) return;
+        int wantedChance = scrutiny is { WatchChallengeActive: true } ? scrutiny.WatchDetectionChancePercent : 5;
+        int banishedChance = scrutiny is { WatchChallengeActive: true } ? Math.Max(10, scrutiny.WatchDetectionChancePercent) : 10;
         for (long minute = minuteBefore + 1; minute <= minuteAfter; minute++)
         {
             string operation = $"regional-wanted:{region}:{minute}";
-            if (wanted && crimes.Roll(operation, "wanted", 1, 100) <= 5 || banished && crimes.Roll(operation, "banished", 1, 100) <= 10)
+            if (wanted && crimes.Roll(operation, "wanted", 1, 100) <= wantedChance
+                || banished && crimes.Roll(operation, "banished", 1, 100) <= banishedChance)
             {
                 crimes.Report(new(operation, DaggerfallCrimeKind.CriminalConspiracy, DaggerfallCrimeStage.Completed,
                     DaggerfallActorIdentity.PlayerEntityId, null, region, minute, DaggerfallCrimeTargetKind.Unknown,

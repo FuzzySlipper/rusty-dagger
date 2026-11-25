@@ -81,7 +81,7 @@ internal sealed class DaggerfallLegalServicePolicy(
         return IsShadyOrCriminalBuilding(building);
     }
 
-    private bool IsShadyOrCriminalBuilding(DaggerfallInteriorBuilding? building)
+    internal bool IsShadyOrCriminalBuilding(DaggerfallInteriorBuilding? building)
     {
         if (building is null) return false;
         if (IsCriminalGuildFaction(building.FactionId)) return true;

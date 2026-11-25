@@ -54,12 +54,15 @@ internal sealed class DaggerfallTradeQuoteService
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallItemValuation _valuation;
     private readonly DaggerfallRegionalPriceState _regionalPrices;
+    private readonly Func<int, int>? _regionalConditionSurcharge;
 
-    internal DaggerfallTradeQuoteService(DaggerfallDefinitions definitions, DaggerfallItemValuation valuation, DaggerfallRegionalPriceState regionalPrices)
+    internal DaggerfallTradeQuoteService(DaggerfallDefinitions definitions, DaggerfallItemValuation valuation, DaggerfallRegionalPriceState regionalPrices,
+        Func<int, int>? regionalConditionSurcharge = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _valuation = valuation ?? throw new ArgumentNullException(nameof(valuation));
         _regionalPrices = regionalPrices ?? throw new ArgumentNullException(nameof(regionalPrices));
+        _regionalConditionSurcharge = regionalConditionSurcharge;
     }
 
     internal DaggerfallTradeQuoteResult Quote(DaggerfallTradeSide side, IReadOnlyList<DaggerfallTradeLine> lines,
@@ -93,7 +96,12 @@ internal sealed class DaggerfallTradeQuoteService
                 if (metadata.MaximumCondition > 0)
                     itemValue = checked((int)(checked((long)itemValue * metadata.CurrentCondition) / metadata.MaximumCondition));
 
-                int regionFactor = region is int regionIndex ? _regionalPrices.AdjustmentForRegion(regionIndex) : 0;
+                int regionFactor = region is int regionIndex
+                    ? Math.Clamp(
+                        _regionalPrices.AdjustmentForRegion(regionIndex) + (_regionalConditionSurcharge?.Invoke(regionIndex) ?? 0),
+                        DaggerfallRegionalEconomyPolicy.MinimumRegionalAdjustment,
+                        DaggerfallRegionalEconomyPolicy.MaximumRegionalAdjustment)
+                    : 0;
                 int unitCost = DaggerfallRegionalEconomyPolicy.CalculateCost(itemValue, shopQuality, region, regionFactor);
                 long lineCost = checked((long)unitCost * checked((long)line.Quantity));
                 subtotal = checked(subtotal + lineCost);

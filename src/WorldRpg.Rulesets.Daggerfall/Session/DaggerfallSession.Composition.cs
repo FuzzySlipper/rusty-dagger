@@ -555,17 +555,25 @@ internal sealed partial class DaggerfallSession
             DaggerfallPropertyStorage propertyStorage = new(containers, itemInstances, definitions, _actorIdentities, property, playerEntity, questItemExits);
             if (saved?.Property is { } savedProperty) propertyStorage.Restore(savedProperty);
             DaggerfallCrimeState crime = new(saved?.Crime, () => racialOverrides.Current?.SuppressCrime == true);
+            WorldConditions = new DaggerfallWorldConditions();
+            WorldConditions.Restore(saved?.WorldConditions);
             LegalServices = new DaggerfallLegalServicePolicy(social, crime, assembled.ActorLedger, definitions,
                 id => actors.TryGet(id, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null,
                 CurrentInteriorBuilding,
                 building => _site.TryFind(_activeProfileKey.Site, out _)
                     ? _site.RequireBuildingSource(_activeProfileKey.Site, new(building.BlockX, building.BlockY, building.Building.Index)).Quality
                     : 10);
+            Scrutiny = new DaggerfallScrutinyPolicy(
+                social, crime, LegalServices, assembled.ActorLedger, WorldConditions, definitions,
+                () => checked((int)_time.Calendar.DayNumber),
+                id => actors.TryGet(id, out ActorState? actor) && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null,
+                CurrentInteriorBuilding,
+                HasWatchOrRulerVouch);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
                     : null, saved?.Services);
-            services.BindLegalServicePolicy(LegalServices.IsProviderDenied);
+            services.BindServiceScrutinyPolicy(npc => Scrutiny.EvaluateServiceScrutiny(npc).Denial);
             DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services.ProviderAvailable);
             DaggerfallTempleServiceRuntime templeServices = new(concreteGuildServices, services, npcs, social,
                 effects, poisons, actors, _random, () => _time);
@@ -577,7 +585,8 @@ internal sealed partial class DaggerfallSession
             DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-            DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices);
+            DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices,
+                Scrutiny.RegionalPriceSurcharge);
             DaggerfallMerchantService merchants = new(definitions, _random, npcs, social, playerStats, character, progression,
                 inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
                 regionalPrices, _itemCondition, skillUses, crime, questItemExits, () => _time.Calendar,
@@ -656,7 +665,7 @@ internal sealed partial class DaggerfallSession
                 calendar: () => _time.Calendar,
                 activeProfile: () => _activeProfileKey,
                 building: CurrentInteriorBuilding,
-                isLegallyDenied: (region, building) => LegalServices.IsRoomRentalDenied(region, building, _dialogue?.CurrentNpc()),
+                isLegallyDenied: (region, building) => Scrutiny.IsRoomRentalDenied(region, building, _dialogue?.CurrentNpc()),
                 tradeReaction: (region, building) =>
                 {
                     if (_dialogue?.CurrentNpc() is { } keeper)
@@ -709,6 +718,9 @@ internal sealed partial class DaggerfallSession
                 () => _worldSocialSeed, new DaggerfallNames(definitions, _random).NpcName);
             OfficeLedger.Restore(saved?.OfficeLedger);
             OfficeHolders.BindOverrideLookup(OfficeLedger.TryGetFactionOverride);
+            NoticeBoard = new DaggerfallNoticeBoard(
+                definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
+                () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity);
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone);
@@ -1081,6 +1093,7 @@ internal sealed partial class DaggerfallSession
             _persistence.GameSeed = () => _random.Seed;
             _persistence.WorldSocialSeed = () => _worldSocialSeed;
             _persistence.OfficeLedger = OfficeLedger.Capture;
+            _persistence.WorldConditions = WorldConditions.Capture;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;
@@ -1176,6 +1189,7 @@ internal sealed partial class DaggerfallSession
                 spawn: (definition, pose) => _roster.Spawn(definition, pose),
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
                 promoteGuard: id => _roster.PromoteToCityWatch(id));
+            Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
             crime.IncidentRecorded += Law.Admit;
             GuildProviders = new DaggerfallGuildProviders(State.ConcreteGuildServices, State.ConcreteGuildMembership, State.KnightlyClaimActions,
                 new DaggerfallGuildAdmission(State.ConcreteGuildMembership, State.Social, State.SkillUses, State.Crime,
@@ -1453,7 +1467,10 @@ internal sealed partial class DaggerfallSession
             introductionTargets: (npc, site) => Introductions.ListIntroductionTargets(npc, site),
             requestIntroduction: (npc, targetId, site) => Introductions.TryIssueIntroduction(npc, targetId, site),
             canCurryFavour: npc => Introductions.CanCurryFavourToday(npc),
-            curryFavour: (npc, polite, blunt) => Introductions.TryCurryFavour(npc, polite, blunt));
+            curryFavour: (npc, polite, blunt) => Introductions.TryCurryFavour(npc, polite, blunt),
+            worldConditions: WorldConditions,
+            readNoticeBoard: site => DaggerfallNoticeBoard.FormatBoardText(NoticeBoard.BuildForSite(site, _time.Calendar.MinuteNumber)),
+            evaluateGateScrutiny: Scrutiny.EvaluateGateScrutiny);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);
@@ -1582,6 +1599,30 @@ internal sealed partial class DaggerfallSession
                 hostileCourts.Add(new(faction.Id, faction.Name, rep, 145));
         }
         return new(wantedOrBanished, hostileGuilds, hostileCourts);
+    }
+
+    private bool HasWatchOrRulerVouch(DaggerfallSiteRecord? site)
+    {
+        if (site is null || OfficeHolders is null || OfficeLedger is null)
+            return false;
+        long? rulerId = OfficeHolders.ResolveRegionalRuler(site.Id.Region)?.ActorId;
+        long? captainId = OfficeLedger.ResolveWatchCaptain(site).HolderActorId;
+        if (rulerId is null && captainId is null)
+            return false;
+        foreach (ActorLedgerEntry entry in State.ActorLedger.All)
+        {
+            if (entry.Social?.Vouches is not { Length: > 0 } vouches)
+                continue;
+            if ((rulerId is long r && entry.DurableId == r) || (captainId is long c && entry.DurableId == c))
+                return true;
+            foreach (ActorVouchRecord vouch in vouches)
+            {
+                if ((rulerId is long r2 && vouch.ReferrerDurableId == r2)
+                    || (captainId is long c2 && vouch.ReferrerDurableId == c2))
+                    return true;
+            }
+        }
+        return false;
     }
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();

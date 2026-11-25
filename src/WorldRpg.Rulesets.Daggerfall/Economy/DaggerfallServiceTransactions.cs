@@ -105,6 +105,7 @@ internal static class DaggerfallServiceOutcomeText
         nameof(DaggerfallServiceDenial.InsufficientRank) => "Your guild rank is too low for this service.",
         nameof(DaggerfallServiceDenial.Closed) => "This service is closed right now.",
         nameof(DaggerfallServiceDenial.WantedOrBanished) => "I do not deal with wanted outlaws.",
+        nameof(DaggerfallServiceDenial.UnderScrutiny) => "By order of the local authorities, this service is closed to you right now.",
         nameof(DaggerfallServiceDenial.MissingItem) or nameof(DaggerfallServiceDenial.ItemChanged) => "The item for this service is no longer available.",
         nameof(DaggerfallServiceDenial.UnknownProvider) or nameof(DaggerfallServiceDenial.ProviderUnavailable)
             or nameof(DaggerfallServiceDenial.ServiceUnavailable) or nameof(DaggerfallServiceDenial.SiteChanged) => "This service is no longer available to you.",
@@ -158,7 +159,7 @@ internal sealed class DaggerfallServiceTransactions
     private readonly EntityId _player;
     private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<DaggerfallNpcSite?> _currentSite;
-    private Func<DaggerfallNpc, bool>? _isLegallyDenied;
+    private Func<DaggerfallNpc, DaggerfallServiceDenial>? _legalServiceDenial;
     private readonly Dictionary<string, DaggerfallServiceQueuedWork> _pending = [];
     private readonly HashSet<string> _submitted = new(StringComparer.Ordinal);
 
@@ -198,8 +199,14 @@ internal sealed class DaggerfallServiceTransactions
     {
     }
 
-    internal void BindLegalServicePolicy(Func<DaggerfallNpc, bool> isLegallyDenied) =>
-        _isLegallyDenied = isLegallyDenied ?? throw new ArgumentNullException(nameof(isLegallyDenied));
+    internal void BindLegalServicePolicy(Func<DaggerfallNpc, bool> isLegallyDenied)
+    {
+        ArgumentNullException.ThrowIfNull(isLegallyDenied);
+        _legalServiceDenial = npc => isLegallyDenied(npc) ? DaggerfallServiceDenial.WantedOrBanished : DaggerfallServiceDenial.None;
+    }
+
+    internal void BindServiceScrutinyPolicy(Func<DaggerfallNpc, DaggerfallServiceDenial> evaluate) =>
+        _legalServiceDenial = evaluate ?? throw new ArgumentNullException(nameof(evaluate));
 
     internal IReadOnlyList<DaggerfallServiceQueuedWork> Pending => [.. _pending.Values.OrderBy(work => work.CompletesAtMinute).ThenBy(work => work.Id, StringComparer.Ordinal)];
 
@@ -356,9 +363,7 @@ internal sealed class DaggerfallServiceTransactions
             && string.Equals(site.Location, provider.Site.Location, StringComparison.Ordinal)
             && (provider.Site.ProfileId is null || StringComparer.Ordinal.Equals(site.ProfileId, provider.Site.ProfileId))))
             return DaggerfallServiceDenial.SiteChanged;
-        return _isLegallyDenied?.Invoke(npc) == true
-            ? DaggerfallServiceDenial.WantedOrBanished
-            : DaggerfallServiceDenial.None;
+        return _legalServiceDenial?.Invoke(npc) ?? DaggerfallServiceDenial.None;
     }
 
     private long CurrentMinute()
