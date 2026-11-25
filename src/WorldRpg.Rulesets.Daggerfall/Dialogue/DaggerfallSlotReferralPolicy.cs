@@ -4,18 +4,19 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>Result of registering a pre-visit referral toward an actual authored <c>SeededSlot</c> at another town.</summary>
+/// <summary>Result of registering a pre-visit structured vouch toward an actual authored <c>SeededSlot</c> at another town.</summary>
 internal sealed record DaggerfallSlotReferralResult(
     long DurableId,
     DaggerfallSiteId TargetSite,
     DaggerfallWorldProfileKey TargetProfile,
     string SlotId,
     string ContactName,
-    string ReferralTag,
+    ActorVouchRecord Vouch,
+    bool Added,
     string Message);
 
 /// <summary>
-/// Issues real pre-visit referrals during dialogue that address deterministic <see cref="ActorOriginKind.SeededSlot"/>
+/// Issues real pre-visit structured vouches during dialogue that address deterministic <see cref="ActorOriginKind.SeededSlot"/>
 /// bystanders in neighboring towns from <c>daggerfall.people</c> before the player visits those towns.
 /// Only the referred slot enters <see cref="DaggerfallActorLedger"/>; untouched neighbors stay at zero save bytes.
 /// </summary>
@@ -28,10 +29,14 @@ internal sealed class DaggerfallSlotReferralPolicy(
 
     /// <summary>
     /// Finds a deterministic neighboring exterior town placing an authored <c>ambient-bark</c> slot in
-    /// <c>daggerfall.people</c>, registers a pre-visit slot referral in <see cref="DaggerfallActorLedger"/>,
-    /// and returns a test-data referral line naming the contact and town.
+    /// <c>daggerfall.people</c>, registers a pre-visit structured <see cref="ActorVouchRecord"/> in
+    /// <see cref="DaggerfallActorLedger"/>, and returns a referral line naming the contact and town.
     /// </summary>
-    internal DaggerfallSlotReferralResult? TryIssuePreVisitReferral(DaggerfallSiteRecord currentSite, DaggerfallNpc speaker)
+    internal DaggerfallSlotReferralResult? TryIssuePreVisitReferral(
+        DaggerfallSiteRecord currentSite,
+        DaggerfallNpc speaker,
+        int speakerFactionId = 0,
+        int currentDay = 0)
     {
         ArgumentNullException.ThrowIfNull(currentSite);
         ArgumentNullException.ThrowIfNull(speaker);
@@ -50,12 +55,19 @@ internal sealed class DaggerfallSlotReferralPolicy(
         string targetClimateName = _definitions.Grids.Climate.GetCell(target.MapPixelX + 1, target.MapPixelY).Name;
         ulong contactSeed = StableHash.NonZeroFnv1a64($"daggerfall.referral.contact:{target.Id.Region}:{target.Id.Index}:{placedSlotId}");
         string contactName = referrals.ResolveContactName(contactSeed, target.Id.Region, targetRegionName, targetClimateName);
-        string referralTag = $"referred-from:{currentSite.Name}";
+        int resolvedFaction = speakerFactionId > 0 ? speakerFactionId : Math.Max(0, speaker.Appearance.FactionId);
+        ActorVouchRecord vouch = new(
+            speaker.DurableId,
+            resolvedFaction,
+            ActorVouchKind.Contact,
+            currentDay,
+            speakerName,
+            currentSite.Name);
 
-        long durableId = _actorLedger.RegisterSlotReferral(
+        (long durableId, bool added) = _actorLedger.RegisterSlotVouch(
             targetProfile,
             placedSlotId,
-            referralTag,
+            vouch,
             displayNameOverride: contactName);
 
         string currentRegionName = _definitions.BuildingNames.RegionName(currentSite.Id.Region);
@@ -63,7 +75,7 @@ internal sealed class DaggerfallSlotReferralPolicy(
         ulong issueSeed = StableHash.NonZeroFnv1a64($"daggerfall.referral.issue:{currentSite.Id.Region}:{currentSite.Id.Index}:{speaker.DurableId}:{target.Id.Index}");
         string message = referrals.FormatIssueLine(issueSeed, target.Name, contactName, speakerName,
             currentSite.Id.Region, currentRegionName, currentClimateName);
-        return new(durableId, target.Id, targetProfile, placedSlotId, contactName, referralTag, message);
+        return new(durableId, target.Id, targetProfile, placedSlotId, contactName, vouch, added, message);
     }
 
     internal (DaggerfallSiteRecord Target, DaggerfallSiteBlock Block, DaggerfallPeopleSlotDefinition Slot)?

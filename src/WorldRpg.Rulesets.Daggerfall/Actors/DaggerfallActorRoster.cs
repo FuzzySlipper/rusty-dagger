@@ -1129,8 +1129,12 @@ internal sealed class DaggerfallActorRoster
                 _npcs.SetDisplayName(npc.DurableId, referral.DisplayNameOverride);
             if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? refOverlay))
             {
-                foreach (string tag in referral.Tags)
-                    refOverlay.RecordReferralTag(tag);
+                if (referral.Tags is { Length: > 0 })
+                    foreach (string tag in referral.Tags)
+                        refOverlay.RecordReferralTag(tag);
+                if (referral.Vouches is { Length: > 0 })
+                    foreach (ActorVouchRecord vouch in referral.Vouches)
+                        refOverlay.RecordVouch(vouch);
             }
         }
         if (delta.Social is { } social)
@@ -1141,6 +1145,7 @@ internal sealed class DaggerfallActorRoster
             {
                 overlay.FamilyId = social.FamilyId;
                 overlay.Met = social.Met;
+                overlay.LastFavourDay = social.LastFavourDay;
                 overlay.IsMuted = social.Muted;
                 overlay.EscortPortraitMedia = social.EscortPortrait;
                 overlay.EscortOrder = social.EscortOrder;
@@ -1151,6 +1156,9 @@ internal sealed class DaggerfallActorRoster
                 if (social.ReferralTags is { Length: > 0 })
                     foreach (string tag in social.ReferralTags)
                         overlay.RecordReferralTag(tag);
+                if (social.Vouches is { Length: > 0 })
+                    foreach (ActorVouchRecord vouch in social.Vouches)
+                        overlay.RecordVouch(vouch);
             }
         }
     }
@@ -1327,6 +1335,7 @@ internal sealed class DaggerfallActorRoster
             {
                 retainedOverlay.FamilyId = retainedSocial.FamilyId;
                 retainedOverlay.Met = retainedSocial.Met;
+                retainedOverlay.LastFavourDay = retainedSocial.LastFavourDay;
                 retainedOverlay.IsMuted = retainedSocial.Muted;
                 retainedOverlay.EscortPortraitMedia = retainedSocial.EscortPortrait;
                 retainedOverlay.EscortOrder = retainedSocial.EscortOrder;
@@ -1337,6 +1346,9 @@ internal sealed class DaggerfallActorRoster
                 if (retainedSocial.ReferralTags is { Length: > 0 })
                     foreach (string tag in retainedSocial.ReferralTags)
                         retainedOverlay.RecordReferralTag(tag);
+                if (retainedSocial.Vouches is { Length: > 0 })
+                    foreach (ActorVouchRecord vouch in retainedSocial.Vouches)
+                        retainedOverlay.RecordVouch(vouch);
             }
             if (projectAppearance && _definitionsByActor[saved.EntityId].MobileId is int mobileId)
             {

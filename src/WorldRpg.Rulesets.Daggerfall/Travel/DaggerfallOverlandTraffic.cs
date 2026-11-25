@@ -278,6 +278,7 @@ internal sealed class DaggerfallOverlandTraffic
             {
                 DisplayNameOverride = existing.Referral?.DisplayNameOverride ?? baselineSocial.DisplayNameOverride,
                 ReferralTags = existing.Referral is { Tags.Length: > 0 } referral ? [.. referral.Tags] : null,
+                Vouches = existing.Referral is { Vouches.Length: > 0 } vouches ? [.. vouches.Vouches] : null,
             };
             _actorLedger.Upsert(existing with
             {

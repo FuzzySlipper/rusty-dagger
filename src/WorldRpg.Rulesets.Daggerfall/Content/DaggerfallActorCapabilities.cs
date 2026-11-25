@@ -147,15 +147,73 @@ internal sealed record ArchetypeProfile(
     }
 }
 
-/// <summary>Attached social/quest overlay state on a live actor (HUD escort portrait, mute, archetype id, witness memory, referrals).</summary>
+/// <summary>What kind of social introduction or vouch one person issued on the player's behalf.</summary>
+internal enum ActorVouchKind
+{
+    /// <summary>Casual or neighborly introduction pointing the player to a peer contact.</summary>
+    Contact = 0,
+
+    /// <summary>Trade or service vouch from a trusted peer that unlocks better prices or waives deposits.</summary>
+    Trade = 1,
+
+    /// <summary>Guild or knightly-order sponsorship vouching for the player to an allied faction or court contact.</summary>
+    Guild = 2,
+
+    /// <summary>Formal court or noble introduction granting audience and work access with a prominent figure.</summary>
+    Court = 3,
+}
+
+/// <summary>
+/// Structured social vouch issued by a specific person (<see cref="ReferrerDurableId"/>) on the player's behalf.
+/// Replaces bare <c>referred-from:{site}</c> strings with durable, trust-evaluated provenance.
+/// </summary>
+internal sealed record ActorVouchRecord(
+    long ReferrerDurableId,
+    int ReferrerFactionId,
+    ActorVouchKind Kind,
+    int IssuedDay,
+    string? ReferrerName = null,
+    string? OriginSiteName = null)
+{
+    internal void Validate()
+    {
+        if (ReferrerDurableId <= 0 || ReferrerDurableId == 1L)
+            throw new ArgumentOutOfRangeException(nameof(ReferrerDurableId), "Saved actor vouch referrer must be a positive non-player actor id.");
+        if (ReferrerFactionId < 0)
+            throw new ArgumentOutOfRangeException(nameof(ReferrerFactionId), "Saved actor vouch referrer faction id cannot be negative.");
+        if (!Enum.IsDefined(Kind))
+            throw new ArgumentOutOfRangeException(nameof(Kind), "Saved actor vouch names an invalid kind.");
+        if (ReferrerName is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(ReferrerName);
+        if (OriginSiteName is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(OriginSiteName);
+    }
+
+    internal bool SameGrant(ActorVouchRecord other) =>
+        other is not null && ReferrerDurableId == other.ReferrerDurableId && Kind == other.Kind;
+
+    /// <summary>Human-readable summary for dialogue greetings and ambient barks.</summary>
+    internal string DisplaySummary() =>
+        !string.IsNullOrWhiteSpace(ReferrerName) && !string.IsNullOrWhiteSpace(OriginSiteName)
+            ? $"{ReferrerName} of {OriginSiteName}"
+            : !string.IsNullOrWhiteSpace(ReferrerName)
+                ? ReferrerName
+                : !string.IsNullOrWhiteSpace(OriginSiteName)
+                    ? OriginSiteName
+                    : $"contact #{ReferrerDurableId}";
+}
+
+/// <summary>Attached social/quest overlay state on a live actor (HUD escort portrait, mute, archetype id, witness memory, vouches).</summary>
 internal sealed class ActorOverlayComponent
 {
     private readonly List<string> _witnessedCrimes = [];
     private readonly List<string> _referralTags = [];
+    private readonly List<ActorVouchRecord> _vouches = [];
 
     internal string? ArchetypeId { get; set; }
     internal string? FamilyId { get; set; }
     internal bool Met { get; set; }
+    internal int? LastFavourDay { get; set; }
     internal bool IsMuted { get; set; }
     internal bool IsQuestor { get; set; }
     internal string? EscortPortraitMedia { get; set; }
@@ -163,6 +221,7 @@ internal sealed class ActorOverlayComponent
     internal string? StagedPartyRole { get; set; }
     internal IReadOnlyList<string> WitnessedCrimes => _witnessedCrimes;
     internal IReadOnlyList<string> ReferralTags => _referralTags;
+    internal IReadOnlyList<ActorVouchRecord> Vouches => _vouches;
 
     internal void RecordWitnessedCrime(string operationId)
     {
@@ -180,4 +239,20 @@ internal sealed class ActorOverlayComponent
 
     internal bool HasReferralTag(string tag) =>
         !string.IsNullOrWhiteSpace(tag) && _referralTags.Contains(tag, StringComparer.Ordinal);
+
+    internal bool RecordVouch(ActorVouchRecord vouch)
+    {
+        ArgumentNullException.ThrowIfNull(vouch);
+        vouch.Validate();
+        if (_vouches.Any(existing => existing.SameGrant(vouch)))
+            return false;
+        _vouches.Add(vouch);
+        return true;
+    }
+
+    internal bool HasVouchFrom(long referrerDurableId) =>
+        referrerDurableId > 0 && _vouches.Any(vouch => vouch.ReferrerDurableId == referrerDurableId);
+
+    internal bool HasVouch(long referrerDurableId, ActorVouchKind kind) =>
+        referrerDurableId > 0 && _vouches.Any(vouch => vouch.ReferrerDurableId == referrerDurableId && vouch.Kind == kind);
 }

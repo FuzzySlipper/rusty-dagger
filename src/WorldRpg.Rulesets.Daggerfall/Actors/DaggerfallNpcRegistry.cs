@@ -189,7 +189,12 @@ public sealed class DaggerfallNpcRegistry
             {
                 DisplayName = resolvedName,
             });
-            _ledger.Upsert(existing with { Social = ActorSocialDiff.FromNpc(hydrated) });
+            ActorSocialDiff hydratedSocial = ActorSocialDiff.FromNpc(hydrated) with
+            {
+                ReferralTags = existing.Referral is { Tags.Length: > 0 } refTags ? [.. refTags.Tags] : null,
+                Vouches = existing.Referral is { Vouches.Length: > 0 } refVouches ? [.. refVouches.Vouches] : null,
+            };
+            _ledger.Upsert(existing with { Social = hydratedSocial });
             return durableId;
         }
 
@@ -604,7 +609,8 @@ public sealed class DaggerfallNpcRegistry
             return false;
         if (entry.Social is { } s
             && (s.Met || s.Muted || s.DispositionDelta != 0 || s.WitnessedCrimes is { Length: > 0 }
-                || s.ReferralTags is { Length: > 0 } || s.EscortPortrait is not null || s.StagedPartyRole is not null
+                || s.ReferralTags is { Length: > 0 } || s.Vouches is { Length: > 0 } || s.LastFavourDay is not null
+                || s.EscortPortrait is not null || s.StagedPartyRole is not null
                 || s.FamilyId is not null || s.Presence != (int)DaggerfallNpcPresence.Active))
             return false;
         if (_actors is not null && _actors.TryGet(durableId, out ActorState? actor)

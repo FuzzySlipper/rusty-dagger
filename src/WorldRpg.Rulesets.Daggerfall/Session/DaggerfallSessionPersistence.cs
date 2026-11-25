@@ -388,6 +388,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             string[]? liveReferrals = liveOverlay.ReferralTags.Count > 0
                 ? [.. liveOverlay.ReferralTags]
                 : social.ReferralTags;
+            ActorVouchRecord[]? liveVouches = DaggerfallActorLedger.MergeVouches(liveOverlay.Vouches, social.Vouches);
             ActorPartyRole? liveStagedRole = liveOverlay.StagedPartyRole is { Length: > 0 } rawDynRole
                 && Enum.TryParse<ActorPartyRole>(rawDynRole, out ActorPartyRole parsedDynRole)
                 ? parsedDynRole
@@ -398,6 +399,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 Muted = liveOverlay.IsMuted,
                 WitnessedCrimes = liveWitnessed,
                 ReferralTags = liveReferrals,
+                Vouches = liveVouches,
+                LastFavourDay = liveOverlay.LastFavourDay ?? social.LastFavourDay,
                 EscortPortrait = liveOverlay.EscortPortraitMedia ?? social.EscortPortrait,
                 EscortOrder = liveOverlay.EscortOrder > 0 ? liveOverlay.EscortOrder : social.EscortOrder,
                 StagedPartyRole = liveStagedRole,
@@ -486,9 +489,13 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             string[]? referralTags = overlay is { ReferralTags.Count: > 0 }
                 ? [.. overlay.ReferralTags]
                 : priorLedger?.Referral?.Tags ?? priorLedger?.Social?.ReferralTags;
+            ActorVouchRecord[]? vouches = DaggerfallActorLedger.MergeVouches(
+                overlay?.Vouches,
+                DaggerfallActorLedger.MergeVouches(priorLedger?.Referral?.Vouches, priorLedger?.Social?.Vouches));
+            int? lastFavourDay = overlay?.LastFavourDay ?? priorLedger?.Social?.LastFavourDay;
             string? referralName = priorLedger?.Referral?.DisplayNameOverride;
-            if (referralTags is { Length: > 0 })
-                referral = new ActorReferralDiff(referralTags, referralName);
+            if (referralTags is { Length: > 0 } || vouches is { Length: > 0 })
+                referral = new ActorReferralDiff(referralTags, referralName, vouches);
             bool nameChanged = originComp?.BaselineNpc is { DisplayName: not null } baseNpc
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName)
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, referralName);
@@ -509,9 +516,12 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 ? overlay.FamilyId
                 : priorLedger?.Social?.FamilyId;
             bool hasPriorSocialDelta = priorLedger?.Social is { } ps
-                && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 } || ps.EscortPortrait is not null || ps.StagedPartyRole is not null || ps.FamilyId is not null);
-            bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || promotedArchetype is not null
-                || stagedPartyRole is not null || familyId is not null || nameChanged || presenceChanged || hasPriorSocialDelta
+                && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 }
+                    || ps.Vouches is { Length: > 0 } || ps.LastFavourDay is not null
+                    || ps.EscortPortrait is not null || ps.StagedPartyRole is not null || ps.FamilyId is not null);
+            bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || lastFavourDay is not null
+                || promotedArchetype is not null || stagedPartyRole is not null || familyId is not null
+                || nameChanged || presenceChanged || hasPriorSocialDelta
                 || relocated || referencedNpcs.Contains(actor.DurableId);
             if (mustKeepSocial)
             {
@@ -521,6 +531,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     Muted = muted,
                     WitnessedCrimes = witnessedCrimes,
                     ReferralTags = referralTags,
+                    Vouches = vouches,
+                    LastFavourDay = lastFavourDay,
                     EscortPortrait = escortPortrait,
                     EscortOrder = escortOrder,
                     StagedPartyRole = stagedPartyRole,
@@ -745,6 +757,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 Muted = overlay?.IsMuted ?? priorLedger?.Social?.Muted == true,
                 WitnessedCrimes = overlay is { WitnessedCrimes.Count: > 0 } ? [.. overlay.WitnessedCrimes] : priorLedger?.Social?.WitnessedCrimes,
                 ReferralTags = overlay is { ReferralTags.Count: > 0 } ? [.. overlay.ReferralTags] : priorLedger?.Social?.ReferralTags,
+                Vouches = DaggerfallActorLedger.MergeVouches(overlay?.Vouches, priorLedger?.Social?.Vouches),
+                LastFavourDay = overlay?.LastFavourDay ?? priorLedger?.Social?.LastFavourDay,
                 EscortPortrait = overlay?.EscortPortraitMedia ?? priorLedger?.Social?.EscortPortrait,
                 EscortOrder = overlay is { EscortOrder: > 0 } ? overlay.EscortOrder : priorLedger?.Social?.EscortOrder ?? 0,
                 FamilyId = !string.IsNullOrWhiteSpace(overlay?.FamilyId) ? overlay.FamilyId : priorLedger?.Social?.FamilyId,
@@ -990,6 +1004,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             {
                 dynOverlay.FamilyId = dynSocial.FamilyId;
                 dynOverlay.Met = dynSocial.Met;
+                dynOverlay.LastFavourDay = dynSocial.LastFavourDay;
                 dynOverlay.IsMuted = dynSocial.Muted;
                 dynOverlay.EscortPortraitMedia = dynSocial.EscortPortrait;
                 dynOverlay.EscortOrder = dynSocial.EscortOrder;
@@ -1000,6 +1015,9 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 if (dynSocial.ReferralTags is { Length: > 0 })
                     foreach (string tag in dynSocial.ReferralTags)
                         dynOverlay.RecordReferralTag(tag);
+                if (dynSocial.Vouches is { Length: > 0 })
+                    foreach (ActorVouchRecord vouch in dynSocial.Vouches)
+                        dynOverlay.RecordVouch(vouch);
             }
         }
 

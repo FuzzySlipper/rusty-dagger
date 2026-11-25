@@ -44,6 +44,7 @@ internal sealed class DaggerfallPartyHireService
     private readonly Func<ulong> _availableGold;
     private readonly Func<ulong, bool> _spendGold;
     private readonly Func<long, bool> _isQuestUnavailable;
+    private readonly Func<DaggerfallNpc, bool> _hasDepositWaiver;
 
     internal DaggerfallPartyHireService(
         DaggerfallDefinitions definitions,
@@ -55,7 +56,8 @@ internal sealed class DaggerfallPartyHireService
         Func<bool> ownsCart,
         Func<ulong> availableGold,
         Func<ulong, bool> spendGold,
-        Func<long, bool>? isQuestUnavailable = null)
+        Func<long, bool>? isQuestUnavailable = null,
+        Func<DaggerfallNpc, bool>? hasDepositWaiver = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
@@ -67,6 +69,7 @@ internal sealed class DaggerfallPartyHireService
         _availableGold = availableGold ?? throw new ArgumentNullException(nameof(availableGold));
         _spendGold = spendGold ?? throw new ArgumentNullException(nameof(spendGold));
         _isQuestUnavailable = isQuestUnavailable ?? (_ => false);
+        _hasDepositWaiver = hasDepositWaiver ?? (_ => false);
     }
 
     /// <summary>Dialogue service options offered for <paramref name="npc"/> under the Services topic group.</summary>
@@ -79,12 +82,13 @@ internal sealed class DaggerfallPartyHireService
         if (!IsHireable(npc))
             return [];
 
+        bool waived = _hasDepositWaiver(npc);
         List<DaggerfallDialogueTopicOption> topics =
         [
-            new("hire-companion", $"Travel with me ({CompanionHireFee} gold)"),
+            new("hire-companion", waived ? "Travel with me (deposit waived)" : $"Travel with me ({CompanionHireFee} gold)"),
         ];
         if (_ownsCart() && !HasActiveDriver())
-            topics.Add(new("hire-driver", $"Drive my wagon ({DriverFee} gold)"));
+            topics.Add(new("hire-driver", waived ? "Drive my wagon (deposit waived)" : $"Drive my wagon ({DriverFee} gold)"));
         return topics;
     }
 
@@ -142,8 +146,9 @@ internal sealed class DaggerfallPartyHireService
                 return new(false, question, "You already have a driver handling your wagon.");
         }
 
-        ulong fee = role == ActorPartyRole.Driver ? DriverHireFee : CompanionHireFee;
-        if (_availableGold() < fee || !_spendGold(fee))
+        bool depositWaived = _hasDepositWaiver(npc);
+        ulong fee = depositWaived ? 0UL : (role == ActorPartyRole.Driver ? DriverHireFee : CompanionHireFee);
+        if (fee > 0UL && (_availableGold() < fee || !_spendGold(fee)))
             return new(false, question, $"You need {fee} gold to hire {name}.");
 
         if (!_actors.TryGet(npc.DurableId, out ActorState? live))
@@ -156,9 +161,13 @@ internal sealed class DaggerfallPartyHireService
         _overlandParties.JoinParty(npc.DurableId, role, portraitMedia: portrait);
         _ = _overlandParties.StagePartyMember(npc.DurableId, _activeProfile(), currentPos, currentYaw);
 
-        string reply = role == ActorPartyRole.Driver
-            ? $"Agreed — {name} takes the reins for {fee} gold and joins your party."
-            : $"Agreed — {name} accepts {fee} gold and joins your party.";
+        string reply = depositWaived
+            ? (role == ActorPartyRole.Driver
+                ? $"On account of your introduction, {name} waives the deposit, takes the reins, and joins your party."
+                : $"On account of your introduction, {name} waives the deposit and joins your party.")
+            : (role == ActorPartyRole.Driver
+                ? $"Agreed — {name} takes the reins for {fee} gold and joins your party."
+                : $"Agreed — {name} accepts {fee} gold and joins your party.");
         return new(true, question, reply);
     }
 

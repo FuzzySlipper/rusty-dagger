@@ -704,6 +704,11 @@ internal sealed partial class DaggerfallSession
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
             OfficeHolders = new DaggerfallOfficeHolders(definitions, _site, State.ActorLedger, State.Npcs);
+            Introductions = new DaggerfallIntroductions(
+                definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
+                State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone);
+            State.Social.BindActorVouchBonus(Introductions.TrustedVouchReactionBonus);
+            State.Quests.BindQuestorDisposition((actorId, delta) => Introductions.AdjustActorDisposition(actorId, delta));
             _questTexts = new DaggerfallQuestTextContext(definitions, _site, State.Npcs, State.ItemInstances,
                 item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, _random,
                 faction => State.Social.GuildEligibility(faction) is { IsMember: true } membership
@@ -948,7 +953,8 @@ internal sealed partial class DaggerfallSession
                 () => State.Transport.HasCart(State.Inventory.Read()),
                 () => State.Currency.Read().Gold,
                 amount => State.Currency.TrySpendGold(amount, []),
-                id => State.Quests.IsNpcMuted(id) || State.Quests.IsEscortWithParty(id));
+                id => State.Quests.IsNpcMuted(id) || State.Quests.IsEscortWithParty(id),
+                hasDepositWaiver: Introductions.HasDepositWaiverVouch);
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),
@@ -1179,7 +1185,8 @@ internal sealed partial class DaggerfallSession
             QuestWork = new DaggerfallQuestWork(State.Quests, State.Npcs, State.Services, State.Social, State.Crime,
                 (npc, building) => GuildProviders.TryResolve(npc, building, DaggerfallConcreteGuildService.Quests, out var guild, out _, out _) ? guild : null,
                 definitions,
-                State.Progression, _time, _site, tuning.QuestOffers, CurrentInteriorBuilding, () => _sites.ActiveProfile.Kind, InsideCastleZone);
+                State.Progression, _time, _site, tuning.QuestOffers, CurrentInteriorBuilding, () => _sites.ActiveProfile.Kind, InsideCastleZone,
+                assessIntroductionAccess: (npc, castle) => Introductions.AssessAccess(npc, castle));
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>
@@ -1428,9 +1435,15 @@ internal sealed partial class DaggerfallSession
             activeProfile: () => _sites.ActiveProfile,
             discloseDirection: DialogueDirections.Disclose,
             dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true,
-            issueReferral: (site, npc) => new DaggerfallSlotReferralPolicy(_definitions, State.ActorLedger).TryIssuePreVisitReferral(site, npc)?.Message,
+            issueReferral: (site, npc) => new DaggerfallSlotReferralPolicy(_definitions, State.ActorLedger)
+                .TryIssuePreVisitReferral(site, npc, State.Social.ResolveNpcReactionFactionId(npc), checked((int)_time.Calendar.DayNumber))?.Message,
             partyHireTopics: npc => PartyHire.TopicsFor(npc),
-            partyHireService: (npc, topic) => PartyHire.Resolve(npc, topic));
+            partyHireService: (npc, topic) => PartyHire.Resolve(npc, topic),
+            introductionAccess: npc => Introductions.AssessAccess(npc),
+            introductionTargets: (npc, site) => Introductions.ListIntroductionTargets(npc, site),
+            requestIntroduction: (npc, targetId, site) => Introductions.TryIssueIntroduction(npc, targetId, site),
+            canCurryFavour: npc => Introductions.CanCurryFavourToday(npc),
+            curryFavour: (npc, polite, blunt) => Introductions.TryCurryFavour(npc, polite, blunt));
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

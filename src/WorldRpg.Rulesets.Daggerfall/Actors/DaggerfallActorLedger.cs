@@ -212,7 +212,9 @@ internal sealed record ActorSocialDiff(
     int EscortOrder = 0,
     int Presence = 0,
     ActorPartyRole? StagedPartyRole = null,
-    string? FamilyId = null)
+    string? FamilyId = null,
+    ActorVouchRecord[]? Vouches = null,
+    int? LastFavourDay = null)
 {
     internal void Validate()
     {
@@ -223,6 +225,12 @@ internal sealed record ActorSocialDiff(
         ArgumentNullException.ThrowIfNull(Services);
         if (DisplayNameOverride is not null) ArgumentException.ThrowIfNullOrWhiteSpace(DisplayNameOverride);
         if (FamilyId is not null) ArgumentException.ThrowIfNullOrWhiteSpace(FamilyId);
+        if (Vouches is not null)
+            foreach (ActorVouchRecord vouch in Vouches)
+            {
+                ArgumentNullException.ThrowIfNull(vouch);
+                vouch.Validate();
+            }
     }
 
     /// <summary>Builds a canonical <see cref="ActorSocialDiff"/> from an NPC snapshot, preserving prior social deltas.</summary>
@@ -252,7 +260,9 @@ internal sealed record ActorSocialDiff(
             EscortOrder: prior?.EscortOrder ?? 0,
             Presence: (int)npc.Presence,
             StagedPartyRole: prior?.StagedPartyRole,
-            FamilyId: prior?.FamilyId);
+            FamilyId: prior?.FamilyId,
+            Vouches: prior?.Vouches,
+            LastFavourDay: prior?.LastFavourDay);
 }
 
 /// <summary>Where an actor currently resides in the world.</summary>
@@ -315,19 +325,29 @@ internal sealed record ActorLocationOverride(
 }
 
 /// <summary>
-/// Sparse pre-visit or persistent slot referral metadata on an <see cref="ActorLedgerEntry"/>.
+/// Sparse pre-visit or persistent slot referral/vouch metadata on an <see cref="ActorLedgerEntry"/>.
 /// Allows callers to address a deterministic <see cref="ActorOriginKind.SeededSlot"/> ("Ask Mara at the west gate")
 /// before the player ever visits the target site without synthesizing a full social/NPC record or touching neighbors.
 /// </summary>
 internal sealed record ActorReferralDiff(
-    string[] Tags,
-    string? DisplayNameOverride = null)
+    string[]? Tags = null,
+    string? DisplayNameOverride = null,
+    ActorVouchRecord[]? Vouches = null)
 {
     internal void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Tags);
-        if (Tags.Length == 0 || Tags.Any(string.IsNullOrWhiteSpace))
-            throw new ArgumentException("Saved actor referral requires at least one non-empty tag.", nameof(Tags));
+        bool hasTags = Tags is { Length: > 0 };
+        bool hasVouches = Vouches is { Length: > 0 };
+        if (!hasTags && !hasVouches)
+            throw new ArgumentException("Saved actor referral requires at least one non-empty tag or structured vouch.", nameof(Tags));
+        if (Tags is not null && Tags.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Saved actor referral tags must all be non-empty.", nameof(Tags));
+        if (Vouches is not null)
+            foreach (ActorVouchRecord vouch in Vouches)
+            {
+                ArgumentNullException.ThrowIfNull(vouch);
+                vouch.Validate();
+            }
         if (DisplayNameOverride is not null)
             ArgumentException.ThrowIfNullOrWhiteSpace(DisplayNameOverride);
     }
@@ -560,16 +580,18 @@ internal sealed class DaggerfallActorLedger
             if (!mergedTags.Contains(referralTag, StringComparer.Ordinal))
                 mergedTags.Add(referralTag);
             string? resolvedName = displayNameOverride ?? existing.Referral?.DisplayNameOverride;
+            ActorVouchRecord[]? existingVouches = MergeVouches(existing.Referral?.Vouches, existing.Social?.Vouches);
             ActorSocialDiff? updatedSocial = existing.Social is { } s
                 ? s with
                 {
                     DisplayNameOverride = resolvedName ?? s.DisplayNameOverride,
                     ReferralTags = [.. (s.ReferralTags ?? []).Concat(mergedTags).Distinct(StringComparer.Ordinal)],
+                    Vouches = existingVouches,
                 }
                 : null;
             _entries[durableId] = existing with
             {
-                Referral = new ActorReferralDiff([.. mergedTags], resolvedName),
+                Referral = new ActorReferralDiff([.. mergedTags], resolvedName, existingVouches),
                 Social = updatedSocial,
             };
         }
@@ -581,6 +603,132 @@ internal sealed class DaggerfallActorLedger
                 Referral: new ActorReferralDiff([referralTag], displayNameOverride));
         }
         return durableId;
+    }
+
+    /// <summary>
+    /// Records a structured <see cref="ActorVouchRecord"/> targeting a deterministic
+    /// <see cref="ActorOriginKind.SeededSlot"/> before the player visits <paramref name="targetProfile"/>.
+    /// Idempotent per <c>(ReferrerDurableId, Kind)</c>; untouched neighboring slots write zero ledger bytes.
+    /// </summary>
+    internal (long DurableId, bool Added) RegisterSlotVouch(
+        DaggerfallWorldProfileKey targetProfile,
+        string slotId,
+        ActorVouchRecord vouch,
+        string? displayNameOverride = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(slotId);
+        ArgumentNullException.ThrowIfNull(vouch);
+        vouch.Validate();
+        if (displayNameOverride is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(displayNameOverride);
+
+        string slotKey = $"{targetProfile.LogicalId}/{slotId}";
+        long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(targetProfile.Site, slotKey);
+        if (_entries.TryGetValue(durableId, out ActorLedgerEntry? existing))
+        {
+            ActorVouchRecord[] priorVouches = MergeVouches(existing.Referral?.Vouches, existing.Social?.Vouches) ?? [];
+            bool added = !priorVouches.Any(existingVouch => existingVouch.SameGrant(vouch));
+            ActorVouchRecord[] mergedVouches = added ? [.. priorVouches, vouch] : priorVouches;
+            string? resolvedName = displayNameOverride ?? existing.Referral?.DisplayNameOverride;
+            string[]? preservedTags = existing.Referral is { Tags.Length: > 0 } ? [.. existing.Referral.Tags] : null;
+            ActorSocialDiff? updatedSocial = existing.Social is { } s
+                ? s with
+                {
+                    DisplayNameOverride = resolvedName ?? s.DisplayNameOverride,
+                    Vouches = mergedVouches,
+                }
+                : null;
+            _entries[durableId] = existing with
+            {
+                Referral = new ActorReferralDiff(preservedTags, resolvedName, mergedVouches),
+                Social = updatedSocial,
+            };
+            return (durableId, added);
+        }
+
+        _entries[durableId] = new ActorLedgerEntry(
+            durableId,
+            ActorOrigin.Seeded(targetProfile, slotId),
+            Referral: new ActorReferralDiff(null, displayNameOverride, [vouch]));
+        return (durableId, true);
+    }
+
+    /// <summary>
+    /// Records a structured <see cref="ActorVouchRecord"/> on any durable actor (live, seeded, cast, or minted).
+    /// Idempotent per <c>(ReferrerDurableId, Kind)</c>; returns true only when a new vouch is added.
+    /// </summary>
+    internal bool RecordVouch(
+        long durableId,
+        ActorVouchRecord vouch,
+        ActorOrigin? origin = null,
+        ActorSocialDiff? social = null)
+    {
+        ArgumentNullException.ThrowIfNull(vouch);
+        vouch.Validate();
+        if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(durableId), "Vouch target must be a positive non-player actor id.");
+
+        if (_entries.TryGetValue(durableId, out ActorLedgerEntry? existing))
+        {
+            ActorVouchRecord[] priorVouches = MergeVouches(existing.Referral?.Vouches, existing.Social?.Vouches) ?? [];
+            bool added = !priorVouches.Any(existingVouch => existingVouch.SameGrant(vouch));
+            ActorVouchRecord[] mergedVouches = added ? [.. priorVouches, vouch] : priorVouches;
+            ActorSocialDiff? baseSocial = existing.Social ?? social;
+            ActorSocialDiff? updatedSocial = baseSocial is { } s
+                ? s with { Vouches = mergedVouches }
+                : null;
+            ActorReferralDiff? updatedReferral = existing.Referral is { } r
+                ? r with { Vouches = mergedVouches }
+                : updatedSocial is null
+                    ? new ActorReferralDiff(null, null, mergedVouches)
+                    : null;
+            _entries[durableId] = existing with
+            {
+                Social = updatedSocial,
+                Referral = updatedReferral,
+            };
+            return added;
+        }
+
+        ArgumentNullException.ThrowIfNull(origin);
+        ActorSocialDiff? initialSocial = social is { } sNew ? sNew with { Vouches = [vouch] } : null;
+        ActorReferralDiff? initialReferral = initialSocial is null ? new ActorReferralDiff(null, null, [vouch]) : null;
+        _entries[durableId] = new ActorLedgerEntry(durableId, origin, Social: initialSocial, Referral: initialReferral);
+        return true;
+    }
+
+    /// <summary>All structured vouches recorded in the ledger for <paramref name="durableId"/>.</summary>
+    internal IReadOnlyList<ActorVouchRecord> GetVouches(long durableId)
+    {
+        if (!_entries.TryGetValue(durableId, out ActorLedgerEntry? entry))
+            return [];
+        return MergeVouches(entry.Referral?.Vouches, entry.Social?.Vouches) ?? [];
+    }
+
+    internal static ActorVouchRecord[]? MergeVouches(
+        IEnumerable<ActorVouchRecord>? first,
+        IEnumerable<ActorVouchRecord>? second)
+    {
+        List<ActorVouchRecord>? merged = null;
+        if (first is not null)
+        {
+            foreach (ActorVouchRecord vouch in first)
+            {
+                merged ??= [];
+                if (!merged.Any(existing => existing.SameGrant(vouch)))
+                    merged.Add(vouch);
+            }
+        }
+        if (second is not null)
+        {
+            foreach (ActorVouchRecord vouch in second)
+            {
+                merged ??= [];
+                if (!merged.Any(existing => existing.SameGrant(vouch)))
+                    merged.Add(vouch);
+            }
+        }
+        return merged is { Count: > 0 } ? [.. merged] : null;
     }
 
     /// <summary>Marks a deterministic slot or authored placement permanently removed (banished), retaining any social tombstone.</summary>

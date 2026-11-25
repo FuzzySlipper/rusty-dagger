@@ -321,6 +321,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             || s.DispositionDelta != 0
             || s.WitnessedCrimes is { Length: > 0 }
             || s.ReferralTags is { Length: > 0 }
+            || s.Vouches is { Length: > 0 }
+            || s.LastFavourDay is not null
             || s.Muted
             || s.EscortPortrait is not null
             || s.StagedPartyRole is not null

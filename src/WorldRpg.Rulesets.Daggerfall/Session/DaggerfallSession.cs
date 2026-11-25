@@ -860,6 +860,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallQuestPlacement QuestPlacement { get; } = null!;
     internal DaggerfallOfficeHolders OfficeHolders { get; } = null!;
 
+    /// <summary>Social introductions and vouching: prominence gating, social-skill skips, structured vouches, and better terms.</summary>
+    internal DaggerfallIntroductions Introductions { get; } = null!;
+
     /// <summary>A quest's foes as actors: their team and target, the commands over them, and spawning.</summary>
     internal DaggerfallQuestFoes QuestFoes { get; } = null!;
 

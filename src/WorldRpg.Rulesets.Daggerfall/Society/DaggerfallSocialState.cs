@@ -17,9 +17,9 @@ internal sealed record DaggerfallGuildMembership(int GuildGroup, int FactionId, 
 internal sealed record DaggerfallSocialAffiliationView(string Faction, string GuildGroup, int Rank, int Reputation, int Recognition, int FactionId = 0);
 
 /// <summary>The reusable reaction answer for a faction, NPC talk, a service, or a quest condition.</summary>
-internal readonly record struct DaggerfallFactionReaction(int FactionId, int FactionReputation, int PersonalReputation, int ActorDisposition = 0)
+internal readonly record struct DaggerfallFactionReaction(int FactionId, int FactionReputation, int PersonalReputation, int ActorDisposition = 0, int VouchBonus = 0)
 {
-    internal int Value => checked(FactionReputation + PersonalReputation + ActorDisposition);
+    internal int Value => checked(FactionReputation + PersonalReputation + ActorDisposition + VouchBonus);
 }
 
 /// <summary>The shared guild eligibility answer; service and quest policy supply their own thresholds.</summary>
@@ -68,12 +68,16 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     private readonly Dictionary<int, Stat> _regionalReputationModifiers = [];
     private Func<long, FactionComponent?>? _actorFactions;
     private Func<long, int>? _actorDisposition;
+    private Func<long, int>? _actorVouchBonus;
 
     internal void BindActorFactions(Func<long, FactionComponent?> lookup) =>
         _actorFactions = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
     internal void BindActorDisposition(Func<long, int> lookup) =>
         _actorDisposition = lookup ?? throw new ArgumentNullException(nameof(lookup));
+
+    internal void BindActorVouchBonus(Func<long, int> lookup) =>
+        _actorVouchBonus = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
     internal DaggerfallSocialState(DaggerfallFactionsSet catalog)
     {
@@ -181,17 +185,18 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         return resolved?.PrimaryFactionId ?? resolved?.RegionalPeopleFactionId ?? npc.Appearance.FactionId;
     }
 
-    /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world, combining faction standing and personal seller disposition.</summary>
+    /// <summary>Computes the same reaction for an NPC whether or not it is currently active in the world, combining faction standing, personal seller disposition, and trusted vouch bonus.</summary>
     internal DaggerfallFactionReaction ReactionForNpc(DaggerfallNpc npc, FactionComponent? factions = null)
     {
         ArgumentNullException.ThrowIfNull(npc);
         int factionId = ResolveNpcReactionFactionId(npc, factions);
         int disposition = _actorDisposition?.Invoke(npc.DurableId) ?? 0;
+        int vouchBonus = _actorVouchBonus?.Invoke(npc.DurableId) ?? 0;
         // Classic sprite placements also carry faction ids absent from FACTION.TXT. Preserve that source
-        // identity, give people without a catalog faction a neutral faction baseline, and still honor personal disposition.
+        // identity, give people without a catalog faction a neutral faction baseline, and still honor personal disposition and trusted vouches.
         return !_catalog.Factions.ContainsKey(factionId)
-            ? new(factionId, 0, 0, disposition)
-            : ReactionForFaction(factionId) with { ActorDisposition = disposition };
+            ? new(factionId, 0, 0, disposition, vouchBonus)
+            : ReactionForFaction(factionId) with { ActorDisposition = disposition, VouchBonus = vouchBonus };
     }
 
     /// <summary>Bounded trade reaction in [-100, 100] combining the seller's personal standing and faction standing.</summary>

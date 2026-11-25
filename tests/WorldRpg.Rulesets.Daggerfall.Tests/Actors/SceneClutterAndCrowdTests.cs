@@ -374,7 +374,6 @@ public sealed class SceneClutterAndCrowdTests
             targetBlock.SourceName, targetBlock.X, targetBlock.Y, targetSlot.SlotId);
         long expectedMaraId = DaggerfallPeopleSlots.SeededSlotIdentity(
             targetRecord.Id, $"{targetProfileKey.LogicalId}/{expectedSlotId}");
-        string expectedTag = $"referred-from:{charingRecord.Name}";
 
         // Collect real untouched neighbor seeded IDs in the target town (other static/clutter slots + exterior population slots).
         long[] targetNeighborIds =
@@ -389,11 +388,17 @@ public sealed class SceneClutterAndCrowdTests
 
         RulesetSavePayload savedBeforeVisit;
         string referredContactName;
+        long referrerId;
+        int expectedReferrerFaction;
+        string expectedSummary;
         using (DaggerfallSession first = DaggerfallSession.StartNew(CreateEngine().Context, composition))
         {
             // Advance to daytime so Charing's real townspeople are live and talkable.
             first.AdvanceElapsedTime(8 * 60 * 60);
             DaggerfallActivationTarget charingSpeaker = first.Dialogue.NpcTargets().First();
+            referrerId = checked((long)charingSpeaker.Identity.Value);
+            DaggerfallNpc speakerNpc = first.State.Npcs.Require(referrerId);
+            expectedReferrerFaction = first.State.Social.ResolveNpcReactionFactionId(speakerNpc);
 
             // Open dialogue with a real Charing townsperson and ask the real "referral" topic.
             DaggerfallActivationOutcome opened = first.Dialogue.ActivateNpc(
@@ -416,7 +421,13 @@ public sealed class SceneClutterAndCrowdTests
             Assert.Equal(ActorOriginKind.SeededSlot, referralEntry.Origin.Kind);
             Assert.Equal(expectedSlotId, referralEntry.Origin.SlotKey);
             Assert.NotNull(referralEntry.Referral);
-            Assert.Contains(expectedTag, referralEntry.Referral!.Tags);
+            Assert.True(referralEntry.Referral!.Tags is null or { Length: 0 });
+            ActorVouchRecord vouch = Assert.Single(referralEntry.Referral.Vouches!);
+            Assert.Equal(referrerId, vouch.ReferrerDurableId);
+            Assert.Equal(expectedReferrerFaction, vouch.ReferrerFactionId);
+            Assert.Equal(ActorVouchKind.Contact, vouch.Kind);
+            Assert.Equal(charingRecord.Name, vouch.OriginSiteName);
+            expectedSummary = vouch.DisplaySummary();
             referredContactName = referralEntry.Referral.DisplayNameOverride!;
             Assert.False(string.IsNullOrWhiteSpace(referredContactName));
             Assert.Contains(referredContactName, referralReply.Message, StringComparison.Ordinal);
@@ -438,11 +449,12 @@ public sealed class SceneClutterAndCrowdTests
         {
             Assert.True(reloaded.State.ActorLedger.TryGet(expectedMaraId, out ActorLedgerEntry? restoredEntry));
             Assert.NotNull(restoredEntry!.Referral);
+            Assert.Contains(restoredEntry.Referral!.Vouches!, v => v.ReferrerDurableId == referrerId && v.Kind == ActorVouchKind.Contact);
 
             Assert.True(reloaded.TryTransitionTo(targetProfileKey));
             reloaded.AdvanceElapsedTime(60);
 
-            // Exact pre-visit durable ID resolves to the real TVRNBL02/TVRNGL02 AmbientBark bystander with hydrated name & tag.
+            // Exact pre-visit durable ID resolves to the real TVRNBL02/TVRNGL02 AmbientBark bystander with hydrated name & structured vouch.
             Assert.True(reloaded.State.Actors.TryGet(expectedMaraId, out ActorState? maraActor));
             Assert.True(maraActor.Actor.Has<StatsComponent>());
             Assert.Equal(ActorInteractionPolicyKind.AmbientBark, maraActor.Actor.Get<ActorInteractionPolicy>().Policy);
@@ -452,13 +464,13 @@ public sealed class SceneClutterAndCrowdTests
 
             DaggerfallNpc maraNpc = reloaded.State.Npcs.Require(expectedMaraId);
             Assert.Equal(referredContactName, maraNpc.DisplayName);
-            Assert.True(maraActor.Actor.Get<ActorOverlayComponent>().HasReferralTag(expectedTag));
+            Assert.True(maraActor.Actor.Get<ActorOverlayComponent>().HasVouch(referrerId, ActorVouchKind.Contact));
 
             // Real target-town neighbors are also live in EntityStore.
             long[] liveNeighbors = [.. targetNeighborIds.Where(id => reloaded.State.Actors.TryGet(id, out _))];
             Assert.NotEmpty(liveNeighbors);
 
-            // Activating the referred contact triggers their referral-aware AmbientBark without opening a full dialogue modal.
+            // Activating the referred contact triggers their vouch-aware AmbientBark without opening a full dialogue modal.
             DaggerfallActivationTarget maraTarget = Assert.Single(
                 reloaded.Dialogue.NpcTargets(),
                 t => (long)t.Identity.Value == expectedMaraId);
@@ -466,16 +478,16 @@ public sealed class SceneClutterAndCrowdTests
                 new DaggerfallActivationSelection(DaggerfallActivationMode.Talk, maraTarget));
             Assert.True(barkOutcome.Applied);
             Assert.Contains(referredContactName, barkOutcome.Message, StringComparison.Ordinal);
-            Assert.Contains(expectedTag, barkOutcome.Message, StringComparison.Ordinal);
+            Assert.Contains(expectedSummary, barkOutcome.Message, StringComparison.Ordinal);
             Assert.Null(reloaded.Dialogue.CurrentNpc());
 
-            // Saving after first visit keeps Mara's referral entry while ALL untouched target-town neighbors write 0 ledger bytes.
+            // Saving after first visit keeps Mara's structured vouch entry while ALL untouched target-town neighbors write 0 ledger bytes.
             DaggerfallSavePayload savedAfterVisit = DaggerfallSavePayload.Read(reloaded.CaptureSave());
             ActorLedgerEntry afterEntry = Assert.Single(
                 savedAfterVisit.ActorLedger,
                 entry => entry.DurableId == expectedMaraId);
             Assert.NotNull(afterEntry.Referral);
-            Assert.Contains(expectedTag, afterEntry.Referral!.Tags);
+            Assert.Contains(afterEntry.Referral!.Vouches!, v => v.ReferrerDurableId == referrerId && v.Kind == ActorVouchKind.Contact);
             foreach (long neighborId in targetNeighborIds)
                 Assert.DoesNotContain(savedAfterVisit.ActorLedger, entry => entry.DurableId == neighborId);
         }

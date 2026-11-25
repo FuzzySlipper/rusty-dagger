@@ -93,6 +93,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallSiteRecord, DaggerfallNpc, string?>? _issueReferral;
     private readonly Func<DaggerfallNpc, IReadOnlyList<DaggerfallDialogueTopicOption>>? _partyHireTopics;
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, DaggerfallPartyHireResult>? _partyHireService;
+    private readonly Func<DaggerfallNpc, DaggerfallIntroductionAccess>? _introductionAccess;
+    private readonly Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallIntroductionTarget>>? _introductionTargets;
+    private readonly Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallIntroductionResult>? _requestIntroduction;
+    private readonly Func<DaggerfallNpc, bool>? _canCurryFavour;
+    private readonly Func<DaggerfallNpc, bool, bool, DaggerfallFavourResult>? _curryFavour;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -129,12 +134,22 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallTextContext>? currentText = null,
         Func<DaggerfallSiteRecord, DaggerfallNpc, string?>? issueReferral = null,
         Func<DaggerfallNpc, IReadOnlyList<DaggerfallDialogueTopicOption>>? partyHireTopics = null,
-        Func<DaggerfallNpc, DaggerfallDialogueTopic, DaggerfallPartyHireResult>? partyHireService = null)
+        Func<DaggerfallNpc, DaggerfallDialogueTopic, DaggerfallPartyHireResult>? partyHireService = null,
+        Func<DaggerfallNpc, DaggerfallIntroductionAccess>? introductionAccess = null,
+        Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallIntroductionTarget>>? introductionTargets = null,
+        Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallIntroductionResult>? requestIntroduction = null,
+        Func<DaggerfallNpc, bool>? canCurryFavour = null,
+        Func<DaggerfallNpc, bool, bool, DaggerfallFavourResult>? curryFavour = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
         _partyHireTopics = partyHireTopics;
         _partyHireService = partyHireService;
+        _introductionAccess = introductionAccess;
+        _introductionTargets = introductionTargets;
+        _requestIntroduction = requestIntroduction;
+        _canCurryFavour = canCurryFavour;
+        _curryFavour = curryFavour;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -363,10 +378,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         var benefit = _guildWelcome?.Invoke(npc);
         if (!string.IsNullOrEmpty(benefit?.Message)) greeting += "\n" + benefit.Message;
         if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
-            && liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? openOverlay)
-            && openOverlay.ReferralTags.Count > 0)
+            && liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? openOverlay))
         {
-            greeting += "\n" + FormatReferralLine(npc, openOverlay.ReferralTags[0]);
+            if (openOverlay.Vouches.Count > 0)
+                greeting += "\n" + FormatReferralLine(npc, openOverlay.Vouches[0].DisplaySummary());
+            else if (openOverlay.ReferralTags.Count > 0)
+                greeting += "\n" + FormatReferralLine(npc, openOverlay.ReferralTags[0]);
         }
         string revision = checked(++_nextRevision).ToString(CultureInfo.InvariantCulture);
         _current = new TalkSession(npc.DurableId, actor.Entity, actor.Position, npc.Site, revision, greeting)
@@ -397,6 +414,34 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             session.QuestionCount++;
             Publish(npc, site);
             return Report(new(result.Accepted, result.Message));
+        }
+        if (topic == DaggerfallDialogueTopic.Introduce)
+        {
+            if (_requestIntroduction is null
+                || !long.TryParse(topicTarget, NumberStyles.Integer, CultureInfo.InvariantCulture, out long targetId))
+                return Reject("That introduction is not available.");
+            DaggerfallIntroductionResult result = _requestIntroduction(npc, targetId, site);
+            session.Question = $"Could you introduce me to {result.TargetName}?";
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
+        if (topic == DaggerfallDialogueTopic.CurryFavour)
+        {
+            if (_curryFavour is null)
+                return Reject("That approach is not available here.");
+            DaggerfallFavourResult result = _curryFavour(
+                npc,
+                session.Tone == DaggerfallDialogueTone.Polite,
+                session.Tone == DaggerfallDialogueTone.Blunt);
+            session.Question = "I wished to pay my respects.";
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Applied, result.Message));
         }
         if (topic is DaggerfallDialogueTopic.Donate or DaggerfallDialogueTopic.Cure)
         {
@@ -527,11 +572,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
         else if (work)
         {
-            int workId = _workAvailable(npc.DurableId) ? 8075 + band : 8078;
-            (session.Reply, IReadOnlyList<string> workDiagnostics) = RenderSelectedRun(
-                Resource(workId), context, $"{session.Revision}:{session.QuestionCount}:work:answer");
-            session.Diagnostics.AddRange(workDiagnostics);
-            if (_offerWork is not null && _workAvailable(npc.DurableId)) session.Reply = _offerWork(npc.DurableId);
+            if (_introductionAccess?.Invoke(npc) is { Allowed: false } denied)
+            {
+                session.Reply = denied.DenialReason ?? "You need an introduction before seeking work here.";
+            }
+            else
+            {
+                int workId = _workAvailable(npc.DurableId) ? 8075 + band : 8078;
+                (session.Reply, IReadOnlyList<string> workDiagnostics) = RenderSelectedRun(
+                    Resource(workId), context, $"{session.Revision}:{session.QuestionCount}:work:answer");
+                session.Diagnostics.AddRange(workDiagnostics);
+                if (_offerWork is not null && _workAvailable(npc.DurableId)) session.Reply = _offerWork(npc.DurableId);
+            }
         }
         else
         {
@@ -819,6 +871,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private string ResolveAmbientBark(DaggerfallNpc npc, ActorOverlayComponent? overlay, DaggerfallSiteRecord? site)
     {
         string speaker = npc.DisplayName ?? npc.Role;
+        if (overlay is { Vouches.Count: > 0 })
+            return $"{speaker}: \"{FormatReferralLine(npc, overlay.Vouches[0].DisplaySummary())}\"";
         if (overlay is { ReferralTags.Count: > 0 })
             return $"{speaker}: \"{FormatReferralLine(npc, overlay.ReferralTags[0])}\"";
 
@@ -846,8 +900,25 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?", Group: Talk), new("news", "Any news?", Group: Talk)];
         if (_issueReferral is not null)
             topics.Add(new("referral", "Any contacts nearby?", Group: Talk));
-        if (npc.Services.Any(service => service is "quest" or "quests" or "quest-candidate") || _workAvailable(npc.DurableId))
+        DaggerfallIntroductionAccess? access = _introductionAccess?.Invoke(npc);
+        if (npc.Services.Any(service => service is "quest" or "quests" or "quest-candidate")
+            || _workAvailable(npc.DurableId)
+            || (access is { Allowed: false, Prominence: >= DaggerfallSocialProminence.MinorCourt } && npc.Kind == DaggerfallNpcKind.Static))
             topics.Add(new("work", "Do you know of any work?", Group: Talk));
+        if (_curryFavour is not null
+            && access is { Allowed: true, Prominence: >= DaggerfallSocialProminence.MinorCourt }
+            && _canCurryFavour?.Invoke(npc) == true)
+            topics.Add(new("curry-favour", "Pay your respects", Group: Talk));
+        if (_introductionTargets is not null && _requestIntroduction is not null)
+        {
+            foreach (DaggerfallIntroductionTarget target in _introductionTargets(npc, site))
+            {
+                string label = target.AlreadyVouched
+                    ? $"Ask about {target.TargetName} (vouched)"
+                    : $"Ask for an introduction to {target.TargetName}";
+                topics.Add(new($"introduce:{target.TargetDurableId}", label, Group: Talk, Category: "Introductions"));
+            }
+        }
         if (_directionDirectory is not null)
             topics.AddRange(_directionDirectory().Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Places }));
         topics.AddRange(_questTopics(npc.DurableId).Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Quests }));
@@ -929,6 +1000,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "directions" => DaggerfallDialogueTopic.Directions,
             "news" => DaggerfallDialogueTopic.News,
             "referral" => DaggerfallDialogueTopic.Referral,
+            "curry-favour" => DaggerfallDialogueTopic.CurryFavour,
             "work" => DaggerfallDialogueTopic.Work,
             "donate" => DaggerfallDialogueTopic.Donate,
             "cure" => DaggerfallDialogueTopic.Cure,
@@ -944,7 +1016,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "dismiss-party" => DaggerfallDialogueTopic.DismissParty,
             _ => default,
         };
-        if (value is "directions" or "news" or "referral" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
+        if (value is "directions" or "news" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
+        if (value is { Length: > 10 } dynamicIntroduce && dynamicIntroduce.StartsWith("introduce:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.Introduce;
+            target = dynamicIntroduce["introduce:".Length..];
+            return target.Length > 0;
+        }
         if (value is { Length: > 10 } dynamicDirection && dynamicDirection.StartsWith("direction:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Directions;

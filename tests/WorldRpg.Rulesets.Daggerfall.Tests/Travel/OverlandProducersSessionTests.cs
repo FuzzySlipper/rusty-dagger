@@ -281,7 +281,7 @@ public sealed class OverlandProducersSessionTests
             Assert.NotNull(onBand.Combat);
             Assert.True(onBand.Combat!.LanguagePacified);
             Assert.NotNull(onBand.Referral);
-            Assert.Equal(["quest:caravan-clue"], onBand.Referral!.Tags);
+            Assert.Equal(["quest:caravan-clue"], onBand.Referral!.Tags!);
             Assert.Equal("Mara the Witness", onBand.Referral.DisplayNameOverride);
             Assert.NotNull(onBand.Social);
             Assert.Equal("Mara the Witness", onBand.Social!.DisplayNameOverride);
@@ -297,7 +297,7 @@ public sealed class OverlandProducersSessionTests
             ActorLedgerEntry restoredOnBand = Assert.Single(restored.State.ActorLedger.EntriesOnOverlandBand(dispatched.BandId));
             Assert.Equal(4.0, restoredOnBand.Vitals!.Stats.Snapshot.Tracks.Single(t => t.Id == DaggerfallMechanicsIds.Health.Value).Current);
             Assert.True(restoredOnBand.Combat!.LanguagePacified);
-            Assert.Equal(["quest:caravan-clue"], restoredOnBand.Referral!.Tags);
+            Assert.Equal(["quest:caravan-clue"], restoredOnBand.Referral!.Tags!);
             Assert.Equal("Mara the Witness", restoredOnBand.Social!.DisplayNameOverride);
             Assert.True(restoredOnBand.Social.Met);
             Assert.Equal(17, restoredOnBand.Social.DispositionDelta);
@@ -343,7 +343,7 @@ public sealed class OverlandProducersSessionTests
             Assert.Equal(baselineEntry.DurableId, onBand.DurableId);
             Assert.Equal(baselineEntry.Origin.SpawnerId, onBand.Origin.SpawnerId);
             Assert.NotNull(onBand.Referral);
-            Assert.Equal(["quest:pre-visit-referral"], onBand.Referral!.Tags);
+            Assert.Equal(["quest:pre-visit-referral"], onBand.Referral!.Tags!);
             Assert.Equal("Aldric the Factor", onBand.Referral.DisplayNameOverride);
             Assert.NotNull(onBand.Social);
             Assert.Equal("Aldric the Factor", onBand.Social!.DisplayNameOverride);

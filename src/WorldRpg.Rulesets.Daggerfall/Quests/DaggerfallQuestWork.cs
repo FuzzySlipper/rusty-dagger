@@ -39,7 +39,8 @@ internal sealed class DaggerfallQuestWork(
     DaggerfallQuestOfferTuning tuning,
     Func<DaggerfallInteriorBuilding?> interiorBuilding,
     Func<DaggerfallWorldProfileKind> profileKind,
-    Func<bool> insideCastle)
+    Func<bool> insideCastle,
+    Func<DaggerfallNpc, bool, DaggerfallIntroductionAccess>? assessIntroductionAccess = null)
 {
     private (DaggerfallNpc Provider, int Faction, bool Member, int Reputation, int Rank)? Provider(long id)
     {
@@ -47,6 +48,7 @@ internal sealed class DaggerfallQuestWork(
         try { npc = npcs.Require(id); } catch (InvalidOperationException) { return null; }
         bool castle = insideCastle();
         if (DaggerfallNpcServiceFacts.IsChild(npc.Appearance)) return null;
+        if (assessIntroductionAccess?.Invoke(npc, castle) is { Allowed: false }) return null;
         string? service = npc.Services.Contains("quests", StringComparer.Ordinal) ? "quests"
             : npc.Services.Contains("quest", StringComparer.Ordinal) ? "quest"
             : npc.Services.Contains("quest-candidate", StringComparer.Ordinal) ? "quest-candidate"
@@ -90,6 +92,11 @@ internal sealed class DaggerfallQuestWork(
     /// <summary>Prepares this person's work offer and answers its text, or why there is none.</summary>
     internal string Offer(long provider)
     {
+        if (npcs.TryGet(provider, out DaggerfallNpc? target) && target is not null
+            && assessIntroductionAccess?.Invoke(target, insideCastle()) is { Allowed: false } denied)
+        {
+            return denied.DenialReason ?? "You need an introduction before seeking work here.";
+        }
         if (Provider(provider) is not { } context) return "That provider has no work available.";
         try
         {
