@@ -341,18 +341,31 @@ public sealed class IntroductionsAndVouchingTests
             DaggerfallPartyHireResult deniedNoGold = session.PartyHire.Resolve(hireable, DaggerfallDialogueTopic.HireCompanion);
             Assert.False(deniedNoGold.Accepted);
 
-            // Issue a trusted peer vouch on the hireable -> deposit waived (0 gold) -> hire succeeds!
+            // Request a trusted peer vouch on the ordinary talk-only hireable through real dialogue (R11049-1).
             long voucherId = SpawnCourtNpc(session, "hire-voucher", "Alena", hireable.Appearance.FactionId, DaggerfallRegion, ["talk"]);
             session.Introductions.AdjustActorDisposition(voucherId, 20);
-            DaggerfallIntroductionResult hireVouch = session.Introductions.TryIssueIntroduction(
-                session.State.Npcs.Require(voucherId), hireable.DurableId, session.Site.ActiveSite);
-            Assert.True(hireVouch.Accepted);
-            Assert.Contains(session.PartyHire.TopicsFor(hireable), t => t.Id == "hire-companion" && t.Label.Contains("waived", StringComparison.OrdinalIgnoreCase));
+            OpenDialogueWith(session, voucherId);
+            DaggerfallDialogueView voucherView = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+            string introTopicId = $"introduce:{hireable.DurableId}";
+            Assert.Contains(voucherView.Topics, t => t.Id == introTopicId && t.Category == "Introductions");
+            DaggerfallActivationOutcome vouchReply = session.Dialogue.Ask(voucherView.Revision, introTopicId, null, null);
+            Assert.True(vouchReply.Applied, vouchReply.Message);
+            ActorVouchRecord hireVouch = Assert.Single(session.Introductions.ReadVouches(hireable.DurableId));
+            Assert.Equal(voucherId, hireVouch.ReferrerDurableId);
+            Assert.Equal(ActorVouchKind.Contact, hireVouch.Kind);
+            session.Dialogue.Close();
 
-            DaggerfallPartyHireResult waivedHire = session.PartyHire.Resolve(hireable, DaggerfallDialogueTopic.HireCompanion);
-            Assert.True(waivedHire.Accepted, waivedHire.Message);
+            // Open dialogue with the vouched hireable: greeting acknowledges Alena and companion deposit is waived (0 gold)!
+            OpenDialogueWith(session, hireable.DurableId);
+            DaggerfallDialogueView hireableView = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+            Assert.Contains("Alena", hireableView.Greeting, StringComparison.Ordinal);
+            Assert.Contains(hireableView.Topics, t => t.Id == "hire-companion" && t.Label.Contains("waived", StringComparison.OrdinalIgnoreCase));
+
+            DaggerfallActivationOutcome waivedHire = session.Dialogue.Ask(hireableView.Revision, "hire-companion", null, null);
+            Assert.True(waivedHire.Applied, waivedHire.Message);
             Assert.Contains("waives the deposit", waivedHire.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(goldBefore, session.State.Currency.Read().Gold);
+            session.Dialogue.Close();
 
             // Verify LastFavourDay survives save/reload (cannot curry favour twice on the same day after reload).
             long favId = SpawnCourtNpc(session, "lady-persist", "Lady Bridwell", LadyBridwellFaction, DaggerfallRegion, ["talk", "quest"]);

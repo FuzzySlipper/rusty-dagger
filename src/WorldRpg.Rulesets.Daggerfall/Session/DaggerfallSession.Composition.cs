@@ -955,6 +955,7 @@ internal sealed partial class DaggerfallSession
                 amount => State.Currency.TrySpendGold(amount, []),
                 id => State.Quests.IsNpcMuted(id) || State.Quests.IsEscortWithParty(id),
                 hasDepositWaiver: Introductions.HasDepositWaiverVouch);
+            Introductions.BindHireableContactLookup(PartyHire.IsHireable);
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),

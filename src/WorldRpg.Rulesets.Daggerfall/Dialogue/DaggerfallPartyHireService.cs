@@ -183,7 +183,7 @@ internal sealed class DaggerfallPartyHireService
         return new(true, question, $"Safe travels. {name} parts ways with your party here.");
     }
 
-    private bool IsHireable(DaggerfallNpc npc)
+    internal bool IsHireable(DaggerfallNpc npc)
     {
         if (npc.Presence != DaggerfallNpcPresence.Active || npc.Kind == DaggerfallNpcKind.Questor)
             return false;

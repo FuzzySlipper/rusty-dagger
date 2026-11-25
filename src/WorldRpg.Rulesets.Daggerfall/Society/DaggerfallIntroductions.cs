@@ -105,6 +105,12 @@ internal sealed class DaggerfallIntroductions(
     private static readonly string[] NobleTitles =
         ["Lord ", "Lady ", "Duke ", "Duchess ", "Marquis ", "Marquise ", "Count ", "Countess ", "Baron ", "Baroness ", "Prince ", "Princess "];
 
+    private Func<DaggerfallNpc, bool>? _isHireableContact;
+
+    /// <summary>Binds the party-hire eligibility lookup so ordinary hireable companions/drivers appear in introduction dialogue.</summary>
+    internal void BindHireableContactLookup(Func<DaggerfallNpc, bool> lookup) =>
+        _isHireableContact = lookup ?? throw new ArgumentNullException(nameof(lookup));
+
     /// <summary>Classifies a person's social prominence tier from their resolved faction, office, and castle context.</summary>
     internal DaggerfallSocialProminence ClassifyProminence(DaggerfallNpc npc, bool? inCastleOverride = null)
     {
@@ -339,11 +345,13 @@ internal sealed class DaggerfallIntroductions(
                 && candidate.Site.Region == site.Id.Region
                 && string.Equals(candidate.Site.Location, site.Name, StringComparison.Ordinal);
             bool isServicePeer = sameSite && candidate.Services.Any(s =>
-                s is "buy-items" or "sell-items" or "buy-spells" or "tavern" or "bank" or "training" or "quests" or "quest" or "quest-candidate");
-            if (candidateProminence == DaggerfallSocialProminence.Ordinary && !isServicePeer)
+                s is "shop" or "buy-items" or "sell-items" or "buy-spells" or "tavern" or "bank" or "training" or "quests" or "quest" or "quest-candidate");
+            bool isHireablePeer = sameSite && _isHireableContact?.Invoke(candidate) == true;
+            bool isLocalPeer = isServicePeer || isHireablePeer;
+            if (candidateProminence == DaggerfallSocialProminence.Ordinary && !isLocalPeer)
                 return;
             // Don't clutter with demotion intros from a king to a random bystander; offer upward or peer intros.
-            if (candidateProminence < speakerProminence && !isServicePeer)
+            if (candidateProminence < speakerProminence && !isLocalPeer)
                 return;
 
             ActorVouchKind kind = DetermineVouchKind(speakerFactionId, candidate, candidateProminence);
@@ -854,7 +862,7 @@ internal sealed class DaggerfallIntroductions(
     {
         if (targetProminence >= DaggerfallSocialProminence.MinorCourt)
             return IsGuildOrOrderFaction(speakerFactionId) ? ActorVouchKind.Guild : ActorVouchKind.Court;
-        if (target.Services.Any(s => s is "buy-items" or "sell-items" or "buy-spells" or "tavern" or "bank"))
+        if (target.Services.Any(s => s is "shop" or "buy-items" or "sell-items" or "buy-spells" or "tavern" or "bank"))
             return ActorVouchKind.Trade;
         return ActorVouchKind.Contact;
     }
