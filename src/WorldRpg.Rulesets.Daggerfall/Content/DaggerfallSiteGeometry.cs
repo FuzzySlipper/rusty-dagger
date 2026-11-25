@@ -104,31 +104,6 @@ internal sealed class DaggerfallSiteGeometry
     /// </summary>
     internal Func<IDisposable>? SpatialSource { get; }
 
-    /// <summary>
-    /// A model mesh's pose from its placement's position and source Euler degrees. The donor turns
-    /// importer-space points by <c>Rz * Rx * Ry</c> before the right-handed flip of Z, so in the profile's
-    /// right-handed frame the same turn is <c>Rz(z) * Rx(-x) * Ry(-y)</c>.
-    /// </summary>
-    internal static Transform Pose(Vector3 position, Vector3 rotationDegrees) =>
-        new(position, SourceRotation(rotationDegrees), Vector3.One);
-
-    /// <summary>An action model's initial Engine pose from its normalized source Euler tuple, refused unless finite.</summary>
-    internal static Transform InitialTransform(Vector3 position, Vector3 rotationDegrees)
-    {
-        if (!IsFinite(position) || !IsFinite(rotationDegrees))
-            throw new ArgumentOutOfRangeException(nameof(position), "Action model pose must be finite.");
-        return Pose(position, rotationDegrees);
-    }
-
-    /// <summary>The right-handed rotation the donor's source Euler degrees turn a model by.</summary>
-    internal static Quaternion SourceRotation(Vector3 rotationDegrees)
-    {
-        Vector3 radians = rotationDegrees * (MathF.PI / 180F);
-        return Quaternion.Normalize(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, radians.Z)
-            * Quaternion.CreateFromAxisAngle(Vector3.UnitX, -radians.X)
-            * Quaternion.CreateFromAxisAngle(Vector3.UnitY, -radians.Y));
-    }
-
-    private static bool IsFinite(Vector3 value) =>
-        float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z);
+    /// <summary>A placed model's pose from its position and its published right-handed rotation.</summary>
+    internal static Transform Pose(Vector3 position, Quaternion rotation) => new(position, rotation, Vector3.One);
 }

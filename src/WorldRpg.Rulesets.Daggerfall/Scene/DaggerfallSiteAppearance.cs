@@ -208,7 +208,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<uint, Material> materialsBySlot = [];
     private readonly Dictionary<DaggerfallRdbDoorId, Appearance> doorVisuals = [];
     private readonly Dictionary<DaggerfallRdbDoorId, ulong> doorVisualOrdinals = [];
-    private readonly Dictionary<DaggerfallRdbDoorId, Transform> doorVisualPoses = [];
     // The door facts last appended, kept while the doors' revision, the slot and the door visuals stand.
     private (int Revision, int Slot, AppearanceFact[] Facts)? doorFacts;
     // Each action model's classic visual, its remodel where the profile has one, and its ordinal.
@@ -566,7 +565,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (doorFacts is not { } held || held.Revision != revision || held.Slot != slot)
             doorFacts = held = (revision, slot, [.. parts.Doors().Where(door => doorVisuals.ContainsKey(door.Id)).Select(door =>
                 new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, doorVisualOrdinals[door.Id]), false, 0,
-                    doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose,
+                    door.Pose,
                     doorVisuals[door.Id], true, RenderLayer.Scene))]);
         facts.AddRange(held.Facts);
         bool gatesOpen = parts.GatesOpen();
@@ -940,7 +939,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (Appearance visual in doorVisuals.Values.Reverse()) Dispose(visual, ref failures);
         doorVisuals.Clear();
         doorVisualOrdinals.Clear();
-        doorVisualPoses.Clear();
         doorFacts = null;
         foreach ((ModelVisual visual, ulong _) in actionModelVisuals.Values.Reverse()) if (visual.Classic is { } classic) Dispose(classic, ref failures);
         actionModelVisuals.Clear();
@@ -1031,7 +1029,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             doorVisuals.Add(door.Id, created);
             doorFacts = null;
             doorVisualOrdinals.Add(door.Id, NextLocationVisualOrdinal());
-            if (visual.LocalPose is { } local) doorVisualPoses.Add(door.Id, local);
         }
         foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
             gateVisuals.Add(gate.Id, (PlaceModel(gate.Open.Visual, $"City gate '{gate.Id}'", gate.Open.ModelId),
@@ -1080,7 +1077,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         retired.AddRange(doorVisuals.Values.Reverse());
         doorVisuals.Clear();
         doorVisualOrdinals.Clear();
-        doorVisualPoses.Clear();
         doorFacts = null;
         retired.AddRange(actionModelVisuals.Values.Select(value => value.Visual.Classic).OfType<Appearance>().Reverse());
         actionModelVisuals.Clear();

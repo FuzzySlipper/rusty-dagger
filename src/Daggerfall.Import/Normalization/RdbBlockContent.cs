@@ -87,8 +87,8 @@ internal sealed record RdbBlockModel(int Index, RdbModelSource Source, bool Ordi
     /// <summary>The model's origin in its block's frame.</summary>
     public Arena2ImportPoint Point => Arena2SourceTransform.ToImportPoint(Source.X, Source.Y, Source.Z);
 
-    /// <summary>The model's source Euler degrees, in the donor's <c>T * Rz * Rx * Ry</c> convention.</summary>
-    public Arena2EulerDegrees RotationDegrees => Arena2SourceTransform.ToEulerDegrees(Source);
+    /// <summary>The model's turn in the published right-handed frame, the one its placed geometry is turned by.</summary>
+    public NormalizedQuaternion Rotation => NormalizedQuaternion.From(Arena2SourceTransform.ToRightHandedRotation(Arena2SourceTransform.ToEulerDegrees(Source)));
 
     /// <summary>Turns one model-local importer point by the model's rotation, before any translation.</summary>
     public Arena2ImportPoint Rotate(Arena2ImportPoint local) => rotation.Transform(local);
@@ -237,7 +237,8 @@ internal sealed class RdbBlockContent
                 SoundIndex: model.Source.SoundIndex,
                 Position: null,
                 RawIndex: model.Source.SoundIndex,
-                Poison: action.Flags == 0x1A ? new(SourceKey, "source-unresolved") : null));
+                Poison: action.Flags == 0x1A ? new(SourceKey, "source-unresolved") : null)
+            { Motion = Arena2ActionMotion.Read(action.Flags, action.Axis, action.Duration, action.Magnitude, model.Source.Description) });
         }
 
         foreach (RdbBlockFlat flat in Flats)
@@ -262,7 +263,8 @@ internal sealed class RdbBlockContent
                 SoundIndex: flat.Source.SoundIndex,
                 Position: place(flat.Point),
                 RawIndex: flat.Source.SoundIndex,
-                Poison: flat.Source.Action == 0x1A ? new(SourceKey, "source-unresolved") : null));
+                Poison: flat.Source.Action == 0x1A ? new(SourceKey, "source-unresolved") : null)
+            { Motion = Arena2ActionMotion.Read(flat.Source.Action, flat.Source.Magnitude, 0, flat.Source.Magnitude, null) });
         }
 
         // Teleport targets are object transforms even when the target has no executable action.
@@ -272,12 +274,10 @@ internal sealed class RdbBlockContent
             var model = Models.FirstOrDefault(value => value.Source.ObjectOffset == action.NextObjectOffset);
             if (model is not null)
             {
-                var rotation = model.RotationDegrees;
-                return action with { NextObjectPosition = place(model.Point),
-                    NextObjectRotationDegrees = new(rotation.X, rotation.Y, rotation.Z) };
+                return action with { NextObjectPosition = place(model.Point), NextObjectRotation = model.Rotation };
             }
             var flat = Flats.FirstOrDefault(value => value.Source.ObjectOffset == action.NextObjectOffset);
-            return flat is null ? action : action with { NextObjectPosition = place(flat.Point), NextObjectRotationDegrees = new(0, 0, 0) };
+            return flat is null ? action : action with { NextObjectPosition = place(flat.Point), NextObjectRotation = NormalizedQuaternion.Identity };
         }).ToArray();
     }
 

@@ -29,8 +29,7 @@ internal enum DaggerfallDungeonMotionActivation : byte
 /// <summary>One explicitly admitted action-model binding to an existing Engine entity.</summary>
 internal sealed record DaggerfallDungeonMotionBinding(
     DaggerfallDungeonActionDefinition Action,
-    EntityId Entity,
-    string? ModelDescription = null);
+    EntityId Entity);
 
 /// <summary>
 /// Current action animation state. <see cref="EndpointIntent"/> is stored separately from phase
@@ -119,7 +118,7 @@ internal sealed class DaggerfallDungeonMotionRuntime
             ArgumentNullException.ThrowIfNull(binding);
             DaggerfallDungeonActionDefinition action = binding.Action
                 ?? throw new ArgumentException("A dungeon motion binding requires an action definition.", nameof(bindings));
-            if (!DaggerfallDungeonMotionPolicy.TryInterpret(action, binding.ModelDescription, out DaggerfallDungeonMotionSpecification specification))
+            if (action.Motion is not { } specification)
                 throw new ArgumentException($"Dungeon action '{action.Id}' is not one of the retained motion variants.", nameof(bindings));
             if (!targets.TryGetValue(binding.Entity.Value, out EntityComponents<Transform, SpatialCollider> target))
                 throw new InvalidOperationException($"Dungeon action '{action.Id}' target {binding.Entity.Value} must be active with Engine Transform and SpatialCollider components.");

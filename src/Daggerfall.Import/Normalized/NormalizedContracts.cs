@@ -119,6 +119,29 @@ public readonly record struct NormalizedVector3(float X, float Y, float Z)
     }
 }
 
+/// <summary>A unit rotation in the published right-handed frame, as <c>System.Numerics.Quaternion</c> and the Engine's <c>Transform</c> hold it.</summary>
+public readonly record struct NormalizedQuaternion(float X, float Y, float Z, float W)
+{
+    public static NormalizedQuaternion Identity => new(0F, 0F, 0F, 1F);
+
+    public static NormalizedQuaternion From(System.Numerics.Quaternion value)
+    {
+        System.Numerics.Quaternion unit = System.Numerics.Quaternion.Normalize(value);
+        return new(unit.X, unit.Y, unit.Z, unit.W);
+    }
+
+    public System.Numerics.Quaternion ToQuaternion() => new(X, Y, Z, W);
+
+    public void Validate(string name)
+    {
+        NormalizedImportDocument.RequireFinite(X, name);
+        NormalizedImportDocument.RequireFinite(Y, name);
+        NormalizedImportDocument.RequireFinite(Z, name);
+        NormalizedImportDocument.RequireFinite(W, name);
+        if (MathF.Abs(ToQuaternion().Length() - 1F) > 1e-3F) throw new ArgumentOutOfRangeException(name, "A normalized rotation must be a unit quaternion.");
+    }
+}
+
 public sealed record NormalizedBounds(NormalizedVector3 Minimum, NormalizedVector3 Maximum);
 
 public readonly record struct NormalizedTriangle(int FirstVertex, int SecondVertex, int ThirdVertex);

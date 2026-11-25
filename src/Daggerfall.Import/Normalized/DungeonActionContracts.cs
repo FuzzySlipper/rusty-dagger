@@ -22,7 +22,29 @@ public sealed record NormalizedDungeonAction(
     byte RawIndex = 0,
     NormalizedDungeonPoisonAction? Poison = null,
     NormalizedVector3? NextObjectPosition = null,
-    NormalizedVector3? NextObjectRotationDegrees = null);
+    NormalizedQuaternion? NextObjectRotation = null)
+{
+    /// <summary>How the action moves its model, when it is a motion action; the runtime reads no source axis.</summary>
+    public NormalizedDungeonMotion? Motion { get; init; }
+}
+
+public enum NormalizedDungeonMotionKind
+{
+    Translation,
+    Rotation,
+}
+
+/// <summary>
+/// One action's motion in the published right-handed frame: a translation in the block's frame, or a turn about an
+/// axis in the model's own frame by a signed angle (a turn can exceed half a turn, which a quaternion cannot hold),
+/// over a duration. A rotation whose source axis names none turns by nothing but still runs.
+/// </summary>
+public sealed record NormalizedDungeonMotion(
+    NormalizedDungeonMotionKind Kind,
+    NormalizedVector3 Translation,
+    NormalizedVector3 RotationAxis,
+    float RotationDegrees,
+    float DurationSeconds);
 
 /// <summary>
 /// Explicit disposition of the original treasure-marker action whose poison variant is unknown.

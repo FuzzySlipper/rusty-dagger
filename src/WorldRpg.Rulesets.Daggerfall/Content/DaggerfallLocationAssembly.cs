@@ -948,7 +948,7 @@ internal sealed class DaggerfallLocationAssembly
         {
             if (Mesh(model) is not { } mesh) return;
             Vector3 position = origin + model.Position;
-            _placedMeshes.Add((mesh.Path, mesh.Sha256, DaggerfallSiteGeometry.Pose(position, model.RotationDegrees), Textures(mesh), model.ModelId));
+            _placedMeshes.Add((mesh.Path, mesh.Sha256, DaggerfallSiteGeometry.Pose(position, model.Rotation), Textures(mesh), model.ModelId));
             Remodel(model.ModelId);
             if (key.Kind == DaggerfallWorldProfileKind.Exterior) return;
             if (model.Bounds is not { } bounds)
@@ -1062,7 +1062,7 @@ internal sealed class DaggerfallLocationAssembly
             try
             {
                 // The building's mesh draws the door plane; an exterior door is entered, not swung.
-                _doors.Add(new DaggerfallRdbDoorDefinition(identity, origin + door.Position, door.RotationDegrees, bounds.Minimum, bounds.Maximum,
+                _doors.Add(new DaggerfallRdbDoorDefinition(identity, origin + door.Position, door.Rotation, bounds.Minimum, bounds.Maximum,
                     door.Kind, door.StartingLockValue, Action: door.Action)
                 {
                     LockSurface = DaggerfallSiteContent.DoorSurface(DaggerfallWorldProfileKind.Exterior),
@@ -1072,11 +1072,10 @@ internal sealed class DaggerfallLocationAssembly
             catch (ArgumentException exception) { diagnostics.Add($"Exterior door '{id}' is invalid: {exception.Message}"); }
 
             // Coming out of the building without an entrance to return through lands in front of its first door,
-            // on its threshold: the door's yaw is its plane normal's, which faces out.
+            // on its threshold: the door's local +Z is its plane normal, which faces out.
             if (door.BuildingIndex is int index)
             {
-                float yaw = door.RotationDegrees.Y * (MathF.PI / 180F);
-                Vector3 normal = new(MathF.Sin(yaw), 0F, MathF.Cos(yaw));
+                Vector3 normal = Vector3.Transform(Vector3.UnitZ, door.Rotation);
                 Vector3 threshold = origin + door.Position + (Vector3.UnitY * bounds.Minimum.Y);
                 string anchor = BuildingAnchor(new DaggerfallSiteBuildingId(block.X, block.Y, index));
                 if (!_anchors.ContainsKey(anchor))
@@ -1116,7 +1115,7 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             if (State(gate.Open) is not { } open || State(gate.Closed) is not { } closed) return;
-            try { _gates.Add(new DaggerfallCityGateDefinition(place(gate.Id), DaggerfallSiteGeometry.Pose(origin + gate.Position, gate.RotationDegrees), open, closed).Validate()); }
+            try { _gates.Add(new DaggerfallCityGateDefinition(place(gate.Id), DaggerfallSiteGeometry.Pose(origin + gate.Position, gate.Rotation), open, closed).Validate()); }
             catch (ArgumentException exception) { diagnostics.Add($"City gate '{gate.Id}' is invalid: {exception.Message}"); }
         }
 
@@ -1152,9 +1151,10 @@ internal sealed class DaggerfallLocationAssembly
                 return;
             }
 
-            // A door keeps its whole source turn: several main-quest blocks (Daggerfall, Wayrest and Woodborne Hall
+            // A door keeps its model's whole turn: several main-quest blocks (Daggerfall, Wayrest and Woodborne Hall
             // castles, the Mantellan Crux) place doors turned over, and the runtime swings a door about its own
-            // up axis from that closed turn, as the donor's action door rotates in its own frame.
+            // up axis from that closed turn, as the donor's action door rotates in its own frame. Its mesh, bounds
+            // and collider are therefore all in the model's frame.
             DaggerfallWorldBlockModel? model = document.Models.SingleOrDefault(candidate => candidate.Id == door.ModelId);
             if (model is null || Mesh(model) is not { } mesh || model.LocalBounds is not { } local)
             {
@@ -1163,45 +1163,16 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             DaggerfallDoorVisual visual = new(mesh.Path, mesh.Sha256, [new DaggerfallMeshMaterialBinding(0, 0)]);
-            (Vector3 Minimum, Vector3 Maximum) bounds = local;
-            if (model.Action is null)
-            {
-                // The door runtime swings a door about its closed pose, which is not the model's own turn: its
-                // collider and visual live in the door frame, so the model frame is turned into it.
-                Quaternion toDoor = Quaternion.Normalize(Quaternion.Inverse(DaggerfallDoorPose.ClosedRotation(door.RotationDegrees))
-                    * DaggerfallSiteGeometry.SourceRotation(model.RotationDegrees));
-                bounds = Turned(local, toDoor);
-                visual = visual with { LocalPose = new Transform(Vector3.Zero, toDoor, Vector3.One) };
-            }
-
             _visualMaterials[mesh.Path] = Textures(mesh);
             try
             {
-                _doors.Add(new DaggerfallRdbDoorDefinition(identity, origin + door.Position, door.RotationDegrees, bounds.Minimum, bounds.Maximum,
+                _doors.Add(new DaggerfallRdbDoorDefinition(identity, origin + door.Position, door.Rotation, local.Minimum, local.Maximum,
                     door.Kind, door.StartingLockValue, Visual: visual, Action: door.Action)
                 {
-                    UsesModelCoordinates = model.Action is not null,
                     LockSurface = DaggerfallSiteContent.DoorSurface(DaggerfallWorldProfileKind.Dungeon),
                 }.Validate());
             }
             catch (ArgumentException exception) { diagnostics.Add($"Dungeon door '{id}' is invalid: {exception.Message}"); }
-        }
-
-        /// <summary>The bounds of a turned box: its eight corners turned, then bounded.</summary>
-        private static (Vector3 Minimum, Vector3 Maximum) Turned((Vector3 Minimum, Vector3 Maximum) box, Quaternion turn)
-        {
-            Vector3 minimum = new(float.PositiveInfinity), maximum = new(float.NegativeInfinity);
-            for (int corner = 0; corner < 8; corner++)
-            {
-                Vector3 point = Vector3.Transform(new Vector3(
-                    (corner & 1) == 0 ? box.Minimum.X : box.Maximum.X,
-                    (corner & 2) == 0 ? box.Minimum.Y : box.Maximum.Y,
-                    (corner & 4) == 0 ? box.Minimum.Z : box.Maximum.Z), turn);
-                minimum = Vector3.Min(minimum, point);
-                maximum = Vector3.Max(maximum, point);
-            }
-
-            return (minimum, maximum);
         }
 
         private void ActionModel(DaggerfallWorldBlockModel model, DaggerfallWorldBlockModelAction action, Vector3 origin, Func<string, string> place)
@@ -1227,7 +1198,7 @@ internal sealed class DaggerfallLocationAssembly
             {
                 _actionModels.Add(new DaggerfallDungeonActionModelDefinition(place(action.ActionId), doorId, doorIdentity, action.Description,
                     action.ModelIndex, action.RawIndex, new DaggerfallDoorVisual(mesh.Path, mesh.Sha256, [new DaggerfallMeshMaterialBinding(0, 0)]),
-                    DaggerfallSiteGeometry.InitialTransform(origin + model.Position, model.RotationDegrees), bounds.Minimum, bounds.Maximum,
+                    DaggerfallSiteGeometry.Pose(origin + model.Position, model.Rotation), bounds.Minimum, bounds.Maximum,
                     model.CollisionVertices, model.CollisionTriangles) { ModelId = model.ModelId }.Validate());
             }
             catch (ArgumentException exception) { diagnostics.Add($"Action model '{model.Id}' is invalid: {exception.Message}"); }

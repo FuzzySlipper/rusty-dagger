@@ -640,14 +640,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         Revision++;
     }
 
-    private static Transform Pose(Door door)
-    {
-        Quaternion closed = door.Definition.UsesModelCoordinates
-            ? WorldRpg.Rulesets.Daggerfall.Content.DaggerfallSiteGeometry.SourceRotation(door.Definition.RotationDegrees)
-            : DaggerfallDoorPose.ClosedRotation(door.Definition.RotationDegrees);
-        Quaternion swing = Quaternion.CreateFromAxisAngle(Vector3.UnitY, door.Definition.OpenAngleDegrees * (MathF.PI / 180F) * door.Progress);
-        return new Transform(door.Definition.Position, Quaternion.Normalize(closed * swing), Vector3.One);
-    }
+    private static Transform Pose(Door door) => DaggerfallDoorPose.Swung(door.Definition, door.Progress);
 
     private void ThrowIfDisposed() { if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallDoorRuntime)); }
 

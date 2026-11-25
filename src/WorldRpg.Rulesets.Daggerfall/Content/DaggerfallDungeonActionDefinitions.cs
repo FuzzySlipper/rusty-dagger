@@ -57,8 +57,11 @@ internal sealed record DaggerfallDungeonActionDefinition(
     byte RawIndex = 0,
     DaggerfallDungeonPoisonAction? Poison = null,
     Vector3? NextObjectPosition = null,
-    Vector3? NextObjectRotationDegrees = null)
+    Quaternion? NextObjectRotation = null)
 {
+    /// <summary>How the action moves its model, as the import published it, when it is a motion action.</summary>
+    internal DaggerfallDungeonMotionSpecification? Motion { get; init; }
+
     internal DaggerfallDungeonActionDefinition Validate(IReadOnlySet<string> actionIds)
     {
         if (string.IsNullOrWhiteSpace(Id)) throw new ArgumentException("A dungeon action requires a stable id.", nameof(Id));
@@ -68,9 +71,11 @@ internal sealed record DaggerfallDungeonActionDefinition(
         Poison?.Validate(this);
         if (SourcePosition is Vector3 position && (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z)))
             throw new ArgumentOutOfRangeException(nameof(SourcePosition));
-        foreach (var point in new[] { NextObjectPosition, NextObjectRotationDegrees })
-            if (point is Vector3 v && (!float.IsFinite(v.X) || !float.IsFinite(v.Y) || !float.IsFinite(v.Z)))
-                throw new ArgumentOutOfRangeException(nameof(NextObjectPosition));
+        if (NextObjectPosition is Vector3 v && (!float.IsFinite(v.X) || !float.IsFinite(v.Y) || !float.IsFinite(v.Z)))
+            throw new ArgumentOutOfRangeException(nameof(NextObjectPosition));
+        if (NextObjectRotation is Quaternion q && (!float.IsFinite(q.X) || !float.IsFinite(q.Y) || !float.IsFinite(q.Z) || !float.IsFinite(q.W)))
+            throw new ArgumentOutOfRangeException(nameof(NextObjectRotation));
+        Motion?.Validate();
         if (NextActionId is not null)
         {
             if (string.IsNullOrWhiteSpace(NextActionId)) throw new ArgumentException("An action link cannot have an empty target id.", nameof(NextActionId));
@@ -81,6 +86,33 @@ internal sealed record DaggerfallDungeonActionDefinition(
         if (!double.IsFinite(CooldownSeconds) || CooldownSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(CooldownSeconds));
         return this;
+    }
+}
+
+internal enum DaggerfallDungeonMotionKind : byte
+{
+    Translation,
+    Rotation,
+}
+
+/// <summary>
+/// One action's motion as the import publishes it, in the right-handed frame: a translation in world units, or a turn
+/// about an axis of the model's own frame by a signed angle, over a duration. A rotation whose source named no axis
+/// turns by nothing but still runs.
+/// </summary>
+internal readonly record struct DaggerfallDungeonMotionSpecification(
+    DaggerfallDungeonMotionKind Kind,
+    Vector3 Translation,
+    Vector3 RotationAxis,
+    float RotationRadians,
+    double DurationSeconds)
+{
+    internal void Validate()
+    {
+        if (!Enum.IsDefined(Kind) || !float.IsFinite(Translation.X) || !float.IsFinite(Translation.Y) || !float.IsFinite(Translation.Z)
+            || !float.IsFinite(RotationRadians) || !double.IsFinite(DurationSeconds) || DurationSeconds < 0d
+            || (RotationAxis != Vector3.Zero && MathF.Abs(RotationAxis.Length() - 1F) > 1E-3F))
+            throw new ArgumentOutOfRangeException(nameof(DaggerfallDungeonActionDefinition.Motion), "A dungeon motion must be finite with a unit or absent axis.");
     }
 }
 

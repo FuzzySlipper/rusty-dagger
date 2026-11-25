@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace Daggerfall.Import.Arena2;
 
 /// <summary>
@@ -104,6 +106,22 @@ public static class Arena2SourceTransform
             ConvertRotation(model.YRotation, degreesPerRawUnit),
             ConvertRotation(model.ZRotation, degreesPerRawUnit));
     }
+
+    /// <summary>
+    /// The right-handed rotation source Euler degrees turn a model by. The donor turns importer-space points by
+    /// <c>Rz * Rx * Ry</c> (column vectors) before the right-handed flip of Z, and that flip negates turns about X
+    /// and Y, so in the published frame the same turn is <c>Rz(z) * Rx(-x) * Ry(-y)</c>.
+    /// </summary>
+    public static Quaternion ToRightHandedRotation(Arena2EulerDegrees degrees)
+    {
+        const float radiansPerDegree = MathF.PI / 180F;
+        return Quaternion.Normalize(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, degrees.Z * radiansPerDegree)
+            * Quaternion.CreateFromAxisAngle(Vector3.UnitX, -degrees.X * radiansPerDegree)
+            * Quaternion.CreateFromAxisAngle(Vector3.UnitY, -degrees.Y * radiansPerDegree));
+    }
+
+    /// <summary>The right-handed rotation of an RMB yaw in source Euler degrees (<see cref="ToRmbYawDegrees"/>).</summary>
+    public static Quaternion ToRightHandedYaw(float sourceYawDegrees) => ToRightHandedRotation(new(0F, sourceYawDegrees, 0F));
 
     /// <summary>
     /// Converts corrected ARCH3D UV sub-units to texture fractions. ARCH3D UVs

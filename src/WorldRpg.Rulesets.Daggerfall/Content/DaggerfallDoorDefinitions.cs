@@ -16,15 +16,9 @@ internal readonly record struct DaggerfallMeshMaterialBinding(uint MeshSlot, uin
 /// <summary>Normalized source action facts retained for the dungeon action-graph owner.</summary>
 internal readonly record struct DaggerfallDoorActionSource(byte Axis, ushort Duration, ushort Magnitude, int NextObjectOffset, byte Flags);
 
-/// <summary>Content-backed visual that follows the same Engine transform as its door collider.</summary>
+/// <summary>Content-backed visual that follows the same Engine transform as its door collider, drawn in the door's (its model's) frame.</summary>
 internal sealed record DaggerfallDoorVisual(string Path, ContentSha256 Sha256, IReadOnlyList<DaggerfallMeshMaterialBinding> Materials)
 {
-    /// <summary>
-    /// The visual's pose in the door's own frame. A published door visual is written in that frame and
-    /// needs none; a product-wide model mesh is in its model frame, which this turns into the door's.
-    /// </summary>
-    internal Transform? LocalPose { get; init; }
-
     internal DaggerfallDoorVisual Validate()
     {
         if (string.IsNullOrWhiteSpace(Path)) throw new ArgumentException("A door visual needs admitted content.", nameof(Path));
@@ -39,7 +33,7 @@ internal sealed record DaggerfallDoorVisual(string Path, ContentSha256 Sha256, I
 internal sealed record DaggerfallRdbDoorDefinition(
     DaggerfallRdbDoorId Id,
     Vector3 Position,
-    Vector3 RotationDegrees,
+    Quaternion Rotation,
     Vector3 BoundsMin,
     Vector3 BoundsMax,
     DaggerfallDoorKind Kind,
@@ -62,9 +56,6 @@ internal sealed record DaggerfallRdbDoorDefinition(
     /// </summary>
     internal WorldRpg.Rulesets.Daggerfall.Content.DaggerfallSiteBuildingId? ExteriorBuilding { get; init; }
 
-    /// <summary>Action-door geometry and bounds retain the source model's local frame.</summary>
-    internal bool UsesModelCoordinates { get; init; }
-
     internal DaggerfallRdbDoorDefinition Validate()
     {
         DaggerfallDoorIdentity.Validate(Id);
@@ -73,7 +64,8 @@ internal sealed record DaggerfallRdbDoorDefinition(
         if (ExteriorBuilding is { } building && (LockSurface != DaggerfallLockInteractionSurface.Exterior
             || building.BlockX < 0 || building.BlockY < 0 || building.Index < 0))
             throw new ArgumentException("An exterior door must name a valid placed building.", nameof(ExteriorBuilding));
-        if (!IsFinite(Position) || !IsFinite(RotationDegrees) || !IsFinite(BoundsMin) || !IsFinite(BoundsMax))
+        if (!IsFinite(Position) || !float.IsFinite(Rotation.X) || !float.IsFinite(Rotation.Y) || !float.IsFinite(Rotation.Z) || !float.IsFinite(Rotation.W)
+            || !IsFinite(BoundsMin) || !IsFinite(BoundsMax))
             throw new ArgumentOutOfRangeException(nameof(Position), "Door pose and bounds must be finite.");
         if (BoundsMin.X >= BoundsMax.X || BoundsMin.Y >= BoundsMax.Y || BoundsMin.Z >= BoundsMax.Z)
             throw new ArgumentException("Door collision bounds must have positive extent.", nameof(BoundsMin));
@@ -89,14 +81,12 @@ internal sealed record DaggerfallRdbDoorDefinition(
     private static bool IsFinite(Vector3 value) => float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z);
 }
 
-/// <summary>The ordinary door-local frame shared by baked-door projection and runtime pose.</summary>
+/// <summary>The door-local frame shared by baked-door projection and runtime pose.</summary>
 internal static class DaggerfallDoorPose
 {
-    internal static Quaternion ClosedRotation(Vector3 rotationDegrees)
-    {
-        Vector3 radians = rotationDegrees * (MathF.PI / 180F);
-        return Quaternion.Normalize(Quaternion.CreateFromYawPitchRoll(radians.Y, radians.X, radians.Z));
-    }
+    /// <summary>A door's pose part way through its swing: its closed turn, then a turn about its own up axis.</summary>
+    internal static Transform Swung(DaggerfallRdbDoorDefinition door, float progress) => new(door.Position,
+        Quaternion.Normalize(door.Rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitY, door.OpenAngleDegrees * (MathF.PI / 180F) * progress)), Vector3.One);
 
     /// <summary>
     /// The world-axis box a turned local box occupies, offset from its pose's translation. Engine colliders and

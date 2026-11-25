@@ -45,16 +45,13 @@ public sealed record DaggerfallWorldBlockSpatial(
 /// unresolved reason, when earlier placements cover all of it.
 /// </param>
 /// <param name="Position">The model origin in the block's right-handed metre frame.</param>
-/// <param name="RotationDegrees">
-/// The model's source Euler degrees, applied in the donor's <c>Rz * Rx * Ry</c> order to its importer-space
-/// points before the right-handed flip: the convention door and action placements already publish.
-/// </param>
+/// <param name="Rotation">The model's turn in the block's right-handed frame, the one its collision is placed by.</param>
 public sealed record DaggerfallWorldBlockModel(
     string Id,
     string ModelId,
     string? MeshArtifactId,
     NormalizedVector3 Position,
-    NormalizedVector3 RotationDegrees)
+    NormalizedQuaternion Rotation)
 {
     /// <summary>The RMB building sub-record that places the model, or null for the block's own objects.</summary>
     public int? BuildingIndex { get; init; }
@@ -98,13 +95,16 @@ public sealed record DaggerfallWorldBlockModelAction(string ActionId, string Des
 /// <param name="ModelId">The placement (<see cref="DaggerfallWorldBlockModel.Id"/>) the door belongs to.</param>
 /// <param name="DoorResourceId">The door definition it instantiates.</param>
 /// <param name="Position">The door's position in the block's frame.</param>
-/// <param name="RotationDegrees">The door's rotation, in the placement convention.</param>
+/// <param name="Rotation">
+/// The door's closed turn in the block's right-handed frame: an RDB door's is its model's, and it swings about its
+/// own up axis; an RMB plane door's faces its local +Z along the plane's outward normal.
+/// </param>
 public sealed record DaggerfallWorldBlockDoor(
     string Id,
     string ModelId,
     string DoorResourceId,
     NormalizedVector3 Position,
-    NormalizedVector3 RotationDegrees)
+    NormalizedQuaternion Rotation)
 {
     /// <summary>For an RMB plane door, the plane's index in its mesh's source planes.</summary>
     public int? Plane { get; init; }
@@ -178,12 +178,12 @@ public sealed record DaggerfallWorldBlockGateState(string ModelId, string MeshAr
 /// <param name="Id">The gate's identity in the block.</param>
 /// <param name="ModelId">The placement (<see cref="DaggerfallWorldBlockModel.Id"/>) the gate is.</param>
 /// <param name="Position">The placement origin in the block's frame.</param>
-/// <param name="RotationDegrees">The placement's source Euler degrees, in the model placement convention.</param>
+/// <param name="Rotation">The placement's turn in the block's right-handed frame, as its model's.</param>
 public sealed record DaggerfallWorldBlockGate(
     string Id,
     string ModelId,
     NormalizedVector3 Position,
-    NormalizedVector3 RotationDegrees,
+    NormalizedQuaternion Rotation,
     DaggerfallWorldBlockGateState Open,
     DaggerfallWorldBlockGateState Closed);
 

@@ -177,7 +177,14 @@ internal static partial class DaggerfallSiteContent
                     RawIndex: rawIndex,
                     Poison: poison,
                     NextObjectPosition: OptionalObjectVector3(action, "nextObjectPosition", $"dungeon teleport {id} destination", diagnostics),
-                    NextObjectRotationDegrees: OptionalObjectVector3(action, "nextObjectRotationDegrees", $"dungeon teleport {id} rotation", diagnostics));
+                    NextObjectRotation: action.TryGetProperty("nextObjectRotation", out JsonElement rotation) && rotation.ValueKind != JsonValueKind.Null
+                        ? DaggerfallWorldBlocks.Rotation(rotation, $"dungeon teleport {id} rotation", diagnostics)
+                        : null)
+                {
+                    Motion = action.TryGetProperty("motion", out JsonElement motion) && motion.ValueKind != JsonValueKind.Null
+                        ? Motion(motion, $"normalized dungeon action '{id}' motion", diagnostics)
+                        : null,
+                };
                 try
                 {
                     if (actionFlag == (byte)DaggerfallDungeonActionFlag.Poison && poison is null)
@@ -1051,6 +1058,26 @@ internal static partial class DaggerfallSiteContent
         return new(Number(DaggerfallBaseContent.Property(value, "x", diagnostics), name, diagnostics),
             Number(DaggerfallBaseContent.Property(value, "y", diagnostics), name, diagnostics),
             Number(DaggerfallBaseContent.Property(value, "z", diagnostics), name, diagnostics));
+    }
+
+    /// <summary>An action's published right-handed motion.</summary>
+    private static DaggerfallDungeonMotionSpecification Motion(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
+    {
+        DaggerfallDungeonMotionKind? kind = DaggerfallBaseContent.Text(value, "kind", diagnostics) switch
+        {
+            "translation" => DaggerfallDungeonMotionKind.Translation,
+            "rotation" => DaggerfallDungeonMotionKind.Rotation,
+            _ => null,
+        };
+        if (kind is null) diagnostics.Add($"{name} has an unknown kind.");
+        DaggerfallDungeonMotionSpecification motion = new(kind ?? DaggerfallDungeonMotionKind.Translation,
+            DaggerfallWorldBlocks.Vector(DaggerfallBaseContent.Property(value, "translation", diagnostics), $"{name} translation", diagnostics),
+            DaggerfallWorldBlocks.Vector(DaggerfallBaseContent.Property(value, "rotationAxis", diagnostics), $"{name} rotation axis", diagnostics),
+            DaggerfallBaseContent.Number(value, "rotationDegrees", diagnostics) * (MathF.PI / 180F),
+            DaggerfallBaseContent.Number(value, "durationSeconds", diagnostics));
+        try { motion.Validate(); }
+        catch (ArgumentException exception) { diagnostics.Add($"{name} is invalid: {exception.Message}"); }
+        return motion;
     }
 
     private static Vector3? OptionalObjectVector3(JsonElement value, string property, string name, DaggerfallContentDiagnostics diagnostics)

@@ -143,7 +143,7 @@ public sealed class WorldBlockNormalizer
             // stay the block's doors.
             bool gate = RmbBlockContent.IsCityGate(model.ModelId);
             if (gate)
-                gates.Add(new($"gate/{slug}/{gates.Count}", id, placement.Position, placement.RotationDegrees,
+                gates.Add(new($"gate/{slug}/{gates.Count}", id, placement.Position, placement.Rotation,
                     RmbBlockContent.GateState(arch, RmbBlockContent.CityGateOpenModel), RmbBlockContent.GateState(arch, RmbBlockContent.CityGateClosedModel)));
             foreach ((Arch3dPlane plane, int planeIndex) in mesh.Planes.Select((plane, index) => (plane, index)).Where(value => value.plane.Points.Count >= 3))
             {
@@ -164,7 +164,7 @@ public sealed class WorldBlockNormalizer
                 }
 
                 geometry.AddMovable(polygon);
-                (NormalizedVector3 centre, NormalizedVector3 rotation, NormalizedBounds bounds) = RmbBlockContent.Door(plane, polygon);
+                (NormalizedVector3 centre, NormalizedQuaternion rotation, NormalizedBounds bounds) = RmbBlockContent.Door(plane, polygon);
                 doors.Add(new($"door/{slug}-rmb/{doorOrdinal++}", id, "door/rmb-exterior", centre, rotation)
                 {
                     Plane = planeIndex,
@@ -300,7 +300,6 @@ public sealed class WorldBlockNormalizer
             if (!model.ActionModel && !model.ActionDoor && DaggerfallInteriorLightFacts.TryProjectHearth($"light-hearth/{scope}/{model.Index}", model.Source.ModelId,
                 point => model.Place(model.Rotate(point), origin), out NormalizedLightPlacement hearth)) lamps.Add(hearth);
             string? doorId = model.ActionDoor ? $"door/{scope}/{model.Index}" : null;
-            Arena2EulerDegrees degrees = model.RotationDegrees;
             Arch3dMesh? mesh = RdbMesh(model.Source.ModelId);
             bool movable = model.ActionModel || model.ActionDoor;
             // The facts a placing location needs without the mesh bytes: a static placement's extent and map
@@ -320,7 +319,7 @@ public sealed class WorldBlockNormalizer
 
             NormalizedMesh? collisionMesh = collision is not null && local.Count != 0 ? collision.ToMesh("mesh/collision", "artifact/collision") : null;
             models.Add(new(id, model.Source.ModelId, mesh is null ? null : MeshArtifactId(model.Source.ModelId),
-                MeshGeometry.ToRightHanded(model.Point), new(degrees.X, degrees.Y, degrees.Z))
+                MeshGeometry.ToRightHanded(model.Point), model.Rotation)
             {
                 UnresolvedReason = mesh is null ? unresolved[model.Source.ModelId] : null,
                 Action = model.ActionModel
@@ -333,7 +332,7 @@ public sealed class WorldBlockNormalizer
                 Collision = collisionMesh is null ? null : new(collisionMesh.Vertices, collisionMesh.Triangles),
             });
             if (doorId is not null)
-                doors.Add(new(doorId, id, $"door/model-{PublishedIds.Slug(model.Source.ModelId)}", MeshGeometry.ToRightHanded(model.Point), new(degrees.X, degrees.Y, degrees.Z))
+                doors.Add(new(doorId, id, $"door/model-{PublishedIds.Slug(model.Source.ModelId)}", MeshGeometry.ToRightHanded(model.Point), model.Rotation)
                 {
                     Kind = model.SpecialDoorAction ? "special" : "normal",
                     StartingLockValue = model.StartingLockValue,
@@ -409,7 +408,7 @@ public sealed class WorldBlockNormalizer
         model.ModelId,
         MeshArtifactId(model.ModelId),
         MeshGeometry.ToRightHanded(model.Frame.Place(new(0F, 0F, 0F))),
-        new(0F, model.Frame.ParentYawDegrees + model.Frame.ModelYawDegrees, 0F))
+        NormalizedQuaternion.From(Arena2SourceTransform.ToRightHandedYaw(model.Frame.ParentYawDegrees + model.Frame.ModelYawDegrees)))
     {
         BuildingIndex = model.BuildingIndex,
     };

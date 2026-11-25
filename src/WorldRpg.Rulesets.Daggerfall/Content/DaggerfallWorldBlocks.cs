@@ -27,7 +27,7 @@ internal sealed record DaggerfallWorldBlockSpatial(string ContentPath, ContentSh
 internal sealed record DaggerfallWorldBlockModelAction(string ActionId, string Description, ushort ModelIndex, byte RawIndex);
 
 /// <summary>One placed model in its block's frame: a product-wide mesh, its pose and what moves it.</summary>
-internal sealed record DaggerfallWorldBlockModel(string Id, string ModelId, string? MeshArtifactId, Vector3 Position, Vector3 RotationDegrees)
+internal sealed record DaggerfallWorldBlockModel(string Id, string ModelId, string? MeshArtifactId, Vector3 Position, Quaternion Rotation)
 {
     internal int? BuildingIndex { get; init; }
     internal string? UnresolvedReason { get; init; }
@@ -44,7 +44,7 @@ internal sealed record DaggerfallWorldBlockModel(string Id, string ModelId, stri
 }
 
 /// <summary>One door in its block's frame.</summary>
-internal sealed record DaggerfallWorldBlockDoor(string Id, string ModelId, Vector3 Position, Vector3 RotationDegrees, DaggerfallDoorKind Kind, int StartingLockValue)
+internal sealed record DaggerfallWorldBlockDoor(string Id, string ModelId, Vector3 Position, Quaternion Rotation, DaggerfallDoorKind Kind, int StartingLockValue)
 {
     internal DaggerfallDoorActionSource? Action { get; init; }
     internal (Vector3 Minimum, Vector3 Maximum)? CollisionBounds { get; init; }
@@ -63,7 +63,7 @@ internal sealed record DaggerfallWorldBlockGateState(string ModelId, string Mesh
     Vector3[] CollisionVertices, Triangle[] CollisionTriangles);
 
 /// <summary>One RMB city gate placement in its block's frame, with its open and closed states.</summary>
-internal sealed record DaggerfallWorldBlockGate(string Id, string ModelId, Vector3 Position, Vector3 RotationDegrees,
+internal sealed record DaggerfallWorldBlockGate(string Id, string ModelId, Vector3 Position, Quaternion Rotation,
     DaggerfallWorldBlockGateState Open, DaggerfallWorldBlockGateState Closed);
 
 /// <summary>One RMB building sub-record as its block states it.</summary>
@@ -367,7 +367,7 @@ internal sealed class DaggerfallWorldBlocks
                 string id = DaggerfallBaseContent.Text(value, "id", diagnostics);
                 string name = $"{owner} gate '{id}'";
                 gates.Add(new(id, DaggerfallBaseContent.Text(value, "modelId", diagnostics), Vector(value, "position", name, diagnostics),
-                    Vector(value, "rotationDegrees", name, diagnostics),
+                    Rotation(value, "rotation", name, diagnostics),
                     ReadGateState(DaggerfallBaseContent.Property(value, "open", diagnostics), $"{name} open", diagnostics),
                     ReadGateState(DaggerfallBaseContent.Property(value, "closed", diagnostics), $"{name} closed", diagnostics)));
             }
@@ -489,7 +489,7 @@ internal sealed class DaggerfallWorldBlocks
 
         return new DaggerfallWorldBlockModel(id, DaggerfallBaseContent.Text(value, "modelId", diagnostics),
             DaggerfallBaseContent.OptionalText(value, "meshArtifactId", diagnostics), Vector(value, "position", name, diagnostics),
-            Vector(value, "rotationDegrees", name, diagnostics))
+            Rotation(value, "rotation", name, diagnostics))
         {
             BuildingIndex = DaggerfallBaseContent.OptionalInteger(value, "buildingIndex", diagnostics),
             UnresolvedReason = DaggerfallBaseContent.OptionalText(value, "unresolvedReason", diagnostics),
@@ -530,7 +530,7 @@ internal sealed class DaggerfallWorldBlocks
         }
 
         return new DaggerfallWorldBlockDoor(id, DaggerfallBaseContent.Text(value, "modelId", diagnostics), Vector(value, "position", name, diagnostics),
-            Vector(value, "rotationDegrees", name, diagnostics), kind, DaggerfallBaseContent.Integer(value, "startingLockValue", diagnostics))
+            Rotation(value, "rotation", name, diagnostics), kind, DaggerfallBaseContent.Integer(value, "startingLockValue", diagnostics))
         {
             Action = action,
             CollisionBounds = OptionalBounds(value, "collisionBounds", name, diagnostics),
@@ -568,6 +568,30 @@ internal sealed class DaggerfallWorldBlocks
 
     private static Vector3 Vector(JsonElement owner, string property, string name, DaggerfallContentDiagnostics diagnostics) =>
         Vector(DaggerfallBaseContent.Property(owner, property, diagnostics), $"{name} {property}", diagnostics);
+
+    private static Quaternion Rotation(JsonElement owner, string property, string name, DaggerfallContentDiagnostics diagnostics) =>
+        Rotation(DaggerfallBaseContent.Property(owner, property, diagnostics), $"{name} {property}", diagnostics);
+
+    /// <summary>A published right-handed unit rotation, refused unless finite and of unit length.</summary>
+    internal static Quaternion Rotation(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add($"{name} must be an object with x, y, z and w.");
+            return Quaternion.Identity;
+        }
+
+        Quaternion rotation = new(DaggerfallBaseContent.Number(value, "x", diagnostics), DaggerfallBaseContent.Number(value, "y", diagnostics),
+            DaggerfallBaseContent.Number(value, "z", diagnostics), DaggerfallBaseContent.Number(value, "w", diagnostics));
+        if (!float.IsFinite(rotation.X) || !float.IsFinite(rotation.Y) || !float.IsFinite(rotation.Z) || !float.IsFinite(rotation.W)
+            || MathF.Abs(rotation.Length() - 1F) > 1E-3F)
+        {
+            diagnostics.Add($"{name} must be a finite unit rotation.");
+            return Quaternion.Identity;
+        }
+
+        return Quaternion.Normalize(rotation);
+    }
 
     internal static Vector3 Vector(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {

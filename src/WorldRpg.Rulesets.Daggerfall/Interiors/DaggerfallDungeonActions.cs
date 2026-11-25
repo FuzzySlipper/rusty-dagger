@@ -265,8 +265,7 @@ internal sealed class DaggerfallDungeonActions(
     private DaggerfallDungeonActionExecution Teleport(DaggerfallDungeonActionDefinition action)
     {
         Vector3? position = action.NextObjectPosition;
-        Vector3 degrees = action.NextObjectRotationDegrees ?? Vector3.Zero;
-        Quaternion rotation = DaggerfallSiteGeometry.InitialTransform(Vector3.Zero, degrees).Rotation;
+        Quaternion rotation = action.NextObjectRotation ?? Quaternion.Identity;
         if (action.NextActionId is string target)
         {
             // Linked actions run first; a moving target therefore uses its current admitted pose.
@@ -349,7 +348,7 @@ internal sealed class DaggerfallDungeonActions(
     private DaggerfallDungeonActionExecution? ActivateMotion(DaggerfallDungeonActionDefinition action)
     {
         ArgumentNullException.ThrowIfNull(action);
-        if (!DaggerfallDungeonMotionPolicy.TryInterpret(action, modelDescription: null, out _)) return null;
+        if (action.Motion is null) return null;
         if (!motion().TryGetEntity(action.Id, out _))
         {
             return new(action.Id, DaggerfallDungeonActionOutcome.MissingTarget,

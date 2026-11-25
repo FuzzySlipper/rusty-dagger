@@ -1329,7 +1329,7 @@ internal sealed record DaggerfallSavePayload(
             if (model.DoorIdentity is not null) continue;
             if (!actions.TryGetValue(model.ActionId, out DaggerfallDungeonActionDefinition? action))
                 throw new ArgumentException($"Selected action model '{model.ActionId}' has no world action definition.");
-            if (DaggerfallDungeonMotionPolicy.TryInterpret(action, model.Description, out DaggerfallDungeonMotionSpecification specification))
+            if (action.Motion is { } specification)
                 expected.Add((action.Id, specification.DurationSeconds));
         }
         DaggerfallDungeonMotionRuntime.ValidateSnapshot(profile.ProfileKey.LogicalId, expected, snapshot);

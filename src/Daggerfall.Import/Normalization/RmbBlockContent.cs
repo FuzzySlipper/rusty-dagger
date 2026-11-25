@@ -417,7 +417,7 @@ internal sealed class RmbBlockContent
     /// One exterior building door from its placed plane: DFU <c>GameObjectHelper.GetStaticDoors</c> takes the
     /// opposite source corners for the centre and a uniform horizontal volume, because ARCH3D doors are planes.
     /// </summary>
-    public static (NormalizedVector3 Centre, NormalizedVector3 RotationDegrees, NormalizedBounds CollisionBounds) Door(
+    public static (NormalizedVector3 Centre, NormalizedQuaternion Rotation, NormalizedBounds CollisionBounds) Door(
         Arch3dPlane plane, IReadOnlyList<NormalizedVector3> polygon)
     {
         Arena2ImportPoint first = Arena2SourceTransform.ToImportPoint(plane.Points[0]);
@@ -427,8 +427,10 @@ internal sealed class RmbBlockContent
         NormalizedVector3 half = new(thickness / 2F, MathF.Max(height, thickness) / 2F, MathF.Min(height, thickness) / 2F);
         NormalizedVector3 centre = new((polygon[0].X + polygon[2].X) / 2F, (polygon[0].Y + polygon[2].Y) / 2F, (polygon[0].Z + polygon[2].Z) / 2F);
         NormalizedVector3 normal = MeshGeometry.Normal(polygon);
-        float yaw = MathF.Atan2(normal.X, normal.Z) * (180F / MathF.PI);
-        return (centre, new(0F, yaw, 0F), new(new(-half.X, -half.Y, -half.Z), half));
+        // A turn about +Y that faces the door's local +Z along the plane's outward normal.
+        float yaw = MathF.Atan2(normal.X, normal.Z);
+        return (centre, NormalizedQuaternion.From(System.Numerics.Quaternion.CreateFromAxisAngle(System.Numerics.Vector3.UnitY, yaw)),
+            new(new(-half.X, -half.Y, -half.Z), half));
     }
 
     /// <summary>

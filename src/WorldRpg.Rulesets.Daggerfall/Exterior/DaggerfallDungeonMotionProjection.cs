@@ -86,7 +86,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
 
                 if (!definitions.TryGetValue(model.ActionId, out action!))
                     throw new ArgumentException($"Dungeon action model '{model.ActionId}' has no action definition.", nameof(actions));
-                bool isMotion = DaggerfallDungeonMotionPolicy.TryInterpret(action, model.Description, out _);
+                bool isMotion = action.Motion is not null;
 
                 DurableIdentityReference identity = MotionIdentity(profileId, model.ActionId);
                 entity = _entities.Create(identity, MotionModelType);
@@ -102,7 +102,7 @@ internal sealed class DaggerfallDungeonMotionProjection : IDisposable
                     false,
                     false));
                 _entitiesByAction.Add(model.ActionId, entity);
-                if (isMotion) bindings.Add(new DaggerfallDungeonMotionBinding(action, entity, model.Description));
+                if (isMotion) bindings.Add(new DaggerfallDungeonMotionBinding(action, entity));
                 if (collisionEnabled) AddCollisionModel(profileId, model, entity);
             }
 
