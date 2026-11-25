@@ -24,7 +24,7 @@ public sealed class DaggerfallActivationContributionsTests
     {
         using EntityDirectory entities = new();
         using DaggerfallDoorRuntime doors = new(entities, RandomMinimum.Create(), [new DaggerfallRdbDoorDefinition(DoorId, new Vector3(2, 0, -4),
-            Vector3.Zero, new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal, StartingLockValue: 4)], "dungeon");
+            Quaternion.Identity, new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal, StartingLockValue: 4)], "dungeon");
         List<DaggerfallRdbDoorId> triggered = [];
         List<DaggerfallActivationMode> forced = [];
         DaggerfallDoorActivationOwner owner = new(doors, triggered.Add,
@@ -46,7 +46,7 @@ public sealed class DaggerfallActivationContributionsTests
         DaggerfallRdbDoorId openId = DoorId with { ModelIndex = 4 };
         using EntityDirectory openEntities = new();
         using DaggerfallDoorRuntime open = new(openEntities, RandomMinimum.Create(), [new DaggerfallRdbDoorDefinition(openId, new Vector3(2, 0, -4),
-            Vector3.Zero, new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal)], "dungeon");
+            Quaternion.Identity, new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal)], "dungeon");
         DaggerfallDoorActivationOwner unlocked = new(open, triggered.Add, (_, _) => throw new InvalidOperationException("Nothing is forced."),
             _ => null, (_, _) => null, _ => null, _ => null, _ => "No lock.", _ => { });
         DaggerfallActivationTarget door = Assert.Single(unlocked.DoorTargets());

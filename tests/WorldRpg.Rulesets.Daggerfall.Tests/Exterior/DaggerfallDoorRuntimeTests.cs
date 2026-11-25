@@ -345,7 +345,7 @@ public sealed class DaggerfallDoorRuntimeTests
     }
 
     private static DaggerfallRdbDoorDefinition Door(int startingLock = 0) => new(
-        new DaggerfallRdbDoorId("S0000007.RDB", 1, 1, 3), new Vector3(2, 0, -4), new Vector3(0, 90, 0),
+        new DaggerfallRdbDoorId("S0000007.RDB", 1, 1, 3), new Vector3(2, 0, -4), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2F),
         new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal, startingLock);
 
     private static DaggerfallDoorView RuntimeView(DaggerfallRdbDoorDefinition definition, int lockValue) => new(

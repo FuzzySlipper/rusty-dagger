@@ -57,8 +57,8 @@ public sealed record WorldBlockVariantRecipe(string Block, string Variant, IRead
 }
 
 /// <summary>
-/// One model a block variant adds, posed as the published block states its models: the origin in the block's right-handed
-/// metre frame and the turn about Y in degrees. It is placed as one of the block's own objects, so the pose snaps to the
-/// source's grid (2.5 cm, 2048 steps a turn).
+/// One model a block variant adds, in the block's right-handed metre frame: its origin, and its turn about +Y in degrees,
+/// counterclockwise seen from above. It is placed as one of the block's own objects, so the pose snaps to the source's
+/// grid (2.5 cm, 2048 steps a turn).
 /// </summary>
 public sealed record WorldBlockVariantModel(string Model, NormalizedVector3 Position, float YawDegrees);

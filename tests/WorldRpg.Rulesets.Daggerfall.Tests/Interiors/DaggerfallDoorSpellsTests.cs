@@ -51,7 +51,7 @@ public sealed class DaggerfallDoorSpellsTests
             _actors.CreatePlayer(1, new EntityTypeId("player"), new DaggerfallMechanicsState().CreateStats(player,
                 DaggerfallPlayerVitals.Initial(player.Stats, TestPayload.Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerfallActorFactory.PlayerCapabilities);
             Effects = new(_actors, new DaggerfallEffectCatalog(DaggerfallDoorMagicEffects.Definitions()));
-            Doors = new(_store, RandomMinimum.Create(), [new(Door, new Vector3(2, 0, -4), new Vector3(0, 90, 0),
+            Doors = new(_store, RandomMinimum.Create(), [new(Door, new Vector3(2, 0, -4), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2F),
                 new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal, 0)], "test");
             Spells = new(Effects, new DaggerfallItemInstances(), () => 30);
         }

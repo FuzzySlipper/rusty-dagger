@@ -67,7 +67,7 @@ public sealed class DaggerfallBuildingEntranceTests
             hallStanding ?? ((_, _) => (false, false)), ownsHouse ?? ((_, _) => false), () => false, _ => false, (_, _) => false);
 
     private static DaggerfallRdbDoorDefinition Door(DaggerfallSiteBuildingId? building, int model = 3) => new(
-        new DaggerfallRdbDoorId("S0000007.RMB", 1, 1, model), new Vector3(2, 0, -4), new Vector3(0, 90, 0),
+        new DaggerfallRdbDoorId("S0000007.RMB", 1, 1, model), new Vector3(2, 0, -4), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2F),
         new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal, 4)
     {
         LockSurface = building is null ? DaggerfallLockInteractionSurface.Interior : DaggerfallLockInteractionSurface.Exterior,

@@ -155,7 +155,7 @@ public sealed class DaggerfallDungeonActionsTests
                 site: new DaggerfallSiteId(1, 2), logicalProfileId: "dungeon", dungeonMap: new DaggerfallDungeonMapContent([], [], []));
             Profile = inputs.ProfileKey;
             _triggers = new(_entities, spatial.Service, _movement, [(Profile, inputs)], Profile);
-            Doors = new(_entities, RandomMinimum.Create(), [new DaggerfallRdbDoorDefinition(DoorId, new Vector3(2, 0, -4), Vector3.Zero,
+            Doors = new(_entities, RandomMinimum.Create(), [new DaggerfallRdbDoorDefinition(DoorId, new Vector3(2, 0, -4), Quaternion.Identity,
                 new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal)], "dungeon");
             Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> graphs = [];
             Owner = new(graphs, () => Profile, () => inputs, () => Doors,

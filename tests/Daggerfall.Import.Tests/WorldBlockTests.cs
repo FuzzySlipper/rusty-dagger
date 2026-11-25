@@ -348,7 +348,7 @@ public sealed class WorldBlockTests
         Assert.Equal(("geometry/mesh-446", "geometry/mesh-447"), (gate.Open.MeshArtifactId, gate.Closed.MeshArtifactId));
         Assert.All(new[] { gate.Open, gate.Closed }, state => Assert.NotEmpty(state.Collision.Triangles));
         DaggerfallWorldBlockModel placed = Assert.Single(wall.Models, model => model.Id == gate.ModelId);
-        Assert.Equal((placed.Position, placed.RotationDegrees), (gate.Position, gate.RotationDegrees));
+        Assert.Equal((placed.Position, placed.Rotation), (gate.Position, gate.Rotation));
 
         MapsExteriorLayout charing = Exterior(sources, 17, "Charing");
         Assert.All(charing.Blocks.Select(block => normalizer.RmbExterior(block.SourceName).Block), block =>

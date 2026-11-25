@@ -18,7 +18,7 @@ public sealed class DungeonTeleportSessionTests
         var teleport = new DaggerfallDungeonActionDefinition("test/teleport", 700001,
             (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)DaggerfallDungeonActionFlag.Teleport,
             0, 0, 0, 700002, linkedAction ? "test/destination" : null, NextObjectPosition: destination,
-            NextObjectRotationDegrees: new(0, 90, 0));
+            NextObjectRotation: Quaternion.CreateFromAxisAngle(Vector3.UnitY, -MathF.PI / 2F));
         var target = new DaggerfallDungeonActionDefinition("test/destination", 700002, 0, 0, 0, 0, 0, 0, null,
             SourcePosition: destination);
         var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance,
@@ -37,8 +37,8 @@ public sealed class DungeonTeleportSessionTests
         var result = session.State.DungeonActions[profile.ProfileKey].Trigger(teleport.Id, DaggerfallDungeonActionEvent.Direct);
         Assert.Contains(result.Executions, value => value.ActionId == teleport.Id && value.Outcome == DaggerfallDungeonActionOutcome.Applied);
         Assert.Equal(destination, session.State.PlayerControl.Position!.Value.ToVector());
-        // The player takes the destination's source pose like any posed model (#9793): a +90-degree source
-        // yaw faces the player along +X.
+        // The player takes the destination's pose like any posed model (#9793): a quarter turn clockwise
+        // seen from above (a +90-degree source yaw) faces the player along +X.
         Assert.Equal(MathF.PI / 2, session.State.PlayerControl.YawRadians, 5);
         Assert.Equal(player, session.State.Actors.Player.Actor.Entity);
         var saved = session.CaptureSave();

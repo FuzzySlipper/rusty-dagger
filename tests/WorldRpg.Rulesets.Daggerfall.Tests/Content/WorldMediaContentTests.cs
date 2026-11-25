@@ -159,7 +159,8 @@ public sealed class WorldMediaContentTests
         Assert.Equal(58, inputs.Doors.Count);
         DaggerfallRdbDoorDefinition first = Assert.Single(inputs.Doors, door => door.Id == new DaggerfallRdbDoorId("B0000003.RDB", 1, 0, 0));
         Assert.Equal(new Vector3(67.8F, 32F, 0F), first.Position);
-        Assert.Equal(new Vector3(0F, 540F, 0F), first.RotationDegrees);
+        // A source yaw of 540 degrees, a half turn about +Y.
+        Assert.Equal(1F, MathF.Abs(Quaternion.Dot(first.Rotation, Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI))), 4);
         Assert.True(first.BoundsMin.X < first.BoundsMax.X);
         Assert.True(first.BoundsMin.Y < first.BoundsMax.Y);
         Assert.True(first.BoundsMin.Z < first.BoundsMax.Z);

@@ -41,7 +41,7 @@ public sealed class RmbPlacementTrimsTests
                         [.. plane.Points.Select(point => MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)))], []));
             }
 
-            Quaternion turn = Quaternion.CreateFromAxisAngle(Vector3.UnitY, -model.RotationDegrees.Y * MathF.PI / 180F);
+            Quaternion turn = model.Rotation.ToQuaternion();
             foreach (RmbTrimFace face in faces)
             {
                 NormalizedVector3[] placed = [.. face.Polygon.Select(point =>

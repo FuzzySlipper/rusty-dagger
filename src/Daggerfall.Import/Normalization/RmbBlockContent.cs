@@ -293,11 +293,12 @@ internal sealed class RmbBlockContent
     /// </summary>
     internal static RmbModelPlacement MiscPlacement(string modelId, NormalizedVector3 position, float yawDegrees)
     {
-        // The inverse of Block's arithmetic: the misc origin (0, 0, 4096 raw), the props' offset down, Y and Z flipped.
+        // The inverse of Block's arithmetic: the misc origin (0, 0, 4096 raw), the props' offset down, Y and Z flipped,
+        // and the right-handed yaw negated into the source's.
         int x = Raw(position.X / Arena2SourceTransform.SourceUnitMetres);
         int y = Raw(-(position.Y - RmbModelFrame.BlockModelOffsetMetres) / Arena2SourceTransform.SourceUnitMetres);
         int z = Raw((-position.Z / Arena2SourceTransform.SourceUnitMetres) - MiscOriginZ);
-        short yaw = checked((short)Raw(-yawDegrees * 2048F / 360F));
+        short yaw = checked((short)Raw(yawDegrees * 2048F / 360F));
         return new(modelId, 0, x, y, z, yaw);
 
         static int Raw(float value) => checked((int)MathF.Round(value, MidpointRounding.AwayFromZero));

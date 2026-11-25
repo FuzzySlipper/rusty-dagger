@@ -55,7 +55,7 @@ public sealed class WorldVariantTests
                 Assert.Equal(authored.Model, model.ModelId);
                 Assert.Null(model.BuildingIndex);
                 Assert.True(Distance(authored.Position, model.Position) < 0.025F, $"{model.Id} stands at {model.Position}, authored at {authored.Position}.");
-                Assert.InRange(MathF.Abs(Turn(authored.YawDegrees - model.RotationDegrees.Y)), 0F, 0.2F);
+                Assert.InRange(MathF.Abs(Turn(authored.YawDegrees - Yaw(model.Rotation))), 0F, 0.2F);
             }
         }
     }
@@ -73,7 +73,7 @@ public sealed class WorldVariantTests
         // (here a second copy of the block's first own model, on top of it) would need a trimmed mesh nobody published.
         DaggerfallWorldBlockModel first = normalizer.RmbExterior(shipped.Block).Block.Models.First(model => model.BuildingIndex is null);
         Assert.Contains("changes which faces of", Assert.Throws<InvalidOperationException>(() =>
-            normalizer.RmbExteriorVariant(shipped with { Remove = [], Add = [new(first.ModelId, first.Position, first.RotationDegrees.Y)] })).Message);
+            normalizer.RmbExteriorVariant(shipped with { Remove = [], Add = [new(first.ModelId, first.Position, Yaw(first.Rotation))] })).Message);
     }
 
     [Fact]
@@ -95,4 +95,11 @@ public sealed class WorldVariantTests
         MathF.Sqrt(((first.X - second.X) * (first.X - second.X)) + ((first.Y - second.Y) * (first.Y - second.Y)) + ((first.Z - second.Z) * (first.Z - second.Z)));
 
     private static float Turn(float degrees) => ((degrees % 360F) + 540F) % 360F - 180F;
+
+    /// <summary>A turn about +Y's angle in degrees, counterclockwise seen from above.</summary>
+    private static float Yaw(NormalizedQuaternion rotation)
+    {
+        Assert.True(MathF.Abs(rotation.X) < 1E-5F && MathF.Abs(rotation.Z) < 1E-5F, $"{rotation} is not a turn about +Y.");
+        return 2F * MathF.Atan2(rotation.Y, rotation.W) * (180F / MathF.PI);
+    }
 }
