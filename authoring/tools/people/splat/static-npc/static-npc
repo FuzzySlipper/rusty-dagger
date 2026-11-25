@@ -431,6 +431,8 @@ def step_walk(n, a):
     env = {**n.env, **n.gpu_env, 'SKIRT_BONES': str(cfg.get('skirt_bones', 8)) if cfg.get('skirt') else '', 'SKIRT_OPTS': cfg.get('skirt_opts', '--solid 3'),
            **({'SKIRT_RIG_OPTS': cfg['skirt_rig_opts']} if cfg.get('skirt_rig_opts') else {}),
            **({'SKIRT_DRIVE_OPTS': cfg['skirt_drive_opts']} if cfg.get('skirt_drive_opts') else {})}
+    if cfg.get('clips_dir'):   # the character's own walking/around clips (npc-467: the staff arm held as painted)
+        env['CLIPS'] = str(n.ch / cfg['clips_dir'])
     names = walk_names(n, [int(x) for x in a.sizes.split(',')] if a.sizes else None)
     for base, skirted, tidy in names:
         if skirted != base:

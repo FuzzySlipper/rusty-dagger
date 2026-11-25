@@ -91,7 +91,9 @@ def finger(n):
     return n.startswith(("LeftHand", "RightHand")) and not n.endswith("Hand")
 
 
-def retarget(rig, clip, xbot, frames=None):
+def turns(rig, xbot):
+    """X Bot's bind rotations and positions, the X Bot bone each joint takes its motion from, and the joint's own turn before
+    that (S). Shared with asset-pipeline tools/splat-rig/layer_clip.py --hold rig, which needs the same turns."""
     names, parents, pb = rig["names"], rig["parents"], rig["bind"]
     nb = len(names)
     X = {k.split(":")[-1]: np.array(v, float).reshape(4, 4).T for k, v in xbot.items()}
@@ -121,6 +123,13 @@ def retarget(rig, clip, xbot, frames=None):
             S[j] = S[idx[side + FOLLOW[part]]]
         elif (n not in X or finger(n)) and parents[j] >= 0:
             S[j] = S[parents[j]]
+    return X, xr, xp, idx, source, S, order
+
+
+def retarget(rig, clip, xbot, frames=None):
+    names, parents, pb = rig["names"], rig["parents"], rig["bind"]
+    nb = len(names)
+    X, xr, xp, idx, source, S, order = turns(rig, xbot)
     leg = lambda p, s: np.linalg.norm(p(s + "Leg") - p(s + "UpLeg")) + np.linalg.norm(p(s + "Foot") - p(s + "Leg"))
     k = float(np.mean([leg(lambda n: pb[idx[n]], s) for s in ("Left", "Right")]) / np.mean([leg(lambda n: xp[n], s) for s in ("Left", "Right")]))
 

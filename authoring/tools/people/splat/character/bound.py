@@ -307,6 +307,13 @@ def walker_npc(cid, cfg, k):
         r['skirt_rig'] = f'{k}/bound/skirt-rig'
         if cfg.get('walk_clip') == 'gentle':   # the villagers' gentler walk for a long skirt (Patch 2026-11-21); a walker that must keep up
             r['clips']['walking'] = (str(dc.ROOT / 'batches/clips-skirt/walking.json'), None)   # (npc-468, an enemy) keeps the full walk
+    # npc.json "clips_dir": the character's own walking/around/idle clip JSONs in place of the shared ones, e.g. npc-467's with the
+    # staff arm held as painted (asset-pipeline tools/splat-rig/layer_clip.py --hold rig, 2026-11-25); static-npc walk uses them too
+    if cfg.get('clips_dir'):
+        for nm in ('walking', 'around', 'idle'):
+            p = dc.char_dir(cid) / cfg['clips_dir'] / f'{nm}.json'
+            if p.exists():
+                r['clips'][nm] = (str(p), r['clips'].get(nm, (None, None))[1])
     # npc.json "extra_clips": {name: [clip JSON (fbx_clip_dump.mjs), Mixamo GLB for the Engine fit]}, relative to the character
     # folder or absolute: a character's own motions, e.g. npc-468's staff walk, strike and cast (PINOC, Patch 2026-11-23)
     r['fit_extra'] = []
