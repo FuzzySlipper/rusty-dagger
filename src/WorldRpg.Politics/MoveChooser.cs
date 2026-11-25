@@ -76,17 +76,21 @@ public static class MoveChooser
     /// 20 if it holds it, with 4 per point of control and prosperity and 2 per point of order there; 6 per influence
     /// piece and per office. A crown's influence leading a contested region's own seat adds its lead times the region's
     /// missing control, so pressing a claim where the crown is ahead is worth something before the annexation it leads
-    /// to.
+    /// to. Conditions count for the region's holder before they weigh: 2 per point of magnitude, gained for a good one
+    /// and lost for a harmful one; a persecution counts against the seat it persecutes.
     /// </summary>
     private static int Standing(Seat seat, Region region)
     {
         int influence = region.InfluenceOf(seat.Id);
         int standing = 6 * influence;
+        foreach (RegionCondition condition in region.Conditions)
+            if (condition.Kind == ConditionKind.Persecution && condition.Detail == seat.Id) standing -= 2 * condition.Magnitude;
         foreach (string holder in region.Offices.Values)
             if (holder == seat.Id) standing += 6;
         if (region.Allegiance == seat.Id)
         {
             standing += 20 + 4 * region.Control + 4 * region.Prosperity + 2 * region.Order;
+            foreach (RegionCondition condition in region.Conditions) standing += 2 * Bent(condition.Kind) * condition.Magnitude;
         }
         else if (seat.Kind == SeatKind.Crown && !region.Capital)
         {
@@ -96,13 +100,22 @@ public static class MoveChooser
         return standing;
     }
 
+    /// <summary>Whether a condition is good (1), harmful (-1) or mixed (0) for the region's holder.</summary>
+    private static int Bent(ConditionKind kind) => kind switch
+    {
+        ConditionKind.Prosperity or ConditionKind.Festival or ConditionKind.Recruitment or ConditionKind.PriceSurge => 1,
+        ConditionKind.Crackdown or ConditionKind.WitchHunt or ConditionKind.Persecution => 0,
+        _ => -1,
+    };
+
     /// <summary>
-    /// A seat's bearing: 2 per point of relation, and 1 per point of each resource up to 6, beyond which a hoard is worth
-    /// nothing more.
+    /// A seat's bearing: 2 per point of relation, 1 per point of each resource up to 6, beyond which a hoard is worth
+    /// nothing more, and 3 lost per point of each condition troubling its court.
     /// </summary>
     private static int Bearing(Board board, Seat seat)
     {
         int bearing = 0;
+        foreach (CourtCondition condition in seat.Court) bearing -= 3 * condition.Magnitude;
         foreach (Seat other in board.Seats)
             if (other.Id != seat.Id) bearing += 2 * board.Relation(seat.Id, other.Id);
         foreach (Resource resource in Enum.GetValues<Resource>())
@@ -121,7 +134,7 @@ public static class MoveChooser
         foreach (BoardChange change in board.TrialChanges)
         {
             string field = change.Field;
-            if (field is "coin" or "favour" or "force")
+            if (field is "coin" or "favour" or "force" || field.StartsWith("court:", StringComparison.Ordinal))
             {
                 touched.Add(change.Subject);
             }

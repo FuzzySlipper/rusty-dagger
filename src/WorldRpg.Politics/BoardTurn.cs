@@ -3,14 +3,18 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// One weekly turn, resolved on Sunday:
 /// <list type="number">
-/// <item>Upkeep. Each seat is paid: coin of a quarter of the prosperity of the regions it holds; favour of a third of
+/// <item>Upkeep. Conditions that have reached their end are lifted. Each seat is paid: coin of a quarter of the
+/// prosperity of the regions it holds (a famine empties a region's granaries, and a price surge adds its magnitude);
+/// favour of a third of
 /// its influence pieces; force of a quarter of its regions' control, each rounded down. A seat's grants
 /// fall due in the weeks their schedules divide, and every <see cref="OfficeWeeks"/>th week each office pays its holder
-/// 1 of its resource. A region with order 1 or less loses a point of control to unrest. Every fourth week an
+/// 1 of its resource. Each region and court condition weighs on its region or crown as
+/// <see cref="Conditions.Weigh(Board, Region)"/> says. A region with order 1 or less loses a point of control to unrest. Every fourth week an
 /// independent region below control 3 regains one, as its own lords reassert themselves. Every
 /// <see cref="SeasonWeeks"/>th week ground left untended drifts: each region's control, prosperity and order above
 /// <see cref="SettledTrack"/> falls by 1, and each relation moves 1 towards 0, so what a seat has built needs keeping
 /// up. Each seat draws its hand back up to <see cref="Board.HandSize"/>.</item>
+/// <item>The World deck turns one card, which lays its condition on a region.</item>
 /// <item>The slow moves due this week arrive, in the order they were played. One that no longer fits its targets, or
 /// changes nothing, fails.</item>
 /// <item>Each seat plays a card from its hand or gathers, the table's order turning by one seat each week. A slow card
@@ -32,6 +36,10 @@ public static class BoardTurn
         board.TakeChanges();
         Upkeep(board);
         IReadOnlyList<BoardChange> upkeep = board.TakeChanges();
+
+        WorldTrace? world = board.TurnWorldCard() is (WorldCard turned, Region region)
+            ? new WorldTrace(turned.Id, region.Id, turned.Actor, board.TakeChanges())
+            : null;
 
         List<ArrivalTrace> arrivals = [];
         foreach (PendingMove move in board.TakeArrivals())
@@ -77,7 +85,7 @@ public static class BoardTurn
             moves.Add(new MoveTrace(id, seat.Id, chosen.Card, chosen.Targets, chosen.Score, visibility, origin, arrives,
                 [.. options.Where(option => !ReferenceEquals(option, chosen)).Take(MoveTrace.AlternativesShown)], board.TakeChanges()));
         }
-        return new TurnTrace(board.Turn, upkeep, arrivals, moves);
+        return new TurnTrace(board.Turn, upkeep, world, arrivals, moves);
     }
 
     /// <summary>The resource an office pays its holder.</summary>
@@ -108,10 +116,11 @@ public static class BoardTurn
 
     private static void Upkeep(Board board)
     {
+        board.ExpireConditions();
         foreach (Seat seat in board.Seats)
         {
             Region[] held = [.. board.Regions.Where(region => region.Allegiance == seat.Id)];
-            board.AdjustResource(seat, Resource.Coin, held.Sum(region => region.Prosperity) / 4);
+            board.AdjustResource(seat, Resource.Coin, held.Sum(Conditions.ProsperityIncome) / 4);
             board.AdjustResource(seat, Resource.Favour, board.Regions.Sum(region => region.InfluenceOf(seat.Id)) / 3);
             board.AdjustResource(seat, Resource.Force, held.Sum(region => region.Control) / 4);
             foreach (SeatGrant grant in seat.Grants)
@@ -125,6 +134,8 @@ public static class BoardTurn
                 }
             }
         }
+        foreach (Region region in board.Regions) Conditions.Weigh(board, region);
+        foreach (Seat seat in board.Seats) Conditions.Weigh(board, seat);
         foreach (Region region in board.Regions)
         {
             if (region.Order <= UnrestOrder) board.AdjustControl(region, -1);

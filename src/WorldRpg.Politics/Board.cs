@@ -25,6 +25,8 @@ public sealed class Board
     private readonly Dictionary<(string, string), int> relations;
     private readonly Dictionary<string, SeatDeck> decks;
     private readonly List<PendingMove> pending = [];
+    private readonly List<WorldCard> worldDraw;
+    private readonly List<WorldCard> worldDiscard = [];
     private readonly List<BoardChange> changes = [];
     private readonly List<Action> undo = [];
     private readonly Dictionary<string, int> pieces;
@@ -32,7 +34,7 @@ public sealed class Board
     private int trialStart = -1;
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
-        Dictionary<string, SeatDeck> decks, BoardRandom random)
+        Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, BoardRandom random)
     {
         Seats = seats;
         Regions = regions;
@@ -40,6 +42,7 @@ public sealed class Board
         regionsById = regions.ToDictionary(region => region.Id, StringComparer.Ordinal);
         this.relations = relations;
         this.decks = decks;
+        this.worldDraw = worldDraw;
         pieces = seats.ToDictionary(seat => seat.Id,
             seat => regions.Sum(region => region.InfluenceOf(seat.Id) + region.Offices.Values.Count(holder => holder == seat.Id)), StringComparer.Ordinal);
         held = seats.ToDictionary(seat => seat.Id, seat => regions.Count(region => region.Allegiance == seat.Id), StringComparer.Ordinal);
@@ -62,7 +65,7 @@ public sealed class Board
 
     /// <summary>
     /// A board at its starting position, played from <paramref name="seed"/> or the setup's canon seed: each seat's
-    /// deck shuffled in table order, then a hand dealt to each.
+    /// deck shuffled in table order, then the World deck, then a hand dealt to each.
     /// </summary>
     public static Board Create(BoardSetup setup, CardSet cards, ulong? seed = null)
     {
@@ -82,8 +85,9 @@ public sealed class Board
         })];
         Dictionary<(string, string), int> relations = setup.Relations.ToDictionary(relation => Pair(relation.A, relation.B), relation => relation.Value);
         Dictionary<string, SeatDeck> decks = setup.Seats.ToDictionary(seat => seat.Id, seat => new SeatDeck([.. cards.Deck(seat)], [], []), StringComparer.Ordinal);
-        Board board = new(seats, regions, relations, decks, new BoardRandom(seed ?? setup.Seed));
+        Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], new BoardRandom(seed ?? setup.Seed));
         foreach (Seat seat in seats) board.Shuffle(decks[seat.Id].drawPile);
+        board.Shuffle(board.worldDraw);
         foreach (Seat seat in seats) board.DrawHand(seat);
         return board;
     }
@@ -146,6 +150,35 @@ public sealed class Board
         SeatDeck deck = decks[seat.Id];
         if (!deck.hand.Remove(card)) throw new InvalidOperationException($"seat '{seat.Id}' holds no '{card.Id}' to discard");
         deck.discard.Add(card);
+    }
+
+    /// <summary>
+    /// Turns the top World card and lays its condition, with the world as its source, on a region it chooses: any
+    /// region, or among those with the lowest prosperity, the highest prosperity or the lowest order, a tie settled by
+    /// chance. An empty World draw pile takes the discards, shuffled; a table with no World cards turns nothing.
+    /// </summary>
+    public (WorldCard Card, Region Region)? TurnWorldCard()
+    {
+        if (worldDraw.Count == 0)
+        {
+            if (worldDiscard.Count == 0) return null;
+            worldDraw.AddRange(worldDiscard);
+            worldDiscard.Clear();
+            Shuffle(worldDraw);
+        }
+        WorldCard card = worldDraw[^1];
+        worldDraw.RemoveAt(worldDraw.Count - 1);
+        worldDiscard.Add(card);
+        Region[] candidates = card.Where switch
+        {
+            WorldTarget.Poorest => [.. Regions.Where(region => region.Prosperity == Regions.Min(other => other.Prosperity))],
+            WorldTarget.Richest => [.. Regions.Where(region => region.Prosperity == Regions.Max(other => other.Prosperity))],
+            WorldTarget.Unruliest => [.. Regions.Where(region => region.Order == Regions.Min(other => other.Order))],
+            _ => [.. Regions],
+        };
+        Region target = candidates[Random.Next(candidates.Length)];
+        AddCondition(target, new RegionCondition(card.Condition, card.Detail, card.Magnitude, null, Turn, Turn + card.Weeks));
+        return (card, target);
     }
 
     /// <summary>Puts a slow move under way.</summary>
@@ -301,11 +334,94 @@ public sealed class Board
         (string, string) pair = Pair(a.Id, b.Id);
         int before = relations.GetValueOrDefault(pair);
         int after = Math.Clamp(before + delta, -RelationLimit, RelationLimit);
+        if (after < 0 && after < before && Hostages(a, b)) after = Math.Min(before, 0);
         if (after == before) return;
         relations[pair] = after;
         Undo(() => relations[pair] = before);
         Record(pair.Item1, $"relation:{pair.Item2}", before, after);
     }
+
+    /// <summary>
+    /// Lays <paramref name="condition"/> on <paramref name="region"/>. A condition of the same kind and detail already
+    /// there is refreshed instead: it keeps the greater magnitude and the later end.
+    /// </summary>
+    public void AddCondition(Region region, RegionCondition condition)
+    {
+        int index = region.Conditions.FindIndex(held => held.Kind == condition.Kind && held.Detail == condition.Detail);
+        RegionCondition? before = index < 0 ? null : region.Conditions[index];
+        RegionCondition after = before is null ? condition
+            : before with { Magnitude = Math.Max(before.Magnitude, condition.Magnitude), End = Math.Max(before.End, condition.End) };
+        if (after == before) return;
+        ReplaceCondition(region.Conditions, before, after);
+        Undo(() => ReplaceCondition(region.Conditions, after, before));
+        changes.Add(new BoardChange(region.Id, ConditionField(condition.Kind, condition.Detail), Describe(before), Describe(after)));
+    }
+
+    /// <summary>Lifts every condition of <paramref name="kind"/> from <paramref name="region"/>.</summary>
+    public void RemoveConditions(Region region, ConditionKind kind)
+    {
+        foreach (RegionCondition condition in region.Conditions.Where(held => held.Kind == kind).ToArray()) Lift(region, condition);
+    }
+
+    /// <summary>Lays <paramref name="condition"/> on <paramref name="crown"/>'s court, refreshing one of the same kind and source.</summary>
+    public void AddCourtCondition(Seat crown, CourtCondition condition)
+    {
+        int index = crown.Court.FindIndex(held => held.Kind == condition.Kind && held.Source == condition.Source);
+        CourtCondition? before = index < 0 ? null : crown.Court[index];
+        CourtCondition after = before is null ? condition
+            : before with { Magnitude = Math.Max(before.Magnitude, condition.Magnitude), End = Math.Max(before.End, condition.End) };
+        if (after == before) return;
+        ReplaceCondition(crown.Court, before, after);
+        Undo(() => ReplaceCondition(crown.Court, after, before));
+        changes.Add(new BoardChange(crown.Id, CourtField(condition), Describe(before), Describe(after)));
+    }
+
+    /// <summary>Takes every region and court condition that has reached its end turn off the board.</summary>
+    public void ExpireConditions()
+    {
+        foreach (Region region in Regions)
+            foreach (RegionCondition condition in region.Conditions.Where(held => held.End <= Turn).ToArray()) Lift(region, condition);
+        foreach (Seat seat in Seats)
+        {
+            foreach (CourtCondition condition in seat.Court.Where(held => held.End <= Turn).ToArray())
+            {
+                ReplaceCondition(seat.Court, condition, null);
+                Undo(() => ReplaceCondition(seat.Court, null, condition));
+                changes.Add(new BoardChange(seat.Id, CourtField(condition), Describe(condition), "none"));
+            }
+        }
+    }
+
+    /// <summary>Whether either seat has given the other hostages, so their relation cannot sink below 0.</summary>
+    private static bool Hostages(Seat a, Seat b) =>
+        a.Court.Any(held => held.Kind == CourtConditionKind.HostageTreaty && held.Source == b.Id)
+        || b.Court.Any(held => held.Kind == CourtConditionKind.HostageTreaty && held.Source == a.Id);
+
+    private void Lift(Region region, RegionCondition condition)
+    {
+        ReplaceCondition(region.Conditions, condition, null);
+        Undo(() => ReplaceCondition(region.Conditions, null, condition));
+        changes.Add(new BoardChange(region.Id, ConditionField(condition.Kind, condition.Detail), Describe(condition), "none"));
+    }
+
+    private static void ReplaceCondition<T>(List<T> held, T? before, T? after) where T : class
+    {
+        int index = before is null ? -1 : held.IndexOf(before);
+        if (index >= 0 && after is not null) held[index] = after;
+        else if (index >= 0) held.RemoveAt(index);
+        else if (after is not null) held.Add(after);
+    }
+
+    private static string ConditionField(ConditionKind kind, string? detail) =>
+        $"condition:{kind.ToString().ToLowerInvariant()}{(detail is null ? "" : ":" + detail)}";
+
+    private static string CourtField(CourtCondition condition) => $"court:{condition.Kind.ToString().ToLowerInvariant()}:{condition.Source}";
+
+    private static string Describe(RegionCondition? condition) => condition is null ? "none"
+        : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{condition.Magnitude} by {condition.Source ?? "world"} until {condition.End}");
+
+    private static string Describe(CourtCondition? condition) => condition is null ? "none"
+        : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{condition.Magnitude} until {condition.End}");
 
     private void ChangeInfluence(Region region, Seat seat, int before, int after)
     {
@@ -342,7 +458,7 @@ public sealed class Board
         if (trialStart >= 0) undo.Add(action);
     }
 
-    private void Shuffle(List<Card> cards)
+    private void Shuffle<T>(List<T> cards)
     {
         for (int index = cards.Count - 1; index > 0; index--)
         {
@@ -397,6 +513,9 @@ public sealed record Seat(string Id, string Name, SeatKind Kind, string? Holder,
 
     public int Force { get; internal set; }
 
+    /// <summary>The conditions on a crown's court, in the order they were laid.</summary>
+    public List<CourtCondition> Court { get; internal init; } = [];
+
     public int Amount(Resource resource) => resource switch
     {
         Resource.Coin => Coin,
@@ -427,6 +546,9 @@ public sealed record Region(string Id, string Name, int CatalogRegion, bool Capi
 
     /// <summary>The offices a seat holds; an office missing here is held by local people with no seat.</summary>
     public SortedDictionary<Office, string> Offices { get; internal init; } = [];
+
+    /// <summary>The conditions on the region, in the order they were laid.</summary>
+    public List<RegionCondition> Conditions { get; internal init; } = [];
 
     public int InfluenceOf(string seat) => Influence.GetValueOrDefault(seat);
 }
