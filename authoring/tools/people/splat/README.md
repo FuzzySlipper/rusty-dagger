@@ -93,6 +93,18 @@ npc-468's second round (Patch 2026-11-23: the legs disconnect at speed, goofy ha
 - A held prop is an experiment in asset-pipeline `tools/splat-prop/`: `prop_splat.py` paints it from its concept onto a Meshy
   shape, `attach_prop.py` puts it in the re-rested hand along the thumb as size NAME-prop, which publish and ship take.
 
+npc-468's third round (Patch 2026-11-25, r02 in the Workbench: the bag rides his hand, the staff is too thick and loosely held,
+the PINOC staff walk turns the feet and doesn't loop). These are still experiments in asset-pipeline:
+- **Staff walk:** `tools/splat-rig/layer_clip.py WALK STAFF-CLIP OUT`, once for the clip JSON and once for the Mixamo GLB. It
+  takes the known walk and holds the right arm at the staff clip's average pose, with 0.6 at the shoulder and 20% of the
+  walk's own swing. This is rusty-engine's joint-weighted clip layer (`AnimationLayerSet.Override`) baked into one clip,
+  because the Workbench plays one clip at a time. The game could layer it live instead.
+- **Bag on the hand:** `tools/splat-rig/hand_islands.py BODY RIG TRANSFORM` on the run's sizes and full bake, before
+  `dagger-char bound --step adopt`. A relaxed hand hangs beside the belt, and its binding took a pouch strip, 208 Gaussians in
+  the 16k body. Any part of a hand's binding that isn't connected to the hand itself takes its neighbour's binding.
+- **Staff:** `tools/splat-prop/prop_mesh.py ... --girth 0.5 --grip-from BODY --transform T`. The shaft goes through the middle
+  of the bake's hand Gaussians. The old X Bot palm guess only fits hands that turn_hands re-rested.
+
 Two walker settings npc-468 needed:
 - `"skirt_opts": "--solid 3 --inside-legs"` for a robe that ends above the ankle. The skirt step drops the legs inside the
   robe's bell (on skirt bones they rode the cloth). For a mid-shin robe, that made the shin vanish when a stride swung it out
