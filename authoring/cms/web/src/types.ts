@@ -961,3 +961,151 @@ export interface Arch3dModelOption {
   cmsId: string | null;
   hasRemodel: boolean;
 }
+
+export type AtlasBaseMode = 'painted' | 'classic';
+export type AtlasOverlayMode = 'geography' | 'political' | 'diplomacy' | 'climate' | 'power' | 'density';
+
+export interface AtlasLevelInfo {
+  level: number;
+  width: number;
+  height: number;
+  columns: number;
+  rows: number;
+}
+
+export interface ClassicMapRect {
+  region?: number;
+  url: string;
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface AtlasClimateInfo {
+  index: number;
+  value: number;
+  name: string;
+  climateBase: string;
+  people: string;
+  color: string;
+}
+
+export interface AtlasPinCategory {
+  id: string;
+  label: string;
+  types: number[];
+  color: string;
+}
+
+export interface AtlasDiplomaticEdge {
+  sourceFactionId: number;
+  sourceFactionName: string;
+  targetFactionId: number;
+  targetFactionName: string;
+  targetRegion: number | null;
+  targetRegionName: string | null;
+}
+
+export interface WorldAtlasRegion {
+  id: number;
+  name: string;
+  hasTerritory: boolean;
+  pixelCount: number;
+  bounds: { minX: number; minY: number; maxX: number; maxY: number } | null;
+  centroid: { x: number; y: number };
+  province: {
+    id: number;
+    name: string;
+    power: number;
+    rulerCode: number;
+    rulerTitle: string | null;
+    regentName: string | null;
+  } | null;
+  court: { id: number; name: string; power: number } | null;
+  people: { id: number; name: string; power: number } | null;
+  factions: Array<{
+    id: number;
+    name: string;
+    type: number;
+    typeName: string;
+    power: number;
+    parent: number;
+    castId: string | null;
+  }>;
+  diplomacy: {
+    allies: AtlasDiplomaticEdge[];
+    enemies: AtlasDiplomaticEdge[];
+    allyRegions: number[];
+    enemyRegions: number[];
+  };
+  climates: Array<{
+    index: number;
+    value: number;
+    name: string;
+    color: string;
+    pixels: number;
+    share: number;
+  }>;
+  dominantClimate: string | null;
+  locations: {
+    total: number;
+    cities: number;
+    townsAndVillages: number;
+    temples: number;
+    dungeons: number;
+    withDungeons: number;
+    other: number;
+  };
+  peoplePack: {
+    cast: Array<{ id: string; name: string }>;
+    regionalSpawners: string[];
+  };
+}
+
+export interface WorldAtlasOverviewResponse {
+  available: boolean;
+  reason?: string;
+  atlas: {
+    available: boolean;
+    tileBaseUrl: string;
+    tileSize: number;
+    worldWidth: number;
+    worldHeight: number;
+    levels: AtlasLevelInfo[];
+  };
+  classicMaps: {
+    available: boolean;
+    world: ClassicMapRect;
+    sheets: ClassicMapRect[];
+  };
+  worldNames: Array<{ id: string; name: string; kind: string; x: number; y: number }>;
+  climates: AtlasClimateInfo[];
+  pinCategories: AtlasPinCategory[];
+  regions: WorldAtlasRegion[];
+  counts: {
+    regions: number;
+    inhabitedRegions: number;
+    locations: number;
+    diplomaticLinks: number;
+  };
+}
+
+export interface WorldAtlasMasksResponse {
+  width: number;
+  height: number;
+  politicRuns: number[];
+  climateRuns: number[];
+  climates: AtlasClimateInfo[];
+}
+
+/** [region, index, mapPixelX, mapPixelY, locationType, hasDungeonInt, name, climateValue] */
+export type WorldAtlasPinTuple = [number, number, number, number, number, number, string, number | null];
+
+export interface WorldAtlasPinsResponse {
+  categories: AtlasPinCategory[];
+  total: number;
+  pins: WorldAtlasPinTuple[];
+}

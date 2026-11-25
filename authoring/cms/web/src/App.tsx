@@ -19,6 +19,7 @@ import { BarksPage } from './pages/BarksPage';
 import { BlockSlotsPage } from './pages/BlockSlotsPage';
 import { WorldBlockDetailPage, WorldBlocksListPage } from './pages/WorldBlocksPage';
 import { LocationDetailPage, LocationsListPage } from './pages/LocationsPage';
+import { WorldAtlasPage } from './pages/WorldAtlasPage';
 
 interface WorkspaceGitStatus {
   gitAvailable: boolean;
@@ -65,6 +66,8 @@ function renderRoute(route: Route) {
       return <LocationsListPage initialQuery={route.query} />;
     case 'location':
       return <LocationDetailPage region={route.region} index={route.index} mode={route.mode} />;
+    case 'world-map':
+      return <WorldAtlasPage initialRegion={route.region} />;
   }
 }
 
@@ -193,6 +196,13 @@ export function App() {
             aria-current={currentSection === 'locations' ? 'page' : undefined}
           >
             Towns &amp; locations (3D)
+          </a>
+          <a
+            href="#world-map"
+            data-page="world-map"
+            aria-current={currentSection === 'world-map' ? 'page' : undefined}
+          >
+            World map (Atlas)
           </a>
           <div class="nav-group-label">Pipelines</div>
           <a href="#pipelines" data-page="pipelines" aria-current={currentSection === 'pipelines' ? 'page' : undefined}>

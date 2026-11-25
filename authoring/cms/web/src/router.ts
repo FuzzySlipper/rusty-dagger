@@ -16,7 +16,8 @@ export type Route =
   | { page: 'world-blocks'; query: Record<string, string> }
   | { page: 'world-block'; key: string }
   | { page: 'locations'; query: Record<string, string> }
-  | { page: 'location'; region: number; index: number; mode?: 'exterior' | 'dungeon' };
+  | { page: 'location'; region: number; index: number; mode?: 'exterior' | 'dungeon' }
+  | { page: 'world-map'; region?: number };
 
 export const encodeKey = (value: string): string => encodeURIComponent(value);
 
@@ -56,6 +57,8 @@ export const locationsUrl = (filters: Record<string, string | number | undefined
 };
 export const locationUrl = (region: number, index: number, mode?: 'exterior' | 'dungeon'): string =>
   mode === 'dungeon' ? `#location/${region}/${index}/dungeon` : `#location/${region}/${index}`;
+export const worldMapUrl = (region?: number): string =>
+  region !== undefined ? `#world-map/${region}` : '#world-map';
 
 function safeDecode(value: string): string {
   try {
@@ -120,6 +123,10 @@ export function parseHash(hash: string): Route {
       return { page: 'location', region, index, mode };
     }
   }
+  if (page === 'world-map') {
+    const reg = encoded ? Number(id) : NaN;
+    return Number.isInteger(reg) ? { page: 'world-map', region: reg } : { page: 'world-map' };
+  }
   if (page === 'pipelines') return { page: 'listing', category: 'pipelines' };
   if ((ASSET_PAGES as string[]).includes(page)) {
     return { page: 'listing', category: page as AssetCategory };
@@ -157,6 +164,8 @@ export function activeSection(
     case 'locations':
     case 'location':
       return 'locations';
+    case 'world-map':
+      return 'world-map';
     case 'search':
       return '';
   }

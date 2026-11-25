@@ -888,3 +888,142 @@ button[data-mark][aria-pressed="true"] { color: var(--accent); border-color: var
   overflow-y: auto;
   max-height: 52vh;
 }
+
+/* --- 2D World & Political Atlas --- */
+.atlas-toolbar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.atlas-search-wrap {
+  position: relative;
+  margin-left: auto;
+  min-width: 240px;
+}
+.atlas-search-wrap input {
+  width: 100%;
+}
+.atlas-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: min(360px, 85vw);
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 40;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+}
+.atlas-search-item {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font-size: 0.84rem;
+}
+.atlas-search-item:hover {
+  background: rgba(77, 224, 150, 0.14);
+}
+.atlas-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: min(74vh, 760px);
+  min-height: 500px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #182b3a;
+}
+.atlas-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.atlas-canvas:active {
+  cursor: grabbing;
+}
+.atlas-zoom-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 5;
+}
+.atlas-zoom-controls button {
+  min-width: 36px;
+  padding: 5px 8px;
+  font-weight: 700;
+  background: rgba(18, 25, 30, 0.88);
+}
+.atlas-hud {
+  pointer-events: none;
+}
+.atlas-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+.atlas-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+.atlas-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.atlas-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.atlas-gradient-bar {
+  display: inline-block;
+  width: 96px;
+  height: 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.atlas-climate-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.chip-ally {
+  border-color: #3d9970;
+  color: #a9f5cd;
+  background: rgba(61, 153, 112, 0.16);
+  cursor: pointer;
+}
+.chip-enemy {
+  border-color: #b84a55;
+  color: #ffb3ba;
+  background: rgba(184, 74, 85, 0.18);
+  cursor: pointer;
+}

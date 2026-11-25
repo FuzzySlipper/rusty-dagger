@@ -38,6 +38,16 @@ class Library:
     art_pack_dir: Path | None = None
     packs_dir: Path | None = None
     arena2_dir: Path | None = None
+    atlas_dir: Path | None = None
+    maps_dir: Path | None = None
+
+    @property
+    def atlas_root(self):
+        return self.atlas_dir or (self.repo / "local/build/import/staging/worldrpg/media/atlas")
+
+    @property
+    def maps_root(self):
+        return self.maps_dir or (self.repo / "local/build/import/staging/worldrpg/media/maps")
 
     @property
     def packs_root(self):
@@ -148,6 +158,8 @@ class Library:
                 self.world_classic_shared / "media/dungeon/terrain",
             ),
             "/media/art-pack/": self.art_pack_root,
+            "/media/atlas/": self.atlas_root,
+            "/media/maps/": self.maps_root,
         }
 
 

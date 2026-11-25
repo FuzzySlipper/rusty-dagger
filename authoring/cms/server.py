@@ -26,6 +26,8 @@ import locations as locations_module
 from locations import LocationsStore
 import world_appearance as world_appearance_module
 from world_appearance import WorldAppearanceStore
+import world_atlas as world_atlas_module
+from world_atlas import WorldAtlasStore
 import variants as variants_module
 from variants import WorldVariantsStore
 from packs import PackStore
@@ -57,6 +59,7 @@ class Workspace:
         self.world_blocks = WorldBlocksStore(library, self.cache, self.people_pack)
         self.locations = LocationsStore(library, self.cache, self.world_blocks, self.people_pack)
         self.world_appearance = WorldAppearanceStore(library, self.cache)
+        self.world_atlas = WorldAtlasStore(library, self.cache, self.locations, self.people_pack)
         self.world_variants = WorldVariantsStore(library, self.cache, self.packs)
 
     def catalog(self):
@@ -225,6 +228,7 @@ def create_router(workspace: Workspace) -> Router:
     blocks_module.register_routes(router, workspace)
     locations_module.register_routes(router, workspace)
     world_appearance_module.register_routes(router, workspace)
+    world_atlas_module.register_routes(router, workspace)
     variants_module.register_routes(router, workspace)
     return router
 
