@@ -75,7 +75,7 @@ python3 authoring/tools/people/concept/back_ph3.py \
 ```
 
 Submit the back candidates to the same [CMS concept stage](../../../../cms/README.md#concept-art) and select
-**Approve as back**. Retrieve it with `concept_cli.py approved mobile-128 --view back`.
+**Approve as back**. Retrieve it with `concept_cli.py approved mobile-128 --view back`. The same single-stage MiniMax H3 back-view graph is also exported as a 1-click browser workflow in [`ui-workflows/rusty-concept-back-ph3.json`](ui-workflows/rusty-concept-back-ph3.json) (and saved in the `gpu-lab` ComfyUI sidebar).
 
 ## Earlier History (2026-11-08)
 
