@@ -132,7 +132,7 @@ public sealed class GuardContinuitySessionTests
         // Save mid-pursuit (before any post-promotion movement): ONLY the sparse diff for the promoted guard is saved — zero untouched town walkers!
         RulesetSavePayload midPursuitSaveBytes = s.CaptureSave();
         DaggerfallSavePayload midPursuitSave = DaggerfallSavePayload.Read(midPursuitSaveBytes);
-        ActorLedgerEntry sparseGuard = Assert.Single(midPursuitSave.ActorLedger);
+        ActorLedgerEntry sparseGuard = Assert.Single(midPursuitSave.ActorLedger, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
         Assert.Equal(guardId, sparseGuard.DurableId);
         Assert.Equal(ActorOriginKind.SeededSlot, sparseGuard.Origin.Kind);
         Assert.NotNull(sparseGuard.Pose);
@@ -173,7 +173,7 @@ public sealed class GuardContinuitySessionTests
 
         RulesetSavePayload awaySaveBytes = reloaded.CaptureSave();
         DaggerfallSavePayload awaySave = DaggerfallSavePayload.Read(awaySaveBytes);
-        ActorLedgerEntry detachedGuard = Assert.Single(awaySave.ActorLedger);
+        ActorLedgerEntry detachedGuard = Assert.Single(awaySave.ActorLedger, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
         Assert.Equal(guardId, detachedGuard.DurableId);
         Assert.Equal(ActorLocationKind.AtSite, detachedGuard.Location?.Kind);
         Assert.True(detachedGuard.Location?.Detached);

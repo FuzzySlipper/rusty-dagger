@@ -914,6 +914,41 @@ internal sealed class DaggerfallExpedition
         }
     }
 
+    /// <summary>
+    /// Advances persistent overland bands while the expedition map is closed (inn sleep, dungeon rest, walking on foot,
+    /// quest time) without triggering player-intercept pauses. Steps in bounded hourly slices so outbound caravans that
+    /// arrive mid-interval can dispatch and progress on their return legs, and returns the number of band arrivals.
+    /// </summary>
+    internal int AdvancePersistentBandsOffMap(long seconds, (double X, double Y) partyPosition)
+    {
+        if (seconds <= 0 || _persistentBands.Count == 0) return 0;
+
+        int arrivals = 0;
+        const int maxSlices = 48;
+        long remaining = seconds;
+        int slices = 0;
+        while (remaining > 0 && _persistentBands.Count > 0)
+        {
+            long stepSeconds = slices + 1 < maxSlices
+                ? Math.Min(remaining, SecondsPerHour)
+                : remaining;
+            remaining -= stepSeconds;
+            slices++;
+
+            double hours = stepSeconds / (double)SecondsPerHour;
+            foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
+            {
+                bool arrived = band.StepMove(partyPosition, hours, allowPursuit: false);
+                if (!arrived) continue;
+                _persistentBands.Remove(band);
+                if (_persistentBandAhead == band) _persistentBandAhead = null;
+                _world.PersistentBandArrived(band);
+                arrivals++;
+            }
+        }
+        return arrivals;
+    }
+
     private bool StepPersistentBands(long seconds)
     {
         if (_persistentBands.Count == 0) return false;

@@ -179,7 +179,7 @@ public sealed class DaggerfallNpcRegistryTests
             Assert.Equal(walker.DurableId, person!.Snapshot.DurableId);
             Assert.Equal(charing.ProfileKey, person.Snapshot.Profile);
         });
-        Assert.Equal(0, session.State.ActorLedger.Count);
+        Assert.DoesNotContain(session.State.ActorLedger.All, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
 
         // Mutating display name on one live townsperson updates ActorPersonComponent immediately and saves ONLY that one actor.
         long namedId = liveWalkers[0].DurableId;
@@ -188,7 +188,7 @@ public sealed class DaggerfallNpcRegistryTests
         Assert.Equal("Talia the Weaver", session.State.Npcs.Require(namedId).DisplayName);
 
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
-        ActorLedgerEntry onlySaved = Assert.Single(saved.ActorLedger);
+        ActorLedgerEntry onlySaved = Assert.Single(saved.ActorLedger, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
         Assert.Equal(namedId, onlySaved.DurableId);
         Assert.Equal("Talia the Weaver", onlySaved.Social?.DisplayNameOverride);
     }

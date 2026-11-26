@@ -272,6 +272,8 @@ internal sealed partial class DaggerfallSession
         WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
         CourierDispatches.AdvanceToMinute(minuteAfter, checked((int)_time.Calendar.DayNumber));   // Society: elapsed-time board-game couriers
         WordSpread.PruneExpired(minuteAfter);                                                     // Society: elapsed-time word spread
+        if (!Expedition.Open)
+            AdvanceOffMapOverland(before, after);                                                 // Travel, Actors: persistent bands run off-map too (Q4)
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar.Sky, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
         _exterior.UpdateResidentCityLights();                                                     // Exterior
@@ -1073,6 +1075,73 @@ internal sealed partial class DaggerfallSession
         Expedition.Begin(MapPosition.Position(), State.Transport.OnShip, held);                   // Travel
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
         _hud.RequestTravelPlaces();                                                               // UiProjection
+    }
+
+    /// <summary>
+    /// Advances persistent overland bands and autonomous traffic/hostile producers while the expedition map is closed
+    /// (inn sleep, dungeon rest, walking on foot, quest time). Slices at 6-hour producer dispatch boundaries so newly
+    /// dispatched caravans/pursuit squads advance across the remainder of the elapsed interval without double-stepping.
+    /// </summary>
+    private void AdvanceOffMapOverland(DaggerfallCalendar before, DaggerfallCalendar after)
+    {
+        long startSec = before.ToAbsoluteSeconds();
+        long endSec = after.ToAbsoluteSeconds();
+        if (endSec <= startSec) return;
+
+        (double X, double Y) offMapPosition = ResolveOffMapPosition();
+        const long dispatchInterval = DaggerfallOverlandTraffic.DispatchIntervalSeconds;
+        long firstWindow = (startSec / dispatchInterval) + 1;
+        long lastWindow = endSec / dispatchInterval;
+
+        if (lastWindow < firstWindow)
+        {
+            _ = Expedition.AdvancePersistentBandsOffMap(endSec - startSec, offMapPosition);
+            return;
+        }
+
+        // Cap per-window interleaving for extreme multi-week jumps while still advancing all elapsed time cleanly.
+        const long maxInterleavedWindows = 16;
+        long cursorSec = startSec;
+        long effectiveFirstWindow = lastWindow - firstWindow + 1 > maxInterleavedWindows
+            ? lastWindow - maxInterleavedWindows + 1
+            : firstWindow;
+        if (effectiveFirstWindow > firstWindow)
+        {
+            long jumpTo = (effectiveFirstWindow - 1) * dispatchInterval;
+            if (jumpTo > cursorSec)
+            {
+                _ = Expedition.AdvancePersistentBandsOffMap(jumpTo - cursorSec, offMapPosition);
+                cursorSec = jumpTo;
+            }
+        }
+
+        DaggerfallCalendar cursorCal = DaggerfallCalendar.FromAbsoluteSeconds(cursorSec);
+        for (long window = effectiveFirstWindow; window <= lastWindow; window++)
+        {
+            long boundarySec = window * dispatchInterval;
+            if (boundarySec > cursorSec)
+            {
+                _ = Expedition.AdvancePersistentBandsOffMap(boundarySec - cursorSec, offMapPosition);
+                cursorSec = boundarySec;
+            }
+            DaggerfallCalendar boundaryCal = DaggerfallCalendar.FromAbsoluteSeconds(boundarySec);
+            _ = OverlandTraffic.Step(cursorCal, boundaryCal, offMapPosition);
+            _ = HostileOverlandBands.Step(cursorCal, boundaryCal, offMapPosition);
+            cursorCal = boundaryCal;
+        }
+
+        if (endSec > cursorSec)
+            _ = Expedition.AdvancePersistentBandsOffMap(endSec - cursorSec, offMapPosition);
+    }
+
+    private (double X, double Y) ResolveOffMapPosition()
+    {
+        if (_site.ActiveSite is not null || _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior || State.Transport.OnShip)
+        {
+            DaggerfallTravelMapPixel px = MapPosition.Position();
+            return (px.X + 0.5, px.Y + 0.5);
+        }
+        return Expedition.Position;
     }
 
     /// <summary>

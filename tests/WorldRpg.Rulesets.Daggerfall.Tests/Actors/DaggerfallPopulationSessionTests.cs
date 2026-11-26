@@ -148,8 +148,9 @@ public sealed class DaggerfallPopulationSessionTests
         session.AdvanceElapsedTime(8 * 60 * 60);
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
         DaggerfallWorldProfileKey activeKey = saved.Site.ActiveProfile!.Require();
-        // Untouched deterministic source population walkers write zero ActorLedger / ActorInventories bytes.
-        Assert.Empty(saved.ActorLedger);
+        // Untouched deterministic source population walkers write zero site ActorLedger / ActorInventories bytes
+        // (excluding autonomous off-map regional traffic on OnOverlandBand).
+        Assert.DoesNotContain(saved.ActorLedger, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
         Assert.Empty(saved.ActorInventories);
 
         // Civilians are projected only after the save, its effects and its residency are restored:
@@ -157,7 +158,7 @@ public sealed class DaggerfallPopulationSessionTests
         (EngineContextFake restoredEngine, _) = fixture.CreateEngine();
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, session.CaptureSave());
         DaggerfallSavePayload again = DaggerfallSavePayload.Read(restored.CaptureSave());
-        Assert.Empty(again.ActorLedger);
+        Assert.DoesNotContain(again.ActorLedger, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
         Assert.Equal(session.State.Npcs.All.OrderBy(n => n.DurableId).Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)),
             restored.State.Npcs.All.OrderBy(n => n.DurableId).Select(entry => (entry.DurableId, entry.StableKey, entry.Presence)));
         Assert.Equal(saved.ActiveDynamicActors(activeKey).Select(actor => actor.EntityId),
@@ -562,9 +563,11 @@ public sealed class DaggerfallPopulationSessionTests
             Assert.Equal(DaggerfallArchetypeIds.Civilian, actor.Actor.Get<ActorOverlayComponent>().ArchetypeId);
         }
 
-        // Untouched baselines cost 0 ActorLedger and 0 ActorInventories bytes.
+        // Untouched baselines cost 0 site ActorLedger and 0 ActorInventories bytes
+        // (excluding autonomous regional traffic bands and arriving regional traffic visitors).
         DaggerfallSavePayload untouchedSave = DaggerfallSavePayload.Read(session.CaptureSave());
-        Assert.Empty(untouchedSave.ActorLedger);
+        Assert.DoesNotContain(untouchedSave.ActorLedger,
+            entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand && entry.Location?.TrafficVisitor != true);
         Assert.Empty(untouchedSave.ActorInventories);
 
         // Wound the first townsperson without killing them; leave the second untouched.
@@ -578,7 +581,8 @@ public sealed class DaggerfallPopulationSessionTests
 
         RulesetSavePayload saveWithWound = session.CaptureSave();
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(saveWithWound);
-        ActorLedgerEntry sparseEntry = Assert.Single(captured.ActorLedger);
+        ActorLedgerEntry sparseEntry = Assert.Single(captured.ActorLedger,
+            entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand && entry.Location?.TrafficVisitor != true);
         Assert.Equal(woundedId, sparseEntry.DurableId);
         Assert.NotNull(sparseEntry.Vitals);
         Assert.DoesNotContain(captured.ActorLedger, entry => entry.DurableId == untouchedId);

@@ -218,9 +218,10 @@ public sealed class DaggerfallActorLedgerTests
         Assert.Equal(ActorOriginKind.CastIndividual, castLive!.Actor.Get<ActorOriginComponent>().Origin.Kind);
         Assert.Equal(cast.Name, session.State.Npcs.Require(castId).DisplayName);
 
-        // Untouched populated town (walkers + cast individual) saves 0 ledger entries and 0 actor inventory entries.
+        // Untouched populated town (walkers + cast individual) saves 0 site ledger entries and 0 actor inventory entries
+        // (excluding autonomous off-map regional traffic on OnOverlandBand).
         DaggerfallSavePayload untouched = DaggerfallSavePayload.Read(session.CaptureSave());
-        Assert.Empty(untouched.ActorLedger);
+        Assert.DoesNotContain(untouched.ActorLedger, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
         Assert.Empty(untouched.ActorInventories);
 
         // R11015-7: Move the CastIndividual, SAVE, RELOAD, then reset back to authored baseline pose/heading,
@@ -245,7 +246,7 @@ public sealed class DaggerfallActorLedgerTests
             reloadedCast.ApplyPose(new ActorPose(baselineLocal, 0f));
             RulesetSavePayload prunedSaveBytes = reloadedMoved.CaptureSave();
             DaggerfallSavePayload pruned = DaggerfallSavePayload.Read(prunedSaveBytes);
-            Assert.Empty(pruned.ActorLedger);
+            Assert.DoesNotContain(pruned.ActorLedger, entry => entry.Location?.Kind != ActorLocationKind.OnOverlandBand);
 
             using DaggerfallSession reloadedPruned = DaggerfallSession.Restore(engine.Context, composition, prunedSaveBytes);
             ActorState restoredBaselineCast = reloadedPruned.State.Actors.Get(castId);

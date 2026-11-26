@@ -229,7 +229,7 @@ internal sealed class DaggerfallOverlandTraffic
         for (int attempt = 0; attempt < 8; attempt++)
         {
             int ordinal = (int)((seed + (ulong)attempt) % 64UL);
-            string slotId = string.Create(CultureInfo.InvariantCulture, $"population/traffic/{(isCaravan ? "caravan" : "courier")}/{ordinal}");
+            string slotId = string.Create(CultureInfo.InvariantCulture, $"traffic/{(isCaravan ? "caravan" : "courier")}/{ordinal}");
             long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(origin.Id, $"{originProfile.LogicalId}/{slotId}");
             if (!IsAvailableForDispatch(durableId)) continue;
 

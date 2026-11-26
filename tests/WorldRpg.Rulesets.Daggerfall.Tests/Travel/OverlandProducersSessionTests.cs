@@ -150,13 +150,18 @@ public sealed class OverlandProducersSessionTests
         using ProducerFixture fixture = ProducerFixture.Create();
         DaggerfallSession session = fixture.Session;
         session.ApplyProductMode(ProductMode.Playing);
-        session.AdvanceElapsedTime(8 * 60 * 60);
 
-        // Untouched town before expedition travel keeps zero ActorLedger traffic entries.
+        // Untouched town at start (before crossing any daytime dispatch window) keeps zero ActorLedger traffic entries.
         Assert.Empty(session.Expedition.PersistentBands);
         Assert.Empty(DaggerfallSavePayload.Read(session.CaptureSave()).ActorLedger);
 
-        // Open the expedition map and march across daytime 6-hour windows (crossing 12:00 and 18:00).
+        // Advancing 8 hours off-map crosses the 06:00 daytime window and autonomously dispatches regional traffic (#11077).
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        Assert.NotEmpty(session.Expedition.PersistentBands);
+        Assert.False(session.Expedition.Open);
+        Assert.False(session.Expedition.EncounterWaiting);
+
+        // Open the expedition map and march across further daytime 6-hour windows (crossing 12:00 and 18:00).
         session.OpenExpedition();
         Assert.True(session.Expedition.Open);
         session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
@@ -405,6 +410,75 @@ public sealed class OverlandProducersSessionTests
             }
             Assert.Null(session.State.ActorLedger.Require(baselineEntry.DurableId).Location);
         }
+    }
+
+    [Fact]
+    public void Off_map_elapsed_time_advances_couriers_traffic_and_hostile_bands_without_pauses_or_double_stepping()
+    {
+        using ProducerFixture fixture = ProducerFixture.Create();
+        DaggerfallSession session = fixture.Session;
+        session.ApplyProductMode(ProductMode.Playing);
+
+        // 1. Stage a board-game courier dispatch to a distant town (> 16h ride) while off-map.
+        DaggerfallSiteRecord origin = session.Site.ActiveSite!;
+        DaggerfallSiteRecord destination = TestPayload.Definitions.Locations.Records
+            .Where(r => r.Exterior is not null && r.Id != origin.Id)
+            .Select(r => (Site: r, Dist: Math.Sqrt(Math.Pow(r.MapPixelX - origin.MapPixelX, 2) + Math.Pow(r.MapPixelY - origin.MapPixelY, 2))))
+            .Where(x => x.Dist >= 40.0 && x.Dist <= 65.0)
+            .OrderBy(x => x.Dist)
+            .First()
+            .Site;
+        long startMinute = ((IDaggerfallExpeditionSurroundings)session).Calendar.MinuteNumber;
+        int startDay = checked((int)((IDaggerfallExpeditionSurroundings)session).Calendar.DayNumber);
+        DaggerfallCourierDispatchSave dispatch = session.CourierDispatches.StageDispatch(
+            dispatchId: "disp:offmap-sleep-sync",
+            seatId: "crown:daggerfall",
+            actionKind: "border-orders",
+            summary: "Off-map sleep synchronization dispatch",
+            origin: origin,
+            destination: destination,
+            currentMinute: startMinute,
+            currentDay: startDay,
+            stageOverlandBand: true);
+        Assert.NotNull(dispatch.OverlandBandId);
+        DaggerfallPersistentOverlandBand courierBand = Assert.Single(
+            session.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
+        double startDistToDest = courierBand.Distance(destination.MapPixelX + 0.5, destination.MapPixelY + 0.5);
+
+        // Also make player wanted so off-map elapsed time dispatches a hostile bounty hunter band too.
+        session.State.Social.ChangeRegionalReputation(origin.Id.Region, -25);
+
+        // 2. Sleep / pass 8 hours OFF-MAP (crossing the 06:00 dispatch window while Expedition stays closed).
+        long sleepSeconds = 8L * DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute;
+        session.AdvanceElapsedTime(sleepSeconds);
+        Assert.False(session.Expedition.Open);
+        Assert.False(session.Expedition.EncounterWaiting);
+
+        // Courier band physically progressed proportionally to 8h off-map sleep (not frozen at origin!).
+        double expectedMoved = courierBand.SpeedPixelsPerHour * 8.0;
+        double midDistToDest = courierBand.Distance(destination.MapPixelX + 0.5, destination.MapPixelY + 0.5);
+        Assert.Equal(startDistToDest - expectedMoved, midDistToDest, precision: 2);
+        Assert.True(session.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? midDispatch));
+        Assert.Equal(DaggerfallDispatchStatus.InTransit, midDispatch!.Status);
+
+        // Regional traffic AND hostile bounty hunters both dispatched off-map and moved across the remaining 3 hours (06:00 -> 09:00).
+        Assert.Contains(session.Expedition.PersistentBands, b => b.BandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal));
+        Assert.Contains(session.Expedition.PersistentBands, b => b.BandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal));
+
+        // 3. Save and reload mid-journey preserves exact off-map progressed positions cleanly.
+        RulesetSavePayload savedMidSleep = session.CaptureSave();
+        using DaggerfallSession restored = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedMidSleep);
+        DaggerfallPersistentOverlandBand restoredCourier = Assert.Single(
+            restored.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
+        Assert.Equal(courierBand.X, restoredCourier.X, precision: 5);
+        Assert.Equal(courierBand.Y, restoredCourier.Y, precision: 5);
+
+        // 4. Advance remaining time off-map past ExpectedArrivalMinute: courier settles Delivered and retires cleanly.
+        long remainingMinutes = Math.Max(60L, dispatch.ExpectedArrivalMinute - ((IDaggerfallExpeditionSurroundings)restored).Calendar.MinuteNumber + 30L);
+        restored.AdvanceElapsedTime(remainingMinutes * DaggerfallCalendar.SecondsPerMinute);
+        Assert.DoesNotContain(restored.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
+        Assert.True(restored.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? doneDispatch));
+        Assert.Equal(DaggerfallDispatchStatus.Delivered, doneDispatch!.Status);
     }
 
     private static DaggerfallDialogueView? TalkTo(DaggerfallSession session, long npcId)

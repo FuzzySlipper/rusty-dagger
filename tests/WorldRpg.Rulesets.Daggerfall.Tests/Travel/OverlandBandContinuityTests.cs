@@ -98,7 +98,7 @@ public sealed class OverlandBandContinuityTests
         // Save and reload: persistent band + OnOverlandBand ledger entry survive, transient chaser is absent.
         RulesetSavePayload savedBytes = session.CaptureSave();
         DaggerfallSavePayload decoded = DaggerfallSavePayload.Read(savedBytes);
-        DaggerfallPersistentBandSave savedBand = Assert.Single(decoded.Expedition.PersistentBands!);
+        DaggerfallPersistentBandSave savedBand = Assert.Single(decoded.Expedition.PersistentBands!, b => b.BandId == "caravan-north");
         Assert.Equal("caravan-north", savedBand.BandId);
         Assert.Equal(movedX, savedBand.X, precision: 6);
         Assert.Equal(movedY, savedBand.Y, precision: 6);
@@ -107,7 +107,7 @@ public sealed class OverlandBandContinuityTests
         Assert.Equal("caravan-north", savedMember.Location?.BandId);
 
         using DaggerfallSession restored = DaggerfallSession.Restore(fixture.CreateEngine().Context, fixture.Composition, savedBytes);
-        DaggerfallPersistentOverlandBand restoredBand = Assert.Single(restored.Expedition.PersistentBands);
+        DaggerfallPersistentOverlandBand restoredBand = Assert.Single(restored.Expedition.PersistentBands, b => b.BandId == "caravan-north");
         Assert.Equal("caravan-north", restoredBand.BandId);
         Assert.Equal(movedX, restoredBand.X, precision: 6);
         Assert.Equal(movedY, restoredBand.Y, precision: 6);
@@ -158,7 +158,7 @@ public sealed class OverlandBandContinuityTests
         // Enter the 3D scene from the expedition map: exact ledger actor materializes beside the player with 0 duplicates.
         session.EnterExpedition();
         Assert.False(session.Expedition.Open);
-        Assert.Empty(session.Expedition.PersistentBands);
+        Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == "courier-intercept");
 
         Assert.True(session.State.Actors.TryGet(travellerId, out ActorState? materialized));
         Assert.Single(session.State.Actors.All, a => a.DurableId == travellerId);
@@ -203,7 +203,7 @@ public sealed class OverlandBandContinuityTests
         _ = session.Expedition.Advance(0.25);
 
         // Band arrived: removed from map, ledger member relocated to Destination, home slot still suppressed.
-        Assert.Empty(session.Expedition.PersistentBands);
+        Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == "factor-delivery");
         Assert.True(session.State.ActorLedger.TryGet(travellerId, out ActorLedgerEntry? arrivedEntry));
         Assert.Equal(ActorLocationKind.AtSite, arrivedEntry!.Location?.Kind);
         Assert.Equal(fixture.Destination.ProfileKey, arrivedEntry.Location?.Profile?.Require());
@@ -342,7 +342,7 @@ public sealed class OverlandBandContinuityTests
         // Entering after reload resolves the pending caught band into EntityStore with zero duplicate bodies.
         restored.EnterExpedition();
         Assert.False(restored.Expedition.Open);
-        Assert.Empty(restored.Expedition.PersistentBands);
+        Assert.DoesNotContain(restored.Expedition.PersistentBands, b => b.BandId == "hostile-raiders");
         Assert.True(restored.State.Actors.TryGet(raiderId, out _));
         Assert.Single(restored.State.Actors.All, a => a.DurableId == raiderId);
         Assert.Equal("Vorn the Highwayman", restored.State.Npcs.Require(raiderId).DisplayName);
@@ -575,7 +575,7 @@ public sealed class OverlandBandContinuityTests
         session.Expedition.SetSpeed(1);
         _ = session.Expedition.Advance(0.25);
 
-        Assert.Empty(session.Expedition.PersistentBands);
+        Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == "envoy-outbound");
         Assert.True(session.State.ActorLedger.TryGet(travellerId, out ActorLedgerEntry? arrivedAtDest));
         Assert.Equal(ActorLocationKind.AtSite, arrivedAtDest!.Location?.Kind);
         Assert.True(arrivedAtDest.Location?.Detached);
@@ -614,7 +614,7 @@ public sealed class OverlandBandContinuityTests
         restoredBeforeDestVisit.Expedition.SetSpeed(1);
         _ = restoredBeforeDestVisit.Expedition.Advance(0.25);
 
-        Assert.Empty(restoredBeforeDestVisit.Expedition.PersistentBands);
+        Assert.DoesNotContain(restoredBeforeDestVisit.Expedition.PersistentBands, b => b.BandId == "envoy-homebound");
         Assert.True(restoredBeforeDestVisit.State.ActorLedger.TryGet(travellerId, out ActorLedgerEntry? arrivedHomeRemotely));
         Assert.Equal(ActorLocationKind.AtSite, arrivedHomeRemotely!.Location?.Kind);
         Assert.True(arrivedHomeRemotely.Location?.Detached);

@@ -132,13 +132,14 @@ internal sealed class DaggerfallPersistentOverlandBand
 
     /// <summary>
     /// Advances this persistent band by <paramref name="hours"/> toward its destination (or pursuing the party if
-    /// <see cref="Hostile"/> and <see cref="Spotted"/>). Returns true when the band reaches its destination pixel.
+    /// <paramref name="allowPursuit"/> is true, <see cref="Hostile"/> and <see cref="Spotted"/>). Returns true when
+    /// the band reaches its destination pixel.
     /// </summary>
-    internal bool StepMove((double X, double Y) party, double hours)
+    internal bool StepMove((double X, double Y) party, double hours, bool allowPursuit = true)
     {
         if (Camp || SpeedPixelsPerHour <= 0 || hours <= 0) return false;
         double targetX, targetY;
-        bool pursuing = Hostile && Spotted;
+        bool pursuing = allowPursuit && Hostile && Spotted;
         if (pursuing)
         {
             targetX = party.X;

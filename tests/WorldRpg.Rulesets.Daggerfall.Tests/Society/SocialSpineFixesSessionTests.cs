@@ -389,6 +389,7 @@ public sealed class SocialSpineFixesSessionTests
         ActorLedgerEntry outboundMember = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(outbound!.BandId));
         long memberId = outboundMember.DurableId;
 
+        session.Expedition.RemovePersistentBand(outbound.BandId);
         _ = session.OverlandParties.OnPersistentBandArrived(outbound);
         string returnBandId = outbound.BandId + DaggerfallOverlandTraffic.ReturnBandSuffix;
         DaggerfallPersistentOverlandBand returnBand = Assert.Single(session.Expedition.PersistentBands, b => b.BandId == returnBandId);
@@ -397,6 +398,7 @@ public sealed class SocialSpineFixesSessionTests
         Assert.Equal(ActorLocationKind.OnOverlandBand, returningEntry!.Location?.Kind);
         Assert.Equal(returnBandId, returningEntry.Location?.BandId);
 
+        session.Expedition.RemovePersistentBand(returnBand.BandId);
         _ = session.OverlandParties.OnPersistentBandArrived(returnBand);
         Assert.False(session.State.ActorLedger.TryGet(memberId, out _),
             "Untouched returning traffic slot must self-prune back to zero ActorLedger entries.");
@@ -408,9 +410,11 @@ public sealed class SocialSpineFixesSessionTests
         {
             Social = member2.Social! with { Met = true, DispositionDelta = 14 },
         });
+        session.Expedition.RemovePersistentBand(outbound2.BandId);
         _ = session.OverlandParties.OnPersistentBandArrived(outbound2);
         DaggerfallPersistentOverlandBand returnBand2 = Assert.Single(session.Expedition.PersistentBands,
             b => b.BandId == outbound2.BandId + DaggerfallOverlandTraffic.ReturnBandSuffix);
+        session.Expedition.RemovePersistentBand(returnBand2.BandId);
         _ = session.OverlandParties.OnPersistentBandArrived(returnBand2);
 
         Assert.True(session.State.ActorLedger.TryGet(member2.DurableId, out ActorLedgerEntry? returnedWithDelta));
