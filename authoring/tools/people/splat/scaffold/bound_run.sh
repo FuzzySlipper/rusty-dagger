@@ -121,7 +121,8 @@ EOF
   mkdir -p $BD/stage-distil; cp $C/budget_seed.py $C/distill_dataset.py $C/train_loop_splat.py $T/vram_peak.py $BD/lab-distil.sh $BD/face.npy $BD/stage-distil/
   # the bound bake and its shell stay on the GPU host from the bound stage; a fresh host (a new Colab runtime, npc-471 2026-11-25) has neither
   rx "test -f $LAB/$BN/splat.npz -a -f $LAB/$BN-data/shell.npz" 2>/dev/null || { echo "staging $BN/splat.npz and $BN-data/shell.npz to $GPU"
-    tar czf - -C $BD $BN/splat.npz $BN-data/shell.npz | rx "mkdir -p $LAB && tar xzf - --no-same-owner -C $LAB" 2>&1 | grep -v Container; }
+    rx "mkdir -p $LAB" 2>&1 | grep -v Container   # two calls: on the lab, gpu-lab exec wraps only the first command of an && chain
+    tar czf - -C $BD $BN/splat.npz $BN-data/shell.npz | rx "tar xzf - --no-same-owner -C $LAB" 2>&1 | grep -v Container; }
   lab "Villager $ID runtime body: $NAME from the bound bake" $BD/stage-distil "budget_seed.py distill_dataset.py train_loop_splat.py vram_peak.py lab-distil.sh face.npy" lab-distil.sh $BD/distil-$NAME.log "" || exit 4
   rx "tar czf - -C $LAB $NAME/splat.npz $NAME/score.json $NAME.seed.json $NAME.train.log" 2>/dev/null | tar xzf - -C $BD/sizes --transform "s,^$NAME\\.,$NAME/,"
   [ -f $O/splat.npz ] || exit 5
