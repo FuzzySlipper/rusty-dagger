@@ -22,7 +22,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 internal enum DaggerfallUiActionKind
 {
     Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellSwap, SpellSort, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
-    ControlsRebind, ControlsRebindButton, ControlsVolume, ControlsReset, ControlsLook, ControlsUiScale, ControlsGroundCover, ControlsClutterDistance, ControlsLampShadows, ControlsSurfaceRelief, ControlsReliefDistance, ControlsInteriorExtrude, ControlsInteriorExtrudeDepth, ControlsInteriorExtrudeCutoff, ControlsInteriorExtrudeDistance, ActionDrivenTime,
+    ControlsRebind, ControlsRebindButton, ControlsVolume, ControlsReset, ControlsLook, ControlsUiScale, ControlsGroundCover, ControlsClutterDistance, ControlsLampShadows, ControlsExteriorExtrude, ControlsSurfaceRelief, ControlsReliefDistance, ControlsInteriorExtrude, ControlsInteriorExtrudeDepth, ControlsInteriorExtrudeCutoff, ControlsInteriorExtrudeDistance, ActionDrivenTime,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
@@ -159,6 +159,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.ControlsGroundCover, "controls-ground-cover", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsClutterDistance, "controls-clutter-distance", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsLampShadows, "controls-lamp-shadows", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.ControlsExteriorExtrude, "controls-exterior-extrude", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsSurfaceRelief, "controls-surface-relief", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsReliefDistance, "controls-relief-distance", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsInteriorExtrude, "controls-interior-extrude", DaggerfallUiPhases.Live),
@@ -627,7 +628,8 @@ internal static class DaggerfallUiAction
                 // Which lamps cast (item), in sectors of what share of the tuned side (scale), and whether outdoors too (enabled).
                 case DaggerfallUiActionKind.ControlsLampShadows: return fields.SetEquals(["action", "item", "scale", "enabled"])
                     && !string.IsNullOrWhiteSpace(item) && scale.HasValue && enabled.HasValue ? new(action, Item: item, Scale: scale, Enabled: enabled) : null;
-                case DaggerfallUiActionKind.ActionDrivenTime or DaggerfallUiActionKind.ControlsGroundCover or DaggerfallUiActionKind.ControlsInteriorExtrude: return fields.SetEquals(["action", "enabled"])
+                case DaggerfallUiActionKind.ActionDrivenTime or DaggerfallUiActionKind.ControlsGroundCover
+                    or DaggerfallUiActionKind.ControlsExteriorExtrude or DaggerfallUiActionKind.ControlsInteriorExtrude: return fields.SetEquals(["action", "enabled"])
                     && enabled.HasValue ? new(action, Enabled: enabled) : null;
                 case DaggerfallUiActionKind.ControlsLook: return fields.SetEquals(["action", "sensitivity", "invert"])
                     && sensitivity.HasValue && invert.HasValue ? new(action, Sensitivity: sensitivity, Invert: invert) : null;

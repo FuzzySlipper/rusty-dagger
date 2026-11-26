@@ -2843,6 +2843,7 @@ test('controls are grouped and named, and a key, a mouse button and a controller
       { id: 'menu', category: 'interface', label: 'Game menu', keys: ['Escape'], fixed: true, fixedReason: 'Escape always opens the game menu, so it is never lost.', buttons: [9], buttonFixedReason: 'The menu keeps its own controller button.' },
     ] } });
     f.root.querySelector('[data-action="settings"]').click();
+    f.root.querySelector('[data-settings-tab="input"]').click();
     const settings = f.root.querySelector('.dagger-controls-root');
     assert.equal(settings.hidden, false);
     // Grouped under the ruleset's headings, in the player's words, keys and buttons named.
@@ -2888,9 +2889,12 @@ test('controls are grouped and named, and a key, a mouse button and a controller
     [...settings.querySelectorAll('button')].find(button => button.textContent === 'Reset controls').click();
     assert.deepEqual(f.actions.at(-1), { action: 'controls-reset' });
 
-    // Sound: each bus steps by the ruleset's volume step and sends the level.
+    // Sound lives on the Game tab: each bus steps by the ruleset's volume step and sends the level.
     f.publish({ controls: { diagnostic: '', bindings: [], volumes: [{ id: 'music', label: 'Music', level: 0.5 }], volumeStep: 0.05 } });
-    const music = settings.querySelector('[data-volume="music"]');
+    f.root.querySelector('[data-settings-tab="game"]').click();
+    const gameTab = f.root.querySelector('[data-settings-panel="game"]');
+    assert.equal(gameTab.hidden, false);
+    const music = gameTab.querySelector('[data-volume="music"]');
     assert.equal(music.querySelector('output').textContent, '50%');
     music.querySelector('[data-stepper="down"]').click();
     assert.deepEqual(f.actions.at(-1), { action: 'controls-volume', item: 'music', scale: 0.45 });
@@ -2898,17 +2902,20 @@ test('controls are grouped and named, and a key, a mouse button and a controller
   } finally { f.dispose(); }
 });
 
-test('Settings shows the Engine video options beside the controls, mounted once and read again on each opening', async () => {
+test('Settings shows the Engine video options on the Video tab, mounted once and read again on each opening', async () => {
   const f = fixture();
   const before = video.mounts.length;
   let panel;
   try {
     const videoRoot = f.root.querySelector('.dagger-video-root');
     assert.equal(videoRoot.hidden, true);
-    assert.equal(video.mounts.length, before, 'Nothing asks the host for video options until Settings opens.');
+    assert.equal(video.mounts.length, before, 'Nothing asks the host for video options until Settings opens the Video tab.');
     f.root.querySelector('[data-action="settings"]').click();
-    assert.equal(videoRoot.hidden, false);
     assert.equal(f.root.querySelector('#dagger-menu-title').textContent, 'Settings');
+    assert.equal(videoRoot.hidden, true, 'Settings opens on the Game tab, keeping Video hidden until chosen.');
+    assert.equal(video.mounts.length, before);
+    f.root.querySelector('[data-settings-tab="video"]').click();
+    assert.equal(videoRoot.hidden, false);
     assert.equal(video.mounts.length, before + 1);
     panel = video.mounts.at(-1);
     assert.equal(panel.host, videoRoot);
@@ -2916,10 +2923,45 @@ test('Settings shows the Engine video options beside the controls, mounted once 
     f.root.querySelector('[data-action="settings"]').click();
     await Promise.resolve(); await Promise.resolve();
     assert.equal(video.mounts.length, before + 1, 'Settings mounts the panel once.');
-    assert.equal(panel.refreshes, 1, 'Opening Settings again reads the catalogue again.');
+    assert.equal(panel.refreshes, 1, 'Opening Settings again on the Video tab reads the catalogue again.');
   } finally { f.dispose(); }
   await Promise.resolve(); await Promise.resolve();
   assert.equal(panel.disposed, true, 'Closing the UI removes the panel.');
+});
+
+test('Settings organizes Game, Input and Video into top tabs navigable by click, keyboard and controller, cancelling rebind capture on tab change', () => {
+  const f = fixture();
+  try {
+    f.publish({ controls: { diagnostic: '', bindings: [
+      { id: 'move.forward', category: 'movement', label: 'Move forward', keys: ['KeyW'], fixed: false, fixedReason: null, buttons: [], buttonFixedReason: null },
+    ] } });
+    f.root.querySelector('[data-action="settings"]').click();
+    const tab = name => f.root.querySelector(`[data-settings-tab="${name}"]`);
+    const panel = name => f.root.querySelector(`[data-settings-panel="${name}"]`);
+    assert.equal(tab('game').getAttribute('aria-selected'), 'true');
+    assert.equal(panel('game').hidden, false);
+    assert.equal(panel('input').hidden, true);
+    assert.equal(panel('video').hidden, true);
+    // Page Down / controller RT step forward across tabs; Page Up / LT step back.
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageDown', bubbles: true, cancelable: true }));
+    assert.equal(tab('input').getAttribute('aria-selected'), 'true');
+    assert.equal(panel('input').hidden, false);
+    assert.equal(panel('game').hidden, true);
+    // Switching away from Input while capturing a key cancels the capture cleanly.
+    panel('input').querySelector('[data-rebind-key="move.forward"]').click();
+    assert.equal(panel('input').querySelector('.dagger-controls-mouse-pad').hidden, false);
+    f.pad('button-7');
+    assert.equal(tab('video').getAttribute('aria-selected'), 'true');
+    assert.equal(panel('video').hidden, false);
+    assert.equal(panel('input').querySelector('.dagger-controls-mouse-pad').hidden, true);
+    // Home jumps back to Game, End jumps to Video.
+    tab('video').dispatchEvent(new KeyboardEvent('keydown', { code: 'Home', bubbles: true, cancelable: true }));
+    assert.equal(tab('game').getAttribute('aria-selected'), 'true');
+    tab('game').dispatchEvent(new KeyboardEvent('keydown', { code: 'End', bubbles: true, cancelable: true }));
+    assert.equal(tab('video').getAttribute('aria-selected'), 'true');
+    f.pad('button-6');
+    assert.equal(tab('input').getAttribute('aria-selected'), 'true');
+  } finally { f.dispose(); }
 });
 
 test('a long menu panel draws its own scrollbar, which follows the scroll, drags with the mouse and pages from its track', () => {
@@ -2967,6 +3009,7 @@ test('Settings offers lamp shadows beside the shadow budget and sends the whole 
       lampShadows: { lamps: 'main', sectors: 1, outdoors: false, sectorShares: [0, 0.5, 1, 2, 4],
         lampChoices: [{ id: 'off', label: 'Off' }, { id: 'big', label: 'Big lamps' }, { id: 'main', label: 'Main lamps' }, { id: 'all', label: 'All lamps' }] } } });
     f.root.querySelector('[data-action="settings"]').click();
+    f.root.querySelector('[data-settings-tab="video"]').click();
     const rows = video.mounts.at(-1).options.productOptions;
     const lamps = rows.find(row => row.id === 'lampShadows');
     const sectors = rows.find(row => row.id === 'shadowSectors');
@@ -2986,19 +3029,27 @@ test('Settings offers lamp shadows beside the shadow budget and sends the whole 
   await Promise.resolve(); await Promise.resolve();
 });
 
-test('Settings offers surface relief only with a refreshed art set, as a strength from flat to its maximum and a reach', async () => {
+test('Settings offers building outward relief, surface relief strength and reach only with a refreshed art set', async () => {
   const f = fixture();
   try {
     f.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: null } });
     f.root.querySelector('[data-action="settings"]').click();
+    f.root.querySelector('[data-settings-tab="video"]').click();
     assert.equal(video.mounts.at(-1).options.productOptions.find(row => row.id === 'surfaceRelief'), undefined,
       'Classic art draws no relief, so no strength is offered.');
+    assert.equal(video.mounts.at(-1).options.productOptions.find(row => row.id === 'exteriorExtrude'), undefined,
+      'Classic art draws no building outward relief.');
   } finally { f.dispose(); }
   await Promise.resolve(); await Promise.resolve();
   const g = fixture();
   try {
-    g.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: { strength: 0.6, maximum: 2, step: 0.1, distance: 1, distanceMinimum: 0.5, distanceMaximum: 20, distanceStep: 0.25 } } });
+    g.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: { extrude: true, strength: 0.6, maximum: 2, step: 0.1, distance: 1, distanceMinimum: 0.5, distanceMaximum: 20, distanceStep: 0.25 } } });
     g.root.querySelector('[data-action="settings"]').click();
+    g.root.querySelector('[data-settings-tab="video"]').click();
+    const extrude = video.mounts.at(-1).options.productOptions.find(row => row.id === 'exteriorExtrude');
+    assert.deepEqual([extrude.group, extrude.kind, extrude.value], ['Buildings', 'toggle', true]);
+    extrude.onChange(false);
+    assert.deepEqual(g.actions.at(-1), { action: 'controls-exterior-extrude', enabled: false });
     const relief = video.mounts.at(-1).options.productOptions.find(row => row.id === 'surfaceRelief');
     assert.deepEqual([relief.group, relief.kind, relief.min, relief.max, relief.step, relief.value], ['Buildings', 'range', 0, 2, 0.1, 0.6]);
     relief.onChange(0);
@@ -3029,6 +3080,7 @@ test('Settings offers outward interior relief toggle and sliders in Interiors', 
       },
     });
     f.root.querySelector('[data-action="settings"]').click();
+    f.root.querySelector('[data-settings-tab="video"]').click();
     const rows = video.mounts.at(-1).options.productOptions;
     const toggle = rows.find(row => row.id === 'interiorExtrude');
     const depth = rows.find(row => row.id === 'interiorExtrudeDepth');
@@ -5390,6 +5442,7 @@ test('look settings claim complete preferences and refresh after reload', () => 
   try {
     f.publish({ controls: { diagnostic: '', bindings: [], lookSensitivity: 1.5, invertVertical: false } });
     f.root.querySelector('[data-action="settings"]').click();
+    f.root.querySelector('[data-settings-tab="input"]').click();
     const sensitivity = f.root.querySelector('[aria-label="Mouse sensitivity multiplier"]');
     const invert = f.root.querySelector('[aria-label="Invert vertical look"]');
     assert.equal(sensitivity.value, '1.5'); assert.equal(invert.checked, false);

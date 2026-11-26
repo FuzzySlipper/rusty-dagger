@@ -121,6 +121,7 @@ internal sealed class DaggerfallCharacterActions(DaggerfallCharacterCreation cre
             case DaggerfallUiActionKind.ControlsClutterDistance: controls.Change(settings => settings.SetClutterDistance(action.Scale!.Value)); break;
             case DaggerfallUiActionKind.ControlsLampShadows: controls.Change(settings => settings.SetLampShadows(
                 new(Enum.Parse<DaggerfallLampShadowLamps>(action.Item!, ignoreCase: true), action.Scale!.Value, action.Enabled!.Value))); break;
+            case DaggerfallUiActionKind.ControlsExteriorExtrude: controls.Change(settings => settings.SetExteriorExtrude(action.Enabled!.Value)); break;
             case DaggerfallUiActionKind.ControlsSurfaceRelief: controls.Change(settings => settings.SetSurfaceRelief(action.Scale!.Value)); break;
             case DaggerfallUiActionKind.ControlsReliefDistance: controls.Change(settings => settings.SetReliefDistance(action.Scale!.Value)); break;
             case DaggerfallUiActionKind.ControlsInteriorExtrude: controls.Change(settings => settings.SetInteriorExtrude(action.Enabled!.Value)); break;

@@ -260,6 +260,20 @@ public sealed class DaggerfallControlSettingsTests
     }
 
     [Fact]
+    public void Exterior_extrude_defaults_on_and_round_trips_while_surviving_reset()
+    {
+        DaggerfallControlSettings settings = new();
+        Assert.True(settings.ExteriorExtrude);
+        Assert.True(DaggerfallControlSettings.Parse(PersistedBindings(new("attack", "Primary"))).ExteriorExtrude);
+
+        settings.SetExteriorExtrude(false);
+        DaggerfallControlSettings parsed = DaggerfallControlSettings.Parse(settings.Serialize());
+        Assert.False(parsed.ExteriorExtrude);
+        parsed.Reset();
+        Assert.False(parsed.ExteriorExtrude);
+    }
+
+    [Fact]
     public void Interior_extrude_defaults_round_trip_and_reject_off_step_or_out_of_range_values()
     {
         DaggerfallControlSettings settings = new();

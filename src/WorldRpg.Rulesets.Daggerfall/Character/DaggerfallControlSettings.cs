@@ -236,6 +236,13 @@ public sealed class DaggerfallControlSettings
     internal void SetLampShadows(DaggerfallLampShadowChoice choice) => LampShadows = choice.Validate();
 
     /// <summary>
+    /// Whether exterior building walls, doors and roofs project outward silhouette relief (<c>exterior-extrude.wgsl</c>, #11075).
+    /// </summary>
+    public bool ExteriorExtrude { get; private set; } = DefaultExteriorExtrude;
+    public const bool DefaultExteriorExtrude = true;
+    public void SetExteriorExtrude(bool enabled) => ExteriorExtrude = enabled;
+
+    /// <summary>
     /// How deep a building's walls, doors and roofs draw their relief near the player, as a share of the depth each
     /// record's relief states, in steps of <see cref="SurfaceReliefStep"/>: a video preference. 0 draws them flat.
     /// </summary>
@@ -358,6 +365,7 @@ public sealed class DaggerfallControlSettings
         SetLampShadows(new(Enum.TryParse(preferences.LampShadows, ignoreCase: true, out DaggerfallLampShadowLamps lamps) ? lamps
             : throw new ArgumentOutOfRangeException(nameof(preferences), preferences.LampShadows, "No lamp shadow choice carries this name."),
             preferences.ShadowSectors, preferences.OutdoorLampShadows));
+        SetExteriorExtrude(preferences.ExteriorExtrude);
         SetSurfaceRelief(preferences.SurfaceRelief);
         SetReliefDistance(preferences.ReliefDistance);
         SetInteriorExtrude(preferences.InteriorExtrude);
@@ -434,7 +442,7 @@ public sealed class DaggerfallControlSettings
     /// <summary>Serializes the bindings for the settings holder.</summary>
     public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, GroundCover, ClutterDistance,
         LampShadows.Lamps.ToString().ToLowerInvariant(), LampShadows.SectorShare, LampShadows.Outdoors, SurfaceRelief, ReliefDistance,
-        InteriorExtrude, InteriorExtrudeDepth, InteriorExtrudeCutoff, InteriorExtrudeDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+        InteriorExtrude, InteriorExtrudeDepth, InteriorExtrudeCutoff, InteriorExtrudeDistance, ExteriorExtrude), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -615,7 +623,8 @@ internal sealed record DaggerfallControlPreferences(
     bool InteriorExtrude = DaggerfallControlSettings.DefaultInteriorExtrude,
     float InteriorExtrudeDepth = DaggerfallControlSettings.DefaultInteriorExtrudeDepth,
     float InteriorExtrudeCutoff = DaggerfallControlSettings.DefaultInteriorExtrudeCutoff,
-    float InteriorExtrudeDistance = DaggerfallControlSettings.DefaultInteriorExtrudeDistance);
+    float InteriorExtrudeDistance = DaggerfallControlSettings.DefaultInteriorExtrudeDistance,
+    bool ExteriorExtrude = DaggerfallControlSettings.DefaultExteriorExtrude);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

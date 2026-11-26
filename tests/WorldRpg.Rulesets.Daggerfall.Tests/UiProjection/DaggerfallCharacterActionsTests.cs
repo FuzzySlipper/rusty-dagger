@@ -53,6 +53,8 @@ public sealed class DaggerfallCharacterActionsTests
         DaggerfallCharacterActions actions = Actions();
         actions.ChangeControls(new DaggerfallPlayerUiAction("controls-volume", Item: "music", Scale: .35f));
         Assert.Equal(.35f, _controls.Settings.Volume("music"), 3);
+        actions.ChangeControls(new DaggerfallPlayerUiAction("controls-exterior-extrude", Enabled: false));
+        Assert.False(_controls.Settings.ExteriorExtrude);
         Assert.Throws<ArgumentException>(() => actions.ChangeControls(new DaggerfallPlayerUiAction("character-begin")));
     }
 

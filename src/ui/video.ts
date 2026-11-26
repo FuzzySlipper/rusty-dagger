@@ -65,6 +65,11 @@ export function mountVideoSettings(root: HTMLElement, send: (action: ControlActi
   let relief: SurfaceReliefChoice | null = null;
   const reliefOptions = (): ProductVideoOption[] => relief ? [
     {
+      id: 'exteriorExtrude', label: 'Building outward relief', group: 'Buildings', kind: 'toggle', value: relief.extrude,
+      description: 'Project stonework, timber, reliefs and trim outward from building walls.',
+      onChange: value => send({ action: 'controls-exterior-extrude', enabled: value === true }),
+    },
+    {
       id: 'surfaceRelief', label: 'Surface relief', group: 'Buildings', kind: 'range',
       min: 0, max: relief.maximum, step: relief.step, unit: '×', value: relief.strength,
       description: 'How deep walls, doors and roofs look up close. 0 draws them flat.',

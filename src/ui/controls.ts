@@ -37,6 +37,7 @@ export interface GroundCoverChoice {
 }
 
 export interface SurfaceReliefChoice {
+  readonly extrude: boolean;
   readonly strength: number;
   readonly maximum: number;
   readonly step: number;
@@ -99,8 +100,13 @@ export function buttonLabel(button: number): string {
   return BUTTON_NAMES[button] ?? `Button ${button}`;
 }
 
+export interface ControlsHosts {
+  readonly game: HTMLElement;
+  readonly input: HTMLElement;
+}
+
 /** Only captures the player's proposed key. C# validates conflicts and owns the active map. */
-export function mountControls(root: HTMLElement, claim: (action: ControlAction) => void) {
+export function mountControls(hosts: ControlsHosts, claim: (action: ControlAction) => void) {
   const status = document.createElement('p'); status.setAttribute('role', 'status');
   const rows = document.createElement('div');
   const swapLabel = document.createElement('label');
@@ -132,8 +138,18 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
     const value = Number(sensitivity.value);
     if (Number.isFinite(value) && value > 0) claim({ action: 'controls-look', sensitivity: value, invert: invert.checked });
   });
+  // Gameplay: action-driven time toggle on the Game tab.
+  const gameplay = document.createElement('section'); gameplay.className = 'dagger-settings-section'; gameplay.setAttribute('aria-label', 'Gameplay');
+  const gameplayHeading = document.createElement('h3'); gameplayHeading.textContent = 'Gameplay';
+  const timeToggle = document.createElement('button'); timeToggle.type = 'button'; timeToggle.dataset.action = 'action-driven-time';
+  timeToggle.setAttribute('aria-pressed', 'false'); timeToggle.textContent = 'Action-driven time: Off';
+  const timeNote = document.createElement('p'); timeNote.className = 'dagger-settings-note';
+  timeNote.textContent = 'Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.';
+  gameplay.append(gameplayHeading, timeToggle, timeNote);
   // Interface scale: a bounded stepper whose limits and steps the ruleset publishes, plus automatic.
   // The choice is a player preference the ruleset persists; scale.ts applies it.
+  const interfaceSection = document.createElement('section'); interfaceSection.className = 'dagger-settings-section'; interfaceSection.setAttribute('aria-label', 'Interface');
+  const interfaceHeading = document.createElement('h3'); interfaceHeading.textContent = 'Interface';
   const scaleGroup = document.createElement('div'); scaleGroup.className = 'dagger-controls-scale'; scaleGroup.setAttribute('role', 'group');
   scaleGroup.setAttribute('aria-label', 'Interface scale');
   const scaleCaption = document.createElement('span'); scaleCaption.textContent = 'Interface scale ';
@@ -142,6 +158,9 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
   const larger = document.createElement('button'); larger.type = 'button'; larger.textContent = '+'; larger.setAttribute('aria-label', 'Larger interface');
   const automatic = document.createElement('button'); automatic.type = 'button'; automatic.textContent = 'Automatic';
   scaleGroup.append(scaleCaption, smaller, scaleValue, larger, automatic);
+  const scaleNote = document.createElement('p'); scaleNote.className = 'dagger-settings-note';
+  scaleNote.textContent = 'Adjusts HUD and menu text size. Automatic follows your window resolution.';
+  interfaceSection.append(interfaceHeading, scaleGroup, scaleNote);
   let scale: { chosen: number | null; range: UiScaleRange; effective: number } | null = null;
   const stepScale = (direction: number): void => {
     if (scale === null) return;
@@ -153,7 +172,8 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
   larger.addEventListener('click', () => stepScale(1));
   automatic.addEventListener('click', () => { if (scale?.chosen !== null) claim({ action: 'controls-ui-scale' }); });
   const paintScale = (): void => {
-    if (scale === null) { scaleGroup.hidden = true; return; }
+    if (scale === null) { scaleGroup.hidden = true; interfaceSection.hidden = true; return; }
+    interfaceSection.hidden = false;
     scaleGroup.hidden = false;
     const shown = scale.chosen ?? scale.effective;
     scaleValue.textContent = scale.chosen === null ? `Automatic (${shown}×)` : `${shown}×`;
@@ -163,7 +183,7 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
   };
   rows.className = 'dagger-controls-bindings';
   // Sound: a stepper per bus, counting steps of the ruleset's volume step, with the level as a percentage beside it.
-  const sound = document.createElement('section'); sound.className = 'dagger-controls-sound'; sound.setAttribute('aria-label', 'Sound');
+  const sound = document.createElement('section'); sound.className = 'dagger-controls-sound dagger-settings-section'; sound.setAttribute('aria-label', 'Sound');
   let lastVolumes = '';
   const drawSound = (value: ControlsProjection): void => {
     const step = value.volumeStep ?? 0;
@@ -193,7 +213,15 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
       }));
     });
   };
-  root.append(status, cancel, mousePad, scaleGroup, sensitivityLabel, invertLabel, applyLook, sound, swapLabel, rows, reset);
+  const lookSection = document.createElement('section'); lookSection.className = 'dagger-settings-section'; lookSection.setAttribute('aria-label', 'Look');
+  const lookHeading = document.createElement('h3'); lookHeading.textContent = 'Look';
+  const lookRow = document.createElement('div'); lookRow.className = 'dagger-controls-look';
+  lookRow.append(sensitivityLabel, invertLabel, applyLook);
+  lookSection.append(lookHeading, lookRow);
+  const toolbar = document.createElement('div'); toolbar.className = 'dagger-controls-toolbar';
+  toolbar.append(swapLabel, reset);
+  hosts.game.append(gameplay, interfaceSection, sound);
+  hosts.input.append(status, cancel, mousePad, lookSection, toolbar, rows);
   let lastLook = '';
   const submit = (key: string): void => {
     if (capture?.kind !== 'key') return;
@@ -252,8 +280,12 @@ export function mountControls(root: HTMLElement, claim: (action: ControlAction) 
       }
       return true;
     },
+    updateTimeControl(enabled: boolean): void {
+      timeToggle.setAttribute('aria-pressed', String(enabled));
+      timeToggle.textContent = `Action-driven time: ${enabled ? 'On' : 'Off'}`;
+    },
     cancel: endCapture,
-    dispose(): void { mousePad.removeEventListener('mousedown', pointer); root.replaceChildren(); },
+    dispose(): void { mousePad.removeEventListener('mousedown', pointer); hosts.game.replaceChildren(); hosts.input.replaceChildren(); },
   };
 }
 

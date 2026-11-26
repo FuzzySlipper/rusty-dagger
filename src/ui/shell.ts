@@ -86,9 +86,7 @@ const SHELL_MARKUP = `
         </section>
         <section class="dagger-menu-group" aria-label="Settings">
           <button data-action="help" data-icon="notebook">Help</button>
-          <button data-action="settings" data-icon="settings">Settings &amp; controls</button>
-          <button data-action="action-driven-time" aria-pressed="false">Action-driven time: Off</button>
-          <p>Action-driven time pauses while you are idle or looking around. Movement and actions advance the world; swings and jumps finish before it pauses.</p>
+          <button data-action="settings" data-icon="settings">Settings</button>
           <p>The world pauses while this menu is open.</p>
         </section>
         <section class="dagger-menu-group" aria-label="Quit" hidden>
@@ -108,8 +106,7 @@ const SHELL_MARKUP = `
       <strong>Text diagnostics</strong>
       <ul class="dagger-text-diagnostics" aria-label="Text diagnostics"></ul>
     </section>
-      <div class="dagger-controls-root" hidden></div>
-      <div class="dagger-video-root" hidden></div>
+      <div class="dagger-settings-root" hidden></div>
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
       <section class="dagger-spells-root" hidden aria-label="Known spells"></section>

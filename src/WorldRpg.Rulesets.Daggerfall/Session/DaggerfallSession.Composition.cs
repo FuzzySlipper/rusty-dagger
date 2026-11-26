@@ -1510,7 +1510,8 @@ internal sealed partial class DaggerfallSession
                 State.PlayerControl.Position?.ToVector() ?? Vector3.Zero,
                 _site.ActiveSite?.DungeonType,
                 _controls.Settings.InteriorExtrude,
-                _controls.Settings.InteriorExtrudeTuning);
+                _controls.Settings.InteriorExtrudeTuning,
+                _controls.Settings.ExteriorExtrude);
         }
         catch (Exception constructionFailure)
         {

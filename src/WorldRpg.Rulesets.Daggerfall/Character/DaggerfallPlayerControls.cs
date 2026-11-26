@@ -101,6 +101,7 @@ internal sealed class DaggerfallPlayerControls(IInputService mappings, IAudioSer
                 candidate.SetGroundCover(Settings.GroundCover);
                 candidate.SetClutterDistance(Settings.ClutterDistance);
                 candidate.SetLampShadows(Settings.LampShadows);
+                candidate.SetExteriorExtrude(Settings.ExteriorExtrude);
                 candidate.SetSurfaceRelief(Settings.SurfaceRelief);
                 candidate.SetReliefDistance(Settings.ReliefDistance);
                 candidate.SetInteriorExtrude(Settings.InteriorExtrude);

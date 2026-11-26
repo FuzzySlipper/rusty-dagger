@@ -413,6 +413,7 @@ public sealed class DaggerfallUiActionTests
         [DaggerfallUiActionKind.DeleteSlot] = "\"key\":\"slot-1\"",
         [DaggerfallUiActionKind.DeathLoadGame] = "\"key\":\"slot-1\"",
         [DaggerfallUiActionKind.InputClaimed] = "\"item\":\"attack\",\"key\":\"developer tools\"",
+        [DaggerfallUiActionKind.ControlsExteriorExtrude] = "\"enabled\":false",
     };
 
     /// <summary>

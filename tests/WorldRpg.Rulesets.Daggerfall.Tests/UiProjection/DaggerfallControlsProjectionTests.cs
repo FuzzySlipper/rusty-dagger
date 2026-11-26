@@ -32,6 +32,7 @@ public sealed class DaggerfallControlsProjectionTests
     public void Fractional_rows_publish_exact_values_ends_and_steps()
     {
         DaggerfallControlSettings settings = new();
+        settings.SetExteriorExtrude(false);
         settings.SetSurfaceRelief(2);
         settings.SetClutterDistance(1.7F);
         settings.SetReliefDistance(19.75F);
@@ -44,6 +45,7 @@ public sealed class DaggerfallControlsProjectionTests
         Dictionary<string, object?> controls = Published(settings);
 
         Dictionary<string, object?> relief = Row(controls, "surfaceRelief");
+        Assert.False(Assert.IsType<bool>(relief["extrude"]));
         Assert.Equal((2d, 2d, .1d), (Number(relief, "strength"), Number(relief, "maximum"), Number(relief, "step")));
         WholeSteps(0, Number(relief, "maximum"), Number(relief, "step"));
         Assert.Equal((19.75d, .5d, 20d, .25d), (Number(relief, "distance"), Number(relief, "distanceMinimum"),

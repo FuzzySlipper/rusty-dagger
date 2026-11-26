@@ -1,7 +1,6 @@
 import { drawArt, image } from './art.js';
 import { mountCharacter, isCharacterProjection } from './character.js';
 import type { ConfirmQuestion } from './confirm.js';
-import { mountControls } from './controls.js';
 import { button, type Send } from './host.js';
 import { mountInventory } from './inventory.js';
 import { isHelpPages, isTutorial, mountHelp } from './help.js';
@@ -15,9 +14,9 @@ import { createStepper } from './stepper.js';
 import { redraw } from './redraw.js';
 import { newSlotRow, slotRow } from './slots.js';
 import type { NavigationSurface } from './navigation.js';
+import { mountSettings } from './settings.js';
 import { renderSpells, spellAction } from './spells.js';
 import { isTransportProjection, mountTransport } from './transport.js';
-import { mountVideoSettings } from './video.js';
 import { mountScrollbar } from './scrollbar.js';
 
 type Panel = 'spells' | 'magic-items' | 'diagnostics' | 'inventory' | 'character' | 'map' | 'transport' | 'rest' | 'journal' | 'loot' | 'save-slots' | 'settings' | 'help';
@@ -147,11 +146,9 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     send({ action: 'rest', mode, hours: (mode === 'loiter' ? loiterHours : restHours).value() });
   };
   const magicItemsRoot = document.createElement('section'); magicItemsRoot.className = 'dagger-magic-items'; magicItemsRoot.hidden = true;
-  shell.querySelector('.dagger-controls-root')!.before(magicItemsRoot);
-  const controlsRoot = shell.querySelector<HTMLElement>('.dagger-controls-root')!;
-  const controlsView = mountControls(controlsRoot, send);
-  const videoRoot = shell.querySelector<HTMLElement>('.dagger-video-root')!;
-  const videoView = mountVideoSettings(videoRoot, send);
+  shell.querySelector('.dagger-settings-root')!.before(magicItemsRoot);
+  const settingsRoot = shell.querySelector<HTMLElement>('.dagger-settings-root')!;
+  const settingsView = mountSettings(settingsRoot, send, () => { menu.scrollTop = 0; scrollbar.update(); });
   const characterRoot = shell.querySelector<HTMLElement>('.dagger-character-root')!;
   const characterView = mountCharacter(characterRoot, send);
   const notebookRoot = shell.querySelector<HTMLElement>('.dagger-notebook-root')!;
@@ -208,7 +205,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const showHome = (): void => {
     inventoryView.closeActions();
     reportMap(false);
-    controlsView.cancel();
+    settingsView.close();
     const previous = activePanel;
     if (previous === 'loot') closeLoot();
     activePanel = null;
@@ -233,7 +230,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const closeMenu = (): void => {
     inventoryView.closeActions();
     reportMap(false);
-    controlsView.cancel();
+    settingsView.close();
     if (activePanel === 'loot') closeLoot();
     activePanel = null;
     loadRequested = false;
@@ -294,9 +291,9 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     helpRoot.hidden = action !== 'help';
     lootRoot.hidden = action !== 'loot';
     saveSlotsRoot.hidden = action !== 'save-slots';
-    controlsRoot.hidden = action !== 'settings';
-    videoRoot.hidden = action !== 'settings';
-    if (action === 'settings') videoView.show();
+    settingsRoot.hidden = action !== 'settings';
+    if (action === 'settings') settingsView.open();
+    else settingsView.close();
     scrollbar.update();
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     for (const name of ['inventory', 'character', 'spells', 'map', 'transport', 'rest', 'journal', 'loot'] as const)
@@ -315,8 +312,9 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       // The journal opens on the first entry of the page it shows, or on that page's tab when it is empty.
       : action === 'journal' ? notebookRoot.querySelector<HTMLElement>('[role="tabpanel"]:not([hidden]) li[tabindex]')
         ?? notebookRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
-      // Help opens on the page it last showed.
-      : action === 'help' ? helpRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') : null;
+      // Help and Settings open on the tab they last showed.
+      : action === 'help' ? helpRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+      : action === 'settings' ? settingsRoot.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') : null;
     if (content !== null) { content.focus(); return; }
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });
@@ -441,14 +439,18 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     page(direction) {
       if (activePanel === 'journal') journalView.page(direction);
       else if (activePanel === 'help') helpView.page(direction);
+      else if (activePanel === 'settings') settingsView.page(direction);
       else if (activePanel === 'map') mapView.zoom(direction);
     },
     pageHint() {
-      return activePanel === 'journal' ? journalView.pageHint() : activePanel === 'help' ? helpView.pageHint() : activePanel === 'map' && isMapProjection(lastMap) ? 'Zoom'
+      return activePanel === 'journal' ? journalView.pageHint()
+        : activePanel === 'help' ? helpView.pageHint()
+        : activePanel === 'settings' ? settingsView.pageHint()
+        : activePanel === 'map' && isMapProjection(lastMap) ? 'Zoom'
         : null;
     },
     captureKey(event) {
-      if (activePanel === 'settings' && controlsView.captureKey(event)) return;
+      if (activePanel === 'settings' && settingsView.captureKey(event)) return;
       // While the menu is open the page holds the keyboard, so the panel hotkeys reach the game here: the
       // bound key shows its panel, and closes the menu when that panel is already shown (which re-locks).
       if (!menu.open || event.repeat || event.ctrlKey || event.altKey || event.metaKey || host.isDead()) return;
@@ -470,7 +472,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       if (menu.open) closeMenu();
     },
     togglePanel,
-    captureButton(button) { return activePanel === 'settings' && controlsView.captureButton(button); },
+    captureButton(button) { return activePanel === 'settings' && settingsView.captureButton(button); },
     update(value, dead, spellbook, diagnosticText) {
       quit = isQuit(value.quit) ? value.quit : null;
       quitGroup.hidden = quit === null;
@@ -522,9 +524,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       // session; a failed load leaves the old session, still modal, and the menu shows why.
       if (loadRequested && menu.open && value.mode === 'playing') closeMenu();
       actionDrivenTime = value.timeControl?.enabled ?? false;
-      const timeToggle = menu.querySelector<HTMLButtonElement>('[data-action="action-driven-time"]')!;
-      timeToggle.setAttribute('aria-pressed', String(actionDrivenTime));
-      timeToggle.textContent = `Action-driven time: ${actionDrivenTime ? 'On' : 'Off'}`;
+      settingsView.updateTimeControl(actionDrivenTime);
       redraw(textDiagnostics, JSON.stringify(diagnosticText), () => textDiagnostics.replaceChildren(...diagnosticText.map(detail => {
         const item = document.createElement('li'); item.textContent = detail; return item;
       })));
@@ -562,10 +562,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       });
       helpView.update(isHelpPages(value.help) ? value.help : [], value.controls ?? null, value.inputDevice ?? 'keyboard',
         isTutorial(value.tutorial) ? value.tutorial : null);
-      if (value.controls) {
-        controlsView.update(value.controls, host.uiScale());
-        videoView.update(value.controls.groundCover, value.controls.lampShadows, value.controls.surfaceRelief, value.controls.interiorExtrude);
-      }
+      if (value.controls) settingsView.update(value.controls, host.uiScale());
       // The modes and their names are the ruleset's, so the menu's choice and the HUD's indicator agree.
       const modes = value.activation?.modes ?? [];
       if (modes.length > 0) redraw(activationMode, JSON.stringify(modes), () => activationMode.replaceChildren(...modes.map(mode => {
@@ -588,8 +585,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     dispose() {
       reportMap(false);
       scrollbar.dispose();
-      controlsView.dispose();
-      videoView.dispose();
+      settingsView.dispose();
       inventoryView.dispose();
       transportView.dispose();
       mapView.dispose();
