@@ -239,4 +239,85 @@ public sealed class OverlandRoutePathingTests
         Assert.Equal(roughBand.Y, restoredBand.Y, precision: 6);
         Assert.Equal(roughBand.RouteStep, restoredBand.RouteStep);
     }
+
+    [Fact]
+    public void Overland_route_steps_contiguously_and_detours_around_single_ocean_pixel_missed_by_donor_Path()
+    {
+        // R11078-1 regression: synthetic flat-land grid with ocean ONLY at world pixel (102, 102).
+        // Donor Path((100,100) -> (103,103)) jumps [(101,100), (102,101), (103,103)], skipping (102,102).
+        // OverlandRoute MUST use strictly 8-adjacent steps, detect ocean at (102,102), and detour on dry land
+        // for both local (< 64 px) and coarse-stitched (> 64 px) routes without any intermediate position entering ocean.
+        const int climateWidth = 1001;
+        const int climateHeight = 500;
+        byte[] climateCells = new byte[climateWidth * climateHeight];
+        Array.Fill(climateCells, (byte)231); // Woodlands (flat land)
+        // ClimateAtWorldPixel adds +1 to X for the sentinel column in CLIMATE.PAK.
+        climateCells[102 * climateWidth + (102 + 1)] = 223; // Ocean at (102, 102)
+        climateCells[172 * climateWidth + (172 + 1)] = 223; // Ocean at (172, 172) for long coarse-stitched route
+
+        DaggerfallWorldGridsSet syntheticGrids = new(
+            new DaggerfallClimateGridDefinition(climateWidth, climateHeight, climateCells,
+            [
+                new(223, "Ocean", DaggerfallClimateDisposition.Named),
+                new(231, "Woodlands", DaggerfallClimateDisposition.Named),
+            ]),
+            new DaggerfallPoliticGridDefinition(1, 1, [64], []));
+        DaggerfallSiteContext sites = new(TestPayload.Definitions.Locations);
+        DaggerfallTravelPolicy policy = new(sites, syntheticGrids, DaggerfallTuning.Defaults.Transport);
+        Assert.True(policy.IsOcean(new(102, 102)));
+        Assert.True(policy.IsOcean(new(172, 172)));
+
+        // Part A: Local route (100,100) -> (103,103) around ocean (102,102).
+        DaggerfallTravelMapPixel origin = new(100, 100);
+        DaggerfallTravelMapPixel dest = new(103, 103);
+        DaggerfallOverlandRoute localRoute = policy.OverlandRoute(origin, dest);
+        Assert.False(localRoute.UsesOcean);
+        Assert.Equal(dest, localRoute.Waypoints[^1]);
+        AssertContiguousAndDry(policy, origin, localRoute.Waypoints);
+
+        DaggerfallPersistentOverlandBand localBand = new(
+            "r11078-local", -20, "Dry Detour Band", DaggerfallBandKind.Caravan,
+            origin.X + 0.5, origin.Y + 0.5, 0d, speedPixelsPerHour: 1.0,
+            destination: new DaggerfallExpeditionMark(dest, null), routeOrigin: origin, routeStep: 0);
+        bool localArrived = false;
+        for (int tick = 0; tick < 200 && !localArrived; tick++)
+        {
+            localArrived = localBand.StepMove((0, 0), hours: 0.05, allowPursuit: false, policy: policy);
+            DaggerfallTravelMapPixel current = new((int)Math.Floor(localBand.X), (int)Math.Floor(localBand.Y));
+            Assert.False(policy.IsOcean(current),
+                $"Band entered ocean pixel {current} at ({localBand.X:F3}, {localBand.Y:F3}) on tick {tick}.");
+        }
+        Assert.True(localArrived);
+        Assert.Equal(dest.X + 0.5, localBand.X, precision: 4);
+        Assert.Equal(dest.Y + 0.5, localBand.Y, precision: 4);
+
+        // Part B: Long coarse-stitched route (100,100) -> (173,173) encountering ocean at (172,172) near its end.
+        DaggerfallTravelMapPixel farDest = new(173, 173);
+        DaggerfallOverlandRoute farRoute = policy.OverlandRoute(origin, farDest);
+        Assert.False(farRoute.UsesOcean);
+        Assert.Equal(farDest, farRoute.Waypoints[^1]);
+        AssertContiguousAndDry(policy, origin, farRoute.Waypoints);
+    }
+
+    private static void AssertContiguousAndDry(
+        DaggerfallTravelPolicy policy,
+        DaggerfallTravelMapPixel origin,
+        IReadOnlyList<DaggerfallTravelMapPixel> waypoints)
+    {
+        DaggerfallTravelMapPixel prev = origin;
+        foreach (DaggerfallTravelMapPixel wp in waypoints)
+        {
+            int dx = Math.Abs(wp.X - prev.X);
+            int dy = Math.Abs(wp.Y - prev.Y);
+            Assert.True(dx <= 1 && dy <= 1 && (dx + dy) > 0,
+                $"Non-adjacent waypoint step {prev} -> {wp}.");
+            Assert.False(policy.IsOcean(wp), $"Waypoint {wp} is ocean.");
+            if (dx == 1 && dy == 1)
+            {
+                Assert.False(policy.IsOcean(new(wp.X, prev.Y)) || policy.IsOcean(new(prev.X, wp.Y)),
+                    $"Diagonal step {prev} -> {wp} cuts across an ocean corner.");
+            }
+            prev = wp;
+        }
+    }
 }

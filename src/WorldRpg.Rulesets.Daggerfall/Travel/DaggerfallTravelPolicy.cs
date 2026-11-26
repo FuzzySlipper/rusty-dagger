@@ -307,20 +307,23 @@ internal sealed class DaggerfallTravelPolicy
         DaggerfallTravelMapPixel origin,
         DaggerfallTravelMapPixel destination)
     {
-        IReadOnlyList<DaggerfallTravelMapPixel> straight = Path(origin, destination);
+        IReadOnlyList<DaggerfallTravelMapPixel> straight = ContiguousLine(origin, destination);
         if (straight.Count <= 1)
             return straight;
 
-        // Fast path: if the straight walk crosses zero ocean and stays entirely on fast flat land, it is already optimal.
+        // Fast path: if the 8-adjacent straight walk crosses zero ocean (including diagonal ocean corners)
+        // and stays entirely on fast flat land, it is already optimal.
         bool straightHasObstacle = false;
+        DaggerfallTravelMapPixel prev = origin;
         for (int i = 0; i < straight.Count; i++)
         {
             DaggerfallTravelMapPixel px = straight[i];
-            if (IsOcean(px) || TerrainFactor(px) > 1.05)
+            if (IsOcean(px) || TerrainFactor(px) > 1.05 || TouchesOceanCorner(prev, px))
             {
                 straightHasObstacle = true;
                 break;
             }
+            prev = px;
         }
         if (!straightHasObstacle)
             return straight;
@@ -333,6 +336,60 @@ internal sealed class DaggerfallTravelPolicy
         }
 
         return FindCoarseBackedWaypoints(origin, destination) ?? straight;
+    }
+
+    /// <summary>
+    /// Standard 8-connected Bresenham walk from <paramref name="origin"/> (excluded) to <paramref name="destination"/>
+    /// (included) where every consecutive step satisfies <c>|dx| &lt;= 1 &amp;&amp; |dy| &lt;= 1</c> (unlike DFU's
+    /// <see cref="Path"/>, which retains the donor's strict comparison and can emit a non-adjacent final jump).
+    /// </summary>
+    internal static IReadOnlyList<DaggerfallTravelMapPixel> ContiguousLine(
+        DaggerfallTravelMapPixel origin,
+        DaggerfallTravelMapPixel destination)
+    {
+        if (origin == destination)
+            return [];
+
+        int x = origin.X;
+        int y = origin.Y;
+        int dx = Math.Abs(destination.X - origin.X);
+        int dy = Math.Abs(destination.Y - origin.Y);
+        int sx = destination.X >= origin.X ? 1 : -1;
+        int sy = destination.Y >= origin.Y ? 1 : -1;
+        int steps = Math.Max(dx, dy);
+        DaggerfallTravelMapPixel[] line = new DaggerfallTravelMapPixel[steps];
+
+        if (dx >= dy)
+        {
+            int err = dx / 2;
+            for (int i = 0; i < steps; i++)
+            {
+                x += sx;
+                err -= dy;
+                if (err < 0)
+                {
+                    y += sy;
+                    err += dx;
+                }
+                line[i] = new(x, y);
+            }
+        }
+        else
+        {
+            int err = dy / 2;
+            for (int i = 0; i < steps; i++)
+            {
+                y += sy;
+                err -= dx;
+                if (err < 0)
+                {
+                    x += sx;
+                    err += dy;
+                }
+                line[i] = new(x, y);
+            }
+        }
+        return line;
     }
 
     private IReadOnlyList<DaggerfallTravelMapPixel>? FindLocalAStarWaypoints(
@@ -391,7 +448,7 @@ internal sealed class DaggerfallTravelPolicy
                 if (closed[nextIdx]) continue;
 
                 DaggerfallTravelMapPixel nextPixel = new(nx, ny);
-                double stepCost = RoutingStepCost(currentOcean, nextPixel, stepLen);
+                double stepCost = RoutingStepCost(new(cx, cy), currentOcean, nextPixel, stepLen);
                 double tentativeG = currentG + stepCost;
                 if (tentativeG < gScore[nextIdx])
                 {
@@ -442,9 +499,9 @@ internal sealed class DaggerfallTravelPolicy
                 : grid.AnchorPixel[cell];
             if (target == current) continue;
 
-            IReadOnlyList<DaggerfallTravelMapPixel> segment = Path(current, target);
+            IReadOnlyList<DaggerfallTravelMapPixel> segment = ContiguousLine(current, target);
             bool expectsLand = !IsOcean(current) && !IsOcean(target);
-            if (expectsLand && segment.Any(IsOcean))
+            if (expectsLand && SegmentTouchesOcean(current, segment))
             {
                 segment = FindLocalAStarWaypoints(current, target, margin: CoarseScale * 2, maxExpanded: 512) ?? segment;
             }
@@ -572,11 +629,34 @@ internal sealed class DaggerfallTravelPolicy
         return created;
     }
 
-    private double RoutingStepCost(bool currentOcean, DaggerfallTravelMapPixel next, double stepLen)
+    private bool TouchesOceanCorner(DaggerfallTravelMapPixel from, DaggerfallTravelMapPixel to)
+    {
+        if (from.X == to.X || from.Y == to.Y)
+            return false;
+        return IsOcean(new(to.X, from.Y)) || IsOcean(new(from.X, to.Y));
+    }
+
+    private bool SegmentTouchesOcean(DaggerfallTravelMapPixel start, IReadOnlyList<DaggerfallTravelMapPixel> segment)
+    {
+        DaggerfallTravelMapPixel prev = start;
+        for (int i = 0; i < segment.Count; i++)
+        {
+            DaggerfallTravelMapPixel next = segment[i];
+            if (IsOcean(next) || TouchesOceanCorner(prev, next))
+                return true;
+            prev = next;
+        }
+        return false;
+    }
+
+    private double RoutingStepCost(DaggerfallTravelMapPixel current, bool currentOcean, DaggerfallTravelMapPixel next, double stepLen)
     {
         if (IsOcean(next))
             return stepLen * OceanRoutingMultiplier + (currentOcean ? 0d : SeaBoardingRoutingPenalty);
-        return stepLen * TerrainFactor(next);
+        double cost = stepLen * TerrainFactor(next);
+        if (!currentOcean && TouchesOceanCorner(current, next))
+            cost += SeaBoardingRoutingPenalty;
+        return cost;
     }
 
     private static double OctileDistance(int x0, int y0, int x1, int y1)
