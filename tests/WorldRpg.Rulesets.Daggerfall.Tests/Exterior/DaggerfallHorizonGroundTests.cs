@@ -622,12 +622,12 @@ public sealed class DaggerfallHorizonGroundTests
             Assert.Equal(ground.MapGround(tile.Tile.SampleX(i), tile.Tile.SampleZ(j), relief, cell),
                 tile.Heights[((j + 1) * tile.Tile.HeightSide) + i + 1], 2);
 
-        // The overland channel dips gently (~1 m before relief) rather than carrying the walked ground's 5 m carve into a deep trench.
+        // The overland channel sits gently in the valley floor rather than plunging into the walked carve's deep cut.
         double walkedCentre = ground.Height(x + Size, z);
         double mapCentre = ground.MapGround(x + Size, z, relief, cell);
         Assert.True(mapCentre > DaggerfallHorizonGround.MapHeight(walkedCentre + 1.5, relief),
             $"Map channel height {mapCentre:F2} should sit higher than the walked ground's deep carve.");
-        Assert.InRange(mapCentre, DaggerfallHorizonGround.MapHeight(surface - 1.2, relief), DaggerfallHorizonGround.MapHeight(surface, relief));
+        Assert.InRange(mapCentre, DaggerfallHorizonGround.MapHeight(surface - 1.0, relief), DaggerfallHorizonGround.MapHeight(500, relief));
     }
 
     [Fact]
@@ -638,11 +638,11 @@ public sealed class DaggerfallHorizonGroundTests
         double valley = DaggerfallHorizonGround.MapHeight(sea + 230, 4) - sea;
         double mountain = DaggerfallHorizonGround.MapHeight(sea + 1_800, 4) - sea;
 
-        // Coastal slopes and lowland river valleys stay close to 1:1 (never 4x cliff/ravine walls).
-        Assert.InRange(coast, 120, 135);
-        Assert.InRange(valley, 230, 275);
+        // Coastal slopes and lowland river valleys stay gentle (~0.5x tabletop scale, never cliff/ravine walls).
+        Assert.InRange(coast, 55, 75);
+        Assert.InRange(valley, 110, 150);
         // Mountain ranges still gain substantial vertical exaggeration so they read at strategic map zooms.
-        Assert.True(mountain > 4_000, $"Mountain peak should stand well raised above lowlands, got {mountain:F0} m.");
+        Assert.True(mountain > 3_500, $"Mountain peak should stand well raised above lowlands, got {mountain:F0} m.");
         Assert.Equal(sea, DaggerfallHorizonGround.MapHeight(sea, 4), 6);
     }
 

@@ -190,14 +190,18 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     {
         int heightSide = tile.HeightSide, side = tile.Side;
         double[] ground = new double[heightSide * heightSide];
+        double[] mapped = new double[heightSide * heightSide];
         Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
         for (int j = -1; j <= side; j++)
         for (int i = -1; i <= side; i++)
         {
             double x = tile.SampleX(i), z = tile.SampleZ(j);
             double height = MapRawHeight(x, z, tile.CellSize, windows);
-            ground[((j + 1) * heightSide) + i + 1] = height;
-            samples.SetHeight(i, j, (float)MapHeight(height, relief));
+            double drawn = MapHeight(height, relief);
+            int idx = ((j + 1) * heightSide) + i + 1;
+            ground[idx] = height;
+            mapped[idx] = drawn;
+            samples.SetHeight(i, j, (float)drawn);
         }
 
         for (int j = 0; j < side; j++)
@@ -218,16 +222,14 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
                 continue;
             }
             samples.SetMaterial(i, j, 1);
-            float cavity = CurvatureShade(ground, heightSide, i, j, tile.CellSize);
+            // Compute slope and curvature from the drawn travel-map heights so gentle lowland valleys/coasts stay grassy
+            // while raised mountain ranges get crisp rocky crags and bold ridge/valley hillshade contrast.
+            float cavity = CurvatureShade(mapped, heightSide, i, j, tile.CellSize);
             if (height <= OceanMetres + BeachMetres) { samples.SetColor(i, j, Linear(palette.Beach * (1 + ((cavity - 1) * .4f)))); continue; }
-            // Far-horizon rock-slope boost (2x) is tuned for coarse mountain cells; on the travel map's fine cells,
-            // applying it at sea level paints gentle coastal hillsides and riverbanks as grey cliffs. Ramp it in above lowlands.
-            float highland = Math.Clamp((float)((height - OceanMetres - 250) / 500), 0, 1);
-            float rockBoost = 1 + (((_groundTuning.RockFromSlope / _tuning.RockFromSlope) - 1) * highland);
-            float slope = Slope(ground, heightSide, i, j, tile.CellSize) * rockBoost;
+            float slope = Slope(mapped, heightSide, i, j, tile.CellSize);
             if (river is { } bankRiver)
             {
-                // Keep overland riverbanks grassy/sandy valley edges rather than painting carved bank slopes as grey rock.
+                // Keep overland riverbanks grassy/sandy valley edges rather than painting bank slopes as grey rock.
                 double bank = DaggerfallTerrainRivers.BankWidth(bankRiver.HalfWidth);
                 float u = (float)Math.Clamp((bankRiver.Distance - bankRiver.HalfWidth) / bank, 0, 1);
                 float smooth = u * u * (3 - (2 * u));
@@ -303,40 +305,47 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 
     /// <summary>
     /// Travel-map height before relief scaling: the same ground and location flattening as far ground, except rivers nestle
-    /// into a gentle valley trough (~1 m before relief) over their full bank width rather than the walked scale's 5 m cut
-    /// that 4x map relief otherwise turns into a sheer canyon.
+    /// gently into the map's valley floor (at most ~5 m below the surrounding uncarved surface, easing to sea level at mouths)
+    /// rather than plunging into a steep cut beside coarse terrain or flattened towns.
     /// </summary>
     private double MapRawHeight(double x, double z, double cellMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows)
     {
         double uncarved = Flattened(Height(x, z, cellMetres * 2, windows, carveRivers: false), x, z);
         if (_terrain.Rivers?.NearOverland(x - DaggerfallWorldGrid.HorizontalSize, z, cellMetres) is not { } river) return uncarved;
         double surface = Math.Max(river.Surface, OceanMetres);
+        double mouthShare = 1 - Math.Clamp((surface - OceanMetres) / 16.0, 0, 1);
+        double floor = Math.Max(OceanMetres, Math.Max(surface, uncarved - 5.0));
+        double target = floor + ((surface - floor) * mouthShare);
         if (river.Distance <= river.HalfWidth)
         {
             double t = river.Distance / river.HalfWidth;
-            double bed = surface - (1.0 * (1 - (t * t)));
+            double bed = target - (.8 * (1 - (t * t)));
             return Math.Max(OceanMetres, Math.Min(uncarved, bed));
         }
         double bank = DaggerfallTerrainRivers.BankWidth(river.HalfWidth);
         double u = Math.Clamp((river.Distance - river.HalfWidth) / bank, 0, 1);
         double smooth = u * u * (3 - (2 * u));
-        double edge = Math.Min(uncarved, surface + .25);
+        double edge = Math.Min(uncarved, target + .25);
         return Math.Max(OceanMetres, edge + ((uncarved - edge) * smooth));
     }
 
-    /// <summary>Elevation above sea level (metres) where travel-map vertical exaggeration smoothly ramps from true 1:1 coast/valley relief toward highland mountain relief.</summary>
+    /// <summary>Lowland vertical scale at sea level so coastal hills and river valleys sit naturally beside water before ramping toward mountain relief.</summary>
+    private const double MapLowlandRelief = .5;
+    /// <summary>Elevation above sea level (metres) where travel-map vertical exaggeration smoothly ramps from gentle lowland relief toward highland mountain relief.</summary>
     private const double MapReliefKneeMetres = 650;
 
     /// <summary>
-    /// A height as the travel map draws it: the sea flat at its surface, coasts and lowland river valleys near true 1:1
-    /// scale so beaches do not become cliffs and rivers do not sink into ravines, smoothly ramping toward
-    /// <paramref name="relief"/> on high hills and mountain ranges so ranges still read from high above.
+    /// A height as the travel map draws it: the sea flat at its surface, coasts and lowland river valleys softened to a
+    /// gentle tabletop slope so beaches meet water cleanly and rivers sit naturally in green valleys, smoothly ramping
+    /// toward <paramref name="relief"/> on high hills and mountain ranges so ranges still read from high above.
     /// </summary>
     internal static double MapHeight(double height, double relief)
     {
         double above = Math.Max(height - OceanMetres, 0);
-        if (relief <= 1 || above <= 0) return OceanMetres + (above * relief);
-        return OceanMetres + above + ((relief - 1) * (above - (MapReliefKneeMetres * Math.Atan(above / MapReliefKneeMetres))));
+        if (above <= 0) return OceanMetres;
+        double lowland = Math.Min(relief, MapLowlandRelief);
+        if (relief <= lowland) return OceanMetres + (above * relief);
+        return OceanMetres + (above * lowland) + ((relief - lowland) * (above - (MapReliefKneeMetres * Math.Atan(above / MapReliefKneeMetres))));
     }
 
     /// <summary>

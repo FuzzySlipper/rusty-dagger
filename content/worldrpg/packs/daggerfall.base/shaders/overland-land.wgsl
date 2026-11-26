@@ -76,9 +76,11 @@ fn shade(given: Surface) -> vec4<f32> {
     let detail_fade = 1.0 - smoothstep(0.06, 0.28, footprint_km);
     let detail_tilt = mix(tilt_a * 0.72 + tilt_b * 0.35, tilt_b * 0.60, macro_mix) * relief_scale * (0.25 + 0.75 * detail_fade);
 
-    // 2. Slope-aware rocky crags: folded geological strata crossed by vertical rock fissures so steep faces never look banded.
+    // 2. Slope-aware rocky crags: folded geological strata crossed by vertical rock fissures on steep highland/mountain faces.
+    let ocean_y = material.parameters[0].z;
     let n0 = normalize(given.normal);
-    let steep = smoothstep(0.08, 0.34, 1.0 - n0.y);
+    let steep = smoothstep(0.14, 0.42, 1.0 - n0.y);
+    let highland = smoothstep(ocean_y + 0.14, ocean_y + 0.42, surface.world_position.y);
     let horiz = n0.xz;
     let horiz_len = length(horiz);
     let slope_dir = select(vec2<f32>(1.0, 0.0), horiz / horiz_len, horiz_len > 1e-4);
@@ -94,13 +96,14 @@ fn shade(given: Surface) -> vec4<f32> {
     // Detect snow-covered slopes so winter crags keep crisp frosty rock contrast without turning muddy.
     let lum = dot(given.base.rgb, vec3<f32>(0.299, 0.587, 0.114));
     let snow_like = smoothstep(0.55, 0.80, lum) * (0.4 + 0.6 * winter);
-    let crag_shade = 1.0 + steep * crag_band * mix(0.16, 0.09, snow_like);
-    let rock_tint = mix(given.base.rgb, mix(given.base.rgb, rock_col, 0.36), steep * (1.0 - snow_like * 0.65));
+    let crag_weight = steep * (0.25 + 0.75 * highland);
+    let crag_shade = 1.0 + crag_weight * crag_band * mix(0.16, 0.09, snow_like);
+    let rock_tint = mix(given.base.rgb, mix(given.base.rgb, rock_col, 0.36), steep * highland * (1.0 - snow_like * 0.65));
 
     // Perturb geometric normal with detail relief + fractured rock ledges and vertical gullies on steep slopes.
     let ledge_grad = (cos(strata_coord * TAU) * 0.24 + cos(strata_coord * TAU * 2.3 + mottle_a * 5.5) * 0.12) * (0.45 + 0.55 * outcrop_mask);
     let fissure_grad = cos(dot(km, slope_perp) * 34.0 + mottle_b * 6.0 + mottle_a * 3.5) * 0.18;
-    let crag_tilt = (slope_dir * ledge_grad + slope_perp * fissure_grad) * steep * (0.35 + 0.65 * detail_fade);
+    let crag_tilt = (slope_dir * ledge_grad + slope_perp * fissure_grad) * crag_weight * (0.35 + 0.65 * detail_fade);
     let total_tilt = detail_tilt + crag_tilt;
     surface.normal = normalize(n0 + vec3<f32>(total_tilt.x, 0.0, total_tilt.y));
 
