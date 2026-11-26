@@ -1489,7 +1489,8 @@ internal sealed partial class DaggerfallSession
                 id => Population.Townsperson(id), id => Population.Seed(id), () => DrawnArt is not null, warnPeople);   // Developer
             DaggerfallActorInspection actorInspection = new(State.Actors, State.PlayerControl, _roster, _senses, _enemyBehavior, _enemyMagic,
                 Casting, _combat, State.Effects, id => State.Actors.TryGet(id, out _) ? actorInventories.EquipmentFor(id).Read() : null, id => QuestFoes.Team(id),
-                () => _latestSimulationStep, definitions, State.Npcs, questNames, () => _worldSocialSeed);                                                          // Developer
+                () => _latestSimulationStep, definitions, State.Npcs, questNames, () => _worldSocialSeed,
+                State.Social, SocialConsequences, Introductions, State.ActorLedger, () => _site.ActiveSite);                                       // Developer
             // One object per module type: the Engine's catalogue binds an instance to the first type it matches.
             DebugCommands =
             [
@@ -1514,6 +1515,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallExpeditionBandReadout(Expedition, OverlandParties, State.Actors, State.Npcs),
                 new DaggerfallOverlandViewCommands(_overland),
                 new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, WordSpread, CourierDispatches, CreatureClashes, State.PlayerControl, definitions, _site, () => _time.Calendar),
+                new DaggerfallSocialInspection(definitions, _site, State.Actors, State.Npcs, State.ActorLedger, State.Social, SocialConsequences, Introductions, OfficeHolders, OfficeLedger, State.Crime, questNames, () => _worldSocialSeed, () => _time.Calendar),
             ];                                                                                     // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,

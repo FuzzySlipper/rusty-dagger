@@ -28,7 +28,9 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
     DaggerfallCasting casting, DaggerfallCombatRules combat, DaggerfallEffectLifecycle effects,
     Func<long, EquipmentRead?> equipment, Func<long, string?> team, Func<ulong?> step,
     DaggerfallDefinitions? definitions = null, DaggerfallNpcRegistry? npcs = null, DaggerfallNames? names = null,
-    Func<ulong>? worldSocialSeed = null)
+    Func<ulong>? worldSocialSeed = null, DaggerfallSocialState? socialState = null,
+    DaggerfallSocialConsequences? socialConsequences = null, DaggerfallIntroductions? introductions = null,
+    DaggerfallActorLedger? actorLedger = null, Func<DaggerfallSiteRecord?>? activeSite = null)
     : IDeveloperActorCommands
 {
     /// <summary>How far <c>target</c> and <c>nearest</c> look for an actor.</summary>
@@ -338,6 +340,11 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             seed);
 
         w.WriteStartObject("social");
+        DaggerfallNpc? npc = npcs is not null && npcs.TryGet(actor.DurableId, out DaggerfallNpc? regNpc) ? regNpc : null;
+        string? displayName = actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? personComp)
+            ? personComp.Snapshot.DisplayName
+            : npc?.DisplayName;
+        if (!string.IsNullOrWhiteSpace(displayName)) w.WriteString("displayName", displayName); else w.WriteNull("displayName");
         if (familyId is not null) w.WriteString("familyId", familyId); else w.WriteNull("familyId");
         if (label is not null) w.WriteString("householdLabel", label); else w.WriteNull("householdLabel");
         w.WriteString("scope", scope switch
@@ -347,6 +354,106 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             DaggerfallHouseholdScope.Local => "local",
             _ => "none",
         });
+
+        DaggerfallSiteRecord? site = activeSite?.Invoke();
+        int householdStanding = socialConsequences is not null && familyId is not null
+            ? socialConsequences.HouseholdStandingDelta(familyId, site)
+            : 0;
+        bool inBloodFeud = npc is not null && introductions is not null && introductions.IsInBloodFeud(npc, site);
+        if (socialState is not null && npc is not null)
+        {
+            DaggerfallFactionReaction reaction = socialState.ReactionForNpc(npc);
+            string? factionName = reaction.FactionId > 0 && definitions is not null
+                && definitions.Factions.Factions.TryGetValue(reaction.FactionId, out DaggerfallFactionDefinition? factionDef)
+                    ? factionDef.Name
+                    : null;
+            w.WriteStartObject("reaction");
+            w.WriteNumber("factionId", reaction.FactionId);
+            if (!string.IsNullOrWhiteSpace(factionName)) w.WriteString("factionName", factionName); else w.WriteNull("factionName");
+            w.WriteNumber("factionReputation", reaction.FactionReputation);
+            w.WriteNumber("personalReputation", reaction.PersonalReputation);
+            w.WriteNumber("actorDisposition", reaction.ActorDisposition);
+            w.WriteNumber("vouchBonus", reaction.VouchBonus);
+            w.WriteNumber("total", reaction.Value);
+            w.WriteNumber("householdStanding", householdStanding);
+            w.WriteBoolean("inBloodFeud", inBloodFeud);
+            w.WriteEndObject();
+        }
+        else
+        {
+            w.WriteNumber("householdStanding", householdStanding);
+            w.WriteBoolean("inBloodFeud", inBloodFeud);
+        }
+
+        if (introductions is not null && npc is not null)
+        {
+            DaggerfallIntroductionAccess access = introductions.AssessAccess(npc);
+            w.WriteStartObject("access");
+            w.WriteString("prominence", access.Prominence.ToString());
+            w.WriteBoolean("allowed", access.Allowed);
+            w.WriteNumber("requiredReach", access.RequiredReach);
+            w.WriteNumber("achievedReach", access.AchievedReach);
+            w.WriteNumber("skillSkip", access.SocialSkillSkip);
+            w.WriteNumber("homeBonus", access.HomeStandingBonus);
+            w.WriteBoolean("hasDepositWaiver", introductions.HasDepositWaiverVouch(npc));
+            if (!string.IsNullOrWhiteSpace(access.DenialReason)) w.WriteString("denialReason", access.DenialReason);
+            else w.WriteNull("denialReason");
+            w.WriteEndObject();
+        }
+
+        IReadOnlyList<ActorVouchRecord> vouches = introductions is not null
+            ? introductions.ReadVouches(actor.DurableId)
+            : actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? vouchOverlay)
+                ? vouchOverlay.Vouches
+                : [];
+        w.WriteStartArray("vouches");
+        foreach (ActorVouchRecord vouch in vouches)
+        {
+            w.WriteStartObject();
+            w.WriteNumber("referrerDurableId", vouch.ReferrerDurableId);
+            if (!string.IsNullOrWhiteSpace(vouch.ReferrerName)) w.WriteString("referrerName", vouch.ReferrerName); else w.WriteNull("referrerName");
+            w.WriteNumber("referrerFactionId", vouch.ReferrerFactionId);
+            if (!string.IsNullOrWhiteSpace(vouch.ReferrerFamilyId)) w.WriteString("referrerFamilyId", vouch.ReferrerFamilyId); else w.WriteNull("referrerFamilyId");
+            w.WriteString("kind", vouch.Kind.ToString());
+            w.WriteNumber("issuedDay", vouch.IssuedDay);
+            if (!string.IsNullOrWhiteSpace(vouch.OriginSiteName)) w.WriteString("originSiteName", vouch.OriginSiteName); else w.WriteNull("originSiteName");
+            if (npc is not null && introductions is not null)
+                w.WriteBoolean("trusted", introductions.TrustsReferrer(npc, vouch));
+            w.WriteEndObject();
+        }
+        w.WriteEndArray();
+
+        if (actorLedger is not null)
+        {
+            bool hasEntry = actorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? entry) && entry is not null;
+            ActorOverlayComponent? overlay = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov) ? ov : null;
+            w.WriteStartObject("ledger");
+            w.WriteBoolean("untouched", !hasEntry);
+            w.WriteBoolean("met", overlay?.Met ?? entry?.Social?.Met ?? false);
+            int? lastFavourDay = overlay?.LastFavourDay ?? entry?.Social?.LastFavourDay;
+            if (lastFavourDay is int favourDay) w.WriteNumber("lastFavourDay", favourDay); else w.WriteNull("lastFavourDay");
+            w.WriteBoolean("familyIdCleared", entry?.Social?.FamilyIdCleared ?? false);
+            w.WriteNumber("personalDispositionDelta", entry?.Social?.DispositionDelta ?? 0);
+            w.WriteStartArray("dirtySections");
+            if (entry is not null)
+            {
+                if (entry.Vitals is not null) w.WriteStringValue("vitals");
+                if (entry.Pose is not null) w.WriteStringValue("pose");
+                if (entry.Combat is not null) w.WriteStringValue("combat");
+                if (entry.Social is not null) w.WriteStringValue("social");
+                if (entry.Location is not null) w.WriteStringValue("location");
+                if (entry.Referral is not null) w.WriteStringValue("referral");
+            }
+            w.WriteEndArray();
+            HashSet<string> crimes = new(StringComparer.Ordinal);
+            if (overlay is not null) foreach (string c in overlay.WitnessedCrimes) crimes.Add(c);
+            if (entry?.Social?.WitnessedCrimes is { Length: > 0 } savedCrimes) foreach (string c in savedCrimes) crimes.Add(c);
+            w.WriteStartArray("witnessedCrimes");
+            foreach (string c in crimes.OrderBy(v => v, StringComparer.Ordinal)) w.WriteStringValue(c);
+            w.WriteEndArray();
+            w.WriteEndObject();
+        }
+
         w.WriteStartArray("localKin");
         if (familyId is not null)
         {

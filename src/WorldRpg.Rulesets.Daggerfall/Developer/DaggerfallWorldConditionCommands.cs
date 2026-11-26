@@ -146,6 +146,8 @@ internal sealed class DaggerfallWorldConditionCommands(
                 w.WriteNumber("delta", wf.Delta);
                 if (wf.FactionId is int fid) w.WriteNumber("factionId", fid);
                 if (wf.GuildRank is int rank) w.WriteNumber("guildRank", rank);
+                if (!string.IsNullOrWhiteSpace(wf.FamilyId)) w.WriteString("familyId", wf.FamilyId);
+                if (!string.IsNullOrWhiteSpace(wf.Headline)) w.WriteString("headline", wf.Headline);
                 w.WriteBoolean("intercepted", wf.CourierIntercepted);
                 if (active is not null)
                 {

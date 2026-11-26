@@ -53,6 +53,7 @@ export function mountDeveloperTools(root: HTMLElement, context: Pick<RustyApplic
       { kind: 'tunables', title: 'Workbench' },
       { kind: 'console' },
       { kind: 'product', title: 'Commands', mount: element => mountCommandHelp(element, transport) },
+      { kind: 'product', title: 'Social', mount: element => mountSocialPanel(element, transport) },
       // The pane lists the product's inspection targets (player, dialogue, door) in its own subject choice and frames
       // the chosen one with its default framings; it opens on the player.
       { kind: 'view', title: 'View', options: { viewport: context.viewport, transport, subject: 'target player' } },
@@ -292,4 +293,482 @@ function mountCommandHelp(element: HTMLElement, transport: LiveDebugTransport): 
     show();
   }, (error: unknown) => { count.textContent = `The catalogue did not answer: ${error instanceof Error ? error.message : String(error)}`; });
   return { dispose() { element.replaceChildren(); } };
+}
+
+interface SocialActorInspect {
+  readonly durableId: number;
+  readonly kind: string;
+  readonly social?: {
+    readonly displayName?: string | null;
+    readonly familyId?: string | null;
+    readonly householdLabel?: string | null;
+    readonly scope?: string;
+    readonly householdStanding?: number;
+    readonly inBloodFeud?: boolean;
+    readonly reaction?: {
+      readonly factionId: number;
+      readonly factionName?: string | null;
+      readonly factionReputation: number;
+      readonly personalReputation: number;
+      readonly actorDisposition: number;
+      readonly vouchBonus: number;
+      readonly total: number;
+      readonly householdStanding: number;
+      readonly inBloodFeud: boolean;
+    };
+    readonly access?: {
+      readonly prominence: string;
+      readonly allowed: boolean;
+      readonly requiredReach: number;
+      readonly achievedReach: number;
+      readonly skillSkip: number;
+      readonly homeBonus: number;
+      readonly hasDepositWaiver: boolean;
+      readonly denialReason?: string | null;
+    };
+    readonly vouches?: readonly {
+      readonly referrerDurableId: number;
+      readonly referrerName?: string | null;
+      readonly referrerFamilyId?: string | null;
+      readonly kind: string;
+      readonly issuedDay: number;
+      readonly originSiteName?: string | null;
+      readonly trusted?: boolean;
+    }[];
+    readonly ledger?: {
+      readonly untouched: boolean;
+      readonly met: boolean;
+      readonly lastFavourDay?: number | null;
+      readonly familyIdCleared: boolean;
+      readonly personalDispositionDelta: number;
+      readonly dirtySections: readonly string[];
+      readonly witnessedCrimes: readonly string[];
+    };
+    readonly localKin?: readonly { readonly durableId: number; readonly name?: string | null }[];
+  };
+}
+
+interface SocialSiteReadout {
+  readonly day: number;
+  readonly worldSocialSeed: number;
+  readonly site?: { readonly region: number; readonly regionName: string; readonly index: number; readonly name: string } | null;
+  readonly loadedPeople: readonly {
+    readonly durableId: number;
+    readonly name: string;
+    readonly role: string;
+    readonly familyId?: string | null;
+    readonly scope: string;
+    readonly reactionTotal?: number;
+    readonly inBloodFeud?: boolean;
+    readonly vouchCount: number;
+    readonly ledgerUntouched: boolean;
+  }[];
+  readonly households: readonly {
+    readonly familyId: string;
+    readonly label?: string | null;
+    readonly scope: string;
+    readonly standingDelta: number;
+    readonly inBloodFeud: boolean;
+    readonly loadedMembers: readonly { readonly durableId: number; readonly name: string; readonly role: string }[];
+  }[];
+  readonly localOffices: readonly {
+    readonly kind: string;
+    readonly title: string;
+    readonly displayName: string;
+    readonly familyId?: string | null;
+    readonly isVacant: boolean;
+    readonly isOverridden: boolean;
+  }[];
+}
+
+interface SocialRegionReadout {
+  readonly day: number;
+  readonly region?: number | null;
+  readonly regionName?: string | null;
+  readonly ruler?: {
+    readonly displayName: string;
+    readonly title?: string | null;
+    readonly familyId?: string | null;
+    readonly hasLivingHolder: boolean;
+    readonly previousHolderName?: string | null;
+  } | null;
+  readonly greatHouses: readonly {
+    readonly familyId: string;
+    readonly label?: string | null;
+    readonly arrivedStandingDelta: number;
+    readonly inBloodFeud: boolean;
+    readonly heldOffices: readonly {
+      readonly siteName?: string;
+      readonly title: string;
+      readonly displayName: string;
+      readonly isVacant: boolean;
+      readonly isOverridden: boolean;
+    }[];
+  }[];
+  readonly boardSeats: readonly {
+    readonly seatId: string;
+    readonly seatName: string;
+    readonly displayName: string;
+    readonly isVacant: boolean;
+    readonly isOverridden: boolean;
+  }[];
+  readonly officeOverrides: readonly {
+    readonly officeKey: string;
+    readonly holderDisplayName?: string | null;
+    readonly vacant: boolean;
+    readonly cause: string;
+    readonly changedDay: number;
+  }[];
+}
+
+interface SocialPlayerReadout {
+  readonly day: number;
+  readonly actorLedgerCount: number;
+  readonly activeRegion?: number | null;
+  readonly activeRegionName?: string | null;
+  readonly activeRegionReputation: number;
+  readonly wantedInActiveRegion: boolean;
+  readonly banishedInActiveRegion: boolean;
+  readonly regionalReputations: readonly {
+    readonly region: number;
+    readonly regionName: string;
+    readonly reputation: number;
+    readonly wanted: boolean;
+    readonly banished: boolean;
+  }[];
+  readonly factionStandings: readonly { readonly factionId: number; readonly name: string; readonly reputation: number }[];
+  readonly affiliations: readonly { readonly faction: string; readonly rank: number; readonly reputation: number }[];
+  readonly law: {
+    readonly banishedRegions: readonly number[];
+    readonly incidentCount: number;
+    readonly reportedIncidentCount: number;
+    readonly recentIncidents: readonly { readonly crime: string; readonly region: number; readonly reported: boolean; readonly gameMinute: number }[];
+  };
+  readonly vouches: readonly {
+    readonly targetDurableId: number;
+    readonly targetName?: string | null;
+    readonly referrerName?: string | null;
+    readonly referrerFamilyId?: string | null;
+    readonly kind: string;
+    readonly issuedDay: number;
+  }[];
+}
+
+interface WordSpreadReadout {
+  readonly minute: number;
+  readonly wavefronts: readonly {
+    readonly eventId: string;
+    readonly kind: string;
+    readonly delta: number;
+    readonly factionId?: number;
+    readonly familyId?: string;
+    readonly headline?: string;
+    readonly intercepted: boolean;
+    readonly statusAtActiveSite?: string;
+    readonly remainingMinutes?: number;
+  }[];
+}
+
+interface ConditionsReadout {
+  readonly gateScrutiny?: string;
+  readonly watchChallenge?: boolean;
+  readonly conditions: readonly {
+    readonly tokenId: string;
+    readonly kind: string;
+    readonly severity: number;
+    readonly subjectTag?: string;
+    readonly expiresDay?: number;
+  }[];
+}
+
+interface DispatchesReadout {
+  readonly dispatches: readonly {
+    readonly dispatchId: string;
+    readonly seatId: string;
+    readonly actionKind: string;
+    readonly status: string;
+    readonly destinationRegion: number;
+  }[];
+}
+
+/**
+ * The Social panel: runtime view of the live social and political layers (actor reaction/access/vouches, active town
+ * households and local offices, regional Great Houses and seat personas, word-spread/conditions/dispatches, and player
+ * standing/law). Reads strictly through debug commands and owns no gameplay state.
+ */
+function mountSocialPanel(element: HTMLElement, transport: LiveDebugTransport): { dispose(): void } {
+  element.classList.add('dagger-developer-panel', 'dagger-developer-social');
+  let disposed = false;
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'dagger-developer-social-bar';
+  const refreshButton = document.createElement('button');
+  refreshButton.type = 'button';
+  refreshButton.textContent = 'Refresh';
+  const actorSelect = document.createElement('select');
+  actorSelect.setAttribute('aria-label', 'Inspect actor');
+  const inspectButton = document.createElement('button');
+  inspectButton.type = 'button';
+  inspectButton.textContent = 'Inspect';
+  toolbar.append(refreshButton, actorSelect, inspectButton);
+
+  const status = document.createElement('output');
+  status.className = 'dagger-developer-status';
+
+  const makeSection = (title: string, open: boolean, key: string): { details: HTMLDetailsElement; body: HTMLPreElement } => {
+    const details = document.createElement('details');
+    details.open = open;
+    details.dataset.socialSection = key;
+    const summary = document.createElement('summary');
+    summary.textContent = title;
+    const body = document.createElement('pre');
+    body.className = 'dagger-developer-social-pre';
+    details.append(summary, body);
+    return { details, body };
+  };
+
+  const actorSection = makeSection('Actor (actor.inspect)', true, 'actor');
+  const siteSection = makeSection('Town Households & Offices (social.site)', true, 'site');
+  const regionSection = makeSection('Region: Great Houses & Seats (social.region)', false, 'region');
+  const worldSection = makeSection('WordSpread, Conditions & Dispatches', false, 'world');
+  const playerSection = makeSection('Player Standing & Law (social.player)', false, 'player');
+
+  const bodyStack = document.createElement('div');
+  bodyStack.className = 'dagger-developer-social-body';
+  bodyStack.append(
+    actorSection.details,
+    siteSection.details,
+    regionSection.details,
+    worldSection.details,
+    playerSection.details,
+  );
+  element.append(toolbar, status, bodyStack);
+
+  const setActorOptions = (people: SocialSiteReadout['loadedPeople'], preserve: string): void => {
+    actorSelect.replaceChildren();
+    for (const [value, label] of [['target', 'Facing (target)'], ['nearest', 'Nearest (nearest)']] as const) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      actorSelect.append(opt);
+    }
+    for (const person of people) {
+      const opt = document.createElement('option');
+      opt.value = String(person.durableId);
+      const flags = [person.inBloodFeud ? 'FEUD' : '', person.familyId ?? ''].filter(Boolean).join(' · ');
+      opt.textContent = flags ? `${person.name} (#${person.durableId}) [${flags}]` : `${person.name} (#${person.durableId})`;
+      actorSelect.append(opt);
+    }
+    const valid = [...actorSelect.options].some(opt => opt.value === preserve);
+    actorSelect.value = valid ? preserve : 'target';
+  };
+  setActorOptions([], 'target');
+
+  const execJson = async <T>(command: string): Promise<{ ok: true; data: T } | { ok: false; error: string }> => {
+    try {
+      const result = await transport.execute(command);
+      if (!result.succeeded) return { ok: false, error: result.message };
+      return { ok: true, data: JSON.parse(result.message) as T };
+    } catch (error: unknown) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+
+  const fmtSigned = (value: number): string => (value > 0 ? `+${value}` : String(value));
+
+  const renderActor = async (): Promise<void> => {
+    const query = actorSelect.value || 'target';
+    const res = await execJson<SocialActorInspect>(`actor.inspect ${query}`);
+    if (disposed) return;
+    if (!res.ok) { actorSection.body.textContent = res.error; return; }
+    const data = res.data;
+    const social = data.social;
+    if (!social) { actorSection.body.textContent = `Actor #${data.durableId} (${data.kind}) — no social component.`; return; }
+    const lines: string[] = [];
+    lines.push(`${social.displayName ?? `Actor #${data.durableId}`} (#${data.durableId}, ${data.kind})`);
+    lines.push(`Family: ${social.familyId ?? 'none'}${social.householdLabel ? ` — ${social.householdLabel}` : ''} [${social.scope ?? 'none'}]`);
+    if (social.reaction) {
+      const r = social.reaction;
+      lines.push(
+        `Reaction: ${fmtSigned(r.total)} (faction ${r.factionId}${r.factionName ? ` ${r.factionName}` : ''}: ${fmtSigned(r.factionReputation)}, personal: ${fmtSigned(r.personalReputation)}, disp: ${fmtSigned(r.actorDisposition)}, vouch: ${fmtSigned(r.vouchBonus)})`,
+      );
+      lines.push(`Household standing: ${fmtSigned(r.householdStanding)}${r.inBloodFeud ? ' [BLOOD FEUD]' : ''}`);
+    } else if (social.inBloodFeud || (social.householdStanding ?? 0) !== 0) {
+      lines.push(`Household standing: ${fmtSigned(social.householdStanding ?? 0)}${social.inBloodFeud ? ' [BLOOD FEUD]' : ''}`);
+    }
+    if (social.access) {
+      const a = social.access;
+      lines.push(
+        `Access (${a.prominence}): ${a.allowed ? 'ALLOWED' : 'DENIED'} (reach ${a.achievedReach}/${a.requiredReach}, skillSkip ${a.skillSkip}, home ${a.homeBonus}, depositWaiver: ${a.hasDepositWaiver ? 'yes' : 'no'})`,
+      );
+      if (a.denialReason) lines.push(`  Reason: ${a.denialReason}`);
+    }
+    if (social.vouches && social.vouches.length > 0) {
+      lines.push(`Vouches (${social.vouches.length}):`);
+      for (const v of social.vouches) {
+        lines.push(`  - ${v.kind} from ${v.referrerName ?? `#${v.referrerDurableId}`}${v.referrerFamilyId ? ` [${v.referrerFamilyId}]` : ''}${v.originSiteName ? ` (${v.originSiteName})` : ''} day ${v.issuedDay}${v.trusted === false ? ' [UNTRUSTED]' : ''}`);
+      }
+    } else {
+      lines.push('Vouches: none');
+    }
+    if (social.ledger) {
+      const l = social.ledger;
+      lines.push(
+        `Ledger: ${l.untouched ? 'untouched (0 bytes)' : `dirty [${l.dirtySections.join(', ')}]`} · met=${l.met} · disp=${fmtSigned(l.personalDispositionDelta)}${l.lastFavourDay != null ? ` · lastFavourDay=${l.lastFavourDay}` : ''}${l.familyIdCleared ? ' · familyIdCleared' : ''}`,
+      );
+      if (l.witnessedCrimes.length > 0) lines.push(`  Witnessed crimes: ${l.witnessedCrimes.join(', ')}`);
+    }
+    if (social.localKin && social.localKin.length > 0) {
+      lines.push(`Loaded kin (${social.localKin.length}): ${social.localKin.map(k => `${k.name ?? `#${k.durableId}`} (#${k.durableId})`).join(', ')}`);
+    }
+    actorSection.body.textContent = lines.join('\n');
+  };
+
+  const refreshAll = async (): Promise<void> => {
+    const selected = actorSelect.value || 'target';
+    const [siteRes, regionRes, playerRes, condRes, spreadRes, dispRes] = await Promise.all([
+      execJson<SocialSiteReadout>('social.site'),
+      execJson<SocialRegionReadout>('social.region'),
+      execJson<SocialPlayerReadout>('social.player'),
+      execJson<ConditionsReadout>('world.conditions'),
+      execJson<WordSpreadReadout>('world.word-spread'),
+      execJson<DispatchesReadout>('world.dispatches'),
+    ]);
+    if (disposed) return;
+
+    const summaryParts: string[] = [];
+    if (siteRes.ok) {
+      const s = siteRes.data;
+      setActorOptions(s.loadedPeople, selected);
+      summaryParts.push(s.site ? `${s.site.name} (${s.site.regionName})` : 'No active site');
+      summaryParts.push(`Day ${s.day}`);
+      summaryParts.push(`${s.loadedPeople.length} loaded`);
+
+      const lines: string[] = [];
+      lines.push(`Households (${s.households.length}):`);
+      if (s.households.length === 0) lines.push('  (none)');
+      for (const h of s.households) {
+        const members = h.loadedMembers.length > 0
+          ? h.loadedMembers.map(m => `${m.name} (#${m.durableId})`).join(', ')
+          : '(unloaded / sparse standing)';
+        lines.push(`  ${h.familyId}${h.label ? ` — ${h.label}` : ''} [${h.scope}] standing=${fmtSigned(h.standingDelta)}${h.inBloodFeud ? ' [BLOOD FEUD]' : ''}`);
+        lines.push(`    Members: ${members}`);
+      }
+      lines.push(`Local Offices (${s.localOffices.length}):`);
+      if (s.localOffices.length === 0) lines.push('  (none)');
+      for (const o of s.localOffices) {
+        lines.push(`  [${o.kind}] ${o.title}: ${o.isVacant ? 'VACANT' : o.displayName}${o.familyId ? ` [${o.familyId}]` : ''}${o.isOverridden ? ' *override*' : ''}`);
+      }
+      siteSection.body.textContent = lines.join('\n');
+    } else {
+      siteSection.body.textContent = siteRes.error;
+    }
+
+    if (regionRes.ok) {
+      const r = regionRes.data;
+      const lines: string[] = [];
+      if (r.ruler) {
+        lines.push(`Ruler: ${r.ruler.hasLivingHolder ? r.ruler.displayName : 'VACANT'}${r.ruler.title ? ` (${r.ruler.title})` : ''}${r.ruler.familyId ? ` [${r.ruler.familyId}]` : ''}`);
+      } else {
+        lines.push('Ruler: (none)');
+      }
+      lines.push(`Great Houses (${r.greatHouses.length}):`);
+      for (const h of r.greatHouses) {
+        lines.push(`  ${h.familyId}${h.label ? ` — ${h.label}` : ''} standing=${fmtSigned(h.arrivedStandingDelta)}${h.inBloodFeud ? ' [BLOOD FEUD]' : ''} · ${h.heldOffices.length} court offices`);
+        for (const o of h.heldOffices) {
+          lines.push(`    - ${o.siteName ?? o.title}: ${o.isVacant ? 'VACANT' : o.displayName}${o.isOverridden ? ' *override*' : ''}`);
+        }
+      }
+      lines.push(`Office Overrides (${r.officeOverrides.length}):`);
+      if (r.officeOverrides.length === 0) lines.push('  (none — all baseline)');
+      for (const ov of r.officeOverrides) {
+        lines.push(`  ${ov.officeKey}: ${ov.vacant ? 'VACANT' : (ov.holderDisplayName ?? '?')} (${ov.cause}, day ${ov.changedDay})`);
+      }
+      lines.push(`Board Seats (${r.boardSeats.length}):`);
+      for (const seat of r.boardSeats) {
+        lines.push(`  ${seat.seatId}: ${seat.isVacant ? 'VACANT' : seat.displayName}${seat.isOverridden ? ' *override*' : ''}`);
+      }
+      regionSection.body.textContent = lines.join('\n');
+    } else {
+      regionSection.body.textContent = regionRes.error;
+    }
+
+    const worldLines: string[] = [];
+    if (condRes.ok) {
+      const c = condRes.data;
+      worldLines.push(`Gate scrutiny: ${c.gateScrutiny ?? 'n/a'}${c.watchChallenge ? ' [WATCH CHALLENGE]' : ''}`);
+      worldLines.push(`Active Conditions (${c.conditions.length}):`);
+      if (c.conditions.length === 0) worldLines.push('  (none)');
+      for (const tok of c.conditions) {
+        worldLines.push(`  ${tok.kind} sev=${tok.severity}${tok.subjectTag ? ` tag=${tok.subjectTag}` : ''}${tok.expiresDay != null ? ` exp=day ${tok.expiresDay}` : ''}`);
+      }
+    } else {
+      worldLines.push(`Conditions error: ${condRes.error}`);
+    }
+    if (spreadRes.ok) {
+      const sp = spreadRes.data;
+      worldLines.push(`WordSpread Wavefronts (${sp.wavefronts.length}):`);
+      if (sp.wavefronts.length === 0) worldLines.push('  (none)');
+      for (const wf of sp.wavefronts) {
+        const subject = wf.familyId ?? (wf.factionId != null ? `faction:${wf.factionId}` : wf.eventId);
+        const eta = wf.remainingMinutes != null && wf.remainingMinutes > 0 ? ` (${wf.remainingMinutes}m left)` : '';
+        worldLines.push(`  [${wf.kind}] ${subject} ${fmtSigned(wf.delta)} · ${wf.statusAtActiveSite ?? 'n/a'}${eta}${wf.intercepted ? ' [INTERCEPTED]' : ''}`);
+      }
+    } else {
+      worldLines.push(`WordSpread error: ${spreadRes.error}`);
+    }
+    if (dispRes.ok) {
+      worldLines.push(`Courier Dispatches (${dispRes.data.dispatches.length}):`);
+      if (dispRes.data.dispatches.length === 0) worldLines.push('  (none)');
+      for (const d of dispRes.data.dispatches) {
+        worldLines.push(`  ${d.dispatchId}: ${d.seatId} ${d.actionKind} -> r${d.destinationRegion} [${d.status}]`);
+      }
+    } else {
+      worldLines.push(`Dispatches error: ${dispRes.error}`);
+    }
+    worldSection.body.textContent = worldLines.join('\n');
+
+    if (playerRes.ok) {
+      const p = playerRes.data;
+      summaryParts.push(`Ledger ${p.actorLedgerCount}`);
+      const lines: string[] = [];
+      lines.push(
+        `Active Region: ${p.activeRegionName ?? 'none'} rep=${fmtSigned(p.activeRegionReputation)}${p.wantedInActiveRegion ? ' [WANTED]' : ''}${p.banishedInActiveRegion ? ' [BANISHED]' : ''}`,
+      );
+      lines.push(`ActorLedger entries: ${p.actorLedgerCount}`);
+      lines.push(`Affiliations (${p.affiliations.length}):`);
+      if (p.affiliations.length === 0) lines.push('  (none)');
+      for (const a of p.affiliations) lines.push(`  ${a.faction}: rank ${a.rank}, rep ${fmtSigned(a.reputation)}`);
+      lines.push(`Non-zero Factions (${p.factionStandings.length}):`);
+      if (p.factionStandings.length === 0) lines.push('  (none)');
+      for (const f of p.factionStandings) lines.push(`  ${f.name} (#${f.factionId}): ${fmtSigned(f.reputation)}`);
+      lines.push(`Law: ${p.law.reportedIncidentCount}/${p.law.incidentCount} reported incidents · banished regions=[${p.law.banishedRegions.join(', ')}]`);
+      for (const inc of p.law.recentIncidents) {
+        lines.push(`  - ${inc.crime} r${inc.region} ${inc.reported ? 'reported' : 'unreported'} @m${inc.gameMinute}`);
+      }
+      lines.push(`Active Vouches (${p.vouches.length}):`);
+      if (p.vouches.length === 0) lines.push('  (none)');
+      for (const v of p.vouches) {
+        lines.push(`  -> ${v.targetName ?? `#${v.targetDurableId}`}: ${v.kind} by ${v.referrerName ?? '?'}${v.referrerFamilyId ? ` [${v.referrerFamilyId}]` : ''} (day ${v.issuedDay})`);
+      }
+      playerSection.body.textContent = lines.join('\n');
+    } else {
+      playerSection.body.textContent = playerRes.error;
+    }
+
+    status.textContent = summaryParts.join(' · ') || 'Refreshed.';
+    await renderActor();
+  };
+
+  refreshButton.addEventListener('click', () => void refreshAll());
+  inspectButton.addEventListener('click', () => void renderActor());
+  actorSelect.addEventListener('change', () => void renderActor());
+
+  void refreshAll();
+  return {
+    dispose() {
+      disposed = true;
+      element.replaceChildren();
+    },
+  };
 }

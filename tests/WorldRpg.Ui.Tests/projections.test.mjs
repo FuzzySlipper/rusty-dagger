@@ -1211,13 +1211,14 @@ test('the developer key opens the developer tools only when the host serves live
     const shell = developer.shells.at(-1);
     assert.equal(shell.isOpen, true);
     assert.equal(note.hidden, true);
-    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'product', 'view', 'scene', 'metrics']);
+    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'product', 'product', 'view', 'scene', 'metrics']);
     assert.equal(shell.options.panels[0].title, 'Dagger');
     assert.equal(shell.options.panels[1].title, 'Workbench');
     assert.equal(shell.options.panels[3].title, 'Commands');
+    assert.equal(shell.options.panels[4].title, 'Social');
     // The view pane opens on the player and keeps its own valid framings.
-    assert.equal(shell.options.panels[4].options.subject, 'target player');
-    assert.equal(shell.options.panels[4].options.framings, undefined);
+    assert.equal(shell.options.panels[5].options.subject, 'target player');
+    assert.equal(shell.options.panels[5].options.framings, undefined);
     assert.equal(f.modes.at(-1), 'interface', 'The open tools hold the cursor, so play stops taking input.');
 
     // Closing (the key again, or the shell's own Close) gives gameplay its input back at once, and the workbench's
@@ -1362,6 +1363,95 @@ test('the Dagger developer panel pauses and steps held time, flies the observer 
     // Closing the panel hands the camera back to the player.
     panel.dispose(); await settle();
     assert.equal(developer.commands.at(-1), 'engine.renderer.camera none');
+  } finally { tools.dispose(); developer.liveDebug = false; developer.answers = {}; }
+});
+
+test('the Social developer panel renders runtime households, Great Houses, wavefronts, player law, and selected actor breakdown', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'KeyboardEvent', 'Event']) globalThis[key] = dom.window[key];
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  developer.liveDebug = true; developer.commands.length = 0; developer.shells.length = 0;
+  developer.answers = {
+    'social.site': JSON.stringify({
+      day: 4, worldSocialSeed: 42,
+      site: { region: 17, regionName: 'Daggerfall', index: 0, name: 'Daggerfall' },
+      loadedPeople: [
+        { durableId: 501, name: 'Maren Holt', role: 'shop', familyId: 'fam:local:r17:s0:x1y1b0', scope: 'local', reactionTotal: -20, inBloodFeud: true, vouchCount: 1, ledgerUntouched: false },
+      ],
+      households: [
+        { familyId: 'fam:local:r17:s0:x1y1b0', label: 'Holt Household', scope: 'local', standingDelta: -20, inBloodFeud: true, loadedMembers: [{ durableId: 501, name: 'Maren Holt', role: 'shop' }] },
+      ],
+      localOffices: [
+        { kind: 'WatchCaptain', title: 'Watch Captain of Daggerfall', displayName: 'Captain Vance', familyId: null, isVacant: false, isOverridden: false },
+      ],
+    }),
+    'social.region': JSON.stringify({
+      day: 4, region: 17, regionName: 'Daggerfall',
+      ruler: { displayName: 'King Gothryd', title: 'King', familyId: 'fam:dynasty:daggerfall', hasLivingHolder: true },
+      greatHouses: [
+        { familyId: 'fam:house:r17:0', label: 'House Valen (Daggerfall)', arrivedStandingDelta: -20, inBloodFeud: true, heldOffices: [{ siteName: 'Daggerfall', title: 'Court Factor', displayName: 'Lady Seraphina', isVacant: false, isOverridden: false }] },
+      ],
+      boardSeats: [{ seatId: 'crown:daggerfall', seatName: 'Crown of Daggerfall', displayName: 'King Gothryd', isVacant: false, isOverridden: false }],
+      officeOverrides: [],
+    }),
+    'social.player': JSON.stringify({
+      day: 4, actorLedgerCount: 2, activeRegion: 17, activeRegionName: 'Daggerfall', activeRegionReputation: -15, wantedInActiveRegion: true, banishedInActiveRegion: false,
+      regionalReputations: [{ region: 17, regionName: 'Daggerfall', reputation: -15, wanted: true, banished: false }],
+      factionStandings: [{ factionId: 368, name: 'Knights of the Dragon', reputation: 12 }],
+      affiliations: [{ faction: 'Knights of the Dragon', rank: 1, reputation: 12 }],
+      law: { banishedRegions: [], incidentCount: 1, reportedIncidentCount: 1, recentIncidents: [{ crime: 'Murder', region: 17, reported: true, gameMinute: 120 }] },
+      vouches: [{ targetDurableId: 501, targetName: 'Maren Holt', referrerName: 'Bram Holt', referrerFamilyId: 'fam:local:r17:s0:x1y1b0', kind: 'Trade', issuedDay: 3 }],
+    }),
+    'world.conditions': JSON.stringify({ gateScrutiny: 'elevated', watchChallenge: true, conditions: [{ tokenId: 'cond:1', kind: 'crime-crackdown', severity: 2 }] }),
+    'world.word-spread': JSON.stringify({ minute: 120, wavefronts: [{ eventId: 'wf:1', kind: 'HouseholdStanding', delta: -20, familyId: 'fam:house:r17:0', intercepted: false, statusAtActiveSite: 'InstantBubble', remainingMinutes: 0 }] }),
+    'world.dispatches': JSON.stringify({ dispatches: [{ dispatchId: 'd:1', seatId: 'crown:daggerfall', actionKind: 'border-posture', status: 'InTransit', destinationRegion: 23 }] }),
+    'actor.inspect target': JSON.stringify({
+      durableId: 501, kind: 'static-npc',
+      social: {
+        displayName: 'Maren Holt', familyId: 'fam:local:r17:s0:x1y1b0', householdLabel: 'Holt Household', scope: 'local',
+        reaction: { factionId: 0, factionName: null, factionReputation: 0, personalReputation: 0, actorDisposition: -20, vouchBonus: 0, total: -20, householdStanding: -20, inBloodFeud: true },
+        access: { prominence: 'Ordinary', allowed: false, requiredReach: 0, achievedReach: 0, skillSkip: 1, homeBonus: 0, hasDepositWaiver: false, denialReason: "Maren Holt's household holds a blood feud against you." },
+        vouches: [{ referrerDurableId: 502, referrerName: 'Bram Holt', referrerFamilyId: 'fam:local:r17:s0:x1y1b0', kind: 'Trade', issuedDay: 3, trusted: true }],
+        ledger: { untouched: false, met: true, lastFavourDay: null, familyIdCleared: false, personalDispositionDelta: 0, dirtySections: ['social'], witnessedCrimes: [] },
+        localKin: [{ durableId: 502, name: 'Bram Holt' }],
+      },
+    }),
+    'actor.inspect 501': JSON.stringify({
+      durableId: 501, kind: 'static-npc',
+      social: {
+        displayName: 'Maren Holt', familyId: 'fam:local:r17:s0:x1y1b0', householdLabel: 'Holt Household', scope: 'local',
+        reaction: { factionId: 0, factionName: null, factionReputation: 0, personalReputation: 0, actorDisposition: -20, vouchBonus: 0, total: -20, householdStanding: -20, inBloodFeud: true },
+        access: { prominence: 'Ordinary', allowed: false, requiredReach: 0, achievedReach: 0, skillSkip: 1, homeBonus: 0, hasDepositWaiver: false, denialReason: "Maren Holt's household holds a blood feud against you." },
+        vouches: [],
+        ledger: { untouched: true, met: false, lastFavourDay: null, familyIdCleared: false, personalDispositionDelta: 0, dirtySections: [], witnessedCrimes: [] },
+        localKin: [],
+      },
+    }),
+  };
+  const root = document.getElementById('root');
+  const tools = developerTools.mountDeveloperTools(root, { viewport: { anchor: () => () => {} } }, { onChange() {} });
+  try {
+    await tools.toggle();
+    const element = document.createElement('div');
+    root.append(element);
+    const panel = developer.shells.at(-1).options.panels.find(p => p.title === 'Social').mount(element);
+    await settle(); await settle();
+
+    assert.match(element.querySelector('.dagger-developer-status').textContent, /Daggerfall.*Day 4.*1 loaded.*Ledger 2/);
+    assert.match(element.querySelector('[data-social-section="actor"] pre').textContent, /BLOOD FEUD/);
+    assert.match(element.querySelector('[data-social-section="actor"] pre').textContent, /Bram Holt/);
+    assert.match(element.querySelector('[data-social-section="site"] pre').textContent, /Holt Household.*-20.*BLOOD FEUD/);
+    assert.match(element.querySelector('[data-social-section="region"] pre').textContent, /House Valen.*-20.*BLOOD FEUD/);
+    assert.match(element.querySelector('[data-social-section="world"] pre').textContent, /fam:house:r17:0.*-20/);
+    assert.match(element.querySelector('[data-social-section="player"] pre').textContent, /WANTED.*Knights of the Dragon/s);
+
+    const select = element.querySelector('select[aria-label="Inspect actor"]');
+    select.value = '501';
+    select.dispatchEvent(new Event('change'));
+    await settle();
+    assert.equal(developer.commands.at(-1), 'actor.inspect 501');
+    assert.match(element.querySelector('[data-social-section="actor"] pre').textContent, /untouched \(0 bytes\)/);
+    panel.dispose();
   } finally { tools.dispose(); developer.liveDebug = false; developer.answers = {}; }
 });
 
