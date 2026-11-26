@@ -393,6 +393,33 @@ internal sealed class DaggerfallSocialConsequences(
             DaggerfallSocialState.MaximumReputation);
     }
 
+    /// <summary>
+    /// Returns the active household standing delta for <paramref name="familyId"/> at <paramref name="atSite"/>:
+    /// settlement-local standing for <c>fam:local:...</c> or arrived province-wide
+    /// <see cref="DaggerfallWordEventKind.HouseholdStanding"/> delta for Great Houses and royal dynasties.
+    /// </summary>
+    internal int HouseholdStandingDelta(string? familyId, DaggerfallSiteRecord? atSite = null, long? minute = null)
+    {
+        if (string.IsNullOrWhiteSpace(familyId))
+            return 0;
+        DaggerfallSiteRecord? targetSite = atSite ?? activeSite?.Invoke();
+        if (DaggerfallHouseholds.IsLocal(familyId))
+        {
+            if (!_localHouseholdStandings.TryGetValue(familyId, out LocalHouseholdStandingState? localState))
+                return 0;
+            if (targetSite is not null
+                && (targetSite.Id.Region != localState.Region
+                    || !string.Equals(targetSite.Name, localState.Location, StringComparison.OrdinalIgnoreCase)))
+            {
+                return 0;
+            }
+            return localState.StandingDelta;
+        }
+        if (wordSpread is null || !DaggerfallHouseholds.IsProvinceWide(familyId) || targetSite is null)
+            return 0;
+        return wordSpread.ArrivedHouseholdStandingDelta(familyId, targetSite, minute ?? currentMinute?.Invoke() ?? 0L);
+    }
+
     private void ApplyAttributedHouseholdRipple(
         string familyId,
         int delta,

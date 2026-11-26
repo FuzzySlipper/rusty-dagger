@@ -797,7 +797,9 @@ internal sealed partial class DaggerfallSession
                 CourierDispatches.Restore(saved.CourierDispatches);
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
-                State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone);
+                State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone,
+                officeLedger: OfficeLedger,
+                findSite: id => _site.TryFind(id, out DaggerfallSiteRecord record) ? record : null);
             State.Social.BindActorVouchBonus(Introductions.TrustedVouchReactionBonus);
             State.Quests.BindQuestorDisposition((actorId, delta) => Introductions.AdjustActorDisposition(actorId, delta));
             _questTexts = new DaggerfallQuestTextContext(definitions, _site, State.Npcs, State.ItemInstances,
@@ -1057,6 +1059,9 @@ internal sealed partial class DaggerfallSession
             if (saved is not null)
                 SocialConsequences.Restore(saved.LocalHouseholds);
             State.Social.BindActorDisposition(id => SocialConsequences.EffectiveDispositionDelta(id));
+            Introductions.BindEffectiveDisposition(
+                (actorId, atSite) => SocialConsequences.EffectiveDispositionDelta(actorId, atSite),
+                (familyId, atSite) => SocialConsequences.HouseholdStandingDelta(familyId, atSite));
             Introductions.BindDispositionAdjusted((actorId, delta) =>
             {
                 if (delta > 0)

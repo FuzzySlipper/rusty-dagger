@@ -173,7 +173,8 @@ internal sealed record ActorVouchRecord(
     ActorVouchKind Kind,
     int IssuedDay,
     string? ReferrerName = null,
-    string? OriginSiteName = null)
+    string? OriginSiteName = null,
+    string? ReferrerFamilyId = null)
 {
     internal void Validate()
     {
@@ -187,6 +188,12 @@ internal sealed record ActorVouchRecord(
             ArgumentException.ThrowIfNullOrWhiteSpace(ReferrerName);
         if (OriginSiteName is not null)
             ArgumentException.ThrowIfNullOrWhiteSpace(OriginSiteName);
+        if (ReferrerFamilyId is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(ReferrerFamilyId);
+            if (!DaggerfallHouseholds.IsValidFamilyId(ReferrerFamilyId))
+                throw new ArgumentException($"Saved actor vouch names an invalid referrer family id '{ReferrerFamilyId}'.", nameof(ReferrerFamilyId));
+        }
     }
 
     internal bool SameGrant(ActorVouchRecord other) =>
