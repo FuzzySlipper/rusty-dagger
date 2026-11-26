@@ -572,6 +572,15 @@ internal static partial class DaggerfallBaseContent
                     merged[key] = value?.DeepClone();
                 }
             }
+            // If this layer introduces a non-empty spells list without authoring spellPolicy, infer 'fixed' at this layer;
+            // if this layer explicitly authors spellPolicy (including 'none'), that explicit choice wins.
+            if (!raw.ContainsKey("spellPolicy") && raw.TryGetPropertyValue("spells", out JsonNode? rawSpells))
+            {
+                if (rawSpells is JsonArray rawSpellsArr && rawSpellsArr.Count > 0)
+                    merged["spellPolicy"] = "fixed";
+                else if (rawSpells is null && string.Equals(merged["spellPolicy"]?.ToString(), "fixed", StringComparison.Ordinal))
+                    merged["spellPolicy"] = "none";
+            }
             merged["id"] = id;
             mergedNodes[id] = merged;
             chains[id] = chain;
@@ -994,8 +1003,8 @@ internal static partial class DaggerfallBaseContent
             spellPolicy = ActorSpellPolicy.None;
         else if (spellPolicy == ActorSpellPolicy.Fixed && spells.Count == 0 && !diagnostics.HasErrors)
             diagnostics.Add($"Actor template '{id}' uses spellPolicy 'fixed' with an empty spells list.");
-        else if (spellPolicy == ActorSpellPolicy.None && spells.Count > 0)
-            spellPolicy = ActorSpellPolicy.Fixed;
+        else if (spellPolicy == ActorSpellPolicy.None)
+            spells.Clear();
 
         DaggerfallActorCapabilities capabilities = new(
             IsPlayer: OptionalBool(el, "isPlayer"),

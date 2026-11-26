@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -235,6 +236,32 @@ public sealed class DaggerfallActorTemplatesTests
         Assert.Equal(["spell.007", "spell.010"], defs.EnemySpells.For(rat));
         Assert.False(defs.EnemySpells.IsCaster(shaman));
         Assert.Empty(defs.EnemySpells.For(shaman));
+
+        // Explicit spellPolicy 'none' on an existing fixed caster OR a child extending a fixed caster
+        // must stay None and must NOT silently flip back to Fixed when spells are still present.
+        JsonObject nonePolicy = TestPayload.Sections("actorTemplateCreatures", "actorSpecsCreatures");
+        JsonArray noneCreatures = nonePolicy["actorTemplateCreatures"]!["templates"]!.AsArray();
+        noneCreatures.First(t => t!["id"]!.GetValue<string>() == "imp")!["spellPolicy"] = "none";
+        // Child extending fixed-caster 'daedroth' (depth 4: actor-base -> creature-base -> daedra -> daedroth -> mute-daedroth)
+        // overriding only spellPolicy to 'none' while inheriting daedroth's spells list.
+        noneCreatures.Add(new JsonObject
+        {
+            ["id"] = "mute-daedroth",
+            ["extends"] = "daedroth",
+            ["spellPolicy"] = "none",
+        });
+        nonePolicy["actorSpecsCreatures"]!["specs"]!.AsArray()
+            .First(s => s!["id"]!.GetValue<string>() == "daedroth")!["template"] = "mute-daedroth";
+
+        DaggerfallDefinitions noneDefs = DaggerfallBaseContent.Read(TestPayload.Splice(nonePolicy));
+        DaggerfallActorDefinition impDef = noneDefs.RequireActor(new("imp"));
+        DaggerfallActorDefinition muteDaedroth = noneDefs.RequireActor(new("daedroth"));
+        Assert.Equal(ActorSpellPolicy.None, impDef.SpellPolicy);
+        Assert.False(noneDefs.EnemySpells.IsCaster(impDef));
+        Assert.Empty(noneDefs.EnemySpells.For(impDef));
+        Assert.Equal(ActorSpellPolicy.None, muteDaedroth.SpellPolicy);
+        Assert.False(noneDefs.EnemySpells.IsCaster(muteDaedroth));
+        Assert.Empty(noneDefs.EnemySpells.For(muteDaedroth));
     }
 
     [Fact]
@@ -255,6 +282,69 @@ public sealed class DaggerfallActorTemplatesTests
             DaggerfallActorGender spriteGender = actor.Actor.Get<DaggerfallActorGender>();
             Assert.Equal(ActorGender.Female, identity.Gender);
             Assert.Equal("female", spriteGender.Value);
+        }
+    }
+
+    [Fact]
+    public void Initial_authored_placement_and_reentry_sprites_honor_spawner_gender_distribution()
+    {
+        // Tighten encounter-mage to female-only while mage template allows both male and female.
+        JsonObject femaleOnly = TestPayload.Sections("actorSpecsEnemies");
+        femaleOnly["actorSpecsEnemies"]!["specs"]!.AsArray().First(s => s!["id"]!.GetValue<string>() == "encounter-mage")!["genders"] =
+            new JsonArray { new JsonObject { ["gender"] = "female", ["weight"] = 100 } };
+        DaggerfallDefinitions defs = DaggerfallBaseContent.Read(TestPayload.Splice(femaleOnly), TestPayload.Data);
+
+        long[] entityIds = [5001L, 5002L, 5003L, 5004L, 5005L, 5006L];
+        string? expectedFemalePath = null;
+        string? maleBasePath = null;
+
+        using var fixture = new SanguineRoseSessionTests.Fixture(
+            definitions: defs,
+            prepareInputs: inputs =>
+            {
+                NormalizedActorSprite mageSprite = inputs.MobileSprites[128];
+                Assert.NotNull(mageSprite.Female);
+                maleBasePath = mageSprite.TexturePath;
+                expectedFemalePath = mageSprite.Female!.TexturePath;
+                Assert.NotEqual(maleBasePath, expectedFemalePath);
+
+                Dictionary<long, AuthoredActor> actors = new(inputs.Project.Actors);
+                Dictionary<long, NormalizedActorSprite> sprites = new(inputs.ActorSprites);
+                foreach (long id in entityIds)
+                {
+                    actors[id] = new AuthoredActor(id, new("encounter-mage"), new(id - 5000f, 0f, -4f), Gender: "unspecified");
+                    sprites[id] = mageSprite;
+                }
+                ProjectFacts project = new(inputs.Project.PlayerPosition, actors);
+                return new DaggerfallSiteProfile(
+                    project, inputs.Geometry, inputs.WorldAppearance, inputs.InitialLook, inputs.Materials,
+                    sprites, inputs.MobileSprites, inputs.Audio, inputs.ClassicPresentation, inputs.Site,
+                    inputs.Doors, inputs.ProfileKind, inputs.ProfileKey.LogicalId, inputs.Portals,
+                    inputs.Anchors.Values.ToArray(), inputs.Lights, inputs.GroundContainerSprites,
+                    inputs.DungeonMap, inputs.DungeonActions, inputs.DungeonActionModels,
+                    inputs.InteriorBuilding, inputs.QuestMarkers, inputs.BillboardSprites);
+            });
+
+        foreach (long entityId in entityIds)
+        {
+            var actor = fixture.Session.State.Actors.Get(entityId);
+            Assert.Equal(ActorGender.Female, actor.Actor.Get<ActorInstanceIdentity>().Gender);
+            Assert.Equal("female", actor.Actor.Get<DaggerfallActorGender>().Value);
+            NormalizedActorSprite? admitted = fixture.Session.ActiveAppearance.SpriteFor(entityId);
+            Assert.NotNull(admitted);
+            Assert.Equal(expectedFemalePath, admitted.TexturePath);
+        }
+
+        // Restoring / re-entering the site selects the identical female atlas for every placement.
+        using DaggerfallSession restored = fixture.Restore();
+        foreach (long entityId in entityIds)
+        {
+            var actor = restored.State.Actors.Get(entityId);
+            Assert.Equal(ActorGender.Female, actor.Actor.Get<ActorInstanceIdentity>().Gender);
+            Assert.Equal("female", actor.Actor.Get<DaggerfallActorGender>().Value);
+            NormalizedActorSprite? reentrySprite = restored.ActiveAppearance.SpriteFor(entityId);
+            Assert.NotNull(reentrySprite);
+            Assert.Equal(expectedFemalePath, reentrySprite.TexturePath);
         }
     }
 }

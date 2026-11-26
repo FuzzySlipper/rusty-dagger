@@ -358,6 +358,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <summary>Whether a dynamic actor currently has a live visual in this projection.</summary>
     internal bool HasActor(long durableId) => actors.ContainsKey(durableId);
 
+    /// <summary>The admitted sprite variant for a live actor visual in this projection, when present.</summary>
+    internal NormalizedActorSprite? SpriteFor(long durableId) =>
+        actors.TryGetValue(durableId, out ActorVisual? visual) ? visual.Sprite : null;
+
     internal void RetireActor(long durableId)
     {
         List<Exception>? failures = null;

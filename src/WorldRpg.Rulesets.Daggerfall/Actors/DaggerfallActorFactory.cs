@@ -166,8 +166,10 @@ internal static class DaggerfallActorFactory
                 ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
                     mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
                     new ActorPose(source.Position, 0f));
-                SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
-                    definitions, definition, source.EntityId, explicitGender: source.Gender, regionIndex: inputs.Site?.Region));
+                ActorInstanceIdentity placedIdentity = DaggerfallActorInstanceResolver.Resolve(
+                    definitions, definition, source.EntityId, explicitGender: source.Gender, regionIndex: inputs.Site?.Region);
+                SetInstanceIdentity(actor.Actor, placedIdentity);
+                actor.Actor.Add(new DaggerfallActorGender(ActorGenderFormat.SpriteKey(placedIdentity.Gender)));
                 DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
                 actor.Actor.Add(new ActorOriginComponent(
                     ActorOrigin.FixedPlacement(inputs.ProfileKey, source.EntityId),

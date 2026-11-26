@@ -105,7 +105,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 () => placedGates.Open, () => placedGates.Visuals, () => placedMotion.Visuals, placedMotion.TryGetTransform);
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
                 tuning.PresentationAudio, random, audioBundle, parts, sessionPresentation, definitions, tuning.Sprites, tuning.SiteLighting,
-                prepareLocationOffUpdate, (id, gender, sprite) => DaggerfallActorGender.Resolve(random, id, gender, sprite), configureAppearance);
+                prepareLocationOffUpdate, (id, gender, sprite) => ResolvePlacedActorGender(definitions, random, inputs, id, gender, sprite), configureAppearance);
             doors.SoundRequested += appearance.PlayDoorSound;
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar.Sky, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
@@ -138,6 +138,26 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     }
 
     internal void AdvanceMotion(double deltaSeconds) => Motion.Advance(deltaSeconds);
+
+    private static string ResolvePlacedActorGender(
+        DaggerfallDefinitions? definitions,
+        IRandomService random,
+        DaggerfallSiteProfile inputs,
+        long entityId,
+        string? explicitGender,
+        NormalizedActorSprite sprite)
+    {
+        if (definitions is not null
+            && inputs.Project.Actors.TryGetValue(entityId, out AuthoredActor? placed)
+            && definitions.Actors.TryGetValue(placed.ActorId, out DaggerfallActorDefinition? definition)
+            && definition.TemplateId is not null)
+        {
+            ActorInstanceIdentity identity = DaggerfallActorInstanceResolver.Resolve(
+                definitions, definition, entityId, explicitGender: explicitGender, regionIndex: inputs.Site?.Region);
+            return ActorGenderFormat.SpriteKey(identity.Gender);
+        }
+        return DaggerfallActorGender.Resolve(random, entityId, explicitGender ?? "unspecified", sprite);
+    }
 
     internal DaggerfallDungeonMotionActivation ActivateMotion(string actionId) => Motion.Activate(actionId);
 
