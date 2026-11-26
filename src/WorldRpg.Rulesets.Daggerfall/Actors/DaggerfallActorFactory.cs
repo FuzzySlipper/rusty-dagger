@@ -356,6 +356,7 @@ internal static class DaggerfallActorFactory
         ActorOverlayComponent overlay = actor.Actor.Get<ActorOverlayComponent>();
         overlay.ArchetypeId = profile.Id;
         overlay.IsQuestor = npc.Kind == DaggerfallNpcKind.Questor;
+        overlay.FamilyId = npc.FamilyId;
 
         DaggerfallNpc liveSnapshot = npc with { X = null, Y = null, Z = null };
         if (actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? existingPerson))

@@ -26,7 +26,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerControlState player, DaggerfallActorRoster roster,
     DaggerfallEnemySenses senses, DaggerfallEnemyBehaviorModule behavior, DaggerfallEnemyMagicModule magic,
     DaggerfallCasting casting, DaggerfallCombatRules combat, DaggerfallEffectLifecycle effects,
-    Func<long, EquipmentRead?> equipment, Func<long, string?> team, Func<ulong?> step)
+    Func<long, EquipmentRead?> equipment, Func<long, string?> team, Func<ulong?> step,
+    DaggerfallDefinitions? definitions = null, DaggerfallNpcRegistry? npcs = null, DaggerfallNames? names = null,
+    Func<ulong>? worldSocialSeed = null)
     : IDeveloperActorCommands
 {
     /// <summary>How far <c>target</c> and <c>nearest</c> look for an actor.</summary>
@@ -211,6 +213,7 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
         WriteBehavior(w, actor, memory);
         WriteAttack(w, actor);
         WriteSpells(w, actor, definition);
+        WriteSocial(w, actor);
         if (actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander))
         {
             w.WriteStartObject("wander");
@@ -306,6 +309,63 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             w.WriteString("outcome", last.Outcome.ToString()); w.WriteNumber("step", last.SimulationStep);
             w.WriteEndObject();
         }
+        w.WriteEndObject();
+    }
+
+    private void WriteSocial(Utf8JsonWriter w, ActorState actor)
+    {
+        string? familyId = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay) && !string.IsNullOrWhiteSpace(overlay.FamilyId)
+            ? overlay.FamilyId
+            : actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person) && !string.IsNullOrWhiteSpace(person.Snapshot.FamilyId)
+                ? person.Snapshot.FamilyId
+                : null;
+        if (familyId is null && !actor.Actor.Has<ActorPersonComponent>())
+            return;
+
+        DaggerfallHouseholdScope scope = DaggerfallHouseholds.ScopeOf(familyId);
+        ulong seed = worldSocialSeed?.Invoke() ?? 0UL;
+        string? label = DaggerfallHouseholds.FormatLabel(
+            familyId,
+            definitions,
+            names is not null ? names.Surname : null,
+            names is not null ? (bank, id) => names.FirstName(bank, false, id) : null,
+            seed);
+
+        w.WriteStartObject("social");
+        if (familyId is not null) w.WriteString("familyId", familyId); else w.WriteNull("familyId");
+        if (label is not null) w.WriteString("householdLabel", label); else w.WriteNull("householdLabel");
+        w.WriteString("scope", scope switch
+        {
+            DaggerfallHouseholdScope.Dynasty => "dynasty",
+            DaggerfallHouseholdScope.GreatHouse => "great-house",
+            DaggerfallHouseholdScope.Local => "local",
+            _ => "none",
+        });
+        w.WriteStartArray("localKin");
+        if (familyId is not null)
+        {
+            foreach (ActorState other in actors.All.OrderBy(a => a.DurableId))
+            {
+                if (other.DurableId == actor.DurableId || other.DurableId == actors.Player.DurableId)
+                    continue;
+                string? otherFamily = other.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? otherOv) && !string.IsNullOrWhiteSpace(otherOv.FamilyId)
+                    ? otherOv.FamilyId
+                    : other.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? otherPerson) ? otherPerson.Snapshot.FamilyId : null;
+                if (!StringComparer.Ordinal.Equals(familyId, otherFamily))
+                    continue;
+                w.WriteStartObject();
+                w.WriteNumber("durableId", other.DurableId);
+                string? kinName = other.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? kinPerson)
+                    ? kinPerson.Snapshot.DisplayName
+                    : npcs is not null && npcs.TryGet(other.DurableId, out DaggerfallNpc? kinNpc)
+                        ? kinNpc.DisplayName
+                        : null;
+                if (!string.IsNullOrWhiteSpace(kinName)) w.WriteString("name", kinName);
+                else w.WriteNull("name");
+                w.WriteEndObject();
+            }
+        }
+        w.WriteEndArray();
         w.WriteEndObject();
     }
 

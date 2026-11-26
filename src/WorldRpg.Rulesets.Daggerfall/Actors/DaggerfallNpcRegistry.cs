@@ -60,6 +60,8 @@ public sealed record DaggerfallNpc(
     public string? DisplayName { get; init; }
     /// <summary>Current physical profile; Site retains the stable social origin.</summary>
     internal DaggerfallWorldProfileKey? Profile { get; init; }
+    /// <summary>Deterministic or authored household/dynasty identity (<c>fam:local:...</c>, <c>fam:house:...</c>, <c>fam:dynasty:...</c>).</summary>
+    internal string? FamilyId { get; init; }
 }
 
 /// <summary>
@@ -156,7 +158,7 @@ public sealed class DaggerfallNpcRegistry
     /// </summary>
     internal long RegisterDeterministic(long durableId, DaggerfallNpcKind kind, string stableKey, DaggerfallNpcSite site,
         DaggerfallNpcAppearance appearance, string role, IReadOnlyList<string> services, string? displayName = null,
-        DaggerfallWorldProfileKey? homeProfile = null)
+        DaggerfallWorldProfileKey? homeProfile = null, string? familyId = null)
     {
         if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
         ArgumentException.ThrowIfNullOrWhiteSpace(stableKey);
@@ -188,6 +190,7 @@ public sealed class DaggerfallNpcRegistry
                 durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null)
             {
                 DisplayName = resolvedName,
+                FamilyId = familyId,
             });
             ActorSocialDiff hydratedSocial = ActorSocialDiff.FromNpc(hydrated) with
             {
@@ -202,6 +205,7 @@ public sealed class DaggerfallNpcRegistry
             durableId, kind, stableKey, site, appearance, role, [.. services], DaggerfallNpcPresence.Active, null, null, null)
         {
             DisplayName = displayName,
+            FamilyId = familyId,
         });
         ActorOrigin origin = ResolveDeterministicOrigin(kind, stableKey, homeProfile, appearance.Gender);
         _ledger.Upsert(new ActorLedgerEntry(durableId, origin, Social: ActorSocialDiff.FromNpc(staged)));
@@ -552,6 +556,7 @@ public sealed class DaggerfallNpcRegistry
         {
             DisplayName = s.DisplayNameOverride,
             Profile = profile,
+            FamilyId = s.FamilyId,
         };
     }
 

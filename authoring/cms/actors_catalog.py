@@ -754,6 +754,8 @@ class ActorsCatalogStore:
                 "race": sp.get("race"),
                 "team": sp.get("team"),
                 "factionId": sp.get("factionId"),
+                "familyId": sp.get("familyId"),
+                "socialGrouping": sp.get("socialGrouping"),
                 "mobileId": (sp.get("classicBinding") or {}).get("mobileId"),
                 "primaryArt": primary_art,
                 "artCount": len({a["id"] for a in art_links}),
@@ -874,6 +876,21 @@ class ActorsCatalogStore:
         board_seats = index["board_seats_by_spec"].get(spec_id, [])
         offices = index["offices_by_spec"].get(spec_id, [])
         fam = sp["family"]
+        family_id = sp.get("familyId")
+        family_members = []
+        if isinstance(family_id, str) and family_id:
+            for other_id in index["spec_order"]:
+                if other_id == spec_id:
+                    continue
+                other = index["specs"][other_id]
+                if other.get("familyId") == family_id:
+                    other_arts = self._art_links_for_spec(other, catalog, concept_store, memo)
+                    family_members.append({
+                        "id": other_id,
+                        "family": other["family"],
+                        "displayName": other.get("displayName") or other_id,
+                        "primaryArt": other_arts[0] if other_arts else None,
+                    })
 
         return {
             "id": spec_id,
@@ -896,7 +913,9 @@ class ActorsCatalogStore:
             "factionId": sp.get("factionId"),
             "factionName": (index["factions"].get(sp.get("factionId")) or {}).get("name") if _is_int(sp.get("factionId")) else None,
             "home": sp.get("home"),
-            "familyId": sp.get("familyId"),
+            "familyId": family_id,
+            "socialGrouping": sp.get("socialGrouping"),
+            "familyMembers": family_members,
             "visual": sp.get("visual"),
             "visualMode": sp.get("visualMode"),
             "appearances": sp.get("appearances"),

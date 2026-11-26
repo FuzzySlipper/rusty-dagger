@@ -7,7 +7,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallNames(DaggerfallDefinitions definitions, IRandomService random, Func<string, int, int>? draw = null)
 {
     /// <summary>A person's name from how they look and the region they belong to.</summary>
-    internal string NpcName(DaggerfallNpcAppearance appearance, int region)
+    internal string NpcName(DaggerfallNpcAppearance appearance, int region) =>
+        NpcName(appearance, region, familyId: null, worldSocialSeed: 0UL);
+
+    /// <summary>
+    /// A person's name from appearance, region, and optional deterministic household <paramref name="familyId"/>.
+    /// Household members share a coherent seeded surname only when their cultural name bank matches the region's bank.
+    /// </summary>
+    internal string NpcName(DaggerfallNpcAppearance appearance, int region, string? familyId, ulong worldSocialSeed = 0UL)
     {
         // Classic StaticNPC.GetDisplayName takes the faction's own name only for Individual (type 4)
         // factions; type 0 (Daedra) sits on nine Sentinel/Wayrest commoner flats by source typo.
@@ -15,7 +22,15 @@ internal sealed class DaggerfallNames(DaggerfallDefinitions definitions, IRandom
             return individual.Name;
         if (!definitions.BuildingNames.TryGetNameBank(region, out int bank))
             throw new NotSupportedException($"NPC region {region} has no published name bank.");
-        return FullName(bank, appearance.Gender == "Female", $"npc/name/{appearance.NameSeed}");
+        bool female = appearance.Gender == "Female";
+        string identity = $"npc/name/{appearance.NameSeed}";
+        if (DaggerfallHouseholds.ShouldShareSurname(appearance.Race, bank, familyId))
+        {
+            string first = FirstName(bank, female, identity);
+            string last = Surname(bank, DaggerfallHouseholds.SurnameIdentity(worldSocialSeed, familyId!));
+            return last.Length > 0 ? first + " " + last : first;
+        }
+        return FullName(bank, female, identity);
     }
 
     internal string FirstName(int bank, bool female, string identity)

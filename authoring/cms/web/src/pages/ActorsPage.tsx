@@ -666,6 +666,8 @@ function SpecInspector({
             ...(detail.interaction ? { Interaction: detail.interaction } : {}),
             ...(detail.team ? { Team: detail.team } : {}),
             ...(detail.factionId ? { Faction: `${detail.factionName ?? 'Faction'} (#${detail.factionId})` } : {}),
+            ...(detail.socialGrouping ? { 'Social grouping': detail.socialGrouping } : {}),
+            ...(detail.familyId ? { 'Family / Dynasty': detail.familyId } : {}),
             ...(detail.home?.block
               ? {
                   Home: `${detail.home.block}${detail.home.site ? ` @ ${detail.home.site.region}/${detail.home.site.index}` : ''}${detail.home.slotId ? ` · slot ${detail.home.slotId}` : ''}${detail.home.position ? ` · pos [${detail.home.position.join(', ')}]` : ''}`,
@@ -710,6 +712,20 @@ function SpecInspector({
             <p class="muted">Not bound to a political board seat.</p>
           )}
         </div>
+
+        {detail.familyMembers.length ? (
+          <div class="usage-subsection">
+            <h3>Family / Dynasty members ({detail.familyMembers.length})</h3>
+            <div class="usage-pills">
+              {detail.familyMembers.map(member => (
+                <a key={member.id} class="art-data-chip" href={actorSpecUrl(member.id)}>
+                  <span>{member.displayName}</span>
+                  <code>{member.id}</code>
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {detail.reverseRefs.offices.length ? (
           <div class="usage-subsection">
@@ -827,7 +843,7 @@ export function ActorsPage({ kind, id }: { kind?: 'template' | 'spec'; id?: stri
   const filteredSpecs = overview.specs.filter(sp => {
     if (familyFilter !== 'all' && sp.family !== familyFilter) return false;
     if (!term) return true;
-    return `${sp.id} ${sp.displayName} ${sp.template ?? ''} ${sp.family} ${sp.role ?? ''} ${sp.race ?? ''}`
+    return `${sp.id} ${sp.displayName} ${sp.template ?? ''} ${sp.family} ${sp.role ?? ''} ${sp.race ?? ''} ${sp.familyId ?? ''} ${sp.socialGrouping ?? ''}`
       .toLowerCase()
       .includes(term);
   });

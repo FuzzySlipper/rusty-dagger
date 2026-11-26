@@ -164,7 +164,7 @@
         "block": "S0000080.RDB",
         "slotId": "d:p00"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:wayrest"
     },
     {
       "id": "king-gothryd",
@@ -191,7 +191,7 @@
         "block": "S0000160.RDB",
         "slotId": "d:p04"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:daggerfall"
     },
     {
       "id": "king-of-worms",
@@ -245,7 +245,7 @@
         "block": "S0000160.RDB",
         "slotId": "d:p18"
       },
-      "familyId": null
+      "familyId": "fam:house:bridwell"
     },
     {
       "id": "lady-brisienna",
@@ -330,7 +330,7 @@
         "block": "S0000160.RDB",
         "slotId": "d:p03"
       },
-      "familyId": null
+      "familyId": "fam:house:bridwell"
     },
     {
       "id": "lord-darkworth",
@@ -465,7 +465,7 @@
         "block": "S0000180.RDB",
         "slotId": "d:p00"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:direnni"
     },
     {
       "id": "mobar",
@@ -519,7 +519,7 @@
         "block": "S0000160.RDB",
         "slotId": "d:p11"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:daggerfall"
     },
     {
       "id": "nulfaga",
@@ -631,7 +631,7 @@
         "block": "S0000040.RDB",
         "slotId": "d:p21"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:sentinel"
     },
     {
       "id": "prince-helseth",
@@ -658,7 +658,7 @@
         "block": "S0000081.RDB",
         "slotId": "d:p06"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:wayrest"
     },
     {
       "id": "prince-lhotun",
@@ -685,7 +685,7 @@
         "block": "S0000040.RDB",
         "slotId": "d:p09"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:sentinel"
     },
     {
       "id": "princess-elysana",
@@ -712,7 +712,7 @@
         "block": "S0000080.RDB",
         "slotId": "d:p01"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:wayrest"
     },
     {
       "id": "princess-morgiah",
@@ -739,7 +739,7 @@
         "block": "S0000080.RDB",
         "slotId": "d:p07"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:wayrest"
     },
     {
       "id": "queen-akorithi",
@@ -766,7 +766,7 @@
         "block": "S0000040.RDB",
         "slotId": "d:p22"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:sentinel"
     },
     {
       "id": "queen-aubk-i",
@@ -793,7 +793,7 @@
         "block": "S0000160.RDB",
         "slotId": "d:p13"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:daggerfall"
     },
     {
       "id": "queen-barenziah",
@@ -820,7 +820,7 @@
         "block": "S0000080.RDB",
         "slotId": "d:p06"
       },
-      "familyId": null
+      "familyId": "fam:dynasty:wayrest"
     },
     {
       "id": "the-night-mother",

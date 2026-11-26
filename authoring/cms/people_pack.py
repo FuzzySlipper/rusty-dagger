@@ -23,6 +23,8 @@ SHARED_CLASS_ROLE_IDS = frozenset({"mage", "warrior", "assassin"})
 INTERACTIONS = ("none", "ambient-bark", "full-dialogue")
 HARMS = ("protected", "law-protected-civilian", "combatant")
 VISUAL_MODES = ("pool", "classic-slot")
+SOCIAL_GROUPINGS = ("none", "building-household", "faction-chapter", "tavern-staff", "tavern-patron", "noble-house")
+VALID_FAMILY_ID_RE = re.compile(r"^[a-z0-9][a-z0-9:._-]*$")
 CLIMATE_NAMES = (
     "Ocean", "Desert", "Desert2", "Mountain", "Rainforest",
     "Swamp", "Subtropical", "MountainWoods", "Woodlands", "HauntedWoodlands",
@@ -335,6 +337,10 @@ def validate_spawners_document(doc, archetypes: dict[str, dict] | None = None) -
         if type(entry.get("deriveRegionalFaction")) is not bool:
             issues.append(ValidationIssue(f"{path}.deriveRegionalFaction", "deriveRegionalFaction must be true or false."))
 
+        social_grouping = entry.get("socialGrouping")
+        if social_grouping is not None and social_grouping not in SOCIAL_GROUPINGS:
+            issues.append(ValidationIssue(f"{path}.socialGrouping", f"socialGrouping must be one of {', '.join(SOCIAL_GROUPINGS)}."))
+
         visual_mode = entry.get("visualMode")
         if visual_mode not in VISUAL_MODES:
             issues.append(ValidationIssue(f"{path}.visualMode", f"visualMode must be one of {', '.join(VISUAL_MODES)}."))
@@ -506,6 +512,7 @@ def _town_spec_to_spawner(spec: dict) -> dict:
         "interaction": spec.get("interaction", "full-dialogue"),
         "harm": spec.get("harm", "law-protected-civilian"),
         "deriveRegionalFaction": bool(spec.get("deriveRegionalFaction", False)),
+        "socialGrouping": spec.get("socialGrouping", "none"),
         "visualMode": spec.get("visualMode", "pool"),
         "defaultPool": spec.get("defaultPool") or [],
         "regionalPools": spec.get("regionalPools") or {},
@@ -684,6 +691,9 @@ def validate_unified_cast_specs_document(
             issues.append(ValidationIssue(f"{path}.interaction", f"Interaction must be one of {', '.join(INTERACTIONS)}."))
         if entry.get("harm") not in HARMS:
             issues.append(ValidationIssue(f"{path}.harm", f"Harm must be one of {', '.join(HARMS)}."))
+        family_id = entry.get("familyId")
+        if family_id is not None and (not isinstance(family_id, str) or not VALID_FAMILY_ID_RE.match(family_id)):
+            issues.append(ValidationIssue(f"{path}.familyId", "familyId must be null or lowercase identifier characters with optional colons (e.g. 'fam:dynasty:daggerfall')."))
     return issues
 
 
@@ -722,6 +732,10 @@ def validate_unified_town_specs_document(doc, templates: dict[str, dict] | None 
             issues.append(ValidationIssue(f"{path}.harm", f"Harm must be one of {', '.join(HARMS)}."))
         if type(entry.get("deriveRegionalFaction")) is not bool:
             issues.append(ValidationIssue(f"{path}.deriveRegionalFaction", "deriveRegionalFaction must be true or false."))
+
+        social_grouping = entry.get("socialGrouping")
+        if social_grouping is not None and social_grouping not in SOCIAL_GROUPINGS:
+            issues.append(ValidationIssue(f"{path}.socialGrouping", f"socialGrouping must be one of {', '.join(SOCIAL_GROUPINGS)}."))
 
         visual_mode = entry.get("visualMode")
         if visual_mode not in VISUAL_MODES:

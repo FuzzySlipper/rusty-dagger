@@ -404,6 +404,8 @@ export interface ActorSpecSummary {
   race: string | null;
   team: string | null;
   factionId: number | null;
+  familyId: string | null;
+  socialGrouping: string | null;
   mobileId: number | null;
   primaryArt: ActorArtLink | null;
   artCount: number;
@@ -478,6 +480,13 @@ export interface ActorSpecDetail {
   factionName: string | null;
   home: { block?: string; slotId?: string; position?: number[]; site?: { region: number; index: number } } | null;
   familyId: string | null;
+  socialGrouping: string | null;
+  familyMembers: Array<{
+    id: string;
+    family: string;
+    displayName: string;
+    primaryArt: ActorArtLink | null;
+  }>;
   visual: { archive: number; record: number } | null;
   visualMode: string | null;
   appearances: Record<string, unknown> | null;

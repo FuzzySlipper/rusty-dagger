@@ -22,7 +22,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsState actors, Func<DaggerfallSiteProfile> profile,
     Func<DaggerfallSiteAppearance> appearance, Func<DaggerfallSiteId, DaggerfallSiteRecord> requireSite, Func<WorldPoint, WorldPoint> profileToLocal,
     Func<DaggerfallNpc, ActorPose, long> materialize, Action<long> unload, Action<long> retire, Func<long, bool> retireDetached,
-    Func<DaggerfallNpc, ActorOrigin, WorldPoint, ActorPose, Vector3, long>? materializeDeterministic = null,
+    Func<DaggerfallNpc, ActorOrigin, WorldPoint, ActorPose, Vector3, string?, long>? materializeDeterministic = null,
     Func<long, bool>? isSuppressed = null)
 {
     private readonly Func<long, bool> _isSuppressed = isSuppressed ?? (_ => false);
@@ -70,7 +70,7 @@ internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsStat
     /// without adding it to the minted dynamic-actor map so untouched slots save zero ledger bytes.
     /// </summary>
     internal long MaterializeDeterministic(long npcId, ActorOrigin origin, WorldPoint baselineProfilePose, ActorPose pose,
-        Vector3 frameOffset)
+        Vector3 frameOffset, string? baselineFamilyId = null)
     {
         DaggerfallNpc npc = npcs.Require(npcId);
         if (npc.Kind != DaggerfallNpcKind.Civilian)
@@ -87,7 +87,7 @@ internal sealed class DaggerfallCivilians(DaggerfallNpcRegistry npcs, ActorsStat
         }
 
         long actorId = materializeDeterministic is not null
-            ? materializeDeterministic(npc, origin, baselineProfilePose, pose, frameOffset)
+            ? materializeDeterministic(npc, origin, baselineProfilePose, pose, frameOffset, baselineFamilyId)
             : materialize(npc, pose);
         if (sourcePopulation)
         {

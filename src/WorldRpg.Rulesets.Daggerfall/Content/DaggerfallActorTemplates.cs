@@ -105,6 +105,45 @@ internal enum ActorSpellPolicy
     ClassTiers,
 }
 
+/// <summary>How a town spawner spec forms deterministic households or Great House affiliations.</summary>
+internal enum ActorSocialGrouping
+{
+    None,
+    BuildingHousehold,
+    FactionChapter,
+    TavernStaff,
+    TavernPatron,
+    NobleHouse,
+}
+
+internal static class ActorSocialGroupingFormat
+{
+    internal static string Slug(ActorSocialGrouping grouping) => grouping switch
+    {
+        ActorSocialGrouping.None => "none",
+        ActorSocialGrouping.BuildingHousehold => "building-household",
+        ActorSocialGrouping.FactionChapter => "faction-chapter",
+        ActorSocialGrouping.TavernStaff => "tavern-staff",
+        ActorSocialGrouping.TavernPatron => "tavern-patron",
+        ActorSocialGrouping.NobleHouse => "noble-house",
+        _ => throw new ArgumentOutOfRangeException(nameof(grouping)),
+    };
+
+    internal static bool TryParse(string? value, out ActorSocialGrouping grouping)
+    {
+        switch (value)
+        {
+            case "none": grouping = ActorSocialGrouping.None; return true;
+            case "building-household": grouping = ActorSocialGrouping.BuildingHousehold; return true;
+            case "faction-chapter": grouping = ActorSocialGrouping.FactionChapter; return true;
+            case "tavern-staff": grouping = ActorSocialGrouping.TavernStaff; return true;
+            case "tavern-patron": grouping = ActorSocialGrouping.TavernPatron; return true;
+            case "noble-house": grouping = ActorSocialGrouping.NobleHouse; return true;
+            default: grouping = default; return false;
+        }
+    }
+}
+
 /// <summary>
 /// Closed set of mechanical capability fields derived from every ruleset call site that formerly branched on
 /// <c>DaggerfallActorKinds</c> or hardcoded classic <c>MobileId</c> switches.
@@ -277,7 +316,8 @@ internal sealed record DaggerfallActorSpawnerSpec(
     string? HomeSlotId = null,
     DaggerfallSiteId? HomeSite = null,
     WorldPoint? HomePosition = null,
-    string? FamilyId = null);
+    string? FamilyId = null,
+    ActorSocialGrouping SocialGrouping = ActorSocialGrouping.None);
 
 /// <summary>Resolved actor template and spawner spec catalog owned by <see cref="DaggerfallDefinitions"/>.</summary>
 internal sealed record DaggerfallActorCatalog(
@@ -318,7 +358,8 @@ internal sealed record DaggerfallActorCatalog(
                         spec.DefaultPool ?? [],
                         spec.RegionalPools ?? EmptyPoolMap,
                         ArchetypeId: spec.TemplateId,
-                        ClimatePoolsMap: spec.ClimatePools ?? EmptyPoolMap),
+                        ClimatePoolsMap: spec.ClimatePools ?? EmptyPoolMap,
+                        SocialGrouping: spec.SocialGrouping),
                     StringComparer.Ordinal));
 
     /// <summary>Projects all <see cref="ActorSpawnerFamily.Cast"/> specs into unique cast individual definitions.</summary>
@@ -340,7 +381,8 @@ internal sealed record DaggerfallActorCatalog(
                         spec.HomeSlotId,
                         FormatInteraction(spec.Interaction),
                         FormatHarm(spec.Harm),
-                        ArchetypeId: spec.TemplateId)
+                        ArchetypeId: spec.TemplateId,
+                        FamilyId: spec.FamilyId)
                     {
                         HomeSite = spec.HomeSite,
                         HomePosition = spec.HomePosition,
@@ -1402,11 +1444,19 @@ internal static partial class DaggerfallBaseContent
         DaggerfallSiteId? homeSite = null;
         WorldPoint? homePosition = null;
         string? familyId = null;
+        ActorSocialGrouping socialGrouping = ActorSocialGrouping.None;
 
         if (family == ActorSpawnerFamily.Town)
         {
             role = Text(item, "role", diagnostics);
             deriveRegionalFaction = OptionalBool(item, "deriveRegionalFaction");
+            if (OptionalText(item, "socialGrouping", diagnostics) is { } groupingText)
+            {
+                if (ActorSocialGroupingFormat.TryParse(groupingText, out ActorSocialGrouping parsedGrouping))
+                    socialGrouping = parsedGrouping;
+                else
+                    diagnostics.Add($"Town spawner spec '{id}' has unknown socialGrouping '{groupingText}'.");
+            }
             visualMode = Text(item, "visualMode", diagnostics);
             if (visualMode is not ("classic-slot" or "pool"))
                 diagnostics.Add($"Town spawner spec '{id}' has invalid visualMode '{visualMode}'.");
@@ -1507,6 +1557,8 @@ internal static partial class DaggerfallBaseContent
                     diagnostics.Add($"Cast spawner spec '{id}' has a home.position but no home.site to set it in.");
             }
             familyId = OptionalText(item, "familyId", diagnostics);
+            if (familyId is not null && !DaggerfallHouseholds.IsValidFamilyId(familyId))
+                diagnostics.Add($"Cast spawner spec '{id}' has invalid familyId '{familyId}'.");
         }
 
         return new DaggerfallActorSpawnerSpec(
@@ -1550,7 +1602,8 @@ internal static partial class DaggerfallBaseContent
             homeSlotId,
             homeSite,
             homePosition,
-            familyId);
+            familyId,
+            socialGrouping);
     }
 
     private static IReadOnlyList<DaggerfallPeoplePoolEntry> ReadSpawnerPool(

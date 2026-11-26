@@ -423,6 +423,12 @@ class ActorsCatalogTests(TestCase):
         self.assertEqual(real_ov["counts"]["byFamily"]["town"], 31)
         real_gothryd = real_ws.actors_catalog.get_spec("king-gothryd", real_ws.catalog(), real_ws.concept_store)
         self.assertEqual([s["seatId"] for s in real_gothryd["reverseRefs"]["boardSeats"]], ["daggerfall"])
+        self.assertEqual(real_gothryd["familyId"], "fam:dynasty:daggerfall")
+        self.assertEqual({m["id"] for m in real_gothryd["familyMembers"]}, {"queen-aubk-i", "mynisera"})
+        real_courtier = real_ws.actors_catalog.get_spec("town-courtier", real_ws.catalog(), real_ws.concept_store)
+        self.assertEqual(real_courtier["socialGrouping"], "noble-house")
+        real_resident = real_ws.actors_catalog.get_spec("town-house-resident", real_ws.catalog(), real_ws.concept_store)
+        self.assertEqual(real_resident["socialGrouping"], "building-household")
         real_mage = real_ws.actors_catalog.get_template("mage", real_ws.catalog(), real_ws.concept_store)
         mage_spawners = {s["id"] for s in real_mage["reverseRefs"]["spawners"]}
         self.assertIn("encounter-mage", mage_spawners)
@@ -453,3 +459,5 @@ class ActorsCatalogTests(TestCase):
         self.assertIn("/api/actors/overview", app_bundle)
         self.assertIn("/api/actors/preview", app_bundle)
         self.assertIn("Unified actor records", app_bundle)
+        self.assertIn("Family / Dynasty members", app_bundle)
+        self.assertIn("Social grouping", app_bundle)

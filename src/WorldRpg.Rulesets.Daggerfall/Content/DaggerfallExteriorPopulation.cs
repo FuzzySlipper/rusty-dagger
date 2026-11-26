@@ -70,19 +70,24 @@ internal static class DaggerfallExteriorPopulation
                 (positions[0], positions[gateGuardIndex]) = (positions[gateGuardIndex], positions[0]);
         }
         List<DaggerfallPopulationPlacement> result = [];
+        int townBuckets = DaggerfallHouseholds.TownHouseholdBucketCount(location);
         for (int index = 0; index < count; index++)
         {
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
             bool isGuard = index % 32 == 0;
-            ulong slotSeed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed, location.Id, DaggerfallPeopleSlots.WalkerSlotKey(index));
+            string walkerSlotKey = DaggerfallPeopleSlots.WalkerSlotKey(index);
+            ulong slotSeed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed, location.Id, walkerSlotKey);
             int spriteIndex = isGuard ? 0 : (int)((slotSeed >> 16) % (ulong)people.Sprites.Count);
             int sprite = people.Sprites[spriteIndex];
             byte flags = isGuard ? (byte)0 : (byte)(spriteIndex == 1 ? 0x20 : 0);
             ushort nameSeed = (ushort)((slotSeed & 0xFFFFUL) == 0 ? 1 : (slotSeed & 0xFFFFUL));
+            string? familyId = DaggerfallHouseholds.ResolveForExteriorWalker(
+                worldSocialSeed, location.Id, walkerSlotKey, isGuard, townBuckets);
             result.Add(new(id, positions[index], sprite >> 7, sprite & 0x7f, people.Id,
                 flags, nameSeed)
             {
                 IsGuard = isGuard,
+                FamilyId = familyId,
             });
         }
         return result;

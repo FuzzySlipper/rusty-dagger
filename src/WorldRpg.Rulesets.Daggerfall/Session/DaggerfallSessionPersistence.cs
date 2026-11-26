@@ -532,15 +532,18 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             int escortOrder = overlay is not null && stagedPartyRole is not null && overlay.EscortOrder > 0
                 ? overlay.EscortOrder
                 : priorLedger?.Social?.EscortOrder ?? 0;
-            string? familyId = !string.IsNullOrWhiteSpace(overlay?.FamilyId)
-                ? overlay.FamilyId
+            string? baselineFamilyId = originComp?.BaselineNpc?.FamilyId;
+            string? liveFamilyId = !string.IsNullOrWhiteSpace(overlay?.FamilyId) ? overlay.FamilyId : null;
+            bool familyChanged = !StringComparer.Ordinal.Equals(liveFamilyId, baselineFamilyId);
+            string? familyId = familyChanged
+                ? liveFamilyId
                 : priorLedger?.Social?.FamilyId;
             bool hasPriorSocialDelta = priorLedger?.Social is { } ps
                 && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 }
                     || ps.Vouches is { Length: > 0 } || ps.LastFavourDay is not null
                     || ps.EscortPortrait is not null || ps.StagedPartyRole is not null || ps.FamilyId is not null);
             bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || lastFavourDay is not null
-                || promotedArchetype is not null || stagedPartyRole is not null || familyId is not null
+                || promotedArchetype is not null || stagedPartyRole is not null || familyChanged
                 || nameChanged || presenceChanged || hasPriorSocialDelta
                 || relocated || referencedNpcs.Contains(actor.DurableId);
             if (mustKeepSocial)
@@ -556,7 +559,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     EscortPortrait = escortPortrait,
                     EscortOrder = escortOrder,
                     StagedPartyRole = stagedPartyRole,
-                    FamilyId = familyId,
+                    FamilyId = familyId ?? (relocated ? liveFamilyId : null),
                 };
             }
         }

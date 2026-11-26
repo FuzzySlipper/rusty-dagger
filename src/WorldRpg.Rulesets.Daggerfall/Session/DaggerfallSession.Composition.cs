@@ -808,7 +808,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindTextContext(_questTexts.For);
             State.Quests.BindCalendar(() => _time.Calendar);
             DaggerfallNames questNames = new(definitions, _random);
-            npcs.BindNames(npc => questNames.NpcName(npc.Appearance, npc.Site.Region));
+            npcs.BindNames(npc => questNames.NpcName(npc.Appearance, npc.Site.Region, npc.FamilyId, _worldSocialSeed));
             var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, _random,
                 (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
                 region => region >= 0 && region < definitions.BuildingNames.RegionNames.Count ? definitions.BuildingNames.RegionNames[region] : null,
@@ -1016,7 +1016,7 @@ internal sealed partial class DaggerfallSession
             Civilians = new DaggerfallCivilians(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance, _site.Require,
                 point => _exterior.ProfileToLocal(point), (npc, pose) => _roster.MaterializeCivilian(npc, pose), id => _roster.UnloadActor(id),
                 RetireActor, id => RetireDetachedActor(id, DaggerfallActorKinds.Civilian),
-                (npc, origin, baseline, pose, frameOffset) => _roster.MaterializeDeterministicCivilian(npc, origin, baseline, pose, frameOffset),
+                (npc, origin, baseline, pose, frameOffset, baselineFamilyId) => _roster.MaterializeDeterministicCivilian(npc, origin, baseline, pose, frameOffset, baselineFamilyId),
                 id => State.Quests.IsEscortWithParty(id)
                     || State.ActorLedger.IsHomeSlotSuppressed(id, _activeProfileKey));
             OverlandParties = new DaggerfallOverlandPartyCoordinator(
@@ -1468,7 +1468,7 @@ internal sealed partial class DaggerfallSession
                 id => Population.Townsperson(id), id => Population.Seed(id), () => DrawnArt is not null, warnPeople);   // Developer
             DaggerfallActorInspection actorInspection = new(State.Actors, State.PlayerControl, _roster, _senses, _enemyBehavior, _enemyMagic,
                 Casting, _combat, State.Effects, id => State.Actors.TryGet(id, out _) ? actorInventories.EquipmentFor(id).Read() : null, id => QuestFoes.Team(id),
-                () => _latestSimulationStep);                                                          // Developer
+                () => _latestSimulationStep, definitions, State.Npcs, questNames, () => _worldSocialSeed);                                                          // Developer
             // One object per module type: the Engine's catalogue binds an instance to the first type it matches.
             DebugCommands =
             [

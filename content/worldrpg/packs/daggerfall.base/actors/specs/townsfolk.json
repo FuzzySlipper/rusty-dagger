@@ -21,6 +21,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -490,6 +491,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -875,6 +877,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "noble-house",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -1394,6 +1397,7 @@
       "harm": "law-protected-civilian",
       "interaction": "ambient-bark",
       "deriveRegionalFaction": false,
+      "socialGrouping": "none",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -1445,6 +1449,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -1908,6 +1913,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -2527,6 +2533,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -3002,6 +3009,7 @@
       "harm": "law-protected-civilian",
       "interaction": "none",
       "deriveRegionalFaction": true,
+      "socialGrouping": "none",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -3435,6 +3443,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "noble-house",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -3990,6 +3999,7 @@
       "harm": "combatant",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "none",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4023,6 +4033,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4086,6 +4097,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "none",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4317,6 +4329,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4786,6 +4799,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -5237,6 +5251,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -5694,6 +5709,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -6415,6 +6431,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -7460,6 +7477,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -7959,6 +7977,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -8434,6 +8453,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -9041,6 +9061,7 @@
       "harm": "combatant",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -9104,6 +9125,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "noble-house",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -9627,6 +9649,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "noble-house",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -10222,6 +10245,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -10673,6 +10697,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -11136,6 +11161,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "tavern-patron",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -11923,6 +11949,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "tavern-staff",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -12392,6 +12419,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "tavern-patron",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -13269,6 +13297,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -14050,6 +14079,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "building-household",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -14441,6 +14471,7 @@
       "harm": "law-protected-civilian",
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
+      "socialGrouping": "faction-chapter",
       "visualMode": "pool",
       "defaultPool": [
         {

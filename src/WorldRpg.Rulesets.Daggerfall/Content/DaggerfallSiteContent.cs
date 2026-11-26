@@ -1318,6 +1318,7 @@ internal sealed record DaggerfallPopulationPlacement(string Id, WorldPoint Posit
     internal int SourceBuildingType { get; init; }
     internal int SourceBuildingFactionId { get; init; }
     internal bool IsGuard { get; init; }
+    internal string? FamilyId { get; init; }
 }
 internal sealed record DaggerfallActorFeedback(int MobileId, string MoveCue, string BarkCue, string AttackCue, bool ParrySounds, int BloodIndex);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)

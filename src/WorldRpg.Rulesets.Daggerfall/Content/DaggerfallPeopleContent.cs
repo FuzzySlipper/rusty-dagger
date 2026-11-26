@@ -93,7 +93,8 @@ internal sealed record DaggerfallPeopleSpawnerDefinition(
     IReadOnlyList<DaggerfallPeoplePoolEntry> DefaultPool,
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> RegionalPools,
     string? ArchetypeId = null,
-    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>? ClimatePoolsMap = null)
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>? ClimatePoolsMap = null,
+    ActorSocialGrouping SocialGrouping = ActorSocialGrouping.None)
 {
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> EmptyPools =
         new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(
@@ -285,7 +286,8 @@ internal sealed record DaggerfallCastIndividualDefinition(
     string? HomeSlotId,
     string Interaction,
     string Harm,
-    string? ArchetypeId = null)
+    string? ArchetypeId = null,
+    string? FamilyId = null)
 {
     internal DaggerfallSiteId? HomeSite { get; init; }
 
