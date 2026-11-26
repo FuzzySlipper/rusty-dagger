@@ -356,6 +356,12 @@ def rig_walker(n, a):
     donor = n.cfg.get('donor_hands', rigger == 'meshy')
     sh(['python3', 'authoring/tools/people/splat/scaffold/transplant_hands.py', rig / 'rigged-glb.glb', DONOR_HANDS, n.scaffold / 'scaffold.glb',
         '--report', n.scaffold / 'scaffold.json'] + ([] if donor else ['--keep-hands']), log=log)
+    if rigger == 'meshy' and n.cfg.get('rigid_prop'):
+        # Meshy's weights give a staff's lower shaft to the nearest leg and its head to Head/shoulder: in the walk the staff broke at
+        # the knee and its foot stayed on the floor (npc-468, npc-458, 2026-11-26). Put the whole staff on the hand, as fit_rig does.
+        tmp = n.scaffold / 'scaffold.noprop.glb'; shutil.move(n.scaffold / 'scaffold.glb', tmp)
+        sh(['blender', '-b', '-P', AP / 'tools/splat-rig/prop_weights.py', '--', tmp, n.scaffold / 'scaffold.glb', '--side', n.cfg['rigid_prop'],
+            '--report', n.scaffold / 'prop_weights.json'], log=log)
     chk = n.ch / '02-guide/wip/check'
     sh(['blender', '-b', '-P', 'authoring/tools/people/splat/scaffold/scaffold_views.py', '--', n.scaffold / 'scaffold.glb', chk], log=log, check=False)
     rep = json.loads((n.scaffold / 'scaffold.json').read_text())
