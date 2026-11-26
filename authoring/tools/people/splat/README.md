@@ -112,8 +112,9 @@ and baked with the hand, so there is no prop to fit (the separate held-prop rout
   right and left; the CMS's `turnaround-4view-*` candidates) sets npc.json `"sides"`. Keys, clay (`clay-right.txt`,
   `clay-left.txt`), Meshy (four images) and the orbit (`<Picture 3>` right, `<Picture 4>` left; name them in orbit.txt) all
   take them. Pinning them as guide frames (`"side_guide": true`: right at 18, left at 54) made no visible difference on
-  npc-471, so it is off by default. Four references don't fit the 5090 at 1920 px: run the clip on a Halo (`HALO=den-m5`
-  guided_clip.sh, about 2 h 50 min). A three-view sheet (`side.png`, one side) worked too, but the sword swung through the
+  npc-471, so it is off by default. At full size four references don't fit the 5090 at 1920 px, so the clip scales them to
+  1280 px (`REF_SIZE`, npc.json `ref_size`): 9 min on the GPU lab, peak 31.7 GB, no visible loss against full-size references
+  on a Halo (2 h 51 min; npc-467, 2026-11-25). The CMS views are 832x1216, so 1280 carries all their detail. A three-view sheet (`side.png`, one side) worked too, but the sword swung through the
   front frames where the front painting drew it pointing down.
 - **Clay of a foreshortened weapon.** Qwen draws a sword that points at the viewer as lying sideways in the front and back
   clay. Say in clay-front/back.txt that only the fist, guard and pommel show, then check: the back clay still needed the blade
