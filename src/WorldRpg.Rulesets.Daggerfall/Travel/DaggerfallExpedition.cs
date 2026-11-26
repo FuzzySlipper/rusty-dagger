@@ -219,6 +219,36 @@ internal sealed record DaggerfallExpeditionLeg([property: JsonRequired] Daggerfa
 internal sealed record DaggerfallExpeditionLodging([property: JsonRequired] DaggerfallSiteId Place, [property: JsonRequired] long PaidUntil);
 
 /// <summary>
+/// Persisted unplaced transient rival members of an entered overland clash whose initial scene placement was
+/// obstructed, along with the durable actor IDs needed to orient both sides once clear placement becomes available.
+/// </summary>
+internal sealed record DaggerfallPendingTransientClashSave(
+    [property: JsonRequired] string BandId,
+    [property: JsonRequired] DaggerfallWorldProfileKeySave ProfileKey,
+    [property: JsonRequired] long[] PrimaryActorIds,
+    [property: JsonRequired] int RivalMobileId,
+    [property: JsonRequired] int RemainingCount,
+    long[]? SpawnedRivalIds = null,
+    int AttemptOrdinal = 0)
+{
+    internal DaggerfallPendingTransientClashSave Validate()
+    {
+        if (string.IsNullOrWhiteSpace(BandId))
+            throw new ArgumentException("Pending transient clash save requires a non-empty BandId.");
+        ArgumentNullException.ThrowIfNull(ProfileKey);
+        _ = ProfileKey.Require();
+        ArgumentNullException.ThrowIfNull(PrimaryActorIds);
+        if (RivalMobileId < 0)
+            throw new ArgumentOutOfRangeException(nameof(RivalMobileId));
+        if (RemainingCount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(RemainingCount), "Pending transient clash must retain at least one remaining member.");
+        if (AttemptOrdinal < 0)
+            throw new ArgumentOutOfRangeException(nameof(AttemptOrdinal));
+        return this;
+    }
+}
+
+/// <summary>
 /// The expedition saved where the map was left: whether it was open, where the player's body stands and the party is,
 /// the leg, mode, pin, ship and lodging, the low-fatigue warning, an encounter waiting to be met and the hour in camp.
 /// </summary>
@@ -239,7 +269,8 @@ internal sealed record DaggerfallExpeditionSave(
     [property: JsonRequired] long CampSeconds,
     string? EncounterFoe = null,
     DaggerfallPersistentBandSave[]? PersistentBands = null,
-    string? PendingPersistentBandId = null)
+    string? PendingPersistentBandId = null,
+    DaggerfallPendingTransientClashSave[]? PendingTransientClashes = null)
 {
     internal static DaggerfallExpeditionSave Closed { get; } = new(false, default, default, default, null, DaggerfallExpeditionMode.Cautious,
         null, DaggerfallExpeditionShip.None, false, null, false, false, 0);
@@ -279,6 +310,14 @@ internal sealed record DaggerfallExpeditionSave(
                 throw new ArgumentException("Expedition save names a pending persistent band with no encounter waiting.");
             if (!bandIds.Contains(PendingPersistentBandId))
                 throw new ArgumentException($"Expedition save names missing pending persistent band '{PendingPersistentBandId}'.");
+        }
+        if (PendingTransientClashes is not null)
+        {
+            foreach (DaggerfallPendingTransientClashSave pending in PendingTransientClashes)
+            {
+                ArgumentNullException.ThrowIfNull(pending);
+                pending.Validate();
+            }
         }
         return this;
     }

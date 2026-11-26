@@ -104,6 +104,47 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     /// <summary>Total transient clash rival members still waiting for clear placement in the active scene.</summary>
     internal int PendingTransientClashCount => _pendingTransientClashes.Sum(p => p.RemainingCount);
 
+    /// <summary>Captures any unplaced transient clash rivals sparsely (null when nothing is pending).</summary>
+    internal DaggerfallPendingTransientClashSave[]? CapturePendingTransientClashes()
+    {
+        if (_pendingTransientClashes.Count == 0) return null;
+        return [.. _pendingTransientClashes
+            .Where(p => p.RemainingCount > 0)
+            .OrderBy(p => p.BandId, StringComparer.Ordinal)
+            .Select(p => new DaggerfallPendingTransientClashSave(
+                p.BandId,
+                DaggerfallWorldProfileKeySave.Capture(p.ProfileKey),
+                [.. p.PrimaryActorIds],
+                p.RivalMobileId,
+                p.RemainingCount,
+                p.SpawnedRivalIds.Count > 0 ? [.. p.SpawnedRivalIds] : null,
+                p.AttemptOrdinal))];
+    }
+
+    /// <summary>Restores persisted unplaced transient clash rivals so blocked raids retry cleanly after reload without duplicating spawned rivals.</summary>
+    internal void RestorePendingTransientClashes(DaggerfallPendingTransientClashSave[]? saved)
+    {
+        _pendingTransientClashes.Clear();
+        if (saved is null || saved.Length == 0) return;
+        foreach (DaggerfallPendingTransientClashSave entry in saved)
+        {
+            entry.Validate();
+            PendingTransientClash restored = new(
+                entry.BandId,
+                entry.ProfileKey.Require(),
+                [.. entry.PrimaryActorIds],
+                entry.RivalMobileId,
+                entry.RemainingCount,
+                default)
+            {
+                AttemptOrdinal = entry.AttemptOrdinal,
+            };
+            if (entry.SpawnedRivalIds is { Length: > 0 } spawnedIds)
+                restored.SpawnedRivalIds.AddRange(spawnedIds);
+            _pendingTransientClashes.Add(restored);
+        }
+    }
+
     internal IReadOnlyList<long> StagedPartyMemberIds =>
     [
         .. _actors.All

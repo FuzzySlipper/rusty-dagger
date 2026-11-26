@@ -474,7 +474,7 @@ public sealed class OverlandBandCollisionsTests
         AssertSidesFaceEachOther([partialMerchant!], partialRaiders);
 
         // Case B: Placement is completely obstructed on entry -> ZERO raiders spawn into blocked poses,
-        // pending members are retained, and they materialize facing the merchant once clear space returns on a later update!
+        // pending members are retained AND persisted across save/load, and materialize facing the merchant once clear on a later update!
         List<string> blockedReleases = [];
         ContentFake blockedContent = new(blockedReleases);
         PopulateContent(blockedContent, originProfile);
@@ -490,7 +490,7 @@ public sealed class OverlandBandCollisionsTests
 
         HashSet<long> blockedBefore = [.. blockedSession.State.Actors.All.Select(a => a.DurableId)];
         blockedSession.EnterExpedition();
-        Assert.True(blockedSession.State.Actors.TryGet(caravanMemberId, out ActorState? blockedMerchant));
+        Assert.True(blockedSession.State.Actors.TryGet(caravanMemberId, out _));
         List<ActorState> spawnedWhileBlocked = [.. blockedSession.State.Actors.All
             .Where(a => a.DurableId != caravanMemberId
                 && !blockedBefore.Contains(a.DurableId)
@@ -499,23 +499,111 @@ public sealed class OverlandBandCollisionsTests
         Assert.Empty(spawnedWhileBlocked);
         Assert.Equal(expectedRivalSize, blockedSession.OverlandParties.PendingTransientClashCount);
 
+        // Save and reload WHILE placement is still obstructed: pending clash state survives the canonical save boundary!
+        RulesetSavePayload savedWhileBlocked = blockedSession.CaptureSave();
+        DaggerfallSavePayload decodedBlocked = DaggerfallSavePayload.Read(savedWhileBlocked);
+        DaggerfallPendingTransientClashSave savedPending = Assert.Single(decodedBlocked.Expedition.PendingTransientClashes!);
+        Assert.Equal(expectedRivalSize, savedPending.RemainingCount);
+        Assert.Contains(caravanMemberId, savedPending.PrimaryActorIds);
+
+        List<string> reloadedBlockedReleases = [];
+        ContentFake reloadedBlockedContent = new(reloadedBlockedReleases);
+        PopulateContent(reloadedBlockedContent, originProfile);
+        SpatialFake reloadedBlockedSpatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, reloadedBlockedReleases);
+        reloadedBlockedSpatial.FloorHit = WalkableFlatFloor;
+        reloadedBlockedSpatial.OverlapHit = _ => new SpatialHit { Present = true };
+        EngineContextFake reloadedBlockedEngine = EngineContextFake.Create(reloadedBlockedContent, reloadedBlockedSpatial.Service, new AppearanceFake(reloadedBlockedReleases));
+        using DaggerfallSession reloadedBlockedSession = DaggerfallSession.Restore(reloadedBlockedEngine.Context, composition, savedWhileBlocked);
+        reloadedBlockedSession.ApplyProductMode(ProductMode.Playing);
+        Assert.Equal(expectedRivalSize, reloadedBlockedSession.OverlandParties.PendingTransientClashCount);
+        Assert.True(reloadedBlockedSession.State.Actors.TryGet(caravanMemberId, out ActorState? reloadedMerchant));
+
         // Clear the obstruction and run one admitted update: retained raiders materialize via TrySpawnPose facing the merchant!
-        blockedSpatial.OverlapHit = _ => default;
-        blockedSession.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(0, blockedSession.OverlandParties.PendingTransientClashCount);
-        List<ActorState> spawnedAfterRetry = [.. blockedSession.State.Actors.All
+        reloadedBlockedSpatial.OverlapHit = _ => default;
+        reloadedBlockedSession.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal(0, reloadedBlockedSession.OverlandParties.PendingTransientClashCount);
+        List<ActorState> spawnedAfterReloadRetry = [.. reloadedBlockedSession.State.Actors.All
             .Where(a => a.DurableId != caravanMemberId
                 && !blockedBefore.Contains(a.DurableId)
-                && blockedSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                && reloadedBlockedSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
                 && def.MobileId == expectedRivalMobileId)];
-        Assert.Equal(expectedRivalSize, spawnedAfterRetry.Count);
-        foreach (ActorState raider in spawnedAfterRetry)
+        Assert.Equal(expectedRivalSize, spawnedAfterReloadRetry.Count);
+        foreach (ActorState raider in spawnedAfterReloadRetry)
         {
             DaggerfallEnemyPerceptionMemory mem = raider.Actor.Get<DaggerfallEnemyPerceptionMemory>();
             Assert.False(mem.LairTruce);
             Assert.True(mem.FactionInfighting);
         }
-        AssertSidesFaceEachOther([blockedMerchant!], spawnedAfterRetry);
+        AssertSidesFaceEachOther([reloadedMerchant!], spawnedAfterReloadRetry);
+
+        // Case C: Partial placement (1 raider spawns on entry, remaining 2 blocked) -> save/restore -> clear -> update
+        // must spawn ONLY the remaining 2 without duplicating the already-spawned raider, and orient all 3 against the merchant!
+        heldRaid.ActiveClash = heldRaid.ActiveClash! with { RivalSize = 3 };
+        RulesetSavePayload savedThreeRaiders = session.CaptureSave();
+
+        List<string> partSaveReleases = [];
+        ContentFake partSaveContent = new(partSaveReleases);
+        PopulateContent(partSaveContent, originProfile);
+        SpatialFake partSaveSpatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, partSaveReleases);
+        partSaveSpatial.FloorHit = WalkableFlatFloor;
+        DaggerfallSession? partSaveSession = null;
+        HashSet<long> partSaveBefore = [];
+        partSaveSpatial.OverlapHit = _ =>
+        {
+            if (partSaveSession is null) return default;
+            int alreadySpawned = partSaveSession.State.Actors.All.Count(a =>
+                a.DurableId != caravanMemberId
+                && !partSaveBefore.Contains(a.DurableId)
+                && partSaveSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                && def.MobileId == expectedRivalMobileId);
+            return alreadySpawned >= 1 ? new SpatialHit { Present = true } : default;
+        };
+        EngineContextFake partSaveEngine = EngineContextFake.Create(partSaveContent, partSaveSpatial.Service, new AppearanceFake(partSaveReleases));
+        using (partSaveSession = DaggerfallSession.Restore(partSaveEngine.Context, composition, savedThreeRaiders))
+        {
+            partSaveSession.ApplyProductMode(ProductMode.Playing);
+            partSaveSession.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+            partSaveSession.Expedition.SetSpeed(1);
+            _ = partSaveSession.Expedition.Advance(0.25);
+
+            partSaveBefore = [.. partSaveSession.State.Actors.All.Select(a => a.DurableId)];
+            partSaveSession.EnterExpedition();
+
+            ActorState firstRaider = Assert.Single(partSaveSession.State.Actors.All.Where(a =>
+                a.DurableId != caravanMemberId
+                && !partSaveBefore.Contains(a.DurableId)
+                && partSaveSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                && def.MobileId == expectedRivalMobileId));
+            Assert.Equal(2, partSaveSession.OverlandParties.PendingTransientClashCount);
+
+            RulesetSavePayload savedPartial = partSaveSession.CaptureSave();
+            DaggerfallSavePayload decodedPartial = DaggerfallSavePayload.Read(savedPartial);
+            DaggerfallPendingTransientClashSave partialPending = Assert.Single(decodedPartial.Expedition.PendingTransientClashes!);
+            Assert.Equal(2, partialPending.RemainingCount);
+            Assert.Contains(firstRaider.DurableId, partialPending.SpawnedRivalIds!);
+
+            List<string> partReloadReleases = [];
+            ContentFake partReloadContent = new(partReloadReleases);
+            PopulateContent(partReloadContent, originProfile);
+            SpatialFake partReloadSpatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, partReloadReleases);
+            partReloadSpatial.FloorHit = WalkableFlatFloor;
+            EngineContextFake partReloadEngine = EngineContextFake.Create(partReloadContent, partReloadSpatial.Service, new AppearanceFake(partReloadReleases));
+            using DaggerfallSession partReloadSession = DaggerfallSession.Restore(partReloadEngine.Context, composition, savedPartial);
+            partReloadSession.ApplyProductMode(ProductMode.Playing);
+            Assert.Equal(2, partReloadSession.OverlandParties.PendingTransientClashCount);
+
+            partReloadSession.Update(new ProductUpdate(OuterUpdate(1), []));
+            Assert.Equal(0, partReloadSession.OverlandParties.PendingTransientClashCount);
+            Assert.True(partReloadSession.State.Actors.TryGet(caravanMemberId, out ActorState? partReloadMerchant));
+            List<ActorState> allThreeRaiders = [.. partReloadSession.State.Actors.All
+                .Where(a => a.DurableId != caravanMemberId
+                    && !partSaveBefore.Contains(a.DurableId)
+                    && partReloadSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                    && def.MobileId == expectedRivalMobileId)];
+            Assert.Equal(3, allThreeRaiders.Count);
+            Assert.Contains(allThreeRaiders, r => r.DurableId == firstRaider.DurableId);
+            AssertSidesFaceEachOther([partReloadMerchant!], allThreeRaiders);
+        }
     }
 
     [Fact]

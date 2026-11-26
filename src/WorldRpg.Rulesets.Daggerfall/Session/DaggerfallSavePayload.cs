@@ -368,9 +368,18 @@ internal sealed record DaggerfallSavePayload(
         }
         foreach (DaggerfallSiteId place in new[] { Expedition.Leg?.Destination.Place, Expedition.Pin?.Place, Expedition.Lodging?.Place }
             .Concat((Expedition.PersistentBands ?? []).Select(b => b.Destination?.Place))
+            .Concat((Expedition.PendingTransientClashes ?? []).Select(c => (DaggerfallSiteId?)c.ProfileKey.Require().Site))
             .OfType<DaggerfallSiteId>())
             if (!definitions.Locations.Keys.Contains((place.Region, place.Index)))
                 throw new ArgumentException($"Saved expedition names missing place {place}.");
+        if (Expedition.PendingTransientClashes is { Length: > 0 } savedPendingClashes)
+        {
+            foreach (DaggerfallPendingTransientClashSave clash in savedPendingClashes)
+            {
+                if (!definitions.Actors.Values.Any(actor => actor.MobileId == clash.RivalMobileId))
+                    throw new ArgumentException($"Saved pending transient clash '{clash.BandId}' names unknown mobile {clash.RivalMobileId}.");
+            }
+        }
         if (Transport.OnShip || Transport.Mode is DaggerfallTransportMode.Horse or DaggerfallTransportMode.Cart)
         {
             DaggerfallWorldProfileKey activeProfile = Site.ActiveProfile?.Require()

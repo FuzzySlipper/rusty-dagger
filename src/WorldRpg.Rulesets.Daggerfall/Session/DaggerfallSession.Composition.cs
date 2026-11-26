@@ -985,7 +985,7 @@ internal sealed partial class DaggerfallSession
                 strikeTuning: tuning.StrikeEnchantments);
             _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
-            _persistence = new(State, _corpseLoot, _groundContainers, _equipmentMoves, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, DungeonText, propertyStorage.Capture, () => Expedition.Capture(), authored, () => Casting.NextSequence);
+            _persistence = new(State, _corpseLoot, _groundContainers, _equipmentMoves, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, DungeonText, propertyStorage.Capture, () => Expedition.Capture() with { PendingTransientClashes = OverlandParties.CapturePendingTransientClashes() }, authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
@@ -1042,6 +1042,8 @@ internal sealed partial class DaggerfallSession
                     _placement.TrySpawnPose(operation, "daggerfall.overland-clash", origin, minimum, maximum, out ActorPose pose, direction)
                         ? pose
                         : null);
+            if (saved?.Expedition.PendingTransientClashes is { Length: > 0 } pendingClashes)
+                OverlandParties.RestorePendingTransientClashes(pendingClashes);
             OverlandTraffic = new DaggerfallOverlandTraffic(
                 definitions, State.ActorLedger, actors, State.Npcs, Expedition, OverlandParties,
                 questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
