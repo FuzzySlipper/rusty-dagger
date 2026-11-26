@@ -616,7 +616,7 @@ public sealed class DaggerfallNpcRegistry
             && (s.Met || s.Muted || s.DispositionDelta != 0 || s.WitnessedCrimes is { Length: > 0 }
                 || s.ReferralTags is { Length: > 0 } || s.Vouches is { Length: > 0 } || s.LastFavourDay is not null
                 || s.EscortPortrait is not null || s.StagedPartyRole is not null
-                || s.FamilyId is not null || s.Presence != (int)DaggerfallNpcPresence.Active))
+                || s.FamilyId is not null || s.FamilyIdCleared || s.Presence != (int)DaggerfallNpcPresence.Active))
             return false;
         if (_actors is not null && _actors.TryGet(durableId, out ActorState? actor)
             && actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp))

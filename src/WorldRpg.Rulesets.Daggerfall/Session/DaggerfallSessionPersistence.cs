@@ -533,15 +533,17 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 ? overlay.EscortOrder
                 : priorLedger?.Social?.EscortOrder ?? 0;
             string? baselineFamilyId = originComp?.BaselineNpc?.FamilyId;
-            string? liveFamilyId = !string.IsNullOrWhiteSpace(overlay?.FamilyId) ? overlay.FamilyId : null;
+            string? liveFamilyId = overlay is not null
+                ? (!string.IsNullOrWhiteSpace(overlay.FamilyId) ? overlay.FamilyId : null)
+                : (priorLedger?.Social?.FamilyIdCleared == true ? null : priorLedger?.Social?.FamilyId ?? baselineFamilyId);
             bool familyChanged = !StringComparer.Ordinal.Equals(liveFamilyId, baselineFamilyId);
-            string? familyId = familyChanged
-                ? liveFamilyId
-                : priorLedger?.Social?.FamilyId;
+            bool familyCleared = familyChanged && liveFamilyId is null;
+            string? familyId = familyChanged ? liveFamilyId : null;
             bool hasPriorSocialDelta = priorLedger?.Social is { } ps
                 && (ps.DispositionDelta != 0 || ps.WitnessedCrimes is { Length: > 0 } || ps.ReferralTags is { Length: > 0 }
                     || ps.Vouches is { Length: > 0 } || ps.LastFavourDay is not null
-                    || ps.EscortPortrait is not null || ps.StagedPartyRole is not null || ps.FamilyId is not null);
+                    || ps.EscortPortrait is not null || ps.StagedPartyRole is not null
+                    || (overlay is null && (ps.FamilyId is not null || ps.FamilyIdCleared)));
             bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || lastFavourDay is not null
                 || promotedArchetype is not null || stagedPartyRole is not null || familyChanged
                 || nameChanged || presenceChanged || hasPriorSocialDelta
@@ -559,7 +561,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     EscortPortrait = escortPortrait,
                     EscortOrder = escortOrder,
                     StagedPartyRole = stagedPartyRole,
-                    FamilyId = familyId ?? (relocated ? liveFamilyId : null),
+                    FamilyId = familyId ?? (relocated && !familyCleared ? liveFamilyId : null),
+                    FamilyIdCleared = familyCleared,
                 };
             }
         }

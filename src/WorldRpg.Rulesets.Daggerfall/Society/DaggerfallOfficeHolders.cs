@@ -44,7 +44,8 @@ internal sealed record DaggerfallOfficeHolder(
     DaggerfallCastHomeLocation? Home,
     bool IsAlive,
     string? PreviousHolderName = null,
-    string? PreviousHolderFate = null)
+    string? PreviousHolderFate = null,
+    string? FamilyId = null)
 {
     /// <summary>True only when the office is held by a living person (never a dead or vacant placeholder).</summary>
     internal bool HasLivingHolder => IsAlive && !string.IsNullOrWhiteSpace(DisplayName);
@@ -374,7 +375,8 @@ internal sealed class DaggerfallOfficeHolders(
             Home: home,
             IsAlive: alive,
             PreviousHolderName: over.PreviousHolderName,
-            PreviousHolderFate: over.PreviousHolderFate);
+            PreviousHolderFate: over.PreviousHolderFate,
+            FamilyId: liveNpc?.FamilyId ?? cast?.FamilyId);
     }
 
     private DaggerfallOfficeHolder BuildFromIndividualFaction(
@@ -405,7 +407,8 @@ internal sealed class DaggerfallOfficeHolders(
                 Home: home,
                 IsAlive: alive,
                 PreviousHolderName: deadPredecessor,
-                PreviousHolderFate: deadPredecessor is not null ? (deadPredecessorFate ?? "was slain") : null);
+                PreviousHolderFate: deadPredecessor is not null ? (deadPredecessorFate ?? "was slain") : null,
+                FamilyId: liveNpc?.FamilyId ?? cast.FamilyId);
         }
 
         DaggerfallFactionSpriteDefinition? sprite = individual.SpriteVisuals.FirstOrDefault();

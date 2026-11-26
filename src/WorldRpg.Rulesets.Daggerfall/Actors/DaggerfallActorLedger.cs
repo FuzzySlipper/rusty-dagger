@@ -216,7 +216,8 @@ internal sealed record ActorSocialDiff(
     ActorPartyRole? StagedPartyRole = null,
     string? FamilyId = null,
     ActorVouchRecord[]? Vouches = null,
-    int? LastFavourDay = null)
+    int? LastFavourDay = null,
+    bool FamilyIdCleared = false)
 {
     internal void Validate()
     {
@@ -227,6 +228,8 @@ internal sealed record ActorSocialDiff(
         ArgumentNullException.ThrowIfNull(Services);
         if (DisplayNameOverride is not null) ArgumentException.ThrowIfNullOrWhiteSpace(DisplayNameOverride);
         if (FamilyId is not null) ArgumentException.ThrowIfNullOrWhiteSpace(FamilyId);
+        if (FamilyIdCleared && FamilyId is not null)
+            throw new ArgumentException("Saved social diff cannot both set FamilyId and mark FamilyIdCleared.", nameof(FamilyIdCleared));
         if (Vouches is not null)
             foreach (ActorVouchRecord vouch in Vouches)
             {
@@ -264,7 +267,8 @@ internal sealed record ActorSocialDiff(
             StagedPartyRole: prior?.StagedPartyRole,
             FamilyId: prior?.FamilyId,
             Vouches: prior?.Vouches,
-            LastFavourDay: prior?.LastFavourDay);
+            LastFavourDay: prior?.LastFavourDay,
+            FamilyIdCleared: prior?.FamilyIdCleared ?? false);
 }
 
 /// <summary>Where an actor currently resides in the world.</summary>

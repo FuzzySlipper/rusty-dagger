@@ -214,9 +214,113 @@ public sealed class DaggerfallHouseholdsTests
         ActorLedgerEntry kinAEntry = Assert.Single(decodedMutated.ActorLedger, e => e.DurableId == kinA);
         Assert.True(kinAEntry.Social?.Met);
         Assert.Null(kinAEntry.Social?.FamilyId); // unchanged from deterministic baseline
+        Assert.False(kinAEntry.Social?.FamilyIdCleared);
         Assert.DoesNotContain(decodedMutated.ActorLedger, e => e.DurableId == kinB); // still 0 bytes!
         ActorLedgerEntry outsiderEntry = Assert.Single(decodedMutated.ActorLedger, e => e.DurableId == outsider);
         Assert.Equal("fam:house:r17:0", outsiderEntry.Social?.FamilyId);
+        Assert.False(outsiderEntry.Social?.FamilyIdCleared);
+    }
+
+    [Fact]
+    public void FamilyId_override_clear_reset_and_met_only_deltas_round_trip_cleanly_through_save_load()
+    {
+        DaggerfallSiteProfile profile = ReadInputs(TestData.RepositoryRoot);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, profile);
+        SpatialFake spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+
+        DaggerfallSessionComposition composition = new(TestPayload.Definitions, profile, DaggerfallTuning.Defaults);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        DaggerfallSiteId siteId = profile.Site!.Value;
+        DaggerfallNpcSite siteBinding = new(siteId.Region, "Daggerfall", "0/0/1", profile.ProfileKey.LogicalId);
+
+        const string baselineFamily = "fam:local:r17:s100:x0y0b1";
+        const string overrideFamily = "fam:house:r17:0";
+        WorldPoint poseA = new(1, 0, -2);
+        WorldPoint poseB = new(2, 0, -2);
+        WorldPoint poseC = new(3, 0, -2);
+
+        long overrideAndResetActor = RegisterAndMaterializeDeterministicStatic(session, siteId, siteBinding, profile, "person/rt-override", 111, baselineFamily, poseA);
+        long clearedActor = RegisterAndMaterializeDeterministicStatic(session, siteId, siteBinding, profile, "person/rt-clear", 222, baselineFamily, poseB);
+        long metOnlyActor = RegisterAndMaterializeDeterministicStatic(session, siteId, siteBinding, profile, "person/rt-met", 333, baselineFamily, poseC);
+
+        // 1. Override A -> B, clear A -> null, mark Met-only on C -> save & reload!
+        session.State.Actors.Get(overrideAndResetActor).Actor.Get<ActorOverlayComponent>().FamilyId = overrideFamily;
+        session.State.Actors.Get(clearedActor).Actor.Get<ActorOverlayComponent>().FamilyId = null;
+        session.State.Actors.Get(metOnlyActor).Actor.Get<ActorOverlayComponent>().Met = true;
+
+        RulesetSavePayload save1 = session.CaptureSave();
+        DaggerfallSavePayload decoded1 = DaggerfallSavePayload.Read(save1);
+        Assert.Equal(overrideFamily, Assert.Single(decoded1.ActorLedger, e => e.DurableId == overrideAndResetActor).Social?.FamilyId);
+        ActorLedgerEntry clearedSaved = Assert.Single(decoded1.ActorLedger, e => e.DurableId == clearedActor);
+        Assert.Null(clearedSaved.Social?.FamilyId);
+        Assert.True(clearedSaved.Social?.FamilyIdCleared);
+        ActorLedgerEntry metSaved = Assert.Single(decoded1.ActorLedger, e => e.DurableId == metOnlyActor);
+        Assert.True(metSaved.Social?.Met);
+        Assert.Null(metSaved.Social?.FamilyId);
+        Assert.False(metSaved.Social?.FamilyIdCleared);
+
+        // Reload into fresh session and re-materialize deterministic slots against restored ledger.
+        EngineContextFake engine2 = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        using DaggerfallSession restored1 = DaggerfallSession.Restore(engine2.Context, composition, save1);
+        RegisterAndMaterializeDeterministicStatic(restored1, siteId, siteBinding, profile, "person/rt-override", 111, baselineFamily, poseA);
+        RegisterAndMaterializeDeterministicStatic(restored1, siteId, siteBinding, profile, "person/rt-clear", 222, baselineFamily, poseB);
+        RegisterAndMaterializeDeterministicStatic(restored1, siteId, siteBinding, profile, "person/rt-met", 333, baselineFamily, poseC);
+
+        Assert.Equal(overrideFamily, restored1.State.Actors.Get(overrideAndResetActor).Actor.Get<ActorOverlayComponent>().FamilyId);
+        Assert.Null(restored1.State.Actors.Get(clearedActor).Actor.Get<ActorOverlayComponent>().FamilyId);
+        Assert.Equal(baselineFamily, restored1.State.Actors.Get(metOnlyActor).Actor.Get<ActorOverlayComponent>().FamilyId);
+        Assert.True(restored1.State.Actors.Get(metOnlyActor).Actor.Get<ActorOverlayComponent>().Met);
+
+        // 2. Reset overrideAndResetActor back to baseline A -> MUST return to 0 ledger bytes (not keep stale B)!
+        restored1.State.Actors.Get(overrideAndResetActor).Actor.Get<ActorOverlayComponent>().FamilyId = baselineFamily;
+        RulesetSavePayload save2 = restored1.CaptureSave();
+        DaggerfallSavePayload decoded2 = DaggerfallSavePayload.Read(save2);
+        Assert.DoesNotContain(decoded2.ActorLedger, e => e.DurableId == overrideAndResetActor);
+        // Cleared actor remains explicitly cleared!
+        Assert.True(Assert.Single(decoded2.ActorLedger, e => e.DurableId == clearedActor).Social?.FamilyIdCleared);
+
+        // Reload save2 -> reset actor comes back cleanly at baseline A, cleared actor stays null!
+        EngineContextFake engine3 = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
+        using DaggerfallSession restored2 = DaggerfallSession.Restore(engine3.Context, composition, save2);
+        RegisterAndMaterializeDeterministicStatic(restored2, siteId, siteBinding, profile, "person/rt-override", 111, baselineFamily, poseA);
+        RegisterAndMaterializeDeterministicStatic(restored2, siteId, siteBinding, profile, "person/rt-clear", 222, baselineFamily, poseB);
+
+        Assert.Equal(baselineFamily, restored2.State.Actors.Get(overrideAndResetActor).Actor.Get<ActorOverlayComponent>().FamilyId);
+        Assert.Null(restored2.State.Actors.Get(clearedActor).Actor.Get<ActorOverlayComponent>().FamilyId);
+    }
+
+    [Fact]
+    public void Seeded_provincial_great_houses_tie_to_tier2_regional_offices_while_keeping_board_seats_separate()
+    {
+        DaggerfallDefinitions defs = TestPayload.Definitions;
+        DaggerfallSiteContext siteContext = new(defs.Locations);
+        DaggerfallActorLedger ledger = new();
+        DaggerfallNpcRegistry npcs = new(null, ledger);
+        DaggerfallOfficeHolders holders = new(defs, siteContext, ledger, npcs);
+        DaggerfallOfficeLedger offices = new(defs, holders, ledger, npcs, () => 42UL);
+
+        // Tier-1 ruler resolves with canonical cast dynasty FamilyId
+        DaggerfallOfficeHolder? daggerfallRuler = holders.ResolveRegionalRuler(17);
+        Assert.NotNull(daggerfallRuler);
+        Assert.Equal("fam:dynasty:daggerfall", daggerfallRuler!.FamilyId);
+
+        // Tier-2 regional Great Houses in Daggerfall (region 17): 2..4 houses, tied to palace CourtFactor offices, zero save bytes
+        IReadOnlyList<DaggerfallRegionalGreatHouse> houses = offices.ResolveRegionalGreatHouses(17);
+        Assert.InRange(houses.Count, 2, 4);
+        Assert.All(houses, house =>
+        {
+            Assert.StartsWith("fam:house:r17:", house.FamilyId, StringComparison.Ordinal);
+            Assert.All(house.HeldOffices, office =>
+            {
+                Assert.Equal(DaggerfallOfficeKind.CourtFactor, office.Kind);
+                Assert.Equal(house.FamilyId, office.FamilyId);
+            });
+        });
+        Assert.True(houses.Sum(h => h.HeldOffices.Count) > 0, "Expected at least one regional Tier-2 CourtFactor office tied to a Great House.");
+        Assert.Empty(offices.Capture().Overrides); // zero save bytes for untouched offices!
     }
 
     private static long RegisterAndMaterializeDeterministicStatic(

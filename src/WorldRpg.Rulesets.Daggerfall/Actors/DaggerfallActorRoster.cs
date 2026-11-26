@@ -1219,7 +1219,9 @@ internal sealed class DaggerfallActorRoster
                 _npcs.SetDisplayName(npc.DurableId, social.DisplayNameOverride);
             if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
             {
-                if (!string.IsNullOrWhiteSpace(social.FamilyId))
+                if (social.FamilyIdCleared)
+                    overlay.FamilyId = null;
+                else if (!string.IsNullOrWhiteSpace(social.FamilyId))
                     overlay.FamilyId = social.FamilyId;
                 overlay.Met = social.Met;
                 overlay.LastFavourDay = social.LastFavourDay;
