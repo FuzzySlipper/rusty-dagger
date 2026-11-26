@@ -14,7 +14,7 @@ public sealed class PoliticalBoardTests
     private static DaggerfallPoliticalCanon Canon => TestPayload.Definitions.PoliticalCanon!;
 
     private static DaggerfallPoliticalBoard NewBoard(DaggerfallWorldConditions conditions, long day = Wednesday, DaggerfallPoliticalBoardSave? saved = null) =>
-        new(Canon, TestPayload.Definitions.BoardSeats, conditions, day, saved);
+        new(Canon, TestPayload.Definitions.BoardSeats, conditions, TestPayload.Definitions.Locations.Records, day, saved);
 
     private static IReadOnlyList<DaggerfallConditionCounterplayRecord> None() => [];
 
@@ -33,13 +33,14 @@ public sealed class PoliticalBoardTests
         Assert.Equal(0, board.Board.Turn);
         Assert.Equal(7 * 100, board.LastTurnDay);
 
-        Assert.Equal(0, board.AdvanceToDay(Wednesday + 3, None));
-        Assert.Equal(1, board.AdvanceToDay(7 * 101, None));
+        board.AdvanceToDay(Wednesday + 3, None);
+        Assert.Equal(0, board.Board.Turn);
+        board.AdvanceToDay(7 * 101, None);
         Assert.Equal(1, board.Board.Turn);
         Assert.Equal(1, board.Latest!.Turn);
 
         // A three-week rest plays the three Sundays it crossed, one after another.
-        Assert.Equal(3, board.AdvanceToDay(7 * 104 + 5, None));
+        board.AdvanceToDay(7 * 104 + 5, None);
         Assert.Equal(4, board.Board.Turn);
         Assert.Equal(7 * 104, board.LastTurnDay);
         Assert.Equal(7 * 105, board.NextTurnDay);
@@ -126,6 +127,34 @@ public sealed class PoliticalBoardTests
     }
 
     [Fact]
+    public void Wars_declared_and_the_chronicles_arcs_are_news_from_their_region_and_secret_moves_never_are()
+    {
+        DaggerfallPoliticalBoard board = NewBoard(new DaggerfallWorldConditions());
+        List<DaggerfallPoliticalNewsItem> news = [];
+        List<ArcRecord> arcs = [];
+        int warsDeclared = 0;
+        for (int week = 0; week < 52 * 3; week++)
+        {
+            int before = board.Board.Wars.Count(war => war.Started == board.Board.Turn + 1);
+            news.AddRange(board.AdvanceToDay(board.NextTurnDay, None));
+            arcs.AddRange(board.LatestTrace!.Chronicle);
+            warsDeclared += board.Board.Wars.Count(war => war.Started == board.Board.Turn) - before;
+        }
+        Assert.NotEmpty(arcs);
+        Assert.Equal(news.Count, news.Select(item => item.EventId).Distinct().Count());
+        Assert.Equal(warsDeclared, news.Count(item => item.Headline.StartsWith("War Declared", StringComparison.Ordinal)));
+        foreach (ArcRecord arc in arcs)
+        {
+            DaggerfallPoliticalNewsItem item = Assert.Single(news, item => item.EventId == $"politics:{arc.Turn}:arc:{arc.Key}:{arc.Phase}");
+            Assert.Equal(board.TurnDay(arc.Turn) * 24 * 60, item.Minute);
+            if (arc.Kind == ArcKind.Blockade)
+                Assert.Equal(board.Board.Region(arc.Subjects[0]).CatalogRegion, item.Origin.Id.Region);
+        }
+        HashSet<string> secret = [.. Canon.Cards.Cards.Where(card => card.Visibility == Visibility.Secret).Select(card => card.Name)];
+        Assert.DoesNotContain(news, item => secret.Any(name => item.Headline.Contains(name, StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void A_saved_board_plays_on_exactly_as_one_never_saved()
     {
         DaggerfallPoliticalBoard played = NewBoard(new DaggerfallWorldConditions());
@@ -151,8 +180,10 @@ public sealed class PoliticalBoardTests
         Assert.Equal(3, board.Board.Turn);
 
         RulesetSavePayload saved = session.CaptureSave();
-        DaggerfallPoliticalBoardSave boardSave = DaggerfallSavePayload.Read(saved).PoliticalBoard!;
-        Assert.Equal(board.LastTurnDay, boardSave.LastTurnDay);
+        DaggerfallSavePayload decoded = DaggerfallSavePayload.Read(saved);
+        Assert.Equal(board.LastTurnDay, decoded.PoliticalBoard!.LastTurnDay);
+        // The board's news spreads as word does.
+        Assert.Contains(decoded.WordSpread.Wavefronts, wavefront => wavefront.EventId.StartsWith("politics:", StringComparison.Ordinal));
 
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];

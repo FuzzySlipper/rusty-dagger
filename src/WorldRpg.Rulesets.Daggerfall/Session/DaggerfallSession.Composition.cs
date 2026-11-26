@@ -1076,7 +1076,7 @@ internal sealed partial class DaggerfallSession
                 ConditionCounterplay.Restore(saved.ConditionCounterplay);
             if (definitions.PoliticalCanon is { } politicalCanon)
                 PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, WorldConditions,
-                    _time.Calendar.DayNumber, saved?.PoliticalBoard);
+                    definitions.Locations.Records, _time.Calendar.DayNumber, saved?.PoliticalBoard);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
                 () => _sites.Projection.Inputs, CurrentInteriorBuilding,

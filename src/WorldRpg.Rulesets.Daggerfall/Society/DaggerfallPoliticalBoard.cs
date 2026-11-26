@@ -34,12 +34,14 @@ internal sealed record DaggerfallPoliticalBoardSave(
 internal sealed class DaggerfallPoliticalBoard
 {
     internal const int DaysPerWeek = 7;
+    private const long MinutesPerDay = 24 * 60;
     internal const string TokenPrefix = "board:";
 
     private readonly DaggerfallPoliticalCanon _canon;
     private readonly DaggerfallBoardSeatSet _seats;
     private readonly DaggerfallWorldConditions _conditions;
     private readonly Board _board;
+    private readonly DaggerfallPoliticalNews _news;
     private readonly Dictionary<int, List<DaggerfallWorldConditionToken>> _tokens = [];
     private readonly Dictionary<string, (string Region, ConditionKind Kind, string? Detail)> _tokenConditions = new(StringComparer.Ordinal);
     private long _lastTurnDay;
@@ -49,7 +51,7 @@ internal sealed class DaggerfallPoliticalBoard
     /// carried. A save made before the board existed starts the canon board on its own day.
     /// </summary>
     internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallWorldConditions conditions,
-        long day, DaggerfallPoliticalBoardSave? saved)
+        IReadOnlyList<DaggerfallSiteRecord> sites, long day, DaggerfallPoliticalBoardSave? saved)
     {
         _canon = canon;
         _seats = seats;
@@ -65,6 +67,7 @@ internal sealed class DaggerfallPoliticalBoard
             _board = Board.Load(canon.Setup, canon.Cards, BoardSave.FromJson(saved.Board.GetRawText(), "the political board save"));
             _lastTurnDay = saved.LastTurnDay;
         }
+        _news = new DaggerfallPoliticalNews(_board, canon.Cards, sites, Faction);
         Rebuild();
         conditions.BindExternalSource(TokensFor);
     }
@@ -84,15 +87,17 @@ internal sealed class DaggerfallPoliticalBoard
     internal TurnTrace? LatestTrace { get; private set; }
 
     /// <summary>
-    /// Plays every turn due by <paramref name="day"/>: one for each Sunday from the last played to it. The counterplay
-    /// <paramref name="drainCounterplay"/> hands over (<see cref="DaggerfallConditionCounterplay.ConsumeBoardEvents"/>)
-    /// is applied at the start of each, where it eased a board token.
+    /// Plays every turn due by <paramref name="day"/>: one for each Sunday from the last played to it, and returns the
+    /// news they made (<see cref="DaggerfallPoliticalNews"/>). The counterplay <paramref name="drainCounterplay"/> hands
+    /// over (<see cref="DaggerfallConditionCounterplay.ConsumeBoardEvents"/>) is applied at the start of each, where it
+    /// eased a board token.
     /// </summary>
-    internal int AdvanceToDay(long day, Func<IReadOnlyList<DaggerfallConditionCounterplayRecord>> drainCounterplay)
+    internal IReadOnlyList<DaggerfallPoliticalNewsItem> AdvanceToDay(long day, Func<IReadOnlyList<DaggerfallConditionCounterplayRecord>> drainCounterplay)
     {
-        int played = 0;
+        List<DaggerfallPoliticalNewsItem> news = [];
         while (NextTurnDay <= day)
         {
+            HashSet<string> warsBefore = [.. _board.Wars.Select(war => war.Id)];
             _conditions.NotifyBeforeExternalMutation();
             foreach (DaggerfallConditionCounterplayRecord record in drainCounterplay())
                 if (Eased(record) is { } eased) _board.Queue(eased);
@@ -100,10 +105,10 @@ internal sealed class DaggerfallPoliticalBoard
             _lastTurnDay += DaysPerWeek;
             LatestTrace = trace;
             Latest = BoardOutputs.Of(_board, _canon.Cards, trace);
+            news.AddRange(_news.Of(trace, warsBefore, _lastTurnDay * MinutesPerDay));
             Rebuild();
-            played++;
         }
-        return played;
+        return news;
     }
 
     internal DaggerfallPoliticalBoardSave Capture()
