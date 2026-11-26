@@ -402,7 +402,7 @@ def step_bake(n, a):
     (n.k / 'cut').mkdir(parents=True, exist_ok=True); shutil.copy(n.cut / 'front-cut.png', n.k / 'cut/front-cut.png')
     (n.k / 'bake.env').write_text(f"CLIP={d.relative_to(n.work)}\nSIZE={cfg['size']}\n")
     (n.k / 'prompts.json').write_text(json.dumps(rings, indent=1) + '\n')
-    env = {'BIREFNET_EDGE': '1', 'BIREFNET_COMFY': n.comfy, **n.gpu_env}
+    env = {'BIREFNET_EDGE': '1', 'BIREFNET_REQUIRED': '1', 'BIREFNET_COMFY': n.comfy, **n.gpu_env}   # no silent colour-key fallback (creature-018)
     if n.key_env:
         env.update(KEY_HOLES=str(cfg.get('key_holes', 60)), DESPILL=str(cfg.get('despill', 2)))
     if cfg.get('key_fill'):   # key colour painted into tears in the figure: fill it dark (orbit_views --key-fill; creature-018)
