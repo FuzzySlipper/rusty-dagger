@@ -219,6 +219,90 @@ public sealed class DaggerfallHouseholdSocialTests
         Assert.Equal(+6, session.SocialConsequences.EffectiveDispositionDelta(distantCousin, distantSite, t0 + 14L * 24L * 60L));
     }
 
+    [Fact]
+    public void Local_household_grudge_and_goodwill_reach_unmaterialized_same_settlement_relatives_across_admission_and_save_reload()
+    {
+        using var fixture = new HouseholdSessionFixture(random: RandomMinimum.Create());
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallNpcSite localSite = new(site.Id.Region, site.Name, "1/2/0", session.Sites.ActiveProfile.LogicalId);
+
+        string grudgeHousehold = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 2, 0);
+        string goodwillHousehold = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 2, 1);
+        string unrelatedHousehold = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 2, 2);
+
+        long murderedMember = AddNpcWithFamily(session, site.Id, localSite, "r11103/grudge-victim", "Alden Moss", grudgeHousehold);
+        long witness = AddNpcWithFamily(session, site.Id, localSite, "r11103/witness", "Garret Watch", null);
+        long helpedMember = AddNpcWithFamily(session, site.Id, localSite, "r11103/goodwill-subject", "Nora Fen", goodwillHousehold);
+
+        // Precompute durable IDs for relatives that have NEVER been registered, materialized, or entered into ActorLedger.
+        DaggerfallWorldProfileKey profile = session.Sites.ActiveProfile;
+        long unmaterializedGrudgeKinId = DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{profile.LogicalId}/r11103/grudge-late-kin");
+        long unmaterializedGoodwillKinId = DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{profile.LogicalId}/r11103/goodwill-late-kin");
+        long unrelatedRelativeId = DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{profile.LogicalId}/r11103/unrelated-late");
+
+        Assert.False(session.State.Npcs.TryGet(unmaterializedGrudgeKinId, out _));
+        Assert.False(session.State.ActorLedger.TryGet(unmaterializedGrudgeKinId, out _));
+        Assert.False(session.State.Npcs.TryGet(unmaterializedGoodwillKinId, out _));
+        Assert.False(session.State.ActorLedger.TryGet(unmaterializedGoodwillKinId, out _));
+
+        // 1. Witnessed murder of grudgeHousehold member while late-kin is absent from Actors, Npcs, and ActorLedger.
+        fixture.Perception.Responder = _ => new PerceptionReadoutResult(
+            new[] { new PerceptionPair(checked((ulong)witness), DaggerfallActorIdentity.PlayerEntityId, 2.0, 1.0, PerceptionPairKind.Visible, 1.0) },
+            ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        ActorState victimActor = session.State.Actors.Get(murderedMember);
+        victimActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        session.SocialConsequences.ReactToDeath(
+            new ActorDiedFact(murderedMember, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 50, 50.0, 0, 0),
+            victimActor,
+            minute: 300L);
+
+        // 2. Help goodwillHousehold member (+10 personal -> +5 kin goodwill) while late-kin is absent from Actors, Npcs, and ActorLedger.
+        session.Introductions.AdjustActorDisposition(helpedMember, +10);
+        Assert.Equal(+10, session.SocialConsequences.EffectiveDispositionDelta(helpedMember));
+
+        // Zero cross-town HouseholdStanding WordSpread wavefronts for local households!
+        Assert.DoesNotContain(session.WordSpread.Wavefronts, wf => wf.Kind == DaggerfallWordEventKind.HouseholdStanding);
+
+        // Save before admitting the unmaterialized relatives: verify sparse LocalHouseholds and 0 ledger bytes for untouched relatives/households!
+        RulesetSavePayload saved = session.CaptureSave();
+        DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
+        Assert.Contains(raw.LocalHouseholds.Standings, s => s.FamilyId == grudgeHousehold && s.StandingDelta == DaggerfallSocialConsequences.KinMurderDispositionPenalty);
+        Assert.Contains(raw.LocalHouseholds.Standings, s => s.FamilyId == goodwillHousehold && s.StandingDelta == +5);
+        Assert.DoesNotContain(raw.LocalHouseholds.Standings, s => s.FamilyId == unrelatedHousehold);
+        Assert.DoesNotContain(raw.ActorLedger ?? [], e => e.DurableId == unmaterializedGrudgeKinId || e.DurableId == unmaterializedGoodwillKinId || e.DurableId == unrelatedRelativeId);
+
+        // 3. Admit the previously unmaterialized relatives in the live session -> both immediately inherit local grudge / goodwill!
+        long liveLateGrudgeKin = AddNpcWithFamily(session, site.Id, localSite, "r11103/grudge-late-kin", "Bryn Moss", grudgeHousehold);
+        long liveLateGoodwillKin = AddNpcWithFamily(session, site.Id, localSite, "r11103/goodwill-late-kin", "Sera Fen", goodwillHousehold);
+        long liveUnrelated = AddNpcWithFamily(session, site.Id, localSite, "r11103/unrelated-late", "Corin Hale", unrelatedHousehold);
+        Assert.Equal(unmaterializedGrudgeKinId, liveLateGrudgeKin);
+        Assert.Equal(unmaterializedGoodwillKinId, liveLateGoodwillKin);
+        Assert.Equal(unrelatedRelativeId, liveUnrelated);
+
+        Assert.Equal(DaggerfallSocialConsequences.KinMurderDispositionPenalty, session.SocialConsequences.EffectiveDispositionDelta(liveLateGrudgeKin));
+        Assert.Equal(DaggerfallSocialConsequences.KinMurderDispositionPenalty, session.State.Social.ReactionForNpc(session.State.Npcs.Require(liveLateGrudgeKin)).ActorDisposition);
+        Assert.Equal(+5, session.SocialConsequences.EffectiveDispositionDelta(liveLateGoodwillKin));
+        Assert.Equal(+5, session.State.Social.ReactionForNpc(session.State.Npcs.Require(liveLateGoodwillKin)).ActorDisposition);
+        Assert.Equal(0, session.SocialConsequences.EffectiveDispositionDelta(liveUnrelated));
+        Assert.Equal(0, session.State.Social.ReactionForNpc(session.State.Npcs.Require(liveUnrelated)).ActorDisposition);
+
+        // 4. Restore from the save captured BEFORE admission, then admit the relatives for the first time -> grudge & goodwill survive save/load!
+        using DaggerfallSession restored = fixture.Restore(saved);
+        long restoredGrudgeKin = AddNpcWithFamily(restored, site.Id, localSite, "r11103/grudge-late-kin", "Bryn Moss", grudgeHousehold);
+        long restoredGoodwillKin = AddNpcWithFamily(restored, site.Id, localSite, "r11103/goodwill-late-kin", "Sera Fen", goodwillHousehold);
+        long restoredUnrelated = AddNpcWithFamily(restored, site.Id, localSite, "r11103/unrelated-late", "Corin Hale", unrelatedHousehold);
+
+        Assert.Equal(DaggerfallSocialConsequences.KinMurderDispositionPenalty, restored.SocialConsequences.EffectiveDispositionDelta(restoredGrudgeKin));
+        Assert.Equal(DaggerfallSocialConsequences.KinMurderDispositionPenalty, restored.State.Social.ReactionForNpc(restored.State.Npcs.Require(restoredGrudgeKin)).ActorDisposition);
+        Assert.Equal(+5, restored.SocialConsequences.EffectiveDispositionDelta(restoredGoodwillKin));
+        Assert.Equal(+5, restored.State.Social.ReactionForNpc(restored.State.Npcs.Require(restoredGoodwillKin)).ActorDisposition);
+        Assert.Equal(0, restored.SocialConsequences.EffectiveDispositionDelta(restoredUnrelated));
+        Assert.False(restored.State.ActorLedger.TryGet(restoredGrudgeKin, out _));
+        Assert.False(restored.State.ActorLedger.TryGet(restoredGoodwillKin, out _));
+        Assert.False(restored.State.ActorLedger.TryGet(restoredUnrelated, out _));
+    }
+
     private static long AddNpcWithFamily(
         DaggerfallSession session,
         DaggerfallSiteId siteId,

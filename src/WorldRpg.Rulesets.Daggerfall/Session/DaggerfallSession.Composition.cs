@@ -1054,6 +1054,8 @@ internal sealed partial class DaggerfallSession
                 State.Social, definitions, State.Actors, State.Npcs, State.ActorLedger,
                 () => Crimes.QueryWitnesses(), Crimes.IsCityWatch, () => _site.Region,
                 WordSpread, () => _site.ActiveSite, () => _time.Calendar.MinuteNumber);
+            if (saved is not null)
+                SocialConsequences.Restore(saved.LocalHouseholds);
             State.Social.BindActorDisposition(id => SocialConsequences.EffectiveDispositionDelta(id));
             Introductions.BindDispositionAdjusted((actorId, delta) =>
             {
@@ -1198,6 +1200,7 @@ internal sealed partial class DaggerfallSession
             _persistence.OfficeLedger = OfficeLedger.Capture;
             _persistence.WorldConditions = WorldConditions.Capture;
             _persistence.WordSpread = WordSpread.Capture;
+            _persistence.LocalHouseholds = SocialConsequences.Capture;
             _persistence.CourierDispatches = CourierDispatches.Capture;
             _persistence.ConditionCounterplay = ConditionCounterplay.Capture;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;

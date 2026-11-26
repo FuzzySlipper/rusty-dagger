@@ -68,6 +68,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal Func<DaggerfallOfficeLedgerSave> OfficeLedger { get; set; } = () => DaggerfallOfficeLedgerSave.Empty;
     internal Func<DaggerfallWorldConditionsSave> WorldConditions { get; set; } = () => DaggerfallWorldConditionsSave.Empty;
     internal Func<DaggerfallWordSpreadSave> WordSpread { get; set; } = () => DaggerfallWordSpreadSave.Empty;
+    internal Func<DaggerfallLocalHouseholdsSave> LocalHouseholds { get; set; } = () => DaggerfallLocalHouseholdsSave.Empty;
     internal Func<DaggerfallCourierDispatchesSave> CourierDispatches { get; set; } = () => DaggerfallCourierDispatchesSave.Empty;
     internal Func<DaggerfallConditionCounterplaySave> ConditionCounterplay { get; set; } = () => DaggerfallConditionCounterplaySave.Empty;
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
@@ -179,6 +180,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             OfficeLedger = OfficeLedger(),
             WorldConditions = WorldConditions(),
             WordSpread = WordSpread(),
+            LocalHouseholds = LocalHouseholds(),
             CourierDispatches = CourierDispatches(),
             ConditionCounterplay = ConditionCounterplay(),
             Doors = _doors().Capture(),

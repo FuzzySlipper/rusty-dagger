@@ -89,6 +89,8 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Sparse elapsed-time news and standing wavefronts; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallWordSpreadSave WordSpread { get; init; } = DaggerfallWordSpreadSave.Empty;
+    /// <summary>Sparse settlement-local household grudge/goodwill standings; empty when untouched.</summary>
+    public DaggerfallLocalHouseholdsSave LocalHouseholds { get; init; } = DaggerfallLocalHouseholdsSave.Empty;
     /// <summary>Sparse sealed couriers carrying pending board-game actions or warrants; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallCourierDispatchesSave CourierDispatches { get; init; } = DaggerfallCourierDispatchesSave.Empty;
@@ -1180,6 +1182,8 @@ internal sealed record DaggerfallSavePayload(
         WorldConditions.Validate();
         ArgumentNullException.ThrowIfNull(WordSpread);
         WordSpread.Validate();
+        ArgumentNullException.ThrowIfNull(LocalHouseholds);
+        LocalHouseholds.Validate();
         ArgumentNullException.ThrowIfNull(CourierDispatches);
         CourierDispatches.Validate();
         ArgumentNullException.ThrowIfNull(ConditionCounterplay);

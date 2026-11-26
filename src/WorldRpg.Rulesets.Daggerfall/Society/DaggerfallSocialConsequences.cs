@@ -5,14 +5,82 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>Per-subject offset preventing the actor whose event caused a local household ripple from double-counting it.</summary>
+internal sealed record DaggerfallLocalHouseholdSubjectOffsetSave(long ActorId, int Offset)
+{
+    internal void Validate()
+    {
+        if (ActorId <= 0 || ActorId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(ActorId), "Saved local household subject offset requires a positive non-player actor id.");
+        if (Offset < DaggerfallSocialState.MinimumReputation * 2 || Offset > DaggerfallSocialState.MaximumReputation * 2)
+            throw new ArgumentOutOfRangeException(nameof(Offset), "Saved local household subject offset is out of range.");
+    }
+}
+
+/// <summary>
+/// Sparse settlement-local household standing delta for one affected <c>fam:local:...</c> household.
+/// Applies deterministically to every member of that household (whether currently loaded or admitted later)
+/// without emitting cross-town <see cref="DaggerfallWordSpread"/> wavefronts or writing per-NPC ledger rows for untouched kin.
+/// </summary>
+internal sealed record DaggerfallLocalHouseholdStandingSave(
+    string FamilyId,
+    int Region,
+    string Location,
+    int StandingDelta,
+    DaggerfallLocalHouseholdSubjectOffsetSave[]? SubjectOffsets = null)
+{
+    internal void Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(FamilyId);
+        if (!DaggerfallHouseholds.IsValidFamilyId(FamilyId) || !DaggerfallHouseholds.IsLocal(FamilyId))
+            throw new ArgumentException($"Saved local household standing requires a valid local FamilyId, got '{FamilyId}'.", nameof(FamilyId));
+        if (Region is < 0 or > 61)
+            throw new ArgumentOutOfRangeException(nameof(Region), "Saved local household standing region is out of range.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(Location);
+        if (StandingDelta < DaggerfallSocialState.MinimumReputation || StandingDelta > DaggerfallSocialState.MaximumReputation)
+            throw new ArgumentOutOfRangeException(nameof(StandingDelta), "Saved local household standing delta is out of range.");
+        if (SubjectOffsets is not null)
+        {
+            HashSet<long> seen = [];
+            foreach (DaggerfallLocalHouseholdSubjectOffsetSave offset in SubjectOffsets)
+            {
+                ArgumentNullException.ThrowIfNull(offset);
+                offset.Validate();
+                if (!seen.Add(offset.ActorId))
+                    throw new ArgumentException($"Saved local household standing '{FamilyId}' repeats subject actor id {offset.ActorId}.");
+            }
+        }
+    }
+}
+
+/// <summary>Sparse persisted snapshot of affected settlement-local households; empty when untouched.</summary>
+internal sealed record DaggerfallLocalHouseholdsSave(DaggerfallLocalHouseholdStandingSave[] Standings)
+{
+    internal static DaggerfallLocalHouseholdsSave Empty { get; } = new([]);
+
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Standings);
+        HashSet<string> keys = new(StringComparer.Ordinal);
+        foreach (DaggerfallLocalHouseholdStandingSave standing in Standings)
+        {
+            ArgumentNullException.ThrowIfNull(standing);
+            standing.Validate();
+            if (!keys.Add(standing.FamilyId))
+                throw new ArgumentException($"Saved local household standings repeat family '{standing.FamilyId}'.");
+        }
+    }
+}
+
 /// <summary>
 /// Social consequences when the player harms or helps faction/household members:
 /// - Deducts faction reputation (routed through <see cref="FactionComponent"/>) and records witness crime memory
 ///   and personal disposition grudge on every living witness who observed a killing.
 /// - Routes attributed household grudge &amp; goodwill ripples strictly through witnessed/reported/known deeds (never
 ///   straight off unwitnessed deaths):
-///   - Town-local households (<c>fam:local:...</c>): sparse <see cref="DaggerfallActorLedger"/> disposition updates
-///     within the subject's settlement only (zero cross-town <see cref="DaggerfallWordSpread"/> noise).
+///   - Town-local households (<c>fam:local:...</c>): sparse settlement-local household standings so both currently
+///     loaded and later-admitted relatives in that settlement receive the grudge/goodwill with zero cross-town
+///     <see cref="DaggerfallWordSpread"/> noise and zero bytes for unrelated households.
 ///   - Provincial Great Houses (<c>fam:house:...</c>) and royal cast dynasties (<c>fam:dynasty:...</c>): province-wide
 ///     <see cref="DaggerfallWordSpread"/> <see cref="DaggerfallWordEventKind.HouseholdStanding"/> wavefronts so kin
 ///     across the province learn at courier speed.
@@ -30,6 +98,14 @@ internal sealed class DaggerfallSocialConsequences(
     Func<DaggerfallSiteRecord?>? activeSite = null,
     Func<long>? currentMinute = null)
 {
+    private sealed class LocalHouseholdStandingState(int region, string location)
+    {
+        internal int Region { get; } = region;
+        internal string Location { get; } = location;
+        internal int StandingDelta { get; set; }
+        internal Dictionary<long, int> SubjectOffsets { get; } = [];
+    }
+
     internal const int PrimaryFactionKillPenalty = -10;
     internal const int RegionalPeopleKillPenalty = -5;
     internal const int WitnessMurderDispositionPenalty = -15;
@@ -40,6 +116,57 @@ internal sealed class DaggerfallSocialConsequences(
     internal const int KinGoodwillMaximumBonus = 10;
 
     private readonly HashSet<string> _rippledEventKeys = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, LocalHouseholdStandingState> _localHouseholdStandings = new(StringComparer.Ordinal);
+
+    internal DaggerfallLocalHouseholdsSave Capture()
+    {
+        if (_localHouseholdStandings.Count == 0)
+            return DaggerfallLocalHouseholdsSave.Empty;
+
+        List<DaggerfallLocalHouseholdStandingSave> entries = [];
+        foreach ((string familyId, LocalHouseholdStandingState state) in _localHouseholdStandings.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            if (state.StandingDelta == 0 && state.SubjectOffsets.Count == 0)
+                continue;
+            DaggerfallLocalHouseholdSubjectOffsetSave[]? offsets = state.SubjectOffsets.Count == 0
+                ? null
+                : [.. state.SubjectOffsets
+                    .Where(pair => pair.Value != 0)
+                    .OrderBy(pair => pair.Key)
+                    .Select(pair => new DaggerfallLocalHouseholdSubjectOffsetSave(pair.Key, pair.Value))];
+            entries.Add(new DaggerfallLocalHouseholdStandingSave(
+                familyId,
+                state.Region,
+                state.Location,
+                state.StandingDelta,
+                offsets is { Length: > 0 } ? offsets : null));
+        }
+        return entries.Count == 0 ? DaggerfallLocalHouseholdsSave.Empty : new([.. entries]);
+    }
+
+    internal void Restore(DaggerfallLocalHouseholdsSave? saved)
+    {
+        _localHouseholdStandings.Clear();
+        if (saved is null)
+            return;
+        saved.Validate();
+        foreach (DaggerfallLocalHouseholdStandingSave entry in saved.Standings)
+        {
+            LocalHouseholdStandingState state = new(entry.Region, entry.Location)
+            {
+                StandingDelta = entry.StandingDelta,
+            };
+            if (entry.SubjectOffsets is { Length: > 0 } offsets)
+            {
+                foreach (DaggerfallLocalHouseholdSubjectOffsetSave offset in offsets)
+                {
+                    if (offset.Offset != 0)
+                        state.SubjectOffsets[offset.ActorId] = offset.Offset;
+                }
+            }
+            _localHouseholdStandings[entry.FamilyId] = state;
+        }
+    }
 
     /// <summary>
     /// Applies faction standing loss, direct witness memory, and attributed kin grudge ripple when the player
@@ -205,25 +332,52 @@ internal sealed class DaggerfallSocialConsequences(
 
     /// <summary>
     /// Computes an actor's effective personal disposition delta: sparse <see cref="DaggerfallActorLedger"/> standing
-    /// plus any arrived province-wide <see cref="DaggerfallWordSpread"/> <see cref="DaggerfallWordEventKind.HouseholdStanding"/>
-    /// delta for Great House or royal dynasty kin at <paramref name="atSite"/>.
+    /// plus any settlement-local household standing (for <c>fam:local:...</c> kin, including relatives admitted after
+    /// the triggering event) or arrived province-wide <see cref="DaggerfallWordSpread"/>
+    /// <see cref="DaggerfallWordEventKind.HouseholdStanding"/> delta (for Great House or royal dynasty kin).
     /// </summary>
     internal int EffectiveDispositionDelta(long actorId, DaggerfallSiteRecord? atSite = null, long? minute = null)
     {
         int personal = actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Social is { } s
             ? s.DispositionDelta
             : 0;
-        if (wordSpread is null)
-            return personal;
-
-        DaggerfallSiteRecord? targetSite = atSite ?? activeSite?.Invoke();
-        if (targetSite is null)
-            return personal;
 
         DaggerfallNpc? npc = npcs.TryGet(actorId, out DaggerfallNpc? reg) ? reg : null;
         ActorState? live = actors.TryGet(actorId, out ActorState? act) ? act : null;
         string? familyId = ResolveActorFamilyId(actorId, live, npc);
-        if (string.IsNullOrWhiteSpace(familyId) || !DaggerfallHouseholds.IsProvinceWide(familyId))
+        if (string.IsNullOrWhiteSpace(familyId))
+            return personal;
+
+        if (DaggerfallHouseholds.IsLocal(familyId))
+        {
+            if (!_localHouseholdStandings.TryGetValue(familyId, out LocalHouseholdStandingState? localState))
+                return personal;
+            if (npc is not null)
+            {
+                if (!SameSettlement(npc.Site, localState.Region, localState.Location))
+                    return personal;
+            }
+            else if ((atSite ?? activeSite?.Invoke()) is { } checkSite
+                && (checkSite.Id.Region != localState.Region
+                    || !string.Equals(checkSite.Name, localState.Location, StringComparison.OrdinalIgnoreCase)))
+            {
+                return personal;
+            }
+
+            int localDelta = checked(localState.StandingDelta + localState.SubjectOffsets.GetValueOrDefault(actorId));
+            if (localDelta == 0)
+                return personal;
+            return Math.Clamp(
+                checked(personal + localDelta),
+                DaggerfallSocialState.MinimumReputation,
+                DaggerfallSocialState.MaximumReputation);
+        }
+
+        if (wordSpread is null || !DaggerfallHouseholds.IsProvinceWide(familyId))
+            return personal;
+
+        DaggerfallSiteRecord? targetSite = atSite ?? activeSite?.Invoke();
+        if (targetSite is null)
             return personal;
 
         int houseDelta = wordSpread.ArrivedHouseholdStandingDelta(
@@ -264,77 +418,41 @@ internal sealed class DaggerfallSocialConsequences(
             return;
         }
 
-        // Tier 1: Commoner/shop/tavern households (fam:local:...) ripple strictly within the victim's/beneficiary's settlement.
+        // Tier 1: Commoner/shop/tavern households (fam:local:...) record one sparse settlement-local standing entry
+        // so both currently loaded kin and untouched deterministic relatives admitted later receive the consequence
+        // without cross-town WordSpread wavefronts or per-NPC ledger bloat.
+        if (!DaggerfallHouseholds.IsLocal(familyId))
+            return;
+
         int? targetRegion = subjectNpc?.Site.Region ?? originSite?.Id.Region ?? currentRegion();
         string? targetLocation = subjectNpc?.Site.Location ?? originSite?.Name;
         if (targetRegion is null || string.IsNullOrWhiteSpace(targetLocation))
             return;
 
-        HashSet<long> updatedKin = [];
-        foreach (ActorState live in actors.All)
+        if (!_localHouseholdStandings.TryGetValue(familyId, out LocalHouseholdStandingState? state))
         {
-            long id = live.DurableId;
-            if (id == DaggerfallActorIdentity.PlayerEntityId || id == subjectActorId || live.IsDefeated)
-                continue;
-            DaggerfallNpc? kinNpc = npcs.TryGet(id, out DaggerfallNpc? reg) ? reg : null;
-            if (kinNpc is null || !SameSettlement(kinNpc.Site, targetRegion.Value, targetLocation))
-                continue;
-            string? kinFamily = ResolveActorFamilyId(id, live, kinNpc);
-            if (!DaggerfallWitnessDiscretion.AreFamily(kinFamily, familyId))
-                continue;
-            if (updatedKin.Add(id))
-                ApplyKinDispositionDelta(id, live, kinNpc, delta);
+            state = new LocalHouseholdStandingState(targetRegion.Value, targetLocation);
+            _localHouseholdStandings[familyId] = state;
         }
 
-        foreach (DaggerfallNpc kinNpc in npcs.All)
+        int nextStanding = Math.Clamp(
+            checked(state.StandingDelta + delta),
+            DaggerfallSocialState.MinimumReputation,
+            DaggerfallSocialState.MaximumReputation);
+        int appliedDelta = nextStanding - state.StandingDelta;
+        state.StandingDelta = nextStanding;
+        if (subjectActorId is long sid && appliedDelta != 0)
         {
-            long id = kinNpc.DurableId;
-            if (id == DaggerfallActorIdentity.PlayerEntityId || id == subjectActorId || updatedKin.Contains(id))
-                continue;
-            if (kinNpc.Presence == DaggerfallNpcPresence.Removed)
-                continue;
-            if (!SameSettlement(kinNpc.Site, targetRegion.Value, targetLocation))
-                continue;
-            string? kinFamily = ResolveActorFamilyId(id, null, kinNpc);
-            if (!DaggerfallWitnessDiscretion.AreFamily(kinFamily, familyId))
-                continue;
-            if (updatedKin.Add(id))
-                ApplyKinDispositionDelta(id, null, kinNpc, delta);
+            int nextOffset = checked(state.SubjectOffsets.GetValueOrDefault(sid) - appliedDelta);
+            if (nextOffset == 0)
+                state.SubjectOffsets.Remove(sid);
+            else
+                state.SubjectOffsets[sid] = nextOffset;
         }
     }
 
     private static bool SameSettlement(DaggerfallNpcSite site, int region, string location) =>
         site.Region == region && string.Equals(site.Location, location, StringComparison.OrdinalIgnoreCase);
-
-    private void ApplyKinDispositionDelta(long kinId, ActorState? liveActor, DaggerfallNpc kinNpc, int delta)
-    {
-        bool hadEntry = actorLedger.TryGet(kinId, out ActorLedgerEntry? existing) && existing is not null;
-        ActorOrigin? origin = existing?.Origin
-            ?? (liveActor is not null && liveActor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? oc) ? oc.Origin : null)
-            ?? (kinNpc.Profile is { } profile
-                ? kinNpc.StableKey.StartsWith("cast:", StringComparison.Ordinal)
-                    ? ActorOrigin.Cast(kinNpc.StableKey["cast:".Length..], profile)
-                    : DaggerfallPeopleSlots.IsDeterministicId(kinId)
-                        ? ActorOrigin.Seeded(profile, kinNpc.StableKey)
-                        : ActorOrigin.MintedActor(
-                            kinNpc.Kind == DaggerfallNpcKind.Civilian ? DaggerfallActorKinds.Civilian : DaggerfallActorKinds.StaticNpc,
-                            gender: kinNpc.Appearance.Gender)
-                : null);
-        if (origin is null)
-            return;
-
-        ActorSocialDiff socialDiff = existing?.Social ?? ActorSocialDiff.FromNpc(kinNpc);
-        int nextDisposition = Math.Clamp(
-            checked(socialDiff.DispositionDelta + delta),
-            DaggerfallSocialState.MinimumReputation,
-            DaggerfallSocialState.MaximumReputation);
-        socialDiff = socialDiff with { DispositionDelta = nextDisposition };
-
-        ActorLedgerEntry updated = hadEntry && existing is not null
-            ? existing with { Social = socialDiff }
-            : new ActorLedgerEntry(kinId, origin, Social: socialDiff);
-        actorLedger.Upsert(updated);
-    }
 
     private string? ResolveActorFamilyId(long actorId, ActorState? liveActor, DaggerfallNpc? npc)
     {
