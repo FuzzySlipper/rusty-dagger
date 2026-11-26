@@ -34,6 +34,7 @@ ATTRIBUTE_ORDER = (
 )
 
 LOOKUP_SECTIONS = (
+    "vocabulary",
     "actorTemplateBases",
     "actorTemplateCreatures",
     "actorTemplateClasses",
@@ -50,6 +51,10 @@ LOOKUP_SECTIONS = (
     "boardSeats",
     "factions",
     "buildingNames",
+)
+
+MAGIC_SCHOOLS = (
+    "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism",
 )
 
 FIRST_HUMAN_MOBILE = 128
@@ -577,6 +582,9 @@ class ActorsCatalogStore:
             enemy_spells_doc = read_base_section(base_path, "enemySpells", {}, self.cache) or {}
             class_tiers = list(enemy_spells_doc.get("classTiers") or [])
 
+            vocab_doc = read_base_section(base_path, "vocabulary", {}, self.cache) or {}
+            vocab_skills = [s for s in (vocab_doc.get("skills") or []) if isinstance(s, str)]
+
             region_names = (read_base_section(base_path, "buildingNames", {}, self.cache) or {}).get("regionNames") or []
             regions = [{"index": i, "name": name} for i, name in enumerate(region_names)]
 
@@ -595,6 +603,7 @@ class ActorsCatalogStore:
                 "factions": factions,
                 "careers": careers,
                 "races": races,
+                "vocab_skills": vocab_skills,
                 "spells_by_key": spells_by_key,
                 "spells_by_identity": spells_by_identity,
                 "class_tiers": class_tiers,
@@ -979,31 +988,26 @@ class ActorsCatalogStore:
             resolved_race = region_default_race
             race_source = f"region:{region}" if region is not None else "default"
 
-        # 3. Resolve level, health, attributes, skills according to scaling mode.
+        # 3. Resolve level, health, attributes, skills, spells, and magicka matching C# runtime
+        #    (DaggerfallEncounterActors.AtLevel, DaggerfallEnemySpells.For / MagickaMaximum,
+        #     and DaggerfallMechanicsState.CreateStats).
         scaling = merged.get("scaling") or "fixed"
+        is_town_or_cast = spec is not None and spec.get("family") in ("town", "cast")
         base_level = merged.get("level") if _is_int(merged.get("level")) else 1
-        effective_level = level if scaling in ("career-leveled", "level-scaled-skills") else (base_level or level)
-        if scaling == "fixed" and level != base_level:
-            notes.append(f"Scaling is 'fixed' (authored level {base_level}); level selector does not rescale stats.")
+        scales_with_level = (not is_town_or_cast) and scaling in ("career-leveled", "level-scaled-skills")
+        effective_level = level if scales_with_level else (base_level or level)
+        if not scales_with_level and level != base_level:
+            notes.append(f"Uses fixed authored level {base_level}; level selector does not rescale stats.")
 
         health = dict(merged.get("health") or {"minimum": 10, "maximum": 20})
         hp_per_lvl = merged.get("hitPointsPerLevel")
-        if scaling == "career-leveled" and _is_int(hp_per_lvl) and hp_per_lvl > 0:
+        if (not is_town_or_cast) and scaling == "career-leveled" and _is_int(hp_per_lvl) and hp_per_lvl > 0:
             health = {
                 "minimum": 10 + effective_level,
                 "maximum": 10 + effective_level * hp_per_lvl,
             }
 
-        base_attrs = dict(merged.get("attributes") or {})
-        base_skills = dict(merged.get("skills") or {})
-        effective_skills = dict(base_skills)
-        if scaling in ("level-scaled-skills", "career-leveled") and effective_level > 1:
-            bonus = (effective_level - 1) * 3
-            for sk, val in base_skills.items():
-                if _is_int(val):
-                    effective_skills[sk] = min(100, val + bonus)
-
-        # 4. Resolve spells (fixed vs class-tiers vs none).
+        # 4. Resolve spells (fixed vs class-tiers vs none) using runtime tier boundary `level // 3`.
         spell_policy = merged.get("spellPolicy") or "none"
         resolved_spells: list[dict] = []
         if spell_policy == "fixed":
@@ -1011,10 +1015,35 @@ class ActorsCatalogStore:
                 info = index["spells_by_key"].get(skey, {"key": skey, "name": skey, "identity": None})
                 resolved_spells.append(info)
         elif spell_policy == "class-tiers" and index["class_tiers"]:
-            tier_idx = min(len(index["class_tiers"]) - 1, max(0, (effective_level - 1) // 3))
+            tier_idx = min(effective_level // 3, len(index["class_tiers"]) - 1)
             for spell_ident in index["class_tiers"][tier_idx]:
-                info = index["spells_by_identity"].get(spell_ident, {"key": f"spell.{spell_ident:03d}", "name": f"Spell #{spell_ident}", "identity": spell_ident})
+                info = index["spells_by_identity"].get(
+                    spell_ident,
+                    {"key": f"spell.{spell_ident:03d}", "name": f"Spell #{spell_ident}", "identity": spell_ident},
+                )
                 resolved_spells.append(info | {"tier": tier_idx + 1})
+
+        # 5. Resolve skills and magicka matching DaggerfallEncounterActors.AtLevel + DaggerfallMechanicsState.CreateStats.
+        base_attrs = dict(merged.get("attributes") or {})
+        base_skills = dict(merged.get("skills") or {})
+        effective_skills = dict(base_skills)
+        if scales_with_level:
+            scaled_skill = min(100, effective_level * 5 + 30)
+            skill_keys = list(index["vocab_skills"]) if index["vocab_skills"] else list(base_skills.keys())
+            for sk in skill_keys:
+                effective_skills[sk] = scaled_skill
+            for sk in base_skills:
+                effective_skills[sk] = scaled_skill
+
+        is_runtime_caster = (not is_town_or_cast) and (
+            spell_policy == "class-tiers" or (spell_policy == "fixed" and len(resolved_spells) > 0)
+        )
+        if is_runtime_caster:
+            for school in MAGIC_SCHOOLS:
+                effective_skills[school] = 80
+            effective_magicka = 10 * effective_level + 100
+        else:
+            effective_magicka = merged.get("magicka")
 
         # 5. Resolve visual preview for (gender, region).
         memo: dict = {}
@@ -1088,7 +1117,7 @@ class ActorsCatalogStore:
                 "health": health,
                 "hitPointsPerLevel": hp_per_lvl,
                 "fatigue": merged.get("fatigue"),
-                "magicka": merged.get("magicka"),
+                "magicka": effective_magicka,
                 "armor": merged.get("armor", 0),
                 "attributes": base_attrs,
                 "skills": effective_skills,

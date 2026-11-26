@@ -50,6 +50,7 @@ class ActorsCatalogTests(TestCase):
         self._write(self.lib.base_payload, {
             "ruleset": "daggerfall",
             "sections": {
+                "vocabulary": "core/vocabulary.json",
                 "actorTemplateBases": "actors/templates/bases.json",
                 "actorTemplateCreatures": "actors/templates/creatures.json",
                 "actorTemplateClasses": "actors/templates/classes.json",
@@ -68,6 +69,10 @@ class ActorsCatalogTests(TestCase):
             },
         })
 
+        self._write(base_dir / "core/vocabulary.json", {
+            "attributes": ["strength", "intelligence", "willpower", "agility", "endurance", "personality", "speed", "luck"],
+            "skills": ["long-blade", "dodging", "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism"],
+        })
         self._write(base_dir / "actors/templates/bases.json", {
             "templates": [
                 {
@@ -316,7 +321,27 @@ class ActorsCatalogTests(TestCase):
         self.assertEqual([s["id"] for s in creature1["actorRecords"]["spawners"]], ["imp"])
         self.assertEqual([t["id"] for t in creature1["actorRecords"]["templates"]], ["imp"])
 
-        # Preview: level/gender/region resolves career-leveled HP, class-tier spells, female texture, and regional race.
+        # Preview: level/gender/region resolves career-leveled HP, runtime class-tier spells (`level // 3`),
+        # runtime scaled skills (`min(100, level * 5 + 30)`), caster magic schools = 80, and magicka = 10 * level + 100.
+        p_lvl2 = self.ws.actors_catalog.preview(
+            "spec", "encounter-mage", self.ws.catalog(), self.ws.concept_store,
+            level=2, gender="male", region=17,
+        )
+        self.assertEqual([s["identity"] for s in p_lvl2["effective"]["spells"]], [7, 10])
+        self.assertEqual(p_lvl2["effective"]["skills"]["long-blade"], 40)
+        self.assertEqual(p_lvl2["effective"]["skills"]["destruction"], 80)
+        self.assertEqual(p_lvl2["effective"]["magicka"], 120)
+
+        p_lvl3 = self.ws.actors_catalog.preview(
+            "spec", "encounter-mage", self.ws.catalog(), self.ws.concept_store,
+            level=3, gender="female", region=20,
+        )
+        # Runtime tier switches at level 3 (3 // 3 == 1), NOT level 4.
+        self.assertEqual([s["identity"] for s in p_lvl3["effective"]["spells"]], [22, 25])
+        self.assertEqual(p_lvl3["effective"]["skills"]["long-blade"], 45)
+        self.assertEqual(p_lvl3["effective"]["skills"]["destruction"], 80)
+        self.assertEqual(p_lvl3["effective"]["magicka"], 130)
+
         p_lvl5 = self.ws.actors_catalog.preview(
             "spec", "encounter-mage", self.ws.catalog(), self.ws.concept_store,
             level=5, gender="female", region=20,
@@ -325,8 +350,20 @@ class ActorsCatalogTests(TestCase):
         self.assertEqual(p_lvl5["effective"]["race"], "redguard")
         self.assertEqual(p_lvl5["effective"]["health"], {"minimum": 15, "maximum": 40})
         self.assertEqual([s["name"] for s in p_lvl5["effective"]["spells"]], ["Ice Storm", "Lightning"])
+        self.assertEqual(p_lvl5["effective"]["skills"]["long-blade"], 55)
+        self.assertEqual(p_lvl5["effective"]["skills"]["destruction"], 80)
+        self.assertEqual(p_lvl5["effective"]["magicka"], 150)
         self.assertEqual(p_lvl5["effective"]["visual"]["textureArchive"], 485)
         self.assertEqual(p_lvl5["effective"]["visual"]["art"]["id"], "npc-100")
+
+        # Scaled creature caster (imp, level 2): ordinary skills = 40, magic schools = 80, magicka = 120.
+        p_imp = self.ws.actors_catalog.preview(
+            "spec", "imp", self.ws.catalog(), self.ws.concept_store,
+            level=2, gender="male", region=17,
+        )
+        self.assertEqual(p_imp["effective"]["skills"]["long-blade"], 40)
+        self.assertEqual(p_imp["effective"]["skills"]["destruction"], 80)
+        self.assertEqual(p_imp["effective"]["magicka"], 120)
 
         # Disallowed gender snaps with an explanatory note.
         p_cast = self.ws.actors_catalog.preview(
@@ -390,6 +427,26 @@ class ActorsCatalogTests(TestCase):
         mage_spawners = {s["id"] for s in real_mage["reverseRefs"]["spawners"]}
         self.assertIn("encounter-mage", mage_spawners)
         self.assertIn("town-mage-guild-member", mage_spawners)
+
+        # Real committed encounter-mage preview matches runtime AtLevel / EnemySpells / MechanicsState:
+        # level 2 -> tier 0 ([16, 20]), level 3 -> tier 1 ([22, 23, 31]), level 6 -> tier 2 ([6, 7, 22, 25, 31]),
+        # level 5 -> ordinary skills 55, magic schools 80, magicka 150.
+        rm2 = real_ws.actors_catalog.preview("spec", "encounter-mage", real_ws.catalog(), real_ws.concept_store, level=2)
+        rm3 = real_ws.actors_catalog.preview("spec", "encounter-mage", real_ws.catalog(), real_ws.concept_store, level=3)
+        rm5 = real_ws.actors_catalog.preview("spec", "encounter-mage", real_ws.catalog(), real_ws.concept_store, level=5)
+        rm6 = real_ws.actors_catalog.preview("spec", "encounter-mage", real_ws.catalog(), real_ws.concept_store, level=6)
+        self.assertEqual([s["identity"] for s in rm2["effective"]["spells"]], [16, 20])
+        self.assertEqual([s["identity"] for s in rm3["effective"]["spells"]], [22, 23, 31])
+        self.assertEqual([s["identity"] for s in rm6["effective"]["spells"]], [6, 7, 22, 25, 31])
+        self.assertEqual(rm5["effective"]["skills"]["long-blade"], 55)
+        self.assertEqual(rm5["effective"]["skills"]["destruction"], 80)
+        self.assertEqual(rm5["effective"]["magicka"], 150)
+
+        # Real committed scaled creature (rat at level 1) populates vocabulary skills with 1*5+30 = 35 and is not a caster.
+        rat1 = real_ws.actors_catalog.preview("spec", "rat", real_ws.catalog(), real_ws.concept_store, level=1)
+        self.assertEqual(rat1["effective"]["skills"]["hand-to-hand"], 35)
+        self.assertEqual(rat1["effective"]["skills"]["destruction"], 35)
+        self.assertEqual(rat1["effective"]["spells"], [])
 
         # Built CMS frontend bundle includes the unified Actors routes and reverse art links.
         app_bundle = (REPO / "authoring/cms/web/dist/app.js").read_text(encoding="utf-8")
