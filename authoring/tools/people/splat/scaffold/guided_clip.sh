@@ -10,7 +10,7 @@
 # is keyframed with the others and goes to REF2VA as the third reference (<Picture 3>); SIDE_FRAME=N also pins it at frame N
 # (MiniMaxH3AddGuide; 18 is his right side on the eyelevel path, 54 his left).
 # Named sides from a four-view sheet: cut/right-cut.png and left-cut.png, references after the back (right, then left);
-# SIDE_GUIDES='right:18 left:54' pins them.
+# SIDE_GUIDES='right:18 left:54' pins them. REF_SIZE=N scales the reference pictures to N px first (ref2va_orbit.py --ref-size).
 #   guide  the stick figure from the scaffold's joints (stick_fit.py; FIT=joints.json gives them instead), its lit-clay (L11 key and fills) and depth orbits at eye level
 #          (27 degree lens, 73 frames) rendered with Blender on den-m5's CPU, and the keyframes at SIZE
 #   clip   H3 REF2VA on the GPU lab: the lit stick video as <Video 1>, depth control 0.5 from the same camera, the two keyframes as
@@ -58,12 +58,12 @@ clip)
     echo "guided $N start $(date +%s) size $SZ seed $SEED host $HALO unet ${H3_UNET:-default} lora ${LORA:-none} steps ${STEPS:-4}" >> $R/times.txt; rc=0
     COMFY_URL=http://$ip:8188 H3_CLIP=${H3_CLIP:-qwen3vl_32b_minimax_h3_int8_convrot.safetensors} \
     asset-resources run --host $HALO --resource $res --owner claude --purpose "Villager $ID stick-guided orbit $N ($SZ px, REF2VA) on $HALO" -- \
-      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) $([ -f $K/side.png ] && echo --image $K/side.png) ${SIDE_FRAME:+--guide $K/side.png:$SIDE_FRAME} $(for v in right left; do [ -f $K/$v.png ] && echo --image $K/$v.png; done) $(for g in ${SIDE_GUIDES:-}; do echo --guide $K/${g%%:*}.png:${g#*:}; done) --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
+      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) $([ -f $K/side.png ] && echo --image $K/side.png) ${SIDE_FRAME:+--guide $K/side.png:$SIDE_FRAME} $(for v in right left; do [ -f $K/$v.png ] && echo --image $K/$v.png; done) $(for g in ${SIDE_GUIDES:-}; do echo --guide $K/${g%%:*}.png:${g#*:}; done) ${REF_SIZE:+--ref-size $REF_SIZE} --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
         --size $SZ --frames 73 --seed $SEED --steps ${STEPS:-4} ${LORA_ARG[@]+"${LORA_ARG[@]}"} --sampler res_multistep --scheduler simple \
         --control depth:$G/$SZ/stick/depth.mp4:0.5 --free-after-encode --deadline ${DEADLINE:-43200} || rc=$?
     echo "guided $N end $(date +%s) rc $rc host $HALO" >> $R/times.txt; exit $rc
   fi
-  export R ID N SZ G H0 T SIDE_FRAME=${SIDE_FRAME:-} SIDE_GUIDES=${SIDE_GUIDES:-} K=$C/wip/keys-$SZ SEED=${SEED:-$((610000000 + 10#$(echo ${ID%%-*} | tr -dc 0-9) * 1000))}
+  export R ID N SZ G H0 T SIDE_FRAME=${SIDE_FRAME:-} SIDE_GUIDES=${SIDE_GUIDES:-} REF_SIZE=${REF_SIZE:-} K=$C/wip/keys-$SZ SEED=${SEED:-$((610000000 + 10#$(echo ${ID%%-*} | tr -dc 0-9) * 1000))}
   mkdir -p $R/$ID/A/guided; echo "guided $N waiting-for-lock $(date +%s)" >> $R/times.txt
   flock -w 7200 /tmp/gpu-lab-claude.lock bash -c '
     if [ $SZ -gt 1088 ]; then t0=$(date +%s); while [ "$(python3 $H0/queue.py)" != "running 0 pending 0" ]; do
@@ -72,7 +72,7 @@ clip)
     $H0/vram.sh $R/$ID/A/guided/vram-$N.log & mon=$!; trap "pkill -P $mon 2>/dev/null; kill $mon 2>/dev/null" EXIT
     echo "guided $N start $(date +%s) size $SZ seed $SEED" >> $R/times.txt; rc=0
     asset-resources run --host gpu-lab --resource lab-comfy --owner claude --purpose "Villager $ID stick-guided orbit $N ($SZ px, REF2VA)" -- \
-      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) $([ -f $K/side.png ] && echo --image $K/side.png) ${SIDE_FRAME:+--guide $K/side.png:$SIDE_FRAME} $(for v in right left; do [ -f $K/$v.png ] && echo --image $K/$v.png; done) $(for g in ${SIDE_GUIDES:-}; do echo --guide $K/${g%%:*}.png:${g#*:}; done) --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
+      python3 $T/ref2va_orbit.py $R/$ID/A/guided/$N --image $K/front.png $([ -f $K/back.png ] && echo --image $K/back.png) $([ -f $K/side.png ] && echo --image $K/side.png) ${SIDE_FRAME:+--guide $K/side.png:$SIDE_FRAME} $(for v in right left; do [ -f $K/$v.png ] && echo --image $K/$v.png; done) $(for g in ${SIDE_GUIDES:-}; do echo --guide $K/${g%%:*}.png:${g#*:}; done) ${REF_SIZE:+--ref-size $REF_SIZE} --prompt-file $G/prompt.txt --video $G/$SZ/stick-L11/shaded.mp4 \
         --size $SZ --frames 73 --seed $SEED --steps 4 --lora minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors --sampler res_multistep --scheduler simple \
         --control depth:$G/$SZ/stick/depth.mp4:0.5 --free-after-encode || rc=$?
     echo "guided $N end $(date +%s) rc $rc queue $(python3 $H0/queue.py) peak-vram-MiB $(sort -k2 -n $R/$ID/A/guided/vram-$N.log | tail -1 | cut -d" " -f2)" >> $R/times.txt; exit $rc' ;;

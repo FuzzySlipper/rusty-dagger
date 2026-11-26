@@ -44,6 +44,8 @@ def main():
     p.add_argument('--steps', type=int, help='Override the recipe step count')
     p.add_argument('--seed', type=int, default=610800110)
     p.add_argument('--guide', action='append', default=[]); p.add_argument('--deadline', type=int, default=14400)
+    p.add_argument('--ref-size', type=int, help='scale each reference picture to this square size first (the node only scales down, to the '
+                   'generation area: 1920 px refs cost about 14k tokens each at every step; Patch 2026-11-25: CMS views are 832x1216 anyway)')
     p.add_argument('--control', action='append', default=[], help='KIND:VIDEO:STRENGTH[:START:END], H3 Fun ControlNet Union, chained')
     p.add_argument('--lora'); p.add_argument('--lora-strength', type=float, default=1.0)
     p.add_argument('--clip-device', default='default', choices=['default', 'cpu'], help='CLIPLoader device: cpu keeps the 15 GB text encoder off the card')
@@ -64,6 +66,13 @@ def main():
     }
     h = lambda f: hashlib.sha256(Path(f).read_bytes()).hexdigest()[:12]
     prompt = Path(a.prompt_file).read_text().strip()
+    if a.ref_size:   # smaller reference tokens; the guide frames (--guide) stay at the generation size
+        from PIL import Image
+        small = []
+        for f in a.image:
+            t = a.out / f'ref-{a.ref_size}-{Path(f).name}'
+            Image.open(f).convert('RGB').resize((a.ref_size, a.ref_size), Image.LANCZOS).save(t); small.append(str(t))
+        a.image = small
     imgs = [upload(f, f'r2v-ref-{h(f)}.png') for f in a.image]
     vid = upload(a.video, f'r2v-motion-{h(a.video)}.mp4')
     enc = {'clip': ['2', 0], 'vae': ['3', 0], 'prompt': prompt, 'width': a.size, 'height': a.size, 'length': a.frames,
