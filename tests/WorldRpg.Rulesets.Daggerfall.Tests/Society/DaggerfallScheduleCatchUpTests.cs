@@ -66,23 +66,25 @@ public sealed class DaggerfallScheduleCatchUpTests
                 DispositionDelta = 10,
             }));
 
-        // 2. Rest inside tavern overnight via ApplyRest (13 hours -> ~09:30 next morning):
-        //    ALL evening visitors must be unloaded cleanly (zero orphaned actors!), untouched visitors write 0 save bytes,
-        //    and the met visitor preserves its sparse Social diff without permanent AtSite relocation.
+        // 2. Rest inside tavern overnight via ApplyRest (13 hours: 20:30 -> 09:30 next morning):
+        //    Keep weather Sunny on each resting slice (resting: true never reconciles mid-sleep) and assert
+        //    IMMEDIATELY after ApplyRest returns — with NO extra AdvanceToMinuteOfDay call — that ApplyRest's
+        //    own completion hook unloaded all stale evening visitors, wrote 0 save bytes for untouched visitors,
+        //    and preserved the met visitor's sparse Social diff without permanent AtSite relocation.
         DaggerfallRestResult restResult = session.ApplyRest(
             new DaggerfallRestRequest(DaggerfallRestMode.Timed, Hours: 13),
             new DaggerfallRestEligibility(Allowed: true),
             seconds =>
             {
                 DaggerfallCalendarAdvance adv = session.AdvanceElapsedTime(seconds, resting: true, idleFatigue: false, completeTimeIncrease: false);
+                session.LocalWeather.State.Force(DaggerfallWeatherKind.Sunny);
                 return new DaggerfallRestTimeAdvance(seconds, adv.AppliedSeconds);
             });
         Assert.True(restResult.Accepted);
-        session.LocalWeather.State.Force(DaggerfallWeatherKind.Sunny);
-        AdvanceToMinuteOfDay(session, 10 * 60);
+        Assert.Equal(9, session.Calendar.Hour);
 
         foreach (DaggerfallScheduledVisitor visitor in eveningVisitors)
-            Assert.False(session.State.Actors.TryGet(visitor.DurableId, out _), $"Stale evening visitor {visitor.DurableId} remained orphaned after resting to sunny morning.");
+            Assert.False(session.State.Actors.TryGet(visitor.DurableId, out _), $"Stale evening visitor {visitor.DurableId} remained orphaned after ApplyRest.");
 
         DaggerfallSavePayload afterMorningRest = DaggerfallSavePayload.Read(session.CaptureSave());
         foreach (long untouchedId in untouchedIds)
@@ -216,25 +218,37 @@ public sealed class DaggerfallScheduleCatchUpTests
         Assert.DoesNotContain(clearSave.ActorLedger, e => e.Location?.Kind != ActorLocationKind.OnOverlandBand);
         Assert.Empty(clearSave.ActorInventories);
 
-        // 3. Same-profile expedition / recall arrival at night (02:00) via TryRelocatePlayer reconciles immediately!
-        AdvanceToMinuteOfDay(session, 2 * 60);
-        DaggerfallSiteAnchor arrivalAnchor = new("expedition-night", exterior.Project.PlayerPosition ?? default, 0f, 0f);
+        // 3. Same-profile expedition / recall arrival via TryRelocatePlayer must itself reconcile a demonstrably
+        //    stale/retiring population immediately (without any prior ReconcileImmediate or AdvanceElapsedTime).
+        DaggerfallNpc visibleWalker = recovered.First(n => n.Role != "guard" && session.State.Actors.TryGet(n.DurableId, out _));
+        ActorState visibleWalkerActor = session.State.Actors.Get(visibleWalker.DurableId);
+        // Place the player 10m south of the walker facing north (-Z, YawRadians = 0) so the walker is in-frustum (<25m).
+        WorldPoint inFrontOfWalker = new(visibleWalkerActor.Position.X, visibleWalkerActor.Position.Y, visibleWalkerActor.Position.Z + 10f);
+        session.State.PlayerControl.YawRadians = 0f;
+        session.State.PlayerControl.Restore(inFrontOfWalker, session.State.PlayerControl.Motion);
+        Assert.True(session.Population.IsWithinPlayerCameraFrustum(visibleWalkerActor.Position));
+
+        // Flip to settled Thunder on a live outdoor tick: walker enters live grace (still Active & IsRetiring == true).
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Thunder);
+        session.ResetScheduleWeatherBaseline();
+        session.Population.Reconcile(immediate: false);
+        Assert.True(session.Population.IsRetiring(visibleWalker.DurableId));
+        Assert.Equal(DaggerfallNpcPresence.Active, session.State.Npcs.Require(visibleWalker.DurableId).Presence);
+
+        // Same-profile TryRelocatePlayer itself must settle arrival immediately (clears retirement & hides walker).
+        DaggerfallSiteAnchor arrivalAnchor = new("expedition-storm-arrival", exterior.Project.PlayerPosition ?? default, 0f, 0f);
         Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, arrivalAnchor));
+        Assert.False(session.Population.IsRetiring(visibleWalker.DurableId));
+        Assert.Equal(DaggerfallNpcPresence.Hidden, session.State.Npcs.Require(visibleWalker.DurableId).Presence);
 
-        DaggerfallNpc[] nightActive = [.. session.State.Npcs.All
+        DaggerfallNpc[] afterArrivalActive = [.. session.State.Npcs.All
             .Where(n => DaggerfallCivilians.IsSourcePopulation(n) && n.Presence == DaggerfallNpcPresence.Active)];
-        foreach (DaggerfallNpc npc in nightActive)
-        {
-            Assert.False(session.Population.IsRetiring(npc.DurableId));
-            string sched = DaggerfallNpcSchedulePolicy.ResolveExteriorScheduleId(
-                session.WorldSocialSeed, Charing, npc.StableKey, npc.Role == "guard", exterior.Population.Count);
-            Assert.True(sched is DaggerfallNpcSchedulePolicy.CityGuardScheduleId or DaggerfallNpcSchedulePolicy.UnderworldNightScheduleId);
-        }
+        Assert.All(afterArrivalActive, npc => Assert.Equal("guard", npc.Role));
 
-        // Save/load across night arrival keeps zero save bytes for untouched townsfolk.
-        DaggerfallSavePayload nightSave = DaggerfallSavePayload.Read(session.CaptureSave());
-        Assert.DoesNotContain(nightSave.ActorLedger, e => e.Location?.Kind != ActorLocationKind.OnOverlandBand);
-        Assert.Empty(nightSave.ActorInventories);
+        // Save/load across arrival keeps zero save bytes for untouched townsfolk.
+        DaggerfallSavePayload arrivalSave = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.DoesNotContain(arrivalSave.ActorLedger, e => e.Location?.Kind != ActorLocationKind.OnOverlandBand);
+        Assert.Empty(arrivalSave.ActorInventories);
     }
 
     private static void AdvanceToMinuteOfDay(DaggerfallSession session, int targetMinuteOfDay)
