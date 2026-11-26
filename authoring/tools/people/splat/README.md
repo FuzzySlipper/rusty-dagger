@@ -180,6 +180,11 @@ Eye picks are by hand: `scaffold/eye_mask.py ID.glb OUT.glb REPORT.png` runs the
 instead. The report crops the 512 px render to x 128-384, around the eyes' mean height, at twice the size, so convert from
 report pixels before writing `--eyes` and the picks (npc-023, 2026-11-23). A bare skull (npc-024) gets none.
 
+**Where each character is:** the CMS's character stages page (http://192.168.1.10:8784/#pipelines) reads every character.json, and
+`static-npc` keeps those current: each step marks its stage running (step, host, time), then done, on hold with what comes next,
+or failed with the error, and publish links the Workbench sets (Patch 2026-11-25). `static-npc sync NPC` rewrites them from what
+is on disk, after manual work or for an older character.
+
 ## Hosts and shared resources
 
 - **GPU lab (the 5090):** training, VACE and the H3 clip run there. The bake stages its trainer and tools to
