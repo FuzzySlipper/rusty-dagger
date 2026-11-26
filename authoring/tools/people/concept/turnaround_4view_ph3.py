@@ -383,6 +383,7 @@ def main():
                     "name": f"4view-s{i}-{view}-{tag}",
                     "image": fmap[view].name,
                     "view": view,
+                    "approve": view,
                 }
                 for view in VIEWS
             ],

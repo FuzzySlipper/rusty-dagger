@@ -64,7 +64,7 @@ The same graph is also available as a 1-click stock-ComfyUI browser workflow in 
 Once a front concept is approved, generate all four aligned orthographic views (`Front | Right Profile | Left Profile | Back`) in one pass with **`turnaround_4view_ph3.py`**:
 1. Runs **MiniMax H3 Image (`p-h3-image_w4a8`)** at `4096×1536` (`4 × 1024×1536` columns, ~`12 s`/sheet warm on RTX 5090), solving both 90° profiles and the 180° back together so hand orientation, cape length, and asymmetric props agree across all four views.
 2. Auto-slices the sheet into four baseline- and height-aligned `832×1216` views (`front`, `right`, `left`, `back`).
-3. Polishes all four views with a light **Krea2-Turbo New B** pass (`--krea-denoise 0.22`, `--krea-style painterly-vivid`, ~`4.8 s`/view) to restore crisp gouache brushwork and warm-umber ink contours without shifting silhouette or geometry, and writes a ready-to-submit `s{i}/batch.json` for `concept_cli.py add`.
+3. Polishes all four views with a light **Krea2-Turbo New B** pass (`--krea-denoise 0.22`, `--krea-style painterly-vivid`, ~`4.8 s`/view) to restore crisp gouache brushwork and warm-umber ink contours without shifting silhouette or geometry, and writes a ready-to-submit `s{i}/batch.json` with per-view `"approve": view` so `concept_cli.py add <id> <dir>/s{i}/batch.json` uploads and approves all 4 directions (`front`, `right`, `left`, `back`, replacing the empty-handed front with the turnaround front) in one command.
 
 ```sh
 # Empty-handed animated turnaround
