@@ -509,4 +509,119 @@ public sealed class DaggerfallScheduleShelterTests
         Assert.False(population.IsRetiring(visibleId));
         Assert.Equal(DaggerfallNpcPresence.Hidden, stage.Npcs.Require(visibleId).Presence);
     }
+
+    [Fact]
+    public void First_encounter_indoors_preserves_home_social_binding_survives_save_load_and_retires_on_subsequent_outdoor_shelter_flip()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord charing = definitions.Locations.Records.Single(r => r.Id == Charing);
+        DaggerfallSiteBuildingSource[] charingBuildings = [.. charing.Exterior!.Buildings.Values];
+        DaggerfallSiteBuildingSource tavernBuilding = charingBuildings
+            .OrderBy(b => b.Id.BlockY).ThenBy(b => b.Id.BlockX).ThenBy(b => b.Id.Index)
+            .First(b => b.Source.BuildingType == 15);
+
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile tavern = Assembled(DaggerfallWorldProfileIds.Interior(Charing, tavernBuilding.Id));
+        DaggerfallSiteProfiles profiles = new([exterior, tavern]);
+
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, tavern);
+        SpatialFake spatial = SpatialFake.Create(tavern.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, tavern, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        // 1. Start directly INSIDE the tavern during a settled midday storm (never visited the exterior first!).
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Thunder);
+        session.AdvanceElapsedTime(12 * 60 * 60); // midday settled storm
+        session.ResetScheduleWeatherBaseline();
+        session.ReconcileInteriorScheduledVisitors(tavern, session.Sites.Projection.Appearance);
+
+        DaggerfallTownShelterAssignment stormPlan = session.ResolveTownShelterAssignment(Charing, tavern.BillboardSprites);
+        DaggerfallScheduledVisitor walkerVisitor = stormPlan.VisitorsFor(tavernBuilding.Id).First(v => v.IsExteriorWalker);
+        long walkerId = walkerVisitor.DurableId;
+
+        Assert.True(session.State.Actors.TryGet(walkerId, out ActorState? indoorWalker));
+        DaggerfallNpc indoorNpc = session.State.Npcs.Require(walkerId);
+        // Social origin must be the canonical exterior town binding (empty building, null ProfileId), NOT the tavern!
+        DaggerfallNpcSite expectedExteriorSite = new(Charing.Region, charing.Name, string.Empty);
+        Assert.Equal(expectedExteriorSite, indoorNpc.Site);
+        Assert.Equal(tavern.ProfileKey, indoorNpc.Profile);
+
+        // Meet this walker for the first time indoors and persist via save/load.
+        indoorWalker!.Actor.Get<ActorOverlayComponent>().Met = true;
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            walkerId,
+            indoorWalker.Actor.Get<ActorOriginComponent>().Origin,
+            Social: DaggerfallSessionPersistence.ToSocialDiff(indoorNpc) with { Met = true, DispositionDelta = 8 }));
+
+        RulesetSavePayload saveBytes = session.CaptureSave();
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, saveBytes);
+        Assert.Equal(expectedExteriorSite, restored.State.Npcs.Require(walkerId).Site);
+
+        // 2. Weather clears to Sunny; walk out to the exterior near this walker -> active outdoors with Met + home binding.
+        restored.LocalWeather.State.Force(DaggerfallWeatherKind.Sunny);
+        restored.ResetScheduleWeatherBaseline();
+        Assert.True(restored.TryTransitionTo(exterior.ProfileKey));
+        DaggerfallPopulationPlacement placement = exterior.Population.Single(p => p.Id == walkerVisitor.HomeSlotId);
+        restored.State.PlayerControl.Restore(restored.Exterior.ProfileToLocal(placement.Position), restored.State.PlayerControl.Motion);
+        restored.Population.ReconcileImmediate();
+
+        Assert.True(restored.State.Actors.TryGet(walkerId, out ActorState? outdoorWalker));
+        Assert.True(outdoorWalker!.Actor.Get<ActorOverlayComponent>().Met);
+        Assert.Equal(DaggerfallNpcPresence.Active, restored.State.Npcs.Require(walkerId).Presence);
+        Assert.Equal(expectedExteriorSite, restored.State.Npcs.Require(walkerId).Site);
+
+        // 3. Weather flips back to settled Thunder outdoors -> SourcePopulation recognizes them via home Site and hides them!
+        restored.LocalWeather.State.Force(DaggerfallWeatherKind.Thunder);
+        restored.ResetScheduleWeatherBaseline();
+        restored.Population.ReconcileImmediate();
+        Assert.Equal(DaggerfallNpcPresence.Hidden, restored.State.Npcs.Require(walkerId).Presence);
+
+        // 4. First-encountered off-hours closed-shop proprietor inside a tavern must ALSO carry their home shop's social binding!
+        DaggerfallTownShelterAssignment? charingEvening = null;
+        int eveningMinute = 20 * 60 + 30;
+        for (int m = 19 * 60 + 45; m <= 22 * 60 + 15; m += 15)
+        {
+            DaggerfallTownShelterAssignment probe = DaggerfallScheduleShelterResolver.ResolveTown(
+                session.WorldSocialSeed, definitions, charing, charingBuildings, [], m,
+                DaggerfallWeatherKind.Sunny, DaggerfallWeatherShelterElapsed.Settled);
+            if (probe.SuppressedStaticSlotsByBuilding.Count > 0)
+            {
+                charingEvening = probe;
+                eveningMinute = m;
+                break;
+            }
+        }
+        Assert.NotNull(charingEvening);
+        KeyValuePair<DaggerfallSiteBuildingId, IReadOnlySet<long>> homeShopEntry = charingEvening!.SuppressedStaticSlotsByBuilding.First();
+        long proprietorId = homeShopEntry.Value.First();
+        DaggerfallSiteBuildingId mixerTavernId = charingEvening.AssignedBuildingByActor[proprietorId];
+        DaggerfallSiteProfile mixerTavern = Assembled(DaggerfallWorldProfileIds.Interior(Charing, mixerTavernId));
+        DaggerfallSiteProfiles mixerProfiles = new([mixerTavern]);
+        List<string> mixerReleases = [];
+        ContentFake mixerContent = new(mixerReleases);
+        PopulateContent(mixerContent, mixerTavern);
+        SpatialFake mixerSpatial = SpatialFake.Create(mixerTavern.Geometry.Spatial[0].Sha256, mixerReleases);
+        EngineContextFake mixerEngine = EngineContextFake.Create(mixerContent, mixerSpatial.Service, new AppearanceFake(mixerReleases));
+        DaggerfallSessionComposition mixerComp = new(definitions, mixerTavern, DaggerfallTuning.Defaults) { Profiles = mixerProfiles };
+
+        using DaggerfallSession mixerSession = DaggerfallSession.StartNew(mixerEngine.Context, mixerComp);
+        DaggerfallCalendar startCal = mixerSession.Calendar;
+        long deltaSeconds = checked((eveningMinute - (startCal.Hour * 60 + startCal.Minute)) * 60L);
+        if (deltaSeconds <= 0) deltaSeconds += 24L * 3600L;
+        mixerSession.AdvanceElapsedTime(deltaSeconds);
+        mixerSession.ReconcileInteriorScheduledVisitors(mixerTavern, mixerSession.Sites.Projection.Appearance);
+
+        Assert.True(mixerSession.State.Actors.TryGet(proprietorId, out _));
+        DaggerfallNpc proprietorNpc = mixerSession.State.Npcs.Require(proprietorId);
+        DaggerfallWorldProfileKey expectedShopProfile = DaggerfallWorldProfileIds.Interior(Charing, homeShopEntry.Key);
+        DaggerfallNpcSite expectedShopSite = new(Charing.Region, charing.Name,
+            $"{homeShopEntry.Key.BlockX}/{homeShopEntry.Key.BlockY}/{homeShopEntry.Key.Index}",
+            expectedShopProfile.LogicalId);
+        Assert.Equal(expectedShopSite, proprietorNpc.Site);
+        Assert.Equal(mixerTavern.ProfileKey, proprietorNpc.Profile);
+    }
 }

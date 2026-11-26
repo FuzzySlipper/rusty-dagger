@@ -1147,15 +1147,14 @@ internal sealed class DaggerfallActorRoster
             && relocatedProfile.Require() != homeOrigin.SiteProfile?.Require())
             return null;
 
-        DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
-        DaggerfallNpcSite binding = new(site.Region, location.Name,
-            destination.InteriorBuilding is { } building ? $"{building.BlockX}/{building.BlockY}/{building.Building.Index}" : string.Empty,
-            destination.ProfileKey.LogicalId);
+        DaggerfallWorldProfileKey homeProfile = homeOrigin.SiteProfile?.Require() ?? destination.ProfileKey;
+        DaggerfallSiteRecord homeLocation = _definitions.Locations.Records.Single(record => record.Id == homeProfile.Site);
+        DaggerfallNpcSite homeBinding = ResolveHomeSocialBinding(homeProfile, homeLocation);
 
         if (!_npcs.TryGet(durableId, out DaggerfallNpc? npc))
         {
-            _npcs.RegisterDeterministic(durableId, kind, homeSlotId, binding, look, role, services,
-                displayName, homeProfile: destination.ProfileKey, familyId: familyId);
+            _npcs.RegisterDeterministic(durableId, kind, homeSlotId, homeBinding, look, role, services,
+                displayName, homeProfile: homeProfile, familyId: familyId);
             npc = _npcs.Require(durableId);
         }
         else if (npc.Presence == DaggerfallNpcPresence.Removed)
@@ -1197,6 +1196,17 @@ internal sealed class DaggerfallActorRoster
         _npcs.Bind(durableId, destination.ProfileKey);
         _npcs.ReleasePose(durableId);
         return durableId;
+    }
+
+    private static DaggerfallNpcSite ResolveHomeSocialBinding(DaggerfallWorldProfileKey homeProfile, DaggerfallSiteRecord homeLocation)
+    {
+        if (homeProfile.Kind == DaggerfallWorldProfileKind.Exterior)
+            return new DaggerfallNpcSite(homeProfile.Site.Region, homeLocation.Name, string.Empty);
+        if (homeProfile.Kind == DaggerfallWorldProfileKind.Interior
+            && DaggerfallWorldProfileIds.TryParse(homeProfile.LogicalId, out _, out DaggerfallSiteBuildingId? homeBuilding)
+            && homeBuilding is { } hb)
+            return new DaggerfallNpcSite(homeProfile.Site.Region, homeLocation.Name, $"{hb.BlockX}/{hb.BlockY}/{hb.Index}", homeProfile.LogicalId);
+        return new DaggerfallNpcSite(homeProfile.Site.Region, homeLocation.Name, string.Empty, homeProfile.LogicalId);
     }
 
     private ActorState MaterializeDeterministicNpc(DaggerfallNpc npc, ActorOrigin origin, WorldPoint baselineProfilePose,
