@@ -60,6 +60,7 @@ Steps, in order (each checks that the one before it has run):
             ID.core.glb with the core as a second primitive, rusty-engine #10990's contract; ID-core.glb for the Workbench;
             npc.json "core_tris", default 2400 as on npc-023, 0 for none), the overview page, and the CMS link to the character
   status    which steps have their outputs
+  sync      write the CMS stage states (#pipelines) from what is on disk; every other step keeps them current as it runs
 
 Hosts: npc.json "gpu_host" (or --gpu) puts every GPU step - clay, clip, bake's lab stages and VACE rings, r1, bound, walk - on a
 Strix Halo (den-m5 or den-nimo) instead of the GPU lab (Patch 2026-11-24: lengthy work on a Halo when he needs the 5090). The CPU
@@ -486,8 +487,14 @@ def step_hands(n, a):
 
 def step_publish(n, a):
     n.need(n.k / 'bound/bound-cleaned/splat.npz', step='bound')
-    for s in ('adopt', 'playable', 'publish'):
+    for s in ('adopt', 'playable'):
         sh([REPO / 'authoring/tools/people/splat/character/dagger-char', 'bound', n.id, '--step', s])
+    log = n.ch / '09-game/wip/publish.log'; log.parent.mkdir(parents=True, exist_ok=True); start = log.stat().st_size if log.exists() else 0
+    rc = sh([REPO / 'authoring/tools/people/splat/character/dagger-char', 'bound', n.id, '--step', 'publish'], log=log, check=False)
+    text = log.read_text()[start:]; print(text[-3000:])
+    if rc:
+        raise SystemExit(f'static-npc: publish failed (rc {rc}); see {log}')
+    n.published = [(w.split()[0], w.split()[1]) for w in text.splitlines() if ' http' in w and '-playable-' in w]   # (set name, Workbench URL)
 
 
 def step_r1(n, a):
@@ -557,9 +564,78 @@ def step_status(n, a):
     print(f"  prompts written for this character: {', '.join(edited) or 'none yet'}")
 
 
+# The CMS's character stages page (authoring/cms, #pipelines) reads each character.json; static-npc keeps it current, so a character's
+# place in the non-linear run is visible there (Patch 2026-11-25). step: (stage folders, state when done, what comes next)
+TRACK = {'init': (('00-brief', '01-concept'), 'approved', 'keys'), 'keys': (('01-concept',), 'approved', 'clay'),
+         'clay': (('02-guide',), 'on-hold', 'mesh'), 'mesh': (('02-guide',), 'on-hold', 'rig'), 'rig': (('02-guide',), 'on-hold', 'guide'),
+         'guide': (('02-guide',), 'approved', 'clip'), 'clip': (('03-clip',), 'approved', 'bake'),
+         'bake': (('04-cutouts', '05-cameras', '06-first-fit', '07-refine'), 'approved', 'r1 (Colab)'),
+         'r1': (('07-refine',), 'approved', 'bound'), 'bound': (('08-final',), 'on-hold', 'graft'),
+         'graft': (('08-final',), 'on-hold', 'walk or publish'), 'hands': (('08-final',), 'on-hold', 'walk'),
+         'walk': (('08-final',), 'on-hold', 'publish'), 'preview': (('08-final',), 'on-hold', 'publish'),
+         'publish': (('09-game',), 'needs-Patch', "Patch's look in the Workbench, then ship"), 'ship': (('09-game',), 'approved', None)}
+GPU_STEPS = {'clay', 'clip', 'bake', 'r1', 'bound', 'walk', 'preview'}
+
+
+def track(n, step, phase, err=''):
+    """Write a step's start, end or failure into character.json (dagger_char.patch: locked, so the lanes' steps never clobber each other)."""
+    if step not in TRACK or not (n.ch / 'character.json').exists():
+        return
+    try:
+        sys.path.insert(0, str(REPO / 'authoring/tools/people/splat/character')); import dagger_char as dc
+        import time
+        stages, done, nxt = TRACK[step]; t = 'found on disk' if getattr(n, 'syncing', False) else time.strftime('%m-%d %H:%M')
+        try:
+            host = n.gpu if step in GPU_STEPS else 'local'
+        except SystemExit:
+            host = '?'
+        pub = getattr(n, 'published', [])
+
+        def fn(m):
+            for st in stages:
+                if phase == 'start':
+                    dc.set_state(m, st, 'running', by='static-npc', why=f'{step} on {host} since {t}')
+                elif phase == 'fail':
+                    dc.set_state(m, st, 'failed', by='static-npc', why=f'{step} failed {t}: {err.strip()[-160:]}')
+                else:
+                    state = 'on-hold' if (step == 'bake' and st == '07-refine') else done
+                    w = f'{step} done {t}' + (f' - next: {nxt}' if nxt and state != 'approved' else '')
+                    if step == 'publish' and pub:
+                        w = f'published {t}: ' + ', '.join(x for x, _ in pub) + f' - next: {nxt}'
+                        m['stages'][st]['review'] = {'batch': {'url': pub[0][1], 'sets': [{'name': x, 'url': u} for x, u in pub]}}
+                    dc.set_state(m, st, state, by='static-npc', note=w if state == 'approved' else '', why='' if state == 'approved' else w)
+            if phase == 'done':   # what waited on this step is done now
+                for k in dc.STAGE_KEYS[:dc.STAGE_KEYS.index(stages[0])]:
+                    if m['stages'][k]['state'] in ('on-hold', 'running'):
+                        dc.set_state(m, k, 'approved', by='static-npc', note=f'done (later: {step} {t})')
+        dc.patch(n.id, fn)
+    except Exception as e:   # tracking never stops the work
+        print(f'static-npc: stage tracking skipped ({e})', flush=True)
+
+
+def step_sync(n, a):
+    """The CMS stages from what is on disk (for characters made before static-npc tracked its steps, or after a manual run): each step
+    whose output exists counts as done, in order, as if it had just finished."""
+    marks = {'init': n.ch / '01-concept/approved/front.png', 'keys': n.keys / 'front.png', 'clay': n.clay / 'front.png', 'mesh': n.mesh / 'model.glb',
+             'rig': n.scaffold / 'scaffold.glb', 'guide': n.guide / str(n.cfg['size']), 'clip': n.clip_dir() / 'frames',
+             'bake': n.k / 'bake/r1-data/views.json', 'r1': n.k / 'bake/r1/splat.npz', 'bound': n.k / 'bound/bound-cleaned/splat.npz',
+             'graft': n.k / f"bound/sizes/{n.cfg['sizes'][0] // 1000}k-graft/splat.npz",
+             'walk': (n.k / 'bound/sizes' / walk_names(n)[0][2] / 'splat.npz') if n.walker and walk_names(n) else n.ch / '-',
+             'publish': n.ch / '09-game/bound/playable/character.json', 'ship': n.ch / f'09-game/bound/final/{n.id}.glb'}
+    done = [k for k, p in marks.items() if p.exists()]; n.syncing = True
+    pubs = AP / 'live-evidence/publications/imports'   # the newest Workbench sets (dagger-char bound publish names them so)
+    for key in ('sizes', 'full-bake'):
+        names = sorted(pubs.glob(f'{n.id}-bound-{key}-playable-*')) if pubs.exists() else []
+        if names:
+            n.published = getattr(n, 'published', []) + [(names[-1].name, 'http://192.168.1.10:8960/#?root=active-evidence&id=import%3A' + names[-1].name)]
+    for k in done:
+        track(n, k, 'done')
+    print(f'{n.id}: stages synced from disk: {", ".join(done) or "nothing yet"}')
+
+
 STEPS = {'init': step_init, 'keys': step_keys, 'clay': step_clay, 'mesh': step_mesh, 'rig': step_rig, 'guide': step_guide,
          'clip': step_clip, 'bake': step_bake, 'bound': step_bound, 'preview': step_preview, 'r1': step_r1, 'walk': step_walk, 'hands': step_hands,
-         'graft': step_graft, 'publish': step_publish, 'ship': step_ship, 'status': step_status}
+         'graft': step_graft, 'publish': step_publish, 'ship': step_ship, 'status': step_status, 'sync': step_sync}
 
 
 def main():
@@ -582,7 +658,14 @@ def main():
     ap.add_argument('--force', action='store_true', help='use a prompt that is still 021\'s template')
     a = ap.parse_args()
     n = Npc(a.id); n.gpu_arg = a.gpu
-    STEPS[a.step](n, a)
+    if a.step == 'init':
+        STEPS[a.step](n, a); track(n, 'init', 'done'); return
+    track(n, a.step, 'start')
+    try:
+        STEPS[a.step](n, a)
+    except BaseException as e:
+        track(n, a.step, 'fail', str(e) or type(e).__name__); raise
+    track(n, a.step, 'done')
 
 
 if __name__ == '__main__':
