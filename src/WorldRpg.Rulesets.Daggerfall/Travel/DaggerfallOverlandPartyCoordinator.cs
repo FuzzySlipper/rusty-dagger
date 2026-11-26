@@ -2,6 +2,7 @@ using System.Numerics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -32,7 +33,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     private readonly Func<DaggerfallSiteId, (int X, int Y)?>? _siteCoordinates;
     private readonly Action<long>? _provokeHostile;
 
-    private readonly List<(string BandId, DaggerfallEncounterStaging Staging)> _pendingIntercepts = [];
+    private readonly List<(string BandId, DaggerfallEncounterStaging Staging, bool InClash, float FacingOffset, float ForwardDistance)> _pendingIntercepts = [];
 
     internal DaggerfallOverlandPartyCoordinator(
         DaggerfallExpedition expedition,
@@ -148,12 +149,53 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         return _expedition.RegisterPersistentBand(save);
     }
 
-    /// <summary>Queues a met persistent band's members to materialize when the player enters the 3D scene.</summary>
+    /// <summary>Queues a met persistent band's members (and any opposing persistent clash band) to materialize when entering the 3D scene.</summary>
     internal void OnMeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging)
     {
         ArgumentNullException.ThrowIfNull(band);
+        bool inClash = band.ActiveClash is not null;
         if (!_pendingIntercepts.Any(item => StringComparer.Ordinal.Equals(item.BandId, band.BandId)))
-            _pendingIntercepts.Add((band.BandId, staging));
+            _pendingIntercepts.Add((band.BandId, staging, inClash, inClash ? 0f : MathF.PI, 4.0f));
+
+        if (band.ActiveClash is { RivalBandId: { Length: > 0 } rivalBandId }
+            && !_pendingIntercepts.Any(item => StringComparer.Ordinal.Equals(item.BandId, rivalBandId)))
+        {
+            _pendingIntercepts.Add((rivalBandId, DaggerfallEncounterStaging.Caught, true, MathF.PI, 9.0f));
+        }
+    }
+
+    /// <summary>
+    /// Cleanly retires a persistent overland band off-screen (e.g. after an off-screen band-vs-band clash or caravan raid)
+    /// without leaving any orphaned <see cref="ActorLocationKind.OnOverlandBand"/> ledger entries.
+    /// </summary>
+    internal void RetireBandOffScreen(string bandId)
+    {
+        if (string.IsNullOrWhiteSpace(bandId)) return;
+        IReadOnlyList<ActorLedgerEntry> members = _actorLedger.EntriesOnOverlandBand(bandId);
+        if (members.Count == 0) return;
+
+        if (bandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal))
+        {
+            foreach (ActorLedgerEntry member in members)
+                _actorLedger.Remove(member.DurableId);
+            return;
+        }
+
+        if (bandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal))
+        {
+            _ = ReturnTrafficMembersHome(members, _activeProfile(), arrivingAtActive: false);
+            return;
+        }
+
+        foreach (ActorLedgerEntry member in members)
+        {
+            if (member.Origin.Kind == ActorOriginKind.Minted)
+                _actorLedger.Remove(member.DurableId);
+            else if (!HasPlayerDeltas(member))
+                _actorLedger.Remove(member.DurableId);
+            else
+                _actorLedger.Upsert(member with { Location = null, Pose = null });
+        }
     }
 
     /// <summary>
@@ -356,10 +398,11 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         ArgumentNullException.ThrowIfNull(activeProfile);
         if (_pendingIntercepts.Count > 0)
         {
-            (string BandId, DaggerfallEncounterStaging Staging)[] intercepts = [.. _pendingIntercepts];
+            var intercepts = _pendingIntercepts.ToArray();
             _pendingIntercepts.Clear();
-            foreach ((string bandId, _) in intercepts)
-                _ = DeliverBandMembers(bandId, activeProfile.ProfileKey, landingLocalPose, landingYaw);
+            foreach (var intercept in intercepts)
+                _ = DeliverBandMembers(intercept.BandId, activeProfile.ProfileKey, landingLocalPose, landingYaw,
+                    intercept.InClash, intercept.FacingOffset, intercept.ForwardDistance);
         }
 
         _ = StagePartyMembers(activeProfile, landingLocalPose, landingYaw,
@@ -612,7 +655,10 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         string bandId,
         DaggerfallWorldProfileKey arrivalProfile,
         WorldPoint? anchorLocalPose,
-        float landingYaw)
+        float landingYaw,
+        bool inClash = false,
+        float facingOffset = MathF.PI,
+        float forwardDistance = 4.0f)
     {
         IReadOnlyList<ActorLedgerEntry> members = _actorLedger.EntriesOnOverlandBand(bandId);
         if (members.Count == 0) return [];
@@ -626,13 +672,13 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         {
             ActorLedgerEntry member = members[i];
             WorldPoint? targetLocal = anchorLocalPose is { } anchor
-                ? OffsetBeside(anchor, landingYaw, i, forwardDistance: 4.0f)
+                ? OffsetBeside(anchor, landingYaw, i, forwardDistance: forwardDistance)
                 : null;
             ActorPoseOverride? arrivalPose = null;
             if (targetLocal is { } spot)
             {
                 WorldPoint pp = _localToProfile(spot);
-                arrivalPose = new(pp.X, pp.Y, pp.Z, landingYaw + MathF.PI);
+                arrivalPose = new(pp.X, pp.Y, pp.Z, landingYaw + facingOffset);
             }
 
             _actorLedger.ClearBandLocation(member.DurableId, arrivalProfile, arrivalPose, detached: !arrivingAtActive, trafficVisitor: isTrafficVisitor);
@@ -647,10 +693,18 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                         : active.Project.PlayerPosition is { } pp ? DaggerfallSceneOrigin.Shift(pp, _sceneTranslation()) : default);
                 ActorState? live = _roster.MaterializeLedgerActorAt(updated, active, materializeSpot, arrivalPose?.HeadingRadians ?? 0f,
                     _activeAppearance(), _sceneTranslation());
-                if (live is not null && (updated.Combat?.ForcedHostile == true
-                    || bandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal)))
+                if (live is not null)
                 {
-                    _provokeHostile?.Invoke(live.DurableId);
+                    if (inClash && live.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? mem))
+                    {
+                        mem.LairTruce = false;
+                        mem.FactionInfighting = true;
+                    }
+                    if (updated.Combat?.ForcedHostile == true
+                        || bandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal))
+                    {
+                        _provokeHostile?.Invoke(live.DurableId);
+                    }
                 }
             }
             delivered.Add(member.DurableId);

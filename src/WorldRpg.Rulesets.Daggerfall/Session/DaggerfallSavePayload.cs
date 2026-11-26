@@ -354,7 +354,9 @@ internal sealed record DaggerfallSavePayload(
         if (LastTavernMealMinute < 0) throw new ArgumentOutOfRangeException(nameof(LastTavernMealMinute));
         Lodging.Validate(definitions.Locations);
         HashSet<string> savedPersistentBandIds = new(
-            (Expedition.PersistentBands ?? []).Select(b => b.BandId),
+            (Expedition.PersistentBands ?? []).SelectMany(b => b.ActiveClash?.RivalBandId is { Length: > 0 } rivalId
+                ? new[] { b.BandId, rivalId }
+                : new[] { b.BandId }),
             StringComparer.Ordinal);
         foreach (ActorLedgerEntry bandMember in ActorLedger)
         {

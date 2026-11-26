@@ -99,7 +99,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         DaggerfallTravelMapPixel? routeOrigin = null,
         int routeStep = 0,
         string? faction = null,
-        DaggerfallSiteIdSave? originSite = null)
+        DaggerfallSiteIdSave? originSite = null,
+        DaggerfallPersistentBandClashSave? activeClash = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -121,6 +122,7 @@ internal sealed class DaggerfallPersistentOverlandBand
         RouteStep = Math.Max(0, routeStep);
         Faction = string.IsNullOrWhiteSpace(faction) ? null : faction.Trim();
         OriginSite = originSite;
+        ActiveClash = activeClash;
     }
 
     internal string BandId { get; }
@@ -142,6 +144,8 @@ internal sealed class DaggerfallPersistentOverlandBand
     internal int RouteStep { get; set; }
     internal string? Faction { get; }
     internal DaggerfallSiteIdSave? OriginSite { get; }
+    internal DaggerfallPersistentBandClashSave? ActiveClash { get; set; }
+    internal bool IsClash => ActiveClash is not null || Kind == DaggerfallBandKind.Clash;
 
     internal double Distance(double x, double y) => Math.Sqrt((X - x) * (X - x) + (Y - y) * (Y - y));
 
@@ -173,7 +177,7 @@ internal sealed class DaggerfallPersistentOverlandBand
         bool allowPursuit = true,
         DaggerfallTravelPolicy? policy = null)
     {
-        if (Camp || SpeedPixelsPerHour <= 0 || hours <= 0) return false;
+        if (Camp || ActiveClash is not null || SpeedPixelsPerHour <= 0 || hours <= 0) return false;
         bool pursuing = allowPursuit && Hostile && Spotted;
         if (pursuing)
         {
@@ -281,7 +285,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         RouteOrigin,
         RouteStep,
         Faction,
-        OriginSite);
+        OriginSite,
+        ActiveClash);
 
     internal static DaggerfallPersistentOverlandBand FromSave(DaggerfallPersistentBandSave save, int displayId) => new(
         save.BandId,
@@ -301,7 +306,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         save.RouteOrigin,
         save.RouteStep,
         save.Faction,
-        save.OriginSite);
+        save.OriginSite,
+        save.ActiveClash);
 }
 
 /// <summary>
@@ -383,17 +389,23 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
         _bands.RemoveAll(band => now >= band.Leaves || band.Distance(party.X, party.Y) > tuning.StageDistance.Maximum * 2);
         double hours = seconds / (double)SecondsPerHour;
         double sees = BandSight(conditions);
+        foreach (DaggerfallExpeditionBand band in _bands)
+        {
+            if (!band.Camp && !band.IsFactionClash) Move(band, party, hours, draw);
+        }
+        _ = ResolveTransientBandCollisions();
+
         DaggerfallBandEvent? found = null;
         foreach (DaggerfallExpeditionBand band in _bands)
         {
-            if (!band.Camp) Move(band, party, hours, draw);
             double distance = band.Distance(party.X, party.Y);
             if (band.Passed && distance > tuning.MeetDistance * 2) band.Passed = false;
             // A meeting settles first: one that sees as far as the meeting is never come upon unseen, however far the
-            // stretch carried the party.
+            // stretch carried the party. Active clashes let the player choose to intervene (CameUpon) rather than
+            // automatically ambushing them as Caught.
             if (distance <= tuning.MeetDistance && !band.Passed)
-                return new(band.Spotted || sees >= tuning.MeetDistance ? DaggerfallBandEventKind.Caught : DaggerfallBandEventKind.CameUpon, band);
-            if (!band.Spotted && !band.Passed && distance <= sees)
+                return new(!band.IsFactionClash && (band.Spotted || sees >= tuning.MeetDistance) ? DaggerfallBandEventKind.Caught : DaggerfallBandEventKind.CameUpon, band);
+            if (!band.IsFactionClash && !band.Spotted && !band.Passed && distance <= sees)
             {
                 // A camp that sees the party breaks camp to give chase.
                 band.Spotted = true;
@@ -402,6 +414,71 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
             }
         }
         return found;
+    }
+
+    /// <summary>Whether two mobile definitions belong to natural-enemy creature factions.</summary>
+    internal bool AreOpposingMobiles(int mobileIdA, int mobileIdB)
+    {
+        if (!mobiles.Mobiles.TryGetValue(mobileIdA, out DaggerfallMobileDefinition? a)
+            || !mobiles.Mobiles.TryGetValue(mobileIdB, out DaggerfallMobileDefinition? b))
+            return false;
+        return _creatureFactions.AreNaturalEnemies(ResolveMobileCreatureFaction(a), ResolveMobileCreatureFaction(b));
+    }
+
+    /// <summary>
+    /// Detects proximity collisions between opposing transient overland bands (natural-enemy creature factions or
+    /// patrols meeting raiders/monsters) and coalesces each colliding pair into one live joinable map clash held at
+    /// their midpoint. Returns the number of newly formed clashes.
+    /// </summary>
+    internal int ResolveTransientBandCollisions()
+    {
+        if (_bands.Count < 2) return 0;
+        double collisionDistance = tuning.MeetDistance * 1.5;
+        int formed = 0;
+
+        for (int i = 0; i < _bands.Count; i++)
+        {
+            DaggerfallExpeditionBand a = _bands[i];
+            if (a.IsFactionClash || a.Spotted) continue;
+
+            for (int j = i + 1; j < _bands.Count; j++)
+            {
+                DaggerfallExpeditionBand b = _bands[j];
+                if (b.IsFactionClash || b.Spotted) continue;
+                if (a.Distance(b.X, b.Y) > collisionDistance) continue;
+                if (!AreOpposingTransientBands(a, b)) continue;
+
+                double midX = (a.X + b.X) * 0.5;
+                double midY = (a.Y + b.Y) * 0.5;
+                DaggerfallExpeditionBand clash = new(
+                    a.Id, a.Request, a.Choice, $"{a.Name} vs {b.Name}",
+                    DaggerfallBandKind.Clash, a.Size, camp: true, midX, midY,
+                    Math.Max(a.Leaves, b.Leaves), a.ConditionTokenId ?? b.ConditionTokenId)
+                {
+                    Heading = a.Heading,
+                    PrimarySideName = a.Name,
+                    RivalChoice = b.Choice,
+                    RivalSize = b.Size,
+                    RivalName = b.Name,
+                };
+                _bands[i] = clash;
+                _bands.RemoveAt(j);
+                formed++;
+                break;
+            }
+        }
+        return formed;
+    }
+
+    private bool AreOpposingTransientBands(DaggerfallExpeditionBand a, DaggerfallExpeditionBand b)
+    {
+        if (a.Choice.MobileId is int ma && b.Choice.MobileId is int mb && AreOpposingMobiles(ma, mb))
+            return true;
+        bool aPatrol = a.Kind == DaggerfallBandKind.Patrol;
+        bool bPatrol = b.Kind == DaggerfallBandKind.Patrol;
+        bool aHostile = a.Kind is DaggerfallBandKind.Bandits or DaggerfallBandKind.Monsters or DaggerfallBandKind.Undead or DaggerfallBandKind.Beasts or DaggerfallBandKind.Hostile;
+        bool bHostile = b.Kind is DaggerfallBandKind.Bandits or DaggerfallBandKind.Monsters or DaggerfallBandKind.Undead or DaggerfallBandKind.Beasts or DaggerfallBandKind.Hostile;
+        return (aPatrol && bHostile) || (bPatrol && aHostile);
     }
 
     /// <summary>

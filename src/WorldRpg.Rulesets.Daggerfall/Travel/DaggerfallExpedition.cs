@@ -91,6 +91,9 @@ internal interface IDaggerfallExpeditionSurroundings
     /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party reached its destination pixel.</summary>
     void PersistentBandArrived(DaggerfallPersistentOverlandBand band) { }
 
+    /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> party was retired off-screen (e.g. off-screen clash or raid resolution).</summary>
+    void PersistentBandRetiredOffScreen(string bandId) { }
+
     /// <summary>Active world-condition tokens affecting <paramref name="region"/> (stubbed/authored or B2 board-driven).</summary>
     IReadOnlyList<DaggerfallWorldConditionToken> WorldConditions(int region) => [];
 }
@@ -137,6 +140,30 @@ internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, 
 }
 
 /// <summary>
+/// An active band-vs-band clash or caravan raid held on a persistent overland band while within the player's
+/// sight/approach so entering stages both opposing sides facing each other. Null when not clashing.
+/// </summary>
+internal sealed record DaggerfallPersistentBandClashSave(
+    [property: JsonRequired] string RivalName,
+    [property: JsonRequired] long EndsAtSecond,
+    string? RivalBandId = null,
+    int? RivalMobileId = null,
+    int RivalSize = 0)
+{
+    internal DaggerfallPersistentBandClashSave Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(RivalName);
+        if (EndsAtSecond < 0)
+            throw new ArgumentOutOfRangeException(nameof(EndsAtSecond), "Persistent band clash end time cannot be negative.");
+        if (RivalSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(RivalSize), "Persistent band clash rival size cannot be negative.");
+        if (string.IsNullOrWhiteSpace(RivalBandId) && (RivalMobileId is null || RivalSize <= 0))
+            throw new ArgumentException("Persistent band clash requires either a rival persistent band id or a rival mobile id and positive size.");
+        return this;
+    }
+}
+
+/// <summary>
 /// One persistent travelling party on the overland map linked to <see cref="DaggerfallActorLedger"/> entries whose
 /// location override is <see cref="ActorLocationKind.OnOverlandBand"/> with the same <paramref name="BandId"/>.
 /// Survives map close/reopen and save/load alongside transient generated chasers.
@@ -158,7 +185,8 @@ internal sealed record DaggerfallPersistentBandSave(
     DaggerfallTravelMapPixel? RouteOrigin = null,
     int RouteStep = 0,
     string? Faction = null,
-    DaggerfallSiteIdSave? OriginSite = null)
+    DaggerfallSiteIdSave? OriginSite = null,
+    DaggerfallPersistentBandClashSave? ActiveClash = null)
 {
     internal DaggerfallPersistentBandSave Validate()
     {
@@ -175,6 +203,7 @@ internal sealed record DaggerfallPersistentBandSave(
         if (RouteStep < 0)
             throw new ArgumentOutOfRangeException(nameof(RouteStep), $"Persistent band '{BandId}' has negative route step {RouteStep}.");
         _ = OriginSite?.Require();
+        ActiveClash?.Validate();
         return this;
     }
 }
@@ -934,6 +963,26 @@ internal sealed class DaggerfallExpedition
     private DaggerfallExpeditionBandView ViewPersistent(DaggerfallPersistentOverlandBand band)
     {
         (double x, double y) = Position;
+        if (band.ActiveClash is { } clash)
+        {
+            string clashSides = $"{band.Name} vs {clash.RivalName}";
+            bool isCaravanRaid = IsRaidableTraveller(band);
+            string clashCategory = isCaravanRaid ? "Caravan Raid" : "Faction Clash";
+            return new(band.DisplayId, band.X, band.Y, band.Heading, DaggerfallBandKind.Clash, clashSides, Camp: true, band.Spotted, band.Distance(x, y))
+            {
+                Mobile = band.Mobile ?? clash.RivalMobileId,
+                PersistentBandId = band.BandId,
+                Category = clashCategory,
+                Faction = band.Faction,
+                ClashSides = clashSides,
+                OriginName = KnownSiteName(band.OriginSite?.Require()),
+                DestinationName = KnownSiteName(band.Destination?.Place),
+                Detail = $"Active {(isCaravanRaid ? "caravan raid" : "clash")}: {clashSides}. Enter to intervene or pass by.",
+                IsClash = true,
+                Hostile = false,
+            };
+        }
+
         bool isDispatch = band.BandId.StartsWith("dispatch:", StringComparison.Ordinal);
         bool isTraffic = band.BandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal);
         bool isHostileProducer = band.BandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal);
@@ -1019,17 +1068,28 @@ internal sealed class DaggerfallExpedition
         return new(_mode, !_world.Calendar.IsDay, _world.Weather(climate), climate, _world.Scouting, _world.Concealment);
     }
 
+    private const long ClashHoldSeconds = 4L * SecondsPerHour;
+
     /// <summary>
     /// The bands' part of a stretch: persistent travelling parties advance toward their destinations and check for
-    /// arrival or intercept, then transient generated chasers move and look. At sea no band intercepts the party.
+    /// arrival or intercept, transient generated chasers move and look, and opposing bands that collide coalesce into
+    /// live joinable clashes (within sight) or resolve cleanly off-screen. At sea no band intercepts the party.
     /// </summary>
     private bool BandsStop(long seconds, DaggerfallCalendar after)
     {
+        long now = after.ToAbsoluteSeconds();
+        ExpireActiveClashes(now);
         if (StepPersistentBands(seconds)) return true;
-        if (_policy.IsOcean(_party)) return false;
+        if (_policy.IsOcean(_party))
+        {
+            ResolveBandCollisions(now, Position, mapOpen: true);
+            return false;
+        }
         double partySight = PartySight;
         IReadOnlyList<DaggerfallWorldConditionToken> activeConditions = _world.WorldConditions(HostAt(_party).Id.Region);
-        if (_bands.Step(seconds, after.ToAbsoluteSeconds(), Position, SightConditions(), _world.PlayerLevel, _world.Roll, activeConditions) is not { } found)
+        DaggerfallBandEvent? found = _bands.Step(seconds, now, Position, SightConditions(), _world.PlayerLevel, _world.Roll, activeConditions);
+        ResolveBandCollisions(now, Position, mapOpen: true);
+        if (found is null || !_bands.All.Contains(found.Band))
             return false;
         DaggerfallExpeditionBand band = found.Band;
         bool many = band.Size > 1;
@@ -1048,7 +1108,9 @@ internal sealed class DaggerfallExpedition
                 return true;
             case DaggerfallBandEventKind.CameUpon:
                 _bandAhead = band;
-                Pause($"You come upon {band.Name}{(band.Camp ? ", camped by the way" : "")}. Enter to fight, or go on to pass it by.");
+                Pause(band.IsFactionClash
+                    ? $"You come upon {band.Name}. Enter to intervene, or go on to pass it by."
+                    : $"You come upon {band.Name}{(band.Camp ? ", camped by the way" : "")}. Enter to fight, or go on to pass it by.");
                 return true;
             default:
                 return false;
@@ -1058,7 +1120,7 @@ internal sealed class DaggerfallExpedition
     /// <summary>
     /// Advances persistent overland bands while the expedition map is closed (inn sleep, dungeon rest, walking on foot,
     /// quest time) without triggering player-intercept pauses. Steps in bounded hourly slices so outbound caravans that
-    /// arrive mid-interval can dispatch and progress on their return legs, and returns the number of band arrivals.
+    /// arrive mid-interval can dispatch and progress on their return legs, and resolves off-screen clashes cleanly.
     /// </summary>
     internal int AdvancePersistentBandsOffMap(long seconds, (double X, double Y) partyPosition)
     {
@@ -1067,6 +1129,8 @@ internal sealed class DaggerfallExpedition
         int arrivals = 0;
         const int maxSlices = 48;
         long remaining = seconds;
+        long now = _world.Calendar.ToAbsoluteSeconds();
+        long sliceCursor = Math.Max(0, now - seconds);
         int slices = 0;
         while (remaining > 0 && _persistentBands.Count > 0)
         {
@@ -1074,7 +1138,13 @@ internal sealed class DaggerfallExpedition
                 ? Math.Min(remaining, SecondsPerHour)
                 : remaining;
             remaining -= stepSeconds;
+            sliceCursor += stepSeconds;
             slices++;
+
+            ExpireActiveClashes(sliceCursor);
+            Dictionary<string, (double X, double Y)> beforePositions = new(_persistentBands.Count, StringComparer.Ordinal);
+            foreach (DaggerfallPersistentOverlandBand band in _persistentBands)
+                beforePositions[band.BandId] = (band.X, band.Y);
 
             double hours = stepSeconds / (double)SecondsPerHour;
             foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
@@ -1086,8 +1156,203 @@ internal sealed class DaggerfallExpedition
                 _world.PersistentBandArrived(band);
                 arrivals++;
             }
+            ResolveBandCollisions(sliceCursor, partyPosition, mapOpen: false, beforePositions);
         }
         return arrivals;
+    }
+
+    /// <summary>
+    /// Evaluates band-vs-band collisions across transient and persistent bands at <paramref name="now"/>:
+    /// collisions within player approach/sight coalesce into a live joinable clash, while off-screen collisions
+    /// resolve cleanly with zero orphaned <c>OnOverlandBand</c> ledger entries.
+    /// </summary>
+    internal int ResolveBandCollisions(
+        long now,
+        (double X, double Y) partyPosition,
+        bool mapOpen,
+        IReadOnlyDictionary<string, (double X, double Y)>? persistentBeforePositions = null)
+    {
+        int collisions = 0;
+        double collisionDistance = _bands.Tuning.MeetDistance * 1.5;
+        double holdRadius = mapOpen ? PartySight * 1.5 : 0d;
+
+        // 1. Transient raider/monster/patrol vs Persistent caravan/patrol/hostile collisions (on-map only).
+        if (mapOpen && _bands.All.Count > 0 && _persistentBands.Count > 0)
+        {
+            foreach (DaggerfallExpeditionBand transient in _bands.All.ToArray())
+            {
+                if (transient.IsFactionClash || transient.Spotted) continue;
+                foreach (DaggerfallPersistentOverlandBand persistent in _persistentBands.ToArray())
+                {
+                    if (persistent.ActiveClash is not null || persistent.Spotted) continue;
+                    if (transient.Distance(persistent.X, persistent.Y) > collisionDistance) continue;
+                    if (!AreOpposingTransientAndPersistent(transient, persistent)) continue;
+
+                    _bands.Remove(transient);
+                    if (_bandAhead == transient) _bandAhead = null;
+                    collisions++;
+
+                    if (persistent.Distance(partyPosition.X, partyPosition.Y) <= holdRadius)
+                    {
+                        persistent.X = (persistent.X + transient.X) * 0.5;
+                        persistent.Y = (persistent.Y + transient.Y) * 0.5;
+                        persistent.ActiveClash = new DaggerfallPersistentBandClashSave(
+                            RivalName: transient.Name,
+                            EndsAtSecond: now + ClashHoldSeconds,
+                            RivalBandId: null,
+                            RivalMobileId: transient.Choice.MobileId,
+                            RivalSize: transient.Size);
+                    }
+                    else
+                    {
+                        ResolveOffScreenTransientRaid(persistent, now);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // 2. Persistent vs Persistent collisions (on-map and off-map), using segment closest-approach when prior positions
+        // are available so fast opposing bands do not tunnel past each other across an hourly off-map slice.
+        if (_persistentBands.Count >= 2)
+        {
+            DaggerfallPersistentOverlandBand[] snapshot = [.. _persistentBands];
+            HashSet<string> consumed = new(StringComparer.Ordinal);
+            for (int i = 0; i < snapshot.Length; i++)
+            {
+                DaggerfallPersistentOverlandBand a = snapshot[i];
+                if (consumed.Contains(a.BandId) || a.ActiveClash is not null || a.Spotted) continue;
+
+                for (int j = i + 1; j < snapshot.Length; j++)
+                {
+                    DaggerfallPersistentOverlandBand b = snapshot[j];
+                    if (consumed.Contains(b.BandId) || b.ActiveClash is not null || b.Spotted) continue;
+                    (double a0x, double a0y) = persistentBeforePositions is not null && persistentBeforePositions.TryGetValue(a.BandId, out var pa) ? pa : (a.X, a.Y);
+                    (double b0x, double b0y) = persistentBeforePositions is not null && persistentBeforePositions.TryGetValue(b.BandId, out var pb) ? pb : (b.X, b.Y);
+                    if (SegmentClosestApproachDistance(a0x, a0y, a.X, a.Y, b0x, b0y, b.X, b.Y) > collisionDistance) continue;
+                    if (!AreOpposingPersistentBands(a, b)) continue;
+
+                    // Keep the non-hostile caravan/patrol as the primary carrier if one side is non-hostile.
+                    (DaggerfallPersistentOverlandBand primary, DaggerfallPersistentOverlandBand rival) =
+                        !b.Hostile && a.Hostile ? (b, a) : (a, b);
+                    consumed.Add(primary.BandId);
+                    consumed.Add(rival.BandId);
+                    _persistentBands.Remove(rival);
+                    if (_persistentBandAhead == rival) _persistentBandAhead = null;
+                    collisions++;
+
+                    if (mapOpen && primary.Distance(partyPosition.X, partyPosition.Y) <= holdRadius)
+                    {
+                        primary.X = (primary.X + rival.X) * 0.5;
+                        primary.Y = (primary.Y + rival.Y) * 0.5;
+                        primary.ActiveClash = new DaggerfallPersistentBandClashSave(
+                            RivalName: rival.Name,
+                            EndsAtSecond: now + ClashHoldSeconds,
+                            RivalBandId: rival.BandId,
+                            RivalMobileId: rival.Mobile,
+                            RivalSize: 0);
+                    }
+                    else
+                    {
+                        ResolveOffScreenPersistentClash(primary, rival.BandId, now);
+                    }
+                    break;
+                }
+            }
+        }
+
+        return collisions;
+    }
+
+    private void ExpireActiveClashes(long now)
+    {
+        if (_persistentBands.Count == 0) return;
+        foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
+        {
+            if (band.ActiveClash is not { } clash || now < clash.EndsAtSecond) continue;
+            if (StringComparer.Ordinal.Equals(_pendingPersistentBandId, band.BandId)) continue;
+            band.ActiveClash = null;
+            if (clash.RivalBandId is { Length: > 0 } rivalBandId)
+            {
+                ResolveOffScreenPersistentClash(band, rivalBandId, now);
+            }
+            else
+            {
+                ResolveOffScreenTransientRaid(band, now);
+            }
+        }
+    }
+
+    private void ResolveOffScreenTransientRaid(DaggerfallPersistentOverlandBand band, long now)
+    {
+        // Deterministic off-screen outcome: 50% the caravan/band escapes and resumes its route; 50% it is scattered/retired cleanly.
+        int roll = _world.Roll($"clash:raid:{band.BandId}:{now}", 1, 100);
+        if (roll <= 50 && IsRaidableTraveller(band))
+        {
+            _persistentBands.Remove(band);
+            if (_persistentBandAhead == band) _persistentBandAhead = null;
+            _world.PersistentBandRetiredOffScreen(band.BandId);
+        }
+    }
+
+    private void ResolveOffScreenPersistentClash(DaggerfallPersistentOverlandBand primary, string rivalBandId, long now)
+    {
+        // Always retire the absorbed rival cleanly so zero OnOverlandBand ledger entries are orphaned.
+        _world.PersistentBandRetiredOffScreen(rivalBandId);
+        int roll = _world.Roll($"clash:persistent:{primary.BandId}:{rivalBandId}:{now}", 1, 100);
+        if (roll <= 50 && (IsRaidableTraveller(primary) || primary.Hostile))
+        {
+            _persistentBands.Remove(primary);
+            if (_persistentBandAhead == primary) _persistentBandAhead = null;
+            _world.PersistentBandRetiredOffScreen(primary.BandId);
+        }
+    }
+
+    private bool AreOpposingTransientAndPersistent(DaggerfallExpeditionBand transient, DaggerfallPersistentOverlandBand persistent)
+    {
+        bool transientRaider = transient.Kind is DaggerfallBandKind.Bandits or DaggerfallBandKind.Monsters or DaggerfallBandKind.Undead or DaggerfallBandKind.Beasts or DaggerfallBandKind.Hostile;
+        if (transientRaider && IsRaidableTraveller(persistent))
+            return true;
+        if (transient.Kind == DaggerfallBandKind.Patrol && persistent.Hostile)
+            return true;
+        if (persistent.Kind == DaggerfallBandKind.Patrol && transientRaider)
+            return true;
+        if (transient.Choice.MobileId is int tm && persistent.Mobile is int pm && _bands.AreOpposingMobiles(tm, pm))
+            return true;
+        return false;
+    }
+
+    private bool AreOpposingPersistentBands(DaggerfallPersistentOverlandBand a, DaggerfallPersistentOverlandBand b)
+    {
+        if ((a.Hostile && IsRaidableTraveller(b)) || (b.Hostile && IsRaidableTraveller(a)))
+            return true;
+        if ((a.Hostile && !b.Hostile && b.Kind == DaggerfallBandKind.Patrol)
+            || (b.Hostile && !a.Hostile && a.Kind == DaggerfallBandKind.Patrol))
+            return true;
+        if (a.Mobile is int ma && b.Mobile is int mb && _bands.AreOpposingMobiles(ma, mb))
+            return true;
+        return false;
+    }
+
+    private static bool IsRaidableTraveller(DaggerfallPersistentOverlandBand band) =>
+        !band.Hostile
+        && !band.BandId.StartsWith("dispatch:", StringComparison.Ordinal)
+        && band.Kind is DaggerfallBandKind.Caravan or DaggerfallBandKind.Travellers;
+
+    /// <summary>Closest Euclidean distance between two linearly moving points over <c>t in [0, 1]</c>.</summary>
+    private static double SegmentClosestApproachDistance(
+        double a0x, double a0y, double a1x, double a1y,
+        double b0x, double b0y, double b1x, double b1y)
+    {
+        double dx0 = a0x - b0x;
+        double dy0 = a0y - b0y;
+        double dvx = (a1x - a0x) - (b1x - b0x);
+        double dvy = (a1y - a0y) - (b1y - b0y);
+        double denom = dvx * dvx + dvy * dvy;
+        double t = denom > 1e-12 ? Math.Clamp(-(dx0 * dvx + dy0 * dvy) / denom, 0d, 1d) : 0d;
+        double cx = dx0 + dvx * t;
+        double cy = dy0 + dvy * t;
+        return Math.Sqrt(cx * cx + cy * cy);
     }
 
     private bool StepPersistentBands(long seconds)
@@ -1109,6 +1374,12 @@ internal sealed class DaggerfallExpedition
 
             if (!atSea && distance <= meetDistance && !band.Passed)
             {
+                if (band.ActiveClash is { } clash)
+                {
+                    _persistentBandAhead = band;
+                    Pause($"You come upon {band.Name} vs {clash.RivalName}. Enter to intervene, or go on to pass it by.");
+                    return true;
+                }
                 if (band.Hostile && (band.Spotted || sees >= meetDistance))
                 {
                     // Keep the caught persistent band in _persistentBands until Entry() actually enters the 3D scene
@@ -1133,7 +1404,7 @@ internal sealed class DaggerfallExpedition
                 continue;
             }
 
-            if (!atSea && band.Hostile && !band.Spotted && !band.Passed && distance <= sees)
+            if (!atSea && band.ActiveClash is null && band.Hostile && !band.Spotted && !band.Passed && distance <= sees)
             {
                 band.Spotted = true;
                 band.Camp = false;
