@@ -28,12 +28,14 @@ CH=local/art/generated/people/dagger-characters/${CHAR:-$ID}; G=$CH/02-guide/wip
 case $STEP in
 guide)
   mkdir -p $G/$SZ
-  if [ -n "${FIT:-}" ]; then cp "$FIT" $G/fit.json   # FIT=joints.json: stick joints written by hand (a static NPC with no rig: 021)
+  FN=fit.json
+  if [ -n "${FIT:-}" ] && [ "${FIT%.glb}" != "$FIT" ]; then FN=fit.glb; cp "$FIT" $G/fit.glb   # FIT=MESH.glb: the mesh itself is the guide figure (a creature)
+  elif [ -n "${FIT:-}" ]; then cp "$FIT" $G/fit.json   # FIT=joints.json: stick joints written by hand (a static NPC with no rig: 021)
   else python3 $T/stick_fit.py $CH/02-guide/scaffold/scaffold.glb $G/fit.json > /dev/null || exit 2; fi
-  St=$R/halo-guide-$SZ; mkdir -p $St; cp $T/blender_path.py $G/fit.json $St/
-  P="--path eyelevel --fov 27 --size $SZ --frames 73"
+  St=$R/halo-guide-$SZ; mkdir -p $St; cp $T/blender_path.py $G/$FN $St/
+  P="--path eyelevel --fov 27 --size $SZ --frames 73${CREATURE:+ --fit-extent 1}"
   asset-resources run --host den-m5 --resource m5-asset-cpu --owner claude --purpose "Blender stick-figure orbit guide for villager $ID at $SZ px" -- \
-    authoring/tools/people/splat/hosts/strix-cpu/run.sh den-m5 $St --fresh -- bash -c "blender -b --factory-startup -t 0 --python blender_path.py -- fit.json out/stick-L11 $P --pass shaded --rig keyfill --key 2.1 --fill 0.5 --back 0.45 --dome 0.08 && blender -b --factory-startup -t 0 --python blender_path.py -- fit.json out/stick $P --pass depth" 2>&1 | grep -E "rendered|Error|Traceback" || true
+    authoring/tools/people/splat/hosts/strix-cpu/run.sh den-m5 $St --fresh -- bash -c "blender -b --factory-startup -t 0 --python blender_path.py -- $FN out/stick-L11 $P --pass shaded --rig keyfill --key 2.1 --fill 0.5 --back 0.45 --dome 0.08 && blender -b --factory-startup -t 0 --python blender_path.py -- $FN out/stick $P --pass depth" 2>&1 | grep -E "rendered|Error|Traceback" || true
   [ -d $St/out/stick/depth ] || { echo "guided_clip.sh: no guide output" >&2; exit 3; }
   cp -r $St/out/. $G/$SZ/
   python3 - $G/$SZ/stick-L11 <<'PY'
@@ -47,7 +49,7 @@ for f in sorted(glob.glob(f'{d}/shaded/*.png')):
 PY
   for v in "$G/$SZ/stick/depth $G/$SZ/stick/depth.mp4" "$G/$SZ/stick-L11/shaded-flat $G/$SZ/stick-L11/shaded.mp4"; do set -- $v; ffmpeg -loglevel error -y -framerate 24 -i $1/%03d.png -c:v libx264 -qp 0 -pix_fmt yuv444p $2; done
   Hh=$(python3 -c "print(round(1898/2176*$SZ))"); Fl=$(python3 -c "print(round(2039/2176*$SZ))")
-  python3 authoring/tools/people/splat/mesh-splat/flood_cut.py keyframes $C/wip/keys-$SZ front=$C/wip/cut/front-cut.png $([ -f $C/wip/cut/back-cut.png ] && echo back=$C/wip/cut/back-cut.png) $([ -f $C/wip/cut/side-cut.png ] && echo side=$C/wip/cut/side-cut.png) $(for v in right left; do [ -f $C/wip/cut/$v-cut.png ] && echo $v=$C/wip/cut/$v-cut.png; done) ${BACKDROP:+--bg $BACKDROP} --size $SZ --height $Hh --floor $Fl --equal-height > /dev/null || exit 4
+  python3 authoring/tools/people/splat/mesh-splat/flood_cut.py keyframes $C/wip/keys-$SZ front=$C/wip/cut/front-cut.png $([ -f $C/wip/cut/back-cut.png ] && echo back=$C/wip/cut/back-cut.png) $([ -f $C/wip/cut/side-cut.png ] && echo side=$C/wip/cut/side-cut.png) $(for v in right left; do [ -f $C/wip/cut/$v-cut.png ] && echo $v=$C/wip/cut/$v-cut.png; done) ${BACKDROP:+--bg $BACKDROP} --size $SZ --height $Hh --floor $Fl $([ -n "${CREATURE:-}" ] && echo --fit-extent || echo --equal-height) > /dev/null || exit 4
   echo "guide $SZ: $(ffprobe -v error -count_frames -select_streams v -show_entries stream=nb_read_frames,width -of csv=p=0 $G/$SZ/stick-L11/shaded.mp4) $(ffprobe -v error -count_frames -select_streams v -show_entries stream=nb_read_frames,width -of csv=p=0 $G/$SZ/stick/depth.mp4)" ;;
 clip)
   [ -f $G/prompt.txt ] || { echo "guided_clip.sh: no $G/prompt.txt" >&2; exit 2; }

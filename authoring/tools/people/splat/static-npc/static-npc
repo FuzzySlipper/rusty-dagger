@@ -118,6 +118,8 @@ class Npc:
     def __init__(self, cid):
         self.id = cid
         self.rid = cid.removeprefix('npc-')                 # the run id under work/ (NNN; bake id NNN-A)
+        if cid.startswith('creature-'):                     # creature-NNN -> cNNN: the batch scripts read run ids as NNN-X (2026-11-26)
+            self.rid = 'c' + cid.removeprefix('creature-')
         self.ch = REPO / 'local/art/generated/people/dagger-characters' / cid
         self.brief = self.ch / '00-brief'
         self.cut = self.ch / '01-concept/wip/cut'
@@ -142,6 +144,12 @@ class Npc:
         f = self.brief / 'npc.json'
         c = json.loads(f.read_text()) if f.exists() else {}
         return {**DEFAULTS, **(WALKER if c.get('walker') else {}), **c}
+
+    @property
+    def creature(self):
+        """npc.json "creature": quadruped, spider or ghost - an animated creature that is not a humanoid (2026-11-26): framed by its
+        largest extent (keys, guide), the clay mesh itself as the orbit guide, a body-plan rig and generated gaits."""
+        return self.cfg.get('creature')
 
     @property
     def walker(self):
@@ -194,15 +202,17 @@ class Npc:
 
 
 def step_init(n, a):
-    a.cms = a.cms or (n.id if n.id.startswith('npc-') else None)
+    a.cms = a.cms or (n.id if n.id.startswith(('npc-', 'creature-')) else None)
     if not a.cms:
         raise SystemExit('init needs --cms (the CMS character id, e.g. npc-021); name new characters npc-NNN (Patch 2026-11-22)')
-    if not n.id.startswith('npc-') and not n.ch.exists():
+    if not n.id.startswith(('npc-', 'creature-')) and not n.ch.exists():
         raise SystemExit(f'name the character by its CMS id: static-npc init npc-{n.id} (Patch 2026-11-22)')
     if not (n.ch / 'character.json').exists():
         sh([REPO / 'authoring/tools/people/splat/character/dagger-char', 'init', n.id, '--name', a.name or n.id])
     ap = n.ch / '01-concept/approved'; ap.mkdir(parents=True, exist_ok=True)
     cfg = n.cfg; cfg.update({'name': a.name or cfg.get('name', n.id), 'cms': a.cms})
+    if getattr(a, 'creature', None):
+        cfg['creature'] = a.creature
     if a.walker:
         cfg.update(walker=True, **{k: v for k, v in WALKER.items() if k not in cfg or cfg[k] == DEFAULTS.get(k)})
     for v in ('front', 'back'):
@@ -251,7 +261,7 @@ def step_keys(n, a):
         sh(['python3', 'authoring/tools/people/splat/mesh-splat/flood_cut.py', 'cut', ap / f'{v}.png', n.cut / f'{v}-cut.png', '--tolerance', str(tol)]
            + (['--open-holes', str(n.cfg['open_holes'])] if n.cfg.get('open_holes') else []))   # npc.json "open_holes": an arm akimbo
     sh(['python3', 'authoring/tools/people/splat/mesh-splat/flood_cut.py', 'keyframes', n.keys] + [f"{v}={n.cut / f'{v}-cut.png'}" for v in n.views]
-       + ['--size', '1920', '--height', '1675', '--floor', '1799', '--equal-height'])
+       + ['--size', '1920', '--height', '1675', '--floor', '1799', '--fit-extent' if n.creature else '--equal-height'])
     print(f'{n.id}: check the cut-outs ({n.cut.relative_to(REPO)}) at full size: tolerance 16 ate a robe edge on 128, 9 is the default')
 
 
@@ -298,6 +308,8 @@ def step_mesh(n, a):
 
 def step_rig(n, a):
     n.need(n.mesh / 'model.glb', step='mesh'); n.scaffold.mkdir(parents=True, exist_ok=True); n.guide.mkdir(parents=True, exist_ok=True)
+    if n.creature:
+        raise SystemExit(f'{n.id}: the {n.creature} rig template is still to be built (2026-11-26); the guide uses the clay mesh, so go on to guide')
     if n.walker:
         return rig_walker(n, a)
     sh(['python3', 'authoring/tools/people/splat/scaffold/static_rig.py', n.mesh / 'model.glb', n.scaffold / 'scaffold.glb', '--report', n.scaffold / 'scaffold.json',
@@ -351,6 +363,11 @@ def rig_walker(n, a):
 
 
 def step_guide(n, a):
+    if n.creature:   # the clay mesh itself is the guide figure, framed by its largest extent; no rig needed yet
+        n.need(n.mesh / 'model.glb', step='mesh'); n.need(n.cut / 'front-cut.png', step='keys'); n.guide.mkdir(parents=True, exist_ok=True)
+        shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
+        sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'guide', str(n.cfg['size'])],
+           env={**n.env, **n.key_env, 'FIT': str(n.mesh / 'model.glb'), 'CREATURE': '1'}); return
     n.need(n.scaffold / 'scaffold.glb', step='rig'); n.need(n.cut / 'front-cut.png', step='keys')
     if not n.walker:
         n.need(n.guide / 'fit-static.json', step='rig')
@@ -644,6 +661,7 @@ def main():
     ap.add_argument('step', choices=list(STEPS)); ap.add_argument('id')
     ap.add_argument('--cms', help='init: the CMS character id (default ID when it is npc-NNN)');
     ap.add_argument('--walker', action='store_true', help='init: a figure that walks (Meshy API rig, Mixamo clips, the walk step)')
+    ap.add_argument('--creature', choices=['quadruped', 'spider', 'ghost'], help='init: an animated creature that is not a humanoid (creature-NNN)')
     ap.add_argument('--from', dest='from_dir', help='init: take front.png (and back.png, side.png) from this folder instead of the CMS approval')
     ap.add_argument('--side', choices=('right', 'left'), help='init --from with a side.png: which side of the figure it shows (default right)')
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')

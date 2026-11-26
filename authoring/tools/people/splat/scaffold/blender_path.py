@@ -52,6 +52,7 @@ def sphere(p, r, scale=(1, 1, 1)):
 if MESH:   # the character's own scaffold as the still figure (glTF import: Y up becomes Z up, his front is -y, his left +x)
     bpy.ops.import_scene.gltf(filepath=fit)
     ms = [o for o in sc.objects if o.type == 'MESH' and len(o.vertex_groups)]   # the skinned body; the importer also makes a bone-shape mesh
+    ms = ms or [o for o in sc.objects if o.type == 'MESH']   # an unrigged mesh (a creature's clay mesh, 2026-11-26)
     for o in ms:
         w = o.matrix_world.copy(); o.modifiers.clear(); o.parent = None; o.matrix_world = w; o.data.materials.clear()
     for o in [o for o in sc.objects if o not in ms]:
@@ -59,6 +60,8 @@ if MESH:   # the character's own scaffold as the still figure (glTF import: Y up
     co = [o.matrix_world @ v.co for o in ms for v in o.data.vertices]
     lo = Vector((min(p.x for p in co), min(p.y for p in co), min(p.z for p in co))); hi = Vector((max(p.x for p in co), max(p.y for p in co), max(p.z for p in co)))
     k = float(dict(zip(argv[2::2], argv[3::2])).get('--mesh-height', 1.72)) / (hi.z - lo.z)
+    if opt.get('--fit-extent') == '1':   # a creature: its largest extent is the 1.72 m a figure's height is (the depth guide's range fits)
+        k = float(opt.get('--mesh-height', 1.72)) / max(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z)
     from mathutils import Matrix
     M = Matrix.Scale(k, 4) @ Matrix.Translation(Vector((-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z)))
     for o in ms:
@@ -87,6 +90,10 @@ zs = [v.z for o in sc.objects if o.type == 'MESH' for v in (o.matrix_world @ p.c
 z0, z1 = min(zs), max(zs); H = z1 - z0; TF = float(opt.get('--target-frac', 0.5)); ZOOM = float(opt.get('--zoom', 1.0))
 target = Vector((0, 0, z0 + H * TF))   # --target-frac: the aim point as a fraction of the figure's height (0.78 = head and shoulders)
 cam_data = bpy.data.cameras.new('cam'); cam_data.type = 'ORTHO'; cam_data.ortho_scale = H / (1898 / 2176) / ZOOM   # figure fills 1898/2176 as the keys; --zoom N frames 1/N of that
+if opt.get('--fit-extent') == '1':   # a creature (--fit-extent 1): its largest extent (height, width or length) fills the frame, as flood_cut.py keyframes --fit-extent
+    xs = [v.x for o in sc.objects if o.type == 'MESH' for v in (o.matrix_world @ p.co for p in o.data.vertices)]
+    ys = [v.y for o in sc.objects if o.type == 'MESH' for v in (o.matrix_world @ p.co for p in o.data.vertices)]
+    cam_data.ortho_scale = max(H, max(xs) - min(xs), max(ys) - min(ys)) / (1675 / 1920) / ZOOM
 cam_data.clip_start = 0.01; cam_data.clip_end = 20
 cam = bpy.data.objects.new('cam', cam_data); sc.collection.objects.link(cam); sc.camera = cam
 DIST = 5.0

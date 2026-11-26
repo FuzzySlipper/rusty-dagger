@@ -77,6 +77,8 @@ def keyframes(args):
         box = im.getchannel('A').getbbox()
         cuts[view] = im.crop(box)
     scale = args.scale or args.height / max(c.size[1] for c in cuts.values())
+    if args.fit_extent:   # a creature (2026-11-26): one scale for every view, the largest width or height of any view to HEIGHT, centred
+        scale = args.height / max(max(c.size) for c in cuts.values())
     # --equal-height: each view gets its own scale so every figure is exactly HEIGHT tall (head top, hair included, to the lowest
     # foot pixel of the alpha box) with its top and floor on the same rows; a rigid figure is the same height from every side.
     scales = {v: (args.height / c.size[1] if args.equal_height else scale) for v, c in cuts.items()}
@@ -88,7 +90,7 @@ def keyframes(args):
         small = c.resize((w, h), Image.LANCZOS)
         bg = tuple(int(v) for v in args.bg.split(',')) if args.bg else (args.grey,) * 3
         canvas = Image.new('RGBA', (args.size, args.size), bg + (255,))
-        canvas.alpha_composite(small, ((args.size - w) // 2, args.floor + 1 - h))
+        canvas.alpha_composite(small, ((args.size - w) // 2, (args.size - h) // 2 if args.fit_extent else args.floor + 1 - h))
         canvas.convert('RGB').save(out / f'{view}.png')
         placed[view] = [w, h]
     (out / 'scale.json').write_text(json.dumps({'scale': scale, 'scales': scales, 'equal_height': args.equal_height, 'size': args.size,
@@ -117,6 +119,7 @@ def main():
     k.add_argument('--grey', type=int, default=128)
     k.add_argument('--bg', help='R,G,B backdrop instead of --grey: a chroma key colour absent from the character (npc-024, 2026-11-23)')
     k.add_argument('--equal-height', action='store_true', help='scale each view on its own to exactly --height')
+    k.add_argument('--fit-extent', action='store_true', help="a creature: one scale for all views, the largest width or height to --height, each view centred in the frame (blender_path.py --fit-extent frames the guide the same way)")
     args = p.parse_args()
     cut(args) if args.cmd == 'cut' else keyframes(args)
 
