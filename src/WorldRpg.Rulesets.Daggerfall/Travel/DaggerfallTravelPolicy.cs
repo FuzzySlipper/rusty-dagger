@@ -12,6 +12,19 @@ internal readonly record struct DaggerfallTravelDestination(
     DaggerfallTravelMapPixel MapPixel);
 
 /// <summary>
+/// A terrain-aware overland route between two world-map pixels: the ordered pixel waypoints from
+/// <paramref name="Origin"/> (excluded) to <paramref name="Destination"/> (included), the equivalent
+/// flat-road cost of each step, total equivalent distance, and whether the route crosses open sea.
+/// </summary>
+internal sealed record DaggerfallOverlandRoute(
+    DaggerfallTravelMapPixel Origin,
+    DaggerfallTravelMapPixel Destination,
+    IReadOnlyList<DaggerfallTravelMapPixel> Waypoints,
+    double[] StepCosts,
+    double TotalEquivalentPixels,
+    bool UsesOcean);
+
+/// <summary>
 /// Daggerfall's overland route and its minutes over the normalized site and climate grids: the destinations the map
 /// offers, the donor's route walk, a pixel's minutes by transport and terrain, and a quest leg's clock.
 /// </summary>
@@ -25,6 +38,21 @@ internal sealed class DaggerfallTravelPolicy
 {
     // CLIMATE.PAK's value for open sea.
     private const int OceanClimate = 223;
+    private const double DiagonalStepLength = 1.4142135623730951;
+    private const double SeaBoardingTravelPenaltyPixels = 2.0;
+    private const double SeaBoardingRoutingPenalty = 12.0;
+    private const double OceanRoutingMultiplier = 2.6;
+    private const int LocalAStarMaxSpan = 64;
+    private const int LocalAStarMaxExpanded = 32_000;
+    private const int CoarseScale = 4;
+    private const int MaxRouteCacheEntries = 2048;
+    private const int MaxCoarseFieldCacheEntries = 4;
+
+    private static readonly (int Dx, int Dy, double Length)[] Neighbours8 =
+    [
+        (1, 0, 1.0), (-1, 0, 1.0), (0, 1, 1.0), (0, -1, 1.0),
+        (1, 1, DiagonalStepLength), (1, -1, DiagonalStepLength), (-1, 1, DiagonalStepLength), (-1, -1, DiagonalStepLength),
+    ];
 
     // DFU's climateIndices starts at CLIMATE.PAK value 223 (Ocean).
     private static readonly int[] ClimateIndices = [0, 0, 0, 1, 2, 3, 4, 5, 5, 5];
@@ -35,6 +63,10 @@ internal sealed class DaggerfallTravelPolicy
     private readonly DaggerfallSiteContext _sites;
     private readonly DaggerfallWorldGridsSet _grids;
     private readonly DaggerfallTransportTuning _transport;
+    private readonly double _baselineFlatLandMinutes;
+    private readonly Dictionary<(DaggerfallTravelMapPixel Origin, DaggerfallTravelMapPixel Destination), DaggerfallOverlandRoute> _routeCache = [];
+    private CoarseRoutingGrid? _coarseGrid;
+    private readonly List<CoarseDistanceField> _coarseFields = [];
 
     internal DaggerfallTravelPolicy(DaggerfallSiteContext sites, DaggerfallWorldGridsSet grids,
         DaggerfallTransportTuning transport)
@@ -42,6 +74,8 @@ internal sealed class DaggerfallTravelPolicy
         _sites = sites ?? throw new ArgumentNullException(nameof(sites));
         _grids = grids ?? throw new ArgumentNullException(nameof(grids));
         _transport = (transport ?? throw new ArgumentNullException(nameof(transport))).Validate();
+        double baseline = (((102 * _transport.HorseTravelModifier) >> 8) * (256 - TerrainMovementModifiers[5] + 256)) >> 8;
+        _baselineFlatLandMinutes = baseline > 0d ? baseline : 1d;
     }
 
     /// <summary>Returns all discovered, exterior-backed destinations in stable site identity order.</summary>
@@ -190,43 +224,74 @@ internal sealed class DaggerfallTravelPolicy
     }
 
     /// <summary>
-    /// Computes the overland courier route distance in equivalent flat-road map pixels from
-    /// <paramref name="origin"/> to <paramref name="destination"/> by walking <see cref="Path"/> over the
-    /// admitted climate/terrain grid and weighting each step by <see cref="PixelMinutes"/> (normalized
-    /// against fast flat land) plus a harbor/ferry boarding cost when entering open sea. Two sites equally
-    /// far in straight-line map coordinates therefore differ whenever one crosses mountains, swamps, deserts,
-    /// or open water.
+    /// Computes the terrain-aware overland route from <paramref name="origin"/> to <paramref name="destination"/>.
+    /// Prefers coastal and valley land paths around bays, inlets, and rough mountains, crossing open sea only when
+    /// no reasonable land route exists (such as islands or wide cross-bay passages).
     /// </summary>
-    internal double CourierRouteDistancePixels(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination)
+    internal DaggerfallOverlandRoute OverlandRoute(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination)
     {
         origin.RequireInBounds(nameof(origin));
         destination.RequireInBounds(nameof(destination));
         if (origin == destination)
-            return 0d;
+            return new(origin, destination, [], [], 0d, false);
 
-        double baselineFlatLandMinutes = (((102 * _transport.HorseTravelModifier) >> 8) * (256 - TerrainMovementModifiers[5] + 256)) >> 8;
-        if (baselineFlatLandMinutes <= 0d)
-            baselineFlatLandMinutes = 1d;
+        (DaggerfallTravelMapPixel, DaggerfallTravelMapPixel) key = (origin, destination);
+        if (_routeCache.TryGetValue(key, out DaggerfallOverlandRoute? cached))
+            return cached;
 
-        const double SeaBoardingPenaltyPixels = 2.0;
+        IReadOnlyList<DaggerfallTravelMapPixel> waypoints = ComputeOverlandWaypoints(origin, destination);
+        DaggerfallOverlandRoute route = BuildOverlandRoute(origin, destination, waypoints);
+        if (_routeCache.Count >= MaxRouteCacheEntries)
+            _routeCache.Clear();
+        _routeCache[key] = route;
+        return route;
+    }
+
+    /// <summary>
+    /// Computes the overland courier route distance in equivalent flat-road map pixels from
+    /// <paramref name="origin"/> to <paramref name="destination"/> using <see cref="OverlandRoute"/>.
+    /// </summary>
+    internal double CourierRouteDistancePixels(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination) =>
+        OverlandRoute(origin, destination).TotalEquivalentPixels;
+
+    /// <summary>
+    /// Equivalent flat-road travel cost multiplier (&gt;= 1.0) for moving across <paramref name="pixel"/> on land
+    /// (or aboard ship on sea). Flat plains/woodlands return 1.0; mountains, swamps, and rough terrain return &gt; 1.0.
+    /// </summary>
+    internal double TerrainFactor(DaggerfallTravelMapPixel pixel)
+    {
+        int pixelMinutes = PixelMinutes(pixel, DaggerfallTransportMode.Horse, aboard: true);
+        return Math.Max(1.0, pixelMinutes / _baselineFlatLandMinutes);
+    }
+
+    private DaggerfallOverlandRoute BuildOverlandRoute(
+        DaggerfallTravelMapPixel origin,
+        DaggerfallTravelMapPixel destination,
+        IReadOnlyList<DaggerfallTravelMapPixel> waypoints)
+    {
+        if (waypoints.Count == 0)
+            return new(origin, destination, [], [], 0d, false);
+
+        double[] stepCosts = new double[waypoints.Count];
         DaggerfallTravelMapPixel previous = origin;
         bool previousOcean = IsOcean(origin);
+        bool usesOcean = false;
         double totalEquivalentPixels = 0d;
 
-        foreach (DaggerfallTravelMapPixel step in Path(origin, destination))
+        for (int i = 0; i < waypoints.Count; i++)
         {
+            DaggerfallTravelMapPixel step = waypoints[i];
             double dx = step.X - previous.X;
             double dy = step.Y - previous.Y;
             double stepLength = Math.Sqrt(dx * dx + dy * dy);
-            if (stepLength <= 0d)
-                continue;
-
             bool ocean = IsOcean(step);
-            int pixelMinutes = PixelMinutes(step, DaggerfallTransportMode.Horse, aboard: true);
-            double terrainFactor = Math.Max(1.0, pixelMinutes / baselineFlatLandMinutes);
-            totalEquivalentPixels += stepLength * terrainFactor;
+            if (ocean) usesOcean = true;
+
+            double cost = stepLength * TerrainFactor(step);
             if (ocean && !previousOcean)
-                totalEquivalentPixels += SeaBoardingPenaltyPixels;
+                cost += SeaBoardingTravelPenaltyPixels;
+            stepCosts[i] = cost;
+            totalEquivalentPixels += cost;
 
             previous = step;
             previousOcean = ocean;
@@ -235,8 +300,321 @@ internal sealed class DaggerfallTravelPolicy
         double directDistance = Math.Sqrt(
             (destination.X - origin.X) * (double)(destination.X - origin.X)
             + (destination.Y - origin.Y) * (double)(destination.Y - origin.Y));
-        return Math.Max(totalEquivalentPixels, directDistance);
+        return new(origin, destination, waypoints, stepCosts, Math.Max(totalEquivalentPixels, directDistance), usesOcean);
     }
+
+    private IReadOnlyList<DaggerfallTravelMapPixel> ComputeOverlandWaypoints(
+        DaggerfallTravelMapPixel origin,
+        DaggerfallTravelMapPixel destination)
+    {
+        IReadOnlyList<DaggerfallTravelMapPixel> straight = Path(origin, destination);
+        if (straight.Count <= 1)
+            return straight;
+
+        // Fast path: if the straight walk crosses zero ocean and stays entirely on fast flat land, it is already optimal.
+        bool straightHasObstacle = false;
+        for (int i = 0; i < straight.Count; i++)
+        {
+            DaggerfallTravelMapPixel px = straight[i];
+            if (IsOcean(px) || TerrainFactor(px) > 1.05)
+            {
+                straightHasObstacle = true;
+                break;
+            }
+        }
+        if (!straightHasObstacle)
+            return straight;
+
+        int span = Math.Max(Math.Abs(destination.X - origin.X), Math.Abs(destination.Y - origin.Y));
+        if (span <= LocalAStarMaxSpan)
+        {
+            return FindLocalAStarWaypoints(origin, destination, margin: Math.Max(16, span), maxExpanded: LocalAStarMaxExpanded)
+                ?? straight;
+        }
+
+        return FindCoarseBackedWaypoints(origin, destination) ?? straight;
+    }
+
+    private IReadOnlyList<DaggerfallTravelMapPixel>? FindLocalAStarWaypoints(
+        DaggerfallTravelMapPixel origin,
+        DaggerfallTravelMapPixel destination,
+        int margin,
+        int maxExpanded)
+    {
+        int minX = Math.Max(0, Math.Min(origin.X, destination.X) - margin);
+        int maxX = Math.Min(DaggerfallTravelMapPixel.Width - 1, Math.Max(origin.X, destination.X) + margin);
+        int minY = Math.Max(0, Math.Min(origin.Y, destination.Y) - margin);
+        int maxY = Math.Min(DaggerfallTravelMapPixel.Height - 1, Math.Max(origin.Y, destination.Y) + margin);
+        int boxW = maxX - minX + 1;
+        int boxH = maxY - minY + 1;
+        int cellCount = boxW * boxH;
+
+        double[] gScore = new double[cellCount];
+        Array.Fill(gScore, double.PositiveInfinity);
+        int[] cameFrom = new int[cellCount];
+        Array.Fill(cameFrom, -1);
+        bool[] closed = new bool[cellCount];
+
+        int startIdx = (origin.Y - minY) * boxW + (origin.X - minX);
+        int goalIdx = (destination.Y - minY) * boxW + (destination.X - minX);
+        gScore[startIdx] = 0d;
+
+        PriorityQueue<int, double> open = new();
+        open.Enqueue(startIdx, OctileDistance(origin.X, origin.Y, destination.X, destination.Y));
+
+        int expanded = 0;
+        while (open.Count > 0)
+        {
+            int current = open.Dequeue();
+            if (closed[current]) continue;
+            closed[current] = true;
+
+            if (current == goalIdx)
+                return ReconstructLocalPath(cameFrom, startIdx, goalIdx, minX, minY, boxW);
+
+            if (++expanded > maxExpanded)
+                return null;
+
+            int cx = minX + (current % boxW);
+            int cy = minY + (current / boxW);
+            bool currentOcean = IsOcean(new(cx, cy));
+            double currentG = gScore[current];
+
+            for (int n = 0; n < Neighbours8.Length; n++)
+            {
+                (int dx, int dy, double stepLen) = Neighbours8[n];
+                int nx = cx + dx;
+                int ny = cy + dy;
+                if (nx < minX || nx > maxX || ny < minY || ny > maxY) continue;
+
+                int nextIdx = (ny - minY) * boxW + (nx - minX);
+                if (closed[nextIdx]) continue;
+
+                DaggerfallTravelMapPixel nextPixel = new(nx, ny);
+                double stepCost = RoutingStepCost(currentOcean, nextPixel, stepLen);
+                double tentativeG = currentG + stepCost;
+                if (tentativeG < gScore[nextIdx])
+                {
+                    cameFrom[nextIdx] = current;
+                    gScore[nextIdx] = tentativeG;
+                    open.Enqueue(nextIdx, tentativeG + OctileDistance(nx, ny, destination.X, destination.Y));
+                }
+            }
+        }
+        return null;
+    }
+
+    private IReadOnlyList<DaggerfallTravelMapPixel>? FindCoarseBackedWaypoints(
+        DaggerfallTravelMapPixel origin,
+        DaggerfallTravelMapPixel destination)
+    {
+        CoarseRoutingGrid grid = _coarseGrid ??= BuildCoarseRoutingGrid();
+        int startCx = origin.X / CoarseScale;
+        int startCy = origin.Y / CoarseScale;
+        int goalCx = destination.X / CoarseScale;
+        int goalCy = destination.Y / CoarseScale;
+        int startCell = startCy * grid.Width + startCx;
+        int goalCell = goalCy * grid.Width + goalCx;
+
+        CoarseDistanceField field = GetOrBuildCoarseField(grid, startCell);
+        if (field.CameFrom[goalCell] < 0 && goalCell != startCell)
+            return null;
+
+        List<int> coarseCells = [];
+        int cursor = goalCell;
+        while (cursor >= 0 && cursor != startCell)
+        {
+            coarseCells.Add(cursor);
+            cursor = field.CameFrom[cursor];
+        }
+        if (cursor != startCell)
+            return null;
+        coarseCells.Reverse();
+
+        // Stitch exact pixel anchors along the coarse corridor so land segments never clip corner ocean pixels.
+        List<DaggerfallTravelMapPixel> waypoints = [];
+        DaggerfallTravelMapPixel current = origin;
+        for (int i = 0; i < coarseCells.Count; i++)
+        {
+            int cell = coarseCells[i];
+            DaggerfallTravelMapPixel target = i == coarseCells.Count - 1
+                ? destination
+                : grid.AnchorPixel[cell];
+            if (target == current) continue;
+
+            IReadOnlyList<DaggerfallTravelMapPixel> segment = Path(current, target);
+            bool expectsLand = !IsOcean(current) && !IsOcean(target);
+            if (expectsLand && segment.Any(IsOcean))
+            {
+                segment = FindLocalAStarWaypoints(current, target, margin: CoarseScale * 2, maxExpanded: 512) ?? segment;
+            }
+            for (int s = 0; s < segment.Count; s++)
+                waypoints.Add(segment[s]);
+            current = target;
+        }
+        return waypoints;
+    }
+
+    private CoarseRoutingGrid BuildCoarseRoutingGrid()
+    {
+        int w = (DaggerfallTravelMapPixel.Width + CoarseScale - 1) / CoarseScale;
+        int h = (DaggerfallTravelMapPixel.Height + CoarseScale - 1) / CoarseScale;
+        int count = w * h;
+        bool[] isOcean = new bool[count];
+        double[] factor = new double[count];
+        DaggerfallTravelMapPixel[] anchor = new DaggerfallTravelMapPixel[count];
+
+        for (int cy = 0; cy < h; cy++)
+        {
+            int py0 = cy * CoarseScale;
+            int py1 = Math.Min(DaggerfallTravelMapPixel.Height - 1, py0 + CoarseScale - 1);
+            for (int cx = 0; cx < w; cx++)
+            {
+                int px0 = cx * CoarseScale;
+                int px1 = Math.Min(DaggerfallTravelMapPixel.Width - 1, px0 + CoarseScale - 1);
+                int idx = cy * w + cx;
+
+                double bestLandFactor = double.PositiveInfinity;
+                DaggerfallTravelMapPixel bestLand = new(px0, py0);
+                bool anyLand = false;
+
+                for (int py = py0; py <= py1; py++)
+                {
+                    for (int px = px0; px <= px1; px++)
+                    {
+                        DaggerfallTravelMapPixel p = new(px, py);
+                        if (IsOcean(p)) continue;
+                        double tf = TerrainFactor(p);
+                        if (!anyLand || tf < bestLandFactor)
+                        {
+                            anyLand = true;
+                            bestLandFactor = tf;
+                            bestLand = p;
+                        }
+                    }
+                }
+
+                if (anyLand)
+                {
+                    isOcean[idx] = false;
+                    factor[idx] = bestLandFactor;
+                    anchor[idx] = bestLand;
+                }
+                else
+                {
+                    isOcean[idx] = true;
+                    factor[idx] = OceanRoutingMultiplier;
+                    anchor[idx] = new((px0 + px1) / 2, (py0 + py1) / 2);
+                }
+            }
+        }
+        return new(w, h, isOcean, factor, anchor);
+    }
+
+    private CoarseDistanceField GetOrBuildCoarseField(CoarseRoutingGrid grid, int startCell)
+    {
+        for (int i = 0; i < _coarseFields.Count; i++)
+        {
+            if (_coarseFields[i].StartCell == startCell)
+                return _coarseFields[i];
+        }
+
+        int cellCount = grid.Width * grid.Height;
+        double[] dist = new double[cellCount];
+        Array.Fill(dist, double.PositiveInfinity);
+        int[] cameFrom = new int[cellCount];
+        Array.Fill(cameFrom, -1);
+        bool[] settled = new bool[cellCount];
+
+        dist[startCell] = 0d;
+        PriorityQueue<int, double> open = new();
+        open.Enqueue(startCell, 0d);
+
+        while (open.Count > 0)
+        {
+            int current = open.Dequeue();
+            if (settled[current]) continue;
+            settled[current] = true;
+
+            int cx = current % grid.Width;
+            int cy = current / grid.Width;
+            bool curOcean = grid.IsOcean[current];
+            double curDist = dist[current];
+
+            for (int n = 0; n < Neighbours8.Length; n++)
+            {
+                (int dx, int dy, double stepLen) = Neighbours8[n];
+                int nx = cx + dx;
+                int ny = cy + dy;
+                if ((uint)nx >= (uint)grid.Width || (uint)ny >= (uint)grid.Height) continue;
+
+                int next = ny * grid.Width + nx;
+                if (settled[next]) continue;
+
+                bool nextOcean = grid.IsOcean[next];
+                double edge = stepLen * CoarseScale * grid.Factor[next];
+                if (nextOcean && !curOcean)
+                    edge += SeaBoardingRoutingPenalty;
+                double tentative = curDist + edge;
+                if (tentative < dist[next])
+                {
+                    dist[next] = tentative;
+                    cameFrom[next] = current;
+                    open.Enqueue(next, tentative);
+                }
+            }
+        }
+
+        CoarseDistanceField created = new(startCell, cameFrom);
+        if (_coarseFields.Count >= MaxCoarseFieldCacheEntries)
+            _coarseFields.RemoveAt(0);
+        _coarseFields.Add(created);
+        return created;
+    }
+
+    private double RoutingStepCost(bool currentOcean, DaggerfallTravelMapPixel next, double stepLen)
+    {
+        if (IsOcean(next))
+            return stepLen * OceanRoutingMultiplier + (currentOcean ? 0d : SeaBoardingRoutingPenalty);
+        return stepLen * TerrainFactor(next);
+    }
+
+    private static double OctileDistance(int x0, int y0, int x1, int y1)
+    {
+        int dx = Math.Abs(x1 - x0);
+        int dy = Math.Abs(y1 - y0);
+        int min = Math.Min(dx, dy);
+        int max = Math.Max(dx, dy);
+        return min * (DiagonalStepLength - 1.0) + max;
+    }
+
+    private static DaggerfallTravelMapPixel[] ReconstructLocalPath(
+        int[] cameFrom,
+        int startIdx,
+        int goalIdx,
+        int minX,
+        int minY,
+        int boxW)
+    {
+        List<DaggerfallTravelMapPixel> reversed = [];
+        int cursor = goalIdx;
+        while (cursor >= 0 && cursor != startIdx)
+        {
+            reversed.Add(new(minX + (cursor % boxW), minY + (cursor / boxW)));
+            cursor = cameFrom[cursor];
+        }
+        reversed.Reverse();
+        return [.. reversed];
+    }
+
+    private sealed record CoarseRoutingGrid(
+        int Width,
+        int Height,
+        bool[] IsOcean,
+        double[] Factor,
+        DaggerfallTravelMapPixel[] AnchorPixel);
+
+    private sealed record CoarseDistanceField(int StartCell, int[] CameFrom);
 
     /// <summary>Whether a map pixel is open sea, which only a ship crosses at speed.</summary>
     internal bool IsOcean(DaggerfallTravelMapPixel pixel) => ClimateAt(pixel.X, pixel.Y).Value == OceanClimate;

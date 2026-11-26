@@ -109,11 +109,18 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             _roster.UnloadActor(memberId);
         }
 
+        DaggerfallTravelMapPixel? routeOrigin = null;
         double heading = 0d;
         if (destination is { } dest)
         {
-            double dx = (dest.Pixel.X + .5) - startX;
-            double dy = (dest.Pixel.Y + .5) - startY;
+            DaggerfallTravelMapPixel startPixel = new(
+                Math.Clamp((int)Math.Floor(startX), 0, DaggerfallTravelMapPixel.Width - 1),
+                Math.Clamp((int)Math.Floor(startY), 0, DaggerfallTravelMapPixel.Height - 1));
+            routeOrigin = startPixel;
+            DaggerfallOverlandRoute route = _expedition.Policy.OverlandRoute(startPixel, dest.Pixel);
+            DaggerfallTravelMapPixel aim = route.Waypoints.Count > 0 ? route.Waypoints[0] : dest.Pixel;
+            double dx = (aim.X + .5) - startX;
+            double dy = (aim.Y + .5) - startY;
             if (dx * dx + dy * dy > 1e-9)
                 heading = (Math.Atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
         }
@@ -131,7 +138,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             camp,
             Spotted: false,
             Hostile: hostile,
-            Mobile: mobile);
+            Mobile: mobile,
+            RouteOrigin: routeOrigin,
+            RouteStep: 0);
         return _expedition.RegisterPersistentBand(save);
     }
 

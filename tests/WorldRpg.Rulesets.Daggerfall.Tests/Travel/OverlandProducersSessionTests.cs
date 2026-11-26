@@ -454,10 +454,12 @@ public sealed class OverlandProducersSessionTests
         Assert.False(session.Expedition.Open);
         Assert.False(session.Expedition.EncounterWaiting);
 
-        // Courier band physically progressed proportionally to 8h off-map sleep (not frozen at origin!).
-        double expectedMoved = courierBand.SpeedPixelsPerHour * 8.0;
+        // Courier band physically progressed along its terrain-aware overland route during the 8h off-map sleep (not frozen at origin!).
+        double movedFromOrigin = courierBand.Distance(origin.MapPixelX + 0.5, origin.MapPixelY + 0.5);
         double midDistToDest = courierBand.Distance(destination.MapPixelX + 0.5, destination.MapPixelY + 0.5);
-        Assert.Equal(startDistToDest - expectedMoved, midDistToDest, precision: 2);
+        Assert.True(movedFromOrigin >= 4.0, $"Expected courier to advance along route during 8h off-map sleep, moved only {movedFromOrigin:F2} px.");
+        Assert.True(midDistToDest < startDistToDest - 3.0, $"Expected courier to close distance to destination ({midDistToDest:F2} vs {startDistToDest:F2}).");
+        Assert.True(courierBand.RouteStep > 0);
         Assert.True(session.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? midDispatch));
         Assert.Equal(DaggerfallDispatchStatus.InTransit, midDispatch!.Status);
 

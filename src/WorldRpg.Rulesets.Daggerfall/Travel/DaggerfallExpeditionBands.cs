@@ -78,6 +78,8 @@ internal sealed record DaggerfallBandEvent(DaggerfallBandEventKind Kind, Daggerf
 /// </summary>
 internal sealed class DaggerfallPersistentOverlandBand
 {
+    private DaggerfallOverlandRoute? _cachedRoute;
+
     internal DaggerfallPersistentOverlandBand(
         string bandId,
         int displayId,
@@ -92,7 +94,9 @@ internal sealed class DaggerfallPersistentOverlandBand
         bool camp = false,
         bool spotted = false,
         bool hostile = false,
-        int? mobile = null)
+        int? mobile = null,
+        DaggerfallTravelMapPixel? routeOrigin = null,
+        int routeStep = 0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -110,6 +114,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         Spotted = spotted;
         Hostile = hostile;
         Mobile = mobile;
+        RouteOrigin = routeOrigin ?? (destination is not null ? ClampedPixel(x, y) : null);
+        RouteStep = Math.Max(0, routeStep);
     }
 
     internal string BandId { get; }
@@ -127,46 +133,129 @@ internal sealed class DaggerfallPersistentOverlandBand
     internal bool Passed { get; set; }
     internal bool Hostile { get; }
     internal int? Mobile { get; }
+    internal DaggerfallTravelMapPixel? RouteOrigin { get; set; }
+    internal int RouteStep { get; set; }
 
     internal double Distance(double x, double y) => Math.Sqrt((X - x) * (X - x) + (Y - y) * (Y - y));
 
+    /// <summary>Returns the cached terrain-aware overland route for this band's current leg, or null if undirected.</summary>
+    internal DaggerfallOverlandRoute? ResolveRoute(DaggerfallTravelPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        if (Destination is not { } dest)
+        {
+            _cachedRoute = null;
+            return null;
+        }
+        DaggerfallTravelMapPixel origin = RouteOrigin ?? ClampedPixel(X, Y);
+        RouteOrigin = origin;
+        if (_cachedRoute is { } cached && cached.Origin == origin && cached.Destination == dest.Pixel)
+            return cached;
+        _cachedRoute = policy.OverlandRoute(origin, dest.Pixel);
+        return _cachedRoute;
+    }
+
     /// <summary>
-    /// Advances this persistent band by <paramref name="hours"/> toward its destination (or pursuing the party if
-    /// <paramref name="allowPursuit"/> is true, <see cref="Hostile"/> and <see cref="Spotted"/>). Returns true when
-    /// the band reaches its destination pixel.
+    /// Advances this persistent band by <paramref name="hours"/> toward its destination along its terrain-aware
+    /// overland route (or pursuing the party if <paramref name="allowPursuit"/> is true, <see cref="Hostile"/> and
+    /// <see cref="Spotted"/>). Returns true when the band reaches its destination pixel.
     /// </summary>
-    internal bool StepMove((double X, double Y) party, double hours, bool allowPursuit = true)
+    internal bool StepMove(
+        (double X, double Y) party,
+        double hours,
+        bool allowPursuit = true,
+        DaggerfallTravelPolicy? policy = null)
     {
         if (Camp || SpeedPixelsPerHour <= 0 || hours <= 0) return false;
-        double targetX, targetY;
         bool pursuing = allowPursuit && Hostile && Spotted;
         if (pursuing)
         {
-            targetX = party.X;
-            targetY = party.Y;
-        }
-        else if (Destination is { } dest)
-        {
-            targetX = dest.Pixel.X + .5;
-            targetY = dest.Pixel.Y + .5;
-        }
-        else
-        {
-            return false;
+            _cachedRoute = null;
+            RouteOrigin = null;
+            RouteStep = 0;
+            return StepDirect(party.X, party.Y, hours, policy, isPursuit: true);
         }
 
+        if (Destination is not { } dest)
+            return false;
+
+        if (policy is null)
+            return StepDirect(dest.Pixel.X + .5, dest.Pixel.Y + .5, hours, policy: null, isPursuit: false);
+
+        DaggerfallOverlandRoute? route = ResolveRoute(policy);
+        if (route is null || route.Waypoints.Count == 0)
+            return StepDirect(dest.Pixel.X + .5, dest.Pixel.Y + .5, hours, policy, isPursuit: false);
+
+        if (RouteStep >= route.Waypoints.Count)
+            return true;
+
+        double budget = SpeedPixelsPerHour * hours;
+        while (budget > 1e-9 && RouteStep < route.Waypoints.Count)
+        {
+            DaggerfallTravelMapPixel wp = route.Waypoints[RouteStep];
+            DaggerfallTravelMapPixel prev = RouteStep == 0 ? route.Origin : route.Waypoints[RouteStep - 1];
+            double tx = wp.X + .5;
+            double ty = wp.Y + .5;
+            double dx = tx - X;
+            double dy = ty - Y;
+            double remDist = Math.Sqrt(dx * dx + dy * dy);
+            if (remDist <= 1e-9)
+            {
+                X = tx;
+                Y = ty;
+                RouteStep++;
+                continue;
+            }
+
+            double fullLen = Math.Sqrt((wp.X - prev.X) * (double)(wp.X - prev.X) + (wp.Y - prev.Y) * (double)(wp.Y - prev.Y));
+            double stepCost = route.StepCosts[RouteStep];
+            double costPerPixel = fullLen > 1e-9 ? Math.Max(1.0, stepCost / fullLen) : 1.0;
+            double remCost = remDist * costPerPixel;
+            Heading = (Math.Atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+
+            if (budget >= remCost - 1e-9)
+            {
+                X = tx;
+                Y = ty;
+                budget -= remCost;
+                RouteStep++;
+            }
+            else
+            {
+                double moved = budget / costPerPixel;
+                X += dx / remDist * moved;
+                Y += dy / remDist * moved;
+                budget = 0d;
+            }
+        }
+
+        return RouteStep >= route.Waypoints.Count;
+    }
+
+    private bool StepDirect(double targetX, double targetY, double hours, DaggerfallTravelPolicy? policy, bool isPursuit)
+    {
         double dx = targetX - X;
         double dy = targetY - Y;
         double length = Math.Sqrt(dx * dx + dy * dy);
-        double step = SpeedPixelsPerHour * hours;
-        if (length <= 1e-9) return !pursuing && Destination is not null;
+        double terrainDivisor = policy is not null ? policy.TerrainFactor(ClampedPixel(X, Y)) : 1.0;
+        double step = (SpeedPixelsPerHour / terrainDivisor) * hours;
+        if (length <= 1e-9) return !isPursuit && Destination is not null;
 
         Heading = (Math.Atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
         double moved = Math.Min(step, length);
-        X += dx / length * moved;
-        Y += dy / length * moved;
-        return !pursuing && Destination is not null && length <= step + 1e-9;
+        double nextX = X + dx / length * moved;
+        double nextY = Y + dy / length * moved;
+        if (isPursuit && policy is not null && !policy.IsOcean(ClampedPixel(X, Y)) && policy.IsOcean(ClampedPixel(nextX, nextY)))
+            return false;
+
+        X = nextX;
+        Y = nextY;
+        return !isPursuit && Destination is not null && length <= step + 1e-9;
     }
+
+    private static DaggerfallTravelMapPixel ClampedPixel(double x, double y) => new(
+        Math.Clamp((int)Math.Floor(x), 0, DaggerfallTravelMapPixel.Width - 1),
+        Math.Clamp((int)Math.Floor(y), 0, DaggerfallTravelMapPixel.Height - 1));
 
     internal DaggerfallPersistentBandSave ToSave() => new(
         BandId,
@@ -181,7 +270,9 @@ internal sealed class DaggerfallPersistentOverlandBand
         Camp,
         Spotted,
         Hostile,
-        Mobile);
+        Mobile,
+        RouteOrigin,
+        RouteStep);
 
     internal static DaggerfallPersistentOverlandBand FromSave(DaggerfallPersistentBandSave save, int displayId) => new(
         save.BandId,
@@ -197,7 +288,9 @@ internal sealed class DaggerfallPersistentOverlandBand
         save.Camp,
         save.Spotted,
         save.Hostile,
-        save.Mobile);
+        save.Mobile,
+        save.RouteOrigin,
+        save.RouteStep);
 }
 
 /// <summary>

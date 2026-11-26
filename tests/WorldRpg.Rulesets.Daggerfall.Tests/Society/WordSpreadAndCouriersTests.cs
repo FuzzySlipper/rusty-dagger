@@ -158,8 +158,10 @@ public sealed class WordSpreadAndCouriersTests
         Assert.NotNull(dispatch.OverlandBandId);
         DaggerfallPersistentOverlandBand liveBand = Assert.Single(
             session.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
-        Assert.True(liveBand.SpeedPixelsPerHour < session.WordSpread.Tuning.CourierSpeedPixelsPerHour,
-            $"Expected band Euclidean speed ({liveBand.SpeedPixelsPerHour:F3}) to be scaled below flat courier speed ({session.WordSpread.Tuning.CourierSpeedPixelsPerHour:F3}) for rough/sea route.");
+        Assert.Equal(new DaggerfallTravelMapPixel(origin.MapPixelX, origin.MapPixelY), liveBand.RouteOrigin);
+        DaggerfallOverlandRoute? bandRoute = liveBand.ResolveRoute(session.Expedition.Policy);
+        Assert.NotNull(bandRoute);
+        Assert.Equal(route, bandRoute!.TotalEquivalentPixels, precision: 4);
 
         // Advance actual expedition travel past straight-line arrival time: courier MUST still be en route & interceptable!
         session.ApplyProductMode(ProductMode.Playing);

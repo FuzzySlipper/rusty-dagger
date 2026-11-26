@@ -235,20 +235,17 @@ internal sealed class DaggerfallCourierDispatches(
         ArgumentNullException.ThrowIfNull(origin);
         ArgumentNullException.ThrowIfNull(destination);
 
-        double dx = destination.MapPixelX - origin.MapPixelX;
-        double dy = destination.MapPixelY - origin.MapPixelY;
-        double directDistance = Math.Sqrt(dx * dx + dy * dy);
         double routeDistance = wordSpread.RouteDistancePixels(
             origin.MapPixelX, origin.MapPixelY, destination.MapPixelX, destination.MapPixelY);
         (double disruption, _) = wordSpread.CourierDisruption(origin.Id.Region, destination.Id.Region, currentDay);
         double effectiveSpeed = wordSpread.Tuning.CourierSpeedPixelsPerHour * disruption;
         long travelMinutes = Math.Max(60L, checked((long)Math.Ceiling((routeDistance / effectiveSpeed) * 60d)));
         long expectedArrival = checked(currentMinute + travelMinutes);
-        // Scale the physical persistent band's Euclidean map speed so traversing directDistance takes the
-        // exact route-weighted travelMinutes (preventing premature arrival before ExpectedArrivalMinute).
+        // Set the persistent band's flat-road equivalent speed so traversing the terrain-aware overland route
+        // arrives in exact lockstep with ExpectedArrivalMinute.
         double travelHours = travelMinutes / 60d;
-        double bandSpeedPixelsPerHour = directDistance > 0d
-            ? Math.Max(1e-6, directDistance / travelHours)
+        double bandSpeedPixelsPerHour = routeDistance > 0d
+            ? Math.Max(1e-6, routeDistance / travelHours)
             : effectiveSpeed;
 
         string? overlandBandId = null;

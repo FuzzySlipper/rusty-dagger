@@ -130,7 +130,9 @@ internal sealed record DaggerfallPersistentBandSave(
     bool Camp = false,
     bool Spotted = false,
     bool Hostile = false,
-    int? Mobile = null)
+    int? Mobile = null,
+    DaggerfallTravelMapPixel? RouteOrigin = null,
+    int RouteStep = 0)
 {
     internal DaggerfallPersistentBandSave Validate()
     {
@@ -143,6 +145,9 @@ internal sealed record DaggerfallPersistentBandSave(
         new DaggerfallTravelMapPixel((int)Math.Floor(X), (int)Math.Floor(Y)).RequireInBounds(nameof(X));
         Destination?.Pixel.RequireInBounds(nameof(Destination));
         DestinationProfile?.Validate();
+        RouteOrigin?.RequireInBounds(nameof(RouteOrigin));
+        if (RouteStep < 0)
+            throw new ArgumentOutOfRangeException(nameof(RouteStep), $"Persistent band '{BandId}' has negative route step {RouteStep}.");
         return this;
     }
 }
@@ -938,7 +943,7 @@ internal sealed class DaggerfallExpedition
             double hours = stepSeconds / (double)SecondsPerHour;
             foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
             {
-                bool arrived = band.StepMove(partyPosition, hours, allowPursuit: false);
+                bool arrived = band.StepMove(partyPosition, hours, allowPursuit: false, policy: _policy);
                 if (!arrived) continue;
                 _persistentBands.Remove(band);
                 if (_persistentBandAhead == band) _persistentBandAhead = null;
@@ -962,7 +967,7 @@ internal sealed class DaggerfallExpedition
         DaggerfallPersistentOverlandBand? spottedStop = null;
         foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
         {
-            bool arrived = band.StepMove((px, py), hours);
+            bool arrived = band.StepMove((px, py), hours, allowPursuit: true, policy: _policy);
             double distance = band.Distance(px, py);
             if (band.Passed && distance > meetDistance * 2) band.Passed = false;
 
