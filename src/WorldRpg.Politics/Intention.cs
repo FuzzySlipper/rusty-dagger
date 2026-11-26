@@ -49,10 +49,10 @@ public sealed record Persona(IReadOnlyDictionary<GoalKind, int> Goals, IReadOnly
 }
 
 /// <summary>
-/// A seat's committed plan: its goal, the week it took it up, the last week it keeps it, and the goal's measure then
-/// (<see cref="Intention.Measure"/>), against which taking one more office counts as done.
+/// A seat's committed plan: its goal, the week it took it up, and the goal's measure then (<see cref="Intention.Measure"/>),
+/// against which taking one more office counts as done.
 /// </summary>
-public sealed record Plan(Goal Goal, int Since, int Until, int Baseline)
+public sealed record Plan(Goal Goal, int Since, int Baseline)
 {
     public override string ToString() => Goal.ToString();
 }
@@ -61,16 +61,15 @@ public sealed record Plan(Goal Goal, int Since, int Until, int Baseline)
 public sealed record Grudge(string Against, int Until);
 
 /// <summary>
-/// How a seat keeps a plan. Before it moves each week, a seat reviews its plan: one that is no longer possible, done or
-/// past its <see cref="PlanWeeks"/> ends, and a threat that matters as much to the holder pre-empts one that is not
-/// itself a threat, becoming the plan. A threat is a grudge (<see cref="GoalKind.Retaliate"/>) or a region it holds and is threatened
-/// in (<see cref="GoalKind.Hold"/>). A seat with no plan takes up the goal that matters most to its holder among its
-/// grudges and its standing goals that are possible and not yet met, the first listed winning a tie; a goal whose plan
-/// just lapsed waits a turn while another is open. Plans steer choice through <see cref="MoveChooser"/>.
+/// How a seat keeps a plan. Before it moves each week, a seat reviews its plan: it keeps the plan until it is no longer
+/// possible or done, or a threat that matters as much to the holder pre-empts it and becomes the plan, unless the plan
+/// is itself a threat. A threat is a grudge (<see cref="GoalKind.Retaliate"/>), done once the grudge is settled or
+/// let go, or a region the seat holds and is threatened in (<see cref="GoalKind.Hold"/>). A seat with no plan takes up
+/// the goal that matters most to its holder among its grudges and its standing goals that are possible and not yet
+/// met, the first listed winning a tie. Plans steer choice through <see cref="MoveChooser"/>.
 /// </summary>
 public static class Intention
 {
-    public const int PlanWeeks = 26;
     public const int RecognisedRelation = 2;
     public const int FootingPieces = 3;
 
@@ -85,7 +84,6 @@ public static class Intention
         {
             string? ended = !Possible(board, seat, plan.Goal) ? "impossible"
                 : Done(board, seat, plan) ? "done"
-                : board.Turn > plan.Until ? "lapsed"
                 : null;
             if (ended is null && !IsThreat(board, seat, plan.Goal))
             {
@@ -95,10 +93,7 @@ public static class Intention
             if (ended is not null) board.EndPlan(seat, ended);
         }
         if (seat.Plan is null && (next ?? Choose(board, seat, persona)) is { } goal)
-        {
-            int until = goal.Kind == GoalKind.Retaliate ? seat.Grudges.First(grudge => grudge.Against == goal.Target).Until : board.Turn + PlanWeeks;
-            board.SetPlan(seat, new Plan(goal, board.Turn, until, Measure(board, seat, goal, board.Regions)));
-        }
+            board.SetPlan(seat, new Plan(goal, board.Turn, Measure(board, seat, goal, board.Regions)));
     }
 
     /// <summary>Whether <paramref name="seat"/> holds <paramref name="region"/> and a rival crown is closing on it, or its control is all but broken.</summary>
@@ -188,9 +183,7 @@ public static class Intention
     private static Goal? Choose(Board board, Seat seat, Persona persona)
     {
         Goal[] open = [.. Candidates(board, seat).Where(goal => persona.Weight(goal.Kind) > 0)];
-        Goal[] fresh = [.. open.Where(goal => goal != seat.Rested)];
-        Goal[] choice = fresh.Length > 0 ? fresh : open;
-        return choice.Length == 0 ? null : choice.MaxBy(goal => persona.Weight(goal.Kind));
+        return open.Length == 0 ? null : open.MaxBy(goal => persona.Weight(goal.Kind));
     }
 
     private static int Footing(Region region, Seat seat) =>

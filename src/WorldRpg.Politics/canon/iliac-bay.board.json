@@ -84,7 +84,7 @@
     "the-underking": {"goals": {"Counter": 3, "Retaliate": 2, "Footing": 2}, "risk": 3},
     "karethys": {"goals": {"Office": 3, "Counter": 2, "Footing": 1, "Retaliate": 1}, "families": {"Arcane": 2}, "risk": 1},
     "oswin-harrowgate": {"goals": {"Counter": 2, "Office": 2, "Retaliate": 2, "Recognition": 1}, "families": {"Force": 2, "Trade": 1}, "risk": 2},
-    "the-squid": {"goals": {"Office": 3, "Counter": 2, "Retaliate": 2}, "families": {"Shadow": 1}, "risk": 2},
+    "the-squid": {"goals": {"Office": 3, "Counter": 2, "Retaliate": 2}, "risk": 2},
     "the-night-mother": {"goals": {"Office": 2, "Counter": 3, "Retaliate": 3}, "risk": 3},
     "aldous-verreine": {"goals": {"Office": 3, "Counter": 2, "Footing": 1, "Retaliate": 1}, "families": {"Faith": 2, "Court": 1}, "risk": 0},
     "medora": {"goals": {"Recognition": 2, "Footing": 2, "Retaliate": 1}, "families": {"Court": 1}, "risk": 0}

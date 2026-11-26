@@ -24,6 +24,26 @@ public sealed class IntentionTests
     }
 
     [Fact]
+    public void An_unfinished_plan_that_is_still_possible_is_kept_however_long_it_takes()
+    {
+        BoardSetup setup = TestBoards.Granary()
+            .Intent("west", Conqueror, new Goal(GoalKind.Take, "hills"), new Goal(GoalKind.Take, "granary"));
+        Board board = TestBoards.Create(setup);
+        Seat west = board.Seat("west");
+        Intention.Review(board, west);
+        Assert.Equal("take hills", west.Plan!.ToString());
+
+        // A year on, with both targets still open and nothing threatening West, it is still taking the hills.
+        board.Turn += 52;
+        board.TakeChanges();
+        Intention.Review(board, west);
+
+        Assert.Equal("take hills", west.Plan!.ToString());
+        Assert.Equal(0, west.Plan.Since);
+        Assert.Empty(board.TakeChanges());
+    }
+
+    [Fact]
     public void A_plan_that_is_done_ends_and_the_next_goal_is_taken_up()
     {
         BoardSetup setup = TestBoards.TwoCrowns(marchAllegiance: null, marchControl: 3)

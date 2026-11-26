@@ -131,16 +131,14 @@ public sealed class Board
     {
         if (seat.Plan is not null) throw new InvalidOperationException($"seat '{seat.Id}' already pursues {seat.Plan}");
         seat.Plan = plan;
-        seat.Rested = null;
         changes.Add(new BoardChange(seat.Id, "plan", "none", plan.ToString()));
     }
 
-    /// <summary>Ends <paramref name="seat"/>'s plan for <paramref name="reason"/>; a plan that lapsed rests its goal for one choice.</summary>
+    /// <summary>Ends <paramref name="seat"/>'s plan for <paramref name="reason"/>.</summary>
     public void EndPlan(Seat seat, string reason)
     {
         Plan plan = seat.Plan ?? throw new InvalidOperationException($"seat '{seat.Id}' has no plan");
         seat.Plan = null;
-        if (reason == "lapsed") seat.Rested = plan.Goal;
         changes.Add(new BoardChange(seat.Id, "plan", plan.ToString(), reason));
     }
 
@@ -647,9 +645,6 @@ public sealed record Seat(string Id, string Name, SeatKind Kind, string Holder, 
 
     /// <summary>The plan the seat is committed to, if any.</summary>
     public Plan? Plan { get; internal set; }
-
-    /// <summary>The goal whose plan lapsed last, which waits while another goal is open.</summary>
-    public Goal? Rested { get; internal set; }
 
     /// <summary>The seat's grudges, in the order they were opened (<see cref="Memory"/>).</summary>
     public List<Grudge> Grudges { get; internal init; } = [];
