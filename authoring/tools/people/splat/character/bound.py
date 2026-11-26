@@ -94,6 +94,11 @@ RUNS = {
 }
 
 
+
+def run_num(cid):
+    """The run folder name under work/ (and the bake id stem): npc-NNN -> NNN, creature-NNN -> cNNN (static-npc, 2026-11-26)."""
+    return 'c' + cid.removeprefix('creature-') if cid.startswith('creature-') else cid.removeprefix('npc-')
+
 def own_run(cid, run, k, clip_what, sizes=None, who='his'):
     """A character started in its own folder and baked with bake.sh and bound_run.sh: the scaffold's paths are absolute (it was made
     in the character folder) and the bake lives in RUN/K (K = NNN/X)."""
@@ -275,7 +280,7 @@ if os.environ.get('CLOAK_452B'):
 
 def pub_name(cid):
     """A character's name in the gallery: npc-NNN as it is (Patch 2026-11-22: the CMS id, clearer), townNNN for the villagers before it."""
-    return cid if cid.startswith('npc-') else f'town{cid}'
+    return cid if cid.startswith(('npc-', 'creature-')) else f'town{cid}'
 
 
 def walker_npc(cid, cfg, k):
@@ -319,7 +324,7 @@ def walker_npc(cid, cfg, k):
     r['fit_extra'] = []
     for name, (js, glb_) in cfg.get('extra_clips', {}).items():
         r['clips'][name] = (str(dc.char_dir(cid) / js), None); r['fit_extra'].append((name, str(dc.char_dir(cid) / glb_)))
-    v = f"{k}/bound/clips-tidy/data/videos/{cid.removeprefix('npc-')}-400k-and-16k"
+    v = f"{k}/bound/clips-tidy/data/videos/{run_num(cid)}-400k-and-16k"
     r['game_review'] = [(f'{v}-{c}.png', f'{cid}-400k-and-body-{c}.png') for c in ('walking-f010-quarter', 'walking-f010-close', 'walking-f020-quarter',
                                                                                     'walking-f024-back-quarter', 'around-f120-quarter', 'walking-f010-face')]
     r['skirt_drive'] = cfg.get('skirt_drive_opts', '').split()   # e.g. "--cloth-gap 0.05": the robe pushed further out by the legs (npc-468)
@@ -332,7 +337,7 @@ def run_of(cid):
     if cid not in RUNS and npc.exists():   # a static NPC made with authoring/tools/people/splat/static-npc/static-npc: its run folder is the character's work/
         # since 2026-11-22 (Patch) a new character is named by its CMS id, npc-NNN; the run under work/ keeps the bare number, NNN/A,
         # because the batch scripts read a run id as NNN-X
-        cfg = json.loads(npc.read_text()); k = f"{cid.removeprefix('npc-')}/A"
+        cfg = json.loads(npc.read_text()); k = f"{run_num(cid)}/A"
         if cfg.get('walker'):
             RUNS[cid] = walker_npc(cid, cfg, k); return RUNS[cid]
         r = static_npc(cid, str(dc.char_dir(cid) / 'work'), k, f"the stick-guided {cfg.get('size', 1920)} px clip (static-npc)")
