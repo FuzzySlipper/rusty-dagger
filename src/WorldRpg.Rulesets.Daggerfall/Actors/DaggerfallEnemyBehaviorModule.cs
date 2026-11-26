@@ -212,7 +212,51 @@ internal sealed class DaggerfallEnemyBehaviorModule
         DaggerfallEnemyPerceptionMemory memory = Senses(actor);
         memory.ProvokedUntilMinute = gameMinute + 1;
         memory.Detected = memory.HasEncounteredPlayer = true;
+        memory.LairTruce = false;
         memory.Reengage();
+    }
+
+    /// <summary>Whether <paramref name="actorId"/> was recently struck/provoked and turns toward attackers from any direction.</summary>
+    internal bool IsProvoked(long actorId, long gameMinute) =>
+        _actors.TryGet(actorId, out ActorState actor)
+        && Senses(actor).ProvokedUntilMinute is long until
+        && until >= gameMinute;
+
+    /// <summary>
+    /// Whether <paramref name="actorId"/> is still held under static-dungeon <see cref="DaggerfallEnemyPerceptionMemory.LairTruce"/>,
+    /// lifting the truce once the player enters wake proximity or alerts/lures the actor.
+    /// </summary>
+    internal bool IsUnderLairTruce(long actorId, WorldPoint? playerPosition, long gameMinute)
+    {
+        if (!_actors.TryGet(actorId, out ActorState actor)) return false;
+        DaggerfallEnemyPerceptionMemory memory = Senses(actor);
+        if (!memory.LairTruce) return false;
+        bool nearPlayer = playerPosition is { } standing
+            && Vector3.DistanceSquared(actor.Position.ToVector(), standing.ToVector())
+                <= DaggerfallEnemyPerceptionMemory.LairTruceWakeRadius * DaggerfallEnemyPerceptionMemory.LairTruceWakeRadius;
+        return memory.RefreshLairTruce(nearPlayer, gameMinute);
+    }
+
+    /// <summary>Lifts <see cref="DaggerfallEnemyPerceptionMemory.LairTruce"/> when an already-alerted rival is lured into close contact.</summary>
+    internal void LiftLairTruce(long actorId)
+    {
+        if (_actors.TryGet(actorId, out ActorState actor))
+            Senses(actor).LairTruce = false;
+    }
+
+    /// <summary>Whether <paramref name="actorId"/> is a free-fighting overland band or staged faction clash participant.</summary>
+    internal bool JoinsFactionInfighting(long actorId) =>
+        _actors.TryGet(actorId, out ActorState actor) && Senses(actor).FactionInfighting;
+
+    /// <summary>Whether any live undefeated combatant in the scene is opted into free creature-faction infighting.</summary>
+    internal bool HasFactionInfightingActors()
+    {
+        foreach (ActorState actor in _actors.All)
+        {
+            if (!actor.IsDefeated && Senses(actor).FactionInfighting)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>Whether an actor hasn't noticed the player. Its pursuit state can't say: paralysis idles an actor that knows.</summary>

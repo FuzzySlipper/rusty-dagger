@@ -94,6 +94,16 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     internal bool Passive { get; set; }
     internal int SpawnDistance { get; set; }
     internal bool WithinClassicSpawnRange { get; set; }
+    /// <summary>
+    /// Static classic dungeon placement truce: unalerted dungeon occupants do not fight each other off-camera until
+    /// player proximity or luring/detection/provocation lifts the truce, keeping dungeons from self-clearing before arrival.
+    /// </summary>
+    internal bool LairTruce { get; set; }
+    /// <summary>
+    /// Opts this actor into natural-enemy creature-faction infighting freely (overland bands, staged faction clashes),
+    /// independent of regional world conditions.
+    /// </summary>
+    internal bool FactionInfighting { get; set; }
     internal bool Pacified { get=>LanguagePacified || MagicallyPacified || (Passive && !ForcedHostile); set=>LanguagePacified=value; }
     internal bool ForcedHostile { get; set; }
     internal long? LastStealthCheckMinute { get; set; }
@@ -104,11 +114,34 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     internal long? DisengagedFrom { get; set; }
     internal long DisengagedUntilMinute { get; set; }
 
+    /// <summary>Distance in metres at which player proximity activates a static dungeon placement out of <see cref="LairTruce"/>.</summary>
+    internal const float LairTruceWakeRadius = 20f;
+
+    /// <summary>Distance in metres at which an already-alerted natural enemy lured into sight breaks a dormant room occupant's <see cref="LairTruce"/>.</summary>
+    internal const double LairTruceLureRadius = 8d;
+
     /// <summary>Whether the actor is still leaving <paramref name="target"/> alone at <paramref name="gameMinute"/>.</summary>
     internal bool LeavesAlone(long target, long gameMinute) => DisengagedFrom == target && gameMinute < DisengagedUntilMinute;
 
     /// <summary>Being struck ends a disengagement: the actor knows where its attacker is and answers it.</summary>
     internal void Reengage() => DisengagedFrom = null;
+
+    /// <summary>
+    /// Evaluates whether <see cref="LairTruce"/> still holds for this actor, lifting it permanently when the player
+    /// enters wake proximity or alerts/lures/provokes the actor.
+    /// </summary>
+    internal bool RefreshLairTruce(bool withinWakeProximity, long gameMinute)
+    {
+        if (!LairTruce) return false;
+        bool alerted = Detected || HasEncounteredPlayer || ForcedHostile
+            || (ProvokedUntilMinute is long until && until >= gameMinute);
+        if (alerted || withinWakeProximity)
+        {
+            LairTruce = false;
+            return false;
+        }
+        return true;
+    }
 
     internal void SetForcedHostile(bool hostile)
     {
@@ -119,6 +152,7 @@ internal sealed class DaggerfallEnemyPerceptionMemory
             MagicallyPacified = false;
             // Attacking is already an encounter; language cannot pacify the same actor on its next detection.
             HasEncounteredPlayer = true;
+            LairTruce = false;
         }
     }
 

@@ -29,4 +29,7 @@ public interface IDeveloperWorldConditionCommands : IDebugCommandModule
 
     [DebugCommand("world.dispatch-send", Description = "Developer: stage a board-game courier dispatch from the active site for SEAT_ID (e.g. crown:daggerfall), ACTION_KIND (e.g. border-posture), to DESTINATION_REGION (0-61).")]
     DebugCommandResult SendDispatch(string seatId, string actionKind, int destinationRegion);
+
+    [DebugCommand("world.clash", Description = "Developer: stage a live two-sided creature-faction clash nearby between FACTION_A and FACTION_B (or 'auto' to pick from active regional world conditions) with COUNT combatants per side.")]
+    DebugCommandResult StageClash(string factionA, string factionB, int count);
 }

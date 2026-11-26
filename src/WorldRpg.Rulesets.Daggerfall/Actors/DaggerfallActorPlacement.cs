@@ -46,10 +46,22 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     Func<long, bool> allowsFoeInfighting, Func<long, bool> restrained, Func<long, bool> joinsInfighting, Func<bool> infightingActive,
     SpatialMovementSystem spatial, IPerceptionService perception, IRandomService random,
     Func<CharacterStepEnvironment> environment, double detectionDistance, float fieldOfViewYDegrees, IActorSight? sight = null,
-    DaggerfallCreatureFactionSet? creatureFactions = null)
+    DaggerfallCreatureFactionSet? creatureFactions = null,
+    Func<long, bool>? isUnderLairTruce = null,
+    Action<long>? liftLairTruce = null,
+    Func<long, bool>? joinsFactionInfighting = null,
+    Func<bool>? hasFactionInfightingPotential = null,
+    Func<string?, string?, bool>? boardConditionDrivesClash = null,
+    Func<long, bool>? isProvoked = null)
 {
     private readonly IActorSight _sight = sight ?? PoseSight.Instance;
     private readonly DaggerfallCreatureFactionSet _creatureFactions = creatureFactions ?? DaggerfallCreatureFactionSet.ClassicDefault;
+    private readonly Func<long, bool> _isUnderLairTruce = isUnderLairTruce ?? (_ => false);
+    private readonly Action<long> _liftLairTruce = liftLairTruce ?? (_ => { });
+    private readonly Func<long, bool> _joinsFactionInfighting = joinsFactionInfighting ?? (_ => false);
+    private readonly Func<bool> _hasFactionInfightingPotential = hasFactionInfightingPotential ?? (() => false);
+    private readonly Func<string?, string?, bool> _boardConditionDrivesClash = boardConditionDrivesClash ?? ((_, _) => false);
+    private readonly Func<long, bool> _isProvoked = isProvoked ?? (_ => false);
 
     // FoeSpawner's placement envelope, in normalized world metres.
     private const float SummonFloorDistance = 4f;
@@ -62,8 +74,8 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     /// <summary>
     /// Whom an enemy or ally pursues, the team rule: none while a quest holds it back or it is defeated; for an ally of
     /// the player, the nearest visible foe it may attack, where it may fight at all; for anyone else the player, unless
-    /// a quest's infighting lets it take a nearer visible foe of another team. Quests supply the teams, the restraint
-    /// and the infighting opt-in as inputs.
+    /// a quest's infighting or creature-faction enmity (under <c>LairTruce</c> for unalerted static dungeon placements,
+    /// and free for overland bands, staged clashes, and board-game surges) lets it take a nearer visible rival.
     /// </summary>
     internal PursuitTarget? SelectTarget(long observerId)
     {
@@ -72,21 +84,53 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
         if (team == "player-ally")
             return allowsFoeInfighting(observerId) ? SelectAllyTarget(observerId) : null;
         PursuitTarget? selected = player.Position is { } position ? new(DaggerfallActorIdentity.PlayerEntityId, position) : null;
-        if (!allowsFoeInfighting(observerId) || !infightingActive()) return selected;
+        if (!allowsFoeInfighting(observerId)) return selected;
+
+        bool questInfighting = infightingActive();
+        bool observerPacified = isPacified(observerId);
+        bool observerUnderTruce = _isUnderLairTruce(observerId);
+        bool observerClash = !observerUnderTruce && _joinsFactionInfighting(observerId);
+        bool creatureInfightingPossible = !observerUnderTruce && !observerPacified
+            && (observerClash || _hasFactionInfightingPotential());
+        if (!questInfighting && !creatureInfightingPossible) return selected;
+
         double best = player.Position is { } standing ? Vector3.Distance(observer.Position.ToVector(), standing.ToVector()) : double.PositiveInfinity;
         Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
+        double facingCosine = _isProvoked(observerId) ? -1d : DaggerfallPerceptionQueryDefaults.MinimumFacingCosine;
         foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
                      Math.Max(detectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
-                     DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, _ => true)
+                     facingCosine, _ => true)
                      .Where(pair => pair.Kind == PerceptionPairKind.Visible).OrderBy(pair => pair.Distance).ThenBy(pair => pair.Target))
         {
             long id = checked((long)pair.Target);
-            // Classic quest foes are excluded from AI fights unless the source explicitly opts in.
-            // Other actors keep their established player pursuit unless participating in that opt-in.
-            if (!joinsInfighting(observerId) && !joinsInfighting(id)) continue;
-            if (!allowsFoeInfighting(id)
-                || !_creatureFactions.AreTeamsHostile(team, EffectiveTeam(id), isPacified(observerId))
-                || pair.Distance >= best) continue;
+            if (!allowsFoeInfighting(id) || pair.Distance >= best) continue;
+            string? targetTeam = EffectiveTeam(id);
+
+            // Classic quest foe-infighting opt-in (existing contract, unchanged).
+            bool questEligible = questInfighting
+                && (joinsInfighting(observerId) || joinsInfighting(id))
+                && _creatureFactions.AreTeamsHostile(team, targetTeam, observerPacified);
+
+            // Creature-faction relations under LairTruce: natural enemies may fight once neither side is held
+            // under static-dungeon LairTruce, when driven by overland/staged clash membership or a regional board-game condition.
+            // Luring an already-alerted enemy into close sight (<= LairTruceLureRadius) of a dormant natural enemy lifts its truce.
+            bool factionEligible = false;
+            if (!questEligible && creatureInfightingPossible && _creatureFactions.AreNaturalEnemies(team, targetTeam))
+            {
+                bool clashDriven = observerClash || _joinsFactionInfighting(id) || _boardConditionDrivesClash(team, targetTeam);
+                if (clashDriven)
+                {
+                    bool targetUnderTruce = _isUnderLairTruce(id);
+                    if (targetUnderTruce && pair.Distance <= Modules.Behavior.DaggerfallEnemyPerceptionMemory.LairTruceLureRadius)
+                    {
+                        _liftLairTruce(id);
+                        targetUnderTruce = false;
+                    }
+                    factionEligible = !targetUnderTruce;
+                }
+            }
+
+            if (!questEligible && !factionEligible) continue;
             selected = new(id, actors.Get(id).Position); best = pair.Distance;
         }
         return selected;

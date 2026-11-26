@@ -251,7 +251,7 @@ internal sealed class DaggerfallActorRoster
     /// memory, managed inventory and equipment, definition loadout, and floor grounding.
     /// Returns the allocated durable identity, which the save persists and restore reuses.
     /// </summary>
-    internal long Spawn(string definitionId, ActorPose pose, int? level = null, bool playerAllied = false, int spawnDistance = 0, bool passive = false)
+    internal long Spawn(string definitionId, ActorPose pose, int? level = null, bool playerAllied = false, int spawnDistance = 0, bool passive = false, bool lairTruce = false, bool factionInfighting = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionId);
         DaggerfallActorDefinition definition = _definitions.RequireActor(new DaggerfallActorId(definitionId));
@@ -275,8 +275,11 @@ internal sealed class DaggerfallActorRoster
             ActorState actor = DaggerfallActorFactory.CreateNonPlayerActor(_actors, durableId, spawnedDefinition,
                 _mechanics.CreateStats(spawnedDefinition, SpawnVitals(spawnedDefinition, spawnLevel, durableId)),
                 pose);
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = spawnDistance;
-            actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = passive;
+            DaggerfallEnemyPerceptionMemory memory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+            memory.SpawnDistance = spawnDistance;
+            memory.Passive = passive;
+            memory.LairTruce = lairTruce;
+            memory.FactionInfighting = factionInfighting;
             DaggerfallActorFactory.RegisterActorInventory(actor, _inventoryStore);
             GrantSpawnLoadout(actor, spawnedDefinition);
             GrantStartingEquipment(actor, spawnedDefinition);
@@ -978,6 +981,8 @@ internal sealed class DaggerfallActorRoster
             memory.SetForcedHostile(combat.ForcedHostile);
             memory.LanguagePacified = combat.LanguagePacified;
             memory.MagicallyPacified = combat.MagicallyPacified;
+            memory.LairTruce = combat.LairTruce ?? false;
+            memory.FactionInfighting = combat.InfightingOverride ?? false;
             if (combat.TeamOverride is not null && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc))
                 fc.SetTeamOverride(combat.TeamOverride);
             if (combat.DetachedInventory is not null || combat.DetachedCorpse is not null || combat.DetachedEffects is not null)
@@ -1077,6 +1082,8 @@ internal sealed class DaggerfallActorRoster
             memory.SetForcedHostile(combat.ForcedHostile);
             memory.LanguagePacified = combat.LanguagePacified;
             memory.MagicallyPacified = combat.MagicallyPacified;
+            if (combat.LairTruce is bool lairTruce) memory.LairTruce = lairTruce;
+            if (combat.InfightingOverride is bool infighting) memory.FactionInfighting = infighting;
             if (combat.TeamOverride is { } teamOverride)
                 actor.Actor.Get<FactionComponent>().SetTeamOverride(teamOverride);
             if (combat.DetachedInventory is not null || combat.DetachedCorpse is not null || combat.DetachedEffects is { Length: > 0 })
@@ -1093,7 +1100,7 @@ internal sealed class DaggerfallActorRoster
                     && !clearedCombat.WabbajackActive && !clearedCombat.Passive && clearedCombat.SpawnDistance == 0
                     && !clearedCombat.PlayerAllied && clearedCombat.CorruptionOrigin is null
                     && clearedCombat.EncounterBandId is null && clearedCombat.PromotedArchetype is null
-                    && clearedCombat.InfightingOverride is null)
+                    && clearedCombat.InfightingOverride is null && clearedCombat.LairTruce is null)
                 {
                     clearedCombat = null;
                 }

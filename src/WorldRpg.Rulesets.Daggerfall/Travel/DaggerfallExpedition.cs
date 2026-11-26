@@ -284,7 +284,7 @@ internal sealed class DaggerfallExpedition
     /// <param name="mobiles">The foes the tables name.</param>
     internal DaggerfallExpedition(DaggerfallTravelPolicy policy, DaggerfallSiteContext sites, DaggerfallExpeditionTuning tuning,
         IDaggerfallExpeditionSurroundings world, DaggerfallExpeditionSave? saved = null, DaggerfallEncounterSet? tables = null,
-        DaggerfallMobileCatalogSet? mobiles = null)
+        DaggerfallMobileCatalogSet? mobiles = null, DaggerfallCreatureFactionSet? creatureFactions = null)
     {
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
         _sites = sites ?? throw new ArgumentNullException(nameof(sites));
@@ -294,7 +294,7 @@ internal sealed class DaggerfallExpedition
             if (site.Exterior is not null) _locations.TryAdd(new(site.MapPixelX, site.MapPixelY), site);
         _bands = new DaggerfallExpeditionBands(policy, tables ?? new DaggerfallEncounterSet([]),
             mobiles ?? new DaggerfallMobileCatalogSet(new Dictionary<int, DaggerfallMobileDefinition>(), new Dictionary<string, DaggerfallMobileDefinition>()),
-            _tuning.Bands, _locations.ContainsKey);
+            _tuning.Bands, _locations.ContainsKey, creatureFactions);
         if (saved is { Open: true }) Restore(saved.Validate());
         else if (saved is not null) RestoreClosed(saved);
     }

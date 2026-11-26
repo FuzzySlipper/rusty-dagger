@@ -34,6 +34,12 @@ internal sealed class DaggerfallExpeditionBand
     /// <summary>Non-null when this band was staged in response to a <see cref="DaggerfallWorldConditionToken"/>.</summary>
     internal string? ConditionTokenId { get; }
 
+    /// <summary>When non-null, this band represents an active road/wilderness clash against an opposing creature faction.</summary>
+    internal DaggerfallEncounterChoice? RivalChoice { get; init; }
+    internal int RivalSize { get; init; }
+    internal string? RivalName { get; init; }
+    internal bool IsFactionClash => RivalChoice is not null && RivalSize > 0;
+
     /// <summary>A camp stays put; any other band wanders, and pursues the party once it has spotted it.</summary>
     internal bool Camp { get; set; }
 
@@ -209,8 +215,10 @@ internal readonly record struct DaggerfallBandSightConditions(DaggerfallExpediti
 /// upon one unseen. The map shows only the bands within the party's sight.
 /// </summary>
 internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, DaggerfallEncounterSet tables,
-    DaggerfallMobileCatalogSet mobiles, DaggerfallBandTuning tuning, Func<DaggerfallTravelMapPixel, bool> located)
+    DaggerfallMobileCatalogSet mobiles, DaggerfallBandTuning tuning, Func<DaggerfallTravelMapPixel, bool> located,
+    DaggerfallCreatureFactionSet? creatureFactions = null)
 {
+    private readonly DaggerfallCreatureFactionSet _creatureFactions = creatureFactions ?? DaggerfallCreatureFactionSet.ClassicDefault;
     private const long SecondsPerHour = DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour;
     private readonly List<DaggerfallExpeditionBand> _bands = [];
     private int _nextId = 1;
@@ -358,8 +366,31 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
         bool camped = camp ?? draw($"{key}:camp", 1, 100) <= tuning.CampShare;
         string baseName = size == 1 ? mobile!.DonorName : $"{size} {Plural(mobile!.DonorName)}";
         string bandName = string.IsNullOrWhiteSpace(conditionTag) ? baseName : $"{baseName} ({conditionTag})";
+
+        // Downstream of board-game moves: when two opposing regional conditions collide (or a severe MonsterSurge
+        // spills over into rival territory), stage an active two-sided faction clash on the map!
+        DaggerfallEncounterChoice? rivalChoice = null;
+        int rivalSize = 0;
+        string? rivalName = null;
+        if (drivingCondition is not null && mobile is not null
+            && TryStageConditionClashRival(drivingCondition, mobile, worldConditions, request.Context, key, draw,
+                out DaggerfallEncounterChoice? pickedRivalChoice, out DaggerfallMobileDefinition? rivalMobile, out string rivalTag))
+        {
+            rivalChoice = pickedRivalChoice;
+            rivalSize = draw($"{key}:rival-size", tuning.Size.Minimum, tuning.Size.Maximum);
+            string rivalBase = rivalSize == 1 ? rivalMobile!.DonorName : $"{rivalSize} {Plural(rivalMobile!.DonorName)}";
+            rivalName = string.IsNullOrWhiteSpace(rivalTag) ? rivalBase : $"{rivalBase} ({rivalTag})";
+            bandName = $"{bandName} vs {rivalName}";
+            camped = false;
+        }
+
         DaggerfallExpeditionBand band = new(id, request, choice, bandName,
-            overrideKind ?? KindOf(mobile!), size, camped, x, y, when + (long)(tuning.LifetimeHours * SecondsPerHour), conditionTokenId);
+            overrideKind ?? KindOf(mobile!), size, camped, x, y, when + (long)(tuning.LifetimeHours * SecondsPerHour), conditionTokenId)
+        {
+            RivalChoice = rivalChoice,
+            RivalSize = rivalSize,
+            RivalName = rivalName,
+        };
         _nextId++;
         _bands.Add(band);
         return band;
@@ -413,6 +444,16 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
                 bandKind = DaggerfallBandKind.Bandits;
                 labelTag = "Bandit Surge";
                 break;
+            case DaggerfallWorldConditionKind.MonsterSurge when subject is "daedra":
+                predicate = pair => pair.Value.IsPublished && pair.Value.Affinity == "Daedra";
+                bandKind = DaggerfallBandKind.Monsters;
+                labelTag = "Daedra Surge";
+                break;
+            case DaggerfallWorldConditionKind.MonsterSurge when subject is "harpies" or "giants" or "spriggans" or "dragonlings" or "werecreatures":
+                predicate = pair => pair.Value.IsPublished && string.Equals(ResolveMobileCreatureFaction(pair.Value), subject, StringComparison.Ordinal);
+                bandKind = DaggerfallBandKind.Monsters;
+                labelTag = "Monster Surge";
+                break;
             case DaggerfallWorldConditionKind.MonsterSurge:
                 predicate = pair => pair.Value.IsPublished && (pair.Value.Team is "Monsters" or "Undead" || pair.Value.Affinity == "Undead");
                 bandKind = DaggerfallBandKind.Monsters;
@@ -451,6 +492,88 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
         mobileId = chosen.Key;
         mobile = chosen.Value;
         return true;
+    }
+
+    private bool TryStageConditionClashRival(
+        DaggerfallWorldConditionToken primaryCondition,
+        DaggerfallMobileDefinition primaryMobile,
+        IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions,
+        DaggerfallEncounterContext context,
+        string key,
+        Func<string, int, int, int> draw,
+        out DaggerfallEncounterChoice? rivalChoice,
+        out DaggerfallMobileDefinition? rivalMobile,
+        out string rivalTag)
+    {
+        rivalChoice = null;
+        rivalMobile = null;
+        rivalTag = string.Empty;
+
+        string primaryFaction = ResolveMobileCreatureFaction(primaryMobile);
+        if (worldConditions is { Count: > 1 })
+        {
+            foreach (DaggerfallWorldConditionToken other in worldConditions)
+            {
+                if (StringComparer.Ordinal.Equals(other.TokenId, primaryCondition.TokenId)) continue;
+                if (!TryPickConditionMobile(other, $"{key}:rival", draw, out int otherMobileId, out DaggerfallMobileDefinition? otherMobile, out _, out string otherTag)
+                    || otherMobile is null)
+                    continue;
+                string otherFaction = ResolveMobileCreatureFaction(otherMobile);
+                if (_creatureFactions.AreNaturalEnemies(primaryFaction, otherFaction))
+                {
+                    rivalChoice = new DaggerfallEncounterChoice(context, null, null, otherMobileId, null, null, null, $"world-condition-clash:{other.TokenId}");
+                    rivalMobile = otherMobile;
+                    rivalTag = otherTag;
+                    return true;
+                }
+            }
+        }
+
+        if (primaryCondition.Kind == DaggerfallWorldConditionKind.MonsterSurge && primaryCondition.Severity >= 3)
+        {
+            IReadOnlyList<string> rivalFactions = DaggerfallCreatureFactionPolicy.RivalFactionsForCondition(_creatureFactions, primaryCondition);
+            List<KeyValuePair<int, DaggerfallMobileDefinition>> candidates = [.. mobiles.Mobiles
+                .Where(pair => pair.Value.IsPublished
+                    && rivalFactions.Contains(ResolveMobileCreatureFaction(pair.Value), StringComparer.Ordinal)
+                    && _creatureFactions.AreNaturalEnemies(primaryFaction, ResolveMobileCreatureFaction(pair.Value)))
+                .OrderBy(pair => pair.Key)];
+            if (candidates.Count > 0)
+            {
+                int idx = candidates.Count == 1 ? 0 : draw($"{key}:surge-rival", 0, candidates.Count - 1);
+                KeyValuePair<int, DaggerfallMobileDefinition> chosen = candidates[Math.Clamp(idx, 0, candidates.Count - 1)];
+                rivalChoice = new DaggerfallEncounterChoice(context, null, null, chosen.Key, null, null, null, $"world-condition-clash:{primaryCondition.TokenId}");
+                rivalMobile = chosen.Value;
+                rivalTag = "Faction Clash";
+                return true;
+            }
+        }
+        return false;
+    }
+
+    internal static string ResolveMobileCreatureFaction(DaggerfallMobileDefinition mobile)
+    {
+        if (mobile.Team == "Criminals") return "criminals";
+        if (mobile.Team == "CityWatch") return "city-watch";
+        if (mobile.Team == "KnightsAndMages") return "knights-and-mages";
+        if (mobile.Affinity == "Undead" || mobile.Team == "Undead") return "undead";
+        if (mobile.Affinity == "Daedra") return "daedra";
+        string name = mobile.DonorName;
+        if (name.Contains("Orc", StringComparison.OrdinalIgnoreCase)) return "orcs";
+        if (name.Contains("Spriggan", StringComparison.OrdinalIgnoreCase)) return "spriggans";
+        if (name.Contains("Nymph", StringComparison.OrdinalIgnoreCase)) return "nymphs";
+        if (name.Contains("Centaur", StringComparison.OrdinalIgnoreCase)) return "centaurs";
+        if (name.Contains("Bear", StringComparison.OrdinalIgnoreCase)) return "bears";
+        if (name.Contains("Tiger", StringComparison.OrdinalIgnoreCase)) return "tigers";
+        if (name.Contains("Spider", StringComparison.OrdinalIgnoreCase)) return "spiders";
+        if (name.Contains("Scorpion", StringComparison.OrdinalIgnoreCase)) return "scorpions";
+        if (name.Contains("Were", StringComparison.OrdinalIgnoreCase)) return "werecreatures";
+        if (name.Contains("Harpy", StringComparison.OrdinalIgnoreCase)) return "harpies";
+        if (name.Contains("Giant", StringComparison.OrdinalIgnoreCase) && !name.Contains("Bat", StringComparison.OrdinalIgnoreCase) && !name.Contains("Rat", StringComparison.OrdinalIgnoreCase)) return "giants";
+        if (name.Contains("Dragonling", StringComparison.OrdinalIgnoreCase)) return "dragonlings";
+        if (name.Contains("Rat", StringComparison.OrdinalIgnoreCase) || name.Contains("Bat", StringComparison.OrdinalIgnoreCase)) return "vermin";
+        if (name.Contains("Slaughterfish", StringComparison.OrdinalIgnoreCase) || name.Contains("Dreugh", StringComparison.OrdinalIgnoreCase) || name.Contains("Lamia", StringComparison.OrdinalIgnoreCase)) return "aquatic";
+        if (name.Contains("Atronach", StringComparison.OrdinalIgnoreCase) || name.Contains("Imp", StringComparison.OrdinalIgnoreCase) || name.Contains("Gargoyle", StringComparison.OrdinalIgnoreCase)) return "magic";
+        return "player-enemy";
     }
 
     private void Move(DaggerfallExpeditionBand band, (double X, double Y) party, double hours, Func<string, int, int, int> draw)

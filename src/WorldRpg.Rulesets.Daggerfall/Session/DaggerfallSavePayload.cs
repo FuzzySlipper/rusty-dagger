@@ -242,6 +242,7 @@ internal sealed record DaggerfallSavePayload(
             ForcedHostile = entry.Combat?.ForcedHostile ?? false,
             LanguagePacified = entry.Combat?.LanguagePacified ?? false,
             MagicallyPacified = entry.Combat?.MagicallyPacified ?? false,
+            LairTruce = entry.Combat?.LairTruce,
         };
 
     private static DaggerfallDynamicActorSave ToDynamicActorSave(ActorLedgerEntry entry) =>
@@ -262,6 +263,8 @@ internal sealed record DaggerfallSavePayload(
             PromotedArchetype = entry.Combat?.PromotedArchetype,
             EncounterBandId = entry.Combat?.EncounterBandId,
             EncounterGeneration = entry.Combat?.EncounterGeneration,
+            LairTruce = entry.Combat?.LairTruce ?? false,
+            FactionInfighting = entry.Combat?.InfightingOverride ?? false,
         };
 
     private static DaggerfallNpcEntry ToNpcEntry(ActorLedgerEntry entry)

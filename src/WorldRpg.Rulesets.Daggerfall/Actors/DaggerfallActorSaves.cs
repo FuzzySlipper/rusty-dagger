@@ -9,6 +9,7 @@ internal sealed record DaggerfallActorSave(long EntityId, float X, float Y, floa
     public bool ForcedHostile { get; init; }
     [JsonRequired] public bool LanguagePacified { get; init; }
     [JsonRequired] public bool MagicallyPacified { get; init; }
+    public bool? LairTruce { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
@@ -39,6 +40,8 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
     public string? PromotedArchetype { get; init; }
     public int? EncounterBandId { get; init; }
     public ulong? EncounterGeneration { get; init; }
+    public bool LairTruce { get; init; }
+    public bool FactionInfighting { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(HeadingRadians))
