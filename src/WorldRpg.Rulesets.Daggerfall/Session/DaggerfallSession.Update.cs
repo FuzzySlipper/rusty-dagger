@@ -276,6 +276,8 @@ internal sealed partial class DaggerfallSession
         if (!Expedition.Open)
             AdvanceOffMapOverland(before, after);                                                 // Travel, Actors: persistent bands run off-map too (Q4)
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
+        if (!ordinaryPlay || minuteAfter - minuteBefore >= 10)
+            ResetScheduleWeatherBaseline();                                                       // Society: settle schedules immediately across time jumps/rest
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar.Sky, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
         _exterior.UpdateResidentCityLights();                                                     // Exterior
         // The gates follow the clock as the lights do, whatever moved it, so an hour that passes while the world is

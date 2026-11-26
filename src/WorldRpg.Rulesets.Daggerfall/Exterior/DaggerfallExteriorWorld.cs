@@ -74,6 +74,9 @@ internal interface IDaggerfallExteriorHost
     /// come are settled on the floor below them now.
     /// </summary>
     void GroundArrivedActors();
+
+    /// <summary>Whether an exterior source-population placement is currently scheduled outdoors by <c>DaggerfallNpcSchedulePolicy</c>.</summary>
+    bool IsPlacementScheduledOutdoors(DaggerfallSiteId siteId, DaggerfallPopulationPlacement placement, long actorId, int totalPopulationCount) => true;
 }
 
 /// <summary>
@@ -1179,14 +1182,17 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
                 .Where(npc => npc.Profile == key && DaggerfallCivilians.IsSourcePopulation(npc) && npc.Presence != DaggerfallNpcPresence.Removed)
                 .Select(npc => npc.DurableId)
                 .ToHashSet();
-            if (_time.Calendar.IsDay && profile.Site is { } residentSiteId && profile.Population.Count > 0)
+            if (profile.Site is { } residentSiteId && profile.Population.Count > 0)
             {
                 DaggerfallSiteRecord residentSite = _site.Require(residentSiteId);
                 if (DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, residentSite, out _) is not null)
                 {
-                    int capacity = DaggerfallSourcePopulation.Capacity(residentSite, profile.Population.Count);
+                    int totalCount = profile.Population.Count;
+                    int capacity = DaggerfallSourcePopulation.Capacity(residentSite, totalCount);
                     foreach (DaggerfallPopulationPlacement pop in profile.Population
                         .Where(p => DaggerfallSourcePopulation.IsEligiblePlacement(profile, _definitions, p))
+                        .Where(p => _host.IsPlacementScheduledOutdoors(residentSiteId, p,
+                            DaggerfallPeopleSlots.SeededSlotIdentity(residentSiteId, $"{key.LogicalId}/{p.Id}"), totalCount))
                         .OrderBy(p => p.Id, StringComparer.Ordinal)
                         .Take(capacity))
                     {

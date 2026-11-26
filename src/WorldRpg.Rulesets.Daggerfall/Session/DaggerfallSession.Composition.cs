@@ -1093,7 +1093,9 @@ internal sealed partial class DaggerfallSession
                 id => _reactions.Holds(id), (actor, policy, step, deltaSeconds) => _ = _enemyBehavior.UpdateCivilian(actor, policy, step, deltaSeconds),
                 message => engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
                     "daggerfall.people", "population", message, string.Empty)),
-                State.ActorLedger, id => State.Quests.IsEscortWithParty(id));
+                State.ActorLedger, id => State.Quests.IsEscortWithParty(id),
+                (siteId, placement, actorId, totalCount) =>
+                    EvaluateExteriorPlacementSchedule(siteId, placement, actorId, totalCount).Placement == DaggerfallSchedulePlacement.ExteriorStreet);
             State.Quests.BindEscortOverlay((actorId, media, order) =>
             {
                 if (media is not null)

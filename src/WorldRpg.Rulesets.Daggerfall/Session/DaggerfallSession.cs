@@ -377,7 +377,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     void IDaggerfallExteriorHost.ConfigureSiteAppearance(DaggerfallSiteAppearance appearance) =>
         ConfigureSiteAppearance(appearance);
 
-    void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation() => Population.Reconcile();
+    void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation()
+    {
+        ResetScheduleWeatherBaseline();
+        Population.Reconcile();
+    }
 
     IReadOnlyList<long> IDaggerfallSiteTransitionHost.BeforeSiteTransition()
     {
@@ -396,6 +400,83 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallExteriorHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
         Civilians.AdmitResidentAppearances(projection.Inputs, projection.Appearance);
+
+    private DaggerfallWeatherKind? _scheduleObservedWeather;
+    private long _scheduleWeatherChangedMinute = long.MinValue;
+
+    internal void ResetScheduleWeatherBaseline()
+    {
+        _scheduleObservedWeather = null;
+        _scheduleWeatherChangedMinute = long.MinValue;
+    }
+
+    private static bool IsShelteringWeather(DaggerfallWeatherKind weather) =>
+        weather is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Snow;
+
+    internal int ScheduleWeatherElapsedMinutes()
+    {
+        DaggerfallWeatherKind current = LocalWeather.Current;
+        if (_scheduleObservedWeather is null || !IsShelteringWeather(current))
+        {
+            _scheduleObservedWeather = current;
+            _scheduleWeatherChangedMinute = long.MinValue;
+            return int.MaxValue;
+        }
+        if (!IsShelteringWeather(_scheduleObservedWeather.Value))
+        {
+            // Fresh onset from fair weather: start staggered 2-10 minute shelter delay.
+            _scheduleObservedWeather = current;
+            _scheduleWeatherChangedMinute = _time.Calendar.MinuteNumber;
+            return 0;
+        }
+        // Continuing or escalating precipitating weather (e.g. Rain -> Thunder): keep existing onset
+        // so already-sheltered walkers never pop back outdoors into a worse storm.
+        _scheduleObservedWeather = current;
+        if (_scheduleWeatherChangedMinute == long.MinValue)
+            return int.MaxValue;
+        return (int)Math.Clamp(_time.Calendar.MinuteNumber - _scheduleWeatherChangedMinute, 0L, int.MaxValue);
+    }
+
+    internal DaggerfallScheduleDecision EvaluateExteriorPlacementSchedule(
+        DaggerfallSiteId siteId,
+        DaggerfallPopulationPlacement placement,
+        long actorId,
+        int totalPopulationCount)
+    {
+        int minuteOfDay = checked(_time.Calendar.Hour * DaggerfallCalendar.MinutesPerHour + _time.Calendar.Minute);
+        DaggerfallWeatherKind weather = LocalWeather.Current;
+        int weatherElapsed = ScheduleWeatherElapsedMinutes();
+        bool isWithParty = State.Quests.IsEscortWithParty(actorId)
+            || (State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.WithParty);
+        bool isOnOverlandBand = State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? bandEntry)
+            && bandEntry?.Location?.Kind == ActorLocationKind.OnOverlandBand;
+        bool isActiveQuestor = State.Quests.QuestContacts(actorId).Count > 0 || State.Quests.IsNpcUnavailable(actorId);
+        DaggerfallSiteRecord? siteRecord = _site.TryFind(siteId, out DaggerfallSiteRecord found) ? found : null;
+        bool isOfficeHolder = OfficeLedger.IsOfficeHolder(actorId, siteRecord);
+
+        return DaggerfallNpcSchedulePolicy.EvaluateExteriorPlacement(
+            _worldSocialSeed,
+            siteId,
+            placement.Id,
+            placement.IsGuard,
+            totalPopulationCount,
+            _definitions.ActorCatalog,
+            minuteOfDay,
+            weather,
+            weatherElapsedMinutes: weatherElapsed,
+            isActiveQuestor: isActiveQuestor,
+            isOfficeHolder: isOfficeHolder,
+            isWithParty: isWithParty,
+            isOnOverlandBand: isOnOverlandBand);
+    }
+
+    bool IDaggerfallExteriorHost.IsPlacementScheduledOutdoors(
+        DaggerfallSiteId siteId,
+        DaggerfallPopulationPlacement placement,
+        long actorId,
+        int totalPopulationCount) =>
+        EvaluateExteriorPlacementSchedule(siteId, placement, actorId, totalPopulationCount).Placement
+            == DaggerfallSchedulePlacement.ExteriorStreet;
 
     // What rest asks of the world, each read from the domain that knows it when the rest asks.
     DaggerfallWorldProfileKey IDaggerfallTeleportSites.ActiveProfile => _activeProfileKey;

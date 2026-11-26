@@ -232,6 +232,8 @@ function EffectivePreviewPanel({
   const [level, setLevel] = useState(1);
   const [gender, setGender] = useState(initialGender || 'male');
   const [region, setRegion] = useState<number>(17);
+  const [timeOfDay, setTimeOfDay] = useState<string>('12:00');
+  const [weather, setWeather] = useState<string>('sunny');
   const [preview, setPreview] = useState<ActorPreviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -250,6 +252,8 @@ function EffectivePreviewPanel({
       level: String(level),
       gender,
       region: String(region),
+      timeOfDay,
+      weather,
     });
     apiRequest<ActorPreviewResult>(`/api/actors/preview?${params.toString()}`, { signal: controller.signal })
       .then(data => setPreview(data))
@@ -260,7 +264,7 @@ function EffectivePreviewPanel({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [kind, id, level, gender, region]);
+  }, [kind, id, level, gender, region, timeOfDay, weather]);
 
   const eff = preview?.effective;
 
@@ -303,6 +307,37 @@ function EffectivePreviewPanel({
               ))}
             </select>
           </label>
+          <label>
+            Time of day
+            <select
+              value={timeOfDay}
+              onChange={e => setTimeOfDay((e.currentTarget as HTMLSelectElement).value)}
+            >
+              <option value="03:00">03:00 (Late night)</option>
+              <option value="06:30">06:30 (Dawn)</option>
+              <option value="09:30">09:30 (Morning)</option>
+              <option value="12:00">12:00 (Midday)</option>
+              <option value="17:30">17:30 (Late afternoon)</option>
+              <option value="18:30">18:30 (Dusk)</option>
+              <option value="20:30">20:30 (Evening tavern)</option>
+              <option value="23:30">23:30 (Underworld night)</option>
+            </select>
+          </label>
+          <label>
+            Weather
+            <select
+              value={weather}
+              onChange={e => setWeather((e.currentTarget as HTMLSelectElement).value)}
+            >
+              <option value="sunny">Sunny</option>
+              <option value="cloudy">Cloudy</option>
+              <option value="overcast">Overcast</option>
+              <option value="fog">Fog</option>
+              <option value="rain">Rain</option>
+              <option value="thunder">Thunder</option>
+              <option value="snow">Snow</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -339,6 +374,28 @@ function EffectivePreviewPanel({
                 }}
               />
             </div>
+
+            {eff.schedule ? (
+              <div class="actor-preview-card">
+                <h3>Schedule &amp; weather ({preview.inputs.timeOfDay ?? timeOfDay} · {preview.inputs.weather ?? weather})</h3>
+                <FactList
+                  facts={{
+                    Profile: `${eff.schedule.label} (${eff.schedule.scheduleId})`,
+                    Placement: eff.schedule.placement,
+                    ...(eff.schedule.buildingTarget !== 'none' ? { Target: eff.schedule.buildingTarget } : {}),
+                    Reason: eff.schedule.reason,
+                    ...(eff.schedule.openHours ? { 'Open hours': eff.schedule.openHours } : {}),
+                    ...(eff.schedule.jitterMinutes > 0 ? { 'Slot jitter': `±${eff.schedule.jitterMinutes} min` } : {}),
+                    ...(eff.schedule.eveningTavernWindow
+                      ? { 'Evening tavern': `${eff.schedule.eveningTavernWindow} (${eff.schedule.eveningTavernSharePercent}%)` }
+                      : {}),
+                    'Storm sheltering': eff.schedule.sheltersInStorm
+                      ? `${eff.schedule.sheltersInRain ? 'Rain & storms' : 'Thunder/snow only'} (${eff.schedule.stormDelayMinMinutes}–${eff.schedule.stormDelayMaxMinutes} min)`
+                      : 'None (stays on duty)',
+                  }}
+                />
+              </div>
+            ) : null}
 
             <div class="actor-preview-card">
               <h3>Spells ({eff.spellPolicy})</h3>
@@ -667,6 +724,7 @@ function SpecInspector({
             ...(detail.team ? { Team: detail.team } : {}),
             ...(detail.factionId ? { Faction: `${detail.factionName ?? 'Faction'} (#${detail.factionId})` } : {}),
             ...(detail.socialGrouping ? { 'Social grouping': detail.socialGrouping } : {}),
+            ...(detail.schedule ? { Schedule: detail.schedule } : {}),
             ...(detail.familyId ? { 'Family / Dynasty': detail.familyId } : {}),
             ...(detail.home?.block
               ? {

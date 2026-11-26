@@ -57,6 +57,20 @@ internal static class DaggerfallBuildingEntryPolicy
         buildingType >= 0 && buildingType < OpenHours.Length
         && hour >= OpenHours[buildingType] && hour < CloseHours[buildingType];
 
+    /// <summary>Reads the donor's public opening and closing hours for a building type from the single authoritative table.</summary>
+    internal static bool TryGetOpeningHours(int buildingType, out int openHour, out int closeHour)
+    {
+        if (buildingType >= 0 && buildingType < OpenHours.Length)
+        {
+            openHour = OpenHours[buildingType];
+            closeHour = CloseHours[buildingType];
+            return true;
+        }
+        openHour = 0;
+        closeHour = 0;
+        return false;
+    }
+
     /// <summary>The donor's residences (<c>RMBLayout.IsResidence</c>), named only "Residence".</summary>
     internal static bool IsResidence(int buildingType) => buildingType is >= House1 and <= House4;
 

@@ -319,12 +319,46 @@ internal sealed record DaggerfallActorSpawnerSpec(
     string? FamilyId = null,
     ActorSocialGrouping SocialGrouping = ActorSocialGrouping.None);
 
-/// <summary>Resolved actor template and spawner spec catalog owned by <see cref="DaggerfallDefinitions"/>.</summary>
+/// <summary>Primary placement posture of a named NPC schedule profile in <c>actors/schedules.json</c>.</summary>
+internal enum DaggerfallSchedulePrimaryMode
+{
+    ExteriorStreet,
+    InteriorBuilding,
+    AlwaysStationed,
+}
+
+/// <summary>Named coarse schedule and weather-sheltering policy authored in <c>actors/schedules.json</c> and referenced by spawner specs.</summary>
+internal sealed record DaggerfallActorScheduleProfile(
+    string Id,
+    string Label,
+    string Description,
+    DaggerfallSchedulePrimaryMode PrimaryMode,
+    bool UsesBuildingOpeningHours,
+    int ActiveStartMinute,
+    int ActiveEndMinute,
+    int JitterMinutes,
+    int? EveningTavernStartMinute,
+    int? EveningTavernEndMinute,
+    int EveningTavernSharePercent,
+    bool SheltersInRain,
+    bool SheltersInStorm,
+    int StormDelayMinMinutes,
+    int StormDelayMaxMinutes,
+    bool UnderworldNightPulse);
+
+/// <summary>Resolved actor template, spawner spec, and schedule catalog owned by <see cref="DaggerfallDefinitions"/>.</summary>
 internal sealed record DaggerfallActorCatalog(
     IReadOnlyDictionary<string, DaggerfallActorTemplateDefinition> Templates,
     IReadOnlyDictionary<string, DaggerfallActorSpawnerSpec> Specs,
-    IReadOnlyDictionary<int, DaggerfallActorSpawnerSpec> SpecsByMobileId)
+    IReadOnlyDictionary<int, DaggerfallActorSpawnerSpec> SpecsByMobileId,
+    IReadOnlyDictionary<string, DaggerfallActorScheduleProfile>? SchedulesMap = null)
 {
+    private static readonly IReadOnlyDictionary<string, DaggerfallActorScheduleProfile> EmptySchedules =
+        new ReadOnlyDictionary<string, DaggerfallActorScheduleProfile>(
+            new Dictionary<string, DaggerfallActorScheduleProfile>(StringComparer.Ordinal));
+
+    internal IReadOnlyDictionary<string, DaggerfallActorScheduleProfile> Schedules => SchedulesMap ?? EmptySchedules;
+
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> EmptyPoolMap =
         new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(
             new Dictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(StringComparer.OrdinalIgnoreCase));
@@ -332,7 +366,8 @@ internal sealed record DaggerfallActorCatalog(
     internal static DaggerfallActorCatalog Empty { get; } = new(
         new ReadOnlyDictionary<string, DaggerfallActorTemplateDefinition>(new Dictionary<string, DaggerfallActorTemplateDefinition>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<string, DaggerfallActorSpawnerSpec>(new Dictionary<string, DaggerfallActorSpawnerSpec>(StringComparer.Ordinal)),
-        new ReadOnlyDictionary<int, DaggerfallActorSpawnerSpec>(new Dictionary<int, DaggerfallActorSpawnerSpec>()));
+        new ReadOnlyDictionary<int, DaggerfallActorSpawnerSpec>(new Dictionary<int, DaggerfallActorSpawnerSpec>()),
+        EmptySchedules);
 
     /// <summary>Projects resolved actor templates with real vitals into <see cref="ArchetypeProfile"/> records.</summary>
     internal IReadOnlyDictionary<string, ArchetypeProfile> ProjectArchetypes() =>
@@ -552,7 +587,7 @@ internal static partial class DaggerfallBaseContent
         new(["legacy", "intelligent", "beast"], StringComparer.Ordinal);
 
     private static readonly HashSet<string> ForbiddenTemplateFields =
-        new(["gender", "genders", "name", "displayName", "visual", "appearances", "sounds", "mobileId", "classicBinding", "home", "familyId", "team"], StringComparer.Ordinal);
+        new(["gender", "genders", "name", "displayName", "visual", "appearances", "sounds", "mobileId", "classicBinding", "home", "familyId", "team", "schedule"], StringComparer.Ordinal);
 
     private static readonly HashSet<string> ForbiddenCastMechanicFields =
         new(["attributes", "skills", "stats", "health", "fatigue", "magicka", "armor", "hitPointsPerLevel", "level", "weight", "xpReward", "attacks", "action", "loadout", "minMetalToHit", "lootTableKey", "careerRef", "tactic", "tendencies", "scaling", "gearPolicy"], StringComparer.Ordinal);
@@ -763,6 +798,9 @@ internal static partial class DaggerfallBaseContent
                 resolvedTemplates[id] = built;
         }
 
+        // 2b. Read named schedule profiles (actors/schedules.json)
+        Dictionary<string, DaggerfallActorScheduleProfile> schedules = ReadActorSchedules(root, diagnostics);
+
         // 3. Read spawner specs & project DaggerfallActorDefinition + DaggerfallMobileCatalogSet
         Dictionary<string, DaggerfallActorSpawnerSpec> specs = new(StringComparer.Ordinal);
         Dictionary<int, DaggerfallActorSpawnerSpec> specsByMobile = [];
@@ -787,7 +825,7 @@ internal static partial class DaggerfallBaseContent
                     continue;
                 }
                 RejectDuplicateProperties(item, $"{sectionName}.spec", diagnostics);
-                DaggerfallActorSpawnerSpec? spec = ReadSpawnerSpec(item, sectionName, resolvedTemplates, validCreatureTeams, factions, diagnostics);
+                DaggerfallActorSpawnerSpec? spec = ReadSpawnerSpec(item, sectionName, resolvedTemplates, schedules, validCreatureTeams, factions, diagnostics);
                 if (spec is null) continue;
                 if (!specs.TryAdd(spec.Id, spec))
                 {
@@ -923,7 +961,8 @@ internal static partial class DaggerfallBaseContent
         DaggerfallActorCatalog catalog = new(
             new ReadOnlyDictionary<string, DaggerfallActorTemplateDefinition>(resolvedTemplates),
             new ReadOnlyDictionary<string, DaggerfallActorSpawnerSpec>(specs),
-            new ReadOnlyDictionary<int, DaggerfallActorSpawnerSpec>(specsByMobile));
+            new ReadOnlyDictionary<int, DaggerfallActorSpawnerSpec>(specsByMobile),
+            new ReadOnlyDictionary<string, DaggerfallActorScheduleProfile>(schedules));
         DaggerfallMobileCatalogSet mobileSet = new(
             new ReadOnlyDictionary<int, DaggerfallMobileDefinition>(mobiles),
             new ReadOnlyDictionary<string, DaggerfallMobileDefinition>(mobilesByActor));
@@ -1257,10 +1296,106 @@ internal static partial class DaggerfallBaseContent
             walks);
     }
 
+    private static Dictionary<string, DaggerfallActorScheduleProfile> ReadActorSchedules(
+        JsonElement root,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<string, DaggerfallActorScheduleProfile> schedules = new(StringComparer.Ordinal);
+        if (!root.TryGetProperty("actorSchedules", out JsonElement section) || section.ValueKind == JsonValueKind.Null)
+            return schedules;
+
+        JsonElement obj = Object(section, "actorSchedules", diagnostics);
+        if (obj.ValueKind != JsonValueKind.Object) return schedules;
+
+        foreach (JsonElement item in Array(obj, "profiles", diagnostics))
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                diagnostics.Add("Section 'actorSchedules' contains a non-object schedule profile.");
+                continue;
+            }
+            RejectDuplicateProperties(item, "actorSchedules.profile", diagnostics);
+            string id = Text(item, "id", diagnostics);
+            if (!ValidId(id))
+            {
+                diagnostics.Add($"Actor schedule profile id '{id}' is invalid.");
+                continue;
+            }
+            string label = OptionalText(item, "label", diagnostics) ?? id;
+            string description = OptionalText(item, "description", diagnostics) ?? string.Empty;
+            DaggerfallSchedulePrimaryMode primaryMode = ParseEnum(
+                Text(item, "primaryMode", diagnostics),
+                id,
+                "primaryMode",
+                diagnostics,
+                static s => s switch
+                {
+                    "exterior-street" => DaggerfallSchedulePrimaryMode.ExteriorStreet,
+                    "interior-building" => DaggerfallSchedulePrimaryMode.InteriorBuilding,
+                    "always-stationed" => DaggerfallSchedulePrimaryMode.AlwaysStationed,
+                    _ => (DaggerfallSchedulePrimaryMode?)null,
+                },
+                DaggerfallSchedulePrimaryMode.AlwaysStationed);
+
+            bool usesBuildingOpeningHours = OptionalBool(item, "usesBuildingOpeningHours");
+            int activeStartMinute = Integer(item, "activeStartMinute", diagnostics);
+            int activeEndMinute = Integer(item, "activeEndMinute", diagnostics);
+            int jitterMinutes = OptionalInteger(item, "jitterMinutes", diagnostics) ?? 0;
+            int? eveningTavernStartMinute = OptionalInteger(item, "eveningTavernStartMinute", diagnostics);
+            int? eveningTavernEndMinute = OptionalInteger(item, "eveningTavernEndMinute", diagnostics);
+            int eveningTavernSharePercent = OptionalInteger(item, "eveningTavernSharePercent", diagnostics) ?? 0;
+            bool sheltersInRain = OptionalBool(item, "sheltersInRain");
+            bool sheltersInStorm = OptionalBool(item, "sheltersInStorm");
+            int stormDelayMinMinutes = OptionalInteger(item, "stormDelayMinMinutes", diagnostics) ?? 0;
+            int stormDelayMaxMinutes = OptionalInteger(item, "stormDelayMaxMinutes", diagnostics) ?? 0;
+            bool underworldNightPulse = OptionalBool(item, "underworldNightPulse");
+
+            if (activeStartMinute is < 0 or >= 1440)
+                diagnostics.Add($"Actor schedule '{id}' activeStartMinute {activeStartMinute} must be in [0, 1439].");
+            if (activeEndMinute is <= 0 or > 1440)
+                diagnostics.Add($"Actor schedule '{id}' activeEndMinute {activeEndMinute} must be in [1, 1440].");
+            if (jitterMinutes is < 0 or > 60)
+                diagnostics.Add($"Actor schedule '{id}' jitterMinutes {jitterMinutes} must be in [0, 60].");
+            if (eveningTavernStartMinute.HasValue != eveningTavernEndMinute.HasValue)
+                diagnostics.Add($"Actor schedule '{id}' must define both eveningTavernStartMinute and eveningTavernEndMinute or neither.");
+            if (eveningTavernStartMinute is < 0 or >= 1440)
+                diagnostics.Add($"Actor schedule '{id}' eveningTavernStartMinute must be in [0, 1439].");
+            if (eveningTavernEndMinute is <= 0 or > 1440)
+                diagnostics.Add($"Actor schedule '{id}' eveningTavernEndMinute must be in [1, 1440].");
+            if (eveningTavernSharePercent is < 0 or > 100)
+                diagnostics.Add($"Actor schedule '{id}' eveningTavernSharePercent must be in [0, 100].");
+            if (stormDelayMinMinutes < 0 || stormDelayMaxMinutes < stormDelayMinMinutes || stormDelayMaxMinutes > 60)
+                diagnostics.Add($"Actor schedule '{id}' storm delay range [{stormDelayMinMinutes}, {stormDelayMaxMinutes}] is invalid.");
+
+            DaggerfallActorScheduleProfile profile = new(
+                id,
+                label,
+                description,
+                primaryMode,
+                usesBuildingOpeningHours,
+                activeStartMinute,
+                activeEndMinute,
+                jitterMinutes,
+                eveningTavernStartMinute,
+                eveningTavernEndMinute,
+                eveningTavernSharePercent,
+                sheltersInRain,
+                sheltersInStorm,
+                stormDelayMinMinutes,
+                stormDelayMaxMinutes,
+                underworldNightPulse);
+            if (!schedules.TryAdd(id, profile))
+                diagnostics.Add($"Duplicate actor schedule profile '{id}'.");
+        }
+
+        return schedules;
+    }
+
     private static DaggerfallActorSpawnerSpec? ReadSpawnerSpec(
         JsonElement item,
         string sectionName,
         IReadOnlyDictionary<string, DaggerfallActorTemplateDefinition> templates,
+        IReadOnlyDictionary<string, DaggerfallActorScheduleProfile> schedules,
         IReadOnlySet<string> validTeams,
         DaggerfallFactionsSet factions,
         DaggerfallContentDiagnostics diagnostics)
@@ -1360,6 +1495,8 @@ internal static partial class DaggerfallBaseContent
             }
         }
         string? schedule = OptionalText(item, "schedule", diagnostics);
+        if (schedule is not null && !schedules.ContainsKey(schedule))
+            diagnostics.Add($"Actor spawner spec '{id}' refers to unknown schedule '{schedule}'.");
         int? levelMin = null, levelMax = null;
         if (item.TryGetProperty("levelBand", out JsonElement lbEl) && lbEl.ValueKind == JsonValueKind.Object)
         {

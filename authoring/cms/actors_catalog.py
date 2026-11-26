@@ -44,6 +44,7 @@ LOOKUP_SECTIONS = (
     "actorSpecsEnemies",
     "actorSpecsTownsfolk",
     "actorSpecsCast",
+    "actorSchedules",
     "catalogs",
     "encounters",
     "enemySpells",
@@ -52,6 +53,171 @@ LOOKUP_SECTIONS = (
     "factions",
     "buildingNames",
 )
+
+WEATHER_KINDS = ("sunny", "cloudy", "overcast", "fog", "rain", "thunder", "snow")
+
+# Mirrors DaggerfallBuildingEntryPolicy.OpenHours/CloseHours by classic building type.
+_BUILDING_OPEN_HOURS = (7, 8, 9, 8, 0, 9, 10, 10, 9, 6, 9, 11, 9, 9, 0, 0, 10, 0, 6, 6, 6, 6, 6, 6, 0)
+_BUILDING_CLOSE_HOURS = (22, 16, 19, 15, 25, 21, 19, 20, 18, 23, 23, 23, 20, 20, 25, 25, 16, 0, 18, 18, 18, 18, 18, 18, 25)
+
+_SPEC_DEFAULT_BUILDING_TYPE = {
+    "town-alchemist": 0,
+    "town-armorer": 2,
+    "town-banker": 3,
+    "town-bookseller": 5,
+    "town-clothier": 6,
+    "town-furniture-merchant": 7,
+    "town-jeweler": 8,
+    "town-general-merchant": 9,
+    "town-pawnbroker": 12,
+    "town-weaponsmith": 13,
+    "town-fighters-guild-member": 11,
+    "town-guild-member": 11,
+    "town-knightly-order-member": 11,
+    "town-mage-guild-member": 11,
+    "town-scholar": 11,
+    "town-temple-priest": 14,
+    "town-tavern-keeper": 15,
+    "town-courtier": 16,
+    "town-noble": 16,
+    "town-palace-attendant": 16,
+}
+
+
+def _parse_time_of_day(raw: str | None) -> tuple[int, str]:
+    if raw is None or not str(raw).strip():
+        return 720, "12:00"
+    text = str(raw).strip()
+    if ":" in text:
+        h_part, sep, m_part = text.partition(":")
+        if not sep or not h_part.isdigit() or not m_part.isdigit():
+            raise ValueError("Query parameter 'timeOfDay' must be HH:MM or an integer hour 0-23.")
+        hour, minute = int(h_part), int(m_part)
+    elif text.isdigit():
+        hour, minute = int(text), 0
+    else:
+        raise ValueError("Query parameter 'timeOfDay' must be HH:MM or an integer hour 0-23.")
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        raise ValueError("Query parameter 'timeOfDay' must be within 00:00-23:59.")
+    return hour * 60 + minute, f"{hour:02d}:{minute:02d}"
+
+
+def _parse_weather(raw: str | None) -> str:
+    if raw is None or not str(raw).strip():
+        return "sunny"
+    value = str(raw).strip().lower()
+    if value not in WEATHER_KINDS:
+        raise ValueError(f"Query parameter 'weather' must be one of {', '.join(WEATHER_KINDS)}.")
+    return value
+
+
+def _in_minute_window(minute_of_day: int, start_min: int, end_min: int) -> bool:
+    if start_min == 0 and end_min >= 1440:
+        return True
+    if start_min < end_min:
+        return start_min <= minute_of_day < end_min
+    return minute_of_day >= start_min or minute_of_day < end_min
+
+
+def _format_minute(minute: int) -> str:
+    m = minute % 1440
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def _evaluate_schedule_preview(
+    spec: dict | None,
+    schedules: dict[str, dict],
+    minute_of_day: int,
+    weather: str,
+) -> dict | None:
+    if not spec:
+        return None
+    sched_id = spec.get("schedule")
+    if not isinstance(sched_id, str) or not sched_id:
+        return None
+    profile = schedules.get(sched_id)
+    if not profile:
+        return {"scheduleId": sched_id, "label": sched_id, "placement": "unknown", "buildingTarget": "none", "reason": "missing-profile"}
+
+    mode = profile.get("primaryMode") or "always-stationed"
+    open_hours_text = None
+    building_type = _SPEC_DEFAULT_BUILDING_TYPE.get(spec.get("id", ""))
+    if building_type is None and spec.get("family") == "cast" and sched_id == "court-noble":
+        building_type = 16
+
+    hour = minute_of_day // 60
+    placement = "interior-building"
+    target = "home-post"
+    reason = "always-stationed"
+
+    if mode == "always-stationed":
+        placement, target, reason = "interior-building", "home-post", "always-stationed"
+    elif mode == "interior-building":
+        if profile.get("usesBuildingOpeningHours") and building_type is not None and 0 <= building_type < len(_BUILDING_OPEN_HOURS):
+            o_h, c_h = _BUILDING_OPEN_HOURS[building_type], _BUILDING_CLOSE_HOURS[building_type]
+            open_hours_text = "Always open" if c_h >= 25 else (f"{o_h:02d}:00–{c_h:02d}:00" if c_h > o_h else "Locked")
+            is_open = o_h <= hour < c_h
+        else:
+            start_m = int(profile.get("activeStartMinute", 0))
+            end_m = int(profile.get("activeEndMinute", 1440))
+            open_hours_text = f"{_format_minute(start_m)}–{_format_minute(end_m)}"
+            is_open = _in_minute_window(minute_of_day, start_m, end_m)
+        if is_open:
+            placement, target, reason = "interior-building", "home-post", "open-hours"
+        else:
+            ev_s = profile.get("eveningTavernStartMinute")
+            ev_e = profile.get("eveningTavernEndMinute")
+            share = int(profile.get("eveningTavernSharePercent") or 0)
+            if isinstance(ev_s, int) and isinstance(ev_e, int) and share > 0 and _in_minute_window(minute_of_day, ev_s, ev_e):
+                placement, target, reason = "interior-building", "tavern", "evening-tavern-eligible"
+            else:
+                placement, target, reason = "sheltered-in-home", "none", "after-hours"
+    else:
+        start_m = int(profile.get("activeStartMinute", 0))
+        end_m = int(profile.get("activeEndMinute", 1440))
+        shelters_rain = bool(profile.get("sheltersInRain"))
+        shelters_storm = bool(profile.get("sheltersInStorm"))
+        weather_shelters = (shelters_storm and weather in ("thunder", "snow")) or (shelters_rain and weather == "rain")
+        if start_m == 0 and end_m >= 1440 and not shelters_rain and not shelters_storm:
+            placement, target, reason = "exterior-street", "none", "on-duty"
+        elif weather_shelters:
+            share = int(profile.get("eveningTavernSharePercent") or 0)
+            if share > 0:
+                placement, target, reason = "interior-building", "tavern", "storm-shelter-tavern-or-home"
+            else:
+                placement, target, reason = "sheltered-in-home", "none", "storm-shelter-home"
+        elif _in_minute_window(minute_of_day, start_m, end_m):
+            placement = "exterior-street"
+            target = "none"
+            reason = "underworld-night" if profile.get("underworldNightPulse") else "daytime-street"
+        else:
+            ev_s = profile.get("eveningTavernStartMinute")
+            ev_e = profile.get("eveningTavernEndMinute")
+            share = int(profile.get("eveningTavernSharePercent") or 0)
+            if isinstance(ev_s, int) and isinstance(ev_e, int) and share > 0 and _in_minute_window(minute_of_day, ev_s, ev_e):
+                placement, target, reason = "interior-building", "tavern", "evening-tavern-or-home"
+            else:
+                placement, target, reason = "sheltered-in-home", "none", "daytime-shelter" if end_m < start_m else "night-shelter"
+
+    ev_s = profile.get("eveningTavernStartMinute")
+    ev_e = profile.get("eveningTavernEndMinute")
+    evening_window = f"{_format_minute(ev_s)}–{_format_minute(ev_e)}" if isinstance(ev_s, int) and isinstance(ev_e, int) else None
+    return {
+        "scheduleId": sched_id,
+        "label": profile.get("label") or sched_id,
+        "primaryMode": mode,
+        "placement": placement,
+        "buildingTarget": target,
+        "reason": reason,
+        "openHours": open_hours_text,
+        "jitterMinutes": int(profile.get("jitterMinutes") or 0),
+        "sheltersInRain": bool(profile.get("sheltersInRain")),
+        "sheltersInStorm": bool(profile.get("sheltersInStorm")),
+        "stormDelayMinMinutes": int(profile.get("stormDelayMinMinutes") or 0),
+        "stormDelayMaxMinutes": int(profile.get("stormDelayMaxMinutes") or 0),
+        "eveningTavernWindow": evening_window,
+        "eveningTavernSharePercent": int(profile.get("eveningTavernSharePercent") or 0),
+    }
 
 MAGIC_SCHOOLS = (
     "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism",
@@ -588,6 +754,15 @@ class ActorsCatalogStore:
             region_names = (read_base_section(base_path, "buildingNames", {}, self.cache) or {}).get("regionNames") or []
             regions = [{"index": i, "name": name} for i, name in enumerate(region_names)]
 
+            schedules_doc = read_base_section(base_path, "actorSchedules", {}, self.cache) or {}
+            schedules: dict[str, dict] = {}
+            schedule_order: list[str] = []
+            for row in schedules_doc.get("profiles") or []:
+                if isinstance(row, dict) and isinstance(row.get("id"), str):
+                    sid = row["id"]
+                    schedules[sid] = row
+                    schedule_order.append(sid)
+
             # Block slot usage from people_pack (when available).
             people_index = self.people_pack._index() if self.people_pack.available() else None
 
@@ -595,6 +770,8 @@ class ActorsCatalogStore:
                 "templates": templates,
                 "specs": specs,
                 "spec_order": spec_order,
+                "schedules": schedules,
+                "schedule_order": schedule_order,
                 "spawners_by_template": spawners_by_template,
                 "specs_by_mobile": specs_by_mobile,
                 "encounter_tables_by_spec": encounter_tables_by_spec,
@@ -756,6 +933,7 @@ class ActorsCatalogStore:
                 "factionId": sp.get("factionId"),
                 "familyId": sp.get("familyId"),
                 "socialGrouping": sp.get("socialGrouping"),
+                "schedule": sp.get("schedule"),
                 "mobileId": (sp.get("classicBinding") or {}).get("mobileId"),
                 "primaryArt": primary_art,
                 "artCount": len({a["id"] for a in art_links}),
@@ -779,6 +957,16 @@ class ActorsCatalogStore:
                 "genders": ["male", "female", "neutral"],
                 "regions": index["regions"],
                 "races": index["races"],
+                "weathers": list(WEATHER_KINDS),
+                "schedules": [
+                    {
+                        "id": sid,
+                        "label": index["schedules"][sid].get("label") or sid,
+                        "primaryMode": index["schedules"][sid].get("primaryMode"),
+                        "description": index["schedules"][sid].get("description") or "",
+                    }
+                    for sid in index["schedule_order"]
+                ],
             },
             "templates": template_rows,
             "specs": spec_rows,
@@ -915,6 +1103,8 @@ class ActorsCatalogStore:
             "home": sp.get("home"),
             "familyId": family_id,
             "socialGrouping": sp.get("socialGrouping"),
+            "schedule": sp.get("schedule"),
+            "scheduleProfile": index["schedules"].get(sp.get("schedule")) if isinstance(sp.get("schedule"), str) else None,
             "familyMembers": family_members,
             "visual": sp.get("visual"),
             "visualMode": sp.get("visualMode"),
@@ -948,11 +1138,15 @@ class ActorsCatalogStore:
         level: int = 1,
         gender: str | None = None,
         region: int | None = None,
+        time_of_day: str | None = None,
+        weather: str | None = None,
     ) -> dict:
         if not self.available():
             raise NotFoundError("Actor catalog is not available.")
         index = self._index()
         level = max(1, min(30, level))
+        minute_of_day, time_label = _parse_time_of_day(time_of_day)
+        weather_kind = _parse_weather(weather)
 
         if kind == "spec":
             spec = index["specs"].get(actor_id)
@@ -1117,6 +1311,8 @@ class ActorsCatalogStore:
         if region is not None and 0 <= region < len(index["regions"]):
             region_name = index["regions"][region]["name"]
 
+        schedule_preview = _evaluate_schedule_preview(spec, index["schedules"], minute_of_day, weather_kind)
+
         return {
             "kind": kind,
             "id": actor_id,
@@ -1127,6 +1323,9 @@ class ActorsCatalogStore:
                 "allowedGenders": effective_allowed,
                 "region": region,
                 "regionName": region_name,
+                "timeOfDay": time_label,
+                "minuteOfDay": minute_of_day,
+                "weather": weather_kind,
             },
             "effective": {
                 "level": effective_level,
@@ -1152,6 +1351,7 @@ class ActorsCatalogStore:
                 "factionId": spec.get("factionId") if spec else None,
                 "factionName": (index["factions"].get(spec.get("factionId")) or {}).get("name") if (spec and _is_int(spec.get("factionId"))) else None,
                 "home": spec.get("home") if spec else None,
+                "schedule": schedule_preview,
                 "visual": visual_preview,
             },
             "notes": notes,
@@ -1282,9 +1482,12 @@ def register_routes(router, workspace):
         level = _parse_optional_int(req.arg("level"), "level") or 1
         gender = req.arg("gender")
         region = _parse_optional_int(req.arg("region"), "region")
+        time_of_day = req.arg("timeOfDay")
+        weather = req.arg("weather")
         return workspace.actors_catalog.preview(
             kind, actor_id, workspace.catalog(), workspace.concept_store,
             level=level, gender=gender, region=region,
+            time_of_day=time_of_day, weather=weather,
         )
 
     router.get("/api/actors/overview", get_overview)

@@ -22,6 +22,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -492,6 +493,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -878,6 +880,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "noble-house",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -1398,6 +1401,7 @@
       "interaction": "ambient-bark",
       "deriveRegionalFaction": false,
       "socialGrouping": "none",
+      "schedule": "city-guard",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -1450,6 +1454,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -1914,6 +1919,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "street-walker",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -2534,6 +2540,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -3010,6 +3017,7 @@
       "interaction": "none",
       "deriveRegionalFaction": true,
       "socialGrouping": "none",
+      "schedule": "always-stationed",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -3444,6 +3452,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "noble-house",
+      "schedule": "court-noble",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4000,6 +4009,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "none",
+      "schedule": "always-stationed",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4034,6 +4044,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "underworld-night",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4098,6 +4109,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "none",
+      "schedule": "always-stationed",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4330,6 +4342,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -4800,6 +4813,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -5252,6 +5266,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -5710,6 +5725,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -6432,6 +6448,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "street-walker",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -7478,6 +7495,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -7978,6 +7996,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -8454,6 +8473,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -9062,6 +9082,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -9126,6 +9147,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "noble-house",
+      "schedule": "court-noble",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -9650,6 +9672,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "noble-house",
+      "schedule": "court-noble",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -10246,6 +10269,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -10698,6 +10722,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -11162,6 +11187,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "tavern-patron",
+      "schedule": "street-walker",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -11950,6 +11976,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "tavern-staff",
+      "schedule": "tavern-staff",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -12420,6 +12447,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "tavern-patron",
+      "schedule": "street-walker",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -13298,6 +13326,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -14080,6 +14109,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "building-household",
+      "schedule": "shopkeeper",
       "visualMode": "pool",
       "defaultPool": [
         {
@@ -14472,6 +14502,7 @@
       "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "socialGrouping": "faction-chapter",
+      "schedule": "guild-member",
       "visualMode": "pool",
       "defaultPool": [
         {

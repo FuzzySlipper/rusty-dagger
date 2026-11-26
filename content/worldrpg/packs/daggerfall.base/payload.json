@@ -12,6 +12,7 @@
     "actorSpecsEnemies": "actors/specs/enemies.json",
     "actorSpecsTownsfolk": "actors/specs/townsfolk.json",
     "actorSpecsCast": "actors/specs/cast.json",
+    "actorSchedules": "actors/schedules.json",
     "items": "items/items.json",
     "equipmentSlots": "core/equipment-slots.json",
     "actions": "core/actions.json",

@@ -454,10 +454,59 @@ class ActorsCatalogTests(TestCase):
         self.assertEqual(rat1["effective"]["skills"]["destruction"], 35)
         self.assertEqual(rat1["effective"]["spells"], [])
 
-        # Built CMS frontend bundle includes the unified Actors routes and reverse art links.
+        # Schedule profiles and timeOfDay / weather preview (#11100):
+        self.assertEqual(len(real_ov["enums"]["schedules"]), 8)
+        self.assertEqual(real_resident["schedule"], "street-walker")
+        self.assertEqual(real_gothryd["schedule"], "always-stationed")
+
+        # Street walker: outdoors midday sunny, sheltered in thunder, evening tavern/home at 20:30, home at 23:30.
+        walker_day = real_ws.actors_catalog.preview(
+            "spec", "town-house-resident", real_ws.catalog(), real_ws.concept_store,
+            time_of_day="12:00", weather="sunny",
+        )
+        walker_storm = real_ws.actors_catalog.preview(
+            "spec", "town-house-resident", real_ws.catalog(), real_ws.concept_store,
+            time_of_day="12:00", weather="thunder",
+        )
+        walker_night = real_ws.actors_catalog.preview(
+            "spec", "town-house-resident", real_ws.catalog(), real_ws.concept_store,
+            time_of_day="23:30", weather="sunny",
+        )
+        self.assertEqual(walker_day["effective"]["schedule"]["placement"], "exterior-street")
+        self.assertNotEqual(walker_storm["effective"]["schedule"]["placement"], "exterior-street")
+        self.assertEqual(walker_night["effective"]["schedule"]["placement"], "sheltered-in-home")
+
+        # City guard stays on duty at 23:30 in thunder; underworld-night is active outdoors at 23:30 in rain.
+        guard_storm = real_ws.actors_catalog.preview(
+            "spec", "town-blades-guard", real_ws.catalog(), real_ws.concept_store,
+            time_of_day="23:30", weather="thunder",
+        )
+        self.assertEqual(guard_storm["effective"]["schedule"]["placement"], "exterior-street")
+        uw_night = real_ws.actors_catalog.preview(
+            "spec", "town-dark-brotherhood-member", real_ws.catalog(), real_ws.concept_store,
+            time_of_day="23:30", weather="rain",
+        )
+        self.assertEqual(uw_night["effective"]["schedule"]["placement"], "exterior-street")
+
+        # Shopkeeper (town-armorer, 09:00-19:00) is open at 12:00 and evening-tavern-eligible once closed at 20:30.
+        shop_open = real_ws.actors_catalog.preview(
+            "spec", "town-armorer", real_ws.catalog(), real_ws.concept_store,
+            time_of_day="12:00", weather="sunny",
+        )
+        shop_evening = real_ws.actors_catalog.preview(
+            "spec", "town-armorer", real_ws.catalog(), real_ws.concept_store,
+            time_of_day="20:30", weather="sunny",
+        )
+        self.assertEqual(shop_open["effective"]["schedule"]["reason"], "open-hours")
+        self.assertEqual(shop_open["effective"]["schedule"]["openHours"], "09:00–19:00")
+        self.assertEqual(shop_evening["effective"]["schedule"]["reason"], "evening-tavern-eligible")
+
+        # Built CMS frontend bundle includes the unified Actors routes, reverse art links, and schedule preview controls.
         app_bundle = (REPO / "authoring/cms/web/dist/app.js").read_text(encoding="utf-8")
         self.assertIn("/api/actors/overview", app_bundle)
         self.assertIn("/api/actors/preview", app_bundle)
         self.assertIn("Unified actor records", app_bundle)
         self.assertIn("Family / Dynasty members", app_bundle)
         self.assertIn("Social grouping", app_bundle)
+        self.assertIn("Time of day", app_bundle)
+        self.assertIn("Schedule & weather", app_bundle)

@@ -429,6 +429,8 @@ export interface ActorsOverview {
     genders: string[];
     regions: Array<{ index: number; name: string }>;
     races: string[];
+    weathers?: string[];
+    schedules?: Array<{ id: string; label: string; primaryMode: string; description: string }>;
   };
   templates: ActorTemplateSummary[];
   specs: ActorSpecSummary[];
@@ -481,6 +483,25 @@ export interface ActorSpecDetail {
   home: { block?: string; slotId?: string; position?: number[]; site?: { region: number; index: number } } | null;
   familyId: string | null;
   socialGrouping: string | null;
+  schedule?: string | null;
+  scheduleProfile?: {
+    id: string;
+    label: string;
+    description: string;
+    primaryMode: string;
+    usesBuildingOpeningHours: boolean;
+    activeStartMinute: number;
+    activeEndMinute: number;
+    jitterMinutes: number;
+    eveningTavernStartMinute: number | null;
+    eveningTavernEndMinute: number | null;
+    eveningTavernSharePercent: number;
+    sheltersInRain: boolean;
+    sheltersInStorm: boolean;
+    stormDelayMinMinutes: number;
+    stormDelayMaxMinutes: number;
+    underworldNightPulse: boolean;
+  } | null;
   familyMembers: Array<{
     id: string;
     family: string;
@@ -531,6 +552,9 @@ export interface ActorPreviewResult {
     allowedGenders: string[];
     region: number | null;
     regionName: string | null;
+    timeOfDay?: string;
+    minuteOfDay?: number;
+    weather?: string;
   };
   effective: {
     level: number;
@@ -556,6 +580,22 @@ export interface ActorPreviewResult {
     factionId: number | null;
     factionName: string | null;
     home: { block?: string; slotId?: string; position?: number[]; site?: { region: number; index: number } } | null;
+    schedule?: {
+      scheduleId: string;
+      label: string;
+      primaryMode: string;
+      placement: string;
+      buildingTarget: string;
+      reason: string;
+      openHours: string | null;
+      jitterMinutes: number;
+      sheltersInRain: boolean;
+      sheltersInStorm: boolean;
+      stormDelayMinMinutes: number;
+      stormDelayMaxMinutes: number;
+      eveningTavernWindow: string | null;
+      eveningTavernSharePercent: number;
+    } | null;
     visual: {
       mode: string;
       source?: string;

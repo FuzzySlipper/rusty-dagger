@@ -526,6 +526,35 @@ internal sealed class DaggerfallOfficeLedger(
         [.. definitions.BoardSeats.All.Select(seat => ResolveBoardSeatPersona(seat.SeatId))];
 
     /// <summary>
+    /// Whether <paramref name="actorId"/> currently holds an institutional office (board seat, active override,
+    /// or local site office such as Watch Captain, Guild Master, Temple Head, or Court Factor).
+    /// </summary>
+    internal bool IsOfficeHolder(long actorId, DaggerfallSiteRecord? site = null)
+    {
+        if (actorId <= 0) return false;
+        foreach (DaggerfallOfficeOverrideSave over in _overrides.Values)
+        {
+            if (!over.Vacant && over.HolderActorId == actorId)
+                return true;
+        }
+        if (site is not null)
+        {
+            foreach (DaggerfallLocalOffice office in ResolveLocalOffices(site))
+            {
+                if (!office.IsVacant && office.HolderActorId == actorId)
+                    return true;
+            }
+        }
+        foreach (var seat in definitions.BoardSeats.All)
+        {
+            if (ResolveBoardSeatPersona(seat.SeatId) is { IsVacant: false, HolderActorId: long seatHolder }
+                && seatHolder == actorId)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Deterministically resolves every local institutional office at <paramref name="site"/> (guild hall masters,
     /// temple heads, court factors, and watch captain) bound to existing seeded building/town slots.
     /// Works identically before and after first visit and writes zero save bytes until overridden.

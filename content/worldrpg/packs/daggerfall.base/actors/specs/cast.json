@@ -29,7 +29,8 @@
         },
         "slotId": "b:22:p05"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "charvek-si",
@@ -56,7 +57,8 @@
         "block": "S0000041.RDB",
         "slotId": "d:p01"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "cyndassa",
@@ -83,7 +85,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p00"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "gortwog",
@@ -110,7 +113,8 @@
         "block": "S0000020.RDB",
         "slotId": "d:p00"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "karethys",
@@ -137,7 +141,8 @@
         "block": "S0000081.RDB",
         "slotId": "d:p11"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "king-eadwyre",
@@ -164,7 +169,8 @@
         "block": "S0000080.RDB",
         "slotId": "d:p00"
       },
-      "familyId": "fam:dynasty:wayrest"
+      "familyId": "fam:dynasty:wayrest",
+      "schedule": "always-stationed"
     },
     {
       "id": "king-gothryd",
@@ -191,7 +197,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p04"
       },
-      "familyId": "fam:dynasty:daggerfall"
+      "familyId": "fam:dynasty:daggerfall",
+      "schedule": "always-stationed"
     },
     {
       "id": "king-of-worms",
@@ -218,7 +225,8 @@
         "block": "S0000205.RDB",
         "slotId": "d:p06"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "lady-bridwell",
@@ -245,7 +253,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p18"
       },
-      "familyId": "fam:house:bridwell"
+      "familyId": "fam:house:bridwell",
+      "schedule": "court-noble"
     },
     {
       "id": "lady-brisienna",
@@ -276,7 +285,8 @@
         },
         "slotId": "b:0:p02"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "lady-northbridge",
@@ -303,7 +313,8 @@
         "block": "S0000040.RDB",
         "slotId": "d:p10"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "lord-bridwell",
@@ -330,7 +341,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p03"
       },
-      "familyId": "fam:house:bridwell"
+      "familyId": "fam:house:bridwell",
+      "schedule": "court-noble"
     },
     {
       "id": "lord-darkworth",
@@ -357,7 +369,8 @@
         "block": "S0000081.RDB",
         "slotId": "d:p07"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "lord-k-avar",
@@ -384,7 +397,8 @@
         "block": "S0000040.RDB",
         "slotId": "d:p18"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "lord-provlith",
@@ -411,7 +425,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p08"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "lord-vhosek",
@@ -438,7 +453,8 @@
         "block": "S0000040.RDB",
         "slotId": "d:p11"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "medora",
@@ -465,7 +481,8 @@
         "block": "S0000180.RDB",
         "slotId": "d:p00"
       },
-      "familyId": "fam:dynasty:direnni"
+      "familyId": "fam:dynasty:direnni",
+      "schedule": "always-stationed"
     },
     {
       "id": "mobar",
@@ -492,7 +509,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p12"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "mynisera",
@@ -519,7 +537,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p11"
       },
-      "familyId": "fam:dynasty:daggerfall"
+      "familyId": "fam:dynasty:daggerfall",
+      "schedule": "always-stationed"
     },
     {
       "id": "nulfaga",
@@ -546,7 +565,8 @@
         "block": "S0000070.RDB",
         "slotId": "d:p00"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "oswin-harrowgate",
@@ -577,7 +597,8 @@
         },
         "slotId": "b:0:p00"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "popudax",
@@ -604,7 +625,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p14"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "court-noble"
     },
     {
       "id": "prince-greklith",
@@ -631,7 +653,8 @@
         "block": "S0000040.RDB",
         "slotId": "d:p21"
       },
-      "familyId": "fam:dynasty:sentinel"
+      "familyId": "fam:dynasty:sentinel",
+      "schedule": "court-noble"
     },
     {
       "id": "prince-helseth",
@@ -658,7 +681,8 @@
         "block": "S0000081.RDB",
         "slotId": "d:p06"
       },
-      "familyId": "fam:dynasty:wayrest"
+      "familyId": "fam:dynasty:wayrest",
+      "schedule": "court-noble"
     },
     {
       "id": "prince-lhotun",
@@ -685,7 +709,8 @@
         "block": "S0000040.RDB",
         "slotId": "d:p09"
       },
-      "familyId": "fam:dynasty:sentinel"
+      "familyId": "fam:dynasty:sentinel",
+      "schedule": "court-noble"
     },
     {
       "id": "princess-elysana",
@@ -712,7 +737,8 @@
         "block": "S0000080.RDB",
         "slotId": "d:p01"
       },
-      "familyId": "fam:dynasty:wayrest"
+      "familyId": "fam:dynasty:wayrest",
+      "schedule": "court-noble"
     },
     {
       "id": "princess-morgiah",
@@ -739,7 +765,8 @@
         "block": "S0000080.RDB",
         "slotId": "d:p07"
       },
-      "familyId": "fam:dynasty:wayrest"
+      "familyId": "fam:dynasty:wayrest",
+      "schedule": "court-noble"
     },
     {
       "id": "queen-akorithi",
@@ -766,7 +793,8 @@
         "block": "S0000040.RDB",
         "slotId": "d:p22"
       },
-      "familyId": "fam:dynasty:sentinel"
+      "familyId": "fam:dynasty:sentinel",
+      "schedule": "always-stationed"
     },
     {
       "id": "queen-aubk-i",
@@ -793,7 +821,8 @@
         "block": "S0000160.RDB",
         "slotId": "d:p13"
       },
-      "familyId": "fam:dynasty:daggerfall"
+      "familyId": "fam:dynasty:daggerfall",
+      "schedule": "always-stationed"
     },
     {
       "id": "queen-barenziah",
@@ -820,7 +849,8 @@
         "block": "S0000080.RDB",
         "slotId": "d:p06"
       },
-      "familyId": "fam:dynasty:wayrest"
+      "familyId": "fam:dynasty:wayrest",
+      "schedule": "always-stationed"
     },
     {
       "id": "the-night-mother",
@@ -847,7 +877,8 @@
         "block": "NASYLUM.RMB",
         "slotId": "b:0:p00"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "the-squid",
@@ -878,7 +909,8 @@
         },
         "slotId": "b:16:p02"
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     },
     {
       "id": "the-underking",
@@ -913,7 +945,8 @@
           -46.8
         ]
       },
-      "familyId": null
+      "familyId": null,
+      "schedule": "always-stationed"
     }
   ]
 }

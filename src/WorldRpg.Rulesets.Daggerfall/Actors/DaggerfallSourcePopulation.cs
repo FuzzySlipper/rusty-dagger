@@ -32,10 +32,12 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     Func<bool> locationLoaded, Func<bool> residencyInitialized, Func<WorldPoint, WorldPoint> profileToLocal, Func<Vector3, Vector3> localToProfile,
     Func<DaggerfallSiteId, DaggerfallSiteRecord> requireSite, Func<bool> isDay, Func<bool> suppressSpawns, Func<long, bool> held,
     Action<ActorState, WanderPolicy, ulong, float> wander, Action<string> report,
-    DaggerfallActorLedger? actorLedger = null, Func<long, bool>? isWithParty = null)
+    DaggerfallActorLedger? actorLedger = null, Func<long, bool>? isWithParty = null,
+    Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, bool>? isPlacementScheduledOutdoors = null)
 {
     private readonly DaggerfallActorLedger _actorLedger = actorLedger ?? new DaggerfallActorLedger();
     private readonly Func<long, bool> _isWithParty = isWithParty ?? (_ => false);
+    private readonly Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, bool>? _isPlacementScheduledOutdoors = isPlacementScheduledOutdoors;
     private const byte FemalePopulationFlag = 0x20;
     // PopulationManager's source pool scales by the number of exterior blocks, then clamps
     // the admitted pool to the donor's 24..96 people window.  The source list remains the
@@ -80,7 +82,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         DaggerfallSiteRecord site = requireSite(siteId);
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, string.Empty);
         DaggerfallNpc[] sourceNpcs = [.. npcs.All.Where(npc => DaggerfallCivilians.IsSourcePopulation(npc) && npc.Site == npcSite)];
-        if (!isDay())
+        if (_isPlacementScheduledOutdoors is null && !isDay())
         {
             foreach (DaggerfallNpc npc in sourceNpcs)
                 Hide(npc);
@@ -103,15 +105,17 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         }
 
         Dictionary<string, DaggerfallNpc> existingByKey = sourceNpcs.ToDictionary(npc => npc.StableKey, StringComparer.Ordinal);
+        int totalPopulationCount = active.Population.Count;
         DaggerfallPopulationPlacement[] candidates = [.. active.Population
             .Where(placement => IsEligiblePlacement(active, definitions, placement))
+            .Where(placement => IsScheduledOutdoors(siteId, active.ProfileKey.LogicalId, placement, totalPopulationCount))
             .Where(placement => IsPlacementAdmitted(placement, existingByKey.GetValueOrDefault(placement.Id), playerProfile))
             // Preserve already active source identities through normal wandering. Stable source
             // order remains the tie-breaker for newly admitted people.
             .OrderByDescending(placement => existingByKey.TryGetValue(placement.Id, out DaggerfallNpc? npc)
                 && npc.Presence == DaggerfallNpcPresence.Active)
             .ThenBy(placement => placement.Id, StringComparer.Ordinal)
-            .Take(Capacity(site, active.Population.Count))];
+            .Take(Capacity(site, totalPopulationCount))];
         HashSet<string> admittedKeys = candidates.Select(placement => placement.Id).ToHashSet(StringComparer.Ordinal);
         foreach (DaggerfallNpc npc in sourceNpcs.Where(npc => !admittedKeys.Contains(npc.StableKey)))
             Hide(npc);
@@ -210,7 +214,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             .Select(npc => npc.DurableId)
             .ToHashSet();
         bool admitted = profile().ProfileKind == DaggerfallWorldProfileKind.Exterior
-            && isDay();
+            && (_isPlacementScheduledOutdoors is not null || isDay());
         foreach (ActorState actor in actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>()))
         {
             if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsCombatant)
@@ -222,8 +226,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             DaggerfallNpc? populationNpc = npcs.All.FirstOrDefault(npc =>
                 DaggerfallCivilians.IsSourcePopulation(npc) && npc.DurableId == actor.DurableId);
             if (populationNpc is not null
-                && profile().ProfileKind == DaggerfallWorldProfileKind.Exterior
-                && isDay()
+                && admitted
                 && locationLoaded()
                 && profile().Project.PlayerPosition is not null
                 && player.Position is WorldPoint standing
@@ -250,6 +253,14 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                 originComp.RecordIdleWanderPose(WorldPoint.From(localToProfile(actor.Position.ToVector())), actor.HeadingYawRadians);
             }
         }
+    }
+
+    private bool IsScheduledOutdoors(DaggerfallSiteId siteId, string logicalProfileId, DaggerfallPopulationPlacement placement, int totalPopulationCount)
+    {
+        if (_isPlacementScheduledOutdoors is null)
+            return isDay();
+        long deterministicId = DaggerfallPeopleSlots.SeededSlotIdentity(siteId, $"{logicalProfileId}/{placement.Id}");
+        return _isPlacementScheduledOutdoors(siteId, placement, deterministicId, totalPopulationCount);
     }
 
     private void Hide(DaggerfallNpc npc)
