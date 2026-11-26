@@ -138,8 +138,10 @@ public static class Prestige
         private readonly Before before;
         private readonly Dictionary<string, int> standing;
 
-        public Witness(Board board, Seat player, Before before, IReadOnlyList<Region> regions, IEnumerable<string> named, Visibility visibility)
+        public Witness(Board board, Seat player, Before before, IReadOnlyList<Region> regions, IEnumerable<string> named, Visibility visibility,
+            IEnumerable<string>? foes = null)
         {
+            Foes = new SortedSet<string>(foes ?? [], StringComparer.Ordinal);
             this.before = before;
             Player = player;
             Regions = regions;
@@ -153,7 +155,8 @@ public static class Prestige
 
         /// <summary>The move of <paramref name="card"/> on <paramref name="targets"/> by <paramref name="player"/>, about to be made.</summary>
         public static Witness OfCard(Board board, Seat player, Before before, Card card, IReadOnlyList<string> targets) =>
-            new(board, player, before, card.TargetRegions(board, targets), Named(board, card, targets), card.Visibility);
+            new(board, player, before, card.TargetRegions(board, targets), Named(board, card, targets), card.Visibility,
+                card.Target == CardTarget.FeudRival ? [targets[1]] : []);
 
         /// <summary>The seats a card's targets name: a seat, a rival on its own ground, a deal's partner or a war's principals.</summary>
         public static IReadOnlyList<string> Named(Board board, Card card, IReadOnlyList<string> targets) => card.Target switch
@@ -173,6 +176,9 @@ public static class Prestige
         public IReadOnlyList<Region> Regions { get; }
 
         public Visibility Visibility { get; }
+
+        /// <summary>The foes a card of open conflict is aimed at: struck by it if it changes the board, whatever it costs them.</summary>
+        public SortedSet<string> Foes { get; }
 
         /// <summary>The other seats the move bears on: named in its targets, or present in a region it targets.</summary>
         public SortedSet<string> Targeted { get; }

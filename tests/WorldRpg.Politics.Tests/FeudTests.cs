@@ -59,6 +59,43 @@ public sealed class FeudTests
         Assert.Contains(new BoardChange("west", "feud:east", "feud-1", "war"), board.TakeChanges());
     }
 
+    /// <summary>
+    /// A raid that lands is a blow whatever it costs the foe in prestige: coin above what prestige counts, or a raid
+    /// struck in payback, still heats the feud.
+    /// </summary>
+    [Fact]
+    public void Every_raid_that_lands_is_a_blow_on_a_wealthy_foe_and_in_payback()
+    {
+        Board board = InFeud(out Feud feud, rich: "west");
+        Seat west = board.Seat("west");
+        Seat east = board.Seat("east");
+        board.HoldGrudge(west, east, 10);
+        Card raid = TestBoards.Card("cattle-raid");
+
+        Strike(board, west, raid, ["east-march", "east"]);
+
+        Assert.Empty(west.Grudges);
+        Assert.Equal(1, board.Feud(feud.Id).Heat);
+
+        board.AdjustResource(east, Resource.Coin, Board.ResourceLimit);
+        Strike(board, west, raid, ["east-march", "east"]);
+        Strike(board, west, raid, ["east-march", "east"]);
+
+        Assert.Equal(Board.ResourceLimit - 4, east.Coin);
+        Assert.Equal((0, -Board.RelationLimit), (board.Feud(feud.Id).Heat, board.Relation("west", "east")));
+    }
+
+    [Fact]
+    public void A_raid_that_takes_nothing_is_no_blow()
+    {
+        Board board = InFeud(out Feud feud, rich: "west");
+        board.AdjustResource(board.Seat("east"), Resource.Coin, -Board.ResourceLimit);
+
+        Strike(board, board.Seat("west"), TestBoards.Card("cattle-raid"), ["east-march", "east"]);
+
+        Assert.Equal(0, board.Feud(feud.Id).Heat);
+    }
+
     [Fact]
     public void A_border_scuffle_lays_a_skirmish_named_for_the_feud()
     {

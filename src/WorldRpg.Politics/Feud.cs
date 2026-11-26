@@ -27,8 +27,8 @@ public sealed record Feud(string Id, string A, string B, int Started, int Heat)
 /// when it becomes a war.</item>
 /// <item>A feud holds no relation against a gesture, which lifts it and cools the feud. The seasonal drift towards 0
 /// lifts it only once the feud has gone quiet, its heat died down to 0, so a feud lasts while blows are being struck.</item>
-/// <item>Each blow between the two, a feud card or any public move by which one struck the other (<see cref="Memory"/>),
-/// heats the feud instead of cooling their relation at once. Every <see cref="BlowsToCool"/>th blow cools it by 1, so a
+/// <item>Each blow between the two, a feud card aimed at the other or any public move by which one struck the other,
+/// payback included (<see cref="Memory"/>), heats the feud instead of cooling their relation at once. Every <see cref="BlowsToCool"/>th blow cools it by 1, so a
 /// hot feud reaches war's relation and becomes a war. Heat dies down by 1 every <see cref="CoolingWeeks"/> weeks.</item>
 /// <item>Surly vassals: each week, each pair of bordering regions held by the feuding crowns skirmishes on its own,
 /// with no seat moving, one week in <see cref="SkirmishChance"/>, or one in <see cref="RestlessChance"/> where either
@@ -88,18 +88,8 @@ public static class Feuds
         }
     }
 
-    /// <summary>
-    /// <paramref name="mover"/> has struck <paramref name="struck"/>: a blow in their feud if they have one, or else their
-    /// relation cools by 1.
-    /// </summary>
-    public static void Struck(Board board, Seat mover, Seat struck)
-    {
-        if (Between(board, mover.Id, struck.Id) is { } feud) Blow(board, feud);
-        else board.AdjustRelation(mover, struck, -1);
-    }
-
     /// <summary>A blow in <paramref name="feud"/>: it heats, and every <see cref="BlowsToCool"/>th blow cools the crowns' relation by 1.</summary>
-    private static void Blow(Board board, Feud feud)
+    public static void Blow(Board board, Feud feud)
     {
         feud = board.Feud(feud.Id);
         if (feud.Heat + 1 < BlowsToCool)
