@@ -1,0 +1,11 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at 8b6dcc371baad2427337ba20c08ee6005b8d7d37 FAILED in 13.5 min
+verify on den-nimo, 13.5 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-8b6dcc371baa-20261125T213034/verify.log
+    lane: run 4e93cdcba081b4ec66330ea8c5c9a99b of verify on den-nimo at 8b6dcc371baad2427337ba20c08ee6005b8d7d37 (0 s)
+    lane: tooling took 10 s, peak memory 39 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 271 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Failed Daggerfall.Import.Tests.ImportToolCommandTests.Report_writes_nothing_and_update_writes_exact_builder_output(name: "people-extract") [44 ms]
+    Failed!  - Failed:     1, Passed:   535, Skipped:     0, Total:   536, Duration: 12 m 10 s - Daggerfall.Import.Tests.dll (net10.0)
+    lane: verify took 791 s, peak memory 8774 MiB
+    lane: verify failed (exit 1)
