@@ -362,19 +362,42 @@ internal sealed class DaggerfallSocialInspection(
                 w.WriteNumber(name, social.PersonalReputation(group));
             w.WriteEndObject();
 
+            List<DaggerfallCrimeIncidentSave> pendingCharges =
+            [
+                .. crime.Incidents
+                    .Where(i => i.Disposition is null
+                        && (i.Reported || i.Witnesses.Query == DaggerfallCrimeWitnessQuery.CompletedWithWitnesses))
+                    .OrderBy(i => i.Region)
+                    .ThenBy(i => i.GameMinute)
+                    .ThenBy(i => i.OperationId, StringComparer.Ordinal),
+            ];
+            Dictionary<int, int> pendingByRegion = pendingCharges
+                .GroupBy(i => i.Region)
+                .ToDictionary(g => g.Key, g => g.Count());
+            HashSet<int> includeRegions = [];
+            if (activeRegion is int ar) includeRegions.Add(ar);
+            foreach (int br in crime.BanishedRegions) includeRegions.Add(br);
+            foreach (DaggerfallLegalResponseSave resp in crime.LegalResponses) includeRegions.Add(resp.Region);
+            foreach (int pr in pendingByRegion.Keys) includeRegions.Add(pr);
+
             w.WriteStartArray("regionalReputations");
-            foreach (DaggerfallRegionalReputationSave entry in socialSave.Regions)
+            foreach ((int region, int effectiveRep) in social.ReadRegionalReputations(includeRegions))
             {
-                bool banished = crime.BanishedRegions.Contains(entry.Region);
-                bool wanted = entry.Value < DaggerfallLegalServicePolicy.WantedReputationThreshold;
-                if (entry.Value == 0 && !banished && entry.Region != activeRegion)
+                bool banished = crime.BanishedRegions.Contains(region);
+                bool wanted = effectiveRep < DaggerfallLegalServicePolicy.WantedReputationThreshold;
+                int pendingCount = pendingByRegion.GetValueOrDefault(region);
+                bool hasResponse = crime.Response(region) is not null;
+                bool hasActiveBounty = banished || wanted || pendingCount > 0 || hasResponse;
+                if (effectiveRep == 0 && !hasActiveBounty && region != activeRegion)
                     continue;
                 w.WriteStartObject();
-                w.WriteNumber("region", entry.Region);
-                w.WriteString("regionName", definitions.BuildingNames.RegionName(entry.Region));
-                w.WriteNumber("reputation", entry.Value);
+                w.WriteNumber("region", region);
+                w.WriteString("regionName", definitions.BuildingNames.RegionName(region));
+                w.WriteNumber("reputation", effectiveRep);
                 w.WriteBoolean("wanted", wanted);
                 w.WriteBoolean("banished", banished);
+                w.WriteNumber("pendingChargeCount", pendingCount);
+                w.WriteBoolean("hasActiveBounty", hasActiveBounty);
                 w.WriteEndObject();
             }
             w.WriteEndArray();
@@ -414,6 +437,45 @@ internal sealed class DaggerfallSocialInspection(
             foreach (int r in crime.BanishedRegions.OrderBy(v => v))
                 w.WriteNumberValue(r);
             w.WriteEndArray();
+            w.WriteNumber("pendingChargeCount", pendingCharges.Count);
+            w.WriteStartArray("pendingCharges");
+            foreach (DaggerfallCrimeIncidentSave charge in pendingCharges)
+            {
+                w.WriteStartObject();
+                w.WriteString("operationId", charge.OperationId);
+                w.WriteString("crime", charge.Crime.ToString());
+                w.WriteNumber("region", charge.Region);
+                w.WriteString("regionName", definitions.BuildingNames.RegionName(charge.Region));
+                w.WriteBoolean("reported", charge.Reported);
+                if (charge.AffectedActorOrOwnerId is long aid) w.WriteNumber("affectedActorOrOwnerId", aid);
+                w.WriteNumber("gameMinute", charge.GameMinute);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteStartArray("legalResponses");
+            foreach (DaggerfallLegalResponseSave response in crime.LegalResponses.OrderBy(r => r.Region))
+            {
+                w.WriteStartObject();
+                w.WriteString("id", response.Id);
+                w.WriteNumber("region", response.Region);
+                w.WriteString("regionName", definitions.BuildingNames.RegionName(response.Region));
+                w.WriteString("phase", response.Phase.ToString());
+                w.WriteNumber("chargeCount", response.Charges.Length);
+                w.WriteStartArray("charges");
+                foreach (string chargeId in response.Charges) w.WriteStringValue(chargeId);
+                w.WriteEndArray();
+                w.WriteNumber("guardCount", response.Guards.Length);
+                if (response.Penalty is { } penalty)
+                {
+                    w.WriteNumber("fine", penalty.Fine);
+                    w.WriteNumber("prisonDays", penalty.PrisonDays);
+                }
+                if (response.Sentence is { } sentence)
+                    w.WriteString("sentenceOutcome", sentence.Outcome.ToString());
+                w.WriteNumber("prisonSecondsRemaining", response.PrisonSecondsRemaining);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
             w.WriteNumber("incidentCount", crime.Incidents.Count);
             w.WriteNumber("reportedIncidentCount", crime.Incidents.Count(i => i.Reported));
             w.WriteNumber("attemptCount", crime.Attempts.Count);
@@ -427,6 +489,17 @@ internal sealed class DaggerfallSocialInspection(
                 w.WriteString("crime", inc.Crime.ToString());
                 w.WriteNumber("region", inc.Region);
                 w.WriteBoolean("reported", inc.Reported);
+                if (inc.Disposition is { } disp)
+                {
+                    w.WriteStartObject("disposition");
+                    w.WriteString("outcome", disp.Outcome.ToString());
+                    w.WriteNumber("resolvedMinute", disp.ResolvedMinute);
+                    w.WriteEndObject();
+                }
+                else
+                {
+                    w.WriteNull("disposition");
+                }
                 if (inc.AffectedActorOrOwnerId is long aid) w.WriteNumber("affectedActorOrOwnerId", aid);
                 w.WriteNumber("gameMinute", inc.GameMinute);
                 w.WriteEndObject();

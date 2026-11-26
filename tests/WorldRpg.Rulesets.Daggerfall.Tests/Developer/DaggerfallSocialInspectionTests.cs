@@ -2,11 +2,13 @@ using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
+using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -199,6 +201,115 @@ public sealed class DaggerfallSocialInspectionTests
             Assert.True(root.GetProperty("wantedInActiveRegion").GetBoolean());
             Assert.Contains(root.GetProperty("affiliations").EnumerateArray(), a => a.GetProperty("factionId").GetInt32() == 368);
             Assert.True(root.GetProperty("actorLedgerCount").GetInt32() > 0);
+        }
+    }
+
+    [Fact]
+    public void Social_player_reflects_live_regional_modifiers_and_clears_pending_bounty_charges_once_resolved()
+    {
+        using var fixture = new SocialDiagFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        int activeRegion = site.Id.Region;
+        int otherRegion = activeRegion == 23 ? 17 : 23;
+
+        // 1. Outstanding charges & legal response (R11117-1):
+        //    Record a reported theft incident (-8 permanent regional standing via IncidentRecorded) and an active Court legal response.
+        const string chargeOp = "diag-crime:theft:1";
+        DaggerfallCrimeIncidentSave charge = new(
+            OperationId: chargeOp,
+            Crime: DaggerfallCrimeKind.Theft,
+            Stage: DaggerfallCrimeStage.Completed,
+            PerpetratorActorId: DaggerfallActorIdentity.PlayerEntityId,
+            AffectedActorOrOwnerId: null,
+            Region: activeRegion,
+            GameMinute: 400L,
+            TargetKind: DaggerfallCrimeTargetKind.Civilian,
+            Witnesses: new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [999L]),
+            GuildCredit: DaggerfallCrimeGuildCredit.None,
+            Reported: true);
+        Assert.True(session.State.Crime.RecordIncident(charge));
+        session.State.Crime.SetResponse(new DaggerfallLegalResponseSave(
+            Id: "diag-case:1",
+            Region: activeRegion,
+            Charges: [chargeOp],
+            Phase: DaggerfallLegalPhase.Court,
+            Profile: DaggerfallWorldProfileKeySave.Capture(session.Sites.ActiveProfile),
+            ResponseDelaySeconds: 0d,
+            Guards: [1001L],
+            Penalty: new DaggerfallCourtPenalty(500, 10, false)));
+
+        // 2. Live regional modifiers (R11117-2):
+        //    - Active region has permanent -15 (-8 from Theft + -7) plus live +10 modifier -> effective -5 (NOT wanted!).
+        //    - Other region has 0 permanent plus live -12 modifier -> effective -12 (WANTED and present in regionalReputations!).
+        session.State.Social.ChangeRegionalReputation(activeRegion, -7);
+        session.State.Social.SetRegionalReputationSource(
+            activeRegion,
+            new IntrinsicSourceIdentity(new EntityId(1), SourceInstanceId.Parse("diag-live-bonus")),
+            +10);
+        session.State.Social.SetRegionalReputationSource(
+            otherRegion,
+            new IntrinsicSourceIdentity(new EntityId(1), SourceInstanceId.Parse("diag-live-penalty")),
+            -12);
+
+        IDeveloperSocialCommands socialCmds = session.Commands<IDeveloperSocialCommands>();
+
+        // Verify active bounties / pending charges / legal responses AND live regional reputation agreement.
+        DebugCommandResult beforeResolve = socialCmds.Player();
+        Assert.True(beforeResolve.Succeeded, beforeResolve.Message);
+        using (JsonDocument doc = JsonDocument.Parse(beforeResolve.Message))
+        {
+            JsonElement root = doc.RootElement;
+            Assert.Equal(-5, root.GetProperty("activeRegionReputation").GetInt32());
+            Assert.False(root.GetProperty("wantedInActiveRegion").GetBoolean());
+
+            JsonElement activeRow = Assert.Single(
+                root.GetProperty("regionalReputations").EnumerateArray(),
+                r => r.GetProperty("region").GetInt32() == activeRegion);
+            Assert.Equal(-5, activeRow.GetProperty("reputation").GetInt32());
+            Assert.False(activeRow.GetProperty("wanted").GetBoolean());
+            Assert.Equal(1, activeRow.GetProperty("pendingChargeCount").GetInt32());
+            Assert.True(activeRow.GetProperty("hasActiveBounty").GetBoolean());
+
+            JsonElement otherRow = Assert.Single(
+                root.GetProperty("regionalReputations").EnumerateArray(),
+                r => r.GetProperty("region").GetInt32() == otherRegion);
+            Assert.Equal(-12, otherRow.GetProperty("reputation").GetInt32());
+            Assert.True(otherRow.GetProperty("wanted").GetBoolean());
+            Assert.True(otherRow.GetProperty("hasActiveBounty").GetBoolean());
+
+            JsonElement law = root.GetProperty("law");
+            Assert.Equal(1, law.GetProperty("pendingChargeCount").GetInt32());
+            JsonElement pending = Assert.Single(law.GetProperty("pendingCharges").EnumerateArray());
+            Assert.Equal(chargeOp, pending.GetProperty("operationId").GetString());
+            JsonElement response = Assert.Single(law.GetProperty("legalResponses").EnumerateArray());
+            Assert.Equal("Court", response.GetProperty("phase").GetString());
+            Assert.Equal(500, response.GetProperty("fine").GetInt32());
+            Assert.Equal(JsonValueKind.Null, Assert.Single(law.GetProperty("recentIncidents").EnumerateArray()).GetProperty("disposition").ValueKind);
+        }
+
+        // 3. Resolve the legal case -> pendingCharges & legalResponses clear while historical crime counts and disposition remain!
+        session.State.Crime.ResolveResponse(activeRegion, DaggerfallCourtOutcome.Acquitted, 450L);
+
+        DebugCommandResult afterResolve = socialCmds.Player();
+        Assert.True(afterResolve.Succeeded, afterResolve.Message);
+        using (JsonDocument doc = JsonDocument.Parse(afterResolve.Message))
+        {
+            JsonElement root = doc.RootElement;
+            JsonElement activeRow = Assert.Single(
+                root.GetProperty("regionalReputations").EnumerateArray(),
+                r => r.GetProperty("region").GetInt32() == activeRegion);
+            Assert.Equal(0, activeRow.GetProperty("pendingChargeCount").GetInt32());
+            Assert.False(activeRow.GetProperty("hasActiveBounty").GetBoolean());
+
+            JsonElement law = root.GetProperty("law");
+            Assert.Equal(0, law.GetProperty("pendingChargeCount").GetInt32());
+            Assert.Empty(law.GetProperty("pendingCharges").EnumerateArray());
+            Assert.Empty(law.GetProperty("legalResponses").EnumerateArray());
+            Assert.Equal(1, law.GetProperty("incidentCount").GetInt32());
+            Assert.Equal(1, law.GetProperty("reportedIncidentCount").GetInt32());
+            JsonElement resolvedInc = Assert.Single(law.GetProperty("recentIncidents").EnumerateArray());
+            Assert.Equal("Acquitted", resolvedInc.GetProperty("disposition").GetProperty("outcome").GetString());
         }
     }
 

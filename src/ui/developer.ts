@@ -435,14 +435,41 @@ interface SocialPlayerReadout {
     readonly reputation: number;
     readonly wanted: boolean;
     readonly banished: boolean;
+    readonly pendingChargeCount?: number;
+    readonly hasActiveBounty?: boolean;
   }[];
   readonly factionStandings: readonly { readonly factionId: number; readonly name: string; readonly reputation: number }[];
   readonly affiliations: readonly { readonly faction: string; readonly rank: number; readonly reputation: number }[];
   readonly law: {
     readonly banishedRegions: readonly number[];
+    readonly pendingChargeCount?: number;
+    readonly pendingCharges?: readonly {
+      readonly operationId: string;
+      readonly crime: string;
+      readonly region: number;
+      readonly regionName?: string;
+      readonly reported: boolean;
+      readonly gameMinute: number;
+    }[];
+    readonly legalResponses?: readonly {
+      readonly id: string;
+      readonly region: number;
+      readonly regionName?: string;
+      readonly phase: string;
+      readonly chargeCount: number;
+      readonly fine?: number;
+      readonly prisonDays?: number;
+      readonly sentenceOutcome?: string;
+    }[];
     readonly incidentCount: number;
     readonly reportedIncidentCount: number;
-    readonly recentIncidents: readonly { readonly crime: string; readonly region: number; readonly reported: boolean; readonly gameMinute: number }[];
+    readonly recentIncidents: readonly {
+      readonly crime: string;
+      readonly region: number;
+      readonly reported: boolean;
+      readonly disposition?: { readonly outcome: string; readonly resolvedMinute: number } | null;
+      readonly gameMinute: number;
+    }[];
   };
   readonly vouches: readonly {
     readonly targetDurableId: number;
@@ -742,9 +769,23 @@ function mountSocialPanel(element: HTMLElement, transport: LiveDebugTransport): 
       lines.push(`Non-zero Factions (${p.factionStandings.length}):`);
       if (p.factionStandings.length === 0) lines.push('  (none)');
       for (const f of p.factionStandings) lines.push(`  ${f.name} (#${f.factionId}): ${fmtSigned(f.reputation)}`);
-      lines.push(`Law: ${p.law.reportedIncidentCount}/${p.law.incidentCount} reported incidents · banished regions=[${p.law.banishedRegions.join(', ')}]`);
+      lines.push(`Law: ${p.law.pendingChargeCount ?? 0} pending charges · ${p.law.reportedIncidentCount}/${p.law.incidentCount} reported incidents · banished regions=[${p.law.banishedRegions.join(', ')}]`);
+      if (p.law.pendingCharges && p.law.pendingCharges.length > 0) {
+        lines.push(`Pending Charges (${p.law.pendingCharges.length}):`);
+        for (const ch of p.law.pendingCharges) {
+          lines.push(`  - ${ch.crime} in ${ch.regionName ?? `r${ch.region}`} (${ch.reported ? 'reported' : 'witnessed'}) @m${ch.gameMinute}`);
+        }
+      }
+      if (p.law.legalResponses && p.law.legalResponses.length > 0) {
+        lines.push(`Active Legal Responses (${p.law.legalResponses.length}):`);
+        for (const resp of p.law.legalResponses) {
+          const pen = resp.fine != null || resp.prisonDays != null ? ` fine=${resp.fine ?? 0} prison=${resp.prisonDays ?? 0}d` : '';
+          lines.push(`  - ${resp.regionName ?? `r${resp.region}`}: ${resp.phase} (${resp.chargeCount} charges${pen}${resp.sentenceOutcome ? ` ${resp.sentenceOutcome}` : ''})`);
+        }
+      }
       for (const inc of p.law.recentIncidents) {
-        lines.push(`  - ${inc.crime} r${inc.region} ${inc.reported ? 'reported' : 'unreported'} @m${inc.gameMinute}`);
+        const statusText = inc.disposition ? `resolved:${inc.disposition.outcome}` : 'open';
+        lines.push(`  - ${inc.crime} r${inc.region} ${inc.reported ? 'reported' : 'unreported'} [${statusText}] @m${inc.gameMinute}`);
       }
       lines.push(`Active Vouches (${p.vouches.length}):`);
       if (p.vouches.length === 0) lines.push('  (none)');

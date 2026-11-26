@@ -1399,7 +1399,15 @@ test('the Social developer panel renders runtime households, Great Houses, wavef
       regionalReputations: [{ region: 17, regionName: 'Daggerfall', reputation: -15, wanted: true, banished: false }],
       factionStandings: [{ factionId: 368, name: 'Knights of the Dragon', reputation: 12 }],
       affiliations: [{ faction: 'Knights of the Dragon', rank: 1, reputation: 12 }],
-      law: { banishedRegions: [], incidentCount: 1, reportedIncidentCount: 1, recentIncidents: [{ crime: 'Murder', region: 17, reported: true, gameMinute: 120 }] },
+      law: {
+        banishedRegions: [],
+        pendingChargeCount: 1,
+        pendingCharges: [{ operationId: 'op:1', crime: 'Murder', region: 17, regionName: 'Daggerfall', reported: true, gameMinute: 120 }],
+        legalResponses: [{ id: 'case:1', region: 17, regionName: 'Daggerfall', phase: 'Court', chargeCount: 1, fine: 500, prisonDays: 10 }],
+        incidentCount: 1,
+        reportedIncidentCount: 1,
+        recentIncidents: [{ crime: 'Murder', region: 17, reported: true, disposition: null, gameMinute: 120 }],
+      },
       vouches: [{ targetDurableId: 501, targetName: 'Maren Holt', referrerName: 'Bram Holt', referrerFamilyId: 'fam:local:r17:s0:x1y1b0', kind: 'Trade', issuedDay: 3 }],
     }),
     'world.conditions': JSON.stringify({ gateScrutiny: 'elevated', watchChallenge: true, conditions: [{ tokenId: 'cond:1', kind: 'crime-crackdown', severity: 2 }] }),
@@ -1444,6 +1452,8 @@ test('the Social developer panel renders runtime households, Great Houses, wavef
     assert.match(element.querySelector('[data-social-section="region"] pre').textContent, /House Valen.*-20.*BLOOD FEUD/);
     assert.match(element.querySelector('[data-social-section="world"] pre').textContent, /fam:house:r17:0.*-20/);
     assert.match(element.querySelector('[data-social-section="player"] pre').textContent, /WANTED.*Knights of the Dragon/s);
+    assert.match(element.querySelector('[data-social-section="player"] pre').textContent, /Pending Charges \(1\).*Murder in Daggerfall/s);
+    assert.match(element.querySelector('[data-social-section="player"] pre').textContent, /Active Legal Responses \(1\).*Court.*fine=500/s);
 
     const select = element.querySelector('select[aria-label="Inspect actor"]');
     select.value = '501';
