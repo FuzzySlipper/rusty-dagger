@@ -89,12 +89,14 @@ public static class Prestige
         {
             string field = change.Field;
             if (field is "coin" or "favour" or "force" || field.StartsWith("court:", StringComparison.Ordinal)
-                || field.StartsWith("weariness:", StringComparison.Ordinal) || field.StartsWith("ally:", StringComparison.Ordinal))
+                || field.StartsWith("weariness:", StringComparison.Ordinal) || field.StartsWith("ally:", StringComparison.Ordinal)
+                || field.StartsWith("heat:", StringComparison.Ordinal))
             {
                 touched.Add(change.Subject);
             }
             else if (field.StartsWith("relation:", StringComparison.Ordinal) || field.StartsWith("deal:", StringComparison.Ordinal)
-                || field.StartsWith("war:", StringComparison.Ordinal) || field.StartsWith("truce:", StringComparison.Ordinal))
+                || field.StartsWith("war:", StringComparison.Ordinal) || field.StartsWith("truce:", StringComparison.Ordinal)
+                || field.StartsWith("feud:", StringComparison.Ordinal))
             {
                 touched.Add(change.Subject);
                 touched.Add(field[(field.IndexOf(':') + 1)..]);
@@ -157,7 +159,7 @@ public static class Prestige
         public static IReadOnlyList<string> Named(Board board, Card card, IReadOnlyList<string> targets) => card.Target switch
         {
             CardTarget.OtherSeat or CardTarget.Deal => [targets[0]],
-            CardTarget.RegionRival => [targets[1]],
+            CardTarget.RegionRival or CardTarget.FeudRival => [targets[1]],
             CardTarget.War => [board.War(targets[0]).A, board.War(targets[0]).B],
             _ => [],
         };

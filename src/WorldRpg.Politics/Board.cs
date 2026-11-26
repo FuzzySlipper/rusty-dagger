@@ -28,6 +28,7 @@ public sealed class Board
     private readonly List<Agreement> agreements = [];
     private readonly List<War> wars = [];
     private readonly List<Truce> truces = [];
+    private readonly List<Feud> feuds = [];
     private readonly List<WorldCard> worldDraw;
     private readonly List<WorldCard> worldDiscard = [];
     private readonly List<BoardChange> changes = [];
@@ -39,6 +40,7 @@ public sealed class Board
     private int trialStart = -1;
     private int dealsMade;
     private int warsMade;
+    private int feudsMade;
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
         Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, IReadOnlyList<Card> warCards, BoardRandom random,
@@ -78,6 +80,9 @@ public sealed class Board
 
     /// <summary>The wars in force, in the order they opened (<see cref="Politics.Wars"/>).</summary>
     public IReadOnlyList<War> Wars => wars;
+
+    /// <summary>The feuds in force, in the order they opened (<see cref="Politics.Feuds"/>).</summary>
+    public IReadOnlyList<Feud> Feuds => feuds;
 
     /// <summary>The truces binding crowns after their treaties.</summary>
     public IReadOnlyList<Truce> Truces => truces;
@@ -126,6 +131,8 @@ public sealed class Board
     public War War(string id) => wars.Single(war => war.Id == id);
 
     public bool HasWar(string id) => wars.Any(war => war.Id == id);
+
+    public Feud Feud(string id) => feuds.Single(feud => feud.Id == id);
 
     /// <summary>The war <paramref name="a"/> and <paramref name="b"/> fight as its principals, if any.</summary>
     public War? WarBetween(string a, string b) => wars.FirstOrDefault(war => war.Principal(a) && war.Principal(b));
@@ -522,18 +529,50 @@ public sealed class Board
         changes.Add(new BoardChange(deal.Proposer, $"deal:{deal.Partner}", deal.ToString(), reason));
     }
 
-    /// <summary>Opens a war between the crowns <paramref name="a"/> and <paramref name="b"/> under the next war id.</summary>
-    public void OpenWar(Seat a, Seat b)
+    /// <summary>Opens a war over <paramref name="aim"/> between the crowns <paramref name="a"/> and <paramref name="b"/> under the next war id.</summary>
+    public void OpenWar(Seat a, Seat b, WarAim aim)
     {
         warsMade++;
-        War war = new(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"war-{warsMade}"), a.Id, b.Id, [], [], Turn, 0, 0);
+        War war = new(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"war-{warsMade}"), a.Id, b.Id, aim, [], [], Turn, 0, 0);
         wars.Add(war);
         Undo(() =>
         {
             wars.Remove(war);
             warsMade--;
         });
-        changes.Add(new BoardChange(a.Id, $"war:{b.Id}", "none", war.Id));
+        changes.Add(new BoardChange(a.Id, $"war:{b.Id}", "none", $"{war.Id} for {aim.ToString().ToLowerInvariant()}"));
+    }
+
+    /// <summary>Opens a feud between the crowns <paramref name="a"/> and <paramref name="b"/> under the next feud id.</summary>
+    public void OpenFeud(Seat a, Seat b)
+    {
+        feudsMade++;
+        Feud feud = new(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"feud-{feudsMade}"), a.Id, b.Id, Turn, 0);
+        feuds.Add(feud);
+        Undo(() =>
+        {
+            feuds.Remove(feud);
+            feudsMade--;
+        });
+        changes.Add(new BoardChange(a.Id, $"feud:{b.Id}", "none", feud.Id));
+    }
+
+    /// <summary>Heats <paramref name="feud"/> by <paramref name="delta"/>, or lets it cool if negative.</summary>
+    public void AddHeat(Feud feud, int delta)
+    {
+        Feud before = Feud(feud.Id);
+        Feud after = before with { Heat = before.Heat + delta };
+        int index = feuds.IndexOf(before);
+        feuds[index] = after;
+        Undo(() => feuds[index] = before);
+        Record(before.A, $"heat:{before.Id}", before.Heat, after.Heat);
+    }
+
+    /// <summary>Ends <paramref name="feud"/> for <paramref name="reason"/>.</summary>
+    public void EndFeud(Feud feud, string reason)
+    {
+        RemoveInPlace(feuds, Feud(feud.Id));
+        changes.Add(new BoardChange(feud.A, $"feud:{feud.B}", feud.Id, reason));
     }
 
     /// <summary><paramref name="ally"/> joins <paramref name="war"/> on the side of the principal <paramref name="side"/>.</summary>

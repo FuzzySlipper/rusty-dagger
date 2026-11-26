@@ -46,6 +46,10 @@ internal static class TestBoards
             [new(CardEffectKind.Control, -2), new(CardEffectKind.AddCondition, 3, Condition: ConditionKind.WarFront, Weeks: 8), new(CardEffectKind.Conquer)], Weeks: 2),
         new("muster", "Muster", CardFamily.War, 2, 0, 0, CardTarget.OwnFront, Visibility.Public, [new(CardEffectKind.Control, 1)]),
         new("sue-for-peace", "Sue for Peace", CardFamily.War, 0, 2, 0, CardTarget.War, Visibility.Public, [new(CardEffectKind.Peace)]),
+        new("border-scuffle", "Border Scuffle", CardFamily.War, 0, 0, 2, CardTarget.FeudRival, Visibility.Public,
+            [new(CardEffectKind.Order, -1), new(CardEffectKind.AddCondition, 1, Condition: ConditionKind.Skirmish, Weeks: 4)]),
+        new("cattle-raid", "Cattle Raid", CardFamily.War, 0, 0, 2, CardTarget.FeudRival, Visibility.Public, [new(CardEffectKind.Take, 2, Resource.Coin)]),
+        new("harass-factors", "Harass Their Factors", CardFamily.War, 0, 1, 1, CardTarget.FeudRival, Visibility.Public, [new(CardEffectKind.RivalInfluence, -1)]),
         new("guild-secret", "Guild Secret", CardFamily.Shadow, 0, 0, 8, CardTarget.None, Visibility.Secret, [new(CardEffectKind.Gain, 4, Resource.Favour)], Seat: "guild"),
     ]);
 

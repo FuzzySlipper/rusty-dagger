@@ -19,7 +19,8 @@ namespace WorldRpg.Politics;
 /// one, as its own lords reassert themselves.</item>
 /// <item>Every <see cref="SeasonWeeks"/>th week ground left untended drifts: each region's control, prosperity and
 /// order above <see cref="SettledTrack"/> falls by 1, a region not cut off below it regains 1 prosperity, and each
-/// relation moves 1 towards 0, except between seats at war, so what a seat has built needs keeping up and fed land recovers.</item>
+/// relation moves 1 towards 0, except between seats at war or in a heated feud, so what a seat has built needs keeping
+/// up and fed land recovers.</item>
 /// <item>Each seat draws its hand back up to <see cref="Board.HandSize"/>.</item>
 /// </list>
 /// </item>
@@ -191,7 +192,8 @@ public static class BoardTurn
         {
             foreach (Seat seat in board.Seats)
                 foreach (Seat other in board.Seats.Where(other => string.CompareOrdinal(seat.Id, other.Id) < 0))
-                    board.AdjustRelation(seat, other, -Math.Sign(board.Relation(seat.Id, other.Id)));
+                    if (Feuds.Between(board, seat.Id, other.Id) is not { Heat: > 0 })
+                        board.AdjustRelation(seat, other, -Math.Sign(board.Relation(seat.Id, other.Id)));
         }
         foreach (Seat seat in board.Seats) board.DrawHand(seat);
     }

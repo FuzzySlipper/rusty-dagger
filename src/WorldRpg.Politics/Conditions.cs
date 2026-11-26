@@ -27,6 +27,9 @@ public enum ConditionKind
     /// <summary>A front between the seats in <see cref="RegionCondition.Detail"/>: prosperity and order fall.</summary>
     WarFront,
 
+    /// <summary>The vassals of the seats in <see cref="RegionCondition.Detail"/> are skirmishing: order falls.</summary>
+    Skirmish,
+
     /// <summary>Raiders on the roads: prosperity falls.</summary>
     Raiders,
 
@@ -95,7 +98,7 @@ public static class Conditions
             if (!Due(condition.Magnitude, board.Turn)) continue;
             switch (condition.Kind)
             {
-                case ConditionKind.Plague or ConditionKind.CrimeWave: board.AdjustOrder(region, -1); break;
+                case ConditionKind.Plague or ConditionKind.CrimeWave or ConditionKind.Skirmish: board.AdjustOrder(region, -1); break;
                 case ConditionKind.MonsterSurge or ConditionKind.Unrest: board.AdjustControl(region, -1); break;
                 case ConditionKind.Crackdown or ConditionKind.WitchHunt:
                     board.AdjustOrder(region, 1);

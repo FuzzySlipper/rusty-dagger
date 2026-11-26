@@ -96,14 +96,14 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
 
     /// <summary>
     /// What is wrong with a condition's detail: price surges, monster surges and persecutions name what they concern;
-    /// a war front's seats are named when a war lays it; the rest name nothing. A persecuted seat is checked against
+    /// a war front's or a skirmish's seats are named when a war or feud lays it; the rest name nothing. A persecuted seat is checked against
     /// the table.
     /// </summary>
     internal static string? ConditionDetailProblem(ConditionKind kind, string? detail)
     {
         bool needs = kind is ConditionKind.PriceSurge or ConditionKind.MonsterSurge or ConditionKind.Persecution;
         return needs && string.IsNullOrWhiteSpace(detail) ? $"a {kind} names no detail"
-            : !needs && kind != ConditionKind.WarFront && detail is not null ? $"a {kind} names a detail it does not use"
+            : !needs && kind is not (ConditionKind.WarFront or ConditionKind.Skirmish) && detail is not null ? $"a {kind} names a detail it does not use"
             : null;
     }
 
@@ -124,7 +124,7 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
     private static string? EffectProblem(Card card, CardEffect effect)
     {
         bool region = card.Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion or CardTarget.RegionRival
-            or CardTarget.EnemyFront or CardTarget.OwnFront;
+            or CardTarget.EnemyFront or CardTarget.OwnFront or CardTarget.FeudRival;
         bool needsResource = effect.Kind is CardEffectKind.Gain or CardEffectKind.Take;
         bool needsOffice = effect.Kind == CardEffectKind.ChallengeOffice;
         bool needsCondition = effect.Kind is CardEffectKind.AddCondition or CardEffectKind.RemoveCondition;
@@ -149,9 +149,9 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
                 "needs a region target",
             CardEffectKind.Influence or CardEffectKind.HolderInfluence or CardEffectKind.ChallengeOffice when !region => "needs a single region target",
             CardEffectKind.MoveInfluence when card.Target != CardTarget.RegionPair => "needs a region pair",
-            CardEffectKind.RivalInfluence when card.Target != CardTarget.RegionRival => "needs a rival in a region",
+            CardEffectKind.RivalInfluence when card.Target is not (CardTarget.RegionRival or CardTarget.FeudRival) => "needs a rival in a region",
             CardEffectKind.Relation when card.Target is CardTarget.None or CardTarget.RegionPair or CardTarget.War => "needs a seat or a single region target",
-            CardEffectKind.Take when card.Target != CardTarget.OtherSeat => "needs a seat target",
+            CardEffectKind.Take when card.Target is not (CardTarget.OtherSeat or CardTarget.FeudRival) => "needs a seat target",
             CardEffectKind.Annex when card.Target != CardTarget.ContestedRegion => "needs a contested region",
             CardEffectKind.Conquer when card.Target != CardTarget.EnemyFront => "needs an enemy front",
             CardEffectKind.Peace or CardEffectKind.Broker when card.Target != CardTarget.War => "needs a war target",

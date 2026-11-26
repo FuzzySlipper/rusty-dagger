@@ -55,12 +55,13 @@ public sealed class PaceTests(FiftyCanonYears run) : IClassFixture<FiftyCanonYea
         Assert.Contains(run.Turns.SelectMany(turn => turn.Moves), move => move.Visibility == Visibility.Secret);
     }
 
+    /// <summary>Hunger is mostly winter's, with war fronts blockading the land around them in the years of war.</summary>
     [Fact]
-    public void Two_to_five_regions_go_hungry_a_year_and_traded_grain_relieves_some()
+    public void Two_to_six_regions_go_hungry_a_year_and_traded_grain_relieves_some()
     {
         BoardChange[] supply = [.. run.Turns.SelectMany(turn => turn.Upkeep).Where(change => change.Field == "supply")];
 
-        Assert.InRange(supply.Count(change => change.From == "fed") / 50.0, 2.0, 5.0);
+        Assert.InRange(supply.Count(change => change.From == "fed") / 50.0, 2.0, 6.0);
         Assert.Contains(supply, change => change.To == "relieved");
     }
 
@@ -85,6 +86,15 @@ public sealed class PaceTests(FiftyCanonYears run) : IClassFixture<FiftyCanonYea
 
         Assert.Contains(wars, change => change.From == "none");
         Assert.Contains(wars, change => change.From != "none");
+    }
+
+    [Fact]
+    public void Crowns_fall_into_feuds_and_some_cool_without_a_war()
+    {
+        BoardChange[] feuds = [.. run.Turns.SelectMany(turn => turn.Wars).Where(change => change.Field.StartsWith("feud:", StringComparison.Ordinal))];
+
+        Assert.Contains(feuds, change => change.From == "none");
+        Assert.Contains(feuds, change => change.To == "cooled");
     }
 
     [Fact]

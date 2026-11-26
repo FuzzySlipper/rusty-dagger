@@ -3,7 +3,8 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// What the seats remember of each other's moves. A public move bears on a seat when its targets name the seat or it
 /// targets a region the seat is present in. If the seat comes out of it worse off, it was struck: its relation with
-/// the mover cools by 1, unless the move already cooled it, and it holds a grudge for <see cref="GrudgeWeeks"/> weeks,
+/// the mover cools by 1, unless the move already cooled it or the two are in a feud, where the blow heats the feud instead
+/// (<see cref="Feuds"/>), and it holds a grudge for <see cref="GrudgeWeeks"/> weeks,
 /// which it may take up as a plan to strike back (<see cref="GoalKind.Retaliate"/>). Striking back at a seat one holds
 /// a grudge against is payback: it settles the grudge and opens none in return. A seat that comes out of a move better
 /// off was helped, and every <see cref="HelpsToWarm"/>th help its relation with the mover warms by 1, unless the move
@@ -37,7 +38,7 @@ public static class Memory
             }
             else if (gain < 0)
             {
-                if (!related) board.AdjustRelation(mover, seat, -1);
+                if (!related) Feuds.Struck(board, mover, seat);
                 board.HoldGrudge(seat, mover, board.Turn + GrudgeWeeks);
             }
             else if (!related && board.Helped(mover, seat) % HelpsToWarm == 0)

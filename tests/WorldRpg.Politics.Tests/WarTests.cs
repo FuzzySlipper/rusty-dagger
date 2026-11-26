@@ -13,7 +13,7 @@ public sealed class WarTests
         Board board = AtWar(out War war);
 
         Assert.Equal(("west", "east", 1), (war.A, war.B, war.Started));
-        Assert.Contains(new BoardChange("west", "war:east", "none", "war-1"), board.TakeChanges());
+        Assert.Contains(new BoardChange("west", "war:east", "none", "war-1 for conquest"), board.TakeChanges());
         Assert.Equal(["west-march", "east-march"], Wars.Fronts(board, war).Select(region => region.Id));
 
         board.AdjustRelation(board.Seat("west"), board.Seat("east"), 2);
@@ -221,10 +221,10 @@ public sealed class WarTests
 
         TurnTrace turn = BoardTurn.Play(board);
 
-        Assert.Contains(new BoardChange("west", "war:east", "none", "war-1"), turn.Wars);
+        Assert.Contains(new BoardChange("west", "war:east", "none", "war-1 for conquest"), turn.Wars);
         using StringWriter writer = new();
         BoardTraceWriter.WriteText(writer, turn);
-        Assert.Contains("wars: west war:east none->war-1", writer.ToString(), StringComparison.Ordinal);
+        Assert.Contains("wars: west war:east none->war-1 for conquest", writer.ToString(), StringComparison.Ordinal);
     }
 
     /// <summary>A seat's whole prestige on a board with no trade agreements: its standing everywhere and its bearing.</summary>
