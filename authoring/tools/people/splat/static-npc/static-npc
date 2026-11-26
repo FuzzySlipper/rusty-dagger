@@ -23,7 +23,8 @@ Every file lives in the character's folder, local/art/generated/people/dagger-ch
 Steps, in order (each checks that the one before it has run):
   init      dagger-char init, the approved front (and back, if approved) from the CMS (--cms, default ID), npc.json, prompt templates
             Experiment (npc-471, 2026-11-25): init --from DIR with a side.png too (a three-view sheet split in three; --side right|left),
-            or right.png and/or left.png (a four-view sheet: npc.json "sides"; they follow the back as <Picture 3>, <Picture 4>)
+            or right.png and/or left.png (a four-view sheet: npc.json "sides"; they follow the back as <Picture 3>, <Picture 4>; the clip
+            scales the references to 1280 px, npc.json "ref_size", so four fit the GPU lab at 1920)
             sets npc.json "side": keys, clay (00-brief/clay-side.txt), Meshy and the orbit take it as a third view (<Picture 3>), and
             "side_guide": true also pins it at its frame of the orbit
   keys      cut both paintings from their background (flood_cut, --tolerance) and make the 1920 px keyframes
@@ -363,6 +364,11 @@ def step_clip(n, a):
     shutil.copy(n.prompt('orbit.txt', a.force), n.guide / 'prompt.txt')
     # npc.json "side_guide": true also pins the side painting at the frame that side faces the camera (18 right, 54 left; experiment, npc-471)
     side = {'SIDE_FRAME': '18' if n.cfg['side'] == 'right' else '54'} if n.cfg.get('side') and n.cfg.get('side_guide') else {}
+    if n.cfg.get('sides') or n.cfg.get('side'):   # four (or three) references: at 1280 px they fit the 5090 at 1920 (9 min, peak 31.7 GB;
+        side['REF_SIZE'] = str(n.cfg.get('ref_size', 1280))   # the CMS views are 832x1216; no visible loss against 1920 px refs on a Halo,
+                                                               # 2 h 51 min - npc-467, Patch 2026-11-25). npc.json "ref_size": 0 for full size
+        if side['REF_SIZE'] == '0':
+            del side['REF_SIZE']
     if n.cfg.get('sides') and n.cfg.get('side_guide'):   # named sides: right at 18, left at 54
         side['SIDE_GUIDES'] = ' '.join(f"{v}:{18 if v == 'right' else 54}" for v in n.cfg['sides'])
     sh(['bash', 'authoring/tools/people/splat/scaffold/guided_clip.sh', n.work, n.rid, 'clip', str(sz)], env={**n.env, **n.key_env, **n.gpu_env, **side})
