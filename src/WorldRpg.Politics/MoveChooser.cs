@@ -6,15 +6,19 @@ public sealed record MoveOption(string Card, IReadOnlyList<string> Targets, int 
 /// <summary>
 /// The first chooser: greedy, one move deep. It plays each legal move in a trial on the board and scores the
 /// resulting prestige: the player's gain counted four times, minus the gains of seats it is not friendly with
-/// (twice for a rival, once for a neutral). The seeded chance breaks only exact ties. Intention, with plans that
-/// span weeks, replaces it in #11060.
+/// (twice for a rival, once for a neutral). A seat's trade agreements count towards its prestige at what each is worth
+/// to it (<see cref="Trade.Worth"/>), as the seat valued them before the move. The seeded chance breaks only exact
+/// ties. Intention, with plans that span weeks, replaces it in #11060.
 /// </summary>
 public static class MoveChooser
 {
+    /// <summary>How much the player's own gain counts.</summary>
+    public const int SelfWeight = 4;
+
     /// <summary>
-    /// Every legal play from <paramref name="seat"/>'s hand that would change something, then gathering, best first;
-    /// moves of equal score keep hand, target and that order. A slow card is weighed as if it arrived now. Gathering
-    /// is always among them, so a seat always has a move.
+    /// Every legal play from <paramref name="seat"/>'s hand that would change something, then gathering, then withdrawing
+    /// from each of its trade agreements, best first; moves of equal score keep hand, target and that order. A slow card
+    /// is weighed as if it arrived now. Gathering is always among them, so a seat always has a move.
     /// </summary>
     public static IReadOnlyList<MoveOption> Options(Board board, Seat seat)
     {
@@ -37,6 +41,14 @@ public static class MoveChooser
             board.AdjustResource(seat, lacking, 1);
             return Score(board, seat, before, [], null);
         })));
+        foreach (Agreement deal in board.Agreements.Where(deal => deal.Binds(seat.Id)).ToArray())
+        {
+            options.Add(new MoveOption(Trade.WithdrawId, [deal.Id], board.Trial(() =>
+            {
+                Trade.Withdraw(board, seat, deal);
+                return Score(board, seat, before, [], null);
+            })));
+        }
         return [.. options.OrderByDescending(option => option.Score)];
     }
 
@@ -58,10 +70,23 @@ public static class MoveChooser
         foreach (string id in Touched(board, seat))
         {
             Seat other = board.Seat(id);
-            int gain = Bearing(board, other) - before.Bearing[id] + (standing is null ? 0 : Standing(other, regions) - standing[id]);
+            int gain = Bearing(board, other) - before.Bearing[id] + (standing is null ? 0 : Standing(other, regions) - standing[id])
+                + Deals(board, other, before) - before.Deals[id];
             score += before.Weight[id] * gain;
         }
         return score;
+    }
+
+    /// <summary>What <paramref name="seat"/>'s agreements in force are worth to it: as it valued them before the trial, or a new one now.</summary>
+    private static int Deals(Board board, Seat seat, Before? before)
+    {
+        int worth = 0;
+        foreach (Agreement deal in board.Agreements)
+        {
+            if (!deal.Binds(seat.Id)) continue;
+            worth += before is not null && before.Worth.TryGetValue((deal.Id, seat.Id), out int valued) ? valued : Trade.Worth(board, seat, deal);
+        }
+        return worth;
     }
 
     private static int Standing(Seat seat, IReadOnlyList<Region> regions)
@@ -138,10 +163,10 @@ public static class MoveChooser
             {
                 touched.Add(change.Subject);
             }
-            else if (field.StartsWith("relation:", StringComparison.Ordinal))
+            else if (field.StartsWith("relation:", StringComparison.Ordinal) || field.StartsWith("deal:", StringComparison.Ordinal))
             {
                 touched.Add(change.Subject);
-                touched.Add(field["relation:".Length..]);
+                touched.Add(field[(field.IndexOf(':') + 1)..]);
             }
             else
             {
@@ -157,14 +182,22 @@ public static class MoveChooser
         return touched;
     }
 
-    private static int RivalWeight(int relation) => relation < 0 ? 2 : relation == 0 ? 1 : 0;
+    /// <summary>How much a seat's gain counts against the player, by their relation: twice for a rival, once for a neutral, not for a friend.</summary>
+    internal static int RivalWeight(int relation) => relation < 0 ? 2 : relation == 0 ? 1 : 0;
 
     /// <summary>The board as it stood before any trial: each seat's weight to the player and its relations and resources.</summary>
     private sealed class Before(Board board, Seat player)
     {
         public Dictionary<string, int> Weight { get; } = board.Seats.ToDictionary(seat => seat.Id,
-            seat => seat == player ? 4 : -RivalWeight(board.Relation(player.Id, seat.Id)), StringComparer.Ordinal);
+            seat => seat == player ? SelfWeight : -RivalWeight(board.Relation(player.Id, seat.Id)), StringComparer.Ordinal);
 
         public Dictionary<string, int> Bearing { get; } = board.Seats.ToDictionary(seat => seat.Id, seat => MoveChooser.Bearing(board, seat), StringComparer.Ordinal);
+
+        /// <summary>What each agreement in force is worth to each of its two seats.</summary>
+        public Dictionary<(string Deal, string Seat), int> Worth { get; } = board.Agreements
+            .SelectMany(deal => new[] { deal.Proposer, deal.Partner }.Select(seat => (deal, seat)))
+            .ToDictionary(pair => (pair.deal.Id, pair.seat), pair => Trade.Worth(board, board.Seat(pair.seat), pair.deal));
+
+        public Dictionary<string, int> Deals { get; } = board.Seats.ToDictionary(seat => seat.Id, seat => MoveChooser.Deals(board, seat, null), StringComparer.Ordinal);
     }
 }

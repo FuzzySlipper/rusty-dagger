@@ -32,6 +32,11 @@ public sealed class CardSetTests
                 [new(CardEffectKind.Gain, 1), new(CardEffectKind.Control, 1), new(CardEffectKind.Take, 1, Resource.Coin)]),
             new("misfit", "Misfit", CardFamily.Shadow, 0, 0, 0, CardTarget.OtherSeat, Visibility.Secret,
                 [new(CardEffectKind.ChallengeOffice, 1), new(CardEffectKind.MoveInfluence, 1), new(CardEffectKind.Annex, Resource: Resource.Coin)]),
+            new("haggle", "Haggle", CardFamily.Trade, 0, 0, 0, CardTarget.OtherSeat, Visibility.Public, [new(CardEffectKind.Deal, Gives: ["coin:1/2"], Asks: ["grain"])]),
+            new("dole", "Dole", CardFamily.Trade, 0, 0, 0, CardTarget.Deal, Visibility.Public, [new(CardEffectKind.Gain, 1, Resource.Coin)]),
+            new("promise", "Promise", CardFamily.Trade, 0, 0, 0, CardTarget.Deal, Visibility.Public, [new(CardEffectKind.Deal, Gives: ["grain:granary"], Asks: ["coin:1/2"])]),
+            new("slow-pay", "Slow Pay", CardFamily.Trade, 0, 0, 0, CardTarget.Deal, Visibility.Public, [new(CardEffectKind.Deal, Gives: ["grain"], Asks: ["coin:1/9"])]),
+            new("empty", "Empty", CardFamily.Trade, 0, 0, 0, CardTarget.Deal, Visibility.Public, [new(CardEffectKind.Deal, Gives: [], Asks: ["coin:1/2"])]),
             new("orphan", "Orphan", CardFamily.Force, 0, 0, 0, CardTarget.None, Visibility.Public, [new(CardEffectKind.Gain, 1, Resource.Force)], Seat: "nobody"),
         ]);
 
@@ -48,6 +53,11 @@ public sealed class CardSetTests
         Assert.Contains("card 'misfit' ChallengeOffice: names no office", problems);
         Assert.Contains("card 'misfit' MoveInfluence: needs a region pair", problems);
         Assert.Contains("card 'misfit' Annex: names a resource it does not use", problems);
+        Assert.Contains("card 'haggle' Deal: needs a deal target", problems);
+        Assert.Contains("card 'dole' Gain: cannot be played on a deal", problems);
+        Assert.Contains("card 'promise' Deal: term 'grain:granary' is not grain or resource:amount/weeks", problems);
+        Assert.Contains("card 'slow-pay' Deal: term 'coin:1/9' falls due outside every 1..8 weeks", problems);
+        Assert.Contains("card 'empty' Deal: offers an empty menu of terms", problems);
         Assert.Contains("card 'orphan' is the signature of unknown seat 'nobody'", problems);
         // The guild draws only shadow cards and its own: here, just Misfit.
         Assert.Contains("seat 'guild' draws from 1 cards, fewer than a hand of 3", problems);

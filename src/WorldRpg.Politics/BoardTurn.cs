@@ -3,23 +3,31 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// One weekly turn, resolved on Sunday:
 /// <list type="number">
-/// <item>Upkeep. Conditions that have reached their end are lifted, and each region is found fed or cut off from food
-/// (<see cref="Supply"/>); a cut-off region pays its holder nothing and loses order. Each seat is paid, from the regions
-/// it holds that are fed: coin of a quarter of their prosperity (a famine empties a region's granaries, and a price surge adds its magnitude);
-/// favour of a third of
-/// its influence pieces; force of a quarter of their control, each rounded down. A seat's grants
-/// fall due in the weeks their schedules divide, and every <see cref="OfficeWeeks"/>th week each office pays its holder
-/// 1 of its resource. Each region and court condition weighs on its region or crown as
-/// <see cref="Conditions.Weigh(Board, Region)"/> says. A region with order 1 or less loses a point of control to unrest. Every fourth week an
-/// independent region below control 3 regains one, as its own lords reassert themselves. Every
-/// <see cref="SeasonWeeks"/>th week ground left untended drifts: each region's control, prosperity and order above
-/// <see cref="SettledTrack"/> falls by 1, and each relation moves 1 towards 0, so what a seat has built needs keeping
-/// up. Each seat draws its hand back up to <see cref="Board.HandSize"/>.</item>
+/// <item>Upkeep:
+/// <list type="bullet">
+/// <item>Conditions that have reached their end are lifted, and each region is found fed or cut off from food
+/// (<see cref="Supply"/>). Trade agreements that have broken end, and the grain rations due relieve regions not fed
+/// (<see cref="Trade"/>).</item>
+/// <item>Each seat is paid from the regions it holds that are fed or relieved: coin of a quarter of their prosperity (a
+/// famine empties a region's granaries, and a price surge adds its magnitude) and force of a quarter of their control,
+/// and favour of a third of its influence pieces, each rounded down. A seat's grants fall due in the weeks their
+/// schedules divide, and every <see cref="OfficeWeeks"/>th week each office pays its holder 1 of its resource. Then the
+/// resource terms of trade agreements falling due are paid.</item>
+/// <item>Each region and court condition weighs on its region or crown as <see cref="Conditions.Weigh(Board, Region)"/>
+/// says. A region still cut off loses order and prosperity every <see cref="Supply.CutWeeks"/>th week. A region with
+/// order 1 or less loses a point of control to unrest. Every fourth week an independent region below control 3 regains
+/// one, as its own lords reassert themselves.</item>
+/// <item>Every <see cref="SeasonWeeks"/>th week ground left untended drifts: each region's control, prosperity and
+/// order above <see cref="SettledTrack"/> falls by 1, a region not cut off below it regains 1 prosperity, and each
+/// relation moves 1 towards 0, so what a seat has built needs keeping up and fed land recovers.</item>
+/// <item>Each seat draws its hand back up to <see cref="Board.HandSize"/>.</item>
+/// </list>
+/// </item>
 /// <item>The World deck turns one card, which lays its condition on a region.</item>
 /// <item>The slow moves due this week arrive, in the order they were played. One that no longer fits its targets, or
 /// changes nothing, fails.</item>
-/// <item>Each seat plays a card from its hand or gathers, the table's order turning by one seat each week. A slow card
-/// is paid now and arrives its weeks later.</item>
+/// <item>Each seat plays a card from its hand, gathers or withdraws from a trade agreement, the table's order turning by
+/// one seat each week. A slow card is paid now and arrives its weeks later.</item>
 /// </list>
 /// </summary>
 public static class BoardTurn
@@ -66,6 +74,10 @@ public static class BoardTurn
             {
                 Gathering.Gather(board, seat);
             }
+            else if (chosen.Card == Trade.WithdrawId)
+            {
+                Trade.Withdraw(board, seat, board.Agreements.Single(deal => deal.Id == chosen.Targets[0]));
+            }
             else
             {
                 Card card = board.Deck(seat).Hand.First(held => held.Id == chosen.Card);
@@ -105,7 +117,7 @@ public static class BoardTurn
     /// </summary>
     public static string? Origin(Board board, Seat seat, Card card, IReadOnlyList<string> targets)
     {
-        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat))
+        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal))
         {
             Region target = board.Region(targets[0]);
             return board.Present(seat, target) ? target.Id : target.Borders.FirstOrDefault(border => board.Present(seat, board.Region(border)));
@@ -119,7 +131,9 @@ public static class BoardTurn
     {
         board.ExpireConditions();
         HashSet<Region> fed = Supply.Fed(board);
-        foreach (Region region in board.Regions) board.SetCut(region, !fed.Contains(region));
+        HashSet<Region> relieved = Trade.Relieve(board, fed);
+        foreach (Region region in board.Regions)
+            board.SetSupply(region, fed.Contains(region) ? RegionSupply.Fed : relieved.Contains(region) ? RegionSupply.Relieved : RegionSupply.Cut);
         foreach (Seat seat in board.Seats)
         {
             Region[] held = [.. board.Regions.Where(region => region.Allegiance == seat.Id && !region.Cut)];
@@ -137,11 +151,16 @@ public static class BoardTurn
                 }
             }
         }
+        Trade.Settle(board);
         foreach (Region region in board.Regions) Conditions.Weigh(board, region);
         foreach (Seat seat in board.Seats) Conditions.Weigh(board, seat);
         foreach (Region region in board.Regions)
         {
-            if (region.Cut && board.Turn % Supply.CutOrderWeeks == 0) board.AdjustOrder(region, -1);
+            if (region.Cut && board.Turn % Supply.CutWeeks == 0)
+            {
+                board.AdjustOrder(region, -1);
+                board.AdjustProsperity(region, -1);
+            }
             if (region.Order <= UnrestOrder) board.AdjustControl(region, -1);
             if (region.Allegiance is null && board.Turn % IndependentRecoveryWeeks == 0 && region.Control < IndependentRecoveryControl)
                 board.AdjustControl(region, 1);
@@ -149,6 +168,7 @@ public static class BoardTurn
             {
                 if (region.Control > SettledTrack) board.AdjustControl(region, -1);
                 if (region.Prosperity > SettledTrack) board.AdjustProsperity(region, -1);
+                else if (region.Prosperity < SettledTrack && !region.Cut) board.AdjustProsperity(region, 1);
                 if (region.Order > SettledTrack) board.AdjustOrder(region, -1);
             }
         }

@@ -25,6 +25,7 @@ public sealed class Board
     private readonly Dictionary<(string, string), int> relations;
     private readonly Dictionary<string, SeatDeck> decks;
     private readonly List<PendingMove> pending = [];
+    private readonly List<Agreement> agreements = [];
     private readonly List<WorldCard> worldDraw;
     private readonly List<WorldCard> worldDiscard = [];
     private readonly List<BoardChange> changes = [];
@@ -32,6 +33,7 @@ public sealed class Board
     private readonly Dictionary<string, int> pieces;
     private readonly Dictionary<string, int> held;
     private int trialStart = -1;
+    private int dealsMade;
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
         Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, BoardRandom random)
@@ -62,6 +64,9 @@ public sealed class Board
 
     /// <summary>The slow moves under way, in the order they were played.</summary>
     public IReadOnlyList<PendingMove> Pending => pending;
+
+    /// <summary>The trade agreements in force, in the order they were made (<see cref="Trade"/>).</summary>
+    public IReadOnlyList<Agreement> Agreements => agreements;
 
     /// <summary>
     /// A board at its starting position, played from <paramref name="seed"/> or the setup's canon seed: each seat's
@@ -377,13 +382,39 @@ public sealed class Board
         if (condition.Kind == CourtConditionKind.HostageTreaty) AdjustRelation(crown, Seat(condition.Source), 0);
     }
 
-    /// <summary>Marks <paramref name="region"/> fed or cut off from food.</summary>
-    public void SetCut(Region region, bool cut)
+    /// <summary>Marks <paramref name="region"/> fed, relieved by traded grain, or cut off from food.</summary>
+    public void SetSupply(Region region, RegionSupply supply)
     {
-        if (region.Cut == cut) return;
-        changes.Add(new BoardChange(region.Id, "supply", region.Cut ? "cut" : "fed", cut ? "cut" : "fed"));
-        region.Cut = cut;
-        Undo(() => region.Cut = !cut);
+        RegionSupply before = region.Supply;
+        if (before == supply) return;
+        changes.Add(new BoardChange(region.Id, "supply", Lower(before), Lower(supply)));
+        region.Supply = supply;
+        Undo(() => region.Supply = before);
+    }
+
+    /// <summary>Puts <paramref name="offer"/> in force under the next agreement id.</summary>
+    public void AddAgreement(Agreement offer)
+    {
+        dealsMade++;
+        Agreement deal = offer with { Id = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"deal-{dealsMade}") };
+        agreements.Add(deal);
+        Undo(() =>
+        {
+            agreements.Remove(deal);
+            dealsMade--;
+        });
+        changes.Add(new BoardChange(deal.Proposer, $"deal:{deal.Partner}", "none", deal.ToString()));
+    }
+
+    /// <summary>Records <paramref name="offer"/>'s refusal; nothing else changes.</summary>
+    public void RefuseAgreement(Agreement offer) =>
+        changes.Add(new BoardChange(offer.Proposer, $"deal:{offer.Partner}", "none", $"refused {offer.Gives} for {offer.Asks}"));
+
+    /// <summary>Ends <paramref name="deal"/> for both sides, for <paramref name="reason"/>.</summary>
+    public void EndAgreement(Agreement deal, string reason)
+    {
+        RemoveInPlace(agreements, deal);
+        changes.Add(new BoardChange(deal.Proposer, $"deal:{deal.Partner}", deal.ToString(), reason));
     }
 
     /// <summary>Takes every region and court condition that has reached its end turn off the board.</summary>
@@ -486,6 +517,8 @@ public sealed class Board
         }
     }
 
+    private static string Lower(RegionSupply supply) => supply.ToString().ToLowerInvariant();
+
     internal static (string, string) Pair(string a, string b) => string.CompareOrdinal(a, b) <= 0 ? (a, b) : (b, a);
 
     private int Track(string subject, string field, int value, int delta) => Clamped(subject, field, value, delta, 0, TrackLimit);
@@ -569,10 +602,26 @@ public sealed record Region(string Id, string Name, int CatalogRegion, bool Capi
     /// <summary>The conditions on the region, in the order they were laid.</summary>
     public List<RegionCondition> Conditions { get; internal init; } = [];
 
-    /// <summary>Whether the region is cut off from food this week (<see cref="Supply"/>).</summary>
-    public bool Cut { get; internal set; }
+    /// <summary>Whether the region is fed, relieved or cut off from food this week (<see cref="Politics.Supply"/>).</summary>
+    public RegionSupply Supply { get; internal set; }
+
+    /// <summary>Whether the region is cut off this week: it pays its holder nothing.</summary>
+    public bool Cut => Supply == RegionSupply.Cut;
 
     public int InfluenceOf(string seat) => Influence.GetValueOrDefault(seat);
+}
+
+/// <summary>How a region is fed this week.</summary>
+public enum RegionSupply
+{
+    /// <summary>Its own harvest or the next valley's feeds it.</summary>
+    Fed,
+
+    /// <summary>It is not fed, and grain bought under a trade agreement relieves it.</summary>
+    Relieved,
+
+    /// <summary>It is cut off from food.</summary>
+    Cut,
 }
 
 /// <summary>A seat's cards: the hand it plays from, the draw pile it fills the hand from and the discard pile.</summary>

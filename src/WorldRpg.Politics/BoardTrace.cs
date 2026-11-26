@@ -57,7 +57,10 @@ public sealed record TurnTrace(
 
     public int Year => (Turn - 1) * DaysPerWeek / DaysPerYear + 1;
 
-    public int Day => (Turn - 1) * DaysPerWeek % DaysPerYear + 1;
+    public int Day => DayOf(Turn);
+
+    /// <summary>The day of its year that <paramref name="turn"/>'s Sunday falls on, from 1.</summary>
+    public static int DayOf(int turn) => (turn - 1) * DaysPerWeek % DaysPerYear + 1;
 
     /// <summary>
     /// The number of weekly turns in <paramref name="years"/> Tamrielic years: every Sunday whose day falls inside the

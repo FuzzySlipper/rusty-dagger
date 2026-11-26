@@ -38,6 +38,8 @@ internal static class TestBoards
         new("suborn", "Suborn the Watch", CardFamily.Shadow, 2, 0, 0, CardTarget.ReachableRegion, Visibility.Secret,
             [new(CardEffectKind.ChallengeOffice, 1, Office: Office.Watch)]),
         new("extort", "Extort", CardFamily.Shadow, 1, 0, 0, CardTarget.OtherSeat, Visibility.Secret, [new(CardEffectKind.Take, 3, Resource.Coin)], Weeks: 1),
+        new("barter", "Barter", CardFamily.Faith, 1, 0, 0, CardTarget.Deal, Visibility.Public,
+            [new(CardEffectKind.Deal, Gives: ["grain", "coin:1/2", "force:1/4"], Asks: ["grain", "coin:1/2", "force:1/4"])]),
         new("guild-secret", "Guild Secret", CardFamily.Shadow, 0, 0, 8, CardTarget.None, Visibility.Secret, [new(CardEffectKind.Gain, 4, Resource.Favour)], Seat: "guild"),
     ]);
 
@@ -70,6 +72,25 @@ internal static class TestBoards
             Region("march", false, marchAllegiance, marchControl, 2, marchOrder, marchInfluence ?? new Dictionary<string, int>(), ["west-capital", "east-capital"])
                 with { Offices = marchOffices },
             Region("east-capital", true, "east", 5, 4, 4, new Dictionary<string, int> { ["east"] = 2 }, ["march"]),
+        ],
+        relation == 0 ? [] : [new RelationSetup("west", "east", relation)]);
+
+    /// <summary>
+    /// Two crowns and the land between them, in a line: West's capital, West's march, independent hill country too poor
+    /// to feed itself, East's granary, which has grain to spare, and East's capital.
+    /// </summary>
+    public static BoardSetup Granary(int relation = 0) => new(
+        7,
+        [
+            new SeatSetup("west", "West", SeatKind.Crown, "west-holder", "west-capital", 4, 4, 4, [CardFamily.Trade, CardFamily.Court, CardFamily.Force]),
+            new SeatSetup("east", "East", SeatKind.Crown, "east-holder", "east-capital", 4, 4, 4, [CardFamily.Trade, CardFamily.Court, CardFamily.Force]),
+        ],
+        [
+            Region("west-capital", true, "west", 5, 4, 4, new Dictionary<string, int> { ["west"] = 2 }, ["march"]),
+            Region("march", false, "west", 3, 2, 3, new Dictionary<string, int>(), ["west-capital", "hills"]),
+            Region("hills", false, null, 3, 1, 3, new Dictionary<string, int>(), ["march", "granary"]),
+            Region("granary", false, "east", 3, 4, 3, new Dictionary<string, int>(), ["hills", "east-capital"]),
+            Region("east-capital", true, "east", 5, 4, 4, new Dictionary<string, int> { ["east"] = 2 }, ["granary"]),
         ],
         relation == 0 ? [] : [new RelationSetup("west", "east", relation)]);
 

@@ -59,6 +59,7 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
             if (card.Weeks is < 0 or > Card.ConsolidationWeeks) problems.Add($"card '{card.Id}' takes {card.Weeks} weeks, outside 0..{Card.ConsolidationWeeks}");
             if (card.Copies < 1) problems.Add($"card '{card.Id}' has {card.Copies} copies");
             if (card.Effects.Count == 0) problems.Add($"card '{card.Id}' does nothing");
+            if (card.Effects.Count(effect => effect.Kind == CardEffectKind.Deal) > 1) problems.Add($"card '{card.Id}' offers more than one deal");
             foreach (CardEffect effect in card.Effects)
                 if (EffectProblem(card, effect) is { } problem) problems.Add($"card '{card.Id}' {effect.Kind}: {problem}");
         }
@@ -102,6 +103,20 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
             : null;
     }
 
+    /// <summary>What is wrong with a menu of deal terms: it offers none, or one is not a term a card can offer.</summary>
+    private static string? TermsProblem(IReadOnlyList<string>? menu)
+    {
+        if (menu is null || menu.Count == 0) return "offers an empty menu of terms";
+        foreach (string text in menu)
+        {
+            TradeTerm? term = TradeTerm.Parse(text);
+            if (term is null || term.Source is not null) return $"term '{text}' is not grain or resource:amount/weeks";
+            if (term.Amount is < 1 or > Board.ResourceLimit) return $"term '{text}' moves an amount outside 1..{Board.ResourceLimit}";
+            if (term.EveryWeeks is < 1 or > Trade.Horizon) return $"term '{text}' falls due outside every 1..{Trade.Horizon} weeks";
+        }
+        return null;
+    }
+
     private static string? EffectProblem(Card card, CardEffect effect)
     {
         bool region = card.Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion or CardTarget.RegionRival;
@@ -110,6 +125,10 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
         bool needsCondition = effect.Kind is CardEffectKind.AddCondition or CardEffectKind.RemoveCondition;
         bool needsCourt = effect.Kind == CardEffectKind.AddCourtCondition;
         bool lasts = effect.Kind is CardEffectKind.AddCondition or CardEffectKind.AddCourtCondition;
+        bool deal = effect.Kind == CardEffectKind.Deal;
+        if (deal != (card.Target == CardTarget.Deal)) return deal ? "needs a deal target" : "cannot be played on a deal";
+        if (deal != (effect.Gives is not null || effect.Asks is not null)) return deal ? "names no terms" : "names terms it does not use";
+        if (deal && (TermsProblem(effect.Gives) ?? TermsProblem(effect.Asks)) is { } terms) return terms;
         if (needsResource != effect.Resource.HasValue) return needsResource ? "names no resource" : "names a resource it does not use";
         if (needsOffice != effect.Office.HasValue) return needsOffice ? "names no office" : "names an office it does not use";
         if (needsCondition != effect.Condition.HasValue) return needsCondition ? "names no condition" : "names a condition it does not use";

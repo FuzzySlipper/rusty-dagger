@@ -60,7 +60,7 @@ public sealed class BoardTurnTests
     }
 
     [Fact]
-    public void Each_season_untended_tracks_and_relations_drift_back()
+    public void Each_season_untended_tracks_and_relations_drift_back_and_fed_land_recovers()
     {
         Board board = TestBoards.Create(TestBoards.TwoCrowns(relation: -2));
         board.Turn = BoardTurn.SeasonWeeks - 1;
@@ -70,7 +70,8 @@ public sealed class BoardTurnTests
         Assert.Contains(new BoardChange("west-capital", "control", "5", "4"), upkeep);
         Assert.Contains(new BoardChange("west-capital", "prosperity", "4", "3"), upkeep);
         Assert.Contains(new BoardChange("west-capital", "order", "4", "3"), upkeep);
-        Assert.DoesNotContain(upkeep, change => change.Subject == "march");
+        // The march, fed and below the settled track, recovers a point of prosperity and keeps its other tracks.
+        Assert.Equal([new BoardChange("march", "prosperity", "2", "3")], upkeep.Where(change => change.Subject == "march"));
         Assert.Contains(new BoardChange("east", "relation:west", "-2", "-1"), upkeep);
     }
 

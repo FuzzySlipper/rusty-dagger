@@ -48,13 +48,54 @@ public sealed class SupplyTests
     }
 
     [Fact]
-    public void A_cut_region_loses_order_every_fourth_week()
+    public void A_cut_region_loses_order_and_prosperity_every_fourth_week()
     {
         Board board = Famished();
         board.AddCondition(board.Region("west-capital"), Lasting(ConditionKind.Raiders));
-        board.Turn = Supply.CutOrderWeeks - 1;
+        board.Turn = Supply.CutWeeks - 1;
 
-        Assert.Contains(BoardTurn.Play(board).Upkeep, change => change is { Subject: "march", Field: "order", From: "3", To: "2" });
+        IReadOnlyList<BoardChange> upkeep = BoardTurn.Play(board).Upkeep;
+
+        Assert.Contains(new BoardChange("march", "order", "3", "2"), upkeep);
+        Assert.Contains(new BoardChange("march", "prosperity", "2", "1"), upkeep);
+    }
+
+    [Fact]
+    public void In_winter_a_region_needs_a_better_harvest_and_only_a_surplus_passes_food_on()
+    {
+        const int Winter = 40;
+        Assert.False(Supply.Winter(Winter - 1));
+        Assert.True(Supply.Winter(Winter));
+        Board board = TestBoards.Create(TestBoards.TwoCrowns());
+        Region march = board.Region("march");
+
+        // The march at prosperity 2 feeds itself until winter; then its neighbours, at 4, have grain to spare for it.
+        Assert.True(Supply.FeedsItself(march, Winter - 1));
+        Assert.False(Supply.FeedsItself(march, Winter));
+        board.Turn = Winter;
+        Assert.Contains(march, Supply.Fed(board));
+
+        // At 3 they still feed themselves in winter but spare nothing, so the march goes hungry.
+        board.AdjustProsperity(board.Region("west-capital"), -1);
+        board.AdjustProsperity(board.Region("east-capital"), -1);
+        Assert.Contains(board.Region("west-capital"), Supply.Fed(board));
+        Assert.DoesNotContain(march, Supply.Fed(board));
+        board.Turn = Winter - 1;
+        Assert.Contains(march, Supply.Fed(board));
+    }
+
+    [Fact]
+    public void Each_season_fed_land_below_the_settled_track_regains_prosperity_and_cut_land_does_not()
+    {
+        Board fed = TestBoards.Create(TestBoards.TwoCrowns());
+        fed.AdjustProsperity(fed.Region("march"), -1);
+        fed.Turn = BoardTurn.SeasonWeeks - 1;
+        Assert.Contains(new BoardChange("march", "prosperity", "1", "2"), BoardTurn.Play(fed).Upkeep);
+
+        Board cut = Famished();
+        cut.AddCondition(cut.Region("west-capital"), Lasting(ConditionKind.Raiders));
+        cut.Turn = BoardTurn.SeasonWeeks - 1;
+        Assert.DoesNotContain(BoardTurn.Play(cut).Upkeep, change => change is { Subject: "march", Field: "prosperity" });
     }
 
     [Fact]

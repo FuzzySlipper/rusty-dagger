@@ -37,6 +37,12 @@ public enum CardTarget
 
     /// <summary>A region the player reaches, then another seat with influence there: a rival on its own ground.</summary>
     RegionRival,
+
+    /// <summary>
+    /// Another seat, then the term the player gives and the term it asks in return, each from the card's menu
+    /// (<see cref="TradeTerm"/>): a trade agreement offered to a partner.
+    /// </summary>
+    Deal,
 }
 
 /// <summary>
@@ -137,11 +143,18 @@ public enum CardEffectKind
     /// there and more than its current seat.
     /// </summary>
     Annex,
+
+    /// <summary>
+    /// Offers the target seat a standing trade agreement on the targeted terms, chosen from <see cref="CardEffect.Gives"/>
+    /// and <see cref="CardEffect.Asks"/>; the partner accepts or refuses it (<see cref="Trade"/>).
+    /// </summary>
+    Deal,
 }
 
 /// <summary>
 /// One effect of a card. <see cref="Resource"/> is set for gaining and taking, <see cref="Office"/> for a challenge,
-/// <see cref="Condition"/> or <see cref="Court"/> with <see cref="Weeks"/> and any <see cref="Detail"/> for a condition.
+/// <see cref="Condition"/> or <see cref="Court"/> with <see cref="Weeks"/> and any <see cref="Detail"/> for a condition,
+/// and the menus of terms <see cref="Gives"/> and <see cref="Asks"/> for a deal.
 /// </summary>
 public sealed record CardEffect(
     CardEffectKind Kind,
@@ -151,7 +164,9 @@ public sealed record CardEffect(
     ConditionKind? Condition = null,
     CourtConditionKind? Court = null,
     int Weeks = 0,
-    string? Detail = null);
+    string? Detail = null,
+    IReadOnlyList<string>? Gives = null,
+    IReadOnlyList<string>? Asks = null);
 
 /// <summary>
 /// A card: its family, what it costs, what it is played on, who sees it and what it does. A card of
@@ -189,7 +204,8 @@ public sealed record Card(
 
     /// <summary>
     /// The targets worth checking for <paramref name="seat"/>, in board order: every seat or region for a single
-    /// target, and for a pair each region the seat is present in with each of its borders. <see cref="Fits"/> decides.
+    /// target, for a pair each region the seat is present in with each of its borders, and for a deal every other seat
+    /// with each pair of terms from the menus, grain from the region it would come from. <see cref="Fits"/> decides.
     /// </summary>
     public IEnumerable<IReadOnlyList<string>> Candidates(Board board, Seat seat) => Target switch
     {
@@ -199,6 +215,7 @@ public sealed record Card(
             .SelectMany(region => region.Borders.Select(border => (IReadOnlyList<string>)[region.Id, border])),
         CardTarget.RegionRival => board.Regions
             .SelectMany(region => region.Influence.Keys.Where(rival => rival != seat.Id).Select(rival => (IReadOnlyList<string>)[region.Id, rival])),
+        CardTarget.Deal => board.Seats.Where(partner => partner != seat).SelectMany(partner => Offers(board, seat, partner)),
         _ => board.Regions.Select(region => (IReadOnlyList<string>)[region.Id]),
     };
 
@@ -222,6 +239,9 @@ public sealed record Card(
                 && board.Region(targets[0]).Borders.Contains(targets[1]),
             CardTarget.RegionRival => targets.Count == 2 && targets[1] != seat.Id && board.Reaches(seat, board.Region(targets[0]))
                 && board.Region(targets[0]).InfluenceOf(targets[1]) > 0,
+            CardTarget.Deal => targets.Count == 3 && board.HasSeat(targets[0])
+                && TradeTerm.Parse(targets[1]) is { } gives && TradeTerm.Parse(targets[2]) is { } asks
+                && Trade.Fits(board, seat, board.Seat(targets[0]), gives, asks),
             _ => false,
         };
         if (!fits) return false;
@@ -321,6 +341,9 @@ public sealed record Card(
                         board.AdjustRelation(seat, former, -2);
                     }
                     break;
+                case CardEffectKind.Deal:
+                    Trade.Propose(board, seat, board.Seat(targets[0]), TradeTerm.Parse(targets[1])!, TradeTerm.Parse(targets[2])!);
+                    break;
                 default: throw new InvalidOperationException($"card '{Id}' has unknown effect {effect.Kind}");
             }
         }
@@ -330,10 +353,24 @@ public sealed record Card(
     /// <summary>The regions among <paramref name="targets"/>: the only regions a card's effects change.</summary>
     public IReadOnlyList<Region> TargetRegions(Board board, IReadOnlyList<string> targets) => Target switch
     {
-        CardTarget.None or CardTarget.OtherSeat => [],
+        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal => [],
         CardTarget.RegionRival => [board.Region(targets[0])],
         _ => [.. targets.Select(board.Region)],
     };
+
+    private IEnumerable<IReadOnlyList<string>> Offers(Board board, Seat seat, Seat partner)
+    {
+        CardEffect deal = Effects.Single(effect => effect.Kind == CardEffectKind.Deal);
+        foreach (string give in deal.Gives!)
+        {
+            if (Trade.Resolve(board, TradeTerm.Parse(give)!, seat, partner) is not { } gives) continue;
+            foreach (string ask in deal.Asks!)
+            {
+                if (Trade.Resolve(board, TradeTerm.Parse(ask)!, partner, seat) is { } asks && gives.Resource != asks.Resource)
+                    yield return [partner.Id, gives.ToString(), asks.ToString()];
+            }
+        }
+    }
 
     private static bool Contestable(Board board, Seat seat, Region region) =>
         !region.Capital && region.Allegiance != seat.Id && board.Turn >= region.ContestableFrom && board.Reaches(seat, region);

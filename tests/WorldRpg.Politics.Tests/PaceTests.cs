@@ -52,6 +52,28 @@ public sealed class PaceTests(FiftyCanonYears run) : IClassFixture<FiftyCanonYea
     }
 
     [Fact]
+    public void Two_to_five_regions_go_hungry_a_year_and_traded_grain_relieves_some()
+    {
+        BoardChange[] supply = [.. run.Turns.SelectMany(turn => turn.Upkeep).Where(change => change.Field == "supply")];
+
+        Assert.InRange(supply.Count(change => change.From == "fed") / 50.0, 2.0, 5.0);
+        Assert.Contains(supply, change => change.To == "relieved");
+    }
+
+    [Fact]
+    public void Seats_trade_and_most_deals_run_until_they_lapse_or_break()
+    {
+        BoardChange[] deals = [.. run.Turns.SelectMany(turn => turn.Upkeep.Concat(turn.Arrivals.SelectMany(arrival => arrival.Changes))
+            .Concat(turn.Moves.SelectMany(move => move.Changes))).Where(change => change.Field.StartsWith("deal:", StringComparison.Ordinal))];
+        int made = deals.Count(change => change.From == "none" && !change.To.StartsWith("refused", StringComparison.Ordinal));
+        int withdrawn = deals.Count(change => change.To.StartsWith("withdrawn", StringComparison.Ordinal));
+
+        Assert.True(made > 50 * 4);
+        Assert.Contains(deals, change => change.From == "none" && change.To.Contains("grain:", StringComparison.Ordinal));
+        Assert.InRange(withdrawn, 1, made / 5);
+    }
+
+    [Fact]
     public void No_capital_changes_hands()
     {
         Assert.All(run.Board.Seats.Where(seat => seat.Kind == SeatKind.Crown), seat => Assert.Equal(seat.Id, run.Board.Region(seat.Home!).Allegiance));
