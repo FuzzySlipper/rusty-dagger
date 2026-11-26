@@ -275,6 +275,11 @@ prints each week's moves (`--format jsonl` for one JSON object per turn):
 dotnet run --project src/WorldRpg.Politics.Cli -- run --years 10
 ```
 
+`--format outputs` prints each week's outputs for the world (conditions, region
+and seat facts, moves and the chronicle) instead of the trace. `--nudges FILE`
+queues the world's nudges, one `{"turn": N, "nudge": {...}}` object a line, and
+`--save FILE` / `--load FILE` write the board at the end and resume from it.
+
 `balance` plays seeds 1 to N in parallel and reports the table's balance: each
 seat's prestige spread, the rate of allegiance changes, wars and feuds, and the
 Empire's reserves and interventions.

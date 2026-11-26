@@ -3,6 +3,7 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// One weekly turn, resolved on Sunday:
 /// <list type="number">
+/// <item>The world's nudges queued since last Sunday are applied, in the order they came (<see cref="Nudges"/>).</item>
 /// <item>The table's leader is found (<see cref="Balance"/>).</item>
 /// <item>Upkeep:
 /// <list type="bullet">
@@ -36,6 +37,7 @@ namespace WorldRpg.Politics;
 /// or in a feud may play the cards of open conflict as well as its hand.</item>
 /// <item>Wars and feuds are checked (<see cref="Wars"/>): weariness grows and exhausted wars end in treaties, feuds
 /// cool and their vassals skirmish, crowns at war's relation go to war, feuds open and end, and allies are pulled in.</item>
+/// <item>The chronicle names the arcs that peaked or settled this week (<see cref="Chronicle"/>).</item>
 /// </list>
 /// </summary>
 public static class BoardTurn
@@ -51,6 +53,12 @@ public static class BoardTurn
     {
         board.Turn++;
         board.TakeChanges();
+        List<NudgeTrace> nudges = [];
+        foreach (WorldNudge nudge in board.TakeQueued())
+        {
+            NudgeOutcome outcome = Nudges.Apply(board, nudge);
+            nudges.Add(new NudgeTrace(nudge, outcome, board.TakeChanges()));
+        }
         board.SetLeader(Balance.FindLeader(board));
         Upkeep(board);
         IReadOnlyList<BoardChange> upkeep = board.TakeChanges();
@@ -97,6 +105,7 @@ public static class BoardTurn
                 Card card = held ?? board.StandingCards.First(standing => standing.Id == chosen.Card);
                 if (held is not null) board.Discard(seat, card);
                 visibility = card.Visibility;
+                origin = Origin(board, seat, card, chosen.Targets);
                 if (card.Weeks == 0)
                 {
                     Prestige.Witness witness = Prestige.Witness.OfCard(board, seat, new Prestige.Before(board), card, chosen.Targets);
@@ -106,7 +115,6 @@ public static class BoardTurn
                 else
                 {
                     card.Pay(board, seat);
-                    origin = Origin(board, seat, card, chosen.Targets);
                     arrives = board.Turn + card.Weeks;
                     board.Schedule(new PendingMove(id, seat.Id, card, chosen.Targets, origin, board.Turn, arrives.Value));
                 }
@@ -115,7 +123,8 @@ public static class BoardTurn
                 [.. options.Where(option => !ReferenceEquals(option, chosen)).Take(MoveTrace.AlternativesShown)], board.TakeChanges()));
         }
         Wars.Check(board);
-        return new TurnTrace(board.Turn, upkeep, world, arrivals, moves, board.TakeChanges());
+        IReadOnlyList<BoardChange> wars = board.TakeChanges();
+        return new TurnTrace(board.Turn, nudges, upkeep, world, arrivals, moves, wars, Chronicle.Check(board));
     }
 
     /// <summary>The resource an office pays its holder.</summary>
@@ -151,7 +160,10 @@ public static class BoardTurn
         HashSet<Region> fed = Supply.Fed(board);
         HashSet<Region> relieved = Trade.Relieve(board, fed);
         foreach (Region region in board.Regions)
+        {
             board.SetSupply(region, fed.Contains(region) ? RegionSupply.Fed : relieved.Contains(region) ? RegionSupply.Relieved : RegionSupply.Cut);
+            board.CountCut(region);
+        }
         foreach (Seat seat in board.Seats.Where(seat => seat.Reserves is not null)) board.SetContested(seat, Balance.Contested(board, seat));
         foreach (Seat seat in board.Seats)
         {

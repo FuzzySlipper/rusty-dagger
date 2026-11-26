@@ -126,7 +126,7 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
         return null;
     }
 
-    private static string? EffectProblem(Card card, CardEffect effect)
+    internal static string? EffectProblem(Card card, CardEffect effect)
     {
         bool region = card.Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion or CardTarget.RegionRival
             or CardTarget.EnemyFront or CardTarget.OwnFront or CardTarget.FeudRival;

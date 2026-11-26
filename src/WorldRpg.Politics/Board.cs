@@ -29,6 +29,9 @@ public sealed class Board
     private readonly List<War> wars = [];
     private readonly List<Truce> truces = [];
     private readonly List<Feud> feuds = [];
+    private readonly List<WorldNudge> queued = [];
+    private readonly List<PendingMove> intercepted = [];
+    private readonly List<OpenArc> arcs = [];
     private readonly List<WorldCard> worldDraw;
     private readonly List<WorldCard> worldDiscard = [];
     private readonly List<BoardChange> changes = [];
@@ -41,6 +44,7 @@ public sealed class Board
     private int dealsMade;
     private int warsMade;
     private int feudsMade;
+
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
         Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, IReadOnlyList<Card> standingCards, BoardRandom random,
@@ -126,7 +130,200 @@ public sealed class Board
         return board;
     }
 
+    /// <summary>Everything about the board that changes as it plays, to be read back with <see cref="Load"/>.</summary>
+    public BoardSave Save() => new(
+        Turn,
+        Random.State,
+        Leader,
+        [.. Seats.Select(seat => new SeatSave(seat.Id, seat.Holder, seat.Plan, [.. seat.Grudges], seat.Coin, seat.Favour, seat.Force, [.. seat.Court],
+            seat.ContestedWeeks, [.. seat.Boons], [.. decks[seat.Id].drawPile.Select(card => card.Id)], [.. decks[seat.Id].hand.Select(card => card.Id)],
+            [.. decks[seat.Id].discard.Select(card => card.Id)]))],
+        [.. Regions.Select(region => new RegionSave(region.Id, region.Allegiance, region.Control, region.Prosperity, region.Order, region.ContestableFrom,
+            new SortedDictionary<string, int>(region.Influence, StringComparer.Ordinal), new SortedDictionary<Office, string>(region.Offices),
+            [.. region.Conditions], region.Supply, region.CutWeeks))],
+        [.. relations.Where(entry => entry.Value != 0).OrderBy(entry => entry.Key.Item1, StringComparer.Ordinal).ThenBy(entry => entry.Key.Item2, StringComparer.Ordinal)
+            .Select(entry => new RelationSetup(entry.Key.Item1, entry.Key.Item2, entry.Value))],
+        [.. pending.Select(move => new PendingMoveSave(move.Id, move.Seat, move.Card.Id, move.Targets, move.Origin, move.Played, move.Arrives))],
+        [.. agreements],
+        dealsMade,
+        [.. wars],
+        warsMade,
+        [.. truces],
+        [.. feuds],
+        feudsMade,
+        [.. worldDraw.Select(card => card.Id)],
+        [.. worldDiscard.Select(card => card.Id)],
+        [.. helps.OrderBy(entry => entry.Key.Helper, StringComparer.Ordinal).ThenBy(entry => entry.Key.Helped, StringComparer.Ordinal)
+            .Select(entry => new HelpSave(entry.Key.Helper, entry.Key.Helped, entry.Value))],
+        [.. queued],
+        [.. arcs]);
+
+    /// <summary>
+    /// The board <paramref name="save"/> holds, read back against the <paramref name="setup"/> and <paramref name="cards"/>
+    /// it was made from. A save that does not fit them is refused with every problem named, rather than played on wrong.
+    /// </summary>
+    public static Board Load(BoardSetup setup, CardSet cards, BoardSave save)
+    {
+        List<string> problems = [.. setup.Problems(), .. cards.Problems(setup)];
+        Dictionary<string, Card> byId = cards.Cards.ToDictionary(card => card.Id, StringComparer.Ordinal);
+        Dictionary<string, WorldCard> worldById = (cards.World ?? []).ToDictionary(card => card.Id, StringComparer.Ordinal);
+        if (!save.Seats.Select(seat => seat.Id).SequenceEqual(setup.Seats.Select(seat => seat.Id))) problems.Add("its seats are not the setup's");
+        if (!save.Regions.Select(region => region.Id).SequenceEqual(setup.Regions.Select(region => region.Id))) problems.Add("its regions are not the setup's");
+        foreach (SeatSave seat in save.Seats)
+        {
+            if (!setup.Personas.ContainsKey(seat.Holder)) problems.Add($"seat '{seat.Id}' holder '{seat.Holder}' has no persona");
+            foreach (string card in seat.DrawPile.Concat(seat.Hand).Concat(seat.Discard).Where(card => !byId.ContainsKey(card)))
+                problems.Add($"seat '{seat.Id}' holds unknown card '{card}'");
+        }
+        foreach (PendingMoveSave move in save.Pending.Where(move => !byId.ContainsKey(move.Card)))
+            problems.Add($"move '{move.Id}' plays unknown card '{move.Card}'");
+        foreach (string card in save.WorldDraw.Concat(save.WorldDiscard).Where(card => !worldById.ContainsKey(card)))
+            problems.Add($"the World deck holds unknown card '{card}'");
+        if (problems.Count > 0) throw new BoardSetupException("board save", problems);
+
+        Dictionary<string, SeatSave> seatSaves = save.Seats.ToDictionary(seat => seat.Id, StringComparer.Ordinal);
+        Dictionary<string, RegionSave> regionSaves = save.Regions.ToDictionary(region => region.Id, StringComparer.Ordinal);
+        Seat[] seats = [.. setup.Seats.Select(seat =>
+        {
+            SeatSave saved = seatSaves[seat.Id];
+            return new Seat(seat.Id, seat.Name, seat.Kind, saved.Holder, seat.Home, seat.Grants ?? [], seat.Agenda ?? [])
+            {
+                Coin = saved.Coin,
+                Favour = saved.Favour,
+                Force = saved.Force,
+                Reserves = seat.Reserves,
+                Arbiter = seat.Arbiter,
+                Outsider = seat.Outsider,
+                Plan = saved.Plan,
+                Grudges = [.. saved.Grudges],
+                Court = [.. saved.Court],
+                ContestedWeeks = saved.ContestedWeeks,
+                Boons = [.. saved.Boons],
+            };
+        })];
+        Region[] regions = [.. setup.Regions.Select(region =>
+        {
+            RegionSave saved = regionSaves[region.Id];
+            return new Region(region.Id, region.Name, region.CatalogRegion, region.Capital, [.. region.Borders])
+            {
+                Allegiance = saved.Allegiance,
+                Control = saved.Control,
+                Prosperity = saved.Prosperity,
+                Order = saved.Order,
+                ContestableFrom = saved.ContestableFrom,
+                Influence = new SortedDictionary<string, int>(saved.Influence.ToDictionary(), StringComparer.Ordinal),
+                Offices = new SortedDictionary<Office, string>(saved.Offices.ToDictionary()),
+                Conditions = [.. saved.Conditions],
+                Supply = saved.Supply,
+                CutWeeks = saved.CutWeeks,
+            };
+        })];
+        Dictionary<string, SeatDeck> decks = save.Seats.ToDictionary(seat => seat.Id,
+            seat => new SeatDeck([.. seat.DrawPile.Select(id => byId[id])], [.. seat.Hand.Select(id => byId[id])], [.. seat.Discard.Select(id => byId[id])]),
+            StringComparer.Ordinal);
+        Board board = new(seats, regions, save.Relations.ToDictionary(relation => Pair(relation.A, relation.B), relation => relation.Value), decks,
+            [.. save.WorldDraw.Select(id => worldById[id])], [.. cards.StandingCards()], new BoardRandom(save.Random),
+            new Dictionary<string, Persona>(setup.Personas, StringComparer.Ordinal))
+        {
+            Turn = save.Turn,
+            Leader = save.Leader,
+            dealsMade = save.DealsMade,
+            warsMade = save.WarsMade,
+            feudsMade = save.FeudsMade,
+        };
+        board.pending.AddRange(save.Pending.Select(move => new PendingMove(move.Id, move.Seat, byId[move.Card], move.Targets, move.Origin, move.Played, move.Arrives)));
+        board.agreements.AddRange(save.Agreements);
+        board.wars.AddRange(save.Wars);
+        board.truces.AddRange(save.Truces);
+        board.feuds.AddRange(save.Feuds);
+        board.worldDiscard.AddRange(save.WorldDiscard.Select(id => worldById[id]));
+        foreach (HelpSave help in save.Helps) board.helps[(help.Helper, help.Helped)] = help.Count;
+        board.queued.AddRange(save.Queued);
+        board.arcs.AddRange(save.Arcs);
+        return board;
+    }
+
     public Seat Seat(string id) => seatsById[id];
+
+    public bool HasRegion(string id) => regionsById.ContainsKey(id);
+
+    public bool HasPersona(string holder) => personas.ContainsKey(holder);
+
+    /// <summary>The nudges queued for the next Sunday, in the order they came.</summary>
+    public IReadOnlyList<WorldNudge> Queued => queued;
+
+    /// <summary>The arcs the chronicle is following (<see cref="Chronicle"/>).</summary>
+    public IReadOnlyList<OpenArc> Arcs => arcs;
+
+    /// <summary>
+    /// Queues <paramref name="nudge"/> from the world for the next Sunday. A nudge that cannot apply to this board is
+    /// refused, naming what is wrong with it (<see cref="Nudges.Problem"/>).
+    /// </summary>
+    public void Queue(WorldNudge nudge)
+    {
+        if (Nudges.Problem(this, nudge) is { } problem) throw new ArgumentException($"nudge {nudge} {problem}", nameof(nudge));
+        queued.Add(nudge);
+    }
+
+    /// <summary>The slow moves the world intercepted this Sunday (<see cref="MoveIntercepted"/>).</summary>
+    public IReadOnlyList<PendingMove> InterceptedThisWeek => intercepted;
+
+    /// <summary>The nudges queued for this Sunday, taken off the queue; last Sunday's interceptions are forgotten.</summary>
+    public IReadOnlyList<WorldNudge> TakeQueued()
+    {
+        WorldNudge[] taken = [.. queued];
+        queued.Clear();
+        intercepted.Clear();
+        return taken;
+    }
+
+    /// <summary>The arc the chronicle follows under <paramref name="key"/>, if any.</summary>
+    public OpenArc? Arc(string key) => arcs.FirstOrDefault(arc => arc.Key == key);
+
+    public void FollowArc(OpenArc arc) => arcs.Add(arc);
+
+    public void DropArc(OpenArc arc) => arcs.RemoveAll(open => open.Key == arc.Key && open.Kind == arc.Kind);
+
+    /// <summary>Opens a succession crisis on <paramref name="seat"/>, which the chronicle settles at turn <paramref name="settles"/>.</summary>
+    public void OpenSuccession(Seat seat, int settles) =>
+        FollowArc(new OpenArc(ArcKind.Succession, string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{seat.Id}:{Turn}"), [seat.Id], Turn, false, settles));
+
+    /// <summary>Records the main quest's <paramref name="boon"/> on <paramref name="seat"/>.</summary>
+    public void GrantBoon(Seat seat, string boon)
+    {
+        seat.Boons.Add(boon);
+        changes.Add(new BoardChange(seat.Id, "boon", "none", boon));
+    }
+
+    /// <summary>Moves the slow move <paramref name="id"/>'s arrival to <paramref name="arrives"/> of its arrival; false if it is no longer under way.</summary>
+    public bool Reschedule(string id, Func<int, int> arrives)
+    {
+        int index = pending.FindIndex(move => move.Id == id);
+        if (index < 0) return false;
+        PendingMove before = pending[index];
+        PendingMove after = before with { Arrives = Math.Max(Turn, arrives(before.Arrives)) };
+        pending[index] = after;
+        Record(before.Seat, $"move:{id}", before.Arrives, after.Arrives);
+        return true;
+    }
+
+    /// <summary>Takes the slow move <paramref name="id"/> off the board, intercepted; false if it is no longer under way.</summary>
+    public bool Intercept(string id)
+    {
+        PendingMove? move = pending.Find(held => held.Id == id);
+        if (move is null) return false;
+        pending.Remove(move);
+        intercepted.Add(move);
+        changes.Add(new BoardChange(move.Seat, $"move:{id}", move.Arrives.ToString(System.Globalization.CultureInfo.InvariantCulture), "intercepted"));
+        return true;
+    }
+
+    /// <summary>Marks the week <paramref name="war"/>'s first region was taken, if none was before.</summary>
+    public void MarkFirstLoss(War war)
+    {
+        War current = War(war.Id);
+        if (current.FirstLoss is null) ReplaceWar(current, current with { FirstLoss = Turn });
+    }
 
     public bool HasSeat(string id) => seatsById.ContainsKey(id);
 
@@ -505,6 +702,21 @@ public sealed class Board
         foreach (RegionCondition condition in region.Conditions.Where(held => held.Kind == kind).ToArray()) Lift(region, condition);
     }
 
+    /// <summary>Lowers the magnitude of <paramref name="region"/>'s condition of <paramref name="kind"/> and <paramref name="detail"/> by <paramref name="amount"/>, lifting it at 0.</summary>
+    public void EaseCondition(Region region, ConditionKind kind, string? detail, int amount)
+    {
+        if (region.Conditions.Find(held => held.Kind == kind && held.Detail == detail) is not { } before) return;
+        if (before.Magnitude <= amount)
+        {
+            Lift(region, before);
+            return;
+        }
+        RegionCondition after = before with { Magnitude = before.Magnitude - amount };
+        ReplaceCondition(region.Conditions, before, after);
+        Undo(() => ReplaceCondition(region.Conditions, after, before));
+        changes.Add(new BoardChange(region.Id, ConditionField(kind, detail), Describe(before), Describe(after)));
+    }
+
     /// <summary>Lifts the condition of <paramref name="kind"/> and <paramref name="detail"/> from <paramref name="region"/>, if it is there.</summary>
     public void RemoveCondition(Region region, ConditionKind kind, string? detail)
     {
@@ -533,6 +745,12 @@ public sealed class Board
         changes.Add(new BoardChange(region.Id, "supply", Lower(before), Lower(supply)));
         region.Supply = supply;
         Undo(() => region.Supply = before);
+    }
+
+    /// <summary>Counts another week <paramref name="region"/> is cut off from food, or clears the count once it is fed (<see cref="Chronicle"/>).</summary>
+    public void CountCut(Region region)
+    {
+        region.CutWeeks = region.Cut ? region.CutWeeks + 1 : 0;
     }
 
     /// <summary>Puts <paramref name="offer"/> in force under the next agreement id.</summary>
@@ -822,6 +1040,9 @@ public sealed record Seat(string Id, string Name, SeatKind Kind, string Holder, 
     /// <summary>Whether the seat keeps the balance of power (<see cref="Balance"/>).</summary>
     public bool Arbiter { get; internal init; }
 
+    /// <summary>The main quest's boons granted to the seat, in the order they came (<see cref="MainQuestBoon"/>).</summary>
+    public List<string> Boons { get; internal init; } = [];
+
     /// <summary>Whether the seat stands outside the Empire an arbiter keeps (<see cref="Balance"/>).</summary>
     public bool Outsider { get; internal init; }
 
@@ -873,6 +1094,9 @@ public sealed record Region(string Id, string Name, int CatalogRegion, bool Capi
 
     /// <summary>Whether the region is fed, relieved or cut off from food this week (<see cref="Politics.Supply"/>).</summary>
     public RegionSupply Supply { get; internal set; }
+
+    /// <summary>How many weeks running the region has been cut off from food.</summary>
+    public int CutWeeks { get; internal set; }
 
     /// <summary>Whether the region is cut off this week: it pays its holder nothing.</summary>
     public bool Cut => Supply == RegionSupply.Cut;

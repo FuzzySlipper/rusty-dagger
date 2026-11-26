@@ -4,13 +4,16 @@ using WorldRpg.Politics;
 return PoliticsCommand.Run(args, Console.Out, Console.Error);
 
 /// <summary>
-/// <c>politics run [--years N] [--seed S] [--format text|jsonl] [--board FILE] [--cards FILE]</c> plays the board and
-/// prints each week; <c>politics balance [--seeds N] [--years N] [--board FILE] [--cards FILE]</c> plays seeds 1 to N
-/// and reports the table's balance (<see cref="BalanceReport"/>).
+/// <c>politics run [--years N] [--seed S] [--format text|jsonl|outputs] [--nudges FILE] [--load FILE] [--save FILE]
+/// [--board FILE] [--cards FILE]</c> plays the board and prints each week: its trace as text or JSON lines, or its
+/// outputs for the world (<see cref="BoardOutputs"/>) as JSON lines. A nudges file holds one scheduled nudge a line
+/// (<see cref="ScheduledNudge"/>), each queued before its week is played; <c>--load</c> resumes a saved board and
+/// <c>--save</c> writes the board when the run ends. <c>politics balance [--seeds N] [--years N] [--board FILE]
+/// [--cards FILE]</c> plays seeds 1 to N and reports the table's balance (<see cref="BalanceReport"/>).
 /// </summary>
 internal static class PoliticsCommand
 {
-    private const string Usage = "usage: politics run [--years N] [--seed S] [--format text|jsonl] [--board FILE] [--cards FILE]"
+    private const string Usage = "usage: politics run [--years N] [--seed S] [--format text|jsonl|outputs] [--nudges FILE] [--load FILE] [--save FILE] [--board FILE] [--cards FILE]"
         + "\n       politics balance [--seeds N] [--years N] [--board FILE] [--cards FILE]";
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
@@ -23,6 +26,9 @@ internal static class PoliticsCommand
         string format = "text";
         string? boardFile = null;
         string? cardsFile = null;
+        string? nudgesFile = null;
+        string? loadFile = null;
+        string? saveFile = null;
         for (int index = 1; index < args.Length; index += 2)
         {
             if (index + 1 >= args.Length) return Fail(error, $"{args[index]} needs a value{Environment.NewLine}{Usage}");
@@ -32,7 +38,10 @@ internal static class PoliticsCommand
                 case "--years" when int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int parsed) && parsed > 0: years = parsed; break;
                 case "--seed" when !balance && ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out ulong parsed): seed = parsed; break;
                 case "--seeds" when balance && int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out int parsed) && parsed > 0: seeds = parsed; break;
-                case "--format" when !balance && value is "text" or "jsonl": format = value; break;
+                case "--format" when !balance && value is "text" or "jsonl" or "outputs": format = value; break;
+                case "--nudges" when !balance: nudgesFile = value; break;
+                case "--load" when !balance: loadFile = value; break;
+                case "--save" when !balance: saveFile = value; break;
                 case "--board": boardFile = value; break;
                 case "--cards": cardsFile = value; break;
                 default: return Fail(error, $"bad option {args[index]} {value}{Environment.NewLine}{Usage}");
@@ -42,11 +51,13 @@ internal static class PoliticsCommand
         BoardSetup setup;
         CardSet cards;
         Board board;
+        IReadOnlyList<ScheduledNudge> nudges;
         try
         {
             setup = boardFile is null ? BoardSetup.Canon() : BoardSetup.Load(boardFile);
             cards = cardsFile is null ? CardSet.Canon() : CardSet.Load(cardsFile);
-            board = Board.Create(setup, cards, seed);
+            board = loadFile is null ? Board.Create(setup, cards, seed) : Board.Load(setup, cards, BoardSave.FromJson(File.ReadAllText(loadFile), loadFile));
+            nudges = nudgesFile is null ? [] : ScheduledNudge.ReadLines(nudgesFile);
         }
         catch (Exception exception) when (exception is BoardSetupException or IOException or UnauthorizedAccessException)
         {
@@ -61,10 +72,20 @@ internal static class PoliticsCommand
 
         for (int turn = 0; turn < TurnTrace.TurnsIn(years); turn++)
         {
+            try
+            {
+                foreach (ScheduledNudge nudge in nudges.Where(nudge => nudge.Turn == board.Turn + 1)) board.Queue(nudge.Nudge);
+            }
+            catch (ArgumentException exception)
+            {
+                return Fail(error, $"{nudgesFile}: {exception.Message}");
+            }
             TurnTrace trace = BoardTurn.Play(board);
-            if (format == "jsonl") BoardTraceWriter.WriteJsonLine(output, trace);
+            if (format == "outputs") BoardTraceWriter.WriteJsonLine(output, BoardOutputs.Of(board, cards, trace));
+            else if (format == "jsonl") BoardTraceWriter.WriteJsonLine(output, trace);
             else BoardTraceWriter.WriteText(output, trace);
         }
+        if (saveFile is not null) File.WriteAllText(saveFile, board.Save().ToJson());
         return 0;
     }
 

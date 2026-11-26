@@ -5,9 +5,9 @@ namespace WorldRpg.Politics;
 
 /// <summary>
 /// One seat's move in a turn: its id (the turn and seat), the plan it moved under, what it played on which targets, its
-/// score, who may see it, the next best moves it passed over and what changed. A slow move names the region it set out
-/// from and the turn it arrives; its changes are only its payment until then. A move's seat is always the true one,
-/// secret or not.
+/// score, who may see it, the region a card set out from (<see cref="BoardTurn.Origin"/>), the next best moves it passed
+/// over and what changed. A slow move names the turn it arrives; its changes are only its payment until then. A move's
+/// seat is always the true one, secret or not.
 /// </summary>
 public sealed record MoveTrace(
     string Id,
@@ -43,17 +43,20 @@ public sealed record ArrivalTrace(
     IReadOnlyList<BoardChange> Changes);
 
 /// <summary>
-/// One week's record: the upkeep's changes, the World card turned, the slow moves arriving, each seat's move in table
-/// order, then the changes of the week's war checks: wars opening, allies joining, weariness and treaties. Turn 1 is the first Sunday; <see cref="Year"/> and <see cref="Day"/> place it in the Tamrielic year of
+/// One week's record: the world's nudges applied, the upkeep's changes, the World card turned, the slow moves arriving,
+/// each seat's move in the order they moved, the changes of the week's war checks (wars opening, allies joining,
+/// weariness and treaties), and the arcs the chronicle named. Turn 1 is the first Sunday; <see cref="Year"/> and <see cref="Day"/> place it in the Tamrielic year of
 /// twelve 30-day months.
 /// </summary>
 public sealed record TurnTrace(
     int Turn,
+    IReadOnlyList<NudgeTrace> Nudges,
     IReadOnlyList<BoardChange> Upkeep,
     WorldTrace? World,
     IReadOnlyList<ArrivalTrace> Arrivals,
     IReadOnlyList<MoveTrace> Moves,
-    IReadOnlyList<BoardChange> Wars)
+    IReadOnlyList<BoardChange> Wars,
+    IReadOnlyList<ArcRecord> Chronicle)
 {
     public const int DaysPerWeek = 7;
     public const int DaysPerYear = 360;
@@ -83,9 +86,21 @@ public static class BoardTraceWriter
         writer.Write('\n');
     }
 
+    /// <summary>One week's outputs as one JSON object ending in a line feed (<see cref="BoardOutputs"/>).</summary>
+    public static void WriteJsonLine(TextWriter writer, BoardOutputs outputs)
+    {
+        writer.Write(JsonSerializer.Serialize(outputs, PoliticsRecordJson.Default.BoardOutputs));
+        writer.Write('\n');
+    }
+
     public static void WriteText(TextWriter writer, TurnTrace turn)
     {
         writer.WriteLine(string.Create(CultureInfo.InvariantCulture, $"== Week {turn.Turn} (year {turn.Year}, day {turn.Day}) =="));
+        foreach (NudgeTrace nudge in turn.Nudges)
+        {
+            writer.WriteLine($"  nudge {JsonSerializer.Serialize(nudge.Nudge, PoliticsJson.Default.WorldNudge)}: {nudge.Outcome.ToString().ToLowerInvariant()}");
+            if (nudge.Changes.Count > 0) writer.WriteLine($"      {Changes(nudge.Changes)}");
+        }
         if (turn.Upkeep.Count > 0) writer.WriteLine($"  upkeep: {Changes(turn.Upkeep)}");
         if (turn.World is { } world)
         {
@@ -107,6 +122,9 @@ public static class BoardTraceWriter
             if (move.Changes.Count > 0) writer.WriteLine($"      {Changes(move.Changes)}");
         }
         if (turn.Wars.Count > 0) writer.WriteLine($"  wars: {Changes(turn.Wars)}");
+        foreach (ArcRecord arc in turn.Chronicle)
+            writer.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"  chronicle: {arc.Kind.ToString().ToLowerInvariant()} {arc.Key} {arc.Phase.ToString().ToLowerInvariant()} ({string.Join(", ", arc.Subjects)}, since week {arc.Started})"));
     }
 
     private static string Move(MoveOption option) => string.Create(CultureInfo.InvariantCulture,

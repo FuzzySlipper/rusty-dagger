@@ -19,9 +19,10 @@ public enum WarAim
 /// A war in force between two crowns, <see cref="A"/> and <see cref="B"/>, the war's principals, over <see cref="Aim"/>,
 /// each with the allies fighting on its side, since turn <see cref="Started"/>. Each principal's weariness counts
 /// towards the treaty that ends it (<see cref="Wars"/>). Allies grow no weary; they fight until their principals make peace.
+/// <see cref="FirstLoss"/> is the week a war card first took a region, the war's turning point (<see cref="Chronicle"/>).
 /// </summary>
 public sealed record War(string Id, string A, string B, WarAim Aim, IReadOnlyList<string> AlliesOfA, IReadOnlyList<string> AlliesOfB,
-    int Started, int WearinessOfA, int WearinessOfB)
+    int Started, int WearinessOfA, int WearinessOfB, int? FirstLoss = null)
 {
     /// <summary>The detail of the war front conditions the war lays: its principals.</summary>
     public string Detail => $"{A},{B}";
@@ -230,6 +231,7 @@ public static class Wars
         string enemy = war.Enemy(war.Side(mover.Id)!);
         bool lost = holder is not null && war.Side(holder) == enemy && region.Allegiance != holder;
         board.AddWeariness(war, enemy, HurtWeariness + (lost ? LossWeariness : 0));
+        if (lost) board.MarkFirstLoss(war);
     }
 
     /// <summary><paramref name="seat"/>, a principal, sues for peace: it cedes a front region unless the enemy is weary too.</summary>
