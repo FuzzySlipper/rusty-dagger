@@ -28,12 +28,12 @@ python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py 128 \
   --seeds 42201,42202,42203 --denoise 0.38
 ```
 
-For static NPCs or non-rigged sprites (e.g. Daedric Princes or static court NPCs), pass `--style-only` (and `--width 1024 --height 1024` for square sprites) to skip the wide-A turnaround stance and overhead lighting prep while keeping the flat `#30343b` slate ground for later cutout. When a classic 3/4 sprite hides one arm behind the torso, add `--show-both-arms` so the shoulders open slightly and both arms/hands stay visible for back views and splats:
+For static NPCs, non-rigged sprites, or classic creatures (e.g. Daedric Princes, static court NPCs, or monsters whose classic pose should be preserved), pass `--style-only --style-variant painterly-vivid` (defaults to `d=0.42`, matching the animated humanoid finish; add `--width 1024 --height 1024` for square/wide sprites like spiders, scorpions, imps, or quadrupeds, and keep `832×1216` for upright bipedal/spectral figures). When a classic 3/4 sprite hides one arm behind the torso, add `--show-both-arms` so the shoulders open slightly and both arms/hands stay visible for back views and splats:
 
 ```sh
-python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py npc-001 \
-  --sprite local/art/reference/npc/art/sprite/texture-175-record-002-frame-001-source.png \
-  --style-only --width 1024 --height 1024 --seeds 101,102,103,104,105,106 --denoise 0.38 --brief "..."
+python3 authoring/tools/people/concept/sprite-anchored-wip/sprite_front.py creature-009 \
+  --sprite local/art/reference/daggerfall-mobile-idle-unmirrored-r01/mobile-9/front.png \
+  --style-only --style-variant painterly-vivid --seeds 90901,90902,90903,90904 --brief "..."
 ```
 
 For named NPCs whose reused world sprite disagrees with their dialogue portrait (`FACES.CIF`), pass `--portrait PATH` (implies `--portrait-only`; trims the classic 3 px gold border automatically) to anchor the face, hair, and collar cues on the portrait while generating a full-length body from the brief. Combine `--portrait` with `--style-only` for static NPCs to get a natural head-to-toe front portrait without wide-A turnaround pose constraints:

@@ -270,6 +270,56 @@ def build_prompts(brief: str, pronoun: str, hooded_shadow: bool, style_only: boo
                 f"do not change the pose into a turnaround stance or remove elements. {face_q}\n\n"
             )
             krea_tail = "Faithfully preserve the pose, composition, props and silhouette of the input image."
+        if style_variant == "painterly-vivid":
+            qwen_p = (
+                "Task: Redraw a very small classic fantasy RPG sprite as newly illustrated high resolution art. "
+                "Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\n"
+                f"{ref_line}"
+                f"Subject: {brief.rstrip('.')}.\n\n"
+                "Style: ART DIRECTION — CLASSIC 1990s FANTASY BOOK-COVER GOUACHE WITH FINE WARM-UMBER INK CONTOURS\n\n"
+                "Draw and paint the subject as a classic hand-painted dark-fantasy RPG illustration in the tradition of Larry Elmore, "
+                "Akihiko Yoshida (Vagrant Story), and classic tabletop RPG manuals, finished with lush opaque gouache brushwork. Build a "
+                "confident underlying ink drawing with fine warm dark-umber contours (never harsh thick pure-black comic outlines), delicate "
+                "directional crosshatching inside folds and shadows, and weathered dry-brush texture. Render clean, vivid local pigments true "
+                "to each material—true cool steel and bone, rich moss-green, deep teal, warm fur, leather, wood, and chitin—anchored by warm "
+                "dark-umber shadow contours without any global ochre or sepia wash over cool materials and without glossy 3D shading.\n\n"
+                "Presentation: Isolated full-length subject matching the classic sprite's framing on a perfectly flat solid dark "
+                "slate grey background, RGB 48,52,59. Clean neutral even overhead daylight equal on both sides. No floor, no scenery, no cast shadow, no border."
+            )
+            krea_p = (
+                "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+                "Drawn and painted as a vivid, richly textured 1990s PC fantasy role-playing game illustration: fine warm dark-umber "
+                "pen-and-ink contour lines (never thick pure-black comic outlines), delicate crosshatching inside folds and shadows, lush "
+                "weathered dry-brush gouache brushwork, and clean, vivid local pigments true to each material—true cool steel and bone, rich "
+                "green, warm fur, leather, wood, and chitin—with warm dark-umber shadow contours and no global ochre or sepia tint over cool "
+                f"materials (4 to 6 painted value groups per material). {face_q}"
+                "Clean neutral even overhead daylight equal on both sides. Plain flat solid dark slate-grey background, RGB 48,52,59, no floor, no scenery, no border.\n\n"
+                f"Subject: {brief.rstrip('.')}. {krea_tail}"
+            )
+            return qwen_p, krea_p
+        if style_variant == "crunchy-warm":
+            qwen_p = (
+                "Task: Redraw a very small classic fantasy RPG sprite as newly illustrated high resolution art. "
+                "Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\n"
+                f"{ref_line}"
+                f"Subject: {brief.rstrip('.')}.\n\n"
+                "Style: ART DIRECTION — WARM 1990s TABLETOP DARK FANTASY PEN-AND-INK WITH RICH OCHRE-AND-UMBER GOUACHE WASH\n\n"
+                "Draw the subject as a classic hand-painted dark-fantasy RPG illustration in the tradition of Akihiko Yoshida (Vagrant Story), "
+                "Larry Elmore, and classic tabletop RPG manuals, finished with rich warm opaque gouache washes. Build a confident underlying "
+                "ink drawing with fine warm dark-umber contours, fine directional crosshatching inside shadows, weathered dry-brush grain, and "
+                "a warm earthy ochre-and-umber colour harmony (no glossy 3D shading).\n\n"
+                "Presentation: Isolated full-length subject matching the classic sprite's framing on a perfectly flat solid dark "
+                "slate grey background, RGB 48,52,59. Warm even overhead daylight equal on both sides. No floor, no scenery, no cast shadow, no border."
+            )
+            krea_p = (
+                "Painting style of Larry Elmore, Brom style, gothic fantasy illustration, dark_fantasy_illustration.\n\n"
+                "Drawn and painted as a vivid, rich warm 1990s PC fantasy role-playing game illustration: fine warm dark-umber pen-and-ink "
+                "contour lines, delicate crosshatching inside shadows, weathered dry-brush gouache texture, and rich warm ochre-and-umber "
+                f"colour harmony (4 to 6 painted value groups per material). {face_q}"
+                "Warm even overhead daylight equal on both sides. Plain flat solid dark slate-grey background, RGB 48,52,59, no floor, no scenery, no border.\n\n"
+                f"Subject: {brief.rstrip('.')}. {krea_tail}"
+            )
+            return qwen_p, krea_p
         qwen_p = (
             "Task: Redraw a very small classic fantasy RPG sprite as newly illustrated high resolution art. "
             "Reconstruct plausible missing detail; do not enlarge or trace the pixel blocks.\n\n"
@@ -400,7 +450,14 @@ def main():
     if args.pose_s2_strength is None: args.pose_s2_strength = d_s2
     if args.pose_s2_end is None: args.pose_s2_end = d_e2
     if args.denoise is None:
-        args.denoise = d_den if args.pose_lock else 0.38
+        if args.pose_lock:
+            args.denoise = d_den
+        elif args.style_only and args.style_variant in ("crunchy-warm", "painterly-vivid"):
+            args.denoise = 0.42
+        elif args.style_only and args.style_variant == "crunchy":
+            args.denoise = 0.46
+        else:
+            args.denoise = 0.38
 
     brief = args.brief
     pronoun = args.pronoun
