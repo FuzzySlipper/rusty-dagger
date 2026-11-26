@@ -571,6 +571,64 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Throws<InvalidOperationException>(() => DaggerfallTerrainRivers.Read(bytes.AsSpan(0, bytes.Length - 1)));
     }
 
+    [Fact]
+    public void River_water_runs_river_space_uvs_across_and_downstream_without_wrapping_a_section()
+    {
+        DaggerfallTerrainRivers rivers = DaggerfallTerrainRivers.Read(River(480, 8));
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(TestSessions.Hash, releases).Service, appearance);
+        Material water = engine.Context.Graphics.CreateMaterial(default);
+        const float repeat = 7f;
+        DaggerfallRiverWater meshes = new(engine.Context, rivers, water, repeat);
+        DaggerfallExteriorWorldOrigin origin = new(4, 3, Vector3.Zero);
+        for (int step = 0; step < 16 && meshes.Building; step++)
+            meshes.Follow(origin, 4.5 * Size, 3.0 * Size);
+
+        Assert.NotEmpty(appearance.MeshRequests);
+        int quads = 0;
+        foreach (MeshResourceCreateRequest request in appearance.MeshRequests)
+        {
+            Vector2[] uvs = request.Uvs.ToArray();
+            for (int q = 0; q < uvs.Length; q += 4)
+            {
+                quads++;
+                Assert.True(uvs[q].X < 0 && uvs[q + 1].X > 0, "Left and right edges bracket centerline u = 0.");
+                Assert.Equal(-uvs[q].X, uvs[q + 1].X, 4);
+                Assert.Equal(uvs[q].Y, uvs[q + 1].Y, 4);
+                Assert.Equal(uvs[q + 2].Y, uvs[q + 3].Y, 4);
+                // Downstream v strictly advances by segment length (100 m) / repeat without wrapping inside a quad.
+                Assert.Equal(100.0 / repeat, uvs[q + 2].Y - uvs[q].Y, 2);
+            }
+        }
+        Assert.Equal(11, quads);
+        meshes.Release();
+    }
+
+    [Fact]
+    public void Overland_map_rivers_soften_their_channel_and_keep_SampleMap_and_MapGround_aligned()
+    {
+        const double surface = 480, halfWidth = 16, x = 3.5 * Size, z = 3 * Size, relief = 4;
+        DaggerfallTerrainSet terrain = Terrain(8, 8, Relief(metres: 500, share: 255), River(surface, halfWidth));
+        DaggerfallHorizonGround ground = Ground(terrain);
+        double cell = DaggerfallOverlandTerrain.FineCellMetres;
+        HeightfieldTileSamples tile = Samples(new(32, 0, 0, 0, 0, (4 * Size) + (8 * cell), (3 * Size) - (16 * cell), cell));
+
+        ground.SampleMap(tile.Tile, tile, relief, winter: false, DaggerfallMapPalette.Default);
+
+        // Every sampled vertex matches MapGround so models, tokens and picks sit on the exact overland mesh.
+        for (int j = 0; j < tile.Tile.Side; j += 4)
+        for (int i = 0; i < tile.Tile.Side; i += 4)
+            Assert.Equal(ground.MapGround(tile.Tile.SampleX(i), tile.Tile.SampleZ(j), relief, cell),
+                tile.Heights[((j + 1) * tile.Tile.HeightSide) + i + 1], 2);
+
+        // The overland channel dips gently (~1 m before relief) rather than carrying the walked ground's 5 m carve into a 20 m trench.
+        double walkedCentre = ground.Height(x + Size, z);
+        double mapCentreRaw = DaggerfallHorizonGround.OceanMetres + ((ground.MapGround(x + Size, z, relief, cell) - DaggerfallHorizonGround.OceanMetres) / relief);
+        Assert.True(mapCentreRaw > walkedCentre + 1.5, $"Map channel raw height {mapCentreRaw:F2} should be much shallower than walked carve {walkedCentre:F2}.");
+        Assert.InRange(mapCentreRaw, surface - 1.2, surface);
+    }
+
     /// <summary>One straight course across the middle of a map pixel, level enough to read a cross-section.</summary>
     private static byte[] River(double surface, double halfWidth)
     {

@@ -37,6 +37,7 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
     private readonly double _relief;
     private readonly DaggerfallMapPalette _palette;
     private readonly DaggerfallTravelMapArt? _art;
+    private MaterialShader? _waterShader;
     private Material? _water, _land;
     private RenderResource? _detail, _detailRelief;
     private Heightfield? _field;
@@ -48,14 +49,24 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
     /// <param name="relief">How far land is raised above the sea, so ranges read from high above.</param>
     /// <param name="palette">The colours the land and the water are painted in.</param>
     /// <param name="art">The art set's detail for the land, if it has it.</param>
-    internal DaggerfallOverlandTerrain(IEngineContext engine, DaggerfallHorizonGround ground, double relief, DaggerfallMapPalette palette, DaggerfallTravelMapArt? art)
+    /// <param name="waterShader">The animated water shader over the sea's maps, or none to draw plain water.</param>
+    internal DaggerfallOverlandTerrain(IEngineContext engine, DaggerfallHorizonGround ground, double relief, DaggerfallMapPalette palette,
+        DaggerfallTravelMapArt? art, MaterialShader? waterShader = null)
     {
         _art = art;
+        _waterShader = waterShader;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
         if (!double.IsFinite(relief) || relief <= 0) throw new ArgumentOutOfRangeException(nameof(relief));
         _relief = relief;
         _palette = palette ?? throw new ArgumentNullException(nameof(palette));
+    }
+
+    /// <summary>Updates the overland water's live shader parameters (wind bearing/speed and moon phase).</summary>
+    internal void UpdateWater(MaterialShader shader)
+    {
+        _waterShader = shader;
+        if (_water is not null && !_disposed) _engine.Graphics.UpdateMaterial(new(_water, Water()));
     }
 
     /// <summary>Whether the map's land is drawn now.</summary>
@@ -71,8 +82,7 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
         if (_field is null)
         {
             _winter = winter;
-            _water ??= _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), .3f,
-                new Color(1, 1, 1, 1), Vector3.Zero, 0, false));
+            _water ??= _engine.Graphics.CreateMaterial(Water());
             _land ??= _engine.Graphics.CreateMaterial(Land());
             _field = _engine.Heightfield.Create(new HeightfieldCreateRequest(TileCells, Rings, new HeightfieldMaterial[] { new(0, _water), new(1, _land) }, RenderLayer.Backdrop,
                 Vector3.Zero, Scale, HeightfieldFocus.At(x, z)));
@@ -94,6 +104,13 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
         _engine.Heightfield.SetFocus(new HeightfieldFocusRequest(_field, HeightfieldFocus.At(x, z)));
         _streamer!.Update();
     }
+
+    /// <summary>The water's material: plain, or animated ripples, shoreline surf and sun/moon glints over the palette's depth colours.</summary>
+    private MaterialRequest Water() => new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), _waterShader is null ? .3f : .2f,
+        new Color(1, 1, 1, 1), Vector3.Zero, 0, false)
+    {
+        Shader = _waterShader ?? default,
+    };
 
     /// <summary>The land's material: plain, the vertices' colours alone, or with the art set's detail over them.</summary>
     private MaterialRequest Land()

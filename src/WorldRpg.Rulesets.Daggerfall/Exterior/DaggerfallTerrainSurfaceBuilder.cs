@@ -159,14 +159,14 @@ internal static class DaggerfallTerrainSurfaceBuilder
     /// <param name="x">The vertex column.</param>
     /// <param name="y">The vertex row.</param>
     /// <param name="finestMetres">The finest relief detail this sampling can hold.</param>
-    internal static float NormalizedHeight(DaggerfallTerrainWindow window, int x, int y, double finestMetres = SampleSpacing * 2)
+    internal static float NormalizedHeight(DaggerfallTerrainWindow window, int x, int y, double finestMetres = SampleSpacing * 2, bool carveRivers = true)
     {
         float classic = ClassicNormalizedHeight(window, x, y);
         if (window.Relief is not { } relief) return classic;
         (double mapX, double mapY) = ReliefPoint(window.MapPixelX, window.MapPixelY, x, y);
         double share = relief.Share(mapX, mapY);
         float ground = share <= 0 ? classic : Blend(classic, (float)(relief.Metres(mapX, mapY, finestMetres, Gullies(window.Rivers, mapX, mapY)) / TerrainVerticalSize), (float)share);
-        return window.Rivers is { } rivers ? Carved(rivers, ground, mapX, mapY, finestMetres) : ground;
+        return carveRivers && window.Rivers is { } rivers ? Carved(rivers, ground, mapX, mapY, finestMetres) : ground;
     }
 
     private static double Gullies(DaggerfallTerrainRivers? rivers, double mapX, double mapY) =>

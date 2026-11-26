@@ -80,7 +80,9 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
             wind * _horizon.CloudDrift.Length() * (1 + (conditions.Wind * _tuning.WindDrift)), _horizon.CloudColors[(int)weather]);
         SetSkySun(outside && horizonFog is not null ? lighting.Sun : null, sunlight);
         SetFall(conditions, outside, sheltered, wind, daylight, seconds);
-        SetGround(conditions, outside, wind, sky.Season == DaggerfallSeason.Winter);
+        // Walked-scale wetness and snow texels map to kilometres on the 1:1000 travel map (and coat its ocean);
+        // the map paints its own winter snow per climate and draws its own map-scale precipitation.
+        SetGround(conditions, outside && mapHaze is null, wind, sky.Season == DaggerfallSeason.Winter);
         if (moons) _moons!.Show(sky, daylight);
         else _moons?.Hide();
     }

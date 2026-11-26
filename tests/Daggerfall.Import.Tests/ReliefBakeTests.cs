@@ -112,6 +112,28 @@ public sealed class ReliefBakeTests
     }
 
     [Fact]
+    public void A_rivers_surface_falls_evenly_rather_than_gathering_at_the_least_fall_and_never_rises()
+    {
+        DaggerfallRivers rivers = Rivers(Island([]));
+        int total = 0, flat = 0;
+        foreach (DaggerfallRiverStation[] course in rivers.Courses)
+        {
+            for (int s = 1; s < course.Length; s++)
+            {
+                double ds = Math.Sqrt(Math.Pow(course[s].X - course[s - 1].X, 2) + Math.Pow(course[s].Z - course[s - 1].Z, 2));
+                double slope = (course[s - 1].Surface - course[s].Surface) / Math.Max(ds, 1e-6);
+                Assert.True(slope > 0, $"river rose or stalled at station {s}: slope={slope}");
+                total++;
+                if (slope <= 2.5e-5) flat++;
+            }
+        }
+
+        Assert.True(total > 0);
+        // Previously > 50% of river sections sat at LeastFall (2e-5); taut-string profile smoothing spreads fall evenly.
+        Assert.True(flat < total * 0.15, $"too many flat least-fall sections: {flat}/{total} ({100.0 * flat / total:F1}%)");
+    }
+
+    [Fact]
     public void A_river_keeps_off_every_location_it_would_otherwise_run_through()
     {
         // Wall the island's middle off: a location levels its map pixel, and any channel through it with that.

@@ -113,6 +113,20 @@ public sealed class DaggerfallSeaTests
         // The shader ripples the water in place of the Engine; without it the Engine's own ripples stay.
         Assert.Equal(0, Water.Material(default, Vector3.One, near).NormalScale);
         Assert.Equal(Water.Ripple, Water.Material(default, Vector3.One, null).NormalScale);
+
+        // Classic river fallback drifts downstream along -v; overland water binds both maps without displacing vertices.
+        MaterialRequest classicRiver = Water.Material(default, Vector3.One, null, river: true);
+        Assert.Equal(0, classicRiver.Water.FoamScroll.X);
+        Assert.True(classicRiver.Water.FoamScroll.Y < 0);
+
+        DaggerfallMapPalette palette = DaggerfallMapPalette.Default;
+        MaterialShader overland = Water.OverlandShader(shader, maps, gale, new(.75f, .25f, 0, 0), palette.Shallow, palette.Deep, .0408f);
+        Assert.Equal(0, overland.DisplacementBound);
+        Assert.Equal(.0408f, overland.Parameter0.Y, 4);
+        Assert.Equal(new Vector4(palette.Shallow, .75f), overland.Parameter1);
+        Assert.Equal(new Vector4(palette.Deep, .25f), overland.Parameter2);
+        Assert.Equal(new RenderResourceReference(maps.Ripples), overland.TextureA);
+        Assert.Equal(new RenderResourceReference(maps.Foam), overland.TextureB);
     }
 
     private static RenderResource Resource(ulong handle) => new(new RenderResourceHandle(handle), () => { });

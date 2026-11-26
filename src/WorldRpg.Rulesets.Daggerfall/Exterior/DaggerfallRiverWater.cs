@@ -90,6 +90,9 @@ internal sealed class DaggerfallRiverWater(IEngineContext engine, DaggerfallTerr
         chunk.Mesh.Dispose();
     }
 
+    /// <summary>How many texture repeats before downstream v resets at a section boundary: divisible by every river pattern's period.</summary>
+    internal const double RepeatWrap = 720;
+
     private Chunk? Build(int px, int py)
     {
         List<Vector3> positions = [];
@@ -99,20 +102,23 @@ internal sealed class DaggerfallRiverWater(IEngineContext engine, DaggerfallTerr
         foreach (DaggerfallRiverSection section in rivers.Sections(px, py))
         {
             uint at = (uint)positions.Count;
-            Add(section.From);
-            Add(section.To);
+            // River UVs run across the channel in u (- left, + right) and downstream in v, wrapped in RepeatWrap blocks
+            // per section so v stays small without ever wrapping across a single quad.
+            double baseV = Math.Floor(section.From.Along / (repeatMetres * RepeatWrap)) * RepeatWrap;
+            Add(section.From, baseV);
+            Add(section.To, baseV);
             // Wound as the sea's sheet is, so the surface faces up: from's left and right, then to's.
             indices.AddRange([at, at + 1, at + 2, at + 1, at + 3, at + 2]);
         }
 
-        void Add(DaggerfallRiverSpan span)
+        void Add(DaggerfallRiverSpan span, double baseV)
         {
-            foreach ((double x, double z) in new[] { (span.LeftX, span.LeftZ), (span.RightX, span.RightZ) })
-            {
-                positions.Add(new((float)(x - cornerX), (float)span.Surface, (float)(z - cornerZ)));
-                // The art repeats from the map's corner, so it runs on from pixel to pixel and into the sea's sheets.
-                uvs.Add(new((float)(x % (repeatMetres * 1024) / repeatMetres), (float)(z % (repeatMetres * 1024) / repeatMetres)));
-            }
+            float v = (float)((span.Along / repeatMetres) - baseV);
+            float halfU = (float)(span.Edge / repeatMetres);
+            positions.Add(new((float)(span.LeftX - cornerX), (float)span.Surface, (float)(span.LeftZ - cornerZ)));
+            uvs.Add(new(-halfU, v));
+            positions.Add(new((float)(span.RightX - cornerX), (float)span.Surface, (float)(span.RightZ - cornerZ)));
+            uvs.Add(new(halfU, v));
         }
 
         if (indices.Count == 0) return null;

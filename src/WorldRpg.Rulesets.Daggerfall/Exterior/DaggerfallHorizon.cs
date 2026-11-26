@@ -48,8 +48,9 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly DaggerfallHorizonTuning _tuning;
     private readonly DaggerfallHorizonGround _ground;
     private readonly Material _sea;
-    /// <summary>The sea's shader for the sheets, the far sea and the rivers, and its maps, where the art set has them.</summary>
-    private readonly (RenderResource Near, RenderResource Far, RenderResource River, DaggerfallSeaMaps Maps)? _seaArt;
+    /// <summary>The sea's shader for the sheets, the far sea, the rivers and the travel map, and its maps, where the art set has them.</summary>
+    private readonly (RenderResource Near, RenderResource Far, RenderResource River, RenderResource Overland, DaggerfallSeaMaps Maps)? _seaArt;
+    private readonly DaggerfallMapPalette _mapPalette;
     private readonly Material _water;
     private readonly Material _river;
     private readonly (MeshResource Mesh, Appearance Look) _sheet, _tile, _fineTile;
@@ -93,13 +94,13 @@ internal sealed class DaggerfallHorizon : IDisposable
         DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallSeaArt? seaArt, double mapRelief, DaggerfallMapPalette mapPalette,
         DaggerfallTravelMapArt? mapArt)
     {
-        Map = new(engine, ground, mapRelief, mapPalette, mapArt);
         _flora = flora ?? throw new ArgumentNullException(nameof(flora));
         _farForest = farForest ?? throw new ArgumentNullException(nameof(farForest));
         ArgumentNullException.ThrowIfNull(water);
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
+        _mapPalette = mapPalette ?? throw new ArgumentNullException(nameof(mapPalette));
         _lift = tuning.Lift;
         _fogDensity = tuning.FogDensity;
         _waterTuning = water;
@@ -108,10 +109,11 @@ internal sealed class DaggerfallHorizon : IDisposable
         if (seaArt is not null)
         {
             RenderResource Shader(string keywords) => engine.Graphics.OpenShader(engine.Content, seaArt.Shader.Path, seaArt.Shader.Sha256, keywords);
-            RenderResource Map(DaggerfallArtFile map) => engine.Graphics.OpenTexture(engine.Content, map.Path, map.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
+            RenderResource MapTex(DaggerfallArtFile map) => engine.Graphics.OpenTexture(engine.Content, map.Path, map.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
                 space: TextureColorSpace.Linear).Handle;
-            _seaArt = (Shader(""), Shader("FAR"), Shader("RIVER"), new(Map(seaArt.Ripples), Map(seaArt.Foam)));
+            _seaArt = (Shader(""), Shader("FAR"), Shader("RIVER"), Shader("OVERLAND"), new(MapTex(seaArt.Ripples), MapTex(seaArt.Foam)));
         }
+        Map = new(engine, ground, mapRelief, mapPalette, mapArt, OverlandWater());
         _sea = engine.Graphics.CreateMaterial(Sea(Vector3.One));
         _water = engine.Graphics.CreateMaterial(Water(default, river: false));
         _river = engine.Graphics.CreateMaterial(Water(default, river: true));
@@ -155,6 +157,7 @@ internal sealed class DaggerfallHorizon : IDisposable
             if (windMoved) _blowing = _wind.Now;
             _moons = moons;
             _engine.Graphics.UpdateMaterial(new(_sea, Sea(_sky)));
+            if (OverlandWater() is { } overland) Map.UpdateWater(overland);
             _waterArchive = -1;
         }
 
@@ -313,7 +316,11 @@ internal sealed class DaggerfallHorizon : IDisposable
 
     /// <summary>The sheets' or the rivers' water over a climate's water art. The rivers' wind blows over a short reach, and never moves their mesh.</summary>
     private MaterialRequest Water(RenderResourceReference art, bool river) => _waterTuning.Material(art, _sky, _seaArt is not { } sea ? null
-        : river ? SeaShader(sea.River, sea.Maps, _waterTuning.Fetch.Y, 0) : SeaShader(sea.Near, sea.Maps, _waterTuning.Fetch.X, WavesReach));
+        : river ? SeaShader(sea.River, sea.Maps, _waterTuning.Fetch.Y, 0) : SeaShader(sea.Near, sea.Maps, _waterTuning.Fetch.X, WavesReach), river);
+
+    private MaterialShader? OverlandWater() => _seaArt is { } sea
+        ? _waterTuning.OverlandShader(sea.Overland, sea.Maps, _blowing, _moons, _mapPalette.Shallow, _mapPalette.Deep, (float)(DaggerfallHorizonGround.OceanMetres * DaggerfallOverlandTerrain.Scale))
+        : null;
 
     private MaterialShader SeaShader(RenderResource shader, DaggerfallSeaMaps maps, float fetch, float reach) =>
         _waterTuning.SeaShader(shader, maps, _blowing, fetch, reach, _moons, SeaColor(_sky));
@@ -585,7 +592,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         _water.Dispose();
         _river.Dispose();
         if (_seaArt is { } art)
-            foreach (RenderResource resource in new[] { art.Near, art.Far, art.River, art.Maps.Ripples, art.Maps.Foam }) resource.Dispose();
+            foreach (RenderResource resource in new[] { art.Near, art.Far, art.River, art.Overland, art.Maps.Ripples, art.Maps.Foam }) resource.Dispose();
     }
 
     /// <summary>

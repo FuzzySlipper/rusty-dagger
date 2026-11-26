@@ -55,7 +55,7 @@ public static partial class ReliefBake
     /// <summary>The catchment of ordinary rain a river starts at.</summary>
     public const double DefaultSourceSquareKilometres = 150;
     private const double StationMetres = 48, LeastCourseMetres = 4_000, CourseSmoothingNodes = 2.5, SurfaceSmoothingMetres = 160;
-    private const double LeastFall = 2e-5, WidthPerRootSquareKilometre = 1, LeastHalfWidth = 6, HeadHalfWidth = 1, HeadMetres = 3_000;
+    private const double LeastFall = 2e-5, MaxProfileCutMetres = 4, WidthPerRootSquareKilometre = 1, LeastHalfWidth = 6, HeadHalfWidth = 1, HeadMetres = 3_000;
     private const double LocationWall = 1e4;
     private const double FloodplainPerHalfWidth = 6, FloodplainNodes = 2, FloodplainRise = 1;
     /// <summary>How far past the coast a mouth runs on, as the classic's own shore can stand short of the lattice's blocky sea.</summary>
@@ -178,19 +178,98 @@ public static partial class ReliefBake
         }
 
         for (int i = 0; i < n; i++) stationOf[i] = (int)Math.Round(Math.Min(along[i], along[n]) / spacing);
-        // Only ever downhill from the head, and on down to what the course ends on: ground that stands in the way is cut through.
-        for (int s = 1; s < stations; s++) surface[s] = Math.Min(surface[s], surface[s - 1]);
-        Fall(surface, joins?.Surface ?? OceanMetres, spacing);
-        // Smoothing rounds the profile's knees but may only lower it: raised, the water would stand over its own bed.
-        double[] raw = (double[])surface.Clone();
-        Smooth(surface, SurfaceSmoothingMetres / spacing);
-        for (int s = 0; s < stations; s++) surface[s] = Math.Min(surface[s], raw[s]);
+        // Fit the smoothest falling profile below the pre-pad valley floor (taut string in a bounded cut tube, #10741):
+        // spreads lattice steps evenly along each reach, never climbs, never stands above its valley floor/banks, and
+        // ends exactly on the sea or trunk surface it joins.
+        SmoothFallingProfile(surface, joins?.Surface ?? OceanMetres, spacing);
         Smooth(half, SurfaceSmoothingMetres / spacing);
-        for (int s = 1; s < stations; s++) surface[s] = Math.Min(surface[s], surface[s - 1]);
-        Fall(surface, joins?.Surface ?? OceanMetres, spacing);
         DaggerfallRiverStation[] course = new DaggerfallRiverStation[stations];
         for (int s = 0; s < stations; s++) course[s] = new((float)sx[s], (float)sz[s], (float)surface[s], (float)half[s]);
         return (course, stationOf);
+    }
+
+    /// <summary>
+    /// Replaces a staircase thalweg profile with the minimum-slope-variation (taut-string) curve inside a bounded cut
+    /// tube <c>[upper - MaxProfileCutMetres, upper]</c> beneath the pre-pad valley floor, followed by gentle knee rounding
+    /// clamped inside the same tube. Guarantees strict downhill fall (<see cref="LeastFall"/>), zero climbs, zero water
+    /// above the valley floor, and exact termination at <paramref name="end"/>.
+    /// </summary>
+    private static void SmoothFallingProfile(double[] surface, double end, double spacing)
+    {
+        int n = surface.Length;
+        if (n < 2)
+        {
+            if (n == 1) surface[0] = end;
+            return;
+        }
+
+        double minDrop = LeastFall * spacing;
+        // Tight monotone-falling upper envelope under the valley floor: never above ground, never climbs, ends at end.
+        double[] upper = (double[])surface.Clone();
+        for (int s = 1; s < n; s++) upper[s] = Math.Min(upper[s], upper[s - 1] - minDrop);
+        Fall(upper, end, spacing);
+
+        // Lower bound of the cut tube: bounded cut below the valley floor, still keeping LeastFall down to end.
+        double[] lower = new double[n];
+        lower[^1] = end;
+        for (int s = n - 2; s >= 0; s--) lower[s] = Math.Max(upper[s] - MaxProfileCutMetres, lower[s + 1] + minDrop);
+        lower[0] = upper[0];
+
+        // Exact O(N) shortest-path taut string through the tube [lower, upper] from (0, upper[0]) to (n - 1, end).
+        LinkedList<(int Index, double Height)> upperHull = new(), lowerHull = new();
+        upperHull.AddLast((0, upper[0]));
+        lowerHull.AddLast((0, lower[0]));
+        List<(int Index, double Height)> knots = [(0, upper[0])];
+
+        static double Slope((int Index, double Height) a, (int Index, double Height) b) =>
+            (b.Height - a.Height) / (b.Index - a.Index);
+
+        for (int i = 1; i < n; i++)
+        {
+            (int Index, double Height) ui = (i, upper[i]), li = (i, lower[i]);
+
+            while (lowerHull.Count >= 2 && Slope(lowerHull.First!.Value, lowerHull.First.Next!.Value) > Slope(lowerHull.First.Value, ui))
+            {
+                lowerHull.RemoveFirst();
+                var apex = lowerHull.First!.Value;
+                knots.Add(apex);
+                upperHull.Clear();
+                upperHull.AddLast(apex);
+            }
+            while (upperHull.Count >= 2 && Slope(upperHull.Last!.Previous!.Value, upperHull.Last.Value) >= Slope(upperHull.Last.Previous.Value, ui))
+                upperHull.RemoveLast();
+            upperHull.AddLast(ui);
+
+            while (upperHull.Count >= 2 && Slope(upperHull.First!.Value, upperHull.First.Next!.Value) < Slope(upperHull.First.Value, li))
+            {
+                upperHull.RemoveFirst();
+                var apex = upperHull.First!.Value;
+                knots.Add(apex);
+                lowerHull.Clear();
+                lowerHull.AddLast(apex);
+            }
+            while (lowerHull.Count >= 2 && Slope(lowerHull.Last!.Previous!.Value, lowerHull.Last.Value) <= Slope(lowerHull.Last.Previous.Value, li))
+                lowerHull.RemoveLast();
+            lowerHull.AddLast(li);
+        }
+        knots.Add((n - 1, end));
+
+        for (int k = 0; k < knots.Count - 1; k++)
+        {
+            (int i0, double y0) = knots[k];
+            (int i1, double y1) = knots[k + 1];
+            double span = Math.Max(i1 - i0, 1);
+            for (int j = i0; j <= i1; j++) surface[j] = y0 + ((y1 - y0) * ((j - i0) / span));
+        }
+
+        // Gently round knot transitions while staying strictly inside [lower, upper] and strictly falling.
+        for (int s = 1; s < n; s++) surface[s] = Math.Min(surface[s], surface[s - 1] - minDrop);
+        Fall(surface, end, spacing);
+        for (int s = 0; s < n; s++) surface[s] = Math.Clamp(surface[s], lower[s], upper[s]);
+        Smooth(surface, SurfaceSmoothingMetres / spacing);
+        for (int s = 0; s < n; s++) surface[s] = Math.Clamp(surface[s], lower[s], upper[s]);
+        for (int s = 1; s < n; s++) surface[s] = Math.Min(surface[s], surface[s - 1] - minDrop);
+        Fall(surface, end, spacing);
     }
 
     /// <summary>Lifts a falling profile so that it keeps a least fall all the way to its end's height.</summary>

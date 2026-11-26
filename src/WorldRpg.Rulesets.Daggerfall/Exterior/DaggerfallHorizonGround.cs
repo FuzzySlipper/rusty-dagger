@@ -195,7 +195,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         for (int i = -1; i <= side; i++)
         {
             double x = tile.SampleX(i), z = tile.SampleZ(j);
-            double height = Ground(x, z, tile.CellSize * 2, windows);
+            double height = MapRawHeight(x, z, tile.CellSize, windows);
             ground[((j + 1) * heightSide) + i + 1] = height;
             samples.SetHeight(i, j, (float)MapHeight(height, relief));
         }
@@ -210,7 +210,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
                 samples.SetColor(i, j, Linear(palette.Water(Offshore(x, z))));
                 continue;
             }
-            if (InChannel(x, z, tile.CellSize * 2))
+            DaggerfallRiverReach? river = _terrain.Rivers?.NearOverland(x - DaggerfallWorldGrid.HorizontalSize, z, tile.CellSize);
+            if (river is { } channel && channel.Distance <= channel.HalfWidth)
             {
                 samples.SetMaterial(i, j, 0);
                 samples.SetColor(i, j, Linear(palette.River));
@@ -219,6 +220,14 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             samples.SetMaterial(i, j, 1);
             if (height <= OceanMetres + BeachMetres) { samples.SetColor(i, j, Linear(palette.Beach)); continue; }
             float slope = Slope(ground, heightSide, i, j, tile.CellSize) * _groundTuning.RockFromSlope / _tuning.RockFromSlope;
+            if (river is { } bankRiver)
+            {
+                // Keep overland riverbanks grassy/sandy valley edges rather than painting carved bank slopes as grey rock.
+                double bank = DaggerfallTerrainRivers.BankWidth(bankRiver.HalfWidth);
+                float u = (float)Math.Clamp((bankRiver.Distance - bankRiver.HalfWidth) / bank, 0, 1);
+                float smooth = u * u * (3 - (2 * u));
+                slope *= .15f + (.85f * smooth);
+            }
             (int mapX, int mapY) = MapPixel(x, z);
             int climate = Climate(mapX, mapY);
             (int broadX, int broadZ) = ((int)Math.Round(x / Spacing / MapNoiseScale), (int)Math.Round(z / Spacing / MapNoiseScale));
@@ -285,7 +294,30 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private const int MapNoiseScale = 32;
 
     /// <summary>The travel map's ground at a point, sampled as its cells of <paramref name="cellMetres"/> are, for what stands on it.</summary>
-    internal double MapGround(double x, double z, double relief, double cellMetres) => MapHeight(Ground(x, z, cellMetres * 2, []), relief);
+    internal double MapGround(double x, double z, double relief, double cellMetres) => MapHeight(MapRawHeight(x, z, cellMetres, []), relief);
+
+    /// <summary>
+    /// Travel-map height before relief scaling: the same ground and location flattening as far ground, except rivers nestle
+    /// into a gentle valley trough (~1 m before relief) over their full bank width rather than the walked scale's 5 m cut
+    /// that 4x map relief otherwise turns into a sheer canyon.
+    /// </summary>
+    private double MapRawHeight(double x, double z, double cellMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows)
+    {
+        double uncarved = Flattened(Height(x, z, cellMetres * 2, windows, carveRivers: false), x, z);
+        if (_terrain.Rivers?.NearOverland(x - DaggerfallWorldGrid.HorizontalSize, z, cellMetres) is not { } river) return uncarved;
+        double surface = Math.Max(river.Surface, OceanMetres);
+        if (river.Distance <= river.HalfWidth)
+        {
+            double t = river.Distance / river.HalfWidth;
+            double bed = surface - (1.0 * (1 - (t * t)));
+            return Math.Max(OceanMetres, Math.Min(uncarved, bed));
+        }
+        double bank = DaggerfallTerrainRivers.BankWidth(river.HalfWidth);
+        double u = Math.Clamp((river.Distance - river.HalfWidth) / bank, 0, 1);
+        double smooth = u * u * (3 - (2 * u));
+        double edge = Math.Min(uncarved, surface + .25);
+        return Math.Max(OceanMetres, edge + ((uncarved - edge) * smooth));
+    }
 
     /// <summary>A height as the travel map draws it: the sea flat at its surface, land above it raised by <paramref name="relief"/>.</summary>
     private static double MapHeight(double height, double relief) => OceanMetres + (Math.Max(height - OceanMetres, 0) * relief);
@@ -758,7 +790,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         return SeabedProbes[^1] * SeabedNodeMetres * SeabedSlope;
     }
 
-    private double Height(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows)
+    private double Height(double x, double z, double finestMetres, Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows, bool carveRivers = true)
     {
         // The vertex the point falls on: a pixel's rows run north from its y, so its row 0 is the pixel's own z.
         long vertexX = (long)Math.Round(x / Spacing), vertexZ = (long)Math.Round(z / Spacing);
@@ -767,7 +799,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         if (!windows.TryGetValue((mapX, mapY), out DaggerfallTerrainWindow? window))
             windows.Add((mapX, mapY), window = DaggerfallTerrainSurfaceBuilder.ReadWindow(_terrain, mapX, mapY));
         return DaggerfallTerrainSurfaceBuilder.NormalizedHeight(window, (int)(vertexX - ((long)mapX * TileDimension)),
-            (int)(((long)mapY * TileDimension) - vertexZ), finestMetres) * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize;
+            (int)(((long)mapY * TileDimension) - vertexZ), finestMetres, carveRivers) * DaggerfallTerrainSurfaceBuilder.TerrainVerticalSize;
     }
 
     private static float[] ValleyFloor(DaggerfallTerrainSet terrain)

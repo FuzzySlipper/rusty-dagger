@@ -8,8 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <param name="HalfWidth">Half the channel's width there.</param>
 internal readonly record struct DaggerfallRiverReach(double Distance, double Surface, double HalfWidth);
 
-/// <summary>Where a section of river water ends: its edges, in metres from the heightmap's corner, and the surface between them.</summary>
-internal readonly record struct DaggerfallRiverSpan(double LeftX, double LeftZ, double RightX, double RightZ, double Surface);
+/// <summary>Where a section of river water ends: its edges, in metres from the heightmap's corner, the surface between them, how far downstream it sits, and its half-span across.</summary>
+internal readonly record struct DaggerfallRiverSpan(double LeftX, double LeftZ, double RightX, double RightZ, double Surface, double Along = 0, double Edge = 0);
 
 /// <summary>One section of river water between two stations.</summary>
 internal readonly record struct DaggerfallRiverSection(DaggerfallRiverSpan From, DaggerfallRiverSpan To);
@@ -38,12 +38,14 @@ internal sealed class DaggerfallTerrainRivers
     private const double CoarsestPerWidth = 4;
 
     private readonly float[] _stations;
+    private readonly double[] _along;
     private readonly int[] _courseEnds;
     private readonly int[] _pixelStarts, _pixelSegments;
 
     private DaggerfallTerrainRivers(float[] stations, int[] courseEnds)
     {
         _stations = stations;
+        _along = Along(stations, courseEnds);
         _courseEnds = courseEnds;
         (_pixelStarts, _pixelSegments) = Index(stations, courseEnds);
     }
@@ -108,6 +110,33 @@ internal sealed class DaggerfallTerrainRivers
         return found;
     }
 
+    /// <summary>
+    /// The nearest river visible on the 3D travel map at a tile cell size, or none. Travel-map cells are coarser than walked
+    /// cells (51.2 m finest), so rivers down to ~8 m wide stay visible at fine zoom as continuous waterways rather than
+    /// vanishing into dry valleys.
+    /// </summary>
+    internal DaggerfallRiverReach? NearOverland(double x, double z, double cellSize)
+    {
+        int px = (int)Math.Floor(x / PixelMetres), py = (int)Math.Floor(z / PixelMetres);
+        if (px is < 0 or >= MapWidth || py is < 0 or >= MapHeight) return null;
+        int pixel = (py * MapWidth) + px;
+        double minWidth = cellSize * .16;
+        double best = double.MaxValue;
+        DaggerfallRiverReach? found = null;
+        for (int k = _pixelStarts[pixel]; k < _pixelStarts[pixel + 1]; k++)
+        {
+            (double distance, double half, double surface) = ToSegment(_pixelSegments[k] * StationFloats, x, z);
+            if (half * 2 < minWidth) continue;
+            // Widen narrow courses slightly to ~0.75 of a fine cell half-width so the heightfield renders a continuous ribbon.
+            double drawnHalf = Math.Max(half, cellSize * .72);
+            if (distance - drawnHalf >= best || distance > drawnHalf + Bank(drawnHalf)) continue;
+            best = distance - drawnHalf;
+            found = new(distance, surface, drawnHalf);
+        }
+
+        return found;
+    }
+
     /// <summary>A point's distance from the segment starting at station float <paramref name="a"/>, and the river's half width and surface at the nearest point.</summary>
     private (double Distance, double HalfWidth, double Surface) ToSegment(int a, double x, double z)
     {
@@ -144,7 +173,7 @@ internal sealed class DaggerfallTerrainRivers
         double dx = _stations[after] - _stations[before], dz = _stations[after + 1] - _stations[before + 1], length = Math.Max(Math.Sqrt((dx * dx) + (dz * dz)), 1e-6);
         double half = _stations[at + 3], edge = half + (Bank(half) * LipShare), x = _stations[at], z = _stations[at + 1];
         double nx = dz / length * edge, nz = -dx / length * edge;
-        return new(x + nx, z + nz, x - nx, z - nz, _stations[at + 2]);
+        return new(x + nx, z + nz, x - nx, z - nz, _stations[at + 2], _along[station], edge);
     }
 
     private (int First, int Last) CourseOf(int station)
@@ -199,7 +228,33 @@ internal sealed class DaggerfallTerrainRivers
 
     private static double Depth(double half) => Math.Clamp(half * DepthPerHalfWidth, Math.Min(LeastDepth, half / 2), MostDepth);
 
+    /// <summary>How far beyond a channel's half-width its bank blends back into the surrounding ground.</summary>
+    internal static double BankWidth(double half) => Bank(half);
+
     private static double Bank(double half) => Math.Max(half * 2, LeastBank);
+
+    /// <summary>Each station's downstream distance in metres from its course's head, so water flows continuously along bends.</summary>
+    private static double[] Along(float[] stations, int[] ends)
+    {
+        double[] along = new double[stations.Length / StationFloats];
+        int start = 0;
+        foreach (int end in ends)
+        {
+            double distance = 0;
+            for (int s = start; s < end; s++)
+            {
+                if (s > start)
+                {
+                    int a = (s - 1) * StationFloats, b = s * StationFloats;
+                    double dx = stations[b] - stations[a], dz = stations[b + 1] - stations[a + 1];
+                    distance += Math.Sqrt((dx * dx) + (dz * dz));
+                }
+                along[s] = distance;
+            }
+            start = end;
+        }
+        return along;
+    }
 
     /// <summary>Each map pixel's segments, reaching out as far as a segment's widest bank can.</summary>
     private static (int[] Starts, int[] Segments) Index(float[] stations, int[] ends)

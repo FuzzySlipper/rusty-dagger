@@ -33,14 +33,19 @@ internal sealed record DaggerfallWaterTuning(Color Shallow, Color Deep, float De
     /// <summary>
     /// The Engine material for this water, over a climate's water art, at the day's light: water's colours are its own, so
     /// they don't fall with the sun. It draws with the sea's <paramref name="shader"/>, if the art set has one, which ripples
-    /// it in place of the Engine.
+    /// it in place of the Engine. Rivers flow downstream along their UVs' +v axis even without the custom shader.
     /// </summary>
-    internal MaterialRequest Material(RenderResourceReference art, Vector3 sky, MaterialShader? shader) => new MaterialRequest(new Color(sky.X, sky.Y, sky.Z, Opacity), art, Roughness, new Color(1, 1, 1, 1), Vector3.Zero, 0, false, MaterialAlphaMode.Blend, 0) with
+    internal MaterialRequest Material(RenderResourceReference art, Vector3 sky, MaterialShader? shader, bool river = false)
     {
-        NormalScale = shader is null ? Ripple : 0,
-        Water = new MaterialWater(Shallow, Deep, DepthMetres, ShoreMetres, FoamThreshold, Drift, Drift, new(-Drift.Y, Drift.X), WaveMetres, default, default),
-        Shader = shader ?? default,
-    };
+        Vector2 primary = river ? new(0, -MathF.Max(Drift.Length(), .12f)) : Drift;
+        Vector2 secondary = river ? new(.015f, primary.Y * 1.4f) : new(-Drift.Y, Drift.X);
+        return new MaterialRequest(new Color(sky.X, sky.Y, sky.Z, Opacity), art, Roughness, new Color(1, 1, 1, 1), Vector3.Zero, 0, false, MaterialAlphaMode.Blend, 0) with
+        {
+            NormalScale = shader is null ? Ripple : 0,
+            Water = new MaterialWater(Shallow, Deep, DepthMetres, ShoreMetres, FoamThreshold, primary, primary, secondary, WaveMetres, default, default),
+            Shader = shader ?? default,
+        };
+    }
 
     /// <summary>
     /// The sea's shader (<c>sea.wgsl</c>, a variant of it) over its <paramref name="art"/> maps, with the wind its waves
@@ -53,6 +58,18 @@ internal sealed record DaggerfallWaterTuning(Color Shallow, Color Deep, float De
         new Vector4(wind.Bearing, HighestWaves, wind.Speed, fetch), new Vector4(Glint, GlintDegrees * MathF.PI / 180, reach),
         new Vector4(moons.X, moons.Y, WaveMetres, Ripple), new Vector4(sea, Shimmer),
         new RenderResourceReference(art.Ripples), new RenderResourceReference(art.Foam), reach > 0 ? WavesReach : 0);
+
+    /// <summary>
+    /// The travel map's water shader (<c>sea.wgsl</c>, keyword <c>OVERLAND</c>) over the sea's ripple and foam maps:
+    /// gentle map-scale animated ripples, shoreline surf along shallow coasts, and sun/moon glints over the map's palette.
+    /// </summary>
+    internal MaterialShader OverlandShader(RenderResource shader, DaggerfallSeaMaps art, DaggerfallSeaWind.Blowing wind, Vector4 moons,
+        Vector3 shallow, Vector3 deep, float oceanBackdropY) => new(new RenderResourceReference(shader),
+        new Vector4(wind.Bearing, oceanBackdropY, wind.Speed, GlintDegrees * MathF.PI / 180),
+        new Vector4(shallow, moons.X),
+        new Vector4(deep, moons.Y),
+        new Vector4(Glint.X, Glint.Y, Ripple, Shimmer),
+        new RenderResourceReference(art.Ripples), new RenderResourceReference(art.Foam), 0);
 
     /// <summary>
     /// How far the waves can carry the water from its mesh, metres, up and sideways, so the Engine culls the water's parts by
