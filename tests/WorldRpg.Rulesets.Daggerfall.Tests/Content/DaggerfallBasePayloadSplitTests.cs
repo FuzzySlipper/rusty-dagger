@@ -38,7 +38,10 @@ public sealed class DaggerfallBasePayloadSplitTests
     public void The_tracked_authored_payload_and_the_imported_payload_share_no_section()
     {
         string payloads = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "payloads");
-        using JsonDocument authored = JsonDocument.Parse(TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base")));
+        string basePayloadPath = TestData.PackPayload("daggerfall.base");
+        Assert.True(new FileInfo(basePayloadPath).Length < 5_000, "daggerfall.base/payload.json should stay a slim section manifest.");
+        using JsonDocument authored = JsonDocument.Parse(DaggerfallBaseContent.AssembleAuthored(
+            DaggerfallBaseContent.FilesFromDisk("daggerfall.base", basePayloadPath)));
         using JsonDocument imported = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(payloads, "daggerfall.imported.json")));
 
         Assert.Equal(
@@ -48,6 +51,34 @@ public sealed class DaggerfallBasePayloadSplitTests
             .Intersect(authored.RootElement.EnumerateObject().Select(section => section.Name)));
         // Importer records nothing at runtime reads stay outside the runtime content root.
         Assert.DoesNotContain(imported.RootElement.EnumerateObject(), section => section.Name is "geometry" or "blocks");
+    }
+
+    [Fact]
+    public void Split_manifest_refuses_missing_file_path_traversal_duplicate_paths_and_mixed_inline_sections()
+    {
+        static DaggerfallBasePackFiles Pack(string manifest, params (string Path, string Body)[] files) =>
+            new("daggerfall.base", Encoding.UTF8.GetBytes(manifest),
+                files.ToDictionary(pair => pair.Path, pair => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(pair.Body), StringComparer.Ordinal));
+
+        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.AssembleAuthored(Pack("""{ "ruleset": "daggerfall", "sections": { "items": "items/items.json" } }""")));
+        Assert.Contains("missing file 'items/items.json'", missing.Message, StringComparison.Ordinal);
+
+        DaggerfallContentException traversal = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.AssembleAuthored(Pack("""{ "ruleset": "daggerfall", "sections": { "items": "../escape.json" } }""")));
+        Assert.Contains("invalid relative path '../escape.json'", traversal.Message, StringComparison.Ordinal);
+
+        DaggerfallContentException duplicatePath = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.AssembleAuthored(Pack(
+                """{ "ruleset": "daggerfall", "sections": { "items": "shared.json", "actors": "shared.json" } }""",
+                ("shared.json", "[]"))));
+        Assert.Contains("maps multiple sections to 'shared.json'", duplicatePath.Message, StringComparison.Ordinal);
+
+        DaggerfallContentException mixed = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.AssembleAuthored(Pack(
+                """{ "ruleset": "daggerfall", "items": [], "sections": { "actors": "actors.json" } }""",
+                ("actors.json", "[]"))));
+        Assert.Contains("may not mix inline section 'items' with a 'sections' map", mixed.Message, StringComparison.Ordinal);
     }
 
     [Fact]

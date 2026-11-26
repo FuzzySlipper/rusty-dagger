@@ -21,7 +21,7 @@ internal static class TestPayload
         return defs.WithPeople(DaggerfallPeopleContent.Read(PeoplePack(), defs.Factions, defs.Vocabulary, defs.Items));
     });
     private static readonly SharedFixture<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
-        TestContentFiles.Read(TestData.PackPayload("daggerfall.base")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
+        DaggerfallBaseContent.FilesFromDisk("daggerfall.base", TestData.PackPayload("daggerfall.base")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
 
     /// <summary>The parsed base definitions.</summary>
     internal static DaggerfallDefinitions Definitions => Shared.Value;

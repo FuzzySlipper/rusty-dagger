@@ -1,0 +1,365 @@
+[
+  {
+    "id": "player-enemy",
+    "teamIndex": 0,
+    "name": "Player Enemies",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": []
+  },
+  {
+    "id": "player-ally",
+    "teamIndex": 1,
+    "name": "Player Allies",
+    "hostileToPlayer": false,
+    "allies": [],
+    "enemies": []
+  },
+  {
+    "id": "vermin",
+    "teamIndex": 2,
+    "name": "Vermin",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "bears",
+      "tigers",
+      "spiders",
+      "scorpions",
+      "city-watch"
+    ]
+  },
+  {
+    "id": "spriggans",
+    "teamIndex": 3,
+    "name": "Spriggans",
+    "hostileToPlayer": true,
+    "allies": [
+      "nymphs",
+      "centaurs",
+      "bears"
+    ],
+    "enemies": [
+      "orcs",
+      "undead",
+      "daedra",
+      "criminals",
+      "spiders",
+      "werecreatures"
+    ]
+  },
+  {
+    "id": "bears",
+    "teamIndex": 4,
+    "name": "Bears",
+    "hostileToPlayer": true,
+    "allies": [
+      "spriggans"
+    ],
+    "enemies": [
+      "tigers",
+      "spiders",
+      "scorpions",
+      "werecreatures",
+      "criminals",
+      "city-watch",
+      "vermin",
+      "aquatic"
+    ]
+  },
+  {
+    "id": "tigers",
+    "teamIndex": 5,
+    "name": "Tigers",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "bears",
+      "spiders",
+      "scorpions",
+      "werecreatures",
+      "criminals",
+      "city-watch",
+      "vermin",
+      "aquatic"
+    ]
+  },
+  {
+    "id": "spiders",
+    "teamIndex": 6,
+    "name": "Spiders",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "scorpions",
+      "vermin",
+      "bears",
+      "tigers",
+      "spriggans",
+      "city-watch",
+      "knights-and-mages",
+      "criminals"
+    ]
+  },
+  {
+    "id": "orcs",
+    "teamIndex": 7,
+    "name": "Orcs",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "undead",
+      "daedra",
+      "city-watch",
+      "knights-and-mages",
+      "criminals",
+      "centaurs",
+      "spriggans",
+      "nymphs",
+      "werecreatures",
+      "giants",
+      "magic",
+      "aquatic"
+    ]
+  },
+  {
+    "id": "centaurs",
+    "teamIndex": 8,
+    "name": "Centaurs",
+    "hostileToPlayer": true,
+    "allies": [
+      "spriggans",
+      "nymphs"
+    ],
+    "enemies": [
+      "orcs",
+      "undead",
+      "daedra",
+      "giants",
+      "harpies"
+    ]
+  },
+  {
+    "id": "werecreatures",
+    "teamIndex": 9,
+    "name": "Werecreatures",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "undead",
+      "orcs",
+      "daedra",
+      "city-watch",
+      "knights-and-mages",
+      "criminals",
+      "bears",
+      "tigers",
+      "spriggans"
+    ]
+  },
+  {
+    "id": "nymphs",
+    "teamIndex": 10,
+    "name": "Nymphs",
+    "hostileToPlayer": true,
+    "allies": [
+      "spriggans",
+      "centaurs"
+    ],
+    "enemies": [
+      "undead",
+      "daedra",
+      "orcs",
+      "harpies"
+    ]
+  },
+  {
+    "id": "aquatic",
+    "teamIndex": 11,
+    "name": "Aquatic Creatures",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "bears",
+      "tigers",
+      "orcs"
+    ]
+  },
+  {
+    "id": "harpies",
+    "teamIndex": 12,
+    "name": "Harpies",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "nymphs",
+      "centaurs",
+      "city-watch",
+      "knights-and-mages",
+      "dragonlings"
+    ]
+  },
+  {
+    "id": "undead",
+    "teamIndex": 13,
+    "name": "Undead",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "orcs",
+      "daedra",
+      "city-watch",
+      "knights-and-mages",
+      "criminals",
+      "spriggans",
+      "centaurs",
+      "nymphs",
+      "werecreatures",
+      "magic"
+    ]
+  },
+  {
+    "id": "giants",
+    "teamIndex": 14,
+    "name": "Giants",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "orcs",
+      "centaurs",
+      "dragonlings",
+      "city-watch"
+    ]
+  },
+  {
+    "id": "scorpions",
+    "teamIndex": 15,
+    "name": "Scorpions",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "spiders",
+      "vermin",
+      "bears",
+      "tigers",
+      "city-watch",
+      "knights-and-mages",
+      "criminals"
+    ]
+  },
+  {
+    "id": "magic",
+    "teamIndex": 16,
+    "name": "Magical Constructs",
+    "hostileToPlayer": true,
+    "allies": [
+      "knights-and-mages"
+    ],
+    "enemies": [
+      "daedra",
+      "undead",
+      "orcs",
+      "criminals"
+    ]
+  },
+  {
+    "id": "daedra",
+    "teamIndex": 17,
+    "name": "Daedra",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "undead",
+      "orcs",
+      "city-watch",
+      "knights-and-mages",
+      "criminals",
+      "spriggans",
+      "centaurs",
+      "nymphs",
+      "dragonlings",
+      "magic",
+      "werecreatures"
+    ]
+  },
+  {
+    "id": "dragonlings",
+    "teamIndex": 18,
+    "name": "Dragonlings",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "daedra",
+      "giants",
+      "harpies",
+      "city-watch",
+      "knights-and-mages"
+    ]
+  },
+  {
+    "id": "knights-and-mages",
+    "teamIndex": 19,
+    "name": "Knights and Mages",
+    "hostileToPlayer": true,
+    "allies": [
+      "city-watch",
+      "magic"
+    ],
+    "enemies": [
+      "criminals",
+      "orcs",
+      "undead",
+      "daedra",
+      "werecreatures",
+      "harpies",
+      "dragonlings",
+      "spiders",
+      "scorpions"
+    ]
+  },
+  {
+    "id": "criminals",
+    "teamIndex": 20,
+    "name": "Criminals",
+    "hostileToPlayer": true,
+    "allies": [],
+    "enemies": [
+      "city-watch",
+      "knights-and-mages",
+      "undead",
+      "daedra",
+      "orcs",
+      "werecreatures",
+      "bears",
+      "tigers",
+      "spiders",
+      "scorpions",
+      "spriggans",
+      "magic"
+    ]
+  },
+  {
+    "id": "city-watch",
+    "teamIndex": 21,
+    "name": "City Watch",
+    "hostileToPlayer": true,
+    "allies": [
+      "knights-and-mages"
+    ],
+    "enemies": [
+      "criminals",
+      "orcs",
+      "undead",
+      "daedra",
+      "werecreatures",
+      "giants",
+      "harpies",
+      "spiders",
+      "scorpions",
+      "dragonlings",
+      "bears",
+      "tigers",
+      "vermin"
+    ]
+  }
+]

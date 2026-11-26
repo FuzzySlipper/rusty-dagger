@@ -1,0 +1,368 @@
+[
+  {
+    "key": "-",
+    "gold": {
+      "minimum": 0,
+      "maximum": 0
+    },
+    "categories": {}
+  },
+  {
+    "key": "A",
+    "gold": {
+      "minimum": 1,
+      "maximum": 10
+    },
+    "categories": {
+      "misc2": 2,
+      "armor": 5,
+      "weapons": 5,
+      "magic": 2,
+      "clothing": 4
+    }
+  },
+  {
+    "key": "B",
+    "gold": {
+      "minimum": 0,
+      "maximum": 0
+    },
+    "categories": {
+      "plant1": 10,
+      "plant2": 10
+    }
+  },
+  {
+    "key": "C",
+    "gold": {
+      "minimum": 2,
+      "maximum": 20
+    },
+    "categories": {
+      "plant1": 10,
+      "plant2": 10,
+      "creature1": 5,
+      "creature2": 5,
+      "creature3": 5,
+      "misc1": 5,
+      "misc2": 2,
+      "armor": 5,
+      "weapons": 25,
+      "magic": 3,
+      "books": 2,
+      "religious": 2
+    }
+  },
+  {
+    "key": "D",
+    "gold": {
+      "minimum": 1,
+      "maximum": 4
+    },
+    "categories": {
+      "plant1": 6,
+      "plant2": 6,
+      "creature1": 6,
+      "creature2": 6,
+      "creature3": 6,
+      "misc1": 6,
+      "religious": 4
+    }
+  },
+  {
+    "key": "E",
+    "gold": {
+      "minimum": 20,
+      "maximum": 80
+    },
+    "categories": {
+      "misc2": 1,
+      "armor": 10,
+      "weapons": 10,
+      "magic": 3,
+      "clothing": 4,
+      "books": 2,
+      "religious": 15
+    }
+  },
+  {
+    "key": "F",
+    "gold": {
+      "minimum": 4,
+      "maximum": 30
+    },
+    "categories": {
+      "plant1": 2,
+      "plant2": 2,
+      "creature1": 5,
+      "creature2": 5,
+      "creature3": 5,
+      "misc1": 2,
+      "misc2": 3,
+      "armor": 50,
+      "weapons": 50,
+      "magic": 1
+    }
+  },
+  {
+    "key": "G",
+    "gold": {
+      "minimum": 3,
+      "maximum": 15
+    },
+    "categories": {
+      "misc2": 3,
+      "armor": 50,
+      "weapons": 50,
+      "magic": 1,
+      "clothing": 5
+    }
+  },
+  {
+    "key": "H",
+    "gold": {
+      "minimum": 2,
+      "maximum": 10
+    },
+    "categories": {
+      "weapons": 100,
+      "magic": 1,
+      "clothing": 2
+    }
+  },
+  {
+    "key": "I",
+    "gold": {
+      "minimum": 0,
+      "maximum": 0
+    },
+    "categories": {
+      "magic": 2,
+      "religious": 5
+    }
+  },
+  {
+    "key": "J",
+    "gold": {
+      "minimum": 50,
+      "maximum": 150
+    },
+    "categories": {
+      "armor": 5,
+      "weapons": 5,
+      "magic": 3
+    }
+  },
+  {
+    "key": "K",
+    "gold": {
+      "minimum": 1,
+      "maximum": 10
+    },
+    "categories": {
+      "plant1": 3,
+      "plant2": 3,
+      "creature1": 3,
+      "creature2": 3,
+      "creature3": 3,
+      "misc1": 3,
+      "misc2": 2,
+      "armor": 5,
+      "weapons": 5,
+      "magic": 3,
+      "books": 5,
+      "religious": 100
+    }
+  },
+  {
+    "key": "L",
+    "gold": {
+      "minimum": 1,
+      "maximum": 20
+    },
+    "categories": {
+      "creature1": 3,
+      "creature2": 3,
+      "creature3": 3,
+      "misc1": 3,
+      "misc2": 5,
+      "armor": 50,
+      "weapons": 50,
+      "magic": 1,
+      "clothing": 75,
+      "religious": 3
+    }
+  },
+  {
+    "key": "M",
+    "gold": {
+      "minimum": 1,
+      "maximum": 15
+    },
+    "categories": {
+      "plant1": 1,
+      "plant2": 1,
+      "creature1": 1,
+      "creature2": 1,
+      "creature3": 1,
+      "misc1": 2,
+      "misc2": 3,
+      "armor": 10,
+      "weapons": 10,
+      "magic": 1,
+      "clothing": 15,
+      "books": 2,
+      "religious": 1
+    }
+  },
+  {
+    "key": "N",
+    "gold": {
+      "minimum": 1,
+      "maximum": 80
+    },
+    "categories": {
+      "plant1": 5,
+      "plant2": 5,
+      "creature1": 5,
+      "creature2": 5,
+      "creature3": 5,
+      "misc1": 5,
+      "misc2": 2,
+      "armor": 5,
+      "weapons": 5,
+      "magic": 1,
+      "clothing": 20,
+      "books": 5,
+      "religious": 5
+    }
+  },
+  {
+    "key": "O",
+    "gold": {
+      "minimum": 5,
+      "maximum": 20
+    },
+    "categories": {
+      "plant1": 1,
+      "plant2": 1,
+      "creature1": 1,
+      "creature2": 1,
+      "creature3": 1,
+      "misc1": 1,
+      "armor": 10,
+      "weapons": 15,
+      "magic": 2
+    }
+  },
+  {
+    "key": "P",
+    "gold": {
+      "minimum": 5,
+      "maximum": 20
+    },
+    "categories": {
+      "plant1": 5,
+      "plant2": 5,
+      "creature1": 5,
+      "creature2": 5,
+      "creature3": 5,
+      "misc1": 5,
+      "misc2": 5,
+      "armor": 5,
+      "weapons": 10,
+      "magic": 2,
+      "books": 10
+    }
+  },
+  {
+    "key": "Q",
+    "gold": {
+      "minimum": 20,
+      "maximum": 80
+    },
+    "categories": {
+      "plant1": 2,
+      "plant2": 2,
+      "creature1": 8,
+      "creature2": 8,
+      "creature3": 8,
+      "misc1": 2,
+      "misc2": 3,
+      "armor": 10,
+      "weapons": 25,
+      "magic": 3,
+      "clothing": 35,
+      "books": 5
+    }
+  },
+  {
+    "key": "R",
+    "gold": {
+      "minimum": 5,
+      "maximum": 20
+    },
+    "categories": {
+      "creature1": 3,
+      "creature2": 3,
+      "creature3": 3,
+      "misc1": 5,
+      "armor": 5,
+      "weapons": 15,
+      "magic": 2
+    }
+  },
+  {
+    "key": "S",
+    "gold": {
+      "minimum": 50,
+      "maximum": 125
+    },
+    "categories": {
+      "plant1": 5,
+      "plant2": 5,
+      "creature1": 5,
+      "creature2": 5,
+      "creature3": 5,
+      "misc1": 15,
+      "misc2": 5,
+      "armor": 10,
+      "weapons": 10,
+      "magic": 3,
+      "books": 5
+    }
+  },
+  {
+    "key": "T",
+    "gold": {
+      "minimum": 20,
+      "maximum": 80
+    },
+    "categories": {
+      "armor": 100,
+      "weapons": 100,
+      "magic": 1
+    }
+  },
+  {
+    "key": "U",
+    "gold": {
+      "minimum": 7,
+      "maximum": 30
+    },
+    "categories": {
+      "plant1": 5,
+      "plant2": 5,
+      "creature1": 5,
+      "creature2": 5,
+      "creature3": 5,
+      "misc1": 10,
+      "misc2": 2,
+      "armor": 10,
+      "weapons": 10,
+      "magic": 2,
+      "books": 2,
+      "religious": 10
+    }
+  }
+]

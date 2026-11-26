@@ -28,8 +28,8 @@ public sealed class ReferenceExportTests : IDisposable
     [Fact]
     public void Organization_reads_every_template_its_groups_and_its_weapon_family_from_the_base_pack()
     {
-        Dictionary<int, ItemReferenceExport.Template> templates = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllBytes(TestData.PackPayload("daggerfall.base")))!
-            ["itemTemplates"]!["templates"]!.AsArray().Select(row => ItemReferenceExport.Template.Read(row!)).ToDictionary(template => template.Index);
+        Dictionary<int, ItemReferenceExport.Template> templates = BasePackFiles.ReadSectionNode(TestData.PackPayload("daggerfall.base"), "itemTemplates")
+            ["templates"]!.AsArray().Select(row => ItemReferenceExport.Template.Read(row!)).ToDictionary(template => template.Index);
         Assert.All(templates.Values, template => Assert.NotEmpty(template.Groups));
         Assert.Equal(["Furniture"], templates[251].Groups);
         Assert.Equal(["QuestItems", "MiscItems"], templates[281].Groups);

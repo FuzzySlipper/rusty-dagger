@@ -51,33 +51,29 @@ public sealed class DaggerfallReferenceCatalogTests
         ResolvedGameComposition composition = TestSessions
             .Resolve(Content(null), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
+        ContentPack basePack = composition.RequireContentPack(new ContentPackId("daggerfall.base"));
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-            composition.RequireContentPack(new ContentPackId("daggerfall.base")).Payload,
+            DaggerfallBaseContent.Files(composition.Content, basePack.Id.Value, basePack.PayloadPath, basePack.Payload),
             composition.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload, DaggerfallData.For(composition));
         Assert.Equal(19, definitions.Catalogs.Careers.Count);
 
         ResolvedGameComposition broken = TestSessions
             .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = 35), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
-        ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
+        ContentPack brokenPack = broken.RequireContentPack(new ContentPackId("daggerfall.base"));
+        DaggerfallBasePackFiles brokenBase = DaggerfallBaseContent.Files(broken.Content, brokenPack.Id.Value, brokenPack.PayloadPath, brokenPack.Payload);
         ReadOnlyMemory<byte> importedPayload = broken.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload;
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(brokenPayload, importedPayload, DaggerfallData.For(broken)); });
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(brokenBase, importedPayload, DaggerfallData.For(broken)); });
         Assert.Contains("skill 35", error.Message, StringComparison.Ordinal);
     }
 
     private static ProductContent Content(Action<JsonObject>? change) => change is null
         ? TestSessions.FullContent(TestData.RepositoryRoot)
-        : TestSessions.FullContentWithEntry(TestData.RepositoryRoot, "worldrpg/packs/daggerfall.base/payload.json", bytes =>
+        : TestSessions.FullContentWithEntry(TestData.RepositoryRoot, "worldrpg/packs/daggerfall.base/world/catalogs.json", bytes =>
         {
-            // This fixture only changes catalogs, so only that section is parsed and only its bytes are
-            // replaced; the rest of the base payload keeps its authored form.
-            JsonObject pack = new()
-            {
-                ["catalogs"] = JsonNode.Parse((TestSessions.TopLevelSection(bytes, "catalogs")
-                    ?? throw new InvalidOperationException("The base payload carries no catalogs section.")).Span),
-            };
+            JsonObject pack = new() { ["catalogs"] = JsonNode.Parse(bytes) };
             change(pack);
-            return TestSessions.ReplaceTopLevelSection(bytes, "catalogs", pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact));
+            return Encoding.UTF8.GetBytes(pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact));
         });
 
     [Theory]

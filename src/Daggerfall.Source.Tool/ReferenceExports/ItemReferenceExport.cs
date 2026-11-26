@@ -27,8 +27,7 @@ internal static class ItemReferenceExport
     /// <param name="basePayload">The base pack's payload, whose <c>itemTemplates</c> section names every template.</param>
     public static void Run(string arena2, string basePayload, string output)
     {
-        JsonNode section = JsonNode.Parse(File.ReadAllBytes(basePayload))?["itemTemplates"]
-            ?? throw new InvalidOperationException($"'{basePayload}' carries no itemTemplates section.");
+        JsonNode section = BasePackFiles.ReadSectionNode(basePayload, "itemTemplates");
         IReadOnlyList<Template> templates = [.. section["templates"]!.AsArray().Select(row => Template.Read(row!))];
         IReadOnlyList<JsonNode> magic = [.. section["magic"]!.AsArray().Select(row => row!)];
         IReadOnlyList<(int Id, string Name, int[] Values)> groups = [.. section["groupTable"]!["groups"]!.AsArray()

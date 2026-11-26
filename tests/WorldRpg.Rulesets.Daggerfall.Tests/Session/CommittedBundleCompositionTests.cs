@@ -209,8 +209,8 @@ public sealed class CommittedBundleCompositionTests
     [Fact]
     public void A_new_game_start_no_location_places_is_refused_by_name()
     {
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithFile("worldrpg/packs/daggerfall.base/payload.json",
-            payload => payload["newGame"]!["start"]!["profile"] = "17/4/dungeon"));
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithFile("worldrpg/packs/daggerfall.base/core/new-game.json",
+            newGame => newGame["start"]!["profile"] = "17/4/dungeon"));
         Assert.Contains("names profile '17/4/dungeon', which no location places", error.Message, StringComparison.Ordinal);
     }
 

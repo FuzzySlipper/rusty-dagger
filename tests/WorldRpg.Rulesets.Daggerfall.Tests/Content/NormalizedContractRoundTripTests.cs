@@ -74,7 +74,7 @@ public sealed class NormalizedContractRoundTripTests
             rewrittenSections[section] = rewritten.ToJsonString(PublishedJson.SectionCompact);
         }
 
-        byte[] authored = TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base"));
+        DaggerfallBasePackFiles authored = DaggerfallBaseContent.FilesFromDisk("daggerfall.base", TestData.PackPayload("daggerfall.base"));
         byte[] rewrittenPayload = RewriteImportedPayload(rewrittenSections);
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, rewrittenPayload, TestPayload.Data);
         Assert.NotEmpty(definitions.CharacterPresentation.Races);

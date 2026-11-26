@@ -1,0 +1,156 @@
+[
+  {
+    "id": "amulet0",
+    "allowedClassifications": [
+      "amulet"
+    ]
+  },
+  {
+    "id": "amulet1",
+    "allowedClassifications": [
+      "amulet"
+    ]
+  },
+  {
+    "id": "bracelet0",
+    "allowedClassifications": [
+      "bracelet"
+    ]
+  },
+  {
+    "id": "bracelet1",
+    "allowedClassifications": [
+      "bracelet"
+    ]
+  },
+  {
+    "id": "ring0",
+    "allowedClassifications": [
+      "ring"
+    ]
+  },
+  {
+    "id": "ring1",
+    "allowedClassifications": [
+      "ring"
+    ]
+  },
+  {
+    "id": "bracer0",
+    "allowedClassifications": [
+      "bracer"
+    ]
+  },
+  {
+    "id": "bracer1",
+    "allowedClassifications": [
+      "bracer"
+    ]
+  },
+  {
+    "id": "mark0",
+    "allowedClassifications": [
+      "mark"
+    ]
+  },
+  {
+    "id": "mark1",
+    "allowedClassifications": [
+      "mark"
+    ]
+  },
+  {
+    "id": "crystal0",
+    "allowedClassifications": [
+      "crystal"
+    ]
+  },
+  {
+    "id": "crystal1",
+    "allowedClassifications": [
+      "crystal"
+    ]
+  },
+  {
+    "id": "head",
+    "allowedClassifications": [
+      "armor-head"
+    ]
+  },
+  {
+    "id": "right-arm",
+    "allowedClassifications": [
+      "armor-right-arm"
+    ]
+  },
+  {
+    "id": "cloak1",
+    "allowedClassifications": [
+      "cloak"
+    ]
+  },
+  {
+    "id": "left-arm",
+    "allowedClassifications": [
+      "armor-left-arm"
+    ]
+  },
+  {
+    "id": "cloak2",
+    "allowedClassifications": [
+      "cloak"
+    ]
+  },
+  {
+    "id": "chest-clothes",
+    "allowedClassifications": [
+      "chest-clothes"
+    ]
+  },
+  {
+    "id": "chest-armor",
+    "allowedClassifications": [
+      "armor-chest"
+    ]
+  },
+  {
+    "id": "right-hand",
+    "allowedClassifications": [
+      "weapon-one-hand",
+      "weapon-two-hand"
+    ]
+  },
+  {
+    "id": "gloves",
+    "allowedClassifications": [
+      "armor-hands"
+    ]
+  },
+  {
+    "id": "left-hand",
+    "allowedClassifications": [
+      "weapon-one-hand",
+      "shield",
+      "weapon-two-hand"
+    ]
+  },
+  {
+    "id": "legs-armor",
+    "allowedClassifications": [
+      "armor-legs"
+    ]
+  },
+  {
+    "id": "legs-clothes",
+    "allowedClassifications": [
+      "legs-clothes"
+    ]
+  },
+  {
+    "id": "feet",
+    "allowedClassifications": [
+      "armor-feet",
+      "feet"
+    ]
+  }
+]

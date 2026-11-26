@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 import re
 
+from base_pack import read_section as read_base_section, sections_stamp as base_sections_stamp
 from cache import FileCache, dir_stamp, file_stamp
 from packs import PackStore, ValidationError, ValidationIssue
 from router import NotFoundError
@@ -481,13 +482,14 @@ class PeoplePackStore:
         cast_path, spawners_path, _ = self._paths()
         return cast_path.is_file() and spawners_path.is_file()
 
+    _BASE_LOOKUP_SECTIONS = ("factions", "buildingNames", "vocabulary", "items")
+
     def _base_lookups(self):
         base_path = self.library.base_payload
-        stamp = file_stamp(base_path)
+        stamp = base_sections_stamp(base_path, self._BASE_LOOKUP_SECTIONS, self.cache)
 
         def build():
-            base = self.packs.read_json(base_path, {}) or {}
-            factions_raw = (base.get("factions") or {}).get("factions") or []
+            factions_raw = (read_base_section(base_path, "factions", {}, self.cache) or {}).get("factions") or []
             factions = {}
             for row in factions_raw:
                 if isinstance(row, dict) and _is_int(row.get("id")):
@@ -499,18 +501,18 @@ class PeoplePackStore:
                         "region": row.get("region"),
                         "parent": row.get("parent"),
                     }
-            region_names = (base.get("buildingNames") or {}).get("regionNames") or []
+            region_names = (read_base_section(base_path, "buildingNames", {}, self.cache) or {}).get("regionNames") or []
             regions = [{"index": i, "key": str(i), "name": name} for i, name in enumerate(region_names)]
             region_by_key = {}
             for entry in regions:
                 region_by_key[entry["key"]] = entry
                 region_by_key[entry["name"].lower()] = entry
-            vocab = base.get("vocabulary") or {}
+            vocab = read_base_section(base_path, "vocabulary", {}, self.cache) or {}
             valid_attributes = set(vocab.get("attributes") or [])
             valid_skills = set(vocab.get("skills") or [])
             items = {
                 row["id"]: row
-                for row in (base.get("items") or [])
+                for row in (read_base_section(base_path, "items", [], self.cache) or [])
                 if isinstance(row, dict) and isinstance(row.get("id"), str)
             }
             return {
@@ -539,7 +541,7 @@ class PeoplePackStore:
             file_stamp(cast_path),
             file_stamp(spawners_path),
             dir_stamp(blocks_dir, "*.json"),
-            file_stamp(base_path),
+            base_sections_stamp(base_path, self._BASE_LOOKUP_SECTIONS, self.cache),
         )
 
         def build():

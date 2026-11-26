@@ -1,0 +1,129 @@
+{
+  "pages": [
+    {
+      "title": "Getting around",
+      "paragraphs": [
+        "Walk with {move.forward}, {move.left}, {move.backward} and {move.right}, and look about with the mouse or the right stick. Hold {run} to run, press {jump} to jump and {crouch} to crouch.",
+        "Running, fighting and guarding spend stamina, the green bar. It refills on its own once you have been still for a moment."
+      ]
+    },
+    {
+      "title": "Fighting",
+      "paragraphs": [
+        "Ready or sheathe your weapon with {toggle-weapon}. Press {attack} for a quick blow that chains into the next, or hold it to charge a heavy one. Hold {block} to guard and press {kick} to kick.",
+        "Equip armour and a weapon you are skilled with. A weapon your training does not cover rarely finds its mark, and a stronger metal hits harder.",
+        "Every attack also adds fatigue. Only rest and magic take fatigue away, and a tired fighter has less stamina to spend."
+      ]
+    },
+    {
+      "title": "Using the world",
+      "paragraphs": [
+        "Aim at something and press {interact} to use it: open a door, take an item, search a body or speak to someone.",
+        "What use does depends on the activation mode: steal {activation.steal}, grab {activation.grab}, look at {activation.info} or talk {activation.talk}. The mode in force is shown at the bottom right of the screen."
+      ]
+    },
+    {
+      "title": "Your character",
+      "paragraphs": [
+        "Open your inventory with {inventory} to equip, use and drop what you carry, and your character sheet with {character} to see your attributes and skills.",
+        "Skills rise as you use them. When enough of your career's skills have risen, you gain a level.",
+        "Open your spellbook with {spell}. Cast the readied spell with {recast}, or abort it with {abort-spell}. Use an enchanted item with {use-magic-item}."
+      ]
+    },
+    {
+      "title": "Resting",
+      "paragraphs": [
+        "Rest with {rest} to recover health, magicka and fatigue. Enemies close by will not let you rest, and indoors you need a room at an inn or the leave of a guild you belong to."
+      ]
+    },
+    {
+      "title": "Finding your way",
+      "paragraphs": [
+        "The map {map} shows the place you are in. Your logbook {logbook} keeps the quests you have taken, and the notebook {notebook} your own notes.",
+        "The travel map {travel-map} shows the Iliac Bay. Travel and transport {transport} takes you to any place you have heard of, by foot, horse, cart or ship, at the cost of the days on the road."
+      ]
+    },
+    {
+      "title": "Saving",
+      "paragraphs": [
+        "Quick save with {quick-save} and quick load with {quick-load}. The game menu, opened with {menu}, saves and loads named games and holds the settings, where every control can be changed."
+      ]
+    }
+  ],
+  "tutorial": {
+    "offer": "A short tutorial walks you through your first steps, a page at a time while you play.",
+    "pages": [
+      {
+        "title": "Your first steps",
+        "afterSeconds": 0,
+        "paragraphs": [
+          "This tutorial shows a page at a time while you play. Read on to carry on playing; the next page follows shortly. End it whenever you like, and take it again from Help.",
+          "Walk with {move.forward}, {move.left}, {move.backward} and {move.right}, and look about with the mouse or the right stick. Every control can be changed: open the menu with {menu} and choose Settings."
+        ]
+      },
+      {
+        "title": "Arm yourself",
+        "afterSeconds": 10,
+        "paragraphs": [
+          "Open your inventory with {inventory}. Put the best weapon you are trained in into your hand and any armour you carry onto your body.",
+          "A weapon your training does not cover, or one of weak metal, will seldom land a blow."
+        ]
+      },
+      {
+        "title": "Fighting",
+        "afterSeconds": 15,
+        "paragraphs": [
+          "Ready or sheathe your weapon with {toggle-weapon}. Press {attack} to strike, hold {block} to guard and press {kick} to kick.",
+          "Every blow spends stamina, the green bar, which refills when you stop to catch your breath."
+        ]
+      },
+      {
+        "title": "The command radial",
+        "afterSeconds": 10,
+        "paragraphs": [
+          "Press {radial} for the command radial. From it you ready your weapon, choose how you use what you touch (grab, look, talk or steal) and reach your spells, map, travel and rest.",
+          "Its centre tells you where you are, the date and the hour, and what you hold ready."
+        ]
+      },
+      {
+        "title": "Resting",
+        "afterSeconds": 5,
+        "paragraphs": [
+          "When your health, stamina or magicka run low, rest with {rest}. You cannot rest with enemies near, and the guards will not let you sleep in the streets: take a room at an inn."
+        ]
+      },
+      {
+        "title": "Magic",
+        "afterSeconds": 10,
+        "paragraphs": [
+          "If you know spells, open your spellbook with {spell} and cast one from it. A spell aimed at a target is loosed where you look, and {recast} casts your last spell again.",
+          "Creatures often resist magic, so keep a weapon to hand."
+        ]
+      },
+      {
+        "title": "Saving",
+        "afterSeconds": 10,
+        "paragraphs": [
+          "Save often. Open the menu with {menu} and choose Save, or save at once with {quick-save}."
+        ]
+      },
+      {
+        "title": "Out of the cave",
+        "afterSeconds": 20,
+        "paragraphs": [
+          "Your first task is to find your way out of this cave. Some doors look like the stone walls around them, so try any wall that seems out of place.",
+          "Open doors, treasure piles and the bodies of the fallen with {interact}, and take what they hold into your pack."
+        ]
+      },
+      {
+        "title": "Choose your fights",
+        "afterSeconds": 45,
+        "paragraphs": [
+          "Some creatures can be hurt only by stronger metal: an imp shrugs off iron, so carry steel or better.",
+          "You need not fight everything. Run from what you cannot beat: your skills grow by using them, not by slaying the strongest foe.",
+          "That is all. The rest is under Help in the menu. Good fortune."
+        ]
+      }
+    ]
+  }
+}

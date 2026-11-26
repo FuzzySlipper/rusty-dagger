@@ -8,6 +8,7 @@ with pipelines and concept art; every other record is a reviewable asset with it
 import csv
 from collections import defaultdict
 
+from base_pack import read_section as read_base_section
 from cache import FileCache, dir_stamp, file_stamp
 from library import MODEL_CATEGORIES, asset_url, file_link, read_json
 from packs import PackStore
@@ -137,7 +138,7 @@ class Catalog:
                 "url": asset_url("/media/npc/", f"{key}/manifest.json")}
 
     def mobile_game(self, row):
-        data = self._json(self.library.base_payload, {}).get("mobiles", {}).get("mobiles", [])
+        data = (read_base_section(self.library.base_payload, "mobiles", {}, self.cache) or {}).get("mobiles", [])
         donor = next((record for record in data if record["donorId"] == row["mobileId"]), {})
         facts = {"Classic archive": f"TEXTURE.{row['sourceArchive']:03d}",
                  "Display variant": row["variant"], "Mobile ID": row["mobileId"]}

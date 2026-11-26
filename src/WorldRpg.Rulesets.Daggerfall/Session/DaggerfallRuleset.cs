@@ -160,8 +160,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
             DaggerfallData data = DaggerfallData.For(selected);
+            ContentPack basePack = RequireSingle(selected, roles, BaseRole);
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-                RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload, data)
+                DaggerfallBaseContent.Files(selected.Content, basePack.Id.Value, basePack.PayloadPath, basePack.Payload),
+                RequireSingle(selected, roles, ImportedRole).Payload, data)
                 .WithQuestSources(DaggerfallQuestContent.Read([.. roles[QuestsRole].Select(pack => QuestPackFiles(selected, pack))]));
             ContentPack[] peoplePacks = [.. roles[PeopleRole]];
             if (peoplePacks.Length > 1)

@@ -1,0 +1,84 @@
+[
+  {
+    "id": "bow-shot",
+    "tags": [
+      "attack",
+      "ranged"
+    ],
+    "reach": 10.0,
+    "interpretation": "player-equipped-ranged",
+    "skill": "archery",
+    "staminaCost": 10
+  },
+  {
+    "id": "melee-attack",
+    "tags": [
+      "attack",
+      "melee"
+    ],
+    "reach": 2.25,
+    "cooldownSeconds": 0.1,
+    "interpretation": "player-equipped-melee",
+    "skill": "equipped",
+    "staminaCost": 10
+  },
+  {
+    "id": "monster-strike",
+    "tags": [
+      "attack",
+      "melee"
+    ],
+    "interpretation": "fixed-melee",
+    "skill": "hand-to-hand",
+    "cooldownSeconds": 1.5,
+    "attackRangeIndex": 0,
+    "reach": 2.0
+  },
+  {
+    "id": "skeleton-strike",
+    "tags": [
+      "attack",
+      "melee"
+    ],
+    "interpretation": "fixed-melee",
+    "skill": "long-blade",
+    "cooldownSeconds": 2,
+    "attackRangeIndex": 0,
+    "reach": 2.0
+  },
+  {
+    "id": "archer-shot",
+    "tags": [
+      "attack",
+      "ranged"
+    ],
+    "interpretation": "enemy-equipped-ranged",
+    "skill": "equipped",
+    "cooldownSeconds": 2.0,
+    "reach": 51.2
+  },
+  {
+    "id": "enemy-class-equipped-melee",
+    "tags": [
+      "attack",
+      "melee"
+    ],
+    "interpretation": "enemy-equipped-melee",
+    "skill": "equipped",
+    "cooldownSeconds": 1.2,
+    "reach": 2.0
+  },
+  {
+    "id": "thief-strike",
+    "tags": [
+      "attack",
+      "melee"
+    ],
+    "interpretation": "fixed-melee",
+    "skill": "short-blade",
+    "cooldownSeconds": 1.2,
+    "minimumDamage": 2,
+    "maximumDamage": 8,
+    "reach": 2.0
+  }
+]

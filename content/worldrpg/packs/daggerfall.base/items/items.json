@@ -1,0 +1,602 @@
+[
+  {
+    "id": "iron-dagger",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 2,
+    "value": 1,
+    "weapon": {
+      "minimumDamage": 1,
+      "maximumDamage": 6,
+      "material": "iron",
+      "skill": "short-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-tanto",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 3,
+    "value": 3,
+    "weapon": {
+      "minimumDamage": 1,
+      "maximumDamage": 8,
+      "material": "iron",
+      "skill": "short-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-wakazashi",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 8,
+    "value": 8,
+    "weapon": {
+      "minimumDamage": 1,
+      "maximumDamage": 10,
+      "material": "iron",
+      "skill": "short-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-shortsword",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 10,
+    "value": 5,
+    "weapon": {
+      "minimumDamage": 1,
+      "maximumDamage": 8,
+      "material": "iron",
+      "skill": "short-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-broadsword",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 20,
+    "value": 10,
+    "weapon": {
+      "minimumDamage": 1,
+      "maximumDamage": 12,
+      "material": "iron",
+      "skill": "long-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-saber",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 15,
+    "value": 12,
+    "weapon": {
+      "minimumDamage": 3,
+      "maximumDamage": 12,
+      "material": "iron",
+      "skill": "long-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-katana",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 10,
+    "value": 25,
+    "weapon": {
+      "minimumDamage": 3,
+      "maximumDamage": 16,
+      "material": "iron",
+      "skill": "long-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-longsword",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 18,
+    "value": 15,
+    "weapon": {
+      "minimumDamage": 2,
+      "maximumDamage": 16,
+      "material": "iron",
+      "skill": "long-blade",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-mace",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 12,
+    "value": 10,
+    "weapon": {
+      "minimumDamage": 4,
+      "maximumDamage": 10,
+      "material": "iron",
+      "skill": "blunt-weapon",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-club",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 18,
+    "value": 10,
+    "weapon": {
+      "minimumDamage": 1,
+      "maximumDamage": 12,
+      "material": "iron",
+      "skill": "blunt-weapon",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-battle-axe",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 24,
+    "value": 20,
+    "weapon": {
+      "minimumDamage": 2,
+      "maximumDamage": 12,
+      "material": "iron",
+      "skill": "axe",
+      "handedness": "either"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-one-hand"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-claymore",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 30,
+    "value": 30,
+    "weapon": {
+      "minimumDamage": 2,
+      "maximumDamage": 18,
+      "material": "iron",
+      "skill": "long-blade",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-dai-katana",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 14,
+    "value": 50,
+    "weapon": {
+      "minimumDamage": 3,
+      "maximumDamage": 21,
+      "material": "iron",
+      "skill": "long-blade",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-staff",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 8,
+    "value": 5,
+    "weapon": {
+      "minimumDamage": 1,
+      "maximumDamage": 8,
+      "material": "iron",
+      "skill": "blunt-weapon",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-flail",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 28,
+    "value": 15,
+    "weapon": {
+      "minimumDamage": 2,
+      "maximumDamage": 14,
+      "material": "iron",
+      "skill": "blunt-weapon",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-warhammer",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 28,
+    "value": 20,
+    "weapon": {
+      "minimumDamage": 3,
+      "maximumDamage": 18,
+      "material": "iron",
+      "skill": "blunt-weapon",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-war-axe",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 30,
+    "value": 20,
+    "weapon": {
+      "minimumDamage": 2,
+      "maximumDamage": 16,
+      "material": "iron",
+      "skill": "axe",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-short-bow",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 4,
+    "value": 10,
+    "weapon": {
+      "minimumDamage": 4,
+      "maximumDamage": 16,
+      "material": "iron",
+      "skill": "archery",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-long-bow",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 6,
+    "value": 20,
+    "weapon": {
+      "minimumDamage": 4,
+      "maximumDamage": 18,
+      "material": "iron",
+      "skill": "archery",
+      "handedness": "both"
+    },
+    "equipment": {
+      "classifications": [
+        "weapon-two-hand"
+      ],
+      "requiredSlots": 2,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "iron-helm",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 10,
+    "value": 80,
+    "armor": {
+      "material": "iron",
+      "part": "head"
+    },
+    "equipment": {
+      "classifications": [
+        "armor-head"
+      ],
+      "requiredSlots": 1
+    }
+  },
+  {
+    "id": "iron-cuirass",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 50,
+    "value": 100,
+    "armor": {
+      "material": "iron",
+      "part": "chest"
+    },
+    "equipment": {
+      "classifications": [
+        "armor-chest"
+      ],
+      "requiredSlots": 1
+    }
+  },
+  {
+    "id": "iron-right-pauldron",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 8,
+    "value": 60,
+    "armor": {
+      "material": "iron",
+      "part": "right-arm"
+    },
+    "equipment": {
+      "classifications": [
+        "armor-right-arm"
+      ],
+      "requiredSlots": 1
+    }
+  },
+  {
+    "id": "iron-left-pauldron",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 8,
+    "value": 60,
+    "armor": {
+      "material": "iron",
+      "part": "left-arm"
+    },
+    "equipment": {
+      "classifications": [
+        "armor-left-arm"
+      ],
+      "requiredSlots": 1
+    }
+  },
+  {
+    "id": "iron-gauntlets",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 5,
+    "value": 50,
+    "armor": {
+      "material": "iron",
+      "part": "hands"
+    },
+    "equipment": {
+      "classifications": [
+        "armor-hands"
+      ],
+      "requiredSlots": 1
+    }
+  },
+  {
+    "id": "iron-greaves",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 10,
+    "value": 80,
+    "armor": {
+      "material": "iron",
+      "part": "legs"
+    },
+    "equipment": {
+      "classifications": [
+        "armor-legs"
+      ],
+      "requiredSlots": 1
+    }
+  },
+  {
+    "id": "iron-boots",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 8,
+    "value": 50,
+    "armor": {
+      "material": "iron",
+      "part": "feet"
+    },
+    "equipment": {
+      "classifications": [
+        "armor-feet"
+      ],
+      "requiredSlots": 1
+    }
+  },
+  {
+    "id": "buckler",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 8,
+    "value": 10,
+    "shield": {
+      "armor": 1
+    },
+    "equipment": {
+      "classifications": [
+        "shield"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "round-shield",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 18,
+    "value": 20,
+    "shield": {
+      "armor": 2
+    },
+    "equipment": {
+      "classifications": [
+        "shield"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "kite-shield",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 30,
+    "value": 30,
+    "shield": {
+      "armor": 3
+    },
+    "equipment": {
+      "classifications": [
+        "shield"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "tower-shield",
+    "maximumQuantity": 1,
+    "kind": "unique",
+    "weight": 50,
+    "value": 50,
+    "shield": {
+      "armor": 4
+    },
+    "equipment": {
+      "classifications": [
+        "shield"
+      ],
+      "requiredSlots": 1,
+      "exclusiveGroup": "hands"
+    }
+  },
+  {
+    "id": "gold-piece",
+    "maximumQuantity": 1000000000,
+    "kind": "fungible",
+    "weight": 0,
+    "value": 1
+  },
+  {
+    "id": "arrow",
+    "maximumQuantity": 1000000000,
+    "kind": "fungible",
+    "weight": 1,
+    "value": 2
+  }
+]

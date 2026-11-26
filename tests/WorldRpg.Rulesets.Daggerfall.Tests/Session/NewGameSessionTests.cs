@@ -232,8 +232,11 @@ public sealed class NewGameSessionTests
     public void Invalid_starting_configuration_is_rejected_while_reading_content(string mutation)
     {
         var definitions = TestPayload.Definitions;
-        var root = System.Text.Json.Nodes.JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot,
-            "content/worldrpg/packs/daggerfall.base/payload.json")))!.AsObject();
+        var root = new System.Text.Json.Nodes.JsonObject
+        {
+            ["newGame"] = System.Text.Json.Nodes.JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot,
+                "content/worldrpg/packs/daggerfall.base/core/new-game.json")))!,
+        };
         var config = root["newGame"]!;
         var item = config["careers"]![0]!["items"]![0]!;
         switch (mutation)

@@ -26,8 +26,8 @@ internal sealed class NpcReferenceWorld
 
     public NpcReferenceWorld(ReferenceExport export, string basePayload, IEnumerable<string> blocks)
     {
-        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(basePayload));
-        regionNames = [.. payload.RootElement.GetProperty("buildingNames").GetProperty("regionNames")
+        using JsonDocument buildingNames = BasePackFiles.ReadSectionDocument(basePayload, "buildingNames");
+        regionNames = [.. buildingNames.RootElement.GetProperty("regionNames")
             .EnumerateArray().Select(name => name.GetString() ?? "")];
 
         foreach (string block in blocks.Distinct(StringComparer.OrdinalIgnoreCase))

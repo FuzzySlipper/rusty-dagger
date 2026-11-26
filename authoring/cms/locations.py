@@ -4,6 +4,7 @@ from collections import Counter
 import json
 from pathlib import Path
 
+from base_pack import read_section as read_base_section, sections_stamp as base_sections_stamp
 from cache import FileCache, file_stamp
 from people_pack import building_type_name
 from router import BadRequestError, NotFoundError
@@ -77,20 +78,21 @@ class LocationsStore:
     def available(self) -> bool:
         return self.payload_path.is_file()
 
+    _BASE_SECTIONS = ("buildingNames", "regions")
+
     def _region_names(self) -> dict[int, str]:
         base_path = self.library.base_payload
         if not base_path.is_file():
             return {}
-        stamp = file_stamp(base_path)
+        stamp = base_sections_stamp(base_path, self._BASE_SECTIONS, self.cache)
 
         def load():
-            data = json.loads(base_path.read_text(encoding="utf-8"))
             names = {}
-            building_regions = (data.get("buildingNames") or {}).get("regionNames") or []
+            building_regions = (read_base_section(base_path, "buildingNames", {}, self.cache) or {}).get("regionNames") or []
             for idx, name in enumerate(building_regions):
                 if isinstance(name, str) and name:
                     names[idx] = name
-            for entry in data.get("regions") or []:
+            for entry in read_base_section(base_path, "regions", [], self.cache) or []:
                 idx = entry.get("index")
                 name = entry.get("name")
                 if isinstance(idx, int) and isinstance(name, str):
@@ -103,7 +105,7 @@ class LocationsStore:
         if not self.payload_path.is_file():
             return None
         base_path = self.library.base_payload
-        stamp = (file_stamp(self.payload_path), file_stamp(base_path))
+        stamp = (file_stamp(self.payload_path), base_sections_stamp(base_path, self._BASE_SECTIONS, self.cache))
 
         def build():
             raw = json.loads(self.payload_path.read_text(encoding="utf-8"))

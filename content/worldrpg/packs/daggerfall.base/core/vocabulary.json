@@ -1,0 +1,69 @@
+{
+  "attributes": [
+    "strength",
+    "intelligence",
+    "willpower",
+    "agility",
+    "endurance",
+    "personality",
+    "speed",
+    "luck",
+    "reflexes"
+  ],
+  "skills": [
+    "medical",
+    "etiquette",
+    "streetwise",
+    "jumping",
+    "orcish",
+    "harpy",
+    "giantish",
+    "dragonish",
+    "nymph",
+    "daedric",
+    "spriggan",
+    "centaurian",
+    "impish",
+    "lockpicking",
+    "mercantile",
+    "pickpocket",
+    "stealth",
+    "swimming",
+    "climbing",
+    "backstabbing",
+    "dodging",
+    "running",
+    "destruction",
+    "restoration",
+    "illusion",
+    "alteration",
+    "thaumaturgy",
+    "mysticism",
+    "short-blade",
+    "long-blade",
+    "hand-to-hand",
+    "axe",
+    "blunt-weapon",
+    "archery",
+    "critical-strike"
+  ],
+  "tracks": [
+    "health",
+    "fatigue",
+    "stamina",
+    "magicka"
+  ],
+  "armorParts": [
+    "head",
+    "right-arm",
+    "left-arm",
+    "chest",
+    "hands",
+    "legs",
+    "feet"
+  ],
+  "progression": [
+    "xp",
+    "level"
+  ]
+}

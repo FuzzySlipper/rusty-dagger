@@ -1,0 +1,13 @@
+{
+  "news": [
+    {
+      "type": 11,
+      "textId": 1410,
+      "scope": "region",
+      "variableKeys": [
+        11
+      ],
+      "requiredValue": true
+    }
+  ]
+}

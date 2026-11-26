@@ -3494,6 +3494,7 @@ internal sealed class DaggerfallContentDiagnostics
 {
     private const int Limit = 16;
     private readonly List<string> _values = [];
+    internal bool HasErrors => _values.Count > 0;
     internal void Add(string value)
     {
         if (_values.Count < Limit) _values.Add(value);

@@ -1,0 +1,14 @@
+{
+  "leather": 3,
+  "chain": 6,
+  "iron": 7,
+  "steel": 9,
+  "silver": 9,
+  "elven": 11,
+  "dwarven": 13,
+  "mithril": 15,
+  "adamantium": 15,
+  "ebony": 17,
+  "orcish": 19,
+  "daedric": 21
+}

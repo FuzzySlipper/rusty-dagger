@@ -1,0 +1,22 @@
+[
+  {
+    "id": "health",
+    "label": "Health",
+    "track": "health"
+  },
+  {
+    "id": "stamina",
+    "label": "Stamina",
+    "track": "stamina"
+  },
+  {
+    "id": "fatigue",
+    "label": "Fatigue",
+    "track": "fatigue"
+  },
+  {
+    "id": "magicka",
+    "label": "Magicka",
+    "track": "magicka"
+  }
+]

@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 import json
 from pathlib import Path
 
+from base_pack import read_section as read_base_section, sections_stamp as base_sections_stamp
 from cache import FileCache, file_stamp
 from router import NotFoundError
 
@@ -232,6 +233,8 @@ class WorldAtlasStore:
             "sheets": present_sheets,
         }
 
+    _BASE_SECTIONS = ("buildingNames", "regions", "factions", "worldNames")
+
     def _build_bundle(self) -> dict:
         imported_path = self.library.imported_payload
         base_path = self.library.base_payload
@@ -244,7 +247,7 @@ class WorldAtlasStore:
 
         stamp = (
             file_stamp(imported_path),
-            file_stamp(base_path),
+            base_sections_stamp(base_path, self._BASE_SECTIONS, self.cache),
             file_stamp(atlas_path),
             file_stamp(self.library.maps_root / "map-trav0i00.png"),
             people_stamp,
@@ -284,7 +287,10 @@ class WorldAtlasStore:
                 }
 
             imp = json.loads(imported_path.read_text(encoding="utf-8"))
-            base = json.loads(base_path.read_text(encoding="utf-8")) if base_path.is_file() else {}
+            base = {
+                name: read_base_section(base_path, name, None, self.cache)
+                for name in self._BASE_SECTIONS
+            } if base_path.is_file() else {}
 
             # 1. Decode 1000x500 politic & climate masks
             politic_section = imp.get("politic") or {}
