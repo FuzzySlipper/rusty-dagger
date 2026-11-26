@@ -3,12 +3,14 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// One weekly turn, resolved on Sunday:
 /// <list type="number">
+/// <item>The table's leader is found (<see cref="Balance"/>).</item>
 /// <item>Upkeep:
 /// <list type="bullet">
 /// <item>Conditions that have reached their end are lifted, grudges past their last week are let go, and each region
 /// is found fed or cut off from food (<see cref="Supply"/>). Trade agreements that have broken end, and the grain rations due relieve regions not fed
 /// (<see cref="Trade"/>).</item>
-/// <item>Each seat is paid from the regions it holds that are fed or relieved: coin of a quarter of their prosperity (a
+/// <item>A seat with a reserves point counts another week it is contested, or clears the count (<see cref="Balance"/>).
+/// Each seat is paid from the regions it holds that are fed or relieved: coin of a quarter of their prosperity (a
 /// famine empties a region's granaries, and a price surge adds its magnitude) and force of a quarter of their control,
 /// and favour of a third of its influence pieces, each rounded down. A seat's grants fall due in the weeks their
 /// schedules divide, and every <see cref="OfficeWeeks"/>th week each office pays its holder 1 of its resource. Then the
@@ -19,8 +21,9 @@ namespace WorldRpg.Politics;
 /// one, as its own lords reassert themselves.</item>
 /// <item>Every <see cref="SeasonWeeks"/>th week ground left untended drifts: each region's control, prosperity and
 /// order above <see cref="SettledTrack"/> falls by 1, a region not cut off below it regains 1 prosperity, and each
-/// relation moves 1 towards 0, except between seats at war or in a heated feud, so what a seat has built needs keeping
-/// up and fed land recovers.</item>
+/// relation moves 1 towards 0, or towards <see cref="Balance.LeaderDrift"/> with the leader, except between seats at
+/// war or in a heated feud, so what a seat has built needs keeping up, fed land recovers and the leader's friends fall
+/// away.</item>
 /// <item>Each seat draws its hand back up to <see cref="Board.HandSize"/>.</item>
 /// </list>
 /// </item>
@@ -28,11 +31,11 @@ namespace WorldRpg.Politics;
 /// <item>The slow moves due this week arrive, in the order they were played. One that no longer fits its targets, or
 /// changes nothing, fails.</item>
 /// <item>Each seat reviews its plan (<see cref="Intention"/>), then plays a card from its hand, gathers or withdraws from
-/// a trade agreement, the table's order turning by one seat each week. A slow card is paid now and arrives its weeks
+/// a trade agreement, the trailing seat by prestige first (<see cref="Balance.Order"/>). A slow card is paid now and arrives its weeks
 /// later. Each seat a move bears on remembers it once it has changed the board (<see cref="Memory"/>). A seat at war
-/// may play the war cards as well as its hand.</item>
-/// <item>Wars are checked (<see cref="Wars"/>): weariness grows and exhausted wars end in treaties, crowns at war's
-/// relation across a border go to war, and allies are pulled in.</item>
+/// or in a feud may play the cards of open conflict as well as its hand.</item>
+/// <item>Wars and feuds are checked (<see cref="Wars"/>): weariness grows and exhausted wars end in treaties, feuds
+/// cool and their vassals skirmish, crowns at war's relation go to war, feuds open and end, and allies are pulled in.</item>
 /// </list>
 /// </summary>
 public static class BoardTurn
@@ -48,6 +51,7 @@ public static class BoardTurn
     {
         board.Turn++;
         board.TakeChanges();
+        board.SetLeader(Balance.FindLeader(board));
         Upkeep(board);
         IReadOnlyList<BoardChange> upkeep = board.TakeChanges();
 
@@ -67,10 +71,8 @@ public static class BoardTurn
         }
 
         List<MoveTrace> moves = [];
-        int seats = board.Seats.Count;
-        for (int index = 0; index < seats; index++)
+        foreach (Seat seat in Balance.Order(board))
         {
-            Seat seat = board.Seats[(board.Turn - 1 + index) % seats];
             Intention.Review(board, seat);
             IReadOnlyList<MoveOption> options = MoveChooser.Options(board, seat);
             MoveOption chosen = MoveChooser.Choose(board, seat, options);
@@ -92,7 +94,7 @@ public static class BoardTurn
             else
             {
                 Card? held = board.Deck(seat).Hand.FirstOrDefault(held => held.Id == chosen.Card);
-                Card card = held ?? board.WarCards.First(war => war.Id == chosen.Card);
+                Card card = held ?? board.StandingCards.First(standing => standing.Id == chosen.Card);
                 if (held is not null) board.Discard(seat, card);
                 visibility = card.Visibility;
                 if (card.Weeks == 0)
@@ -132,7 +134,7 @@ public static class BoardTurn
     /// </summary>
     public static string? Origin(Board board, Seat seat, Card card, IReadOnlyList<string> targets)
     {
-        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.War))
+        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.War or CardTarget.Leader))
         {
             Region target = board.Region(targets[0]);
             return board.Present(seat, target) ? target.Id : target.Borders.FirstOrDefault(border => board.Present(seat, board.Region(border)));
@@ -156,6 +158,7 @@ public static class BoardTurn
             board.AdjustResource(seat, Resource.Coin, held.Sum(Conditions.ProsperityIncome) / 4);
             board.AdjustResource(seat, Resource.Favour, board.Regions.Sum(region => region.InfluenceOf(seat.Id)) / 3);
             board.AdjustResource(seat, Resource.Force, held.Sum(region => region.Control) / 4);
+            if (seat.Reserves is not null) board.SetContested(seat, Balance.Contested(board, seat));
             foreach (SeatGrant grant in seat.Grants)
                 if (board.Turn % grant.EveryWeeks == 0) board.AdjustResource(seat, grant.Resource, grant.Amount);
             if (board.Turn % OfficeWeeks == 0)
@@ -193,7 +196,7 @@ public static class BoardTurn
             foreach (Seat seat in board.Seats)
                 foreach (Seat other in board.Seats.Where(other => string.CompareOrdinal(seat.Id, other.Id) < 0))
                     if (Feuds.Between(board, seat.Id, other.Id) is not { Heat: > 0 })
-                        board.AdjustRelation(seat, other, -Math.Sign(board.Relation(seat.Id, other.Id)));
+                        board.AdjustRelation(seat, other, Math.Sign(Balance.DriftTarget(board, seat, other) - board.Relation(seat.Id, other.Id)));
         }
         foreach (Seat seat in board.Seats) board.DrawHand(seat);
     }

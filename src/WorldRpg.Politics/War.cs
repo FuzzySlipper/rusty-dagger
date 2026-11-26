@@ -248,12 +248,17 @@ public static class Wars
     public static bool MaySue(War war, Seat seat) => war.Principal(seat.Id) && war.Weariness(seat.Id) >= PeaceWeariness;
 
     /// <summary>
-    /// Whether <paramref name="broker"/> may broker a truce in <paramref name="war"/>: it does not fight it, stands at
-    /// <see cref="BrokerRelation"/> or better with both principals, and both are weary enough.
+    /// Whether <paramref name="broker"/> may broker a truce in <paramref name="war"/>: it does not fight it, both
+    /// principals are weary enough, and it stands at <see cref="BrokerRelation"/> or better with both, or, as an arbiter
+    /// (<see cref="Balance"/>), is hostile to neither.
     /// </summary>
-    public static bool MayBroker(Board board, War war, Seat broker) =>
-        !war.Fights(broker.Id) && war.WearinessOfA >= BrokerWeariness && war.WearinessOfB >= BrokerWeariness
-        && board.Relation(broker.Id, war.A) >= BrokerRelation && board.Relation(broker.Id, war.B) >= BrokerRelation;
+    public static bool MayBroker(Board board, War war, Seat broker)
+    {
+        bool Trusted(string principal) => broker.Arbiter
+            ? board.Relation(broker.Id, principal) > Supply.Hostile
+            : board.Relation(broker.Id, principal) >= BrokerRelation;
+        return !war.Fights(broker.Id) && war.WearinessOfA >= BrokerWeariness && war.WearinessOfB >= BrokerWeariness && Trusted(war.A) && Trusted(war.B);
+    }
 
     /// <summary>
     /// Ends <paramref name="war"/> in a treaty for <paramref name="reason"/>. Then the principals' relation is set to

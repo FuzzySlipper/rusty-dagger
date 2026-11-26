@@ -43,11 +43,11 @@ public sealed class Board
     private int feudsMade;
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
-        Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, IReadOnlyList<Card> warCards, BoardRandom random,
+        Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, IReadOnlyList<Card> standingCards, BoardRandom random,
         IReadOnlyDictionary<string, Persona> personas)
     {
         this.personas = personas;
-        WarCards = warCards;
+        StandingCards = standingCards;
         Seats = seats;
         Regions = regions;
         seatsById = seats.ToDictionary(seat => seat.Id, StringComparer.Ordinal);
@@ -72,6 +72,9 @@ public sealed class Board
     /// <summary>How many weekly turns have been played.</summary>
     public int Turn { get; internal set; }
 
+    /// <summary>The seat leading the table this week, found at its start (<see cref="Balance.FindLeader"/>).</summary>
+    public string? Leader { get; private set; }
+
     /// <summary>The slow moves under way, in the order they were played.</summary>
     public IReadOnlyList<PendingMove> Pending => pending;
 
@@ -87,8 +90,11 @@ public sealed class Board
     /// <summary>The truces binding crowns after their treaties.</summary>
     public IReadOnlyList<Truce> Truces => truces;
 
-    /// <summary>The war cards, which no seat draws: each seat fighting a war may play them every week beside its hand.</summary>
-    public IReadOnlyList<Card> WarCards { get; }
+    /// <summary>
+    /// The standing cards, which no seat draws: a seat in a feud or at war may play the cards of open conflict every
+    /// week beside its hand, and an arbiter its countermoves.
+    /// </summary>
+    public IReadOnlyList<Card> StandingCards { get; }
 
     /// <summary>
     /// A board at its starting position, played from <paramref name="seed"/> or the setup's canon seed: each seat's
@@ -99,7 +105,7 @@ public sealed class Board
         IReadOnlyList<string> problems = [.. setup.Problems(), .. cards.Problems(setup)];
         if (problems.Count > 0) throw new BoardSetupException("board setup", problems);
         Seat[] seats = [.. setup.Seats.Select(seat => new Seat(seat.Id, seat.Name, seat.Kind, seat.Holder, seat.Home, seat.Grants ?? [], seat.Agenda ?? [])
-            { Coin = seat.Coin, Favour = seat.Favour, Force = seat.Force })];
+            { Coin = seat.Coin, Favour = seat.Favour, Force = seat.Force, Reserves = seat.Reserves, Arbiter = seat.Arbiter })];
         Region[] regions = [.. setup.Regions.Select(region => new Region(region.Id, region.Name, region.CatalogRegion, region.Capital, [.. region.Borders])
         {
             Allegiance = region.Allegiance,
@@ -112,7 +118,7 @@ public sealed class Board
         })];
         Dictionary<(string, string), int> relations = setup.Relations.ToDictionary(relation => Pair(relation.A, relation.B), relation => relation.Value);
         Dictionary<string, SeatDeck> decks = setup.Seats.ToDictionary(seat => seat.Id, seat => new SeatDeck([.. cards.Deck(seat)], [], []), StringComparer.Ordinal);
-        Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], [.. cards.WarCards()], new BoardRandom(seed ?? setup.Seed),
+        Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], [.. cards.StandingCards()], new BoardRandom(seed ?? setup.Seed),
             new Dictionary<string, Persona>(setup.Personas!, StringComparer.Ordinal));
         foreach (Seat seat in seats) board.Shuffle(decks[seat.Id].drawPile);
         board.Shuffle(board.worldDraw);
@@ -152,6 +158,25 @@ public sealed class Board
         seat.Holder = holder;
         Undo(() => seat.Holder = before);
         changes.Add(new BoardChange(seat.Id, "holder", before, holder));
+    }
+
+    /// <summary>Makes <paramref name="seat"/> the leader of the table, or no seat.</summary>
+    public void SetLeader(Seat? seat)
+    {
+        if (Leader == seat?.Id) return;
+        changes.Add(new BoardChange(seat?.Id ?? Leader!, "leader", Leader ?? "none", seat?.Id ?? "none"));
+        Leader = seat?.Id;
+    }
+
+    /// <summary>
+    /// Counts another week <paramref name="seat"/>'s reserves point is contested, or clears the count; the trace records
+    /// the deliveries stopping and resuming (<see cref="Balance.ReservesCut"/>).
+    /// </summary>
+    public void SetContested(Seat seat, bool contested)
+    {
+        bool cut = Balance.ReservesCut(seat);
+        seat.ContestedWeeks = contested ? seat.ContestedWeeks + 1 : 0;
+        if (cut != Balance.ReservesCut(seat)) changes.Add(new BoardChange(seat.Id, "reserves", cut ? "cut" : "open", cut ? "open" : "cut"));
     }
 
     /// <summary>Commits <paramref name="seat"/>, which has no plan, to <paramref name="plan"/> (<see cref="Intention"/>).</summary>
@@ -255,7 +280,7 @@ public sealed class Board
     /// <summary>
     /// Turns the top World card and lays its condition, with the world as its source, on a region it chooses: any
     /// region, or among those with the lowest prosperity, the highest prosperity or the lowest order, a tie settled by
-    /// chance. An empty World draw pile takes the discards, shuffled; a table with no World cards turns nothing.
+    /// chance. Trouble that may fall anywhere falls twice as often on the leader's regions. An empty World draw pile takes the discards, shuffled; a table with no World cards turns nothing.
     /// </summary>
     public (WorldCard Card, Region Region)? TurnWorldCard()
     {
@@ -274,6 +299,7 @@ public sealed class Board
             WorldTarget.Poorest => [.. Regions.Where(region => region.Prosperity == Regions.Min(other => other.Prosperity))],
             WorldTarget.Richest => [.. Regions.Where(region => region.Prosperity == Regions.Max(other => other.Prosperity))],
             WorldTarget.Unruliest => [.. Regions.Where(region => region.Order == Regions.Min(other => other.Order))],
+            _ when Prestige.Bent(card.Condition) < 0 => [.. Regions, .. Regions.Where(region => Leader is not null && region.Allegiance == Leader)],
             _ => [.. Regions],
         };
         Region target = candidates[Random.Next(candidates.Length)];
@@ -421,8 +447,13 @@ public sealed class Board
         Undo(() => region.ContestableFrom = before);
     }
 
+    /// <summary>
+    /// Moves <paramref name="seat"/>'s <paramref name="resource"/> within 0 to <see cref="ResourceLimit"/>. A seat whose
+    /// reserves are cut off gains no Force (<see cref="Balance"/>).
+    /// </summary>
     public void AdjustResource(Seat seat, Resource resource, int delta)
     {
+        if (resource == Resource.Force && delta > 0 && Balance.ReservesCut(seat)) return;
         (int coin, int favour, int force) = (seat.Coin, seat.Favour, seat.Force);
         Undo(() => (seat.Coin, seat.Favour, seat.Force) = (coin, favour, force));
         switch (resource)
@@ -784,6 +815,15 @@ public sealed record Seat(string Id, string Name, SeatKind Kind, string Holder, 
 
     /// <summary>The seat's grudges, in the order they were opened (<see cref="Memory"/>).</summary>
     public List<Grudge> Grudges { get; internal init; } = [];
+
+    /// <summary>The region all its Force arrives through, if any (<see cref="Balance"/>).</summary>
+    public string? Reserves { get; internal init; }
+
+    /// <summary>Whether the seat keeps the balance of power (<see cref="Balance"/>).</summary>
+    public bool Arbiter { get; internal init; }
+
+    /// <summary>How many weeks running its reserves point has been contested.</summary>
+    public int ContestedWeeks { get; internal set; }
 
     public int Coin { get; internal set; }
 

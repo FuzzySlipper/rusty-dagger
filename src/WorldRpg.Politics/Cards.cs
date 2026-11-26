@@ -15,6 +15,12 @@ public enum CardFamily
     /// beside its hand, and each fits only the feud or war it is for (<see cref="Feuds"/>, <see cref="Wars"/>).
     /// </summary>
     War,
+
+    /// <summary>
+    /// An arbiter's countermoves, which no seat draws: every arbiter may play them each week beside its hand, so its
+    /// Force, not its draw, limits how often it intervenes (<see cref="Balance"/>).
+    /// </summary>
+    Arbitration,
 }
 
 /// <summary>What a card is played on. Its targets are given in this order.</summary>
@@ -57,6 +63,15 @@ public enum CardTarget
 
     /// <summary>A region the player reaches, then a foe of the player's present there: a crown it feuds with, or an enemy in a war.</summary>
     FeudRival,
+
+    /// <summary>
+    /// A region the player reaches that owes allegiance to no crown and is under threat, its control below
+    /// <see cref="BoardTurn.SettledTrack"/>: a buffer barony in need.
+    /// </summary>
+    IndependentRegion,
+
+    /// <summary>The seat leading the table (<see cref="Board.Leader"/>), if it is not the player.</summary>
+    Leader,
 
     /// <summary>
     /// Another seat, then the term the player gives and the term it asks in return, each from the card's menu
@@ -243,6 +258,7 @@ public sealed record Card(
     {
         CardTarget.None => [[]],
         CardTarget.OtherSeat => board.Seats.Select(other => (IReadOnlyList<string>)[other.Id]),
+        CardTarget.Leader => board.Leader is { } leader ? [[leader]] : [],
         CardTarget.RegionPair => board.Regions.Where(region => board.Present(seat, region))
             .SelectMany(region => region.Borders.Select(border => (IReadOnlyList<string>)[region.Id, border])),
         CardTarget.RegionRival => board.Regions
@@ -280,6 +296,9 @@ public sealed record Card(
             CardTarget.EnemyFront => targets.Count == 1 && Wars.Against(board, seat, board.Region(targets[0])) is not null,
             CardTarget.OwnFront => targets.Count == 1 && Wars.OwnFront(board, seat, board.Region(targets[0])),
             CardTarget.War => targets.Count == 1 && board.HasWar(targets[0]),
+            CardTarget.IndependentRegion => targets.Count == 1 && board.Region(targets[0]) is { Allegiance: null } barony
+                && barony.Control < BoardTurn.SettledTrack && board.Reaches(seat, barony),
+            CardTarget.Leader => targets.Count == 1 && targets[0] == board.Leader && targets[0] != seat.Id,
             CardTarget.FeudRival => targets.Count == 2 && board.HasSeat(targets[1]) && Wars.Foe(board, seat.Id, targets[1])
                 && board.Reaches(seat, board.Region(targets[0])) && board.Present(board.Seat(targets[1]), board.Region(targets[0])),
             _ => false,
@@ -355,7 +374,7 @@ public sealed record Card(
                 case CardEffectKind.Relation:
                     string? other = Target switch
                     {
-                        CardTarget.OtherSeat => targets[0],
+                        CardTarget.OtherSeat or CardTarget.Leader => targets[0],
                         CardTarget.RegionRival or CardTarget.FeudRival => targets[1],
                         _ => regions[0].Allegiance,
                     };
@@ -417,7 +436,7 @@ public sealed record Card(
     /// </summary>
     public IReadOnlyList<Region> TargetRegions(Board board, IReadOnlyList<string> targets) => Target switch
     {
-        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal => [],
+        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.Leader => [],
         CardTarget.War => [.. Wars.TreatyRegions(board, board.War(targets[0]))],
         CardTarget.RegionRival or CardTarget.FeudRival => [board.Region(targets[0])],
         _ => [.. targets.Select(board.Region)],

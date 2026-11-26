@@ -42,13 +42,17 @@ public static class Prestige
         return standing;
     }
 
+    /// <summary>A seat's whole prestige: its standing everywhere, its bearing and what its agreements in force are worth to it.</summary>
+    public static int Total(Board board, Seat seat) => Standing(seat, board.Regions) + Bearing(board, seat) + Deals(board, seat, null);
+
     /// <summary>
     /// A seat's bearing: 2 per point of relation, 1 per point of each resource up to 6, beyond which a hoard is worth
-    /// nothing more, and 3 lost per point of each condition troubling its court.
+    /// nothing more, and 3 lost per point of each condition troubling its court; for an arbiter, its arbitration
+    /// (<see cref="Balance.Arbitration"/>).
     /// </summary>
     public static int Bearing(Board board, Seat seat)
     {
-        int bearing = 0;
+        int bearing = Balance.Arbitration(board, seat);
         foreach (CourtCondition condition in seat.Court) bearing -= 3 * condition.Magnitude;
         foreach (Seat other in board.Seats)
             if (other.Id != seat.Id) bearing += 2 * board.Relation(seat.Id, other.Id);
@@ -58,7 +62,7 @@ public static class Prestige
     }
 
     /// <summary>Whether a condition is good (1), harmful (-1) or mixed (0) for the region's holder.</summary>
-    private static int Bent(ConditionKind kind) => kind switch
+    internal static int Bent(ConditionKind kind) => kind switch
     {
         ConditionKind.Prosperity or ConditionKind.Festival or ConditionKind.Recruitment or ConditionKind.PriceSurge => 1,
         ConditionKind.Crackdown or ConditionKind.WitchHunt or ConditionKind.Persecution => 0,
@@ -80,11 +84,13 @@ public static class Prestige
     /// <summary>
     /// The seats whose prestige <paramref name="changes"/> by <paramref name="player"/> can have changed: the player, the
     /// seats changed directly, and every seat present before or after in a region changed. Present before and gone now, a
-    /// seat shows in the change that removed it. Any other seat's gain is exactly 0.
+    /// seat shows in the change that removed it. An arbiter is touched by any change to an independent region, any change
+    /// of allegiance and any war opening or ending. Any other seat's gain is exactly 0.
     /// </summary>
     private static SortedSet<string> Touched(Board board, Seat player, IEnumerable<BoardChange> changes)
     {
         SortedSet<string> touched = new(StringComparer.Ordinal) { player.Id };
+        string[] arbiters = [.. board.Seats.Where(seat => seat.Arbiter).Select(seat => seat.Id)];
         foreach (BoardChange change in changes)
         {
             string field = change.Field;
@@ -100,10 +106,12 @@ public static class Prestige
             {
                 touched.Add(change.Subject);
                 touched.Add(field[(field.IndexOf(':') + 1)..]);
+                if (field.StartsWith("war:", StringComparison.Ordinal)) touched.UnionWith(arbiters);
             }
             else
             {
                 Region region = board.Region(change.Subject);
+                if (region.Allegiance is null || field == "allegiance") touched.UnionWith(arbiters);
                 if (region.Allegiance is not null) touched.Add(region.Allegiance);
                 touched.UnionWith(region.Influence.Keys);
                 touched.UnionWith(region.Offices.Values);
@@ -161,7 +169,7 @@ public static class Prestige
         /// <summary>The seats a card's targets name: a seat, a rival on its own ground, a deal's partner or a war's principals.</summary>
         public static IReadOnlyList<string> Named(Board board, Card card, IReadOnlyList<string> targets) => card.Target switch
         {
-            CardTarget.OtherSeat or CardTarget.Deal => [targets[0]],
+            CardTarget.OtherSeat or CardTarget.Deal or CardTarget.Leader => [targets[0]],
             CardTarget.RegionRival or CardTarget.FeudRival => [targets[1]],
             CardTarget.War => [board.War(targets[0]).A, board.War(targets[0]).B],
             _ => [],

@@ -76,11 +76,29 @@ public sealed class BoardTurnTests
     }
 
     [Fact]
-    public void Every_seat_moves_once_a_week_and_the_first_to_move_turns_with_the_weeks()
+    public void Every_seat_moves_once_a_week_and_between_equals_the_first_to_move_turns_with_the_weeks()
+    {
+        Board board = TestBoards.Create(TestBoards.TwoCrowns(marchAllegiance: null));
+        Assert.Equal(Prestige.Total(board, board.Seat("west")), Prestige.Total(board, board.Seat("east")));
+
+        Assert.Equal(["west", "east"], BoardTurn.Play(board).Moves.Select(move => move.Seat));
+        Assert.Equal(["east", "west"], OrderOnTurn(2));
+    }
+
+    /// <summary>The order the seats of an untouched, even board would move in on <paramref name="turn"/>.</summary>
+    private static IEnumerable<string> OrderOnTurn(int turn)
+    {
+        Board board = TestBoards.Create(TestBoards.TwoCrowns(marchAllegiance: null));
+        board.Turn = turn;
+        return Balance.Order(board).Select(seat => seat.Id);
+    }
+
+    [Fact]
+    public void The_trailing_seat_moves_first()
     {
         Board board = TestBoards.Create(TestBoards.TwoCrowns());
 
-        Assert.Equal(["west", "east"], BoardTurn.Play(board).Moves.Select(move => move.Seat));
+        Assert.True(Prestige.Total(board, board.Seat("east")) < Prestige.Total(board, board.Seat("west")));
         Assert.Equal(["east", "west"], BoardTurn.Play(board).Moves.Select(move => move.Seat));
     }
 
@@ -90,7 +108,7 @@ public sealed class BoardTurnTests
         Board board = TestBoards.Create(TestBoards.TwoCrowns());
         board.Hold("west", "trade-charter", "keep-the-peace", "envoy");
 
-        MoveTrace move = BoardTurn.Play(board).Moves[0];
+        MoveTrace move = BoardTurn.Play(board).Moves.Single(move => move.Seat == "west");
 
         Assert.Equal("1-west", move.Id);
         Assert.InRange(move.Alternatives.Count, 1, MoveTrace.AlternativesShown);

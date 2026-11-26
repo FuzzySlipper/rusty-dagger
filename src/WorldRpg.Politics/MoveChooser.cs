@@ -9,7 +9,7 @@ public sealed record MoveOption(string Card, IReadOnlyList<string> Targets, int 
 /// <list type="bullet">
 /// <item>prestige (<see cref="Prestige"/>): the player's gain counted <see cref="SelfWeight"/> times, minus the gains of
 /// seats it is not friendly with (twice for a rival, once for a neutral), so resources spent and relations moved
-/// count;</item>
+/// count; an arbiter counts the leader as a rival;</item>
 /// <item>plan progress: how far the move takes the plan's goal (<see cref="Intention.Measure"/>, or what the target seat
 /// loses for a goal against a seat), times <see cref="PlanWeight"/> and the holder's weight for that kind of goal.
 /// Gathering towards a card that would further the plan, which the seat cannot pay for yet, earns that card's progress
@@ -30,7 +30,8 @@ public static class MoveChooser
     public const int RiskWeight = 6;
 
     /// <summary>
-    /// Every legal play from <paramref name="seat"/>'s hand, and from the war cards if it is in a feud or fights a war, that would change
+    /// Every legal play from <paramref name="seat"/>'s hand, from the cards of open conflict if it is in a feud or fights
+    /// a war, and from the countermoves if it is an arbiter, that would change
     /// something, then gathering, then withdrawing
     /// from each of its trade agreements, best first; moves of equal score keep hand, target and that order. A slow card
     /// is weighed as if it arrived now. Gathering is always among them, so a seat always has a move.
@@ -39,8 +40,9 @@ public static class MoveChooser
     {
         List<MoveOption> options = [];
         Weighing weighing = new(board, seat);
-        IEnumerable<Card> war = Wars.InConflict(board, seat) ? board.WarCards : [];
-        foreach (Card card in board.Deck(seat).Hand.Distinct().Concat(war))
+        bool conflict = Wars.InConflict(board, seat);
+        IEnumerable<Card> standing = board.StandingCards.Where(card => card.Family == CardFamily.War ? conflict : seat.Arbiter);
+        foreach (Card card in board.Deck(seat).Hand.Distinct().Concat(standing))
         {
             int leaning = LeaningWeight * weighing.Persona.Leaning(card.Family);
             foreach (IReadOnlyList<string> targets in card.Candidates(board, seat).ToArray())
@@ -93,9 +95,11 @@ public static class MoveChooser
 
         public Prestige.Before Before { get; } = new(board);
 
-        /// <summary>Each seat's weight to the player.</summary>
+        /// <summary>Each seat's weight to the player; an arbiter weighs the leader as a rival whatever their relation.</summary>
         public Dictionary<string, int> Weight { get; } = board.Seats.ToDictionary(seat => seat.Id,
-            seat => seat == player ? SelfWeight : -RivalWeight(board.Relation(player.Id, seat.Id)), StringComparer.Ordinal);
+            seat => seat == player ? SelfWeight
+                : player.Arbiter && seat.Id == board.Leader ? -RivalWeight(-1)
+                : -RivalWeight(board.Relation(player.Id, seat.Id)), StringComparer.Ordinal);
 
         public Prestige.Witness Witness(Card card, IReadOnlyList<string> targets) => Prestige.Witness.OfCard(board, Player, Before, card, targets);
 

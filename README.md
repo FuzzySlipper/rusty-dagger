@@ -275,6 +275,14 @@ prints each week's moves (`--format jsonl` for one JSON object per turn):
 dotnet run --project src/WorldRpg.Politics.Cli -- run --years 10
 ```
 
+`balance` plays seeds 1 to N in parallel and reports the table's balance: each
+seat's prestige spread, the rate of allegiance changes, wars and feuds, and the
+Empire's reserves and interventions.
+
+```bash
+dotnet run -c Release --project src/WorldRpg.Politics.Cli -- balance --seeds 8 --years 50
+```
+
 ## Verify
 
 ```bash
