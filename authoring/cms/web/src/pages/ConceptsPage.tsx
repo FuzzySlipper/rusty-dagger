@@ -2,13 +2,18 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { apiRequest, isAbortError } from '../api';
 import { encodeKey, subjectUrl } from '../router';
 import { useApp } from '../state';
-import type { ConceptCandidate, ConceptStageDetail } from '../types';
+import type { ConceptCandidate, ConceptStageDetail, ConceptView } from '../types';
 import { Modal } from '../components/Modal';
 import { ConceptUploader } from '../components/ConceptUploader';
 import { Breadcrumb, Empty, PageHeading } from '../components/ui';
 
-type ConceptView = 'front' | 'back';
-const VIEW_LABELS: Record<ConceptView, string> = { front: 'Front', back: 'Back' };
+const ALL_VIEWS: ConceptView[] = ['front', 'left', 'right', 'back'];
+const VIEW_LABELS: Record<ConceptView, string> = {
+  front: 'Front',
+  left: 'Left',
+  right: 'Right',
+  back: 'Back',
+};
 
 const seedLabel = (item: ConceptCandidate): string =>
   item.details.seed === null ? 'Seed unavailable' : `Seed ${item.details.seed}`;
@@ -85,10 +90,12 @@ export function ConceptsPage({ id }: { id: string }) {
     );
   }
 
-  const views: ConceptView[] = stage.approvals ? ['front', 'back'] : ['front'];
-  const approvals: Record<ConceptView, ConceptCandidate | null> = stage.approvals ?? {
-    front: stage.approved,
-    back: null,
+  const views: ConceptView[] = stage.approvals ? ALL_VIEWS : ['front'];
+  const approvals: Record<ConceptView, ConceptCandidate | null> = {
+    front: stage.approvals?.front ?? stage.approved ?? null,
+    left: stage.approvals?.left ?? null,
+    right: stage.approvals?.right ?? null,
+    back: stage.approvals?.back ?? null,
   };
   const conflicts: ConceptView[] = stage.conflicts ?? (stage.conflict ? ['front'] : []);
 

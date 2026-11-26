@@ -241,14 +241,16 @@ export interface ConceptCandidate {
   approvedAt?: string;
 }
 
+export type ConceptView = 'front' | 'left' | 'right' | 'back';
+
 export interface ConceptStageDetail {
   id: string;
   name: string;
   classic: string | null;
   classicUrl: string;
   candidates: ConceptCandidate[];
-  approvals?: Record<'front' | 'back', ConceptCandidate | null>;
-  conflicts?: Array<'front' | 'back'>;
+  approvals?: Record<ConceptView, ConceptCandidate | null>;
+  conflicts?: ConceptView[];
   approved: ConceptCandidate | null;
   conflict: boolean;
 }

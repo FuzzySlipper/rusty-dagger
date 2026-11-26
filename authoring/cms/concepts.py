@@ -11,7 +11,7 @@ from uuid import uuid4
 from library import asset_url
 
 MEDIA = "/media/concepts/"
-VIEWS = ("front", "back")
+VIEWS = ("front", "left", "right", "back")
 IMAGE_FORMATS = {
     ".png": lambda image: image.startswith(b"\x89PNG\r\n\x1a\n"),
     ".jpg": lambda image: image.startswith(b"\xff\xd8\xff"),
@@ -39,22 +39,33 @@ class ConceptStore:
                 )
                 """)
             columns = {row["name"] for row in db.execute("PRAGMA table_info(approvals)")}
-            legacy = "subject" in columns and "view" not in columns
-            if legacy:
+            table_row = db.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'approvals'").fetchone()
+            table_sql = table_row["sql"] if table_row and table_row["sql"] else ""
+            legacy_no_view = "subject" in columns and "view" not in columns
+            legacy_two_view = "view" in columns and ("'left'" not in table_sql or "'right'" not in table_sql)
+            if legacy_no_view:
                 db.execute("ALTER TABLE approvals RENAME TO front_approvals")
+            elif legacy_two_view:
+                db.execute("ALTER TABLE approvals RENAME TO two_view_approvals")
             db.execute("""
                 CREATE TABLE IF NOT EXISTS approvals (
-                    subject TEXT NOT NULL, view TEXT NOT NULL CHECK(view IN ('front', 'back')),
+                    subject TEXT NOT NULL, view TEXT NOT NULL CHECK(view IN ('front', 'left', 'right', 'back')),
                     candidate TEXT NOT NULL REFERENCES candidates(id), approved_at TEXT NOT NULL,
                     PRIMARY KEY (subject, view)
                 )
                 """)
-            if legacy:
+            if legacy_no_view:
                 db.execute("""
                     INSERT INTO approvals (subject, view, candidate, approved_at)
                     SELECT subject, 'front', candidate, approved_at FROM front_approvals
                     """)
                 db.execute("DROP TABLE front_approvals")
+            elif legacy_two_view:
+                db.execute("""
+                    INSERT INTO approvals (subject, view, candidate, approved_at)
+                    SELECT subject, view, candidate, approved_at FROM two_view_approvals
+                    """)
+                db.execute("DROP TABLE two_view_approvals")
 
     @contextmanager
     def connection(self):
@@ -62,10 +73,29 @@ class ConceptStore:
             db.row_factory = sqlite3.Row
             yield db
 
-    def submit(self, subject, body):
+    @staticmethod
+    def _parse_approve_views(raw) -> list[str]:
+        if raw is None or raw == "" or raw is False:
+            return []
+        if isinstance(raw, str):
+            views = [raw.strip().lower()]
+        elif isinstance(raw, list) and all(isinstance(v, str) for v in raw):
+            views = [v.strip().lower() for v in raw if v.strip()]
+        else:
+            raise ValueError(f"Approve view must be one of {', '.join(VIEWS)} (or a list of them).")
+        ordered: list[str] = []
+        for view in views:
+            if view not in VIEWS:
+                raise ValueError(f"Choose {', '.join(VIEWS)} for the approval.")
+            if view not in ordered:
+                ordered.append(view)
+        return ordered
+
+    def submit(self, subject, body, aliases=()):
         if not isinstance(body, dict):
             raise ValueError("Send a concept candidate as JSON.")
         batch, name, filename, details, encoded = (body.get(key) for key in ("batch", "name", "filename", "details", "image"))
+        approve_views = self._parse_approve_views(body.get("approve"))
         if not all(isinstance(value, str) and value.strip() for value in (batch, name, filename, encoded)):
             raise ValueError("A batch name, candidate name, filename and image are required.")
         if not isinstance(details, dict) or not isinstance(details.get("prompt"), str) or not details["prompt"].strip():
@@ -92,13 +122,29 @@ class ConceptStore:
                     # A retry can reuse a submission, but replacing its image would also replace what was approved.
                     if existing["details"] != provenance or (self.images / existing["file"]).read_bytes() != image:
                         raise ValueError("That candidate already exists with different art or generation details. Use a new candidate name.")
-                    return self.candidate(existing)
-                identifier = uuid4().hex
-                created = self.images / (identifier + suffix)
-                created.write_bytes(image)
-                db.execute("INSERT INTO candidates VALUES (?, ?, ?, ?, ?, ?, ?)",
-                           (identifier, subject, batch, name, created.name, provenance, now()))
-                return self.candidate(db.execute("SELECT * FROM candidates WHERE id = ?", (identifier,)).fetchone())
+                    candidate_row = existing
+                else:
+                    identifier = uuid4().hex
+                    created = self.images / (identifier + suffix)
+                    created.write_bytes(image)
+                    db.execute("INSERT INTO candidates VALUES (?, ?, ?, ?, ?, ?, ?)",
+                               (identifier, subject, batch, name, created.name, provenance, now()))
+                    candidate_row = db.execute("SELECT * FROM candidates WHERE id = ?", (identifier,)).fetchone()
+
+                if approve_views:
+                    approved_at = now()
+                    for view in approve_views:
+                        if aliases:
+                            db.executemany("DELETE FROM approvals WHERE subject = ? AND view = ?", ((alias, view) for alias in aliases))
+                        db.execute("""
+                            INSERT INTO approvals(subject, view, candidate, approved_at) VALUES (?, ?, ?, ?)
+                            ON CONFLICT(subject, view) DO UPDATE SET candidate = excluded.candidate, approved_at = excluded.approved_at
+                            """, (subject, view, candidate_row["id"], approved_at))
+
+                result = self.candidate(candidate_row)
+                if approve_views:
+                    result["approvedViews"] = approve_views
+                return result
         except (OSError, sqlite3.Error):
             if created:
                 created.unlink(missing_ok=True)
@@ -136,7 +182,7 @@ class ConceptStore:
         if not isinstance(candidate, str):
             raise ValueError("Choose one candidate to approve.")
         if view not in VIEWS:
-            raise ValueError("Choose front or back for the approval.")
+            raise ValueError(f"Choose {', '.join(VIEWS)} for the approval.")
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT subject, file FROM candidates WHERE id = ?", (candidate,)).fetchone()

@@ -78,12 +78,18 @@ so the CMS can find their reviews.
 Use the [people concept recipes](../tools/people/concept/README.md) to prepare classic reference sheets, write
 costume briefs, and generate front or back candidates.
 
-Open **Concept art** from a people or creature record. You can drag and drop ComfyUI PNG/JPEG/WebP renders directly into the upload dropzone on that page (ComfyUI `prompt`, `seed`, `model`, `sampler`, and LoRA metadata are extracted automatically from PNG chunks, with editable fields and optional immediate front/back approval). Candidates are grouped by batch. Open one to inspect the original
-image and its generation details, then choose **Approve as front** or **Approve as back**. Each view has one
-approval. The character page uses the front as its canonical depiction. Both approvals appear on the concept
+Open **Concept art** from a people or creature record. You can drag and drop ComfyUI PNG/JPEG/WebP renders directly into the upload dropzone on that page (ComfyUI `prompt`, `seed`, `model`, `sampler`, and LoRA metadata are extracted automatically from PNG chunks, with editable fields and optional immediate `front`/`left`/`right`/`back` approval). Candidates are grouped by batch. Open one to inspect the original
+image and its generation details, then choose **Approve as front**, **Approve as left**, **Approve as right**, or **Approve as back**. Each view has one
+approval. The character page uses the front as its canonical depiction. All four approvals appear on the concept
 art page. Previous candidates remain available.
 
-Submit existing local generation outputs with `python3 authoring/cms/concept_cli.py add npc-381 batch.json`.
+Submit existing local generation outputs with `python3 authoring/cms/concept_cli.py add npc-381 batch.json` (each candidate may include `"approve": "front" | "left" | "right" | "back"`), or upload a single image directly without writing a manifest:
+
+```sh
+python3 authoring/cms/concept_cli.py upload npc-381 front.png --batch turnaround --approve front
+python3 authoring/cms/concept_cli.py approve npc-381 front-a --view left
+```
+
 The manifest uses a batch name and distinct candidate names within that batch. Paths are relative to the manifest.
 
 ```json
@@ -91,19 +97,21 @@ The manifest uses a batch name and distinct candidate names within that batch. P
   "batch": "tunic-study",
   "defaults": { "model": "local-model", "steps": 25 },
   "candidates": [
-    { "image": "front-a.png", "prompt": "Exact generation prompt", "seed": 8031 },
-    { "image": "front-b.png", "prompt": "Exact revised prompt", "seed": 8032 }
+    { "image": "front-a.png", "prompt": "Exact generation prompt", "seed": 8031, "approve": "front" },
+    { "image": "left-a.png", "prompt": "Exact left profile prompt", "seed": 8032, "approve": "left" }
   ]
 }
 ```
 
 Use `null` if the generator supplies no seed. Other fields, including negative prompts, samplers, and graph settings,
 are saved with the candidate. Re-running the same submission keeps its existing candidate ID. The `approved`
-command defaults to the front and returns the selected image's generation metadata. Pass `--image` to save
+command defaults to `front` (`--view front|left|right|back`) and returns the selected image's generation metadata. Pass `--image` to save
 its original bytes for downstream work.
 
 ```sh
 python3 authoring/cms/concept_cli.py approved npc-381 --image /tmp/npc-381-front.png
+python3 authoring/cms/concept_cli.py approved npc-381 --view left --image /tmp/npc-381-left.png
+python3 authoring/cms/concept_cli.py approved npc-381 --view right --image /tmp/npc-381-right.png
 python3 authoring/cms/concept_cli.py approved npc-381 --view back --image /tmp/npc-381-back.png
 ```
 

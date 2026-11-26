@@ -105,3 +105,57 @@ class ConceptTests(TestCase):
         self.assertTrue(stage["conflict"])
         self.store.approve("npc-381", ("npc-382", "npc-383"), first["id"])
         self.assertEqual(self.store.stage("npc-381", ("npc-382", "npc-383"))["approved"]["id"], first["id"])
+
+    def test_two_view_approvals_table_migrates_to_four_views(self):
+        front = self.submit("Front A")
+        back = self.submit("Back A", seed=2)
+        left = self.submit("Left A", seed=3)
+        right = self.submit("Right A", seed=4)
+        date = "2026-11-24T10:20:00+00:00"
+        with self.store.connection() as db:
+            db.execute("DROP TABLE approvals")
+            db.execute("""
+                CREATE TABLE approvals (
+                    subject TEXT NOT NULL, view TEXT NOT NULL CHECK(view IN ('front', 'back')),
+                    candidate TEXT NOT NULL REFERENCES candidates(id), approved_at TEXT NOT NULL,
+                    PRIMARY KEY (subject, view)
+                )
+                """)
+            db.execute("INSERT INTO approvals VALUES (?, ?, ?, ?)", ("npc-381", "front", front["id"], date))
+            db.execute("INSERT INTO approvals VALUES (?, ?, ?, ?)", ("npc-381", "back", back["id"], date))
+
+        reopened = ConceptStore(self.root)
+        reopened.approve("npc-381", (), left["id"], "left")
+        reopened.approve("npc-381", (), right["id"], "right")
+        stage = reopened.stage("npc-381")
+        self.assertEqual(stage["approvals"]["front"]["id"], front["id"])
+        self.assertEqual(stage["approvals"]["left"]["id"], left["id"])
+        self.assertEqual(stage["approvals"]["right"]["id"], right["id"])
+        self.assertEqual(stage["approvals"]["back"]["id"], back["id"])
+
+    def test_submit_with_approve_marks_views_atomically_and_rejects_invalid_view(self):
+        created = self.store.submit("npc-381", {
+            "name": "Left profile",
+            "batch": "Turnaround",
+            "filename": "left.png",
+            "image": base64.b64encode(b"\x89PNG\r\n\x1a\nleft").decode(),
+            "details": {"prompt": "Left side profile.", "seed": 77},
+            "approve": "left",
+        })
+        self.assertEqual(created["approvedViews"], ["left"])
+        stage = self.store.stage("npc-381")
+        self.assertEqual(stage["approvals"]["left"]["id"], created["id"])
+        self.assertIsNone(stage["approvals"]["front"])
+
+        with self.assertRaisesRegex(ValueError, "front, left, right, back"):
+            self.store.submit("npc-381", {
+                "name": "Bad view",
+                "batch": "Turnaround",
+                "filename": "bad.png",
+                "image": base64.b64encode(b"\x89PNG\r\n\x1a\nbad").decode(),
+                "details": {"prompt": "Invalid view test.", "seed": 88},
+                "approve": "top",
+            })
+        # Failed validation must not persist candidate or image
+        self.assertEqual(len(self.store.stage("npc-381")["candidates"]), 1)
+        self.assertEqual(len(list(self.store.images.iterdir())), 1)

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiRequest } from '../api';
 import { arrayBufferToBase64, extractComfyMetadata, type ExtractedComfyMetadata } from '../comfyMetadata';
 import { encodeKey } from '../router';
-import type { ConceptCandidate, ConceptStageDetail } from '../types';
+import type { ConceptCandidate, ConceptStageDetail, ConceptView } from '../types';
 
-type ApproveChoice = '' | 'front' | 'back';
+type ApproveChoice = '' | ConceptView;
 
 interface QueuedConceptFile {
   localId: string;
@@ -162,26 +162,27 @@ export function ConceptUploader({
           details.source = 'manual-upload';
         }
 
-        const created = await apiRequest<ConceptCandidate>(
+        const payload: Record<string, unknown> = {
+          batch: cleanBatch,
+          name: cleanName,
+          filename: item.file.name,
+          image: item.base64,
+          details,
+        };
+        if (item.approveAs) {
+          payload.approve = item.approveAs;
+        }
+
+        await apiRequest<ConceptCandidate>(
           `/api/concepts/${encodeKey(subjectId)}/candidates`,
           {
             method: 'POST',
-            body: {
-              batch: cleanBatch,
-              name: cleanName,
-              filename: item.file.name,
-              image: item.base64,
-              details,
-            },
+            body: payload,
           },
         );
         uploadedCount += 1;
 
-        if (item.approveAs === 'front' || item.approveAs === 'back') {
-          await apiRequest<ConceptStageDetail>(`/api/concepts/${encodeKey(subjectId)}/approve`, {
-            method: 'POST',
-            body: { candidate: created.id, view: item.approveAs },
-          });
+        if (item.approveAs) {
           approvedNotes.push(`${cleanName} approved as ${item.approveAs}`);
         }
       }
@@ -333,6 +334,8 @@ export function ConceptUploader({
                       >
                         <option value="">Candidate only</option>
                         <option value="front">Approve as front</option>
+                        <option value="left">Approve as left</option>
+                        <option value="right">Approve as right</option>
                         <option value="back">Approve as back</option>
                       </select>
                     </label>

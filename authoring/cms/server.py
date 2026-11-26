@@ -101,7 +101,7 @@ class Workspace:
         subject, aliases = resolved
         id = subject["id"]
         if action == "candidates":
-            return self.concept_store.submit(id, body)
+            return self.concept_store.submit(id, body, aliases=aliases)
         if not isinstance(body, dict):
             raise ValueError("Choose one candidate to approve.")
         return self.concept_store.approve(id, aliases, body.get("candidate"), body.get("view", "front")) | subject

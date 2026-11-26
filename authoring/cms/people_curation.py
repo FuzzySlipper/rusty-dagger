@@ -188,8 +188,7 @@ def references_for(npc_id: str, workspace) -> dict:
     concept_count = len((stage or {}).get("candidates", []))
     approvals = (stage or {}).get("approvals") or {}
     has_approved_concept = bool(
-        approvals.get("front")
-        or approvals.get("back")
+        any(approvals.get(v) for v in ("front", "left", "right", "back"))
         or (stage or {}).get("approved")
         or (detail.get("concept") and detail["concept"].get("approved"))
     )
