@@ -338,10 +338,9 @@ internal sealed partial class DaggerfallSession
         AdvanceCalendar(calendarBefore,
             deferSkillAdvancement ? DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills : DaggerfallCalendarAdvanceKind.Elapsed,
             resting: resting, idleFatigue: idleFatigue);                                          // Session: the calendar's list
-        // Elapsed rest/travel/service time can cross the donor outdoor population's dawn or dusk
-        // boundary without an Engine admitted frame. Reconcile through the existing NPC/lifetime
-        // owner so source civilians hide, retire, restore and preserve their durable identities.
-        if (advance.AppliedSeconds > 0)
+        // Elapsed travel/service/debug time can cross dawn, dusk, or shelter boundaries without an Engine admitted
+        // frame; rest runs many short slices and reconciles once at rest completion in ApplyRest.
+        if (advance.AppliedSeconds > 0 && !resting)
             ReconcileNpcProjection(immediate: true);                                              // Actors
         // No admitted update refills Stamina through elapsed time, so the time itself does.
         if (advance.AppliedSeconds > 0) _condition.Stamina.Fill(State.Actors.Player.Stats);      // Condition
@@ -1327,6 +1326,7 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallRestResult result = _rest.Apply(request, eligibility, State.Actors.Player.Stats, this, advanceTime,
             rapidHealing, noRegeneration, () => _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind));   // Time
+        if (result.ElapsedSeconds > 0) ReconcileNpcProjection(immediate: true);                   // Actors
         if (result.Accepted && result.ElapsedSeconds > 0) CompleteTimeIncrease();                // Session: the increase's end
         RestPanel.Publish(result);                                                                // UiProjection
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));   // UiProjection
@@ -1647,6 +1647,8 @@ internal sealed partial class DaggerfallSession
                 || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.WithParty),
             point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector())));  // Actors
         Population.Reconcile(immediate);                                                          // Actors
+        if (immediate && _sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Interior)
+            ReconcileInteriorScheduleCatchUp(_sites.Projection.Inputs, _appearance);              // Society/Actors
     }
 
     /// <summary>

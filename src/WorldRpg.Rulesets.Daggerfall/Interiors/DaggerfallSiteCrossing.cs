@@ -374,6 +374,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             _host.RelocatePlayer(_exterior.ProfileToLocal(pose.Position), pose.YawRadians, pose.PitchRadians, pose.Stance);
             if (profile.Kind == DaggerfallWorldProfileKind.Exterior) _exterior.FollowRecall();
             _exterior.StandArrivingPlayer();
+            if (profile.Kind == DaggerfallWorldProfileKind.Exterior) _host.ReconcileArrivalPopulation();
             return true;
         }
         return TryTransitionTo(profile, pose, useReturnDestination: false);

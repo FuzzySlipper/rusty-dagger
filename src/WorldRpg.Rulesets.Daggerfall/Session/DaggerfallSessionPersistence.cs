@@ -807,6 +807,59 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         return sparse with { Combat = combat, Social = social };
     }
 
+    /// <summary>
+    /// Flushes one live deterministic actor's sparse diff into <see cref="DaggerfallActorLedger"/> before unloading it
+    /// during an in-place schedule catch-up (e.g., rest/wait inside an interior), self-pruning untouched baselines to 0 bytes.
+    /// </summary>
+    internal void FlushLiveDeterministicActorToLedger(
+        ActorState actor,
+        DaggerfallWorldProfileKey activeProfile,
+        Func<WorldPoint, WorldPoint> localToProfile)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        if (!actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
+            || originComp.Origin.Kind is not (ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual)
+            || originComp.Origin.IsFixedPlacement)
+            return;
+
+        DaggerfallActorInventorySave? capturedInv = State.ActorInventories.InventoryFor(actor.DurableId) is { } invCoord
+            ? new DaggerfallActorInventorySave(actor.DurableId,
+                CaptureInventory(invCoord, State.ActorInventories.EquipmentFor(actor.DurableId), DaggerfallItemOwner.Actor(actor.DurableId)))
+            : null;
+        ActorLedgerEntry sparse = CaptureSparseDeterministicActor(
+            actor, activeProfile, localToProfile, CollectReferencedNpcs(), capturedInv, out bool inventoryIsDefault);
+        DaggerfallActorInventorySave? detachedInv = inventoryIsDefault ? null : capturedInv;
+        DaggerfallCorpseSave? detachedCorpse = CaptureCorpses([actor.DurableId]).SingleOrDefault();
+        DaggerfallActiveEffectSave[] detachedEffects = State.Effects.Capture()
+            .Where(effect => effect.TargetId == actor.DurableId)
+            .ToArray();
+        if (sparse.IsEmptyBaseline && detachedInv is null && detachedCorpse is null && detachedEffects.Length == 0)
+        {
+            State.ActorLedger.Remove(actor.DurableId);
+            return;
+        }
+        ActorCombatStateDiff? combat = detachedInv is not null || detachedCorpse is not null || detachedEffects.Length > 0
+            ? (sparse.Combat ?? new ActorCombatStateDiff()) with
+            {
+                DetachedInventory = detachedInv,
+                DetachedCorpse = detachedCorpse,
+                DetachedEffects = detachedEffects.Length > 0 ? detachedEffects : null,
+            }
+            : sparse.Combat;
+        ActorLocationOverride? location = sparse.Location is { Kind: ActorLocationKind.Dead }
+            ? sparse.Location with { Detached = true }
+            : originComp.IsScheduledVisitor
+                ? null
+                : sparse.Location;
+        ActorSocialDiff? social = sparse.Social;
+        if (social is null && actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? detachedPerson))
+        {
+            State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorDet);
+            social = ActorSocialDiff.FromNpc(detachedPerson.Snapshot, priorDet?.Social);
+        }
+        State.ActorLedger.Upsert(sparse with { Combat = combat, Social = social, Location = location });
+    }
+
     /// <summary>Captures one unloading site's actor-owned state without retaining runtime entities.</summary>
     internal DaggerfallSiteRuntimeDelta CaptureSiteDelta(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion,
         IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, IReadOnlySet<long>? actorFilter = null,

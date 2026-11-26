@@ -529,7 +529,8 @@ internal static class DaggerfallScheduleShelterResolver
     /// </summary>
     internal static IReadOnlyList<(WorldPoint Position, float HeadingRadians)> ResolveInteriorStandPoints(
         DaggerfallSiteProfile destination,
-        int maxCount)
+        int maxCount,
+        IEnumerable<WorldPoint>? extraOccupied = null)
     {
         ArgumentNullException.ThrowIfNull(destination);
         if (maxCount <= 0)
@@ -540,6 +541,11 @@ internal static class DaggerfallScheduleShelterResolver
             occupied.Add(staticNpc.Position);
         foreach (var fixedActor in destination.Project.Actors.Values)
             occupied.Add(fixedActor.Position);
+        if (extraOccupied is not null)
+        {
+            foreach (WorldPoint livePos in extraOccupied)
+                occupied.Add(livePos);
+        }
 
         List<WorldPoint> doors = [];
         if (destination.InteriorBuilding?.EntryFrame is { } entryFrame)

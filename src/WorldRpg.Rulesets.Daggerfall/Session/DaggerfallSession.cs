@@ -398,6 +398,16 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     internal void ReconcileInteriorScheduledVisitors(
         DaggerfallSiteProfile destination,
+        DaggerfallSiteAppearance appearance) =>
+        AdmitInteriorScheduledVisitors(destination, appearance, assignment: null);
+
+    /// <summary>
+    /// Reconciles an active interior's scheduled visitors and schedule-suppressed home static slots across an
+    /// elapsed time jump (rest, wait, loiter, or debug time skip) with zero orphaned actors, zero duplicate bodies,
+    /// and zero save bytes for untouched NPCs.
+    /// </summary>
+    internal void ReconcileInteriorScheduleCatchUp(
+        DaggerfallSiteProfile destination,
         DaggerfallSiteAppearance appearance)
     {
         ArgumentNullException.ThrowIfNull(destination);
@@ -409,16 +419,89 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
         DaggerfallTownShelterAssignment assignment = ResolveTownShelterAssignment(siteId, destination.BillboardSprites);
         DaggerfallSiteBuildingId buildingId = new(interiorBuilding.BlockX, interiorBuilding.BlockY, interiorBuilding.Building.Index);
+        HashSet<long> desiredVisitors = [.. assignment.VisitorsFor(buildingId).Select(v => v.DurableId)];
+        IReadOnlySet<long> suppressedStatic = assignment.SuppressedSlotsFor(buildingId);
+
+        // 1. Unload stale scheduled visitors no longer scheduled into this interior (flushing sparse diffs first).
+        foreach (ActorState live in State.Actors.All.ToArray())
+        {
+            if (live.DurableId == DaggerfallActorIdentity.PlayerEntityId || live.IsDefeated)
+                continue;
+            if (!live.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
+                || !originComp.IsScheduledVisitor)
+                continue;
+            if (desiredVisitors.Contains(live.DurableId))
+                continue;
+            _persistence.FlushLiveDeterministicActorToLedger(live, destination.ProfileKey, p => p);
+            _roster.UnloadActor(live.DurableId, appearance);
+        }
+
+        // 2. Reconcile home static slots that became scheduled away at a tavern or returned when hours reopened.
+        bool needsStaticRematerialize = false;
+        foreach (DaggerfallStaticNpcPlacement placement in destination.StaticNpcs)
+        {
+            if (placement.Appearance.FactionId > 0
+                && _definitions.People.TryGetIndividualByFaction(placement.Appearance.FactionId, out _))
+                continue;
+            long id = DaggerfallPeopleSlots.SeededSlotIdentity(siteId, $"{destination.ProfileKey.LogicalId}/{placement.Id}");
+            if (suppressedStatic.Contains(id))
+            {
+                if (State.Actors.TryGet(id, out ActorState? liveStatic)
+                    && !liveStatic.IsDefeated
+                    && liveStatic.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? staticOrigin)
+                    && !staticOrigin.IsScheduledVisitor
+                    && !staticOrigin.IsRelocated
+                    && staticOrigin.Origin.Kind == ActorOriginKind.SeededSlot)
+                {
+                    _persistence.FlushLiveDeterministicActorToLedger(liveStatic, destination.ProfileKey, p => p);
+                    _roster.UnloadActor(id, appearance);
+                }
+            }
+            else if (!State.Actors.TryGet(id, out _)
+                && !State.ActorLedger.IsHomeSlotSuppressed(id, destination.ProfileKey)
+                && !_roster.BanishedActors.Contains(id))
+            {
+                needsStaticRematerialize = true;
+            }
+        }
+        if (needsStaticRematerialize)
+            _roster.MaterializeStaticNpcs(destination, appearance);
+
+        // 3. Admit any newly scheduled visitors without overlapping already-standing live actors.
+        AdmitInteriorScheduledVisitors(destination, appearance, assignment);
+    }
+
+    private void AdmitInteriorScheduledVisitors(
+        DaggerfallSiteProfile destination,
+        DaggerfallSiteAppearance appearance,
+        DaggerfallTownShelterAssignment? assignment)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(appearance);
+        if (destination.ProfileKind != DaggerfallWorldProfileKind.Interior
+            || destination.Site is not { } siteId
+            || destination.InteriorBuilding is not { } interiorBuilding)
+            return;
+
+        assignment ??= ResolveTownShelterAssignment(siteId, destination.BillboardSprites);
+        DaggerfallSiteBuildingId buildingId = new(interiorBuilding.BlockX, interiorBuilding.BlockY, interiorBuilding.Building.Index);
         IReadOnlyList<DaggerfallScheduledVisitor> visitors = assignment.VisitorsFor(buildingId);
         if (visitors.Count == 0)
             return;
 
+        DaggerfallScheduledVisitor[] pending = [.. visitors.Where(v => !State.Actors.TryGet(v.DurableId, out _))];
+        if (pending.Length == 0)
+            return;
+
+        WorldPoint[] liveOccupied = [.. State.Actors.All
+            .Where(a => a.DurableId != DaggerfallActorIdentity.PlayerEntityId)
+            .Select(a => a.Position)];
         IReadOnlyList<(WorldPoint Position, float HeadingRadians)> standPoints =
-            DaggerfallScheduleShelterResolver.ResolveInteriorStandPoints(destination, visitors.Count);
-        int admitCount = Math.Min(visitors.Count, standPoints.Count);
+            DaggerfallScheduleShelterResolver.ResolveInteriorStandPoints(destination, pending.Length, liveOccupied);
+        int admitCount = Math.Min(pending.Length, standPoints.Count);
         for (int i = 0; i < admitCount; i++)
         {
-            DaggerfallScheduledVisitor visitor = visitors[i];
+            DaggerfallScheduledVisitor visitor = pending[i];
             (WorldPoint pos, float heading) = standPoints[i];
             ActorOrigin origin = ActorOrigin.Seeded(
                 visitor.HomeProfile,
