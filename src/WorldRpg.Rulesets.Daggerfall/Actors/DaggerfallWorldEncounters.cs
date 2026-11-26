@@ -28,7 +28,7 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
     DaggerfallDefinitions definitions, PlayerControlState player, Func<int> playerLevel, Func<bool> swimming, Func<bool> onShip,
     Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteRecord?> activeSite, Func<(int X, int Y)> exteriorCell,
     Func<bool> atLocation, Func<ulong?> generation, Func<string, ActorPose, int, long> spawn, Func<long, ActorPose?> actorPose,
-    Action<long> provoke, Func<int, ulong, ActorPose?>? findBandLeader = null, Action<long, int, ulong>? tagBandMember = null)
+    Action<long> provoke, Func<int, ulong, ActorPose?>? findBandLeader = null, Action<long, int, ulong, string?>? tagBandMember = null)
 {
     /// <summary>
     /// Catches up each elapsed minute and stops at its first selected spawn, as the donor does. Ordinary play reaches
@@ -151,10 +151,22 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
         if (pending.Band is { } memberBand)
         {
             _bandLeaders.TryAdd((memberBand.Id, pending.Generation), actor);
-            tagBandMember?.Invoke(actor, memberBand.Id, pending.Generation);
+            tagBandMember?.Invoke(actor, memberBand.Id, pending.Generation, ExtractConditionTokenId(pending.Choice.Reason));
         }
         if (pending.Band is { Staging: DaggerfallEncounterStaging.Caught }) provoke(actor);
         return actor;
+    }
+
+    internal static string? ExtractConditionTokenId(string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) return null;
+        const string directPrefix = "world-condition:";
+        if (reason.StartsWith(directPrefix, StringComparison.Ordinal) && reason.Length > directPrefix.Length)
+            return reason[directPrefix.Length..];
+        const string clashPrefix = "world-condition-clash:";
+        if (reason.StartsWith(clashPrefix, StringComparison.Ordinal) && reason.Length > clashPrefix.Length)
+            return reason[clashPrefix.Length..];
+        return null;
     }
 
     private readonly Dictionary<(int BandId, ulong Generation), long> _bandLeaders = [];

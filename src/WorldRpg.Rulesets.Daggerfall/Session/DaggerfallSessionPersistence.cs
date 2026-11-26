@@ -69,6 +69,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal Func<DaggerfallWorldConditionsSave> WorldConditions { get; set; } = () => DaggerfallWorldConditionsSave.Empty;
     internal Func<DaggerfallWordSpreadSave> WordSpread { get; set; } = () => DaggerfallWordSpreadSave.Empty;
     internal Func<DaggerfallCourierDispatchesSave> CourierDispatches { get; set; } = () => DaggerfallCourierDispatchesSave.Empty;
+    internal Func<DaggerfallConditionCounterplaySave> ConditionCounterplay { get; set; } = () => DaggerfallConditionCounterplaySave.Empty;
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
     internal DaggerfallSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallEquipmentMoves pack, DaggerfallBookNotebook notebook,
@@ -179,6 +180,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             WorldConditions = WorldConditions(),
             WordSpread = WordSpread(),
             CourierDispatches = CourierDispatches(),
+            ConditionCounterplay = ConditionCounterplay(),
             Doors = _doors().Capture(),
             SiteDeltas = siteDeltas,
             DungeonMotion = dungeonMotion,
@@ -686,6 +688,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             PromotedArchetype: dyn.PromotedArchetype,
             EncounterBandId: dyn.EncounterBandId,
             EncounterGeneration: dyn.EncounterGeneration,
+            EncounterConditionTokenId: dyn.EncounterConditionTokenId,
             DetachedInventory: detachedInventory,
             DetachedCorpse: detachedCorpse,
             DetachedEffects: detachedEffects is { Length: > 0 } ? detachedEffects : null);
@@ -913,6 +916,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 : null,
             EncounterBandId = actor.Actor.TryGet<DaggerfallEncounterBandMember>(out var bandMember) ? bandMember.BandId : null,
             EncounterGeneration = bandMember?.Generation,
+            EncounterConditionTokenId = bandMember?.ConditionTokenId,
             LairTruce = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LairTruce,
             FactionInfighting = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().FactionInfighting,
         };

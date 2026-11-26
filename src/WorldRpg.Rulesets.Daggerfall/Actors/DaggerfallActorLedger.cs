@@ -5,8 +5,8 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>Attached to a materialized encounter band member so remaining pending band members place beside it.</summary>
-internal sealed record DaggerfallEncounterBandMember(int BandId, ulong Generation);
+/// <summary>Attached to a materialized encounter band member so remaining pending band members place beside it and condition-driven bands can credit counter-play on wipeout.</summary>
+internal sealed record DaggerfallEncounterBandMember(int BandId, ulong Generation, string? ConditionTokenId = null);
 
 /// <summary>
 /// Attached to every live non-player actor in <c>EntityStore</c> to record its canonical <see cref="ActorOrigin"/>
@@ -165,6 +165,7 @@ internal sealed record ActorCombatStateDiff(
     string? PromotedArchetype = null,
     int? EncounterBandId = null,
     ulong? EncounterGeneration = null,
+    string? EncounterConditionTokenId = null,
     DaggerfallActorInventorySave? DetachedInventory = null,
     DaggerfallCorpseSave? DetachedCorpse = null,
     DaggerfallActiveEffectSave[]? DetachedEffects = null)

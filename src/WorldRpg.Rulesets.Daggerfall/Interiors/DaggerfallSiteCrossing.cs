@@ -232,6 +232,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                     PromotedArchetype = combat?.PromotedArchetype,
                     EncounterBandId = combat?.EncounterBandId,
                     EncounterGeneration = combat?.EncounterGeneration,
+                    EncounterConditionTokenId = combat?.EncounterConditionTokenId,
                     LairTruce = combat?.LairTruce ?? false,
                     FactionInfighting = combat?.InfightingOverride ?? false,
                 });

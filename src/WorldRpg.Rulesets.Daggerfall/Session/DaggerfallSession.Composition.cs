@@ -416,11 +416,11 @@ internal sealed partial class DaggerfallSession
                             return candidate.Pose;
                     return null;
                 },
-                tagBandMember: (actorId, bandId, gen) =>
+                tagBandMember: (actorId, bandId, gen, condTokenId) =>
                 {
                     if (actors.TryGet(actorId, out ActorState? spawned))
                     {
-                        spawned.Actor.Add(new DaggerfallEncounterBandMember(bandId, gen));
+                        spawned.Actor.Add(new DaggerfallEncounterBandMember(bandId, gen, condTokenId));
                         DaggerfallEnemyPerceptionMemory mem = spawned.Actor.Get<DaggerfallEnemyPerceptionMemory>();
                         mem.LairTruce = false;
                         mem.FactionInfighting = true;
@@ -1053,6 +1053,13 @@ internal sealed partial class DaggerfallSession
             SocialConsequences = new DaggerfallSocialConsequences(
                 State.Social, definitions, State.Actors, State.Npcs, State.ActorLedger,
                 () => Crimes.QueryWitnesses(), Crimes.IsCityWatch, () => _site.Region);
+            ConditionCounterplay = new DaggerfallConditionCounterplay(
+                definitions, WorldConditions, WordSpread, State.Actors, _roster.Definitions,
+                () => _activeProfileKey, () => _site.ActiveSite, () => State.Character.Identity.Name,
+                id => QuestFoes.Team(id) == "player-ally",
+                hasPendingBandMembers: (bandId, gen) => _encounters.Pending.Any(p => p.Band is { Id: int id } && id == bandId && p.Generation == gen));
+            if (saved is not null)
+                ConditionCounterplay.Restore(saved.ConditionCounterplay);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
                 () => _sites.Projection.Inputs, CurrentInteriorBuilding,
@@ -1185,6 +1192,7 @@ internal sealed partial class DaggerfallSession
             _persistence.WorldConditions = WorldConditions.Capture;
             _persistence.WordSpread = WordSpread.Capture;
             _persistence.CourierDispatches = CourierDispatches.Capture;
+            _persistence.ConditionCounterplay = ConditionCounterplay.Capture;
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;

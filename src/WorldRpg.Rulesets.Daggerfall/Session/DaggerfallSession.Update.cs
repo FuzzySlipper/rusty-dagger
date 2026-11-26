@@ -1514,6 +1514,8 @@ internal sealed partial class DaggerfallSession
             OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite); // Society: OfficeLedger sparse override
             CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
+            if (ConditionCounterplay.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)) is { } counterplay)
+                Presentation.SetOutcome(counterplay.OutcomeMessage);                              // Society, UiProjection
         }
         _corpseLoot.Create(died);                                                                 // Items
         _rewards.React(died, _facts);                                                             // Character

@@ -40,6 +40,7 @@ internal sealed record DaggerfallDynamicActorSave(long EntityId, string Definiti
     public string? PromotedArchetype { get; init; }
     public int? EncounterBandId { get; init; }
     public ulong? EncounterGeneration { get; init; }
+    public string? EncounterConditionTokenId { get; init; }
     public bool LairTruce { get; init; }
     public bool FactionInfighting { get; init; }
     internal void Validate()

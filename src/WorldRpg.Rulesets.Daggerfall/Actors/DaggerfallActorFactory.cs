@@ -408,7 +408,7 @@ internal static class DaggerfallActorFactory
         if (saved.TeamOverride is { } teamOverride) actor.Actor.Get<FactionComponent>().SetTeamOverride(teamOverride);
         else if (saved.PlayerAllied) actor.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
         if (saved.EncounterBandId is int bandId && saved.EncounterGeneration is ulong bandGen)
-            actor.Actor.Add(new DaggerfallEncounterBandMember(bandId, bandGen));
+            actor.Actor.Add(new DaggerfallEncounterBandMember(bandId, bandGen, saved.EncounterConditionTokenId));
         actor.Actor.Add(new ActorOriginComponent(
             ActorOrigin.MintedActor(saved.Definition, saved.Level, gender: saved.Gender),
             new WorldPoint(saved.X, saved.Y, saved.Z), saved.HeadingRadians));

@@ -124,8 +124,30 @@ internal sealed record DaggerfallWorldConditionToken(
     }
 }
 
+/// <summary>Sparse local severity reduction applied to an external (B2 board-game) condition token until the next weekly board turn consumes it.</summary>
+internal sealed record DaggerfallConditionReductionSave(
+    [property: JsonRequired] string TokenId,
+    [property: JsonRequired] int SeverityReduction)
+{
+    internal DaggerfallConditionReductionSave Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(TokenId);
+        if (SeverityReduction <= 0)
+            throw new ArgumentOutOfRangeException(nameof(SeverityReduction), SeverityReduction, $"Condition reduction for '{TokenId}' must be positive.");
+        return this;
+    }
+}
+
+/// <summary>Result of weakening or stripping an active <see cref="DaggerfallWorldConditionToken"/> via player counter-play.</summary>
+internal sealed record DaggerfallConditionMutationOutcome(
+    DaggerfallWorldConditionToken Original,
+    DaggerfallWorldConditionToken? Updated,
+    bool Stripped);
+
 /// <summary>Sparse persisted world-condition tokens. Empty when no authored/stubbed condition tokens are active.</summary>
-internal sealed record DaggerfallWorldConditionsSave(DaggerfallWorldConditionToken[] Tokens)
+internal sealed record DaggerfallWorldConditionsSave(
+    DaggerfallWorldConditionToken[] Tokens,
+    DaggerfallConditionReductionSave[]? ExternalReductions = null)
 {
     internal static DaggerfallWorldConditionsSave Empty { get; } = new([]);
 
@@ -139,6 +161,17 @@ internal sealed record DaggerfallWorldConditionsSave(DaggerfallWorldConditionTok
             token.Validate();
             if (!ids.Add(token.TokenId))
                 throw new ArgumentException($"Saved world conditions repeat token id '{token.TokenId}'.", nameof(Tokens));
+        }
+        if (ExternalReductions is not null)
+        {
+            HashSet<string> reducedIds = new(StringComparer.Ordinal);
+            foreach (DaggerfallConditionReductionSave reduction in ExternalReductions)
+            {
+                ArgumentNullException.ThrowIfNull(reduction);
+                reduction.Validate();
+                if (!reducedIds.Add(reduction.TokenId))
+                    throw new ArgumentException($"Saved world conditions repeat external reduction for '{reduction.TokenId}'.", nameof(ExternalReductions));
+            }
         }
         return this;
     }
@@ -164,6 +197,7 @@ internal interface IDaggerfallWorldConditionSource
 internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSource
 {
     private readonly Dictionary<string, DaggerfallWorldConditionToken> _tokens = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _externalReductions = new(StringComparer.Ordinal);
     private Func<int, IReadOnlyList<DaggerfallWorldConditionToken>>? _externalSource;
 
     /// <summary>Fired immediately before authored or external world conditions change so elapsed-time spread can checkpoint accumulated progress.</summary>
@@ -217,10 +251,63 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     /// <summary>Clears all authored/stubbed condition tokens.</summary>
     internal void Clear()
     {
-        if (_tokens.Count == 0)
+        if (_tokens.Count == 0 && _externalReductions.Count == 0)
             return;
         BeforeMutation?.Invoke();
         _tokens.Clear();
+        _externalReductions.Clear();
+    }
+
+    /// <summary>
+    /// Weakens an active condition token in <paramref name="region"/> by <paramref name="severityDelta"/> or strips it
+    /// entirely when severity drops to zero. Works uniformly for sparse authored tokens and external B2 board-game
+    /// tokens (recording a sparse local reduction until the next Sunday board turn consumes it).
+    /// </summary>
+    internal DaggerfallConditionMutationOutcome? WeakenOrStrip(string tokenId, int region, int? currentDay = null, int severityDelta = 1)
+    {
+        if (string.IsNullOrWhiteSpace(tokenId) || severityDelta <= 0)
+            return null;
+        DaggerfallWorldConditionToken? active = ActiveForRegion(region, currentDay)
+            .FirstOrDefault(t => StringComparer.Ordinal.Equals(t.TokenId, tokenId));
+        if (active is null)
+            return null;
+
+        BeforeMutation?.Invoke();
+        if (_tokens.TryGetValue(tokenId, out DaggerfallWorldConditionToken? local))
+        {
+            if (local.Severity <= severityDelta)
+            {
+                _tokens.Remove(tokenId);
+                return new(local, Updated: null, Stripped: true);
+            }
+            DaggerfallWorldConditionToken updatedLocal = local with { Severity = local.Severity - severityDelta };
+            _tokens[tokenId] = updatedLocal;
+            return new(local, updatedLocal, Stripped: false);
+        }
+
+        int prior = _externalReductions.GetValueOrDefault(tokenId);
+        _externalReductions[tokenId] = checked(prior + severityDelta);
+        int remaining = active.Severity - severityDelta;
+        return remaining <= 0
+            ? new(active, Updated: null, Stripped: true)
+            : new(active, active with { Severity = remaining }, Stripped: false);
+    }
+
+    /// <summary>Clears a consumed local counter-play reduction for an external B2 board-game token.</summary>
+    internal bool ClearExternalReduction(string tokenId)
+    {
+        if (string.IsNullOrWhiteSpace(tokenId) || !_externalReductions.ContainsKey(tokenId))
+            return false;
+        BeforeMutation?.Invoke();
+        return _externalReductions.Remove(tokenId);
+    }
+
+    /// <summary>Clears all local counter-play reductions after Track B consumes pending counter-play on its weekly turn.</summary>
+    internal void ClearExternalReductions()
+    {
+        if (_externalReductions.Count == 0) return;
+        BeforeMutation?.Invoke();
+        _externalReductions.Clear();
     }
 
     /// <summary>Removes expired authored tokens at or after <paramref name="currentDay"/>.</summary>
@@ -246,7 +333,13 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
             {
                 if (token is null || !token.AppliesToRegion(region)) continue;
                 if (currentDay is int d && (d < token.StartedDay || token.IsExpired(d))) continue;
-                merged[token.TokenId] = token;
+                DaggerfallWorldConditionToken effective = token;
+                if (_externalReductions.TryGetValue(token.TokenId, out int reduction) && reduction > 0)
+                {
+                    if (token.Severity <= reduction) continue;
+                    effective = token with { Severity = token.Severity - reduction };
+                }
+                merged[effective.TokenId] = effective;
             }
         }
 
@@ -281,16 +374,26 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     }
 
     internal DaggerfallWorldConditionsSave Capture() =>
-        new([.. _tokens.Values.OrderBy(token => token.TokenId, StringComparer.Ordinal)]);
+        new(
+            [.. _tokens.Values.OrderBy(token => token.TokenId, StringComparer.Ordinal)],
+            _externalReductions.Count > 0
+                ? [.. _externalReductions.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new DaggerfallConditionReductionSave(pair.Key, pair.Value))]
+                : null);
 
     internal void Restore(DaggerfallWorldConditionsSave? saved)
     {
         _tokens.Clear();
+        _externalReductions.Clear();
         if (saved is null)
             return;
         saved.Validate();
         foreach (DaggerfallWorldConditionToken token in saved.Tokens)
             _tokens[token.TokenId] = token;
+        if (saved.ExternalReductions is not null)
+        {
+            foreach (DaggerfallConditionReductionSave reduction in saved.ExternalReductions)
+                _externalReductions[reduction.TokenId] = reduction.SeverityReduction;
+        }
     }
 
     /// <summary>Builds a deterministic authored token id for a region/kind pair.</summary>

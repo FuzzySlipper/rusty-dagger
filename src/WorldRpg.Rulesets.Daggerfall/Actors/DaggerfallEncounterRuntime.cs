@@ -177,18 +177,25 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
             throw new ArgumentException("A saved encounter pose must be finite.");
 
         DaggerfallEncounterChoice choice = value.Choice;
-        // A band from the expedition map was picked from its table without the source's spawn chance.
-        bool chanceKept = value.Band is null
-            ? choice.ChanceRoll is 0 && choice.ChanceDenominator == DaggerfallEncounterPolicy.DenominatorFor(value.Request.Context)
-            : choice.ChanceRoll is null && choice.ChanceDenominator is null;
-        if (choice.Reason is not null || choice.Table is not int table || choice.Entry is not int entry
-            || choice.LevelPercentile is not int percentile || !chanceKept)
-            throw new ArgumentException("A saved selected encounter must retain its complete canonical selection facts.");
-        if (table != DaggerfallEncounterPolicy.TableFor(value.Request) || entry is < 0 or >= 20)
-            throw new ArgumentException("A saved encounter table choice does not match its request.");
-        (int minimum, int maximum) = DaggerfallEncounterPolicy.LevelBand(percentile, value.Request.PlayerLevel);
-        if (entry < minimum || entry > maximum || _definitions.Encounters.Tables[table][entry] != choice.MobileId.Value)
-            throw new ArgumentException("A saved encounter entry does not match its canonical table or level band.");
+        bool conditionBand = value.Band is not null
+            && DaggerfallWorldEncounters.ExtractConditionTokenId(choice.Reason) is not null
+            && choice.Table is null
+            && choice.Entry is null;
+        if (!conditionBand)
+        {
+            // A band from the expedition map was picked from its table without the source's spawn chance.
+            bool chanceKept = value.Band is null
+                ? choice.ChanceRoll is 0 && choice.ChanceDenominator == DaggerfallEncounterPolicy.DenominatorFor(value.Request.Context)
+                : choice.ChanceRoll is null && choice.ChanceDenominator is null;
+            if (choice.Reason is not null || choice.Table is not int table || choice.Entry is not int entry
+                || choice.LevelPercentile is not int percentile || !chanceKept)
+                throw new ArgumentException("A saved selected encounter must retain its complete canonical selection facts.");
+            if (table != DaggerfallEncounterPolicy.TableFor(value.Request) || entry is < 0 or >= 20)
+                throw new ArgumentException("A saved encounter table choice does not match its request.");
+            (int minimum, int maximum) = DaggerfallEncounterPolicy.LevelBand(percentile, value.Request.PlayerLevel);
+            if (entry < minimum || entry > maximum || _definitions.Encounters.Tables[table][entry] != choice.MobileId.Value)
+                throw new ArgumentException("A saved encounter entry does not match its canonical table or level band.");
+        }
 
         DaggerfallMobileDefinition mobile = _definitions.Mobiles.Mobiles.TryGetValue(choice.MobileId.Value, out DaggerfallMobileDefinition? found)
             ? found : throw new ArgumentException($"Saved encounter selects unpublished mobile {choice.MobileId.Value}.");

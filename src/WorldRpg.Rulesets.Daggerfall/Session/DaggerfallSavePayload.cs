@@ -92,6 +92,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Sparse sealed couriers carrying pending board-game actions or warrants; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallCourierDispatchesSave CourierDispatches { get; init; } = DaggerfallCourierDispatchesSave.Empty;
+    /// <summary>Sparse dungeon/band counter-play progress and unconsumed World-&gt;Board events; empty when untouched.</summary>
+    [JsonRequired]
+    public DaggerfallConditionCounterplaySave ConditionCounterplay { get; init; } = DaggerfallConditionCounterplaySave.Empty;
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];
@@ -263,6 +266,7 @@ internal sealed record DaggerfallSavePayload(
             PromotedArchetype = entry.Combat?.PromotedArchetype,
             EncounterBandId = entry.Combat?.EncounterBandId,
             EncounterGeneration = entry.Combat?.EncounterGeneration,
+            EncounterConditionTokenId = entry.Combat?.EncounterConditionTokenId,
             LairTruce = entry.Combat?.LairTruce ?? false,
             FactionInfighting = entry.Combat?.InfightingOverride ?? false,
         };
@@ -1178,6 +1182,8 @@ internal sealed record DaggerfallSavePayload(
         WordSpread.Validate();
         ArgumentNullException.ThrowIfNull(CourierDispatches);
         CourierDispatches.Validate();
+        ArgumentNullException.ThrowIfNull(ConditionCounterplay);
+        ConditionCounterplay.Validate();
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();
         ArgumentNullException.ThrowIfNull(Doors);

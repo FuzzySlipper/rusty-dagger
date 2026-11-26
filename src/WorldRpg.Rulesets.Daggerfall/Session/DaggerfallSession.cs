@@ -910,6 +910,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Sealed board-game courier dispatches that the player can deliver, buy, or intercept.</summary>
     internal DaggerfallCourierDispatches CourierDispatches { get; } = null!;
+    internal DaggerfallConditionCounterplay ConditionCounterplay { get; } = null!;
 
     /// <summary>Gate, watch, service, and scarcity scrutiny policy driven by standing and active world conditions.</summary>
     internal DaggerfallScrutinyPolicy Scrutiny { get; } = null!;
