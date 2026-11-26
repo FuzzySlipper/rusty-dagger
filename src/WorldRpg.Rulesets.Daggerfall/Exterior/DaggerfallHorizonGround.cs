@@ -219,7 +219,11 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             }
             samples.SetMaterial(i, j, 1);
             if (height <= OceanMetres + BeachMetres) { samples.SetColor(i, j, Linear(palette.Beach)); continue; }
-            float slope = Slope(ground, heightSide, i, j, tile.CellSize) * _groundTuning.RockFromSlope / _tuning.RockFromSlope;
+            // Far-horizon rock-slope boost (2x) is tuned for coarse mountain cells; on the travel map's fine cells,
+            // applying it at sea level paints gentle coastal hillsides and riverbanks as grey cliffs. Ramp it in above lowlands.
+            float highland = Math.Clamp((float)((height - OceanMetres - 250) / 500), 0, 1);
+            float rockBoost = 1 + (((_groundTuning.RockFromSlope / _tuning.RockFromSlope) - 1) * highland);
+            float slope = Slope(ground, heightSide, i, j, tile.CellSize) * rockBoost;
             if (river is { } bankRiver)
             {
                 // Keep overland riverbanks grassy/sandy valley edges rather than painting carved bank slopes as grey rock.
@@ -319,8 +323,20 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         return Math.Max(OceanMetres, edge + ((uncarved - edge) * smooth));
     }
 
-    /// <summary>A height as the travel map draws it: the sea flat at its surface, land above it raised by <paramref name="relief"/>.</summary>
-    private static double MapHeight(double height, double relief) => OceanMetres + (Math.Max(height - OceanMetres, 0) * relief);
+    /// <summary>Elevation above sea level (metres) where travel-map vertical exaggeration smoothly ramps from true 1:1 coast/valley relief toward highland mountain relief.</summary>
+    private const double MapReliefKneeMetres = 650;
+
+    /// <summary>
+    /// A height as the travel map draws it: the sea flat at its surface, coasts and lowland river valleys near true 1:1
+    /// scale so beaches do not become cliffs and rivers do not sink into ravines, smoothly ramping toward
+    /// <paramref name="relief"/> on high hills and mountain ranges so ranges still read from high above.
+    /// </summary>
+    internal static double MapHeight(double height, double relief)
+    {
+        double above = Math.Max(height - OceanMetres, 0);
+        if (relief <= 1 || above <= 0) return OceanMetres + (above * relief);
+        return OceanMetres + above + ((relief - 1) * (above - (MapReliefKneeMetres * Math.Atan(above / MapReliefKneeMetres))));
+    }
 
     /// <summary>
     /// The far forest's ground, in far ground's own frame (map metres): far ground's lifted and sunk heights, so copies stand
