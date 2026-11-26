@@ -1,0 +1,60 @@
+{
+  "region": 17,
+  "index": 1045,
+  "name": "Hearthwing Manor",
+  "mapId": 1095964127,
+  "longitude": 26536,
+  "latitude": 38056,
+  "dungeonType": 255,
+  "locationType": 8,
+  "discovered": true,
+  "exterior": {
+    "locationId": 21262,
+    "mapPixelX": 207,
+    "mapPixelY": 202,
+    "width": 2,
+    "height": 2,
+    "letter1": "I",
+    "tileOriginX": 48,
+    "tileOriginY": 48,
+    "usesCustomLocationPosition": false,
+    "blendClearance": 2,
+    "flattenRect": {
+      "minX": 46,
+      "maxX": 81,
+      "minY": 46,
+      "maxY": 81
+    },
+    "blocks": [
+      {
+        "sourceName": "MANRAS01.RMB",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "sourceName": "PALAAA00.RMB",
+        "x": 1,
+        "y": 0
+      },
+      {
+        "sourceName": "FILLAA03.RMB",
+        "x": 0,
+        "y": 1
+      },
+      {
+        "sourceName": "FILLAA02.RMB",
+        "x": 1,
+        "y": 1
+      }
+    ],
+    "buildingTypes": [
+      15,
+      16,
+      17,
+      18
+    ],
+    "portTownAndUnknown": 0,
+    "missingCityBuildings": []
+  },
+  "climate": 231
+}

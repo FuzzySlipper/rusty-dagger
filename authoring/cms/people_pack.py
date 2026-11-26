@@ -258,10 +258,26 @@ def validate_cast_document(
             if not _is_int(visual.get("record")) or visual["record"] < 0:
                 issues.append(ValidationIssue(f"{path}.visual.record", "Record must be a non-negative integer."))
 
-        for key in ("homeBlock", "homeSlotId"):
-            val = entry.get(key)
-            if not isinstance(val, str) or not val.strip():
-                issues.append(ValidationIssue(f"{path}.{key}", f"{key} must be non-empty text."))
+        # A placed individual names a homeBlock and exactly one of homeSlotId and homePosition; homeSite pins the home to
+        # one location and is required with a position. An unplaced individual names none of them.
+        home_block, home_slot, home_position, home_site = (entry.get(key) for key in ("homeBlock", "homeSlotId", "homePosition", "homeSite"))
+        if home_block is None:
+            if home_slot is not None or home_position is not None or home_site is not None:
+                issues.append(ValidationIssue(f"{path}.homeBlock", "A home slot, position or site needs a homeBlock."))
+        else:
+            if not isinstance(home_block, str) or not home_block.strip():
+                issues.append(ValidationIssue(f"{path}.homeBlock", "homeBlock must be non-empty text."))
+            if (home_slot is None) == (home_position is None):
+                issues.append(ValidationIssue(f"{path}.homeSlotId", "A home names exactly one of homeSlotId and homePosition."))
+            if home_slot is not None and (not isinstance(home_slot, str) or not home_slot.strip()):
+                issues.append(ValidationIssue(f"{path}.homeSlotId", "homeSlotId must be non-empty text."))
+            if home_position is not None and (not isinstance(home_position, list) or len(home_position) != 3
+                                              or not all(isinstance(v, (int, float)) for v in home_position)):
+                issues.append(ValidationIssue(f"{path}.homePosition", "homePosition must be three numbers."))
+            if home_position is not None and home_site is None:
+                issues.append(ValidationIssue(f"{path}.homeSite", "A homePosition needs a homeSite to set it in."))
+        if home_site is not None and not (isinstance(home_site, dict) and _is_int(home_site.get("region")) and _is_int(home_site.get("index"))):
+            issues.append(ValidationIssue(f"{path}.homeSite", "homeSite must be an object with integer region and index."))
 
         if entry.get("interaction") not in INTERACTIONS:
             issues.append(ValidationIssue(f"{path}.interaction", f"Interaction must be one of {', '.join(INTERACTIONS)}."))
@@ -1552,7 +1568,8 @@ class PeoplePackStore:
                 doc = self.packs.read_json(block_file, {}) or {}
                 kind = doc.get("kind")
                 blocks = doc.get("blocks") or {}
-                if kind not in ("rmb-interior", "rmb-exterior", "rdb-dungeon"):
+                # site-exterior keys one location's grid cell (region/index/x,y), whose spawner slots it places there alone.
+                if kind not in ("rmb-interior", "rmb-exterior", "rdb-dungeon", "site-exterior"):
                     issues.append(ValidationIssue(block_file.name, f"Unsupported block kind '{kind}'."))
                     continue
                 for block_key, block_val in blocks.items():

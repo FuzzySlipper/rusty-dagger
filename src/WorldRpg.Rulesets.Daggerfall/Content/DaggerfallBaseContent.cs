@@ -872,7 +872,7 @@ internal static partial class DaggerfallBaseContent
         return new DaggerfallLocationSet([.. keys], [.. records], dungeons, gaps, regions);
     }
 
-    private static DaggerfallSiteExterior? ReadSiteExterior(JsonElement location, int region, int index,
+    internal static DaggerfallSiteExterior? ReadSiteExterior(JsonElement location, int region, int index,
         int longitude, int latitude, DaggerfallSiteDetails? details, DaggerfallContentDiagnostics diagnostics)
     {
         if (!location.TryGetProperty("exterior", out JsonElement value)) return null;

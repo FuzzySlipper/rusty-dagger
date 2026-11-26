@@ -653,7 +653,7 @@ internal sealed class DaggerfallActorRoster
             profile.InteriorBuilding is { } building ? $"{building.BlockX}/{building.BlockY}/{building.Building.Index}" : string.Empty,
             profile.ProfileKey.LogicalId);
         DaggerfallNpcAppearance look = sourcePlacement?.Appearance
-            ?? new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.WorldFactionId);
+            ?? new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.FactionId);
         string role = sourcePlacement?.Role ?? "person";
         IReadOnlyList<string> services = sourcePlacement?.Services ?? ["talk"];
         _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Static, $"cast:{castId}", binding, look, role, services, cast.Name, profile.ProfileKey);
@@ -830,7 +830,7 @@ internal sealed class DaggerfallActorRoster
                 DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
                 _npcs.RegisterDeterministic(entry.DurableId, DaggerfallNpcKind.Static, $"cast:{cid}",
                     new DaggerfallNpcSite(site.Region, location.Name, string.Empty, profile.ProfileKey.LogicalId),
-                    new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.WorldFactionId),
+                    new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.FactionId),
                     "person", ["talk"], cast.Name, profile.ProfileKey);
                 npc = _npcs.Require(entry.DurableId);
             }
@@ -904,7 +904,7 @@ internal sealed class DaggerfallActorRoster
             DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
             _npcs.RegisterDeterministic(entry.DurableId, DaggerfallNpcKind.Static, $"cast:{cid}",
                 new DaggerfallNpcSite(site.Region, location.Name, string.Empty, profile.ProfileKey.LogicalId),
-                new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.WorldFactionId),
+                new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.FactionId),
                 "person", ["talk"], cast.Name, profile.ProfileKey);
             npc = _npcs.Require(entry.DurableId);
         }

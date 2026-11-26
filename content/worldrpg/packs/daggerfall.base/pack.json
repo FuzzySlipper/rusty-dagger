@@ -6,6 +6,6 @@
   "dependencies": [
     { "id": "daggerfall.imported" }
   ],
-  "description": "The authored base sections the ruleset joins to the imported ones, and in terrain/ the wilderness relief and rivers that daggerfall-source-tool relief-bake bakes from WOODS.WLD, with relief.json naming the digest of the WOODS.WLD they were baked from (the game warns when the player's differs).",
+  "description": "The authored base sections the ruleset joins to the imported ones, and in terrain/ the wilderness relief and rivers that daggerfall-source-tool relief-bake bakes from WOODS.WLD, with relief.json naming the digest of the WOODS.WLD they were baked from (the game warns when the player's differs), and in locations/ the locations locationOverrides lays out anew, baked as record, detail and ground by daggerfall-source-tool location-bake (run it after editing a recipe).",
   "payload": "worldrpg/packs/daggerfall.base/payload.json"
 }

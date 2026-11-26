@@ -266,14 +266,16 @@ internal sealed record DaggerfallPeopleBarks(
 }
 
 /// <summary>
-/// Genuine unique named individual authored in <c>cast/individuals.json</c>. An unplaced individual has no
-/// <see cref="HomeBlock"/> or <see cref="HomeSlotId"/>: nothing sets it in the world, and it appears only where a quest
-/// or the political board names it. Only an unplaced individual may have no <see cref="FactionId"/>, when it has no
-/// faction record of its own (a seat head Daggerfall never named).
+/// Genuine unique named individual authored in <c>cast/individuals.json</c>. A placed individual's home is a
+/// <see cref="HomeBlock"/> and either a <see cref="HomeSlotId"/>, the block's people slot it takes, or a
+/// <see cref="HomePosition"/> in the block's frame where it is set. A <see cref="HomeSite"/> pins the home to that one
+/// location when the block repeats across the world, and a home position always names one: there the slot is the
+/// individual's, or the individual is added, and nowhere else. An unplaced individual has no home: nothing sets it in
+/// the world, and it appears only where a quest or the political board names it.
 /// </summary>
 internal sealed record DaggerfallCastIndividualDefinition(
     string Id,
-    int? FactionId,
+    int FactionId,
     string Name,
     string? Race,
     string Gender,
@@ -285,9 +287,10 @@ internal sealed record DaggerfallCastIndividualDefinition(
     string Harm,
     string? ArchetypeId = null)
 {
-    /// <summary>The faction an individual set in the world carries; one with no faction of its own is never set there.</summary>
-    internal int WorldFactionId => FactionId
-        ?? throw new InvalidOperationException($"cast individual '{Id}' has no faction of its own, so it cannot be set in the world");
+    internal DaggerfallSiteId? HomeSite { get; init; }
+
+    internal WorldPoint? HomePosition { get; init; }
+
 }
 
 /// <summary>One authored people slot in an RMB interior, RMB exterior, or RDB dungeon block.</summary>
@@ -318,7 +321,8 @@ internal sealed record DaggerfallPeopleSet(
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RmbExteriors,
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RdbDungeons,
     IReadOnlyDictionary<string, ArchetypeProfile>? ArchetypesMap = null,
-    DaggerfallPeopleBarks? BarksData = null)
+    DaggerfallPeopleBarks? BarksData = null,
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>? SiteExteriorsMap = null)
 {
     private static readonly IReadOnlyDictionary<string, ArchetypeProfile> EmptyArchetypes =
         new ReadOnlyDictionary<string, ArchetypeProfile>(new Dictionary<string, ArchetypeProfile>(StringComparer.Ordinal));
@@ -376,8 +380,23 @@ internal sealed record DaggerfallPeopleSet(
     internal IReadOnlyList<DaggerfallPeopleSlotDefinition> GetRmbExteriorSlots(string blockSourceKey) =>
         RmbExteriors.TryGetValue(blockSourceKey, out IReadOnlyList<DaggerfallPeopleSlotDefinition>? slots) ? slots : [];
 
+    /// <summary>
+    /// The people a <c>site-exterior</c> block file sets at one location's grid cell (<paramref name="blockX"/>,
+    /// <paramref name="blockY"/>) besides its block's own, such as the guards a location keeps: placed there alone.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallPeopleSlotDefinition> GetSiteExteriorSlots(DaggerfallSiteId site, int blockX, int blockY) =>
+        SiteExteriorsMap is not null && SiteExteriorsMap.TryGetValue(SiteExteriorKey(site, blockX, blockY), out IReadOnlyList<DaggerfallPeopleSlotDefinition>? slots) ? slots : [];
+
+    /// <summary>A <c>site-exterior</c> block file's key for one location's grid cell: <c>region/index/x,y</c>.</summary>
+    internal static string SiteExteriorKey(DaggerfallSiteId site, int blockX, int blockY) =>
+        string.Create(CultureInfo.InvariantCulture, $"{site.Region}/{site.Index}/{blockX},{blockY}");
+
     internal IReadOnlyList<DaggerfallPeopleSlotDefinition> GetRdbDungeonSlots(string blockSourceKey) =>
         RdbDungeons.TryGetValue(blockSourceKey, out IReadOnlyList<DaggerfallPeopleSlotDefinition>? slots) ? slots : [];
+
+    /// <summary>The individuals whose home is pinned to <paramref name="site"/>'s block <paramref name="blockSourceKey"/>.</summary>
+    internal IEnumerable<DaggerfallCastIndividualDefinition> HomedAt(DaggerfallSiteId site, string blockSourceKey) =>
+        Individuals.Values.Where(cast => cast.HomeSite == site && string.Equals(cast.HomeBlock, blockSourceKey, StringComparison.OrdinalIgnoreCase));
 
     internal bool TryGetIndividualByFaction(int factionId, out DaggerfallCastIndividualDefinition? individual)
     {
@@ -470,9 +489,10 @@ internal static class DaggerfallPeopleContent
         Dictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>> rmbInteriors = new(StringComparer.Ordinal);
         Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> rmbExteriors = new(StringComparer.Ordinal);
         Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> rdbDungeons = new(StringComparer.Ordinal);
+        Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> siteExteriors = new(StringComparer.Ordinal);
 
         foreach (DaggerfallPeopleBlockFile file in pack.BlockFiles)
-            ReadBlockFile(pack.PackId, file, individuals, spawners, factions, rmbInteriors, rmbExteriors, rdbDungeons, diagnostics);
+            ReadBlockFile(pack.PackId, file, individuals, spawners, factions, rmbInteriors, rmbExteriors, rdbDungeons, siteExteriors, diagnostics);
 
         diagnostics.ThrowIfAny();
         return new(
@@ -482,7 +502,8 @@ internal static class DaggerfallPeopleContent
             new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rmbExteriors),
             new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rdbDungeons),
             new ReadOnlyDictionary<string, ArchetypeProfile>(archetypes),
-            barks);
+            barks,
+            new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(siteExteriors));
     }
 
     private static DaggerfallPeopleBarks ReadBarks(
@@ -822,7 +843,7 @@ internal static class DaggerfallPeopleContent
             {
                 JsonElement obj = DaggerfallBaseContent.Object(item, "cast individual", diagnostics);
                 string id = DaggerfallBaseContent.Text(obj, "id", diagnostics);
-                int? factionId = DaggerfallBaseContent.OptionalInteger(obj, "factionId", diagnostics);
+                int factionId = DaggerfallBaseContent.Integer(obj, "factionId", diagnostics);
                 string name = DaggerfallBaseContent.Text(obj, "name", diagnostics);
                 string? race = obj.TryGetProperty("race", out JsonElement raceEl) && raceEl.ValueKind != JsonValueKind.Null
                     ? raceEl.GetString()
@@ -833,6 +854,15 @@ internal static class DaggerfallPeopleContent
                 int record = DaggerfallBaseContent.Integer(visual, "record", diagnostics);
                 string? homeBlock = DaggerfallBaseContent.OptionalText(obj, "homeBlock", diagnostics);
                 string? homeSlotId = DaggerfallBaseContent.OptionalText(obj, "homeSlotId", diagnostics);
+                DaggerfallSiteId? homeSite = null;
+                if (obj.TryGetProperty("homeSite", out JsonElement siteEl) && siteEl.ValueKind != JsonValueKind.Null)
+                {
+                    JsonElement site = DaggerfallBaseContent.Object(siteEl, $"cast '{id}' homeSite", diagnostics);
+                    homeSite = new(DaggerfallBaseContent.Integer(site, "region", diagnostics), DaggerfallBaseContent.Integer(site, "index", diagnostics));
+                }
+                WorldPoint? homePosition = obj.TryGetProperty("homePosition", out JsonElement positionEl) && positionEl.ValueKind != JsonValueKind.Null
+                    ? ReadPosition(positionEl, $"cast '{id}' home", diagnostics)
+                    : null;
                 string interaction = DaggerfallBaseContent.Text(obj, "interaction", diagnostics);
                 string harm = DaggerfallBaseContent.Text(obj, "harm", diagnostics);
                 string? archetypeId = obj.TryGetProperty("archetype", out JsonElement archEl) && archEl.ValueKind != JsonValueKind.Null
@@ -844,18 +874,21 @@ internal static class DaggerfallPeopleContent
                 if (!ValidInteraction(interaction)) diagnostics.Add($"Cast individual '{id}' has invalid interaction '{interaction}'.");
                 if (!ValidHarm(harm)) diagnostics.Add($"Cast individual '{id}' has invalid harm '{harm}'.");
                 if (archive < 0 || record < 0 || factionId <= 0) diagnostics.Add($"Cast individual '{id}' has invalid visual or factionId.");
-                if ((homeBlock is null) != (homeSlotId is null)) diagnostics.Add($"Cast individual '{id}' names only one of homeBlock and homeSlotId.");
-                if (factionId is null && homeBlock is not null) diagnostics.Add($"Cast individual '{id}' has a home but no factionId; only an unplaced individual may have none.");
+                if (homeBlock is null ? homeSlotId is not null || homePosition is not null || homeSite is not null : (homeSlotId is null) == (homePosition is null))
+                    diagnostics.Add($"Cast individual '{id}' must name a homeBlock with exactly one of homeSlotId and homePosition, and a homeSite only with a homeBlock.");
+                if (homePosition is not null && homeSite is null)
+                    diagnostics.Add($"Cast individual '{id}' has a homePosition but no homeSite to set it in.");
                 if (archetypeId is not null && !archetypes.ContainsKey(archetypeId))
                     diagnostics.Add($"Cast individual '{id}' references unknown archetype '{archetypeId}'.");
-                if (factions is not null && factionId is not null)
+                if (factions is not null)
                 {
-                    if (!factions.Factions.TryGetValue(factionId.Value, out DaggerfallFactionDefinition? faction))
+                    if (!factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction))
                         diagnostics.Add($"Cast individual '{id}' references missing faction {factionId}.");
                     else if (faction.Type != IndividualFactionType)
                         diagnostics.Add($"Cast individual '{id}' references faction {factionId} ('{faction.Name}') of type {faction.Type}, expected Individual (4).");
                 }
-                if (!result.TryAdd(id, new(id, factionId, name, race, gender, archive, record, homeBlock, homeSlotId, interaction, harm, archetypeId)))
+                if (!result.TryAdd(id, new(id, factionId, name, race, gender, archive, record, homeBlock, homeSlotId, interaction, harm, archetypeId)
+                    { HomeSite = homeSite, HomePosition = homePosition }))
                     diagnostics.Add($"People pack '{packId}' repeats cast individual '{id}'.");
             }
         }
@@ -985,6 +1018,7 @@ internal static class DaggerfallPeopleContent
         Dictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>> rmbInteriors,
         Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> rmbExteriors,
         Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> rdbDungeons,
+        Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> siteExteriors,
         DaggerfallContentDiagnostics diagnostics)
     {
         try
@@ -1036,6 +1070,29 @@ internal static class DaggerfallPeopleContent
                         kind == "rmb-exterior" ? rmbExteriors : rdbDungeons;
                     if (!target.TryAdd(blockKey, slots))
                         diagnostics.Add($"People pack '{packId}' repeats {kind} block '{blockKey}'.");
+                }
+                else if (kind == "site-exterior")
+                {
+                    // A location's own people at one grid cell, keyed region/index/x,y: they are placed as the block's
+                    // standing people are, which places no one who talks, so a slot here never offers dialogue.
+                    string[] parts = blockKey.Split('/');
+                    string[] cell = parts.Length == 3 ? parts[2].Split(',') : [];
+                    if (cell.Length != 2 || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int region)
+                        || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int index)
+                        || !int.TryParse(cell[0], NumberStyles.None, CultureInfo.InvariantCulture, out int x)
+                        || !int.TryParse(cell[1], NumberStyles.None, CultureInfo.InvariantCulture, out int y)
+                        || DaggerfallPeopleSet.SiteExteriorKey(new(region, index), x, y) != blockKey
+                        || blockProp.Value.ValueKind != JsonValueKind.Array)
+                    {
+                        diagnostics.Add($"People site cell '{blockKey}' in '{file.Path}' must be keyed region/index/x,y and map to a slot array.");
+                        continue;
+                    }
+                    IReadOnlyList<DaggerfallPeopleSlotDefinition> slots = ReadSlots(
+                        blockProp.Value.EnumerateArray(), blockKey, individuals, spawners, factions, diagnostics);
+                    foreach (DaggerfallPeopleSlotDefinition slot in slots.Where(slot => slot.Interaction == "full-dialogue" || slot.CastId is not null))
+                        diagnostics.Add($"People site cell '{blockKey}' slot '{slot.SlotId}' must be a spawner's and not offer dialogue; a cast individual's home is its cast entry's.");
+                    if (!siteExteriors.TryAdd(blockKey, slots))
+                        diagnostics.Add($"People pack '{packId}' repeats site cell '{blockKey}'.");
                 }
                 else
                 {

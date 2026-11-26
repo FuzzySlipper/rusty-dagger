@@ -161,9 +161,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             }
             DaggerfallData data = DaggerfallData.For(selected);
             ContentPack basePack = RequireSingle(selected, roles, BaseRole);
-            DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-                DaggerfallBaseContent.Files(selected.Content, basePack.Id.Value, basePack.PayloadPath, basePack.Payload),
-                RequireSingle(selected, roles, ImportedRole).Payload, data)
+            DaggerfallBasePackFiles baseFiles = DaggerfallBaseContent.Files(selected.Content, basePack.Id.Value, basePack.PayloadPath, basePack.Payload);
+            // The locations the base pack lays out anew replace the imported ones before anything reads the catalog.
+            DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(baseFiles, RequireSingle(selected, roles, ImportedRole).Payload, data)
+                .WithLocationOverrides(DaggerfallLocationOverrides.Read(selected.Content, basePack.PayloadPath, DaggerfallBaseContent.AssembleAuthored(baseFiles)))
                 .WithQuestSources(DaggerfallQuestContent.Read([.. roles[QuestsRole].Select(pack => QuestPackFiles(selected, pack))]));
             ContentPack[] peoplePacks = [.. roles[PeopleRole]];
             if (peoplePacks.Length > 1)

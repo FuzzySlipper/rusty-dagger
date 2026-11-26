@@ -19,9 +19,32 @@ public sealed class DaggerfallPeopleContentTests
 
         Assert.Equal(33, people.Individuals.Count);
         Assert.Contains("king-gothryd", people.Individuals.Keys);
-        // The political board's seat heads that no block places: quests or the board name them.
-        Assert.All(["lady-brisienna", "the-underking", "the-squid", "oswin-harrowgate", "aldous-verreine"],
-            id => Assert.Null(people.Individuals[id].HomeBlock));
+        // The political board's seat heads that no classic block places live at homes pinned to one site each: the
+        // site places the home block, and a slot home is one of that block's people slots.
+        foreach ((string id, DaggerfallSiteId site) in new[]
+        {
+            ("lady-brisienna", new DaggerfallSiteId(17, 1045)), ("the-squid", new DaggerfallSiteId(23, 601)),
+            ("aldous-verreine", new DaggerfallSiteId(23, 601)), ("oswin-harrowgate", new DaggerfallSiteId(52, 152)),
+            ("the-underking", new DaggerfallSiteId(16, 559)),
+        })
+        {
+            DaggerfallCastIndividualDefinition cast = people.Individuals[id];
+            Assert.Equal(site, cast.HomeSite);
+            DaggerfallSiteRecord record = Assert.Single(definitions.Locations.Records, value => value.Id == site);
+            string block = cast.HomeBlock!;
+            if (block.EndsWith(".RDB", StringComparison.Ordinal))
+            {
+                Assert.Single(record.DungeonBlocks, value => value.SourceKey == block);
+                Assert.NotNull(cast.HomePosition);
+            }
+            else
+            {
+                Assert.Single(record.Exterior!.Blocks, value => value.SourceName == block);
+                int building = int.Parse(cast.HomeSlotId!.Split(':')[1], System.Globalization.CultureInfo.InvariantCulture);
+                Assert.True(people.TryGetRmbInteriorSlots(block, building, out DaggerfallPeopleBuildingSlots? slots));
+                Assert.Contains(slots!.Slots, slot => slot.SlotId == cast.HomeSlotId);
+            }
+        }
         Assert.Contains("queen-aubk-i", people.Individuals.Keys);
         Assert.Contains("the-night-mother", people.Individuals.Keys);
 
@@ -102,32 +125,41 @@ public sealed class DaggerfallPeopleContentTests
     }
 
     [Fact]
-    public void Pack_reader_admits_unplaced_cast_individuals_and_only_they_may_have_no_faction_of_their_own()
+    public void Pack_reader_admits_unplaced_individuals_and_homes_pinned_to_one_site_by_slot_or_position()
     {
-        DaggerfallPeopleSet people = DaggerfallPeopleContent.Read(CastOnly("unplaced.people", """
+        DaggerfallPeopleSet people = DaggerfallPeopleContent.Read(CastOnly("homes.people", """
             {"individuals":[
-              {"id":"lady-brisienna","factionId":352,"name":"Lady Brisienna","race":"breton","gender":"Female","visual":{"archive":180,"record":1},"interaction":"full-dialogue","harm":"protected"},
-              {"id":"oswin-harrowgate","name":"Oswin Harrowgate","race":"breton","gender":"Male","visual":{"archive":334,"record":15},"interaction":"full-dialogue","harm":"protected"}
+              {"id":"unplaced","factionId":353,"name":"Unplaced","race":null,"gender":"Male","visual":{"archive":182,"record":54},"interaction":"full-dialogue","harm":"protected"},
+              {"id":"lady-brisienna","factionId":352,"name":"Lady Brisienna","race":"breton","gender":"Female","visual":{"archive":180,"record":1},"homeSite":{"region":17,"index":1045},"homeBlock":"PALAAA00.RMB","homeSlotId":"b:0:p02","interaction":"full-dialogue","harm":"protected"},
+              {"id":"the-squid","factionId":399,"name":"The Squid","race":"breton","gender":"Male","visual":{"archive":183,"record":16},"homeSite":{"region":16,"index":559},"homeBlock":"N0000048.RDB","homePosition":[40.4,0.6,-46.8],"interaction":"full-dialogue","harm":"protected"}
             ]}
             """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items);
 
+        DaggerfallCastIndividualDefinition unplaced = people.Individuals["unplaced"];
+        Assert.Null(unplaced.HomeBlock);
+        Assert.Null(unplaced.HomeSite);
         DaggerfallCastIndividualDefinition brisienna = people.Individuals["lady-brisienna"];
-        Assert.Null(brisienna.HomeBlock);
-        Assert.Null(brisienna.HomeSlotId);
-        Assert.True(people.TryGetIndividualByFaction(352, out DaggerfallCastIndividualDefinition? named));
-        Assert.Same(brisienna, named);
-        DaggerfallCastIndividualDefinition harrowgate = people.Individuals["oswin-harrowgate"];
-        Assert.Null(harrowgate.FactionId);
-        Assert.Throws<InvalidOperationException>(() => harrowgate.WorldFactionId);
+        Assert.Equal(new DaggerfallSiteId(17, 1045), brisienna.HomeSite);
+        Assert.Equal("b:0:p02", brisienna.HomeSlotId);
+        Assert.Null(brisienna.HomePosition);
+        Assert.Equal([brisienna], people.HomedAt(new(17, 1045), "PALAAA00.RMB"));
+        Assert.Empty(people.HomedAt(new(17, 1046), "PALAAA00.RMB"));
+        DaggerfallCastIndividualDefinition squid = people.Individuals["the-squid"];
+        Assert.Equal(new WorldPoint(40.4f, 0.6f, -46.8f), squid.HomePosition);
+        Assert.Null(squid.HomeSlotId);
 
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallPeopleContent.Read(CastOnly("half-placed.people", """
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallPeopleContent.Read(CastOnly("bad-homes.people", """
             {"individuals":[
               {"id":"half-placed","factionId":352,"name":"Half Placed","race":"breton","gender":"Female","visual":{"archive":180,"record":1},"homeBlock":"S0000160.RDB","interaction":"full-dialogue","harm":"protected"},
-              {"id":"placed-nobody","name":"Placed Nobody","race":"breton","gender":"Male","visual":{"archive":334,"record":15},"homeBlock":"S0000160.RDB","homeSlotId":"d:p00","interaction":"full-dialogue","harm":"protected"}
+              {"id":"both-ways","factionId":353,"name":"Both Ways","race":"breton","gender":"Male","visual":{"archive":182,"record":54},"homeSite":{"region":16,"index":559},"homeBlock":"N0000048.RDB","homeSlotId":"d:p00","homePosition":[0,0,0],"interaction":"full-dialogue","harm":"protected"},
+              {"id":"nowhere","factionId":399,"name":"Nowhere","race":"breton","gender":"Male","visual":{"archive":183,"record":16},"homeBlock":"N0000048.RDB","homePosition":[0,0,0],"interaction":"full-dialogue","harm":"protected"},
+              {"id":"factionless","name":"Factionless","race":"breton","gender":"Male","visual":{"archive":334,"record":15},"interaction":"full-dialogue","harm":"protected"}
             ]}
             """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
-        Assert.Contains("Cast individual 'half-placed' names only one of homeBlock and homeSlotId.", error.Message, StringComparison.Ordinal);
-        Assert.Contains("Cast individual 'placed-nobody' has a home but no factionId", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Cast individual 'half-placed' must name a homeBlock with exactly one of homeSlotId and homePosition", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Cast individual 'both-ways' must name a homeBlock with exactly one of homeSlotId and homePosition", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Cast individual 'nowhere' has a homePosition but no homeSite to set it in.", error.Message, StringComparison.Ordinal);
+        Assert.Contains("factionId", error.Message, StringComparison.Ordinal);
     }
 
     private static DaggerfallPeoplePackFiles CastOnly(string id, string cast) => new(

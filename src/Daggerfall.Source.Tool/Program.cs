@@ -3,7 +3,7 @@ using Daggerfall.Source.Tool.Commands;
 namespace Daggerfall.Source.Tool;
 
 /// <summary>
-/// The source tool: reference sets for image generation, the developer command listing, the art pack's ARCH3D remodel meshes, and the baked world variants and terrain relief a pack commits. Nothing here
+/// The source tool: reference sets for image generation, the developer command listing, the art pack's ARCH3D remodel meshes, and the baked world variants, location overrides and terrain relief a pack commits. Nothing here
 /// feeds the data containers; the import and its steps are <c>Daggerfall.Import.Tool</c>'s.
 /// </summary>
 internal static class Program
@@ -16,6 +16,8 @@ internal static class Program
         ModelMeshCommand.Command,
         // A content pack's world variants, baked as block documents with their collision and navigation for the pack.
         WorldVariantBakeCommand.Command,
+        // A content pack's location overrides, baked as location records, details and ground for the pack.
+        LocationBakeCommand.Command,
         // The base pack's terrain relief and rivers, baked from WOODS.WLD for the pack to commit.
         ReliefBakeCommand.Command,
         // One-time extraction of Arena2 people placements into the owned daggerfall.people pack.

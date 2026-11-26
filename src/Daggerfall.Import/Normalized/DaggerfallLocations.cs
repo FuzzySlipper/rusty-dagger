@@ -396,7 +396,7 @@ public static class DaggerfallLocationBuilder
     /// The climate <c>MapsFile</c> gives a location: the CLIMATE.PAK value at its own map pixel. (The terrain
     /// reads the next pixel east to align the climate and height grids; a location's climate does not.)
     /// </summary>
-    private static int LocationClimate(PakMap climate, DaggerfallLocationMap location)
+    internal static int LocationClimate(PakMap climate, DaggerfallLocationMap location)
     {
         (int x, int y) = MapsDecoder.ToMapPixel(location.Longitude, location.Latitude);
         return climate.TryGetPixel(x, y, out byte value)

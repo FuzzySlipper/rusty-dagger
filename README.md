@@ -150,6 +150,14 @@ the one ignored folder. Its folders say what may be deleted:
   `dotnet run --project src/Daggerfall.Source.Tool -- relief-bake --arena2 local/inputs/arena2 --update`,
   commit the three files with the change, and route the `data` lane: the atlas
   is drawn from them, so they move the importer revision.
+- A location the base pack lays out anew (its `locationOverrides` section, `world/location-overrides.json`,
+  such as Hearthwing Manor as the Blades hall) is baked into
+  `content/worldrpg/packs/daggerfall.base/locations/` with
+  `dotnet run --project src/Daggerfall.Source.Tool -- location-bake --arena2 local/inputs/arena2 --pack content/worldrpg/packs/daggerfall.base`.
+  Bake after editing a recipe and commit what it writes with it: the game
+  refuses a recipe with no bake, and `LocationBakeTests` fails a bake its
+  recipe no longer makes. A block a recipe adds must be one some classic
+  location places, since only those are published.
 - The store and `data-sync` carry `classic-art.rpak` with each revision's other
   containers, and `status` prints its revision: a developer's checkout has every
   container, so it runs exactly what a player has and can still compare.

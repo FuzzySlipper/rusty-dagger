@@ -2,6 +2,7 @@
   "individuals": [
     {
       "id": "aldous-verreine",
+      "factionId": 1001,
       "name": "Aldous Verreine",
       "race": "breton",
       "gender": "Male",
@@ -9,6 +10,9 @@
         "archive": 183,
         "record": 12
       },
+      "homeSite": { "region": 23, "index": 601 },
+      "homeBlock": "TEMPAAD0.RMB",
+      "homeSlotId": "b:22:p05",
       "interaction": "full-dialogue",
       "harm": "protected"
     },
@@ -142,6 +146,9 @@
         "archive": 180,
         "record": 1
       },
+      "homeSite": { "region": 17, "index": 1045 },
+      "homeBlock": "PALAAA00.RMB",
+      "homeSlotId": "b:0:p02",
       "interaction": "full-dialogue",
       "harm": "protected"
     },
@@ -297,6 +304,7 @@
     },
     {
       "id": "oswin-harrowgate",
+      "factionId": 1000,
       "name": "Oswin Harrowgate",
       "race": "breton",
       "gender": "Male",
@@ -304,6 +312,9 @@
         "archive": 334,
         "record": 15
       },
+      "homeSite": { "region": 52, "index": 152 },
+      "homeBlock": "FIGHAA01.RMB",
+      "homeSlotId": "b:0:p00",
       "interaction": "full-dialogue",
       "harm": "protected"
     },
@@ -467,6 +478,9 @@
         "archive": 183,
         "record": 16
       },
+      "homeSite": { "region": 23, "index": 601 },
+      "homeBlock": "THIEAL00.RMB",
+      "homeSlotId": "b:16:p02",
       "interaction": "full-dialogue",
       "harm": "protected"
     },
@@ -480,6 +494,9 @@
         "archive": 182,
         "record": 54
       },
+      "homeSite": { "region": 16, "index": 559 },
+      "homeBlock": "N0000048.RDB",
+      "homePosition": [40.4, 0.6, -46.8],
       "interaction": "full-dialogue",
       "harm": "protected"
     }

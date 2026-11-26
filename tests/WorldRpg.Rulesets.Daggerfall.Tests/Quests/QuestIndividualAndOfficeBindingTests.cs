@@ -99,7 +99,7 @@ public sealed class QuestIndividualAndOfficeBindingTests
 
         DaggerfallSiteProfile awayTown = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         DaggerfallSiteProfile palaceSite = StaticNpcAdmissionTests.StaticProviderSite(
-            Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))), factionId: queen.WorldFactionId);
+            Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))), factionId: queen.FactionId);
         DaggerfallSiteProfiles profiles = new([awayTown, palaceSite]);
 
         List<string> releases = [];
@@ -139,6 +139,59 @@ public sealed class QuestIndividualAndOfficeBindingTests
     }
 
     [Fact]
+    public void Lady_Brisienna_lives_in_the_Hearthwing_Blades_hall_where_an_atHome_quest_finds_her_across_save_reload()
+    {
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {
+              "name": "brisienna-visit",
+              "displayName": "",
+              "sourceFile": "brisienna-visit.txt",
+              "messages": [],
+              "blocks": [
+                { "kind": "person", "firstLine": 1, "lines": ["Person _brisienna_ named Lady_Brisienna atHome female"] },
+                { "kind": "task", "firstLine": 10, "lines": ["_met_ task:", "clicked npc _brisienna_"] }
+              ]
+            }
+            """)!);
+        DaggerfallDefinitions definitions = TestPayload.WithQuests(root);
+        DaggerfallCastIndividualDefinition brisienna = definitions.People.Individuals["lady-brisienna"];
+        long brisiennaId = DaggerfallPeopleSlots.CastIndividualIdentity(brisienna.Id);
+        DaggerfallSiteId hearthwing = new(17, 1045);
+
+        // The Blades hall, assembled from the base pack's override as the product assembles it, reached from away.
+        DaggerfallSiteProfile awayTown = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile hall = Assembled(DaggerfallWorldProfileIds.Interior(hearthwing, new(1, 0, 0)));
+        DaggerfallSiteProfiles profiles = new([awayTown, hall]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, awayTown);
+        PopulateContent(content, hall);
+        SpatialFake spatial = SpatialFake.Create(awayTown.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, awayTown, DaggerfallTuning.Defaults)
+        {
+            Profiles = profiles,
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))),
+        };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        DaggerfallQuestInstanceSave started = session.State.Quests.Start(new(
+            "visit:1", "brisienna-visit.txt", "brisienna-visit", DaggerfallQuestLifecycle.Active, null, [], []));
+        Assert.Equal([brisiennaId], started.Resources.Single().Binding.ActorIds);
+        Assert.True(session.TryTransitionTo(hall.ProfileKey));
+        ActorState live = Assert.Single(session.State.Actors.All, actor => actor.DurableId == brisiennaId);
+        Assert.Equal(brisienna.Name, session.State.Npcs.Require(brisiennaId).DisplayName);
+
+        RulesetSavePayload saved = session.CaptureSave();
+        using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, composition, saved);
+        Assert.Single(restored.State.Actors.All, actor => actor.DurableId == brisiennaId);
+        Assert.True(restored.State.Quests.ActorClicked(brisiennaId));
+        restored.Update(new ProductUpdate(OuterUpdate(5), []));
+        Assert.True(restored.State.Quests.Capture().Instances.Single().Tasks.Single(t => t.Symbol == "met").IsSet);
+    }
+
+    [Fact]
     public void Relocating_cast_individual_via_place_npc_moves_canonical_actor_suppresses_home_slot_and_survives_save_reload()
     {
         JsonArray root = TestPayload.QuestRecords();
@@ -160,7 +213,7 @@ public sealed class QuestIndividualAndOfficeBindingTests
         long kavarId = DaggerfallPeopleSlots.CastIndividualIdentity(kavar.Id);
 
         DaggerfallSiteProfile homeSite = StaticNpcAdmissionTests.StaticProviderSite(
-            Assembled(DaggerfallWorldProfileIds.Exterior(Charing)), factionId: kavar.WorldFactionId);
+            Assembled(DaggerfallWorldProfileIds.Exterior(Charing)), factionId: kavar.FactionId);
         DaggerfallSiteProfile destSource = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0)));
         Dictionary<(int Archive, int Record), NormalizedBillboardSprite> destBillboards = destSource.BillboardSprites.ToDictionary();
         NormalizedBillboardSprite sampleBillboard = homeSite.BillboardSprites.Values.First();

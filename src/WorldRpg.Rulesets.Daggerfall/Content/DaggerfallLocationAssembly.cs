@@ -350,6 +350,13 @@ internal sealed class DaggerfallLocationAssembly
                     origin,
                     slotId => DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(block.SourceName, block.X, block.Y, slotId),
                     (block.X << 8) ^ block.Y);
+                // The people this location keeps at this cell, such as its guards, stand beside the block's own.
+                PlacePeopleClutterSlots(
+                    document,
+                    owner._definitions.People.GetSiteExteriorSlots(key.Site, block.X, block.Y),
+                    origin,
+                    slotId => DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(block.SourceName, block.X, block.Y, slotId),
+                    (block.X << 8) ^ block.Y);
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, id => PlaceId(id, block.X, block.Y)));
                 int fallbackClutter = 0;
                 foreach (JsonNode? billboard in document.Section("billboards"))
@@ -376,6 +383,7 @@ internal sealed class DaggerfallLocationAssembly
             bool[] matched = talkableSlots.Count > 0 ? new bool[talkableSlots.Count] : [];
             string regionName = owner._definitions.BuildingNames.RegionName(key.Site.Region);
             string climateName = owner._definitions.Grids.Climate.GetCell(record.MapPixelX + 1, record.MapPixelY).Name;
+            DaggerfallCastIndividualDefinition[] homed = [.. owner._definitions.People.HomedAt(key.Site, document.Key.SourceKey)];
             foreach (JsonNode? person in document.Section("staticNpcs"))
             {
                 Vector3? rawPos = TryReadPosition(person);
@@ -384,9 +392,34 @@ internal sealed class DaggerfallLocationAssembly
                 value.Remove("sourceOffset");
                 value["nameSeed"] = offset ^ key.Site.Index;
                 if (talkableSlots.Count > 0 && placementSlotKey is not null)
-                    ApplyAuthoredSpawnerSlot(value, rawPos, talkableSlots, matched, placementSlotKey, regionName, climateName);
+                    ApplyAuthoredSpawnerSlot(value, rawPos, talkableSlots, matched, placementSlotKey, regionName, climateName, homed);
                 Append("staticNpcs", value);
             }
+
+            // An individual whose home is a position in this block at this site is set there, as the block's own people are.
+            foreach (DaggerfallCastIndividualDefinition cast in homed)
+            {
+                if (cast.HomePosition is not { } at) continue;
+                JsonObject person = new()
+                {
+                    ["id"] = $"person/cast-{cast.Id}",
+                    ["position"] = Vector(at.ToVector()),
+                    ["race"] = null,
+                };
+                JsonObject value = Moved(person, origin, id => placed($"person/{Scope(document)}/{id["person/".Length..]}"));
+                value["nameSeed"] = 1;
+                SetCast(value, cast);
+                Append("staticNpcs", value);
+            }
+        }
+
+        /// <summary>Makes a static person <paramref name="cast"/>: its faction, which the roster sets the individual by, and its look.</summary>
+        private static void SetCast(JsonObject value, DaggerfallCastIndividualDefinition cast)
+        {
+            value["factionId"] = cast.FactionId;
+            value["billboardArchive"] = cast.Archive;
+            value["billboardRecord"] = cast.Record;
+            value["gender"] = cast.Gender;
         }
 
         private static IReadOnlyList<DaggerfallPeopleSlotDefinition> FilterTalkableSlots(
@@ -417,7 +450,8 @@ internal sealed class DaggerfallLocationAssembly
             bool[] matched,
             Func<string, string> placementSlotKey,
             string regionName,
-            string climateName)
+            string climateName,
+            IReadOnlyList<DaggerfallCastIndividualDefinition> homed)
         {
             int bestIndex = -1;
             if (rawPosition is { } pos)
@@ -445,6 +479,12 @@ internal sealed class DaggerfallLocationAssembly
 
             matched[bestIndex] = true;
             DaggerfallPeopleSlotDefinition slot = talkableSlots[bestIndex];
+            // An individual whose home is this slot at this site takes it in place of the slot's own occupant.
+            if (homed.FirstOrDefault(cast => string.Equals(cast.HomeSlotId, slot.SlotId, StringComparison.Ordinal)) is { } home)
+            {
+                SetCast(value, home);
+                return;
+            }
             // Cast individuals keep their unique cast sprite, faction, and identity unchanged.
             if (slot.CastId is not null || slot.SpawnerId is null) return;
             if (!owner._definitions.People.Spawners.ContainsKey(slot.SpawnerId)) return;
@@ -610,6 +650,8 @@ internal sealed class DaggerfallLocationAssembly
                 ? FilterTalkableSlots(interiorPeople!.Slots)
                 : [];
             bool[] interiorMatched = interiorTalkable.Count > 0 ? new bool[interiorTalkable.Count] : [];
+            DaggerfallCastIndividualDefinition[] interiorHomed = [.. owner._definitions.People.HomedAt(key.Site, placed.SourceName)
+                .Where(cast => cast.HomeSlotId is not null)];
             string interiorRegionName = owner._definitions.BuildingNames.RegionName(key.Site.Region);
             string interiorClimateName = owner._definitions.Grids.Climate.GetCell(record.MapPixelX + 1, record.MapPixelY).Name;
 
@@ -626,7 +668,7 @@ internal sealed class DaggerfallLocationAssembly
                 if (interiorTalkable.Count > 0)
                     ApplyAuthoredSpawnerSlot(value, rawPos, interiorTalkable, interiorMatched,
                         slotId => DaggerfallPeopleSlots.InteriorBuildingSlotKey(building.BlockX, building.BlockY, slotId),
-                        interiorRegionName, interiorClimateName);
+                        interiorRegionName, interiorClimateName, interiorHomed);
                 Append("staticNpcs", value);
             }
 

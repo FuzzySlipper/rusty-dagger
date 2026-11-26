@@ -112,6 +112,13 @@ internal sealed record DaggerfallSiteRecord(
     /// archive this dungeon draws it from; empty for a location without a dungeon.
     /// </summary>
     internal IReadOnlyDictionary<int, int> DungeonTextureRemaps { get; init; } = new Dictionary<int, int>();
+
+    /// <summary>
+    /// Whether a pack's location override reserves the site (<see cref="DaggerfallLocationOverrides"/>): its buildings are
+    /// never a random quest's, as a place someone keeps for their own purpose.
+    /// </summary>
+    internal bool Reserved { get; init; }
+
     internal int Region => Id.Region;
 
     internal int Index => Id.Index;

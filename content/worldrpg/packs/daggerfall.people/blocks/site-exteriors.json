@@ -1,0 +1,15 @@
+{
+  "kind": "site-exterior",
+  "blocks": {
+    "17/1045/1,0": [
+      {"slotId": "s:g00", "spawner": "blades-guard", "position": [65.0, 0, -52.0], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}},
+      {"slotId": "s:g01", "spawner": "blades-guard", "position": [65.0, 0, -58.8], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}},
+      {"slotId": "s:g02", "spawner": "blades-guard", "position": [96.0, 0, -41.6], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}},
+      {"slotId": "s:g03", "spawner": "blades-guard", "position": [96.0, 0, -57.6], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}},
+      {"slotId": "s:g04", "spawner": "blades-guard", "position": [6.4, 0, -41.6], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}},
+      {"slotId": "s:g05", "spawner": "blades-guard", "position": [6.4, 0, -57.6], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}},
+      {"slotId": "s:g06", "spawner": "blades-guard", "position": [44.8, 0, -3.2], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}},
+      {"slotId": "s:g07", "spawner": "blades-guard", "position": [44.8, 0, -99.2], "interaction": "ambient-bark", "factionId": 129, "visual": {"archive": 183, "record": 2, "gender": "Male"}}
+    ]
+  }
+}

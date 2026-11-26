@@ -17,11 +17,25 @@ internal static class TestPayload
     private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() =>
     {
         DaggerfallDefinitions defs = DaggerfallBaseContent.Read(Combined.Value, Data)
+            .WithLocationOverrides(LocationOverrides())
             .WithQuestSources(DaggerfallQuestContent.Read([QuestPack()]));
         return defs.WithPeople(DaggerfallPeopleContent.Read(PeoplePack(), defs.Factions, defs.Vocabulary, defs.Items));
     });
     private static readonly SharedFixture<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
         DaggerfallBaseContent.FilesFromDisk("daggerfall.base", TestData.PackPayload("daggerfall.base")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
+
+    /// <summary>The locations the base pack lays out anew, read from its payload and the baked files beside it as the ruleset reads them.</summary>
+    internal static DaggerfallLocationOverrides LocationOverrides()
+    {
+        string payload = TestData.PackPayload("daggerfall.base");
+        string folder = Path.Combine(Path.GetDirectoryName(payload)!, DaggerfallLocationOverrides.Folder);
+        Dictionary<string, ReadOnlyMemory<byte>> files = Directory.Exists(folder)
+            ? Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).ToDictionary(
+                path => Path.GetRelativePath(folder, path).Replace('\\', '/'), path => (ReadOnlyMemory<byte>)File.ReadAllBytes(path), StringComparer.Ordinal)
+            : [];
+        return DaggerfallLocationOverrides.Read(DaggerfallBaseContent.AssembleAuthored(DaggerfallBaseContent.FilesFromDisk("daggerfall.base", payload)),
+            files, DaggerfallLocationOverrides.Folder);
+    }
 
     /// <summary>The parsed base definitions.</summary>
     internal static DaggerfallDefinitions Definitions => Shared.Value;

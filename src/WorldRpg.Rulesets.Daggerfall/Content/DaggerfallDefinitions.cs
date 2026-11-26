@@ -413,7 +413,16 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// records are retained rather than only counted: a site lookup asks what a location is, and a
     /// section that kept nothing but its shape would leave every caller re-reading the payload.
     /// </summary>
-    internal DaggerfallLocationSet Locations { get; } = locations;
+    internal DaggerfallLocationSet Locations { get; private set; } = locations;
+
+    /// <summary>These definitions with the locations a pack lays out anew in place of the imported ones (<see cref="DaggerfallLocationOverrides"/>).</summary>
+    internal DaggerfallDefinitions WithLocationOverrides(DaggerfallLocationOverrides overrides)
+    {
+        ArgumentNullException.ThrowIfNull(overrides);
+        var replaced = (DaggerfallDefinitions)MemberwiseClone();
+        replaced.Locations = Locations with { Records = overrides.Apply(Locations.Records) };
+        return replaced;
+    }
 
     /// <summary>
     /// The published text a caller resolves a value through. A key the pack does not carry answers as a

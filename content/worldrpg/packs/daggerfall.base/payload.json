@@ -31,6 +31,7 @@
     "rumors": "text/rumors.json",
     "books": "text/books.json",
     "biographies": "text/biographies.json",
-    "creatureFactions": "actors/creature-factions.json"
+    "creatureFactions": "actors/creature-factions.json",
+    "locationOverrides": "world/location-overrides.json"
   }
 }

@@ -1336,6 +1336,43 @@
       }
     },
     {
+      "id": "blades-guard",
+      "role": "person",
+      "archetype": "guard",
+      "interaction": "ambient-bark",
+      "harm": "law-protected-civilian",
+      "deriveRegionalFaction": false,
+      "visualMode": "pool",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 183,
+          "record": 4,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 182,
+          "record": 16,
+          "gender": "Male",
+          "weight": 4
+        }
+      ],
+      "regionalPools": {},
+      "climatePools": {}
+    },
+    {
       "id": "bookseller",
       "role": "merchant",
       "archetype": "merchant",

@@ -189,7 +189,7 @@ public sealed class DaggerfallActorLedgerTests
         DaggerfallSiteProfile exteriorTemplate = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         // Real populated exterior town (Charing source walkers) + an authored CastIndividual placement admitted
         // automatically by production MaterializeStaticNpcs via its Individual FactionId.
-        DaggerfallSiteProfile homeTown = StaticNpcAdmissionTests.StaticProviderSite(exteriorTemplate, factionId: cast.WorldFactionId);
+        DaggerfallSiteProfile homeTown = StaticNpcAdmissionTests.StaticProviderSite(exteriorTemplate, factionId: cast.FactionId);
         DaggerfallSiteProfile otherTown = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))));
         DaggerfallSiteProfiles profiles = new([homeTown, otherTown]);
         List<string> releases = [];

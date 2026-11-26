@@ -2733,7 +2733,8 @@
         473,
         474,
         475,
-        247
+        247,
+        1001
       ],
       "type": 9,
       "typeName": "Temple",
@@ -6005,7 +6006,8 @@
       "children": [
         849,
         850,
-        851
+        851,
+        1000
       ],
       "type": 2,
       "typeName": "Group",
@@ -17328,6 +17330,68 @@
           "record": 20
         }
       ]
+    },
+    {
+      "id": 1000,
+      "filedId": 1000,
+      "name": "Oswin Harrowgate",
+      "parent": 41,
+      "parentDisposition": "resolved",
+      "children": [],
+      "type": 4,
+      "typeName": "Individual",
+      "region": 52,
+      "power": 30,
+      "flags": 1,
+      "ruler": 0,
+      "allies": [],
+      "allyDisposition": "resolved",
+      "enemies": [],
+      "enemyDisposition": "resolved",
+      "sprites": [],
+      "face": -1,
+      "race": 0,
+      "socialGroup": 0,
+      "socialGroupName": "Commoners",
+      "guildGroup": 11,
+      "guildGroupName": "FightersGuild",
+      "reputation": 0,
+      "summon": -1,
+      "minimumFame": 10,
+      "maximumFame": 80,
+      "vampire": 0,
+      "rank": 0
+    },
+    {
+      "id": 1001,
+      "filedId": 1001,
+      "name": "Aldous Verreine",
+      "parent": 92,
+      "parentDisposition": "resolved",
+      "children": [],
+      "type": 4,
+      "typeName": "Individual",
+      "region": 23,
+      "power": 30,
+      "flags": 1,
+      "ruler": 0,
+      "allies": [],
+      "allyDisposition": "resolved",
+      "enemies": [],
+      "enemyDisposition": "resolved",
+      "sprites": [],
+      "face": -1,
+      "race": 0,
+      "socialGroup": 7,
+      "socialGroupName": "GuildMembers",
+      "guildGroup": 17,
+      "guildGroupName": "HolyOrder",
+      "reputation": 0,
+      "summon": -1,
+      "minimumFame": 10,
+      "maximumFame": 80,
+      "vampire": 0,
+      "rank": 0
     }
   ],
   "regions": [

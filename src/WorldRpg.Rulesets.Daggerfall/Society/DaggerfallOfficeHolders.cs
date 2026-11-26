@@ -91,9 +91,11 @@ internal static class DaggerfallCastHomes
         if (sites is null || string.IsNullOrWhiteSpace(cast.HomeBlock))
             return false;
 
+        // A home pinned to one site resolves there alone; an unpinned one to the first site placing its block.
+        IEnumerable<DaggerfallSiteRecord> candidates = cast.HomeSite is { } pinned ? sites.Records.Where(site => site.Id == pinned) : sites.Records;
         if (cast.HomeBlock.EndsWith(".RDB", StringComparison.OrdinalIgnoreCase))
         {
-            DaggerfallSiteRecord? dungeon = sites.Records
+            DaggerfallSiteRecord? dungeon = candidates
                 .Where(site => site.DungeonBlocks.Any(block =>
                     string.Equals(block.SourceKey, cast.HomeBlock, StringComparison.OrdinalIgnoreCase)))
                 .OrderBy(site => preferredRegion is int region && site.Region == region ? 0 : 1)
@@ -110,7 +112,7 @@ internal static class DaggerfallCastHomes
         if (cast.HomeBlock.EndsWith(".RMB", StringComparison.OrdinalIgnoreCase))
         {
             int buildingIndex = ParseBuildingIndex(cast.HomeSlotId);
-            foreach (DaggerfallSiteRecord site in sites.Records
+            foreach (DaggerfallSiteRecord site in candidates
                 .OrderBy(record => preferredRegion is int region && record.Region == region ? 0 : 1)
                 .ThenBy(record => record.Region)
                 .ThenBy(record => record.Index))

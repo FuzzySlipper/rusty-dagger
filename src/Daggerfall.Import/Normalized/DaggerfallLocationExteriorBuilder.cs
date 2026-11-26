@@ -39,12 +39,24 @@ internal sealed class DaggerfallLocationExteriorBuilder
             throw new InvalidOperationException($"MAPS exterior resolver returned region {layout.Region}, index {layout.LocationIndex} for location {location.Region}:{location.Index}.");
         }
 
-        (int mapPixelX, int mapPixelY) = MapsDecoder.ToMapPixel(location.Longitude, location.Latitude);
         if (layout.MapId != location.MapId || layout.Longitude != location.Longitude || layout.Latitude != location.Latitude)
         {
             throw new InvalidOperationException($"MAPS exterior record for location {location.Region}:{location.Index} disagrees with its MAPTABLE identity.");
         }
 
+        return Build(layout, location);
+    }
+
+    /// <summary>
+    /// Normalizes <paramref name="location"/>'s exterior from <paramref name="layout"/>: the MAPS layout itself, or one
+    /// an authored location override lays out anew from it (<c>daggerfall-source-tool location-bake</c>), with its block
+    /// grid and its pool of city buildings.
+    /// </summary>
+    internal DaggerfallLocationExterior Build(MapsExteriorLayout layout, DaggerfallLocationMap location)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        ArgumentNullException.ThrowIfNull(location);
+        (int mapPixelX, int mapPixelY) = MapsDecoder.ToMapPixel(location.Longitude, location.Latitude);
         bool customPosition = layout.Width == 1
             && layout.Height == 1
             && layout.Blocks.Count == 1

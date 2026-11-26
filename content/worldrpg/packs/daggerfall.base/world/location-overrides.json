@@ -1,0 +1,42 @@
+[
+  {
+    "region": 17,
+    "index": 1045,
+    "name": null,
+    "width": 2,
+    "height": 2,
+    "blocks": [
+      {
+        "x": 0,
+        "y": 0,
+        "block": "MANRAS01.RMB"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "block": "PALAAA00.RMB"
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "block": "FILLAA03.RMB"
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "block": "FILLAA02.RMB"
+      }
+    ],
+    "buildings": [
+      {
+        "x": 1,
+        "y": 0,
+        "buildingType": 16,
+        "factionId": 129,
+        "nameSeed": 1045,
+        "quality": 20
+      }
+    ],
+    "reserved": true
+  }
+]
