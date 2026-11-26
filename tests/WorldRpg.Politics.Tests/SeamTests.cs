@@ -72,6 +72,27 @@ public sealed class SaveTests
     }
 
     [Fact]
+    public void A_slow_move_saved_with_targets_its_card_cannot_take_is_refused_and_one_that_merely_no_longer_fits_loads()
+    {
+        BoardSetup setup = TestBoards.TwoCrowns();
+        Board board = TestBoards.Create(setup);
+        board.Schedule(new PendingMove("0-east", "east", TestBoards.Card("march-on"), ["march"], "east-capital", 0, 2));
+        board.Schedule(new PendingMove("0-west", "west", TestBoards.Card("march-on"), ["west-capital"], "west-capital", 0, 2));
+        BoardSave save = board.Save();
+        BoardSave atlantis = save with { Pending = [save.Pending[0] with { Targets = ["atlantis"] }] };
+        BoardSave crowded = save with { Pending = [save.Pending[0] with { Targets = ["march", "east"] }] };
+
+        Assert.Contains("move '0-east' targets 'atlantis', which is no region of the table",
+            Assert.Throws<BoardSetupException>(() => Board.Load(setup, TestBoards.CardsFor(setup), atlantis)).Problems);
+        Assert.Contains("move '0-east' has 2 targets where ContestedRegion takes 1",
+            Assert.Throws<BoardSetupException>(() => Board.Load(setup, TestBoards.CardsFor(setup), crowded)).Problems);
+
+        Board resumed = Board.Load(setup, TestBoards.CardsFor(setup), save);
+        BoardTurn.Play(resumed);
+        Assert.Contains(BoardTurn.Play(resumed).Arrivals, arrival => arrival is { Id: "0-west", Outcome: MoveOutcome.Failed });
+    }
+
+    [Fact]
     public void A_slow_move_saved_under_way_is_published_with_its_origin_when_it_arrives()
     {
         Board board = TestBoards.Create(TestBoards.TwoCrowns());

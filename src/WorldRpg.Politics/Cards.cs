@@ -278,6 +278,29 @@ public sealed record Card(
         _ => board.Regions.Select(region => (IReadOnlyList<string>)[region.Id]),
     };
 
+    /// <summary>
+    /// What is wrong with the shape of <paramref name="targets"/> for this card, whatever the board's state: how many
+    /// there are and whether each names a region (<paramref name="isRegion"/>) or seat (<paramref name="isSeat"/>) of the
+    /// table, or a trade term, as its target kind says. A war is named by id and may have ended, which only makes the
+    /// move fail on arrival.
+    /// </summary>
+    public string? TargetShapeProblem(IReadOnlyList<string> targets, Func<string, bool> isRegion, Func<string, bool> isSeat)
+    {
+        Func<string, bool>[] shape = Target switch
+        {
+            CardTarget.None => [],
+            CardTarget.OtherSeat or CardTarget.Leader or CardTarget.LeaderFriend or CardTarget.Underdog => [isSeat],
+            CardTarget.RegionPair => [isRegion, isRegion],
+            CardTarget.RegionRival or CardTarget.FeudRival => [isRegion, isSeat],
+            CardTarget.Deal => [isSeat, term => TradeTerm.Parse(term) is not null, term => TradeTerm.Parse(term) is not null],
+            CardTarget.War => [_ => true],
+            _ => [isRegion],
+        };
+        if (targets.Count != shape.Length) return $"has {targets.Count} targets where {Target} takes {shape.Length}";
+        int bad = Enumerable.Range(0, shape.Length).FirstOrDefault(index => !shape[index](targets[index]), -1);
+        return bad < 0 ? null : $"targets '{targets[bad]}', which is no {(Target == CardTarget.Deal && bad > 0 ? "trade term" : shape[bad] == isSeat ? "seat" : "region")} of the table";
+    }
+
     /// <summary>Whether <paramref name="seat"/> can afford this card and play it on <paramref name="targets"/> now.</summary>
     public bool Playable(Board board, Seat seat, IReadOnlyList<string> targets) => Affordable(seat) && Fits(board, seat, targets);
 

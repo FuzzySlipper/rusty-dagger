@@ -179,7 +179,7 @@ public sealed class Board
             problems.Add($"move '{move.Id}' plays unknown card '{move.Card}'");
         foreach (string card in save.WorldDraw.Concat(save.WorldDiscard).Where(card => !worldById.ContainsKey(card)))
             problems.Add($"the World deck holds unknown card '{card}'");
-        problems.AddRange(ReferenceProblems(setup, save));
+        problems.AddRange(ReferenceProblems(setup, save, byId));
         if (problems.Count > 0) throw new BoardSetupException("board save", problems);
 
         Dictionary<string, SeatSave> seatSaves = save.Seats.ToDictionary(seat => seat.Id, StringComparer.Ordinal);
@@ -249,14 +249,17 @@ public sealed class Board
     /// <summary>
     /// Every seat, crown and region a save names that its setup does not have: allegiance only to a crown, influence and
     /// offices of seats at the table, and relations, slow moves, deals, wars, truces, feuds, helps, grudges, courts and the
-    /// leader among them.
+    /// leader among them, and the targets of the slow moves under way, shaped as their cards take them.
     /// </summary>
-    private static IEnumerable<string> ReferenceProblems(BoardSetup setup, BoardSave save)
+    private static IEnumerable<string> ReferenceProblems(BoardSetup setup, BoardSave save, IReadOnlyDictionary<string, Card> cards)
     {
         HashSet<string> seats = [.. setup.Seats.Select(seat => seat.Id)];
         HashSet<string> crowns = [.. setup.Seats.Where(seat => seat.Kind == SeatKind.Crown).Select(seat => seat.Id)];
         Dictionary<string, RegionSetup> regions = setup.Regions.ToDictionary(region => region.Id, StringComparer.Ordinal);
         string? Unknown(string what, string seat) => seats.Contains(seat) ? null : $"{what} names unknown seat '{seat}'";
+        foreach (PendingMoveSave move in save.Pending)
+            if (cards.TryGetValue(move.Card, out Card? card) && card.TargetShapeProblem(move.Targets, regions.ContainsKey, seats.Contains) is { } shape)
+                yield return $"move '{move.Id}' {shape}";
         foreach (RegionSave region in save.Regions)
         {
             if (region.Allegiance is { } holder && !crowns.Contains(holder)) yield return $"region '{region.Id}' owes allegiance to '{holder}', which is no crown at the table";
