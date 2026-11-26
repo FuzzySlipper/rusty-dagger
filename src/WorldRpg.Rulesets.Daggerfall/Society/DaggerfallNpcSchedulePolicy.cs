@@ -21,6 +21,80 @@ internal enum DaggerfallScheduleBuildingTarget
     Temple,
 }
 
+/// <summary>Elapsed in-game minutes since the onset of each weather-sheltering class.</summary>
+internal readonly record struct DaggerfallWeatherShelterElapsed(int PrecipElapsedMinutes, int SevereElapsedMinutes)
+{
+    internal static DaggerfallWeatherShelterElapsed Settled { get; } = new(int.MaxValue, int.MaxValue);
+}
+
+/// <summary>
+/// Tracks live weather-sheltering onset separately for precipitating weather (<c>Rain</c>/<c>Thunder</c>/<c>Snow</c>)
+/// and severe weather (<c>Thunder</c>/<c>Snow</c>) so escalating from sustained rain to a thunderstorm preserves
+/// already-sheltered rain-sensitive walkers while still staggering rain-tolerant roles (<c>underworld-night</c>).
+/// </summary>
+internal sealed class DaggerfallWeatherShelterClock
+{
+    private const long SettledSentinel = long.MinValue;
+    private DaggerfallWeatherKind? _observed;
+    private long? _precipStartedMinute;
+    private long? _severeStartedMinute;
+
+    internal static bool IsPrecipitating(DaggerfallWeatherKind weather) =>
+        weather is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Snow;
+
+    internal static bool IsSevere(DaggerfallWeatherKind weather) =>
+        weather is DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Snow;
+
+    internal void Reset()
+    {
+        _observed = null;
+        _precipStartedMinute = null;
+        _severeStartedMinute = null;
+    }
+
+    internal DaggerfallWeatherShelterElapsed Observe(DaggerfallWeatherKind current, long currentMinute)
+    {
+        bool currentPrecip = IsPrecipitating(current);
+        bool currentSevere = IsSevere(current);
+
+        if (_observed is null)
+        {
+            // Initial load, site arrival, or post-time-jump reconciliation settles immediately.
+            _observed = current;
+            _precipStartedMinute = currentPrecip ? SettledSentinel : null;
+            _severeStartedMinute = currentSevere ? SettledSentinel : null;
+            return new(
+                currentPrecip ? int.MaxValue : 0,
+                currentSevere ? int.MaxValue : 0);
+        }
+
+        bool prevPrecip = IsPrecipitating(_observed.Value);
+        bool prevSevere = IsSevere(_observed.Value);
+
+        if (!currentPrecip)
+            _precipStartedMinute = null;
+        else if (!prevPrecip)
+            _precipStartedMinute = currentMinute;
+
+        if (!currentSevere)
+            _severeStartedMinute = null;
+        else if (!prevSevere)
+            _severeStartedMinute = currentMinute;
+
+        _observed = current;
+        return new(
+            Elapsed(_precipStartedMinute, currentMinute),
+            Elapsed(_severeStartedMinute, currentMinute));
+    }
+
+    private static int Elapsed(long? startedMinute, long currentMinute) => startedMinute switch
+    {
+        null => 0,
+        SettledSentinel => int.MaxValue,
+        long started => (int)Math.Clamp(currentMinute - started, 0L, int.MaxValue),
+    };
+}
+
 /// <summary>Deterministic schedule and weather placement outcome for one NPC slot at one instant.</summary>
 internal sealed record DaggerfallScheduleDecision(
     DaggerfallSchedulePlacement Placement,
@@ -96,7 +170,8 @@ internal static class DaggerfallNpcSchedulePolicy
         bool isActiveQuestor = false,
         bool isOfficeHolder = false,
         bool isWithParty = false,
-        bool isOnOverlandBand = false)
+        bool isOnOverlandBand = false,
+        int? severeWeatherElapsedMinutes = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentException.ThrowIfNullOrWhiteSpace(slotKey);
@@ -127,7 +202,9 @@ internal static class DaggerfallNpcSchedulePolicy
             return EvaluateInteriorProfile(profile, normalizedMinute, buildingType, holidayId, jitter, stormDelay, tavernRoll);
 
         // 3. Exterior-street profiles (street-walker, city-guard, underworld-night):
-        return EvaluateExteriorProfile(profile, normalizedMinute, weather, weatherElapsedMinutes, jitter, stormDelay, tavernRoll);
+        return EvaluateExteriorProfile(
+            profile, normalizedMinute, weather, weatherElapsedMinutes,
+            severeWeatherElapsedMinutes ?? weatherElapsedMinutes, jitter, stormDelay, tavernRoll);
     }
 
     /// <summary>Evaluates one spawner spec's authored schedule profile from <paramref name="catalog"/>.</summary>
@@ -146,7 +223,8 @@ internal static class DaggerfallNpcSchedulePolicy
         bool isActiveQuestor = false,
         bool isOfficeHolder = false,
         bool isWithParty = false,
-        bool isOnOverlandBand = false)
+        bool isOnOverlandBand = false,
+        int? severeWeatherElapsedMinutes = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -166,7 +244,8 @@ internal static class DaggerfallNpcSchedulePolicy
             isActiveQuestor,
             isOfficeHolder,
             isWithParty,
-            isOnOverlandBand);
+            isOnOverlandBand,
+            severeWeatherElapsedMinutes);
     }
 
     /// <summary>Evaluates an exterior source-population placement against the active schedule catalog.</summary>
@@ -183,7 +262,8 @@ internal static class DaggerfallNpcSchedulePolicy
         bool isActiveQuestor = false,
         bool isOfficeHolder = false,
         bool isWithParty = false,
-        bool isOnOverlandBand = false)
+        bool isOnOverlandBand = false,
+        int? severeWeatherElapsedMinutes = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         string scheduleId = ResolveExteriorScheduleId(worldSocialSeed, siteId, slotKey, isGuard, totalPopulationCount);
@@ -202,7 +282,8 @@ internal static class DaggerfallNpcSchedulePolicy
             isActiveQuestor: isActiveQuestor,
             isOfficeHolder: isOfficeHolder,
             isWithParty: isWithParty,
-            isOnOverlandBand: isOnOverlandBand);
+            isOnOverlandBand: isOnOverlandBand,
+            severeWeatherElapsedMinutes: severeWeatherElapsedMinutes);
     }
 
     private static DaggerfallScheduleDecision EvaluateInteriorProfile(
@@ -270,7 +351,8 @@ internal static class DaggerfallNpcSchedulePolicy
         DaggerfallActorScheduleProfile profile,
         int minuteOfDay,
         DaggerfallWeatherKind weather,
-        int weatherElapsedMinutes,
+        int precipElapsedMinutes,
+        int severeElapsedMinutes,
         int jitter,
         int stormDelay,
         int tavernRoll)
@@ -289,11 +371,14 @@ internal static class DaggerfallNpcSchedulePolicy
                 Pinned: false);
         }
 
-        // Staggered weather sheltering: Rain / Thunder / Snow clear ordinary walkers over 2-10 in-game minutes.
+        // Staggered weather sheltering: rain-sensitive roles use precipElapsedMinutes (so Rain -> Thunder keeps
+        // already-sheltered walkers indoors), while rain-tolerant severe-only roles (underworld-night) use
+        // severeElapsedMinutes so escalating from sustained Rain to Thunder/Snow still staggers their shelter.
         bool severeWeather = weather is DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Snow;
         bool rainWeather = weather == DaggerfallWeatherKind.Rain;
         bool weatherShelters = (profile.SheltersInStorm && severeWeather) || (profile.SheltersInRain && rainWeather);
-        if (weatherShelters && weatherElapsedMinutes >= stormDelay)
+        int relevantElapsed = profile.SheltersInRain ? precipElapsedMinutes : severeElapsedMinutes;
+        if (weatherShelters && relevantElapsed >= stormDelay)
         {
             if (profile.EveningTavernSharePercent > 0 && tavernRoll < profile.EveningTavernSharePercent)
             {

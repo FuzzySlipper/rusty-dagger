@@ -401,41 +401,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     void IDaggerfallExteriorHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
         Civilians.AdmitResidentAppearances(projection.Inputs, projection.Appearance);
 
-    private DaggerfallWeatherKind? _scheduleObservedWeather;
-    private long _scheduleWeatherChangedMinute = long.MinValue;
+    private readonly DaggerfallWeatherShelterClock _scheduleWeatherClock = new();
 
-    internal void ResetScheduleWeatherBaseline()
-    {
-        _scheduleObservedWeather = null;
-        _scheduleWeatherChangedMinute = long.MinValue;
-    }
+    internal void ResetScheduleWeatherBaseline() => _scheduleWeatherClock.Reset();
 
-    private static bool IsShelteringWeather(DaggerfallWeatherKind weather) =>
-        weather is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Snow;
-
-    internal int ScheduleWeatherElapsedMinutes()
-    {
-        DaggerfallWeatherKind current = LocalWeather.Current;
-        if (_scheduleObservedWeather is null || !IsShelteringWeather(current))
-        {
-            _scheduleObservedWeather = current;
-            _scheduleWeatherChangedMinute = long.MinValue;
-            return int.MaxValue;
-        }
-        if (!IsShelteringWeather(_scheduleObservedWeather.Value))
-        {
-            // Fresh onset from fair weather: start staggered 2-10 minute shelter delay.
-            _scheduleObservedWeather = current;
-            _scheduleWeatherChangedMinute = _time.Calendar.MinuteNumber;
-            return 0;
-        }
-        // Continuing or escalating precipitating weather (e.g. Rain -> Thunder): keep existing onset
-        // so already-sheltered walkers never pop back outdoors into a worse storm.
-        _scheduleObservedWeather = current;
-        if (_scheduleWeatherChangedMinute == long.MinValue)
-            return int.MaxValue;
-        return (int)Math.Clamp(_time.Calendar.MinuteNumber - _scheduleWeatherChangedMinute, 0L, int.MaxValue);
-    }
+    internal DaggerfallWeatherShelterElapsed ObserveScheduleWeatherElapsed() =>
+        _scheduleWeatherClock.Observe(LocalWeather.Current, _time.Calendar.MinuteNumber);
 
     internal DaggerfallScheduleDecision EvaluateExteriorPlacementSchedule(
         DaggerfallSiteId siteId,
@@ -445,7 +416,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         int minuteOfDay = checked(_time.Calendar.Hour * DaggerfallCalendar.MinutesPerHour + _time.Calendar.Minute);
         DaggerfallWeatherKind weather = LocalWeather.Current;
-        int weatherElapsed = ScheduleWeatherElapsedMinutes();
+        DaggerfallWeatherShelterElapsed weatherElapsed = ObserveScheduleWeatherElapsed();
         bool isWithParty = State.Quests.IsEscortWithParty(actorId)
             || (State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.WithParty);
         bool isOnOverlandBand = State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? bandEntry)
@@ -463,11 +434,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             _definitions.ActorCatalog,
             minuteOfDay,
             weather,
-            weatherElapsedMinutes: weatherElapsed,
+            weatherElapsedMinutes: weatherElapsed.PrecipElapsedMinutes,
             isActiveQuestor: isActiveQuestor,
             isOfficeHolder: isOfficeHolder,
             isWithParty: isWithParty,
-            isOnOverlandBand: isOnOverlandBand);
+            isOnOverlandBand: isOnOverlandBand,
+            severeWeatherElapsedMinutes: weatherElapsed.SevereElapsedMinutes);
     }
 
     bool IDaggerfallExteriorHost.IsPlacementScheduledOutdoors(

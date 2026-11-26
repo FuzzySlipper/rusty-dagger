@@ -1,10 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Rusty.Engine;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
@@ -321,5 +324,155 @@ public sealed class DaggerfallNpcSchedulePolicyTests
             string expectedSchedule = DaggerfallNpcSchedulePolicy.ResolveExteriorScheduleId(0UL, town.Id, key, key.EndsWith("000", StringComparison.Ordinal), placements.Length);
             Assert.True(expectedSchedule is DaggerfallNpcSchedulePolicy.CityGuardScheduleId or DaggerfallNpcSchedulePolicy.UnderworldNightScheduleId);
         }
+    }
+
+    [Fact]
+    public void Sustained_rain_to_thunder_or_snow_staggers_underworld_while_keeping_rain_sheltered_walkers_indoors()
+    {
+        DaggerfallActorScheduleProfile walker = TestPayload.Definitions.ActorCatalog.Schedules["street-walker"];
+        DaggerfallActorScheduleProfile underworld = TestPayload.Definitions.ActorCatalog.Schedules["underworld-night"];
+
+        // 1. Midday escalation (Sunny -> Rain for 15m -> Thunder): rain-sensitive street-walkers are already sheltered
+        //    and must stay sheltered on the first Thunder tick (no pop-back-out!).
+        DaggerfallWeatherShelterClock middayClock = new();
+        _ = middayClock.Observe(DaggerfallWeatherKind.Sunny, 720L);
+        _ = middayClock.Observe(DaggerfallWeatherKind.Rain, 725L);
+        DaggerfallWeatherShelterElapsed afterSustainedRain = middayClock.Observe(DaggerfallWeatherKind.Rain, 740L);
+        Assert.Equal(15, afterSustainedRain.PrecipElapsedMinutes);
+        Assert.Equal(0, afterSustainedRain.SevereElapsedMinutes);
+
+        DaggerfallWeatherShelterElapsed thunderAtMidday = middayClock.Observe(DaggerfallWeatherKind.Thunder, 740L);
+        Assert.Equal(15, thunderAtMidday.PrecipElapsedMinutes);
+        Assert.Equal(0, thunderAtMidday.SevereElapsedMinutes);
+
+        for (int i = 0; i < 32; i++)
+        {
+            DaggerfallScheduleDecision decision = DaggerfallNpcSchedulePolicy.Evaluate(
+                7UL, DaggerfallTown, $"walker/midday/{i:D3}", walker, 12 * 60 + 20, DaggerfallWeatherKind.Thunder,
+                weatherElapsedMinutes: thunderAtMidday.PrecipElapsedMinutes,
+                severeWeatherElapsedMinutes: thunderAtMidday.SevereElapsedMinutes);
+            Assert.NotEqual(DaggerfallSchedulePlacement.ExteriorStreet, decision.Placement);
+        }
+
+        // 2. Late-night escalation (arrival in Rain at 23:30, sustained 15m, then escalating to Thunder or Snow):
+        //    underworld-night NPCs stay outdoors in Rain, then stagger indoors over 6-10 minutes when Thunder/Snow starts.
+        foreach (DaggerfallWeatherKind severeKind in new[] { DaggerfallWeatherKind.Thunder, DaggerfallWeatherKind.Snow })
+        {
+            DaggerfallWeatherShelterClock nightClock = new();
+            // Arrival in Rain settles PrecipElapsedMinutes = int.MaxValue while SevereElapsedMinutes = 0.
+            DaggerfallWeatherShelterElapsed arrivalRain = nightClock.Observe(DaggerfallWeatherKind.Rain, 1410L);
+            Assert.Equal(int.MaxValue, arrivalRain.PrecipElapsedMinutes);
+            Assert.Equal(0, arrivalRain.SevereElapsedMinutes);
+
+            // Sustained rain for 15 minutes still keeps underworld-night outdoors.
+            DaggerfallWeatherShelterElapsed sustainedRain = nightClock.Observe(DaggerfallWeatherKind.Rain, 1425L);
+            Assert.Equal(int.MaxValue, sustainedRain.PrecipElapsedMinutes);
+            Assert.Equal(0, sustainedRain.SevereElapsedMinutes);
+
+            // Escalation Rain -> Thunder/Snow starts the severe-weather clock at 0!
+            DaggerfallWeatherShelterElapsed severeStart = nightClock.Observe(severeKind, 1425L);
+            Assert.Equal(int.MaxValue, severeStart.PrecipElapsedMinutes);
+            Assert.Equal(0, severeStart.SevereElapsedMinutes);
+
+            DaggerfallWeatherShelterElapsed severeMid = nightClock.Observe(severeKind, 1433L); // +8 min
+            Assert.Equal(8, severeMid.SevereElapsedMinutes);
+
+            DaggerfallWeatherShelterElapsed severeSettled = nightClock.Observe(severeKind, 1436L); // +11 min
+            Assert.Equal(11, severeSettled.SevereElapsedMinutes);
+
+            int outAtStart = 0, outAtMid = 0, outAtSettled = 0;
+            for (int i = 0; i < 48; i++)
+            {
+                string slot = $"uw/night/{i:D3}";
+                DaggerfallScheduleDecision d0 = DaggerfallNpcSchedulePolicy.Evaluate(
+                    7UL, DaggerfallTown, slot, underworld, 23 * 60 + 45, severeKind,
+                    weatherElapsedMinutes: severeStart.PrecipElapsedMinutes,
+                    severeWeatherElapsedMinutes: severeStart.SevereElapsedMinutes);
+                DaggerfallScheduleDecision d8 = DaggerfallNpcSchedulePolicy.Evaluate(
+                    7UL, DaggerfallTown, slot, underworld, 23 * 60 + 53, severeKind,
+                    weatherElapsedMinutes: severeMid.PrecipElapsedMinutes,
+                    severeWeatherElapsedMinutes: severeMid.SevereElapsedMinutes);
+                DaggerfallScheduleDecision d11 = DaggerfallNpcSchedulePolicy.Evaluate(
+                    7UL, DaggerfallTown, slot, underworld, 23 * 60 + 56, severeKind,
+                    weatherElapsedMinutes: severeSettled.PrecipElapsedMinutes,
+                    severeWeatherElapsedMinutes: severeSettled.SevereElapsedMinutes);
+
+                if (d0.Placement == DaggerfallSchedulePlacement.ExteriorStreet) outAtStart++;
+                if (d8.Placement == DaggerfallSchedulePlacement.ExteriorStreet) outAtMid++;
+                if (d11.Placement == DaggerfallSchedulePlacement.ExteriorStreet) outAtSettled++;
+            }
+
+            Assert.Equal(48, outAtStart);
+            Assert.InRange(outAtMid, 1, 47);
+            Assert.Equal(0, outAtSettled);
+        }
+    }
+
+    [Fact]
+    public void Session_sustained_rain_to_thunder_staggers_underworld_while_preserving_sheltered_walkers()
+    {
+        List<string> releases = [];
+        DaggerfallSiteProfile profile = ReadInputs(TestData.RepositoryRoot);
+        ContentFake content = new(releases);
+        PopulateContent(content, profile);
+        SpatialFake spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(
+            content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service, random: RandomMinimum.Create());
+        using DaggerfallSession session = DaggerfallSession.StartNew(
+            engine.Context, new(TestPayload.Definitions, profile, DaggerfallTuning.Defaults));
+
+        DaggerfallSiteId siteId = session.Site.ActiveSite!.Id;
+        const int townPop = 24;
+        string underworldId = Enumerable.Range(1, 200)
+            .Select(i => $"population/session/dynamic/{i:D3}")
+            .First(id => DaggerfallNpcSchedulePolicy.ResolveExteriorScheduleId(session.WorldSocialSeed, siteId, id, isGuard: false, townPop)
+                == DaggerfallNpcSchedulePolicy.UnderworldNightScheduleId);
+        string walkerId = Enumerable.Range(1, 200)
+            .Select(i => $"population/session/dynamic/{i:D3}")
+            .First(id => DaggerfallNpcSchedulePolicy.ResolveExteriorScheduleId(session.WorldSocialSeed, siteId, id, isGuard: false, townPop)
+                == DaggerfallNpcSchedulePolicy.StreetWalkerScheduleId);
+
+        DaggerfallPopulationPlacement underworldPlacement = new(underworldId, new WorldPoint(2f, 0f, 2f), 210, 4, 0, 0, 1001);
+        DaggerfallPopulationPlacement walkerPlacement = new(walkerId, new WorldPoint(3f, 0f, 2f), 210, 4, 0, 0, 1002);
+
+        // 1. Midday (12:00): Sunny -> Rain -> 15 min sustained Rain -> Thunder.
+        //    Rain-sensitive walker shelters during sustained Rain and stays sheltered immediately on Rain -> Thunder.
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Sunny);
+        session.AdvanceElapsedTime(12 * 60 * 60); // 12:00 (resets weather baseline)
+        Assert.Equal(DaggerfallSchedulePlacement.ExteriorStreet,
+            session.EvaluateExteriorPlacementSchedule(siteId, walkerPlacement, 9001L, townPop).Placement);
+
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Rain);
+        Assert.Equal(0, session.ObserveScheduleWeatherElapsed().PrecipElapsedMinutes);
+        // Step ordinary play forward 15 minutes (in 5-minute increments so no >=10m jump reset triggers).
+        for (ulong i = 0; i < 3; i++)
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, i + 1, i + 1, 60, 1, 0, 25d), [])); // 25s real * 12x = 5 game min
+        Assert.True(session.ObserveScheduleWeatherElapsed().PrecipElapsedMinutes >= 10);
+        Assert.NotEqual(DaggerfallSchedulePlacement.ExteriorStreet,
+            session.EvaluateExteriorPlacementSchedule(siteId, walkerPlacement, 9001L, townPop).Placement);
+
+        // Escalate Rain -> Thunder: already-sheltered street-walker MUST remain sheltered immediately!
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Thunder);
+        Assert.NotEqual(DaggerfallSchedulePlacement.ExteriorStreet,
+            session.EvaluateExteriorPlacementSchedule(siteId, walkerPlacement, 9001L, townPop).Placement);
+
+        // 2. Late night (23:30): settled in Rain, then escalate Rain -> Thunder during ordinary play.
+        //    Underworld-night stays outdoors in Rain, lingers at Thunder +0m (SevereElapsed == 0 < 6..10m),
+        //    then shelters indoors once 11+ in-game minutes of Thunder elapse.
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Rain);
+        session.AdvanceElapsedTime(11 * 60 * 60 + 15 * 60); // 23:30 (settled in Rain)
+        DaggerfallScheduleDecision uwInRain = session.EvaluateExteriorPlacementSchedule(siteId, underworldPlacement, 9002L, townPop);
+        Assert.Equal(DaggerfallSchedulePlacement.ExteriorStreet, uwInRain.Placement);
+
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Thunder);
+        DaggerfallScheduleDecision uwAtThunderStart = session.EvaluateExteriorPlacementSchedule(siteId, underworldPlacement, 9002L, townPop);
+        Assert.Equal(DaggerfallSchedulePlacement.ExteriorStreet, uwAtThunderStart.Placement);
+        Assert.Equal(0, session.ObserveScheduleWeatherElapsed().SevereElapsedMinutes);
+
+        // Advance ordinary play 11+ in-game minutes (3 steps of 20s real = 3 * 4 game min = 12 game min).
+        for (ulong i = 0; i < 3; i++)
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 10 + i, 10 + i, 60, 1, 0, 20d), []));
+        DaggerfallScheduleDecision uwAfterThunderDelay = session.EvaluateExteriorPlacementSchedule(siteId, underworldPlacement, 9002L, townPop);
+        Assert.NotEqual(DaggerfallSchedulePlacement.ExteriorStreet, uwAfterThunderDelay.Placement);
     }
 }

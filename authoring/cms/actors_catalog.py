@@ -7,6 +7,7 @@ block slots, offices, board seats), and bidirectional links to npc-### / creatur
 
 from collections import Counter, defaultdict
 from pathlib import Path
+import re
 
 from base_pack import read_section as read_base_section, sections_stamp as base_sections_stamp
 from cache import FileCache, file_stamp
@@ -56,9 +57,26 @@ LOOKUP_SECTIONS = (
 
 WEATHER_KINDS = ("sunny", "cloudy", "overcast", "fog", "rain", "thunder", "snow")
 
-# Mirrors DaggerfallBuildingEntryPolicy.OpenHours/CloseHours by classic building type.
-_BUILDING_OPEN_HOURS = (7, 8, 9, 8, 0, 9, 10, 10, 9, 6, 9, 11, 9, 9, 0, 0, 10, 0, 6, 6, 6, 6, 6, 6, 0)
-_BUILDING_CLOSE_HOURS = (22, 16, 19, 15, 25, 21, 19, 20, 18, 23, 23, 23, 20, 20, 25, 25, 16, 0, 18, 18, 18, 18, 18, 18, 25)
+# Single canonical owner of building opening/closing hours (zero duplicated literal tables).
+_BUILDING_ENTRY_POLICY_REL = Path("src/WorldRpg.Rulesets.Daggerfall/Interiors/DaggerfallBuildingEntryPolicy.cs")
+_OPEN_HOURS_RE = re.compile(r"\bOpenHours\s*=\s*\[([0-9,\s]+)\]")
+_CLOSE_HOURS_RE = re.compile(r"\bCloseHours\s*=\s*\[([0-9,\s]+)\]")
+
+
+def _read_building_opening_hours(policy_path: Path) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Derive building opening/closing hours directly from DaggerfallBuildingEntryPolicy.cs."""
+    if not policy_path.is_file():
+        return (), ()
+    text = policy_path.read_text(encoding="utf-8")
+    open_match = _OPEN_HOURS_RE.search(text)
+    close_match = _CLOSE_HOURS_RE.search(text)
+    if not open_match or not close_match:
+        return (), ()
+    open_hours = tuple(int(tok.strip()) for tok in open_match.group(1).split(",") if tok.strip())
+    close_hours = tuple(int(tok.strip()) for tok in close_match.group(1).split(",") if tok.strip())
+    if len(open_hours) != len(close_hours):
+        return (), ()
+    return open_hours, close_hours
 
 _SPEC_DEFAULT_BUILDING_TYPE = {
     "town-alchemist": 0,
@@ -127,6 +145,7 @@ def _format_minute(minute: int) -> str:
 def _evaluate_schedule_preview(
     spec: dict | None,
     schedules: dict[str, dict],
+    building_hours: tuple[tuple[int, ...], tuple[int, ...]],
     minute_of_day: int,
     weather: str,
 ) -> dict | None:
@@ -141,6 +160,7 @@ def _evaluate_schedule_preview(
 
     mode = profile.get("primaryMode") or "always-stationed"
     open_hours_text = None
+    open_table, close_table = building_hours
     building_type = _SPEC_DEFAULT_BUILDING_TYPE.get(spec.get("id", ""))
     if building_type is None and spec.get("family") == "cast" and sched_id == "court-noble":
         building_type = 16
@@ -153,8 +173,8 @@ def _evaluate_schedule_preview(
     if mode == "always-stationed":
         placement, target, reason = "interior-building", "home-post", "always-stationed"
     elif mode == "interior-building":
-        if profile.get("usesBuildingOpeningHours") and building_type is not None and 0 <= building_type < len(_BUILDING_OPEN_HOURS):
-            o_h, c_h = _BUILDING_OPEN_HOURS[building_type], _BUILDING_CLOSE_HOURS[building_type]
+        if profile.get("usesBuildingOpeningHours") and building_type is not None and 0 <= building_type < len(open_table):
+            o_h, c_h = open_table[building_type], close_table[building_type]
             open_hours_text = "Always open" if c_h >= 25 else (f"{o_h:02d}:00–{c_h:02d}:00" if c_h > o_h else "Locked")
             is_open = o_h <= hour < c_h
         else:
@@ -579,6 +599,10 @@ class ActorsCatalogStore:
     def canon_board_path(self) -> Path:
         return self.library.repo / "content/worldrpg/packs/daggerfall.base/world/iliac-bay.board.json"
 
+    @property
+    def building_entry_policy_path(self) -> Path:
+        return self.library.repo / _BUILDING_ENTRY_POLICY_REL
+
     def available(self) -> bool:
         base_path = self.library.base_payload
         if not base_path.is_file():
@@ -589,10 +613,12 @@ class ActorsCatalogStore:
     def _index(self) -> dict:
         base_path = self.library.base_payload
         board_path = self.canon_board_path
+        policy_path = self.building_entry_policy_path
         people_stamp = self.people_pack.cache_stamp() if self.people_pack.available() else None
         stamp = (
             base_sections_stamp(base_path, LOOKUP_SECTIONS, self.cache),
             file_stamp(board_path),
+            file_stamp(policy_path),
             people_stamp,
         )
 
@@ -763,6 +789,8 @@ class ActorsCatalogStore:
                     schedules[sid] = row
                     schedule_order.append(sid)
 
+            building_hours = _read_building_opening_hours(policy_path)
+
             # Block slot usage from people_pack (when available).
             people_index = self.people_pack._index() if self.people_pack.available() else None
 
@@ -772,6 +800,7 @@ class ActorsCatalogStore:
                 "spec_order": spec_order,
                 "schedules": schedules,
                 "schedule_order": schedule_order,
+                "building_hours": building_hours,
                 "spawners_by_template": spawners_by_template,
                 "specs_by_mobile": specs_by_mobile,
                 "encounter_tables_by_spec": encounter_tables_by_spec,
@@ -1311,7 +1340,9 @@ class ActorsCatalogStore:
         if region is not None and 0 <= region < len(index["regions"]):
             region_name = index["regions"][region]["name"]
 
-        schedule_preview = _evaluate_schedule_preview(spec, index["schedules"], minute_of_day, weather_kind)
+        schedule_preview = _evaluate_schedule_preview(
+            spec, index["schedules"], index["building_hours"], minute_of_day, weather_kind,
+        )
 
         return {
             "kind": kind,

@@ -1,6 +1,7 @@
 """Unit and HTTP integration tests for the unified CMS Actors inspector (#11095)."""
 
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Thread
@@ -500,6 +501,66 @@ class ActorsCatalogTests(TestCase):
         self.assertEqual(shop_open["effective"]["schedule"]["reason"], "open-hours")
         self.assertEqual(shop_open["effective"]["schedule"]["openHours"], "09:00–19:00")
         self.assertEqual(shop_evening["effective"]["schedule"]["reason"], "evening-tavern-eligible")
+
+        # Opening hours derive live from DaggerfallBuildingEntryPolicy.cs (zero duplicate table):
+        # mutating the canonical C# policy in an isolated repo immediately updates CMS preview.
+        hours_repo = self.root / "hours-repo"
+        pack_dir = hours_repo / "content/worldrpg/packs/daggerfall.base"
+        (pack_dir / "actors/templates").mkdir(parents=True, exist_ok=True)
+        (pack_dir / "actors/specs").mkdir(parents=True, exist_ok=True)
+        (pack_dir / "world").mkdir(parents=True, exist_ok=True)
+        (pack_dir / "payload.json").write_text(json.dumps({
+            "ruleset": "daggerfall",
+            "sections": {
+                "actorTemplateBases": "actors/templates/bases.json",
+                "actorSpecsTownsfolk": "actors/specs/townsfolk.json",
+                "actorSchedules": "actors/schedules.json",
+                "buildingNames": "world/building-names.json",
+            },
+        }), encoding="utf-8")
+        (pack_dir / "actors/templates/bases.json").write_text(json.dumps({
+            "templates": [{"id": "merchant", "health": {"minimum": 10, "maximum": 20}, "armor": 0}],
+        }), encoding="utf-8")
+        (pack_dir / "actors/specs/townsfolk.json").write_text(json.dumps({
+            "specs": [{
+                "id": "town-armorer",
+                "family": "town",
+                "template": "merchant",
+                "displayName": "Armorer",
+                "role": "merchant",
+                "genders": [{"gender": "male", "weight": 1}],
+                "schedule": "shopkeeper",
+                "defaultPool": [],
+            }],
+        }), encoding="utf-8")
+        (pack_dir / "actors/schedules.json").write_text(
+            (REPO / "content/worldrpg/packs/daggerfall.base/actors/schedules.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        (pack_dir / "world/building-names.json").write_text(json.dumps({"regionNames": ["Daggerfall"]}), encoding="utf-8")
+        policy_file = hours_repo / "src/WorldRpg.Rulesets.Daggerfall/Interiors/DaggerfallBuildingEntryPolicy.cs"
+        policy_file.parent.mkdir(parents=True, exist_ok=True)
+        policy_file.write_text(
+            "private static readonly int[] OpenHours = [7, 8, 11];\n"
+            "private static readonly int[] CloseHours = [22, 16, 15];\n",
+            encoding="utf-8",
+        )
+        hours_lib = Library(self.lib.npcs, self.root / "pipeline", repo=hours_repo)
+        hours_ws = Workspace(hours_lib, self.root / "h-links.json", self.root / "h-merges.json", ReviewStore(self.root / "h.sqlite3"), ConceptStore(self.root / "hc"))
+        p_closed = hours_ws.actors_catalog.preview("spec", "town-armorer", hours_ws.catalog(), hours_ws.concept_store, time_of_day="10:00", weather="sunny")
+        self.assertEqual(p_closed["effective"]["schedule"]["openHours"], "11:00–15:00")
+        self.assertEqual(p_closed["effective"]["schedule"]["reason"], "after-hours")
+        # Now edit the single canonical policy file (and bump mtime) -> CMS preview reflects new hours immediately.
+        policy_file.write_text(
+            "private static readonly int[] OpenHours = [7, 8, 8];\n"
+            "private static readonly int[] CloseHours = [22, 16, 21];\n",
+            encoding="utf-8",
+        )
+        st_now = policy_file.stat()
+        os.utime(policy_file, (st_now.st_atime + 2, st_now.st_mtime + 2))
+        p_open = hours_ws.actors_catalog.preview("spec", "town-armorer", hours_ws.catalog(), hours_ws.concept_store, time_of_day="10:00", weather="sunny")
+        self.assertEqual(p_open["effective"]["schedule"]["openHours"], "08:00–21:00")
+        self.assertEqual(p_open["effective"]["schedule"]["reason"], "open-hours")
 
         # Built CMS frontend bundle includes the unified Actors routes, reverse art links, and schedule preview controls.
         app_bundle = (REPO / "authoring/cms/web/dist/app.js").read_text(encoding="utf-8")
