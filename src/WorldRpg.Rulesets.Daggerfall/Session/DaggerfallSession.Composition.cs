@@ -1284,8 +1284,10 @@ internal sealed partial class DaggerfallSession
             partiallyConstructed.Add(_weatherPresentation);
             _interiorLook = new DaggerfallInteriorLook(engine, composition.Data, tuning.SiteLighting);
             partiallyConstructed.Add(_interiorLook);
+            Func<int, int, int> climateAtPixel = (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value;
+            DaggerfallOverlandRoads overlandRoads = new(definitions.Terrain, climateAtPixel, definitions.Locations.Records);
             DaggerfallHorizonGround ground = new(definitions.Terrain,
-                (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _exterior.Locations);
+                climateAtPixel, tuning.Horizon, tuning.Ground, _exterior.Locations, overlandRoads);
             _exterior.UseGround(ground, GroundWalkers);
             DaggerfallArtFile? mapLandShader = composition.Data is not null
                 && composition.Data.TryReadFile(DaggerfallOverlandTerrain.LandShaderPath, out ReadOnlyMemory<byte> landShaderBytes)

@@ -50,12 +50,20 @@ internal sealed record DaggerfallMapPalette(
     /// <summary>How strongly the detail's relief shades the land, as a share of its normal map's.</summary>
     internal float DetailRelief { get; init; } = .6f;
 
+    private static readonly Vector3 TemperateRoad = Srgb("#9f885f");
+    private static readonly Vector3 DesertRoad = Srgb("#917045");
+    private static readonly Vector3 SubtropicalRoad = Srgb("#bea370");
+    private static readonly Vector3 MountainRoad = Srgb("#9d9584");
+    private static readonly Vector3 WinterRoadSnow = Srgb("#ced7e1");
+
     /// <summary>
     /// Open ground by its layers' weights (grass, earth, rock, and snow or a swamp's lush ground), in the climate's colours,
-    /// lightened or darkened by <paramref name="patch"/> (0 to 1) and, in winter, under snow.
+    /// lightened or darkened by <paramref name="patch"/> (0 to 1), blended with worn trade roads (<paramref name="road"/>),
+    /// and, in winter, under snow.
     /// </summary>
     /// <param name="woods">Broad noise (0 to 1) whose high ground the climate's woods cover, by its share of forest.</param>
-    internal Vector3 Ground(int climate, Vector4 weights, bool lush, float patch, float woods, bool winter)
+    /// <param name="road">Worn trade-road coverage at this vertex (0 to 1), softening under winter snow.</param>
+    internal Vector3 Ground(int climate, Vector4 weights, bool lush, float patch, float woods, bool winter, float road = 0f)
     {
         DaggerfallMapGround ground = Climates.TryGetValue(climate, out DaggerfallMapGround found) ? found : Climates[231];
         float total = MathF.Max(weights.X + weights.Y + weights.Z + weights.W, 1e-4f);
@@ -65,6 +73,23 @@ internal sealed record DaggerfallMapPalette(
         Vector3 colour = ((open * weights.X) + (Vector3.Lerp(ground.Earth, ground.Woods, forest) * weights.Y) + (Rock * weights.Z) + ((lush ? Lush : Snow) * weights.W)) / total;
         colour *= 1 + (Variation * ((patch * 2) - 1));
         if (winter && climate is not (224 or 225 or 229)) colour = Vector3.Lerp(colour, Snow, WinterSnow * (1 - (weights.Z / total)));
+        if (road > .001f)
+        {
+            // Attenuate roads smoothly across steep rocky crags so tracks never smear up vertical cliffs.
+            float rockShare = weights.Z / total;
+            float cragFade = 1f - Math.Clamp((rockShare - .35f) / .35f, 0f, 1f);
+            bool snowed = winter && climate is not (224 or 225 or 229);
+            Vector3 track = climate switch
+            {
+                224 or 225 => DesertRoad,
+                229 => SubtropicalRoad,
+                226 => MountainRoad,
+                _ => TemperateRoad,
+            };
+            if (snowed) track = Vector3.Lerp(track, WinterRoadSnow, .72f);
+            float blend = Math.Clamp(road * cragFade * (snowed ? .46f : .80f) * (.86f + (.14f * patch)), 0f, .88f);
+            colour = Vector3.Lerp(colour, track, blend);
+        }
         return colour;
     }
 

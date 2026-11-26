@@ -67,6 +67,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private readonly Func<int, int, int> _climate;
     private readonly DaggerfallHorizonTuning _tuning;
     private readonly DaggerfallGroundTuning _groundTuning;
+    private readonly DaggerfallOverlandRoads? _roads;
     private readonly float[] _floor;
     /// <summary>Each map pixel's distance in pixels to the nearest land, measured the first time the travel map paints water.</summary>
     private readonly Lazy<float[]> _offshore;
@@ -81,14 +82,16 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 
     /// <param name="climate">The climate value at an in-bounds map pixel.</param>
     /// <param name="locations">The locations by the map pixel they stand on: all ground levels under them and near ground wears their tiles.</param>
+    /// <param name="roads">Optional overland trade-road network painted onto the travel map and cleared of miniature trees (#11114).</param>
     internal DaggerfallHorizonGround(DaggerfallTerrainSet terrain, Func<int, int, int> climate, DaggerfallHorizonTuning tuning, DaggerfallGroundTuning groundTuning,
-        IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations)
+        IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> locations, DaggerfallOverlandRoads? roads = null)
     {
         _locations = locations ?? throw new ArgumentNullException(nameof(locations));
         _terrain = terrain ?? throw new ArgumentNullException(nameof(terrain));
         _climate = climate ?? throw new ArgumentNullException(nameof(climate));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _groundTuning = groundTuning ?? throw new ArgumentNullException(nameof(groundTuning));
+        _roads = roads;
         _frame = new(0, 0, tuning.Lift, false);
         // The samples are read on first use, which is content work no worker may do.
         _ = terrain.Samples;
@@ -248,11 +251,13 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             }
             float patch = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX / 4 + 7_919, 64_000 - (broadZ / 4));
             float woods = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX / 2 + 3_301, 64_000 - (broadZ / 2) + 5_107);
-            samples.SetColor(i, j, Linear(palette.Ground(climate, weights, lush, patch, woods, winter) * cavity));
+            float road = _roads?.Sample(x, z, tile.CellSize) ?? 0f;
+            samples.SetColor(i, j, Linear(palette.Ground(climate, weights, lush, patch, woods, winter, road) * cavity));
         }
     }
 
-    private static Color Linear(System.Numerics.Vector3 colour) => new(colour.X, colour.Y, colour.Z, 1);
+    private static Color Linear(System.Numerics.Vector3 colour) =>
+        new(Math.Clamp(colour.X, 0f, 1f), Math.Clamp(colour.Y, 0f, 1f), Math.Clamp(colour.Z, 0f, 1f), 1f);
 
     /// <summary>
     /// How far out to sea a point lies, in metres to the nearest map pixel of land, read between pixels: the shallows by
@@ -343,9 +348,11 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             return false;
         }
 
-        // Exclude river channels and immediate riverbanks.
+        // Exclude river channels, immediate riverbanks, and worn overland trade roads so trees part cleanly around roadways.
         if (_terrain.Rivers?.NearOverland(x - DaggerfallWorldGrid.HorizontalSize, z, cellMetres) is { } river
             && river.Distance <= river.HalfWidth + (DaggerfallTerrainRivers.BankWidth(river.HalfWidth) * .85))
+            return false;
+        if ((_roads?.Sample(x, z, cellMetres) ?? 0f) > .14f)
             return false;
 
         Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
