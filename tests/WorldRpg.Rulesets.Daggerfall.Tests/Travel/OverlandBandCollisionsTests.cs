@@ -1,4 +1,5 @@
 using System.Numerics;
+using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -299,12 +300,13 @@ public sealed class OverlandBandCollisionsTests
         Assert.True(session.Expedition.BandAhead!.IsClash);
         Assert.Contains("intervene", session.Expedition.Message ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
-        // Save/restore round-trip preserves the transient-rival raid, and EnterExpedition materializes BOTH sides facing each other!
+        // Save/restore round-trip preserves the transient-rival raid, and EnterExpedition materializes BOTH sides facing each other via TrySpawnPose!
         RulesetSavePayload saved = session.CaptureSave();
         List<string> restoreReleases = [];
         ContentFake restoreContent = new(restoreReleases);
         PopulateContent(restoreContent, originProfile);
         SpatialFake restoreSpatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, restoreReleases);
+        restoreSpatial.FloorHit = WalkableFlatFloor;
         EngineContextFake restoreEngine = EngineContextFake.Create(restoreContent, restoreSpatial.Service, new AppearanceFake(restoreReleases));
         using DaggerfallSession restored = DaggerfallSession.Restore(restoreEngine.Context, composition, saved);
         restored.ApplyProductMode(ProductMode.Playing);
@@ -318,6 +320,9 @@ public sealed class OverlandBandCollisionsTests
         HashSet<long> actorsBeforeEntry = [.. restored.State.Actors.All.Select(a => a.DurableId)];
         restored.EnterExpedition();
         Assert.False(restored.Expedition.Open);
+        Assert.NotEmpty(restoreSpatial.FloorProbes);
+        Assert.NotEmpty(restoreSpatial.OverlapRequests);
+        Assert.Equal(0, restored.OverlandParties.PendingTransientClashCount);
 
         Assert.True(restored.State.Actors.TryGet(caravanMemberId, out ActorState? liveMerchant));
         List<ActorState> spawnedRaiders = [.. restored.State.Actors.All
@@ -336,6 +341,181 @@ public sealed class OverlandBandCollisionsTests
         }
         AssertSidesFaceEachOther([liveMerchant!], spawnedRaiders);
         Assert.Empty(restored.State.ActorLedger.EntriesOnOverlandBand(caravan.BandId));
+    }
+
+    [Fact]
+    public void Obstructed_transient_raid_anchor_never_spawns_into_blocked_pose_and_retries_when_clear()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord origin = definitions.Locations.Records.First(r =>
+            r.Id.Region == DaggerfallRegion && r.Exterior is not null && r.Kind == DaggerfallSiteKind.TownCity);
+        DaggerfallSiteProfile originProfile = Assembled(DaggerfallWorldProfileIds.Exterior(origin.Id));
+        DaggerfallSiteProfiles profiles = new([originProfile]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, originProfile);
+        SpatialFake spatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, originProfile, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            "cond:monster-surge:r17:obstructed-test", DaggerfallWorldConditionKind.MonsterSurge, DaggerfallRegion, Severity: 2, StartedDay: 0, SubjectTag: "orcs"));
+        session.OpenExpedition();
+
+        DaggerfallTravelMapPixel? wildPixel = null;
+        for (int dy = -2; dy <= 2 && wildPixel is null; dy++)
+        {
+            for (int dx = -2; dx <= 2 && wildPixel is null; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                DaggerfallTravelMapPixel candidate = new(origin.MapPixelX + dx, origin.MapPixelY + dy);
+                if (!candidate.IsInBounds || session.Expedition.Policy.IsOcean(candidate)) continue;
+                if (session.Expedition.LocationAt(candidate) is not null) continue;
+                if (session.Expedition.HostAt(candidate).Id != origin.Id) continue;
+                wildPixel = candidate;
+            }
+        }
+        Assert.NotNull(wildPixel);
+
+        session.Expedition.Close();
+        session.Expedition.Begin(wildPixel!.Value, aboardOwnShip: false);
+        (double px, double py) = session.Expedition.Position;
+
+        DaggerfallPersistentOverlandBand? caravan = session.OverlandTraffic.TryDispatchWindow(791L, (px, py));
+        Assert.NotNull(caravan);
+        long caravanMemberId = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(caravan!.BandId)).DurableId;
+        caravan.X = px + 0.10;
+        caravan.Y = py;
+        Assert.Null(session.Expedition.StageBand(distance: 0.14, bearing: 90.0, camp: true));
+
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        session.Expedition.SetSpeed(1);
+        _ = session.Expedition.Advance(0.25);
+
+        DaggerfallPersistentOverlandBand heldRaid = Assert.Single(session.Expedition.PersistentBands, b => b.BandId == caravan.BandId);
+        Assert.NotNull(heldRaid.ActiveClash);
+        int expectedRivalMobileId = heldRaid.ActiveClash!.RivalMobileId!.Value;
+        int expectedRivalSize = heldRaid.ActiveClash.RivalSize;
+        Assert.True(expectedRivalSize > 0);
+        RulesetSavePayload savedRaid = session.CaptureSave();
+
+        // Case A: A solid obstacle blocks the 9m anchor directly ahead of the player (radius 3m), while nearby space is clear.
+        // TrySpawnPose must deflect raiders away from the obstructed 9m zone and orient both sides from their actual resolved poses.
+        List<string> partialReleases = [];
+        ContentFake partialContent = new(partialReleases);
+        PopulateContent(partialContent, originProfile);
+        SpatialFake partialSpatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, partialReleases);
+        Vector3? blocked9mAnchor = null;
+        const float obstacleRadius = 3.0f;
+        partialSpatial.FloorHit = request =>
+        {
+            if (request.Direction.Y < -0.5f)
+                return WalkableFlatFloor(request);
+            // Horizontal wall ray check: block rays passing directly into the 9m obstacle ahead of the origin.
+            if (blocked9mAnchor is { } obs)
+            {
+                Vector3 rel = obs - request.Origin;
+                float proj = Vector3.Dot(rel, request.Direction);
+                if (proj > 0f && proj <= request.MaxDistance)
+                {
+                    Vector3 closest = request.Origin + request.Direction * proj;
+                    float dx = closest.X - obs.X;
+                    float dz = closest.Z - obs.Z;
+                    if (dx * dx + dz * dz <= obstacleRadius * obstacleRadius)
+                        return new SpatialHit { Present = true, Distance = MathF.Max(0.5f, proj - obstacleRadius), Point = closest, Normal = -request.Direction };
+                }
+            }
+            return default;
+        };
+        partialSpatial.OverlapHit = request =>
+        {
+            if (blocked9mAnchor is { } obs)
+            {
+                float dx = request.Center.X - obs.X;
+                float dz = request.Center.Z - obs.Z;
+                if (dx * dx + dz * dz <= obstacleRadius * obstacleRadius)
+                    return new SpatialHit { Present = true };
+            }
+            return default;
+        };
+        EngineContextFake partialEngine = EngineContextFake.Create(partialContent, partialSpatial.Service, new AppearanceFake(partialReleases));
+        using DaggerfallSession partialSession = DaggerfallSession.Restore(partialEngine.Context, composition, savedRaid);
+        partialSession.ApplyProductMode(ProductMode.Playing);
+        partialSession.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        partialSession.Expedition.SetSpeed(1);
+        _ = partialSession.Expedition.Advance(0.25);
+
+        // Arm the obstacle at the 9m forward anchor dynamically from the first horizontal placement ray's origin (the landing pose).
+        Func<SpatialRaycastRequest, SpatialHit> baseFloor = partialSpatial.FloorHit;
+        partialSpatial.FloorHit = request =>
+        {
+            if (blocked9mAnchor is null && MathF.Abs(request.Direction.Y) < 0.1f)
+                blocked9mAnchor = request.Origin + ActorHeading.Forward(0f) * 9.0f;
+            return baseFloor(request);
+        };
+
+        HashSet<long> partialBefore = [.. partialSession.State.Actors.All.Select(a => a.DurableId)];
+        partialSession.EnterExpedition();
+        Assert.NotNull(blocked9mAnchor);
+        Assert.True(partialSession.State.Actors.TryGet(caravanMemberId, out ActorState? partialMerchant));
+        List<ActorState> partialRaiders = [.. partialSession.State.Actors.All
+            .Where(a => a.DurableId != caravanMemberId
+                && !partialBefore.Contains(a.DurableId)
+                && partialSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                && def.MobileId == expectedRivalMobileId)];
+        Assert.Equal(expectedRivalSize, partialRaiders.Count);
+        foreach (ActorState raider in partialRaiders)
+        {
+            float distToBlocked = HorizontalDistance(raider.Position.ToVector(), blocked9mAnchor!.Value);
+            Assert.True(distToBlocked > obstacleRadius, $"Raider {raider.DurableId} spawned inside blocked 9m obstacle (dist={distToBlocked:F2}).");
+        }
+        AssertSidesFaceEachOther([partialMerchant!], partialRaiders);
+
+        // Case B: Placement is completely obstructed on entry -> ZERO raiders spawn into blocked poses,
+        // pending members are retained, and they materialize facing the merchant once clear space returns on a later update!
+        List<string> blockedReleases = [];
+        ContentFake blockedContent = new(blockedReleases);
+        PopulateContent(blockedContent, originProfile);
+        SpatialFake blockedSpatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, blockedReleases);
+        blockedSpatial.FloorHit = WalkableFlatFloor;
+        blockedSpatial.OverlapHit = _ => new SpatialHit { Present = true };
+        EngineContextFake blockedEngine = EngineContextFake.Create(blockedContent, blockedSpatial.Service, new AppearanceFake(blockedReleases));
+        using DaggerfallSession blockedSession = DaggerfallSession.Restore(blockedEngine.Context, composition, savedRaid);
+        blockedSession.ApplyProductMode(ProductMode.Playing);
+        blockedSession.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        blockedSession.Expedition.SetSpeed(1);
+        _ = blockedSession.Expedition.Advance(0.25);
+
+        HashSet<long> blockedBefore = [.. blockedSession.State.Actors.All.Select(a => a.DurableId)];
+        blockedSession.EnterExpedition();
+        Assert.True(blockedSession.State.Actors.TryGet(caravanMemberId, out ActorState? blockedMerchant));
+        List<ActorState> spawnedWhileBlocked = [.. blockedSession.State.Actors.All
+            .Where(a => a.DurableId != caravanMemberId
+                && !blockedBefore.Contains(a.DurableId)
+                && blockedSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                && def.MobileId == expectedRivalMobileId)];
+        Assert.Empty(spawnedWhileBlocked);
+        Assert.Equal(expectedRivalSize, blockedSession.OverlandParties.PendingTransientClashCount);
+
+        // Clear the obstruction and run one admitted update: retained raiders materialize via TrySpawnPose facing the merchant!
+        blockedSpatial.OverlapHit = _ => default;
+        blockedSession.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal(0, blockedSession.OverlandParties.PendingTransientClashCount);
+        List<ActorState> spawnedAfterRetry = [.. blockedSession.State.Actors.All
+            .Where(a => a.DurableId != caravanMemberId
+                && !blockedBefore.Contains(a.DurableId)
+                && blockedSession.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                && def.MobileId == expectedRivalMobileId)];
+        Assert.Equal(expectedRivalSize, spawnedAfterRetry.Count);
+        foreach (ActorState raider in spawnedAfterRetry)
+        {
+            DaggerfallEnemyPerceptionMemory mem = raider.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+            Assert.False(mem.LairTruce);
+            Assert.True(mem.FactionInfighting);
+        }
+        AssertSidesFaceEachOther([blockedMerchant!], spawnedAfterRetry);
     }
 
     [Fact]
@@ -414,6 +594,18 @@ public sealed class OverlandBandCollisionsTests
     }
 
     private static Vector3 HorizontalNormalize(Vector3 v) => Vector3.Normalize(new Vector3(v.X, 0f, v.Z));
+
+    private static SpatialHit WalkableFlatFloor(SpatialRaycastRequest request) =>
+        request.Direction.Y < -0.5f
+            ? new SpatialHit { Present = true, Point = new Vector3(request.Origin.X, 0f, request.Origin.Z), Normal = Vector3.UnitY, Distance = MathF.Max(0f, request.Origin.Y) }
+            : default;
+
+    private static float HorizontalDistance(Vector3 a, Vector3 b)
+    {
+        float dx = a.X - b.X;
+        float dz = a.Z - b.Z;
+        return MathF.Sqrt(dx * dx + dz * dz);
+    }
 
     private static float Vector3Distance(WorldPoint a, WorldPoint b)
     {

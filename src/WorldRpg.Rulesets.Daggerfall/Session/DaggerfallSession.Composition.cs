@@ -1037,7 +1037,11 @@ internal sealed partial class DaggerfallSession
                         .FirstOrDefault();
                     if (def is null) return null;
                     return SpawnActor(def.Id.Value, pose, lairTruce: false, factionInfighting: true);
-                });
+                },
+                tryResolveSpawnPose: (operation, origin, minimum, maximum, direction) =>
+                    _placement.TrySpawnPose(operation, "daggerfall.overland-clash", origin, minimum, maximum, out ActorPose pose, direction)
+                        ? pose
+                        : null);
             OverlandTraffic = new DaggerfallOverlandTraffic(
                 definitions, State.ActorLedger, actors, State.Npcs, Expedition, OverlandParties,
                 questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);

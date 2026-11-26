@@ -33,6 +33,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     private readonly Func<DaggerfallSiteId, (int X, int Y)?>? _siteCoordinates;
     private readonly Action<long>? _provokeHostile;
     private readonly Func<int, ActorPose, long?>? _spawnClashMobile;
+    private readonly Func<string, WorldPoint, float, float, SpawnDirection, ActorPose?>? _tryResolveSpawnPose;
 
     private sealed record PendingIntercept(
         string BandId,
@@ -45,7 +46,26 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             || (TransientRivalMobileId is not null && TransientRivalSize > 0);
     }
 
+    private sealed class PendingTransientClash(
+        string bandId,
+        DaggerfallWorldProfileKey profileKey,
+        List<long> primaryActorIds,
+        int rivalMobileId,
+        int remainingCount,
+        WorldPoint playerAnchor)
+    {
+        internal string BandId { get; } = bandId;
+        internal DaggerfallWorldProfileKey ProfileKey { get; } = profileKey;
+        internal List<long> PrimaryActorIds { get; } = primaryActorIds;
+        internal int RivalMobileId { get; } = rivalMobileId;
+        internal int RemainingCount { get; set; } = remainingCount;
+        internal WorldPoint PlayerAnchor { get; set; } = playerAnchor;
+        internal List<long> SpawnedRivalIds { get; } = [];
+        internal int AttemptOrdinal { get; set; }
+    }
+
     private readonly List<PendingIntercept> _pendingIntercepts = [];
+    private readonly List<PendingTransientClash> _pendingTransientClashes = [];
 
     internal DaggerfallOverlandPartyCoordinator(
         DaggerfallExpedition expedition,
@@ -61,7 +81,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         Func<long, ActorLedgerEntry?> captureLiveForCustody,
         Func<DaggerfallSiteId, (int X, int Y)?>? siteCoordinates = null,
         Action<long>? provokeHostile = null,
-        Func<int, ActorPose, long?>? spawnClashMobile = null)
+        Func<int, ActorPose, long?>? spawnClashMobile = null,
+        Func<string, WorldPoint, float, float, SpawnDirection, ActorPose?>? tryResolveSpawnPose = null)
     {
         _expedition = expedition ?? throw new ArgumentNullException(nameof(expedition));
         _actorLedger = actorLedger ?? throw new ArgumentNullException(nameof(actorLedger));
@@ -77,7 +98,11 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         _siteCoordinates = siteCoordinates;
         _provokeHostile = provokeHostile;
         _spawnClashMobile = spawnClashMobile;
+        _tryResolveSpawnPose = tryResolveSpawnPose;
     }
+
+    /// <summary>Total transient clash rival members still waiting for clear placement in the active scene.</summary>
+    internal int PendingTransientClashCount => _pendingTransientClashes.Sum(p => p.RemainingCount);
 
     internal IReadOnlyList<long> StagedPartyMemberIds =>
     [
@@ -411,6 +436,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     internal void OnEnterSceneFromExpedition(DaggerfallSiteProfile activeProfile, WorldPoint landingLocalPose, float landingYaw)
     {
         ArgumentNullException.ThrowIfNull(activeProfile);
+        _pendingTransientClashes.RemoveAll(pending => pending.ProfileKey != activeProfile.ProfileKey);
         if (_pendingIntercepts.Count > 0)
         {
             PendingIntercept[] intercepts = [.. _pendingIntercepts];
@@ -433,29 +459,96 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                     rivalIds.AddRange(DeliverBandMembers(
                         rivalBandId, activeProfile.ProfileKey, landingLocalPose, landingYaw,
                         inClash: true, facingOffset: MathF.PI, forwardDistance: 9.0f));
+                    OrientClashSidesFacingEachOther(primaryIds, rivalIds);
                 }
                 else if (intercept.TransientRivalMobileId is int rivalMobileId
                     && intercept.TransientRivalSize > 0
                     && _spawnClashMobile is not null)
                 {
-                    float initialRivalYaw = landingYaw + MathF.PI;
-                    for (int i = 0; i < intercept.TransientRivalSize; i++)
-                    {
-                        WorldPoint spot = OffsetBeside(landingLocalPose, landingYaw, i, forwardDistance: 9.0f);
-                        if (_spawnClashMobile(rivalMobileId, new ActorPose(spot, initialRivalYaw)) is long spawnedId)
-                        {
-                            rivalIds.Add(spawnedId);
-                            _provokeHostile?.Invoke(spawnedId);
-                        }
-                    }
+                    PendingTransientClash pending = new(
+                        intercept.BandId,
+                        activeProfile.ProfileKey,
+                        [.. primaryIds],
+                        rivalMobileId,
+                        intercept.TransientRivalSize,
+                        landingLocalPose);
+                    _ = TryMaterializeTransientClash(pending);
+                    if (pending.RemainingCount > 0)
+                        _pendingTransientClashes.Add(pending);
                 }
-
-                OrientClashSidesFacingEachOther(primaryIds, rivalIds);
             }
         }
 
         _ = StagePartyMembers(activeProfile, landingLocalPose, landingYaw,
             role => role is ActorPartyRole.Driver or ActorPartyRole.Companion);
+    }
+
+    /// <summary>
+    /// Retries placement for any transient clash rivals whose initial anchor was obstructed on scene entry,
+    /// using <see cref="DaggerfallActorPlacement.TrySpawnPose"/> clearance checks and orienting both clash sides
+    /// from their resulting positions once placed.
+    /// </summary>
+    internal int StepPendingClashSpawns(WorldPoint currentPlayerPosition)
+    {
+        if (_pendingTransientClashes.Count == 0) return 0;
+        DaggerfallWorldProfileKey activeKey = _activeProfile().ProfileKey;
+        int placedTotal = 0;
+
+        for (int i = _pendingTransientClashes.Count - 1; i >= 0; i--)
+        {
+            PendingTransientClash pending = _pendingTransientClashes[i];
+            if (pending.ProfileKey != activeKey)
+            {
+                _pendingTransientClashes.RemoveAt(i);
+                continue;
+            }
+            pending.PlayerAnchor = currentPlayerPosition;
+            placedTotal += TryMaterializeTransientClash(pending);
+            if (pending.RemainingCount <= 0)
+                _pendingTransientClashes.RemoveAt(i);
+        }
+        return placedTotal;
+    }
+
+    private int TryMaterializeTransientClash(PendingTransientClash pending)
+    {
+        if (_spawnClashMobile is null || pending.RemainingCount <= 0) return 0;
+        int placedThisCall = 0;
+        int targetCount = pending.RemainingCount;
+        for (int i = 0; i < targetCount; i++)
+        {
+            ActorPose? resolved = TryResolveClashRivalPose(pending, i);
+            if (resolved is not { } pose)
+                break;
+
+            if (_spawnClashMobile(pending.RivalMobileId, pose) is long spawnedId)
+            {
+                pending.SpawnedRivalIds.Add(spawnedId);
+                pending.RemainingCount--;
+                placedThisCall++;
+                _provokeHostile?.Invoke(spawnedId);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if (placedThisCall > 0)
+            OrientClashSidesFacingEachOther(pending.PrimaryActorIds, pending.SpawnedRivalIds);
+        return placedThisCall;
+    }
+
+    private ActorPose? TryResolveClashRivalPose(PendingTransientClash pending, int memberIndex)
+    {
+        if (_tryResolveSpawnPose is null)
+            return null;
+        string op = $"overland-clash:{pending.BandId}:{pending.AttemptOrdinal++}:{memberIndex}";
+        // Prefer the intended opposing anchor ~7-11m ahead of the player (beyond the 4m primary side), then a closer
+        // clear spot ahead, then any unobstructed angle around the player — always respecting walls and ClearFloor.
+        return _tryResolveSpawnPose(op + ":ahead", pending.PlayerAnchor, 7.0f, 11.0f, SpawnDirection.Ahead)
+            ?? _tryResolveSpawnPose(op + ":mid-ahead", pending.PlayerAnchor, 5.0f, 9.0f, SpawnDirection.Ahead)
+            ?? _tryResolveSpawnPose(op + ":around", pending.PlayerAnchor, 5.0f, 11.0f, SpawnDirection.Any);
     }
 
     private void OrientClashSidesFacingEachOther(IReadOnlyList<long> primaryIds, IReadOnlyList<long> rivalIds)
