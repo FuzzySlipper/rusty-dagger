@@ -140,9 +140,9 @@ public sealed class DaggerfallMobileCatalogTests
         DaggerfallContentException missingTemplates = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(emptyTemplates)));
         Assert.Contains(missingTemplates.Diagnostics, message => message.Contains("no actor templates", StringComparison.Ordinal));
 
-        JsonObject emptySpecs = TestPayload.Sections("actorSpecsCreatures", "actorSpecsEnemies");
-        emptySpecs["actorSpecsCreatures"] = new JsonObject { ["specs"] = new JsonArray() };
-        emptySpecs["actorSpecsEnemies"] = new JsonObject { ["specs"] = new JsonArray() };
+        JsonObject emptySpecs = TestPayload.Sections("actorSpecsCreatures", "actorSpecsEnemies", "actorSpecsTownsfolk", "actorSpecsCast");
+        foreach (string name in new[] { "actorSpecsCreatures", "actorSpecsEnemies", "actorSpecsTownsfolk", "actorSpecsCast" })
+            emptySpecs[name] = new JsonObject { ["specs"] = new JsonArray() };
         DaggerfallContentException missingSpecs = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(emptySpecs)));
         Assert.Contains(missingSpecs.Diagnostics, message => message.Contains("no actor spawner specs", StringComparison.Ordinal));
     }

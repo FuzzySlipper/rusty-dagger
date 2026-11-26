@@ -98,7 +98,7 @@ public sealed class DaggerfallLocationOverridesTests
     public void Blades_guards_stand_at_the_hall_door_and_road_entrances_of_Hearthwing_alone()
     {
         DaggerfallStaticNpcPlacement[] guards = [.. Assembled(DaggerfallWorldProfileIds.Exterior(Hearthwing)).StaticNpcs
-            .Where(npc => npc.SpawnerId == "blades-guard")];
+            .Where(npc => npc.SpawnerId == "town-blades-guard")];
 
         Assert.Equal(8, guards.Length);
         Assert.All(guards, guard =>
@@ -108,7 +108,7 @@ public sealed class DaggerfallLocationOverridesTests
             Assert.Equal(ActorHarmPolicyKind.LawProtectedCivilian, guard.Harm);
         });
         DaggerfallSiteId hearthfield = TestPayload.Definitions.Locations.Records.Single(site => site.Region == 17 && site.Name == "Hearthfield Manor").Id;
-        Assert.DoesNotContain(Assembled(DaggerfallWorldProfileIds.Exterior(hearthfield)).StaticNpcs, npc => npc.SpawnerId == "blades-guard");
+        Assert.DoesNotContain(Assembled(DaggerfallWorldProfileIds.Exterior(hearthfield)).StaticNpcs, npc => npc.SpawnerId == "town-blades-guard");
     }
 
     [Fact]
@@ -120,13 +120,13 @@ public sealed class DaggerfallLocationOverridesTests
             BlockFiles = [new DaggerfallPeopleBlockFile("blocks/bad-sites.json", Encoding.UTF8.GetBytes("""
                 {"kind":"site-exterior","blocks":{
                   "17/1045":[],
-                  "17/1045/0,0":[{"slotId":"s:t00","spawner":"blades-guard","position":[0,0,0],"interaction":"full-dialogue","factionId":129,"visual":{"archive":183,"record":2,"gender":"Male"}}]
+                  "17/1045/0,0":[{"slotId":"s:t00","spawner":"town-blades-guard","position":[0,0,0],"interaction":"full-dialogue","factionId":129,"visual":{"archive":183,"record":2,"gender":"Male"}}]
                 }}
                 """))],
         };
 
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
-            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
+            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items, TestPayload.Definitions.ActorCatalog));
 
         Assert.Contains("People site cell '17/1045' in 'blocks/bad-sites.json' must be keyed region/index/x,y", error.Message, StringComparison.Ordinal);
         Assert.Contains("People site cell '17/1045/0,0' slot 's:t00' must be a spawner's and not offer dialogue", error.Message, StringComparison.Ordinal);

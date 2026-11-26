@@ -139,17 +139,17 @@ public sealed class BoardSetupTests
         Assert.Contains("seat 'guild' goal retaliate west: is never authored: grudges open it", problems);
     }
 
-    /// <summary>The ids of the people pack's cast individuals, from the repository's content.</summary>
+    /// <summary>The ids of the cast individuals (single-person cast spawners in daggerfall.base), from the repository's content.</summary>
     private static HashSet<string> CastIndividuals()
     {
         DirectoryInfo? root = new(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, CastFile))) root = root.Parent;
         Assert.NotNull(root);
         using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root.FullName, CastFile)));
-        return [.. document.RootElement.GetProperty("individuals").EnumerateArray().Select(individual => individual.GetProperty("id").GetString()!)];
+        return [.. document.RootElement.GetProperty("specs").EnumerateArray().Select(individual => individual.GetProperty("id").GetString()!)];
     }
 
-    private const string CastFile = "content/worldrpg/packs/daggerfall.people/cast/individuals.json";
+    private const string CastFile = "content/worldrpg/packs/daggerfall.base/actors/specs/cast.json";
 
     [Fact]
     public void A_seat_cannot_start_with_more_pieces_than_its_supply()

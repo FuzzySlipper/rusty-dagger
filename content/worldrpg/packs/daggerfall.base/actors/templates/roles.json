@@ -1,3 +1,327 @@
 {
-  "templates": []
+  "templates": [
+    {
+      "id": "civilian",
+      "extends": "humanoid",
+      "attributes": {
+        "strength": 45,
+        "intelligence": 45,
+        "willpower": 45,
+        "agility": 45,
+        "endurance": 45,
+        "personality": 50,
+        "speed": 45,
+        "luck": 45
+      },
+      "skills": {
+        "etiquette": 25,
+        "streetwise": 25,
+        "hand-to-hand": 15,
+        "dodging": 15
+      },
+      "health": {
+        "minimum": 18,
+        "maximum": 28
+      },
+      "fatigue": 50,
+      "magicka": 0,
+      "armor": 0,
+      "level": 1,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": true,
+      "loadout": []
+    },
+    {
+      "id": "static-npc",
+      "extends": "humanoid",
+      "attributes": {
+        "strength": 50,
+        "intelligence": 50,
+        "willpower": 50,
+        "agility": 50,
+        "endurance": 50,
+        "personality": 52,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "etiquette": 30,
+        "streetwise": 25,
+        "dodging": 15
+      },
+      "health": {
+        "minimum": 20,
+        "maximum": 30
+      },
+      "fatigue": 50,
+      "magicka": 0,
+      "armor": 0,
+      "level": 1,
+      "defaultHarm": "protected",
+      "defaultInteraction": "full-dialogue",
+      "walks": false,
+      "loadout": []
+    },
+    {
+      "id": "clutter-person",
+      "extends": "civilian",
+      "attributes": {
+        "strength": 45,
+        "intelligence": 45,
+        "willpower": 45,
+        "agility": 45,
+        "endurance": 45,
+        "personality": 45,
+        "speed": 45,
+        "luck": 45
+      },
+      "skills": {
+        "dodging": 15
+      },
+      "health": {
+        "minimum": 16,
+        "maximum": 24
+      },
+      "fatigue": 40,
+      "magicka": 0,
+      "armor": 0,
+      "level": 1,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "none",
+      "walks": false,
+      "loadout": []
+    },
+    {
+      "id": "questor",
+      "extends": "static-npc",
+      "attributes": {
+        "strength": 50,
+        "intelligence": 56,
+        "willpower": 50,
+        "agility": 50,
+        "endurance": 50,
+        "personality": 58,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "etiquette": 40,
+        "streetwise": 35,
+        "dodging": 20
+      },
+      "health": {
+        "minimum": 28,
+        "maximum": 40
+      },
+      "fatigue": 60,
+      "magicka": 10,
+      "armor": 0,
+      "level": 2,
+      "defaultHarm": "protected",
+      "defaultInteraction": "full-dialogue",
+      "walks": false,
+      "loadout": []
+    },
+    {
+      "id": "guard",
+      "extends": "humanoid",
+      "attributes": {
+        "strength": 62,
+        "intelligence": 55,
+        "willpower": 55,
+        "agility": 55,
+        "endurance": 60,
+        "personality": 55,
+        "speed": 55,
+        "luck": 55
+      },
+      "skills": {
+        "long-blade": 45,
+        "dodging": 35,
+        "streetwise": 30
+      },
+      "health": {
+        "minimum": 40,
+        "maximum": 56
+      },
+      "fatigue": 80,
+      "magicka": 0,
+      "armor": 4,
+      "level": 3,
+      "defaultHarm": "combatant",
+      "defaultInteraction": "full-dialogue",
+      "walks": true,
+      "loadout": [
+        {
+          "item": "gold-piece",
+          "quantity": 8
+        }
+      ]
+    },
+    {
+      "id": "combatant",
+      "extends": "humanoid",
+      "attributes": {
+        "strength": 56,
+        "intelligence": 50,
+        "willpower": 50,
+        "agility": 50,
+        "endurance": 55,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 35,
+        "dodging": 30
+      },
+      "health": {
+        "minimum": 30,
+        "maximum": 45
+      },
+      "fatigue": 70,
+      "magicka": 0,
+      "armor": 2,
+      "level": 2,
+      "defaultHarm": "combatant",
+      "defaultInteraction": "none",
+      "walks": true,
+      "loadout": []
+    },
+    {
+      "id": "merchant",
+      "extends": "civilian",
+      "attributes": {
+        "strength": 48,
+        "intelligence": 55,
+        "willpower": 48,
+        "agility": 48,
+        "endurance": 48,
+        "personality": 60,
+        "speed": 48,
+        "luck": 48
+      },
+      "skills": {
+        "mercantile": 50,
+        "etiquette": 40,
+        "streetwise": 35
+      },
+      "health": {
+        "minimum": 22,
+        "maximum": 32
+      },
+      "fatigue": 55,
+      "magicka": 0,
+      "armor": 0,
+      "level": 1,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": false,
+      "loadout": [
+        {
+          "item": "gold-piece",
+          "quantity": 15
+        }
+      ]
+    },
+    {
+      "id": "noble",
+      "extends": "static-npc",
+      "attributes": {
+        "strength": 50,
+        "intelligence": 56,
+        "willpower": 54,
+        "agility": 50,
+        "endurance": 50,
+        "personality": 68,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "etiquette": 60,
+        "mercantile": 40,
+        "short-blade": 25
+      },
+      "health": {
+        "minimum": 26,
+        "maximum": 36
+      },
+      "fatigue": 55,
+      "magicka": 15,
+      "armor": 0,
+      "level": 2,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": false,
+      "loadout": [
+        {
+          "item": "gold-piece",
+          "quantity": 25
+        }
+      ]
+    },
+    {
+      "id": "priest",
+      "extends": "static-npc",
+      "attributes": {
+        "strength": 48,
+        "intelligence": 56,
+        "willpower": 64,
+        "agility": 48,
+        "endurance": 48,
+        "personality": 56,
+        "speed": 48,
+        "luck": 48
+      },
+      "skills": {
+        "restoration": 50,
+        "mysticism": 40,
+        "medical": 45,
+        "etiquette": 40
+      },
+      "health": {
+        "minimum": 24,
+        "maximum": 34
+      },
+      "fatigue": 55,
+      "magicka": 40,
+      "armor": 0,
+      "level": 2,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": false,
+      "loadout": []
+    },
+    {
+      "id": "child",
+      "extends": "civilian",
+      "attributes": {
+        "strength": 35,
+        "intelligence": 35,
+        "willpower": 35,
+        "agility": 48,
+        "endurance": 35,
+        "personality": 35,
+        "speed": 52,
+        "luck": 35
+      },
+      "skills": {
+        "running": 35,
+        "dodging": 25
+      },
+      "health": {
+        "minimum": 12,
+        "maximum": 18
+      },
+      "fatigue": 40,
+      "magicka": 0,
+      "armor": 0,
+      "level": 1,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": false,
+      "loadout": []
+    }
+  ]
 }

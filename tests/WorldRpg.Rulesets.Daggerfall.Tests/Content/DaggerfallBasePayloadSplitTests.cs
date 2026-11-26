@@ -45,7 +45,7 @@ public sealed class DaggerfallBasePayloadSplitTests
         using JsonDocument imported = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(payloads, "daggerfall.imported.json")));
 
         Assert.Equal(
-            ["ruleset", "enemyRanged", "vocabulary", "armorValuesByMaterial", "actorTemplateBases", "actorTemplateCreatures", "actorTemplateClasses", "actorTemplateRoles", "actorSpecsCreatures", "actorSpecsEnemies", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "encounters", "assembledSites", "classicPresentation", "newGame", "enemySpells", "dialogueWorldRules", "help", "questJournalTitles", "worldNames", "buildingNames", "internalText", "catalogs", "magic", "factions", "itemTemplates", "text", "names", "rumors", "books", "biographies", "creatureFactions", "locationOverrides"],
+            ["ruleset", "enemyRanged", "vocabulary", "armorValuesByMaterial", "actorTemplateBases", "actorTemplateCreatures", "actorTemplateClasses", "actorTemplateRoles", "actorSpecsCreatures", "actorSpecsEnemies", "actorSpecsTownsfolk", "actorSpecsCast", "items", "equipmentSlots", "actions", "lootTables", "hudResources", "encounters", "assembledSites", "classicPresentation", "newGame", "enemySpells", "dialogueWorldRules", "help", "questJournalTitles", "worldNames", "buildingNames", "internalText", "catalogs", "magic", "factions", "boardSeats", "itemTemplates", "text", "names", "rumors", "books", "biographies", "creatureFactions", "locationOverrides"],
             authored.RootElement.EnumerateObject().Select(section => section.Name));
         Assert.Empty(imported.RootElement.EnumerateObject().Select(section => section.Name)
             .Intersect(authored.RootElement.EnumerateObject().Select(section => section.Name)));

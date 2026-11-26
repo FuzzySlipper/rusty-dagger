@@ -240,10 +240,7 @@ class WorldAtlasStore:
         base_path = self.library.base_payload
         atlas_path = self.atlas_manifest_path
         people_available = self.people_pack.available()
-        people_stamp = (
-            file_stamp(self.library.people_pack / "spawners.json"),
-            file_stamp(self.library.people_pack / "cast/individuals.json"),
-        ) if people_available else None
+        people_stamp = self.people_pack.cache_stamp() if people_available else None
 
         stamp = (
             file_stamp(imported_path),

@@ -1,11 +1,25 @@
 {
-  "spawners": [
+  "specs": [
     {
-      "id": "alchemist",
+      "id": "town-alchemist",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Alchemist",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 65
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -456,11 +470,25 @@
       }
     },
     {
-      "id": "armorer",
+      "id": "town-armorer",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Armorer",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 52
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -827,11 +855,25 @@
       }
     },
     {
-      "id": "banker",
+      "id": "town-banker",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Banker",
       "role": "bank teller",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 31
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -1336,11 +1378,21 @@
       }
     },
     {
-      "id": "blades-guard",
+      "id": "town-blades-guard",
+      "family": "town",
+      "template": "guard",
+      "published": false,
+      "displayName": "Blades Guard",
       "role": "person",
-      "archetype": "guard",
-      "interaction": "ambient-bark",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 20
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "ambient-bark",
       "deriveRegionalFaction": false,
       "visualMode": "pool",
       "defaultPool": [
@@ -1373,11 +1425,25 @@
       "climatePools": {}
     },
     {
-      "id": "bookseller",
+      "id": "town-bookseller",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Bookseller",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 43
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -1822,11 +1888,25 @@
       }
     },
     {
-      "id": "child",
+      "id": "town-child",
+      "family": "town",
+      "template": "child",
+      "published": false,
+      "displayName": "Child",
       "role": "person",
-      "archetype": "child",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 683
+        },
+        {
+          "gender": "female",
+          "weight": 59
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -2427,11 +2507,25 @@
       }
     },
     {
-      "id": "clothier",
+      "id": "town-clothier",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Clothier",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 39
+        },
+        {
+          "gender": "female",
+          "weight": 6
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -2888,11 +2982,25 @@
       }
     },
     {
-      "id": "clutter-person",
+      "id": "town-clutter-person",
+      "family": "town",
+      "template": "clutter-person",
+      "published": false,
+      "displayName": "Clutter Person",
       "role": "bystander",
-      "archetype": "clutter-person",
-      "interaction": "none",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 4
+        },
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "none",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -3307,11 +3415,25 @@
       }
     },
     {
-      "id": "courtier",
+      "id": "town-courtier",
+      "family": "town",
+      "template": "noble",
+      "published": false,
+      "displayName": "Courtier",
       "role": "person",
-      "archetype": "noble",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 49
+        },
+        {
+          "gender": "female",
+          "weight": 2
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -3852,11 +3974,21 @@
       }
     },
     {
-      "id": "daedra-summon",
+      "id": "town-daedra-summon",
+      "family": "town",
+      "template": "combatant",
+      "published": false,
+      "displayName": "Daedra Summon",
       "role": "person",
-      "archetype": "combatant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 2
+        }
+      ],
+      "naming": "generated",
       "harm": "combatant",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -3871,11 +4003,25 @@
       "climatePools": {}
     },
     {
-      "id": "dark-brotherhood-member",
+      "id": "town-dark-brotherhood-member",
+      "family": "town",
+      "template": "assassin",
+      "published": false,
+      "displayName": "Dark Brotherhood Member",
       "role": "person",
-      "archetype": "assassin",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 6
+        },
+        {
+          "gender": "female",
+          "weight": 3
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -3920,11 +4066,25 @@
       "climatePools": {}
     },
     {
-      "id": "dungeon-inhabitant",
+      "id": "town-dungeon-inhabitant",
+      "family": "town",
+      "template": "civilian",
+      "published": false,
+      "displayName": "Dungeon Inhabitant",
       "role": "person",
-      "archetype": "civilian",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 26
+        },
+        {
+          "gender": "female",
+          "weight": 10
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -4137,11 +4297,25 @@
       "climatePools": {}
     },
     {
-      "id": "fighters-guild-member",
+      "id": "town-fighters-guild-member",
+      "family": "town",
+      "template": "warrior",
+      "published": false,
+      "displayName": "Fighters Guild Member",
       "role": "person",
-      "archetype": "warrior",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 21
+        },
+        {
+          "gender": "female",
+          "weight": 7
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -4592,11 +4766,25 @@
       }
     },
     {
-      "id": "furniture-merchant",
+      "id": "town-furniture-merchant",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Furniture Merchant",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 23
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -5029,11 +5217,25 @@
       }
     },
     {
-      "id": "general-merchant",
+      "id": "town-general-merchant",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "General Merchant",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 85
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -5472,11 +5674,25 @@
       }
     },
     {
-      "id": "guild-member",
+      "id": "town-guild-member",
+      "family": "town",
+      "template": "civilian",
+      "published": false,
+      "displayName": "Guild Member",
       "role": "person",
-      "archetype": "civilian",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 201
+        },
+        {
+          "gender": "female",
+          "weight": 54
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -6179,11 +6395,25 @@
       }
     },
     {
-      "id": "house-resident",
+      "id": "town-house-resident",
+      "family": "town",
+      "template": "civilian",
+      "published": false,
+      "displayName": "House Resident",
       "role": "person",
-      "archetype": "civilian",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 4232
+        },
+        {
+          "gender": "female",
+          "weight": 5955
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -7210,11 +7440,25 @@
       }
     },
     {
-      "id": "jeweler",
+      "id": "town-jeweler",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Jeweler",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 33
+        },
+        {
+          "gender": "female",
+          "weight": 12
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -7695,11 +7939,25 @@
       }
     },
     {
-      "id": "knightly-order-member",
+      "id": "town-knightly-order-member",
+      "family": "town",
+      "template": "warrior",
+      "published": false,
+      "displayName": "Knightly Order Member",
       "role": "person",
-      "archetype": "warrior",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 24
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -8156,11 +8414,25 @@
       }
     },
     {
-      "id": "mage-guild-member",
+      "id": "town-mage-guild-member",
+      "family": "town",
+      "template": "mage",
+      "published": false,
+      "displayName": "Mage Guild Member",
       "role": "person",
-      "archetype": "mage",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 226
+        },
+        {
+          "gender": "female",
+          "weight": 37
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -8749,11 +9021,25 @@
       }
     },
     {
-      "id": "necromancer",
+      "id": "town-necromancer",
+      "family": "town",
+      "template": "mage",
+      "published": false,
+      "displayName": "Necromancer",
       "role": "person",
-      "archetype": "mage",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 3
+        },
+        {
+          "gender": "male",
+          "weight": 3
+        }
+      ],
+      "naming": "generated",
       "harm": "combatant",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -8798,11 +9084,25 @@
       "climatePools": {}
     },
     {
-      "id": "noble",
+      "id": "town-noble",
+      "family": "town",
+      "template": "noble",
+      "published": false,
+      "displayName": "Noble",
       "role": "person",
-      "archetype": "noble",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -9307,11 +9607,25 @@
       }
     },
     {
-      "id": "palace-attendant",
+      "id": "town-palace-attendant",
+      "family": "town",
+      "template": "noble",
+      "published": false,
+      "displayName": "Palace Attendant",
       "role": "person",
-      "archetype": "noble",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 16
+        },
+        {
+          "gender": "female",
+          "weight": 26
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -9888,11 +10202,25 @@
       }
     },
     {
-      "id": "pawnbroker",
+      "id": "town-pawnbroker",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Pawnbroker",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 22
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -10325,11 +10653,25 @@
       }
     },
     {
-      "id": "scholar",
+      "id": "town-scholar",
+      "family": "town",
+      "template": "mage",
+      "published": false,
+      "displayName": "Scholar",
       "role": "person",
-      "archetype": "mage",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 34
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -10774,11 +11116,25 @@
       }
     },
     {
-      "id": "shop-patron",
+      "id": "town-shop-patron",
+      "family": "town",
+      "template": "civilian",
+      "published": false,
+      "displayName": "Shop Patron",
       "role": "person",
-      "archetype": "civilian",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 178
+        },
+        {
+          "gender": "male",
+          "weight": 108
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -11547,11 +11903,25 @@
       }
     },
     {
-      "id": "tavern-keeper",
+      "id": "town-tavern-keeper",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Tavern Keeper",
       "role": "tavern keeper",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 305
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -12002,11 +12372,25 @@
       }
     },
     {
-      "id": "tavern-patron",
+      "id": "town-tavern-patron",
+      "family": "town",
+      "template": "civilian",
+      "published": false,
+      "displayName": "Tavern Patron",
       "role": "person",
-      "archetype": "civilian",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 770
+        },
+        {
+          "gender": "male",
+          "weight": 514
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -12865,11 +13249,25 @@
       }
     },
     {
-      "id": "temple-priest",
+      "id": "town-temple-priest",
+      "family": "town",
+      "template": "priest",
+      "published": false,
+      "displayName": "Temple Priest",
       "role": "priest",
-      "archetype": "priest",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 88
+        },
+        {
+          "gender": "female",
+          "weight": 54
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -13632,11 +14030,25 @@
       }
     },
     {
-      "id": "weaponsmith",
+      "id": "town-weaponsmith",
+      "family": "town",
+      "template": "merchant",
+      "published": false,
+      "displayName": "Weaponsmith",
       "role": "merchant",
-      "archetype": "merchant",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 55
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [
@@ -14009,11 +14421,25 @@
       }
     },
     {
-      "id": "witch",
+      "id": "town-witch",
+      "family": "town",
+      "template": "mage",
+      "published": false,
+      "displayName": "Witch",
       "role": "witch",
-      "archetype": "mage",
-      "interaction": "full-dialogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 68
+        },
+        {
+          "gender": "female",
+          "weight": 75
+        }
+      ],
+      "naming": "generated",
       "harm": "law-protected-civilian",
+      "interaction": "full-dialogue",
       "deriveRegionalFaction": true,
       "visualMode": "pool",
       "defaultPool": [

@@ -314,7 +314,7 @@ public sealed class SceneClutterAndCrowdTests
         Assert.DoesNotContain(assembledNone.Decorations, dec =>
             DaggerfallPeopleSlots.IsPersonClutterBillboard(dec.Source.Archive, dec.Source.Record));
         DaggerfallStaticNpcPlacement noneClutter = Assert.Single(assembledNone.StaticNpcs, npc =>
-            npc.SpawnerId == "clutter-person"
+            npc.SpawnerId == "town-clutter-person"
             && npc.Interaction == ActorInteractionPolicyKind.None
             && npc.Harm == ActorHarmPolicyKind.LawProtectedCivilian);
         int expectedNoneFaction = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, noneTown.Id.Region)!.Id;
@@ -330,7 +330,7 @@ public sealed class SceneClutterAndCrowdTests
         Assert.DoesNotContain(assembledBark.Decorations, dec =>
             DaggerfallPeopleSlots.IsPersonClutterBillboard(dec.Source.Archive, dec.Source.Record));
         DaggerfallStaticNpcPlacement barkClutter = Assert.Single(assembledBark.StaticNpcs, npc =>
-            npc.SpawnerId == "clutter-person"
+            npc.SpawnerId == "town-clutter-person"
             && npc.Interaction == ActorInteractionPolicyKind.AmbientBark
             && npc.Harm == ActorHarmPolicyKind.LawProtectedCivilian);
         int expectedBarkFaction = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, barkTown.Id.Region)!.Id;

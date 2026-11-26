@@ -625,7 +625,7 @@ public sealed class DaggerfallPopulationSessionTests
             billboard.Standing((183, 5)),
             ActorInteractionPolicyKind.FullDialogue,
             ActorHarmPolicyKind.LawProtectedCivilian,
-            SpawnerId: "banker");
+            SpawnerId: "town-banker");
 
         DaggerfallSiteProfile baseExterior = SameContentAt(template, town.Id, DaggerfallWorldProfileKind.Exterior,
             DaggerfallWorldProfileIds.Exterior(town.Id).LogicalId);
@@ -730,7 +730,7 @@ public sealed class DaggerfallPopulationSessionTests
             billboard.Standing((183, 5)),
             ActorInteractionPolicyKind.AmbientBark,
             ActorHarmPolicyKind.LawProtectedCivilian,
-            SpawnerId: "banker");
+            SpawnerId: "town-banker");
 
         DaggerfallSiteProfile BuildSite(DaggerfallSiteId siteId, IReadOnlyList<DaggerfallStaticNpcPlacement> statics)
         {
@@ -813,7 +813,7 @@ public sealed class DaggerfallPopulationSessionTests
         RulesetSavePayload relocatedSave = session.CaptureSave();
         DaggerfallSavePayload capturedPayload = DaggerfallSavePayload.Read(relocatedSave);
         ActorLedgerEntry savedEntry = Assert.Single(capturedPayload.ActorLedger, e => e.DurableId == bankerId);
-        Assert.Equal("banker", savedEntry.Origin.SpawnerId);
+        Assert.Equal("town-banker", savedEntry.Origin.SpawnerId);
         Assert.Equal(ActorHarmPolicyKind.LawProtectedCivilian, savedEntry.Origin.HarmPolicy);
         Assert.Equal(ActorInteractionPolicyKind.AmbientBark, savedEntry.Origin.InteractionPolicy);
         // Untouched baseline loadout still stays 0 bytes in ActorInventories even after relocation.

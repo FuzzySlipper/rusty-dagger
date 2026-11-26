@@ -5,12 +5,21 @@ import math
 from pathlib import Path
 import re
 
-from base_pack import read_section as read_base_section, sections_stamp as base_sections_stamp
+from base_pack import read_section as read_base_section, section_path as base_section_path, sections_stamp as base_sections_stamp
 from cache import FileCache, dir_stamp, file_stamp
 from packs import PackStore, ValidationError, ValidationIssue
 from router import NotFoundError
 
 GENDERS = ("Male", "Female")
+SPEC_GENDERS = ("male", "female")
+SPEC_GENDER_TO_LEGACY = {"male": "Male", "female": "Female", "neutral": "Neutral"}
+LEGACY_GENDER_TO_SPEC = {"Male": "male", "Female": "female", "Neutral": "neutral"}
+CAST_FORBIDDEN_MECHANIC_FIELDS = frozenset({
+    "attributes", "skills", "health", "hitPointsPerLevel", "fatigue", "magicka",
+    "armor", "level", "attackRanges", "damage", "loadout", "spells", "spellPolicy",
+    "tactic", "tendencies", "capabilities",
+})
+SHARED_CLASS_ROLE_IDS = frozenset({"mage", "warrior", "assassin"})
 INTERACTIONS = ("none", "ambient-bark", "full-dialogue")
 HARMS = ("protected", "law-protected-civilian", "combatant")
 VISUAL_MODES = ("pool", "classic-slot")
@@ -459,6 +468,290 @@ def _raise_if_issues(summary: str, issues: list[ValidationIssue]):
         raise ValidationError(summary, issues)
 
 
+def _spec_gender_to_legacy(spec: dict) -> str | None:
+    genders = spec.get("genders")
+    if isinstance(genders, list) and len(genders) == 1 and isinstance(genders[0], dict):
+        return SPEC_GENDER_TO_LEGACY.get(str(genders[0].get("gender") or "").lower())
+    return None
+
+
+def _cast_spec_to_individual(spec: dict) -> dict:
+    home = spec.get("home") if isinstance(spec.get("home"), dict) else None
+    return {
+        "id": spec.get("id"),
+        "factionId": spec.get("factionId"),
+        "name": spec.get("displayName", ""),
+        "race": spec.get("race"),
+        "gender": _spec_gender_to_legacy(spec) or "Male",
+        "visual": spec.get("visual") or {},
+        "homeBlock": home.get("block") if home else None,
+        "homeSlotId": home.get("slotId") if home else None,
+        "homePosition": home.get("position") if home else None,
+        "homeSite": home.get("site") if home else None,
+        "home": home,
+        "interaction": spec.get("interaction", "full-dialogue"),
+        "harm": spec.get("harm", "protected"),
+        "archetype": spec.get("template"),
+        "template": spec.get("template"),
+        "familyId": spec.get("familyId"),
+    }
+
+
+def _town_spec_to_spawner(spec: dict) -> dict:
+    return {
+        "id": spec.get("id"),
+        "role": spec.get("role") or spec.get("displayName") or spec.get("id", ""),
+        "archetype": spec.get("template"),
+        "template": spec.get("template"),
+        "interaction": spec.get("interaction", "full-dialogue"),
+        "harm": spec.get("harm", "law-protected-civilian"),
+        "deriveRegionalFaction": bool(spec.get("deriveRegionalFaction", False)),
+        "visualMode": spec.get("visualMode", "pool"),
+        "defaultPool": spec.get("defaultPool") or [],
+        "regionalPools": spec.get("regionalPools") or {},
+        "climatePools": spec.get("climatePools") or {},
+    }
+
+
+def _resolve_template_map(raw_templates: dict[str, dict]) -> dict[str, dict]:
+    resolved: dict[str, dict] = {}
+    visiting: set[str] = set()
+
+    def resolve_one(tid: str) -> dict:
+        if tid in resolved:
+            return resolved[tid]
+        raw = raw_templates.get(tid)
+        if not isinstance(raw, dict) or tid in visiting:
+            return {}
+        visiting.add(tid)
+        parent_id = raw.get("extends")
+        merged = dict(resolve_one(parent_id)) if isinstance(parent_id, str) and parent_id in raw_templates else {}
+        for key, value in raw.items():
+            if key in ("id", "extends"):
+                continue
+            if key in ("attributes", "skills", "capabilities") and isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**merged[key], **value}
+            else:
+                merged[key] = value
+        merged["id"] = tid
+        visiting.discard(tid)
+        resolved[tid] = merged
+        return merged
+
+    for tid in raw_templates:
+        resolve_one(tid)
+    return resolved
+
+
+def _template_to_archetype(resolved_tpl: dict) -> dict:
+    health = resolved_tpl.get("health") if isinstance(resolved_tpl.get("health"), dict) else {}
+    hmin = health.get("minimum", health.get("min", 20))
+    hmax = health.get("maximum", health.get("max", hmin))
+    attrs = resolved_tpl.get("attributes") if isinstance(resolved_tpl.get("attributes"), dict) else {}
+    base_attr = 50
+    if attrs:
+        counts = Counter(v for v in attrs.values() if _is_int(v))
+        if counts:
+            base_attr = counts.most_common(1)[0][0]
+    loadout_raw = resolved_tpl.get("loadout") if isinstance(resolved_tpl.get("loadout"), list) else []
+    loadout = []
+    for entry in loadout_raw:
+        if isinstance(entry, dict):
+            item_id = entry.get("item") or entry.get("itemId")
+            qty = entry.get("quantity", 1)
+            if item_id:
+                loadout.append({"itemId": item_id, "quantity": qty})
+    return {
+        "id": resolved_tpl["id"],
+        "health": {"min": hmin, "max": hmax},
+        "fatigue": resolved_tpl.get("fatigue", 50) if _is_int(resolved_tpl.get("fatigue")) else 50,
+        "magicka": resolved_tpl.get("magicka", 0) if _is_int(resolved_tpl.get("magicka")) else 0,
+        "armor": resolved_tpl.get("armor", 0) if _is_int(resolved_tpl.get("armor")) else 0,
+        "level": resolved_tpl.get("level", 1) if _is_int(resolved_tpl.get("level")) else 1,
+        "baseAttribute": base_attr,
+        "attributes": dict(attrs),
+        "skills": dict(resolved_tpl.get("skills") or {}),
+        "defaultHarm": resolved_tpl.get("defaultHarm") or "law-protected-civilian",
+        "defaultInteraction": resolved_tpl.get("defaultInteraction") or "full-dialogue",
+        "walks": bool(resolved_tpl.get("walks", True)),
+        "loadout": loadout,
+    }
+
+
+def validate_unified_cast_specs_document(
+    doc,
+    factions: dict[int, dict] | None = None,
+    templates: dict[str, dict] | None = None,
+) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    if not isinstance(doc, dict) or not isinstance(doc.get("specs"), list):
+        return [ValidationIssue("specs", "Cast specs file must contain a 'specs' array.")]
+    seen: set[str] = set()
+    for index, entry in enumerate(doc["specs"]):
+        path = f"specs[{index}]"
+        if not isinstance(entry, dict):
+            issues.append(ValidationIssue(path, "Cast spec must be an object."))
+            continue
+        cid = entry.get("id")
+        if not valid_id(cid):
+            issues.append(ValidationIssue(f"{path}.id", "ID must be lowercase kebab/identifier characters."))
+        elif cid in seen:
+            issues.append(ValidationIssue(f"{path}.id", f"Duplicate cast spec ID '{cid}'."))
+        else:
+            seen.add(cid)
+
+        if entry.get("family") != "cast":
+            issues.append(ValidationIssue(f"{path}.family", "Cast spec must declare family 'cast'."))
+
+        for forbidden in sorted(CAST_FORBIDDEN_MECHANIC_FIELDS & set(entry.keys())):
+            issues.append(ValidationIssue(f"{path}.{forbidden}", f"Cast spec cannot override template mechanic field '{forbidden}'."))
+
+        tpl = entry.get("template")
+        if not valid_id(tpl):
+            issues.append(ValidationIssue(f"{path}.template", "Template ID must be lowercase kebab/identifier characters."))
+        elif templates is not None and tpl not in templates:
+            issues.append(ValidationIssue(f"{path}.template", f"References unknown template '{tpl}'."))
+
+        faction_id = entry.get("factionId")
+        if not _is_int(faction_id) or faction_id <= 0:
+            issues.append(ValidationIssue(f"{path}.factionId", "factionId must be a positive integer."))
+        elif factions:
+            faction = factions.get(faction_id)
+            if faction is None:
+                issues.append(ValidationIssue(f"{path}.factionId", f"References missing faction {faction_id}."))
+            elif faction.get("type") != INDIVIDUAL_FACTION_TYPE:
+                issues.append(ValidationIssue(
+                    f"{path}.factionId",
+                    f"Faction {faction_id} ('{faction.get('name', '?')}') has type {faction.get('type')}, expected Individual (4).",
+                ))
+
+        name = entry.get("displayName")
+        if not isinstance(name, str) or not name.strip():
+            issues.append(ValidationIssue(f"{path}.displayName", "displayName must be non-empty text."))
+
+        race = entry.get("race")
+        if race is not None and (not isinstance(race, str) or not race.strip()):
+            issues.append(ValidationIssue(f"{path}.race", "race must be null or non-empty text."))
+
+        genders = entry.get("genders")
+        if not isinstance(genders, list) or len(genders) != 1 or not isinstance(genders[0], dict):
+            issues.append(ValidationIssue(f"{path}.genders", "Cast spec must pin exactly one gender entry."))
+        else:
+            g = genders[0].get("gender")
+            w = genders[0].get("weight")
+            if g not in SPEC_GENDERS:
+                issues.append(ValidationIssue(f"{path}.genders[0].gender", f"Gender must be one of {', '.join(SPEC_GENDERS)}."))
+            if not _is_int(w) or w <= 0:
+                issues.append(ValidationIssue(f"{path}.genders[0].weight", "Weight must be a positive integer."))
+
+        visual = entry.get("visual")
+        if not isinstance(visual, dict):
+            issues.append(ValidationIssue(f"{path}.visual", "Visual must be an object with archive and record."))
+        else:
+            if not _is_int(visual.get("archive")) or visual["archive"] < 0:
+                issues.append(ValidationIssue(f"{path}.visual.archive", "Archive must be a non-negative integer."))
+            if not _is_int(visual.get("record")) or visual["record"] < 0:
+                issues.append(ValidationIssue(f"{path}.visual.record", "Record must be a non-negative integer."))
+
+        home = entry.get("home")
+        if home is not None:
+            if not isinstance(home, dict):
+                issues.append(ValidationIssue(f"{path}.home", "home must be an object or null."))
+            else:
+                home_block = home.get("block")
+                home_slot = home.get("slotId")
+                home_position = home.get("position")
+                home_site = home.get("site")
+                if not isinstance(home_block, str) or not home_block.strip():
+                    issues.append(ValidationIssue(f"{path}.home.block", "home.block must be non-empty text."))
+                if (home_slot is None) == (home_position is None):
+                    issues.append(ValidationIssue(f"{path}.home.slotId", "A home names exactly one of slotId and position."))
+                if home_slot is not None and (not isinstance(home_slot, str) or not home_slot.strip()):
+                    issues.append(ValidationIssue(f"{path}.home.slotId", "home.slotId must be non-empty text."))
+                if home_position is not None and (
+                    not isinstance(home_position, list) or len(home_position) != 3
+                    or not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in home_position)
+                ):
+                    issues.append(ValidationIssue(f"{path}.home.position", "home.position must be three numbers."))
+                if home_position is not None and home_site is None:
+                    issues.append(ValidationIssue(f"{path}.home.site", "A home.position needs a home.site to set it in."))
+                if home_site is not None and not (
+                    isinstance(home_site, dict) and _is_int(home_site.get("region")) and _is_int(home_site.get("index"))
+                ):
+                    issues.append(ValidationIssue(f"{path}.home.site", "home.site must be an object with integer region and index."))
+
+        if entry.get("interaction") not in INTERACTIONS:
+            issues.append(ValidationIssue(f"{path}.interaction", f"Interaction must be one of {', '.join(INTERACTIONS)}."))
+        if entry.get("harm") not in HARMS:
+            issues.append(ValidationIssue(f"{path}.harm", f"Harm must be one of {', '.join(HARMS)}."))
+    return issues
+
+
+def validate_unified_town_specs_document(doc, templates: dict[str, dict] | None = None) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    if not isinstance(doc, dict) or not isinstance(doc.get("specs"), list):
+        return [ValidationIssue("specs", "Townsfolk specs file must contain a 'specs' array.")]
+    seen: set[str] = set()
+    for index, entry in enumerate(doc["specs"]):
+        path = f"specs[{index}]"
+        if not isinstance(entry, dict):
+            issues.append(ValidationIssue(path, "Spawner spec must be an object."))
+            continue
+        sid = entry.get("id")
+        if not valid_id(sid):
+            issues.append(ValidationIssue(f"{path}.id", "ID must be lowercase kebab/identifier characters."))
+        elif sid in seen:
+            issues.append(ValidationIssue(f"{path}.id", f"Duplicate spawner ID '{sid}'."))
+        else:
+            seen.add(sid)
+
+        if entry.get("family") != "town":
+            issues.append(ValidationIssue(f"{path}.family", "Townsfolk spec must declare family 'town'."))
+
+        role = entry.get("role")
+        if not isinstance(role, str) or not role.strip():
+            issues.append(ValidationIssue(f"{path}.role", "Role must be non-empty text."))
+        tpl = entry.get("template")
+        if not valid_id(tpl):
+            issues.append(ValidationIssue(f"{path}.template", "Template ID must be lowercase kebab/identifier characters."))
+        elif templates is not None and tpl not in templates:
+            issues.append(ValidationIssue(f"{path}.template", f"References unknown template '{tpl}'."))
+        if entry.get("interaction") not in INTERACTIONS:
+            issues.append(ValidationIssue(f"{path}.interaction", f"Interaction must be one of {', '.join(INTERACTIONS)}."))
+        if entry.get("harm") not in HARMS:
+            issues.append(ValidationIssue(f"{path}.harm", f"Harm must be one of {', '.join(HARMS)}."))
+        if type(entry.get("deriveRegionalFaction")) is not bool:
+            issues.append(ValidationIssue(f"{path}.deriveRegionalFaction", "deriveRegionalFaction must be true or false."))
+
+        visual_mode = entry.get("visualMode")
+        if visual_mode not in VISUAL_MODES:
+            issues.append(ValidationIssue(f"{path}.visualMode", f"visualMode must be one of {', '.join(VISUAL_MODES)}."))
+
+        _validate_pool(entry.get("defaultPool"), f"{path}.defaultPool", issues, require_non_empty=(visual_mode == "pool"))
+
+        regional = entry.get("regionalPools")
+        if not isinstance(regional, dict):
+            issues.append(ValidationIssue(f"{path}.regionalPools", "regionalPools must be an object."))
+        else:
+            for region_key, pool in regional.items():
+                if not isinstance(region_key, str) or not region_key.strip():
+                    issues.append(ValidationIssue(f"{path}.regionalPools", "Region key must be non-empty text."))
+                    continue
+                _validate_pool(pool, f"{path}.regionalPools.{region_key}", issues, require_non_empty=True)
+
+        climate_pools = entry.get("climatePools")
+        if climate_pools is not None:
+            if not isinstance(climate_pools, dict):
+                issues.append(ValidationIssue(f"{path}.climatePools", "climatePools must be an object."))
+            else:
+                for climate_key, pool in climate_pools.items():
+                    if not isinstance(climate_key, str) or climate_key.lower() not in CLIMATE_NAMES_LOWER:
+                        issues.append(ValidationIssue(f"{path}.climatePools.{climate_key}", f"Unknown climate '{climate_key}'."))
+                        continue
+                    _validate_pool(pool, f"{path}.climatePools.{climate_key}", issues, require_non_empty=True)
+    return issues
+
+
 class PeoplePackStore:
     """Mtime-cached reader, cross-linker, validator, and atomic editor for daggerfall.people."""
 
@@ -471,12 +764,37 @@ class PeoplePackStore:
     def root(self) -> Path:
         return self.library.people_pack
 
-    def _paths(self):
+    def _resolve_sources(self):
         payload = self.packs.read_json(self.root / "payload.json", {}) or {}
         cast_rel = payload.get("castFile", "cast/individuals.json")
         spawners_rel = payload.get("spawnersFile", "spawners.json")
         blocks_rel = payload.get("blocksFolder", "blocks")
-        return self.root / cast_rel, self.root / spawners_rel, self.root / blocks_rel
+
+        cast_path = self.root / cast_rel
+        cast_unified = False
+        if not cast_path.is_file():
+            base_cast, _ = base_section_path(self.library.base_payload, "actorSpecsCast", self.cache)
+            if base_cast is not None and base_cast.is_file():
+                cast_path = base_cast
+                cast_unified = True
+
+        spawners_path = self.root / spawners_rel
+        spawners_unified = False
+        if not spawners_path.is_file():
+            base_townsfolk, _ = base_section_path(self.library.base_payload, "actorSpecsTownsfolk", self.cache)
+            if base_townsfolk is not None and base_townsfolk.is_file():
+                spawners_path = base_townsfolk
+                spawners_unified = True
+
+        return cast_path, cast_unified, spawners_path, spawners_unified, self.root / blocks_rel
+
+    def _paths(self):
+        cast_path, _, spawners_path, _, blocks_dir = self._resolve_sources()
+        return cast_path, spawners_path, blocks_dir
+
+    def cache_stamp(self):
+        cast_path, spawners_path, _ = self._paths()
+        return (file_stamp(spawners_path), file_stamp(cast_path))
 
     def _archetypes_path(self) -> Path | None:
         payload = self.packs.read_json(self.root / "payload.json", {}) or {}
@@ -485,6 +803,26 @@ class PeoplePackStore:
             return self.root / arch_rel
         default_path = self.root / "archetypes.json"
         return default_path if default_path.is_file() else None
+
+    def _unified_template_paths(self) -> dict[str, Path]:
+        out: dict[str, Path] = {}
+        for section in ("actorTemplateBases", "actorTemplateRoles", "actorTemplateClasses", "actorTemplateCreatures"):
+            path, _ = base_section_path(self.library.base_payload, section, self.cache)
+            if path is not None and path.is_file():
+                out[section] = path
+        return out
+
+    def _load_unified_templates(self) -> tuple[dict[str, dict], dict[str, dict], dict[str, Path]]:
+        raw_by_id: dict[str, dict] = {}
+        owner_by_id: dict[str, Path] = {}
+        for section, path in self._unified_template_paths().items():
+            doc = self.packs.read_json(path, {}) or {}
+            for entry in doc.get("templates") or []:
+                if isinstance(entry, dict) and isinstance(entry.get("id"), str):
+                    raw_by_id[entry["id"]] = entry
+                    owner_by_id[entry["id"]] = path
+        resolved_by_id = _resolve_template_map(raw_by_id)
+        return raw_by_id, resolved_by_id, owner_by_id
 
     def _barks_path(self) -> Path | None:
         payload = self.packs.read_json(self.root / "payload.json", {}) or {}
@@ -550,7 +888,7 @@ class PeoplePackStore:
         return {"key": key, "canonicalKey": key, "index": None, "name": key}
 
     def _index(self):
-        cast_path, spawners_path, blocks_dir = self._paths()
+        cast_path, cast_unified, spawners_path, spawners_unified, blocks_dir = self._resolve_sources()
         base_path = self.library.base_payload
         stamp = (
             file_stamp(self.root / "payload.json"),
@@ -563,12 +901,28 @@ class PeoplePackStore:
         def build():
             lookups = self._base_lookups()
             factions = lookups["factions"]
-            cast_doc = self.packs.read_json(cast_path, {"individuals": []}) or {"individuals": []}
-            spawners_doc = self.packs.read_json(spawners_path, {"spawners": []}) or {"spawners": []}
-
-            individuals = list(cast_doc.get("individuals") or [])
+            if cast_unified:
+                cast_doc = self.packs.read_json(cast_path, {"specs": []}) or {"specs": []}
+                individuals = [
+                    _cast_spec_to_individual(row)
+                    for row in (cast_doc.get("specs") or [])
+                    if isinstance(row, dict) and "id" in row
+                ]
+            else:
+                cast_doc = self.packs.read_json(cast_path, {"individuals": []}) or {"individuals": []}
+                individuals = list(cast_doc.get("individuals") or [])
             individuals_by_id = {row["id"]: row for row in individuals if isinstance(row, dict) and "id" in row}
-            spawners = list(spawners_doc.get("spawners") or [])
+
+            if spawners_unified:
+                spawners_doc = self.packs.read_json(spawners_path, {"specs": []}) or {"specs": []}
+                spawners = [
+                    _town_spec_to_spawner(row)
+                    for row in (spawners_doc.get("specs") or [])
+                    if isinstance(row, dict) and "id" in row
+                ]
+            else:
+                spawners_doc = self.packs.read_json(spawners_path, {"spawners": []}) or {"spawners": []}
+                spawners = list(spawners_doc.get("spawners") or [])
             spawners_by_id = {row["id"]: row for row in spawners if isinstance(row, dict) and "id" in row}
 
             slots = []
@@ -686,6 +1040,9 @@ class PeoplePackStore:
     ):
         cast_id = slot.get("castId")
         spawner_id = slot.get("spawner")
+        if cast_id is None and spawner_id and spawner_id in individuals_by_id:
+            cast_id = spawner_id
+            spawner_id = None
         faction_id = slot.get("factionId")
         faction = factions.get(faction_id) if _is_int(faction_id) else None
         vis = slot.get("visual") or {}
@@ -918,7 +1275,7 @@ class PeoplePackStore:
     def update_cast(self, cast_id: str, body, catalog, concept_store) -> dict:
         if not isinstance(body, dict):
             raise ValidationError("Cast update must be a JSON object.")
-        cast_path, _, _ = self._paths()
+        cast_path, cast_unified, _, _, _ = self._resolve_sources()
         lookups = self._base_lookups()
         allowed = {"name", "race", "gender", "interaction", "harm", "visual"}
         unknown = sorted(set(body) - allowed)
@@ -928,44 +1285,87 @@ class PeoplePackStore:
                 [ValidationIssue(field, "This field cannot be edited here.") for field in unknown],
             )
 
-        def mutate(doc):
-            if not isinstance(doc, dict) or not isinstance(doc.get("individuals"), list):
-                raise ValidationError("Cast file is malformed.")
-            found = False
-            updated_list = []
-            for entry in doc["individuals"]:
-                if isinstance(entry, dict) and entry.get("id") == cast_id:
-                    found = True
-                    next_entry = dict(entry)
-                    if "name" in body:
-                        next_entry["name"] = body["name"].strip() if isinstance(body["name"], str) else body["name"]
-                    if "race" in body:
-                        race = body["race"]
-                        next_entry["race"] = None if race is None or (isinstance(race, str) and not race.strip()) else (
-                            race.strip() if isinstance(race, str) else race
-                        )
-                    if "gender" in body:
-                        next_entry["gender"] = body["gender"]
-                    if "interaction" in body:
-                        next_entry["interaction"] = body["interaction"]
-                    if "harm" in body:
-                        next_entry["harm"] = body["harm"]
-                    if "visual" in body:
-                        vis = body["visual"]
-                        if isinstance(vis, dict):
-                            next_entry["visual"] = {"archive": vis.get("archive"), "record": vis.get("record")}
-                        else:
-                            next_entry["visual"] = vis
-                    updated_list.append(next_entry)
-                else:
-                    updated_list.append(entry)
-            if not found:
-                raise NotFoundError(f"Cast individual '{cast_id}' not found.")
-            return {"individuals": updated_list}, cast_id
+        if cast_unified:
+            def mutate(doc):
+                if not isinstance(doc, dict) or not isinstance(doc.get("specs"), list):
+                    raise ValidationError("Cast specs file is malformed.")
+                found = False
+                updated_list = []
+                for entry in doc["specs"]:
+                    if isinstance(entry, dict) and entry.get("id") == cast_id:
+                        found = True
+                        next_entry = dict(entry)
+                        if "name" in body:
+                            next_entry["displayName"] = body["name"].strip() if isinstance(body["name"], str) else body["name"]
+                        if "race" in body:
+                            race = body["race"]
+                            next_entry["race"] = None if race is None or (isinstance(race, str) and not race.strip()) else (
+                                race.strip() if isinstance(race, str) else race
+                            )
+                        if "gender" in body:
+                            raw_gender = body["gender"]
+                            mapped = LEGACY_GENDER_TO_SPEC.get(raw_gender, raw_gender.lower() if isinstance(raw_gender, str) else raw_gender)
+                            next_entry["genders"] = [{"gender": mapped, "weight": 1}]
+                        if "interaction" in body:
+                            next_entry["interaction"] = body["interaction"]
+                        if "harm" in body:
+                            next_entry["harm"] = body["harm"]
+                        if "visual" in body:
+                            vis = body["visual"]
+                            if isinstance(vis, dict):
+                                next_entry["visual"] = {"archive": vis.get("archive"), "record": vis.get("record")}
+                            else:
+                                next_entry["visual"] = vis
+                        updated_list.append(next_entry)
+                    else:
+                        updated_list.append(entry)
+                if not found:
+                    raise NotFoundError(f"Cast individual '{cast_id}' not found.")
+                return {"specs": updated_list}, cast_id
 
-        def validator(doc):
-            issues = validate_cast_document(doc, lookups["factions"] or None)
-            _raise_if_issues("Cast individual validation failed.", issues)
+            def validator(doc):
+                _, resolved_templates, _ = self._load_unified_templates()
+                issues = validate_unified_cast_specs_document(doc, lookups["factions"] or None, resolved_templates or None)
+                _raise_if_issues("Cast individual validation failed.", issues)
+        else:
+            def mutate(doc):
+                if not isinstance(doc, dict) or not isinstance(doc.get("individuals"), list):
+                    raise ValidationError("Cast file is malformed.")
+                found = False
+                updated_list = []
+                for entry in doc["individuals"]:
+                    if isinstance(entry, dict) and entry.get("id") == cast_id:
+                        found = True
+                        next_entry = dict(entry)
+                        if "name" in body:
+                            next_entry["name"] = body["name"].strip() if isinstance(body["name"], str) else body["name"]
+                        if "race" in body:
+                            race = body["race"]
+                            next_entry["race"] = None if race is None or (isinstance(race, str) and not race.strip()) else (
+                                race.strip() if isinstance(race, str) else race
+                            )
+                        if "gender" in body:
+                            next_entry["gender"] = body["gender"]
+                        if "interaction" in body:
+                            next_entry["interaction"] = body["interaction"]
+                        if "harm" in body:
+                            next_entry["harm"] = body["harm"]
+                        if "visual" in body:
+                            vis = body["visual"]
+                            if isinstance(vis, dict):
+                                next_entry["visual"] = {"archive": vis.get("archive"), "record": vis.get("record")}
+                            else:
+                                next_entry["visual"] = vis
+                        updated_list.append(next_entry)
+                    else:
+                        updated_list.append(entry)
+                if not found:
+                    raise NotFoundError(f"Cast individual '{cast_id}' not found.")
+                return {"individuals": updated_list}, cast_id
+
+            def validator(doc):
+                issues = validate_cast_document(doc, lookups["factions"] or None)
+                _raise_if_issues("Cast individual validation failed.", issues)
 
         self.packs.update_json(cast_path, mutate, validator=validator, sort_keys=False)
         self.cache.invalidate(("people-pack-index", self.root, self.library.base_payload))
@@ -987,7 +1387,7 @@ class PeoplePackStore:
     def update_spawner(self, spawner_id: str, body, catalog, concept_store) -> dict:
         if not isinstance(body, dict):
             raise ValidationError("Spawner update must be a JSON object.")
-        _, spawners_path, _ = self._paths()
+        _, _, spawners_path, spawners_unified, _ = self._resolve_sources()
         allowed = {"role", "archetype", "interaction", "harm", "deriveRegionalFaction", "visualMode", "defaultPool", "regionalPools", "climatePools"}
         unknown = sorted(set(body) - allowed)
         if unknown:
@@ -1009,12 +1409,15 @@ class PeoplePackStore:
                 for item in pool
             ]
 
+        list_key = "specs" if spawners_unified else "spawners"
+        arch_field = "template" if spawners_unified else "archetype"
+
         def mutate(doc):
-            if not isinstance(doc, dict) or not isinstance(doc.get("spawners"), list):
+            if not isinstance(doc, dict) or not isinstance(doc.get(list_key), list):
                 raise ValidationError("Spawners file is malformed.")
             found = False
             updated_list = []
-            for entry in doc["spawners"]:
+            for entry in doc[list_key]:
                 if isinstance(entry, dict) and entry.get("id") == spawner_id:
                     found = True
                     next_entry = dict(entry)
@@ -1023,9 +1426,9 @@ class PeoplePackStore:
                     if "archetype" in body:
                         arch = body["archetype"]
                         if arch is None or (isinstance(arch, str) and not arch.strip()):
-                            next_entry.pop("archetype", None)
+                            next_entry.pop(arch_field, None)
                         else:
-                            next_entry["archetype"] = arch.strip() if isinstance(arch, str) else arch
+                            next_entry[arch_field] = arch.strip() if isinstance(arch, str) else arch
                     if "interaction" in body:
                         next_entry["interaction"] = body["interaction"]
                     if "harm" in body:
@@ -1057,30 +1460,55 @@ class PeoplePackStore:
                     updated_list.append(entry)
             if not found:
                 raise NotFoundError(f"Spawner '{spawner_id}' not found.")
-            return {"spawners": updated_list}, spawner_id
+            return {list_key: updated_list}, spawner_id
 
         def validator(doc):
-            arch_path = self._archetypes_path()
-            archetypes_by_id = None
-            if arch_path is not None and arch_path.is_file():
-                arch_doc = self.packs.read_json(arch_path, {}) or {}
-                archetypes_by_id = {
-                    row["id"]: row for row in arch_doc.get("archetypes", [])
-                    if isinstance(row, dict) and isinstance(row.get("id"), str)
-                }
-            issues = validate_spawners_document(doc, archetypes_by_id)
+            if spawners_unified:
+                _, resolved_templates, _ = self._load_unified_templates()
+                issues = validate_unified_town_specs_document(doc, resolved_templates or None)
+            else:
+                arch_path = self._archetypes_path()
+                archetypes_by_id = None
+                if arch_path is not None and arch_path.is_file():
+                    arch_doc = self.packs.read_json(arch_path, {}) or {}
+                    archetypes_by_id = {
+                        row["id"]: row for row in arch_doc.get("archetypes", [])
+                        if isinstance(row, dict) and isinstance(row.get("id"), str)
+                    }
+                issues = validate_spawners_document(doc, archetypes_by_id)
             _raise_if_issues("Spawner validation failed.", issues)
 
         self.packs.update_json(spawners_path, mutate, validator=validator, sort_keys=False)
         self.cache.invalidate(("people-pack-index", self.root, self.library.base_payload))
         return self.get_spawner(spawner_id, catalog, concept_store)
 
+    def _unified_role_archetypes(self) -> tuple[list[dict], dict[str, Path]]:
+        raw_by_id, resolved_by_id, owner_by_id = self._load_unified_templates()
+        paths = self._unified_template_paths()
+        roles_path = paths.get("actorTemplateRoles")
+        classes_path = paths.get("actorTemplateClasses")
+        result: list[dict] = []
+        if roles_path is not None:
+            roles_doc = self.packs.read_json(roles_path, {}) or {}
+            for entry in roles_doc.get("templates") or []:
+                tid = entry.get("id") if isinstance(entry, dict) else None
+                if isinstance(tid, str) and tid in resolved_by_id:
+                    result.append(_template_to_archetype(resolved_by_id[tid]))
+        if classes_path is not None:
+            classes_doc = self.packs.read_json(classes_path, {}) or {}
+            for entry in classes_doc.get("templates") or []:
+                tid = entry.get("id") if isinstance(entry, dict) else None
+                if isinstance(tid, str) and tid in SHARED_CLASS_ROLE_IDS and tid in resolved_by_id:
+                    result.append(_template_to_archetype(resolved_by_id[tid]))
+        return result, owner_by_id
+
     def list_archetypes(self) -> list[dict]:
         arch_path = self._archetypes_path()
-        if arch_path is None or not arch_path.is_file():
-            return []
-        doc = self.packs.read_json(arch_path, {"archetypes": []}) or {"archetypes": []}
-        return list(doc.get("archetypes") or [])
+        if arch_path is not None and arch_path.is_file():
+            doc = self.packs.read_json(arch_path, {"archetypes": []}) or {"archetypes": []}
+            return list(doc.get("archetypes") or [])
+        archetypes, _ = self._unified_role_archetypes()
+        return archetypes
 
     def get_archetype(self, archetype_id: str) -> dict | None:
         for entry in self.list_archetypes():
@@ -1092,8 +1520,6 @@ class PeoplePackStore:
         if not isinstance(body, dict):
             raise ValidationError("Archetype update must be a JSON object.")
         arch_path = self._archetypes_path()
-        if arch_path is None or not arch_path.is_file():
-            raise NotFoundError("People pack has no archetypes.json.")
         lookups = self._base_lookups()
         allowed = {
             "health", "fatigue", "magicka", "armor", "level",
@@ -1106,6 +1532,63 @@ class PeoplePackStore:
                 f"Unsupported archetype fields: {', '.join(unknown)}.",
                 [ValidationIssue(field, "This field cannot be edited here.") for field in unknown],
             )
+
+        if arch_path is None or not arch_path.is_file():
+            archetypes, owner_by_id = self._unified_role_archetypes()
+            target_path = owner_by_id.get(archetype_id)
+            if target_path is None:
+                raise NotFoundError(f"Archetype '{archetype_id}' not found.")
+
+            def mutate_unified(doc):
+                if not isinstance(doc, dict) or not isinstance(doc.get("templates"), list):
+                    raise ValidationError("Role templates file is malformed.")
+                found = False
+                updated_list = []
+                for entry in doc["templates"]:
+                    if isinstance(entry, dict) and entry.get("id") == archetype_id:
+                        found = True
+                        next_entry = dict(entry)
+                        if "health" in body:
+                            h = body["health"]
+                            next_entry["health"] = {"minimum": h.get("min"), "maximum": h.get("max")} if isinstance(h, dict) else h
+                        for key in ("fatigue", "magicka", "armor", "level", "attributes", "skills", "defaultHarm", "defaultInteraction", "walks"):
+                            if key in body:
+                                next_entry[key] = body[key]
+                        if "loadout" in body:
+                            lo = body["loadout"]
+                            if isinstance(lo, list):
+                                next_entry["loadout"] = [
+                                    {"item": item.get("itemId", item.get("item")), "quantity": item.get("quantity")}
+                                    if isinstance(item, dict) else item
+                                    for item in lo
+                                ]
+                            else:
+                                next_entry["loadout"] = lo
+                        updated_list.append(next_entry)
+                    else:
+                        updated_list.append(entry)
+                if not found:
+                    raise NotFoundError(f"Archetype '{archetype_id}' not found.")
+                return {"templates": updated_list}, archetype_id
+
+            def validator_unified(doc):
+                raw_by_id, _, _ = self._load_unified_templates()
+                for entry in (doc or {}).get("templates") or []:
+                    if isinstance(entry, dict) and isinstance(entry.get("id"), str):
+                        raw_by_id[entry["id"]] = entry
+                resolved_by_id = _resolve_template_map(raw_by_id)
+                simulated = {"archetypes": [_template_to_archetype(resolved_by_id[a["id"]]) for a in archetypes if a["id"] in resolved_by_id]}
+                issues = validate_archetypes_document(
+                    simulated,
+                    valid_attributes=lookups["attributes"] or None,
+                    valid_skills=lookups["skills"] or None,
+                    items=lookups["items"] or None,
+                )
+                _raise_if_issues("Archetype validation failed.", issues)
+
+            self.packs.update_json(target_path, mutate_unified, validator=validator_unified, sort_keys=False)
+            self.cache.invalidate(("people-pack-index", self.root, self.library.base_payload))
+            return self.get_archetype(archetype_id)
 
         def mutate(doc):
             if not isinstance(doc, dict) or not isinstance(doc.get("archetypes"), list):
@@ -1169,14 +1652,11 @@ class PeoplePackStore:
             return next_doc, "barks"
 
         def validator(doc):
-            arch_path = self._archetypes_path()
-            archetypes_by_id = None
-            if arch_path is not None and arch_path.is_file():
-                arch_doc = self.packs.read_json(arch_path, {}) or {}
-                archetypes_by_id = {
-                    row["id"]: row for row in arch_doc.get("archetypes", [])
-                    if isinstance(row, dict) and isinstance(row.get("id"), str)
-                }
+            archetypes_list = self.list_archetypes()
+            archetypes_by_id = {
+                row["id"]: row for row in archetypes_list
+                if isinstance(row, dict) and isinstance(row.get("id"), str)
+            } if archetypes_list else None
             issues = validate_barks_document(doc, archetypes_by_id)
             _raise_if_issues("Barks validation failed.", issues)
 
@@ -1214,7 +1694,7 @@ class PeoplePackStore:
                     [ValidationIssue("buildingIndex", "buildingIndex is required for rmb-interior.")],
                 )
 
-        cast_path, spawners_path, blocks_dir = self._paths()
+        cast_path, cast_unified, spawners_path, _, blocks_dir = self._resolve_sources()
         target_path = blocks_dir / file_by_kind[kind]
         if not target_path.is_file():
             raise NotFoundError(f"Block slots file '{file_by_kind[kind]}' not found.")
@@ -1276,6 +1756,9 @@ class PeoplePackStore:
                 elif next_cast is not None:
                     if next_cast not in individuals_by_id:
                         issues.append(ValidationIssue("castId", f"Unknown castId '{next_cast}'."))
+                    elif cast_unified:
+                        slot["spawner"] = next_cast
+                        slot.pop("castId", None)
                     else:
                         slot["castId"] = next_cast
                         slot.pop("spawner", None)
@@ -1307,7 +1790,8 @@ class PeoplePackStore:
 
             # Verify slot-level faction invariant (spawner slots may not carry Type-4 Individual factions)
             effective_fid = slot.get("factionId")
-            if _is_int(effective_fid) and factions and slot.get("castId") is None:
+            is_cast_slot = slot.get("castId") is not None or (slot.get("spawner") in individuals_by_id)
+            if _is_int(effective_fid) and factions and not is_cast_slot:
                 faction = factions.get(effective_fid)
                 if faction and faction.get("type") == INDIVIDUAL_FACTION_TYPE:
                     issues.append(
@@ -1510,8 +1994,8 @@ class PeoplePackStore:
                     "gender": ind["gender"],
                     "factionId": ind["factionId"],
                     "factionName": faction["name"] if faction else None,
-                    "homeBlock": ind["homeBlock"],
-                    "homeSlotId": ind["homeSlotId"],
+                    "homeBlock": ind.get("homeBlock"),
+                    "homeSlotId": ind.get("homeSlotId"),
                     "interaction": ind["interaction"],
                     "harm": ind["harm"],
                     "visual": ind["visual"],
@@ -1525,17 +2009,18 @@ class PeoplePackStore:
         }
 
     def validate_all(self) -> dict:
-        cast_path, spawners_path, blocks_dir = self._paths()
+        cast_path, cast_unified, spawners_path, spawners_unified, blocks_dir = self._resolve_sources()
         lookups = self._base_lookups()
         factions = lookups["factions"] or None
 
         cast_doc = self.packs.read_json(cast_path, None)
         spawners_doc = self.packs.read_json(spawners_path, None)
         arch_path = self._archetypes_path()
-        archetypes_doc = self.packs.read_json(arch_path, None) if arch_path is not None else None
         issues: list[ValidationIssue] = []
         archetypes_by_id: dict[str, dict] | None = None
-        if arch_path is not None:
+        templates_by_id: dict[str, dict] | None = None
+        if arch_path is not None and arch_path.is_file():
+            archetypes_doc = self.packs.read_json(arch_path, None)
             issues += validate_archetypes_document(
                 archetypes_doc,
                 valid_attributes=lookups["attributes"] or None,
@@ -1546,21 +2031,49 @@ class PeoplePackStore:
                 row["id"]: row for row in (archetypes_doc or {}).get("archetypes", [])
                 if isinstance(row, dict) and isinstance(row.get("id"), str)
             }
-        issues += validate_cast_document(cast_doc, factions, archetypes_by_id)
-        issues += validate_spawners_document(spawners_doc, archetypes_by_id)
+        elif cast_unified or spawners_unified:
+            _, resolved_templates, _ = self._load_unified_templates()
+            templates_by_id = resolved_templates
+            role_archetypes, _ = self._unified_role_archetypes()
+            if role_archetypes:
+                issues += validate_archetypes_document(
+                    {"archetypes": role_archetypes},
+                    valid_attributes=lookups["attributes"] or None,
+                    valid_skills=lookups["skills"] or None,
+                    items=lookups["items"] or None,
+                )
+                archetypes_by_id = {row["id"]: row for row in role_archetypes}
+
+        if cast_unified:
+            issues += validate_unified_cast_specs_document(cast_doc, factions, templates_by_id)
+            individuals_by_id = {
+                row["id"]: row for row in (cast_doc or {}).get("specs", [])
+                if isinstance(row, dict) and isinstance(row.get("id"), str)
+            }
+        else:
+            issues += validate_cast_document(cast_doc, factions, archetypes_by_id)
+            individuals_by_id = {
+                row["id"]: row for row in (cast_doc or {}).get("individuals", [])
+                if isinstance(row, dict) and isinstance(row.get("id"), str)
+            }
+
+        if spawners_unified:
+            issues += validate_unified_town_specs_document(spawners_doc, templates_by_id)
+            spawners_by_id = {
+                row["id"]: row for row in (spawners_doc or {}).get("specs", [])
+                if isinstance(row, dict) and isinstance(row.get("id"), str)
+            }
+        else:
+            issues += validate_spawners_document(spawners_doc, archetypes_by_id)
+            spawners_by_id = {
+                row["id"]: row for row in (spawners_doc or {}).get("spawners", [])
+                if isinstance(row, dict) and isinstance(row.get("id"), str)
+            }
+
         barks_path = self._barks_path()
         barks_doc = self.packs.read_json(barks_path, None) if barks_path is not None else None
         if barks_path is not None:
             issues += validate_barks_document(barks_doc, archetypes_by_id)
-
-        individuals_by_id = {
-            row["id"]: row for row in (cast_doc or {}).get("individuals", [])
-            if isinstance(row, dict) and isinstance(row.get("id"), str)
-        }
-        spawners_by_id = {
-            row["id"]: row for row in (spawners_doc or {}).get("spawners", [])
-            if isinstance(row, dict) and isinstance(row.get("id"), str)
-        }
 
         slot_count = 0
         if blocks_dir.is_dir():
@@ -1590,18 +2103,25 @@ class PeoplePackStore:
                                 seen_slots.add(sid)
                             cid = slot.get("castId")
                             spid = slot.get("spawner")
+                            is_cast_ref = False
                             if (cid is None) == (spid is None):
                                 issues.append(ValidationIssue(f"{scope}/{sid}", "Must specify exactly one of castId or spawner."))
-                            elif cid is not None and cid not in individuals_by_id:
-                                issues.append(ValidationIssue(f"{scope}/{sid}", f"References unknown castId '{cid}'."))
-                            elif spid is not None and spid not in spawners_by_id:
-                                issues.append(ValidationIssue(f"{scope}/{sid}", f"References unknown spawner '{spid}'."))
+                            elif cid is not None:
+                                if cid not in individuals_by_id:
+                                    issues.append(ValidationIssue(f"{scope}/{sid}", f"References unknown castId '{cid}'."))
+                                else:
+                                    is_cast_ref = True
+                            elif spid is not None:
+                                if spid in individuals_by_id:
+                                    is_cast_ref = True
+                                elif spid not in spawners_by_id:
+                                    issues.append(ValidationIssue(f"{scope}/{sid}", f"References unknown spawner '{spid}'."))
                             fid = slot.get("factionId")
                             if _is_int(fid) and factions:
                                 faction = factions.get(fid)
                                 if faction is None:
                                     issues.append(ValidationIssue(f"{scope}/{sid}", f"References missing faction {fid}."))
-                                elif cid is None and faction.get("type") == INDIVIDUAL_FACTION_TYPE:
+                                elif not is_cast_ref and faction.get("type") == INDIVIDUAL_FACTION_TYPE:
                                     issues.append(ValidationIssue(
                                         f"{scope}/{sid}",
                                         f"Non-cast spawner slot illegally carries Type-4 Individual faction {fid}.",

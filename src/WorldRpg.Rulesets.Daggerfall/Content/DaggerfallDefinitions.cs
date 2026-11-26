@@ -311,8 +311,11 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
         return replaced;
     }
 
-    /// <summary>The owned <c>daggerfall.people</c> pack (unique cast, regional typed spawners, and block slot templates).</summary>
+    /// <summary>The owned <c>daggerfall.people</c> pack (block placements and ambient barks, joined with base actor templates/spawners/cast).</summary>
     internal DaggerfallPeopleSet People { get; private set; } = DaggerfallPeopleSet.Empty;
+
+    /// <summary>Canonical political board-game seat bindings (<c>seatId -&gt; faction/region/title</c>, no holder).</summary>
+    internal DaggerfallBoardSeatSet BoardSeats { get; init; } = DaggerfallBoardSeatSet.Empty;
 
     /// <summary>These definitions joined with the owned people pack, every other section shared.</summary>
     internal DaggerfallDefinitions WithPeople(DaggerfallPeopleSet people)

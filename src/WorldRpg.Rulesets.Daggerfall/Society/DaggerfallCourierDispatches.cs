@@ -259,7 +259,7 @@ internal sealed class DaggerfallCourierDispatches(
                 string bandId = $"{DispatchBandPrefix}{dispatchId}";
                 DaggerfallTravelMapPixel destPixel = new(destination.MapPixelX, destination.MapPixelY);
                 DaggerfallWorldProfileKey destProfile = DaggerfallWorldProfileIds.Exterior(destination.Id);
-                string seatLabel = DaggerfallBoardSeatCatalog.TryGetBySeatId(seatId, out DaggerfallBoardSeatDefinition? seat) && seat is not null
+                string seatLabel = definitions.BoardSeats.TryGetBySeatId(seatId, out DaggerfallBoardSeatBinding? seat) && seat is not null
                     ? seat.SeatName
                     : seatId;
                 _ = coordinator.DispatchOverlandBand(

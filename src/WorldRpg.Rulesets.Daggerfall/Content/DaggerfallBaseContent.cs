@@ -160,22 +160,23 @@ internal static partial class DaggerfallBaseContent
             Dictionary<string, DaggerfallLootTableDefinition> lootTables = ReadLootTables(root, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, diagnostics);
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
+            DaggerfallLocationSet locations = ReadLocations(root, data, diagnostics);
+            DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
+            DaggerfallBoardSeatSet boardSeats = ReadBoardSeats(root, factions, diagnostics);
             DaggerfallCreatureFactionSet creatureFactions = root.TryGetProperty("creatureFactions", out JsonElement creatureFactionsEl)
                 ? DaggerfallCreatureFactionSet.Read(creatureFactionsEl, diagnostics)
                 : DaggerfallCreatureFactionSet.ClassicDefault;
             (DaggerfallActorCatalog actorCatalog, Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, DaggerfallMobileCatalogSet mobiles) =
-                ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, magic, diagnostics);
+                ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, magic, factions, diagnostics);
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             DaggerfallEncounterSet encounters = ReadEncounters(root, actorCatalog, mobiles, diagnostics);
             ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, itemTemplatesCatalog, diagnostics);
             DaggerfallEnemySpells enemySpells = ReadEnemySpells(root, mobiles, magic, diagnostics);
-            DaggerfallLocationSet locations = ReadLocations(root, data, diagnostics);
             (DaggerfallTextSet text, DaggerfallNameTablesSet names, DaggerfallRumorCatalogSet rumors, DaggerfallDialogueWorldRules dialogueWorldRules, DaggerfallBiographiesSet biographies, DaggerfallBooksSet books) = ReadTextAndKeyedSections(root, diagnostics);
             DaggerfallBuildingNameInputs buildingNames = ReadBuildingNameInputs(root, locations.Regions, diagnostics);
             DaggerfallWorldGridsSet grids = ReadWorldGrids(root, diagnostics);
-            DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
             DaggerfallTerrainSet terrain = ReadTerrain(root, data, diagnostics);
             foreach (var recipe in magic.PotionRecipes.Values) recipe.Validate(itemTemplatesCatalog);
             DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
@@ -200,6 +201,7 @@ internal static partial class DaggerfallBaseContent
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, DaggerfallQuestSourceSet.None, cinematics, encounters)
             {
                 ActorCatalog = actorCatalog,
+                BoardSeats = boardSeats,
                 CreatureFactions = creatureFactions,
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,

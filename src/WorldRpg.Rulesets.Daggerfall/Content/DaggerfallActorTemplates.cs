@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
@@ -173,9 +174,41 @@ internal sealed record DaggerfallActorTemplateDefinition(
     string? CareerRef,
     DaggerfallActorCapabilities Capabilities,
     ActorSpellPolicy SpellPolicy = ActorSpellPolicy.None,
-    IReadOnlyList<string>? Spells = null)
+    IReadOnlyList<string>? Spells = null,
+    int Fatigue = 50,
+    int Magicka = 0,
+    ActorHarmPolicyKind DefaultHarm = ActorHarmPolicyKind.Combatant,
+    ActorInteractionPolicyKind DefaultInteraction = ActorInteractionPolicyKind.None,
+    bool Walks = true)
 {
     internal IReadOnlyList<string> EffectiveSpells => Spells ?? [];
+
+    /// <summary>Projects this resolved actor template into an <see cref="ArchetypeProfile"/> for civilian/town/cast materialization.</summary>
+    internal ArchetypeProfile ToArchetypeProfile()
+    {
+        Dictionary<DaggerfallStatId, int> attrs = [];
+        Dictionary<DaggerfallStatId, int> skills = [];
+        HashSet<DaggerfallStatId> attrSet = [.. DaggerfallMechanicsIds.Attributes];
+        foreach ((DaggerfallStatId id, int val) in Stats.Values)
+        {
+            if (attrSet.Contains(id)) attrs[id] = val;
+            else skills[id] = val;
+        }
+        return new ArchetypeProfile(
+            Id,
+            Health,
+            Fatigue,
+            Magicka,
+            BaseAttribute: 50,
+            new ReadOnlyDictionary<DaggerfallStatId, int>(attrs),
+            new ReadOnlyDictionary<DaggerfallStatId, int>(skills),
+            DefaultHarm,
+            DefaultInteraction,
+            Walks: Walks,
+            Armor: Armor,
+            Level: Math.Max(1, Level ?? 1),
+            Loadout: Loadout);
+    }
 }
 
 /// <summary>Weighted gender entry inside a spawner's gender distribution.</summary>
@@ -230,7 +263,21 @@ internal sealed record DaggerfallActorSpawnerSpec(
     string BarkSound,
     string AttackSound,
     bool ParrySounds,
-    DaggerfallActorClassicBinding? ClassicBinding);
+    DaggerfallActorClassicBinding? ClassicBinding,
+    string? Role = null,
+    bool DeriveRegionalFaction = false,
+    string? VisualMode = null,
+    IReadOnlyList<DaggerfallPeoplePoolEntry>? DefaultPool = null,
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>? RegionalPools = null,
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>? ClimatePools = null,
+    int? FactionId = null,
+    int? VisualArchive = null,
+    int? VisualRecord = null,
+    string? HomeBlock = null,
+    string? HomeSlotId = null,
+    DaggerfallSiteId? HomeSite = null,
+    WorldPoint? HomePosition = null,
+    string? FamilyId = null);
 
 /// <summary>Resolved actor template and spawner spec catalog owned by <see cref="DaggerfallDefinitions"/>.</summary>
 internal sealed record DaggerfallActorCatalog(
@@ -238,10 +285,81 @@ internal sealed record DaggerfallActorCatalog(
     IReadOnlyDictionary<string, DaggerfallActorSpawnerSpec> Specs,
     IReadOnlyDictionary<int, DaggerfallActorSpawnerSpec> SpecsByMobileId)
 {
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> EmptyPoolMap =
+        new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(
+            new Dictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(StringComparer.OrdinalIgnoreCase));
+
     internal static DaggerfallActorCatalog Empty { get; } = new(
         new ReadOnlyDictionary<string, DaggerfallActorTemplateDefinition>(new Dictionary<string, DaggerfallActorTemplateDefinition>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<string, DaggerfallActorSpawnerSpec>(new Dictionary<string, DaggerfallActorSpawnerSpec>(StringComparer.Ordinal)),
         new ReadOnlyDictionary<int, DaggerfallActorSpawnerSpec>(new Dictionary<int, DaggerfallActorSpawnerSpec>()));
+
+    /// <summary>Projects resolved actor templates with real vitals into <see cref="ArchetypeProfile"/> records.</summary>
+    internal IReadOnlyDictionary<string, ArchetypeProfile> ProjectArchetypes() =>
+        new ReadOnlyDictionary<string, ArchetypeProfile>(
+            Templates.Values
+                .Where(t => !t.Capabilities.IsPlayer && t.Health.Minimum > 1)
+                .ToDictionary(t => t.Id, t => t.ToArchetypeProfile(), StringComparer.Ordinal));
+
+    /// <summary>Projects all <see cref="ActorSpawnerFamily.Town"/> specs into people-slot spawner definitions.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition> ProjectTownSpawners() =>
+        new ReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition>(
+            Specs.Values
+                .Where(spec => spec.Family == ActorSpawnerFamily.Town)
+                .ToDictionary(
+                    spec => spec.Id,
+                    spec => new DaggerfallPeopleSpawnerDefinition(
+                        spec.Id,
+                        spec.Role ?? "person",
+                        FormatInteraction(spec.Interaction),
+                        FormatHarm(spec.Harm),
+                        spec.DeriveRegionalFaction,
+                        spec.VisualMode ?? "pool",
+                        spec.DefaultPool ?? [],
+                        spec.RegionalPools ?? EmptyPoolMap,
+                        ArchetypeId: spec.TemplateId,
+                        ClimatePoolsMap: spec.ClimatePools ?? EmptyPoolMap),
+                    StringComparer.Ordinal));
+
+    /// <summary>Projects all <see cref="ActorSpawnerFamily.Cast"/> specs into unique cast individual definitions.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallCastIndividualDefinition> ProjectCastIndividuals() =>
+        new ReadOnlyDictionary<string, DaggerfallCastIndividualDefinition>(
+            Specs.Values
+                .Where(spec => spec.Family == ActorSpawnerFamily.Cast)
+                .ToDictionary(
+                    spec => spec.Id,
+                    spec => new DaggerfallCastIndividualDefinition(
+                        spec.Id,
+                        spec.FactionId ?? 0,
+                        spec.DisplayName,
+                        spec.Race,
+                        spec.Genders.Count > 0 && spec.Genders[0].Gender == ActorGender.Female ? "Female" : "Male",
+                        spec.VisualArchive ?? 0,
+                        spec.VisualRecord ?? 0,
+                        spec.HomeBlock,
+                        spec.HomeSlotId,
+                        FormatInteraction(spec.Interaction),
+                        FormatHarm(spec.Harm),
+                        ArchetypeId: spec.TemplateId)
+                    {
+                        HomeSite = spec.HomeSite,
+                        HomePosition = spec.HomePosition,
+                    },
+                    StringComparer.Ordinal));
+
+    private static string FormatInteraction(ActorInteractionPolicyKind kind) => kind switch
+    {
+        ActorInteractionPolicyKind.None => "none",
+        ActorInteractionPolicyKind.AmbientBark => "ambient-bark",
+        _ => "full-dialogue",
+    };
+
+    private static string FormatHarm(ActorHarmPolicyKind kind) => kind switch
+    {
+        ActorHarmPolicyKind.Protected => "protected",
+        ActorHarmPolicyKind.LawProtectedCivilian => "law-protected-civilian",
+        _ => "combatant",
+    };
 }
 
 /// <summary>
@@ -394,6 +512,11 @@ internal static partial class DaggerfallBaseContent
     private static readonly HashSet<string> ForbiddenTemplateFields =
         new(["gender", "genders", "name", "displayName", "visual", "appearances", "sounds", "mobileId", "classicBinding", "home", "familyId", "team"], StringComparer.Ordinal);
 
+    private static readonly HashSet<string> ForbiddenCastMechanicFields =
+        new(["attributes", "skills", "stats", "health", "fatigue", "magicka", "armor", "hitPointsPerLevel", "level", "weight", "xpReward", "attacks", "action", "loadout", "minMetalToHit", "lootTableKey", "careerRef", "tactic", "tendencies", "scaling", "gearPolicy"], StringComparer.Ordinal);
+
+    private const int IndividualFactionType = 4;
+
     private static readonly string[] CareerAttributeOrder =
         ["strength", "intelligence", "willpower", "agility", "endurance", "personality", "speed", "luck"];
 
@@ -406,6 +529,7 @@ internal static partial class DaggerfallBaseContent
         IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables,
         DaggerfallCreatureFactionSet creatureFactions,
         DaggerfallMagicCatalogSet magic,
+        DaggerfallFactionsSet factions,
         DaggerfallContentDiagnostics diagnostics)
     {
         // 1. Collect raw templates across all branch files
@@ -621,7 +745,7 @@ internal static partial class DaggerfallBaseContent
                     continue;
                 }
                 RejectDuplicateProperties(item, $"{sectionName}.spec", diagnostics);
-                DaggerfallActorSpawnerSpec? spec = ReadSpawnerSpec(item, sectionName, resolvedTemplates, validCreatureTeams, diagnostics);
+                DaggerfallActorSpawnerSpec? spec = ReadSpawnerSpec(item, sectionName, resolvedTemplates, validCreatureTeams, factions, diagnostics);
                 if (spec is null) continue;
                 if (!specs.TryAdd(spec.Id, spec))
                 {
@@ -1037,6 +1161,30 @@ internal static partial class DaggerfallBaseContent
             AllowedRaces: allowedRaces?.AsReadOnly(),
             Traits: traits.AsReadOnly());
 
+        int fatigue = OptionalInteger(el, "fatigue", diagnostics) ?? 50;
+        int magicka = OptionalInteger(el, "magicka", diagnostics) ?? 0;
+        if (fatigue is < 0 or > 10_000)
+            diagnostics.Add($"Actor template '{id}' has invalid fatigue {fatigue}.");
+        if (magicka is < 0 or > 10_000)
+            diagnostics.Add($"Actor template '{id}' has invalid magicka {magicka}.");
+        ActorHarmPolicyKind defaultHarm = ParseEnum(OptionalText(el, "defaultHarm", diagnostics) ?? "combatant", id, "defaultHarm", diagnostics, static s => s switch
+        {
+            "protected" => ActorHarmPolicyKind.Protected,
+            "law-protected-civilian" => ActorHarmPolicyKind.LawProtectedCivilian,
+            "combatant" => ActorHarmPolicyKind.Combatant,
+            _ => (ActorHarmPolicyKind?)null,
+        }, ActorHarmPolicyKind.Combatant);
+        ActorInteractionPolicyKind defaultInteraction = ParseEnum(OptionalText(el, "defaultInteraction", diagnostics) ?? "none", id, "defaultInteraction", diagnostics, static s => s switch
+        {
+            "none" => ActorInteractionPolicyKind.None,
+            "ambient-bark" => ActorInteractionPolicyKind.AmbientBark,
+            "full-dialogue" => ActorInteractionPolicyKind.FullDialogue,
+            _ => (ActorInteractionPolicyKind?)null,
+        }, ActorInteractionPolicyKind.None);
+        bool walks = el.TryGetProperty("walks", out JsonElement walksEl) && walksEl.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? walksEl.ValueKind == JsonValueKind.True
+            : movement == ActorMovementMedium.Ground;
+
         string? extendsId = raw.TryGetPropertyValue("extends", out JsonNode? eNode) && eNode is JsonValue eVal && eVal.TryGetValue<string>(out string? eStr)
             ? eStr : null;
 
@@ -1059,7 +1207,12 @@ internal static partial class DaggerfallBaseContent
             careerRef,
             capabilities,
             spellPolicy,
-            spells.AsReadOnly());
+            spells.AsReadOnly(),
+            fatigue,
+            magicka,
+            defaultHarm,
+            defaultInteraction,
+            walks);
     }
 
     private static DaggerfallActorSpawnerSpec? ReadSpawnerSpec(
@@ -1067,6 +1220,7 @@ internal static partial class DaggerfallBaseContent
         string sectionName,
         IReadOnlyDictionary<string, DaggerfallActorTemplateDefinition> templates,
         IReadOnlySet<string> validTeams,
+        DaggerfallFactionsSet factions,
         DaggerfallContentDiagnostics diagnostics)
     {
         string id = Text(item, "id", diagnostics);
@@ -1234,6 +1388,127 @@ internal static partial class DaggerfallBaseContent
                 cbEl.TryGetProperty("donorLootTableKey", out JsonElement dlEl) && dlEl.ValueKind == JsonValueKind.String ? dlEl.GetString() : null);
         }
 
+        string? role = null;
+        bool deriveRegionalFaction = false;
+        string? visualMode = null;
+        IReadOnlyList<DaggerfallPeoplePoolEntry>? defaultPool = null;
+        IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>? regionalPools = null;
+        IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>? climatePools = null;
+        int? factionId = null;
+        int? visualArchive = null;
+        int? visualRecord = null;
+        string? homeBlock = null;
+        string? homeSlotId = null;
+        DaggerfallSiteId? homeSite = null;
+        WorldPoint? homePosition = null;
+        string? familyId = null;
+
+        if (family == ActorSpawnerFamily.Town)
+        {
+            role = Text(item, "role", diagnostics);
+            deriveRegionalFaction = OptionalBool(item, "deriveRegionalFaction");
+            visualMode = Text(item, "visualMode", diagnostics);
+            if (visualMode is not ("classic-slot" or "pool"))
+                diagnostics.Add($"Town spawner spec '{id}' has invalid visualMode '{visualMode}'.");
+            defaultPool = ReadSpawnerPool(Array(item, "defaultPool", diagnostics), $"spec '{id}' defaultPool", diagnostics);
+
+            Dictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> regMap = new(StringComparer.OrdinalIgnoreCase);
+            if (item.TryGetProperty("regionalPools", out JsonElement regEl) && regEl.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty prop in regEl.EnumerateObject())
+                {
+                    if (prop.Value.ValueKind != JsonValueKind.Array)
+                        diagnostics.Add($"Town spawner spec '{id}' regionalPools.'{prop.Name}' must be an array.");
+                    else
+                        regMap[prop.Name] = ReadSpawnerPool(prop.Value.EnumerateArray(), $"spec '{id}' regionalPools.{prop.Name}", diagnostics);
+                }
+            }
+            regionalPools = new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(regMap);
+
+            Dictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>> climMap = new(StringComparer.OrdinalIgnoreCase);
+            if (item.TryGetProperty("climatePools", out JsonElement climEl) && climEl.ValueKind != JsonValueKind.Null)
+            {
+                if (climEl.ValueKind != JsonValueKind.Object)
+                {
+                    diagnostics.Add($"Town spawner spec '{id}' climatePools must be an object.");
+                }
+                else
+                {
+                    foreach (JsonProperty prop in climEl.EnumerateObject())
+                    {
+                        if (!DaggerfallPeopleContent.ValidClimateNames.Contains(prop.Name))
+                            diagnostics.Add($"Town spawner spec '{id}' climatePools references unknown climate '{prop.Name}'.");
+                        if (prop.Value.ValueKind != JsonValueKind.Array)
+                            diagnostics.Add($"Town spawner spec '{id}' climatePools.'{prop.Name}' must be an array.");
+                        else
+                        {
+                            IReadOnlyList<DaggerfallPeoplePoolEntry> pool = ReadSpawnerPool(prop.Value.EnumerateArray(), $"spec '{id}' climatePools.{prop.Name}", diagnostics);
+                            if (pool.Count == 0)
+                                diagnostics.Add($"Town spawner spec '{id}' climatePools.'{prop.Name}' must contain at least one entry.");
+                            else
+                                climMap[prop.Name] = pool;
+                        }
+                    }
+                }
+            }
+            climatePools = new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeoplePoolEntry>>(climMap);
+        }
+        else if (family == ActorSpawnerFamily.Cast)
+        {
+            foreach (JsonProperty prop in item.EnumerateObject())
+            {
+                if (ForbiddenCastMechanicFields.Contains(prop.Name))
+                    diagnostics.Add($"Cast spawner spec '{id}' may not patch mechanic field '{prop.Name}'; give it a child template instead.");
+            }
+            if (genders.Count != 1)
+                diagnostics.Add($"Cast spawner spec '{id}' must pin exactly one gender.");
+            factionId = Integer(item, "factionId", diagnostics);
+            if (factionId <= 0)
+                diagnostics.Add($"Cast spawner spec '{id}' requires a positive factionId.");
+            else if (factions.Factions.Count > 0)
+            {
+                if (!factions.Factions.TryGetValue(factionId.Value, out DaggerfallFactionDefinition? faction))
+                    diagnostics.Add($"Cast spawner spec '{id}' references missing faction {factionId.Value}.");
+                else if (faction.Type != IndividualFactionType)
+                    diagnostics.Add($"Cast spawner spec '{id}' references faction {factionId.Value} ('{faction.Name}') of type {faction.Type}, expected Individual (4).");
+            }
+            JsonElement vis = Object(Property(item, "visual", diagnostics), $"cast spec '{id}' visual", diagnostics);
+            visualArchive = Integer(vis, "archive", diagnostics);
+            visualRecord = Integer(vis, "record", diagnostics);
+            if (visualArchive < 0 || visualRecord < 0)
+                diagnostics.Add($"Cast spawner spec '{id}' has invalid visual ({visualArchive}.{visualRecord}).");
+
+            if (item.TryGetProperty("home", out JsonElement homeEl) && homeEl.ValueKind != JsonValueKind.Null)
+            {
+                JsonElement homeObj = Object(homeEl, $"cast spec '{id}' home", diagnostics);
+                homeBlock = OptionalText(homeObj, "block", diagnostics);
+                homeSlotId = OptionalText(homeObj, "slotId", diagnostics);
+                if (homeObj.TryGetProperty("site", out JsonElement siteEl) && siteEl.ValueKind != JsonValueKind.Null)
+                {
+                    JsonElement siteObj = Object(siteEl, $"cast spec '{id}' home.site", diagnostics);
+                    homeSite = new(Integer(siteObj, "region", diagnostics), Integer(siteObj, "index", diagnostics));
+                }
+                if (homeObj.TryGetProperty("position", out JsonElement posEl) && posEl.ValueKind != JsonValueKind.Null)
+                {
+                    if (posEl.ValueKind != JsonValueKind.Array || posEl.GetArrayLength() != 3)
+                        diagnostics.Add($"Cast spawner spec '{id}' home.position must be a 3-element array.");
+                    else
+                    {
+                        float x = posEl[0].GetSingle(), y = posEl[1].GetSingle(), z = posEl[2].GetSingle();
+                        if (!float.IsFinite(x) || !float.IsFinite(y) || !float.IsFinite(z))
+                            diagnostics.Add($"Cast spawner spec '{id}' home.position has a non-finite coordinate.");
+                        else
+                            homePosition = new(x, y, z);
+                    }
+                }
+                if (homeBlock is null ? homeSlotId is not null || homePosition is not null || homeSite is not null : (homeSlotId is null) == (homePosition is null))
+                    diagnostics.Add($"Cast spawner spec '{id}' must name home.block with exactly one of home.slotId and home.position, and home.site only with home.block.");
+                if (homePosition is not null && homeSite is null)
+                    diagnostics.Add($"Cast spawner spec '{id}' has a home.position but no home.site to set it in.");
+            }
+            familyId = OptionalText(item, "familyId", diagnostics);
+        }
+
         return new DaggerfallActorSpawnerSpec(
             id,
             family,
@@ -1261,7 +1536,40 @@ internal static partial class DaggerfallBaseContent
             barkSound,
             attackSound,
             parrySounds,
-            binding);
+            binding,
+            role,
+            deriveRegionalFaction,
+            visualMode,
+            defaultPool,
+            regionalPools,
+            climatePools,
+            factionId,
+            visualArchive,
+            visualRecord,
+            homeBlock,
+            homeSlotId,
+            homeSite,
+            homePosition,
+            familyId);
+    }
+
+    private static IReadOnlyList<DaggerfallPeoplePoolEntry> ReadSpawnerPool(
+        IEnumerable<JsonElement> array, string context, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<DaggerfallPeoplePoolEntry> entries = [];
+        foreach (JsonElement item in array)
+        {
+            JsonElement obj = Object(item, context, diagnostics);
+            int archive = Integer(obj, "archive", diagnostics);
+            int record = Integer(obj, "record", diagnostics);
+            string gender = Text(obj, "gender", diagnostics);
+            int weight = Integer(obj, "weight", diagnostics);
+            if (archive < 0 || record < 0 || weight <= 0 || gender is not ("Male" or "Female"))
+                diagnostics.Add($"{context} has an invalid pool entry ({archive}.{record}, gender='{gender}', weight={weight}).");
+            else
+                entries.Add(new(archive, record, gender, weight));
+        }
+        return entries.AsReadOnly();
     }
 
     private static bool OptionalBool(JsonElement obj, string name) =>

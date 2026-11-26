@@ -1,0 +1,17 @@
+{
+  "seats": [
+    { "id": "daggerfall", "officeFactionId": 201, "title": "King" },
+    { "id": "wayrest", "officeFactionId": 207, "title": "King" },
+    { "id": "sentinel", "officeFactionId": 204, "title": "Queen" },
+    { "id": "orsinium", "officeFactionId": 358, "title": "Lord" },
+    { "id": "empire", "officeFactionId": 129, "title": "Grandmaster" },
+    { "id": "necromancers", "officeFactionId": 306, "title": "King of Worms" },
+    { "id": "underking", "officeFactionId": 353, "title": "Underking" },
+    { "id": "mages-guild", "officeFactionId": 40, "title": "Archmagister" },
+    { "id": "fighters-guild", "officeFactionId": 41, "title": "Guildmaster" },
+    { "id": "thieves-guild", "officeFactionId": 42, "title": "Mastermind" },
+    { "id": "dark-brotherhood", "officeFactionId": 108, "title": "Night Mother" },
+    { "id": "temples", "officeFactionId": 450, "title": "High Priest" },
+    { "id": "balfiera", "officeFactionId": 199, "title": "Matriarch" }
+  ]
+}

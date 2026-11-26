@@ -503,3 +503,125 @@ class PeoplePackTests(TestCase):
                 "banker", {"archetype": "missing-archetype"},
                 self.workspace.catalog(), self.workspace.concept_store,
             )
+
+    def test_unified_actor_specs_edit_and_validate_cast_homes_and_reject_mechanic_overrides(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lib = Library(root / "local/art/reference/npc", root / "pipeline", repo=root)
+            self._write(lib.npcs / "manifest.json", {
+                "entries": [{"id": "npc-010", "name": "Lady Brisienna", "kind": "Named NPC", "image": "b.png"}],
+                "aliases": {"334-6": "npc-010"},
+            })
+            (lib.npcs / "art/b.png").parent.mkdir(parents=True, exist_ok=True)
+            (lib.npcs / "art/b.png").touch()
+            base_dir = lib.base_payload.parent
+            self._write(lib.base_payload, {
+                "sections": {
+                    "factions": "world/factions.json",
+                    "buildingNames": "world/building-names.json",
+                    "vocabulary": "core/vocabulary.json",
+                    "items": "items/items.json",
+                    "actorTemplateBases": "actors/templates/bases.json",
+                    "actorTemplateRoles": "actors/templates/roles.json",
+                    "actorSpecsTownsfolk": "actors/specs/townsfolk.json",
+                    "actorSpecsCast": "actors/specs/cast.json",
+                },
+            })
+            self._write(base_dir / "world/factions.json", {
+                "factions": [{"id": 506, "name": "Lady Brisienna", "type": 4, "typeName": "Individual", "region": 17, "parent": 0}],
+            })
+            self._write(base_dir / "world/building-names.json", {"regionNames": [f"R{i}" for i in range(25)]})
+            self._write(base_dir / "core/vocabulary.json", {"attributes": ["strength"], "skills": ["etiquette"]})
+            self._write(base_dir / "items/items.json", [])
+            self._write(base_dir / "actors/templates/bases.json", {"templates": [{"id": "humanoid", "attributes": {"strength": 50}}]})
+            self._write(base_dir / "actors/templates/roles.json", {
+                "templates": [
+                    {
+                        "id": rid,
+                        "extends": "humanoid",
+                        "health": {"minimum": 20, "maximum": 30},
+                        "fatigue": 50,
+                        "magicka": 0,
+                        "armor": 0,
+                        "level": 1,
+                        "defaultHarm": "protected",
+                        "defaultInteraction": "full-dialogue",
+                        "walks": False,
+                        "loadout": [],
+                    }
+                    for rid in ("civilian", "static-npc", "clutter-person", "questor", "guard", "combatant")
+                ],
+            })
+            self._write(base_dir / "actors/specs/townsfolk.json", {
+                "specs": [{
+                    "id": "town-banker",
+                    "family": "town",
+                    "template": "civilian",
+                    "role": "bank teller",
+                    "interaction": "full-dialogue",
+                    "harm": "law-protected-civilian",
+                    "deriveRegionalFaction": True,
+                    "visualMode": "pool",
+                    "defaultPool": [{"archive": 334, "record": 6, "gender": "Female", "weight": 1}],
+                    "regionalPools": {},
+                }],
+            })
+            self._write(base_dir / "actors/specs/cast.json", {
+                "specs": [{
+                    "id": "lady-brisienna",
+                    "family": "cast",
+                    "template": "static-npc",
+                    "displayName": "Lady Brisienna",
+                    "genders": [{"gender": "female", "weight": 1}],
+                    "race": "breton",
+                    "factionId": 506,
+                    "naming": "designated",
+                    "harm": "protected",
+                    "interaction": "full-dialogue",
+                    "visual": {"archive": 334, "record": 6},
+                    "home": {"block": "PALAAA00.RMB", "site": {"region": 17, "index": 1045}, "slotId": "b:0:p02"},
+                }],
+            })
+            self._write(lib.people_pack / "payload.json", {"blocksFolder": "blocks"})
+            self._write(lib.people_pack / "blocks/rmb-interiors.json", {
+                "kind": "rmb-interior",
+                "blocks": {
+                    "PALAAA00.RMB": {
+                        "0": {
+                            "buildingType": 16,
+                            "buildingFactionId": 506,
+                            "slots": [{
+                                "slotId": "b:0:p02",
+                                "spawner": "lady-brisienna",
+                                "position": [1.0, 0.0, 2.0],
+                                "interaction": "full-dialogue",
+                                "factionId": 506,
+                                "visual": {"archive": 334, "record": 6, "gender": "Female"},
+                            }],
+                        },
+                    },
+                },
+            })
+
+            ws = Workspace(lib, root / "links.json", root / "merges.json", ReviewStore(root / "r.sqlite3"), ConceptStore(root / "c"))
+            report = ws.people_pack.validate_all()
+            self.assertTrue(report["valid"], report["issues"])
+            self.assertEqual(report["counts"]["cast"], 1)
+            self.assertEqual(report["counts"]["spawners"], 1)
+
+            updated = ws.people_pack.update_cast("lady-brisienna", {"name": "Lady Brisienna of the Blades"}, ws.catalog(), ws.concept_store)
+            self.assertEqual(updated["name"], "Lady Brisienna of the Blades")
+            self.assertEqual(updated["homeBlock"], "PALAAA00.RMB")
+            self.assertEqual(updated["homeSlotId"], "b:0:p02")
+            self.assertEqual(updated["usage"]["slotCount"], 1)
+
+            # Corrupt cast.json with a mechanic override + bad home -> rejected by validate_all.
+            bad_cast = json.loads((base_dir / "actors/specs/cast.json").read_text(encoding="utf-8"))
+            bad_cast["specs"][0]["health"] = {"minimum": 50, "maximum": 60}
+            bad_cast["specs"][0]["home"] = {"block": "PALAAA00.RMB", "position": [1, 2, 3]}  # missing site
+            self._write(base_dir / "actors/specs/cast.json", bad_cast)
+            bad_report = ws.people_pack.validate_all()
+            self.assertFalse(bad_report["valid"])
+            fields = {issue["field"] for issue in bad_report["issues"]}
+            self.assertIn("specs[0].health", fields)
+            self.assertIn("specs[0].home.site", fields)

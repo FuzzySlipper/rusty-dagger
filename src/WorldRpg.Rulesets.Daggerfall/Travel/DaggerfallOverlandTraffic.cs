@@ -24,8 +24,8 @@ internal sealed class DaggerfallOverlandTraffic
     internal const double CaravanSpeedPixelsPerHour = 1.0;
     internal const double CourierSpeedPixelsPerHour = 2.1;
 
-    private static readonly string[] CaravanSpawners = ["general-merchant", "banker", "tavern-keeper", "alchemist", "clothier", "house-resident"];
-    private static readonly string[] CourierSpawners = ["house-resident", "guild-member", "palace-attendant", "courtier", "tavern-patron"];
+    private static readonly string[] CaravanSpawners = ["town-general-merchant", "town-banker", "town-tavern-keeper", "town-alchemist", "town-clothier", "town-house-resident"];
+    private static readonly string[] CourierSpawners = ["town-house-resident", "town-guild-member", "town-palace-attendant", "town-courtier", "town-tavern-patron"];
 
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallActorLedger _actorLedger;

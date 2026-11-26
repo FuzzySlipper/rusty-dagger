@@ -1,0 +1,919 @@
+{
+  "specs": [
+    {
+      "id": "aldous-verreine",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Aldous Verreine",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 1001,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 12
+      },
+      "home": {
+        "block": "TEMPAAD0.RMB",
+        "site": {
+          "region": 23,
+          "index": 601
+        },
+        "slotId": "b:22:p05"
+      },
+      "familyId": null
+    },
+    {
+      "id": "charvek-si",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Charvek-si",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 385,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 184,
+        "record": 1
+      },
+      "home": {
+        "block": "S0000041.RDB",
+        "slotId": "d:p01"
+      },
+      "familyId": null
+    },
+    {
+      "id": "cyndassa",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Cyndassa",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 500,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 5
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p00"
+      },
+      "familyId": null
+    },
+    {
+      "id": "gortwog",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Gortwog",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "factionId": 357,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 19
+      },
+      "home": {
+        "block": "S0000020.RDB",
+        "slotId": "d:p00"
+      },
+      "familyId": null
+    },
+    {
+      "id": "karethys",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Karethys",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "dark-elf",
+      "factionId": 396,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 346,
+        "record": 11
+      },
+      "home": {
+        "block": "S0000081.RDB",
+        "slotId": "d:p11"
+      },
+      "familyId": null
+    },
+    {
+      "id": "king-eadwyre",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "King Eadwyre",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 390,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 346,
+        "record": 21
+      },
+      "home": {
+        "block": "S0000080.RDB",
+        "slotId": "d:p00"
+      },
+      "familyId": null
+    },
+    {
+      "id": "king-gothryd",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "King Gothryd",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 364,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 19
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p04"
+      },
+      "familyId": null
+    },
+    {
+      "id": "king-of-worms",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "King of Worms",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 305,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 178,
+        "record": 4
+      },
+      "home": {
+        "block": "S0000205.RDB",
+        "slotId": "d:p06"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lady-bridwell",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lady Bridwell",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 377,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 8
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p18"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lady-brisienna",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lady Brisienna",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 352,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 180,
+        "record": 1
+      },
+      "home": {
+        "block": "PALAAA00.RMB",
+        "site": {
+          "region": 17,
+          "index": 1045
+        },
+        "slotId": "b:0:p02"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lady-northbridge",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lady Northbridge",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 501,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 357,
+        "record": 0
+      },
+      "home": {
+        "block": "S0000040.RDB",
+        "slotId": "d:p10"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lord-bridwell",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Bridwell",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 367,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 17
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p03"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lord-darkworth",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Darkworth",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 397,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 184,
+        "record": 0
+      },
+      "home": {
+        "block": "S0000081.RDB",
+        "slotId": "d:p07"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lord-k-avar",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord K'avar",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 386,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 25
+      },
+      "home": {
+        "block": "S0000040.RDB",
+        "slotId": "d:p18"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lord-provlith",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Provlith",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 387,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 0
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p08"
+      },
+      "familyId": null
+    },
+    {
+      "id": "lord-vhosek",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Vhosek",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 383,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 357,
+        "record": 3
+      },
+      "home": {
+        "block": "S0000040.RDB",
+        "slotId": "d:p11"
+      },
+      "familyId": null
+    },
+    {
+      "id": "medora",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Medora",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 363,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 14
+      },
+      "home": {
+        "block": "S0000180.RDB",
+        "slotId": "d:p00"
+      },
+      "familyId": null
+    },
+    {
+      "id": "mobar",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Mobar",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 371,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 18
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p12"
+      },
+      "familyId": null
+    },
+    {
+      "id": "mynisera",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Mynisera",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 366,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 4
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p11"
+      },
+      "familyId": null
+    },
+    {
+      "id": "nulfaga",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Nulfaga",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 303,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 17
+      },
+      "home": {
+        "block": "S0000070.RDB",
+        "slotId": "d:p00"
+      },
+      "familyId": null
+    },
+    {
+      "id": "oswin-harrowgate",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Oswin Harrowgate",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 1000,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 15
+      },
+      "home": {
+        "block": "FIGHAA01.RMB",
+        "site": {
+          "region": 52,
+          "index": 152
+        },
+        "slotId": "b:0:p00"
+      },
+      "familyId": null
+    },
+    {
+      "id": "popudax",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Popudax",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 369,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 1
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p14"
+      },
+      "familyId": null
+    },
+    {
+      "id": "prince-greklith",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Prince Greklith",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 381,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 357,
+        "record": 1
+      },
+      "home": {
+        "block": "S0000040.RDB",
+        "slotId": "d:p21"
+      },
+      "familyId": null
+    },
+    {
+      "id": "prince-helseth",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Prince Helseth",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "dark-elf",
+      "factionId": 393,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 346,
+        "record": 16
+      },
+      "home": {
+        "block": "S0000081.RDB",
+        "slotId": "d:p06"
+      },
+      "familyId": null
+    },
+    {
+      "id": "prince-lhotun",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Prince Lhotun",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 382,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 357,
+        "record": 7
+      },
+      "home": {
+        "block": "S0000040.RDB",
+        "slotId": "d:p09"
+      },
+      "familyId": null
+    },
+    {
+      "id": "princess-elysana",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Princess Elysana",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 392,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 346,
+        "record": 17
+      },
+      "home": {
+        "block": "S0000080.RDB",
+        "slotId": "d:p01"
+      },
+      "familyId": null
+    },
+    {
+      "id": "princess-morgiah",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Princess Morgiah",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "dark-elf",
+      "factionId": 394,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 346,
+        "record": 0
+      },
+      "home": {
+        "block": "S0000080.RDB",
+        "slotId": "d:p07"
+      },
+      "familyId": null
+    },
+    {
+      "id": "queen-akorithi",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Queen Akorithi",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 380,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 357,
+        "record": 15
+      },
+      "home": {
+        "block": "S0000040.RDB",
+        "slotId": "d:p22"
+      },
+      "familyId": null
+    },
+    {
+      "id": "queen-aubk-i",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Queen Aubk-i",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 365,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 334,
+        "record": 21
+      },
+      "home": {
+        "block": "S0000160.RDB",
+        "slotId": "d:p13"
+      },
+      "familyId": null
+    },
+    {
+      "id": "queen-barenziah",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Queen Barenziah",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "dark-elf",
+      "factionId": 391,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 346,
+        "record": 22
+      },
+      "home": {
+        "block": "S0000080.RDB",
+        "slotId": "d:p06"
+      },
+      "familyId": null
+    },
+    {
+      "id": "the-night-mother",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "The Night Mother",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "khajiit",
+      "factionId": 356,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 176,
+        "record": 6
+      },
+      "home": {
+        "block": "NASYLUM.RMB",
+        "slotId": "b:0:p00"
+      },
+      "familyId": null
+    },
+    {
+      "id": "the-squid",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "The Squid",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 399,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 16
+      },
+      "home": {
+        "block": "THIEAL00.RMB",
+        "site": {
+          "region": 23,
+          "index": 601
+        },
+        "slotId": "b:16:p02"
+      },
+      "familyId": null
+    },
+    {
+      "id": "the-underking",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "The Underking",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "factionId": 353,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 54
+      },
+      "home": {
+        "block": "N0000048.RDB",
+        "site": {
+          "region": 16,
+          "index": 559
+        },
+        "position": [
+          40.4,
+          0.6,
+          -46.8
+        ]
+      },
+      "familyId": null
+    }
+  ]
+}

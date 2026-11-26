@@ -63,12 +63,12 @@ internal sealed record DaggerfallSocialTuning(
     }
 }
 
-/// <summary>One selected <c>daggerfall.people</c> pack as the reader takes it.</summary>
+/// <summary>One selected <c>daggerfall.people</c> pack as the reader takes it (block placements and barks, plus optional legacy inline overrides for unit tests).</summary>
 internal sealed record DaggerfallPeoplePackFiles(
     string PackId,
     ReadOnlyMemory<byte> Payload,
-    ReadOnlyMemory<byte> CastBytes,
-    ReadOnlyMemory<byte> SpawnersBytes,
+    ReadOnlyMemory<byte>? CastBytes,
+    ReadOnlyMemory<byte>? SpawnersBytes,
     IReadOnlyList<DaggerfallPeopleBlockFile> BlockFiles,
     ReadOnlyMemory<byte>? ArchetypesBytes = null,
     ReadOnlyMemory<byte>? BarksBytes = null);
@@ -460,19 +460,17 @@ internal static class DaggerfallPeopleContent
         DaggerfallPeoplePackFiles pack,
         DaggerfallFactionsSet? factions = null,
         DaggerfallVocabulary? vocabulary = null,
-        IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>? items = null)
+        IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>? items = null,
+        DaggerfallActorCatalog? actorCatalog = null)
     {
         ArgumentNullException.ThrowIfNull(pack);
         DaggerfallContentDiagnostics diagnostics = new();
 
-        // Validate payload manifest pointers.
+        // Validate payload manifest pointers (daggerfall.people now owns barks and block slots only; templates/spawners/cast live in daggerfall.base).
         try
         {
             using JsonDocument payloadDoc = JsonDocument.Parse(pack.Payload);
             JsonElement root = DaggerfallBaseContent.Object(payloadDoc.RootElement, $"People pack '{pack.PackId}' payload", diagnostics);
-            _ = DaggerfallBaseContent.Text(root, "castFile", diagnostics);
-            _ = DaggerfallBaseContent.Text(root, "spawnersFile", diagnostics);
-            _ = DaggerfallBaseContent.Text(root, "archetypesFile", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "barksFile", diagnostics);
             _ = DaggerfallBaseContent.Text(root, "blocksFolder", diagnostics);
         }
@@ -481,10 +479,38 @@ internal static class DaggerfallPeopleContent
             diagnostics.Add($"People pack '{pack.PackId}' payload is malformed: {exception.Message}");
         }
 
-        Dictionary<string, ArchetypeProfile> archetypes = ReadArchetypes(pack.PackId, pack.ArchetypesBytes, vocabulary, items, diagnostics);
+        Dictionary<string, ArchetypeProfile> archetypes;
+        if (pack.ArchetypesBytes is { IsEmpty: false } archBytes)
+        {
+            archetypes = ReadArchetypes(pack.PackId, archBytes, vocabulary, items, diagnostics);
+        }
+        else if (actorCatalog is not null)
+        {
+            archetypes = actorCatalog.ProjectArchetypes().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+            foreach (string requiredId in DaggerfallArchetypeIds.Required)
+            {
+                if (!archetypes.ContainsKey(requiredId))
+                    diagnostics.Add($"People pack '{pack.PackId}' actor catalog must define required archetype template '{requiredId}'.");
+            }
+        }
+        else
+        {
+            archetypes = ReadArchetypes(pack.PackId, null, vocabulary, items, diagnostics);
+        }
+
         DaggerfallPeopleBarks barks = ReadBarks(pack.PackId, pack.BarksBytes, archetypes, diagnostics);
-        Dictionary<string, DaggerfallCastIndividualDefinition> individuals = ReadIndividuals(pack.PackId, pack.CastBytes, factions, archetypes, diagnostics);
-        Dictionary<string, DaggerfallPeopleSpawnerDefinition> spawners = ReadSpawners(pack.PackId, pack.SpawnersBytes, archetypes, diagnostics);
+
+        Dictionary<string, DaggerfallCastIndividualDefinition> individuals = pack.CastBytes is { IsEmpty: false } castBytes
+            ? ReadIndividuals(pack.PackId, castBytes, factions, archetypes, diagnostics)
+            : actorCatalog is not null
+                ? actorCatalog.ProjectCastIndividuals().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)
+                : new Dictionary<string, DaggerfallCastIndividualDefinition>(StringComparer.Ordinal);
+
+        Dictionary<string, DaggerfallPeopleSpawnerDefinition> spawners = pack.SpawnersBytes is { IsEmpty: false } spawnerBytes
+            ? ReadSpawners(pack.PackId, spawnerBytes, archetypes, diagnostics)
+            : actorCatalog is not null
+                ? actorCatalog.ProjectTownSpawners().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)
+                : new Dictionary<string, DaggerfallPeopleSpawnerDefinition>(StringComparer.Ordinal);
 
         Dictionary<string, IReadOnlyDictionary<int, DaggerfallPeopleBuildingSlots>> rmbInteriors = new(StringComparer.Ordinal);
         Dictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> rmbExteriors = new(StringComparer.Ordinal);
@@ -1130,8 +1156,18 @@ internal static class DaggerfallPeopleContent
                 diagnostics.Add($"Slot '{scope}/{slotId}' must specify exactly one of castId or spawner.");
             else if (castId is not null && !individuals.ContainsKey(castId))
                 diagnostics.Add($"Slot '{scope}/{slotId}' references unknown castId '{castId}'.");
-            else if (spawnerId is not null && !spawners.ContainsKey(spawnerId))
-                diagnostics.Add($"Slot '{scope}/{slotId}' references unknown spawner '{spawnerId}'.");
+            else if (spawnerId is not null)
+            {
+                if (individuals.ContainsKey(spawnerId))
+                {
+                    castId = spawnerId;
+                    spawnerId = null;
+                }
+                else if (!spawners.ContainsKey(spawnerId))
+                {
+                    diagnostics.Add($"Slot '{scope}/{slotId}' references unknown spawner '{spawnerId}'.");
+                }
+            }
 
             WorldPoint position = ReadPosition(DaggerfallBaseContent.Property(obj, "position", diagnostics), $"{scope}/{slotId}", diagnostics);
             string interaction = DaggerfallBaseContent.Text(obj, "interaction", diagnostics);

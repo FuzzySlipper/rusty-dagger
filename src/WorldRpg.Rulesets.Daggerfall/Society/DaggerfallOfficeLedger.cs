@@ -111,16 +111,6 @@ internal sealed record DaggerfallOfficeLedgerSave(DaggerfallOfficeOverrideSave[]
     }
 }
 
-/// <summary>Static descriptor for one of the 13 canonical political board-game seats (matching <c>WorldRpg.Politics</c> B1).</summary>
-internal sealed record DaggerfallBoardSeatDefinition(
-    string SeatId,
-    string SeatName,
-    DaggerfallOfficeKind Kind,
-    int OfficeFactionId,
-    string? DefaultCastId,
-    int? HomeRegion,
-    string DefaultTitle);
-
 /// <summary>
 /// Resolved leader persona for a board-game seat, combining <see cref="DaggerfallOfficeLedger"/> sparse overrides
 /// with <see cref="DaggerfallOfficeHolders"/> and published cast/faction defaults.
@@ -165,46 +155,11 @@ internal sealed record DaggerfallLocalOffice(
     string? CauseDetail = null);
 
 /// <summary>
-/// Canonical catalog of the 13 board-game major seats defined in <c>WorldRpg.Politics/canon/iliac-bay.board.json</c>.
-/// Each seat maps 1:1 to a major office in <see cref="DaggerfallOfficeLedger"/> so board-game moves and world-state
-/// changes (deaths, quests, successions) share one authoritative office identity.
-/// </summary>
-internal static class DaggerfallBoardSeatCatalog
-{
-    internal static readonly IReadOnlyList<DaggerfallBoardSeatDefinition> All =
-    [
-        new("daggerfall", "Kingdom of Daggerfall", DaggerfallOfficeKind.Ruler, 201, "king-gothryd", 17, "King"),
-        new("wayrest", "Kingdom of Wayrest", DaggerfallOfficeKind.Ruler, 207, "king-eadwyre", 23, "King"),
-        new("sentinel", "Kingdom of Sentinel", DaggerfallOfficeKind.Ruler, 204, "queen-akorithi", 20, "Queen"),
-        new("orsinium", "Orsinium", DaggerfallOfficeKind.Ruler, 358, "gortwog", 26, "Lord"),
-        new("empire", "The Empire and the Blades", DaggerfallOfficeKind.MajorSeat, 129, null, null, "Grandmaster"),
-        new("necromancers", "The Necromancers", DaggerfallOfficeKind.MajorSeat, 306, "king-of-worms", null, "King of Worms"),
-        new("underking", "The Underking", DaggerfallOfficeKind.MajorSeat, 353, null, null, "Underking"),
-        new("mages-guild", "The Mages Guild", DaggerfallOfficeKind.MajorSeat, DaggerfallConcreteGuildCatalog.MagesFactionId, null, null, "Archmagister"),
-        new("fighters-guild", "The Fighters Guild", DaggerfallOfficeKind.MajorSeat, DaggerfallConcreteGuildCatalog.FightersFactionId, null, null, "Guildmaster"),
-        new("thieves-guild", "The Thieves Guild", DaggerfallOfficeKind.MajorSeat, DaggerfallConcreteGuildCatalog.ThievesFactionId, null, null, "Mastermind"),
-        new("dark-brotherhood", "The Dark Brotherhood", DaggerfallOfficeKind.MajorSeat, DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId, "the-night-mother", null, "Night Mother"),
-        new("temples", "The Temples", DaggerfallOfficeKind.MajorSeat, 450, null, null, "High Priest"),
-        new("balfiera", "Clan Direnni of Balfiera", DaggerfallOfficeKind.MajorSeat, 199, "medora", 9, "Matriarch"),
-    ];
-
-    private static readonly Dictionary<string, DaggerfallBoardSeatDefinition> BySeatId =
-        All.ToDictionary(seat => seat.SeatId, StringComparer.Ordinal);
-
-    private static readonly Dictionary<int, DaggerfallBoardSeatDefinition> ByFactionId =
-        All.ToDictionary(seat => seat.OfficeFactionId);
-
-    internal static bool TryGetBySeatId(string seatId, out DaggerfallBoardSeatDefinition? seat) =>
-        BySeatId.TryGetValue(seatId, out seat);
-
-    internal static bool TryGetByFactionId(int officeFactionId, out DaggerfallBoardSeatDefinition? seat) =>
-        ByFactionId.TryGetValue(officeFactionId, out seat);
-}
-
-/// <summary>
 /// Sparse world-scoped office ledger connecting live world actors and seeded building/town slots to the political
 /// board game and quest system. Untouched offices resolve deterministically with zero save bytes; only card moves,
 /// quest outcomes, deaths, or explicit successions write a sparse <see cref="DaggerfallOfficeOverrideSave"/>.
+/// Seat bindings (<c>seatId -&gt; faction/region/title</c>, with no holder) come from <c>daggerfall.base/world/board-seats.json</c>;
+/// <c>iliac-bay.board.json</c> owns seats, holders, and personas, and live holders reach this ledger through B2 (#11055).
 /// </summary>
 internal sealed class DaggerfallOfficeLedger(
     DaggerfallDefinitions definitions,
@@ -225,13 +180,19 @@ internal sealed class DaggerfallOfficeLedger(
     internal int OverrideCount => _overrides.Count;
     internal IReadOnlyCollection<DaggerfallOfficeOverrideSave> Overrides => _overrides.Values;
 
+    private static DaggerfallOfficeKind ToOfficeKind(DaggerfallBoardSeatKind kind) => kind switch
+    {
+        DaggerfallBoardSeatKind.Ruler => DaggerfallOfficeKind.Ruler,
+        _ => DaggerfallOfficeKind.MajorSeat,
+    };
+
     /// <summary>Canonical office key for a faction-addressed office (rulers, major seats, faction heads).</summary>
     internal static string FactionOfficeKey(int officeFactionId) =>
         string.Create(CultureInfo.InvariantCulture, $"faction:{officeFactionId}");
 
     /// <summary>Canonical office key for a board-game seat (aliases to its <see cref="FactionOfficeKey"/>).</summary>
-    internal static string SeatOfficeKey(string seatId) =>
-        DaggerfallBoardSeatCatalog.TryGetBySeatId(seatId, out DaggerfallBoardSeatDefinition? seat) && seat is not null
+    internal string SeatOfficeKey(string seatId) =>
+        definitions.BoardSeats.TryGetBySeatId(seatId, out DaggerfallBoardSeatBinding? seat) && seat is not null
             ? FactionOfficeKey(seat.OfficeFactionId)
             : $"seat:{seatId}";
 
@@ -291,7 +252,7 @@ internal sealed class DaggerfallOfficeLedger(
             throw new ArgumentOutOfRangeException(nameof(officeFactionId), "Faction office id must be positive.");
 
         string key = FactionOfficeKey(officeFactionId);
-        DaggerfallBoardSeatCatalog.TryGetByFactionId(officeFactionId, out DaggerfallBoardSeatDefinition? seat);
+        definitions.BoardSeats.TryGetByFactionId(officeFactionId, out DaggerfallBoardSeatBinding? seat);
 
         // Snapshot current holder before overwriting so predecessor history is preserved for macros & news.
         if (previousHolderName is null && previousHolderActorId is null)
@@ -364,12 +325,12 @@ internal sealed class DaggerfallOfficeLedger(
         string? causeDetail = null,
         string? title = null)
     {
-        if (!DaggerfallBoardSeatCatalog.TryGetBySeatId(seatId, out DaggerfallBoardSeatDefinition? seat) || seat is null)
+        if (!definitions.BoardSeats.TryGetBySeatId(seatId, out DaggerfallBoardSeatBinding? seat) || seat is null)
             throw new ArgumentException($"Unknown board-game seat '{seatId}'.", nameof(seatId));
 
         return SetFactionOfficeHolder(
             seat.OfficeFactionId,
-            seat.Kind,
+            ToOfficeKind(seat.Kind),
             holderActorId,
             holderCastId,
             holderFactionId,
@@ -393,8 +354,8 @@ internal sealed class DaggerfallOfficeLedger(
             throw new ArgumentOutOfRangeException(nameof(officeFactionId), "Faction office id must be positive.");
 
         string key = FactionOfficeKey(officeFactionId);
-        DaggerfallBoardSeatCatalog.TryGetByFactionId(officeFactionId, out DaggerfallBoardSeatDefinition? seat);
-        DaggerfallOfficeKind kind = seat?.Kind ?? DaggerfallOfficeKind.Ruler;
+        definitions.BoardSeats.TryGetByFactionId(officeFactionId, out DaggerfallBoardSeatBinding? seat);
+        DaggerfallOfficeKind kind = seat is not null ? ToOfficeKind(seat.Kind) : DaggerfallOfficeKind.Ruler;
 
         if (previousHolderName is null && previousHolderActorId is null)
         {
@@ -476,12 +437,13 @@ internal sealed class DaggerfallOfficeLedger(
     /// <summary>Removes a sparse override, returning the office to its zero-byte seeded baseline.</summary>
     internal bool ClearOverride(string officeKey) => _overrides.Remove(officeKey);
 
-    /// <summary>Resolves the current leader persona for one of the 13 B1 board-game seats.</summary>
+    /// <summary>Resolves the current leader persona for one of the canonical B1 board-game seats.</summary>
     internal DaggerfallSeatLeaderPersona ResolveBoardSeatPersona(string seatId)
     {
-        if (!DaggerfallBoardSeatCatalog.TryGetBySeatId(seatId, out DaggerfallBoardSeatDefinition? seat) || seat is null)
+        if (!definitions.BoardSeats.TryGetBySeatId(seatId, out DaggerfallBoardSeatBinding? seat) || seat is null)
             throw new ArgumentException($"Unknown board-game seat '{seatId}'.", nameof(seatId));
 
+        DaggerfallOfficeKind officeKind = ToOfficeKind(seat.Kind);
         string officeKey = FactionOfficeKey(seat.OfficeFactionId);
         bool overridden = _overrides.TryGetValue(officeKey, out DaggerfallOfficeOverrideSave? over);
         DaggerfallOfficeHolder? holder = officeHolders.ResolveOffice(seat.OfficeFactionId, seat.HomeRegion);
@@ -492,7 +454,7 @@ internal sealed class DaggerfallOfficeLedger(
                 SeatId: seat.SeatId,
                 SeatName: seat.SeatName,
                 OfficeKey: officeKey,
-                Kind: seat.Kind,
+                Kind: officeKind,
                 OfficeFactionId: seat.OfficeFactionId,
                 HolderActorId: null,
                 HolderCastId: null,
@@ -512,7 +474,7 @@ internal sealed class DaggerfallOfficeLedger(
                 SeatId: seat.SeatId,
                 SeatName: seat.SeatName,
                 OfficeKey: officeKey,
-                Kind: seat.Kind,
+                Kind: officeKind,
                 OfficeFactionId: seat.OfficeFactionId,
                 HolderActorId: holder.ActorId,
                 HolderCastId: holder.CastId,
@@ -526,31 +488,6 @@ internal sealed class DaggerfallOfficeLedger(
                 CauseDetail: over?.CauseDetail ?? holder.PreviousHolderFate);
         }
 
-        // Non-cast organizational seats without a published individual child (e.g. Mages/Fighters/Thieves Guild, Temples, Empire)
-        // synthesize a deterministic seeded institutional persona until cast or overridden — costing zero save bytes.
-        if (seat.DefaultCastId is { Length: > 0 } castId
-            && definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? castDef))
-        {
-            long castActorId = DaggerfallPeopleSlots.CastIndividualIdentity(castDef.Id);
-            bool alive = !officeHolders.IsActorDead(castActorId);
-            return new DaggerfallSeatLeaderPersona(
-                SeatId: seat.SeatId,
-                SeatName: seat.SeatName,
-                OfficeKey: officeKey,
-                Kind: seat.Kind,
-                OfficeFactionId: seat.OfficeFactionId,
-                HolderActorId: alive ? castActorId : null,
-                HolderCastId: alive ? castDef.Id : null,
-                HolderFactionId: alive ? castDef.FactionId : null,
-                DisplayName: alive ? castDef.Name : string.Empty,
-                Title: seat.DefaultTitle,
-                IsVacant: !alive,
-                IsOverridden: overridden,
-                PreviousHolderName: alive ? null : castDef.Name,
-                ChangeCause: alive ? null : DaggerfallOfficeChangeCause.Death,
-                CauseDetail: alive ? null : "was slain");
-        }
-
         string defaultName = definitions.Factions.Factions.TryGetValue(seat.OfficeFactionId, out DaggerfallFactionDefinition? faction)
             ? $"{seat.DefaultTitle} of {faction.Name}"
             : $"{seat.DefaultTitle} of {seat.SeatName}";
@@ -558,7 +495,7 @@ internal sealed class DaggerfallOfficeLedger(
             SeatId: seat.SeatId,
             SeatName: seat.SeatName,
             OfficeKey: officeKey,
-            Kind: seat.Kind,
+            Kind: officeKind,
             OfficeFactionId: seat.OfficeFactionId,
             HolderActorId: null,
             HolderCastId: null,
@@ -572,9 +509,9 @@ internal sealed class DaggerfallOfficeLedger(
             CauseDetail: over?.CauseDetail);
     }
 
-    /// <summary>Resolves all 13 canonical B1 board-game seat personas in seat-table order.</summary>
+    /// <summary>Resolves all canonical B1 board-game seat personas in seat-table order.</summary>
     internal IReadOnlyList<DaggerfallSeatLeaderPersona> ResolveAllBoardSeatPersonas() =>
-        [.. DaggerfallBoardSeatCatalog.All.Select(seat => ResolveBoardSeatPersona(seat.SeatId))];
+        [.. definitions.BoardSeats.All.Select(seat => ResolveBoardSeatPersona(seat.SeatId))];
 
     /// <summary>
     /// Deterministically resolves every local institutional office at <paramref name="site"/> (guild hall masters,
@@ -708,12 +645,12 @@ internal sealed class DaggerfallOfficeLedger(
 
         // 2. Check untouched baseline canonical major seats and regional province rulers.
         HashSet<int> checkedFactions = [];
-        foreach (DaggerfallBoardSeatDefinition seat in DaggerfallBoardSeatCatalog.All)
+        foreach (DaggerfallBoardSeatBinding seat in definitions.BoardSeats.All)
         {
             if (!checkedFactions.Add(seat.OfficeFactionId) || _overrides.ContainsKey(FactionOfficeKey(seat.OfficeFactionId)))
                 continue;
             if (MatchesHolderActor(seat.OfficeFactionId, seat.HomeRegion, deadActorId, out string? slainName))
-                recorded.Add(RecordFactionHolderDeath(seat.OfficeFactionId, seat.Kind, deadActorId, slainName, currentDay));
+                recorded.Add(RecordFactionHolderDeath(seat.OfficeFactionId, ToOfficeKind(seat.Kind), deadActorId, slainName, currentDay));
         }
 
         foreach (DaggerfallFactionDefinition province in definitions.Factions.Factions.Values
@@ -801,7 +738,7 @@ internal sealed class DaggerfallOfficeLedger(
         // Temporarily remove any override pointing at the dead actor so ResolveOffice walks to the next living successor.
         string key = FactionOfficeKey(officeFactionId);
         _overrides.Remove(key);
-        DaggerfallBoardSeatCatalog.TryGetByFactionId(officeFactionId, out DaggerfallBoardSeatDefinition? seat);
+        definitions.BoardSeats.TryGetByFactionId(officeFactionId, out DaggerfallBoardSeatBinding? seat);
         DaggerfallOfficeHolder? next = officeHolders.ResolveOffice(officeFactionId, seat?.HomeRegion);
         if (next is { HasLivingHolder: true } successor && successor.ActorId != deadActorId)
         {
@@ -1049,13 +986,13 @@ internal sealed class DaggerfallOfficeLedger(
         {
             // Match DaggerfallLocationAssembly.FilterTalkableSlots so person/{ordinal} aligns 1:1 with live staticNpcs!
             if (!string.Equals(slot.Interaction, "full-dialogue", StringComparison.Ordinal)
-                || string.Equals(slot.SpawnerId, "clutter-person", StringComparison.Ordinal))
+                || string.Equals(slot.SpawnerId, "town-clutter-person", StringComparison.Ordinal))
             {
                 continue;
             }
 
             int ordinal = talkableOrdinal++;
-            if (string.Equals(slot.SpawnerId, "child", StringComparison.Ordinal))
+            if (string.Equals(slot.SpawnerId, "town-child", StringComparison.Ordinal))
                 continue;
 
             string placementId = string.Create(CultureInfo.InvariantCulture, $"person/{ordinal}");
@@ -1090,21 +1027,21 @@ internal sealed class DaggerfallOfficeLedger(
     {
         if (buildingType == PalaceBuildingType)
         {
-            if (string.Equals(slot.SpawnerId, "courtier", StringComparison.Ordinal)) return 30;
-            if (string.Equals(slot.SpawnerId, "noble", StringComparison.Ordinal)) return 25;
-            if (string.Equals(slot.SpawnerId, "palace-attendant", StringComparison.Ordinal)) return 20;
+            if (string.Equals(slot.SpawnerId, "town-courtier", StringComparison.Ordinal)) return 30;
+            if (string.Equals(slot.SpawnerId, "town-noble", StringComparison.Ordinal)) return 25;
+            if (string.Equals(slot.SpawnerId, "town-palace-attendant", StringComparison.Ordinal)) return 20;
             return 10;
         }
         if (buildingType == TempleBuildingType && !IsGuildFaction(buildingFaction))
         {
             if (slot.FactionId == 240 || (buildingFaction > 0 && slot.FactionId == buildingFaction)) return 30;
-            if (string.Equals(slot.SpawnerId, "temple-priest", StringComparison.Ordinal)) return 20;
+            if (string.Equals(slot.SpawnerId, "town-temple-priest", StringComparison.Ordinal)) return 20;
             return 10;
         }
         // Guild hall / order hall: prefer exact building faction or questor faction, then guild member spawner.
         if (buildingFaction > 0 && slot.FactionId == buildingFaction) return 30;
         if (slot.FactionId is 63 or 851 or 804 or 807 or 846) return 25;
-        if (slot.SpawnerId is "mage-guild-member" or "fighters-guild-member" or "knightly-order-member" or "dark-brotherhood-member" or "guild-member")
+        if (slot.SpawnerId is "town-mage-guild-member" or "town-fighters-guild-member" or "town-knightly-order-member" or "town-dark-brotherhood-member" or "town-guild-member")
             return 20;
         return 10;
     }

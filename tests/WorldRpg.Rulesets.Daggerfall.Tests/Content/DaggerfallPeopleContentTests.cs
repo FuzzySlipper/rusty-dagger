@@ -65,14 +65,14 @@ public sealed class DaggerfallPeopleContentTests
             Assert.False(string.IsNullOrWhiteSpace(spawner.ArchetypeId));
             Assert.Contains(spawner.ArchetypeId!, people.Archetypes.Keys);
         });
-        Assert.Contains("banker", people.Spawners.Keys);
-        Assert.Contains("weaponsmith", people.Spawners.Keys);
-        Assert.Contains("alchemist", people.Spawners.Keys);
-        Assert.Contains("tavern-keeper", people.Spawners.Keys);
-        Assert.Contains("tavern-patron", people.Spawners.Keys);
-        Assert.Contains("mage-guild-member", people.Spawners.Keys);
-        Assert.Contains("house-resident", people.Spawners.Keys);
-        Assert.Contains("clutter-person", people.Spawners.Keys);
+        Assert.Contains("town-banker", people.Spawners.Keys);
+        Assert.Contains("town-weaponsmith", people.Spawners.Keys);
+        Assert.Contains("town-alchemist", people.Spawners.Keys);
+        Assert.Contains("town-tavern-keeper", people.Spawners.Keys);
+        Assert.Contains("town-tavern-patron", people.Spawners.Keys);
+        Assert.Contains("town-mage-guild-member", people.Spawners.Keys);
+        Assert.Contains("town-house-resident", people.Spawners.Keys);
+        Assert.Contains("town-clutter-person", people.Spawners.Keys);
 
         // Authored regional & climate spawner pools are populated with zero cast-individual visual clashes.
         HashSet<(int Archive, int Record)> castVisuals =
@@ -133,7 +133,7 @@ public sealed class DaggerfallPeopleContentTests
               {"id":"lady-brisienna","factionId":352,"name":"Lady Brisienna","race":"breton","gender":"Female","visual":{"archive":180,"record":1},"homeSite":{"region":17,"index":1045},"homeBlock":"PALAAA00.RMB","homeSlotId":"b:0:p02","interaction":"full-dialogue","harm":"protected"},
               {"id":"the-squid","factionId":399,"name":"The Squid","race":"breton","gender":"Male","visual":{"archive":183,"record":16},"homeSite":{"region":16,"index":559},"homeBlock":"N0000048.RDB","homePosition":[40.4,0.6,-46.8],"interaction":"full-dialogue","harm":"protected"}
             ]}
-            """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items);
+            """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items, TestPayload.Definitions.ActorCatalog);
 
         DaggerfallCastIndividualDefinition unplaced = people.Individuals["unplaced"];
         Assert.Null(unplaced.HomeBlock);
@@ -155,7 +155,7 @@ public sealed class DaggerfallPeopleContentTests
               {"id":"nowhere","factionId":399,"name":"Nowhere","race":"breton","gender":"Male","visual":{"archive":183,"record":16},"homeBlock":"N0000048.RDB","homePosition":[0,0,0],"interaction":"full-dialogue","harm":"protected"},
               {"id":"factionless","name":"Factionless","race":"breton","gender":"Male","visual":{"archive":334,"record":15},"interaction":"full-dialogue","harm":"protected"}
             ]}
-            """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
+            """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items, TestPayload.Definitions.ActorCatalog));
         Assert.Contains("Cast individual 'half-placed' must name a homeBlock with exactly one of homeSlotId and homePosition", error.Message, StringComparison.Ordinal);
         Assert.Contains("Cast individual 'both-ways' must name a homeBlock with exactly one of homeSlotId and homePosition", error.Message, StringComparison.Ordinal);
         Assert.Contains("Cast individual 'nowhere' has a homePosition but no homeSite to set it in.", error.Message, StringComparison.Ordinal);
@@ -217,7 +217,7 @@ public sealed class DaggerfallPeopleContentTests
             TestPayload.PeoplePack().BarksBytes);
 
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
-            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
+            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items, TestPayload.Definitions.ActorCatalog));
         Assert.Contains("illegally carries Type-4 Individual faction 406", error.Message, StringComparison.Ordinal);
     }
 
@@ -516,7 +516,7 @@ public sealed class DaggerfallPeopleContentTests
             """));
 
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() =>
-            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
+            DaggerfallPeopleContent.Read(tampered, TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items, TestPayload.Definitions.ActorCatalog));
         Assert.Contains("unknown climate 'Volcanic'", error.Message, StringComparison.Ordinal);
         Assert.Contains("barks.defaultBarks", error.Message, StringComparison.Ordinal);
         Assert.Contains("unknown archetype 'missing-archetype'", error.Message, StringComparison.Ordinal);
@@ -571,9 +571,9 @@ public sealed class DaggerfallPeopleContentTests
     public void Regional_and_climate_spawner_pools_resolve_distinct_visuals_across_regions_and_climates()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallPeopleSpawnerDefinition resident = definitions.People.Spawners["house-resident"];
+        DaggerfallPeopleSpawnerDefinition resident = definitions.People.Spawners["town-house-resident"];
         DaggerfallPeopleSlotDefinition slot = new(
-            "b:0:p00", CastId: null, SpawnerId: "house-resident", new WorldPoint(1, 0, 2),
+            "b:0:p00", CastId: null, SpawnerId: "town-house-resident", new WorldPoint(1, 0, 2),
             "full-dialogue", FactionId: null, DeriveRegionalFaction: true,
             new DaggerfallPeopleVisual(182, 0, "Male"), BuildingType: 17, BuildingFactionId: 0);
 

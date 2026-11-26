@@ -506,7 +506,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             StringComparer.Ordinal.Equals(d.OverlandBandId, bandId));
         if (dispatch is null)
             return default;
-        string? seatName = DaggerfallBoardSeatCatalog.TryGetBySeatId(dispatch.SeatId, out DaggerfallBoardSeatDefinition? seat) && seat is not null
+        string? seatName = _definitions.BoardSeats.TryGetBySeatId(dispatch.SeatId, out DaggerfallBoardSeatBinding? seat) && seat is not null
             ? seat.SeatName
             : null;
         string? detail = dispatch.Revealed

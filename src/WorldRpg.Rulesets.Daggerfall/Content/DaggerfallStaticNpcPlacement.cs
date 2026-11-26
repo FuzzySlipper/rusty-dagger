@@ -80,7 +80,7 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
             IReadOnlyList<string> services;
             if (interaction == ActorInteractionPolicyKind.None)
             {
-                role = spawnerId ?? "clutter-person";
+                role = spawnerId ?? "town-clutter-person";
                 services = [];
             }
             else if (interaction == ActorInteractionPolicyKind.AmbientBark)

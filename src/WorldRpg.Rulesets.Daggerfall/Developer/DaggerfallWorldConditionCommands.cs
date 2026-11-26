@@ -222,7 +222,7 @@ internal sealed class DaggerfallWorldConditionCommands(
         int nowDay = checked((int)calendar().DayNumber);
         string trimmedSeat = seatId.Trim();
         string trimmedAction = actionKind.Trim();
-        int? sourceFactionId = DaggerfallBoardSeatCatalog.TryGetBySeatId(trimmedSeat, out DaggerfallBoardSeatDefinition? seat) && seat is not null
+        int? sourceFactionId = definitions.BoardSeats.TryGetBySeatId(trimmedSeat, out DaggerfallBoardSeatBinding? seat) && seat is not null
             ? seat.OfficeFactionId
             : null;
         string dispatchId = string.Create(CultureInfo.InvariantCulture, $"dev-dispatch:{trimmedSeat}:{nowMinute}:{courierDispatches.Count + 1}");

@@ -347,4 +347,32 @@ public sealed class DaggerfallActorTemplatesTests
             Assert.Equal(expectedFemalePath, reentrySprite.TexturePath);
         }
     }
+
+    [Fact]
+    public void Shared_class_templates_townsfolk_cast_specs_and_board_seats_validate_cleanly()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallActorCatalog catalog = definitions.ActorCatalog;
+
+        // One mage/warrior/assassin template shared by hostile enemy specs and town guild specs.
+        Assert.Equal("mage", catalog.Specs["encounter-mage"].TemplateId);
+        Assert.Equal("mage", catalog.Specs["town-mage-guild-member"].TemplateId);
+        Assert.Equal("warrior", catalog.Specs["encounter-warrior"].TemplateId);
+        Assert.Equal("warrior", catalog.Specs["town-fighters-guild-member"].TemplateId);
+        Assert.Equal("assassin", catalog.Specs["encounter-assassin"].TemplateId);
+        Assert.Equal("assassin", catalog.Specs["town-dark-brotherhood-member"].TemplateId);
+
+        // Cast specs never patch mechanics: adding a mechanic field is refused.
+        JsonObject badCast = TestPayload.Sections("actorSpecsCast");
+        badCast["actorSpecsCast"]!["specs"]!.AsArray().First(s => s!["id"]!.GetValue<string>() == "king-gothryd")!["armor"] = 10;
+        DaggerfallContentException castEx = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(badCast)));
+        Assert.Contains(castEx.Diagnostics, d => d.Contains("king-gothryd", StringComparison.Ordinal) && d.Contains("armor", StringComparison.Ordinal));
+
+        // Board seat bindings load all 13 canonical seats with no holder field, and refuse holder/defaultCastId.
+        Assert.Equal(13, definitions.BoardSeats.All.Count);
+        JsonObject badSeat = TestPayload.Sections("boardSeats");
+        badSeat["boardSeats"]!["seats"]!.AsArray().First(s => s!["id"]!.GetValue<string>() == "daggerfall")!["holder"] = "king-gothryd";
+        DaggerfallContentException seatEx = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(badSeat)));
+        Assert.Contains(seatEx.Diagnostics, d => d.Contains("must not declare a holder", StringComparison.Ordinal));
+    }
 }

@@ -6,7 +6,12 @@
       "careerRef": "class00",
       "lootTableKey": "U",
       "castsMagic": true,
-      "spellPolicy": "class-tiers"
+      "spellPolicy": "class-tiers",
+      "fatigue": 50,
+      "magicka": 65,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": false
     },
     {
       "id": "spellsword",
@@ -132,7 +137,12 @@
       "extends": "combat-class",
       "careerRef": "class11",
       "lootTableKey": "O",
-      "languageSkill": "streetwise"
+      "languageSkill": "streetwise",
+      "fatigue": 70,
+      "magicka": 15,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": false
     },
     {
       "id": "monk",
@@ -211,7 +221,12 @@
       "id": "warrior",
       "extends": "combat-class",
       "careerRef": "class16",
-      "lootTableKey": "T"
+      "lootTableKey": "T",
+      "fatigue": 75,
+      "magicka": 0,
+      "defaultHarm": "law-protected-civilian",
+      "defaultInteraction": "full-dialogue",
+      "walks": false
     },
     {
       "id": "knight",

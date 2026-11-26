@@ -430,7 +430,7 @@ internal sealed class DaggerfallLocationAssembly
             foreach (DaggerfallPeopleSlotDefinition slot in slots)
             {
                 if (string.Equals(slot.Interaction, "full-dialogue", StringComparison.Ordinal)
-                    && !string.Equals(slot.SpawnerId, "clutter-person", StringComparison.Ordinal))
+                    && !string.Equals(slot.SpawnerId, "town-clutter-person", StringComparison.Ordinal))
                     talkable.Add(slot);
             }
             return talkable;
@@ -519,7 +519,7 @@ internal sealed class DaggerfallLocationAssembly
             foreach (DaggerfallPeopleSlotDefinition slot in slots)
             {
                 if (string.Equals(slot.Interaction, "full-dialogue", StringComparison.Ordinal)
-                    && !string.Equals(slot.SpawnerId, "clutter-person", StringComparison.Ordinal))
+                    && !string.Equals(slot.SpawnerId, "town-clutter-person", StringComparison.Ordinal))
                     continue;
                 emittedAny = true;
                 string id = placeSlotId is not null
@@ -600,7 +600,7 @@ internal sealed class DaggerfallLocationAssembly
                         ["nameSeed"] = nameSeed,
                         ["interaction"] = "none",
                         ["harm"] = "law-protected-civilian",
-                        ["spawnerId"] = "clutter-person",
+                        ["spawnerId"] = "town-clutter-person",
                     });
                 }
                 return;
