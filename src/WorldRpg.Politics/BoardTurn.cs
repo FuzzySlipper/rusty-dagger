@@ -152,13 +152,13 @@ public static class BoardTurn
         HashSet<Region> relieved = Trade.Relieve(board, fed);
         foreach (Region region in board.Regions)
             board.SetSupply(region, fed.Contains(region) ? RegionSupply.Fed : relieved.Contains(region) ? RegionSupply.Relieved : RegionSupply.Cut);
+        foreach (Seat seat in board.Seats.Where(seat => seat.Reserves is not null)) board.SetContested(seat, Balance.Contested(board, seat));
         foreach (Seat seat in board.Seats)
         {
             Region[] held = [.. board.Regions.Where(region => region.Allegiance == seat.Id && !region.Cut)];
             board.AdjustResource(seat, Resource.Coin, held.Sum(Conditions.ProsperityIncome) / 4);
             board.AdjustResource(seat, Resource.Favour, board.Regions.Sum(region => region.InfluenceOf(seat.Id)) / 3);
             board.AdjustResource(seat, Resource.Force, held.Sum(region => region.Control) / 4);
-            if (seat.Reserves is not null) board.SetContested(seat, Balance.Contested(board, seat));
             foreach (SeatGrant grant in seat.Grants)
                 if (board.Turn % grant.EveryWeeks == 0) board.AdjustResource(seat, grant.Resource, grant.Amount);
             if (board.Turn % OfficeWeeks == 0)

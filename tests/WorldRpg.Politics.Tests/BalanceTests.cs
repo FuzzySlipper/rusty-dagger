@@ -33,6 +33,32 @@ public sealed class BalanceTests
         Assert.Contains(new BoardChange("guild", "reserves", "cut", "open"), lifted.Upkeep);
     }
 
+    /// <summary>
+    /// A crown whose Force arrives through its march: its capital's Force income stops in the same week as everything
+    /// else once the march has been contested four weeks running, and comes back in the week the contest lifts.
+    /// </summary>
+    [Fact]
+    public void A_cut_stops_and_a_reopening_restores_the_Force_of_held_land_in_the_same_week_as_the_rest()
+    {
+        BoardSetup setup = TestBoards.TwoCrowns();
+        Board board = TestBoards.Create(setup with { Seats = [.. setup.Seats.Select(seat => seat.Id == "west" ? seat with { Reserves = "march" } : seat)] });
+        Assert.True(Paid(BoardTurn.Play(board), Resource.Force, "west"));
+        board.AddCondition(board.Region("march"), new RegionCondition(ConditionKind.Raiders, null, 1, null, board.Turn, board.Turn + 100));
+
+        TurnTrace[] contested = [.. Enumerable.Range(0, Balance.ReservesBite).Select(_ => BoardTurn.Play(board))];
+
+        Assert.All(contested[..^1], turn => Assert.True(Paid(turn, Resource.Force, "west")));
+        Assert.False(Paid(contested[^1], Resource.Force, "west"));
+        Assert.Contains(new BoardChange("west", "reserves", "open", "cut"), contested[^1].Upkeep);
+
+        board.RemoveConditions(board.Region("march"), ConditionKind.Raiders);
+        board.AdjustResource(board.Seat("west"), Resource.Force, -Board.ResourceLimit);
+        TurnTrace lifted = BoardTurn.Play(board);
+
+        Assert.Contains(new BoardChange("west", "reserves", "cut", "open"), lifted.Upkeep);
+        Assert.True(Paid(lifted, Resource.Force, "west"));
+    }
+
     [Fact]
     public void A_hostile_seat_out_influencing_the_receiver_contests_its_reserves_point()
     {
@@ -145,8 +171,8 @@ public sealed class BalanceTests
         return (interventions, cut);
     }
 
-    private static bool Paid(TurnTrace turn, Resource resource) =>
-        turn.Upkeep.Any(change => change.Subject == "guild" && change.Field == resource.ToString().ToLowerInvariant()
+    private static bool Paid(TurnTrace turn, Resource resource, string seat = "guild") =>
+        turn.Upkeep.Any(change => change.Subject == seat && change.Field == resource.ToString().ToLowerInvariant()
             && int.Parse(change.To, System.Globalization.CultureInfo.InvariantCulture) > int.Parse(change.From, System.Globalization.CultureInfo.InvariantCulture));
 }
 
