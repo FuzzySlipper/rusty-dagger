@@ -4,16 +4,30 @@ namespace WorldRpg.Politics;
 public sealed record MoveOption(string Card, IReadOnlyList<string> Targets, int Score);
 
 /// <summary>
-/// The first chooser: greedy, one move deep. It plays each legal move in a trial on the board and scores the
-/// resulting prestige: the player's gain counted four times, minus the gains of seats it is not friendly with
-/// (twice for a rival, once for a neutral). A seat's trade agreements count towards its prestige at what each is worth
-/// to it (<see cref="Trade.Worth"/>), as the seat valued them before the move. The seeded chance breaks only exact
-/// ties. Intention, with plans that span weeks, replaces it in #11060.
+/// How a seat chooses its move, one move deep and steered by its holder's persona and its plan (<see cref="Intention"/>).
+/// It plays each legal move in a trial on the board and scores it:
+/// <list type="bullet">
+/// <item>prestige (<see cref="Prestige"/>): the player's gain counted <see cref="SelfWeight"/> times, minus the gains of
+/// seats it is not friendly with (twice for a rival, once for a neutral), so resources spent and relations moved
+/// count;</item>
+/// <item>plan progress: how far the move takes the plan's goal (<see cref="Intention.Measure"/>, or what the target seat
+/// loses for a goal against a seat), times <see cref="PlanWeight"/> and the holder's weight for that kind of goal.
+/// Gathering towards a card that would further the plan, which the seat cannot pay for yet, earns that card's progress
+/// shared over what it still lacks;</item>
+/// <item>leaning: <see cref="LeaningWeight"/> per point the holder leans towards the card's family, or away from it;</item>
+/// <item>risk: for each seat that would remember being struck (<see cref="Memory"/>), <see cref="RiskWeight"/> per
+/// point the holder's risk appetite falls short of <see cref="Persona.RiskLimit"/>.</item>
+/// </list>
+/// The seeded chance breaks only exact ties.
 /// </summary>
 public static class MoveChooser
 {
     /// <summary>How much the player's own gain counts.</summary>
     public const int SelfWeight = 4;
+
+    public const int PlanWeight = 1;
+    public const int LeaningWeight = 2;
+    public const int RiskWeight = 6;
 
     /// <summary>
     /// Every legal play from <paramref name="seat"/>'s hand that would change something, then gathering, then withdrawing
@@ -23,30 +37,36 @@ public static class MoveChooser
     public static IReadOnlyList<MoveOption> Options(Board board, Seat seat)
     {
         List<MoveOption> options = [];
-        Before before = new(board, seat);
+        Weighing weighing = new(board, seat);
         foreach (Card card in board.Deck(seat).Hand.Distinct())
         {
+            int leaning = LeaningWeight * weighing.Persona.Leaning(card.Family);
             foreach (IReadOnlyList<string> targets in card.Candidates(board, seat).ToArray())
             {
                 if (!card.Playable(board, seat, targets)) continue;
-                IReadOnlyList<Region> regions = card.TargetRegions(board, targets);
-                Dictionary<string, int> standing = board.Seats.ToDictionary(other => other.Id, other => Standing(other, regions), StringComparer.Ordinal);
-                int? score = board.Trial(() => card.Play(board, seat, targets) ? Score(board, seat, before, regions, standing) : (int?)null);
+                Prestige.Witness witness = weighing.Witness(card, targets);
+                int planBefore = weighing.PlanMeasure(witness);
+                int? score = board.Trial(() => card.Play(board, seat, targets) ? weighing.Score(witness, planBefore) + leaning : (int?)null);
                 if (score is not null) options.Add(new MoveOption(card.Id, targets, score.Value));
             }
         }
         Resource lacking = Gathering.Lacking(board, seat);
+        Prestige.Witness still = new(board, seat, weighing.Before, [], [], Visibility.Public);
+        int toward = weighing.Toward(lacking);
+        int stillBefore = weighing.PlanMeasure(still);
         options.Add(new MoveOption(Gathering.Id, [], board.Trial(() =>
         {
             board.AdjustResource(seat, lacking, 1);
-            return Score(board, seat, before, [], null);
+            return weighing.Score(still, stillBefore) + toward;
         })));
         foreach (Agreement deal in board.Agreements.Where(deal => deal.Binds(seat.Id)).ToArray())
         {
+            Prestige.Witness witness = Prestige.Witness.OfWithdrawal(board, seat, weighing.Before, deal);
+            int dealBefore = weighing.PlanMeasure(witness);
             options.Add(new MoveOption(Trade.WithdrawId, [deal.Id], board.Trial(() =>
             {
                 Trade.Withdraw(board, seat, deal);
-                return Score(board, seat, before, [], null);
+                return weighing.Score(witness, dealBefore);
             })));
         }
         return [.. options.OrderByDescending(option => option.Score)];
@@ -59,145 +79,72 @@ public static class MoveChooser
         return best.Length == 1 ? best[0] : best[board.Random.Next(best.Length)];
     }
 
-    /// <summary>
-    /// The trial under way scored for <paramref name="seat"/>: each touched seat's gain in prestige, weighted as the seat
-    /// stood with the player before it. A card changes only its target <paramref name="regions"/>, so a seat's standing
-    /// elsewhere is unchanged; <paramref name="standing"/> holds each seat's standing in them before the trial.
-    /// </summary>
-    private static int Score(Board board, Seat seat, Before before, IReadOnlyList<Region> regions, Dictionary<string, int>? standing)
-    {
-        int score = 0;
-        foreach (string id in Touched(board, seat))
-        {
-            Seat other = board.Seat(id);
-            int gain = Bearing(board, other) - before.Bearing[id] + (standing is null ? 0 : Standing(other, regions) - standing[id])
-                + Deals(board, other, before) - before.Deals[id];
-            score += before.Weight[id] * gain;
-        }
-        return score;
-    }
-
-    /// <summary>What <paramref name="seat"/>'s agreements in force are worth to it: as it valued them before the trial, or a new one now.</summary>
-    private static int Deals(Board board, Seat seat, Before? before)
-    {
-        int worth = 0;
-        foreach (Agreement deal in board.Agreements)
-        {
-            if (!deal.Binds(seat.Id)) continue;
-            worth += before is not null && before.Worth.TryGetValue((deal.Id, seat.Id), out int valued) ? valued : Trade.Worth(board, seat, deal);
-        }
-        return worth;
-    }
-
-    private static int Standing(Seat seat, IReadOnlyList<Region> regions)
-    {
-        int standing = 0;
-        foreach (Region region in regions) standing += Standing(seat, region);
-        return standing;
-    }
-
-    /// <summary>
-    /// A seat's prestige, in half points, is its standing in every region and its bearing. Its standing in a region:
-    /// 20 if it holds it, with 4 per point of control and prosperity and 2 per point of order there; 6 per influence
-    /// piece and per office. A crown's influence leading a contested region's own seat adds its lead times the region's
-    /// missing control, so pressing a claim where the crown is ahead is worth something before the annexation it leads
-    /// to. Conditions count for the region's holder before they weigh: 2 per point of magnitude, gained for a good one
-    /// and lost for a harmful one; a persecution counts against the seat it persecutes.
-    /// </summary>
-    private static int Standing(Seat seat, Region region)
-    {
-        int influence = region.InfluenceOf(seat.Id);
-        int standing = 6 * influence;
-        foreach (RegionCondition condition in region.Conditions)
-            if (condition.Kind == ConditionKind.Persecution && condition.Detail == seat.Id) standing -= 2 * condition.Magnitude;
-        foreach (string holder in region.Offices.Values)
-            if (holder == seat.Id) standing += 6;
-        if (region.Allegiance == seat.Id)
-        {
-            standing += 20 + 4 * region.Control + 4 * region.Prosperity + 2 * region.Order;
-            foreach (RegionCondition condition in region.Conditions) standing += 2 * Bent(condition.Kind) * condition.Magnitude;
-        }
-        else if (seat.Kind == SeatKind.Crown && !region.Capital)
-        {
-            int lead = influence - (region.Allegiance is null ? 0 : region.InfluenceOf(region.Allegiance));
-            if (lead > 0) standing += 2 * lead * (Board.TrackLimit - region.Control);
-        }
-        return standing;
-    }
-
-    /// <summary>Whether a condition is good (1), harmful (-1) or mixed (0) for the region's holder.</summary>
-    private static int Bent(ConditionKind kind) => kind switch
-    {
-        ConditionKind.Prosperity or ConditionKind.Festival or ConditionKind.Recruitment or ConditionKind.PriceSurge => 1,
-        ConditionKind.Crackdown or ConditionKind.WitchHunt or ConditionKind.Persecution => 0,
-        _ => -1,
-    };
-
-    /// <summary>
-    /// A seat's bearing: 2 per point of relation, 1 per point of each resource up to 6, beyond which a hoard is worth
-    /// nothing more, and 3 lost per point of each condition troubling its court.
-    /// </summary>
-    private static int Bearing(Board board, Seat seat)
-    {
-        int bearing = 0;
-        foreach (CourtCondition condition in seat.Court) bearing -= 3 * condition.Magnitude;
-        foreach (Seat other in board.Seats)
-            if (other.Id != seat.Id) bearing += 2 * board.Relation(seat.Id, other.Id);
-        foreach (Resource resource in Enum.GetValues<Resource>())
-            bearing += Math.Min(seat.Amount(resource), 6);
-        return bearing;
-    }
-
-    /// <summary>
-    /// The seats whose prestige the trial under way can have changed: the player, the seats it changed directly, and
-    /// every seat present before or after in a region it changed. Present before and gone now, a seat shows in the
-    /// change that removed it. Any other seat's gain is exactly 0, so it is not weighed.
-    /// </summary>
-    private static SortedSet<string> Touched(Board board, Seat player)
-    {
-        SortedSet<string> touched = new(StringComparer.Ordinal) { player.Id };
-        foreach (BoardChange change in board.TrialChanges)
-        {
-            string field = change.Field;
-            if (field is "coin" or "favour" or "force" || field.StartsWith("court:", StringComparison.Ordinal))
-            {
-                touched.Add(change.Subject);
-            }
-            else if (field.StartsWith("relation:", StringComparison.Ordinal) || field.StartsWith("deal:", StringComparison.Ordinal))
-            {
-                touched.Add(change.Subject);
-                touched.Add(field[(field.IndexOf(':') + 1)..]);
-            }
-            else
-            {
-                Region region = board.Region(change.Subject);
-                if (region.Allegiance is not null) touched.Add(region.Allegiance);
-                touched.UnionWith(region.Influence.Keys);
-                touched.UnionWith(region.Offices.Values);
-                if (field.StartsWith("influence:", StringComparison.Ordinal)) touched.Add(field["influence:".Length..]);
-                if (field == "allegiance" || field.StartsWith("office:", StringComparison.Ordinal))
-                    touched.UnionWith(new[] { change.From, change.To }.Where(board.HasSeat));
-            }
-        }
-        return touched;
-    }
-
     /// <summary>How much a seat's gain counts against the player, by their relation: twice for a rival, once for a neutral, not for a friend.</summary>
     internal static int RivalWeight(int relation) => relation < 0 ? 2 : relation == 0 ? 1 : 0;
 
-    /// <summary>The board as it stood before any trial: each seat's weight to the player and its relations and resources.</summary>
-    private sealed class Before(Board board, Seat player)
+    /// <summary>The board as it stood before any trial, as <see cref="Player"/> weighs its moves.</summary>
+    private sealed class Weighing(Board board, Seat player)
     {
+        public Seat Player { get; } = player;
+
+        public Persona Persona { get; } = board.Persona(player);
+
+        public Prestige.Before Before { get; } = new(board);
+
+        /// <summary>Each seat's weight to the player.</summary>
         public Dictionary<string, int> Weight { get; } = board.Seats.ToDictionary(seat => seat.Id,
             seat => seat == player ? SelfWeight : -RivalWeight(board.Relation(player.Id, seat.Id)), StringComparer.Ordinal);
 
-        public Dictionary<string, int> Bearing { get; } = board.Seats.ToDictionary(seat => seat.Id, seat => MoveChooser.Bearing(board, seat), StringComparer.Ordinal);
+        public Prestige.Witness Witness(Card card, IReadOnlyList<string> targets) => Prestige.Witness.OfCard(board, Player, Before, card, targets);
 
-        /// <summary>What each agreement in force is worth to each of its two seats.</summary>
-        public Dictionary<(string Deal, string Seat), int> Worth { get; } = board.Agreements
-            .SelectMany(deal => new[] { deal.Proposer, deal.Partner }.Select(seat => (deal, seat)))
-            .ToDictionary(pair => (pair.deal.Id, pair.seat), pair => Trade.Worth(board, board.Seat(pair.seat), pair.deal));
+        /// <summary>The plan's measure over the witnessed move's regions before it is tried.</summary>
+        public int PlanMeasure(Prestige.Witness witness) => Player.Plan is { } plan ? Intention.Measure(board, Player, plan.Goal, witness.Regions) : 0;
 
-        public Dictionary<string, int> Deals { get; } = board.Seats.ToDictionary(seat => seat.Id, seat => MoveChooser.Deals(board, seat, null), StringComparer.Ordinal);
+        /// <summary>The trial under way scored for the player: prestige, plan progress and risk.</summary>
+        public int Score(Prestige.Witness witness, int planBefore)
+        {
+            SortedDictionary<string, int> gains = witness.Gains(board, [.. board.TrialChanges]);
+            int score = 0;
+            foreach ((string id, int gain) in gains)
+            {
+                score += Weight[id] * gain;
+                if (gain < 0 && id != Player.Id && Memory.Struck(witness, board.Seat(id))) score -= RiskWeight * (Persona.RiskLimit - Persona.Risk);
+            }
+            return score + Progress(witness, planBefore, gains);
+        }
+
+        /// <summary>
+        /// What gathering <paramref name="lacking"/> earns towards the plan: the best progress a card the player is saving
+        /// for would make, shared over the resources that card still lacks, if it lacks <paramref name="lacking"/>.
+        /// </summary>
+        public int Toward(Resource lacking)
+        {
+            if (Player.Plan is null) return 0;
+            int best = 0;
+            foreach (Card card in Gathering.Saving(board, Player).Distinct())
+            {
+                if (card.Cost(lacking) <= Player.Amount(lacking)) continue;
+                int shortfall = Enum.GetValues<Resource>().Sum(resource => Math.Max(0, card.Cost(resource) - Player.Amount(resource)));
+                foreach (IReadOnlyList<string> targets in card.Candidates(board, Player).ToArray())
+                {
+                    if (!card.Fits(board, Player, targets)) continue;
+                    Prestige.Witness witness = Witness(card, targets);
+                    int planBefore = PlanMeasure(witness);
+                    int progress = board.Trial(() =>
+                        card.Apply(board, Player, targets) ? Progress(witness, planBefore, witness.Gains(board, [.. board.TrialChanges])) : 0);
+                    best = Math.Max(best, progress / shortfall);
+                }
+            }
+            return best;
+        }
+
+        private int Progress(Prestige.Witness witness, int planBefore, SortedDictionary<string, int> gains)
+        {
+            if (Player.Plan is not { } plan) return 0;
+            int progress = plan.Goal.Kind is GoalKind.Counter or GoalKind.Retaliate
+                ? -gains.GetValueOrDefault(plan.Goal.Target)
+                : Intention.Measure(board, Player, plan.Goal, witness.Regions) - planBefore;
+            return PlanWeight * Persona.Weight(plan.Goal.Kind) * progress;
+        }
     }
 }

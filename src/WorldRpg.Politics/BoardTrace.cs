@@ -4,13 +4,15 @@ using System.Text.Json;
 namespace WorldRpg.Politics;
 
 /// <summary>
-/// One seat's move in a turn: its id (the turn and seat), what it played on which targets, its score, who may see it,
-/// the next best moves it passed over and what changed. A slow move names the region it set out from and the turn it
-/// arrives; its changes are only its payment until then. A move's seat is always the true one, secret or not.
+/// One seat's move in a turn: its id (the turn and seat), the plan it moved under, what it played on which targets, its
+/// score, who may see it, the next best moves it passed over and what changed. A slow move names the region it set out
+/// from and the turn it arrives; its changes are only its payment until then. A move's seat is always the true one,
+/// secret or not.
 /// </summary>
 public sealed record MoveTrace(
     string Id,
     string Seat,
+    string? Plan,
     string Card,
     IReadOnlyList<string> Targets,
     int Score,
@@ -99,7 +101,8 @@ public static class BoardTraceWriter
             string slow = move.Arrives is null ? "" : string.Create(CultureInfo.InvariantCulture,
                 $", from {move.Origin ?? "nowhere"}, arrives week {move.Arrives}");
             string passed = move.Alternatives.Count == 0 ? "" : $"; over {string.Join(", ", move.Alternatives.Select(Move))}";
-            writer.WriteLine($"  {move.Seat}: {Move(new MoveOption(move.Card, move.Targets, move.Score))}{Secret(move.Visibility)}{slow}{passed}");
+            string plan = move.Plan is null ? "" : $" [{move.Plan}]";
+            writer.WriteLine($"  {move.Seat}{plan}: {Move(new MoveOption(move.Card, move.Targets, move.Score))}{Secret(move.Visibility)}{slow}{passed}");
             if (move.Changes.Count > 0) writer.WriteLine($"      {Changes(move.Changes)}");
         }
     }

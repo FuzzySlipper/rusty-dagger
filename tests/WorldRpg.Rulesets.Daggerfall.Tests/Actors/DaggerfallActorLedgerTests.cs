@@ -185,11 +185,11 @@ public sealed class DaggerfallActorLedgerTests
     public void Untouched_populated_site_writes_zero_ledger_entries_and_self_prunes_and_suppresses_relocated_seeded_and_cast_actors()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallCastIndividualDefinition cast = definitions.People.Individuals.Values.First();
+        DaggerfallCastIndividualDefinition cast = definitions.People.Individuals.Values.First(individual => individual.HomeBlock is not null);
         DaggerfallSiteProfile exteriorTemplate = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         // Real populated exterior town (Charing source walkers) + an authored CastIndividual placement admitted
         // automatically by production MaterializeStaticNpcs via its Individual FactionId.
-        DaggerfallSiteProfile homeTown = StaticNpcAdmissionTests.StaticProviderSite(exteriorTemplate, factionId: cast.FactionId);
+        DaggerfallSiteProfile homeTown = StaticNpcAdmissionTests.StaticProviderSite(exteriorTemplate, factionId: cast.WorldFactionId);
         DaggerfallSiteProfile otherTown = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))));
         DaggerfallSiteProfiles profiles = new([homeTown, otherTown]);
         List<string> releases = [];

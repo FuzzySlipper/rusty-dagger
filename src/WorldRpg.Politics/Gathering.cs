@@ -20,7 +20,8 @@ public static class Gathering
     /// <summary>The resource gathering gains for <paramref name="seat"/> now.</summary>
     public static Resource Lacking(Board board, Seat seat) => Lacking(seat, Saving(board, seat));
 
-    private static Card[] Saving(Board board, Seat seat) =>
+    /// <summary>The cards in <paramref name="seat"/>'s hand it is saving for: those it cannot pay for yet but could play now if it could.</summary>
+    internal static Card[] Saving(Board board, Seat seat) =>
         [.. board.Deck(seat).Hand.Where(card => !card.Affordable(seat) && card.Candidates(board, seat).Any(targets => card.Fits(board, seat, targets)))];
 
     private static Resource Lacking(Seat seat, Card[] saving)

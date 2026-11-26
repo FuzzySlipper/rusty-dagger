@@ -5,8 +5,8 @@ namespace WorldRpg.Politics;
 /// <list type="number">
 /// <item>Upkeep:
 /// <list type="bullet">
-/// <item>Conditions that have reached their end are lifted, and each region is found fed or cut off from food
-/// (<see cref="Supply"/>). Trade agreements that have broken end, and the grain rations due relieve regions not fed
+/// <item>Conditions that have reached their end are lifted, grudges past their last week are let go, and each region
+/// is found fed or cut off from food (<see cref="Supply"/>). Trade agreements that have broken end, and the grain rations due relieve regions not fed
 /// (<see cref="Trade"/>).</item>
 /// <item>Each seat is paid from the regions it holds that are fed or relieved: coin of a quarter of their prosperity (a
 /// famine empties a region's granaries, and a price surge adds its magnitude) and force of a quarter of their control,
@@ -26,8 +26,9 @@ namespace WorldRpg.Politics;
 /// <item>The World deck turns one card, which lays its condition on a region.</item>
 /// <item>The slow moves due this week arrive, in the order they were played. One that no longer fits its targets, or
 /// changes nothing, fails.</item>
-/// <item>Each seat plays a card from its hand, gathers or withdraws from a trade agreement, the table's order turning by
-/// one seat each week. A slow card is paid now and arrives its weeks later.</item>
+/// <item>Each seat reviews its plan (<see cref="Intention"/>), then plays a card from its hand, gathers or withdraws from
+/// a trade agreement, the table's order turning by one seat each week. A slow card is paid now and arrives its weeks
+/// later. Each seat a move bears on remembers it once it has changed the board (<see cref="Memory"/>).</item>
 /// </list>
 /// </summary>
 public static class BoardTurn
@@ -54,7 +55,9 @@ public static class BoardTurn
         foreach (PendingMove move in board.TakeArrivals())
         {
             Seat seat = board.Seat(move.Seat);
+            Prestige.Witness witness = Prestige.Witness.OfCard(board, seat, new Prestige.Before(board), move.Card, move.Targets);
             bool resolved = move.Card.Fits(board, seat, move.Targets) && move.Card.Apply(board, seat, move.Targets);
+            if (resolved) Memory.Remember(board, witness);
             arrivals.Add(new ArrivalTrace(move.Id, move.Seat, move.Card.Id, move.Targets, move.Card.Visibility,
                 resolved ? MoveOutcome.Resolved : MoveOutcome.Failed, board.TakeChanges()));
         }
@@ -64,6 +67,7 @@ public static class BoardTurn
         for (int index = 0; index < seats; index++)
         {
             Seat seat = board.Seats[(board.Turn - 1 + index) % seats];
+            Intention.Review(board, seat);
             IReadOnlyList<MoveOption> options = MoveChooser.Options(board, seat);
             MoveOption chosen = MoveChooser.Choose(board, seat, options);
             string id = $"{board.Turn}-{seat.Id}";
@@ -76,7 +80,10 @@ public static class BoardTurn
             }
             else if (chosen.Card == Trade.WithdrawId)
             {
-                Trade.Withdraw(board, seat, board.Agreements.Single(deal => deal.Id == chosen.Targets[0]));
+                Agreement deal = board.Agreements.Single(deal => deal.Id == chosen.Targets[0]);
+                Prestige.Witness witness = Prestige.Witness.OfWithdrawal(board, seat, new Prestige.Before(board), deal);
+                Trade.Withdraw(board, seat, deal);
+                Memory.Remember(board, witness);
             }
             else
             {
@@ -85,7 +92,9 @@ public static class BoardTurn
                 visibility = card.Visibility;
                 if (card.Weeks == 0)
                 {
+                    Prestige.Witness witness = Prestige.Witness.OfCard(board, seat, new Prestige.Before(board), card, chosen.Targets);
                     card.Play(board, seat, chosen.Targets);
+                    Memory.Remember(board, witness);
                 }
                 else
                 {
@@ -95,7 +104,7 @@ public static class BoardTurn
                     board.Schedule(new PendingMove(id, seat.Id, card, chosen.Targets, origin, board.Turn, arrives.Value));
                 }
             }
-            moves.Add(new MoveTrace(id, seat.Id, chosen.Card, chosen.Targets, chosen.Score, visibility, origin, arrives,
+            moves.Add(new MoveTrace(id, seat.Id, seat.Plan?.ToString(), chosen.Card, chosen.Targets, chosen.Score, visibility, origin, arrives,
                 [.. options.Where(option => !ReferenceEquals(option, chosen)).Take(MoveTrace.AlternativesShown)], board.TakeChanges()));
         }
         return new TurnTrace(board.Turn, upkeep, world, arrivals, moves);
@@ -130,6 +139,7 @@ public static class BoardTurn
     private static void Upkeep(Board board)
     {
         board.ExpireConditions();
+        board.ExpireGrudges();
         HashSet<Region> fed = Supply.Fed(board);
         HashSet<Region> relieved = Trade.Relieve(board, fed);
         foreach (Region region in board.Regions)

@@ -1,6 +1,18 @@
 {
   "individuals": [
     {
+      "id": "aldous-verreine",
+      "name": "Aldous Verreine",
+      "race": "breton",
+      "gender": "Male",
+      "visual": {
+        "archive": 183,
+        "record": 12
+      },
+      "interaction": "full-dialogue",
+      "harm": "protected"
+    },
+    {
       "id": "charvek-si",
       "factionId": 385,
       "name": "Charvek-si",
@@ -117,6 +129,19 @@
       },
       "homeBlock": "S0000160.RDB",
       "homeSlotId": "d:p18",
+      "interaction": "full-dialogue",
+      "harm": "protected"
+    },
+    {
+      "id": "lady-brisienna",
+      "factionId": 352,
+      "name": "Lady Brisienna",
+      "race": "breton",
+      "gender": "Female",
+      "visual": {
+        "archive": 180,
+        "record": 1
+      },
       "interaction": "full-dialogue",
       "harm": "protected"
     },
@@ -271,6 +296,18 @@
       "harm": "protected"
     },
     {
+      "id": "oswin-harrowgate",
+      "name": "Oswin Harrowgate",
+      "race": "breton",
+      "gender": "Male",
+      "visual": {
+        "archive": 334,
+        "record": 15
+      },
+      "interaction": "full-dialogue",
+      "harm": "protected"
+    },
+    {
       "id": "popudax",
       "factionId": 369,
       "name": "Popudax",
@@ -417,6 +454,32 @@
       },
       "homeBlock": "NASYLUM.RMB",
       "homeSlotId": "b:0:p00",
+      "interaction": "full-dialogue",
+      "harm": "protected"
+    },
+    {
+      "id": "the-squid",
+      "factionId": 399,
+      "name": "The Squid",
+      "race": "breton",
+      "gender": "Male",
+      "visual": {
+        "archive": 183,
+        "record": 16
+      },
+      "interaction": "full-dialogue",
+      "harm": "protected"
+    },
+    {
+      "id": "the-underking",
+      "factionId": 353,
+      "name": "The Underking",
+      "race": null,
+      "gender": "Male",
+      "visual": {
+        "archive": 182,
+        "record": 54
+      },
       "interaction": "full-dialogue",
       "harm": "protected"
     }

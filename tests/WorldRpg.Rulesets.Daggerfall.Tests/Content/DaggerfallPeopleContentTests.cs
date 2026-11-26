@@ -17,8 +17,11 @@ public sealed class DaggerfallPeopleContentTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallPeopleSet people = definitions.People;
 
-        Assert.Equal(28, people.Individuals.Count);
+        Assert.Equal(33, people.Individuals.Count);
         Assert.Contains("king-gothryd", people.Individuals.Keys);
+        // The political board's seat heads that no block places: quests or the board name them.
+        Assert.All(["lady-brisienna", "the-underking", "the-squid", "oswin-harrowgate", "aldous-verreine"],
+            id => Assert.Null(people.Individuals[id].HomeBlock));
         Assert.Contains("queen-aubk-i", people.Individuals.Keys);
         Assert.Contains("the-night-mother", people.Individuals.Keys);
 
@@ -97,6 +100,44 @@ public sealed class DaggerfallPeopleContentTests
         }
         Assert.True(totalSlots > 14_000);
     }
+
+    [Fact]
+    public void Pack_reader_admits_unplaced_cast_individuals_and_only_they_may_have_no_faction_of_their_own()
+    {
+        DaggerfallPeopleSet people = DaggerfallPeopleContent.Read(CastOnly("unplaced.people", """
+            {"individuals":[
+              {"id":"lady-brisienna","factionId":352,"name":"Lady Brisienna","race":"breton","gender":"Female","visual":{"archive":180,"record":1},"interaction":"full-dialogue","harm":"protected"},
+              {"id":"oswin-harrowgate","name":"Oswin Harrowgate","race":"breton","gender":"Male","visual":{"archive":334,"record":15},"interaction":"full-dialogue","harm":"protected"}
+            ]}
+            """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items);
+
+        DaggerfallCastIndividualDefinition brisienna = people.Individuals["lady-brisienna"];
+        Assert.Null(brisienna.HomeBlock);
+        Assert.Null(brisienna.HomeSlotId);
+        Assert.True(people.TryGetIndividualByFaction(352, out DaggerfallCastIndividualDefinition? named));
+        Assert.Same(brisienna, named);
+        DaggerfallCastIndividualDefinition harrowgate = people.Individuals["oswin-harrowgate"];
+        Assert.Null(harrowgate.FactionId);
+        Assert.Throws<InvalidOperationException>(() => harrowgate.WorldFactionId);
+
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallPeopleContent.Read(CastOnly("half-placed.people", """
+            {"individuals":[
+              {"id":"half-placed","factionId":352,"name":"Half Placed","race":"breton","gender":"Female","visual":{"archive":180,"record":1},"homeBlock":"S0000160.RDB","interaction":"full-dialogue","harm":"protected"},
+              {"id":"placed-nobody","name":"Placed Nobody","race":"breton","gender":"Male","visual":{"archive":334,"record":15},"homeBlock":"S0000160.RDB","homeSlotId":"d:p00","interaction":"full-dialogue","harm":"protected"}
+            ]}
+            """), TestPayload.Definitions.Factions, TestPayload.Definitions.Vocabulary, TestPayload.Definitions.Items));
+        Assert.Contains("Cast individual 'half-placed' names only one of homeBlock and homeSlotId.", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Cast individual 'placed-nobody' has a home but no factionId", error.Message, StringComparison.Ordinal);
+    }
+
+    private static DaggerfallPeoplePackFiles CastOnly(string id, string cast) => new(
+        id,
+        Encoding.UTF8.GetBytes("""{"castFile":"cast/individuals.json","spawnersFile":"spawners.json","archetypesFile":"archetypes.json","barksFile":"barks.json","blocksFolder":"blocks"}"""),
+        Encoding.UTF8.GetBytes(cast),
+        Encoding.UTF8.GetBytes("""{"spawners":[]}"""),
+        [],
+        TestPayload.PeoplePack().ArchetypesBytes,
+        TestPayload.PeoplePack().BarksBytes);
 
     [Fact]
     public void Pack_reader_rejects_cloned_type4_individual_faction_on_non_cast_spawner_slot()

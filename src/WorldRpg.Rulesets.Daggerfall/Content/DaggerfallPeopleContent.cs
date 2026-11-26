@@ -265,20 +265,30 @@ internal sealed record DaggerfallPeopleBarks(
     }
 }
 
-/// <summary>Genuine unique named individual authored in <c>cast/individuals.json</c>.</summary>
+/// <summary>
+/// Genuine unique named individual authored in <c>cast/individuals.json</c>. An unplaced individual has no
+/// <see cref="HomeBlock"/> or <see cref="HomeSlotId"/>: nothing sets it in the world, and it appears only where a quest
+/// or the political board names it. Only an unplaced individual may have no <see cref="FactionId"/>, when it has no
+/// faction record of its own (a seat head Daggerfall never named).
+/// </summary>
 internal sealed record DaggerfallCastIndividualDefinition(
     string Id,
-    int FactionId,
+    int? FactionId,
     string Name,
     string? Race,
     string Gender,
     int Archive,
     int Record,
-    string HomeBlock,
-    string HomeSlotId,
+    string? HomeBlock,
+    string? HomeSlotId,
     string Interaction,
     string Harm,
-    string? ArchetypeId = null);
+    string? ArchetypeId = null)
+{
+    /// <summary>The faction an individual set in the world carries; one with no faction of its own is never set there.</summary>
+    internal int WorldFactionId => FactionId
+        ?? throw new InvalidOperationException($"cast individual '{Id}' has no faction of its own, so it cannot be set in the world");
+}
 
 /// <summary>One authored people slot in an RMB interior, RMB exterior, or RDB dungeon block.</summary>
 internal sealed record DaggerfallPeopleSlotDefinition(
@@ -812,7 +822,7 @@ internal static class DaggerfallPeopleContent
             {
                 JsonElement obj = DaggerfallBaseContent.Object(item, "cast individual", diagnostics);
                 string id = DaggerfallBaseContent.Text(obj, "id", diagnostics);
-                int factionId = DaggerfallBaseContent.Integer(obj, "factionId", diagnostics);
+                int? factionId = DaggerfallBaseContent.OptionalInteger(obj, "factionId", diagnostics);
                 string name = DaggerfallBaseContent.Text(obj, "name", diagnostics);
                 string? race = obj.TryGetProperty("race", out JsonElement raceEl) && raceEl.ValueKind != JsonValueKind.Null
                     ? raceEl.GetString()
@@ -821,8 +831,8 @@ internal static class DaggerfallPeopleContent
                 JsonElement visual = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(obj, "visual", diagnostics), $"cast '{id}' visual", diagnostics);
                 int archive = DaggerfallBaseContent.Integer(visual, "archive", diagnostics);
                 int record = DaggerfallBaseContent.Integer(visual, "record", diagnostics);
-                string homeBlock = DaggerfallBaseContent.Text(obj, "homeBlock", diagnostics);
-                string homeSlotId = DaggerfallBaseContent.Text(obj, "homeSlotId", diagnostics);
+                string? homeBlock = DaggerfallBaseContent.OptionalText(obj, "homeBlock", diagnostics);
+                string? homeSlotId = DaggerfallBaseContent.OptionalText(obj, "homeSlotId", diagnostics);
                 string interaction = DaggerfallBaseContent.Text(obj, "interaction", diagnostics);
                 string harm = DaggerfallBaseContent.Text(obj, "harm", diagnostics);
                 string? archetypeId = obj.TryGetProperty("archetype", out JsonElement archEl) && archEl.ValueKind != JsonValueKind.Null
@@ -834,11 +844,13 @@ internal static class DaggerfallPeopleContent
                 if (!ValidInteraction(interaction)) diagnostics.Add($"Cast individual '{id}' has invalid interaction '{interaction}'.");
                 if (!ValidHarm(harm)) diagnostics.Add($"Cast individual '{id}' has invalid harm '{harm}'.");
                 if (archive < 0 || record < 0 || factionId <= 0) diagnostics.Add($"Cast individual '{id}' has invalid visual or factionId.");
+                if ((homeBlock is null) != (homeSlotId is null)) diagnostics.Add($"Cast individual '{id}' names only one of homeBlock and homeSlotId.");
+                if (factionId is null && homeBlock is not null) diagnostics.Add($"Cast individual '{id}' has a home but no factionId; only an unplaced individual may have none.");
                 if (archetypeId is not null && !archetypes.ContainsKey(archetypeId))
                     diagnostics.Add($"Cast individual '{id}' references unknown archetype '{archetypeId}'.");
-                if (factions is not null)
+                if (factions is not null && factionId is not null)
                 {
-                    if (!factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction))
+                    if (!factions.Factions.TryGetValue(factionId.Value, out DaggerfallFactionDefinition? faction))
                         diagnostics.Add($"Cast individual '{id}' references missing faction {factionId}.");
                     else if (faction.Type != IndividualFactionType)
                         diagnostics.Add($"Cast individual '{id}' references faction {factionId} ('{faction.Name}') of type {faction.Type}, expected Individual (4).");

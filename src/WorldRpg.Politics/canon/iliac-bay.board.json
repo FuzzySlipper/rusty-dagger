@@ -1,19 +1,19 @@
 {
   "seed": 405,
   "seats": [
-    {"id": "daggerfall", "name": "Kingdom of Daggerfall", "kind": "Crown", "holder": "king-gothryd", "home": "daggerfall", "coin": 4, "favour": 3, "force": 4, "families": ["Trade", "Court", "Force"]},
-    {"id": "wayrest", "name": "Kingdom of Wayrest", "kind": "Crown", "holder": "king-eadwyre", "home": "wayrest", "coin": 6, "favour": 4, "force": 2, "families": ["Trade", "Court", "Force"]},
-    {"id": "sentinel", "name": "Kingdom of Sentinel", "kind": "Crown", "holder": "queen-akorithi", "home": "sentinel", "coin": 5, "favour": 3, "force": 4, "families": ["Trade", "Court", "Force"]},
-    {"id": "orsinium", "name": "Orsinium", "kind": "Crown", "holder": "gortwog", "home": "orsinium", "coin": 2, "favour": 1, "force": 5, "families": ["Trade", "Court", "Force"]},
-    {"id": "empire", "name": "The Empire and the Blades", "kind": "Power", "holder": null, "home": null, "coin": 10, "favour": 4, "force": 3, "families": ["Trade", "Court", "Force"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 1}, {"resource": "Force", "amount": 1, "everyWeeks": 3}]},
-    {"id": "necromancers", "name": "The Necromancers", "kind": "Power", "holder": "king-of-worms", "home": null, "coin": 2, "favour": 1, "force": 4, "families": [], "grants": [{"resource": "Force", "amount": 1, "everyWeeks": 3}, {"resource": "Coin", "amount": 1, "everyWeeks": 4}]},
-    {"id": "underking", "name": "The Underking", "kind": "Power", "holder": null, "home": null, "coin": 0, "favour": 0, "force": 6, "families": [], "grants": [{"resource": "Force", "amount": 1, "everyWeeks": 2}]},
-    {"id": "mages-guild", "name": "The Mages Guild", "kind": "Power", "holder": null, "home": null, "coin": 5, "favour": 4, "force": 1, "families": ["Arcane", "Trade"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 2}]},
-    {"id": "fighters-guild", "name": "The Fighters Guild", "kind": "Power", "holder": null, "home": null, "coin": 3, "favour": 2, "force": 5, "families": ["Force", "Trade"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 2}]},
-    {"id": "thieves-guild", "name": "The Thieves Guild", "kind": "Power", "holder": null, "home": null, "coin": 4, "favour": 2, "force": 2, "families": ["Shadow", "Trade"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 2}]},
-    {"id": "dark-brotherhood", "name": "The Dark Brotherhood", "kind": "Power", "holder": "the-night-mother", "home": null, "coin": 3, "favour": 1, "force": 4, "families": [], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 3}]},
-    {"id": "temples", "name": "The Temples", "kind": "Power", "holder": null, "home": null, "coin": 4, "favour": 6, "force": 1, "families": ["Faith", "Court"], "grants": [{"resource": "Favour", "amount": 1, "everyWeeks": 2}]},
-    {"id": "balfiera", "name": "Clan Direnni of Balfiera", "kind": "Power", "holder": "medora", "home": null, "coin": 3, "favour": 4, "force": 1, "families": ["Arcane", "Court"], "grants": [{"resource": "Favour", "amount": 1, "everyWeeks": 4}]}
+    {"id": "daggerfall", "name": "Kingdom of Daggerfall", "kind": "Crown", "holder": "king-gothryd", "home": "daggerfall", "coin": 4, "favour": 3, "force": 4, "families": ["Trade", "Court", "Force"], "agenda": [{"kind": "Hold", "target": "betony"}, {"kind": "Take", "target": "glenpoint"}, {"kind": "Counter", "target": "sentinel"}]},
+    {"id": "wayrest", "name": "Kingdom of Wayrest", "kind": "Crown", "holder": "king-eadwyre", "home": "wayrest", "coin": 6, "favour": 4, "force": 2, "families": ["Trade", "Court", "Force"], "agenda": [{"kind": "Take", "target": "menevia"}, {"kind": "Take", "target": "gavaudon"}, {"kind": "Office", "target": "Factor"}]},
+    {"id": "sentinel", "name": "Kingdom of Sentinel", "kind": "Crown", "holder": "queen-akorithi", "home": "sentinel", "coin": 5, "favour": 3, "force": 4, "families": ["Trade", "Court", "Force"], "agenda": [{"kind": "Take", "target": "betony"}, {"kind": "Take", "target": "antiphyllos"}, {"kind": "Counter", "target": "daggerfall"}]},
+    {"id": "orsinium", "name": "Orsinium", "kind": "Crown", "holder": "gortwog", "home": "orsinium", "coin": 2, "favour": 1, "force": 5, "families": ["Trade", "Court", "Force"], "agenda": [{"kind": "Recognition", "target": "empire"}, {"kind": "Recognition", "target": "wayrest"}, {"kind": "Take", "target": "wrothgaria"}]},
+    {"id": "empire", "name": "The Empire and the Blades", "kind": "Power", "holder": "lady-brisienna", "home": null, "coin": 10, "favour": 4, "force": 3, "families": ["Trade", "Court", "Force"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 1}, {"resource": "Force", "amount": 1, "everyWeeks": 3}], "agenda": [{"kind": "Counter", "target": "necromancers"}, {"kind": "Footing", "target": "ilessan-hills"}, {"kind": "Office", "target": "Watch"}]},
+    {"id": "necromancers", "name": "The Necromancers", "kind": "Power", "holder": "king-of-worms", "home": null, "coin": 2, "favour": 1, "force": 4, "families": [], "grants": [{"resource": "Force", "amount": 1, "everyWeeks": 3}, {"resource": "Coin", "amount": 1, "everyWeeks": 4}], "agenda": [{"kind": "Counter", "target": "underking"}, {"kind": "Counter", "target": "mages-guild"}, {"kind": "Footing", "target": "shalgora"}]},
+    {"id": "underking", "name": "The Underking", "kind": "Power", "holder": "the-underking", "home": null, "coin": 0, "favour": 0, "force": 6, "families": [], "grants": [{"resource": "Force", "amount": 1, "everyWeeks": 2}], "agenda": [{"kind": "Counter", "target": "necromancers"}, {"kind": "Footing", "target": "wrothgaria"}]},
+    {"id": "mages-guild", "name": "The Mages Guild", "kind": "Power", "holder": "karethys", "home": null, "coin": 5, "favour": 4, "force": 1, "families": ["Arcane", "Trade"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 2}], "agenda": [{"kind": "Office", "target": "Hall"}, {"kind": "Counter", "target": "necromancers"}]},
+    {"id": "fighters-guild", "name": "The Fighters Guild", "kind": "Power", "holder": "oswin-harrowgate", "home": null, "coin": 3, "favour": 2, "force": 5, "families": ["Force", "Trade"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 2}], "agenda": [{"kind": "Counter", "target": "thieves-guild"}, {"kind": "Office", "target": "Watch"}]},
+    {"id": "thieves-guild", "name": "The Thieves Guild", "kind": "Power", "holder": "the-squid", "home": null, "coin": 4, "favour": 2, "force": 2, "families": ["Shadow", "Trade"], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 2}], "agenda": [{"kind": "Office", "target": "Watch"}, {"kind": "Counter", "target": "fighters-guild"}, {"kind": "Office", "target": "Factor"}]},
+    {"id": "dark-brotherhood", "name": "The Dark Brotherhood", "kind": "Power", "holder": "the-night-mother", "home": null, "coin": 3, "favour": 1, "force": 4, "families": [], "grants": [{"resource": "Coin", "amount": 1, "everyWeeks": 3}], "agenda": [{"kind": "Office", "target": "Watch"}, {"kind": "Counter", "target": "temples"}]},
+    {"id": "temples", "name": "The Temples", "kind": "Power", "holder": "aldous-verreine", "home": null, "coin": 4, "favour": 6, "force": 1, "families": ["Faith", "Court"], "grants": [{"resource": "Favour", "amount": 1, "everyWeeks": 2}], "agenda": [{"kind": "Office", "target": "Temple"}, {"kind": "Counter", "target": "necromancers"}, {"kind": "Counter", "target": "dark-brotherhood"}]},
+    {"id": "balfiera", "name": "Clan Direnni of Balfiera", "kind": "Power", "holder": "medora", "home": null, "coin": 3, "favour": 4, "force": 1, "families": ["Arcane", "Court"], "grants": [{"resource": "Favour", "amount": 1, "everyWeeks": 4}], "agenda": [{"kind": "Recognition", "target": "wayrest"}, {"kind": "Recognition", "target": "daggerfall"}, {"kind": "Footing", "target": "menevia"}]}
   ],
   "regions": [
     {"id": "abibon-gora", "name": "Abibon-Gora", "catalogRegion": 43, "capital": false, "allegiance": null, "control": 3, "prosperity": 4, "order": 3, "influence": {}, "borders": ["alikra", "kairou"]},
@@ -73,5 +73,20 @@
     {"a": "necromancers", "b": "temples", "value": -2},
     {"a": "fighters-guild", "b": "thieves-guild", "value": -1},
     {"a": "dark-brotherhood", "b": "temples", "value": -1}
-  ]
+  ],
+  "personas": {
+    "king-gothryd": {"goals": {"Hold": 3, "Take": 2, "Counter": 2, "Retaliate": 2, "Recognition": 1}, "families": {"Court": 1, "Force": 1}, "risk": 1},
+    "king-eadwyre": {"goals": {"Take": 2, "Hold": 2, "Office": 2, "Recognition": 2, "Retaliate": 1}, "families": {"Trade": 1, "Court": 1, "Force": -1}, "risk": 1},
+    "queen-akorithi": {"goals": {"Take": 3, "Hold": 2, "Counter": 2, "Retaliate": 3}, "families": {"Force": 2, "Court": 1}, "risk": 2},
+    "gortwog": {"goals": {"Recognition": 3, "Take": 2, "Hold": 2, "Retaliate": 2}, "families": {"Court": 1, "Force": 1}, "risk": 1},
+    "lady-brisienna": {"goals": {"Counter": 3, "Footing": 2, "Office": 2, "Recognition": 1, "Retaliate": 1}, "families": {"Court": 2}, "risk": 1},
+    "king-of-worms": {"goals": {"Counter": 3, "Retaliate": 3, "Footing": 2}, "risk": 3},
+    "the-underking": {"goals": {"Counter": 3, "Retaliate": 2, "Footing": 2}, "risk": 3},
+    "karethys": {"goals": {"Office": 3, "Counter": 2, "Footing": 1, "Retaliate": 1}, "families": {"Arcane": 2}, "risk": 1},
+    "oswin-harrowgate": {"goals": {"Counter": 2, "Office": 2, "Retaliate": 2, "Recognition": 1}, "families": {"Force": 2, "Trade": 1}, "risk": 2},
+    "the-squid": {"goals": {"Office": 3, "Counter": 2, "Retaliate": 2}, "families": {"Shadow": 1}, "risk": 2},
+    "the-night-mother": {"goals": {"Office": 2, "Counter": 3, "Retaliate": 3}, "risk": 3},
+    "aldous-verreine": {"goals": {"Office": 3, "Counter": 2, "Footing": 1, "Retaliate": 1}, "families": {"Faith": 2, "Court": 1}, "risk": 0},
+    "medora": {"goals": {"Recognition": 2, "Footing": 2, "Retaliate": 1}, "families": {"Court": 1}, "risk": 0}
+  }
 }

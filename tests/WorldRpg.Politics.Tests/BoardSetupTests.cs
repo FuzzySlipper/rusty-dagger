@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Xunit;
 
 namespace WorldRpg.Politics.Tests;
@@ -84,6 +85,73 @@ public sealed class BoardSetupTests
     }
 
     [Fact]
+    public void Every_canon_seat_is_held_by_a_cast_individual_with_a_persona_and_a_canon_agenda()
+    {
+        BoardSetup canon = BoardSetup.Canon();
+        HashSet<string> cast = CastIndividuals();
+
+        Assert.All(canon.Seats, seat =>
+        {
+            Assert.Contains(seat.Holder, cast);
+            Assert.True(canon.Personas.ContainsKey(seat.Holder), $"holder '{seat.Holder}' has no persona");
+            Assert.InRange(seat.Agenda?.Count ?? 0, 2, BoardSetup.AgendaLimit);
+        });
+        Assert.Equal("lady-brisienna", canon.Seats.Single(seat => seat.Id == "empire").Holder);
+        Assert.Equal("the-underking", canon.Seats.Single(seat => seat.Id == "underking").Holder);
+        // The canon examples the design names: Sentinel takes Betony, Daggerfall holds it, the Underking counters the Necromancers.
+        Assert.Contains(new Goal(GoalKind.Take, "betony"), canon.Seats.Single(seat => seat.Id == "sentinel").Agenda!);
+        Assert.Contains(new Goal(GoalKind.Hold, "betony"), canon.Seats.Single(seat => seat.Id == "daggerfall").Agenda!);
+        Assert.Contains(new Goal(GoalKind.Counter, "necromancers"), canon.Seats.Single(seat => seat.Id == "underking").Agenda!);
+    }
+
+    [Fact]
+    public void A_seat_needs_a_holder_with_a_persona_and_goals_it_can_pursue()
+    {
+        BoardSetup setup = TestBoards.TwoCrowns().WithGuild();
+        setup = setup with
+        {
+            Seats =
+            [
+                setup.Seats[0] with { Holder = "stranger" },
+                setup.Seats[1] with { Holder = "stranger", Agenda = [new(GoalKind.Take, "nowhere"), new(GoalKind.Office, "Mayor"), new(GoalKind.Counter, "east"), new(GoalKind.Recognition, "west")] },
+                setup.Seats[2] with { Holder = null!, Agenda = [new(GoalKind.Hold, "march"), new(GoalKind.Retaliate, "west")] },
+            ],
+            Personas = new Dictionary<string, Persona>(setup.Personas)
+            {
+                ["west-holder"] = new(new Dictionary<GoalKind, int> { [GoalKind.Take] = 4 }, new Dictionary<CardFamily, int> { [CardFamily.Force] = -3 }, 5),
+            },
+        };
+
+        IReadOnlyList<string> problems = setup.Problems();
+
+        Assert.Contains("seat 'west' holder 'stranger' has no persona", problems);
+        Assert.Contains("holder 'stranger' holds 'west' and 'east'", problems);
+        Assert.Contains("seat 'guild' has no holder", problems);
+        Assert.Contains("persona 'west-holder' weighs Take 4, outside 0..3", problems);
+        Assert.Contains("persona 'west-holder' leans -3 on Force, outside -2..2", problems);
+        Assert.Contains("persona 'west-holder' risk 5 is outside 0..3", problems);
+        Assert.Contains("seat 'east' has 4 standing goals, more than 3", problems);
+        Assert.Contains("seat 'east' goal take nowhere: names an unknown region", problems);
+        Assert.Contains("seat 'east' goal office mayor: names an unknown office", problems);
+        Assert.Contains("seat 'east' goal counter east: names no other seat", problems);
+        Assert.DoesNotContain(problems, problem => problem.Contains("recognition west", StringComparison.Ordinal));
+        Assert.Contains("seat 'guild' goal hold march: only a crown holds land", problems);
+        Assert.Contains("seat 'guild' goal retaliate west: is never authored: grudges open it", problems);
+    }
+
+    /// <summary>The ids of the people pack's cast individuals, from the repository's content.</summary>
+    private static HashSet<string> CastIndividuals()
+    {
+        DirectoryInfo? root = new(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, CastFile))) root = root.Parent;
+        Assert.NotNull(root);
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root.FullName, CastFile)));
+        return [.. document.RootElement.GetProperty("individuals").EnumerateArray().Select(individual => individual.GetProperty("id").GetString()!)];
+    }
+
+    private const string CastFile = "content/worldrpg/packs/daggerfall.people/cast/individuals.json";
+
+    [Fact]
     public void A_seat_cannot_start_with_more_pieces_than_its_supply()
     {
         Dictionary<Office, string> all = Enum.GetValues<Office>().ToDictionary(office => office, _ => "west");
@@ -103,7 +171,7 @@ public sealed class BoardSetupTests
             string missing = Path.Combine(directory, "missing.json");
             File.WriteAllText(missing, """{ "seed": 1, "seats": [], "regions": [] }""");
             string unknown = Path.Combine(directory, "unknown.json");
-            File.WriteAllText(unknown, """{ "seed": 1, "seats": [], "regions": [], "relations": [], "rivers": [] }""");
+            File.WriteAllText(unknown, """{ "seed": 1, "seats": [], "regions": [], "relations": [], "personas": {}, "rivers": [] }""");
 
             Assert.Contains("relations", Assert.Throws<BoardSetupException>(() => BoardSetup.Load(missing)).Message, StringComparison.Ordinal);
             Assert.Contains("rivers", Assert.Throws<BoardSetupException>(() => BoardSetup.Load(unknown)).Message, StringComparison.Ordinal);

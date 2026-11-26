@@ -99,7 +99,7 @@ public sealed class QuestIndividualAndOfficeBindingTests
 
         DaggerfallSiteProfile awayTown = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         DaggerfallSiteProfile palaceSite = StaticNpcAdmissionTests.StaticProviderSite(
-            Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))), factionId: queen.FactionId);
+            Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0))), factionId: queen.WorldFactionId);
         DaggerfallSiteProfiles profiles = new([awayTown, palaceSite]);
 
         List<string> releases = [];
@@ -160,7 +160,7 @@ public sealed class QuestIndividualAndOfficeBindingTests
         long kavarId = DaggerfallPeopleSlots.CastIndividualIdentity(kavar.Id);
 
         DaggerfallSiteProfile homeSite = StaticNpcAdmissionTests.StaticProviderSite(
-            Assembled(DaggerfallWorldProfileIds.Exterior(Charing)), factionId: kavar.FactionId);
+            Assembled(DaggerfallWorldProfileIds.Exterior(Charing)), factionId: kavar.WorldFactionId);
         DaggerfallSiteProfile destSource = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(0, 0, 0)));
         Dictionary<(int Archive, int Record), NormalizedBillboardSprite> destBillboards = destSource.BillboardSprites.ToDictionary();
         NormalizedBillboardSprite sampleBillboard = homeSite.BillboardSprites.Values.First();

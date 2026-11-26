@@ -4,15 +4,20 @@ using System.Text.Json.Serialization;
 namespace WorldRpg.Politics;
 
 /// <summary>
-/// A board's starting position: its canon seed, the seats at the table, the regions and the relations between
-/// seats. The canon Iliac Bay start is <c>canon/iliac-bay.board.json</c> beside this library.
+/// A board's starting position: its canon seed, the seats at the table, the regions, the relations between seats and
+/// the persona of each cast individual who holds a seat or may come to. The canon Iliac Bay start is
+/// <c>canon/iliac-bay.board.json</c> beside this library.
 /// </summary>
 public sealed record BoardSetup(
     ulong Seed,
     IReadOnlyList<SeatSetup> Seats,
     IReadOnlyList<RegionSetup> Regions,
-    IReadOnlyList<RelationSetup> Relations)
+    IReadOnlyList<RelationSetup> Relations,
+    IReadOnlyDictionary<string, Persona> Personas)
 {
+    /// <summary>The most standing goals a seat holds.</summary>
+    public const int AgendaLimit = 3;
+
     /// <summary>The canon start's file name in the build output.</summary>
     public const string CanonFile = "canon/iliac-bay.board.json";
 
@@ -46,6 +51,8 @@ public sealed record BoardSetup(
         foreach (SeatSetup seat in Seats)
         {
             if (!seats.Add(seat.Id)) problems.Add($"seat '{seat.Id}' is listed twice");
+            if (string.IsNullOrEmpty(seat.Holder)) problems.Add($"seat '{seat.Id}' has no holder");
+            else if (!Personas.ContainsKey(seat.Holder)) problems.Add($"seat '{seat.Id}' holder '{seat.Holder}' has no persona");
             foreach ((string name, int value) in new[] { ("coin", seat.Coin), ("favour", seat.Favour), ("force", seat.Force) })
                 if (value is < 0 or > Board.ResourceLimit) problems.Add($"seat '{seat.Id}' {name} {value} is outside 0..{Board.ResourceLimit}");
             foreach (SeatGrant grant in seat.Grants ?? [])
@@ -103,6 +110,24 @@ public sealed record BoardSetup(
         foreach (RegionSetup capital in Regions.Where(region => region.Capital))
             if (!Seats.Any(seat => seat.Home == capital.Id)) problems.Add($"capital '{capital.Id}' is no seat's home");
         HashSet<(string, string)> pairs = [];
+        foreach (IGrouping<string, SeatSetup> shared in Seats.Where(seat => !string.IsNullOrEmpty(seat.Holder)).GroupBy(seat => seat.Holder).Where(group => group.Count() > 1))
+            problems.Add($"holder '{shared.Key}' holds {string.Join(" and ", shared.Select(seat => $"'{seat.Id}'"))}");
+        foreach ((string holder, Persona persona) in Personas)
+        {
+            foreach ((GoalKind kind, int weight) in persona.Goals)
+                if (weight is < 0 or > Persona.WeightLimit) problems.Add($"persona '{holder}' weighs {kind} {weight}, outside 0..{Persona.WeightLimit}");
+            foreach ((CardFamily family, int leaning) in persona.Families ?? new Dictionary<CardFamily, int>())
+                if (leaning is < -Persona.LeaningLimit or > Persona.LeaningLimit)
+                    problems.Add($"persona '{holder}' leans {leaning} on {family}, outside -{Persona.LeaningLimit}..{Persona.LeaningLimit}");
+            if (persona.Risk is < 0 or > Persona.RiskLimit) problems.Add($"persona '{holder}' risk {persona.Risk} is outside 0..{Persona.RiskLimit}");
+        }
+        foreach (SeatSetup seat in Seats)
+        {
+            IReadOnlyList<Goal> agenda = seat.Agenda ?? [];
+            if (agenda.Count > AgendaLimit) problems.Add($"seat '{seat.Id}' has {agenda.Count} standing goals, more than {AgendaLimit}");
+            foreach (Goal goal in agenda)
+                if (GoalProblem(seat, goal, seats, regions) is { } problem) problems.Add($"seat '{seat.Id}' goal {goal}: {problem}");
+        }
         foreach (RelationSetup relation in Relations)
         {
             if (!seats.Contains(relation.A) || !seats.Contains(relation.B)) problems.Add($"relation {relation.A}/{relation.B} names an unknown seat");
@@ -113,24 +138,37 @@ public sealed record BoardSetup(
         }
         return problems;
     }
+
+    /// <summary>What is wrong with a standing goal of <paramref name="seat"/>'s, or null if nothing is.</summary>
+    private static string? GoalProblem(SeatSetup seat, Goal goal, HashSet<string> seats, HashSet<string> regions) => goal.Kind switch
+    {
+        _ when string.IsNullOrEmpty(goal.Target) => "names no target",
+        GoalKind.Take or GoalKind.Hold when seat.Kind != SeatKind.Crown => "only a crown holds land",
+        GoalKind.Take or GoalKind.Hold or GoalKind.Footing when !regions.Contains(goal.Target) => "names an unknown region",
+        GoalKind.Office when !Enum.TryParse(goal.Target, out Office _) => "names an unknown office",
+        GoalKind.Recognition or GoalKind.Counter when !seats.Contains(goal.Target) || goal.Target == seat.Id => "names no other seat",
+        GoalKind.Retaliate => "is never authored: grudges open it",
+        _ => null,
+    };
 }
 
 /// <summary>
-/// A seat at the table: who plays, its kind, the cast individual holding it now, the home capital a crown holds, its
-/// starting resources, the card families its deck is drawn from and the grants it is paid on a schedule. A seat whose
-/// head is not cast yet has no holder until intention (#11060) casts one; it then becomes required.
+/// A seat at the table: who plays, its kind, the cast individual holding it now (a person of the people pack, whose
+/// persona plays the seat), the home capital a crown holds, its starting resources, the card families its deck is
+/// drawn from, the grants it is paid on a schedule, and its standing goals, up to <see cref="BoardSetup.AgendaLimit"/>.
 /// </summary>
 public sealed record SeatSetup(
     string Id,
     string Name,
     SeatKind Kind,
-    string? Holder,
+    string Holder,
     string? Home,
     int Coin,
     int Favour,
     int Force,
     IReadOnlyList<CardFamily> Families,
-    IReadOnlyList<SeatGrant>? Grants = null);
+    IReadOnlyList<SeatGrant>? Grants = null,
+    IReadOnlyList<Goal>? Agenda = null);
 
 /// <summary>
 /// A resource paid to a seat in upkeep every <paramref name="EveryWeeks"/> weeks, on top of its income: what makes a

@@ -73,7 +73,8 @@ internal static class TestBoards
                 with { Offices = marchOffices },
             Region("east-capital", true, "east", 5, 4, 4, new Dictionary<string, int> { ["east"] = 2 }, ["march"]),
         ],
-        relation == 0 ? [] : [new RelationSetup("west", "east", relation)]);
+        relation == 0 ? [] : [new RelationSetup("west", "east", relation)],
+        Personas);
 
     /// <summary>
     /// Two crowns and the land between them, in a line: West's capital, West's march, independent hill country too poor
@@ -92,13 +93,32 @@ internal static class TestBoards
             Region("granary", false, "east", 3, 4, 3, new Dictionary<string, int>(), ["hills", "east-capital"]),
             Region("east-capital", true, "east", 5, 4, 4, new Dictionary<string, int> { ["east"] = 2 }, ["granary"]),
         ],
-        relation == 0 ? [] : [new RelationSetup("west", "east", relation)]);
+        relation == 0 ? [] : [new RelationSetup("west", "east", relation)],
+        Personas);
 
-    /// <summary>The setup with a guild seated: a power with no holder or home, drawing shadow cards, with the given grants.</summary>
+    /// <summary>The setup with a guild seated: a power with no home, drawing shadow cards, with the given grants.</summary>
     public static BoardSetup WithGuild(this BoardSetup setup, IReadOnlyList<SeatGrant>? grants = null) => setup with
     {
-        Seats = [.. setup.Seats, new SeatSetup("guild", "Guild", SeatKind.Power, null, null, 4, 4, 4, [CardFamily.Shadow], grants)],
+        Seats = [.. setup.Seats, new SeatSetup("guild", "Guild", SeatKind.Power, "guild-holder", null, 4, 4, 4, [CardFamily.Shadow], grants)],
     };
+
+    /// <summary>
+    /// A persona for each test holder that cares for no goal and leans on no family, and is heedless of reprisal, so a
+    /// test seat weighs prestige alone unless a test gives it a persona and an agenda.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, Persona> Personas = new[] { "west-holder", "east-holder", "guild-holder" }
+        .ToDictionary(holder => holder, _ => new Persona(new Dictionary<GoalKind, int>(), Risk: Persona.RiskLimit));
+
+    /// <summary>The setup with <paramref name="seat"/> given <paramref name="agenda"/>, and its holder <paramref name="persona"/>.</summary>
+    public static BoardSetup Intent(this BoardSetup setup, string seat, Persona persona, params Goal[] agenda)
+    {
+        SeatSetup chosen = setup.Seats.Single(other => other.Id == seat);
+        return setup with
+        {
+            Seats = [.. setup.Seats.Select(other => other == chosen ? other with { Agenda = agenda } : other)],
+            Personas = new Dictionary<string, Persona>(setup.Personas) { [chosen.Holder] = persona },
+        };
+    }
 
     public static RegionSetup Region(string id, bool capital, string? allegiance, int control, int prosperity, int order,
         IReadOnlyDictionary<string, int> influence, IReadOnlyList<string> borders) =>

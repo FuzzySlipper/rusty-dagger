@@ -32,12 +32,15 @@ public sealed class Board
     private readonly List<Action> undo = [];
     private readonly Dictionary<string, int> pieces;
     private readonly Dictionary<string, int> held;
+    private readonly IReadOnlyDictionary<string, Persona> personas;
+    private readonly Dictionary<(string Helper, string Helped), int> helps = [];
     private int trialStart = -1;
     private int dealsMade;
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
-        Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, BoardRandom random)
+        Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, BoardRandom random, IReadOnlyDictionary<string, Persona> personas)
     {
+        this.personas = personas;
         Seats = seats;
         Regions = regions;
         seatsById = seats.ToDictionary(seat => seat.Id, StringComparer.Ordinal);
@@ -76,7 +79,7 @@ public sealed class Board
     {
         IReadOnlyList<string> problems = [.. setup.Problems(), .. cards.Problems(setup)];
         if (problems.Count > 0) throw new BoardSetupException("board setup", problems);
-        Seat[] seats = [.. setup.Seats.Select(seat => new Seat(seat.Id, seat.Name, seat.Kind, seat.Holder, seat.Home, seat.Grants ?? [])
+        Seat[] seats = [.. setup.Seats.Select(seat => new Seat(seat.Id, seat.Name, seat.Kind, seat.Holder, seat.Home, seat.Grants ?? [], seat.Agenda ?? [])
             { Coin = seat.Coin, Favour = seat.Favour, Force = seat.Force })];
         Region[] regions = [.. setup.Regions.Select(region => new Region(region.Id, region.Name, region.CatalogRegion, region.Capital, [.. region.Borders])
         {
@@ -90,7 +93,8 @@ public sealed class Board
         })];
         Dictionary<(string, string), int> relations = setup.Relations.ToDictionary(relation => Pair(relation.A, relation.B), relation => relation.Value);
         Dictionary<string, SeatDeck> decks = setup.Seats.ToDictionary(seat => seat.Id, seat => new SeatDeck([.. cards.Deck(seat)], [], []), StringComparer.Ordinal);
-        Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], new BoardRandom(seed ?? setup.Seed));
+        Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], new BoardRandom(seed ?? setup.Seed),
+            new Dictionary<string, Persona>(setup.Personas!, StringComparer.Ordinal));
         foreach (Seat seat in seats) board.Shuffle(decks[seat.Id].drawPile);
         board.Shuffle(board.worldDraw);
         foreach (Seat seat in seats) board.DrawHand(seat);
@@ -104,6 +108,71 @@ public sealed class Board
     public Region Region(string id) => regionsById[id];
 
     public int Relation(string a, string b) => relations.GetValueOrDefault(Pair(a, b));
+
+    /// <summary>The persona of the cast individual holding <paramref name="seat"/> now.</summary>
+    public Persona Persona(Seat seat) => personas[seat.Holder];
+
+    /// <summary>
+    /// Gives <paramref name="seat"/> to <paramref name="holder"/>, whose persona then plays it; the seat keeps its hand,
+    /// pieces, plan and grudges.
+    /// </summary>
+    public void SetHolder(Seat seat, string holder)
+    {
+        if (!personas.ContainsKey(holder)) throw new ArgumentException($"holder '{holder}' has no persona on this board", nameof(holder));
+        string before = seat.Holder;
+        if (before == holder) return;
+        seat.Holder = holder;
+        Undo(() => seat.Holder = before);
+        changes.Add(new BoardChange(seat.Id, "holder", before, holder));
+    }
+
+    /// <summary>Commits <paramref name="seat"/>, which has no plan, to <paramref name="plan"/> (<see cref="Intention"/>).</summary>
+    public void SetPlan(Seat seat, Plan plan)
+    {
+        if (seat.Plan is not null) throw new InvalidOperationException($"seat '{seat.Id}' already pursues {seat.Plan}");
+        seat.Plan = plan;
+        seat.Rested = null;
+        changes.Add(new BoardChange(seat.Id, "plan", "none", plan.ToString()));
+    }
+
+    /// <summary>Ends <paramref name="seat"/>'s plan for <paramref name="reason"/>; a plan that lapsed rests its goal for one choice.</summary>
+    public void EndPlan(Seat seat, string reason)
+    {
+        Plan plan = seat.Plan ?? throw new InvalidOperationException($"seat '{seat.Id}' has no plan");
+        seat.Plan = null;
+        if (reason == "lapsed") seat.Rested = plan.Goal;
+        changes.Add(new BoardChange(seat.Id, "plan", plan.ToString(), reason));
+    }
+
+    /// <summary><paramref name="seat"/> holds a grudge against <paramref name="against"/> to the end of <paramref name="until"/>, or longer if it already did.</summary>
+    public void HoldGrudge(Seat seat, Seat against, int until)
+    {
+        int index = seat.Grudges.FindIndex(grudge => grudge.Against == against.Id);
+        Grudge? before = index < 0 ? null : seat.Grudges[index];
+        if (before is not null && before.Until >= until) return;
+        Grudge after = new(against.Id, until);
+        if (before is null) seat.Grudges.Add(after);
+        else seat.Grudges[index] = after;
+        changes.Add(new BoardChange(seat.Id, $"grudge:{against.Id}", Describe(before), Describe(after)));
+    }
+
+    /// <summary><paramref name="seat"/> has struck back at <paramref name="against"/>, which settles its grudge.</summary>
+    public void SettleGrudge(Seat seat, Seat against) => DropGrudge(seat, seat.Grudges.Single(grudge => grudge.Against == against.Id), "settled");
+
+    /// <summary>Lets go every grudge whose last week has passed.</summary>
+    public void ExpireGrudges()
+    {
+        foreach (Seat seat in Seats)
+            foreach (Grudge grudge in seat.Grudges.Where(grudge => grudge.Until < Turn).ToArray()) DropGrudge(seat, grudge, "none");
+    }
+
+    /// <summary>Counts a help from <paramref name="helper"/> to <paramref name="helped"/>; returns how many it has given.</summary>
+    public int Helped(Seat helper, Seat helped)
+    {
+        int count = helps.GetValueOrDefault((helper.Id, helped.Id)) + 1;
+        helps[(helper.Id, helped.Id)] = count;
+        return count;
+    }
 
     /// <summary>
     /// Whether <paramref name="seat"/> can act in <paramref name="region"/>: it is present there or in a region bordering
@@ -230,6 +299,12 @@ public sealed class Board
 
     /// <summary>How many changes are recorded and not yet taken.</summary>
     public int ChangeCount => changes.Count;
+
+    /// <summary>The changes recorded since the count was <paramref name="mark"/> (<see cref="ChangeCount"/>).</summary>
+    public IEnumerable<BoardChange> ChangesSince(int mark)
+    {
+        for (int index = mark; index < changes.Count; index++) yield return changes[index];
+    }
 
     /// <summary>The changes recorded since the last call, in the order they happened.</summary>
     public IReadOnlyList<BoardChange> TakeChanges()
@@ -503,6 +578,15 @@ public sealed class Board
         if (seat is not null) held[seat]++;
     }
 
+    private void DropGrudge(Seat seat, Grudge grudge, string outcome)
+    {
+        seat.Grudges.Remove(grudge);
+        changes.Add(new BoardChange(seat.Id, $"grudge:{grudge.Against}", Describe(grudge), outcome));
+    }
+
+    private static string Describe(Grudge? grudge) =>
+        grudge is null ? "none" : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"until {grudge.Until}");
+
     private void Undo(Action action)
     {
         if (trialStart >= 0) undo.Add(action);
@@ -554,11 +638,22 @@ public enum SeatKind
 }
 
 /// <summary>
-/// A player at the table. <see cref="Holder"/> is the cast individual who holds the seat now, if the head of the body
-/// is cast; <see cref="Home"/> is a crown's capital.
+/// A player at the table. <see cref="Holder"/> is the cast individual who holds the seat now, whose persona plays it;
+/// <see cref="Home"/> is a crown's capital; <see cref="Agenda"/> holds its standing goals (<see cref="Intention"/>).
 /// </summary>
-public sealed record Seat(string Id, string Name, SeatKind Kind, string? Holder, string? Home, IReadOnlyList<SeatGrant> Grants)
+public sealed record Seat(string Id, string Name, SeatKind Kind, string Holder, string? Home, IReadOnlyList<SeatGrant> Grants, IReadOnlyList<Goal> Agenda)
 {
+    public string Holder { get; internal set; } = Holder;
+
+    /// <summary>The plan the seat is committed to, if any.</summary>
+    public Plan? Plan { get; internal set; }
+
+    /// <summary>The goal whose plan lapsed last, which waits while another goal is open.</summary>
+    public Goal? Rested { get; internal set; }
+
+    /// <summary>The seat's grudges, in the order they were opened (<see cref="Memory"/>).</summary>
+    public List<Grudge> Grudges { get; internal init; } = [];
+
     public int Coin { get; internal set; }
 
     public int Favour { get; internal set; }
