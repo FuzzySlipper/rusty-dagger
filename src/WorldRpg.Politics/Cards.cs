@@ -402,10 +402,14 @@ public sealed record Card(
         return former;
     }
 
-    /// <summary>The regions among <paramref name="targets"/>: the only regions a card's effects change.</summary>
+    /// <summary>
+    /// The only regions a card's effects change: the regions among <paramref name="targets"/>, or for a war, those a
+    /// treaty ending it may change (<see cref="Wars.TreatyRegions"/>).
+    /// </summary>
     public IReadOnlyList<Region> TargetRegions(Board board, IReadOnlyList<string> targets) => Target switch
     {
-        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.War => [],
+        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal => [],
+        CardTarget.War => [.. Wars.TreatyRegions(board, board.War(targets[0]))],
         CardTarget.RegionRival => [board.Region(targets[0])],
         _ => [.. targets.Select(board.Region)],
     };

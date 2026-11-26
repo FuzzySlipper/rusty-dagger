@@ -150,6 +150,17 @@ public static class Wars
         region.Allegiance is { } holder && war.Side(holder) is { } side && Borders(board, region, war.SideOf(war.Enemy(side))));
 
     /// <summary>
+    /// The regions a treaty ending <paramref name="war"/> may change, in board order: its fronts, where a region may be
+    /// ceded, and every region its war fronts lie on.
+    /// </summary>
+    public static IEnumerable<Region> TreatyRegions(Board board, War war)
+    {
+        HashSet<Region> fronts = [.. Fronts(board, war)];
+        return board.Regions.Where(region => fronts.Contains(region)
+            || region.Conditions.Any(condition => condition.Kind == ConditionKind.WarFront && condition.Detail == war.Detail));
+    }
+
+    /// <summary>
     /// What a war card that changed <paramref name="region"/>, which <paramref name="holder"/> held, costs the
     /// principal of the holder's side: <see cref="HurtWeariness"/>, and <see cref="LossWeariness"/> more if the region was taken.
     /// </summary>

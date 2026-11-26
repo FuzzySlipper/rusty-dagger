@@ -171,6 +171,38 @@ public sealed class WarTests
         Assert.Contains(new BoardChange("west", "war:east", "war-1", "truce brokered by guild"), board.TakeChanges());
     }
 
+    /// <summary>
+    /// A treaty cedes a front region and lifts war fronts wherever they lie, so the move that makes one is witnessed over
+    /// all of them: each seat's witnessed gain is its whole change in prestige.
+    /// </summary>
+    [Fact]
+    public void Suing_for_peace_or_brokering_a_truce_is_weighed_for_every_region_the_treaty_changes()
+    {
+        foreach (bool brokered in new[] { false, true })
+        {
+            Board board = TestBoards.Create(TestBoards.Frontier(relation: -3).WithGuild().Rich("east").Rich("guild"));
+            Seat guild = board.Seat("guild");
+            board.AdjustRelation(guild, board.Seat("west"), Wars.BrokerRelation);
+            board.AdjustRelation(guild, board.Seat("east"), Wars.BrokerRelation);
+            board.Turn = 1;
+            Wars.Check(board);
+            War war = Assert.Single(board.Wars);
+            board.AddCondition(board.Region("west-capital"), new RegionCondition(ConditionKind.WarFront, war.Detail, 2, "east", 1, 9));
+            board.AddWeariness(war, "east", Wars.PeaceWeariness);
+            board.AddWeariness(war, "west", Wars.BrokerWeariness);
+            (Seat player, Card card) = brokered ? (guild, Broker) : (board.Seat("east"), TestBoards.Card("sue-for-peace"));
+            Dictionary<string, int> before = board.Seats.ToDictionary(seat => seat.Id, seat => Whole(board, seat));
+            Prestige.Witness witness = Prestige.Witness.OfCard(board, player, new Prestige.Before(board), card, [war.Id]);
+
+            card.Play(board, player, [war.Id]);
+
+            Assert.Equal(brokered ? "east" : "west", board.Region("east-march").Allegiance);
+            Assert.Empty(board.Region("west-capital").Conditions);
+            SortedDictionary<string, int> gains = witness.Gains(board, [.. board.ChangesSince(witness.Mark)]);
+            Assert.All(board.Seats, seat => Assert.Equal(Whole(board, seat) - before[seat.Id], gains.GetValueOrDefault(seat.Id)));
+        }
+    }
+
     [Fact]
     public void No_seat_draws_war_cards_and_only_a_seat_at_war_is_offered_them()
     {
@@ -194,6 +226,9 @@ public sealed class WarTests
         BoardTraceWriter.WriteText(writer, turn);
         Assert.Contains("wars: west war:east none->war-1", writer.ToString(), StringComparison.Ordinal);
     }
+
+    /// <summary>A seat's whole prestige on a board with no trade agreements: its standing everywhere and its bearing.</summary>
+    private static int Whole(Board board, Seat seat) => Prestige.Standing(seat, board.Regions) + Prestige.Bearing(board, seat);
 
     /// <summary>The frontier with West and East gone to war on turn 1, and <paramref name="rich"/> at the top of every resource.</summary>
     private static Board AtWar(out War war, string? rich = null)
