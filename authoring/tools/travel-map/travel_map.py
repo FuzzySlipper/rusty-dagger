@@ -104,6 +104,19 @@ def snow():
     return frames(np.clip(1 - distance, 0, 1) ** 1.4 * 255)
 
 
+def shadow():
+    """A soft radial contact-shadow mask (white RGB, rich footprint core feathering smoothly to zero at the edge)."""
+    size = 64
+    y, x = np.mgrid[0:size, 0:size].astype(float) + 0.5
+    r = np.hypot(x - size / 2, y - size / 2) / (size / 2)
+    # Strong AO core right under and slightly past walls (r <= 0.72), feathering smoothly to 0 by r = 0.98.
+    core = np.exp(-((r / 0.78) ** 3.0))
+    edge = 1 - smooth(r, 0.68, 0.98)
+    alpha = np.round(np.clip(core * edge, 0, 1) * 255).astype(np.uint8)
+    white = np.full(alpha.shape, 255, np.uint8)
+    return np.dstack([white, white, white, alpha])
+
+
 def entry(path):
     data = path.read_bytes()
     return {'path': path.relative_to(ROOT / 'content').as_posix(), 'byteLength': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
@@ -117,16 +130,18 @@ def main():
     Image.fromarray(normal, 'RGBA').save(MEDIA / 'detail-normal.png', optimize=True)
     Image.fromarray(rain(), 'RGBA').save(MEDIA / 'rain.png', optimize=True)
     Image.fromarray(snow(), 'RGBA').save(MEDIA / 'snow.png', optimize=True)
+    Image.fromarray(shadow(), 'RGBA').save(MEDIA / 'shadow.png', optimize=True)
     places = MEDIA / 'places'
     for old in places.glob('*.glb'):
         old.unlink()
-    slots = place_models.write(places)
+    slots, slot_names = place_models.write(places)
     payload_path = PACK / 'payload.json'
     payload = json.loads(payload_path.read_text())
     payload['artReplacements']['travelMap'] = {
         'rain': entry(MEDIA / 'rain.png'), 'snow': entry(MEDIA / 'snow.png'),
         'detail': entry(MEDIA / 'detail.png'), 'detailNormal': entry(MEDIA / 'detail-normal.png'),
-        'places': {kind: {**entry(places / f'{kind}.rstatmsh'), 'slots': slots[kind]} for kind in KINDS}}
+        'shadow': entry(MEDIA / 'shadow.png'),
+        'places': {kind: {**entry(places / f'{kind}.rstatmsh'), 'slots': slots[kind], 'slotNames': slot_names[kind]} for kind in KINDS}}
     payload_path.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + '\n')
     print('wrote the travel map art and stated artReplacements.travelMap')
 

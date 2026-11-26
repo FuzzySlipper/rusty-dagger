@@ -134,15 +134,35 @@ public sealed class DaggerfallExpeditionSessionTests
         fixture.Open();
         fixture.Step();
 
-        // The origin is a city, which stands as the city's static mesh, read off the update, made once and shared by every
-        // city, each of its slots painted its colour.
+        // The origin is a city, which stands as the city's static mesh, read off the update, made once per climate and shared by
+        // every city in that climate, each of its slots painted for its climate, season and time of day.
         DaggerfallTravelMapPlace city = art.Places[DaggerfallSiteKind.TownCity];
-        Assert.Single(fixture.Appearance.DeferredStaticMeshPaths, path => path == city.File.Path);
+        DaggerfallOverlandPlaceClimate originClimate = DaggerfallOverlandPlacePalette.Classify(
+            fixture.Session.Expedition.Policy.Climate(fixture.OriginPixel));
+        var date = DaggerfallSavePayload.Read(fixture.Session.CaptureSave()).Calendar;
+        DaggerfallCalendar now = new(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second);
+        bool winter = now.Season == DaggerfallSeason.Winter;
+        float night = MathF.Round(Math.Clamp(1 - DaggerfallTuning.Defaults.Weather.Daylight(now, DaggerfallWeatherKind.Sunny), 0, 1) * 20) / 20;
+        Assert.Contains(fixture.Appearance.DeferredStaticMeshPaths, path => path == city.File.Path);
         Appearance model = fixture.Appearance.StaticMeshByPath[city.File.Path];
         Assert.Contains(fixture.Facts(), fact => fact.Layer == RenderLayer.Backdrop && ReferenceEquals(fact.Appearance, model));
         MeshMaterialBinding[] paints = fixture.Appearance.StaticMeshMaterials[model];
         Assert.Equal(city.Slots.Count, paints.Length);
-        Assert.All(paints, paint => Assert.Equal(city.Slots[(int)paint.MaterialSlot], fixture.Appearance.MaterialRequests[paint.Material].Color));
+        Assert.All(paints, paint =>
+        {
+            string slotName = city.SlotName((int)paint.MaterialSlot);
+            MaterialRequest request = fixture.Appearance.MaterialRequests[paint.Material];
+            MaterialRequest expected = DaggerfallOverlandPlacePalette.Resolve(
+                originClimate, slotName, city.Slots[(int)paint.MaterialSlot], winter, night, request.Texture);
+            if (slotName == "shadow")
+            {
+                Assert.Equal(MaterialAlphaMode.Blend, request.AlphaMode);
+                Assert.True(request.Unlit);
+                Assert.NotEqual(default, request.Texture);
+            }
+            Assert.Equal(expected.Color, request.Color);
+            Assert.Equal(expected.EmissionIntensity, request.EmissionIntensity);
+        });
         // The land's detail repeats every tuned stretch, its relief on its normal map; both are read as data.
         MaterialRequest land = Assert.Single(fixture.Appearance.MaterialRequests.Values,
             request => request.TextureScale == new Vector2(1 / DaggerfallTuning.Defaults.Expedition.Map.Ground.DetailMetres));

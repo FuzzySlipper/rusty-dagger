@@ -49,9 +49,10 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     private readonly IReadOnlyList<DaggerfallTravelDestination> _destinations;
     private readonly Action _playerCamera;
     private readonly DaggerfallTravelMapArt? _art;
-    /// <summary>Each kind of place's model, made the first time one is drawn.</summary>
-    private readonly Dictionary<DaggerfallSiteKind, Appearance> _places = [];
-    private readonly Dictionary<Color, Material> _paints = [];
+    /// <summary>Each kind and climate's place model, made the first time one is drawn.</summary>
+    private readonly Dictionary<(DaggerfallSiteKind Kind, DaggerfallOverlandPlaceClimate Climate), Appearance> _places = [];
+    private readonly Dictionary<(DaggerfallOverlandPlaceClimate Climate, string SlotName, Color BaseColor), Material> _paints = [];
+    private RenderResource? _shadowTexture;
     private DaggerfallOverlandFall? _fall;
     /// <summary>The drops' textures and atlases, released after the drops, atlases first.</summary>
     private readonly List<IDisposable> _owned = [];
@@ -138,7 +139,9 @@ internal sealed class DaggerfallOverlandMap : IDisposable
 
     /// <summary>Whether the weather where the party is greys the map's colours.</summary>
     private bool _wet;
-    /// <summary>How far into the night the grading last cooled for, in steps too small to see.</summary>
+    /// <summary>Whether winter frosted roofs and ground snow were last applied to place materials.</summary>
+    private bool _winter;
+    /// <summary>How far into the night the grading and window glow last updated for, in steps too small to see.</summary>
     private float _night;
 
     internal DaggerfallOverlandView View { get; }
@@ -202,6 +205,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         _engine.CameraView.SetBackdrop(new(_camera, default, Global(eye), Backdrop(viewEye), (float)LinkScale));
         if (opening) _engine.CameraView.SetActiveCamera(_camera);
         float dark = MathF.Round(Math.Clamp(night, 0, 1) * 20) / 20;
+        bool placeStateChanged = opening || winter != _winter || dark != _night;
         if (opening || wet != _wet || dark != _night)
         {
             (_wet, _night) = (wet, dark);
@@ -209,6 +213,11 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         }
         // The moonlight hangs from the party's billboard, which stands in the backdrop once a snapshot has carried it.
         else Moonlight(night);
+        if (placeStateChanged)
+        {
+            _winter = winter;
+            UpdatePlacePaints();
+        }
         _open = true;
         Compose(expedition, partyX, partyZ);
     }
@@ -287,9 +296,9 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         _camera?.Dispose();
         _models?.Dispose();
         _fall?.Dispose();
-        for (int index = _owned.Count - 1; index >= 0; index--) _owned[index].Dispose();
         foreach (Appearance place in _places.Values) place.Dispose();
         foreach (Material paint in _paints.Values) paint.Dispose();
+        for (int index = _owned.Count - 1; index >= 0; index--) _owned[index].Dispose();
         foreach ((SpriteAtlas atlas, Appearance look, RenderResource texture) in _billboards.Values.OfType<(SpriteAtlas, Appearance, RenderResource)>())
         {
             look.Dispose();
@@ -390,7 +399,8 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             if (!known && Math.Sqrt(((x - partyX) * (x - partyX)) + ((z - partyZ) * (z - partyZ))) > sight) continue;
             // The nearest places come first, so a wide view leaves out only the farthest.
             if (_facts.Count >= MostPlaceParts) break;
-            if (Place(place.Kind) is { } model)
+            DaggerfallOverlandPlaceClimate climate = DaggerfallOverlandPlacePalette.Classify(expedition.Policy.Climate(place.MapPixel));
+            if (Place(place.Kind, climate) is { } model)
             {
                 // Each turned its own way, sunk a little so it sits into a slope.
                 uint seed = (uint)HashCode.Combine(place.Id.Region, place.Id.Index);
@@ -486,27 +496,52 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     }
 
     /// <summary>
-    /// A kind of place's model from the art set, a static mesh read and uploaded off the update and painted flat in its
-    /// slots' colours, made the first time one is drawn and shared by every place of its kind; none without the set.
+    /// A kind of place's model from the art set for <paramref name="climate"/>, a static mesh read and uploaded off the update
+    /// and painted in its climate's colours (with seasonal snow roofs, night window lights and contact shadows), made the first
+    /// time one is drawn and shared by every place of its kind and climate; none without the set.
     /// </summary>
-    private Appearance? Place(DaggerfallSiteKind kind)
+    private Appearance? Place(DaggerfallSiteKind kind, DaggerfallOverlandPlaceClimate climate)
     {
-        if (_places.TryGetValue(kind, out Appearance? model)) return model;
+        if (_places.TryGetValue((kind, climate), out Appearance? model)) return model;
         if (_art?.Places.GetValueOrDefault(kind) is not { } place) return null;
         model = _engine.Graphics.CreateStaticMesh(_engine.Content, place.File.Path, place.File.Sha256, new Color(1, 1, 1, 1), deferred: true);
-        _places.Add(kind, model);
+        _places.Add((kind, climate), model);
         _engine.Graphics.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(model,
-            place.Slots.Select((colour, slot) => new MeshMaterialBinding((uint)slot, Paint(colour))).ToArray()));
+            place.Slots.Select((colour, slot) => new MeshMaterialBinding((uint)slot, Paint(climate, place.SlotName(slot), colour))).ToArray()));
         return model;
     }
 
-    /// <summary>A flat-shaded material of one colour, made once for every place model that uses it.</summary>
-    private Material Paint(Color colour)
+    /// <summary>A shared material for one climate and slot role, updated in place when winter or night shifts.</summary>
+    private Material Paint(DaggerfallOverlandPlaceClimate climate, string slotName, Color colour)
     {
-        if (!_paints.TryGetValue(colour, out Material? material))
-            _paints.Add(colour, material = _engine.Graphics.CreateMaterial(
-                new MaterialRequest(colour, default(RenderResourceReference), .9f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { FlatShading = true }));
+        (DaggerfallOverlandPlaceClimate, string, Color) key = (climate, slotName, colour);
+        if (!_paints.TryGetValue(key, out Material? material))
+        {
+            RenderResourceReference shadow = slotName == "shadow" ? ShadowTexture() : default;
+            _paints.Add(key, material = _engine.Graphics.CreateMaterial(
+                DaggerfallOverlandPlacePalette.Resolve(climate, slotName, colour, _winter, _night, shadow)));
+        }
         return material;
+    }
+
+    private void UpdatePlacePaints()
+    {
+        foreach (((DaggerfallOverlandPlaceClimate climate, string slotName, Color colour), Material material) in _paints)
+        {
+            if (!DaggerfallOverlandPlacePalette.IsDynamic(climate, slotName)) continue;
+            RenderResourceReference shadow = slotName == "shadow" ? ShadowTexture() : default;
+            _engine.Graphics.UpdateMaterial(new(material,
+                DaggerfallOverlandPlacePalette.Resolve(climate, slotName, colour, _winter, _night, shadow)));
+        }
+    }
+
+    private RenderResourceReference ShadowTexture()
+    {
+        if (_shadowTexture is { } cached) return new(cached);
+        if (_art?.Shadow is not { } file) return default;
+        _shadowTexture = _engine.Graphics.OpenTexture(_engine.Content, file.Path, file.Sha256, TextureFilter.Linear).Handle;
+        _owned.Add(_shadowTexture);
+        return new(_shadowTexture);
     }
 
     /// <summary>The kinds of place named however far out the view stands.</summary>

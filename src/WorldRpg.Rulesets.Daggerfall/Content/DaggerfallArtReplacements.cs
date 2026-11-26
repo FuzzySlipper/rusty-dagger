@@ -142,11 +142,11 @@ internal sealed record DaggerfallSeaArt(DaggerfallArtFile Shader, DaggerfallArtF
 
 /// <summary>
 /// The travel map's art (#10950): the drops that fall on it in rain and snow (atlases of four frames from seen to faint),
-/// the detail its land takes close in (a mottle read as data and its relief as a normal map), and a small model for each
-/// kind of place, in house widths, standing on its origin.
+/// the detail its land takes close in (a mottle read as data and its relief as a normal map), a soft radial contact-shadow
+/// mask, and a small model for each kind of place, in house widths, standing on its origin.
 /// </summary>
 internal sealed record DaggerfallTravelMapArt(DaggerfallArtFile Rain, DaggerfallArtFile Snow, DaggerfallArtFile Detail, DaggerfallArtFile DetailNormal,
-    IReadOnlyDictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> Places)
+    IReadOnlyDictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> Places, DaggerfallArtFile? Shadow = null)
 {
     /// <summary>The kind of place each model in the art pack's <c>travelMap.places</c> stands for, by the name it is listed under.</summary>
     internal static IReadOnlyDictionary<string, DaggerfallSiteKind> PlaceNames { get; } = new Dictionary<string, DaggerfallSiteKind>(StringComparer.Ordinal)
@@ -159,8 +159,15 @@ internal sealed record DaggerfallTravelMapArt(DaggerfallArtFile Rain, Daggerfall
     };
 }
 
-/// <summary>A kind of place's model on the travel map: an Engine static mesh and the linear colour each of its material slots is painted.</summary>
-internal sealed record DaggerfallTravelMapPlace(DaggerfallArtFile File, IReadOnlyList<Color> Slots);
+/// <summary>
+/// A kind of place's model on the travel map: an Engine static mesh, the linear default colour each of its material slots is
+/// painted, and the optional semantic role name of each slot (such as <c>window</c>, <c>tile</c>, <c>stone</c> or <c>shadow</c>).
+/// </summary>
+internal sealed record DaggerfallTravelMapPlace(DaggerfallArtFile File, IReadOnlyList<Color> Slots, IReadOnlyList<string>? SlotNames = null)
+{
+    /// <summary>The semantic role name of material slot <paramref name="slot"/>, or empty when none was stated.</summary>
+    internal string SlotName(int slot) => SlotNames is not null && (uint)slot < (uint)SlotNames.Count ? SlotNames[slot] : string.Empty;
+}
 
 /// <summary>
 /// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, drawn at
@@ -700,14 +707,23 @@ internal sealed class DaggerfallArtReplacements
             {
                 Dictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> places = [];
                 foreach (JsonProperty place in mapArt.GetProperty("places").EnumerateObject())
+                {
+                    Color[] slots = [.. place.Value.GetProperty("slots").EnumerateArray().Select(slot =>
+                        Color.FromSrgbHex(int.Parse(slot.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))];
+                    string[]? slotNames = place.Value.TryGetProperty("slotNames", out JsonElement names)
+                        ? [.. names.EnumerateArray().Select(name => name.GetString()!)] : null;
+                    if (slotNames is not null && slotNames.Length != slots.Length)
+                        throw new InvalidOperationException($"Content pack '{packId}' states {slotNames.Length} slot names for travel map place '{place.Name}', not {slots.Length}.");
                     places.Add(DaggerfallTravelMapArt.PlaceNames.TryGetValue(place.Name, out DaggerfallSiteKind kind) ? kind
                         : throw new InvalidOperationException($"Content pack '{packId}' models travel map place '{place.Name}', which is no kind of place."),
-                        new(File(place.Value, $"The travel map's {place.Name}"), [.. place.Value.GetProperty("slots").EnumerateArray().Select(slot =>
-                            Color.FromSrgbHex(int.Parse(slot.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))]));
+                        new(File(place.Value, $"The travel map's {place.Name}"), slots, slotNames));
+                }
                 if (places.Count != DaggerfallTravelMapArt.PlaceNames.Count)
                     throw new InvalidOperationException($"Content pack '{packId}' models {places.Count} kinds of place for the travel map, not all {DaggerfallTravelMapArt.PlaceNames.Count}.");
+                DaggerfallArtFile? shadow = mapArt.TryGetProperty("shadow", out JsonElement shadowFile)
+                    ? File(shadowFile, "The travel map's contact shadow") : null;
                 travelMap = new(File(mapArt.GetProperty("rain"), "The travel map's rain"), File(mapArt.GetProperty("snow"), "The travel map's snow"),
-                    File(mapArt.GetProperty("detail"), "The travel map's detail"), File(mapArt.GetProperty("detailNormal"), "The travel map's detail relief"), places);
+                    File(mapArt.GetProperty("detail"), "The travel map's detail"), File(mapArt.GetProperty("detailNormal"), "The travel map's detail relief"), places, shadow);
             }
             if (section.TryGetProperty("trees", out JsonElement treeArt))
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
