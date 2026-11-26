@@ -311,6 +311,96 @@ public sealed class DaggerfallHouseholdIntroductionsTests
         Assert.False(restored.Introductions.HasDepositWaiverVouch(distantNoble));
     }
 
+    [Fact]
+    public void Negative_personal_disposition_alone_does_not_create_blood_feud_while_attributed_family_grudges_revoke_prior_vouches()
+    {
+        using var fixture = new HouseholdIntroFixture(random: RandomMinimum.Create());
+        DaggerfallSession session = fixture.Session;
+        SetSocialStats(session, etiquette: 60, streetwise: 60, personality: 60);
+
+        DaggerfallSiteRecord originSite = session.Site.ActiveSite!;
+        DaggerfallSiteRecord distantSite = TestPayload.Definitions.Locations.Records
+            .First(r => r.Id != originSite.Id
+                && double.Hypot(r.MapPixelX - originSite.MapPixelX, r.MapPixelY - originSite.MapPixelY) is >= 25.0 and <= 80.0);
+
+        DaggerfallNpcSite originNpcSite = new(originSite.Id.Region, originSite.Name, "1/4/0", session.Sites.ActiveProfile.LogicalId);
+        string localHousehold = DaggerfallHouseholds.BuildingHouseholdId(originSite.Id, 1, 4, 0);
+
+        long merchantId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "r11107/merchant", "Maren Holt", localHousehold, 0, ["talk", "shop"]);
+        long siblingId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "r11107/sibling", "Bram Holt", localHousehold, 0, ["talk"]);
+        long outsiderId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "r11107/outsider", "Joran Pike", null, 0, ["talk"]);
+        long witnessId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "r11107/witness", "Oren Watch", null, 0, ["talk"]);
+
+        DaggerfallNpc merchant = session.State.Npcs.Require(merchantId);
+        DaggerfallNpc outsider = session.State.Npcs.Require(outsiderId);
+
+        // Give the ordinary family-bearing merchant a trusted vouch from an outsider.
+        session.Introductions.AdjustActorDisposition(outsiderId, 25);
+        Assert.True(session.Introductions.TryIssueIntroduction(outsider, merchantId, originSite).Accepted);
+        Assert.True(session.Introductions.HasDepositWaiverVouch(merchant));
+        Assert.Equal(DaggerfallIntroductions.TrustedVouchStandingBonus, session.Introductions.TrustedVouchReactionBonus(merchantId));
+
+        // 1. Apply 4 quest failures (-16 personal disposition) and 2 rude favour attempts (-4 personal -> -20 total).
+        //    Household standing remains 0 -> MUST NOT trigger a blood feud, deny access, or revoke the trusted vouch!
+        for (int i = 0; i < 4; i++)
+            session.Introductions.AdjustActorDisposition(merchantId, DaggerfallIntroductions.QuestFailureDispositionPenalty);
+        for (int i = 0; i < 2; i++)
+            session.Introductions.AdjustActorDisposition(merchantId, DaggerfallIntroductions.FavourRudeNoblePenalty);
+
+        Assert.Equal(-20, session.SocialConsequences.EffectiveDispositionDelta(merchantId));
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(localHousehold, originSite));
+        Assert.False(session.Introductions.IsInBloodFeud(merchant));
+        Assert.True(session.Introductions.AssessAccess(merchant).Allowed);
+        Assert.True(session.Introductions.HasDepositWaiverVouch(merchant));
+        Assert.Equal(DaggerfallIntroductions.TrustedVouchStandingBonus, session.Introductions.TrustedVouchReactionBonus(merchantId));
+
+        // 2. Now commit an attributed witnessed murder against their sibling -> attributed local grudge revokes prior vouch!
+        fixture.Perception.Responder = _ => new PerceptionReadoutResult(
+            new[] { new PerceptionPair(checked((ulong)witnessId), DaggerfallActorIdentity.PlayerEntityId, 2.0, 1.0, PerceptionPairKind.Visible, 1.0) },
+            ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        ActorState siblingActor = session.State.Actors.Get(siblingId);
+        siblingActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        session.SocialConsequences.ReactToDeath(
+            new ActorDiedFact(siblingId, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 50, 50.0, 0, 0),
+            siblingActor,
+            minute: 150L);
+
+        Assert.Equal(DaggerfallSocialConsequences.KinMurderDispositionPenalty, session.SocialConsequences.HouseholdStandingDelta(localHousehold, originSite));
+        Assert.True(session.Introductions.IsInBloodFeud(merchant));
+        Assert.False(session.Introductions.AssessAccess(merchant).Allowed);
+        Assert.False(session.Introductions.HasDepositWaiverVouch(merchant));
+        Assert.Equal(0, session.Introductions.TrustedVouchReactionBonus(merchantId));
+
+        // 3. Same guarantee for a Great House member holding a prior vouch: courier-arrived grudge revokes their prior vouch!
+        const string greatHouse = "fam:house:r17:1";
+        long houseVictimId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "r11107/house-victim", "Lord Cassian", greatHouse, 0, ["talk"]);
+        DaggerfallWorldProfileKey distantProfile = DaggerfallWorldProfileIds.Exterior(distantSite.Id);
+        DaggerfallNpcSite distantNpcSite = new(distantSite.Id.Region, distantSite.Name, string.Empty, distantProfile.LogicalId);
+        DaggerfallNpc distantHouseKin = BuildUntouchedOffSceneNpc(distantSite.Id, distantProfile, distantNpcSite, "r11107/house-kin", "Lady Elara", greatHouse, 0, ["talk", "shop"]);
+        ActorVouchRecord priorVouch = new(outsiderId, 0, ActorVouchKind.Trade, 1, "Joran Pike", originSite.Name);
+        session.State.ActorLedger.RecordVouch(distantHouseKin.DurableId, priorVouch, ActorOrigin.Seeded(distantProfile, "r11107/house-kin"));
+
+        Assert.True(session.Introductions.HasDepositWaiverVouch(distantHouseKin));
+
+        long startMinute = ((WorldRpg.Rulesets.Daggerfall.Travel.IDaggerfallExpeditionSurroundings)session).Calendar.MinuteNumber;
+        ActorState houseVictimActor = session.State.Actors.Get(houseVictimId);
+        houseVictimActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        session.SocialConsequences.ReactToDeath(
+            new ActorDiedFact(houseVictimId, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 50, 50.0, 0, 0),
+            houseVictimActor,
+            minute: startMinute);
+
+        // Still in transit -> prior vouch still holds at distantSite.
+        Assert.False(session.Introductions.IsInBloodFeud(distantHouseKin, distantSite));
+        Assert.True(session.Introductions.HasDepositWaiverVouch(distantHouseKin));
+
+        // Courier arrives -> Great House blood feud revokes prior vouch!
+        session.AdvanceElapsedTime(14L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.True(session.Introductions.IsInBloodFeud(distantHouseKin, distantSite));
+        Assert.False(session.Introductions.AssessAccess(distantHouseKin).Allowed);
+        Assert.False(session.Introductions.HasDepositWaiverVouch(distantHouseKin));
+    }
+
     private static void SetSocialStats(DaggerfallSession session, int etiquette, int streetwise, int personality)
     {
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("etiquette")).BaseValue = etiquette;

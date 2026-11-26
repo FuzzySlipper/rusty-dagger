@@ -230,7 +230,7 @@ internal sealed class DaggerfallIntroductions(
     {
         ArgumentNullException.ThrowIfNull(target);
         string? targetFamilyId = ResolveActorFamilyId(target.DurableId, target);
-        return IsInBloodFeudCore(target.DurableId, targetFamilyId, ResolveActorSite(target, atSite));
+        return IsInBloodFeudCore(targetFamilyId, ResolveActorSite(target, atSite));
     }
 
     /// <summary>Evaluates whether the player currently has social access to approach <paramref name="target"/> for work or court business.</summary>
@@ -248,7 +248,7 @@ internal sealed class DaggerfallIntroductions(
         DaggerfallSiteRecord? targetSite = ResolveActorSite(target);
 
         // An attributed household blood feud refuses audience, introductions, and business regardless of social charm or prior vouches.
-        if (IsInBloodFeudCore(target.DurableId, targetFamilyId, targetSite))
+        if (IsInBloodFeudCore(targetFamilyId, targetSite))
         {
             string feudingName = target.DisplayName ?? target.Role;
             return new(
@@ -397,7 +397,7 @@ internal sealed class DaggerfallIntroductions(
                 return;
 
             DaggerfallSiteRecord? candidateSite = ResolveActorSite(candidate);
-            if (IsInBloodFeudCore(candidate.DurableId, candidateFamilyId, candidateSite))
+            if (IsInBloodFeudCore(candidateFamilyId, candidateSite))
                 return;
 
             DaggerfallSocialProminence candidateProminence = ClassifyProminence(candidate);
@@ -445,7 +445,7 @@ internal sealed class DaggerfallIntroductions(
             int rulerFactionId = ruler.HolderFactionId ?? ruler.OfficeFactionId;
             string? rulerFamilyId = ResolveActorFamilyId(rulerId, officeFamilyId: ruler.FamilyId);
             DaggerfallSiteRecord? rulerSite = ruler.Home?.Site ?? site;
-            if (!IsInBloodFeudCore(rulerId, rulerFamilyId, rulerSite))
+            if (!IsInBloodFeudCore(rulerFamilyId, rulerSite))
             {
                 bool rulerIsKin = DaggerfallWitnessDiscretion.AreFamily(speakerFamilyId, rulerFamilyId);
                 ActorVouchKind kind = !rulerIsKin && IsGuildOrOrderFaction(speakerFactionId) ? ActorVouchKind.Guild : ActorVouchKind.Court;
@@ -495,7 +495,7 @@ internal sealed class DaggerfallIntroductions(
                         if (!DaggerfallWitnessDiscretion.AreFamily(speakerFamilyId, holderFamilyId))
                             continue;
                         DaggerfallSiteRecord? officeSite = findSite?.Invoke(office.SiteId) ?? site;
-                        if (IsInBloodFeudCore(holderId, holderFamilyId, officeSite))
+                        if (IsInBloodFeudCore(holderFamilyId, officeSite))
                             continue;
 
                         DaggerfallSocialProminence officeProminence = ResolveLocalOfficeProminence(office, holderId);
@@ -599,7 +599,7 @@ internal sealed class DaggerfallIntroductions(
                 ? (findSite?.Invoke(localOfficeTarget.SiteId) ?? site)
                 : officeTarget?.Home?.Site ?? site;
 
-        if (IsInBloodFeudCore(targetDurableId, targetFamilyId, targetSite))
+        if (IsInBloodFeudCore(targetFamilyId, targetSite))
         {
             return new(false, false, targetDurableId, targetName, null,
                 $"{targetName}'s household holds a blood feud against you; my word will not open their door.");
@@ -999,7 +999,7 @@ internal sealed class DaggerfallIntroductions(
         out int bestVouchReachBase)
     {
         bestVouchReachBase = -1;
-        if (IsInBloodFeudCore(target.DurableId, targetFamilyId, targetSite))
+        if (IsInBloodFeudCore(targetFamilyId, targetSite))
             return null;
 
         ActorVouchRecord? best = null;
@@ -1041,18 +1041,11 @@ internal sealed class DaggerfallIntroductions(
         return ActorVouchKind.Contact;
     }
 
-    private bool IsInBloodFeudCore(long actorId, string? familyId, DaggerfallSiteRecord? atSite)
+    private bool IsInBloodFeudCore(string? familyId, DaggerfallSiteRecord? atSite)
     {
-        if (string.IsNullOrWhiteSpace(familyId))
+        if (string.IsNullOrWhiteSpace(familyId) || _householdStandingDelta is null)
             return false;
-        if (ReadActorDisposition(actorId, atSite) <= BloodFeudDispositionThreshold)
-            return true;
-        if (_householdStandingDelta is not null
-            && _householdStandingDelta(familyId, atSite) <= BloodFeudDispositionThreshold)
-        {
-            return true;
-        }
-        return false;
+        return _householdStandingDelta(familyId, atSite) <= BloodFeudDispositionThreshold;
     }
 
     private bool TryResolveKnownActorFamilyId(long actorId, out string? familyId)
