@@ -1538,6 +1538,15 @@ class PeoplePackStore:
             target_path = owner_by_id.get(archetype_id)
             if target_path is None:
                 raise NotFoundError(f"Archetype '{archetype_id}' not found.")
+            if "baseAttribute" in body:
+                base_attr_val = body["baseAttribute"]
+                if not _is_int(base_attr_val) or base_attr_val < 1 or base_attr_val > 100:
+                    raise ValidationError(
+                        "Archetype validation failed.",
+                        [ValidationIssue("baseAttribute", "baseAttribute must be an integer in 1..100.")],
+                    )
+            _, existing_resolved, _ = self._load_unified_templates()
+            current_arch = _template_to_archetype(existing_resolved[archetype_id]) if archetype_id in existing_resolved else None
 
             def mutate_unified(doc):
                 if not isinstance(doc, dict) or not isinstance(doc.get("templates"), list):
@@ -1551,9 +1560,30 @@ class PeoplePackStore:
                         if "health" in body:
                             h = body["health"]
                             next_entry["health"] = {"minimum": h.get("min"), "maximum": h.get("max")} if isinstance(h, dict) else h
-                        for key in ("fatigue", "magicka", "armor", "level", "attributes", "skills", "defaultHarm", "defaultInteraction", "walks"):
+                        for key in ("fatigue", "magicka", "armor", "level", "skills", "defaultHarm", "defaultInteraction", "walks"):
                             if key in body:
                                 next_entry[key] = body[key]
+                        if "baseAttribute" in body or "attributes" in body:
+                            existing_attrs = dict(current_arch["attributes"]) if current_arch else dict(entry.get("attributes") or {})
+                            old_base = current_arch["baseAttribute"] if current_arch else 50
+                            all_attr_names = sorted(lookups["attributes"]) if lookups["attributes"] else sorted(existing_attrs.keys() or [
+                                "strength", "intelligence", "willpower", "agility",
+                                "endurance", "personality", "speed", "luck",
+                            ])
+                            if "baseAttribute" in body:
+                                new_base = body["baseAttribute"]
+                                merged_attrs = {
+                                    name: (new_base if existing_attrs.get(name, old_base) == old_base else existing_attrs[name])
+                                    for name in all_attr_names
+                                }
+                                if "attributes" in body:
+                                    if isinstance(body["attributes"], dict):
+                                        merged_attrs.update(body["attributes"])
+                                    else:
+                                        merged_attrs = body["attributes"]
+                                next_entry["attributes"] = merged_attrs
+                            else:
+                                next_entry["attributes"] = body["attributes"]
                         if "loadout" in body:
                             lo = body["loadout"]
                             if isinstance(lo, list):

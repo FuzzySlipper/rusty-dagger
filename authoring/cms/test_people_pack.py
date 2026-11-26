@@ -531,9 +531,17 @@ class PeoplePackTests(TestCase):
                 "factions": [{"id": 506, "name": "Lady Brisienna", "type": 4, "typeName": "Individual", "region": 17, "parent": 0}],
             })
             self._write(base_dir / "world/building-names.json", {"regionNames": [f"R{i}" for i in range(25)]})
-            self._write(base_dir / "core/vocabulary.json", {"attributes": ["strength"], "skills": ["etiquette"]})
+            self._write(base_dir / "core/vocabulary.json", {
+                "attributes": ["strength", "intelligence", "willpower", "agility", "endurance", "personality", "speed", "luck"],
+                "skills": ["etiquette"],
+            })
             self._write(base_dir / "items/items.json", [])
-            self._write(base_dir / "actors/templates/bases.json", {"templates": [{"id": "humanoid", "attributes": {"strength": 50}}]})
+            self._write(base_dir / "actors/templates/bases.json", {
+                "templates": [{
+                    "id": "humanoid",
+                    "attributes": {"strength": 45, "intelligence": 45, "willpower": 45, "agility": 45, "endurance": 45, "personality": 50, "speed": 45, "luck": 45},
+                }],
+            })
             self._write(base_dir / "actors/templates/roles.json", {
                 "templates": [
                     {
@@ -614,6 +622,19 @@ class PeoplePackTests(TestCase):
             self.assertEqual(updated["homeBlock"], "PALAAA00.RMB")
             self.assertEqual(updated["homeSlotId"], "b:0:p02")
             self.assertEqual(updated["usage"]["slotCount"], 1)
+
+            # Updating baseAttribute on a unified role template persists into roles.json and preserves non-base overrides.
+            updated_arch = ws.people_pack.update_archetype("civilian", {"baseAttribute": 60})
+            self.assertEqual(updated_arch["baseAttribute"], 60)
+            self.assertEqual(updated_arch["attributes"]["strength"], 60)
+            self.assertEqual(updated_arch["attributes"]["personality"], 50)
+            persisted_roles = json.loads((base_dir / "actors/templates/roles.json").read_text(encoding="utf-8"))
+            civ_persisted = next(t for t in persisted_roles["templates"] if t["id"] == "civilian")
+            self.assertEqual(civ_persisted["attributes"]["strength"], 60)
+            self.assertEqual(civ_persisted["attributes"]["personality"], 50)
+
+            with self.assertRaises(ValidationError):
+                ws.people_pack.update_archetype("civilian", {"baseAttribute": 0})
 
             # Corrupt cast.json with a mechanic override + bad home -> rejected by validate_all.
             bad_cast = json.loads((base_dir / "actors/specs/cast.json").read_text(encoding="utf-8"))
