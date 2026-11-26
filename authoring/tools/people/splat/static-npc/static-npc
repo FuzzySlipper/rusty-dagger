@@ -405,6 +405,8 @@ def step_bake(n, a):
     env = {'BIREFNET_EDGE': '1', 'BIREFNET_REQUIRED': '1', 'BIREFNET_COMFY': n.comfy, **n.gpu_env}   # no silent colour-key fallback (creature-018)
     if n.key_env:
         env.update(KEY_HOLES=str(cfg.get('key_holes', 60)), DESPILL=str(cfg.get('despill', 2)))
+    if cfg.get('no_rings'):   # no VACE rings: they frame a standing person (creature-005's head-high ring repainted a sitting tiger)
+        env['NO_RINGS'] = '1'
     if cfg.get('key_fill'):   # key colour painted into tears in the figure: fill it dark (orbit_views --key-fill; creature-018)
         env['KEY_FILL'] = str(cfg['key_fill'])
     sh(['authoring/tools/people/splat/bake/bake.sh', n.work, f'{n.rid}-A', 'tools'], env=env)
