@@ -192,7 +192,7 @@ public sealed class QuestIndividualAndOfficeBindingTests
     }
 
     [Fact]
-    public void Relocating_cast_individual_via_place_npc_moves_canonical_actor_suppresses_home_slot_and_survives_save_reload()
+    public void Relocating_cast_individual_via_place_npc_moves_canonical_actor_suppresses_home_slot_survives_save_reload_and_returns_home_when_the_quest_ends()
     {
         JsonArray root = TestPayload.QuestRecords();
         root.Add(JsonNode.Parse("""
@@ -274,6 +274,22 @@ public sealed class QuestIndividualAndOfficeBindingTests
         // Returning to homeSite suppresses his home slot so no duplicate body appears!
         Assert.True(restored.TryTransitionTo(homeSite.ProfileKey));
         Assert.False(restored.State.Actors.TryGet(kavarId, out _));
+
+        // The placement holds him only while the quest lasts: once it ends he is home again, not at the destination.
+        Assert.True(restored.TryTransitionTo(destSite.ProfileKey));
+        Assert.True(restored.State.Actors.TryGet(kavarId, out _));
+        restored.State.Quests.Complete("kavar:1", "done");
+        Assert.False(restored.State.Actors.TryGet(kavarId, out _));
+        Assert.Null(restored.State.ActorLedger.TryGet(kavarId, out ActorLedgerEntry? released) ? released!.Location : null);
+        Assert.True(restored.TryTransitionTo(homeSite.ProfileKey));
+        Assert.Single(restored.State.Actors.All, actor => actor.DurableId == kavarId);
+
+        RulesetSavePayload homeSave = restored.CaptureSave();
+        Assert.DoesNotContain(DaggerfallSavePayload.Read(homeSave).ActorLedger, entry => entry.DurableId == kavarId && entry.Location is not null);
+        using DaggerfallSession reloaded = DaggerfallSession.Restore(engine.Context, composition, homeSave);
+        Assert.Single(reloaded.State.Actors.All, actor => actor.DurableId == kavarId);
+        Assert.True(reloaded.TryTransitionTo(destSite.ProfileKey));
+        Assert.False(reloaded.State.Actors.TryGet(kavarId, out _));
     }
 
     [Fact]

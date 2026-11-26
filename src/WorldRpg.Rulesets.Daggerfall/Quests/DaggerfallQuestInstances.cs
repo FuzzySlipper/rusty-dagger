@@ -707,6 +707,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> _textContext = _ => DaggerfallQuestMessageContext.Empty;
     private Action<string, string>? _appendNote;
     private Action<string>? _removeCarriedQuestItems;
+    private Action<IReadOnlyList<long>>? _returnPlacedPeople;
     private DaggerfallQuestPlaceAllocator? _placeAllocator;
     private DaggerfallQuestPersonAllocator? _personAllocator;
     private DaggerfallQuestResourceAllocator? _resourceAllocator;
@@ -836,6 +837,13 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     /// <summary>The session supplies canonical item removal; quest state owns only terminal links.</summary>
     internal void BindItemCleanup(Action<string> removeCarriedQuestItems) =>
         _removeCarriedQuestItems = removeCarriedQuestItems ?? throw new ArgumentNullException(nameof(removeCarriedQuestItems));
+
+    /// <summary>
+    /// The session sends home the people a quest placed elsewhere once it ends: a quest placement holds a person only
+    /// while the quest lasts.
+    /// </summary>
+    internal void BindPlacementRelease(Action<IReadOnlyList<long>> returnPlacedPeople) =>
+        _returnPlacedPeople = returnPlacedPeople ?? throw new ArgumentNullException(nameof(returnPlacedPeople));
 
     /// <summary>Uses the session's one route calculator for travel-derived quest deadlines.</summary>
     internal void BindTravelMinutes(Func<DaggerfallSiteId, long> travelMinutes)
@@ -1198,8 +1206,13 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     private void ClearWorldLinks(DaggerfallQuestRuntimeInstance instance)
     {
         // Selected resource identities and text remain for journal/post-quest conversation.
-        // Visible actors continue under their canonical roster/registry lifetime.
+        // Visible actors continue under their canonical roster/registry lifetime, save the people this quest placed
+        // elsewhere, who go home unless another quest still under way places them.
+        long[] placed = [.. PlacedPeople(instance)];
         instance.Placements = [];
+        HashSet<long> stillPlaced = [.. _instances.Values.Where(other => other.Lifecycle == DaggerfallQuestLifecycle.Active).SelectMany(PlacedPeople)];
+        long[] released = [.. placed.Distinct().Where(id => !stillPlaced.Contains(id))];
+        if (released.Length > 0) _returnPlacedPeople?.Invoke(released);
         Messages.RemoveDialogue(instance.InstanceId);
         long[] droppedEscorts = instance.Resources
             .Where(resource => resource.EscortFaceMedia is not null)
@@ -1210,6 +1223,12 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         foreach (long actorId in droppedEscorts) _escortFaceChanged?.Invoke(actorId, null, 0);
         _removeCarriedQuestItems?.Invoke(instance.InstanceId);
     }
+
+    /// <summary>The people <paramref name="instance"/>'s applied placements set somewhere.</summary>
+    private static IEnumerable<long> PlacedPeople(DaggerfallQuestRuntimeInstance instance) => instance.Placements
+        .Where(placement => placement.Applied is not null)
+        .SelectMany(placement => instance.Resources.Where(resource => resource.Symbol == placement.ResourceSymbol))
+        .SelectMany(resource => resource.Binding.ActorIds);
 
     private DaggerfallQuestRuntimeInstance Active(string instanceId)
     {

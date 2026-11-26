@@ -1233,6 +1233,8 @@ internal sealed partial class DaggerfallSession
                     return _roster.RelocateCastIndividual(castId, profile, floor, appearance, displayName,
                         DaggerfallCastHomes.ResolveProfileKey(home), _exterior.ProfileToLocal(default).ToVector());
                 }, OfficeHolders.IsActorDead);
+            // A quest placement holds a person only while the quest lasts: once it ends the person goes home.
+            State.Quests.BindPlacementRelease(people => { foreach (long id in people) _roster.ReturnPlacedPersonHome(id); });
             QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, () => Expedition.Open, _roster.Definitions, _placement, _vitality,
                 tuning.QuestSpawning, () => _sites.ReadQuestLocation(), (definition, pose) => _roster.Spawn(definition, pose),
                 _roster.RemoveQuestActor, (id, allies) => _enemyBehavior.MakeHostile(id, includePlayerAllies: allies),

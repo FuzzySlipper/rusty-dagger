@@ -752,6 +752,23 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
+    /// Sends home a cast individual or a seeded person a quest placed elsewhere, now that no quest places it: its
+    /// relocation and placed pose are dropped, so its home admits it again on the next visit, and a body standing at
+    /// the placement leaves. One that is dead, with the party, on a band, off stage or removed stays as it is.
+    /// </summary>
+    internal void ReturnPlacedPersonHome(long id)
+    {
+        if (!_actorLedger.TryGet(id, out ActorLedgerEntry? entry) || entry is null
+            || entry.Origin.Kind is not (ActorOriginKind.CastIndividual or ActorOriginKind.SeededSlot)
+            || entry.Location?.Kind != ActorLocationKind.AtSite)
+            return;
+        if (_actors.TryGet(id, out _)) UnloadActor(id);
+        if (_npcs.TryGet(id, out _)) _npcs.Unplace(id);
+        ActorLedgerEntry current = _actorLedger.TryGet(id, out ActorLedgerEntry? unplaced) && unplaced is not null ? unplaced : entry;
+        _actorLedger.Upsert(current with { Location = null, Pose = null });
+    }
+
+    /// <summary>
     /// Materializes a deterministic <see cref="ActorOriginKind.SeededSlot"/> exterior population civilian without adding
     /// it to <c>_dynamicActors</c>, hydrating any sparse <see cref="DaggerfallActorLedger"/> delta.
     /// <paramref name="frameOffset"/> is the profile-to-local translation, independent of <paramref name="localPose"/>,
