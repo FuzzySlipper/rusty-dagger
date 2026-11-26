@@ -52,6 +52,10 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     /// <summary>Each kind and climate's place model, made the first time one is drawn.</summary>
     private readonly Dictionary<(DaggerfallSiteKind Kind, DaggerfallOverlandPlaceClimate Climate), Appearance> _places = [];
     private readonly Dictionary<(DaggerfallOverlandPlaceClimate Climate, string SlotName, Color BaseColor), Material> _paints = [];
+    /// <summary>Each miniature forest clump silhouette, shared across every forested cell of its kind (#11113).</summary>
+    private readonly Dictionary<DaggerfallTravelMapForestKind, Appearance> _forests = [];
+    private readonly Dictionary<(DaggerfallTravelMapForestKind Kind, string SlotName, Color BaseColor), Material> _forestPaints = [];
+    private readonly Dictionary<(int X, int Z), DaggerfallOverlandForestClump?> _forestCells = [];
     private RenderResource? _shadowTexture;
     private DaggerfallOverlandFall? _fall;
     /// <summary>The drops' textures and atlases, released after the drops, atlases first.</summary>
@@ -298,6 +302,8 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         _fall?.Dispose();
         foreach (Appearance place in _places.Values) place.Dispose();
         foreach (Material paint in _paints.Values) paint.Dispose();
+        foreach (Appearance forest in _forests.Values) forest.Dispose();
+        foreach (Material paint in _forestPaints.Values) paint.Dispose();
         for (int index = _owned.Count - 1; index >= 0; index--) _owned[index].Dispose();
         foreach ((SpriteAtlas atlas, Appearance look, RenderResource texture) in _billboards.Values.OfType<(SpriteAtlas, Appearance, RenderResource)>())
         {
@@ -410,6 +416,10 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             if (known && (close || Named.Contains(place.Kind)) && place.MapPixel != expedition.Party)
                 Label(place.Name, DaggerfallSiteKinds.Label(place.Kind), x, z, (float)(_tuning.House * 2.6));
         }
+
+        // Instanced miniature forest clumps on wooded cells around the view target, respecting settlement clearances and
+        // the map's part budget so places always take priority (#11113).
+        ComposeForests(house);
 
         // The party's sight, its standard, the way it goes and where it heads.
         for (int index = 0; index < SightRingDots; index++)
@@ -533,6 +543,136 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             _engine.Graphics.UpdateMaterial(new(material,
                 DaggerfallOverlandPlacePalette.Resolve(climate, slotName, colour, _winter, _night, shadow)));
         }
+        foreach (((DaggerfallTravelMapForestKind kind, string slotName, Color colour), Material material) in _forestPaints)
+        {
+            if (!DaggerfallOverlandForests.IsDynamic(kind, slotName)) continue;
+            RenderResourceReference shadow = slotName == "shadow" ? ShadowTexture() : default;
+            _engine.Graphics.UpdateMaterial(new(material,
+                DaggerfallOverlandForests.ResolveMaterial(kind, slotName, colour, _winter, _night, shadow)));
+        }
+    }
+
+    private Appearance? Forest(DaggerfallTravelMapForestKind kind)
+    {
+        if (_forests.TryGetValue(kind, out Appearance? model)) return model;
+        if (_art?.Forests?.GetValueOrDefault(kind) is not { } clump) return null;
+        model = _engine.Graphics.CreateStaticMesh(_engine.Content, clump.File.Path, clump.File.Sha256, new Color(1, 1, 1, 1), deferred: true);
+        _forests.Add(kind, model);
+        _engine.Graphics.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(model,
+            clump.Slots.Select((colour, slot) => new MeshMaterialBinding((uint)slot, ForestPaint(kind, clump.SlotName(slot), colour))).ToArray()));
+        return model;
+    }
+
+    private Material ForestPaint(DaggerfallTravelMapForestKind kind, string slotName, Color colour)
+    {
+        (DaggerfallTravelMapForestKind, string, Color) key = (kind, slotName, colour);
+        if (!_forestPaints.TryGetValue(key, out Material? material))
+        {
+            RenderResourceReference shadow = slotName == "shadow" ? ShadowTexture() : default;
+            _forestPaints.Add(key, material = _engine.Graphics.CreateMaterial(
+                DaggerfallOverlandForests.ResolveMaterial(kind, slotName, colour, _winter, _night, shadow)));
+        }
+        return material;
+    }
+
+    private void ComposeForests(float house)
+    {
+        if (_art?.Forests is null) return;
+        double forestReach = DaggerfallOverlandForests.ReachFor(View.Distance);
+        if (forestReach <= 0) return;
+        int remainingBudget = Math.Min(DaggerfallOverlandForests.MostClumps, MostPlaceParts - _facts.Count);
+        if (remainingBudget <= 0) return;
+
+        EnsureBlocks();
+        double cell = DaggerfallOverlandForests.CellMetres;
+        int cx = (int)Math.Floor(View.TargetX / cell), cz = (int)Math.Floor(View.TargetZ / cell);
+        int span = (int)Math.Ceiling(forestReach / cell);
+        double reachSq = forestReach * forestReach;
+        int placed = 0;
+
+        // Walk concentric square rings outward from the camera target so foreground groves always win the instance budget.
+        for (int ring = 0; ring <= span && placed < remainingBudget; ring++)
+        {
+            if (ring == 0)
+            {
+                TryEmit(cx, cz);
+                continue;
+            }
+            for (int dx = -ring; dx <= ring && placed < remainingBudget; dx++)
+            {
+                TryEmit(cx + dx, cz - ring);
+                if (placed < remainingBudget) TryEmit(cx + dx, cz + ring);
+            }
+            for (int dz = -ring + 1; dz <= ring - 1 && placed < remainingBudget; dz++)
+            {
+                TryEmit(cx - ring, cz + dz);
+                if (placed < remainingBudget) TryEmit(cx + ring, cz + dz);
+            }
+        }
+
+        void TryEmit(int gx, int gz)
+        {
+            if (SampleForestCell(gx, gz) is not { } clump) return;
+            double dx = clump.X - View.TargetX, dz = clump.Z - View.TargetZ;
+            double distSq = (dx * dx) + (dz * dz);
+            if (distSq >= reachSq) return;
+            float edge = DaggerfallOverlandForests.EdgeScale(Math.Sqrt(distSq), forestReach);
+            if (edge <= 0f || Forest(clump.Kind) is not { } model) return;
+            float scale = house * .92f * clump.Scale * edge;
+            Vector3 at = new((float)clump.X, (float)clump.Height - (scale * .03f), (float)clump.Z);
+            _facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.TravelMap(DaggerfallOverlandForests.PartId(gx, gz)), false, 0,
+                new Transform(Backdrop(at), Quaternion.CreateFromAxisAngle(Vector3.UnitY, clump.Yaw), new Vector3(scale * DaggerfallOverlandTerrain.Scale)),
+                model, true, RenderLayer.Backdrop));
+            placed++;
+        }
+    }
+
+    private DaggerfallOverlandForestClump? SampleForestCell(int gx, int gz)
+    {
+        if (_forestCells.TryGetValue((gx, gz), out DaggerfallOverlandForestClump? cached)) return cached;
+        if (_forestCells.Count > 64_000) _forestCells.Clear();
+        (double x, double z, uint hash, float scale, float yaw) = DaggerfallOverlandForests.Candidate(gx, gz);
+        DaggerfallOverlandForestClump? result = null;
+        if (!NearAnyPlace(x, z) && _terrain.TrySampleForest(x, z, out double height, out int climate, out float density))
+        {
+            // Scale lightly with local forest density so woodland edges taper into smaller edge trees.
+            float sized = scale * (.82f + (.24f * Math.Clamp(density, 0f, 1f)));
+            result = new(x, z, height, DaggerfallOverlandForests.KindFor(climate, hash), sized, yaw);
+        }
+        _forestCells[(gx, gz)] = result;
+        return result;
+    }
+
+    private bool NearAnyPlace(double x, double z)
+    {
+        const int Block = 16;
+        DaggerfallTravelMapPixel px = DaggerfallOverlandView.Pixel(x, z);
+        (int bx, int by) = (px.X / Block, px.Y / Block);
+        for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            if (!_blocks.TryGetValue((bx + dx, by + dy), out List<DaggerfallTravelDestination>? places)) continue;
+            foreach (DaggerfallTravelDestination place in places)
+            {
+                (double siteX, double siteZ) = DaggerfallOverlandView.Metres(place.MapPixel.X + .5, place.MapPixel.Y + .5);
+                double clear = DaggerfallOverlandForests.PlaceClearanceMetres(place.Kind);
+                double ox = x - siteX, oz = z - siteZ;
+                if ((ox * ox) + (oz * oz) < clear * clear) return true;
+            }
+        }
+        return false;
+    }
+
+    private void EnsureBlocks()
+    {
+        const int Block = 16;
+        if (_blocks.Count > 0) return;
+        foreach (DaggerfallTravelDestination place in _destinations)
+        {
+            (int X, int Y) block = (place.MapPixel.X / Block, place.MapPixel.Y / Block);
+            if (!_blocks.TryGetValue(block, out List<DaggerfallTravelDestination>? held)) _blocks[block] = held = [];
+            held.Add(place);
+        }
     }
 
     private RenderResourceReference ShadowTexture()
@@ -569,13 +709,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     private IEnumerable<DaggerfallTravelDestination> PlacesAbout(double x, double z, double reach)
     {
         const int Block = 16;
-        if (_blocks.Count == 0)
-            foreach (DaggerfallTravelDestination place in _destinations)
-            {
-                (int X, int Y) block = (place.MapPixel.X / Block, place.MapPixel.Y / Block);
-                if (!_blocks.TryGetValue(block, out List<DaggerfallTravelDestination>? held)) _blocks[block] = held = [];
-                held.Add(place);
-            }
+        EnsureBlocks();
         DaggerfallTravelMapPixel middle = DaggerfallOverlandView.Pixel(x, z);
         int span = (int)Math.Ceiling(reach / Cell / Block) + 1;
         (int X, int Y) centre = (middle.X / Block, middle.Y / Block);

@@ -304,6 +304,76 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     internal double MapGround(double x, double z, double relief, double cellMetres) => MapHeight(MapRawHeight(x, z, cellMetres, []), relief);
 
     /// <summary>
+    /// Samples whether map point (<paramref name="x"/>, <paramref name="z"/>) is eligible for a travel-map miniature forest
+    /// clump: excludes sea, beaches, river channels/banks, steep rock crags, high snow peaks and open unwooded plains,
+    /// matching <see cref="SampleMap"/>'s painted wood mask and climate forest share (#11113).
+    /// </summary>
+    internal bool TrySampleMapForest(double x, double z, double relief, double cellMetres, DaggerfallMapPalette palette,
+        out double drawnHeight, out int climate, out float density)
+    {
+        drawnHeight = OceanMetres;
+        climate = OceanClimate;
+        density = 0f;
+        if (x < DaggerfallWorldGrid.HorizontalSize || z < 0
+            || x >= (_terrain.Width - 1) * DaggerfallWorldGrid.HorizontalSize
+            || z >= _terrain.Height * DaggerfallWorldGrid.HorizontalSize)
+            return false;
+        (int mapX, int mapY) = MapPixel(x, z);
+        climate = Climate(mapX, mapY);
+        if (climate == OceanClimate) return false;
+
+        // Cheap woods-mask pre-check first so unwooded plains skip height & river queries.
+        (int broadX, int broadZ) = ((int)Math.Round(x / Spacing / MapNoiseScale), (int)Math.Round(z / Spacing / MapNoiseScale));
+        float woods = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX / 2 + 3_301, 64_000 - (broadZ / 2) + 5_107);
+        DaggerfallMapGround ground = palette.Climates.TryGetValue(climate, out DaggerfallMapGround found) ? found : palette.Climates[231];
+        float woodMask;
+        if (ground.Forest > 0f)
+        {
+            woodMask = Math.Clamp((woods - (1f - ground.Forest)) * 6f, 0f, 1f);
+            if (woodMask < .28f) return false;
+        }
+        else if (climate is 224 or 225)
+        {
+            // Arid deserts stay open dunes except rare sheltered oasis scrub/palm pockets.
+            if (woods < .84f) return false;
+            woodMask = Math.Clamp((woods - .84f) / .16f, 0f, 1f) * .45f;
+        }
+        else
+        {
+            return false;
+        }
+
+        // Exclude river channels and immediate riverbanks.
+        if (_terrain.Rivers?.NearOverland(x - DaggerfallWorldGrid.HorizontalSize, z, cellMetres) is { } river
+            && river.Distance <= river.HalfWidth + (DaggerfallTerrainRivers.BankWidth(river.HalfWidth) * .85))
+            return false;
+
+        Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
+        double raw = MapRawHeight(x, z, cellMetres, windows);
+        if (raw <= OceanMetres + BeachMetres + 1.5) return false;
+        if (climate is 224 or 225 && raw > OceanMetres + 55) return false;
+
+        drawnHeight = MapHeight(raw, relief);
+        double hEast = MapHeight(MapRawHeight(x + cellMetres, z, cellMetres, windows), relief);
+        double hWest = MapHeight(MapRawHeight(x - cellMetres, z, cellMetres, windows), relief);
+        double hSouth = MapHeight(MapRawHeight(x, z + cellMetres, cellMetres, windows), relief);
+        double hNorth = MapHeight(MapRawHeight(x, z - cellMetres, cellMetres, windows), relief);
+        double sx = (hEast - hWest) / (2 * cellMetres), sz = (hSouth - hNorth) / (2 * cellMetres);
+        float slope = (float)Math.Sqrt((sx * sx) + (sz * sz));
+        if (slope > .55f) return false;
+
+        float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX, 64_000 - broadZ);
+        System.Numerics.Vector4 weights = DaggerfallGroundBlend.Weights(_groundTuning, noise, slope, (float)raw, noiseStone: false);
+        float total = MathF.Max(weights.X + weights.Y + weights.Z + weights.W, 1e-4f);
+        float rockShare = weights.Z / total;
+        float snowShare = climate == 228 ? 0f : weights.W / total;
+        if (rockShare > .36f || snowShare > .42f) return false;
+
+        density = woodMask * (1f - rockShare);
+        return density >= .20f;
+    }
+
+    /// <summary>
     /// Travel-map height before relief scaling: the same ground and location flattening as far ground, except rivers nestle
     /// gently into the map's valley floor (at most ~5 m below the surrounding uncarved surface, easing to sea level at mouths)
     /// rather than plunging into a steep cut beside coarse terrain or flattened towns.

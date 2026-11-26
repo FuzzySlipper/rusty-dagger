@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+import forests as forest_models
 import places as place_models
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,6 +37,7 @@ DETAIL = 1024
 # The place kinds places.py models, by the names the travelMap section gives them.
 KINDS = ['city', 'town', 'village', 'farm', 'wealthy-home', 'poor-home', 'tavern', 'temple', 'cult', 'coven',
          'labyrinth', 'keep', 'ruin', 'graveyard', 'ship']
+FOREST_KINDS = ['temperate', 'pine', 'palm', 'deadwood']
 
 
 def band(rng, size, least, most, slope):
@@ -135,15 +137,18 @@ def main():
     for old in places.glob('*.glb'):
         old.unlink()
     slots, slot_names = place_models.write(places)
+    forests = MEDIA / 'forests'
+    forest_slots, forest_slot_names, forest_bytes = forest_models.write(forests)
     payload_path = PACK / 'payload.json'
     payload = json.loads(payload_path.read_text())
     payload['artReplacements']['travelMap'] = {
         'rain': entry(MEDIA / 'rain.png'), 'snow': entry(MEDIA / 'snow.png'),
         'detail': entry(MEDIA / 'detail.png'), 'detailNormal': entry(MEDIA / 'detail-normal.png'),
         'shadow': entry(MEDIA / 'shadow.png'),
-        'places': {kind: {**entry(places / f'{kind}.rstatmsh'), 'slots': slots[kind], 'slotNames': slot_names[kind]} for kind in KINDS}}
+        'places': {kind: {**entry(places / f'{kind}.rstatmsh'), 'slots': slots[kind], 'slotNames': slot_names[kind]} for kind in KINDS},
+        'forests': {kind: {**entry(forests / f'{kind}.rstatmsh'), 'slots': forest_slots[kind], 'slotNames': forest_slot_names[kind]} for kind in FOREST_KINDS}}
     payload_path.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + '\n')
-    print('wrote the travel map art and stated artReplacements.travelMap')
+    print(f'wrote the travel map art and stated artReplacements.travelMap (forests: {forest_bytes} bytes)')
 
 
 if __name__ == '__main__':

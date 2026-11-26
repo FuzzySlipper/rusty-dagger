@@ -224,6 +224,10 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
     /// <summary>The land's height at a map point, in map metres, as its finest cells draw it: what stands on the map stands on it.</summary>
     internal double Height(double x, double z) => _ground.MapGround(x, z, _relief, FineCellMetres);
 
+    /// <summary>Whether a map point sits on wooded land suitable for an instanced miniature forest clump (#11113).</summary>
+    internal bool TrySampleForest(double x, double z, out double drawnHeight, out int climate, out float density) =>
+        _ground.TrySampleMapForest(x, z, _relief, FineCellMetres, _palette, out drawnHeight, out climate, out density);
+
     /// <summary>What the land holds and waits for, for the map's cost.</summary>
     internal HeightfieldReadout? Read() => _field is null ? null : _engine.Heightfield.Read(_field);
 

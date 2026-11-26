@@ -145659,6 +145659,80 @@
       "sail"
      ]
     }
+   },
+   "forests": {
+    "temperate": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/forests/temperate.rstatmsh",
+     "byteLength": 7288,
+     "sha256": "9c2a448db31b26279c53ef3aaad19bc866761c9d451fdb63d529900690e5cd8a",
+     "slots": [
+      "#141820",
+      "#5c4028",
+      "#396228",
+      "#4c7830",
+      "#27482c",
+      "#335a36"
+     ],
+     "slotNames": [
+      "shadow",
+      "trunk",
+      "canopy",
+      "canopy-alt",
+      "pine",
+      "pine-snow"
+     ]
+    },
+    "pine": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/forests/pine.rstatmsh",
+     "byteLength": 6471,
+     "sha256": "0ad494d0d3bae94eff002eaf4f7247406acdfb25cbabec57ab4c3a3640edac16",
+     "slots": [
+      "#141820",
+      "#5c4028",
+      "#27482c",
+      "#335a36"
+     ],
+     "slotNames": [
+      "shadow",
+      "trunk",
+      "pine",
+      "pine-snow"
+     ]
+    },
+    "palm": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/forests/palm.rstatmsh",
+     "byteLength": 5917,
+     "sha256": "cb168e8dbc9a8a2b0854c3fc67fb10f4092062d068d1ab69f9a0d5764f60859f",
+     "slots": [
+      "#141820",
+      "#5c4028",
+      "#567c32",
+      "#7a7e44"
+     ],
+     "slotNames": [
+      "shadow",
+      "trunk",
+      "frond",
+      "scrub"
+     ]
+    },
+    "deadwood": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/travel-map/forests/deadwood.rstatmsh",
+     "byteLength": 5723,
+     "sha256": "86ca8938383b3113895909e3c3ff29cc6deda2bb9c5c0dc65a41265c2d08f655",
+     "slots": [
+      "#141820",
+      "#3c342e",
+      "#5c4028",
+      "#3a4a30"
+     ],
+     "slotNames": [
+      "shadow",
+      "bark",
+      "trunk",
+      "moss-canopy"
+     ]
+    }
    }
   }
  }

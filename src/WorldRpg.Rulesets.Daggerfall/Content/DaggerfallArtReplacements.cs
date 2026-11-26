@@ -140,13 +140,17 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 /// </summary>
 internal sealed record DaggerfallSeaArt(DaggerfallArtFile Shader, DaggerfallArtFile Ripples, DaggerfallArtFile Foam);
 
+/// <summary>The miniature forest clump silhouette kinds the travel map instances across wooded climates (#11113).</summary>
+internal enum DaggerfallTravelMapForestKind { Temperate, Pine, Palm, Deadwood }
+
 /// <summary>
 /// The travel map's art (#10950): the drops that fall on it in rain and snow (atlases of four frames from seen to faint),
 /// the detail its land takes close in (a mottle read as data and its relief as a normal map), a soft radial contact-shadow
-/// mask, and a small model for each kind of place, in house widths, standing on its origin.
+/// mask, a small model for each kind of place, and miniature forest clump models by climate, all in house widths.
 /// </summary>
 internal sealed record DaggerfallTravelMapArt(DaggerfallArtFile Rain, DaggerfallArtFile Snow, DaggerfallArtFile Detail, DaggerfallArtFile DetailNormal,
-    IReadOnlyDictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> Places, DaggerfallArtFile? Shadow = null)
+    IReadOnlyDictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> Places, DaggerfallArtFile? Shadow = null,
+    IReadOnlyDictionary<DaggerfallTravelMapForestKind, DaggerfallTravelMapPlace>? Forests = null)
 {
     /// <summary>The kind of place each model in the art pack's <c>travelMap.places</c> stands for, by the name it is listed under.</summary>
     internal static IReadOnlyDictionary<string, DaggerfallSiteKind> PlaceNames { get; } = new Dictionary<string, DaggerfallSiteKind>(StringComparer.Ordinal)
@@ -156,6 +160,13 @@ internal sealed record DaggerfallTravelMapArt(DaggerfallArtFile Rain, Daggerfall
         ["tavern"] = DaggerfallSiteKind.Tavern, ["temple"] = DaggerfallSiteKind.ReligionTemple, ["cult"] = DaggerfallSiteKind.ReligionCult,
         ["coven"] = DaggerfallSiteKind.Coven, ["labyrinth"] = DaggerfallSiteKind.DungeonLabyrinth, ["keep"] = DaggerfallSiteKind.DungeonKeep,
         ["ruin"] = DaggerfallSiteKind.DungeonRuin, ["graveyard"] = DaggerfallSiteKind.Graveyard, ["ship"] = DaggerfallSiteKind.HomeYourShips,
+    };
+
+    /// <summary>The forest clump silhouette each model in <c>travelMap.forests</c> stands for, by the name it is listed under.</summary>
+    internal static IReadOnlyDictionary<string, DaggerfallTravelMapForestKind> ForestNames { get; } = new Dictionary<string, DaggerfallTravelMapForestKind>(StringComparer.Ordinal)
+    {
+        ["temperate"] = DaggerfallTravelMapForestKind.Temperate, ["pine"] = DaggerfallTravelMapForestKind.Pine,
+        ["palm"] = DaggerfallTravelMapForestKind.Palm, ["deadwood"] = DaggerfallTravelMapForestKind.Deadwood,
     };
 }
 
@@ -722,8 +733,27 @@ internal sealed class DaggerfallArtReplacements
                     throw new InvalidOperationException($"Content pack '{packId}' models {places.Count} kinds of place for the travel map, not all {DaggerfallTravelMapArt.PlaceNames.Count}.");
                 DaggerfallArtFile? shadow = mapArt.TryGetProperty("shadow", out JsonElement shadowFile)
                     ? File(shadowFile, "The travel map's contact shadow") : null;
+                Dictionary<DaggerfallTravelMapForestKind, DaggerfallTravelMapPlace>? forests = null;
+                if (mapArt.TryGetProperty("forests", out JsonElement forestArt))
+                {
+                    forests = [];
+                    foreach (JsonProperty clump in forestArt.EnumerateObject())
+                    {
+                        Color[] slots = [.. clump.Value.GetProperty("slots").EnumerateArray().Select(slot =>
+                            Color.FromSrgbHex(int.Parse(slot.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))];
+                        string[]? slotNames = clump.Value.TryGetProperty("slotNames", out JsonElement names)
+                            ? [.. names.EnumerateArray().Select(name => name.GetString()!)] : null;
+                        if (slotNames is not null && slotNames.Length != slots.Length)
+                            throw new InvalidOperationException($"Content pack '{packId}' states {slotNames.Length} slot names for travel map forest '{clump.Name}', not {slots.Length}.");
+                        forests.Add(DaggerfallTravelMapArt.ForestNames.TryGetValue(clump.Name, out DaggerfallTravelMapForestKind kind) ? kind
+                            : throw new InvalidOperationException($"Content pack '{packId}' models travel map forest '{clump.Name}', which is no forest kind."),
+                            new(File(clump.Value, $"The travel map's {clump.Name} forest"), slots, slotNames));
+                    }
+                    if (forests.Count != DaggerfallTravelMapArt.ForestNames.Count)
+                        throw new InvalidOperationException($"Content pack '{packId}' models {forests.Count} forest kinds for the travel map, not all {DaggerfallTravelMapArt.ForestNames.Count}.");
+                }
                 travelMap = new(File(mapArt.GetProperty("rain"), "The travel map's rain"), File(mapArt.GetProperty("snow"), "The travel map's snow"),
-                    File(mapArt.GetProperty("detail"), "The travel map's detail"), File(mapArt.GetProperty("detailNormal"), "The travel map's detail relief"), places, shadow);
+                    File(mapArt.GetProperty("detail"), "The travel map's detail"), File(mapArt.GetProperty("detailNormal"), "The travel map's detail relief"), places, shadow, forests);
             }
             if (section.TryGetProperty("trees", out JsonElement treeArt))
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
