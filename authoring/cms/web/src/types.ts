@@ -290,6 +290,21 @@ export interface CharacterPeoplePackUsage {
   slotCount: number;
 }
 
+export interface CharacterActorRecords {
+  spawners: Array<{
+    id: string;
+    family: string;
+    displayName: string;
+    template: string | null;
+    published: boolean;
+  }>;
+  templates: Array<{
+    id: string;
+    branch: string;
+    extends: string | null;
+  }>;
+}
+
 export interface CharacterDetail extends CharacterSummary {
   pipelines: PipelineDetail[];
   automaticPipelines: string[];
@@ -309,6 +324,245 @@ export interface CharacterDetail extends CharacterSummary {
     conflict: boolean;
   };
   peoplePack?: CharacterPeoplePackUsage;
+  actorRecords?: CharacterActorRecords;
+}
+
+export interface ActorArtLink {
+  id: string;
+  category: AssetCategory;
+  name: string;
+  kind: string;
+  classic: string | null;
+  conceptUrl: string | null;
+  hasApprovedConcept: boolean;
+  hasFinalAsset: boolean;
+  role?: string;
+  mobileId?: number;
+  gender?: string;
+  visualKey?: string;
+}
+
+export interface ActorFieldProvenance {
+  field: string;
+  value: unknown;
+  definedBy: string;
+  status: 'local' | 'inherited' | 'overridden' | 'cleared' | 'career-default';
+  careerRef?: string | null;
+  previousValue?: unknown;
+  previousDefinedBy?: string | null;
+}
+
+export interface ActorStatProvenance {
+  stat: string;
+  value: number | null;
+  definedBy: string;
+  status: 'local' | 'inherited' | 'overridden' | 'cleared' | 'career-default';
+  careerRef?: string | null;
+  previousValue?: number | null;
+  previousDefinedBy?: string | null;
+}
+
+export interface ActorBoardSeatRef {
+  seatId: string;
+  seatName: string;
+  kind: string | null;
+  title: string | null;
+  officeFactionId: number | null;
+  officeFactionName: string | null;
+  home: string | null;
+  canonicalHolder: string | null;
+  spawnerId?: string;
+}
+
+export interface ActorTemplateSummary {
+  id: string;
+  branch: string;
+  extends: string | null;
+  chain: string[];
+  depth: number;
+  directChildrenCount: number;
+  directSpawnerCount: number;
+  descendantSpawnerCount: number;
+  scaling: string | null;
+  careerRef: string | null;
+  tactic: string | null;
+  spellPolicy: string | null;
+  level: number | null;
+  health: { minimum: number; maximum: number } | null;
+  castsMagic: boolean;
+}
+
+export interface ActorSpecSummary {
+  id: string;
+  family: string;
+  template: string | null;
+  displayName: string;
+  role: string | null;
+  published: boolean;
+  harm: string | null;
+  interaction: string | null;
+  race: string | null;
+  team: string | null;
+  factionId: number | null;
+  mobileId: number | null;
+  primaryArt: ActorArtLink | null;
+  artCount: number;
+  encounterTableCount: number;
+  blockSlotCount: number;
+  boardSeatCount: number;
+  editorHref: string | null;
+}
+
+export interface ActorsOverview {
+  available: boolean;
+  counts: {
+    templates: number;
+    specs: number;
+    byFamily: Record<string, number>;
+    byBranch: Record<string, number>;
+  };
+  enums: {
+    branches: string[];
+    families: string[];
+    genders: string[];
+    regions: Array<{ index: number; name: string }>;
+    races: string[];
+  };
+  templates: ActorTemplateSummary[];
+  specs: ActorSpecSummary[];
+}
+
+export interface ActorTemplateDetail {
+  id: string;
+  branch: string;
+  extends: string | null;
+  chain: Array<{ id: string; branch: string }>;
+  depth: number;
+  directChildren: Array<{ id: string; branch: string; directSpawnerCount: number }>;
+  fields: ActorFieldProvenance[];
+  attributeRows: ActorStatProvenance[];
+  skillRows: ActorStatProvenance[];
+  resolved: Record<string, unknown>;
+  reverseRefs: {
+    spawners: Array<{
+      id: string;
+      family: string;
+      displayName: string;
+      published: boolean;
+      blockSlotCount: number;
+      encounterTableCount: number;
+      primaryArt: ActorArtLink | null;
+    }>;
+    encounterTables: Array<{ tableIndex: number; slots: number }>;
+    blockSlotCount: number;
+    boardSeats: ActorBoardSeatRef[];
+  };
+  artLinks: ActorArtLink[];
+}
+
+export interface ActorSpecDetail {
+  id: string;
+  family: string;
+  displayName: string;
+  role: string | null;
+  template: string | null;
+  templateChain: Array<{ id: string; branch: string }>;
+  published: boolean;
+  genders: Array<{ gender: string; weight: number }>;
+  race: string | null;
+  naming: string | null;
+  harm: string | null;
+  interaction: string | null;
+  team: string | null;
+  factionId: number | null;
+  factionName: string | null;
+  home: { block?: string; slotId?: string; position?: number[]; site?: { region: number; index: number } } | null;
+  familyId: string | null;
+  visual: { archive: number; record: number } | null;
+  visualMode: string | null;
+  appearances: Record<string, unknown> | null;
+  sounds: Record<string, unknown> | null;
+  classicBinding: Record<string, unknown> | null;
+  deriveRegionalFaction: boolean | null;
+  defaultPoolCount: number;
+  regionalPoolCount: number;
+  climatePoolCount: number;
+  editorHref: string | null;
+  templateFields: ActorFieldProvenance[];
+  attributeRows: ActorStatProvenance[];
+  skillRows: ActorStatProvenance[];
+  reverseRefs: {
+    encounterTables: Array<{ tableIndex: number; slots: number; totalSlots: number; share: number }>;
+    blockSlots: {
+      slotCount: number;
+      blockCount: number;
+      blocks: string[];
+      byKind: Record<string, number>;
+      byBuildingType: Array<{ buildingType: number; name: string | null; count: number }>;
+    };
+    offices: Array<{
+      factionId: number;
+      factionName: string | null;
+      region: number | null;
+      parentFactionId: number | null;
+      parentFactionName: string | null;
+    }>;
+    boardSeats: ActorBoardSeatRef[];
+  };
+  artLinks: ActorArtLink[];
+}
+
+export interface ActorPreviewResult {
+  kind: 'spec' | 'template';
+  id: string;
+  templateId: string | null;
+  inputs: {
+    level: number;
+    gender: string;
+    allowedGenders: string[];
+    region: number | null;
+    regionName: string | null;
+  };
+  effective: {
+    level: number;
+    scaling: string;
+    race: string;
+    raceSource: string;
+    health: { minimum: number; maximum: number };
+    hitPointsPerLevel: number | null;
+    fatigue: number | null;
+    magicka: number | null;
+    armor: number;
+    attributes: Record<string, number>;
+    skills: Record<string, number>;
+    attacks: Array<{ minimumDamage: number; maximumDamage: number }>;
+    loadout: Array<{ item?: string; itemId?: string; quantity: number }>;
+    tactic: string | null;
+    tendencies: Record<string, number> | null;
+    spellPolicy: string;
+    spells: Array<{ key: string; name: string; identity: number | null; tier?: number }>;
+    harm: string | null;
+    interaction: string | null;
+    team: string | null;
+    factionId: number | null;
+    factionName: string | null;
+    home: { block?: string; slotId?: string; position?: number[]; site?: { region: number; index: number } } | null;
+    visual: {
+      mode: string;
+      source?: string;
+      textureArchive?: number | null;
+      art?: ActorArtLink | null;
+      entries: Array<{
+        archive: number;
+        record: number;
+        gender: string;
+        weight: number;
+        share: number;
+        art: VisualArtInfo;
+      }>;
+    };
+  };
+  notes: string[];
 }
 
 export interface VisualArtInfo {

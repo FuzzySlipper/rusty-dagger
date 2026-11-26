@@ -9,6 +9,7 @@ export type Route =
   | { page: 'pipeline'; id: string }
   | { page: 'review'; id: string; stage: string }
   | { page: 'search'; term: string }
+  | { page: 'actors'; kind?: 'template' | 'spec'; id?: string }
   | { page: 'cast'; id?: string }
   | { page: 'spawners'; id?: string }
   | { page: 'barks' }
@@ -27,6 +28,9 @@ export const assetUrl = (id: string): string => `#asset/${encodeKey(id)}`;
 export const pipelineUrl = (id: string): string => `#pipeline/${encodeKey(id)}`;
 export const stageUrl = (id: string, stage: string): string => `#review/${encodeKey(id)}/${encodeKey(stage)}`;
 export const searchUrl = (term: string): string => `#search/${encodeKey(term)}`;
+export const actorsUrl = (): string => '#actors';
+export const actorTemplateUrl = (id: string): string => `#actors/template/${encodeKey(id)}`;
+export const actorSpecUrl = (id: string): string => `#actors/spec/${encodeKey(id)}`;
 export const castUrl = (id?: string): string => (id ? `#cast/${encodeKey(id)}` : '#cast');
 export const spawnerUrl = (id?: string): string => (id ? `#spawners/${encodeKey(id)}` : '#spawners');
 export const barksUrl = (): string => '#barks';
@@ -81,6 +85,10 @@ export function parseHash(hash: string): Route {
   if (page === 'pipeline' && id) return { page: 'pipeline', id };
   if (page === 'review' && id && stage) return { page: 'review', id, stage };
   if (page === 'search' && id) return { page: 'search', term: id };
+  if (page === 'actors') {
+    if ((id === 'template' || id === 'spec') && stage) return { page: 'actors', kind: id, id: stage };
+    return { page: 'actors' };
+  }
   if (page === 'cast') return id ? { page: 'cast', id } : { page: 'cast' };
   if (page === 'spawners') return id ? { page: 'spawners', id } : { page: 'spawners' };
   if (page === 'barks') return { page: 'barks' };
@@ -150,6 +158,8 @@ export function activeSection(
     case 'pipeline':
     case 'review':
       return 'pipelines';
+    case 'actors':
+      return 'actors';
     case 'cast':
       return 'cast';
     case 'spawners':

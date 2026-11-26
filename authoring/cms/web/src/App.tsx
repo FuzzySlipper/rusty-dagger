@@ -13,6 +13,7 @@ import { ConceptsPage } from './pages/ConceptsPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { StageReviewPage } from './pages/StageReviewPage';
 import { SearchPage } from './pages/SearchPage';
+import { ActorsPage } from './pages/ActorsPage';
 import { CastPage } from './pages/CastPage';
 import { SpawnersPage } from './pages/SpawnersPage';
 import { BarksPage } from './pages/BarksPage';
@@ -50,6 +51,8 @@ function renderRoute(route: Route) {
       return <StageReviewPage pipeline={route.id} stage={route.stage} />;
     case 'search':
       return <SearchPage term={route.term} />;
+    case 'actors':
+      return <ActorsPage kind={route.kind} id={route.id} />;
     case 'cast':
       return <CastPage id={route.id} />;
     case 'spawners':
@@ -171,6 +174,9 @@ export function App() {
             </a>
           ))}
           <div class="nav-group-label">Game data</div>
+          <a href="#actors" data-page="actors" aria-current={currentSection === 'actors' ? 'page' : undefined}>
+            Actors (unified)
+          </a>
           <a href="#cast" data-page="cast" aria-current={currentSection === 'cast' ? 'page' : undefined}>
             Cast individuals
           </a>

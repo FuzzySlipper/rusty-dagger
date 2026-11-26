@@ -1114,3 +1114,125 @@ button[data-mark][aria-pressed="true"] { color: var(--accent); border-color: var
   resize: vertical;
   font-size: 0.84rem;
 }
+
+/* Unified Actors inspector (#11095) */
+.actor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.actor-tabs,
+.actor-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.actor-toolbar input[type="search"] {
+  flex: 1;
+  min-width: 220px;
+}
+.actor-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  margin-bottom: 12px;
+}
+.actor-chain-sep {
+  color: var(--muted);
+  margin-right: 6px;
+}
+.actor-prov-badge {
+  display: inline-block;
+  font-size: 0.74rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.actor-prov-badge.prov-local {
+  border-color: #4de096;
+  color: #4de096;
+}
+.actor-prov-badge.prov-overridden {
+  border-color: #f0b44c;
+  color: #f0b44c;
+}
+.actor-prov-badge.prov-career-default {
+  border-color: #6ab0ff;
+  color: #6ab0ff;
+}
+.actor-prov-badge.prov-cleared {
+  border-color: #e66b6b;
+  color: #e66b6b;
+}
+.actor-prov-badge.prov-inherited {
+  color: var(--muted);
+}
+.actor-row-highlight {
+  background: rgba(255, 255, 255, 0.025);
+}
+.actor-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.actor-stats-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.actor-preview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.actor-preview-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.actor-preview-controls input[type="number"] {
+  width: 72px;
+}
+.actor-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+.actor-preview-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--bg);
+}
+.actor-preview-card h3 {
+  margin-top: 0;
+}
+.actor-preview-notes {
+  margin: 0 0 10px 0;
+  padding-left: 18px;
+  color: #f0b44c;
+  font-size: 0.86rem;
+}
+.actor-art-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.actor-art-inline img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}

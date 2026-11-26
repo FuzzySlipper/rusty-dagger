@@ -1,7 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { apiRequest, isAbortError } from '../api';
-import { blocksUrl, castUrl, conceptsUrl, encodeKey, spawnerUrl, stageUrl } from '../router';
+import { actorSpecUrl, actorTemplateUrl, blocksUrl, castUrl, conceptsUrl, encodeKey, spawnerUrl, stageUrl } from '../router';
 import { useApp } from '../state';
 import { ASSET_LABELS, type CharacterDetail, type LinkChoice, type PipelineDetail } from '../types';
 import { ArtDataCard, ArtDataChip } from '../components/ArtDataLink';
@@ -369,6 +369,47 @@ export function CharacterPage({ id }: { id: string }) {
       </div>
 
       <ReviewPanel category={subject.category} id={subject.id} />
+
+      {subject.actorRecords && (subject.actorRecords.spawners.length > 0 || subject.actorRecords.templates.length > 0) ? (
+        <section class="panel" id="actor-records-usage">
+          <div class="section-heading">
+            <h2>Unified actor records</h2>
+            <a class="button" href="#actors">
+              Open Actors view
+            </a>
+          </div>
+          {subject.actorRecords.spawners.length ? (
+            <div class="usage-subsection">
+              <h3>Spawner specs ({subject.actorRecords.spawners.length})</h3>
+              <div class="usage-pills">
+                {subject.actorRecords.spawners.map(sp => (
+                  <ArtDataChip
+                    key={sp.id}
+                    href={actorSpecUrl(sp.id)}
+                    id={`${sp.family}${sp.template ? ` · ${sp.template}` : ''}`}
+                    label={`${sp.displayName} (${sp.id})`}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {subject.actorRecords.templates.length ? (
+            <div class="usage-subsection">
+              <h3>Templates ({subject.actorRecords.templates.length})</h3>
+              <div class="usage-pills">
+                {subject.actorRecords.templates.map(tpl => (
+                  <ArtDataChip
+                    key={tpl.id}
+                    href={actorTemplateUrl(tpl.id)}
+                    id={tpl.branch}
+                    label={tpl.extends ? `${tpl.id} ← ${tpl.extends}` : tpl.id}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {subject.peoplePack ? (
         <section class="panel" id="people-pack-usage">

@@ -13,6 +13,8 @@ from tempfile import TemporaryDirectory
 from urllib.parse import unquote, urlsplit
 
 from cache import FileCache
+import actors_catalog as actors_catalog_module
+from actors_catalog import ActorsCatalogStore
 import blocks as blocks_module
 from blocks import WorldBlocksStore
 import catalog as catalog_module
@@ -56,6 +58,7 @@ class Workspace:
         self.packs = packs if packs is not None else PackStore(self.cache)
         self.catalog_store = CatalogStore(library, links, self.cache, self.packs)
         self.people_pack = PeoplePackStore(library, self.cache, self.packs)
+        self.actors_catalog = ActorsCatalogStore(library, self.cache, self.packs, self.people_pack)
         self.world_blocks = WorldBlocksStore(library, self.cache, self.people_pack)
         self.locations = LocationsStore(library, self.cache, self.world_blocks, self.people_pack)
         self.world_appearance = WorldAppearanceStore(library, self.cache)
@@ -85,6 +88,8 @@ class Workspace:
                                       "conflict": stage["conflict"]}
         if subject and subject.get("category") == "people":
             subject["peoplePack"] = self.people_pack.usage_for_npc(subject["id"], catalog, self.concept_store)
+        if subject and subject.get("category") in ("people", "creatures"):
+            subject["actorRecords"] = self.actors_catalog.usage_for_art(subject["id"], catalog)
         return subject
 
     def concept_stage(self, key):
@@ -224,6 +229,7 @@ def create_router(workspace: Workspace) -> Router:
     reviews_module.register_routes(router, workspace)
     concepts_module.register_routes(router, workspace)
     people_pack_module.register_routes(router, workspace)
+    actors_catalog_module.register_routes(router, workspace)
     people_curation_module.register_routes(router, workspace)
     blocks_module.register_routes(router, workspace)
     locations_module.register_routes(router, workspace)
