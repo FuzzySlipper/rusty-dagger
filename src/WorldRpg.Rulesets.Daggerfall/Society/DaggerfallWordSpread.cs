@@ -17,6 +17,9 @@ internal enum DaggerfallWordEventKind
 
     /// <summary>Public news, decree, or rumour spreading along courier roads.</summary>
     NewsRumor = 2,
+
+    /// <summary>Attributed Great House or royal dynasty grudge/goodwill spreading at courier speed across the province.</summary>
+    HouseholdStanding = 3,
 }
 
 /// <summary>Whether a wavefront event has reached a queried town or site.</summary>
@@ -94,7 +97,8 @@ internal sealed record DaggerfallWordWavefrontSave(
     double? FrozenRadiusPixels = null,
     long? LastCheckpointMinute = null,
     double? BaseReachedRadiusPixels = null,
-    DaggerfallWordRegionProgressSave[]? RegionProgress = null)
+    DaggerfallWordRegionProgressSave[]? RegionProgress = null,
+    string? FamilyId = null)
 {
     internal DaggerfallWordWavefrontSave Validate()
     {
@@ -107,6 +111,10 @@ internal sealed record DaggerfallWordWavefrontSave(
             throw new ArgumentOutOfRangeException(nameof(EmittedAtMinute), EmittedAtMinute, $"Word wavefront '{EventId}' emitted before calendar origin.");
         if (FactionId is < 0)
             throw new ArgumentOutOfRangeException(nameof(FactionId), FactionId, $"Word wavefront '{EventId}' cannot have a negative faction id.");
+        if (FamilyId is not null && !DaggerfallHouseholds.IsValidFamilyId(FamilyId))
+            throw new ArgumentException($"Word wavefront '{EventId}' has invalid familyId '{FamilyId}'.", nameof(FamilyId));
+        if (Kind == DaggerfallWordEventKind.HouseholdStanding && string.IsNullOrWhiteSpace(FamilyId))
+            throw new ArgumentException($"HouseholdStanding wavefront '{EventId}' must specify a FamilyId.", nameof(FamilyId));
         if (FrozenRadiusPixels is double fr && (!double.IsFinite(fr) || fr < 0d))
             throw new ArgumentOutOfRangeException(nameof(FrozenRadiusPixels), FrozenRadiusPixels, $"Word wavefront '{EventId}' frozen radius must be finite and non-negative.");
         if (LastCheckpointMinute is long lcm && lcm < EmittedAtMinute)
@@ -321,6 +329,69 @@ internal sealed class DaggerfallWordSpread(
             Body: body);
         wf.Validate();
         _wavefronts[eventId] = wf;
+        return wf;
+    }
+
+    /// <summary>
+    /// Records an attributed Great House or royal dynasty grudge/goodwill wavefront spreading outward from
+    /// <paramref name="originSite"/> at courier speed. Plain standing deltas emitted at the same origin and minute
+    /// for the same <paramref name="familyId"/> coalesce cleanly into one wavefront.
+    /// </summary>
+    internal DaggerfallWordWavefrontSave RecordHouseholdStanding(
+        string familyId,
+        int delta,
+        DaggerfallSiteRecord originSite,
+        long currentMinute,
+        string? headline = null,
+        string? body = null,
+        string? eventId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(familyId);
+        ArgumentNullException.ThrowIfNull(originSite);
+
+        if (string.IsNullOrWhiteSpace(headline) && string.IsNullOrWhiteSpace(body) && string.IsNullOrWhiteSpace(eventId))
+        {
+            DaggerfallWordWavefrontSave? existing = _wavefronts.Values.FirstOrDefault(w =>
+                w.Kind == DaggerfallWordEventKind.HouseholdStanding
+                && string.Equals(w.FamilyId, familyId, StringComparison.OrdinalIgnoreCase)
+                && w.OriginRegion == originSite.Id.Region
+                && w.OriginPixelX == originSite.MapPixelX
+                && w.OriginPixelY == originSite.MapPixelY
+                && w.EmittedAtMinute == currentMinute
+                && w.Headline is null
+                && w.Body is null
+                && !w.CourierIntercepted
+                && (w.LastCheckpointMinute is null || w.LastCheckpointMinute == w.EmittedAtMinute));
+            if (existing is not null)
+            {
+                int combined = checked(existing.Delta + delta);
+                if (combined == 0)
+                {
+                    _wavefronts.Remove(existing.EventId);
+                    return existing with { Delta = 0 };
+                }
+                DaggerfallWordWavefrontSave merged = existing with { Delta = combined };
+                _wavefronts[existing.EventId] = merged;
+                return merged;
+            }
+        }
+
+        string id = string.IsNullOrWhiteSpace(eventId)
+            ? string.Create(CultureInfo.InvariantCulture, $"wf:household:{familyId}:{currentMinute}:{++_nextSequence}")
+            : eventId;
+        DaggerfallWordWavefrontSave wf = new(
+            EventId: id,
+            Kind: DaggerfallWordEventKind.HouseholdStanding,
+            OriginRegion: originSite.Id.Region,
+            OriginPixelX: originSite.MapPixelX,
+            OriginPixelY: originSite.MapPixelY,
+            EmittedAtMinute: currentMinute,
+            Delta: delta,
+            Headline: headline,
+            Body: body,
+            FamilyId: familyId);
+        wf.Validate();
+        _wavefronts[id] = wf;
         return wf;
     }
 
@@ -572,6 +643,28 @@ internal sealed class DaggerfallWordSpread(
         return latestRankWavefront is null || EvaluateAt(latestRankWavefront, targetSite, currentMinute, currentDay).HasArrived;
     }
 
+    /// <summary>
+    /// Total arrived attributed grudge/goodwill delta for a Great House or royal dynasty <paramref name="familyId"/>
+    /// at <paramref name="targetSite"/> by <paramref name="currentMinute"/>. Returns 0 while in transit or intercepted.
+    /// </summary>
+    internal int ArrivedHouseholdStandingDelta(string? familyId, DaggerfallSiteRecord? targetSite, long currentMinute, int? currentDay = null)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || targetSite is null || _wavefronts.Count == 0)
+            return 0;
+
+        int arrived = 0;
+        foreach (DaggerfallWordWavefrontSave wf in _wavefronts.Values)
+        {
+            if (wf.Kind != DaggerfallWordEventKind.HouseholdStanding
+                || wf.Delta == 0
+                || !string.Equals(wf.FamilyId, familyId, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (EvaluateAt(wf, targetSite, currentMinute, currentDay).HasArrived)
+                arrived += wf.Delta;
+        }
+        return arrived;
+    }
+
     /// <summary>Returns all news/standing wavefronts that have arrived at <paramref name="targetSite"/> (newest first).</summary>
     internal IReadOnlyList<DaggerfallWordWavefrontSave> ArrivedNewsAt(DaggerfallSiteRecord targetSite, long currentMinute, int? currentDay = null)
     {
@@ -580,7 +673,7 @@ internal sealed class DaggerfallWordSpread(
             return [];
 
         return [.. _wavefronts.Values
-            .Where(wf => wf.Kind is DaggerfallWordEventKind.NewsRumor or DaggerfallWordEventKind.FactionStanding
+            .Where(wf => wf.Kind is DaggerfallWordEventKind.NewsRumor or DaggerfallWordEventKind.FactionStanding or DaggerfallWordEventKind.HouseholdStanding
                 && !string.IsNullOrWhiteSpace(wf.Body)
                 && EvaluateAt(wf, targetSite, currentMinute, currentDay).HasArrived)
             .OrderByDescending(wf => wf.EmittedAtMinute)

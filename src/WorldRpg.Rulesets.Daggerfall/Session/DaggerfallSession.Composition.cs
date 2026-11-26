@@ -1052,7 +1052,14 @@ internal sealed partial class DaggerfallSession
                 ReadHostileStanding, () => State.Progression.Level, () => _worldSocialSeed, () => _site.ActiveSite?.Id);
             SocialConsequences = new DaggerfallSocialConsequences(
                 State.Social, definitions, State.Actors, State.Npcs, State.ActorLedger,
-                () => Crimes.QueryWitnesses(), Crimes.IsCityWatch, () => _site.Region);
+                () => Crimes.QueryWitnesses(), Crimes.IsCityWatch, () => _site.Region,
+                WordSpread, () => _site.ActiveSite, () => _time.Calendar.MinuteNumber);
+            State.Social.BindActorDisposition(id => SocialConsequences.EffectiveDispositionDelta(id));
+            Introductions.BindDispositionAdjusted((actorId, delta) =>
+            {
+                if (delta > 0)
+                    SocialConsequences.ReactToKinGoodwill(actorId, delta);
+            });
             ConditionCounterplay = new DaggerfallConditionCounterplay(
                 definitions, WorldConditions, WordSpread, State.Actors, _roster.Definitions,
                 () => _activeProfileKey, () => _site.ActiveSite, () => State.Character.Identity.Name,
@@ -1293,8 +1300,14 @@ internal sealed partial class DaggerfallSession
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
             Law.BindCrimeSpread((incident, loss) =>
             {
-                if (_site.ActiveSite is { } origin)
+                DaggerfallSiteRecord? origin = _site.ActiveSite;
+                if (origin is not null)
                     WordSpread.RecordCrime(incident.OperationId, incident.Region, loss, origin, _time.Calendar.MinuteNumber);
+                SocialConsequences.ReactToAttributedCrime(
+                    incident,
+                    origin,
+                    _time.Calendar.MinuteNumber,
+                    Crimes.TryGetVictimFamilyId(incident.OperationId));
             });
             crime.IncidentRecorded += Law.Admit;
             GuildProviders = new DaggerfallGuildProviders(State.ConcreteGuildServices, State.ConcreteGuildMembership, State.KnightlyClaimActions,

@@ -77,13 +77,6 @@ internal static class DaggerfallWitnessDiscretion
     private const int TempleFactionType = 9;
     private const int CourtFactionType = 14;
 
-    private static readonly HashSet<string> NobleTitles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "King", "Queen", "Prince", "Princess", "Lord", "Lady",
-        "Baron", "Baroness", "Duke", "Duchess", "Count", "Countess",
-        "Marquis", "Marquise", "Sir", "Dame",
-    };
-
     /// <summary>
     /// Base reporting probability (0..100) for an unconnected bystander before social-skill and disposition adjustments.
     /// Petty/property crimes (such as lockpicking a neighbour's door) have a moderate base chance so social skills
@@ -150,7 +143,7 @@ internal static class DaggerfallWitnessDiscretion
         {
             DaggerfallNpc? witnessNpc = npcs.TryGet(witnessId, out DaggerfallNpc? wn) ? wn : null;
             bool guard = IsGuard(witnessId, actors, npcs, isCityWatch);
-            string? familyId = ResolveActorFamilyId(witnessId, actors, actorLedger);
+            string? familyId = ResolveActorFamilyId(witnessId, actors, actorLedger, npcs);
             HashSet<int> guildRoots = CollectActorGuildRoots(witnessId, witnessNpc, definitions, actors);
             int dispositionDelta = actorLedger is not null && actorLedger.TryGet(witnessId, out ActorLedgerEntry? ledgerEntry)
                 && ledgerEntry?.Social is { } socialDiff
@@ -193,13 +186,7 @@ internal static class DaggerfallWitnessDiscretion
         int personality = ReadPlayerStat(actors, "personality", 50);
 
         HashSet<int> victimGuildRoots = CollectVictimGuildRoots(victim, definitions, actors, npcs);
-        DaggerfallNpc? victimNpc = victim?.ActorId is long vid && npcs.TryGet(vid, out DaggerfallNpc? vn) ? vn : null;
-        string? victimFamilyId = ResolveVictimFamilyId(victim, actors, actorLedger);
-        string? victimDisplayName = victim?.DisplayName ?? victimNpc?.DisplayName;
-        string? victimBuilding = !string.IsNullOrWhiteSpace(victim?.BuildingKey) ? victim.BuildingKey : victimNpc?.Site.Building;
-        int? victimBuildingType = victim?.BuildingType;
-        int? victimRegion = victim?.Region ?? victimNpc?.Site.Region;
-        string? victimLocation = victim?.Location ?? victimNpc?.Site.Location;
+        string? victimFamilyId = ResolveVictimFamilyId(victim, actors, actorLedger, npcs);
 
         List<long> reporting = [];
         List<DaggerfallWitnessDecision> decisions = [];
@@ -227,9 +214,9 @@ internal static class DaggerfallWitnessDiscretion
             }
 
             DaggerfallNpc? witnessNpc = observed is not null ? observed.Npc : (npcs.TryGet(witnessId, out DaggerfallNpc? wn) ? wn : null);
-            string? witnessFamilyId = observed is not null ? observed.FamilyId : ResolveActorFamilyId(witnessId, actors, actorLedger);
+            string? witnessFamilyId = observed is not null ? observed.FamilyId : ResolveActorFamilyId(witnessId, actors, actorLedger, npcs);
 
-            if (AreFamily(witnessNpc, witnessFamilyId, victimFamilyId, victimDisplayName, victimBuilding, victimBuildingType, victimRegion, victimLocation))
+            if (AreFamily(witnessFamilyId, victimFamilyId))
             {
                 reporting.Add(witnessId);
                 decisions.Add(new(witnessId, true, DaggerfallWitnessReportReason.FamilyMember, 100));
@@ -274,62 +261,16 @@ internal static class DaggerfallWitnessDiscretion
         return new(evidence, decisions);
     }
 
-    /// <summary>House1..House4 building types (private residences, never public taverns, shops, guilds, or temples).</summary>
-    internal static bool IsPrivateResidence(int? buildingType) => buildingType is >= 17 and <= 20;
-
-    internal static bool AreFamily(
-        DaggerfallNpc? witnessNpc,
-        string? witnessFamilyId,
-        string? victimFamilyId,
-        string? victimDisplayName,
-        string? victimBuilding,
-        int? victimBuildingType,
-        int? victimRegion,
-        string? victimLocation)
-    {
-        bool witnessHasFamily = !string.IsNullOrWhiteSpace(witnessFamilyId);
-        bool victimHasFamily = !string.IsNullOrWhiteSpace(victimFamilyId);
-        if (witnessHasFamily && victimHasFamily)
-            return string.Equals(witnessFamilyId, victimFamilyId, StringComparison.OrdinalIgnoreCase);
-
-        if (witnessNpc is null)
-            return false;
-
-        bool sameSite = victimRegion is int vr && witnessNpc.Site.Region == vr
-            && !string.IsNullOrWhiteSpace(victimLocation)
-            && string.Equals(witnessNpc.Site.Location, victimLocation, StringComparison.OrdinalIgnoreCase);
-
-        // Only a private residence (House1..House4) implies a shared household; occupants of public buildings
-        // (taverns, shops, guild halls, temples, banks) share a placement address without being family.
-        if (sameSite && IsPrivateResidence(victimBuildingType)
-            && !string.IsNullOrWhiteSpace(victimBuilding)
-            && !string.IsNullOrWhiteSpace(witnessNpc.Site.Building)
-            && string.Equals(witnessNpc.Site.Building, victimBuilding, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (sameSite && TryExtractSurname(witnessNpc.DisplayName, out string witnessSurname)
-            && TryExtractSurname(victimDisplayName, out string victimSurname)
-            && string.Equals(witnessSurname, victimSurname, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
-    }
-
-    internal static bool TryExtractSurname(string? fullName, out string surname)
-    {
-        surname = string.Empty;
-        if (string.IsNullOrWhiteSpace(fullName))
-            return false;
-        string[] tokens = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (tokens.Length < 2)
-            return false;
-        // Require either at least two non-title words ("Gareth Ashford") or a noble title + family name ("Lord Bridwell").
-        string last = tokens[^1];
-        if (NobleTitles.Contains(last))
-            return false;
-        surname = last;
-        return true;
-    }
+    /// <summary>
+    /// Exact resolved <c>FamilyId</c> kin match: two actors (or an actor and a household building) are family
+    /// if and only if both carry the exact same non-empty <c>FamilyId</c>. Retires fragile surname and
+    /// building-address heuristics so unrelated palace courtiers, guildhall members, and coincidental
+    /// surnames never produce false family reports.
+    /// </summary>
+    internal static bool AreFamily(string? witnessFamilyId, string? victimFamilyId) =>
+        !string.IsNullOrWhiteSpace(witnessFamilyId)
+        && !string.IsNullOrWhiteSpace(victimFamilyId)
+        && string.Equals(witnessFamilyId, victimFamilyId, StringComparison.OrdinalIgnoreCase);
 
     internal static HashSet<int> CollectGuildRoots(int factionId, DaggerfallFactionsSet factions)
     {
@@ -398,26 +339,44 @@ internal static class DaggerfallWitnessDiscretion
         return roots;
     }
 
-    private static string? ResolveVictimFamilyId(
+    internal static string? ResolveVictimFamilyId(
         DaggerfallCrimeVictimContext? victim,
         ActorsState actors,
-        DaggerfallActorLedger? actorLedger)
+        DaggerfallActorLedger? actorLedger,
+        DaggerfallNpcRegistry? npcs = null)
     {
         if (!string.IsNullOrWhiteSpace(victim?.FamilyId))
             return victim.FamilyId;
-        return victim?.ActorId is long vid ? ResolveActorFamilyId(vid, actors, actorLedger) : null;
+        return victim?.ActorId is long vid ? ResolveActorFamilyId(vid, actors, actorLedger, npcs) : null;
     }
 
-    private static string? ResolveActorFamilyId(long actorId, ActorsState actors, DaggerfallActorLedger? actorLedger)
+    internal static string? ResolveActorFamilyId(
+        long actorId,
+        ActorsState actors,
+        DaggerfallActorLedger? actorLedger,
+        DaggerfallNpcRegistry? npcs = null)
     {
-        if (actors.TryGet(actorId, out ActorState? live)
-            && live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)
-            && !string.IsNullOrWhiteSpace(overlay.FamilyId))
-            return overlay.FamilyId;
+        if (actors.TryGet(actorId, out ActorState? live))
+        {
+            if (live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+                return !string.IsNullOrWhiteSpace(overlay.FamilyId) ? overlay.FamilyId : null;
+            if (live.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person)
+                && !string.IsNullOrWhiteSpace(person.Snapshot.FamilyId))
+                return person.Snapshot.FamilyId;
+        }
         if (actorLedger is not null
             && actorLedger.TryGet(actorId, out ActorLedgerEntry? entry)
-            && !string.IsNullOrWhiteSpace(entry?.Social?.FamilyId))
-            return entry.Social!.FamilyId;
+            && entry?.Social is { } social)
+        {
+            if (social.FamilyIdCleared)
+                return null;
+            if (!string.IsNullOrWhiteSpace(social.FamilyId))
+                return social.FamilyId;
+        }
+        if (npcs is not null
+            && npcs.TryGet(actorId, out DaggerfallNpc? npc)
+            && !string.IsNullOrWhiteSpace(npc.FamilyId))
+            return npc.FamilyId;
         return null;
     }
 

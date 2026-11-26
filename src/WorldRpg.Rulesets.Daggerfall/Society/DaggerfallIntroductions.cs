@@ -599,6 +599,12 @@ internal sealed class DaggerfallIntroductions(
         return AssessAccess(target).Allowed;
     }
 
+    private Action<long, int>? _onDispositionAdjusted;
+
+    /// <summary>Binds a notification invoked after personal disposition changes (used for household goodwill ripples).</summary>
+    internal void BindDispositionAdjusted(Action<long, int> onAdjusted) =>
+        _onDispositionAdjusted = onAdjusted ?? throw new ArgumentNullException(nameof(onAdjusted));
+
     /// <summary>Adjusts an actor's persistent personal <c>DispositionDelta</c> (and optional <c>LastFavourDay</c>) in <see cref="DaggerfallActorLedger"/>.</summary>
     internal void AdjustActorDisposition(long actorId, int delta, int? setLastFavourDay = null)
     {
@@ -641,6 +647,8 @@ internal sealed class DaggerfallIntroductions(
             ? existing with { Social = socialDiff }
             : new ActorLedgerEntry(actorId, origin, Social: socialDiff);
         actorLedger.Upsert(updated);
+        if (delta != 0)
+            _onDispositionAdjusted?.Invoke(actorId, delta);
     }
 
     private DaggerfallSocialProminence ClassifyProminenceCore(

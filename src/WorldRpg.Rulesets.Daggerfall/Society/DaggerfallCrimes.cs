@@ -38,8 +38,14 @@ internal sealed class DaggerfallCrimes(
     Action<long> provoke,
     DaggerfallActorLedger? actorLedger = null)
 {
+    private readonly Dictionary<string, string> _victimFamilyByOperation = new(StringComparer.Ordinal);
+
     /// <summary>Per-witness reporting decisions from the most recent evaluated crime (transient runtime readout).</summary>
     internal IReadOnlyList<DaggerfallWitnessDecision> LastWitnessDecisions { get; private set; } = [];
+
+    /// <summary>Returns the resolved victim <c>FamilyId</c> recorded during witness evaluation for <paramref name="operationId"/>, if any.</summary>
+    internal string? TryGetVictimFamilyId(string operationId) =>
+        !string.IsNullOrWhiteSpace(operationId) && _victimFamilyByOperation.TryGetValue(operationId, out string? fid) ? fid : null;
 
     /// <summary>Whether this actor is the city watch.</summary>
     internal bool IsCityWatch(long actor) => actorDefinitions.GetValueOrDefault(actor)?.MobileId == 146;
@@ -71,6 +77,9 @@ internal sealed class DaggerfallCrimes(
     {
         DaggerfallWitnessDiscretionResult result = DaggerfallWitnessDiscretion.Evaluate(
             operation, kind, victim, rawWitnesses, definitions, actors, npcs, actorLedger, IsCityWatch, Roll, capturedObservations);
+        string? resolvedVictimFamily = DaggerfallWitnessDiscretion.ResolveVictimFamilyId(victim, actors, actorLedger, npcs);
+        if (!string.IsNullOrWhiteSpace(operation) && !string.IsNullOrWhiteSpace(resolvedVictimFamily))
+            _victimFamilyByOperation[operation] = resolvedVictimFamily;
         LastWitnessDecisions = result.Decisions;
         return result;
     }

@@ -100,9 +100,14 @@ internal sealed class DaggerfallPropertyLoot(
         long minute = calendar().MinuteNumber;
         crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Theft, DaggerfallActorIdentity.PlayerEntityId,
             source.Id, profile.Site.Region, minute, DaggerfallCrimeAttemptOutcome.PropertyTransferred, witnesses));
+        string? buildingFamilyId = DaggerfallHouseholds.IsResidenceOrFamilyShop(interior.BuildingType)
+            || DaggerfallHouseholds.IsTavern(interior.BuildingType)
+                ? DaggerfallHouseholds.BuildingHouseholdId(profile.Site, interior.BlockX, interior.BlockY, interior.Building.Index)
+                : null;
         DaggerfallCrimeVictimContext victim = new(
             FactionId: interior.FactionId > 0 ? interior.FactionId : null,
             BuildingKey: $"{interior.BlockX}/{interior.BlockY}/{interior.Building.Index}",
+            FamilyId: buildingFamilyId,
             Region: profile.Site.Region,
             Location: site.TryFind(profile.Site, out DaggerfallSiteRecord? loc) ? loc.Name : null,
             BuildingType: interior.BuildingType);

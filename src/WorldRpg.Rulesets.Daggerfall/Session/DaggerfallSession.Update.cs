@@ -850,9 +850,14 @@ internal sealed partial class DaggerfallSession
                     factionId = source.Source.FactionId;
             }
         }
+        string? buildingFamilyId = buildingType is int bt
+            && (DaggerfallHouseholds.IsResidenceOrFamilyShop(bt) || DaggerfallHouseholds.IsTavern(bt))
+                ? DaggerfallHouseholds.BuildingHouseholdId(_activeProfileKey.Site, buildingId.BlockX, buildingId.BlockY, buildingId.Index)
+                : null;
         return new DaggerfallCrimeVictimContext(
             FactionId: factionId,
             BuildingKey: $"{buildingId.BlockX}/{buildingId.BlockY}/{buildingId.Index}",
+            FamilyId: buildingFamilyId,
             Region: _activeProfileKey.Site.Region,
             Location: locationName,
             BuildingType: buildingType);

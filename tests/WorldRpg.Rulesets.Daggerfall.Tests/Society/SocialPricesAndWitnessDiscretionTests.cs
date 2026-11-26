@@ -197,36 +197,37 @@ public sealed class SocialPricesAndWitnessDiscretionTests
     public void Family_member_never_ignores_crime_against_relative_or_household_and_FamilyId_persists_across_save_reload()
     {
         // Even with maxed social skills (100) and roll = 100 (guaranteed ignore for unconnected witnesses),
-        // a family member (by explicit FamilyId, shared surname, or shared household building) ALWAYS reports!
+        // an exact FamilyId match ALWAYS reports, while a coincidental surname match without matching FamilyId
+        // falls back to normal witness discretion (#11103).
         using var fixture = CreateExteriorWitnessFixture(rollValue: 100);
         fixture.Session.State.Actors.Player.Stats.GetStat(StatId.Parse("etiquette")).BaseValue = 100;
         fixture.Session.State.Actors.Player.Stats.GetStat(StatId.Parse("streetwise")).BaseValue = 100;
         fixture.Session.State.Actors.Player.Stats.GetStat(StatId.Parse("personality")).BaseValue = 100;
 
-        long relativeByFamilyId = fixture.AddBystander("Talia Rowan", factionId: 0, familyId: "family:ashford");
-        long relativeBySurname = fixture.AddBystander("Gareth Ashford", factionId: 0);
+        long relativeByFamilyId = fixture.AddBystander("Talia Rowan", factionId: 0, familyId: "fam:local:r17:s100:x0y0b1");
+        long sameSurnameStranger = fixture.AddBystander("Gareth Ashford", factionId: 0);
         long unrelatedStranger = fixture.AddBystander("Bram Turner", factionId: 0);
-        long victim = fixture.AddBystander("Elara Ashford", factionId: 0, familyId: "family:ashford");
+        long victim = fixture.AddBystander("Elara Ashford", factionId: 0, familyId: "fam:local:r17:s100:x0y0b1");
 
         // Save and reload BEFORE the crime to prove FamilyId persists through ActorLedger!
         RulesetSavePayload saved = fixture.Session.CaptureSave();
         using DaggerfallSession restored = fixture.Restore(saved);
-        Assert.Equal("family:ashford", restored.State.Actors.Get(relativeByFamilyId).Actor.Get<ActorOverlayComponent>().FamilyId);
-        Assert.Equal("family:ashford", restored.State.Actors.Get(victim).Actor.Get<ActorOverlayComponent>().FamilyId);
+        Assert.Equal("fam:local:r17:s100:x0y0b1", restored.State.Actors.Get(relativeByFamilyId).Actor.Get<ActorOverlayComponent>().FamilyId);
+        Assert.Equal("fam:local:r17:s100:x0y0b1", restored.State.Actors.Get(victim).Actor.Get<ActorOverlayComponent>().FamilyId);
 
         restored.Crimes.ObserveAttack(DaggerfallActorIdentity.PlayerEntityId, victim, "family-attack:1");
 
         IReadOnlyList<DaggerfallWitnessDecision> decisions = restored.Crimes.LastWitnessDecisions;
         Assert.Equal(DaggerfallWitnessReportReason.FamilyMember, decisions.Single(d => d.WitnessActorId == relativeByFamilyId).Reason);
         Assert.True(decisions.Single(d => d.WitnessActorId == relativeByFamilyId).Reported);
-        Assert.Equal(DaggerfallWitnessReportReason.FamilyMember, decisions.Single(d => d.WitnessActorId == relativeBySurname).Reason);
-        Assert.True(decisions.Single(d => d.WitnessActorId == relativeBySurname).Reported);
+        Assert.Equal(DaggerfallWitnessReportReason.DiscretionRollIgnored, decisions.Single(d => d.WitnessActorId == sameSurnameStranger).Reason);
+        Assert.False(decisions.Single(d => d.WitnessActorId == sameSurnameStranger).Reported);
         Assert.Equal(DaggerfallWitnessReportReason.DiscretionRollIgnored, decisions.Single(d => d.WitnessActorId == unrelatedStranger).Reason);
         Assert.False(decisions.Single(d => d.WitnessActorId == unrelatedStranger).Reported);
 
         DaggerfallCrimeIncidentSave incident = Assert.Single(restored.State.Crime.Incidents);
         Assert.Contains(relativeByFamilyId, incident.Witnesses.WitnessActorIds);
-        Assert.Contains(relativeBySurname, incident.Witnesses.WitnessActorIds);
+        Assert.DoesNotContain(sameSurnameStranger, incident.Witnesses.WitnessActorIds);
         Assert.DoesNotContain(unrelatedStranger, incident.Witnesses.WitnessActorIds);
         Assert.NotNull(restored.Law.Current);
     }
@@ -299,12 +300,14 @@ public sealed class SocialPricesAndWitnessDiscretionTests
         Assert.True(result.Decisions.Single(d => d.WitnessActorId == actualRelative).Reported);
         Assert.Equal([actualRelative], result.ReportingEvidence.WitnessActorIds);
 
-        // Contrast: a resident sharing Site.Building of a private house (BuildingType = 17, House1) IS household family.
+        // Contrast: a resident sharing the deterministic household FamilyId of a private house (BuildingType = 17) IS household family.
         const string privateHouse = "2/2/0";
-        long resident = fixture.AddBystander("Maren Holt", factionId: 0, buildingKey: privateHouse);
+        string privateHouseFamily = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 2, 2, 0);
+        long resident = fixture.AddBystander("Maren Holt", factionId: 0, familyId: privateHouseFamily, buildingKey: privateHouse);
         DaggerfallCrimeVictimContext houseVictim = new(
             FactionId: null,
             BuildingKey: privateHouse,
+            FamilyId: privateHouseFamily,
             Region: site.Id.Region,
             Location: site.Name,
             BuildingType: 17);
