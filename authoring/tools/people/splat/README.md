@@ -105,8 +105,9 @@ the PINOC staff walk turns the feet and doesn't loop). These are still experimen
 - **Staff:** `tools/splat-prop/prop_mesh.py ... --girth 0.5 --grip-from BODY --transform T`. The shaft goes through the middle
   of the bake's hand Gaussians. The old X Bot palm guess only fits hands that turn_hands re-rested.
 
-Weapons painted in hand, from four-view sheets (npc-471 sword, npc-467 staff; Patch 2026-11-25). The weapon is in the
-paintings, carved into the clay mesh and baked with the hand, so there is no prop to fit:
+Weapons painted in hand, from four-view sheets (npc-471 sword, npc-467 staff; Patch 2026-11-25: "weapons on characters should
+become the new normal"). This is the standard for armed characters. The weapon is in the paintings, carved into the clay mesh
+and baked with the hand, so there is no prop to fit (the separate held-prop route above is for when a character must drop or swap it):
 - **Four views.** `static-npc init npc-NNN --walker --from DIR` with `front.png`, `back.png`, `right.png` and `left.png` (her
   right and left; the CMS's `turnaround-4view-*` candidates) sets npc.json `"sides"`. Keys, clay (`clay-right.txt`,
   `clay-left.txt`), Meshy (four images) and the orbit (`<Picture 3>` right, `<Picture 4>` left; name them in orbit.txt) all
