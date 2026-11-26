@@ -65,6 +65,11 @@ public sealed class TradeTests
         Assert.Equal(Term("grain:granary"), Trade.Resolve(board, Term("grain"), east, west));
         Assert.Contains(board.Region("march"), Trade.Reached(board, granary, east, west));
 
+        // A blockaded region takes in no grain, though the land beyond it is open.
+        board.AddCondition(board.Region("march"), Lasting(ConditionKind.Raiders));
+        Assert.DoesNotContain(board.Region("march"), Trade.Reached(board, granary, east, west));
+        board.RemoveConditions(board.Region("march"), ConditionKind.Raiders);
+
         Board guilded = TestBoards.Create(TestBoards.Granary().WithGuild());
         Assert.Null(Trade.Resolve(guilded, Term("grain"), guilded.Seat("east"), guilded.Seat("guild")));
 
@@ -95,6 +100,34 @@ public sealed class TradeTests
         Assert.Equal(
             [new("west", "coin", "3", "2"), new("east", "coin", "5", "6"), new("east", "force", "4", "2"), new("west", "force", "4", "6")],
             board.TakeChanges());
+    }
+
+    [Fact]
+    public void A_deal_pays_every_week_of_its_term_and_then_lapses()
+    {
+        Board board = Hungry();
+        Seat west = board.Seat("west");
+        Seat east = board.Seat("east");
+        Agreement deal = CoinForGrain(board);
+        Assert.Equal(deal.Start + Trade.TermWeeks, deal.End);
+        int paid = 0;
+        int relieved = 0;
+
+        for (board.Turn = deal.Start + 1; board.Turn <= deal.End; board.Turn++)
+        {
+            relieved += Trade.Relieve(board, Supply.Fed(board)).Count;
+            board.AdjustResource(west, Resource.Coin, Board.ResourceLimit);
+            board.AdjustResource(east, Resource.Coin, -Board.ResourceLimit);
+            board.TakeChanges();
+            Trade.Settle(board);
+            paid += board.TakeChanges().Count(change => change is { Subject: "east", Field: "coin" });
+        }
+
+        Assert.Equal(Trade.TermWeeks, relieved);
+        Assert.Equal(Trade.TermWeeks / 2, paid);
+        Assert.Contains(deal, board.Agreements);
+        Assert.Empty(Trade.Relieve(board, Supply.Fed(board)));
+        Assert.Empty(board.Agreements);
     }
 
     [Fact]
@@ -138,6 +171,7 @@ public sealed class TradeTests
     [InlineData("source lost", "granary lost")]
     [InlineData("no surplus", "no surplus in granary")]
     [InlineData("route cut", "route from granary cut")]
+    [InlineData("destination blockaded", "route from granary cut")]
     public void A_deal_breaks_for_both_sides_when_the_land_or_the_seats_turn_against_it(string cause, string reason)
     {
         Board board = Hungry();
@@ -145,11 +179,12 @@ public sealed class TradeTests
         Agreement deal = CoinForGrain(board);
         switch (cause)
         {
-            case "lapsed": board.Turn = deal.End; break;
+            case "lapsed": board.Turn = deal.End + 1; break;
             case "hostile": board.AdjustRelation(west, board.Seat("east"), Supply.Hostile); break;
             case "source lost": board.SetAllegiance(board.Region("granary"), west); break;
             case "no surplus": board.AdjustProsperity(board.Region("granary"), -1); break;
             case "route cut": board.AddCondition(board.Region("hills"), Lasting(ConditionKind.Raiders)); break;
+            case "destination blockaded": board.AddCondition(board.Region("march"), Lasting(ConditionKind.Raiders)); break;
         }
         board.TakeChanges();
 

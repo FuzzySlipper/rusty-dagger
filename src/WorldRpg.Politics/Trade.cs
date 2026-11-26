@@ -37,7 +37,8 @@ public sealed record TradeTerm(Resource? Resource, int Amount, int EveryWeeks, s
 
 /// <summary>
 /// A standing trade agreement: <see cref="Proposer"/> gives <see cref="Gives"/> and <see cref="Partner"/> gives
-/// <see cref="Asks"/>, each Sunday a term falls due, from the turn after <see cref="Start"/> until <see cref="End"/>.
+/// <see cref="Asks"/>, each Sunday a term falls due, from the turn after <see cref="Start"/> through <see cref="End"/>;
+/// it lapses the Sunday after.
 /// <see cref="ProposerPrice"/> and <see cref="PartnerPrice"/> are the bargain each side struck: what the resource terms
 /// were worth to it when the deal was made (<see cref="Trade.Worth"/>).
 /// </summary>
@@ -68,7 +69,7 @@ public sealed record Agreement(string Id, string Proposer, TradeTerm Gives, stri
 /// side, and relieves the receiver's most valuable region not fed that week. A ration not needed is lost, never stored.
 /// </para>
 /// <para>
-/// A deal ends for both sides when it lapses, when the two seats turn hostile, when a ration's source region changes
+/// A deal ends for both sides when it lapses after its last week, when the two seats turn hostile, when a ration's source region changes
 /// hands, loses its surplus or can no longer reach the receiver, when a side cannot pay a term that falls due (a default,
 /// which costs 1 relation), or when either seat withdraws (a weekly move, which costs 1 relation).
 /// </para>
@@ -197,9 +198,9 @@ public static class Trade
     }
 
     /// <summary>
-    /// The regions a ration from <paramref name="source"/> reaches: every region along an overland path that runs only
-    /// through regions neither blockaded nor held by a crown hostile to the giver or the receiver, and the regions at the
-    /// end of such a path. A blockaded source sends nothing.
+    /// The regions a ration from <paramref name="source"/> reaches: every region joined to it by an overland path that
+    /// runs, from end to end, only through regions neither blockaded nor held by a crown hostile to the giver or the
+    /// receiver. A blockaded region takes in no grain, and a blockaded source sends none.
     /// </summary>
     public static HashSet<Region> Reached(Board board, Region source, Seat giver, Seat receiver)
     {
@@ -209,7 +210,7 @@ public static class Trade
         while (open.TryDequeue(out Region? region))
         {
             foreach (Region border in region.Borders.Select(board.Region))
-                if (reached.Add(border) && Passable(board, border, giver, receiver)) open.Enqueue(border);
+                if (Passable(board, border, giver, receiver) && reached.Add(border)) open.Enqueue(border);
         }
         return reached;
     }
@@ -230,7 +231,7 @@ public static class Trade
         term.Source is not { } source || Spare(board, board.Region(source), giver) && Reaches(board, board.Region(source), giver, receiver);
 
     private static string? Broken(Board board, Agreement deal, Seat proposer, Seat partner) =>
-        board.Turn >= deal.End ? "lapsed"
+        board.Turn > deal.End ? "lapsed"
         : board.Relation(proposer.Id, partner.Id) <= Supply.Hostile ? "hostile"
         : RationBroken(board, deal.Gives, proposer, partner) ?? RationBroken(board, deal.Asks, partner, proposer);
 
