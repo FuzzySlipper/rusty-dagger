@@ -602,7 +602,8 @@ def track(n, step, phase, err=''):
                     w = f'{step} done {t}' + (f' - next: {nxt}' if nxt and state != 'approved' else '')
                     if step == 'publish' and pub:
                         w = f'published {t}: ' + ', '.join(x for x, _ in pub) + f' - next: {nxt}'
-                        m['stages'][st]['review'] = {'batch': {'url': pub[0][1], 'sets': [{'name': x, 'url': u} for x, u in pub]}}
+                        m['stages'][st]['review'] = {'batch': {'id': pub[0][0], 'url': pub[0][1], 'created': dc.NOW(),   # page.py reads id, url, created
+                                                               'sets': [{'name': x, 'url': u} for x, u in pub]}}
                     dc.set_state(m, st, state, by='static-npc', note=w if state == 'approved' else '', why='' if state == 'approved' else w)
             if phase == 'done':   # what waited on this step is done now
                 for k in dc.STAGE_KEYS[:dc.STAGE_KEYS.index(stages[0])]:
