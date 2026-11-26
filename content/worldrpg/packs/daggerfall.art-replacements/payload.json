@@ -107557,13 +107557,12 @@
     },
     "17-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-017-1.png",
-     "byteLength": 30932,
-     "sha256": "584f812941a3a77377b420cf00cf75c94d0cf480b7760b421ede1608c4aa8b27",
+     "byteLength": 32772,
+     "sha256": "5bcfe09a570519f05c73e745360ff9fb231ea4892c064b20b83a67892db0aa88",
      "width": 128,
      "height": 128,
      "kind": "stone",
      "tallest": 1.0,
-     "depth": 0.05,
      "sway": 0,
      "shade": [
       0.55,
@@ -107571,7 +107570,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.055,
+     "extrude": 0.09
     },
     "17-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-017-2.png",
@@ -108145,13 +108146,12 @@
     },
     "74-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-074-2.png",
-     "byteLength": 48982,
-     "sha256": "0f4e12e5671a4d9e5e891433b9e2f559877a38bf1f28bd06b97b2c166c4961bd",
+     "byteLength": 47926,
+     "sha256": "4465ba1420316cd6b6a5ae9d4962a4116f948ec4304133d094b7d1b943a22d52",
      "width": 128,
      "height": 256,
      "kind": "door",
      "tallest": 1.0,
-     "depth": 0.025,
      "sway": 0,
      "shade": [
       0.55,
@@ -108159,7 +108159,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.03,
+     "extrude": 0.062
     },
     "79-0": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-079-0.png",
@@ -108904,13 +108906,12 @@
     },
     "117-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-117-1.png",
-     "byteLength": 15258,
-     "sha256": "f25a82305751bac189338873c82a46975345a61cacaf3232e6a9fe8b7555fe2c",
+     "byteLength": 14624,
+     "sha256": "5954897f82cab06928b4dd997ed9a00b04af2e3cc309e6fffdcf3047c5381221",
      "width": 128,
      "height": 128,
      "kind": "stone",
      "tallest": 1.0,
-     "depth": 0.05,
      "sway": 0,
      "shade": [
       0.55,
@@ -108918,7 +108919,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.055,
+     "extrude": 0.09
     },
     "117-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-117-2.png",
@@ -108960,13 +108963,12 @@
     },
     "118-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-118-1.png",
-     "byteLength": 15122,
-     "sha256": "b112f1c64ff87e926e7cf55089658062ca453ba2586579874d586cfe0191acb3",
+     "byteLength": 14720,
+     "sha256": "c6ea13acb5914b66945f4687ab28f98dca41a12f68a987bfac3afc90be50a1d9",
      "width": 128,
      "height": 128,
      "kind": "stone, snowed",
      "tallest": 1.0,
-     "depth": 0.05,
      "sway": 0,
      "shade": [
       0.55,
@@ -108974,7 +108976,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.055,
+     "extrude": 0.09
     },
     "118-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-118-2.png",
@@ -108997,13 +109001,12 @@
     },
     "121-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-121-1.png",
-     "byteLength": 33384,
-     "sha256": "e073ccd0ef5d38ed42a80c8d20c88eae7dcff3ef239315c1a45bce2ddbb05ff4",
+     "byteLength": 33606,
+     "sha256": "d28003c0066fe71279251ff1000ef1363f46c3a18a4570f10c6dd7a0140f24b2",
      "width": 128,
      "height": 192,
      "kind": "timber",
      "tallest": 1.0,
-     "depth": 0.04,
      "sway": 0,
      "shade": [
       0.55,
@@ -109011,7 +109014,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.04,
+     "extrude": 0.068
     },
     "126-0": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-126-0.png",
@@ -110193,13 +110198,12 @@
     },
     "174-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-174-2.png",
-     "byteLength": 43153,
-     "sha256": "9f512285fe2d4abd71e58c224f216dfa4b470a1ceb9b469c4be52b799cea61bc",
+     "byteLength": 44263,
+     "sha256": "1b3d8756684f690e915afc7ef563f75f369e8f4430726ccc752d4157b8110800",
      "width": 128,
      "height": 256,
      "kind": "door",
      "tallest": 1.0,
-     "depth": 0.025,
      "sway": 0,
      "shade": [
       0.55,
@@ -110207,7 +110211,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.03,
+     "extrude": 0.062
     },
     "309-0": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-309-0.png",
@@ -110667,13 +110673,12 @@
     },
     "317-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-317-1.png",
-     "byteLength": 29860,
-     "sha256": "1da02556278ca031257421149e13e5eaa8702f2a65a6cd5c83c02b8d5c504d6b",
+     "byteLength": 31764,
+     "sha256": "6834101452c9811e2bba1b01adea46912f2c2a0b893e5ad3cf688d5c4eb70d5e",
      "width": 128,
      "height": 128,
      "kind": "stone",
      "tallest": 1.0,
-     "depth": 0.05,
      "sway": 0,
      "shade": [
       0.55,
@@ -110681,7 +110686,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.055,
+     "extrude": 0.09
     },
     "317-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-317-2.png",
@@ -110723,13 +110730,12 @@
     },
     "318-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-318-1.png",
-     "byteLength": 29127,
-     "sha256": "d2badf5819bd4556175547ad55fb6eb310dca33ba5292db55258c710432ebde0",
+     "byteLength": 31223,
+     "sha256": "79c0cc9f0d08cbc7949a4780ff19980083645ad856b5d9d36f07b4912fe50d1a",
      "width": 128,
      "height": 128,
      "kind": "stone, snowed",
      "tallest": 1.0,
-     "depth": 0.05,
      "sway": 0,
      "shade": [
       0.55,
@@ -110737,7 +110743,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.055,
+     "extrude": 0.09
     },
     "318-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-318-2.png",
@@ -110779,13 +110787,12 @@
     },
     "321-4": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-321-4.png",
-     "byteLength": 10708,
-     "sha256": "b099e4e36dea6a262b82e3e92f675f4ec6080dfcb54c14e12b7883eaf898df9e",
+     "byteLength": 10849,
+     "sha256": "ca6c75001a7e00fc75c2c470f3ce24445d1ffe3d9042854e48f57eff600e077a",
      "width": 64,
      "height": 128,
      "kind": "door",
      "tallest": 1.0,
-     "depth": 0.025,
      "sway": 0,
      "shade": [
       0.55,
@@ -110793,17 +110800,18 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.03,
+     "extrude": 0.062
     },
     "321-9": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-321-9.png",
-     "byteLength": 25151,
-     "sha256": "2b646f0dd3424f3d5910c7e75da0d195796f171e67b54f66aec0c8b1f0ef27c2",
+     "byteLength": 25215,
+     "sha256": "d919f855d88ac817b9d73d3da1f5016b972689e5b5ddfada0c2027abcd267eac",
      "width": 128,
      "height": 128,
      "kind": "timber",
      "tallest": 1.0,
-     "depth": 0.04,
      "sway": 0,
      "shade": [
       0.55,
@@ -110811,7 +110819,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.04,
+     "extrude": 0.068
     },
     "326-0": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-326-0.png",
@@ -111898,13 +111908,12 @@
     },
     "374-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-374-2.png",
-     "byteLength": 42550,
-     "sha256": "dd9dc95dcf3adb81c8ab8ec99fc58ba8c807ec42bbc5b5c77e1480a620f25f33",
+     "byteLength": 43012,
+     "sha256": "1129da8174b98c883a1e77f9cf626715a0e581b11fabd1a7fff470070c04449e",
      "width": 128,
      "height": 256,
      "kind": "door",
      "tallest": 1.0,
-     "depth": 0.025,
      "sway": 0,
      "shade": [
       0.55,
@@ -111912,7 +111921,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.03,
+     "extrude": 0.062
     },
     "374-3": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-374-3.png",
@@ -112391,13 +112402,12 @@
     },
     "417-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-417-1.png",
-     "byteLength": 20064,
-     "sha256": "6b29d1f26939ba91a64dc494a7cd93ca8c63258282009545cfb5c48fd74c21d7",
+     "byteLength": 18945,
+     "sha256": "00beefdd2f6be28bc294b82e90aff0886383ee4f74b83a46a227bf9ed0123ee6",
      "width": 128,
      "height": 128,
      "kind": "stone",
      "tallest": 1.0,
-     "depth": 0.05,
      "sway": 0,
      "shade": [
       0.55,
@@ -112405,7 +112415,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.055,
+     "extrude": 0.09
     },
     "417-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-417-2.png",
@@ -112447,13 +112459,12 @@
     },
     "418-1": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-418-1.png",
-     "byteLength": 16784,
-     "sha256": "e71db77d093630de404515597b8545d31c591989a6a6c1872c615f49efef7bfb",
+     "byteLength": 16125,
+     "sha256": "c632fa566af9a44396aebf3eeb3c80410bbbf771bf6d351b753d58039e2dd8fc",
      "width": 128,
      "height": 128,
      "kind": "stone, snowed",
      "tallest": 1.0,
-     "depth": 0.05,
      "sway": 0,
      "shade": [
       0.55,
@@ -112461,7 +112472,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.055,
+     "extrude": 0.09
     },
     "418-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-418-2.png",
@@ -113510,13 +113523,12 @@
     },
     "474-2": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-474-2.png",
-     "byteLength": 40337,
-     "sha256": "e8477ec3d8e8d4fb1b3b18968e5cadb992a47279a83f006a66395b6a5373330d",
+     "byteLength": 39853,
+     "sha256": "1e3a41a20ae1c287423477ce79aec0adc2d7abd42ce7e11a3943a22736c4815f",
      "width": 128,
      "height": 256,
      "kind": "door",
      "tallest": 1.0,
-     "depth": 0.025,
      "sway": 0,
      "shade": [
       0.55,
@@ -113524,7 +113536,9 @@
       0.55
      ],
      "glints": 0,
-     "sinksUnderSnow": false
+     "sinksUnderSnow": false,
+     "depth": 0.03,
+     "extrude": 0.062
     },
     "474-3": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-474-3.png",

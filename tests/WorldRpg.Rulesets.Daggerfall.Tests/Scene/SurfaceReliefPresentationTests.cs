@@ -253,4 +253,122 @@ public sealed class SurfaceReliefPresentationTests
         presentation.Publish(actors);
         Assert.Single(graphics.Snapshots[^1]);
     }
+
+    [Fact]
+    public void Exterior_silhouette_extrude_overlays_city_gates_shares_remodel_overlay_tracks_open_and_closed_state_and_disposes_cleanly()
+    {
+        bool refreshed = true, open = true;
+        float strength = 1F;
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        foreach (string path in new[] { "texture/texture-312-1.png", "texture/texture-313-1.png", "texture/texture-329-0.png",
+                     "surfaces/texture-312-1.png", "surfaces/texture-313-1.png", "surfaces/texture-329-0.png", "relief/relief.wgsl",
+                     "relief/relief-312-1.png", "relief/relief-313-1.png", "relief/relief-329-0.png", "shaders/exterior-extrude.wgsl",
+                     "mesh/446.rstatmsh", "mesh/447.rstatmsh", "remodel/446.rstatmsh", "remodel/447.rstatmsh", "remodel/446-own.png" })
+            content.Add(path, Hash);
+
+        DaggerfallCityGateState GateState(string model) =>
+            new(new DaggerfallDoorVisual($"mesh/{model}.rstatmsh", Hash, [new DaggerfallMeshMaterialBinding(0, 0), new DaggerfallMeshMaterialBinding(1, 1)]),
+                -Vector3.One, Vector3.One, [Vector3.Zero, Vector3.UnitX, Vector3.UnitY], [new Triangle(0, 1, 2)]) { ModelId = model };
+
+        Transform nearPose = new(new Vector3(10F, 0F, 0F), Quaternion.CreateFromAxisAngle(Vector3.UnitY, -MathF.PI / 2F), Vector3.One);
+        Transform farPose = new(new Vector3(180F, 0F, 0F), Quaternion.Identity, Vector3.One);
+        DaggerfallCityGateDefinition nearGate = new("gate/wallaa11-rmb/0", nearPose, GateState("446"), GateState("447"));
+        DaggerfallCityGateDefinition farGate = new("gate/wallaa11-rmb/1", farPose, GateState("446"), GateState("447"));
+
+        DaggerfallSiteGeometry geometry = new(1, [new DaggerfallSiteSpatialPart("block", "spatial/block.rspatial", Hash)], [])
+        {
+            Remodels = new Dictionary<string, DaggerfallSiteRemodel>(StringComparer.Ordinal)
+            {
+                ["446"] = new("remodel/446.rstatmsh", Hash, [new(0, 0), new(1, 1)], [new DaggerfallRemodelTexture(2, "remodel/446-own.png", Hash, false)]),
+                ["447"] = new("remodel/447.rstatmsh", Hash, [new(0, 0), new(1, 1)], []),
+            },
+        };
+        DaggerfallSiteProfile profile = new(
+            new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            geometry,
+            // Non-zero world transform proves gate overlays use gate poses directly, matching the base gate draw.
+            new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(new Vector3(50F, 0F, 0F), Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
+            new PlayerInitialLook(0, 0),
+            [new NormalizedMaterial(0, "texture/texture-312-1.png", Hash, "material/texture-12-1") { WinterTexture = new("texture/texture-313-1.png", Hash) },
+                new NormalizedMaterial(1, "texture/texture-329-0.png", Hash, "material/texture-29-0")],
+            new Dictionary<long, NormalizedActorSprite>(),
+            profileKind: DaggerfallWorldProfileKind.Exterior) { CityGates = [nearGate, farGate] };
+
+        DaggerfallLocationParts parts = new(() => 0, () => [], () => open,
+            () => [(nearGate, new Rusty.Engine.Entities.EntityId(7), nearGate.Open.Visual, nearPose),
+                (farGate, new Rusty.Engine.Entities.EntityId(8), farGate.Open.Visual, farPose)],
+            () => [], (string _, out Transform pose) => { pose = default; return false; });
+
+        AppearanceFake graphics = new(releases);
+        string artJson = ArtJson.Replace("\"depth\": 0.02", "\"depth\": 0.02, \"extrude\": 0.075", StringComparison.Ordinal);
+        using var actors = EmptyActors();
+        DaggerfallSiteAppearance presentation = new(content, graphics, profile, parts: parts, configure: p =>
+        {
+            p.UseSurfaceRelief(DaggerfallSurfaceReliefTuning.Default, () => (strength, 1F));
+            p.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service,
+                DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(artJson), "test.art"), () => refreshed);
+        });
+
+        // Off by default: only the two base gate remodels publish, and classic gate meshes are never opened.
+        presentation.Publish(actors);
+        Assert.Equal(2, graphics.Snapshots[^1].Length);
+        Assert.DoesNotContain("mesh/446.rstatmsh", graphics.StaticMeshPaths);
+        Assert.DoesNotContain("mesh/447.rstatmsh", graphics.StaticMeshPaths);
+
+        // Enabling builds exactly one shared overlay appearance per remodeled gate state (446 and 447), never opening classic meshes.
+        presentation.UpdateExteriorExtrude("shaders/exterior-extrude.wgsl", Hash, enabled: true, viewpoint: new Vector3(12F, 0F, 0F));
+        Assert.Equal(2, graphics.StaticMeshPaths.Count(path => path == "remodel/446.rstatmsh"));
+        Assert.Equal(2, graphics.StaticMeshPaths.Count(path => path == "remodel/447.rstatmsh"));
+        Assert.DoesNotContain("mesh/446.rstatmsh", graphics.StaticMeshPaths);
+        Assert.DoesNotContain("mesh/447.rstatmsh", graphics.StaticMeshPaths);
+
+        Appearance openOverlay = graphics.StaticMeshMaterials.Keys.Last(app =>
+            graphics.StaticMeshMaterials[app].Any(binding => Now(graphics, binding.Material).Shader.Parameter0.X == 1F)
+            && graphics.StaticMeshMaterials[app].Length == 3);
+        Appearance closedOverlay = graphics.StaticMeshMaterials.Keys.Last(app =>
+            graphics.StaticMeshMaterials[app].Any(binding => Now(graphics, binding.Material).Shader.Parameter0.X == 1F)
+            && graphics.StaticMeshMaterials[app].Length == 2);
+
+        // Non-extrudable surface slots and remodel-owned textures bind the discard shader on the overlay.
+        MeshMaterialBinding[] openBindings = graphics.StaticMeshMaterials[openOverlay];
+        Assert.Equal(1F, Now(graphics, Assert.Single(openBindings, b => b.MaterialSlot == 0).Material).Shader.Parameter0.X);
+        Assert.Equal(Vector4.Zero, Now(graphics, Assert.Single(openBindings, b => b.MaterialSlot == 1).Material).Shader.Parameter0);
+        Assert.Equal(Vector4.Zero, Now(graphics, Assert.Single(openBindings, b => b.MaterialSlot == 2).Material).Shader.Parameter0);
+
+        // Only the near gate (within fadeEnd + 32 m) emits an overlay, directly at its gate pose without casting shadows.
+        presentation.Publish(actors);
+        AppearanceFact[] drawn = graphics.Snapshots[^1];
+        Assert.Equal(3, drawn.Length);
+        AppearanceFact nearOpenFact = Assert.Single(drawn, fact => fact.ShadowCasting == ShadowCasting.None);
+        Assert.Equal(openOverlay, nearOpenFact.Appearance);
+        Assert.Equal((nearPose.Translation, nearPose.Rotation), (nearOpenFact.Transform.Translation, nearOpenFact.Transform.Rotation));
+        var nearOverlayId = nearOpenFact.ObjectId;
+
+        // Closing the gates at dusk swaps the overlay immediately to the closed remodel under the same identity.
+        open = false;
+        presentation.Publish(actors);
+        AppearanceFact nearClosedFact = Assert.Single(graphics.Snapshots[^1], fact => fact.ShadowCasting == ShadowCasting.None);
+        Assert.Equal((closedOverlay, nearOverlayId), (nearClosedFact.Appearance, nearClosedFact.ObjectId));
+
+        // Walking across town to the far gate culls the near gate overlay and draws the far gate overlay instead.
+        presentation.UpdateExteriorExtrude("shaders/exterior-extrude.wgsl", Hash, enabled: true, viewpoint: new Vector3(175F, 0F, 0F));
+        presentation.Publish(actors);
+        AppearanceFact farClosedFact = Assert.Single(graphics.Snapshots[^1], fact => fact.ShadowCasting == ShadowCasting.None);
+        Assert.Equal(closedOverlay, farClosedFact.Appearance);
+        Assert.Equal(farPose.Translation, farClosedFact.Transform.Translation);
+        Assert.NotEqual(nearOverlayId, farClosedFact.ObjectId);
+
+        // Classic art or zero relief strength hides gate overlays cleanly.
+        refreshed = false;
+        presentation.Publish(actors);
+        Assert.DoesNotContain(graphics.Snapshots[^1], fact => fact.ShadowCasting == ShadowCasting.None);
+        refreshed = true;
+        strength = 0F;
+        presentation.Publish(actors);
+        Assert.DoesNotContain(graphics.Snapshots[^1], fact => fact.ShadowCasting == ShadowCasting.None);
+
+        // Disposing retires shared gate overlay appearances cleanly with no duplicate disposal.
+        presentation.Dispose();
+    }
 }

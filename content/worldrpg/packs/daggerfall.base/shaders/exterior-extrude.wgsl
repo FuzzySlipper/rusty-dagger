@@ -30,11 +30,13 @@ fn block_height(cell: vec2<i32>, size: vec2<i32>, cutoff: f32) -> f32 {
 
 fn surface_extrude_scale(world_normal: vec3<f32>) -> f32 {
     // Full outward projection on vertical walls and pitched roofs (up to ~60 deg slope) so shingle
-    // courses and snowdrifts step out cleanly; gentler on flat horizontal pads/balconies (ny > 0.86)
-    // and flat downward soffits so feet never clip and eaves stay tight.
-    let flat_up = smoothstep(0.86, 0.97, world_normal.y);
+    // courses, stonework and snowdrifts step out cleanly; fade cleanly to zero on flat horizontal
+    // upward floors/thresholds/pads (ny > 0.96) so buried gate/building slabs never poke up through
+    // terrain roads or snow and feet never clip balconies; gentler on flat downward soffits so
+    // archway ceilings and eaves stay tight.
+    let flat_up = smoothstep(0.86, 0.96, world_normal.y);
     let flat_down = smoothstep(0.82, 0.96, -world_normal.y);
-    return mix(1.0, 0.45, flat_up) * mix(1.0, 0.55, flat_down);
+    return (1.0 - flat_up) * mix(1.0, 0.55, flat_down);
 }
 
 fn displace(vertex: Vertex) -> vec3<f32> {
@@ -81,7 +83,15 @@ fn shade(given: Surface) -> vec4<f32> {
     let tu = select(vec3<f32>(1.0, 0.0, 0.0), normalize(tu_raw), dot(tu_raw, tu_raw) > 1e-12);
     let tv = select(vec3<f32>(0.0, 0.0, 1.0), normalize(tv_raw), dot(tv_raw, tv_raw) > 1e-12);
 
-    var keep = mode >= 0.5 && fade > 0.02;
+    let surf_scale = surface_extrude_scale(n);
+    let into = normalize(given.world_position - frame.camera.xyz);
+    let ndotv = -dot(into, n);
+    // Taper smoothly to zero on razor-edge-on faces (< ~11 deg grazing, e.g. edge-on open gate
+    // leaves or horizon soffit edges) so displaced outer envelopes never float across sky gaps.
+    let grazing = smoothstep(0.08, 0.20, ndotv);
+    let eff_fade = fade * grazing;
+
+    var keep = mode >= 0.5 && eff_fade > 0.02 && surf_scale > 0.02;
     var cell = vec2<i32>(floor(uv * texels));
     var normal = n;
     var hit_pos = given.world_position;
@@ -90,10 +100,8 @@ fn shade(given: Surface) -> vec4<f32> {
     var rim_mask = 0.0;
 
     if keep {
-        let surf_scale = surface_extrude_scale(n);
         let depth = p0.y * surf_scale;
-        let into = normalize(given.world_position - frame.camera.xyz);
-        let down = max(-dot(into, n), 0.16);
+        let down = max(ndotv, 0.12);
         let a = dot(into, along_u);
         let b = dot(into, along_v);
         let across = vec2<f32>(vv * a - cross_uv * b, uu * b - cross_uv * a) / gram;
@@ -110,7 +118,7 @@ fn shade(given: Surface) -> vec4<f32> {
         let steps = clamp(i32(p0.z), 1, 48);
 
         for (var i = 0; i < steps; i++) {
-            let bh = block_height(cell, size, cutoff) * fade;
+            let bh = block_height(cell, size, cutoff) * eff_fade;
             let leaves = min(next.x, next.y);
             let step_leaves = min(leaves, depth);
             if bh > 0.04 {

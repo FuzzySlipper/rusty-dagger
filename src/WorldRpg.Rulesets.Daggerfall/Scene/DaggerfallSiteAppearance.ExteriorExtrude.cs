@@ -1,18 +1,20 @@
 using System.Numerics;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// Outward 3D architectural silhouette-POM overlays for exterior buildings (<c>exterior-extrude.wgsl</c>, #11075).
-/// Overlays each building model's drawn mesh (its 3D remodel where remodeled, skipping remodel-owned textures and
-/// shell-stacked hedge/low-wall slots so remodels never clip and hedges never double-extrude), only on material
-/// slots whose authored relief declares a positive <see cref="DaggerfallGroundRelief.Extrude"/>.
+/// Outward 3D architectural silhouette-POM overlays for exterior buildings and city gates (<c>exterior-extrude.wgsl</c>,
+/// #11075 / #11089). Overlays each building or city gate model's drawn mesh (its 3D remodel where remodeled, shared
+/// across placements and skipping remodel-owned textures and shell-stacked hedge/low-wall slots so remodels never clip
+/// and hedges never double-extrude), only on material slots whose authored relief declares a positive
+/// <see cref="DaggerfallGroundRelief.Extrude"/>.
 /// <para>
-/// Street-distance culling emits overlay facts only for buildings within <c>fadeEnd + 32 m</c> of the active
-/// viewpoint so large cities like Daggerfall or Wayrest keep GPU instance overhead tiny with zero pop-in.
+/// Street-distance culling emits overlay facts only for buildings and city gates within <c>fadeEnd + 32 m</c> of the
+/// active viewpoint so large cities like Daggerfall or Wayrest keep GPU instance overhead tiny with zero pop-in.
 /// </para>
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
@@ -30,7 +32,9 @@ internal sealed partial class DaggerfallSiteAppearance
     private Material? exteriorExtrudeDiscardMaterial;
     private readonly Dictionary<SurfaceMaterial, ExteriorExtrudeMaterial> exteriorExtrudeMaterials = [];
     private readonly Dictionary<ModelVisual, Appearance> exteriorExtrudeOverlays = [];
+    private readonly Dictionary<string, Appearance> exteriorExtrudeRemodels = new(StringComparer.Ordinal);
     private readonly List<(ModelVisual Model, Transform Pose, ulong Ordinal)> exteriorExtrudePlacements = [];
+    private readonly Dictionary<string, (Appearance? Open, Appearance? Closed, ulong Ordinal)> exteriorExtrudeGates = new(StringComparer.Ordinal);
 
     private sealed class ExteriorExtrudeMaterial(Material material, SurfaceMaterial surface)
     {
@@ -66,9 +70,10 @@ internal sealed partial class DaggerfallSiteAppearance
     private void EnsureExteriorExtrudeOverlays()
     {
         if (!exteriorExtrudeEnabled
+            || !surfacesRefreshed
             || exteriorExtrudeShader is null
             || inputs.ProfileKind != DaggerfallWorldProfileKind.Exterior
-            || world.Count == 0
+            || (world.Count == 0 && gateVisuals.Count == 0)
             || exteriorExtrudeOverlaysBuilt)
             return;
 
@@ -80,54 +85,90 @@ internal sealed partial class DaggerfallSiteAppearance
 
         foreach ((ModelVisual model, Transform pose, int _) in world)
         {
-            if (!exteriorExtrudeOverlays.TryGetValue(model, out Appearance? overlay))
-            {
-                overlay = TryCreateExteriorExtrudeOverlay(model, surfaceByMaterial, season, refreshed);
-                if (overlay is null) continue;
-                exteriorExtrudeOverlays.Add(model, overlay);
-            }
+            Appearance? overlay = GetOrCreateExteriorExtrudeOverlay(model, surfaceByMaterial, season, refreshed);
+            if (overlay is null) continue;
             exteriorExtrudePlacements.Add((model, pose, NextLocationVisualOrdinal()));
         }
+
+        foreach ((string gateId, (ModelVisual open, ModelVisual closed, ulong _)) in gateVisuals)
+        {
+            Appearance? openOverlay = GetOrCreateExteriorExtrudeOverlay(open, surfaceByMaterial, season, refreshed);
+            Appearance? closedOverlay = GetOrCreateExteriorExtrudeOverlay(closed, surfaceByMaterial, season, refreshed);
+            if (openOverlay is null && closedOverlay is null) continue;
+            exteriorExtrudeGates.Add(gateId, (openOverlay, closedOverlay, NextLocationVisualOrdinal()));
+        }
+
         exteriorExtrudeOverlaysBuilt = true;
     }
 
-    private Appearance? TryCreateExteriorExtrudeOverlay(
+    private Appearance? GetOrCreateExteriorExtrudeOverlay(
         ModelVisual model,
         Dictionary<Material, SurfaceMaterial> surfaceByMaterial,
         int season,
         bool refreshed)
     {
+        if (exteriorExtrudeOverlays.TryGetValue(model, out Appearance? known)) return known;
         if (model.ModelId is not null && inputs.Geometry.Remodels.TryGetValue(model.ModelId, out DaggerfallSiteRemodel? remodel))
         {
-            bool anyExtrudable = false;
-            foreach (DaggerfallMeshMaterialBinding binding in remodel.Materials)
+            if (exteriorExtrudeRemodels.TryGetValue(model.ModelId, out Appearance? shared))
             {
-                if (remodel.Shells.ContainsKey(binding.MeshSlot)) continue;
-                if (!materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)) continue;
-                if (!surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)) continue;
-                if (HasAnyExteriorExtrude(sm)) { anyExtrudable = true; break; }
+                exteriorExtrudeOverlays.Add(model, shared);
+                return shared;
             }
-            if (!anyExtrudable) return null;
-
-            Appearance created = appearance.CreateStaticMesh(content, remodel.Path, remodel.Sha256, worldAppearance.Tint, admittingOffUpdate);
-            List<MeshMaterialBinding> bindings = new(remodel.Materials.Count + remodel.Textures.Count);
-            foreach (DaggerfallMeshMaterialBinding binding in remodel.Materials)
-            {
-                Material mat = !remodel.Shells.ContainsKey(binding.MeshSlot)
-                    && materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)
-                    && surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)
-                    && HasAnyExteriorExtrude(sm)
-                    ? GetOrCreateExteriorExtrudeMaterial(sm, season, refreshed)
-                    : GetOrCreateExteriorExtrudeDiscardMaterial();
-                bindings.Add(new MeshMaterialBinding(binding.MeshSlot, mat));
-            }
-            foreach (DaggerfallRemodelTexture texture in remodel.Textures)
-                bindings.Add(new MeshMaterialBinding(texture.MeshSlot, GetOrCreateExteriorExtrudeDiscardMaterial()));
-
-            appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings.ToArray()));
+            Appearance? created = TryCreateExteriorExtrudeRemodelOverlay(remodel, surfaceByMaterial, season, refreshed);
+            if (created is null) return null;
+            exteriorExtrudeRemodels.Add(model.ModelId, created);
+            exteriorExtrudeOverlays.Add(model, created);
             return created;
         }
 
+        Appearance? classic = TryCreateExteriorExtrudeClassicOverlay(model, surfaceByMaterial, season, refreshed);
+        if (classic is null) return null;
+        exteriorExtrudeOverlays.Add(model, classic);
+        return classic;
+    }
+
+    private Appearance? TryCreateExteriorExtrudeRemodelOverlay(
+        DaggerfallSiteRemodel remodel,
+        Dictionary<Material, SurfaceMaterial> surfaceByMaterial,
+        int season,
+        bool refreshed)
+    {
+        bool anyExtrudable = false;
+        foreach (DaggerfallMeshMaterialBinding binding in remodel.Materials)
+        {
+            if (remodel.Shells.ContainsKey(binding.MeshSlot)) continue;
+            if (!materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)) continue;
+            if (!surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)) continue;
+            if (HasAnyExteriorExtrude(sm)) { anyExtrudable = true; break; }
+        }
+        if (!anyExtrudable) return null;
+
+        Appearance created = appearance.CreateStaticMesh(content, remodel.Path, remodel.Sha256, worldAppearance.Tint, admittingOffUpdate);
+        List<MeshMaterialBinding> bindings = new(remodel.Materials.Count + remodel.Textures.Count);
+        foreach (DaggerfallMeshMaterialBinding binding in remodel.Materials)
+        {
+            Material mat = !remodel.Shells.ContainsKey(binding.MeshSlot)
+                && materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)
+                && surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)
+                && HasAnyExteriorExtrude(sm)
+                ? GetOrCreateExteriorExtrudeMaterial(sm, season, refreshed)
+                : GetOrCreateExteriorExtrudeDiscardMaterial();
+            bindings.Add(new MeshMaterialBinding(binding.MeshSlot, mat));
+        }
+        foreach (DaggerfallRemodelTexture texture in remodel.Textures)
+            bindings.Add(new MeshMaterialBinding(texture.MeshSlot, GetOrCreateExteriorExtrudeDiscardMaterial()));
+
+        appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings.ToArray()));
+        return created;
+    }
+
+    private Appearance? TryCreateExteriorExtrudeClassicOverlay(
+        ModelVisual model,
+        Dictionary<Material, SurfaceMaterial> surfaceByMaterial,
+        int season,
+        bool refreshed)
+    {
         bool anyClassicExtrudable = false;
         foreach (DaggerfallMeshMaterialBinding binding in model.Mesh.Materials)
         {
@@ -245,7 +286,7 @@ internal sealed partial class DaggerfallSiteAppearance
         if (!exteriorExtrudeEnabled
             || !surfacesRefreshed
             || surfacesRelief.Strength <= 0f
-            || exteriorExtrudePlacements.Count == 0)
+            || (exteriorExtrudePlacements.Count == 0 && exteriorExtrudeGates.Count == 0))
             return;
 
         float fadeEnd = reliefTuning.FadeEnd * surfacesRelief.Distance;
@@ -262,14 +303,33 @@ internal sealed partial class DaggerfallSiteAppearance
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, ordinal), false, 0,
                 worldPose, overlay, worldAppearance.Visible, worldAppearance.Layer, ShadowCasting.None));
         }
+
+        if (parts is null || exteriorExtrudeGates.Count == 0) return;
+        bool gatesOpen = parts.GatesOpen();
+        foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in parts.Gates())
+        {
+            if (!exteriorExtrudeGates.TryGetValue(gate.Id, out (Appearance? Open, Appearance? Closed, ulong Ordinal) gateOverlay))
+                continue;
+            Appearance? overlay = gatesOpen ? gateOverlay.Open : gateOverlay.Closed;
+            if (overlay is null) continue;
+            if (viewpoint is { } eye && Vector3.DistanceSquared(pose.Translation, eye) > cullRadiusSq)
+                continue;
+            facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, gateOverlay.Ordinal), false, 0,
+                pose, overlay, true, RenderLayer.Scene, ShadowCasting.None));
+        }
     }
 
     private void TakeExteriorExtrudeResources(List<IDisposable> retired)
     {
+        HashSet<Appearance> unique = [];
         foreach (Appearance overlay in exteriorExtrudeOverlays.Values)
-            retired.Add(overlay);
+            if (unique.Add(overlay)) retired.Add(overlay);
+        foreach (Appearance overlay in exteriorExtrudeRemodels.Values)
+            if (unique.Add(overlay)) retired.Add(overlay);
         exteriorExtrudeOverlays.Clear();
+        exteriorExtrudeRemodels.Clear();
         exteriorExtrudePlacements.Clear();
+        exteriorExtrudeGates.Clear();
         exteriorExtrudeMaterials.Clear();
         exteriorExtrudeDiscardMaterial = null;
         exteriorExtrudeOverlaysBuilt = false;

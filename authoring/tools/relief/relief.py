@@ -329,11 +329,22 @@ def _exterior_set():
 
 def outdoors():
     """Every record a town's exterior blocks draw, as the import publishes them (tiling.py): each placed model's records,
-    in its base archive and every archive the climate and season swaps draw it as."""
+    plus remodeled city wall and gate slots (444-447), in their base archive and every archive the climate and season swaps draw them as."""
     planes = tiling.meshes()
     swaps, _ = tiling.reach()
-    return {(drawn, record) for _, kind, mesh in tiling.placements() if kind == "rmbExterior"
-            for archive, record, _, _ in planes.get(mesh, []) for drawn in {archive} | swaps.get((archive, record), set())}
+    drawn = {(target, record) for _, kind, mesh in tiling.placements() if kind == "rmbExterior"
+             for archive, record, _, _ in planes.get(mesh, []) for target in {archive} | swaps.get((archive, record), set())}
+    models = json.loads(PAYLOAD.read_text())["artReplacements"].get("models", {})
+    for mid in ("444", "445", "446", "447"):
+        for slot in models.get(mid, {}).get("slots", []):
+            mat = slot.get("material", "")
+            if mat.startswith("material/texture-"):
+                archive, record = (int(part) for part in mat.split("material/texture-")[1].split("-"))
+                base = archive % 100
+                for climate in (0, 100, 300, 400):
+                    for offset in (0, 1):
+                        drawn.add((climate + offset + base, record))
+    return drawn
 
 
 def covered():
