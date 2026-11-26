@@ -32,16 +32,23 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
     internal static HeightfieldRing[] Rings { get; } =
         [new(FineCellMetres, 8_000), new(FineCellMetres * 4, 32_000), new(FineCellMetres * 16, 110_000)];
 
+    internal const string LandShaderPath = "worldrpg/packs/daggerfall.base/shaders/overland-land.wgsl";
+
     private readonly IEngineContext _engine;
     private readonly DaggerfallHorizonGround _ground;
     private readonly double _relief;
     private readonly DaggerfallMapPalette _palette;
     private readonly DaggerfallTravelMapArt? _art;
+    private readonly DaggerfallArtFile? _landShaderFile;
     private MaterialShader? _waterShader;
     private Material? _water, _land;
-    private RenderResource? _detail, _detailRelief;
+    private RenderResource? _detail, _detailRelief, _landShader;
     private Heightfield? _field;
     private HeightfieldStreamer? _streamer;
+    private Vector2 _windDirection = new(.8f, .6f);
+    private float _cloudSpeed = .10f;
+    private float _cloudCover = .22f;
+    private float _daylight = 1f;
     private bool _winter;
     private bool _shown;
     private bool _disposed;
@@ -50,11 +57,13 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
     /// <param name="palette">The colours the land and the water are painted in.</param>
     /// <param name="art">The art set's detail for the land, if it has it.</param>
     /// <param name="waterShader">The animated water shader over the sea's maps, or none to draw plain water.</param>
+    /// <param name="landShader">The base pack's overland-land shader (anti-tiling, cliff crags, drifting cloud shadows), if present.</param>
     internal DaggerfallOverlandTerrain(IEngineContext engine, DaggerfallHorizonGround ground, double relief, DaggerfallMapPalette palette,
-        DaggerfallTravelMapArt? art, MaterialShader? waterShader = null)
+        DaggerfallTravelMapArt? art, MaterialShader? waterShader = null, DaggerfallArtFile? landShader = null)
     {
         _art = art;
         _waterShader = waterShader;
+        _landShaderFile = landShader;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _ground = ground ?? throw new ArgumentNullException(nameof(ground));
         if (!double.IsFinite(relief) || relief <= 0) throw new ArgumentOutOfRangeException(nameof(relief));
@@ -67,6 +76,43 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
     {
         _waterShader = shader;
         if (_water is not null && !_disposed) _engine.Graphics.UpdateMaterial(new(_water, Water()));
+    }
+
+    /// <summary>Updates wind bearing and speed for the land's drifting cloud shadows.</summary>
+    internal void UpdateWind(float bearingRadians, float speedMetresPerSecond)
+    {
+        Vector2 dir = new(MathF.Cos(bearingRadians), MathF.Sin(bearingRadians));
+        float speed = .07f + (Math.Clamp(speedMetresPerSecond / 20f, 0, 1) * .11f);
+        if (Vector2.DistanceSquared(dir, _windDirection) < 1e-4f && MathF.Abs(speed - _cloudSpeed) < .005f) return;
+        _windDirection = dir;
+        _cloudSpeed = speed;
+        RefreshLand();
+    }
+
+    /// <summary>Updates active weather cloud shadow density, daylight and season for the overland land shader.</summary>
+    internal void UpdateAtmosphere(DaggerfallWeatherKind weather, float daylight, bool winter)
+    {
+        float cover = weather switch
+        {
+            DaggerfallWeatherKind.Sunny => .22f,
+            DaggerfallWeatherKind.Cloudy => .42f,
+            DaggerfallWeatherKind.Overcast => .64f,
+            DaggerfallWeatherKind.Fog => .58f,
+            DaggerfallWeatherKind.Rain => .72f,
+            DaggerfallWeatherKind.Snow => .68f,
+            _ => .78f,
+        };
+        float lit = MathF.Round(Math.Clamp(daylight, 0, 1) * 20) / 20;
+        if (MathF.Abs(cover - _cloudCover) < .001f && MathF.Abs(lit - _daylight) < .001f && winter == _winter) return;
+        _cloudCover = cover;
+        _daylight = lit;
+        RefreshLand();
+    }
+
+    private void RefreshLand()
+    {
+        if (_land is not null && _landShader is not null && !_disposed)
+            _engine.Graphics.UpdateMaterial(new(_land, LandMaterial()));
     }
 
     /// <summary>Whether the map's land is drawn now.</summary>
@@ -93,6 +139,7 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
         {
             _winter = winter;
             _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_field, -1e9, -1e9, 1e9, 1e9));
+            RefreshLand();
         }
 
         if (shown != _shown)
@@ -112,16 +159,40 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
         Shader = _waterShader ?? default,
     };
 
-    /// <summary>The land's material: plain, the vertices' colours alone, or with the art set's detail over them.</summary>
+    /// <summary>The land's material: plain, detail maps alone, or the overland-land shader over the detail maps.</summary>
     private MaterialRequest Land()
     {
         if (_art is null)
             return new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), .95f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false);
         // Both maps are data: the mottle multiplies the colours as it is, and mipmaps average it to its tone at a distance.
-        _detail = _engine.Graphics.OpenTexture(_engine.Content, _art.Detail.Path, _art.Detail.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
+        _detail ??= _engine.Graphics.OpenTexture(_engine.Content, _art.Detail.Path, _art.Detail.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
             space: TextureColorSpace.Linear).Handle;
-        _detailRelief = _engine.Graphics.OpenTexture(_engine.Content, _art.DetailNormal.Path, _art.DetailNormal.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
+        _detailRelief ??= _engine.Graphics.OpenTexture(_engine.Content, _art.DetailNormal.Path, _art.DetailNormal.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
             space: TextureColorSpace.Linear).Handle;
+        if (_landShaderFile is { } shaderFile)
+            _landShader ??= _engine.Graphics.OpenShader(_engine.Content, shaderFile.Path, shaderFile.Sha256);
+        return LandMaterial();
+    }
+
+    private MaterialRequest LandMaterial()
+    {
+        if (_detail is null || _detailRelief is null)
+            return new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), .95f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false);
+        if (_landShader is not null)
+        {
+            return new MaterialRequest(new Color(1, 1, 1, 1), default(RenderResourceReference), .95f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false)
+            {
+                Shader = new MaterialShader(
+                    new RenderResourceReference(_landShader),
+                    new Vector4(_palette.DetailMetres * Scale, _palette.DetailRelief, (float)(DaggerfallHorizonGround.OceanMetres * Scale), _cloudCover),
+                    new Vector4(_windDirection.X, _windDirection.Y, _cloudSpeed, _daylight),
+                    new Vector4(_palette.Rock, _winter ? 1f : 0f),
+                    Vector4.Zero,
+                    new RenderResourceReference(_detail),
+                    new RenderResourceReference(_detailRelief),
+                    0),
+            };
+        }
         return new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(_detail), .95f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false)
         {
             NormalMap = new RenderResourceReference(_detailRelief),
@@ -171,6 +242,7 @@ internal sealed class DaggerfallOverlandTerrain : IDisposable
         Drop();
         _water?.Dispose();
         _land?.Dispose();
+        _landShader?.Dispose();
         _detail?.Dispose();
         _detailRelief?.Dispose();
     }

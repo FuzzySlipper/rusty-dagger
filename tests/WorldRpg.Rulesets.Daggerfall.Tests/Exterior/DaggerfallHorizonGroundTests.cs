@@ -646,6 +646,24 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.Equal(sea, DaggerfallHorizonGround.MapHeight(sea, 4), 6);
     }
 
+    [Fact]
+    public void Travel_map_curvature_darkens_concave_valleys_brightens_ridges_and_leaves_flat_ground_neutral()
+    {
+        double[] flat = new double[9];
+        Array.Fill(flat, 200);
+        Assert.Equal(1f, DaggerfallHorizonGround.CurvatureShade(flat, 3, 0, 0, 51.2), 4);
+
+        double[] valley = (double[])flat.Clone();
+        valley[4] = 185;
+        float valleyShade = DaggerfallHorizonGround.CurvatureShade(valley, 3, 0, 0, 51.2);
+        Assert.InRange(valleyShade, .80f, .96f);
+
+        double[] ridge = (double[])flat.Clone();
+        ridge[4] = 215;
+        float ridgeShade = DaggerfallHorizonGround.CurvatureShade(ridge, 3, 0, 0, 51.2);
+        Assert.InRange(ridgeShade, 1.04f, 1.14f);
+    }
+
     /// <summary>One straight course across the middle of a map pixel, level enough to read a cross-section.</summary>
     private static byte[] River(double surface, double halfWidth)
     {

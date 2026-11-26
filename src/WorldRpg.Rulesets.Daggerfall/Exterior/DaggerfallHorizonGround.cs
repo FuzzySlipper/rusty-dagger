@@ -218,7 +218,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
                 continue;
             }
             samples.SetMaterial(i, j, 1);
-            if (height <= OceanMetres + BeachMetres) { samples.SetColor(i, j, Linear(palette.Beach)); continue; }
+            float cavity = CurvatureShade(ground, heightSide, i, j, tile.CellSize);
+            if (height <= OceanMetres + BeachMetres) { samples.SetColor(i, j, Linear(palette.Beach * (1 + ((cavity - 1) * .4f)))); continue; }
             // Far-horizon rock-slope boost (2x) is tuned for coarse mountain cells; on the travel map's fine cells,
             // applying it at sea level paints gentle coastal hillsides and riverbanks as grey cliffs. Ramp it in above lowlands.
             float highland = Math.Clamp((float)((height - OceanMetres - 250) / 500), 0, 1);
@@ -245,7 +246,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             }
             float patch = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX / 4 + 7_919, 64_000 - (broadZ / 4));
             float woods = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX / 2 + 3_301, 64_000 - (broadZ / 2) + 5_107);
-            samples.SetColor(i, j, Linear(palette.Ground(climate, weights, lush, patch, woods, winter)));
+            samples.SetColor(i, j, Linear(palette.Ground(climate, weights, lush, patch, woods, winter) * cavity));
         }
     }
 
@@ -594,6 +595,19 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         int at = ((j + 1) * heightSide) + i + 1;
         double slopeX = (ground[at + 1] - ground[at - 1]) / (2 * cell), slopeZ = (ground[at + heightSide] - ground[at - heightSide]) / (2 * cell);
         return (float)Math.Sqrt((slopeX * slopeX) + (slopeZ * slopeZ));
+    }
+
+    /// <summary>
+    /// Travel-map local curvature hillshade AO from the tile's already-sampled height stencil: softly darkens concave
+    /// valleys/gullies and brightens convex ridges/crests across every ring with zero GPU or asset cost (#11111).
+    /// </summary>
+    internal static float CurvatureShade(double[] ground, int heightSide, int i, int j, double cell)
+    {
+        int at = ((j + 1) * heightSide) + i + 1;
+        double average = (((ground[at - 1] + ground[at + 1] + ground[at - heightSide] + ground[at + heightSide]) * 2)
+            + ground[at - heightSide - 1] + ground[at - heightSide + 1] + ground[at + heightSide - 1] + ground[at + heightSide + 1]) / 12.0;
+        double normalized = Math.Tanh((ground[at] - average) / Math.Max(cell * .18, 1e-3));
+        return (float)(normalized >= 0 ? 1 + (.12 * normalized) : 1 + (.18 * normalized));
     }
 
     private static void Draw(HeightfieldTileSamples samples, int i, int j, Paint paint)

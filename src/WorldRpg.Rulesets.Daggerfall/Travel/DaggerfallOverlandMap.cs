@@ -183,6 +183,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             _fall?.Release();
         }
         View.Track(partyX, partyZ);
+        _terrain.UpdateAtmosphere(weather, 1 - Math.Clamp(night, 0, 1), winter);
         _terrain.Follow(View.TargetX, View.TargetZ, winter, shown: true);
         Vector3 target = View.Target(Height(View.TargetX, View.TargetZ));
         _lookedAt = Backdrop(target).Y;

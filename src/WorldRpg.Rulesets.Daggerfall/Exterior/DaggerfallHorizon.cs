@@ -92,7 +92,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <param name="mapPalette">The colours the travel map's land and water are painted in.</param>
     internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers,
         DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallSeaArt? seaArt, double mapRelief, DaggerfallMapPalette mapPalette,
-        DaggerfallTravelMapArt? mapArt)
+        DaggerfallTravelMapArt? mapArt, DaggerfallArtFile? mapLandShader = null)
     {
         _flora = flora ?? throw new ArgumentNullException(nameof(flora));
         _farForest = farForest ?? throw new ArgumentNullException(nameof(farForest));
@@ -113,7 +113,7 @@ internal sealed class DaggerfallHorizon : IDisposable
                 space: TextureColorSpace.Linear).Handle;
             _seaArt = (Shader(""), Shader("FAR"), Shader("RIVER"), Shader("OVERLAND"), new(MapTex(seaArt.Ripples), MapTex(seaArt.Foam)));
         }
-        Map = new(engine, ground, mapRelief, mapPalette, mapArt, OverlandWater());
+        Map = new(engine, ground, mapRelief, mapPalette, mapArt, OverlandWater(), mapLandShader);
         _sea = engine.Graphics.CreateMaterial(Sea(Vector3.One));
         _water = engine.Graphics.CreateMaterial(Water(default, river: false));
         _river = engine.Graphics.CreateMaterial(Water(default, river: true));
@@ -154,7 +154,11 @@ internal sealed class DaggerfallHorizon : IDisposable
         if (skyMoved || (_seaArt is not null && (moons != _moons || windMoved)))
         {
             if (skyMoved) _sky = sky;
-            if (windMoved) _blowing = _wind.Now;
+            if (windMoved)
+            {
+                _blowing = _wind.Now;
+                Map.UpdateWind(_blowing.Bearing, _blowing.Speed);
+            }
             _moons = moons;
             _engine.Graphics.UpdateMaterial(new(_sea, Sea(_sky)));
             if (OverlandWater() is { } overland) Map.UpdateWater(overland);

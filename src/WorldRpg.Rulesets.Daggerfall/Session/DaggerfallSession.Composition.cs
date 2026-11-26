@@ -1277,10 +1277,16 @@ internal sealed partial class DaggerfallSession
             DaggerfallHorizonGround ground = new(definitions.Terrain,
                 (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _exterior.Locations);
             _exterior.UseGround(ground, GroundWalkers);
+            DaggerfallArtFile? mapLandShader = composition.Data is not null
+                && composition.Data.TryReadFile(DaggerfallOverlandTerrain.LandShaderPath, out ReadOnlyMemory<byte> landShaderBytes)
+                ? new(DaggerfallOverlandTerrain.LandShaderPath,
+                    DaggerfallContentHash.Parse(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(landShaderBytes.Span)), "The travel map's land shader"))
+                : null;
             _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers,
                 new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Sprites, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
                 new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Sprites, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
-                composition.ArtReplacements?.Sea, tuning.Expedition.Map.Relief, tuning.Expedition.Map.Ground, composition.ArtReplacements?.TravelMap);
+                composition.ArtReplacements?.Sea, tuning.Expedition.Map.Relief, tuning.Expedition.Map.Ground, composition.ArtReplacements?.TravelMap,
+                mapLandShader);
             partiallyConstructed.Add(_horizon);
             _overland = new DaggerfallOverlandMap(engine, _horizon.Map, tuning.Expedition.Map, Expedition.Policy.AllDestinations(), _camera.Activate,
                 mobile => _sites.Projection.Inputs.MobileSprites.GetValueOrDefault(mobile), PartyMobile, tuning.Sprites.Actors,
