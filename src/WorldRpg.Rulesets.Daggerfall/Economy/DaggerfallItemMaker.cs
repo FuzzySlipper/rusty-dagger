@@ -26,7 +26,7 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
     DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
     MechanicsInventoryCoordinator inventory, DaggerfallItemInstances instances,
     DaggerfallItemEnchanting enchanting, DaggerfallSoulGems souls, DaggerfallUniqueItemAllocator identities,
-    Func<DaggerfallCalendar> calendar)
+    Func<DaggerfallCalendar> calendar, Func<int, int, int>? magicServicePrice = null)
 {
     private DaggerfallItemMakerDraft? _draft;
     private long _revision;
@@ -97,7 +97,8 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
             var quote = DaggerfallEnchantmentConstruction.Quote(definitions, item.Metadata, _draft.Name, _draft.Settings);
             var settings = quote.Enchantment.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key]).ToArray();
             if (settings.Any(value => value.Type == 15 && !souls.HasSoul(value.Param))) return Refused("SoulUnavailable");
-            return new(Revision, Draft, quote.Capacity, quote.Power, quote.Gold, [.. settings.Select(Setting)], true, null);
+            int gold = magicServicePrice?.Invoke(provider.Site.Region, quote.Gold) ?? quote.Gold;
+            return new(Revision, Draft, quote.Capacity, quote.Power, gold, [.. settings.Select(Setting)], true, null);
         }
         catch (Exception exception) when (exception is ArgumentException or OverflowException)
         { return Refused(DaggerfallRejectionText.For(exception)); }

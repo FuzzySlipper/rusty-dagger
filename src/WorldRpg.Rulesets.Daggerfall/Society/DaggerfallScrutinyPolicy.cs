@@ -59,7 +59,6 @@ internal sealed class DaggerfallScrutinyPolicy(
     internal const int HighStandingExemptThreshold = 20;
     internal const int HeightenedWantedThreshold = -5;
     internal const int StrictWantedThreshold = 0;
-    internal const int GrainShortageSurchargePerSeverity = 150;
 
     /// <summary>Effective regional reputation known at <paramref name="site"/> (accounting for crimes whose couriers have not arrived yet).</summary>
     internal int EffectiveRegionalReputation(int region, DaggerfallSiteRecord? site = null)
@@ -224,13 +223,6 @@ internal sealed class DaggerfallScrutinyPolicy(
         if (tavernKeeper is not null && (legalServices.IsOutlawExempt(tavernKeeper, building) || HasTrustedVouchFor(tavernKeeper.DurableId)))
             return false;
         return !legalServices.IsShadyOrCriminalBuilding(building);
-    }
-
-    /// <summary>Regional price-adjustment surcharge (added to the classic 1000-base regional factor) from active scarcity conditions.</summary>
-    internal int RegionalPriceSurcharge(int region)
-    {
-        int shortage = conditions.MaxSeverity(region, DaggerfallWorldConditionKind.GrainShortage, currentDay());
-        return shortage > 0 ? shortage * GrainShortageSurchargePerSeverity : 0;
     }
 
     private bool HasTrustedVouchFor(long npcDurableId) =>

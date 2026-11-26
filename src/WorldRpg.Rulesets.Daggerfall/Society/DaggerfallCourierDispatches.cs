@@ -590,6 +590,17 @@ internal sealed class DaggerfallCourierDispatches(
         _resolutions.AddRange(saved.Resolutions);
     }
 
+    /// <summary>Forgets a settled dispatch and its resolutions once the board has taken what it needed of them.</summary>
+    internal bool Forget(string dispatchId)
+    {
+        if (!_dispatches.TryGetValue(dispatchId, out DaggerfallCourierDispatchSave? dispatch)
+            || dispatch.Status is not (DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted))
+            return false;
+        _dispatches.Remove(dispatchId);
+        _resolutions.RemoveAll(resolution => resolution.DispatchId == dispatchId);
+        return true;
+    }
+
     private DaggerfallDispatchResolution RecordResolution(DaggerfallDispatchResolution resolution)
     {
         resolution.Validate();

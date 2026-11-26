@@ -18,7 +18,7 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
     DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
     DaggerfallCharacterState character, MechanicsInventoryCoordinator inventory, StatsComponent playerStats,
     Func<string, int?> castingCost, Func<DaggerfallCalendar> calendar,
-    Func<DaggerfallNpc, int>? tradeReaction = null)
+    Func<DaggerfallNpc, int>? tradeReaction = null, Func<int, int, int>? magicServicePrice = null)
 {
     // DFLocation.Holidays.Witches_Festival, whose date is owned by the existing calendar.
     private const int WitchesFestival = 43;
@@ -33,14 +33,14 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
         if (!CanUse(provider)) return [];
         int reaction = ResolveReaction(provider);
         return definitions.Magic.Spells.Values.Where(spell => spell.SpellsForSale).OrderBy(spell => spell.Name, StringComparer.Ordinal)
-            .Select(spell => Offer(spell.Key, quality, reaction)).OfType<DaggerfallSpellOffer>().ToArray();
+            .Select(spell => Offer(spell.Key, quality, reaction, provider.Site.Region)).OfType<DaggerfallSpellOffer>().ToArray();
     }
 
     internal DaggerfallSpellSaleResult Buy(DaggerfallServiceProvider provider, int quality, string key, ulong quotedPrice, bool confirm)
     {
         if (!confirm) return new(false, "ConfirmationRequired");
         if (!CanUse(provider)) return new(false, "ProviderUnavailable");
-        var offer = Offer(key, quality, ResolveReaction(provider));
+        var offer = Offer(key, quality, ResolveReaction(provider), provider.Site.Region);
         if (offer is null) return new(false, "SpellUnavailable");
         if (offer.Known) return new(false, "AlreadyKnown");
         if (offer.Price != quotedPrice) return new(false, "PriceChanged");
@@ -72,7 +72,7 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
             ? Math.Clamp(tradeReaction(npc), DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction)
             : 0;
 
-    private DaggerfallSpellOffer? Offer(string key, int quality, int reaction)
+    private DaggerfallSpellOffer? Offer(string key, int quality, int reaction, int region)
     {
         if (!definitions.Magic.Spells.TryGetValue(key, out var spell) || !spell.SpellsForSale || castingCost(key) is not int cost) return null;
         int presented = checked(cost * 4);
@@ -81,6 +81,7 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
         int price = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(presented, quality, false,
             Math.Clamp(stats.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100),
             Math.Clamp(stats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), reaction);
+        price = magicServicePrice?.Invoke(region, price) ?? price;
         return new(key, spell.Name, cost, checked((ulong)price), character.KnownSpells.Contains(key));
     }
 

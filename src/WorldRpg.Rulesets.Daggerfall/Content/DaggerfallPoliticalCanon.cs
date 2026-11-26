@@ -14,7 +14,8 @@ internal static partial class DaggerfallBaseContent
     private const int LastClassicRegion = 61;
 
     /// <summary>The canon board, or null for a base pack that carries none (then no board runs).</summary>
-    private static DaggerfallPoliticalCanon? ReadPoliticalCanon(JsonElement root, DaggerfallBoardSeatSet seats, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallPoliticalCanon? ReadPoliticalCanon(JsonElement root, DaggerfallBoardSeatSet seats, DaggerfallActorCatalog actors,
+        DaggerfallContentDiagnostics diagnostics)
     {
         bool hasBoard = root.TryGetProperty("politicalBoard", out JsonElement boardSection);
         bool hasCards = root.TryGetProperty("politicalCards", out JsonElement cardsSection);
@@ -45,6 +46,9 @@ internal static partial class DaggerfallBaseContent
         foreach (SeatSetup seat in setup.Seats)
             if (!seats.TryGetBySeatId(seat.Id, out _))
                 diagnostics.Add($"Political board seat '{seat.Id}' has no board-seat binding to an office faction.");
+        foreach (string persona in setup.Personas.Keys)
+            if (!actors.Specs.ContainsKey(persona))
+                diagnostics.Add($"Political board persona '{persona}' names no cast actor.");
         foreach (DaggerfallBoardSeatBinding binding in seats.All)
             if (!setup.Seats.Any(seat => seat.Id == binding.SeatId))
                 diagnostics.Add($"Board-seat binding '{binding.SeatId}' names no seat of the political board.");

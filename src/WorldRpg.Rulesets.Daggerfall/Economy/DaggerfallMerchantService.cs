@@ -220,6 +220,7 @@ internal sealed class DaggerfallMerchantService
     private readonly Func<DaggerfallCrimeWitnessEvidence> _crimeWitnesses;
     private readonly Func<string, DaggerfallCrimeKind, DaggerfallCrimeVictimContext?, DaggerfallCrimeWitnessEvidence, DaggerfallCrimeWitnessEvidence>? _evaluateWitnesses;
     private readonly Func<DaggerfallCalendar> _calendar;
+    private readonly Func<int, int, int>? _magicServicePrice;
     private readonly Func<DaggerfallNpcSite?> _currentSite;
     private readonly Dictionary<string, Binding> _bindings = new(StringComparer.Ordinal);
     private long _nextRequest;
@@ -265,7 +266,8 @@ internal sealed class DaggerfallMerchantService
         Func<DaggerfallNpcSite?> currentSite,
         IEnumerable<DaggerfallMerchantSave>? restored = null,
         Func<DaggerfallCrimeWitnessEvidence>? crimeWitnesses = null,
-        Func<string, DaggerfallCrimeKind, DaggerfallCrimeVictimContext?, DaggerfallCrimeWitnessEvidence, DaggerfallCrimeWitnessEvidence>? evaluateWitnesses = null)
+        Func<string, DaggerfallCrimeKind, DaggerfallCrimeVictimContext?, DaggerfallCrimeWitnessEvidence, DaggerfallCrimeWitnessEvidence>? evaluateWitnesses = null,
+        Func<int, int, int>? magicServicePrice = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _random = random ?? throw new ArgumentNullException(nameof(random));
@@ -292,6 +294,7 @@ internal sealed class DaggerfallMerchantService
         _evaluateWitnesses = evaluateWitnesses;
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         _currentSite = currentSite ?? throw new ArgumentNullException(nameof(currentSite));
+        _magicServicePrice = magicServicePrice;
         foreach (DaggerfallMerchantSave save in restored ?? []) MaterializeSaved(save);
     }
 
@@ -594,9 +597,13 @@ internal sealed class DaggerfallMerchantService
     /// admission changes eligibility and provider identity while leaving the ordinary cost unchanged
     /// outside that holiday.
     /// </summary>
-    private int IdentifyCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
-        _calendar().GetHolidayId(binding.Context.Provider.Site.Region) == WitchesFestival
-            ? 0 : DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(IdentifySourceValue(definition, metadata));
+    private int IdentifyCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata)
+    {
+        int region = binding.Context.Provider.Site.Region;
+        if (_calendar().GetHolidayId(region) == WitchesFestival) return 0;
+        int cost = DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(IdentifySourceValue(definition, metadata));
+        return _magicServicePrice?.Invoke(region, cost) ?? cost;
+    }
 
     private static string GuildRefusal(DaggerfallConcreteGuildServiceRuntimeDecision decision) =>
         !decision.Policy.Eligible ? decision.Policy.Denial.ToString()

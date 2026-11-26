@@ -163,12 +163,12 @@ internal static partial class DaggerfallBaseContent
             DaggerfallLocationSet locations = ReadLocations(root, data, diagnostics);
             DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
             DaggerfallBoardSeatSet boardSeats = ReadBoardSeats(root, factions, diagnostics);
-            DaggerfallPoliticalCanon? politicalCanon = ReadPoliticalCanon(root, boardSeats, diagnostics);
             DaggerfallCreatureFactionSet creatureFactions = root.TryGetProperty("creatureFactions", out JsonElement creatureFactionsEl)
                 ? DaggerfallCreatureFactionSet.Read(creatureFactionsEl, diagnostics)
                 : DaggerfallCreatureFactionSet.ClassicDefault;
             (DaggerfallActorCatalog actorCatalog, Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, DaggerfallMobileCatalogSet mobiles) =
                 ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, magic, factions, diagnostics);
+            DaggerfallPoliticalCanon? politicalCanon = ReadPoliticalCanon(root, boardSeats, actorCatalog, diagnostics);
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             DaggerfallEncounterSet encounters = ReadEncounters(root, actorCatalog, mobiles, diagnostics);
             ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);

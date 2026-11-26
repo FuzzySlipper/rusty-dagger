@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using WorldRpg.Kit;
 using WorldRpg.Politics;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -14,7 +15,7 @@ public sealed class PoliticalBoardTests
     private static DaggerfallPoliticalCanon Canon => TestPayload.Definitions.PoliticalCanon!;
 
     private static DaggerfallPoliticalBoard NewBoard(DaggerfallWorldConditions conditions, long day = Wednesday, DaggerfallPoliticalBoardSave? saved = null) =>
-        new(Canon, TestPayload.Definitions.BoardSeats, conditions, TestPayload.Definitions.Locations.Records, day, saved);
+        new(Canon, TestPayload.Definitions.BoardSeats, conditions, TestPayload.Definitions.Locations.Records, null, day, saved);
 
     private static IReadOnlyList<DaggerfallConditionCounterplayRecord> None() => [];
 
@@ -24,6 +25,25 @@ public sealed class PoliticalBoardTests
         DaggerfallPoliticalCanon canon = Canon;
         Assert.Equal(13, canon.Setup.Seats.Count);
         Assert.All(canon.Setup.Seats, seat => Assert.True(TestPayload.Definitions.BoardSeats.TryGetBySeatId(seat.Id, out _)));
+    }
+
+    [Fact]
+    public void A_board_naming_a_region_seat_or_holder_the_world_lacks_is_refused_with_each_named()
+    {
+        JsonObject sections = TestPayload.Sections("politicalBoard");
+        JsonObject board = sections["politicalBoard"]!.AsObject();
+        board["regions"]!.AsArray().First(region => region!["id"]!.GetValue<string>() == "betony")!["catalogRegion"] = 99;
+        JsonNode persona = board["personas"]!["king-gothryd"]!.DeepClone();
+        board["personas"]!["king-nobody"] = persona;
+        JsonObject extra = board["seats"]!.AsArray().First(seat => seat!["id"]!.GetValue<string>() == "balfiera")!.DeepClone().AsObject();
+        extra["id"] = "free-company";
+        extra["holder"] = "king-nobody";
+        board["seats"]!.AsArray().Add(extra);
+
+        DaggerfallContentException refused = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(sections)));
+        Assert.Contains(refused.Diagnostics, problem => problem.Contains("'betony'", StringComparison.Ordinal) && problem.Contains("99", StringComparison.Ordinal));
+        Assert.Contains(refused.Diagnostics, problem => problem.Contains("'king-nobody'", StringComparison.Ordinal));
+        Assert.Contains(refused.Diagnostics, problem => problem.Contains("'free-company'", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -198,6 +218,36 @@ public sealed class PoliticalBoardTests
         restored.AdvanceElapsedTime(7 * 86400);
         Assert.Equal(4, restored.PoliticalBoard.Board.Turn);
         Assert.Equal(board.Board.Save().ToJson(), restored.PoliticalBoard.Board.Save().ToJson());
+    }
+
+    [Fact]
+    public void A_slow_move_rides_with_a_courier_whose_seizure_intercepts_it_and_whose_dispatch_is_then_forgotten()
+    {
+        using DaggerfallSession session = FreshSession();
+        DaggerfallPoliticalBoard board = session.PoliticalBoard!;
+        long day = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar.Day;
+        PendingMove? ridden = null;
+        while (ridden is null)
+        {
+            session.AdvanceElapsedTime((board.NextTurnDay - day) * 86400);
+            day = board.NextTurnDay - DaggerfallPoliticalBoard.DaysPerWeek;
+            ridden = board.Board.Pending.FirstOrDefault(move => move.Played == board.Board.Turn && move.Arrives > board.Board.Turn + 1
+                && session.CourierDispatches.TryGet(move.Id, out DaggerfallCourierDispatchSave? staged) && staged!.Status == DaggerfallDispatchStatus.InTransit);
+            Assert.True(board.Board.Turn < 26, "no slow move with a courier still on the road in half a year");
+        }
+        Assert.True(session.CourierDispatches.TryGet(ridden.Id, out DaggerfallCourierDispatchSave? dispatch));
+        Assert.Equal(ridden.Seat, dispatch!.SeatId);
+        Assert.Equal(ridden.Card.Id, dispatch.ActionKind);
+
+        Assert.True(session.CourierDispatches.InterceptDispatch(ridden.Id, dispatch.DispatchedAtMinute + 1, checked((int)day)).Accepted);
+        session.AdvanceElapsedTime(7 * 86400);
+
+        NudgeTrace intercepted = Assert.Single(board.LatestTrace!.Nudges, nudge => nudge.Nudge == new MoveIntercepted(ridden.Id));
+        Assert.Equal(NudgeOutcome.Applied, intercepted.Outcome);
+        Assert.DoesNotContain(board.Board.Pending, move => move.Id == ridden.Id);
+        Assert.False(session.CourierDispatches.TryGet(ridden.Id, out _));
+        // Every courier still on the board's books carries a move still under way.
+        Assert.All(session.CourierDispatches.All, courier => Assert.Contains(board.Board.Pending, move => move.Id == courier.DispatchId));
     }
 
     private static string Slug(ConditionKind kind) =>

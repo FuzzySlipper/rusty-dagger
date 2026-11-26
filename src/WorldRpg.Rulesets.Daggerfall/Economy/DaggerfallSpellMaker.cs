@@ -14,7 +14,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallSpellMaker(DaggerfallDefinitions definitions, DaggerfallEffectCatalog effects,
     DaggerfallNpcRegistry npcs, DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
     DaggerfallCharacterState character, MechanicsInventoryCoordinator inventory, StatsComponent playerStats,
-    Func<DaggerfallCalendar> calendar)
+    Func<DaggerfallCalendar> calendar, Func<int, int, int>? magicServicePrice = null)
 {
     private DaggerfallSpellDraft? _draft;
     private long _draftRevision;
@@ -48,7 +48,7 @@ internal sealed class DaggerfallSpellMaker(DaggerfallDefinitions definitions, Da
                 school => Math.Clamp(DaggerfallCasting.Read(playerStats, school), 0, 100));
             var cost = DaggerfallMagicCostPolicy.CalculateTotalEffectCosts(definitions.Magic, _draft.Effects,
                 DaggerfallMagicCostPolicy.TargetForRangeType(_draft.RangeType), skills);
-            return new(Revision, _draft, cost.Gold, cost.SpellPoints, true, null);
+            return new(Revision, _draft, magicServicePrice?.Invoke(provider.Site.Region, cost.Gold) ?? cost.Gold, cost.SpellPoints, true, null);
         }
         catch (Exception exception) when (exception is ArgumentException or OverflowException or InvalidOperationException)
         { return new(Revision, _draft, 0, 0, false, "InvalidSettings"); }

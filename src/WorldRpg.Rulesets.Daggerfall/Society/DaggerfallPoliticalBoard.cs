@@ -30,6 +30,13 @@ internal sealed record DaggerfallPoliticalBoardSave(
 /// queued as <see cref="WorldNudge"/>s and applied at the start of the next turn; the counterplay that eased a board
 /// token is drained into <see cref="ConditionEased"/> then.
 /// </para>
+/// <para>
+/// A slow move rides with a sealed courier (<see cref="DaggerfallCourierDispatches"/>, the dispatch named by the move's
+/// id) from the largest town of the region it set out from to that of the region or seat it aims at. A courier the
+/// player seizes or kills intercepts the move; one the player carries to its door brings the move in at the next
+/// Sunday; one still on the road, or in the player's pack, on the Sunday the move is due delays it a week. Courier
+/// friction is the world's. Once its move has settled the board forgets the dispatch.
+/// </para>
 /// </summary>
 internal sealed class DaggerfallPoliticalBoard
 {
@@ -42,20 +49,26 @@ internal sealed class DaggerfallPoliticalBoard
     private readonly DaggerfallWorldConditions _conditions;
     private readonly Board _board;
     private readonly DaggerfallPoliticalNews _news;
+    private readonly DaggerfallCourierDispatches? _couriers;
+    private readonly IReadOnlyList<DaggerfallSiteRecord> _sites;
+    private readonly Dictionary<string, DaggerfallSiteRecord?> _towns = new(StringComparer.Ordinal);
     private readonly Dictionary<int, List<DaggerfallWorldConditionToken>> _tokens = [];
     private readonly Dictionary<string, (string Region, ConditionKind Kind, string? Detail)> _tokenConditions = new(StringComparer.Ordinal);
     private long _lastTurnDay;
 
     /// <summary>
     /// The board for a new game starting on <paramref name="day"/> (<paramref name="saved"/> null), or the board a save
-    /// carried. A save made before the board existed starts the canon board on its own day.
+    /// carried. A save made before the board existed starts the canon board on its own day. Without
+    /// <paramref name="couriers"/> slow moves travel unseen.
     /// </summary>
     internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallWorldConditions conditions,
-        IReadOnlyList<DaggerfallSiteRecord> sites, long day, DaggerfallPoliticalBoardSave? saved)
+        IReadOnlyList<DaggerfallSiteRecord> sites, DaggerfallCourierDispatches? couriers, long day, DaggerfallPoliticalBoardSave? saved)
     {
         _canon = canon;
         _seats = seats;
         _conditions = conditions;
+        _sites = sites;
+        _couriers = couriers;
         if (saved is null)
         {
             _board = Board.Create(canon.Setup, canon.Cards);
@@ -67,9 +80,10 @@ internal sealed class DaggerfallPoliticalBoard
             _board = Board.Load(canon.Setup, canon.Cards, BoardSave.FromJson(saved.Board.GetRawText(), "the political board save"));
             _lastTurnDay = saved.LastTurnDay;
         }
-        _news = new DaggerfallPoliticalNews(_board, canon.Cards, sites, Faction);
+        _news = new DaggerfallPoliticalNews(_board, canon.Cards, Town, Faction);
         Rebuild();
         conditions.BindExternalSource(TokensFor);
+        couriers?.BindBoardMoveCallback(CourierSettled);
     }
 
     internal Board Board => _board;
@@ -101,11 +115,14 @@ internal sealed class DaggerfallPoliticalBoard
             _conditions.NotifyBeforeExternalMutation();
             foreach (DaggerfallConditionCounterplayRecord record in drainCounterplay())
                 if (Eased(record) is { } eased) _board.Queue(eased);
+            DelayCouriersOnTheRoad();
             TurnTrace trace = BoardTurn.Play(_board);
             _lastTurnDay += DaysPerWeek;
+            SendCouriers(trace);
             LatestTrace = trace;
             Latest = BoardOutputs.Of(_board, _canon.Cards, trace);
             news.AddRange(_news.Of(trace, warsBefore, _lastTurnDay * MinutesPerDay));
+            ForgetSettledCouriers();
             Rebuild();
         }
         return news;
@@ -121,10 +138,82 @@ internal sealed class DaggerfallPoliticalBoard
     internal IReadOnlyList<DaggerfallWorldConditionToken> TokensFor(int region) =>
         _tokens.TryGetValue(region, out List<DaggerfallWorldConditionToken>? tokens) ? tokens : [];
 
+    /// <summary>
+    /// The largest town in board region <paramref name="region"/>'s classic region, where its couriers and news set out:
+    /// a city before a hamlet before a village (Betony has no city). Null where it has none.
+    /// </summary>
+    internal DaggerfallSiteRecord? Town(string region)
+    {
+        if (_towns.TryGetValue(region, out DaggerfallSiteRecord? town)) return town;
+        int catalogRegion = _board.Region(region).CatalogRegion;
+        town = _sites
+            .Where(site => site.Id.Region == catalogRegion && site.Exterior is not null
+                && site.Kind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage)
+            .OrderBy(site => site.Kind)
+            .ThenByDescending(site => site.Exterior!.Width * site.Exterior.Height)
+            .ThenBy(site => site.Id.Index)
+            .FirstOrDefault();
+        _towns[region] = town;
+        return town;
+    }
+
     /// <summary>The day turn <paramref name="turn"/> was played on.</summary>
     internal long TurnDay(int turn) => _lastTurnDay - (long)(_board.Turn - turn) * DaysPerWeek;
 
     private static long SundayOnOrBefore(long day) => day - ((day % DaysPerWeek) + DaysPerWeek) % DaysPerWeek;
+
+    /// <summary>Stages a courier for each slow move this turn played that travels between two towns.</summary>
+    private void SendCouriers(TurnTrace trace)
+    {
+        if (_couriers is null) return;
+        long minute = _lastTurnDay * MinutesPerDay;
+        foreach (PendingMove move in _board.Pending.Where(move => move.Played == trace.Turn))
+        {
+            Seat seat = _board.Seat(move.Seat);
+            string? targetSeat = move.Targets.Count > 0 && _board.HasSeat(move.Targets[0]) ? move.Targets[0] : null;
+            string? from = move.Origin ?? seat.Home;
+            string? to = move.Targets.Count > 0 && _board.HasRegion(move.Targets[0]) ? move.Targets[0]
+                : targetSeat is not null ? _board.Seat(targetSeat).Home : null;
+            if (from is null || to is null || Town(from) is not { } origin || Town(to) is not { } destination || origin.Id == destination.Id) continue;
+            string aim = targetSeat is not null ? _board.Seat(targetSeat).Name : _board.Region(to).Name;
+            _couriers.StageDispatch(move.Id, seat.Id, move.Card.Id, $"{seat.Name}: {move.Card.Name}, for {aim}", origin, destination,
+                minute, checked((int)_lastTurnDay), Faction(seat.Id), Faction(targetSeat));
+        }
+    }
+
+    /// <summary>Delays a week each move due this coming Sunday whose courier has not reached its door.</summary>
+    private void DelayCouriersOnTheRoad()
+    {
+        if (_couriers is null) return;
+        foreach (PendingMove move in _board.Pending.Where(move => move.Arrives == _board.Turn + 1).ToArray())
+            if (_couriers.TryGet(move.Id, out DaggerfallCourierDispatchSave? dispatch)
+                && dispatch!.Status is DaggerfallDispatchStatus.InTransit or DaggerfallDispatchStatus.BoughtAndRevealed or DaggerfallDispatchStatus.CarriedByPlayer)
+                _board.Queue(new MoveDelayed(move.Id, 1));
+    }
+
+    /// <summary>What the player did with a board move's courier, queued for the next Sunday; a delivery on schedule tells the board nothing.</summary>
+    private void CourierSettled(DaggerfallDispatchResolution resolution)
+    {
+        if (!_board.Pending.Any(move => move.Id == resolution.DispatchId)) return;
+        if (resolution.Outcome == DaggerfallDispatchStatus.Intercepted) _board.Queue(new MoveIntercepted(resolution.DispatchId));
+        else if (resolution.Outcome == DaggerfallDispatchStatus.Delivered && resolution.DeliveredByPlayer) _board.Queue(new MoveDelivered(resolution.DispatchId));
+    }
+
+    /// <summary>Forgets the dispatches whose moves are no longer under way.</summary>
+    private void ForgetSettledCouriers()
+    {
+        if (_couriers is null) return;
+        HashSet<string> pending = [.. _board.Pending.Select(move => move.Id)];
+        foreach (DaggerfallCourierDispatchSave dispatch in _couriers.All.ToArray())
+            if (IsMoveId(dispatch.DispatchId) && !pending.Contains(dispatch.DispatchId)
+                && dispatch.Status is DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted)
+                _couriers.Forget(dispatch.DispatchId);
+    }
+
+    /// <summary>Whether <paramref name="id"/> names a board move (<c>turn-seat</c>), not a dispatch staged by hand.</summary>
+    private bool IsMoveId(string id) =>
+        id.IndexOf('-', StringComparison.Ordinal) is > 0 and var dash && int.TryParse(id.AsSpan(0, dash), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _)
+        && _board.HasSeat(id[(dash + 1)..]);
 
     /// <summary>The board condition a counterplay record eased, by the amount A6 already showed; null for a token not the board's.</summary>
     private ConditionEased? Eased(DaggerfallConditionCounterplayRecord record) =>

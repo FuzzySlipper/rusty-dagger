@@ -648,14 +648,16 @@ internal sealed partial class DaggerfallSession
             DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
+            DaggerfallConditionPrices conditionPrices = new(WorldConditions, () => checked((int)_time.Calendar.DayNumber));
             DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices,
-                Scrutiny.RegionalPriceSurcharge);
+                conditionPrices.GoodsAdjustment);
             DaggerfallMerchantService merchants = new(definitions, _random, npcs, social, playerStats, character, progression,
                 inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
                 regionalPrices, _itemCondition, skillUses, crime, questItemExits, () => _time.Calendar,
                 () => _dialogue?.CurrentNpc()?.Site,
                 saved?.Merchants, () => Crimes.QueryWitnesses(),
-                (op, kind, victim, raw) => Crimes.EvaluateWitnesses(op, kind, victim, raw).ReportingEvidence);
+                (op, kind, victim, raw) => Crimes.EvaluateWitnesses(op, kind, victim, raw).ReportingEvidence,
+                conditionPrices.MagicService);
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport, questItemExits);
@@ -766,15 +768,17 @@ internal sealed partial class DaggerfallSession
                     return true;
                 });
             _itemMaker = new DaggerfallItemMaker(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
-                State.Inventory, State.ItemInstances, _itemEnchanting, ItemSouls.Gems, _uniqueItems, () => _time.Calendar);
+                State.Inventory, State.ItemInstances, _itemEnchanting, ItemSouls.Gems, _uniqueItems, () => _time.Calendar,
+                conditionPrices.MagicService);
             _potionMaker = new DaggerfallPotionMaking(definitions, State.Npcs, State.ConcreteGuildServices, State.Inventory,
                 State.Containers, State.Wagon, State.ItemInstances, _random, () => _time.Calendar);
             SpellSales = new DaggerfallSpellSales(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
                 State.Character, State.Inventory, State.Actors.Player.Stats,
                 key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar,
-                npc => State.Social.TradeReactionForNpc(npc));
+                npc => State.Social.TradeReactionForNpc(npc), conditionPrices.MagicService);
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
-                State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
+                State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar,
+                conditionPrices.MagicService);
             OfficeHolders = new DaggerfallOfficeHolders(definitions, _site, State.ActorLedger, State.Npcs);
             OfficeLedger = new DaggerfallOfficeLedger(
                 definitions, OfficeHolders, State.ActorLedger, State.Npcs,
@@ -1076,7 +1080,7 @@ internal sealed partial class DaggerfallSession
                 ConditionCounterplay.Restore(saved.ConditionCounterplay);
             if (definitions.PoliticalCanon is { } politicalCanon)
                 PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, WorldConditions,
-                    definitions.Locations.Records, _time.Calendar.DayNumber, saved?.PoliticalBoard);
+                    definitions.Locations.Records, CourierDispatches, _time.Calendar.DayNumber, saved?.PoliticalBoard);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
                 () => _sites.Projection.Inputs, CurrentInteriorBuilding,

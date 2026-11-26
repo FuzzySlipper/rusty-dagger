@@ -17,14 +17,14 @@ internal sealed class DaggerfallPoliticalNews
     private readonly Board _board;
     private readonly IReadOnlyDictionary<string, Card> _cards;
     private readonly Func<string, int?> _faction;
-    private readonly Dictionary<string, DaggerfallSiteRecord?> _towns = new(StringComparer.Ordinal);
-    private readonly IReadOnlyList<DaggerfallSiteRecord> _sites;
+    private readonly Func<string, DaggerfallSiteRecord?> _town;
 
-    internal DaggerfallPoliticalNews(Board board, CardSet cards, IReadOnlyList<DaggerfallSiteRecord> sites, Func<string, int?> faction)
+    /// <summary>News of <paramref name="board"/>; <paramref name="town"/> is the town a board region's news leaves from, <paramref name="faction"/> a seat's office faction.</summary>
+    internal DaggerfallPoliticalNews(Board board, CardSet cards, Func<string, DaggerfallSiteRecord?> town, Func<string, int?> faction)
     {
         _board = board;
         _cards = cards.Cards.ToDictionary(card => card.Id, StringComparer.Ordinal);
-        _sites = sites;
+        _town = town;
         _faction = faction;
     }
 
@@ -34,7 +34,7 @@ internal sealed class DaggerfallPoliticalNews
         List<DaggerfallPoliticalNewsItem> news = [];
         void Add(string key, string headline, string body, string? region, string? seat)
         {
-            if (region is not null && Town(region) is { } origin)
+            if (region is not null && _town(region) is { } origin)
                 news.Add(new($"politics:{trace.Turn}:{key}", headline, body, origin, minute, seat is null ? null : _faction(seat)));
         }
 
@@ -127,23 +127,4 @@ internal sealed class DaggerfallPoliticalNews
         Office.Temple => "Temple Head",
         _ => "Guild Master",
     };
-
-    /// <summary>
-    /// The largest town in board region <paramref name="region"/>'s classic region, which its news spreads from: a city
-    /// before a hamlet before a village (Betony has no city). Null where it has none.
-    /// </summary>
-    private DaggerfallSiteRecord? Town(string region)
-    {
-        if (_towns.TryGetValue(region, out DaggerfallSiteRecord? town)) return town;
-        int catalogRegion = _board.Region(region).CatalogRegion;
-        town = _sites
-            .Where(site => site.Id.Region == catalogRegion && site.Exterior is not null
-                && site.Kind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage)
-            .OrderBy(site => site.Kind)
-            .ThenByDescending(site => site.Exterior!.Width * site.Exterior.Height)
-            .ThenBy(site => site.Id.Index)
-            .FirstOrDefault();
-        _towns[region] = town;
-        return town;
-    }
 }
