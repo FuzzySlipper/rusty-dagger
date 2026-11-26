@@ -140,6 +140,13 @@ Two walker settings npc-468 needed:
   haze, and its dark folds higher up stuck out at the knee as shards (npc-468's two failed tries).
 - `clean_opts` for a teal or green hood, as for green hair. The bound step now warns when the face or crown rule takes much.
 
+A long cape or cloak behind the legs: `"skirt": true, "skirt_bones": 6, "skirt_rig_opts": "--cloak"` (npc-472, 2026-11-26,
+the first long cape that walks). `skirt_bones.py --cloak` takes the Gaussians below the hips, behind the body and 2 cm clear
+of the leg capsules, and hangs them on an open XPBD sheet over the cloak's own arc: bone columns at both edges, no wrap, and
+nothing dropped as inside. 472's walk keeps the cloak whole, opens it at the stride with the boots under the hem, and no leg
+comes through, at 400k and at 16k. The cape-layer route (bake bare, cut the cape) is no longer needed for a cape that hangs
+behind; npc-461 and npc-462 use this too.
+
 With a `backdrop`, the bound step's clean also drops Gaussians coloured like the key (`clean_bound.py --key`): 4,700 magenta
 specks inside npc-468's robe, 1.2% of the 400k.
 
