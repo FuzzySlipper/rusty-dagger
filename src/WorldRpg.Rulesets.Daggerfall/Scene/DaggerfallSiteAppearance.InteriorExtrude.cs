@@ -6,59 +6,49 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
-/// Experimental outward 3D architectural extrusion overlays (<c>interior-extrude.wgsl</c>, #11043):
-/// compares single-envelope outward silhouette-POM (<c>silhouette-pom</c>) against grass-FX-style 14-layer
-/// stacked extruded wall shells (<c>wall-shells</c> and shadow-casting <c>wall-shells-shadow</c>).
-/// Leaves normal Pass 3 defaults completely untouched when <see cref="DaggerfallInteriorExtrudeMode.Off"/>.
+/// Outward 3D architectural silhouette-POM overlays for building interiors and dungeons (<c>interior-extrude.wgsl</c>,
+/// #11043 / #11067). Overlays each model's drawn mesh (its 3D remodel where remodeled, skipping remodel-owned textures
+/// and shell-stacked slots so classic meshes are never opened under refreshed art and remodels never clip) with a single
+/// non-shadow-casting outer envelope.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
-    private const int ExtrudeWallShellLayers = 14;
     private RenderResource? interiorExtrudeShader;
-    private DaggerfallInteriorExtrudeMode interiorExtrudeMode = DaggerfallInteriorExtrudeMode.Off;
-    private DaggerfallInteriorExtrudeMode builtExtrudeMode = DaggerfallInteriorExtrudeMode.Off;
+    private bool interiorExtrudeEnabled;
+    private bool interiorExtrudeOverlaysBuilt;
     private DaggerfallInteriorExtrudeTuning interiorExtrudeTuning = DaggerfallInteriorExtrudeTuning.Default;
     private Material? interiorExtrudeDiscardMaterial;
-    private readonly Dictionary<(SurfaceMaterial Surface, int Layer, int Layers, DaggerfallInteriorExtrudeMode Mode), InteriorExtrudeMaterial> interiorExtrudeMaterials = [];
-    private readonly Dictionary<ModelVisual, Appearance[]> interiorExtrudeOverlays = [];
-    private readonly List<Appearance> retiredExtrudeOverlays = [];
-    private readonly List<(ModelVisual Model, Transform Pose, ulong[] Ordinals)> interiorExtrudePlacements = [];
+    private readonly Dictionary<SurfaceMaterial, InteriorExtrudeMaterial> interiorExtrudeMaterials = [];
+    private readonly Dictionary<ModelVisual, Appearance> interiorExtrudeOverlays = [];
+    private readonly List<(ModelVisual Model, Transform Pose, ulong Ordinal)> interiorExtrudePlacements = [];
 
-    private sealed class InteriorExtrudeMaterial(Material material, SurfaceMaterial surface, int layer, int layers, DaggerfallInteriorExtrudeMode mode)
+    private sealed class InteriorExtrudeMaterial(Material material, SurfaceMaterial surface)
     {
         internal Material Material { get; } = material;
         internal SurfaceMaterial Surface { get; } = surface;
-        internal int Layer { get; } = layer;
-        internal int Layers { get; } = layers;
-        internal DaggerfallInteriorExtrudeMode Mode { get; } = mode;
         internal RenderResource? Current { get; set; }
     }
 
     internal void UpdateInteriorExtrude(
         string? shaderPath,
         ContentSha256 shaderSha256,
-        DaggerfallInteriorExtrudeMode mode,
+        bool enabled,
         DaggerfallInteriorExtrudeTuning? tuning = null)
     {
         if (disposed || inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior) return;
         DaggerfallInteriorExtrudeTuning nextTuning = tuning ?? DaggerfallInteriorExtrudeTuning.Default;
-        bool wantsOverlay = mode is DaggerfallInteriorExtrudeMode.SilhouettePom
-            or DaggerfallInteriorExtrudeMode.WallShells
-            or DaggerfallInteriorExtrudeMode.WallShellsShadow;
-        if (wantsOverlay && interiorExtrudeShader is null && shaderPath is not null)
+        if (enabled && interiorExtrudeShader is null && shaderPath is not null)
         {
             interiorExtrudeShader = appearance.OpenShader(content, shaderPath, shaderSha256);
             ownedResources.Add(interiorExtrudeShader);
         }
-        DaggerfallInteriorExtrudeMode effective = wantsOverlay && interiorExtrudeShader is not null
-            ? mode
-            : DaggerfallInteriorExtrudeMode.Off;
-        bool modeChanged = interiorExtrudeMode != effective;
+        bool effective = enabled && interiorExtrudeShader is not null;
+        bool modeChanged = interiorExtrudeEnabled != effective;
         bool tuningChanged = interiorExtrudeTuning != nextTuning;
         if (!modeChanged && !tuningChanged) return;
-        interiorExtrudeMode = effective;
+        interiorExtrudeEnabled = effective;
         interiorExtrudeTuning = nextTuning;
-        if (effective != DaggerfallInteriorExtrudeMode.Off)
+        if (effective)
         {
             if (modeChanged) EnsureInteriorExtrudeOverlays();
             if (tuningChanged) ApplyInteriorExtrude(SurfaceSeason, surfacesRefreshed);
@@ -67,82 +57,93 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void EnsureInteriorExtrudeOverlays()
     {
-        if (interiorExtrudeMode == DaggerfallInteriorExtrudeMode.Off
+        if (!interiorExtrudeEnabled
+            || !surfacesRefreshed
             || interiorExtrudeShader is null
             || inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior
-            || world.Count == 0)
+            || world.Count == 0
+            || interiorExtrudeOverlaysBuilt)
             return;
-
-        bool needRebuild = interiorExtrudeOverlays.Count == 0
-            || LayerCountFor(builtExtrudeMode) != LayerCountFor(interiorExtrudeMode);
-        if (!needRebuild) return;
-
-        // If switching live between 1-layer SilhouettePom and 14-layer WallShells, drop previous overlays cleanly.
-        if (interiorExtrudeOverlays.Count > 0)
-        {
-            foreach (Appearance[] existing in interiorExtrudeOverlays.Values)
-                foreach (Appearance layerApp in existing)
-                    retiredExtrudeOverlays.Add(layerApp);
-            interiorExtrudeOverlays.Clear();
-            interiorExtrudePlacements.Clear();
-            interiorExtrudeMaterials.Clear();
-            interiorExtrudeDiscardMaterial = null;
-        }
 
         Dictionary<Material, SurfaceMaterial> surfaceByMaterial = new(surfaceMaterials.Count);
         foreach (SurfaceMaterial sm in surfaceMaterials) surfaceByMaterial[sm.Material] = sm;
 
         int season = SurfaceSeason;
         bool refreshed = surfacesRefreshed;
-        int targetLayers = LayerCountFor(interiorExtrudeMode);
 
         foreach ((ModelVisual model, Transform pose, int _) in world)
         {
-            if (!interiorExtrudeOverlays.TryGetValue(model, out Appearance[]? layers))
+            if (!interiorExtrudeOverlays.TryGetValue(model, out Appearance? overlay))
             {
-                bool anyExtrudable = false;
-                foreach (DaggerfallMeshMaterialBinding binding in model.Mesh.Materials)
-                {
-                    if (!materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)) continue;
-                    if (!surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)) continue;
-                    if (IsExtrudable(sm, season)) { anyExtrudable = true; break; }
-                }
-                if (!anyExtrudable) continue;
-
-                layers = new Appearance[targetLayers];
-                for (int layer = 1; layer <= targetLayers; layer++)
-                {
-                    Appearance overlay = appearance.CreateStaticMesh(content, model.Mesh.Path, model.Mesh.Sha256, worldAppearance.Tint, admittingOffUpdate);
-                    MeshMaterialBinding[] bindings = new MeshMaterialBinding[model.Mesh.Materials.Count];
-                    for (int i = 0; i < model.Mesh.Materials.Count; i++)
-                    {
-                        DaggerfallMeshMaterialBinding src = model.Mesh.Materials[i];
-                        Material mat = materialsBySlot.TryGetValue(src.WorldMaterialSlot, out Material? worldMat)
-                            && surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)
-                            && IsExtrudable(sm, season)
-                            ? GetOrCreateInteriorExtrudeMaterial(sm, layer, targetLayers, interiorExtrudeMode, season, refreshed)
-                            : GetOrCreateInteriorExtrudeDiscardMaterial();
-                        bindings[i] = new MeshMaterialBinding(src.MeshSlot, mat);
-                    }
-                    appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(overlay, bindings));
-                    layers[layer - 1] = overlay;
-                }
-                interiorExtrudeOverlays.Add(model, layers);
+                overlay = TryCreateInteriorExtrudeOverlay(model, surfaceByMaterial, season, refreshed);
+                if (overlay is null) continue;
+                interiorExtrudeOverlays.Add(model, overlay);
             }
-
-            ulong[] ordinals = new ulong[layers.Length];
-            for (int i = 0; i < layers.Length; i++) ordinals[i] = NextLocationVisualOrdinal();
-            interiorExtrudePlacements.Add((model, pose, ordinals));
+            interiorExtrudePlacements.Add((model, pose, NextLocationVisualOrdinal()));
         }
-        builtExtrudeMode = interiorExtrudeMode;
+        interiorExtrudeOverlaysBuilt = true;
     }
 
-    private static int LayerCountFor(DaggerfallInteriorExtrudeMode mode) => mode switch
+    private Appearance? TryCreateInteriorExtrudeOverlay(
+        ModelVisual model,
+        Dictionary<Material, SurfaceMaterial> surfaceByMaterial,
+        int season,
+        bool refreshed)
     {
-        DaggerfallInteriorExtrudeMode.SilhouettePom => 1,
-        DaggerfallInteriorExtrudeMode.WallShells or DaggerfallInteriorExtrudeMode.WallShellsShadow => ExtrudeWallShellLayers,
-        _ => 0,
-    };
+        if (model.ModelId is not null && inputs.Geometry.Remodels.TryGetValue(model.ModelId, out DaggerfallSiteRemodel? remodel))
+        {
+            bool anyExtrudable = false;
+            foreach (DaggerfallMeshMaterialBinding binding in remodel.Materials)
+            {
+                if (remodel.Shells.ContainsKey(binding.MeshSlot)) continue;
+                if (!materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)) continue;
+                if (!surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)) continue;
+                if (IsExtrudable(sm, season)) { anyExtrudable = true; break; }
+            }
+            if (!anyExtrudable) return null;
+
+            Appearance created = appearance.CreateStaticMesh(content, remodel.Path, remodel.Sha256, worldAppearance.Tint, admittingOffUpdate);
+            List<MeshMaterialBinding> bindings = new(remodel.Materials.Count + remodel.Textures.Count);
+            foreach (DaggerfallMeshMaterialBinding src in remodel.Materials)
+            {
+                Material mat = !remodel.Shells.ContainsKey(src.MeshSlot)
+                    && materialsBySlot.TryGetValue(src.WorldMaterialSlot, out Material? worldMat)
+                    && surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)
+                    && IsExtrudable(sm, season)
+                    ? GetOrCreateInteriorExtrudeMaterial(sm, season, refreshed)
+                    : GetOrCreateInteriorExtrudeDiscardMaterial();
+                bindings.Add(new MeshMaterialBinding(src.MeshSlot, mat));
+            }
+            foreach (DaggerfallRemodelTexture texture in remodel.Textures)
+                bindings.Add(new MeshMaterialBinding(texture.MeshSlot, GetOrCreateInteriorExtrudeDiscardMaterial()));
+            appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings.ToArray()));
+            return created;
+        }
+
+        bool anyClassicExtrudable = false;
+        foreach (DaggerfallMeshMaterialBinding binding in model.Mesh.Materials)
+        {
+            if (!materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? worldMat)) continue;
+            if (!surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)) continue;
+            if (IsExtrudable(sm, season)) { anyClassicExtrudable = true; break; }
+        }
+        if (!anyClassicExtrudable) return null;
+
+        Appearance overlay = appearance.CreateStaticMesh(content, model.Mesh.Path, model.Mesh.Sha256, worldAppearance.Tint, admittingOffUpdate);
+        MeshMaterialBinding[] classicBindings = new MeshMaterialBinding[model.Mesh.Materials.Count];
+        for (int i = 0; i < model.Mesh.Materials.Count; i++)
+        {
+            DaggerfallMeshMaterialBinding src = model.Mesh.Materials[i];
+            Material mat = materialsBySlot.TryGetValue(src.WorldMaterialSlot, out Material? worldMat)
+                && surfaceByMaterial.TryGetValue(worldMat, out SurfaceMaterial? sm)
+                && IsExtrudable(sm, season)
+                ? GetOrCreateInteriorExtrudeMaterial(sm, season, refreshed)
+                : GetOrCreateInteriorExtrudeDiscardMaterial();
+            classicBindings[i] = new MeshMaterialBinding(src.MeshSlot, mat);
+        }
+        appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(overlay, classicBindings));
+        return overlay;
+    }
 
     private bool IsExtrudable(SurfaceMaterial sm, int season)
     {
@@ -172,22 +173,18 @@ internal sealed partial class DaggerfallSiteAppearance
         return interiorExtrudeDiscardMaterial;
     }
 
-    private Material GetOrCreateInteriorExtrudeMaterial(
-        SurfaceMaterial surface, int layer, int layers, DaggerfallInteriorExtrudeMode mode, int season, bool refreshed)
+    private Material GetOrCreateInteriorExtrudeMaterial(SurfaceMaterial surface, int season, bool refreshed)
     {
-        var key = (surface, layer, layers, mode);
-        if (interiorExtrudeMaterials.TryGetValue(key, out InteriorExtrudeMaterial? known)) return known.Material;
+        if (interiorExtrudeMaterials.TryGetValue(surface, out InteriorExtrudeMaterial? known)) return known.Material;
         RenderResource tex = DrawnSurface(surface, season, refreshed);
-        Material created = appearance.CreateMaterial(InteriorExtrudeRequest(surface, tex, layer, layers, mode));
+        Material created = appearance.CreateMaterial(InteriorExtrudeRequest(surface, tex));
         locationMaterials.Add(created);
         materials.Add(created);
-        InteriorExtrudeMaterial entry = new(created, surface, layer, layers, mode) { Current = tex };
-        interiorExtrudeMaterials.Add(key, entry);
+        interiorExtrudeMaterials.Add(surface, new(created, surface) { Current = tex });
         return created;
     }
 
-    private MaterialRequest InteriorExtrudeRequest(
-        SurfaceMaterial surface, RenderResource texture, int layer, int layers, DaggerfallInteriorExtrudeMode mode)
+    private MaterialRequest InteriorExtrudeRequest(SurfaceMaterial surface, RenderResource texture)
     {
         DaggerfallInteriorReliefSettings baseSettings = interiorRelief
             ?? DaggerfallInteriorLook.ResolveRelief("voxel-pulp", inputs.ProfileKind == DaggerfallWorldProfileKind.Dungeon)!;
@@ -201,9 +198,6 @@ internal sealed partial class DaggerfallSiteAppearance
                 authored?.Image,
                 baseSettings,
                 surface.SurfaceClass,
-                mode,
-                layer,
-                layers,
                 interiorDungeonDampness,
                 interiorWaterLevelY,
                 interiorExtrudeTuning,
@@ -213,46 +207,40 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void ApplyInteriorExtrude(int season, bool refreshed)
     {
-        if (interiorExtrudeShader is null || interiorExtrudeMaterials.Count == 0) return;
+        if (interiorExtrudeShader is null) return;
+        if (interiorExtrudeEnabled && !interiorExtrudeOverlaysBuilt && refreshed)
+            EnsureInteriorExtrudeOverlays();
+        if (interiorExtrudeMaterials.Count == 0) return;
         foreach (InteriorExtrudeMaterial entry in interiorExtrudeMaterials.Values)
         {
             RenderResource wanted = DrawnSurface(entry.Surface, season, refreshed);
             appearance.UpdateMaterial(new MaterialUpdateRequest(
                 entry.Material,
-                InteriorExtrudeRequest(entry.Surface, wanted, entry.Layer, entry.Layers, entry.Mode)));
+                InteriorExtrudeRequest(entry.Surface, wanted)));
             entry.Current = wanted;
         }
     }
 
     private void AppendInteriorExtrudeFacts(List<AppearanceFact> facts, int slot)
     {
-        if (interiorExtrudeMode == DaggerfallInteriorExtrudeMode.Off || interiorExtrudePlacements.Count == 0) return;
-        bool castShadows = interiorExtrudeMode == DaggerfallInteriorExtrudeMode.WallShellsShadow;
-        foreach ((ModelVisual model, Transform pose, ulong[] ordinals) in interiorExtrudePlacements)
+        if (!interiorExtrudeEnabled || !surfacesRefreshed || interiorExtrudePlacements.Count == 0) return;
+        foreach ((ModelVisual model, Transform pose, ulong ordinal) in interiorExtrudePlacements)
         {
-            if (!interiorExtrudeOverlays.TryGetValue(model, out Appearance[]? layers)) continue;
+            if (!interiorExtrudeOverlays.TryGetValue(model, out Appearance? overlay)) continue;
             Transform worldPose = Compose(worldAppearance.Transform, pose);
-            for (int i = 0; i < layers.Length; i++)
-            {
-                ShadowCasting shadow = castShadows && i >= 3 && (i % 2 == 1) ? ShadowCasting.Cast : ShadowCasting.None;
-                facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, ordinals[i]), false, 0,
-                    worldPose, layers[i], worldAppearance.Visible, worldAppearance.Layer, shadow));
-            }
+            facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, ordinal), false, 0,
+                worldPose, overlay, worldAppearance.Visible, worldAppearance.Layer, ShadowCasting.None));
         }
     }
 
     private void TakeInteriorExtrudeResources(List<IDisposable> retired)
     {
-        foreach (Appearance[] layers in interiorExtrudeOverlays.Values)
-            for (int i = layers.Length - 1; i >= 0; i--)
-                retired.Add(layers[i]);
-        for (int i = retiredExtrudeOverlays.Count - 1; i >= 0; i--)
-            retired.Add(retiredExtrudeOverlays[i]);
-        retiredExtrudeOverlays.Clear();
+        foreach (Appearance overlay in interiorExtrudeOverlays.Values)
+            retired.Add(overlay);
         interiorExtrudeOverlays.Clear();
         interiorExtrudePlacements.Clear();
         interiorExtrudeMaterials.Clear();
         interiorExtrudeDiscardMaterial = null;
-        builtExtrudeMode = DaggerfallInteriorExtrudeMode.Off;
+        interiorExtrudeOverlaysBuilt = false;
     }
 }

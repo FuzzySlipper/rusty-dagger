@@ -901,7 +901,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallSiteProjection site = _sites.Projection;
         DaggerfallWeatherConditions conditions = LocalWeather.Conditions;
         _interiorLook.Sync(site.Inputs, site.Lighting, site.Appearance, _weatherPresentation, _viewLight, _time.Calendar.Sky,
-            player, _overland.Open, _site.ActiveSite?.DungeonType, CurrentInteriorBuilding()?.BuildingType,
+            player, _overland.Open, _site.ActiveSite?.DungeonType, TryCurrentInteriorBuildingType(),
             _controls.Settings.InteriorExtrude, _controls.Settings.InteriorExtrudeTuning); // Scene
         _weatherPresentation.Update(site.Inputs, site.WorldOffset, site.Lighting, site.Appearance, _time.Calendar.Sky,
             _tuning.Weather.Daylight(_time.Calendar, conditions.Kind), _tuning.Weather.Sunlight(_time.Calendar.Season, conditions.Kind),

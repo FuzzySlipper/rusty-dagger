@@ -231,6 +231,17 @@ internal sealed class DaggerfallSiteContext
         return placement with { BuildingType = building.Source.BuildingType, FactionId = building.Source.FactionId };
     }
 
+    /// <summary>Non-throwing variant of <see cref="InteriorBuilding"/> for presentation mood hints when a fixture omits site building metadata.</summary>
+    internal DaggerfallInteriorBuilding? TryInteriorBuilding(DaggerfallSiteId site, DaggerfallInteriorBuilding? placement)
+    {
+        if (placement is null) return null;
+        if (!TryFind(site, out DaggerfallSiteRecord record)
+            || record.Exterior is not { } exterior
+            || !exterior.Buildings.TryGetValue(new(placement.BlockX, placement.BlockY, placement.Building.Index), out var building))
+            return placement;
+        return placement with { BuildingType = building.Source.BuildingType, FactionId = building.Source.FactionId };
+    }
+
     /// <summary>The name a loading screen gives a destination: its location, or its kind when it has none.</summary>
     internal string DestinationName(DaggerfallWorldProfileKey destination) =>
         TryFind(destination.Site, out DaggerfallSiteRecord record) && record.Name is { Length: > 0 } name

@@ -74,9 +74,9 @@ public interface IDeveloperSceneCommands : IDebugCommandModule
     [DebugCommand("world.interior-surfaces", Description = "Developer: select Pass 3 interior & dungeon material-aware PBR/relief and volumetric 3D moss/carpet shell mode for this run (off, materials, shells, full, or status/list).")]
     DebugCommandResult InteriorSurfaces(string mode);
 
-    [DebugCommand("world.interior-extrude", Description = "Developer: select experimental outward 3D interior/dungeon extrusion mode for this run (off, deep-pom, silhouette-pom, wall-shells, wall-shells-shadow, or status/list).")]
+    [DebugCommand("world.interior-extrude", Description = "Developer: override outward 3D interior/dungeon silhouette-POM relief for this run (auto, off, on, or status).")]
     DebugCommandResult InteriorExtrude(string mode);
 
-    [DebugCommand("world.exterior-extrude", Description = "Developer: toggle outward 3D architectural silhouette-POM extrusion on exterior buildings for this run (off, on, or status).")]
+    [DebugCommand("world.exterior-extrude", Description = "Developer: override outward 3D architectural silhouette-POM extrusion on exterior buildings for this run (auto, off, on, or status).")]
     DebugCommandResult ExteriorExtrude(string mode);
 }

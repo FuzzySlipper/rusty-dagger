@@ -1504,6 +1504,13 @@ internal sealed partial class DaggerfallSession
             // first snapshot share its frame and no restored presence is decided from the start pose.
             ReconcileNpcProjection();
             _itemCastTriggers.Refresh();
+            _interiorLook.WarmSite(
+                _sites.Projection.Inputs,
+                _sites.Projection.Appearance,
+                State.PlayerControl.Position?.ToVector() ?? Vector3.Zero,
+                _site.ActiveSite?.DungeonType,
+                _controls.Settings.InteriorExtrude,
+                _controls.Settings.InteriorExtrudeTuning);
         }
         catch (Exception constructionFailure)
         {

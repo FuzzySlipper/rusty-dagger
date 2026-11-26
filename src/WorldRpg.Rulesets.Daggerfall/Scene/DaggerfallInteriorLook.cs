@@ -119,8 +119,8 @@ internal sealed class DaggerfallInteriorLook : IDisposable
     private string _preset = "auto";
     private string _reliefMode = "voxel-pulp";
     private string _surfaceMode = "full";
-    private string _extrudeMode = "off";
-    private string _exteriorExtrudeMode = "on";
+    private string _extrudeMode = "auto";
+    private string _exteriorExtrudeMode = "auto";
     private RenderResource? _shader;
     private bool _shaderAttempted;
     private ContentSha256? _reliefShaderSha;
@@ -193,11 +193,9 @@ internal sealed class DaggerfallInteriorLook : IDisposable
 
     internal static IReadOnlyList<string> ExtrudeModeNames { get; } =
     [
+        "auto",
         "off",
-        "deep-pom",
-        "silhouette-pom",
-        "wall-shells",
-        "wall-shells-shadow",
+        "on",
     ];
 
     internal string? Select(string name)
@@ -235,7 +233,8 @@ internal sealed class DaggerfallInteriorLook : IDisposable
     internal string? SelectExtrude(string mode)
     {
         string normalized = mode.Trim().ToLowerInvariant();
-        if (normalized == "reset") normalized = "off";
+        if (normalized == "reset") normalized = "auto";
+        else if (normalized == "silhouette-pom") normalized = "on";
         if (!ExtrudeModeNames.Contains(normalized))
             return $"Unknown interior extrude mode '{mode}'. Valid modes: {string.Join(", ", ExtrudeModeNames)}.";
         _extrudeMode = normalized;
@@ -245,9 +244,9 @@ internal sealed class DaggerfallInteriorLook : IDisposable
     internal string? SelectExteriorExtrude(string mode)
     {
         string normalized = mode.Trim().ToLowerInvariant();
-        if (normalized == "reset") normalized = "off";
-        if (normalized is not ("off" or "on"))
-            return $"Unknown exterior extrude mode '{mode}'. Valid modes: off, on.";
+        if (normalized == "reset") normalized = "auto";
+        if (normalized is not ("auto" or "off" or "on"))
+            return $"Unknown exterior extrude mode '{mode}'. Valid modes: auto, off, on.";
         _exteriorExtrudeMode = normalized;
         return null;
     }
@@ -265,7 +264,7 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         $"interior-extrude mode={_extrudeMode} extrudeShaderReady={EnsureExtrudeShaderSha() is not null} available=[{string.Join(", ", ExtrudeModeNames)}]";
 
     internal string DescribeExteriorExtrude() =>
-        $"exterior-extrude mode={_exteriorExtrudeMode} shaderReady={EnsureExteriorExtrudeShaderSha() is not null} available=[off, on]";
+        $"exterior-extrude mode={_exteriorExtrudeMode} shaderReady={EnsureExteriorExtrudeShaderSha() is not null} available=[auto, off, on]";
 
     /// <summary>
     /// Maps Daggerfall's <c>DFRegion.DungeonTypes</c> ordinal (<c>0..18</c>) to Patch's approved dungeon mood preset:
@@ -288,6 +287,27 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         buildingType == 15 ? "interior-cozy" : "interior-dramatic";
 
     /// <summary>
+    /// Pre-opens the active site's shader, heightmap, and overlay resources during session setup so the first
+    /// realtime update performs no late content opens or shader/mesh load hitches, without altering camera or
+    /// lighting state while the title screen is still up.
+    /// </summary>
+    internal void WarmSite(
+        DaggerfallSiteProfile site,
+        DaggerfallSiteAppearance appearance,
+        Vector3 playerPosition,
+        int? dungeonType = null,
+        bool videoExtrudeEnabled = true,
+        DaggerfallInteriorExtrudeTuning? extrudeTuning = null,
+        bool videoExteriorExtrudeEnabled = true)
+    {
+        if (_disposed) return;
+        if (site.ProfileKind is DaggerfallWorldProfileKind.Interior or DaggerfallWorldProfileKind.Dungeon)
+            _ = EnsureShader();
+        SyncSurfaces(site, appearance, playerPosition, overlandOpen: false, dungeonType,
+            videoExtrudeEnabled, extrudeTuning, videoExteriorExtrudeEnabled);
+    }
+
+    /// <summary>
     /// Reconciles the active site's lighting, fog, indirect bounce, SSAO, tone mapping, bloom,
     /// color grading, image effect, viewmodel floor, and Pass 2 voxel-relief surface shader.
     /// </summary>
@@ -303,72 +323,16 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         int? dungeonType = null,
         int? buildingType = null,
         bool videoExtrudeEnabled = false,
-        DaggerfallInteriorExtrudeTuning? extrudeTuning = null)
+        DaggerfallInteriorExtrudeTuning? extrudeTuning = null,
+        bool videoExteriorExtrudeEnabled = true)
     {
         if (_disposed) return;
 
         bool indoors = site.ProfileKind is DaggerfallWorldProfileKind.Interior or DaggerfallWorldProfileKind.Dungeon;
         bool isDungeon = site.ProfileKind == DaggerfallWorldProfileKind.Dungeon;
 
-        // Pass 2/3 interior/dungeon voxel relief, material-class PBR, waterline wetness & volumetric shells.
-        bool materialAware = _surfaceMode is "materials" or "full";
-        bool shellsWanted = _surfaceMode is "shells" or "full";
-        float dampness = isDungeon ? DaggerfallInteriorSurfaceMaterials.DungeonDampnessFor(dungeonType) : 0f;
-        float? waterLevelY = null;
-        if (isDungeon && site.WaterVolumes.Count > 0)
-        {
-            float maxY = float.NegativeInfinity;
-            foreach (var vol in site.WaterVolumes)
-                if (vol.Maximum.Y > maxY) maxY = vol.Maximum.Y;
-            if (float.IsFinite(maxY)) waterLevelY = maxY;
-        }
-
-        DaggerfallInteriorReliefSettings? reliefSettings = ResolveRelief(_reliefMode, isDungeon);
-        if (_extrudeMode == "deep-pom" && reliefSettings is not null)
-        {
-            reliefSettings = reliefSettings with
-            {
-                DepthMetres = isDungeon ? 0.155f : 0.135f,
-                MaxSteps = 36,
-                CavityDarkness = isDungeon ? 0.86f : 0.78f,
-                SelfShadowStrength = 0.78f,
-            };
-        }
-
-        if (indoors && !overlandOpen && reliefSettings is not null && EnsureReliefShaderSha() is { } reliefSha)
-            appearance.UpdateInteriorRelief(ReliefShaderPath, reliefSha, reliefSettings,
-                materialAware, dampness, waterLevelY);
-        else if (indoors)
-            appearance.UpdateInteriorRelief(null, default, null);
-
-        if (indoors && !overlandOpen && shellsWanted && EnsureShellShaderSha() is { } shellSha)
-            appearance.UpdateInteriorShells(ShellShaderPath, shellSha, enabled: true);
-        else if (indoors)
-            appearance.UpdateInteriorShells(null, default, enabled: false);
-
-        DaggerfallInteriorExtrudeMode extrudeEnum = _extrudeMode switch
-        {
-            "deep-pom" => DaggerfallInteriorExtrudeMode.DeepPom,
-            "silhouette-pom" => DaggerfallInteriorExtrudeMode.SilhouettePom,
-            "wall-shells" => DaggerfallInteriorExtrudeMode.WallShells,
-            "wall-shells-shadow" => DaggerfallInteriorExtrudeMode.WallShellsShadow,
-            _ => videoExtrudeEnabled ? DaggerfallInteriorExtrudeMode.SilhouettePom : DaggerfallInteriorExtrudeMode.Off,
-        };
-        DaggerfallInteriorExtrudeTuning activeTuning = extrudeTuning ?? DaggerfallInteriorExtrudeTuning.Default;
-        if (indoors && !overlandOpen && extrudeEnum is DaggerfallInteriorExtrudeMode.SilhouettePom or DaggerfallInteriorExtrudeMode.WallShells or DaggerfallInteriorExtrudeMode.WallShellsShadow
-            && EnsureExtrudeShaderSha() is { } extrudeSha)
-            appearance.UpdateInteriorExtrude(ExtrudeShaderPath, extrudeSha, extrudeEnum, activeTuning);
-        else if (indoors)
-            appearance.UpdateInteriorExtrude(null, default, DaggerfallInteriorExtrudeMode.Off, activeTuning);
-
-        if (!indoors)
-        {
-            bool exteriorWanted = !overlandOpen && _exteriorExtrudeMode == "on";
-            if (exteriorWanted && EnsureExteriorExtrudeShaderSha() is { } extSha)
-                appearance.UpdateExteriorExtrude(ExteriorExtrudeShaderPath, extSha, enabled: true, playerPosition);
-            else
-                appearance.UpdateExteriorExtrude(null, default, enabled: false, playerPosition);
-        }
+        SyncSurfaces(site, appearance, playerPosition, overlandOpen, dungeonType,
+            videoExtrudeEnabled, extrudeTuning, videoExteriorExtrudeEnabled);
 
         if (!indoors || overlandOpen || _preset == "baseline")
         {
@@ -477,6 +441,72 @@ internal sealed class DaggerfallInteriorLook : IDisposable
         _appliedLighting = null;
         _probeCenter = null;
         _activeOnCamera = false;
+    }
+
+    private void SyncSurfaces(
+        DaggerfallSiteProfile site,
+        DaggerfallSiteAppearance appearance,
+        Vector3 playerPosition,
+        bool overlandOpen,
+        int? dungeonType,
+        bool videoExtrudeEnabled,
+        DaggerfallInteriorExtrudeTuning? extrudeTuning,
+        bool videoExteriorExtrudeEnabled)
+    {
+        bool indoors = site.ProfileKind is DaggerfallWorldProfileKind.Interior or DaggerfallWorldProfileKind.Dungeon;
+        bool isDungeon = site.ProfileKind == DaggerfallWorldProfileKind.Dungeon;
+
+        // Pass 2/3 interior/dungeon voxel relief, material-class PBR, waterline wetness & volumetric shells.
+        bool materialAware = _surfaceMode is "materials" or "full";
+        bool shellsWanted = _surfaceMode is "shells" or "full";
+        float dampness = isDungeon ? DaggerfallInteriorSurfaceMaterials.DungeonDampnessFor(dungeonType) : 0f;
+        float? waterLevelY = null;
+        if (isDungeon && site.WaterVolumes.Count > 0)
+        {
+            float maxY = float.NegativeInfinity;
+            foreach (var vol in site.WaterVolumes)
+                if (vol.Maximum.Y > maxY) maxY = vol.Maximum.Y;
+            if (float.IsFinite(maxY)) waterLevelY = maxY;
+        }
+
+        DaggerfallInteriorReliefSettings? reliefSettings = ResolveRelief(_reliefMode, isDungeon);
+
+        if (indoors && !overlandOpen && reliefSettings is not null && EnsureReliefShaderSha() is { } reliefSha)
+            appearance.UpdateInteriorRelief(ReliefShaderPath, reliefSha, reliefSettings,
+                materialAware, dampness, waterLevelY);
+        else if (indoors)
+            appearance.UpdateInteriorRelief(null, default, null);
+
+        if (indoors && !overlandOpen && shellsWanted && EnsureShellShaderSha() is { } shellSha)
+            appearance.UpdateInteriorShells(ShellShaderPath, shellSha, enabled: true);
+        else if (indoors)
+            appearance.UpdateInteriorShells(null, default, enabled: false);
+
+        bool interiorExtrudeWanted = _extrudeMode switch
+        {
+            "on" => true,
+            "off" => false,
+            _ => videoExtrudeEnabled,
+        };
+        DaggerfallInteriorExtrudeTuning activeTuning = extrudeTuning ?? DaggerfallInteriorExtrudeTuning.Default;
+        if (indoors && !overlandOpen && interiorExtrudeWanted && EnsureExtrudeShaderSha() is { } extrudeSha)
+            appearance.UpdateInteriorExtrude(ExtrudeShaderPath, extrudeSha, enabled: true, activeTuning);
+        else if (indoors)
+            appearance.UpdateInteriorExtrude(null, default, enabled: false, activeTuning);
+
+        if (!indoors)
+        {
+            bool exteriorWanted = !overlandOpen && (_exteriorExtrudeMode switch
+            {
+                "on" => true,
+                "off" => false,
+                _ => videoExteriorExtrudeEnabled,
+            });
+            if (exteriorWanted && EnsureExteriorExtrudeShaderSha() is { } extSha)
+                appearance.UpdateExteriorExtrude(ExteriorExtrudeShaderPath, extSha, enabled: true, playerPosition);
+            else
+                appearance.UpdateExteriorExtrude(null, default, enabled: false, playerPosition);
+        }
     }
 
     private void ApplyRendererSettings(DaggerfallInteriorLookProfile profile)

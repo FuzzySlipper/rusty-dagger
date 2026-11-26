@@ -1,19 +1,16 @@
-// Experimental outward 3D architectural extrusion shader for interiors & dungeons (#11043):
-//   - mode 1 (`silhouette-pom`): single outer envelope displaced +H outward along world_normal,
-//     running a 2D-DDA voxel raymarch inward toward the base wall and discarding empty mortar/air
-//     so bricks, carved medallions, and timber beams physically break silhouettes past corners &
-//     doorways with solid continuous 90-degree voxel sidewalls.
-//   - mode 2 (`wall-shells`): grass-FX-style multi-layer stacked shells displaced 0..+H outward,
-//     writing true per-layer Z-buffer depth so SSAO and depth occlusion physically see protruding
-//     blocks, with rim-edge normal tilting and optional real 3D silhouette shadow casting.
+// Outward 3D architectural silhouette-POM extrusion shader for interiors & dungeons (#11043, #11067):
 //   - mode 0: fast discard for non-extruded slots sharing a multi-material static mesh.
+//   - mode 1: single outer envelope displaced +H outward along world_normal, running a 2D-DDA voxel
+//     raymarch inward toward the base wall and discarding empty mortar/recessed plaster so bricks,
+//     carved medallions, framed art, and timber beams physically break silhouettes past corners and
+//     doorways with solid continuous 90-degree voxel sidewalls.
 //
-// parameters[0]: (mode, lift_metres, steps_or_frac, cutoff)
+// parameters[0]: (mode, lift_metres, steps, cutoff)
 // parameters[1]: (fade_start, fade_end, base_roughness, rim_roughness)
 // parameters[2]: (rim_metalness, cavity_darkness, height_gamma, mortar_threshold)
 // parameters[3]: (has_authored_map, special_flags, water_level_y, has_water)
 
-#import rusty::types::{Surface, Vertex, Caster}
+#import rusty::types::{Surface, Vertex}
 #import rusty::material::{material, albedo, albedo_sampler, product_map_a}
 #import rusty::surface::transform_uv
 #import rusty::view::frame
@@ -56,28 +53,13 @@ fn block_height(cell: vec2<i32>, size: vec2<i32>, has_map: bool, gamma: f32, mor
     return smoothstep(cutoff, 0.92, h);
 }
 
-// 5-tap coherent block height for stacked wall shells: prevents 1-texel grain inside a stone face
-// from spawning noisy contour rings while keeping mortar joints, lion carvings, and timber seams crisp.
-fn shell_block_height(cell: vec2<i32>, size: vec2<i32>, has_map: bool, gamma: f32, mortar_t: f32, cutoff: f32) -> f32 {
-    let c = texel_height(cell, size, has_map, gamma, mortar_t);
-    let n = texel_height(cell + vec2<i32>(0, -1), size, has_map, gamma, mortar_t);
-    let s = texel_height(cell + vec2<i32>(0, 1), size, has_map, gamma, mortar_t);
-    let e = texel_height(cell + vec2<i32>(1, 0), size, has_map, gamma, mortar_t);
-    let w = texel_height(cell + vec2<i32>(-1, 0), size, has_map, gamma, mortar_t);
-    let avg = c * 0.40 + (n + s + e + w) * 0.15;
-    // Keep true deep mortar seams open while smoothing noisy mid-face stone grain.
-    let smoothed = select(avg, c, c < cutoff * 0.85);
-    return smoothstep(cutoff, 0.90, smoothed);
-}
-
 fn surface_extrude_scale(world_normal: vec3<f32>) -> f32 {
     // Full outward projection on vertical walls; shallower on ceilings and floors so feet/items never bury.
     return mix(1.0, select(0.58, 0.42, world_normal.y > 0.0), smoothstep(0.45, 0.75, abs(world_normal.y)));
 }
 
 fn displace(vertex: Vertex) -> vec3<f32> {
-    let mode = material.parameters[0].x;
-    if mode < 0.5 {
+    if material.parameters[0].x < 0.5 {
         return vertex.world_position;
     }
     let n = normalize(vertex.world_normal);
@@ -129,12 +111,11 @@ fn shade(given: Surface) -> vec4<f32> {
     var normal = n;
     var hit_pos = given.world_position;
     var side = 0;
-    var hit_h = 0.0;
     var ao_factor = 1.0;
     var rim_mask = 0.0;
 
-    if keep && mode < 1.5 {
-        // Mode 1: Outward Silhouette-Envelope 2D-DDA Voxel Raymarch.
+    if keep {
+        // Outward Silhouette-Envelope 2D-DDA Voxel Raymarch.
         let surf_scale = surface_extrude_scale(n);
         let depth = p0.y * surf_scale;
         let into = normalize(given.world_position - frame.camera.xyz);
@@ -162,12 +143,10 @@ fn shade(given: Surface) -> vec4<f32> {
                 let floor_at = (1.0 - bh) * depth;
                 if floor_at <= entered {
                     found = entered;
-                    hit_h = bh;
                     break;
                 }
                 if floor_at <= step_leaves {
                     found = floor_at;
-                    hit_h = bh;
                     side = 0;
                     break;
                 }
@@ -210,33 +189,6 @@ fn shade(given: Surface) -> vec4<f32> {
             ao_factor = mix(1.0, 1.0 - 0.50 * p2.y, hollow);
             let edge_mag = clamp(length(slope) * 0.60, 0.0, 1.0);
             rim_mask = max(select(0.0, 0.45, side != 0), edge_mag) * (1.0 - hollow * 0.70) * fade;
-        }
-    } else if keep {
-        // Mode 2: Grass-FX-Style Stacked Extruded Wall Shells (coherent stone/timber slabs).
-        let frac = p0.z;
-        let bh = shell_block_height(cell, size, has_map, gamma, mortar_t, cutoff) * fade;
-        if bh < frac || bh <= 0.04 {
-            keep = false;
-        } else {
-            hit_h = bh;
-            let bh_xp = shell_block_height(cell + vec2<i32>(1, 0), size, has_map, gamma, mortar_t, cutoff) * fade;
-            let bh_xm = shell_block_height(cell - vec2<i32>(1, 0), size, has_map, gamma, mortar_t, cutoff) * fade;
-            let bh_yp = shell_block_height(cell + vec2<i32>(0, 1), size, has_map, gamma, mortar_t, cutoff) * fade;
-            let bh_ym = shell_block_height(cell - vec2<i32>(0, 1), size, has_map, gamma, mortar_t, cutoff) * fade;
-
-            let edge_x = select(0.0, 1.0, bh_xp < frac) - select(0.0, 1.0, bh_xm < frac);
-            let edge_y = select(0.0, 1.0, bh_yp < frac) - select(0.0, 1.0, bh_ym < frac);
-            let on_rim = (abs(edge_x) + abs(edge_y)) > 0.5;
-            if on_rim && good_det {
-                side = 1;
-                normal = normalize(n * 0.64 + (tu * edge_x + tv * edge_y) * 0.77);
-            } else if good_det {
-                let slope = vec2<f32>(bh_xp - bh_xm, bh_yp - bh_ym) * 0.40;
-                normal = normalize(n - (tu * slope.x + tv * slope.y));
-            }
-            let top_cap = smoothstep(0.18, 0.02, bh - frac);
-            ao_factor = mix(0.60, 1.0, frac);
-            rim_mask = max(select(0.0, 0.42, on_rim), top_cap * 0.65) * fade;
         }
     }
 
@@ -324,21 +276,4 @@ fn shade(given: Surface) -> vec4<f32> {
     lit.base = vec4<f32>(final_base * ao_factor * side_tone, 1.0);
     lit.occlusion *= ao_factor;
     return standard_shade(lit);
-}
-
-fn cast_shadow(caster: Caster) {
-    let p0 = material.parameters[0];
-    if p0.x < 1.5 {
-        discard;
-    }
-    let uv = transform_uv(material.base_uv_u, material.base_uv_v, caster.uv);
-    let has_map = material.parameters[3].x > 0.5;
-    let size = select(vec2<i32>(textureDimensions(albedo, 0)), vec2<i32>(textureDimensions(product_map_a, 0)), has_map);
-    let cell = vec2<i32>(floor(uv * vec2<f32>(size)));
-    let gamma = max(material.parameters[2].z, 0.25);
-    let mortar_t = material.parameters[2].w;
-    let bh = shell_block_height(cell, size, has_map, gamma, mortar_t, p0.w);
-    if bh < p0.z || bh <= 0.04 {
-        discard;
-    }
 }

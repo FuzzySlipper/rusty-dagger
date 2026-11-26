@@ -558,6 +558,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private DaggerfallInteriorBuilding? CurrentInteriorBuilding() =>
         _site.InteriorBuilding(_activeProfileKey.Site, _sites.Projection.Inputs.InteriorBuilding);
 
+    /// <summary>The building type ordinal for interior mood selection, or null when the active site has no building record.</summary>
+    private int? TryCurrentInteriorBuildingType() =>
+        _site.TryInteriorBuilding(_activeProfileKey.Site, _sites.Projection.Inputs.InteriorBuilding)?.BuildingType;
+
     /// <summary>Every actor definition by durable identity: authored placements and spawned actors alike.</summary>
     internal IReadOnlyDictionary<long, DaggerfallActorDefinition> DefinitionsByActor => _roster.Definitions;
 

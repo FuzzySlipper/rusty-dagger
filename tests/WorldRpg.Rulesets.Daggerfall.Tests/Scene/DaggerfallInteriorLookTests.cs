@@ -191,27 +191,25 @@ public sealed class DaggerfallInteriorLookTests
         List<string> releases = [];
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, new AppearanceFake(releases));
         using DaggerfallInteriorLook look = new(engine.Context, data: null, Tuning);
+        Assert.Equal("auto", look.ExtrudeMode);
+        Assert.Null(look.SelectExtrude("on"));
+        Assert.Equal("on", look.ExtrudeMode);
+        Assert.Null(look.SelectExtrude("off"));
         Assert.Equal("off", look.ExtrudeMode);
-        Assert.Null(look.SelectExtrude("deep-pom"));
-        Assert.Equal("deep-pom", look.ExtrudeMode);
         Assert.Null(look.SelectExtrude("silhouette-pom"));
-        Assert.Equal("silhouette-pom", look.ExtrudeMode);
-        Assert.Null(look.SelectExtrude("wall-shells"));
-        Assert.Equal("wall-shells", look.ExtrudeMode);
-        Assert.Null(look.SelectExtrude("wall-shells-shadow"));
-        Assert.Equal("wall-shells-shadow", look.ExtrudeMode);
-        Assert.NotNull(look.SelectExtrude("not-a-mode"));
+        Assert.Equal("on", look.ExtrudeMode);
+        Assert.NotNull(look.SelectExtrude("wall-shells"));
         Assert.Null(look.SelectExtrude("reset"));
-        Assert.Equal("off", look.ExtrudeMode);
+        Assert.Equal("auto", look.ExtrudeMode);
 
-        Assert.Equal("on", look.ExteriorExtrudeMode);
+        Assert.Equal("auto", look.ExteriorExtrudeMode);
         Assert.Null(look.SelectExteriorExtrude("off"));
         Assert.Equal("off", look.ExteriorExtrudeMode);
         Assert.Null(look.SelectExteriorExtrude("on"));
         Assert.Equal("on", look.ExteriorExtrudeMode);
         Assert.NotNull(look.SelectExteriorExtrude("wall-shells"));
         Assert.Null(look.SelectExteriorExtrude("reset"));
-        Assert.Equal("off", look.ExteriorExtrudeMode);
+        Assert.Equal("auto", look.ExteriorExtrudeMode);
 
         Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.FlatSolid));
         Assert.Equal(0f, DaggerfallInteriorSurfaceMaterials.ExtrudeScale(DaggerfallInteriorSurfaceClass.PaintingOrScroll));
@@ -225,7 +223,6 @@ public sealed class DaggerfallInteriorLookTests
         DaggerfallInteriorExtrudeTuning tuning = new(DepthScale: 1.5f, Cutoff: 0.45f, DistanceScale: 2.0f);
         MaterialShader built = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
             shader, heightMap, relief, DaggerfallInteriorSurfaceClass.DefaultStone,
-            DaggerfallInteriorExtrudeMode.SilhouettePom, layer: 1, layers: 1,
             dungeonDampness: 0.2f, waterLevelY: null, tuning);
         Assert.Equal(1f, built.Parameter0.X);
         Assert.Equal(0.090f * 1.5f, built.Parameter0.Y, 5);
@@ -238,13 +235,11 @@ public sealed class DaggerfallInteriorLookTests
         // Authored extrude metadata controls per-record projection: 0 discards, positive unlocks framed paintings.
         MaterialShader discarded = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
             shader, heightMap, relief, DaggerfallInteriorSurfaceClass.DefaultStone,
-            DaggerfallInteriorExtrudeMode.SilhouettePom, layer: 1, layers: 1,
             dungeonDampness: 0f, waterLevelY: null, tuning, authoredExtrudeMetres: 0f);
         Assert.Equal(0f, discarded.Parameter0.X);
 
         MaterialShader paintingFrame = DaggerfallInteriorSurfaceMaterials.BuildExtrudeShader(
             shader, heightMap, relief, DaggerfallInteriorSurfaceClass.PaintingOrScroll,
-            DaggerfallInteriorExtrudeMode.SilhouettePom, layer: 1, layers: 1,
             dungeonDampness: 0f, waterLevelY: null, tuning, authoredExtrudeMetres: 0.05f);
         Assert.Equal(1f, paintingFrame.Parameter0.X);
         Assert.Equal(0.05f * 1.5f, paintingFrame.Parameter0.Y, 5);
