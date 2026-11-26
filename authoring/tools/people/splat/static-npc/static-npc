@@ -147,7 +147,8 @@ class Npc:
 
     @property
     def creature(self):
-        """npc.json "creature": quadruped, spider or ghost - an animated creature that is not a humanoid (2026-11-26): framed by its
+        """npc.json "creature": quadruped, spider, ghost, flyer (winged, hovering: creature-001 imp) or biped (hunched, rigged on Tripo,
+        not the X Bot walk: creature-009 werewolf) - an animated creature that is not a plain humanoid (2026-11-26): framed by its
         largest extent (keys, guide), the clay mesh itself as the orbit guide, a body-plan rig and generated gaits."""
         return self.cfg.get('creature')
 
@@ -665,7 +666,7 @@ def main():
     ap.add_argument('step', choices=list(STEPS)); ap.add_argument('id')
     ap.add_argument('--cms', help='init: the CMS character id (default ID when it is npc-NNN)');
     ap.add_argument('--walker', action='store_true', help='init: a figure that walks (Meshy API rig, Mixamo clips, the walk step)')
-    ap.add_argument('--creature', choices=['quadruped', 'spider', 'ghost'], help='init: an animated creature that is not a humanoid (creature-NNN)')
+    ap.add_argument('--creature', choices=['quadruped', 'spider', 'ghost', 'flyer', 'biped'], help='init: an animated creature that is not a humanoid (creature-NNN)')
     ap.add_argument('--from', dest='from_dir', help='init: take front.png (and back.png, side.png) from this folder instead of the CMS approval')
     ap.add_argument('--side', choices=('right', 'left'), help='init --from with a side.png: which side of the figure it shows (default right)')
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
