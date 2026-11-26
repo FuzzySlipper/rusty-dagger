@@ -912,6 +912,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallCourierDispatches CourierDispatches { get; } = null!;
     internal DaggerfallConditionCounterplay ConditionCounterplay { get; } = null!;
 
+    /// <summary>The political board, playing a turn every Sunday; null when the base pack carries no board.</summary>
+    internal DaggerfallPoliticalBoard? PoliticalBoard { get; }
+
     /// <summary>Gate, watch, service, and scarcity scrutiny policy driven by standing and active world conditions.</summary>
     internal DaggerfallScrutinyPolicy Scrutiny { get; } = null!;
 

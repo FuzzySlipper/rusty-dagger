@@ -32,6 +32,8 @@
     "magic": "magic/magic.json",
     "factions": "world/factions.json",
     "boardSeats": "world/board-seats.json",
+    "politicalBoard": "world/iliac-bay.board.json",
+    "politicalCards": "world/iliac-bay.cards.json",
     "itemTemplates": "items/item-templates.json",
     "text": "text/text.json",
     "names": "world/names.json",

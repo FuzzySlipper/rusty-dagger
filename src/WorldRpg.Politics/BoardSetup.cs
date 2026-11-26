@@ -6,7 +6,8 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// A board's starting position: its canon seed, the seats at the table, the regions, the relations between seats and
 /// the persona of each cast individual who holds a seat or may come to. The canon Iliac Bay start is
-/// <c>canon/iliac-bay.board.json</c> beside this library.
+/// the base content pack's <c>world/iliac-bay.board.json</c>, which the build copies beside this library as
+/// <c>canon/iliac-bay.board.json</c>.
 /// </summary>
 public sealed record BoardSetup(
     ulong Seed,
@@ -25,20 +26,23 @@ public sealed record BoardSetup(
     public static BoardSetup Canon() => Load(Path.Combine(AppContext.BaseDirectory, CanonFile));
 
     /// <summary>Reads and validates a board file; a malformed or inconsistent one is refused with every problem named.</summary>
-    public static BoardSetup Load(string path)
+    public static BoardSetup Load(string path) => Read(File.ReadAllText(path), path);
+
+    /// <summary>Reads and validates a board from JSON; <paramref name="source"/> names where it came from.</summary>
+    public static BoardSetup Read(string json, string source)
     {
         BoardSetup? setup;
         try
         {
-            setup = JsonSerializer.Deserialize(File.ReadAllBytes(path), PoliticsJson.Default.BoardSetup);
+            setup = JsonSerializer.Deserialize(json, PoliticsJson.Default.BoardSetup);
         }
         catch (JsonException exception)
         {
-            throw new BoardSetupException(path, [exception.Message]);
+            throw new BoardSetupException(source, [exception.Message]);
         }
-        if (setup is null) throw new BoardSetupException(path, ["the file holds no board"]);
+        if (setup is null) throw new BoardSetupException(source, ["the file holds no board"]);
         IReadOnlyList<string> problems = setup.Problems();
-        if (problems.Count > 0) throw new BoardSetupException(path, problems);
+        if (problems.Count > 0) throw new BoardSetupException(source, problems);
         return setup;
     }
 

@@ -411,7 +411,7 @@ class ActorsCatalogStore:
 
     @property
     def canon_board_path(self) -> Path:
-        return self.library.repo / "src/WorldRpg.Politics/canon/iliac-bay.board.json"
+        return self.library.repo / "content/worldrpg/packs/daggerfall.base/world/iliac-bay.board.json"
 
     def available(self) -> bool:
         base_path = self.library.base_payload

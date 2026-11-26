@@ -97,6 +97,8 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Sparse dungeon/band counter-play progress and unconsumed World-&gt;Board events; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallConditionCounterplaySave ConditionCounterplay { get; init; } = DaggerfallConditionCounterplaySave.Empty;
+    /// <summary>The political board in play; null when the base pack carries no board (or the save was made before it ran).</summary>
+    public DaggerfallPoliticalBoardSave? PoliticalBoard { get; init; }
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
     [JsonRequired]
     public DaggerfallDoorSave[] Doors { get; init; } = [];
@@ -1188,6 +1190,7 @@ internal sealed record DaggerfallSavePayload(
         CourierDispatches.Validate();
         ArgumentNullException.ThrowIfNull(ConditionCounterplay);
         ConditionCounterplay.Validate();
+        PoliticalBoard?.Validate();
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();
         ArgumentNullException.ThrowIfNull(Doors);

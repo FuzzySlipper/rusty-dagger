@@ -13,13 +13,13 @@ public sealed class ArchitectureLawTests
     {
         AssertProjectReferences("Daggerfall.Import", []);
         AssertProjectReferences("WorldRpg.Kit", []);
-        AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["WorldRpg.Kit"]);
+        AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["WorldRpg.Kit", "WorldRpg.Politics"]);
         AssertProjectReferences("WorldRpg.Host", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
 
         foreach (string project in ActiveRuntimeProjects()) AssertPackageReference(project, "Rusty.Engine");
 
         // The political board game stands alone: it runs and is tested without the Engine, the Kit or the ruleset,
-        // and its CLI reaches nothing else.
+        // and its CLI reaches nothing else. The ruleset drives it.
         AssertProjectReferences("WorldRpg.Politics", []);
         Assert.Empty(XDocument.Load(ProjectFile("WorldRpg.Politics")).Descendants("PackageReference"));
         AssertProjectReferences("WorldRpg.Politics.Cli", ["WorldRpg.Politics"]);

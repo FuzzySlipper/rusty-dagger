@@ -13,8 +13,9 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="WorldRpg.Politics.Tests" />
-    <!-- The canon start and cards are loaded, not compiled: it travels beside the library into every output that uses it. -->
-    <None Include="canon/iliac-bay.board.json" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="canon/iliac-bay.cards.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The canon start and cards are content of the base pack, which the game reads. The CLI and the tests read the
+         same files beside this library. -->
+    <None Include="../../content/worldrpg/packs/daggerfall.base/world/iliac-bay.board.json" Link="canon/iliac-bay.board.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../content/worldrpg/packs/daggerfall.base/world/iliac-bay.cards.json" Link="canon/iliac-bay.cards.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

@@ -4,7 +4,7 @@ namespace WorldRpg.Politics;
 
 /// <summary>
 /// The cards a table plays with: the shared families and every seat's signature cards, and the World deck no seat
-/// plays. The canon set is <c>canon/iliac-bay.cards.json</c> beside this library. A seat's deck is every shared card of
+/// plays. The canon set is the base content pack's <c>world/iliac-bay.cards.json</c>, copied beside this library. A seat's deck is every shared card of
 /// its families and its own signature cards, each as many times as the card's copies; the World deck is every World
 /// card, as many times as its copies. A set with no World cards turns none.
 /// </summary>
@@ -16,20 +16,23 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
     public static CardSet Canon() => Load(Path.Combine(AppContext.BaseDirectory, CanonFile));
 
     /// <summary>Reads a card file and checks the cards on their own; <see cref="Problems"/> checks them against a table.</summary>
-    public static CardSet Load(string path)
+    public static CardSet Load(string path) => Read(File.ReadAllText(path), path);
+
+    /// <summary>Reads cards from JSON and checks them on their own; <paramref name="source"/> names where they came from.</summary>
+    public static CardSet Read(string json, string source)
     {
         CardSet? set;
         try
         {
-            set = JsonSerializer.Deserialize(File.ReadAllBytes(path), PoliticsJson.Default.CardSet);
+            set = JsonSerializer.Deserialize(json, PoliticsJson.Default.CardSet);
         }
         catch (JsonException exception)
         {
-            throw new BoardSetupException(path, [exception.Message]);
+            throw new BoardSetupException(source, [exception.Message]);
         }
-        if (set is null) throw new BoardSetupException(path, ["the file holds no cards"]);
+        if (set is null) throw new BoardSetupException(source, ["the file holds no cards"]);
         IReadOnlyList<string> problems = set.Problems(null);
-        if (problems.Count > 0) throw new BoardSetupException(path, problems);
+        if (problems.Count > 0) throw new BoardSetupException(source, problems);
         return set;
     }
 

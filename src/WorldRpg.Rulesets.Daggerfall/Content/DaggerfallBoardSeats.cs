@@ -11,7 +11,7 @@ internal enum DaggerfallBoardSeatKind
 
 /// <summary>
 /// Ruleset binding for one canonical political board-game seat (<c>seatId -&gt; { officeFactionId, title }</c>).
-/// Intentionally carries NO holder, seat name, kind, or home region: <c>WorldRpg.Politics/canon/iliac-bay.board.json</c>
+/// Intentionally carries NO holder, seat name, kind, or home region: the base pack's <c>world/iliac-bay.board.json</c>
 /// owns seats, holders, and personas, and faction metadata comes from <c>factions.json</c> (no hand-kept copies).
 /// </summary>
 internal sealed record DaggerfallBoardSeatBinding(

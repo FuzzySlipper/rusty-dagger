@@ -163,6 +163,7 @@ internal static partial class DaggerfallBaseContent
             DaggerfallLocationSet locations = ReadLocations(root, data, diagnostics);
             DaggerfallFactionsSet factions = ReadFactions(root, locations.Regions, diagnostics);
             DaggerfallBoardSeatSet boardSeats = ReadBoardSeats(root, factions, diagnostics);
+            DaggerfallPoliticalCanon? politicalCanon = ReadPoliticalCanon(root, boardSeats, diagnostics);
             DaggerfallCreatureFactionSet creatureFactions = root.TryGetProperty("creatureFactions", out JsonElement creatureFactionsEl)
                 ? DaggerfallCreatureFactionSet.Read(creatureFactionsEl, diagnostics)
                 : DaggerfallCreatureFactionSet.ClassicDefault;
@@ -202,6 +203,7 @@ internal static partial class DaggerfallBaseContent
             {
                 ActorCatalog = actorCatalog,
                 BoardSeats = boardSeats,
+                PoliticalCanon = politicalCanon,
                 CreatureFactions = creatureFactions,
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,

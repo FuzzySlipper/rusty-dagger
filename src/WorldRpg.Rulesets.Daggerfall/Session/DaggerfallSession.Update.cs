@@ -270,6 +270,7 @@ internal sealed partial class DaggerfallSession
         long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
+        PoliticalBoard?.AdvanceToDay(_time.Calendar.DayNumber, ConditionCounterplay.ConsumeBoardEvents); // Society: a board turn each Sunday reached
         CourierDispatches.AdvanceToMinute(minuteAfter, checked((int)_time.Calendar.DayNumber));   // Society: elapsed-time board-game couriers
         WordSpread.PruneExpired(minuteAfter);                                                     // Society: elapsed-time word spread
         if (!Expedition.Open)

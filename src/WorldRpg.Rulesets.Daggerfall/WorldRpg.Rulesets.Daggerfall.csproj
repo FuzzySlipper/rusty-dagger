@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
+    <ProjectReference Include="../WorldRpg.Politics/WorldRpg.Politics.csproj" />
     <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]">
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
     </PackageReference>

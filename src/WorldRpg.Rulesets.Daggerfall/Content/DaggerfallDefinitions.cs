@@ -317,6 +317,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// <summary>Canonical political board-game seat bindings (<c>seatId -&gt; faction/region/title</c>, no holder).</summary>
     internal DaggerfallBoardSeatSet BoardSeats { get; init; } = DaggerfallBoardSeatSet.Empty;
 
+    /// <summary>The political board's canon start and cards; null when the base pack carries no board.</summary>
+    internal DaggerfallPoliticalCanon? PoliticalCanon { get; init; }
+
     /// <summary>These definitions joined with the owned people pack, every other section shared.</summary>
     internal DaggerfallDefinitions WithPeople(DaggerfallPeopleSet people)
     {

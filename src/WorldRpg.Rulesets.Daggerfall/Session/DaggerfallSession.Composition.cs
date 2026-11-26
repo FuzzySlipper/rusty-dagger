@@ -1074,6 +1074,9 @@ internal sealed partial class DaggerfallSession
                 hasPendingBandMembers: (bandId, gen) => _encounters.Pending.Any(p => p.Band is { Id: int id } && id == bandId && p.Generation == gen));
             if (saved is not null)
                 ConditionCounterplay.Restore(saved.ConditionCounterplay);
+            if (definitions.PoliticalCanon is { } politicalCanon)
+                PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, WorldConditions,
+                    _time.Calendar.DayNumber, saved?.PoliticalBoard);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
                 () => _sites.Projection.Inputs, CurrentInteriorBuilding,
@@ -1208,6 +1211,7 @@ internal sealed partial class DaggerfallSession
             _persistence.LocalHouseholds = SocialConsequences.Capture;
             _persistence.CourierDispatches = CourierDispatches.Capture;
             _persistence.ConditionCounterplay = ConditionCounterplay.Capture;
+            _persistence.PoliticalBoard = () => PoliticalBoard?.Capture();
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;

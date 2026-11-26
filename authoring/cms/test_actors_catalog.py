@@ -244,7 +244,7 @@ class ActorsCatalogTests(TestCase):
         self._write(base_dir / "world/building-names.json", {
             "regionNames": [f"Region {i}" for i in range(25)],
         })
-        self._write(self.root / "src/WorldRpg.Politics/canon/iliac-bay.board.json", {
+        self._write(self.root / "content/worldrpg/packs/daggerfall.base/world/iliac-bay.board.json", {
             "seats": [{"id": "daggerfall", "name": "Kingdom of Daggerfall", "kind": "Crown", "holder": "king-gothryd", "home": "daggerfall"}],
         })
         self._write(self.lib.people_pack / "payload.json", {"blocksFolder": "blocks"})
