@@ -188,7 +188,7 @@ mattes)
       python3 authoring/tools/people/splat/mesh-splat/birefnet_masks.py $D/frames $D/birefnet --comfy ${BIREFNET_COMFY:-http://192.168.1.24:8188,http://192.168.1.23:8188} --last ${LAST:-71} 2>&1 | grep -v '^resource-board' | tail -n 1
     [ "$(ls $D/birefnet 2>/dev/null | wc -l)" -ge "$(( ${LAST:-71} + 1 ))" ] && BOPT="--birefnet birefnet${BIREFNET_EDGE:+ --birefnet-edge $BIREFNET_EDGE}" || echo "BiRefNet masks incomplete: the flat / large / guide tests decide" >&2
   fi
-  halo "mattes and Solv3R inputs" "python3 \$ASSET_CPU_REPO/mesh-splat/orbit_views.py frames orbit --direction $dir --last ${LAST:-71} --step ${STEP:-5} --threshold 8 --open-holes ${OPEN_HOLES:-500} --hole-large ${HOLE_LARGE:-4000,2.5} ${KEY_HOLES:+--key-holes $KEY_HOLES} ${DESPILL:+--despill $DESPILL} $GOPT $BOPT > /dev/null && python3 \$ASSET_CPU_REPO/mesh-splat/orbit_inputs.py orbit/views inputs > /dev/null && ls inputs/images | wc -l"; mrc=$?
+  halo "mattes and Solv3R inputs" "python3 \$ASSET_CPU_REPO/mesh-splat/orbit_views.py frames orbit --direction $dir --last ${LAST:-71} --step ${STEP:-5} --threshold 8 --open-holes ${OPEN_HOLES:-500} --hole-large ${HOLE_LARGE:-4000,2.5} ${KEY_HOLES:+--key-holes $KEY_HOLES} ${KEY_FILL:+--key-fill $KEY_FILL} ${DESPILL:+--despill $DESPILL} $GOPT $BOPT > /dev/null && python3 \$ASSET_CPU_REPO/mesh-splat/orbit_inputs.py orbit/views inputs > /dev/null && ls inputs/images | wc -l"; mrc=$?
   [ $mrc = 0 ] && { halo "matte review (glance)" "python3 \$ASSET_CPU_REPO/mesh-splat/matte_review.py . ${MATTE_CLIPS:+--clips $MATTE_CLIPS}" || echo "matte review failed (warning only)"; }
   (exit $mrc) ;;
 cams)

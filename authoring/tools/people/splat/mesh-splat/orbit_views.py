@@ -217,6 +217,26 @@ def despill(image, alpha, width):
     return Image.fromarray(np.clip(np.rint(pix), 0, 255).astype(np.uint8))
 
 
+def key_fill(image, alpha, threshold):
+    """--key-fill T: the clip paints the key colour INTO the figure where the painting shows background through a tear (creature-018's
+    ragged robe, 2026-11-26: magenta streaks the matte keeps, since BiRefNet calls them robe). The key's strong channels are those
+    above a quarter of the border colour's range (the backdrop may be a dim vignette, 108,66,87 there; at half, blue fell out). Inside the matte, a pixel
+    whose strong channels exceed its weak ones by more than T is blended toward a dark grey that keeps its shading (0.6 x the weak
+    channel), fully at 2T: the painting draws its tears dark. Opening them as holes instead would bake a smear, as the streaks
+    change from frame to frame."""
+    pix = np.asarray(image).astype(np.float32)
+    border = np.concatenate([pix[:8].reshape(-1, 3), pix[-8:].reshape(-1, 3), pix[:, :8].reshape(-1, 3), pix[:, -8:].reshape(-1, 3)])
+    k = np.median(border, 0); hi = k > k.min() + (k.max() - k.min()) / 4; lo = ~hi
+    if not hi.any() or not lo.any() or k.max() - k.min() < 20:
+        return image, 0
+    weak = pix[..., lo].max(-1)
+    spill = np.clip(pix[..., hi].min(-1) - weak, 0, None)
+    near = ndimage.binary_dilation((alpha > 0.5) & (spill > threshold), iterations=1) & (alpha > 0)
+    w = (np.clip((spill - threshold / 2) / (threshold * 1.5), 0, 1) * near)[..., None]
+    pix = pix * (1 - w) + (0.6 * weak)[..., None] * w
+    return Image.fromarray(np.clip(np.rint(pix), 0, 255).astype(np.uint8)), int((w[..., 0] > 0.5).sum())
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("frames", type=Path)
@@ -234,6 +254,7 @@ def main():
     parser.add_argument("--guide-frac", type=float, default=0.5)
     parser.add_argument("--birefnet", type=Path)
     parser.add_argument("--key-holes", type=float, metavar="DIST", help="chroma-key backdrop: open every enclosed patch within DIST of the border colour")
+    parser.add_argument("--key-fill", type=float, metavar="T", help="inside the matte, take the key colour out of pixels more than T key-tinted (key painted into tears; creature-018)")
     parser.add_argument("--despill", type=float, metavar="PX", help="chroma-key backdrop: take the key colour's spill off the edge's PX px (at 1088)")
     parser.add_argument("--birefnet-edge", type=float, metavar="PX",
                         help="with --birefnet: also cut the matte's outline back to the mask widened by PX pixels (at 1088; scaled with the frame). "
@@ -257,6 +278,9 @@ def main():
         if bdir:
             prev = report.pop("maps")
         if args.open_holes or bdir or args.key_holes:
+            holes[f"{index:03d}"] = report
+        if args.key_fill:
+            image, report["key_filled"] = key_fill(image, alpha, args.key_fill)
             holes[f"{index:03d}"] = report
         if args.despill:
             image = despill(image, alpha, args.despill)
