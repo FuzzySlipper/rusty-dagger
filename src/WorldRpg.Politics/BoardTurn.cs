@@ -19,7 +19,7 @@ namespace WorldRpg.Politics;
 /// one, as its own lords reassert themselves.</item>
 /// <item>Every <see cref="SeasonWeeks"/>th week ground left untended drifts: each region's control, prosperity and
 /// order above <see cref="SettledTrack"/> falls by 1, a region not cut off below it regains 1 prosperity, and each
-/// relation moves 1 towards 0, so what a seat has built needs keeping up and fed land recovers.</item>
+/// relation moves 1 towards 0, except between seats at war, so what a seat has built needs keeping up and fed land recovers.</item>
 /// <item>Each seat draws its hand back up to <see cref="Board.HandSize"/>.</item>
 /// </list>
 /// </item>
@@ -28,7 +28,10 @@ namespace WorldRpg.Politics;
 /// changes nothing, fails.</item>
 /// <item>Each seat reviews its plan (<see cref="Intention"/>), then plays a card from its hand, gathers or withdraws from
 /// a trade agreement, the table's order turning by one seat each week. A slow card is paid now and arrives its weeks
-/// later. Each seat a move bears on remembers it once it has changed the board (<see cref="Memory"/>).</item>
+/// later. Each seat a move bears on remembers it once it has changed the board (<see cref="Memory"/>). A seat at war
+/// may play the war cards as well as its hand.</item>
+/// <item>Wars are checked (<see cref="Wars"/>): weariness grows and exhausted wars end in treaties, crowns at war's
+/// relation across a border go to war, and allies are pulled in.</item>
 /// </list>
 /// </summary>
 public static class BoardTurn
@@ -87,8 +90,9 @@ public static class BoardTurn
             }
             else
             {
-                Card card = board.Deck(seat).Hand.First(held => held.Id == chosen.Card);
-                board.Discard(seat, card);
+                Card? held = board.Deck(seat).Hand.FirstOrDefault(held => held.Id == chosen.Card);
+                Card card = held ?? board.WarCards.First(war => war.Id == chosen.Card);
+                if (held is not null) board.Discard(seat, card);
                 visibility = card.Visibility;
                 if (card.Weeks == 0)
                 {
@@ -107,7 +111,8 @@ public static class BoardTurn
             moves.Add(new MoveTrace(id, seat.Id, seat.Plan?.ToString(), chosen.Card, chosen.Targets, chosen.Score, visibility, origin, arrives,
                 [.. options.Where(option => !ReferenceEquals(option, chosen)).Take(MoveTrace.AlternativesShown)], board.TakeChanges()));
         }
-        return new TurnTrace(board.Turn, upkeep, world, arrivals, moves);
+        Wars.Check(board);
+        return new TurnTrace(board.Turn, upkeep, world, arrivals, moves, board.TakeChanges());
     }
 
     /// <summary>The resource an office pays its holder.</summary>
@@ -126,7 +131,7 @@ public static class BoardTurn
     /// </summary>
     public static string? Origin(Board board, Seat seat, Card card, IReadOnlyList<string> targets)
     {
-        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal))
+        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.War))
         {
             Region target = board.Region(targets[0]);
             return board.Present(seat, target) ? target.Id : target.Borders.FirstOrDefault(border => board.Present(seat, board.Region(border)));

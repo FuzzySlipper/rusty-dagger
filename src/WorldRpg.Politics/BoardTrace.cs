@@ -43,8 +43,8 @@ public sealed record ArrivalTrace(
     IReadOnlyList<BoardChange> Changes);
 
 /// <summary>
-/// One week's record: the upkeep's changes, the World card turned, the slow moves arriving, then each seat's move in
-/// table order. Turn 1 is the first Sunday; <see cref="Year"/> and <see cref="Day"/> place it in the Tamrielic year of
+/// One week's record: the upkeep's changes, the World card turned, the slow moves arriving, each seat's move in table
+/// order, then the changes of the week's war checks: wars opening, allies joining, weariness and treaties. Turn 1 is the first Sunday; <see cref="Year"/> and <see cref="Day"/> place it in the Tamrielic year of
 /// twelve 30-day months.
 /// </summary>
 public sealed record TurnTrace(
@@ -52,7 +52,8 @@ public sealed record TurnTrace(
     IReadOnlyList<BoardChange> Upkeep,
     WorldTrace? World,
     IReadOnlyList<ArrivalTrace> Arrivals,
-    IReadOnlyList<MoveTrace> Moves)
+    IReadOnlyList<MoveTrace> Moves,
+    IReadOnlyList<BoardChange> Wars)
 {
     public const int DaysPerWeek = 7;
     public const int DaysPerYear = 360;
@@ -105,6 +106,7 @@ public static class BoardTraceWriter
             writer.WriteLine($"  {move.Seat}{plan}: {Move(new MoveOption(move.Card, move.Targets, move.Score))}{Secret(move.Visibility)}{slow}{passed}");
             if (move.Changes.Count > 0) writer.WriteLine($"      {Changes(move.Changes)}");
         }
+        if (turn.Wars.Count > 0) writer.WriteLine($"  wars: {Changes(turn.Wars)}");
     }
 
     private static string Move(MoveOption option) => string.Create(CultureInfo.InvariantCulture,

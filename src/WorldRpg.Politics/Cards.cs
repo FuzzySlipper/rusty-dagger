@@ -9,6 +9,12 @@ public enum CardFamily
     Shadow,
     Arcane,
     Faith,
+
+    /// <summary>
+    /// War cards, which no seat draws: every seat fighting a war may play them each week beside its hand, and they fit
+    /// only a war it fights (<see cref="Wars"/>).
+    /// </summary>
+    War,
 }
 
 /// <summary>What a card is played on. Its targets are given in this order.</summary>
@@ -37,6 +43,17 @@ public enum CardTarget
 
     /// <summary>A region the player reaches, then another seat with influence there: a rival on its own ground.</summary>
     RegionRival,
+
+    /// <summary>
+    /// A region of an enemy's in a war the player fights, bordering land held by the player's side, that the player reaches.
+    /// </summary>
+    EnemyFront,
+
+    /// <summary>A region owing allegiance to the player that borders land held by the enemy's side in a war it fights.</summary>
+    OwnFront,
+
+    /// <summary>A war in force.</summary>
+    War,
 
     /// <summary>
     /// Another seat, then the term the player gives and the term it asks in return, each from the card's menu
@@ -145,6 +162,18 @@ public enum CardEffectKind
     Annex,
 
     /// <summary>
+    /// A crown takes the target region if its control is 0 and it is not a capital, as an annexation takes one, with no
+    /// further cost in relation: the two are at war already.
+    /// </summary>
+    Conquer,
+
+    /// <summary>The player, a principal of the target war, sues for peace (<see cref="Wars.SueForPeace"/>).</summary>
+    Peace,
+
+    /// <summary>The player, a third seat, brokers a truce ending the target war (<see cref="Wars.Broker"/>).</summary>
+    Broker,
+
+    /// <summary>
     /// Offers the target seat a standing trade agreement on the targeted terms, chosen from <see cref="CardEffect.Gives"/>
     /// and <see cref="CardEffect.Asks"/>; the partner accepts or refuses it (<see cref="Trade"/>).
     /// </summary>
@@ -216,6 +245,7 @@ public sealed record Card(
         CardTarget.RegionRival => board.Regions
             .SelectMany(region => region.Influence.Keys.Where(rival => rival != seat.Id).Select(rival => (IReadOnlyList<string>)[region.Id, rival])),
         CardTarget.Deal => board.Seats.Where(partner => partner != seat).SelectMany(partner => Offers(board, seat, partner)),
+        CardTarget.War => board.Wars.Select(war => (IReadOnlyList<string>)[war.Id]),
         _ => board.Regions.Select(region => (IReadOnlyList<string>)[region.Id]),
     };
 
@@ -242,6 +272,9 @@ public sealed record Card(
             CardTarget.Deal => targets.Count == 3 && board.HasSeat(targets[0])
                 && TradeTerm.Parse(targets[1]) is { } gives && TradeTerm.Parse(targets[2]) is { } asks
                 && Trade.Fits(board, seat, board.Seat(targets[0]), gives, asks),
+            CardTarget.EnemyFront => targets.Count == 1 && Wars.Against(board, seat, board.Region(targets[0])) is not null,
+            CardTarget.OwnFront => targets.Count == 1 && Wars.OwnFront(board, seat, board.Region(targets[0])),
+            CardTarget.War => targets.Count == 1 && board.HasWar(targets[0]),
             _ => false,
         };
         if (!fits) return false;
@@ -255,6 +288,9 @@ public sealed record Card(
                 case CardEffectKind.ChallengeOffice when board.PiecesLeft(seat) == 0:
                 case CardEffectKind.AddCourtCondition when board.Seat(targets[0]) is not { Kind: SeatKind.Crown, Home: { } home }
                     || !board.Reaches(seat, board.Region(home)):
+                    return false;
+                case CardEffectKind.Peace when !Wars.MaySue(board.War(targets[0]), seat):
+                case CardEffectKind.Broker when !Wars.MayBroker(board, board.War(targets[0]), seat):
                     return false;
                 case CardEffectKind.Annex:
                     if (seat.Kind != SeatKind.Crown) return false;
@@ -290,6 +326,8 @@ public sealed record Card(
     {
         int before = board.ChangeCount;
         IReadOnlyList<Region> regions = TargetRegions(board, targets);
+        War? front = Target == CardTarget.EnemyFront ? Wars.Against(board, seat, regions[0]) : null;
+        string? holder = regions.Count > 0 ? regions[0].Allegiance : null;
         foreach (CardEffect effect in Effects)
         {
             switch (effect.Kind)
@@ -323,37 +361,51 @@ public sealed record Card(
                     board.AdjustResource(seat, effect.Resource.Value, taken);
                     break;
                 case CardEffectKind.AddCondition:
-                    board.AddCondition(regions[0], new RegionCondition(effect.Condition!.Value, effect.Detail, effect.Amount, seat.Id, board.Turn, board.Turn + effect.Weeks));
+                    string? detail = effect.Condition == ConditionKind.WarFront ? front?.Detail ?? effect.Detail : effect.Detail;
+                    board.AddCondition(regions[0], new RegionCondition(effect.Condition!.Value, detail, effect.Amount, seat.Id, board.Turn, board.Turn + effect.Weeks));
                     break;
                 case CardEffectKind.RemoveCondition: board.RemoveConditions(regions[0], effect.Condition!.Value); break;
                 case CardEffectKind.AddCourtCondition:
                     board.AddCourtCondition(board.Seat(targets[0]), new CourtCondition(effect.Court!.Value, effect.Amount, seat.Id, board.Turn, board.Turn + effect.Weeks));
                     break;
                 case CardEffectKind.Annex:
-                    Region annexed = regions[0];
-                    Seat? former = annexed.Allegiance is null ? null : board.Seat(annexed.Allegiance);
-                    board.SetAllegiance(annexed, seat);
-                    board.AdjustControl(annexed, AnnexedControl - annexed.Control);
-                    board.Consolidate(annexed, board.Turn + ConsolidationWeeks);
-                    if (former is not null)
-                    {
-                        board.AdjustInfluence(annexed, former, -annexed.InfluenceOf(former.Id));
-                        board.AdjustRelation(seat, former, -2);
-                    }
+                    if (TakeRegion(board, seat, regions[0]) is { } former) board.AdjustRelation(seat, former, -2);
                     break;
+                case CardEffectKind.Conquer:
+                    if (seat.Kind == SeatKind.Crown && regions[0].Control == 0 && !regions[0].Capital) TakeRegion(board, seat, regions[0]);
+                    break;
+                case CardEffectKind.Peace: Wars.SueForPeace(board, board.War(targets[0]), seat); break;
+                case CardEffectKind.Broker: Wars.Broker(board, board.War(targets[0]), seat); break;
                 case CardEffectKind.Deal:
                     Trade.Propose(board, seat, board.Seat(targets[0]), TradeTerm.Parse(targets[1])!, TradeTerm.Parse(targets[2])!);
                     break;
                 default: throw new InvalidOperationException($"card '{Id}' has unknown effect {effect.Kind}");
             }
         }
-        return board.ChangeCount > before;
+        bool changed = board.ChangeCount > before;
+        if (changed && front is not null) Wars.Hurt(board, front, holder!, regions[0]);
+        return changed;
+    }
+
+    /// <summary>
+    /// <paramref name="seat"/> takes <paramref name="region"/>: it changes allegiance at control <see cref="AnnexedControl"/>
+    /// and is consolidated for <see cref="ConsolidationWeeks"/> weeks, and its former seat's factors are expelled.
+    /// Returns the former seat, if any.
+    /// </summary>
+    internal static Seat? TakeRegion(Board board, Seat seat, Region region)
+    {
+        Seat? former = region.Allegiance is null ? null : board.Seat(region.Allegiance);
+        board.SetAllegiance(region, seat);
+        board.AdjustControl(region, AnnexedControl - region.Control);
+        board.Consolidate(region, board.Turn + ConsolidationWeeks);
+        if (former is not null) board.AdjustInfluence(region, former, -region.InfluenceOf(former.Id));
+        return former;
     }
 
     /// <summary>The regions among <paramref name="targets"/>: the only regions a card's effects change.</summary>
     public IReadOnlyList<Region> TargetRegions(Board board, IReadOnlyList<string> targets) => Target switch
     {
-        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal => [],
+        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.War => [],
         CardTarget.RegionRival => [board.Region(targets[0])],
         _ => [.. targets.Select(board.Region)],
     };

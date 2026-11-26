@@ -88,11 +88,13 @@ public static class Prestige
         foreach (BoardChange change in changes)
         {
             string field = change.Field;
-            if (field is "coin" or "favour" or "force" || field.StartsWith("court:", StringComparison.Ordinal))
+            if (field is "coin" or "favour" or "force" || field.StartsWith("court:", StringComparison.Ordinal)
+                || field.StartsWith("weariness:", StringComparison.Ordinal) || field.StartsWith("ally:", StringComparison.Ordinal))
             {
                 touched.Add(change.Subject);
             }
-            else if (field.StartsWith("relation:", StringComparison.Ordinal) || field.StartsWith("deal:", StringComparison.Ordinal))
+            else if (field.StartsWith("relation:", StringComparison.Ordinal) || field.StartsWith("deal:", StringComparison.Ordinal)
+                || field.StartsWith("war:", StringComparison.Ordinal) || field.StartsWith("truce:", StringComparison.Ordinal))
             {
                 touched.Add(change.Subject);
                 touched.Add(field[(field.IndexOf(':') + 1)..]);
@@ -149,13 +151,14 @@ public static class Prestige
 
         /// <summary>The move of <paramref name="card"/> on <paramref name="targets"/> by <paramref name="player"/>, about to be made.</summary>
         public static Witness OfCard(Board board, Seat player, Before before, Card card, IReadOnlyList<string> targets) =>
-            new(board, player, before, card.TargetRegions(board, targets), Named(card, targets), card.Visibility);
+            new(board, player, before, card.TargetRegions(board, targets), Named(board, card, targets), card.Visibility);
 
-        /// <summary>The seats a card's targets name: a seat, a rival on its own ground or a deal's partner.</summary>
-        public static IReadOnlyList<string> Named(Card card, IReadOnlyList<string> targets) => card.Target switch
+        /// <summary>The seats a card's targets name: a seat, a rival on its own ground, a deal's partner or a war's principals.</summary>
+        public static IReadOnlyList<string> Named(Board board, Card card, IReadOnlyList<string> targets) => card.Target switch
         {
             CardTarget.OtherSeat or CardTarget.Deal => [targets[0]],
             CardTarget.RegionRival => [targets[1]],
+            CardTarget.War => [board.War(targets[0]).A, board.War(targets[0]).B],
             _ => [],
         };
 

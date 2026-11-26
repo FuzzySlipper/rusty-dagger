@@ -40,6 +40,12 @@ internal static class TestBoards
         new("extort", "Extort", CardFamily.Shadow, 1, 0, 0, CardTarget.OtherSeat, Visibility.Secret, [new(CardEffectKind.Take, 3, Resource.Coin)], Weeks: 1),
         new("barter", "Barter", CardFamily.Faith, 1, 0, 0, CardTarget.Deal, Visibility.Public,
             [new(CardEffectKind.Deal, Gives: ["grain", "coin:1/2", "force:1/4"], Asks: ["grain", "coin:1/2", "force:1/4"])]),
+        new("border-raid", "Border Raid", CardFamily.War, 0, 0, 2, CardTarget.EnemyFront, Visibility.Public,
+            [new(CardEffectKind.Control, -1), new(CardEffectKind.AddCondition, 1, Condition: ConditionKind.WarFront, Weeks: 8)]),
+        new("siege", "Siege", CardFamily.War, 0, 0, 4, CardTarget.EnemyFront, Visibility.Public,
+            [new(CardEffectKind.Control, -2), new(CardEffectKind.AddCondition, 3, Condition: ConditionKind.WarFront, Weeks: 8), new(CardEffectKind.Conquer)], Weeks: 2),
+        new("muster", "Muster", CardFamily.War, 2, 0, 0, CardTarget.OwnFront, Visibility.Public, [new(CardEffectKind.Control, 1)]),
+        new("sue-for-peace", "Sue for Peace", CardFamily.War, 0, 2, 0, CardTarget.War, Visibility.Public, [new(CardEffectKind.Peace)]),
         new("guild-secret", "Guild Secret", CardFamily.Shadow, 0, 0, 8, CardTarget.None, Visibility.Secret, [new(CardEffectKind.Gain, 4, Resource.Favour)], Seat: "guild"),
     ]);
 
@@ -94,6 +100,25 @@ internal static class TestBoards
             Region("east-capital", true, "east", 5, 4, 4, new Dictionary<string, int> { ["east"] = 2 }, ["granary"]),
         ],
         relation == 0 ? [] : [new RelationSetup("west", "east", relation)],
+        Personas);
+
+    /// <summary>
+    /// Two crowns whose marches border each other, in a line: West's capital, West's march, East's march and East's
+    /// capital. The marches are the front of any war between them.
+    /// </summary>
+    public static BoardSetup Frontier(int relation) => new(
+        7,
+        [
+            new SeatSetup("west", "West", SeatKind.Crown, "west-holder", "west-capital", 4, 4, 4, [CardFamily.Trade, CardFamily.Court, CardFamily.Force]),
+            new SeatSetup("east", "East", SeatKind.Crown, "east-holder", "east-capital", 4, 4, 4, [CardFamily.Trade, CardFamily.Court, CardFamily.Force]),
+        ],
+        [
+            Region("west-capital", true, "west", 5, 4, 4, new Dictionary<string, int> { ["west"] = 2 }, ["west-march"]),
+            Region("west-march", false, "west", 3, 3, 3, new Dictionary<string, int> { ["west"] = 1 }, ["west-capital", "east-march"]),
+            Region("east-march", false, "east", 2, 3, 3, new Dictionary<string, int> { ["east"] = 1, ["west"] = 1 }, ["west-march", "east-capital"]),
+            Region("east-capital", true, "east", 5, 4, 4, new Dictionary<string, int> { ["east"] = 2 }, ["east-march"]),
+        ],
+        [new RelationSetup("west", "east", relation)],
         Personas);
 
     /// <summary>The setup with a guild seated: a power with no home, drawing shadow cards, with the given grants.</summary>

@@ -78,6 +78,16 @@ public sealed class PaceTests(FiftyCanonYears run) : IClassFixture<FiftyCanonYea
     }
 
     [Fact]
+    public void Neighbouring_crowns_go_to_war_and_make_peace()
+    {
+        BoardChange[] wars = [.. run.Turns.SelectMany(turn => turn.Wars.Concat(turn.Arrivals.SelectMany(arrival => arrival.Changes))
+            .Concat(turn.Moves.SelectMany(move => move.Changes))).Where(change => change.Field.StartsWith("war:", StringComparison.Ordinal))];
+
+        Assert.Contains(wars, change => change.From == "none");
+        Assert.Contains(wars, change => change.From != "none");
+    }
+
+    [Fact]
     public void No_capital_changes_hands()
     {
         Assert.All(run.Board.Seats.Where(seat => seat.Kind == SeatKind.Crown), seat => Assert.Equal(seat.Id, run.Board.Region(seat.Home!).Allegiance));

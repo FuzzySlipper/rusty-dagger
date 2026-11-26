@@ -26,6 +26,8 @@ public sealed class Board
     private readonly Dictionary<string, SeatDeck> decks;
     private readonly List<PendingMove> pending = [];
     private readonly List<Agreement> agreements = [];
+    private readonly List<War> wars = [];
+    private readonly List<Truce> truces = [];
     private readonly List<WorldCard> worldDraw;
     private readonly List<WorldCard> worldDiscard = [];
     private readonly List<BoardChange> changes = [];
@@ -36,11 +38,14 @@ public sealed class Board
     private readonly Dictionary<(string Helper, string Helped), int> helps = [];
     private int trialStart = -1;
     private int dealsMade;
+    private int warsMade;
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
-        Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, BoardRandom random, IReadOnlyDictionary<string, Persona> personas)
+        Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, IReadOnlyList<Card> warCards, BoardRandom random,
+        IReadOnlyDictionary<string, Persona> personas)
     {
         this.personas = personas;
+        WarCards = warCards;
         Seats = seats;
         Regions = regions;
         seatsById = seats.ToDictionary(seat => seat.Id, StringComparer.Ordinal);
@@ -71,6 +76,15 @@ public sealed class Board
     /// <summary>The trade agreements in force, in the order they were made (<see cref="Trade"/>).</summary>
     public IReadOnlyList<Agreement> Agreements => agreements;
 
+    /// <summary>The wars in force, in the order they opened (<see cref="Politics.Wars"/>).</summary>
+    public IReadOnlyList<War> Wars => wars;
+
+    /// <summary>The truces binding crowns after their treaties.</summary>
+    public IReadOnlyList<Truce> Truces => truces;
+
+    /// <summary>The war cards, which no seat draws: each seat fighting a war may play them every week beside its hand.</summary>
+    public IReadOnlyList<Card> WarCards { get; }
+
     /// <summary>
     /// A board at its starting position, played from <paramref name="seed"/> or the setup's canon seed: each seat's
     /// deck shuffled in table order, then the World deck, then a hand dealt to each.
@@ -93,7 +107,7 @@ public sealed class Board
         })];
         Dictionary<(string, string), int> relations = setup.Relations.ToDictionary(relation => Pair(relation.A, relation.B), relation => relation.Value);
         Dictionary<string, SeatDeck> decks = setup.Seats.ToDictionary(seat => seat.Id, seat => new SeatDeck([.. cards.Deck(seat)], [], []), StringComparer.Ordinal);
-        Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], new BoardRandom(seed ?? setup.Seed),
+        Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], [.. cards.WarCards()], new BoardRandom(seed ?? setup.Seed),
             new Dictionary<string, Persona>(setup.Personas!, StringComparer.Ordinal));
         foreach (Seat seat in seats) board.Shuffle(decks[seat.Id].drawPile);
         board.Shuffle(board.worldDraw);
@@ -108,6 +122,13 @@ public sealed class Board
     public Region Region(string id) => regionsById[id];
 
     public int Relation(string a, string b) => relations.GetValueOrDefault(Pair(a, b));
+
+    public War War(string id) => wars.Single(war => war.Id == id);
+
+    public bool HasWar(string id) => wars.Any(war => war.Id == id);
+
+    /// <summary>The war <paramref name="a"/> and <paramref name="b"/> fight as its principals, if any.</summary>
+    public War? WarBetween(string a, string b) => wars.FirstOrDefault(war => war.Principal(a) && war.Principal(b));
 
     /// <summary>The persona of the cast individual holding <paramref name="seat"/> now.</summary>
     public Persona Persona(Seat seat) => personas[seat.Holder];
@@ -406,6 +427,10 @@ public sealed class Board
         }
     }
 
+    /// <summary>
+    /// Moves the relation between <paramref name="a"/> and <paramref name="b"/>. Hostages hold it at 0 or above, and a war
+    /// between them as principals holds it at war's relation, so no drift or gesture lifts it before the treaty.
+    /// </summary>
     public void AdjustRelation(Seat a, Seat b, int delta)
     {
         if (a.Id == b.Id) throw new InvalidOperationException($"seat '{a.Id}' has no relation with itself");
@@ -413,6 +438,7 @@ public sealed class Board
         int before = relations.GetValueOrDefault(pair);
         int after = Math.Clamp(before + delta, -RelationLimit, RelationLimit);
         if (Hostages(a, b)) after = Math.Max(after, 0);
+        if (WarBetween(a.Id, b.Id) is not null) after = -RelationLimit;
         if (after == before) return;
         relations[pair] = after;
         Undo(() => relations[pair] = before);
@@ -439,6 +465,12 @@ public sealed class Board
     public void RemoveConditions(Region region, ConditionKind kind)
     {
         foreach (RegionCondition condition in region.Conditions.Where(held => held.Kind == kind).ToArray()) Lift(region, condition);
+    }
+
+    /// <summary>Lifts the condition of <paramref name="kind"/> and <paramref name="detail"/> from <paramref name="region"/>, if it is there.</summary>
+    public void RemoveCondition(Region region, ConditionKind kind, string? detail)
+    {
+        if (region.Conditions.Find(held => held.Kind == kind && held.Detail == detail) is { } condition) Lift(region, condition);
     }
 
     /// <summary>Lays <paramref name="condition"/> on <paramref name="crown"/>'s court, refreshing one of the same kind and source.</summary>
@@ -490,6 +522,64 @@ public sealed class Board
         changes.Add(new BoardChange(deal.Proposer, $"deal:{deal.Partner}", deal.ToString(), reason));
     }
 
+    /// <summary>Opens a war between the crowns <paramref name="a"/> and <paramref name="b"/> under the next war id.</summary>
+    public void OpenWar(Seat a, Seat b)
+    {
+        warsMade++;
+        War war = new(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"war-{warsMade}"), a.Id, b.Id, [], [], Turn, 0, 0);
+        wars.Add(war);
+        Undo(() =>
+        {
+            wars.Remove(war);
+            warsMade--;
+        });
+        changes.Add(new BoardChange(a.Id, $"war:{b.Id}", "none", war.Id));
+    }
+
+    /// <summary><paramref name="ally"/> joins <paramref name="war"/> on the side of the principal <paramref name="side"/>.</summary>
+    public void JoinWar(War war, Seat ally, string side)
+    {
+        war = War(war.Id);
+        ReplaceWar(war, side == war.A ? war with { AlliesOfA = [.. war.AlliesOfA, ally.Id] } : war with { AlliesOfB = [.. war.AlliesOfB, ally.Id] });
+        changes.Add(new BoardChange(ally.Id, $"ally:{war.Id}", "none", side));
+    }
+
+    /// <summary>Makes the principal <paramref name="seat"/> of <paramref name="war"/> wearier by <paramref name="amount"/>.</summary>
+    public void AddWeariness(War war, string seat, int amount)
+    {
+        war = War(war.Id);
+        int before = war.Weariness(seat);
+        ReplaceWar(war, seat == war.A ? war with { WearinessOfA = before + amount } : war with { WearinessOfB = before + amount });
+        Record(seat, $"weariness:{war.Id}", before, before + amount);
+    }
+
+    /// <summary>Ends <paramref name="war"/> for <paramref name="reason"/>; its allies leave it with it.</summary>
+    public void EndWar(War war, string reason)
+    {
+        RemoveInPlace(wars, War(war.Id));
+        changes.Add(new BoardChange(war.A, $"war:{war.B}", war.Id, reason));
+    }
+
+    /// <summary>Binds two crowns to <paramref name="truce"/>.</summary>
+    public void AddTruce(Truce truce)
+    {
+        truces.Add(truce);
+        Undo(() => truces.Remove(truce));
+        changes.Add(new BoardChange(truce.A, $"truce:{truce.B}", "none",
+            string.Create(System.Globalization.CultureInfo.InvariantCulture, $"until {truce.Until}")));
+    }
+
+    /// <summary>Lets go every truce that has reached its end.</summary>
+    public void ExpireTruces()
+    {
+        foreach (Truce truce in truces.Where(truce => truce.Until <= Turn).ToArray())
+        {
+            RemoveInPlace(truces, truce);
+            changes.Add(new BoardChange(truce.A, $"truce:{truce.B}",
+                string.Create(System.Globalization.CultureInfo.InvariantCulture, $"until {truce.Until}"), "none"));
+        }
+    }
+
     /// <summary>Takes every region and court condition that has reached its end turn off the board.</summary>
     public void ExpireConditions()
     {
@@ -512,6 +602,13 @@ public sealed class Board
     private static bool Hostages(Seat a, Seat b) =>
         a.Court.Any(held => held.Kind == CourtConditionKind.HostageTreaty && held.Source == b.Id)
         || b.Court.Any(held => held.Kind == CourtConditionKind.HostageTreaty && held.Source == a.Id);
+
+    private void ReplaceWar(War before, War after)
+    {
+        int index = wars.IndexOf(before);
+        wars[index] = after;
+        Undo(() => wars[index] = before);
+    }
 
     private void Lift(Region region, RegionCondition condition)
     {

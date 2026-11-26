@@ -30,7 +30,8 @@ public static class MoveChooser
     public const int RiskWeight = 6;
 
     /// <summary>
-    /// Every legal play from <paramref name="seat"/>'s hand that would change something, then gathering, then withdrawing
+    /// Every legal play from <paramref name="seat"/>'s hand, and from the war cards if it fights a war, that would change
+    /// something, then gathering, then withdrawing
     /// from each of its trade agreements, best first; moves of equal score keep hand, target and that order. A slow card
     /// is weighed as if it arrived now. Gathering is always among them, so a seat always has a move.
     /// </summary>
@@ -38,7 +39,8 @@ public static class MoveChooser
     {
         List<MoveOption> options = [];
         Weighing weighing = new(board, seat);
-        foreach (Card card in board.Deck(seat).Hand.Distinct())
+        IEnumerable<Card> war = board.Wars.Any(war => war.Fights(seat.Id)) ? board.WarCards : [];
+        foreach (Card card in board.Deck(seat).Hand.Distinct().Concat(war))
         {
             int leaning = LeaningWeight * weighing.Persona.Leaning(card.Family);
             foreach (IReadOnlyList<string> targets in card.Candidates(board, seat).ToArray())

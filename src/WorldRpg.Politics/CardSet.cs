@@ -35,12 +35,15 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
 
     public Card ById(string id) => Cards.Single(card => card.Id == id);
 
+    /// <summary>The war cards, which every seat fighting a war may play (<see cref="CardFamily.War"/>).</summary>
+    public IEnumerable<Card> WarCards() => Cards.Where(card => card.Family == CardFamily.War);
+
     /// <summary>The World deck before its shuffle, in card set order.</summary>
     public IEnumerable<WorldCard> WorldDeck() => (World ?? []).SelectMany(card => Enumerable.Repeat(card, card.Copies));
 
-    /// <summary>The deck <paramref name="seat"/> starts with, in card set order before its shuffle.</summary>
+    /// <summary>The deck <paramref name="seat"/> starts with, in card set order before its shuffle. No seat draws war cards.</summary>
     public IEnumerable<Card> Deck(SeatSetup seat) => Cards
-        .Where(card => card.Seat is null ? seat.Families.Contains(card.Family) : card.Seat == seat.Id)
+        .Where(card => card.Family != CardFamily.War && (card.Seat is null ? seat.Families.Contains(card.Family) : card.Seat == seat.Id))
         .SelectMany(card => Enumerable.Repeat(card, card.Copies));
 
     /// <summary>
@@ -60,6 +63,7 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
             if (card.Copies < 1) problems.Add($"card '{card.Id}' has {card.Copies} copies");
             if (card.Effects.Count == 0) problems.Add($"card '{card.Id}' does nothing");
             if (card.Effects.Count(effect => effect.Kind == CardEffectKind.Deal) > 1) problems.Add($"card '{card.Id}' offers more than one deal");
+            if (card.Family == CardFamily.War && card.Seat is not null) problems.Add($"card '{card.Id}' is a war card and no seat's signature");
             foreach (CardEffect effect in card.Effects)
                 if (EffectProblem(card, effect) is { } problem) problems.Add($"card '{card.Id}' {effect.Kind}: {problem}");
         }
@@ -119,7 +123,8 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
 
     private static string? EffectProblem(Card card, CardEffect effect)
     {
-        bool region = card.Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion or CardTarget.RegionRival;
+        bool region = card.Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion or CardTarget.RegionRival
+            or CardTarget.EnemyFront or CardTarget.OwnFront;
         bool needsResource = effect.Kind is CardEffectKind.Gain or CardEffectKind.Take;
         bool needsOffice = effect.Kind == CardEffectKind.ChallengeOffice;
         bool needsCondition = effect.Kind is CardEffectKind.AddCondition or CardEffectKind.RemoveCondition;
@@ -145,9 +150,11 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
             CardEffectKind.Influence or CardEffectKind.HolderInfluence or CardEffectKind.ChallengeOffice when !region => "needs a single region target",
             CardEffectKind.MoveInfluence when card.Target != CardTarget.RegionPair => "needs a region pair",
             CardEffectKind.RivalInfluence when card.Target != CardTarget.RegionRival => "needs a rival in a region",
-            CardEffectKind.Relation when card.Target is CardTarget.None or CardTarget.RegionPair => "needs a seat or a single region target",
+            CardEffectKind.Relation when card.Target is CardTarget.None or CardTarget.RegionPair or CardTarget.War => "needs a seat or a single region target",
             CardEffectKind.Take when card.Target != CardTarget.OtherSeat => "needs a seat target",
             CardEffectKind.Annex when card.Target != CardTarget.ContestedRegion => "needs a contested region",
+            CardEffectKind.Conquer when card.Target != CardTarget.EnemyFront => "needs an enemy front",
+            CardEffectKind.Peace or CardEffectKind.Broker when card.Target != CardTarget.War => "needs a war target",
             CardEffectKind.AddCondition or CardEffectKind.RemoveCondition when !region => "needs a single region target",
             CardEffectKind.AddCourtCondition when card.Target != CardTarget.OtherSeat => "needs a seat target",
             CardEffectKind.MoveInfluence or CardEffectKind.Take when effect.Amount < 1 => "moves nothing",
