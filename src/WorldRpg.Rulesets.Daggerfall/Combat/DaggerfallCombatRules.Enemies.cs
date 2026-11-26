@@ -76,8 +76,11 @@ internal sealed partial class DaggerfallCombatRules
         return (chosen is null || chosen == own?.Id ? own : null, null);
     }
 
-    private bool CarriesBowAttack(Combatant actor) => actor.Definition.Kind == DaggerfallActorKinds.EnemyClass
-        && actor.Definition.MobileId is int mobileId && _catalog.Mobiles.Mobiles[mobileId].HasBowAttack;
+    private bool CarriesBowAttack(Combatant actor) =>
+        (actor.Definition.Capabilities.GearPolicy == ActorGearPolicy.GeneratedClassGear
+            || (actor.Definition.TemplateId is null && actor.Definition.Kind == DaggerfallActorKinds.EnemyClass))
+        && (actor.Definition.Capabilities.HasBowAttack
+            || (actor.Definition.MobileId is int mobileId && _catalog.Mobiles.Mobiles[mobileId].HasBowAttack));
 
     /// <summary>The arrows the enemy carries, or none when it has no managed inventory.</summary>
     private int ArrowsCarried(Combatant actor) => _actorInventories(actor.Id) is { } inventory

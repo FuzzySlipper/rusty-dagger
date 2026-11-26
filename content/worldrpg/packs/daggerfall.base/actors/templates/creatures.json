@@ -1,0 +1,1903 @@
+{
+  "templates": [
+    {
+      "id": "rat",
+      "extends": "beast",
+      "attributes": {
+        "strength": 40,
+        "intelligence": 10,
+        "willpower": 70,
+        "agility": 80,
+        "endurance": 55,
+        "speed": 45
+      },
+      "skills": {
+        "climbing": 35,
+        "backstabbing": 35,
+        "stealth": 35,
+        "axe": 35,
+        "nymph": 35,
+        "streetwise": 35,
+        "centaurian": 35,
+        "lockpicking": 35,
+        "hand-to-hand": 35,
+        "critical-strike": 35,
+        "mysticism": 35,
+        "giantish": 35
+      },
+      "health": {
+        "minimum": 9,
+        "maximum": 16
+      },
+      "armor": 30,
+      "weight": 2,
+      "xpReward": 50,
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 4
+        }
+      ],
+      "resistanceFlags": 68,
+      "fixedRace": "rat"
+    },
+    {
+      "id": "imp",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 40,
+        "intelligence": 65,
+        "willpower": 70,
+        "agility": 80,
+        "endurance": 55,
+        "speed": 70
+      },
+      "skills": {
+        "stealth": 40,
+        "daedric": 40,
+        "archery": 40,
+        "climbing": 40,
+        "nymph": 40,
+        "lockpicking": 40,
+        "blunt-weapon": 40,
+        "pickpocket": 40,
+        "etiquette": 40,
+        "streetwise": 40,
+        "running": 40,
+        "centaurian": 40,
+        "hand-to-hand": 40
+      },
+      "health": {
+        "minimum": 11,
+        "maximum": 18
+      },
+      "armor": 15,
+      "level": 2,
+      "weight": 40,
+      "xpReward": 100,
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 15
+        }
+      ],
+      "minMetalToHit": "steel",
+      "lootTableKey": "D",
+      "movement": "flying",
+      "seesThroughInvisibility": true,
+      "languageSkill": "impish",
+      "fixedRace": "imp"
+    },
+    {
+      "id": "spriggan",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 80,
+        "willpower": 30,
+        "endurance": 75,
+        "speed": 40
+      },
+      "skills": {
+        "dodging": 45,
+        "climbing": 45,
+        "stealth": 45,
+        "backstabbing": 45,
+        "etiquette": 45,
+        "nymph": 45,
+        "impish": 45,
+        "daedric": 45,
+        "centaurian": 45,
+        "lockpicking": 45,
+        "spriggan": 45,
+        "orcish": 45
+      },
+      "health": {
+        "minimum": 12,
+        "maximum": 26
+      },
+      "armor": -20,
+      "level": 3,
+      "weight": 240,
+      "xpReward": 150,
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        }
+      ],
+      "lootTableKey": "B",
+      "languageSkill": "spriggan",
+      "allowedGenders": [
+        "female"
+      ],
+      "fixedRace": "spriggan"
+    },
+    {
+      "id": "giant-bat",
+      "extends": "beast",
+      "attributes": {
+        "intelligence": 40,
+        "willpower": 60,
+        "agility": 70,
+        "endurance": 55,
+        "personality": 40,
+        "speed": 70
+      },
+      "skills": {
+        "archery": 45,
+        "axe": 45,
+        "climbing": 45,
+        "streetwise": 45,
+        "giantish": 45,
+        "critical-strike": 45,
+        "nymph": 45,
+        "daedric": 45,
+        "lockpicking": 45,
+        "etiquette": 45,
+        "running": 45,
+        "centaurian": 45,
+        "hand-to-hand": 45
+      },
+      "health": {
+        "minimum": 12,
+        "maximum": 26
+      },
+      "armor": 30,
+      "level": 3,
+      "weight": 80,
+      "xpReward": 150,
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        }
+      ],
+      "movement": "flying",
+      "fixedRace": "giant-bat"
+    },
+    {
+      "id": "grizzly-bear",
+      "extends": "beast",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 70,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "archery": 50,
+        "axe": 50,
+        "critical-strike": 50,
+        "climbing": 50,
+        "stealth": 50,
+        "streetwise": 50,
+        "nymph": 50,
+        "etiquette": 50,
+        "blunt-weapon": 50,
+        "daedric": 50,
+        "impish": 50,
+        "spriggan": 50
+      },
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "armor": 30,
+      "level": 4,
+      "weight": 1000,
+      "xpReward": 200,
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        }
+      ],
+      "tactic": "beast",
+      "fixedRace": "grizzly-bear"
+    },
+    {
+      "id": "sabertooth-tiger",
+      "extends": "beast",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 60,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "backstabbing": 50,
+        "long-blade": 50,
+        "climbing": 50,
+        "axe": 50,
+        "hand-to-hand": 50,
+        "nymph": 50,
+        "thaumaturgy": 50,
+        "etiquette": 50,
+        "lockpicking": 50,
+        "daedric": 50,
+        "centaurian": 50
+      },
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "armor": 30,
+      "level": 4,
+      "weight": 1000,
+      "xpReward": 200,
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 3,
+          "maximumDamage": 15
+        }
+      ],
+      "fixedRace": "sabertooth-tiger"
+    },
+    {
+      "id": "spider",
+      "extends": "beast",
+      "attributes": {
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 75,
+        "speed": 70
+      },
+      "skills": {
+        "blunt-weapon": 50,
+        "long-blade": 50,
+        "hand-to-hand": 50,
+        "dodging": 50,
+        "harpy": 50,
+        "axe": 50,
+        "swimming": 50,
+        "climbing": 50,
+        "stealth": 50,
+        "nymph": 50,
+        "etiquette": 50,
+        "daedric": 50
+      },
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "armor": 25,
+      "level": 4,
+      "weight": 400,
+      "xpReward": 200,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "fixedRace": "spider"
+    },
+    {
+      "id": "orc",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 40,
+        "willpower": 80,
+        "endurance": 75
+      },
+      "skills": {
+        "long-blade": 55,
+        "climbing": 55,
+        "backstabbing": 55,
+        "hand-to-hand": 55,
+        "blunt-weapon": 55,
+        "archery": 55,
+        "axe": 55,
+        "thaumaturgy": 55,
+        "jumping": 55,
+        "giantish": 55,
+        "dodging": 55,
+        "critical-strike": 55
+      },
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "armor": 35,
+      "level": 5,
+      "weight": 600,
+      "xpReward": 250,
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 6
+        }
+      ],
+      "action": "enemy-class-equipped-melee",
+      "lootTableKey": "A",
+      "gearPolicy": "fixed-variant-gear",
+      "fixedEquipmentVariant": 0,
+      "resistanceFlags": 64,
+      "languageSkill": "orcish",
+      "fixedRace": "orc"
+    },
+    {
+      "id": "centaur",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 80,
+        "intelligence": 80,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "climbing": 55,
+        "centaurian": 55,
+        "backstabbing": 55,
+        "hand-to-hand": 55,
+        "archery": 55,
+        "medical": 55,
+        "blunt-weapon": 55,
+        "alteration": 55,
+        "swimming": 55,
+        "axe": 55,
+        "harpy": 55,
+        "giantish": 55
+      },
+      "health": {
+        "minimum": 14,
+        "maximum": 46
+      },
+      "armor": 30,
+      "level": 5,
+      "weight": 1200,
+      "xpReward": 250,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "action": "enemy-class-equipped-melee",
+      "lootTableKey": "C",
+      "gearPolicy": "fixed-variant-gear",
+      "fixedEquipmentVariant": 1,
+      "resistanceFlags": 2,
+      "languageSkill": "centaurian",
+      "fixedRace": "centaur"
+    },
+    {
+      "id": "werewolf",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 20,
+        "willpower": 40,
+        "agility": 80,
+        "endurance": 65,
+        "personality": 30,
+        "speed": 85
+      },
+      "skills": {
+        "critical-strike": 60,
+        "backstabbing": 60,
+        "long-blade": 60,
+        "axe": 60,
+        "hand-to-hand": 60,
+        "jumping": 60,
+        "stealth": 60,
+        "blunt-weapon": 60,
+        "etiquette": 60,
+        "lockpicking": 60,
+        "giantish": 60,
+        "orcish": 60
+      },
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "armor": 25,
+      "level": 6,
+      "weight": 480,
+      "xpReward": 300,
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        }
+      ],
+      "minMetalToHit": "silver",
+      "fixedRace": "werewolf",
+      "traits": [
+        "humanoid",
+        "lycanthrope"
+      ]
+    },
+    {
+      "id": "nymph",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 40,
+        "intelligence": 70,
+        "willpower": 60,
+        "agility": 80,
+        "endurance": 55,
+        "personality": 60,
+        "speed": 70
+      },
+      "skills": {
+        "blunt-weapon": 60,
+        "backstabbing": 60,
+        "axe": 60,
+        "mercantile": 60,
+        "long-blade": 60,
+        "climbing": 60,
+        "hand-to-hand": 60,
+        "spriggan": 60,
+        "pickpocket": 60,
+        "harpy": 60,
+        "orcish": 60,
+        "daedric": 60
+      },
+      "health": {
+        "minimum": 15,
+        "maximum": 50
+      },
+      "level": 6,
+      "weight": 200,
+      "xpReward": 300,
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 5
+        }
+      ],
+      "minMetalToHit": "silver",
+      "lootTableKey": "C",
+      "resistanceFlags": 5,
+      "languageSkill": "nymph",
+      "allowedGenders": [
+        "female"
+      ],
+      "fixedRace": "nymph"
+    },
+    {
+      "id": "slaughterfish",
+      "extends": "aquatic-creature",
+      "attributes": {
+        "strength": 70,
+        "willpower": 80,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "mysticism": 65,
+        "backstabbing": 65,
+        "long-blade": 65,
+        "archery": 65,
+        "hand-to-hand": 65,
+        "harpy": 65,
+        "streetwise": 65,
+        "nymph": 65,
+        "daedric": 65,
+        "lockpicking": 65,
+        "etiquette": 65,
+        "centaurian": 65
+      },
+      "health": {
+        "minimum": 15,
+        "maximum": 50
+      },
+      "armor": 30,
+      "level": 7,
+      "weight": 400,
+      "xpReward": 350,
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        }
+      ],
+      "fixedRace": "slaughterfish"
+    },
+    {
+      "id": "orc-sergeant",
+      "extends": "orc",
+      "attributes": {
+        "intelligence": 50
+      },
+      "skills": {
+        "axe": 65,
+        "blunt-weapon": 65,
+        "climbing": 65,
+        "critical-strike": 65,
+        "long-blade": 65,
+        "dodging": 65,
+        "hand-to-hand": 65,
+        "harpy": 65,
+        "orcish": 65,
+        "etiquette": 65,
+        "running": 65,
+        "thaumaturgy": 65,
+        "backstabbing": null,
+        "archery": null,
+        "jumping": null,
+        "giantish": null
+      },
+      "health": {
+        "minimum": 15,
+        "maximum": 50
+      },
+      "armor": 25,
+      "level": 7,
+      "xpReward": 350,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "fixedEquipmentVariant": 1,
+      "resistanceFlags": 0,
+      "fixedRace": "orc-sergeant"
+    },
+    {
+      "id": "harpy",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 70,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 55,
+        "speed": 70
+      },
+      "skills": {
+        "axe": 70,
+        "long-blade": 70,
+        "archery": 70,
+        "spriggan": 70,
+        "pickpocket": 70,
+        "hand-to-hand": 70,
+        "etiquette": 70,
+        "running": 70,
+        "centaurian": 70,
+        "orcish": 70,
+        "harpy": 70,
+        "giantish": 70
+      },
+      "health": {
+        "minimum": 16,
+        "maximum": 85
+      },
+      "armor": 10,
+      "level": 8,
+      "weight": 200,
+      "xpReward": 400,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "minMetalToHit": "dwarven",
+      "lootTableKey": "D",
+      "movement": "flying",
+      "languageSkill": "harpy",
+      "allowedGenders": [
+        "female"
+      ],
+      "fixedRace": "harpy"
+    },
+    {
+      "id": "wereboar",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 80,
+        "intelligence": 10,
+        "willpower": 40,
+        "agility": 70,
+        "endurance": 75,
+        "personality": 40,
+        "speed": 70
+      },
+      "skills": {
+        "long-blade": 70,
+        "archery": 70,
+        "dodging": 70,
+        "daedric": 70,
+        "hand-to-hand": 70,
+        "medical": 70,
+        "dragonish": 70,
+        "harpy": 70,
+        "climbing": 70,
+        "critical-strike": 70,
+        "blunt-weapon": 70,
+        "streetwise": 70
+      },
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "armor": 15,
+      "level": 8,
+      "weight": 560,
+      "xpReward": 400,
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        },
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        },
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "minMetalToHit": "silver",
+      "fixedRace": "wereboar",
+      "traits": [
+        "humanoid",
+        "lycanthrope"
+      ]
+    },
+    {
+      "id": "skeletal-warrior",
+      "extends": "undead",
+      "attributes": {
+        "intelligence": 65,
+        "willpower": 40,
+        "agility": 80,
+        "endurance": 55,
+        "speed": 70
+      },
+      "skills": {
+        "archery": 75,
+        "axe": 75,
+        "long-blade": 75,
+        "hand-to-hand": 75,
+        "daedric": 75,
+        "dodging": 75,
+        "giantish": 75,
+        "etiquette": 75,
+        "dragonish": 75,
+        "climbing": 75,
+        "blunt-weapon": 75,
+        "stealth": 75
+      },
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "armor": 10,
+      "level": 9,
+      "weight": 80,
+      "xpReward": 450,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "action": "skeleton-strike",
+      "lootTableKey": "H",
+      "takesExtraBluntDamage": true,
+      "seesThroughInvisibility": true,
+      "fixedRace": "skeletal-warrior"
+    },
+    {
+      "id": "giant",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 110,
+        "intelligence": 40,
+        "agility": 70,
+        "endurance": 75,
+        "personality": 40,
+        "speed": 60
+      },
+      "skills": {
+        "dodging": 80,
+        "etiquette": 80,
+        "hand-to-hand": 80,
+        "impish": 80,
+        "giantish": 80,
+        "harpy": 80,
+        "dragonish": 80,
+        "long-blade": 80,
+        "climbing": 80,
+        "blunt-weapon": 80,
+        "nymph": 80,
+        "daedric": 80
+      },
+      "health": {
+        "minimum": 18,
+        "maximum": 74
+      },
+      "armor": 15,
+      "level": 10,
+      "weight": 3000,
+      "xpReward": 500,
+      "attacks": [
+        {
+          "minimumDamage": 10,
+          "maximumDamage": 30
+        }
+      ],
+      "lootTableKey": "F",
+      "languageSkill": "giantish",
+      "fixedRace": "giant"
+    },
+    {
+      "id": "zombie",
+      "extends": "undead",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 40,
+        "willpower": 90,
+        "agility": 80,
+        "endurance": 100,
+        "speed": 70
+      },
+      "skills": {
+        "axe": 80,
+        "critical-strike": 80,
+        "long-blade": 80,
+        "archery": 80,
+        "etiquette": 80,
+        "dragonish": 80,
+        "mysticism": 80,
+        "climbing": 80,
+        "stealth": 80,
+        "streetwise": 80,
+        "blunt-weapon": 80,
+        "hand-to-hand": 80
+      },
+      "health": {
+        "minimum": 52,
+        "maximum": 66
+      },
+      "level": 10,
+      "weight": 4000,
+      "xpReward": 500,
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ],
+      "lootTableKey": "G",
+      "fixedRace": "zombie"
+    },
+    {
+      "id": "ghost",
+      "extends": "undead",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 65,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "blunt-weapon": 85,
+        "daedric": 85,
+        "dodging": 85,
+        "hand-to-hand": 85,
+        "thaumaturgy": 85,
+        "axe": 85,
+        "etiquette": 85,
+        "long-blade": 85,
+        "harpy": 85,
+        "critical-strike": 85,
+        "climbing": 85,
+        "stealth": 85
+      },
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "level": 11,
+      "xpReward": 550,
+      "attacks": [
+        {
+          "minimumDamage": 10,
+          "maximumDamage": 35
+        }
+      ],
+      "minMetalToHit": "silver",
+      "lootTableKey": "I",
+      "movement": "spectral",
+      "seesThroughInvisibility": true,
+      "fixedRace": "ghost"
+    },
+    {
+      "id": "mummy",
+      "extends": "undead",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 40,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "long-blade": 85,
+        "thaumaturgy": 85,
+        "daedric": 85,
+        "critical-strike": 85,
+        "dragonish": 85,
+        "axe": 85,
+        "climbing": 85,
+        "stealth": 85,
+        "blunt-weapon": 85,
+        "hand-to-hand": 85,
+        "streetwise": 85,
+        "etiquette": 85
+      },
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "armor": 10,
+      "level": 11,
+      "weight": 300,
+      "xpReward": 550,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "minMetalToHit": "silver",
+      "lootTableKey": "E",
+      "seesThroughInvisibility": true,
+      "immunityFlags": 64,
+      "fixedRace": "mummy"
+    },
+    {
+      "id": "giant-scorpion",
+      "extends": "beast",
+      "attributes": {
+        "strength": 120,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "long-blade": 90,
+        "dodging": 90,
+        "alteration": 90,
+        "axe": 90,
+        "dragonish": 90,
+        "giantish": 90,
+        "climbing": 90,
+        "short-blade": 90,
+        "stealth": 90,
+        "blunt-weapon": 90,
+        "streetwise": 90,
+        "hand-to-hand": 90
+      },
+      "health": {
+        "minimum": 18,
+        "maximum": 74
+      },
+      "level": 12,
+      "weight": 600,
+      "xpReward": 600,
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 25
+        }
+      ],
+      "fixedRace": "giant-scorpion"
+    },
+    {
+      "id": "orc-shaman",
+      "extends": "orc",
+      "attributes": {
+        "intelligence": 70
+      },
+      "skills": {
+        "axe": 95,
+        "backstabbing": 95,
+        "long-blade": 95,
+        "climbing": 95,
+        "dodging": 95,
+        "blunt-weapon": 95,
+        "critical-strike": 95,
+        "etiquette": 95,
+        "archery": 95,
+        "hand-to-hand": 95,
+        "giantish": 95,
+        "harpy": 95,
+        "thaumaturgy": null,
+        "jumping": null
+      },
+      "health": {
+        "minimum": 18,
+        "maximum": 74
+      },
+      "level": 13,
+      "weight": 400,
+      "xpReward": 650,
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 20
+        }
+      ],
+      "lootTableKey": "U",
+      "resistanceFlags": 0,
+      "fixedRace": "orc-shaman"
+    },
+    {
+      "id": "gargoyle",
+      "extends": "humanoid-monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 70
+      },
+      "skills": {
+        "long-blade": 100,
+        "archery": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "orcish": 100,
+        "thaumaturgy": 100,
+        "dodging": 100,
+        "daedric": 100,
+        "etiquette": 100,
+        "illusion": 100,
+        "climbing": 100,
+        "streetwise": 100
+      },
+      "health": {
+        "minimum": 19,
+        "maximum": 82
+      },
+      "level": 14,
+      "weight": 300,
+      "xpReward": 700,
+      "attacks": [
+        {
+          "minimumDamage": 10,
+          "maximumDamage": 15
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "resistanceFlags": 2,
+      "languageSkill": "giantish",
+      "allowedGenders": [
+        "neutral"
+      ],
+      "fixedRace": "gargoyle"
+    },
+    {
+      "id": "wraith",
+      "extends": "undead",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 85
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "axe": 100,
+        "dodging": 100,
+        "climbing": 100,
+        "centaurian": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "giantish": 100,
+        "archery": 100,
+        "impish": 100,
+        "etiquette": 100
+      },
+      "health": {
+        "minimum": 30,
+        "maximum": 90
+      },
+      "level": 15,
+      "xpReward": 750,
+      "attacks": [
+        {
+          "minimumDamage": 20,
+          "maximumDamage": 45
+        }
+      ],
+      "minMetalToHit": "silver",
+      "lootTableKey": "I",
+      "movement": "spectral",
+      "seesThroughInvisibility": true,
+      "resistanceFlags": 2,
+      "fixedRace": "wraith"
+    },
+    {
+      "id": "orc-warlord",
+      "extends": "orc",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 70
+      },
+      "skills": {
+        "backstabbing": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "blunt-weapon": 100,
+        "dodging": 100,
+        "dragonish": 100,
+        "etiquette": 100,
+        "alteration": 100,
+        "giantish": 100,
+        "critical-strike": 100,
+        "nymph": 100,
+        "climbing": null,
+        "archery": null,
+        "axe": null,
+        "jumping": null
+      },
+      "health": {
+        "minimum": 20,
+        "maximum": 90
+      },
+      "armor": 0,
+      "level": 16,
+      "weight": 700,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 50
+        }
+      ],
+      "lootTableKey": "T",
+      "fixedEquipmentVariant": 2,
+      "resistanceFlags": 0,
+      "fixedRace": "orc-warlord"
+    },
+    {
+      "id": "frost-daedra",
+      "extends": "daedra",
+      "attributes": {
+        "strength": 120,
+        "intelligence": 80,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "speed": 95
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "archery": 100,
+        "centaurian": 100,
+        "daedric": 100,
+        "dodging": 100,
+        "stealth": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "axe": 100,
+        "harpy": 100,
+        "giantish": 100,
+        "orcish": 100
+      },
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "armor": -25,
+      "level": 17,
+      "weight": 800,
+      "xpReward": 850,
+      "attacks": [
+        {
+          "minimumDamage": 50,
+          "maximumDamage": 100
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "lootTableKey": "J",
+      "seesThroughInvisibility": true,
+      "immunityFlags": 16,
+      "fixedRace": "frost-daedra"
+    },
+    {
+      "id": "fire-daedra",
+      "extends": "daedra",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 110,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 90,
+        "speed": 95
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "centaurian": 100,
+        "daedric": 100,
+        "climbing": 100,
+        "stealth": 100,
+        "dragonish": 100,
+        "impish": 100,
+        "critical-strike": 100,
+        "long-blade": 100,
+        "harpy": 100,
+        "giantish": 100,
+        "axe": 100
+      },
+      "health": {
+        "minimum": 26,
+        "maximum": 138
+      },
+      "armor": 5,
+      "level": 17,
+      "weight": 800,
+      "xpReward": 850,
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "lootTableKey": "J",
+      "seesThroughInvisibility": true,
+      "immunityFlags": 8,
+      "fixedRace": "fire-daedra"
+    },
+    {
+      "id": "daedroth",
+      "extends": "daedra",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 110,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 90,
+        "speed": 100
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "archery": 100,
+        "climbing": 100,
+        "critical-strike": 100,
+        "stealth": 100,
+        "dodging": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "dragonish": 100,
+        "thaumaturgy": 100,
+        "axe": 100,
+        "etiquette": 100
+      },
+      "health": {
+        "minimum": 27,
+        "maximum": 146
+      },
+      "armor": 5,
+      "level": 18,
+      "weight": 400,
+      "xpReward": 900,
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "lootTableKey": "E",
+      "seesThroughInvisibility": true,
+      "fixedRace": "daedroth"
+    },
+    {
+      "id": "vampire",
+      "extends": "undead",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 90,
+        "willpower": 80,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 100,
+        "speed": 100
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "daedric": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "axe": 100,
+        "critical-strike": 100,
+        "giantish": 100,
+        "etiquette": 100,
+        "orcish": 100,
+        "harpy": 100,
+        "thaumaturgy": 100
+      },
+      "health": {
+        "minimum": 28,
+        "maximum": 154
+      },
+      "armor": -10,
+      "level": 19,
+      "weight": 400,
+      "xpReward": 950,
+      "attacks": [
+        {
+          "minimumDamage": 20,
+          "maximumDamage": 50
+        }
+      ],
+      "minMetalToHit": "silver",
+      "lootTableKey": "Q",
+      "seesThroughInvisibility": true,
+      "attackModifierFlags": 4,
+      "immunityFlags": 68,
+      "languageSkill": "etiquette",
+      "allowedGenders": [
+        "male",
+        "female"
+      ],
+      "fixedRace": "vampire",
+      "traits": [
+        "undead",
+        "vampire"
+      ]
+    },
+    {
+      "id": "daedra-seducer",
+      "extends": "daedra",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 60,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 120,
+        "speed": 70
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "dragonish": 100,
+        "archery": 100,
+        "daedric": 100,
+        "stealth": 100,
+        "long-blade": 100,
+        "etiquette": 100,
+        "critical-strike": 100,
+        "harpy": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "impish": 100
+      },
+      "health": {
+        "minimum": 27,
+        "maximum": 146
+      },
+      "armor": 5,
+      "level": 19,
+      "weight": 200,
+      "xpReward": 950,
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "lootTableKey": "Q",
+      "seesThroughInvisibility": true,
+      "allowedGenders": [
+        "female"
+      ],
+      "fixedRace": "daedra-seducer"
+    },
+    {
+      "id": "vampire-ancient",
+      "extends": "vampire",
+      "attributes": {
+        "strength": 120,
+        "agility": 90,
+        "speed": 120
+      },
+      "skills": {
+        "archery": 100,
+        "stealth": 100,
+        "etiquette": null,
+        "harpy": null
+      },
+      "health": {
+        "minimum": 30,
+        "maximum": 170
+      },
+      "armor": -25,
+      "level": 20,
+      "xpReward": 1000,
+      "attacks": [
+        {
+          "minimumDamage": 20,
+          "maximumDamage": 60
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "immunityFlags": 69,
+      "fixedRace": "vampire-ancient"
+    },
+    {
+      "id": "daedra-lord",
+      "extends": "daedra",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 110,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 90,
+        "speed": 120
+      },
+      "skills": {
+        "axe": 100,
+        "blunt-weapon": 100,
+        "etiquette": 100,
+        "dragonish": 100,
+        "critical-strike": 100,
+        "stealth": 100,
+        "archery": 100,
+        "long-blade": 100,
+        "thaumaturgy": 100,
+        "dodging": 100,
+        "hand-to-hand": 100,
+        "daedric": 100
+      },
+      "health": {
+        "minimum": 35,
+        "maximum": 210
+      },
+      "armor": -50,
+      "level": 20,
+      "weight": 1000,
+      "xpReward": 1000,
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "lootTableKey": "S",
+      "seesThroughInvisibility": true,
+      "immunityFlags": 69,
+      "fixedRace": "daedra-lord"
+    },
+    {
+      "id": "lich",
+      "extends": "undead",
+      "attributes": {
+        "strength": 80,
+        "intelligence": 120,
+        "willpower": 95,
+        "agility": 90,
+        "endurance": 95,
+        "speed": 80
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "centaurian": 100,
+        "archery": 100,
+        "critical-strike": 100,
+        "dragonish": 100,
+        "giantish": 100,
+        "orcish": 100,
+        "harpy": 100,
+        "thaumaturgy": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100
+      },
+      "health": {
+        "minimum": 30,
+        "maximum": 170
+      },
+      "armor": -50,
+      "level": 20,
+      "weight": 300,
+      "xpReward": 1000,
+      "attacks": [
+        {
+          "minimumDamage": 70,
+          "maximumDamage": 100
+        }
+      ],
+      "minMetalToHit": "mithril",
+      "lootTableKey": "S",
+      "seesThroughInvisibility": true,
+      "languageSkill": "etiquette",
+      "fixedRace": "lich"
+    },
+    {
+      "id": "ancient-lich",
+      "extends": "lich",
+      "attributes": {
+        "strength": 110,
+        "intelligence": 200,
+        "speed": 100
+      },
+      "skills": {
+        "climbing": 100,
+        "etiquette": 100,
+        "dodging": 100,
+        "axe": 100,
+        "backstabbing": null,
+        "centaurian": null,
+        "dragonish": null,
+        "hand-to-hand": null
+      },
+      "armor": -60,
+      "level": 21,
+      "xpReward": 1050,
+      "seesThroughInvisibility": false,
+      "fixedRace": "ancient-lich"
+    },
+    {
+      "id": "dragonling",
+      "extends": "beast",
+      "attributes": {
+        "strength": 250,
+        "intelligence": 30,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "speed": 100
+      },
+      "skills": {
+        "archery": 100,
+        "axe": 100,
+        "centaurian": 100,
+        "critical-strike": 100,
+        "climbing": 100,
+        "stealth": 100,
+        "blunt-weapon": 100,
+        "streetwise": 100,
+        "nymph": 100,
+        "etiquette": 100,
+        "lockpicking": 100,
+        "daedric": 100
+      },
+      "health": {
+        "minimum": 14,
+        "maximum": 42
+      },
+      "armor": 30,
+      "level": 16,
+      "weight": 10000,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "movement": "flying",
+      "languageSkill": "dragonish",
+      "fixedRace": "dragonling"
+    },
+    {
+      "id": "fire-atronach",
+      "extends": "golem",
+      "attributes": {
+        "strength": 130,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 100,
+        "speed": 60
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "archery": 100,
+        "running": 100,
+        "stealth": 100,
+        "etiquette": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "armor": 30,
+      "level": 16,
+      "weight": 1000,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "attackModifierFlags": 4,
+      "immunityFlags": 77,
+      "lowToleranceFlags": 16,
+      "fixedRace": "fire-atronach"
+    },
+    {
+      "id": "iron-atronach",
+      "extends": "golem",
+      "attributes": {
+        "strength": 140,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 100,
+        "speed": 55
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "archery": 100,
+        "running": 100,
+        "stealth": 100,
+        "daedric": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "armor": 30,
+      "level": 16,
+      "weight": 1000,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "attackModifierFlags": 4,
+      "immunityFlags": 101,
+      "lowToleranceFlags": 2,
+      "fixedRace": "iron-atronach"
+    },
+    {
+      "id": "flesh-atronach",
+      "extends": "golem",
+      "attributes": {
+        "strength": 125,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 69,
+        "speed": 61,
+        "luck": 55
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "archery": 100,
+        "running": 100,
+        "stealth": 100,
+        "dragonish": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "armor": 30,
+      "level": 16,
+      "weight": 1000,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "attackModifierFlags": 4,
+      "immunityFlags": 69,
+      "lowToleranceFlags": 4,
+      "fixedRace": "flesh-atronach"
+    },
+    {
+      "id": "ice-atronach",
+      "extends": "golem",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 69,
+        "speed": 65,
+        "luck": 60
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "centaurian": 100,
+        "running": 100,
+        "stealth": 100,
+        "climbing": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "armor": 30,
+      "level": 16,
+      "weight": 1000,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "attackModifierFlags": 4,
+      "immunityFlags": 85,
+      "lowToleranceFlags": 8,
+      "fixedRace": "ice-atronach"
+    },
+    {
+      "id": "horse",
+      "extends": "beast",
+      "health": {
+        "minimum": 0,
+        "maximum": 0
+      },
+      "level": 0,
+      "attackModifierFlags": 4,
+      "immunityFlags": 69,
+      "allowedGenders": [
+        "neutral"
+      ],
+      "fixedRace": "horse"
+    },
+    {
+      "id": "dragonling-40",
+      "extends": "dragonling",
+      "attributes": {
+        "strength": 61,
+        "intelligence": 93,
+        "willpower": 80,
+        "agility": 80,
+        "personality": 62,
+        "speed": 70,
+        "luck": 60
+      },
+      "skills": {
+        "long-blade": 100,
+        "running": 100,
+        "dragonish": 100,
+        "illusion": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100,
+        "centaurian": null,
+        "climbing": null,
+        "streetwise": null,
+        "nymph": null,
+        "etiquette": null,
+        "lockpicking": null,
+        "daedric": null
+      },
+      "attackModifierFlags": 4,
+      "resistanceFlags": 2,
+      "immunityFlags": 69,
+      "lowToleranceFlags": 16,
+      "fixedRace": "dragonling-40"
+    },
+    {
+      "id": "dreugh",
+      "extends": "aquatic-creature",
+      "attributes": {
+        "strength": 71,
+        "intelligence": 84,
+        "willpower": 80,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 62,
+        "speed": 70,
+        "luck": 60
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "daedric": 100,
+        "running": 100,
+        "stealth": 100,
+        "etiquette": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "armor": 30,
+      "level": 16,
+      "weight": 600,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "lootTableKey": "R",
+      "canOpenDoors": true,
+      "attackModifierFlags": 4,
+      "resistanceFlags": 2,
+      "immunityFlags": 69,
+      "lowToleranceFlags": 16,
+      "enemyGroup": "humanoid",
+      "languageSkill": "impish",
+      "fixedRace": "dreugh",
+      "traits": [
+        "humanoid"
+      ]
+    },
+    {
+      "id": "lamia",
+      "extends": "aquatic-creature",
+      "attributes": {
+        "strength": 75,
+        "intelligence": 84,
+        "willpower": 80,
+        "agility": 85,
+        "endurance": 95,
+        "personality": 62,
+        "speed": 65,
+        "luck": 70
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "climbing": 100,
+        "running": 100,
+        "stealth": 100,
+        "dragonish": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "health": {
+        "minimum": 16,
+        "maximum": 58
+      },
+      "armor": 30,
+      "level": 16,
+      "weight": 200,
+      "xpReward": 800,
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "lootTableKey": "R",
+      "canOpenDoors": true,
+      "attackModifierFlags": 4,
+      "resistanceFlags": 2,
+      "immunityFlags": 69,
+      "lowToleranceFlags": 16,
+      "enemyGroup": "humanoid",
+      "languageSkill": "nymph",
+      "allowedGenders": [
+        "female"
+      ],
+      "fixedRace": "lamia",
+      "traits": [
+        "humanoid"
+      ]
+    }
+  ]
+}

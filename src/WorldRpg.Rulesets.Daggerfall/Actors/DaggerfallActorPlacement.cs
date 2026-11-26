@@ -179,7 +179,7 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
                 && definitions.TryGetValue(actor.DurableId, out var definition)
                 && (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
                     ? harm.IsCombatant
-                    : definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
+                    : definition.Capabilities.IsCombatEncounter || (definition.TemplateId is null && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))
                 && eligible(definition with { Team = EffectiveTeam(actor.DurableId) }))
             .OrderBy(actor => actor.DurableId)
             .Select(actor => new PerceptionTarget(checked((ulong)actor.DurableId), actor.Position.ToVector() + lift)).ToArray();

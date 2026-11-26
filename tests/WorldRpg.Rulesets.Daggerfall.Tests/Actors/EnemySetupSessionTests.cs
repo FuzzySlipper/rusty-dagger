@@ -52,9 +52,9 @@ public sealed class EnemySetupSessionTests
     [Fact]
     public void Soul_gem_uses_the_admitted_mobile_value()
     {
-        var section = TestPayload.Sections("mobiles");
-        var shaman = section["mobiles"]!["mobiles"]!.AsArray().Single(row => row!["donorId"]!.GetValue<int>() == 21)!;
-        shaman["soulPoints"] = 4321;
+        var section = TestPayload.Sections("actorSpecsCreatures");
+        var shaman = section["actorSpecsCreatures"]!["specs"]!.AsArray().Single(row => row!["classicBinding"]?["mobileId"]?.GetValue<int>() == 21)!;
+        shaman["classicBinding"]!["soulPoints"] = 4321;
         var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(section), TestPayload.Data);
         var gem = definitions.RequireItem(new("template-274"));
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions);

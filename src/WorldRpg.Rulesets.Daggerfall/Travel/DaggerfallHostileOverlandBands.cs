@@ -172,10 +172,12 @@ internal sealed class DaggerfallHostileOverlandBands
     private DaggerfallActorDefinition? ResolveCombatantDefinition(int preferredMobileId)
     {
         DaggerfallActorDefinition? preferred = _definitions.Actors.Values
-            .FirstOrDefault(a => a.Kind == DaggerfallActorKinds.EnemyClass && a.MobileId == preferredMobileId);
+            .FirstOrDefault(a => (a.Capabilities.Scaling == ActorScalingMode.CareerLeveled || (a.TemplateId is null && a.Kind == DaggerfallActorKinds.EnemyClass))
+                && a.MobileId == preferredMobileId);
         if (preferred is not null) return preferred;
         return _definitions.Actors.Values
-            .Where(a => a.Kind == DaggerfallActorKinds.EnemyClass && a.MobileId is not null)
+            .Where(a => (a.Capabilities.Scaling == ActorScalingMode.CareerLeveled || (a.TemplateId is null && a.Kind == DaggerfallActorKinds.EnemyClass))
+                && a.MobileId is not null)
             .OrderBy(a => a.MobileId)
             .FirstOrDefault();
     }

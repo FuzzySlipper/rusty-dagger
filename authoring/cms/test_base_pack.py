@@ -18,15 +18,17 @@ class BasePackTests(unittest.TestCase):
         cache = FileCache()
         factions = read_section(BASE_PAYLOAD, "factions", {}, cache)
         self.assertGreater(len(factions.get("factions", [])), 300)
-        mobiles = read_section(BASE_PAYLOAD, "mobiles", {}, cache)
-        self.assertEqual(len(mobiles.get("mobiles", [])), 62)
+        creature_specs = read_section(BASE_PAYLOAD, "actorSpecsCreatures", {}, cache)
+        self.assertEqual(len(creature_specs.get("specs", [])), 43)
+        enemy_specs = read_section(BASE_PAYLOAD, "actorSpecsEnemies", {}, cache)
+        self.assertEqual(len(enemy_specs.get("specs", [])), 20)
         building_names = read_section(BASE_PAYLOAD, "buildingNames", {}, cache)
         self.assertEqual(len(building_names.get("regionNames", [])), 62)
         vocab = read_section(BASE_PAYLOAD, "vocabulary", {}, cache)
         self.assertIn("strength", vocab.get("attributes", []))
-        path, is_split = section_path(BASE_PAYLOAD, "mobiles", cache)
+        path, is_split = section_path(BASE_PAYLOAD, "actorSpecsCreatures", cache)
         self.assertTrue(is_split)
-        self.assertEqual(path.name, "mobiles.json")
+        self.assertEqual(path.name, "creatures.json")
 
     def test_per_section_stamp_ignores_unrelated_section_edits(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -53,6 +53,9 @@ internal sealed record DaggerfallMobileDefinition(
     /// <summary>How this mobile tends to choose under a tactic that weighs tendencies; null takes the tactic's tuned defaults.</summary>
     internal DaggerfallTacticTendencies? Tendencies { get; init; }
 
+    /// <summary>The spawner spec ID backing this classic mobile binding, when loaded from <c>actors/specs/</c>.</summary>
+    internal string? SpawnerId { get; init; }
+
     /// <summary>The tactic every mobile fights with unless its record names another: the decision enemies made before tactics existed.</summary>
     internal const string LegacyTactic = "legacy";
 

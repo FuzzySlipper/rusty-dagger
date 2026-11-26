@@ -240,7 +240,7 @@ internal sealed class DaggerfallCreatureFactionClashes(
 
     private DaggerfallActorDefinition? PickDefinition(string factionId) =>
         definitions.Actors.Values
-            .Where(a => a.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass
+            .Where(a => (a.Capabilities.IsCombatEncounter || (a.TemplateId is null && a.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))
                 && string.Equals(a.Team, factionId, StringComparison.Ordinal)
                 && a.MobileId is int mid
                 && definitions.Mobiles.Mobiles.TryGetValue(mid, out DaggerfallMobileDefinition? mobile)

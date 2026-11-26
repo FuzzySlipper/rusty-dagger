@@ -153,7 +153,7 @@ internal sealed class DaggerfallCorpseLootModule
             || fact.ActorId == DaggerfallActorIdentity.PlayerEntityId
             || !state.IsDefeated
             || !_definitions.TryGetValue(fact.ActorId, out DaggerfallActorDefinition? actor)
-            || actor.Kind == DaggerfallActorKinds.Player) return;
+            || actor.Capabilities.IsPlayer || actor.Kind == DaggerfallActorKinds.Player) return;
 
         if (state.Actor.TryGet<CorpseLootComponent>(out _)) return;
 

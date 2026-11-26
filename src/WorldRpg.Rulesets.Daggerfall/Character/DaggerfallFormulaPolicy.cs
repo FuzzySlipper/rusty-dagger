@@ -502,6 +502,8 @@ internal static class DaggerfallFormulaPolicy
     internal static DaggerfallEnemyGroup EnemyGroupFor(DaggerfallActorDefinition actor)
     {
         ArgumentNullException.ThrowIfNull(actor);
+        if (actor.Capabilities.EnemyGroup != DaggerfallEnemyGroup.None)
+            return actor.Capabilities.EnemyGroup;
         return actor.MobileId is int mobileId ? EnemyGroupFor(actor.Kind, mobileId) : DaggerfallEnemyGroup.None;
     }
 
@@ -528,6 +530,8 @@ internal static class DaggerfallFormulaPolicy
     internal static string? LanguageSkillFor(DaggerfallActorDefinition actor)
     {
         ArgumentNullException.ThrowIfNull(actor);
+        if (actor.Capabilities.LanguageSkill is not null)
+            return actor.Capabilities.LanguageSkill;
         return actor.MobileId is int mobileId ? LanguageSkillFor(actor.Kind, mobileId) : null;
     }
 

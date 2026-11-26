@@ -166,6 +166,8 @@ internal static class DaggerfallActorFactory
                 ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
                     mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
                     new ActorPose(source.Position, 0f));
+                SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
+                    definitions, definition, source.EntityId, explicitGender: source.Gender, regionIndex: inputs.Site?.Region));
                 DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
                 actor.Actor.Add(new ActorOriginComponent(
                     ActorOrigin.FixedPlacement(inputs.ProfileKey, source.EntityId),
@@ -210,6 +212,13 @@ internal static class DaggerfallActorFactory
             DaggerfallNpcRegistry npcs = new(actors, actorLedger);
 
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
+            SetInstanceIdentity(player.Actor, DaggerfallActorInstanceResolver.Resolve(
+                definitions,
+                playerDefinition,
+                DaggerfallActorIdentity.PlayerEntityId,
+                explicitGender: character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male",
+                explicitRace: character.Identity.RaceId,
+                explicitFaction: "player-ally"));
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved.DynamicActors, authored, inventoryStore, npcs);
             // A restored player stands where the save left them from construction on: the active profile may
@@ -241,6 +250,8 @@ internal static class DaggerfallActorFactory
         ActorState actor = CreateNonPlayerActor(actors, source.EntityId, definition,
             mechanics.CreateStats(definition, InitialVitals(random, definition, source.EntityId)),
             new ActorPose(source.Position, 0F));
+        SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
+            definitions, definition, source.EntityId, explicitGender: source.Gender));
         DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
         if (profileKey is { } pk)
             actor.Actor.Add(new ActorOriginComponent(ActorOrigin.FixedPlacement(pk, source.EntityId), source.Position, 0F, baselineStats));
@@ -250,7 +261,7 @@ internal static class DaggerfallActorFactory
         memory.Passive = source.Passive;
         memory.SpawnDistance = source.SpawnDistance;
         bool defaultLairTruce = profileKey is { Kind: DaggerfallWorldProfileKind.Dungeon }
-            && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
+            && (definition.Capabilities.IsCombatEncounter || (definition.TemplateId is null && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass));
         memory.LairTruce = restored?.LairTruce ?? defaultLairTruce;
         memory.SetForcedHostile(restored?.ForcedHostile ?? false);
         memory.LanguagePacified = restored?.LanguagePacified ?? false;
@@ -354,6 +365,15 @@ internal static class DaggerfallActorFactory
             ? ActorVisualSpec.SplatCivilian(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, npc.Appearance.Gender)
             : ActorVisualSpec.Billboard(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, onBase: true);
         actor.Actor.Get<ActorRenderComponent>().SetVisual(visual);
+
+        ActorGender npcGender = ActorGenderFormat.TryParse(npc.Appearance.Gender, out ActorGender parsedGender)
+            ? parsedGender
+            : (StableHash.NonZeroFnv1a64($"daggerfall.npc-gender:{npc.DurableId}") & 1UL) == 0UL ? ActorGender.Male : ActorGender.Female;
+        string npcRace = !string.IsNullOrWhiteSpace(npc.Appearance.Race) ? npc.Appearance.Race : "breton";
+        string npcFaction = primaryFactionId is int fid
+            ? fid.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase) ? "city-watch" : "neutral";
+        SetInstanceIdentity(actor.Actor, new ActorInstanceIdentity(npc.StableKey, profile.Id, npcGender, npcRace, npcFaction));
     }
 
     /// <summary>Resolves authored encounter definitions and content-backed NPC archetype definitions.</summary>
@@ -405,6 +425,13 @@ internal static class DaggerfallActorFactory
         DaggerfallWabbajack.Restore(actor.Actor, saved.WabbajackActive ? saved.Definition : null);
         if (saved.CorruptionOrigin is { } origin) actor.Actor.Add(origin);
         if (saved.Gender is { } gender) actor.Actor.Add(new DaggerfallActorGender(gender));
+        SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
+            definitions,
+            definition,
+            saved.EntityId,
+            explicitGender: saved.Gender,
+            explicitRace: restoredNpc?.Appearance.Race,
+            explicitFaction: saved.TeamOverride ?? (saved.PlayerAllied ? "player-ally" : null)));
         if (saved.TeamOverride is { } teamOverride) actor.Actor.Get<FactionComponent>().SetTeamOverride(teamOverride);
         else if (saved.PlayerAllied) actor.Actor.Get<FactionComponent>().SetTeamOverride("player-ally");
         if (saved.EncounterBandId is int bandId && saved.EncounterGeneration is ulong bandGen)
@@ -415,6 +442,7 @@ internal static class DaggerfallActorFactory
         if (restoredNpc is not null)
         {
             bool promotedGuard = string.Equals(saved.PromotedArchetype, DaggerfallArchetypeIds.Guard, StringComparison.Ordinal)
+                || definition.Capabilities.CityWatchArrest
                 || definition.MobileId == 146;
             ArchetypeProfile npcProfile = ResolveNpcArchetype(
                 definitions,
@@ -482,29 +510,40 @@ internal static class DaggerfallActorFactory
         actor.Actor.Add(new PursuitMemoryComponent());
         actor.Actor.Add(new DaggerfallEnemyPerceptionMemory());
 
-        ActorHarmPolicyKind harmKind = definition.Kind switch
-        {
-            DaggerfallActorKinds.StaticNpc => ActorHarmPolicyKind.Protected,
-            DaggerfallActorKinds.Civilian => ActorHarmPolicyKind.LawProtectedCivilian,
-            _ => ActorHarmPolicyKind.Combatant,
-        };
-        ActorInteractionPolicyKind interactionKind = definition.Kind is DaggerfallActorKinds.StaticNpc or DaggerfallActorKinds.Civilian
-            ? ActorInteractionPolicyKind.FullDialogue
-            : ActorInteractionPolicyKind.None;
+        ActorHarmPolicyKind harmKind = definition.TemplateId is not null
+            ? definition.DefaultHarm
+            : definition.Kind switch
+            {
+                DaggerfallActorKinds.StaticNpc => ActorHarmPolicyKind.Protected,
+                DaggerfallActorKinds.Civilian => ActorHarmPolicyKind.LawProtectedCivilian,
+                _ => ActorHarmPolicyKind.Combatant,
+            };
+        ActorInteractionPolicyKind interactionKind = definition.TemplateId is not null
+            ? definition.DefaultInteraction
+            : definition.Kind is DaggerfallActorKinds.StaticNpc or DaggerfallActorKinds.Civilian
+                ? ActorInteractionPolicyKind.FullDialogue
+                : ActorInteractionPolicyKind.None;
         actor.Actor.Add(new ActorHarmPolicy(harmKind));
         actor.Actor.Add(new ActorInteractionPolicy(interactionKind));
         actor.Actor.Add(new FactionComponent(creatureFactionId: definition.Team ?? (harmKind == ActorHarmPolicyKind.Combatant ? "player-enemy" : null)));
-        actor.Actor.Add(new ActorOverlayComponent { ArchetypeId = definition.Kind });
+        actor.Actor.Add(new ActorOverlayComponent { ArchetypeId = definition.TemplateId ?? definition.Kind });
         ActorVisualSpec visualSpec = definition.MobileId is int mobileId
             ? ActorVisualSpec.DirectionalMobile(mobileId)
             : definition.Kind == DaggerfallActorKinds.Civilian
                 ? new ActorVisualSpec(ActorVisualKind.SplatCharacter, definition.Id.Value)
                 : new ActorVisualSpec(ActorVisualKind.Billboard, definition.Id.Value);
         actor.Actor.Add(new ActorRenderComponent(visualSpec));
+        SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(null, definition, durableId));
 
         if (definition.Kind == DaggerfallActorKinds.Civilian)
             actor.Actor.Add(new WanderMemoryComponent());
         return actor;
+    }
+
+    internal static void SetInstanceIdentity(Actor actor, ActorInstanceIdentity identity)
+    {
+        if (actor.Has<ActorInstanceIdentity>()) actor.Replace(identity);
+        else actor.Add(identity);
     }
 
     /// <summary>

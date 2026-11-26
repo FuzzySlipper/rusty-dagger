@@ -499,7 +499,8 @@ internal sealed partial class DaggerfallCombatRules : IAttackRules<IProductFact>
             : DaggerfallFormulaPolicy.CalculateWeaponAttackDamage(
                 Draw(request, attacker.Id, target.Id, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemy),
                 checked(attackDamageMod + attack.DamageBonus),
-                target.Definition.Kind == DaggerfallActorKinds.Monster && target.Definition.MobileId == SkeletalWarriorMobileId,
+                target.Definition.Capabilities.TakesExtraBluntDamage
+                    || (target.Definition.TemplateId is null && target.Definition.Kind == DaggerfallActorKinds.Monster && target.Definition.MobileId == SkeletalWarriorMobileId),
                 DaggerfallFormulaPolicy.WeaponIsEdged(attack.Skill),
                 attack.Material == "silver",
                 StrengthModifier(attacker),

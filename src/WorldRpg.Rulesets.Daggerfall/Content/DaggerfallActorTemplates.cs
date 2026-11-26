@@ -1,0 +1,1124 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using WorldRpg.Kit;
+using WorldRpg.Kit.World;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+
+namespace WorldRpg.Rulesets.Daggerfall.Content;
+
+/// <summary>Closed 3-value gender enum resolved on every concrete live actor instance.</summary>
+internal enum ActorGender
+{
+    Male,
+    Female,
+    Neutral,
+}
+
+internal static class ActorGenderFormat
+{
+    internal static string Slug(ActorGender gender) => gender switch
+    {
+        ActorGender.Male => "male",
+        ActorGender.Female => "female",
+        ActorGender.Neutral => "neutral",
+        _ => throw new ArgumentOutOfRangeException(nameof(gender)),
+    };
+
+    internal static string SpriteKey(ActorGender gender) => gender switch
+    {
+        ActorGender.Male => "male",
+        ActorGender.Female => "female",
+        ActorGender.Neutral => "unspecified",
+        _ => throw new ArgumentOutOfRangeException(nameof(gender)),
+    };
+
+    internal static bool TryParse(string? value, out ActorGender gender)
+    {
+        if (string.Equals(value, "male", StringComparison.OrdinalIgnoreCase)) { gender = ActorGender.Male; return true; }
+        if (string.Equals(value, "female", StringComparison.OrdinalIgnoreCase)) { gender = ActorGender.Female; return true; }
+        if (string.Equals(value, "neutral", StringComparison.OrdinalIgnoreCase)) { gender = ActorGender.Neutral; return true; }
+        gender = default;
+        return false;
+    }
+}
+
+/// <summary>How an actor's stats and vitals scale with level.</summary>
+internal enum ActorScalingMode
+{
+    Fixed,
+    LevelScaledSkills,
+    CareerLeveled,
+}
+
+/// <summary>How an actor acquires starting combat equipment on spawn.</summary>
+internal enum ActorGearPolicy
+{
+    FixedLoadout,
+    GeneratedClassGear,
+    FixedVariantGear,
+}
+
+/// <summary>How an actor's base body weight is computed for encumbrance and strike impact.</summary>
+internal enum ActorBodyWeightMode
+{
+    Fixed,
+    GenderedHumanoid,
+}
+
+/// <summary>Locomotion medium for navigation and grounding.</summary>
+internal enum ActorMovementMedium
+{
+    Ground,
+    Flying,
+    Aquatic,
+    Spectral,
+}
+
+/// <summary>How a spawner names materialized instances.</summary>
+internal enum ActorNamingMode
+{
+    Label,
+    Generated,
+    Designated,
+}
+
+/// <summary>Typed family of an actor spawner spec.</summary>
+internal enum ActorSpawnerFamily
+{
+    Player,
+    Creature,
+    Enemy,
+    Town,
+    PartyHire,
+    Cast,
+}
+
+/// <summary>
+/// Closed set of mechanical capability fields derived from every ruleset call site that formerly branched on
+/// <c>DaggerfallActorKinds</c> or hardcoded classic <c>MobileId</c> switches.
+/// </summary>
+internal sealed record DaggerfallActorCapabilities(
+    bool IsPlayer = false,
+    bool IsCombatEncounter = false,
+    ActorScalingMode Scaling = ActorScalingMode.Fixed,
+    ActorGearPolicy GearPolicy = ActorGearPolicy.FixedLoadout,
+    int? FixedEquipmentVariant = null,
+    ActorBodyWeightMode BodyWeightMode = ActorBodyWeightMode.Fixed,
+    bool UsesNaturalArmor = false,
+    bool TakesExtraBluntDamage = false,
+    bool CityWatchArrest = false,
+    ActorMovementMedium Movement = ActorMovementMedium.Ground,
+    bool CanOpenDoors = false,
+    bool SeesThroughInvisibility = false,
+    bool CastsMagic = false,
+    bool PrefersRanged = false,
+    bool HasRangedAttack1 = false,
+    bool HasRangedAttack2 = false,
+    int AttackModifierFlags = 0,
+    int ResistanceFlags = 0,
+    int ImmunityFlags = 0,
+    int LowToleranceFlags = 0,
+    int CriticalWeaknessFlags = 0,
+    DaggerfallEnemyGroup EnemyGroup = DaggerfallEnemyGroup.None,
+    string? LanguageSkill = null,
+    string Tactic = DaggerfallMobileDefinition.LegacyTactic,
+    DaggerfallTacticTendencies? Tendencies = null,
+    IReadOnlyList<ActorGender>? AllowedGenders = null,
+    string? FixedRace = null,
+    IReadOnlyList<string>? Traits = null)
+{
+    private static readonly IReadOnlyList<ActorGender> DefaultGenders = [ActorGender.Male, ActorGender.Female];
+
+    internal static DaggerfallActorCapabilities Default { get; } = new();
+
+    internal IReadOnlyList<ActorGender> EffectiveAllowedGenders => AllowedGenders ?? DefaultGenders;
+    internal IReadOnlyList<string> EffectiveTraits => Traits ?? [];
+    internal bool Walks => Movement == ActorMovementMedium.Ground;
+    internal bool HasBowAttack => HasRangedAttack1 && (!CastsMagic || HasRangedAttack2);
+}
+
+/// <summary>Flat, immutable resolved actor template produced by the load-time inheritance resolver.</summary>
+internal sealed record DaggerfallActorTemplateDefinition(
+    string Id,
+    string? Extends,
+    IReadOnlyList<string> InheritanceChain,
+    DaggerfallStatBases Stats,
+    DaggerfallVitalRange Health,
+    int Armor,
+    int? HitPointsPerLevel,
+    int? Level,
+    int? Weight,
+    DaggerfallRewardPolicy Rewards,
+    IReadOnlyList<DaggerfallAttackRange> Attacks,
+    string? ActionId,
+    IReadOnlyList<DaggerfallLoadoutEntry> Loadout,
+    string? MinimumMaterial,
+    string? LootTableKey,
+    string? CareerRef,
+    DaggerfallActorCapabilities Capabilities);
+
+/// <summary>Weighted gender entry inside a spawner's gender distribution.</summary>
+internal sealed record DaggerfallActorGenderWeight(ActorGender Gender, int Weight);
+
+/// <summary>Transitional classic Arena2/DFU binding metadata attached to a spawner spec (never to a template).</summary>
+internal sealed record DaggerfallActorClassicBinding(
+    int MobileId,
+    string DonorName,
+    string Identity,
+    string Affinity,
+    string Behaviour,
+    int SoulPoints,
+    int MapChance,
+    string DonorTeam,
+    string DonorMinMetalToHit,
+    int DonorArmorValue,
+    DaggerfallAttackRange? DonorDamage,
+    DaggerfallVitalRange? DonorHealth,
+    int DonorLevel,
+    int DonorWeight,
+    string? DonorLootTableKey);
+
+/// <summary>
+/// Typed spawner instance spec describing how a template enters the world (art, gender split, race, naming,
+/// sound cues, faction/team, context policies, and optional classic binding).
+/// </summary>
+internal sealed record DaggerfallActorSpawnerSpec(
+    string Id,
+    ActorSpawnerFamily Family,
+    string TemplateId,
+    bool Published,
+    string DisplayName,
+    IReadOnlyList<DaggerfallActorGenderWeight> Genders,
+    string? Race,
+    ActorNamingMode Naming,
+    ActorHarmPolicyKind Harm,
+    ActorInteractionPolicyKind Interaction,
+    string? Team,
+    string? Schedule,
+    int? LevelMin,
+    int? LevelMax,
+    int MaleTexture,
+    int FemaleTexture,
+    int CorpseArchive,
+    int CorpseRecord,
+    bool HasIdle,
+    bool NoShadow,
+    Vector3? GlowColor,
+    DaggerfallActorPresentationDefinition Presentation,
+    string MoveSound,
+    string BarkSound,
+    string AttackSound,
+    bool ParrySounds,
+    DaggerfallActorClassicBinding? ClassicBinding);
+
+/// <summary>Resolved actor template and spawner spec catalog owned by <see cref="DaggerfallDefinitions"/>.</summary>
+internal sealed record DaggerfallActorCatalog(
+    IReadOnlyDictionary<string, DaggerfallActorTemplateDefinition> Templates,
+    IReadOnlyDictionary<string, DaggerfallActorSpawnerSpec> Specs,
+    IReadOnlyDictionary<int, DaggerfallActorSpawnerSpec> SpecsByMobileId)
+{
+    internal static DaggerfallActorCatalog Empty { get; } = new(
+        new ReadOnlyDictionary<string, DaggerfallActorTemplateDefinition>(new Dictionary<string, DaggerfallActorTemplateDefinition>(StringComparer.Ordinal)),
+        new ReadOnlyDictionary<string, DaggerfallActorSpawnerSpec>(new Dictionary<string, DaggerfallActorSpawnerSpec>(StringComparer.Ordinal)),
+        new ReadOnlyDictionary<int, DaggerfallActorSpawnerSpec>(new Dictionary<int, DaggerfallActorSpawnerSpec>()));
+}
+
+/// <summary>
+/// Concrete resolved identity attached to every live actor in <c>EntityStore</c> (player, creature, enemy, civilian, cast).
+/// Deterministic from seed for procedural actors so untouched instances write zero save bytes.
+/// </summary>
+internal sealed class ActorInstanceIdentity(
+    string spawnerId,
+    string templateId,
+    ActorGender gender,
+    string race,
+    string factionId)
+{
+    internal string SpawnerId { get; } = spawnerId;
+    internal string TemplateId { get; } = templateId;
+    internal ActorGender Gender { get; } = gender;
+    internal string Race { get; } = race;
+    internal string FactionId { get; } = factionId;
+}
+
+/// <summary>Deterministic resolver turning a spawner/definition + durable id into a concrete <see cref="ActorInstanceIdentity"/>.</summary>
+internal static class DaggerfallActorInstanceResolver
+{
+    private static readonly string[] HumanoidCultureRaces =
+        ["breton", "redguard", "nord", "dark-elf", "high-elf", "wood-elf", "khajiit", "argonian"];
+
+    internal static ActorInstanceIdentity Resolve(
+        DaggerfallDefinitions? definitions,
+        DaggerfallActorDefinition definition,
+        long durableId,
+        string? explicitGender = null,
+        string? explicitRace = null,
+        string? explicitFaction = null,
+        int? regionIndex = null,
+        ulong worldSocialSeed = 0UL)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        DaggerfallActorSpawnerSpec? spec = null;
+        if (definitions is not null)
+        {
+            string lookupId = definition.SpawnerId ?? definition.Id.Value;
+            definitions.ActorCatalog.Specs.TryGetValue(lookupId, out spec);
+        }
+
+        ActorGender gender = ResolveGender(spec, definition, durableId, explicitGender, worldSocialSeed);
+        string race = ResolveRace(spec, definition, durableId, explicitRace, regionIndex, worldSocialSeed);
+        string faction = !string.IsNullOrWhiteSpace(explicitFaction) ? explicitFaction
+            : !string.IsNullOrWhiteSpace(spec?.Team) ? spec.Team
+            : !string.IsNullOrWhiteSpace(definition.Team) ? definition.Team
+            : "neutral";
+
+        return new ActorInstanceIdentity(
+            spec?.Id ?? definition.SpawnerId ?? definition.Id.Value,
+            spec?.TemplateId ?? definition.TemplateId ?? definition.Id.Value,
+            gender,
+            race,
+            faction);
+    }
+
+    internal static ActorGender ResolveGender(
+        DaggerfallActorSpawnerSpec? spec,
+        DaggerfallActorDefinition definition,
+        long durableId,
+        string? explicitGender,
+        ulong worldSocialSeed)
+    {
+        IReadOnlyList<ActorGender> allowed = definition.Capabilities.EffectiveAllowedGenders;
+        if (ActorGenderFormat.TryParse(explicitGender, out ActorGender parsed) && allowed.Contains(parsed))
+            return parsed;
+        if (spec is { Genders.Count: > 0 })
+        {
+            if (spec.Genders.Count == 1)
+                return spec.Genders[0].Gender;
+            int total = 0;
+            foreach (DaggerfallActorGenderWeight entry in spec.Genders) total += entry.Weight;
+            if (total > 0)
+            {
+                ulong hash = StableHash.NonZeroFnv1a64($"daggerfall.actor-gender:{worldSocialSeed}:{spec.Id}:{durableId}");
+                int pick = (int)(hash % (ulong)total);
+                int acc = 0;
+                foreach (DaggerfallActorGenderWeight entry in spec.Genders)
+                {
+                    acc += entry.Weight;
+                    if (pick < acc) return entry.Gender;
+                }
+            }
+        }
+        if (allowed.Count == 1)
+            return allowed[0];
+        ulong fallbackHash = StableHash.NonZeroFnv1a64($"daggerfall.actor-gender:{worldSocialSeed}:{definition.Id.Value}:{durableId}");
+        return allowed[(int)(fallbackHash % (ulong)allowed.Count)];
+    }
+
+    private static string ResolveRace(
+        DaggerfallActorSpawnerSpec? spec,
+        DaggerfallActorDefinition definition,
+        long durableId,
+        string? explicitRace,
+        int? regionIndex,
+        ulong worldSocialSeed)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitRace)) return explicitRace;
+        if (!string.IsNullOrWhiteSpace(spec?.Race)) return spec.Race;
+        if (!string.IsNullOrWhiteSpace(definition.Race)) return definition.Race;
+        if (!string.IsNullOrWhiteSpace(definition.Capabilities.FixedRace)) return definition.Capabilities.FixedRace;
+        // Regional culture default for procedural humanoids
+        if (regionIndex is int region && region is 0 or 1 or 11 or 20 or 22 or 43 or 44 or 45 or 46 or 47 or 48 or 49 or 50 or 51 or 52 or 53 or 54 or 55 or 56 or 61)
+        {
+            ulong roll = StableHash.NonZeroFnv1a64($"daggerfall.actor-race:{worldSocialSeed}:{definition.Id.Value}:{durableId}") % 100UL;
+            return roll < 70UL ? "redguard" : HumanoidCultureRaces[(int)(roll % (ulong)HumanoidCultureRaces.Length)];
+        }
+        ulong hash = StableHash.NonZeroFnv1a64($"daggerfall.actor-race:{worldSocialSeed}:{definition.Id.Value}:{durableId}");
+        return (hash % 100UL) < 65UL ? "breton" : HumanoidCultureRaces[(int)((hash / 100UL) % (ulong)HumanoidCultureRaces.Length)];
+    }
+}
+
+internal static partial class DaggerfallBaseContent
+{
+    internal const int MaximumTemplateInheritanceDepth = 4;
+
+    private static readonly string[] TemplateSectionNames =
+        ["actorTemplateBases", "actorTemplateCreatures", "actorTemplateClasses", "actorTemplateRoles"];
+
+    private static readonly string[] SpecSectionNames =
+        ["actorSpecsCreatures", "actorSpecsEnemies", "actorSpecsTownsfolk", "actorSpecsCast"];
+
+    private static readonly HashSet<string> CompiledTacticNames =
+        new(["legacy", "intelligent", "beast"], StringComparer.Ordinal);
+
+    private static readonly HashSet<string> ForbiddenTemplateFields =
+        new(["gender", "genders", "name", "displayName", "visual", "appearances", "sounds", "mobileId", "classicBinding", "home", "familyId", "team"], StringComparer.Ordinal);
+
+    private static readonly string[] CareerAttributeOrder =
+        ["strength", "intelligence", "willpower", "agility", "endurance", "personality", "speed", "luck"];
+
+    private static (DaggerfallActorCatalog Catalog, Dictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors, DaggerfallMobileCatalogSet Mobiles) ReadActorCatalog(
+        JsonElement root,
+        DaggerfallVocabulary vocabulary,
+        DaggerfallCatalogSet catalogs,
+        IReadOnlyDictionary<string, DaggerfallActionDefinition> actions,
+        IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items,
+        IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables,
+        DaggerfallCreatureFactionSet creatureFactions,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        // 1. Collect raw templates across all branch files
+        Dictionary<string, JsonObject> rawTemplates = new(StringComparer.Ordinal);
+        bool anyTemplateSection = false;
+        foreach (string sectionName in TemplateSectionNames)
+        {
+            if (!root.TryGetProperty(sectionName, out JsonElement section)) continue;
+            anyTemplateSection = true;
+            JsonElement obj = Object(section, sectionName, diagnostics);
+            if (obj.ValueKind != JsonValueKind.Object) continue;
+            foreach (JsonElement item in Array(obj, "templates", diagnostics))
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    diagnostics.Add($"Section '{sectionName}' contains a non-object template entry.");
+                    continue;
+                }
+                RejectDuplicateProperties(item, $"{sectionName}.template", diagnostics);
+                string id = Text(item, "id", diagnostics);
+                if (!ValidId(id))
+                {
+                    diagnostics.Add($"Actor template id '{id}' in '{sectionName}' is invalid.");
+                    continue;
+                }
+                foreach (JsonProperty prop in item.EnumerateObject())
+                {
+                    if (ForbiddenTemplateFields.Contains(prop.Name))
+                        diagnostics.Add($"Actor template '{id}' may not declare instance-only field '{prop.Name}'; move it to a spawner spec.");
+                }
+                JsonObject parsed = JsonNode.Parse(item.GetRawText())!.AsObject();
+                if (!rawTemplates.TryAdd(id, parsed))
+                    diagnostics.Add($"Duplicate actor template '{id}'.");
+            }
+        }
+
+        if (!anyTemplateSection || rawTemplates.Count == 0)
+        {
+            diagnostics.Add("Base payload publishes no actor templates.");
+            return (DaggerfallActorCatalog.Empty, [], new(new Dictionary<int, DaggerfallMobileDefinition>(), new Dictionary<string, DaggerfallMobileDefinition>(StringComparer.Ordinal)));
+        }
+
+        // 2. Resolve single-parent inheritance (acyclic, depth <= 4)
+        Dictionary<string, JsonObject> mergedNodes = new(StringComparer.Ordinal);
+        Dictionary<string, List<string>> chains = new(StringComparer.Ordinal);
+        Dictionary<string, DaggerfallActorTemplateDefinition> resolvedTemplates = new(StringComparer.Ordinal);
+
+        JsonObject? ResolveMerged(string id, List<string> stack)
+        {
+            if (mergedNodes.TryGetValue(id, out JsonObject? cached)) return cached;
+            if (!rawTemplates.TryGetValue(id, out JsonObject? raw))
+            {
+                diagnostics.Add($"Actor template '{stack[^1]}' extends unknown parent '{id}'.");
+                return null;
+            }
+            int cycleAt = stack.IndexOf(id);
+            if (cycleAt >= 0)
+            {
+                diagnostics.Add($"Actor template inheritance cycle detected: {string.Join(" -> ", stack.Skip(cycleAt).Append(id))}.");
+                return null;
+            }
+            if (stack.Count > MaximumTemplateInheritanceDepth)
+            {
+                diagnostics.Add($"Actor template '{stack[0]}' exceeds maximum inheritance depth {MaximumTemplateInheritanceDepth} ({string.Join(" -> ", stack.Append(id))}).");
+                return null;
+            }
+
+            string? parentId = null;
+            if (raw.TryGetPropertyValue("extends", out JsonNode? extNode) && extNode is not null)
+            {
+                if (extNode is JsonValue extVal && extVal.TryGetValue<string>(out string? extStr) && !string.IsNullOrWhiteSpace(extStr))
+                    parentId = extStr;
+                else
+                {
+                    diagnostics.Add($"Actor template '{id}' has invalid 'extends' value.");
+                    return null;
+                }
+            }
+
+            JsonObject merged;
+            List<string> chain;
+            if (parentId is not null)
+            {
+                stack.Add(id);
+                JsonObject? parentMerged = ResolveMerged(parentId, stack);
+                stack.RemoveAt(stack.Count - 1);
+                if (parentMerged is null) return null;
+                merged = parentMerged.DeepClone().AsObject();
+                chain = [.. chains[parentId], id];
+                if (chain.Count - 1 > MaximumTemplateInheritanceDepth)
+                {
+                    diagnostics.Add($"Actor template '{id}' exceeds maximum depth {MaximumTemplateInheritanceDepth} ({string.Join(" -> ", chain)}).");
+                    return null;
+                }
+            }
+            else
+            {
+                merged = new JsonObject();
+                chain = [id];
+            }
+
+            foreach ((string key, JsonNode? value) in raw)
+            {
+                if (key is "id" or "extends") continue;
+                if (key is "attributes" or "skills")
+                {
+                    if (value is null)
+                    {
+                        merged[key] = new JsonObject();
+                    }
+                    else if (value is JsonObject mapOverride)
+                    {
+                        JsonObject targetMap = merged[key] is JsonObject existing ? existing : new JsonObject();
+                        foreach ((string mk, JsonNode? mv) in mapOverride)
+                        {
+                            if (mv is null) targetMap.Remove(mk);
+                            else targetMap[mk] = mv.DeepClone();
+                        }
+                        merged[key] = targetMap;
+                    }
+                    else
+                    {
+                        diagnostics.Add($"Actor template '{id}' field '{key}' must be an object or null.");
+                    }
+                }
+                else
+                {
+                    merged[key] = value?.DeepClone();
+                }
+            }
+            merged["id"] = id;
+            mergedNodes[id] = merged;
+            chains[id] = chain;
+            return merged;
+        }
+
+        foreach (string id in rawTemplates.Keys)
+        {
+            JsonObject? merged = ResolveMerged(id, []);
+            if (merged is null) continue;
+            DaggerfallActorTemplateDefinition? built = BuildResolvedTemplate(
+                id, rawTemplates[id], merged, chains[id], vocabulary, catalogs, actions, items, lootTables, diagnostics);
+            if (built is not null)
+                resolvedTemplates[id] = built;
+        }
+
+        // 3. Read spawner specs & project DaggerfallActorDefinition + DaggerfallMobileCatalogSet
+        Dictionary<string, DaggerfallActorSpawnerSpec> specs = new(StringComparer.Ordinal);
+        Dictionary<int, DaggerfallActorSpawnerSpec> specsByMobile = [];
+        Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors = [];
+        Dictionary<int, DaggerfallMobileDefinition> mobiles = [];
+        Dictionary<string, DaggerfallMobileDefinition> mobilesByActor = new(StringComparer.Ordinal);
+        HashSet<string> validCreatureTeams = creatureFactions.Factions.Keys.ToHashSet(StringComparer.Ordinal);
+        validCreatureTeams.Add("player-ally");
+
+        bool anySpecSection = false;
+        foreach (string sectionName in SpecSectionNames)
+        {
+            if (!root.TryGetProperty(sectionName, out JsonElement section)) continue;
+            anySpecSection = true;
+            JsonElement obj = Object(section, sectionName, diagnostics);
+            if (obj.ValueKind != JsonValueKind.Object) continue;
+            foreach (JsonElement item in Array(obj, "specs", diagnostics))
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    diagnostics.Add($"Section '{sectionName}' contains a non-object spawner spec.");
+                    continue;
+                }
+                RejectDuplicateProperties(item, $"{sectionName}.spec", diagnostics);
+                DaggerfallActorSpawnerSpec? spec = ReadSpawnerSpec(item, sectionName, resolvedTemplates, validCreatureTeams, diagnostics);
+                if (spec is null) continue;
+                if (!specs.TryAdd(spec.Id, spec))
+                {
+                    diagnostics.Add($"Duplicate actor spawner spec '{spec.Id}'.");
+                    continue;
+                }
+                if (spec.ClassicBinding is { } binding)
+                {
+                    if (!specsByMobile.TryAdd(binding.MobileId, spec))
+                        diagnostics.Add($"Actor spawner spec '{spec.Id}' claims classic mobileId {binding.MobileId}, already claimed by '{specsByMobile[binding.MobileId].Id}'.");
+                }
+            }
+        }
+
+        if (!anySpecSection || specs.Count == 0)
+            diagnostics.Add("Base payload publishes no actor spawner specs.");
+
+        // Count classic identities to preserve published-variant disposition parity
+        Dictionary<string, int> classicIdentityCounts = specs.Values
+            .Where(s => s.ClassicBinding is not null)
+            .GroupBy(s => s.ClassicBinding!.Identity, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+
+        foreach (DaggerfallActorSpawnerSpec spec in specs.Values)
+        {
+            if (!resolvedTemplates.TryGetValue(spec.TemplateId, out DaggerfallActorTemplateDefinition? template))
+                continue;
+
+            if (spec.Published)
+            {
+                DaggerfallActorId actorId = new(spec.Id);
+                string derivedKind = DeriveActorKind(spec, template);
+                string? catalogRace = spec.Race is not null && catalogs.Races.Any(race => race.Id == spec.Race)
+                    ? spec.Race
+                    : null;
+                DaggerfallActorDefinition definition = new(
+                    actorId,
+                    derivedKind,
+                    template.Stats,
+                    template.Health,
+                    new(DaggerfallMechanicsIds.Health, template.Capabilities.IsPlayer ? DaggerfallMechanicsIds.Stamina : null),
+                    template.Rewards,
+                    template.Armor,
+                    spec.ClassicBinding?.MobileId,
+                    template.HitPointsPerLevel,
+                    template.Attacks,
+                    spec.Team,
+                    template.MinimumMaterial,
+                    template.LootTableKey,
+                    template.Level,
+                    template.Weight,
+                    template.ActionId,
+                    template.Loadout,
+                    spec.Presentation,
+                    catalogRace,
+                    template.CareerRef)
+                {
+                    TemplateId = template.Id,
+                    SpawnerId = spec.Id,
+                    Capabilities = template.Capabilities,
+                    DefaultHarm = spec.Harm,
+                    DefaultInteraction = spec.Interaction,
+                };
+                if (!actors.TryAdd(actorId, definition))
+                    diagnostics.Add($"Duplicate actor definition '{actorId.Value}'.");
+            }
+
+            if (spec.ClassicBinding is { } binding)
+            {
+                string numbered = $"{binding.Identity}-{binding.MobileId.ToString(CultureInfo.InvariantCulture)}";
+                string? linkedActor = spec.Published ? spec.Id : null;
+                string disposition = !spec.Published ? "unpublished"
+                    : spec.Family == ActorSpawnerFamily.Enemy && spec.Id.StartsWith("encounter-", StringComparison.Ordinal) ? "human-mobile"
+                    : spec.Id == numbered && classicIdentityCounts.GetValueOrDefault(binding.Identity) > 1 ? "published-variant"
+                    : "published";
+                // Classic HumanMobiles property expects Actor == null for encounter-* synthesized classes? No: ActorFor uses mobile.Actor ?? $"encounter-{identity}"
+                // Wait: DaggerfallMobileCatalogTests checks HumanMobiles has Actor == null when disposition == "human-mobile" — keep exact parity!
+                string? mobileActorField = disposition == "human-mobile" ? null : linkedActor;
+                DaggerfallMobileDefinition mobile = new(
+                    binding.MobileId,
+                    binding.DonorName,
+                    binding.Identity,
+                    template.Capabilities.CastsMagic,
+                    template.Capabilities.CanOpenDoors,
+                    template.Capabilities.SeesThroughInvisibility,
+                    mobileActorField,
+                    disposition,
+                    binding.Behaviour,
+                    binding.Affinity,
+                    spec.MaleTexture,
+                    spec.FemaleTexture,
+                    spec.CorpseArchive,
+                    spec.CorpseRecord,
+                    spec.HasIdle,
+                    template.Capabilities.HasRangedAttack1,
+                    template.Capabilities.HasRangedAttack2,
+                    spec.MoveSound,
+                    spec.BarkSound,
+                    spec.AttackSound,
+                    binding.DonorLootTableKey,
+                    binding.DonorMinMetalToHit,
+                    binding.DonorDamage?.MinimumDamage ?? 0,
+                    binding.DonorDamage?.MaximumDamage ?? 0,
+                    binding.DonorHealth?.Minimum ?? 0,
+                    binding.DonorHealth?.Maximum ?? 0,
+                    binding.DonorLevel,
+                    binding.DonorArmorValue,
+                    spec.ParrySounds,
+                    binding.MapChance,
+                    binding.DonorWeight,
+                    binding.DonorTeam,
+                    template.Capabilities.AttackModifierFlags)
+                {
+                    SoulPoints = binding.SoulPoints,
+                    NoShadow = spec.NoShadow,
+                    PrefersRanged = template.Capabilities.PrefersRanged,
+                    GlowColor = spec.GlowColor,
+                    ResistanceFlags = template.Capabilities.ResistanceFlags,
+                    ImmunityFlags = template.Capabilities.ImmunityFlags,
+                    LowToleranceFlags = template.Capabilities.LowToleranceFlags,
+                    CriticalWeaknessFlags = template.Capabilities.CriticalWeaknessFlags,
+                    Tactic = template.Capabilities.Tactic,
+                    Tendencies = template.Capabilities.Tendencies,
+                    SpawnerId = spec.Id,
+                };
+                if (mobiles.TryAdd(binding.MobileId, mobile) && spec.Published)
+                    mobilesByActor.TryAdd(spec.Id, mobile);
+            }
+        }
+
+        DaggerfallActorCatalog catalog = new(
+            new ReadOnlyDictionary<string, DaggerfallActorTemplateDefinition>(resolvedTemplates),
+            new ReadOnlyDictionary<string, DaggerfallActorSpawnerSpec>(specs),
+            new ReadOnlyDictionary<int, DaggerfallActorSpawnerSpec>(specsByMobile));
+        DaggerfallMobileCatalogSet mobileSet = new(
+            new ReadOnlyDictionary<int, DaggerfallMobileDefinition>(mobiles),
+            new ReadOnlyDictionary<string, DaggerfallMobileDefinition>(mobilesByActor));
+        return (catalog, actors, mobileSet);
+    }
+
+    private static string DeriveActorKind(DaggerfallActorSpawnerSpec spec, DaggerfallActorTemplateDefinition template) =>
+        template.Capabilities.IsPlayer ? DaggerfallActorKinds.Player
+        : spec.Family == ActorSpawnerFamily.Enemy || template.Capabilities.Scaling == ActorScalingMode.CareerLeveled ? DaggerfallActorKinds.EnemyClass
+        : spec.Family == ActorSpawnerFamily.Creature ? DaggerfallActorKinds.Monster
+        : spec.Family == ActorSpawnerFamily.Cast ? DaggerfallActorKinds.StaticNpc
+        : DaggerfallActorKinds.Civilian;
+
+    private static DaggerfallActorTemplateDefinition? BuildResolvedTemplate(
+        string id,
+        JsonObject raw,
+        JsonObject merged,
+        List<string> chain,
+        DaggerfallVocabulary vocabulary,
+        DaggerfallCatalogSet catalogs,
+        IReadOnlyDictionary<string, DaggerfallActionDefinition> actions,
+        IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items,
+        IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        using JsonDocument doc = JsonDocument.Parse(merged.ToJsonString());
+        JsonElement el = doc.RootElement;
+
+        string? careerRef = OptionalText(el, "careerRef", diagnostics);
+        DaggerfallCareerDefinition? career = null;
+        if (careerRef is not null && !catalogs.TryGetCareer(careerRef, out career))
+            diagnostics.Add($"Actor template '{id}' refers to unknown career '{careerRef}'.");
+
+        ActorScalingMode scaling = ParseEnum(OptionalText(el, "scaling", diagnostics) ?? "fixed", id, "scaling", diagnostics, static s => s switch
+        {
+            "fixed" => ActorScalingMode.Fixed,
+            "level-scaled-skills" => ActorScalingMode.LevelScaledSkills,
+            "career-leveled" => ActorScalingMode.CareerLeveled,
+            _ => (ActorScalingMode?)null,
+        }, ActorScalingMode.Fixed);
+
+        // Build stats map: start from merged attributes/skills, then apply careerRef defaults for keys not explicitly authored on raw template
+        Dictionary<DaggerfallStatId, int> statValues = vocabulary.ActorStats.ToDictionary(s => s, _ => 0);
+        HashSet<string> rawAttrKeys = raw.TryGetPropertyValue("attributes", out JsonNode? ra) && ra is JsonObject rao
+            ? rao.Select(p => p.Key).ToHashSet(StringComparer.Ordinal) : [];
+        HashSet<string> rawSkillKeys = raw.TryGetPropertyValue("skills", out JsonNode? rs) && rs is JsonObject rso
+            ? rso.Select(p => p.Key).ToHashSet(StringComparer.Ordinal) : [];
+
+        if (el.TryGetProperty("attributes", out JsonElement attrsEl) && attrsEl.ValueKind == JsonValueKind.Object)
+            ReadStatMap(attrsEl, vocabulary.Attributes, statValues, diagnostics);
+        if (el.TryGetProperty("skills", out JsonElement skillsEl) && skillsEl.ValueKind == JsonValueKind.Object)
+            ReadStatMap(skillsEl, vocabulary.Skills, statValues, diagnostics);
+
+        if (career is not null)
+        {
+            for (int i = 0; i < CareerAttributeOrder.Length && i < career.AttributeValues.Count; i++)
+            {
+                string attrName = CareerAttributeOrder[i];
+                if (!rawAttrKeys.Contains(attrName))
+                    statValues[new DaggerfallStatId(attrName)] = career.AttributeValues[i];
+            }
+            if (scaling == ActorScalingMode.CareerLeveled)
+            {
+                foreach (DaggerfallStatId skillId in vocabulary.Skills)
+                {
+                    if (!rawSkillKeys.Contains(skillId.Value) && statValues[skillId] == 0)
+                        statValues[skillId] = 35;
+                }
+            }
+        }
+
+        if (statValues[DaggerfallMechanicsIds.Strength] is < 0 or > 10_000
+            || statValues[DaggerfallMechanicsIds.Endurance] is < 0 or > 10_000
+            || statValues[DaggerfallMechanicsIds.Intelligence] is < 0 or > 10_000)
+            diagnostics.Add($"Actor template '{id}' attributes are outside the supported range.");
+
+        int? hpPerLevel = OptionalInteger(el, "hitPointsPerLevel", diagnostics);
+        if (career is not null && (!raw.ContainsKey("hitPointsPerLevel") || raw["hitPointsPerLevel"] is null))
+            hpPerLevel = career.HitPointsPerLevel;
+
+        DaggerfallVitalRange health;
+        if (career is not null && scaling == ActorScalingMode.CareerLeveled && !raw.ContainsKey("health") && hpPerLevel is int hpl)
+            health = new DaggerfallVitalRange(11, checked(10 + hpl));
+        else if (el.TryGetProperty("health", out JsonElement healthEl) && healthEl.ValueKind == JsonValueKind.Object)
+            health = ReadRange(healthEl, $"template '{id}' health", diagnostics);
+        else
+            health = new DaggerfallVitalRange(10, 20);
+
+        int armor = OptionalInteger(el, "armor", diagnostics) ?? 0;
+        if (armor is < -MaximumAuthoredArmor or > MaximumAuthoredArmor)
+            diagnostics.Add($"Actor template '{id}' armor is outside the supported range.");
+
+        int? level = OptionalInteger(el, "level", diagnostics);
+        int? weight = OptionalInteger(el, "weight", diagnostics);
+        int xpReward = OptionalInteger(el, "xpReward", diagnostics) ?? 0;
+        IReadOnlyList<DaggerfallAttackRange> attacks = el.TryGetProperty("attacks", out JsonElement attacksEl) && attacksEl.ValueKind == JsonValueKind.Array
+            ? ReadAttackRanges(el, diagnostics) : [];
+        string? actionId = OptionalText(el, "action", diagnostics);
+        if (actionId is not null && !actions.ContainsKey(actionId))
+            diagnostics.Add($"Actor template '{id}' refers to missing action '{actionId}'.");
+        IReadOnlyList<DaggerfallLoadoutEntry> loadout = el.TryGetProperty("loadout", out JsonElement loadoutEl) && loadoutEl.ValueKind == JsonValueKind.Array
+            ? ReadLoadout(el, items, diagnostics) : [];
+        string? minMetal = OptionalText(el, "minMetalToHit", diagnostics);
+        string? lootTableKey = OptionalText(el, "lootTableKey", diagnostics);
+        if (lootTableKey is not null && !lootTables.ContainsKey(lootTableKey))
+            diagnostics.Add($"Actor template '{id}' refers to unknown loot table '{lootTableKey}'.");
+
+        string tactic = DaggerfallMobileDefinition.LegacyTactic;
+        if (el.TryGetProperty("tactic", out JsonElement tacticEl) && tacticEl.ValueKind != JsonValueKind.Null)
+        {
+            if (tacticEl.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(tacticEl.GetString()))
+                diagnostics.Add($"Actor template '{id}' names a blank or non-text tactic.");
+            else
+            {
+                tactic = tacticEl.GetString()!;
+                if (!CompiledTacticNames.Contains(tactic))
+                    diagnostics.Add($"Actor template '{id}' names unknown tactic '{tactic}'.");
+            }
+        }
+
+        DaggerfallTacticTendencies? tendencies = null;
+        if (el.TryGetProperty("tendencies", out JsonElement tendEl) && tendEl.ValueKind != JsonValueKind.Null)
+        {
+            if (tendEl.ValueKind != JsonValueKind.Object)
+                diagnostics.Add($"Actor template '{id}' tendencies must be an object or null.");
+            else
+            {
+                tendencies = new(OptionalNumber(tendEl, "courage", diagnostics) ?? double.NaN,
+                    OptionalNumber(tendEl, "discipline", diagnostics) ?? double.NaN);
+                if (!tendencies.IsValid)
+                    diagnostics.Add($"Actor template '{id}' needs tendencies' courage and discipline between 0 and 1.");
+                if (tactic != "intelligent")
+                    diagnostics.Add($"Actor template '{id}' authors tendencies, which tactic '{tactic}' does not weigh.");
+            }
+        }
+
+        ActorGearPolicy gearPolicy = ParseEnum(OptionalText(el, "gearPolicy", diagnostics) ?? "fixed-loadout", id, "gearPolicy", diagnostics, static s => s switch
+        {
+            "fixed-loadout" => ActorGearPolicy.FixedLoadout,
+            "generated-class-gear" => ActorGearPolicy.GeneratedClassGear,
+            "fixed-variant-gear" => ActorGearPolicy.FixedVariantGear,
+            _ => (ActorGearPolicy?)null,
+        }, ActorGearPolicy.FixedLoadout);
+
+        ActorBodyWeightMode bodyWeightMode = ParseEnum(OptionalText(el, "bodyWeightMode", diagnostics) ?? "fixed", id, "bodyWeightMode", diagnostics, static s => s switch
+        {
+            "fixed" => ActorBodyWeightMode.Fixed,
+            "gendered-humanoid" => ActorBodyWeightMode.GenderedHumanoid,
+            _ => (ActorBodyWeightMode?)null,
+        }, ActorBodyWeightMode.Fixed);
+
+        ActorMovementMedium movement = ParseEnum(OptionalText(el, "movement", diagnostics) ?? "ground", id, "movement", diagnostics, static s => s switch
+        {
+            "ground" => ActorMovementMedium.Ground,
+            "flying" => ActorMovementMedium.Flying,
+            "aquatic" => ActorMovementMedium.Aquatic,
+            "spectral" => ActorMovementMedium.Spectral,
+            _ => (ActorMovementMedium?)null,
+        }, ActorMovementMedium.Ground);
+
+        DaggerfallEnemyGroup enemyGroup = ParseEnum(OptionalText(el, "enemyGroup", diagnostics) ?? "none", id, "enemyGroup", diagnostics, static s => s switch
+        {
+            "none" => DaggerfallEnemyGroup.None,
+            "animals" => DaggerfallEnemyGroup.Animals,
+            "humanoid" => DaggerfallEnemyGroup.Humanoid,
+            "undead" => DaggerfallEnemyGroup.Undead,
+            "daedra" => DaggerfallEnemyGroup.Daedra,
+            _ => (DaggerfallEnemyGroup?)null,
+        }, DaggerfallEnemyGroup.None);
+
+        string? languageSkill = OptionalText(el, "languageSkill", diagnostics);
+        if (languageSkill is not null && !vocabulary.Skills.Contains(new DaggerfallStatId(languageSkill)))
+            diagnostics.Add($"Actor template '{id}' languageSkill '{languageSkill}' is not a known skill.");
+
+        List<ActorGender> allowedGenders = [];
+        if (el.TryGetProperty("allowedGenders", out JsonElement gendersEl) && gendersEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement g in gendersEl.EnumerateArray())
+            {
+                if (g.ValueKind == JsonValueKind.String && ActorGenderFormat.TryParse(g.GetString(), out ActorGender parsed))
+                {
+                    if (!allowedGenders.Contains(parsed)) allowedGenders.Add(parsed);
+                }
+                else
+                    diagnostics.Add($"Actor template '{id}' allowedGenders contains invalid gender '{g}'.");
+            }
+        }
+        if (allowedGenders.Count == 0)
+            diagnostics.Add($"Actor template '{id}' must allow at least one gender (male, female, or neutral).");
+
+        List<string> traits = [];
+        if (el.TryGetProperty("traits", out JsonElement traitsEl) && traitsEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement t in traitsEl.EnumerateArray())
+                if (t.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(t.GetString()))
+                    traits.Add(t.GetString()!);
+        }
+
+        DaggerfallActorCapabilities capabilities = new(
+            IsPlayer: OptionalBool(el, "isPlayer"),
+            IsCombatEncounter: OptionalBool(el, "isCombatEncounter"),
+            Scaling: scaling,
+            GearPolicy: gearPolicy,
+            FixedEquipmentVariant: OptionalInteger(el, "fixedEquipmentVariant", diagnostics),
+            BodyWeightMode: bodyWeightMode,
+            UsesNaturalArmor: OptionalBool(el, "usesNaturalArmor"),
+            TakesExtraBluntDamage: OptionalBool(el, "takesExtraBluntDamage"),
+            CityWatchArrest: OptionalBool(el, "cityWatchArrest"),
+            Movement: movement,
+            CanOpenDoors: OptionalBool(el, "canOpenDoors"),
+            SeesThroughInvisibility: OptionalBool(el, "seesThroughInvisibility"),
+            CastsMagic: OptionalBool(el, "castsMagic"),
+            PrefersRanged: OptionalBool(el, "prefersRanged"),
+            HasRangedAttack1: OptionalBool(el, "hasRangedAttack1"),
+            HasRangedAttack2: OptionalBool(el, "hasRangedAttack2"),
+            AttackModifierFlags: FlagByte(el, "attackModifierFlags", diagnostics),
+            ResistanceFlags: FlagByte(el, "resistanceFlags", diagnostics),
+            ImmunityFlags: FlagByte(el, "immunityFlags", diagnostics),
+            LowToleranceFlags: FlagByte(el, "lowToleranceFlags", diagnostics),
+            CriticalWeaknessFlags: FlagByte(el, "criticalWeaknessFlags", diagnostics),
+            EnemyGroup: enemyGroup,
+            LanguageSkill: languageSkill,
+            Tactic: tactic,
+            Tendencies: tendencies,
+            AllowedGenders: allowedGenders.AsReadOnly(),
+            FixedRace: OptionalText(el, "fixedRace", diagnostics),
+            Traits: traits.AsReadOnly());
+
+        string? extendsId = raw.TryGetPropertyValue("extends", out JsonNode? eNode) && eNode is JsonValue eVal && eVal.TryGetValue<string>(out string? eStr)
+            ? eStr : null;
+
+        return new DaggerfallActorTemplateDefinition(
+            id,
+            extendsId,
+            chain.AsReadOnly(),
+            new DaggerfallStatBases(statValues),
+            health,
+            armor,
+            hpPerLevel,
+            level,
+            weight,
+            new DaggerfallRewardPolicy(xpReward),
+            attacks,
+            actionId,
+            loadout,
+            minMetal,
+            lootTableKey,
+            careerRef,
+            capabilities);
+    }
+
+    private static DaggerfallActorSpawnerSpec? ReadSpawnerSpec(
+        JsonElement item,
+        string sectionName,
+        IReadOnlyDictionary<string, DaggerfallActorTemplateDefinition> templates,
+        IReadOnlySet<string> validTeams,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        string id = Text(item, "id", diagnostics);
+        if (!ValidId(id))
+        {
+            diagnostics.Add($"Actor spawner spec id '{id}' in '{sectionName}' is invalid.");
+            return null;
+        }
+        string templateId = Text(item, "template", diagnostics);
+        if (!templates.TryGetValue(templateId, out DaggerfallActorTemplateDefinition? template))
+        {
+            diagnostics.Add($"Actor spawner spec '{id}' refers to unknown template '{templateId}'.");
+            return null;
+        }
+        ActorSpawnerFamily family = ParseEnum(Text(item, "family", diagnostics), id, "family", diagnostics, static s => s switch
+        {
+            "player" => ActorSpawnerFamily.Player,
+            "creature" => ActorSpawnerFamily.Creature,
+            "enemy" => ActorSpawnerFamily.Enemy,
+            "town" => ActorSpawnerFamily.Town,
+            "party-hire" => ActorSpawnerFamily.PartyHire,
+            "cast" => ActorSpawnerFamily.Cast,
+            _ => (ActorSpawnerFamily?)null,
+        }, ActorSpawnerFamily.Creature);
+
+        bool published = !item.TryGetProperty("published", out JsonElement pubEl) || pubEl.ValueKind != JsonValueKind.False;
+        string displayName = OptionalText(item, "displayName", diagnostics) ?? id;
+
+        List<DaggerfallActorGenderWeight> genders = [];
+        foreach (JsonElement gEl in Array(item, "genders", diagnostics))
+        {
+            JsonElement gObj = Object(gEl, $"spec '{id}' gender entry", diagnostics);
+            string gText = Text(gObj, "gender", diagnostics);
+            int weight = Integer(gObj, "weight", diagnostics);
+            if (!ActorGenderFormat.TryParse(gText, out ActorGender parsed))
+            {
+                diagnostics.Add($"Actor spawner spec '{id}' names unknown gender '{gText}'.");
+                continue;
+            }
+            if (!template.Capabilities.EffectiveAllowedGenders.Contains(parsed))
+            {
+                diagnostics.Add($"Actor spawner spec '{id}' uses gender '{gText}' disallowed by template '{templateId}'.");
+                continue;
+            }
+            if (weight <= 0)
+            {
+                diagnostics.Add($"Actor spawner spec '{id}' gender '{gText}' weight must be positive.");
+                continue;
+            }
+            genders.Add(new(parsed, weight));
+        }
+        if (genders.Count == 0)
+            diagnostics.Add($"Actor spawner spec '{id}' must specify at least one valid gender entry.");
+
+        ActorNamingMode naming = ParseEnum(OptionalText(item, "naming", diagnostics) ?? "label", id, "naming", diagnostics, static s => s switch
+        {
+            "label" => ActorNamingMode.Label,
+            "generated" => ActorNamingMode.Generated,
+            "designated" => ActorNamingMode.Designated,
+            _ => (ActorNamingMode?)null,
+        }, ActorNamingMode.Label);
+
+        ActorHarmPolicyKind harm = ParseEnum(OptionalText(item, "harm", diagnostics) ?? "combatant", id, "harm", diagnostics, static s => s switch
+        {
+            "protected" => ActorHarmPolicyKind.Protected,
+            "law-protected-civilian" => ActorHarmPolicyKind.LawProtectedCivilian,
+            "combatant" => ActorHarmPolicyKind.Combatant,
+            _ => (ActorHarmPolicyKind?)null,
+        }, ActorHarmPolicyKind.Combatant);
+
+        ActorInteractionPolicyKind interaction = ParseEnum(OptionalText(item, "interaction", diagnostics) ?? "none", id, "interaction", diagnostics, static s => s switch
+        {
+            "none" => ActorInteractionPolicyKind.None,
+            "ambient-bark" => ActorInteractionPolicyKind.AmbientBark,
+            "full-dialogue" => ActorInteractionPolicyKind.FullDialogue,
+            _ => (ActorInteractionPolicyKind?)null,
+        }, ActorInteractionPolicyKind.None);
+
+        string? team = OptionalText(item, "team", diagnostics);
+        if (team is not null && !validTeams.Contains(team))
+            diagnostics.Add($"Actor spawner spec '{id}' refers to unknown team '{team}'.");
+
+        string? race = OptionalText(item, "race", diagnostics);
+        string? schedule = OptionalText(item, "schedule", diagnostics);
+        int? levelMin = null, levelMax = null;
+        if (item.TryGetProperty("levelBand", out JsonElement lbEl) && lbEl.ValueKind == JsonValueKind.Object)
+        {
+            levelMin = OptionalInteger(lbEl, "minimum", diagnostics);
+            levelMax = OptionalInteger(lbEl, "maximum", diagnostics);
+        }
+
+        int maleTexture = 0, femaleTexture = 0, corpseArchive = 0, corpseRecord = 0;
+        bool hasIdle = false, noShadow = false;
+        Vector3? glowColor = null;
+        DaggerfallActorPresentationDefinition presentation = DaggerfallActorPresentationDefinition.None;
+        if (item.TryGetProperty("appearances", out JsonElement appEl) && appEl.ValueKind == JsonValueKind.Object)
+        {
+            maleTexture = OptionalInteger(appEl, "maleTexture", diagnostics) ?? 0;
+            femaleTexture = OptionalInteger(appEl, "femaleTexture", diagnostics) ?? 0;
+            if (appEl.TryGetProperty("corpse", out JsonElement corpseEl) && corpseEl.ValueKind == JsonValueKind.Object)
+            {
+                corpseArchive = OptionalInteger(corpseEl, "archive", diagnostics) ?? 0;
+                corpseRecord = OptionalInteger(corpseEl, "record", diagnostics) ?? 0;
+            }
+            hasIdle = OptionalBool(appEl, "hasIdle");
+            noShadow = OptionalBool(appEl, "noShadow");
+            if (appEl.TryGetProperty("glowColor", out JsonElement glowEl) && glowEl.ValueKind == JsonValueKind.Object)
+            {
+                glowColor = new Vector3(Number(glowEl, "red", diagnostics), Number(glowEl, "green", diagnostics), Number(glowEl, "blue", diagnostics));
+                if (glowColor.Value.X < 0 || glowColor.Value.Y < 0 || glowColor.Value.Z < 0)
+                    diagnostics.Add($"Actor spawner spec '{id}' requires nonnegative glow channels.");
+            }
+            presentation = ReadActorPresentation(appEl, new DaggerfallActorId(id), diagnostics);
+        }
+
+        string moveSound = "", barkSound = "", attackSound = "";
+        bool parrySounds = false;
+        if (item.TryGetProperty("sounds", out JsonElement soundEl) && soundEl.ValueKind == JsonValueKind.Object)
+        {
+            moveSound = OptionalText(soundEl, "move") ?? "";
+            barkSound = OptionalText(soundEl, "bark") ?? "";
+            attackSound = OptionalText(soundEl, "attack") ?? "";
+            parrySounds = OptionalBool(soundEl, "parrySounds");
+        }
+
+        DaggerfallActorClassicBinding? binding = null;
+        if (item.TryGetProperty("classicBinding", out JsonElement cbEl) && cbEl.ValueKind == JsonValueKind.Object)
+        {
+            int mobileId = Integer(cbEl, "mobileId", diagnostics);
+            int soulPoints = OptionalInteger(cbEl, "soulPoints", diagnostics) ?? 0;
+            if (soulPoints < 0)
+                diagnostics.Add($"Actor spawner spec '{id}' requires nonnegative soulPoints.");
+            DaggerfallAttackRange? donorDamage = cbEl.TryGetProperty("donorDamage", out JsonElement ddEl) && ddEl.ValueKind == JsonValueKind.Object
+                ? new DaggerfallAttackRange(Integer(ddEl, "minimum", diagnostics), Integer(ddEl, "maximum", diagnostics)) : null;
+            DaggerfallVitalRange? donorHealth = cbEl.TryGetProperty("donorHealth", out JsonElement dhEl) && dhEl.ValueKind == JsonValueKind.Object
+                ? new DaggerfallVitalRange(Integer(dhEl, "minimum", diagnostics), Integer(dhEl, "maximum", diagnostics)) : null;
+            binding = new DaggerfallActorClassicBinding(
+                mobileId,
+                OptionalText(cbEl, "donorName") ?? displayName,
+                OptionalText(cbEl, "identity") ?? id,
+                OptionalText(cbEl, "affinity") ?? "",
+                OptionalText(cbEl, "behaviour") ?? "General",
+                soulPoints,
+                OptionalInteger(cbEl, "mapChance", diagnostics) ?? 0,
+                OptionalText(cbEl, "donorTeam") ?? "",
+                OptionalText(cbEl, "donorMinMetalToHit") ?? "",
+                OptionalInteger(cbEl, "donorArmorValue", diagnostics) ?? 0,
+                donorDamage,
+                donorHealth,
+                OptionalInteger(cbEl, "donorLevel", diagnostics) ?? 0,
+                OptionalInteger(cbEl, "donorWeight", diagnostics) ?? 0,
+                cbEl.TryGetProperty("donorLootTableKey", out JsonElement dlEl) && dlEl.ValueKind == JsonValueKind.String ? dlEl.GetString() : null);
+        }
+
+        return new DaggerfallActorSpawnerSpec(
+            id,
+            family,
+            templateId,
+            published,
+            displayName,
+            genders.AsReadOnly(),
+            race,
+            naming,
+            harm,
+            interaction,
+            team,
+            schedule,
+            levelMin,
+            levelMax,
+            maleTexture,
+            femaleTexture,
+            corpseArchive,
+            corpseRecord,
+            hasIdle,
+            noShadow,
+            glowColor,
+            presentation,
+            moveSound,
+            barkSound,
+            attackSound,
+            parrySounds,
+            binding);
+    }
+
+    private static bool OptionalBool(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out JsonElement val) && val.ValueKind == JsonValueKind.True;
+
+    private static TEnum ParseEnum<TEnum>(string text, string owner, string field, DaggerfallContentDiagnostics diagnostics, Func<string, TEnum?> parse, TEnum fallback) where TEnum : struct
+    {
+        if (parse(text) is { } parsed) return parsed;
+        diagnostics.Add($"Actor '{owner}' has unknown {field} value '{text}'.");
+        return fallback;
+    }
+}

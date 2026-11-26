@@ -30,8 +30,10 @@ internal static class DaggerfallSocialMagicEffects
     internal static void Pacify(DaggerfallActiveEffect effect, int? group, Func<long, DaggerfallActorDefinition?> liveDefinition, Action<long> pacify)
     {
         long target=checked((long)effect.Context.Target.Value);
-        if (liveDefinition(target) is not { } definition || (group is null ? definition.Kind != DaggerfallActorKinds.EnemyClass
-                : definition.Kind != DaggerfallActorKinds.Monster || DaggerfallFormulaPolicy.EnemyGroupFor(definition) != group switch
+        if (liveDefinition(target) is not { } definition || (group is null
+                ? !(definition.Capabilities.Scaling == ActorScalingMode.CareerLeveled || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.EnemyClass))
+                : !(definition.Capabilities.UsesNaturalArmor || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.Monster))
+                  || DaggerfallFormulaPolicy.EnemyGroupFor(definition) != group switch
                 {0=>DaggerfallEnemyGroup.Animals,1=>DaggerfallEnemyGroup.Undead,2=>DaggerfallEnemyGroup.Humanoid,3=>DaggerfallEnemyGroup.Daedra,_=>DaggerfallEnemyGroup.None}))
         {effect.InitialOutcome=DaggerfallEffectAdmissionOutcome.NoMatch;return;}
         pacify(target);

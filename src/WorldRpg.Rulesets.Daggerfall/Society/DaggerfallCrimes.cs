@@ -218,7 +218,7 @@ internal sealed class DaggerfallCrimes(
             && npcs.IsGameplayActive(npc.DurableId)
             && npc.Site.Region == site.Region && npc.Site.Location == site.ActiveSite?.Name;
         return actorDefinitions.TryGetValue(actorId, out var definition)
-            && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
+            && (definition.Capabilities.IsCombatEncounter || (definition.TemplateId is null && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass));
     }
 
     /// <summary>

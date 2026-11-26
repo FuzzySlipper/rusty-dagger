@@ -26,7 +26,8 @@ internal sealed class DaggerfallQuestResourceAllocator(
             if (!definitions.Mobiles.Mobiles.TryGetValue(mobileId, out var mobile))
                 throw new NotSupportedException($"Quest foe '{declaration.CanonicalId}' has no published mobile {mobileId}.");
             var definition = definitions.RequireActor(DaggerfallEncounterActors.ActorFor(mobile));
-            bool human = definition.Kind == DaggerfallActorKinds.EnemyClass;
+            bool human = definition.Capabilities.Scaling == ActorScalingMode.CareerLeveled
+                || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.EnemyClass);
             bool female = human && Draw(key + "/gender", 0, 99) >= 55;
             string display;
             if (human)

@@ -158,12 +158,14 @@ internal static partial class DaggerfallBaseContent
             Dictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots = ReadEquipmentSlots(root, diagnostics);
             Dictionary<string, int> armorValues = ReadIntegerMap(root, "armorValuesByMaterial", diagnostics);
             Dictionary<string, DaggerfallLootTableDefinition> lootTables = ReadLootTables(root, diagnostics);
-            Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors = ReadActors(root, vocabulary, actions, items, diagnostics);
-            List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, diagnostics);
-            DaggerfallMobileCatalogSet mobiles = ReadMobileCatalog(root, actors, diagnostics);
-            DaggerfallEncounterActors.AddMissing(actors, catalogs, mobiles, vocabulary);
-            DaggerfallEncounterSet encounters = ReadEncounters(root, catalogs, mobiles, diagnostics);
+            DaggerfallCreatureFactionSet creatureFactions = root.TryGetProperty("creatureFactions", out JsonElement creatureFactionsEl)
+                ? DaggerfallCreatureFactionSet.Read(creatureFactionsEl, diagnostics)
+                : DaggerfallCreatureFactionSet.ClassicDefault;
+            (DaggerfallActorCatalog actorCatalog, Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, DaggerfallMobileCatalogSet mobiles) =
+                ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, diagnostics);
+            List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
+            DaggerfallEncounterSet encounters = ReadEncounters(root, actorCatalog, mobiles, diagnostics);
             ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, itemTemplatesCatalog, diagnostics);
@@ -195,12 +197,9 @@ internal static partial class DaggerfallBaseContent
                 || enemyRanged.MinimumDistance >= rangedAction.Reach)
                 diagnostics.Add("Enemy ranged setup requires an admitted bow, fungible arrows, positive quiver count and valid range band.");
             diagnostics.ThrowIfAny();
-            DaggerfallCreatureFactionSet creatureFactions = root.TryGetProperty("creatureFactions", out JsonElement creatureFactionsEl)
-                ? DaggerfallCreatureFactionSet.Read(creatureFactionsEl, diagnostics)
-                : DaggerfallCreatureFactionSet.ClassicDefault;
-            diagnostics.ThrowIfAny();
             return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, DaggerfallQuestSourceSet.None, cinematics, encounters)
             {
+                ActorCatalog = actorCatalog,
                 CreatureFactions = creatureFactions,
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,
@@ -301,7 +300,7 @@ internal static partial class DaggerfallBaseContent
         }
     }
 
-    private static DaggerfallEncounterSet ReadEncounters(JsonElement root, DaggerfallCatalogSet catalogs, DaggerfallMobileCatalogSet mobiles, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallEncounterSet ReadEncounters(JsonElement root, DaggerfallActorCatalog actorCatalog, DaggerfallMobileCatalogSet mobiles, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("encounters", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
@@ -309,6 +308,7 @@ internal static partial class DaggerfallBaseContent
             return new DaggerfallEncounterSet([]);
         }
         List<IReadOnlyList<int>> tables = [];
+        List<IReadOnlyList<string>> spawnerTables = [];
         if (!section.TryGetProperty("tables", out JsonElement sourceTables) || sourceTables.ValueKind != JsonValueKind.Array)
         {
             diagnostics.Add("Random encounter tables must be an array.");
@@ -316,14 +316,47 @@ internal static partial class DaggerfallBaseContent
         }
         foreach (JsonElement value in sourceTables.EnumerateArray())
         {
-            int[] table = value.ValueKind == JsonValueKind.Array
-                ? value.EnumerateArray().Select(entry => entry.ValueKind == JsonValueKind.Number && entry.TryGetInt32(out int mobile) ? mobile : -1).ToArray()
-                : [];
-            if (table.Length != 20 || table.Any(mobile => !mobiles.Mobiles.ContainsKey(mobile))) diagnostics.Add("Every random encounter table must carry twenty published mobile ids.");
-            tables.Add(System.Array.AsReadOnly(table));
+            List<int> mobileRow = [];
+            List<string> spawnerRow = [];
+            bool valid = value.ValueKind == JsonValueKind.Array;
+            if (valid)
+            {
+                foreach (JsonElement entry in value.EnumerateArray())
+                {
+                    if (entry.ValueKind == JsonValueKind.String)
+                    {
+                        string spawnerId = entry.GetString() ?? "";
+                        if (!actorCatalog.Specs.TryGetValue(spawnerId, out DaggerfallActorSpawnerSpec? spec)
+                            || !spec.Published
+                            || spec.ClassicBinding is null)
+                        {
+                            diagnostics.Add($"Encounter table names unknown or unpublished spawner '{spawnerId}'.");
+                            valid = false;
+                            break;
+                        }
+                        spawnerRow.Add(spec.Id);
+                        mobileRow.Add(spec.ClassicBinding.MobileId);
+                    }
+                    else if (entry.ValueKind == JsonValueKind.Number && entry.TryGetInt32(out int mobileId)
+                        && mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile))
+                    {
+                        mobileRow.Add(mobileId);
+                        spawnerRow.Add(DaggerfallEncounterActors.ActorFor(mobile).Value);
+                    }
+                    else
+                    {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+            if (!valid || mobileRow.Count != 20)
+                diagnostics.Add("Every random encounter table must carry twenty published encounter spawners.");
+            tables.Add(System.Array.AsReadOnly(mobileRow.ToArray()));
+            spawnerTables.Add(System.Array.AsReadOnly(spawnerRow.ToArray()));
         }
         if (tables.Count != 45) diagnostics.Add($"Random encounter corpus must carry forty-five tables, found {tables.Count}.");
-        return new DaggerfallEncounterSet(System.Array.AsReadOnly(tables.ToArray()));
+        return new DaggerfallEncounterSet(System.Array.AsReadOnly(tables.ToArray()), System.Array.AsReadOnly(spawnerTables.ToArray()));
     }
 
     /// <summary>
@@ -1038,32 +1071,6 @@ internal static partial class DaggerfallBaseContent
         }
     }
 
-    private static Dictionary<DaggerfallActorId, DaggerfallActorDefinition> ReadActors(JsonElement root, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, DaggerfallContentDiagnostics diagnostics)
-    {
-        Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors = [];
-        foreach (JsonElement value in Array(root, "actors", diagnostics))
-        {
-            JsonElement actor = Object(value, "actor", diagnostics);
-            DaggerfallActorId id = new(Text(actor, "id", diagnostics));
-            DaggerfallStatBases stats = ReadStats(actor, vocabulary, diagnostics);
-            DaggerfallVitalRange health = ReadRange(Object(Property(actor, "health", diagnostics), "actor.health", diagnostics), "actor health", diagnostics);
-            DaggerfallRewardPolicy rewards = new(OptionalInteger(actor, "xpReward", diagnostics) ?? 0);
-            IReadOnlyList<DaggerfallAttackRange> attacks = ReadAttackRanges(actor, diagnostics);
-            string? actionId = OptionalText(actor, "action", diagnostics);
-            if (!ValidId(id.Value)) diagnostics.Add($"Actor id '{id.Value}' is invalid.");
-            int armor = Integer(actor, "armor", diagnostics);
-            int? mobileId = OptionalInteger(actor, "mobileId", diagnostics);
-            if (armor is < -MaximumAuthoredArmor or > MaximumAuthoredArmor) diagnostics.Add($"Actor '{id.Value}' armor is outside the supported range.");
-            if (mobileId is < 0 or > 100_000) diagnostics.Add($"Actor '{id.Value}' mobileId is outside the supported range.");
-            if (actionId is not null && !actions.ContainsKey(actionId)) diagnostics.Add($"Actor '{id.Value}' refers to missing action '{actionId}'.");
-            DaggerfallActorPresentationDefinition presentation = ReadActorPresentation(actor, id, diagnostics);
-            DaggerfallActorDefinition definition = new(id, Text(actor, "kind", diagnostics), stats, health, new(DaggerfallMechanicsIds.Health, id.Value == "player" ? DaggerfallMechanicsIds.Stamina : null), rewards, armor, mobileId, OptionalInteger(actor, "hitPointsPerLevel", diagnostics), attacks, OptionalText(actor, "team", diagnostics), OptionalText(actor, "minMetalToHit", diagnostics), OptionalText(actor, "lootTableKey", diagnostics), OptionalInteger(actor, "level", diagnostics), OptionalInteger(actor, "weight", diagnostics), actionId, ReadLoadout(actor, items, diagnostics), presentation, OptionalText(actor, "race", diagnostics), OptionalText(actor, "career", diagnostics));
-            if (!actors.TryAdd(id, definition)) diagnostics.Add($"Duplicate actor definition '{id.Value}'.");
-        }
-        if (actors.Count == 0) diagnostics.Add("Base payload must define at least one actor.");
-        return actors;
-    }
-
     private static DaggerfallActorPresentationDefinition ReadActorPresentation(JsonElement actor, DaggerfallActorId actorId, DaggerfallContentDiagnostics diagnostics)
     {
         if (!actor.TryGetProperty("presentation", out JsonElement value) || value.ValueKind == JsonValueKind.Null) return DaggerfallActorPresentationDefinition.None;
@@ -1366,130 +1373,6 @@ internal static partial class DaggerfallBaseContent
         if (result.ValueKind == JsonValueKind.String) return result.GetString() ?? string.Empty;
         diagnostics.Add($"'{property}' must be a string.");
         return string.Empty;
-    }
-
-    /// <summary>
-    /// Reads the published mobile catalog and joins it to the authored actors. Each imported record states the
-    /// donor's parameters and the identity its donor name gives it; which authored actor carries it, and so its
-    /// disposition, is joined here rather than by the import, so an authored actor edit leaves the imported data
-    /// current. A consumer resolves a mobile's behaviour, damage and health without opening the donor's table.
-    /// </summary>
-    private static DaggerfallMobileCatalogSet ReadMobileCatalog(
-        JsonElement root,
-        IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors,
-        DaggerfallContentDiagnostics diagnostics)
-    {
-        if (!root.TryGetProperty("mobiles", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
-        {
-            // The payload must publish the catalog: every published actor's parameters would resolve to
-            // nothing without it. The diagnostic is what a caller sees - reading aborts on it - so the
-            // return below is never observed.
-            diagnostics.Add("Base payload publishes no mobile catalog section; donor mobile parameters resolve to nothing.");
-            return new DaggerfallMobileCatalogSet(
-                new Dictionary<int, DaggerfallMobileDefinition>(),
-                new Dictionary<string, DaggerfallMobileDefinition>(StringComparer.Ordinal));
-        }
-
-        Dictionary<int, DaggerfallMobileDefinition> mobiles = [];
-        Dictionary<string, DaggerfallMobileDefinition> byActor = new(StringComparer.Ordinal);
-        JsonElement[] records = [.. Array(section, "mobiles", diagnostics)];
-        // The donor names some mobiles more than once; an authored actor keeps each addressable by numbering
-        // it after its donor id, and the plain identity is the entry it repeats.
-        Dictionary<string, int> identityCounts = records.Select(mobile => OptionalText(mobile, "identity"))
-            .GroupBy(identity => identity, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-        foreach (JsonElement mobile in records)
-        {
-            int donorId = Integer(mobile, "donorId", diagnostics);
-            string identity = OptionalText(mobile, "identity");
-            string numbered = $"{identity}-{donorId.ToString(CultureInfo.InvariantCulture)}";
-            string? actor = actors.ContainsKey(new DaggerfallActorId(numbered)) ? numbered
-                : actors.ContainsKey(new DaggerfallActorId(identity)) ? identity : null;
-            string disposition = actor is not null ? (actor == numbered && identityCounts[identity] > 1 ? "published-variant" : "published")
-                : donorId >= DaggerfallEncounterActors.FirstClassMobile ? "human-mobile" : "unpublished";
-            JsonElement corpse = Object(Property(mobile, "corpse", diagnostics), "corpse", diagnostics);
-            JsonElement sounds = Object(Property(mobile, "sounds", diagnostics), "sounds", diagnostics);
-            JsonElement damage = Object(Property(mobile, "damage", diagnostics), "damage", diagnostics);
-            JsonElement health = Object(Property(mobile, "health", diagnostics), "health", diagnostics);
-
-            DaggerfallMobileDefinition definition = new(
-                donorId,
-                OptionalText(mobile, "donorName"),
-                identity,
-                mobile.TryGetProperty("castsMagic", out JsonElement castsMagic) && castsMagic.ValueKind == JsonValueKind.True,
-                mobile.TryGetProperty("canOpenDoors", out JsonElement canOpenDoors) && canOpenDoors.ValueKind == JsonValueKind.True,
-                Boolean(mobile, "seesThroughInvisibility", diagnostics),
-                actor,
-                disposition,
-                OptionalText(mobile, "behaviour"),
-                OptionalText(mobile, "affinity"),
-                Integer(mobile, "maleTexture", diagnostics),
-                Integer(mobile, "femaleTexture", diagnostics),
-                Integer(corpse, "archive", diagnostics),
-                Integer(corpse, "record", diagnostics),
-                Boolean(mobile, "hasIdle", diagnostics),
-                Boolean(mobile, "hasRangedAttack1", diagnostics),
-                Boolean(mobile, "hasRangedAttack2", diagnostics),
-                OptionalText(sounds, "move"),
-                OptionalText(sounds, "bark"),
-                OptionalText(sounds, "attack"),
-                mobile.TryGetProperty("lootTableKey", out JsonElement lootTableKey) && lootTableKey.ValueKind == JsonValueKind.String ? lootTableKey.GetString() : null,
-                OptionalText(mobile, "minMetalToHit"),
-                Integer(damage, "minimum", diagnostics),
-                Integer(damage, "maximum", diagnostics),
-                Integer(health, "minimum", diagnostics),
-                Integer(health, "maximum", diagnostics),
-                Integer(mobile, "level", diagnostics),
-                Integer(mobile, "armorValue", diagnostics),
-                Boolean(mobile, "parrySounds", diagnostics),
-                Integer(mobile, "mapChance", diagnostics),
-                Integer(mobile, "weight", diagnostics),
-                OptionalText(mobile, "team"),
-                FlagByte(mobile, "attackModifierFlags", diagnostics))
-            {
-                SoulPoints = Integer(mobile, "soulPoints", diagnostics),
-                NoShadow = Boolean(mobile, "noShadow", diagnostics),
-                PrefersRanged = Boolean(mobile, "prefersRanged", diagnostics),
-                GlowColor = mobile.TryGetProperty("glowColor", out JsonElement glow) && glow.ValueKind != JsonValueKind.Null
-                    ? new System.Numerics.Vector3(Number(glow, "red", diagnostics), Number(glow, "green", diagnostics), Number(glow, "blue", diagnostics)) : null,
-                ResistanceFlags = FlagByte(mobile, "resistanceFlags", diagnostics),
-                ImmunityFlags = FlagByte(mobile, "immunityFlags", diagnostics),
-                LowToleranceFlags = FlagByte(mobile, "lowToleranceFlags", diagnostics),
-                CriticalWeaknessFlags = FlagByte(mobile, "criticalWeaknessFlags", diagnostics),
-                Tactic = mobile.TryGetProperty("tactic", out JsonElement tactic) ? tactic.ValueKind == JsonValueKind.String ? tactic.GetString()! : "" : DaggerfallMobileDefinition.LegacyTactic,
-                Tendencies = mobile.TryGetProperty("tendencies", out JsonElement tendencies)
-                    ? new(OptionalNumber(tendencies, "courage", diagnostics) ?? double.NaN, OptionalNumber(tendencies, "discipline", diagnostics) ?? double.NaN) : null,
-            };
-
-            if (definition.Tendencies is { IsValid: false })
-                diagnostics.Add($"Published mobile {donorId} needs its tendencies' courage and discipline between 0 and 1.");
-            if (string.IsNullOrWhiteSpace(definition.Tactic))
-                diagnostics.Add($"Published mobile {donorId} names a blank or non-text tactic; leave the field out to fight with '{DaggerfallMobileDefinition.LegacyTactic}'.");
-            if (definition.SoulPoints < 0 || definition.GlowColor is { } tint && (tint.X < 0 || tint.Y < 0 || tint.Z < 0))
-                diagnostics.Add($"Published mobile {donorId} requires nonnegative soul points and glow channels.");
-            // A donor id identifies one mobile; two records claiming it would make a lookup ambiguous.
-            if (!mobiles.TryAdd(donorId, definition))
-            {
-                diagnostics.Add($"Published mobile catalog names donor id {donorId} twice ('{definition.DonorName}' and '{mobiles[donorId].DonorName}'), so a consumer cannot resolve one record for it.");
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(identity))
-            {
-                diagnostics.Add($"Published mobile {donorId} ('{definition.DonorName}') carries no identity, so nothing links it to an actor.");
-            }
-
-            if (actor is not null && !byActor.TryAdd(actor, definition))
-            {
-                diagnostics.Add($"Published mobile catalog names actor '{actor}' twice, so a consumer cannot resolve one mobile for it.");
-            }
-        }
-
-        if (mobiles.Count == 0)
-        {
-            diagnostics.Add("The published mobile catalog carries no mobile, so nothing resolves through it.");
-        }
-
-        return new DaggerfallMobileCatalogSet(mobiles, byActor);
     }
 
     /// <summary>

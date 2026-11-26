@@ -266,7 +266,8 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
 
         DaggerfallMonsterHit[] slots = [];
         Action<DamageEvent> roll;
-        if (attacker.Definition.Kind == DaggerfallActorKinds.Monster && weapon.Skill == DaggerfallMechanicsIds.HandToHand.Value)
+        if ((attacker.Definition.Capabilities.UsesNaturalArmor || (attacker.Definition.TemplateId is null && attacker.Definition.Kind == DaggerfallActorKinds.Monster))
+            && weapon.Skill == DaggerfallMechanicsIds.HandToHand.Value)
         {
             (int total, slots) = MonsterSlots(key, attacker, target, enemy);
             roll = value => value.Damage = Math.Max(0, total);

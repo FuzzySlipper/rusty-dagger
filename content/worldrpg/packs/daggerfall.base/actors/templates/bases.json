@@ -1,0 +1,208 @@
+{
+  "templates": [
+    {
+      "id": "actor-base",
+      "attributes": {
+        "strength": 50,
+        "intelligence": 50,
+        "willpower": 50,
+        "agility": 50,
+        "endurance": 50,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {},
+      "health": {
+        "minimum": 10,
+        "maximum": 20
+      },
+      "armor": 0,
+      "hitPointsPerLevel": null,
+      "level": 1,
+      "weight": 0,
+      "xpReward": 0,
+      "attacks": [],
+      "action": null,
+      "loadout": [],
+      "minMetalToHit": null,
+      "lootTableKey": null,
+      "careerRef": null,
+      "tactic": "legacy",
+      "tendencies": null,
+      "scaling": "fixed",
+      "gearPolicy": "fixed-loadout",
+      "fixedEquipmentVariant": null,
+      "bodyWeightMode": "fixed",
+      "usesNaturalArmor": false,
+      "takesExtraBluntDamage": false,
+      "isPlayer": false,
+      "isCombatEncounter": false,
+      "cityWatchArrest": false,
+      "movement": "ground",
+      "canOpenDoors": false,
+      "seesThroughInvisibility": false,
+      "castsMagic": false,
+      "prefersRanged": false,
+      "hasRangedAttack1": false,
+      "hasRangedAttack2": false,
+      "attackModifierFlags": 0,
+      "resistanceFlags": 0,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0,
+      "enemyGroup": "none",
+      "languageSkill": null,
+      "allowedGenders": [
+        "male",
+        "female"
+      ],
+      "fixedRace": null,
+      "traits": []
+    },
+    {
+      "id": "creature-base",
+      "extends": "actor-base",
+      "action": "monster-strike",
+      "scaling": "level-scaled-skills",
+      "usesNaturalArmor": true,
+      "isCombatEncounter": true
+    },
+    {
+      "id": "beast",
+      "extends": "creature-base",
+      "enemyGroup": "animals",
+      "traits": [
+        "animals"
+      ]
+    },
+    {
+      "id": "humanoid-monster",
+      "extends": "creature-base",
+      "canOpenDoors": true,
+      "enemyGroup": "humanoid",
+      "traits": [
+        "humanoid"
+      ]
+    },
+    {
+      "id": "aquatic-creature",
+      "extends": "creature-base",
+      "movement": "aquatic",
+      "enemyGroup": "animals",
+      "traits": [
+        "animals"
+      ]
+    },
+    {
+      "id": "undead",
+      "extends": "creature-base",
+      "canOpenDoors": true,
+      "enemyGroup": "undead",
+      "allowedGenders": [
+        "neutral"
+      ],
+      "traits": [
+        "undead"
+      ]
+    },
+    {
+      "id": "daedra",
+      "extends": "creature-base",
+      "canOpenDoors": true,
+      "enemyGroup": "daedra",
+      "languageSkill": "daedric",
+      "traits": [
+        "daedra"
+      ]
+    },
+    {
+      "id": "golem",
+      "extends": "creature-base",
+      "canOpenDoors": true,
+      "allowedGenders": [
+        "neutral"
+      ],
+      "traits": [
+        "golem"
+      ]
+    },
+    {
+      "id": "humanoid",
+      "extends": "actor-base",
+      "canOpenDoors": true,
+      "bodyWeightMode": "gendered-humanoid",
+      "enemyGroup": "humanoid",
+      "traits": [
+        "humanoid"
+      ]
+    },
+    {
+      "id": "combat-class",
+      "extends": "humanoid",
+      "action": "enemy-class-equipped-melee",
+      "level": null,
+      "weight": null,
+      "scaling": "career-leveled",
+      "gearPolicy": "generated-class-gear",
+      "isCombatEncounter": true,
+      "hasRangedAttack1": true,
+      "languageSkill": "etiquette"
+    },
+    {
+      "id": "player",
+      "extends": "humanoid",
+      "attributes": {
+        "strength": 50,
+        "endurance": 40,
+        "intelligence": 50,
+        "willpower": 50,
+        "agility": 50,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50,
+        "reflexes": 2
+      },
+      "skills": {
+        "long-blade": 60,
+        "hand-to-hand": 40,
+        "medical": 30,
+        "backstabbing": 30
+      },
+      "health": {
+        "minimum": 85,
+        "maximum": 85
+      },
+      "hitPointsPerLevel": 8,
+      "level": null,
+      "weight": null,
+      "action": "melee-attack",
+      "loadout": [
+        {
+          "item": "iron-longsword",
+          "entityId": 1001,
+          "equipSlot": "right-hand"
+        },
+        {
+          "item": "iron-dagger",
+          "entityId": 1002
+        },
+        {
+          "item": "iron-cuirass",
+          "entityId": 1003,
+          "equipSlot": "chest-armor"
+        },
+        {
+          "item": "gold-piece",
+          "quantity": 25
+        }
+      ],
+      "careerRef": "class00",
+      "isPlayer": true,
+      "enemyGroup": "none",
+      "traits": [
+        "humanoid"
+      ]
+    }
+  ]
+}

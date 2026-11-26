@@ -1,0 +1,225 @@
+{
+  "templates": [
+    {
+      "id": "mage",
+      "extends": "combat-class",
+      "careerRef": "class00",
+      "lootTableKey": "U",
+      "castsMagic": true
+    },
+    {
+      "id": "spellsword",
+      "extends": "combat-class",
+      "careerRef": "class01",
+      "lootTableKey": "P",
+      "castsMagic": true
+    },
+    {
+      "id": "battlemage",
+      "extends": "combat-class",
+      "careerRef": "class02",
+      "lootTableKey": "U",
+      "tactic": "intelligent",
+      "tendencies": {
+        "courage": 0.6,
+        "discipline": 0.8
+      },
+      "castsMagic": true,
+      "hasRangedAttack2": true
+    },
+    {
+      "id": "sorcerer",
+      "extends": "combat-class",
+      "careerRef": "class03",
+      "lootTableKey": "U"
+    },
+    {
+      "id": "healer",
+      "extends": "combat-class",
+      "careerRef": "class04",
+      "lootTableKey": "U",
+      "castsMagic": true
+    },
+    {
+      "id": "nightblade",
+      "extends": "combat-class",
+      "careerRef": "class05",
+      "lootTableKey": "U",
+      "castsMagic": true,
+      "hasRangedAttack2": true,
+      "languageSkill": "streetwise"
+    },
+    {
+      "id": "bard",
+      "extends": "combat-class",
+      "careerRef": "class06",
+      "lootTableKey": "O"
+    },
+    {
+      "id": "burglar",
+      "extends": "combat-class",
+      "careerRef": "class07",
+      "lootTableKey": "O",
+      "languageSkill": "streetwise"
+    },
+    {
+      "id": "rogue",
+      "extends": "combat-class",
+      "careerRef": "class08",
+      "lootTableKey": "O",
+      "languageSkill": "streetwise"
+    },
+    {
+      "id": "acrobat",
+      "extends": "combat-class",
+      "careerRef": "class09",
+      "lootTableKey": "O",
+      "languageSkill": "streetwise"
+    },
+    {
+      "id": "thief",
+      "extends": "combat-class",
+      "careerRef": "class10",
+      "skills": {
+        "medical": null,
+        "etiquette": null,
+        "streetwise": 35,
+        "jumping": 35,
+        "orcish": null,
+        "harpy": null,
+        "giantish": null,
+        "dragonish": null,
+        "nymph": null,
+        "daedric": null,
+        "spriggan": null,
+        "centaurian": null,
+        "impish": null,
+        "lockpicking": 35,
+        "mercantile": 35,
+        "pickpocket": 35,
+        "stealth": 35,
+        "swimming": null,
+        "climbing": 35,
+        "backstabbing": 35,
+        "dodging": 35,
+        "running": 35,
+        "destruction": null,
+        "restoration": null,
+        "illusion": null,
+        "alteration": null,
+        "thaumaturgy": null,
+        "mysticism": null,
+        "short-blade": 35,
+        "long-blade": null,
+        "hand-to-hand": null,
+        "axe": null,
+        "blunt-weapon": null,
+        "archery": null,
+        "critical-strike": 35
+      },
+      "action": "thief-strike",
+      "xpReward": 50,
+      "lootTableKey": "T",
+      "languageSkill": "streetwise"
+    },
+    {
+      "id": "assassin",
+      "extends": "combat-class",
+      "careerRef": "class11",
+      "lootTableKey": "O",
+      "languageSkill": "streetwise"
+    },
+    {
+      "id": "monk",
+      "extends": "combat-class",
+      "careerRef": "class12",
+      "lootTableKey": "T"
+    },
+    {
+      "id": "archer",
+      "extends": "combat-class",
+      "careerRef": "class13",
+      "skills": {
+        "medical": null,
+        "etiquette": null,
+        "streetwise": null,
+        "jumping": 35,
+        "orcish": null,
+        "harpy": null,
+        "giantish": null,
+        "dragonish": null,
+        "nymph": null,
+        "daedric": null,
+        "spriggan": null,
+        "centaurian": null,
+        "impish": null,
+        "lockpicking": null,
+        "mercantile": null,
+        "pickpocket": null,
+        "stealth": null,
+        "swimming": 35,
+        "climbing": 35,
+        "backstabbing": null,
+        "dodging": 35,
+        "running": 35,
+        "destruction": null,
+        "restoration": null,
+        "illusion": null,
+        "alteration": null,
+        "thaumaturgy": null,
+        "mysticism": null,
+        "short-blade": 35,
+        "long-blade": 35,
+        "hand-to-hand": 35,
+        "axe": 35,
+        "blunt-weapon": 35,
+        "archery": 35,
+        "critical-strike": 35
+      },
+      "health": {
+        "minimum": 11,
+        "maximum": 30
+      },
+      "action": "archer-shot",
+      "xpReward": 50,
+      "lootTableKey": "C",
+      "prefersRanged": true
+    },
+    {
+      "id": "ranger",
+      "extends": "combat-class",
+      "careerRef": "class14",
+      "lootTableKey": "C",
+      "tactic": "intelligent",
+      "tendencies": {
+        "courage": 0.4,
+        "discipline": 0.3
+      }
+    },
+    {
+      "id": "barbarian",
+      "extends": "combat-class",
+      "careerRef": "class15",
+      "lootTableKey": "T"
+    },
+    {
+      "id": "warrior",
+      "extends": "combat-class",
+      "careerRef": "class16",
+      "lootTableKey": "T"
+    },
+    {
+      "id": "knight",
+      "extends": "combat-class",
+      "careerRef": "class17",
+      "lootTableKey": "T"
+    },
+    {
+      "id": "city-watch",
+      "extends": "combat-class",
+      "careerRef": "class18",
+      "hasRangedAttack1": false,
+      "cityWatchArrest": true
+    }
+  ]
+}

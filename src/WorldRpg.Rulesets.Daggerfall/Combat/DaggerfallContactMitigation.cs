@@ -89,8 +89,8 @@ internal sealed class DaggerfallContactMitigation(DaggerfallContactInputs sessio
         // donor's value falls as armor strengthens, so a negative shift absorbs more.
         if (harm.TargetId == DaggerfallActorIdentity.PlayerEntityId)
             points = Math.Max(0d, points - session.PlayerArmorValueModifier() * tuning.AbsorptionPerArmorValueShift);
-        // A monster's natural armour class is lower the tougher its hide; the baseline is an unarmoured beast.
-        if (harm.Target.Kind == DaggerfallActorKinds.Monster)
+        // A creature's natural armour class is lower the tougher its hide; the baseline is an unarmoured beast.
+        if (harm.Target.Capabilities.UsesNaturalArmor || (harm.Target.TemplateId is null && harm.Target.Kind == DaggerfallActorKinds.Monster))
             points += Math.Max(0d, tuning.MonsterArmorBaseline - harm.Target.Armor) * tuning.MonsterAbsorptionPerPoint;
         return (int)Math.Round(points * tuning.AbsorptionMultiplier(channel), MidpointRounding.AwayFromZero);
     }

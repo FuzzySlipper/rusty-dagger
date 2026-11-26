@@ -125,6 +125,11 @@ internal sealed record DaggerfallLocationSet(
 
 internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, string? Race = null, string? Career = null)
 {
+    internal string? TemplateId { get; init; }
+    internal string? SpawnerId { get; init; }
+    internal DaggerfallActorCapabilities Capabilities { get; init; } = DaggerfallActorCapabilities.Default;
+    internal ActorHarmPolicyKind DefaultHarm { get; init; } = ActorHarmPolicyKind.Combatant;
+    internal ActorInteractionPolicyKind DefaultInteraction { get; init; } = ActorInteractionPolicyKind.None;
 }
 
 /// <summary>
@@ -169,8 +174,10 @@ internal sealed record DaggerfallHudResourceDefinition(string Id, string Label, 
 /// <summary>Action-owned damage is allowed only for a fixed action without a donor actor range (the thief).</summary>
 internal sealed record DaggerfallActionDefinition(string Id, IReadOnlyList<string> Tags, string Interpretation, string Skill, int? AttackRangeIndex, int? MinimumDamage, int? MaximumDamage, int? StaminaCost, double? Reach, double? CooldownSeconds, int DamageBonus = 0);
 internal sealed record DaggerfallLootTableDefinition(string Key, int MinimumGold, int MaximumGold, IReadOnlyDictionary<string, int> Categories);
-/// <summary>The complete ordered classic encounter tables.</summary>
-internal sealed record DaggerfallEncounterSet(IReadOnlyList<IReadOnlyList<int>> Tables);
+/// <summary>The complete ordered classic encounter tables (spawner spec IDs plus resolved classic mobile IDs).</summary>
+internal sealed record DaggerfallEncounterSet(
+    IReadOnlyList<IReadOnlyList<int>> Tables,
+    IReadOnlyList<IReadOnlyList<string>>? SpawnerTables = null);
 internal sealed record DaggerfallVocabulary(IReadOnlyList<DaggerfallStatId> Attributes, IReadOnlyList<DaggerfallStatId> Skills, IReadOnlyList<DaggerfallTrackId> Tracks, IReadOnlyList<string> ArmorParts, IReadOnlyList<DaggerfallStatId> Progression)
 {
     internal IReadOnlyList<DaggerfallStatId> ActorStats { get; } = Array.AsReadOnly(Attributes.Concat(Skills).ToArray());
@@ -197,6 +204,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
+
+    /// <summary>The resolved actor templates and spawner specs loaded from <c>daggerfall.base/actors/</c>.</summary>
+    internal DaggerfallActorCatalog ActorCatalog { get; init; } = DaggerfallActorCatalog.Empty;
 
     internal DaggerfallEnemyRangedDefinition EnemyRanged { get; init; } = null!;
 

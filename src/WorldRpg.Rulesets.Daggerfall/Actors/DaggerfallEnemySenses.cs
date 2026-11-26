@@ -32,7 +32,9 @@ internal sealed class DaggerfallEnemySenses(ActorsState actors, PlayerControlSta
     /// <summary>Whether an actor fights the player now: combatant harm policy, hostile faction team (with quest overrides), and not pacified.</summary>
     internal bool IsHostile(long actorId, DaggerfallActorDefinition definition)
     {
-        if (definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)) return false;
+        if (!definition.Capabilities.IsCombatEncounter
+            && (definition.TemplateId is not null || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)))
+            return false;
         bool combatant = !actors.TryGet(actorId, out ActorState? actor)
             || !actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm)
             || harm.IsCombatant;
@@ -115,7 +117,7 @@ internal sealed class DaggerfallEnemySenses(ActorsState actors, PlayerControlSta
             TargetInvisible: perceptionEffects.Invisible,
             TargetBlending: perceptionEffects.Blending,
             TargetShade: perceptionEffects.Shade,
-            EnemySeesThroughInvisibility: mobile?.SeesThroughInvisibility == true,
+            EnemySeesThroughInvisibility: definition.Capabilities.SeesThroughInvisibility || mobile?.SeesThroughInvisibility == true,
             TargetPacified: targetPacified,
             EnemyHostile: IsHostile(actorId, definition),
             TargetWeaponSheathed: !weaponDrawn(),
@@ -142,7 +144,8 @@ internal sealed class DaggerfallEnemySenses(ActorsState actors, PlayerControlSta
         {
             if (actor.IsDefeated || isPacified(actor.DurableId)
                 || !definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
-                || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
+                || (!definition.Capabilities.IsCombatEncounter
+                    && (definition.TemplateId is not null || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)))
                 || foeTeam(actor.DurableId) == "player-ally") continue;
             bool inSight = lastPerception().TryGetValue(actor.DurableId, out var perception)
                 && perception.InSight;

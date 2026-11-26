@@ -160,12 +160,12 @@ public sealed class DaggerfallCatalogContentTests
     /// has to name the action so the author knows which one to fix.
     /// </remarks>
     [Theory]
-    [InlineData("\"attackRangeIndex\": 0,\n      \"reach\": 2.0", "\"attackRangeIndex\": 0,\n      \"reach\": 50.0", "beyond any melee distance")]
+    [InlineData("\"attackRangeIndex\": 0,\n    \"reach\": 2.0", "\"attackRangeIndex\": 0,\n    \"reach\": 50.0", "beyond any melee distance")]
     [InlineData("\"reach\": 10.0,", "\"reach\": 100.0,", "beyond the admitted classic ranged maximum")]
     // An action with no reach at all is the case the combat module's own refusal guards, and the one an
     // author is most likely to produce by omission. Validation owns it: the swing a missing reach would
     // admit is refused here rather than at the first attack.
-    [InlineData("\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0,\n      \"reach\": 2.0", "\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0", "must declare the positive reach")]
+    [InlineData("\"cooldownSeconds\": 1.5,\n    \"attackRangeIndex\": 0,\n    \"reach\": 2.0", "\"cooldownSeconds\": 1.5,\n    \"attackRangeIndex\": 0", "must declare the positive reach")]
     public void RejectsAnActionThatReachesFurtherThanItsKindOfAttackResolves(string before, string after, string expected)
     {
         Assert.True(TestPayload.Contains(before), "The fixture's text is not in the payload.");

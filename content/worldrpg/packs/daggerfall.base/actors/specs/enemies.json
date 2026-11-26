@@ -1,0 +1,1204 @@
+{
+  "specs": [
+    {
+      "id": "player",
+      "family": "player",
+      "template": "player",
+      "published": true,
+      "displayName": "Player",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "naming": "designated",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "player-ally"
+    },
+    {
+      "id": "encounter-mage",
+      "family": "enemy",
+      "template": "mage",
+      "published": true,
+      "displayName": "Mage",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 486,
+        "femaleTexture": 485,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 128,
+        "donorName": "Mage",
+        "identity": "mage",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 3,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "U"
+      }
+    },
+    {
+      "id": "encounter-spellsword",
+      "family": "enemy",
+      "template": "spellsword",
+      "published": true,
+      "displayName": "Spellsword",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 476,
+        "femaleTexture": 475,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 129,
+        "donorName": "Spellsword",
+        "identity": "spellsword",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "P"
+      }
+    },
+    {
+      "id": "encounter-battlemage",
+      "family": "enemy",
+      "template": "battlemage",
+      "published": true,
+      "displayName": "Battlemage",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 490,
+        "femaleTexture": 489,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 130,
+        "donorName": "Battlemage",
+        "identity": "battlemage",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 2,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "U"
+      }
+    },
+    {
+      "id": "encounter-sorcerer",
+      "family": "enemy",
+      "template": "sorcerer",
+      "published": true,
+      "displayName": "Sorcerer",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 478,
+        "femaleTexture": 477,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 131,
+        "donorName": "Sorcerer",
+        "identity": "sorcerer",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 3,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "U"
+      }
+    },
+    {
+      "id": "encounter-healer",
+      "family": "enemy",
+      "template": "healer",
+      "published": true,
+      "displayName": "Healer",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 486,
+        "femaleTexture": 485,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 132,
+        "donorName": "Healer",
+        "identity": "healer",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "U"
+      }
+    },
+    {
+      "id": "encounter-nightblade",
+      "family": "enemy",
+      "template": "nightblade",
+      "published": true,
+      "displayName": "Nightblade",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "criminals",
+      "appearances": {
+        "maleTexture": 490,
+        "femaleTexture": 489,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 133,
+        "donorName": "Nightblade",
+        "identity": "nightblade",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "Criminals",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "U"
+      }
+    },
+    {
+      "id": "encounter-bard",
+      "family": "enemy",
+      "template": "bard",
+      "published": true,
+      "displayName": "Bard",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 134,
+        "donorName": "Bard",
+        "identity": "bard",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 2,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "O"
+      }
+    },
+    {
+      "id": "encounter-burglar",
+      "family": "enemy",
+      "template": "burglar",
+      "published": true,
+      "displayName": "Burglar",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "criminals",
+      "appearances": {
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 135,
+        "donorName": "Burglar",
+        "identity": "burglar",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "Criminals",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "O"
+      }
+    },
+    {
+      "id": "encounter-rogue",
+      "family": "enemy",
+      "template": "rogue",
+      "published": true,
+      "displayName": "Rogue",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "criminals",
+      "appearances": {
+        "maleTexture": 480,
+        "femaleTexture": 479,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 136,
+        "donorName": "Rogue",
+        "identity": "rogue",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "Criminals",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "O"
+      }
+    },
+    {
+      "id": "encounter-acrobat",
+      "family": "enemy",
+      "template": "acrobat",
+      "published": true,
+      "displayName": "Acrobat",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 137,
+        "donorName": "Acrobat",
+        "identity": "acrobat",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "O"
+      }
+    },
+    {
+      "id": "thief",
+      "family": "enemy",
+      "template": "thief",
+      "published": true,
+      "displayName": "Thief",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "criminals",
+      "appearances": {
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 138,
+        "donorName": "Thief",
+        "identity": "thief",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 2,
+        "donorTeam": "Criminals",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "O"
+      }
+    },
+    {
+      "id": "encounter-assassin",
+      "family": "enemy",
+      "template": "assassin",
+      "published": true,
+      "displayName": "Assassin",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "criminals",
+      "appearances": {
+        "maleTexture": 480,
+        "femaleTexture": 479,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 139,
+        "donorName": "Assassin",
+        "identity": "assassin",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Criminals",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "O"
+      }
+    },
+    {
+      "id": "encounter-monk",
+      "family": "enemy",
+      "template": "monk",
+      "published": true,
+      "displayName": "Monk",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 140,
+        "donorName": "Monk",
+        "identity": "monk",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "T"
+      }
+    },
+    {
+      "id": "archer",
+      "family": "enemy",
+      "template": "archer",
+      "published": true,
+      "displayName": "Archer",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 482,
+        "femaleTexture": 481,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 141,
+        "donorName": "Archer",
+        "identity": "archer",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "C"
+      }
+    },
+    {
+      "id": "encounter-ranger",
+      "family": "enemy",
+      "template": "ranger",
+      "published": true,
+      "displayName": "Ranger",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 482,
+        "femaleTexture": 481,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 142,
+        "donorName": "Ranger",
+        "identity": "ranger",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "C"
+      }
+    },
+    {
+      "id": "encounter-barbarian",
+      "family": "enemy",
+      "template": "barbarian",
+      "published": true,
+      "displayName": "Barbarian",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "criminals",
+      "appearances": {
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 143,
+        "donorName": "Barbarian",
+        "identity": "barbarian",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Criminals",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "T"
+      }
+    },
+    {
+      "id": "encounter-warrior",
+      "family": "enemy",
+      "template": "warrior",
+      "published": true,
+      "displayName": "Warrior",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 144,
+        "donorName": "Warrior",
+        "identity": "warrior",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "T"
+      }
+    },
+    {
+      "id": "encounter-knight",
+      "family": "enemy",
+      "template": "knight",
+      "published": true,
+      "displayName": "Knight",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "knights-and-mages",
+      "appearances": {
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "EnemyHumanBark",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 145,
+        "donorName": "Knight",
+        "identity": "knight",
+        "affinity": "Human",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "KnightsAndMages",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": "T"
+      }
+    },
+    {
+      "id": "encounter-city-watch-the-haltmeister",
+      "family": "enemy",
+      "template": "city-watch",
+      "published": true,
+      "displayName": "City Watch - The Haltmeister",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": null,
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "city-watch",
+      "appearances": {
+        "maleTexture": 399,
+        "femaleTexture": 399,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHumanMove",
+        "bark": "Halt",
+        "attack": "EnemyHumanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 146,
+        "donorName": "City Watch - The Haltmeister",
+        "identity": "city-watch-the-haltmeister",
+        "affinity": "Human",
+        "behaviour": "Guard",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "CityWatch",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": null
+      }
+    }
+  ]
+}

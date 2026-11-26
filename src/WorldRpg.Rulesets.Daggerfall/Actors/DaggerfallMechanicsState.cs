@@ -24,7 +24,9 @@ internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpell
         ArgumentNullException.ThrowIfNull(definition);
         // All factory paths (authored, spawned, transformed and restored) share this skill setup.
         // Casters subsequently replace their six magic schools with the donor's fixed 80.
-        if (vocabulary is not null && definition.Kind == DaggerfallActorKinds.Monster)
+        if (vocabulary is not null
+            && (definition.Capabilities.Scaling == ActorScalingMode.LevelScaledSkills
+                || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.Monster)))
             definition = DaggerfallEncounterActors.AtLevel(definition, vocabulary, definition.Level ?? 1);
         bool caster = enemySpells?.IsCaster(definition.MobileId) == true;
         if (caster) vitals = vitals with { MagickaMaximum = DaggerfallEnemySpells.MagickaMaximum(definition.Level ?? 1) };

@@ -67,12 +67,12 @@ public sealed class DaggerfallMobileCatalogTests
         Assert.Equal(17, mobiles.HumanMobiles.Count());
         Assert.All(mobiles.HumanMobiles, mobile => Assert.Null(mobile.Actor));
 
-        // An authored actor added for a mobile nothing published reaches the catalog with no new import.
-        JsonObject payload = TestPayload.Sections("mobiles", "actors");
-        JsonObject horse = payload["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "rat")!.DeepClone().AsObject();
-        horse["id"] = "horse";
-        horse["mobileId"] = 39;
-        payload["actors"]!.AsArray().Add(horse);
+        // Publishing a previously unpublished creature spec reaches the catalog with no new import.
+        JsonObject payload = TestPayload.Sections("actorSpecsCreatures");
+        JsonObject horse = payload["actorSpecsCreatures"]!["specs"]!.AsArray().First(spec => spec!["id"]!.GetValue<string>() == "horse")!.AsObject();
+        horse["published"] = true;
+        horse["template"] = "rat";
+        horse["genders"] = new JsonArray { new JsonObject { ["gender"] = "male", ["weight"] = 1 }, new JsonObject { ["gender"] = "female", ["weight"] = 1 } };
 
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload));
 
@@ -95,77 +95,64 @@ public sealed class DaggerfallMobileCatalogTests
         Assert.All(read.Values.Where(mobile => mobile.DonorId is not (130 or 142 or 4)), mobile =>
             Assert.Equal((DaggerfallMobileDefinition.LegacyTactic, (DaggerfallTacticTendencies?)null), (mobile.Tactic, mobile.Tendencies)));
 
-        JsonObject payload = TestPayload.Sections("mobiles", "actors");
-        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tactic"] = "beast";
+        JsonObject payload = TestPayload.Sections("actorTemplateCreatures");
+        JsonObject ratTemplate = payload["actorTemplateCreatures"]!["templates"]!.AsArray().First(t => t!["id"]!.GetValue<string>() == "rat")!.AsObject();
+        ratTemplate["tactic"] = "beast";
         Assert.Equal("beast", DaggerfallBaseContent.Read(TestPayload.Splice(payload)).Mobiles.Mobiles[0].Tactic);
 
-        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tactic"] = " ";
+        ratTemplate["tactic"] = " ";
         DaggerfallContentException blank = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
-        Assert.True(blank.Diagnostics.Any(message => message.Contains("mobile 0 names a blank or non-text tactic", StringComparison.Ordinal)),
+        Assert.True(blank.Diagnostics.Any(message => message.Contains("rat", StringComparison.Ordinal) && message.Contains("tactic", StringComparison.Ordinal)),
             $"the blank tactic was not named: {string.Join(" | ", blank.Diagnostics)}");
 
-        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tactic"] = "intelligent";
-        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tendencies"] =
-            new JsonObject { ["courage"] = 1.5, ["discipline"] = .2 };
+        ratTemplate["tactic"] = "intelligent";
+        ratTemplate["tendencies"] = new JsonObject { ["courage"] = 1.5, ["discipline"] = .2 };
         DaggerfallContentException outOfRange = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
-        Assert.Contains(outOfRange.Diagnostics, message => message.Contains("mobile 0 needs its tendencies' courage and discipline between 0 and 1", StringComparison.Ordinal));
+        Assert.Contains(outOfRange.Diagnostics, message => message.Contains("tendencies", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void RefusesTwoMobilesThatJoinOneActor()
+    public void RefusesDuplicateSpecIdsAndDuplicateMobileIds()
     {
-        // Two donor records whose identities both name one authored actor would leave a consumer resolving two
-        // mobiles for it.
-        JsonObject payload = TestPayload.Sections("mobiles", "actors");
-        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 1)!["identity"] = "rat";
+        JsonObject payload = TestPayload.Sections("actorSpecsCreatures");
+        JsonObject imp = payload["actorSpecsCreatures"]!["specs"]!.AsArray().First(spec => spec!["id"]!.GetValue<string>() == "imp")!.AsObject();
+        imp["id"] = "rat";
 
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
+        DaggerfallContentException dupId = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
+        Assert.Contains(dupId.Diagnostics, message => message.Contains("Duplicate actor spawner spec 'rat'", StringComparison.Ordinal));
 
-        Assert.True(
-            failure.Diagnostics.Any(message => message.Contains("names actor 'rat' twice", StringComparison.Ordinal)),
-            $"the doubly joined actor was not named: {string.Join(" | ", failure.Diagnostics)}");
+        JsonObject dupMobile = TestPayload.Sections("actorSpecsCreatures");
+        JsonObject impMobile = dupMobile["actorSpecsCreatures"]!["specs"]!.AsArray().First(spec => spec!["id"]!.GetValue<string>() == "imp")!.AsObject();
+        impMobile["classicBinding"]!["mobileId"] = 0;
+
+        DaggerfallContentException dupMobileEx = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(dupMobile)));
+        Assert.Contains(dupMobileEx.Diagnostics, message => message.Contains("mobileId 0", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void RefusesADuplicateDonorIdAndAPayloadWithNoMobileCatalog()
+    public void RefusesAPayloadWithNoActorTemplatesOrNoSpecs()
     {
-        JsonObject payload = TestPayload.Sections("mobiles", "actors");
-        JsonObject rat = payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!.AsObject();
-        payload["mobiles"]!["mobiles"]!.AsArray().Add(rat.DeepClone());
-        DaggerfallContentException duplicate = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
-        Assert.True(
-            duplicate.Diagnostics.Any(message => message.Contains("donor id 0 twice", StringComparison.Ordinal)),
-            $"the duplicate donor id was not named: {string.Join(" | ", duplicate.Diagnostics)}");
+        JsonObject emptyTemplates = TestPayload.Sections("actorTemplateBases", "actorTemplateCreatures", "actorTemplateClasses", "actorTemplateRoles");
+        foreach (string name in new[] { "actorTemplateBases", "actorTemplateCreatures", "actorTemplateClasses", "actorTemplateRoles" })
+            emptyTemplates[name] = new JsonObject { ["templates"] = new JsonArray() };
+        DaggerfallContentException missingTemplates = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(emptyTemplates)));
+        Assert.Contains(missingTemplates.Diagnostics, message => message.Contains("no actor templates", StringComparison.Ordinal));
 
-        byte[] withoutMobiles = TestPayload.Without("mobiles");
-        Assert.Null(TestSessions.TopLevelSection(withoutMobiles, "mobiles"));
-        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(withoutMobiles));
-        Assert.True(
-            missing.Diagnostics.Any(message => message.Contains("no mobile catalog section", StringComparison.Ordinal)),
-            $"the missing catalog was not named: {string.Join(" | ", missing.Diagnostics)}");
+        JsonObject emptySpecs = TestPayload.Sections("actorSpecsCreatures", "actorSpecsEnemies");
+        emptySpecs["actorSpecsCreatures"] = new JsonObject { ["specs"] = new JsonArray() };
+        emptySpecs["actorSpecsEnemies"] = new JsonObject { ["specs"] = new JsonArray() };
+        DaggerfallContentException missingSpecs = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(emptySpecs)));
+        Assert.Contains(missingSpecs.Diagnostics, message => message.Contains("no actor spawner specs", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void RefusesAnActorWhoseMobileReferenceDangles()
+    public void RefusesASpawnerWhoseTemplateDangles()
     {
-        // An actor's mobile id is a media reference, so a reference the catalog does not carry is refused
-        // with the actor and the id named rather than leaving the actor without a source record.
-        JsonObject payload = TestPayload.Sections("mobiles", "actors");
-        JsonObject rat = payload["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "rat")!.AsObject();
-        rat["mobileId"] = 999;
+        JsonObject payload = TestPayload.Sections("actorSpecsCreatures");
+        JsonObject rat = payload["actorSpecsCreatures"]!["specs"]!.AsArray().First(spec => spec!["id"]!.GetValue<string>() == "rat")!.AsObject();
+        rat["template"] = "no-such-template";
         DaggerfallContentException dangling = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
-        Assert.True(
-            dangling.Diagnostics.Any(message => message.Contains("'rat'", StringComparison.Ordinal) && message.Contains("mobile 999", StringComparison.Ordinal) && message.Contains("does not carry", StringComparison.Ordinal)),
-            $"the dangling mobile reference was not named: {string.Join(" | ", dangling.Diagnostics)}");
-
-        // A reference that resolves to another actor would give this actor that mobile's media.
-        JsonObject swapped = TestPayload.Sections("mobiles", "actors");
-        JsonObject imp = swapped["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "imp")!.AsObject();
-        imp["mobileId"] = 0;
-        DaggerfallContentException mismatch = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(swapped)));
-        Assert.True(
-            mismatch.Diagnostics.Any(message => message.Contains("'imp'", StringComparison.Ordinal) && message.Contains("resolves to actor 'rat'", StringComparison.Ordinal)),
-            $"the mismatched mobile reference was not named: {string.Join(" | ", mismatch.Diagnostics)}");
+        Assert.Contains(dangling.Diagnostics, message => message.Contains("'rat'", StringComparison.Ordinal) && message.Contains("no-such-template", StringComparison.Ordinal));
     }
 
     private static byte[] Payload() => TestPayload.CombinedBytes;

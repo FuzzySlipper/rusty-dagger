@@ -138,6 +138,36 @@ class Catalog:
                 "url": asset_url("/media/npc/", f"{key}/manifest.json")}
 
     def mobile_game(self, row):
+        specs = []
+        for section in ("actorSpecsCreatures", "actorSpecsEnemies"):
+            specs.extend((read_base_section(self.library.base_payload, section, {}, self.cache) or {}).get("specs", []))
+        spec = next((record for record in specs if (record.get("classicBinding") or {}).get("mobileId") == row["mobileId"]), None)
+        if spec is not None:
+            binding = spec.get("classicBinding") or {}
+            templates = {}
+            for section in ("actorTemplateBases", "actorTemplateCreatures", "actorTemplateClasses", "actorTemplateRoles"):
+                for tmpl in (read_base_section(self.library.base_payload, section, {}, self.cache) or {}).get("templates", []):
+                    templates[tmpl["id"]] = tmpl
+            caps = {}
+            chain = []
+            cur = spec.get("template")
+            while cur and cur in templates and cur not in chain:
+                chain.append(cur)
+                cur = templates[cur].get("extends")
+            for tid in reversed(chain):
+                caps.update(templates[tid].get("capabilities") or {})
+            facts = {"Classic archive": f"TEXTURE.{row['sourceArchive']:03d}",
+                     "Display variant": row["variant"], "Mobile ID": row["mobileId"],
+                     "Spawner": spec["id"], "Template": spec["template"]}
+            for label, value in (("Identity", binding.get("identity")),
+                                 ("Behaviour", binding.get("behaviour")),
+                                 ("Affinity", binding.get("affinity")),
+                                 ("Team", spec.get("team") or binding.get("donorTeam")),
+                                 ("Casts magic", caps.get("castsMagic")),
+                                 ("Opens doors", caps.get("canOpenDoors"))):
+                if value is not None:
+                    facts[label] = value
+            return {"facts": facts, "record": spec}
         data = (read_base_section(self.library.base_payload, "mobiles", {}, self.cache) or {}).get("mobiles", [])
         donor = next((record for record in data if record["donorId"] == row["mobileId"]), {})
         facts = {"Classic archive": f"TEXTURE.{row['sourceArchive']:03d}",

@@ -45,7 +45,8 @@ internal sealed class DaggerfallQuestFoes(DaggerfallQuestInstances quests, Actor
     /// <summary>Removes every monster and enemy class, or makes them all hostile, as a quest commands.</summary>
     internal void CommandAllEnemies(bool clear)
     {
-        foreach (long id in actorDefinitions.Where(pair => pair.Value.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
+        foreach (long id in actorDefinitions.Where(pair => pair.Value.Capabilities.IsCombatEncounter
+                || (pair.Value.TemplateId is null && pair.Value.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))
             .Select(pair => pair.Key).ToArray())
         {
             if (clear) removeQuestActor(id);

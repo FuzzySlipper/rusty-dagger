@@ -145,12 +145,25 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
         {
             w.WriteStartObject("definition");
             w.WriteString("id", definition.Id.Value); w.WriteString("kind", definition.Kind);
+            if (definition.TemplateId is { } templateId) w.WriteString("template", templateId); else w.WriteNull("template");
+            if (definition.SpawnerId is { } spawnerId) w.WriteString("spawner", spawnerId); else w.WriteNull("spawner");
             if (definition.MobileId is { } mobile) w.WriteNumber("mobileId", mobile); else w.WriteNull("mobileId");
             if (definition.Level is { } level) w.WriteNumber("level", level); else w.WriteNull("level");
             w.WriteString("career", definition.Career); w.WriteString("action", definition.ActionId); w.WriteString("team", definition.Team);
             w.WriteEndObject();
         }
         else w.WriteNull("definition");
+        if (actor.Actor.TryGet<ActorInstanceIdentity>(out ActorInstanceIdentity? identity))
+        {
+            w.WriteStartObject("identity");
+            w.WriteString("spawner", identity.SpawnerId);
+            w.WriteString("template", identity.TemplateId);
+            w.WriteString("gender", ActorGenderFormat.Slug(identity.Gender));
+            w.WriteString("race", identity.Race);
+            w.WriteString("faction", identity.FactionId);
+            w.WriteEndObject();
+        }
+        else w.WriteNull("identity");
         Vector(w, "position", actor.Position.ToVector());
         w.WriteNumber("headingDegrees", actor.HeadingYawRadians * 180 / Math.PI);
         if (player.Position is { } standing) w.WriteNumber("distanceToPlayer", Vector3.Distance(actor.Position.ToVector(), standing.ToVector()));

@@ -75,7 +75,8 @@ internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcReg
         {
             DaggerfallQuestGuardSpawnState Result(DaggerfallQuestGuardSpawnOutcome outcome, int count = 0, double delay = 0, long[]? candidates = null) =>
                 new(activeProfile(), town.Id, delay, count, 0, candidates ?? [], outcome);
-            if (actors.All.Count(actor => !actor.IsDefeated && actorDefinitions.GetValueOrDefault(actor.DurableId)?.MobileId == 146)
+            if (actors.All.Count(actor => !actor.IsDefeated && actorDefinitions.GetValueOrDefault(actor.DurableId) is { } def
+                    && (def.Capabilities.CityWatchArrest || def.MobileId == 146))
                 > spawning.MaximumActiveGuards) return Result(DaggerfallQuestGuardSpawnOutcome.ActiveLimit);
             int count = crimes.Roll(operation, "quest-guard-count", lawTuning.MinimumGuards, lawTuning.MaximumGuards);
             if (activeProfile().Kind == DaggerfallWorldProfileKind.Interior)

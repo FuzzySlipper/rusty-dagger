@@ -1,0 +1,2625 @@
+{
+  "specs": [
+    {
+      "id": "rat",
+      "family": "creature",
+      "template": "rat",
+      "published": true,
+      "displayName": "Rat",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "rat",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "vermin",
+      "appearances": {
+        "maleTexture": 255,
+        "femaleTexture": 255,
+        "corpse": {
+          "archive": 401,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null,
+        "presentation": {
+          "preferredRestState": "ratIdle"
+        }
+      },
+      "sounds": {
+        "move": "EnemyRatMove",
+        "bark": "EnemyRatBark",
+        "attack": "EnemyRatAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 0,
+        "donorName": "Rat",
+        "identity": "rat",
+        "affinity": "Animal",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Vermin",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 1,
+          "maximum": 4
+        },
+        "donorHealth": {
+          "minimum": 9,
+          "maximum": 16
+        },
+        "donorLevel": 1,
+        "donorWeight": 2,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "imp",
+      "family": "creature",
+      "template": "imp",
+      "published": true,
+      "displayName": "Imp",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "imp",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "magic",
+      "appearances": {
+        "maleTexture": 256,
+        "femaleTexture": 256,
+        "corpse": {
+          "archive": 406,
+          "record": 5
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null,
+        "presentation": {
+          "preferredRestState": "move",
+          "effectiveFramesPerSecond": {
+            "move": 10
+          }
+        }
+      },
+      "sounds": {
+        "move": "EnemyImpMove",
+        "bark": "EnemyImpBark",
+        "attack": "EnemyImpAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 1,
+        "donorName": "Imp",
+        "identity": "imp",
+        "affinity": "Darkness",
+        "behaviour": "Flying",
+        "soulPoints": 1000,
+        "mapChance": 1,
+        "donorTeam": "Magic",
+        "donorMinMetalToHit": "Steel",
+        "donorArmorValue": 3,
+        "donorDamage": {
+          "minimum": 2,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 11,
+          "maximum": 18
+        },
+        "donorLevel": 2,
+        "donorWeight": 40,
+        "donorLootTableKey": "D"
+      }
+    },
+    {
+      "id": "spriggan",
+      "family": "creature",
+      "template": "spriggan",
+      "published": true,
+      "displayName": "Spriggan",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "spriggan",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "spriggans",
+      "appearances": {
+        "maleTexture": 257,
+        "femaleTexture": 257,
+        "corpse": {
+          "archive": 406,
+          "record": 3
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemySprigganMove",
+        "bark": "EnemySprigganBark",
+        "attack": "EnemySprigganAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 2,
+        "donorName": "Spriggan",
+        "identity": "spriggan",
+        "affinity": "Daylight",
+        "behaviour": "General",
+        "soulPoints": 1000,
+        "mapChance": 0,
+        "donorTeam": "Spriggans",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": -4,
+        "donorDamage": {
+          "minimum": 1,
+          "maximum": 8
+        },
+        "donorHealth": {
+          "minimum": 12,
+          "maximum": 26
+        },
+        "donorLevel": 3,
+        "donorWeight": 240,
+        "donorLootTableKey": "B"
+      }
+    },
+    {
+      "id": "giant-bat",
+      "family": "creature",
+      "template": "giant-bat",
+      "published": true,
+      "displayName": "Giant Bat",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "giant-bat",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "vermin",
+      "appearances": {
+        "maleTexture": 258,
+        "femaleTexture": 258,
+        "corpse": {
+          "archive": 401,
+          "record": 0
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null,
+        "presentation": {
+          "preferredRestState": "move",
+          "effectiveFramesPerSecond": {
+            "move": 10
+          }
+        }
+      },
+      "sounds": {
+        "move": "EnemyGiantBatMove",
+        "bark": "EnemyGiantBatBark",
+        "attack": "EnemyGiantBatAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 3,
+        "donorName": "Giant Bat",
+        "identity": "giant-bat",
+        "affinity": "Animal",
+        "behaviour": "Flying",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Vermin",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 2,
+          "maximum": 12
+        },
+        "donorHealth": {
+          "minimum": 12,
+          "maximum": 26
+        },
+        "donorLevel": 3,
+        "donorWeight": 80,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "grizzly-bear",
+      "family": "creature",
+      "template": "grizzly-bear",
+      "published": true,
+      "displayName": "Grizzly Bear",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "grizzly-bear",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "bears",
+      "appearances": {
+        "maleTexture": 259,
+        "femaleTexture": 259,
+        "corpse": {
+          "archive": 401,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyBearMove",
+        "bark": "EnemyBearBark",
+        "attack": "EnemyBearAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 4,
+        "donorName": "Grizzly Bear",
+        "identity": "grizzly-bear",
+        "affinity": "Animal",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Bears",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 1,
+          "maximum": 8
+        },
+        "donorHealth": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "donorLevel": 4,
+        "donorWeight": 1000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "sabertooth-tiger",
+      "family": "creature",
+      "template": "sabertooth-tiger",
+      "published": true,
+      "displayName": "Sabertooth Tiger",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "sabertooth-tiger",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "tigers",
+      "appearances": {
+        "maleTexture": 260,
+        "femaleTexture": 260,
+        "corpse": {
+          "archive": 401,
+          "record": 3
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyTigerMove",
+        "bark": "EnemyTigerBark",
+        "attack": "EnemyTigerAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 5,
+        "donorName": "Sabertooth Tiger",
+        "identity": "sabertooth-tiger",
+        "affinity": "Animal",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Tigers",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 1,
+          "maximum": 10
+        },
+        "donorHealth": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "donorLevel": 4,
+        "donorWeight": 1000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "spider",
+      "family": "creature",
+      "template": "spider",
+      "published": true,
+      "displayName": "Spider",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "spider",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "spiders",
+      "appearances": {
+        "maleTexture": 261,
+        "femaleTexture": 261,
+        "corpse": {
+          "archive": 401,
+          "record": 4
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemySpiderMove",
+        "bark": "EnemySpiderBark",
+        "attack": "EnemySpiderAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 6,
+        "donorName": "Spider",
+        "identity": "spider",
+        "affinity": "Animal",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Spiders",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 5,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "donorLevel": 4,
+        "donorWeight": 400,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "orc",
+      "family": "creature",
+      "template": "orc",
+      "published": true,
+      "displayName": "Orc",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "orc",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "orcs",
+      "appearances": {
+        "maleTexture": 262,
+        "femaleTexture": 262,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyOrcMove",
+        "bark": "EnemyOrcBark",
+        "attack": "EnemyOrcAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 7,
+        "donorName": "Orc",
+        "identity": "orc",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 1000,
+        "mapChance": 0,
+        "donorTeam": "Orcs",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 7,
+        "donorDamage": {
+          "minimum": 1,
+          "maximum": 6
+        },
+        "donorHealth": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "donorLevel": 5,
+        "donorWeight": 600,
+        "donorLootTableKey": "A"
+      }
+    },
+    {
+      "id": "centaur",
+      "family": "creature",
+      "template": "centaur",
+      "published": true,
+      "displayName": "Centaur",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "centaur",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "centaurs",
+      "appearances": {
+        "maleTexture": 263,
+        "femaleTexture": 263,
+        "corpse": {
+          "archive": 406,
+          "record": 0
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyCentaurMove",
+        "bark": "EnemyCentaurBark",
+        "attack": "EnemyCentaurAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 8,
+        "donorName": "Centaur",
+        "identity": "centaur",
+        "affinity": "Daylight",
+        "behaviour": "General",
+        "soulPoints": 3000,
+        "mapChance": 1,
+        "donorTeam": "Centaurs",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 14,
+          "maximum": 46
+        },
+        "donorLevel": 5,
+        "donorWeight": 1200,
+        "donorLootTableKey": "C"
+      }
+    },
+    {
+      "id": "werewolf",
+      "family": "creature",
+      "template": "werewolf",
+      "published": true,
+      "displayName": "Werewolf",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "werewolf",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "werecreatures",
+      "appearances": {
+        "maleTexture": 264,
+        "femaleTexture": 264,
+        "corpse": {
+          "archive": 96,
+          "record": 5
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyWerewolfMove",
+        "bark": "EnemyWerewolfBark",
+        "attack": "EnemyWerewolfAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 9,
+        "donorName": "Werewolf",
+        "identity": "werewolf",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 1000,
+        "mapChance": 0,
+        "donorTeam": "Werecreatures",
+        "donorMinMetalToHit": "Silver",
+        "donorArmorValue": 5,
+        "donorDamage": {
+          "minimum": 1,
+          "maximum": 10
+        },
+        "donorHealth": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "donorLevel": 6,
+        "donorWeight": 480,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "nymph",
+      "family": "creature",
+      "template": "nymph",
+      "published": true,
+      "displayName": "Nymph",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "nymph",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "nymphs",
+      "appearances": {
+        "maleTexture": 265,
+        "femaleTexture": 265,
+        "corpse": {
+          "archive": 406,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyNymphMove",
+        "bark": "EnemyNymphBark",
+        "attack": "EnemyNymphAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 10,
+        "donorName": "Nymph",
+        "identity": "nymph",
+        "affinity": "Daylight",
+        "behaviour": "General",
+        "soulPoints": 10000,
+        "mapChance": 1,
+        "donorTeam": "Nymphs",
+        "donorMinMetalToHit": "Silver",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 1,
+          "maximum": 5
+        },
+        "donorHealth": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorLevel": 6,
+        "donorWeight": 200,
+        "donorLootTableKey": "C"
+      }
+    },
+    {
+      "id": "slaughterfish",
+      "family": "creature",
+      "template": "slaughterfish",
+      "published": true,
+      "displayName": "Slaughterfish",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "slaughterfish",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "aquatic",
+      "appearances": {
+        "maleTexture": 266,
+        "femaleTexture": 266,
+        "corpse": {
+          "archive": 305,
+          "record": 1
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyEelMove",
+        "bark": "EnemyEelBark",
+        "attack": "EnemyEelAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 11,
+        "donorName": "Slaughterfish",
+        "identity": "slaughterfish",
+        "affinity": "Water",
+        "behaviour": "Aquatic",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Aquatic",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 2,
+          "maximum": 12
+        },
+        "donorHealth": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorLevel": 7,
+        "donorWeight": 400,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "orc-sergeant",
+      "family": "creature",
+      "template": "orc-sergeant",
+      "published": true,
+      "displayName": "Orc Sergeant",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "orc-sergeant",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "orcs",
+      "appearances": {
+        "maleTexture": 267,
+        "femaleTexture": 267,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyOrcSergeantMove",
+        "bark": "EnemyOrcSergeantBark",
+        "attack": "EnemyOrcSergeantAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 12,
+        "donorName": "Orc Sergeant",
+        "identity": "orc-sergeant",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 1000,
+        "mapChance": 1,
+        "donorTeam": "Orcs",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 5,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorLevel": 7,
+        "donorWeight": 600,
+        "donorLootTableKey": "A"
+      }
+    },
+    {
+      "id": "harpy",
+      "family": "creature",
+      "template": "harpy",
+      "published": true,
+      "displayName": "Harpy",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "harpy",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "harpies",
+      "appearances": {
+        "maleTexture": 268,
+        "femaleTexture": 268,
+        "corpse": {
+          "archive": 406,
+          "record": 4
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyHarpyMove",
+        "bark": "EnemyHarpyBark",
+        "attack": "EnemyHarpyAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 13,
+        "donorName": "Harpy",
+        "identity": "harpy",
+        "affinity": "Daylight",
+        "behaviour": "Flying",
+        "soulPoints": 3000,
+        "mapChance": 0,
+        "donorTeam": "Harpies",
+        "donorMinMetalToHit": "Dwarven",
+        "donorArmorValue": 2,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 16,
+          "maximum": 85
+        },
+        "donorLevel": 8,
+        "donorWeight": 200,
+        "donorLootTableKey": "D"
+      }
+    },
+    {
+      "id": "wereboar",
+      "family": "creature",
+      "template": "wereboar",
+      "published": true,
+      "displayName": "Wereboar",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "wereboar",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "werecreatures",
+      "appearances": {
+        "maleTexture": 269,
+        "femaleTexture": 269,
+        "corpse": {
+          "archive": 96,
+          "record": 5
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyWereboarMove",
+        "bark": "EnemyWereboarBark",
+        "attack": "EnemyWereboarAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 14,
+        "donorName": "Wereboar",
+        "identity": "wereboar",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 1000,
+        "mapChance": 0,
+        "donorTeam": "Werecreatures",
+        "donorMinMetalToHit": "Silver",
+        "donorArmorValue": 3,
+        "donorDamage": {
+          "minimum": 2,
+          "maximum": 12
+        },
+        "donorHealth": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "donorLevel": 8,
+        "donorWeight": 560,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "skeletal-warrior",
+      "family": "creature",
+      "template": "skeletal-warrior",
+      "published": true,
+      "displayName": "Skeletal Warrior",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "skeletal-warrior",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 270,
+        "femaleTexture": 270,
+        "corpse": {
+          "archive": 306,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemySkeletonMove",
+        "bark": "EnemySkeletonBark",
+        "attack": "EnemySkeletonAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 15,
+        "donorName": "Skeletal Warrior",
+        "identity": "skeletal-warrior",
+        "affinity": "Undead",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 2,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "donorLevel": 9,
+        "donorWeight": 80,
+        "donorLootTableKey": "H"
+      }
+    },
+    {
+      "id": "giant",
+      "family": "creature",
+      "template": "giant",
+      "published": true,
+      "displayName": "Giant",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "giant",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "giants",
+      "appearances": {
+        "maleTexture": 271,
+        "femaleTexture": 271,
+        "corpse": {
+          "archive": 406,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyGiantMove",
+        "bark": "EnemyGiantBark",
+        "attack": "EnemyGiantAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 16,
+        "donorName": "Giant",
+        "identity": "giant",
+        "affinity": "Daylight",
+        "behaviour": "General",
+        "soulPoints": 3000,
+        "mapChance": 1,
+        "donorTeam": "Giants",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 3,
+        "donorDamage": {
+          "minimum": 10,
+          "maximum": 30
+        },
+        "donorHealth": {
+          "minimum": 18,
+          "maximum": 74
+        },
+        "donorLevel": 10,
+        "donorWeight": 3000,
+        "donorLootTableKey": "F"
+      }
+    },
+    {
+      "id": "zombie",
+      "family": "creature",
+      "template": "zombie",
+      "published": true,
+      "displayName": "Zombie",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "zombie",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 272,
+        "femaleTexture": 272,
+        "corpse": {
+          "archive": 306,
+          "record": 4
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyZombieMove",
+        "bark": "EnemyZombieBark",
+        "attack": "EnemyZombieAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 17,
+        "donorName": "Zombie",
+        "identity": "zombie",
+        "affinity": "Undead",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 1,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorHealth": {
+          "minimum": 52,
+          "maximum": 66
+        },
+        "donorLevel": 10,
+        "donorWeight": 4000,
+        "donorLootTableKey": "G"
+      }
+    },
+    {
+      "id": "ghost",
+      "family": "creature",
+      "template": "ghost",
+      "published": true,
+      "displayName": "Ghost",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "ghost",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 273,
+        "femaleTexture": 273,
+        "corpse": {
+          "archive": 306,
+          "record": 0
+        },
+        "hasIdle": false,
+        "noShadow": true,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyGhostMove",
+        "bark": "EnemyGhostBark",
+        "attack": "EnemyGhostAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 18,
+        "donorName": "Ghost",
+        "identity": "ghost",
+        "affinity": "Undead",
+        "behaviour": "Spectral",
+        "soulPoints": 30000,
+        "mapChance": 1,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "Silver",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 10,
+          "maximum": 35
+        },
+        "donorHealth": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "donorLevel": 11,
+        "donorWeight": 0,
+        "donorLootTableKey": "I"
+      }
+    },
+    {
+      "id": "mummy",
+      "family": "creature",
+      "template": "mummy",
+      "published": true,
+      "displayName": "Mummy",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "mummy",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 274,
+        "femaleTexture": 274,
+        "corpse": {
+          "archive": 306,
+          "record": 5
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyMummyMove",
+        "bark": "EnemyMummyBark",
+        "attack": "EnemyMummyAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 19,
+        "donorName": "Mummy",
+        "identity": "mummy",
+        "affinity": "Undead",
+        "behaviour": "General",
+        "soulPoints": 10000,
+        "mapChance": 1,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "Silver",
+        "donorArmorValue": 2,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "donorLevel": 11,
+        "donorWeight": 300,
+        "donorLootTableKey": "E"
+      }
+    },
+    {
+      "id": "giant-scorpion",
+      "family": "creature",
+      "template": "giant-scorpion",
+      "published": true,
+      "displayName": "Giant Scorpion",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "giant-scorpion",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "scorpions",
+      "appearances": {
+        "maleTexture": 275,
+        "femaleTexture": 275,
+        "corpse": {
+          "archive": 401,
+          "record": 5
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyScorpionMove",
+        "bark": "EnemyScorpionBark",
+        "attack": "EnemyScorpionAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 20,
+        "donorName": "Giant Scorpion",
+        "identity": "giant-scorpion",
+        "affinity": "Animal",
+        "behaviour": "General",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Scorpions",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 15,
+          "maximum": 25
+        },
+        "donorHealth": {
+          "minimum": 18,
+          "maximum": 74
+        },
+        "donorLevel": 12,
+        "donorWeight": 600,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "orc-shaman",
+      "family": "creature",
+      "template": "orc-shaman",
+      "published": true,
+      "displayName": "Orc Shaman",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "orc-shaman",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "orcs",
+      "appearances": {
+        "maleTexture": 276,
+        "femaleTexture": 276,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyOrcShamanMove",
+        "bark": "EnemyOrcShamanBark",
+        "attack": "EnemyOrcShamanAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 21,
+        "donorName": "Orc Shaman",
+        "identity": "orc-shaman",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 3000,
+        "mapChance": 3,
+        "donorTeam": "Orcs",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 7,
+        "donorDamage": {
+          "minimum": 2,
+          "maximum": 20
+        },
+        "donorHealth": {
+          "minimum": 18,
+          "maximum": 74
+        },
+        "donorLevel": 13,
+        "donorWeight": 400,
+        "donorLootTableKey": "U"
+      }
+    },
+    {
+      "id": "gargoyle",
+      "family": "creature",
+      "template": "gargoyle",
+      "published": true,
+      "displayName": "Gargoyle",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "gargoyle",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "magic",
+      "appearances": {
+        "maleTexture": 277,
+        "femaleTexture": 277,
+        "corpse": {
+          "archive": 96,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyGargoyleMove",
+        "bark": "EnemyGargoyleBark",
+        "attack": "EnemyGargoyleAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 22,
+        "donorName": "Gargoyle",
+        "identity": "gargoyle",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 3000,
+        "mapChance": 0,
+        "donorTeam": "Magic",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 10,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 19,
+          "maximum": 82
+        },
+        "donorLevel": 14,
+        "donorWeight": 300,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "wraith",
+      "family": "creature",
+      "template": "wraith",
+      "published": true,
+      "displayName": "Wraith",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "wraith",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 278,
+        "femaleTexture": 278,
+        "corpse": {
+          "archive": 306,
+          "record": 0
+        },
+        "hasIdle": false,
+        "noShadow": true,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyWraithMove",
+        "bark": "EnemyWraithBark",
+        "attack": "EnemyWraithAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 23,
+        "donorName": "Wraith",
+        "identity": "wraith",
+        "affinity": "Undead",
+        "behaviour": "Spectral",
+        "soulPoints": 30000,
+        "mapChance": 1,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "Silver",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 20,
+          "maximum": 45
+        },
+        "donorHealth": {
+          "minimum": 30,
+          "maximum": 90
+        },
+        "donorLevel": 15,
+        "donorWeight": 0,
+        "donorLootTableKey": "I"
+      }
+    },
+    {
+      "id": "orc-warlord",
+      "family": "creature",
+      "template": "orc-warlord",
+      "published": true,
+      "displayName": "Orc Warlord",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "orc-warlord",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "orcs",
+      "appearances": {
+        "maleTexture": 279,
+        "femaleTexture": 279,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyOrcWarlordMove",
+        "bark": "EnemyOrcWarlordBark",
+        "attack": "EnemyOrcWarlordAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 24,
+        "donorName": "Orc Warlord",
+        "identity": "orc-warlord",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 1000,
+        "mapChance": 2,
+        "donorTeam": "Orcs",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 50
+        },
+        "donorHealth": {
+          "minimum": 20,
+          "maximum": 90
+        },
+        "donorLevel": 16,
+        "donorWeight": 700,
+        "donorLootTableKey": "T"
+      }
+    },
+    {
+      "id": "frost-daedra",
+      "family": "creature",
+      "template": "frost-daedra",
+      "published": true,
+      "displayName": "Frost Daedra",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "frost-daedra",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "daedra",
+      "appearances": {
+        "maleTexture": 280,
+        "femaleTexture": 280,
+        "corpse": {
+          "archive": 400,
+          "record": 3
+        },
+        "hasIdle": true,
+        "noShadow": true,
+        "glowColor": {
+          "red": 1.8000001,
+          "green": 6.8,
+          "blue": 8.8
+        }
+      },
+      "sounds": {
+        "move": "EnemyFrostDaedraMove",
+        "bark": "EnemyFrostDaedraBark",
+        "attack": "EnemyFrostDaedraAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 25,
+        "donorName": "Frost Daedra",
+        "identity": "frost-daedra",
+        "affinity": "Daedra",
+        "behaviour": "General",
+        "soulPoints": 50000,
+        "mapChance": 0,
+        "donorTeam": "Daedra",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": -5,
+        "donorDamage": {
+          "minimum": 50,
+          "maximum": 100
+        },
+        "donorHealth": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "donorLevel": 17,
+        "donorWeight": 800,
+        "donorLootTableKey": "J"
+      }
+    },
+    {
+      "id": "fire-daedra",
+      "family": "creature",
+      "template": "fire-daedra",
+      "published": true,
+      "displayName": "Fire Daedra",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "fire-daedra",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "daedra",
+      "appearances": {
+        "maleTexture": 281,
+        "femaleTexture": 281,
+        "corpse": {
+          "archive": 400,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": true,
+        "glowColor": {
+          "red": 12.150001,
+          "green": 11.95,
+          "blue": 2.2
+        }
+      },
+      "sounds": {
+        "move": "EnemyFireDaedraMove",
+        "bark": "EnemyFireDaedraBark",
+        "attack": "EnemyFireDaedraAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 26,
+        "donorName": "Fire Daedra",
+        "identity": "fire-daedra",
+        "affinity": "Daedra",
+        "behaviour": "General",
+        "soulPoints": 50000,
+        "mapChance": 0,
+        "donorTeam": "Daedra",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": 1,
+        "donorDamage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorHealth": {
+          "minimum": 26,
+          "maximum": 138
+        },
+        "donorLevel": 17,
+        "donorWeight": 800,
+        "donorLootTableKey": "J"
+      }
+    },
+    {
+      "id": "daedroth",
+      "family": "creature",
+      "template": "daedroth",
+      "published": true,
+      "displayName": "Daedroth",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "daedroth",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "daedra",
+      "appearances": {
+        "maleTexture": 282,
+        "femaleTexture": 282,
+        "corpse": {
+          "archive": 400,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyLesserDaedraMove",
+        "bark": "EnemyLesserDaedraBark",
+        "attack": "EnemyLesserDaedraAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 27,
+        "donorName": "Daedroth",
+        "identity": "daedroth",
+        "affinity": "Daedra",
+        "behaviour": "General",
+        "soulPoints": 10000,
+        "mapChance": 0,
+        "donorTeam": "Daedra",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": 1,
+        "donorDamage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorHealth": {
+          "minimum": 27,
+          "maximum": 146
+        },
+        "donorLevel": 18,
+        "donorWeight": 400,
+        "donorLootTableKey": "E"
+      }
+    },
+    {
+      "id": "vampire",
+      "family": "creature",
+      "template": "vampire",
+      "published": true,
+      "displayName": "Vampire",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "vampire",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 283,
+        "femaleTexture": 283,
+        "corpse": {
+          "archive": 96,
+          "record": 3
+        },
+        "hasIdle": true,
+        "noShadow": true,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyFemaleVampireMove",
+        "bark": "EnemyFemaleVampireBark",
+        "attack": "EnemyFemaleVampireAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 28,
+        "donorName": "Vampire",
+        "identity": "vampire",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 70000,
+        "mapChance": 3,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "Silver",
+        "donorArmorValue": -2,
+        "donorDamage": {
+          "minimum": 20,
+          "maximum": 50
+        },
+        "donorHealth": {
+          "minimum": 28,
+          "maximum": 154
+        },
+        "donorLevel": 19,
+        "donorWeight": 400,
+        "donorLootTableKey": "Q"
+      }
+    },
+    {
+      "id": "daedra-seducer",
+      "family": "creature",
+      "template": "daedra-seducer",
+      "published": true,
+      "displayName": "Daedra Seducer",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "daedra-seducer",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "daedra",
+      "appearances": {
+        "maleTexture": 284,
+        "femaleTexture": 284,
+        "corpse": {
+          "archive": 400,
+          "record": 6
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemySeducerMove",
+        "bark": "EnemySeducerBark",
+        "attack": "EnemySeducerAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 29,
+        "donorName": "Daedra Seducer",
+        "identity": "daedra-seducer",
+        "affinity": "Daedra",
+        "behaviour": "General",
+        "soulPoints": 150000,
+        "mapChance": 1,
+        "donorTeam": "Daedra",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": 1,
+        "donorDamage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorHealth": {
+          "minimum": 27,
+          "maximum": 146
+        },
+        "donorLevel": 19,
+        "donorWeight": 200,
+        "donorLootTableKey": "Q"
+      }
+    },
+    {
+      "id": "vampire-ancient",
+      "family": "creature",
+      "template": "vampire-ancient",
+      "published": true,
+      "displayName": "Vampire Ancient",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "vampire-ancient",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 285,
+        "femaleTexture": 285,
+        "corpse": {
+          "archive": 96,
+          "record": 3
+        },
+        "hasIdle": true,
+        "noShadow": true,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyVampireMove",
+        "bark": "EnemyVampireBark",
+        "attack": "EnemyVampireAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 30,
+        "donorName": "Vampire Ancient",
+        "identity": "vampire-ancient",
+        "affinity": "Darkness",
+        "behaviour": "General",
+        "soulPoints": 100000,
+        "mapChance": 3,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": -5,
+        "donorDamage": {
+          "minimum": 20,
+          "maximum": 60
+        },
+        "donorHealth": {
+          "minimum": 30,
+          "maximum": 170
+        },
+        "donorLevel": 20,
+        "donorWeight": 400,
+        "donorLootTableKey": "Q"
+      }
+    },
+    {
+      "id": "daedra-lord",
+      "family": "creature",
+      "template": "daedra-lord",
+      "published": true,
+      "displayName": "Daedra Lord",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "daedra-lord",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "daedra",
+      "appearances": {
+        "maleTexture": 286,
+        "femaleTexture": 286,
+        "corpse": {
+          "archive": 400,
+          "record": 4
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyDaedraLordMove",
+        "bark": "EnemyDaedraLordBark",
+        "attack": "EnemyDaedraLordAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 31,
+        "donorName": "Daedra Lord",
+        "identity": "daedra-lord",
+        "affinity": "Daedra",
+        "behaviour": "General",
+        "soulPoints": 800000,
+        "mapChance": 0,
+        "donorTeam": "Daedra",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": -10,
+        "donorDamage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "donorHealth": {
+          "minimum": 35,
+          "maximum": 210
+        },
+        "donorLevel": 20,
+        "donorWeight": 1000,
+        "donorLootTableKey": "S"
+      }
+    },
+    {
+      "id": "lich",
+      "family": "creature",
+      "template": "lich",
+      "published": true,
+      "displayName": "Lich",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "lich",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 287,
+        "femaleTexture": 287,
+        "corpse": {
+          "archive": 306,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyLichMove",
+        "bark": "EnemyLichBark",
+        "attack": "EnemyLichAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 32,
+        "donorName": "Lich",
+        "identity": "lich",
+        "affinity": "Undead",
+        "behaviour": "General",
+        "soulPoints": 100000,
+        "mapChance": 4,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": -10,
+        "donorDamage": {
+          "minimum": 70,
+          "maximum": 100
+        },
+        "donorHealth": {
+          "minimum": 30,
+          "maximum": 170
+        },
+        "donorLevel": 20,
+        "donorWeight": 300,
+        "donorLootTableKey": "S"
+      }
+    },
+    {
+      "id": "ancient-lich",
+      "family": "creature",
+      "template": "ancient-lich",
+      "published": true,
+      "displayName": "Ancient Lich",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "ancient-lich",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "undead",
+      "appearances": {
+        "maleTexture": 288,
+        "femaleTexture": 288,
+        "corpse": {
+          "archive": 306,
+          "record": 3
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyLichKingMove",
+        "bark": "EnemyLichKingBark",
+        "attack": "EnemyLichKingAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 33,
+        "donorName": "Ancient Lich",
+        "identity": "ancient-lich",
+        "affinity": "Undead",
+        "behaviour": "General",
+        "soulPoints": 250000,
+        "mapChance": 4,
+        "donorTeam": "Undead",
+        "donorMinMetalToHit": "Mithril",
+        "donorArmorValue": -12,
+        "donorDamage": {
+          "minimum": 70,
+          "maximum": 100
+        },
+        "donorHealth": {
+          "minimum": 30,
+          "maximum": 170
+        },
+        "donorLevel": 21,
+        "donorWeight": 300,
+        "donorLootTableKey": "S"
+      }
+    },
+    {
+      "id": "dragonling",
+      "family": "creature",
+      "template": "dragonling",
+      "published": true,
+      "displayName": "Dragonling",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "dragonling",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "dragonlings",
+      "appearances": {
+        "maleTexture": 289,
+        "femaleTexture": 289,
+        "corpse": {
+          "archive": 96,
+          "record": 0
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyFaeryDragonMove",
+        "bark": "EnemyFaeryDragonBark",
+        "attack": "EnemyFaeryDragonAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 34,
+        "donorName": "Dragonling",
+        "identity": "dragonling",
+        "affinity": "Daylight",
+        "behaviour": "Flying",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "Dragonlings",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 14,
+          "maximum": 42
+        },
+        "donorLevel": 16,
+        "donorWeight": 10000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "fire-atronach",
+      "family": "creature",
+      "template": "fire-atronach",
+      "published": true,
+      "displayName": "Fire Atronach",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "fire-atronach",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "magic",
+      "appearances": {
+        "maleTexture": 290,
+        "femaleTexture": 290,
+        "corpse": {
+          "archive": 405,
+          "record": 2
+        },
+        "hasIdle": true,
+        "noShadow": true,
+        "glowColor": {
+          "red": 12.150001,
+          "green": 7.5,
+          "blue": 2.2
+        }
+      },
+      "sounds": {
+        "move": "EnemyFireAtronachMove",
+        "bark": "EnemyFireAtronachBark",
+        "attack": "EnemyFireAtronachAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 35,
+        "donorName": "Fire Atronach",
+        "identity": "fire-atronach",
+        "affinity": "Golem",
+        "behaviour": "General",
+        "soulPoints": 30000,
+        "mapChance": 0,
+        "donorTeam": "Magic",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "donorLevel": 16,
+        "donorWeight": 1000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "iron-atronach",
+      "family": "creature",
+      "template": "iron-atronach",
+      "published": true,
+      "displayName": "Iron Atronach",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "iron-atronach",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "magic",
+      "appearances": {
+        "maleTexture": 291,
+        "femaleTexture": 291,
+        "corpse": {
+          "archive": 405,
+          "record": 1
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyIronAtronachMove",
+        "bark": "EnemyIronAtronachBark",
+        "attack": "EnemyIronAtronachAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 36,
+        "donorName": "Iron Atronach",
+        "identity": "iron-atronach",
+        "affinity": "Golem",
+        "behaviour": "General",
+        "soulPoints": 30000,
+        "mapChance": 0,
+        "donorTeam": "Magic",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "donorLevel": 16,
+        "donorWeight": 1000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "flesh-atronach",
+      "family": "creature",
+      "template": "flesh-atronach",
+      "published": true,
+      "displayName": "Flesh Atronach",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "flesh-atronach",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "magic",
+      "appearances": {
+        "maleTexture": 292,
+        "femaleTexture": 292,
+        "corpse": {
+          "archive": 405,
+          "record": 0
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyFleshAtronachMove",
+        "bark": "EnemyFleshAtronachBark",
+        "attack": "EnemyFleshAtronachAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 37,
+        "donorName": "Flesh Atronach",
+        "identity": "flesh-atronach",
+        "affinity": "Golem",
+        "behaviour": "General",
+        "soulPoints": 30000,
+        "mapChance": 0,
+        "donorTeam": "Magic",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "donorLevel": 16,
+        "donorWeight": 1000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "ice-atronach",
+      "family": "creature",
+      "template": "ice-atronach",
+      "published": true,
+      "displayName": "Ice Atronach",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "ice-atronach",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "magic",
+      "appearances": {
+        "maleTexture": 293,
+        "femaleTexture": 293,
+        "corpse": {
+          "archive": 405,
+          "record": 3
+        },
+        "hasIdle": true,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyIceAtronachMove",
+        "bark": "EnemyIceAtronachBark",
+        "attack": "EnemyIceAtronachAttack",
+        "parrySounds": true
+      },
+      "classicBinding": {
+        "mobileId": 38,
+        "donorName": "Ice Atronach",
+        "identity": "ice-atronach",
+        "affinity": "Golem",
+        "behaviour": "General",
+        "soulPoints": 30000,
+        "mapChance": 0,
+        "donorTeam": "Magic",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "donorLevel": 16,
+        "donorWeight": 1000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "horse",
+      "family": "creature",
+      "template": "horse",
+      "published": false,
+      "displayName": "Horse (unused, but can appear in merchant-sold soul traps)",
+      "genders": [
+        {
+          "gender": "neutral",
+          "weight": 1
+        }
+      ],
+      "race": "horse",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": null,
+      "appearances": {
+        "maleTexture": 0,
+        "femaleTexture": 0,
+        "corpse": {
+          "archive": 0,
+          "record": 0
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "",
+        "bark": "",
+        "attack": "",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 39,
+        "donorName": "Horse (unused, but can appear in merchant-sold soul traps)",
+        "identity": "horse",
+        "affinity": "",
+        "behaviour": "",
+        "soulPoints": 0,
+        "mapChance": 0,
+        "donorTeam": "",
+        "donorMinMetalToHit": "",
+        "donorArmorValue": 0,
+        "donorDamage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorHealth": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "donorLevel": 0,
+        "donorWeight": 0,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "dragonling-40",
+      "family": "creature",
+      "template": "dragonling-40",
+      "published": true,
+      "displayName": "Dragonling",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "dragonling-40",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "dragonlings",
+      "appearances": {
+        "maleTexture": 295,
+        "femaleTexture": 295,
+        "corpse": {
+          "archive": 96,
+          "record": 0
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyFaeryDragonMove",
+        "bark": "EnemyFaeryDragonBark",
+        "attack": "EnemyFaeryDragonAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 40,
+        "donorName": "Dragonling",
+        "identity": "dragonling",
+        "affinity": "Daylight",
+        "behaviour": "Flying",
+        "soulPoints": 500000,
+        "mapChance": 0,
+        "donorTeam": "Dragonlings",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 14,
+          "maximum": 42
+        },
+        "donorLevel": 16,
+        "donorWeight": 10000,
+        "donorLootTableKey": null
+      }
+    },
+    {
+      "id": "dreugh",
+      "family": "creature",
+      "template": "dreugh",
+      "published": true,
+      "displayName": "Dreugh",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "dreugh",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "aquatic",
+      "appearances": {
+        "maleTexture": 296,
+        "femaleTexture": 296,
+        "corpse": {
+          "archive": 305,
+          "record": 0
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyDreughMove",
+        "bark": "EnemyDreughBark",
+        "attack": "EnemyDreughAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 41,
+        "donorName": "Dreugh",
+        "identity": "dreugh",
+        "affinity": "Water",
+        "behaviour": "Aquatic",
+        "soulPoints": 10000,
+        "mapChance": 0,
+        "donorTeam": "Aquatic",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "donorLevel": 16,
+        "donorWeight": 600,
+        "donorLootTableKey": "R"
+      }
+    },
+    {
+      "id": "lamia",
+      "family": "creature",
+      "template": "lamia",
+      "published": true,
+      "displayName": "Lamia",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "lamia",
+      "naming": "label",
+      "harm": "combatant",
+      "interaction": "none",
+      "team": "aquatic",
+      "appearances": {
+        "maleTexture": 297,
+        "femaleTexture": 297,
+        "corpse": {
+          "archive": 305,
+          "record": 2
+        },
+        "hasIdle": false,
+        "noShadow": false,
+        "glowColor": null
+      },
+      "sounds": {
+        "move": "EnemyLamiaMove",
+        "bark": "EnemyLamiaBark",
+        "attack": "EnemyLamiaAttack",
+        "parrySounds": false
+      },
+      "classicBinding": {
+        "mobileId": 42,
+        "donorName": "Lamia",
+        "identity": "lamia",
+        "affinity": "Water",
+        "behaviour": "Aquatic",
+        "soulPoints": 10000,
+        "mapChance": 0,
+        "donorTeam": "Aquatic",
+        "donorMinMetalToHit": "None",
+        "donorArmorValue": 6,
+        "donorDamage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "donorHealth": {
+          "minimum": 16,
+          "maximum": 58
+        },
+        "donorLevel": 16,
+        "donorWeight": 200,
+        "donorLootTableKey": "R"
+      }
+    }
+  ]
+}

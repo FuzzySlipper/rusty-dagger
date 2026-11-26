@@ -159,8 +159,15 @@ internal sealed class DaggerfallEnemyBehaviorModule
         if (!actors.TryGetValue(actorId, out DaggerfallActorDefinition? actor))
             return new PursuitPolicy();
 
-        ActorNavigationMode mode = ActorNavigationMode.Ground;
-        if (actor.MobileId is int mobileId && definitions.Mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile))
+        ActorNavigationMode mode = actor.TemplateId is not null
+            ? actor.Capabilities.Movement switch
+            {
+                ActorMovementMedium.Aquatic => ActorNavigationMode.Swimming,
+                ActorMovementMedium.Flying or ActorMovementMedium.Spectral => ActorNavigationMode.Flying,
+                _ => ActorNavigationMode.Ground,
+            }
+            : ActorNavigationMode.Ground;
+        if (actor.TemplateId is null && actor.MobileId is int mobileId && definitions.Mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile))
         {
             mode = mobile.Behaviour switch
             {
@@ -186,9 +193,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(definitions);
         return actors.TryGetValue(actorId, out DaggerfallActorDefinition? actor)
-            && actor.MobileId is int mobileId
-            && definitions.Mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile)
-            && mobile.CanOpenDoors;
+            && (actor.Capabilities.CanOpenDoors
+                || (actor.TemplateId is null
+                    && actor.MobileId is int mobileId
+                    && definitions.Mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile)
+                    && mobile.CanOpenDoors));
     }
 
     /// <summary>

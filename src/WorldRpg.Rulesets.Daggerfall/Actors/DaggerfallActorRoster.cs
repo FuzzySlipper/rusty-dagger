@@ -117,7 +117,7 @@ internal sealed class DaggerfallActorRoster
     internal DaggerfallWabbajackResult Transform(long durableId, int selectedMobile)
     {
         if (!_actors.TryGet(durableId, out var original) || !_definitionsByActor.TryGetValue(durableId, out var oldDefinition)
-            || oldDefinition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))
+            || (!oldDefinition.Capabilities.IsCombatEncounter && (oldDefinition.TemplateId is not null || oldDefinition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))))
             return new(DaggerfallWabbajackOutcome.InvalidTarget, durableId);
         if (DaggerfallWabbajack.DefinitionOf(original.Actor) is not null)
             return new(DaggerfallWabbajackOutcome.AlreadyTransformed, durableId);
@@ -142,6 +142,7 @@ internal sealed class DaggerfallActorRoster
         Appearance.RetireActor(durableId);
         _actors.Entities.Destroy(ActorsState.Identity(durableId));
         ActorState replacement = DaggerfallActorFactory.CreateNonPlayerActor(_actors, durableId, definition, stats, pose);
+        DaggerfallActorFactory.SetInstanceIdentity(replacement.Actor, DaggerfallActorInstanceResolver.Resolve(_definitions, definition, durableId));
         DaggerfallActorFactory.RegisterActorInventory(replacement, _inventoryStore);
         DaggerfallWabbajack.Restore(replacement.Actor, definition.Id.Value);
         if (origin is not null) replacement.Actor.Add(origin);
@@ -169,14 +170,14 @@ internal sealed class DaggerfallActorRoster
     {
         long actorId = actor.DurableId;
         if (_definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? currentDef)
-            && currentDef.MobileId == 146
+            && (currentDef.Capabilities.CityWatchArrest || currentDef.MobileId == 146)
             && actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? existingHarm)
             && existingHarm.IsCombatant)
         {
             return actorId;
         }
 
-        DaggerfallActorDefinition baseWatch = _definitions.Actors.Values.Single(value => value.MobileId == 146);
+        DaggerfallActorDefinition baseWatch = _definitions.Actors.Values.Single(value => value.Capabilities.CityWatchArrest || value.MobileId == 146);
         int baseLevel = baseWatch.Level ?? _actors.Player.Progression.Level;
         int spawnLevel = checked(baseLevel + (int)_random.DrawKeyed(new KeyedRngRequest(
             DaggerfallRandomKey.Seed, CombatRandomKey.EnemyScope,
@@ -198,6 +199,14 @@ internal sealed class DaggerfallActorRoster
             actor.Actor.Replace(new DaggerfallActorGender(gender));
         else
             actor.Actor.Add(new DaggerfallActorGender(gender));
+        DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
+            _definitions,
+            watchDef,
+            actorId,
+            explicitGender: gender,
+            explicitRace: _npcs.TryGet(actorId, out DaggerfallNpc? watchNpc) ? watchNpc.Appearance.Race : null,
+            explicitFaction: "city-watch",
+            regionIndex: activeProfile.Site?.Region));
 
         _definitionsByActor[actorId] = watchDef;
         if (_dynamicActors.ContainsKey(actorId))
@@ -255,16 +264,18 @@ internal sealed class DaggerfallActorRoster
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(definitionId);
         DaggerfallActorDefinition definition = _definitions.RequireActor(new DaggerfallActorId(definitionId));
-        if (definition.Kind == DaggerfallActorKinds.Player)
+        if (definition.Capabilities.IsPlayer || definition.Kind == DaggerfallActorKinds.Player)
             throw new InvalidOperationException("The player actor is authored once; it cannot be spawned.");
         if (level is < 1) throw new ArgumentOutOfRangeException(nameof(level));
         if (spawnDistance is < 0 or > 6) throw new ArgumentOutOfRangeException(nameof(spawnDistance));
         // Class enemies level to the player the way the donor levels them; monsters carry their
         // own level. Every enemy skill starts from that level before caster school overrides.
-        int spawnLevel = level ?? definition.Level ?? (definition.Kind == DaggerfallActorKinds.EnemyClass ? _actors.Player.Progression.Level : 1);
+        bool careerLeveled = definition.Capabilities.Scaling == ActorScalingMode.CareerLeveled
+            || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.EnemyClass);
+        int spawnLevel = level ?? definition.Level ?? (careerLeveled ? _actors.Player.Progression.Level : 1);
         DurableIdentityReference identity = _identities.Allocate(DurableIdentityKind.Actor);
         long durableId = checked((long)identity.Value);
-        if (definition.Kind == DaggerfallActorKinds.EnemyClass && definition.MobileId == 146)
+        if (definition.Capabilities.CityWatchArrest || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.EnemyClass && definition.MobileId == 146))
             spawnLevel = checked(spawnLevel + (int)_random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, CombatRandomKey.EnemyScope,
                 $"class-guard-level:{durableId}", 3, 6)).Value);
         DaggerfallActorDefinition spawnedDefinition = DaggerfallEncounterActors.AtLevel(definition, _definitions.Vocabulary, spawnLevel);
@@ -292,6 +303,13 @@ internal sealed class DaggerfallActorRoster
                 actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
                 Appearance.AddActor(durableId, sprite.ForGender(resolvedGender), definition.MobileId);
             }
+            DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
+                _definitions,
+                spawnedDefinition,
+                durableId,
+                explicitGender: resolvedGender is not null and not "unspecified" ? resolvedGender : null,
+                explicitFaction: playerAllied ? "player-ally" : null,
+                regionIndex: _profile().Site?.Region));
             actor.Actor.Add(new ActorOriginComponent(
                 ActorOrigin.MintedActor(spawnedDefinition.Id.Value, spawnLevel, gender: resolvedGender),
                 pose.Position, pose.HeadingYawRadians));
@@ -337,7 +355,7 @@ internal sealed class DaggerfallActorRoster
     internal void BanishHostiles()
     {
         foreach (long id in _definitionsByActor.Where(pair => pair.Key != DaggerfallActorIdentity.PlayerEntityId
-            && pair.Value.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass).Select(pair => pair.Key).ToArray()) Banish(id);
+            && (pair.Value.Capabilities.IsCombatEncounter || (pair.Value.TemplateId is null && pair.Value.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))).Select(pair => pair.Key).ToArray()) Banish(id);
     }
 
     /// <summary>Explicit quest removal also removes a defeated actor and its corpse, without inventing a death.</summary>
@@ -909,7 +927,7 @@ internal sealed class DaggerfallActorRoster
         if (npc is null && entry.Origin.Kind == ActorOriginKind.Minted
             && entry.Origin.DefinitionId is { Length: > 0 } mintedDefId
             && _definitions.Actors.TryGetValue(new DaggerfallActorId(mintedDefId), out DaggerfallActorDefinition? mintedDef)
-            && mintedDef.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
+            && (mintedDef.Capabilities.IsCombatEncounter || (mintedDef.TemplateId is null && mintedDef.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)))
         {
             return MaterializeMintedCombatant(entry, mintedDef, profile, localPose, headingRadians, appearance, translation);
         }
@@ -969,9 +987,11 @@ internal sealed class DaggerfallActorRoster
         Vector3 translation)
     {
         long durableId = entry.DurableId;
+        bool careerLeveled = baseDefinition.Capabilities.Scaling == ActorScalingMode.CareerLeveled
+            || (baseDefinition.TemplateId is null && baseDefinition.Kind == DaggerfallActorKinds.EnemyClass);
         int spawnLevel = entry.Origin.Level
             ?? baseDefinition.Level
-            ?? (baseDefinition.Kind == DaggerfallActorKinds.EnemyClass ? _actors.Player.Progression.Level : 1);
+            ?? (careerLeveled ? _actors.Player.Progression.Level : 1);
         DaggerfallActorDefinition spawnedDefinition = DaggerfallEncounterActors.AtLevel(baseDefinition, _definitions.Vocabulary, spawnLevel);
         if (entry.Combat?.PlayerAllied == true)
             spawnedDefinition = spawnedDefinition with { Team = "player-ally" };
@@ -1014,15 +1034,24 @@ internal sealed class DaggerfallActorRoster
             GrantStartingEquipment(actor, spawnedDefinition);
         }
 
+        string? mintedGender = entry.Origin.Gender;
         if (spawnedDefinition.MobileId is int mobileId
             && profile.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
         {
-            string resolvedGender = !string.IsNullOrWhiteSpace(entry.Origin.Gender)
-                ? entry.Origin.Gender!
+            string resolvedGender = !string.IsNullOrWhiteSpace(mintedGender)
+                ? mintedGender!
                 : DaggerfallActorGender.Resolve(_random, durableId, "unspecified", sprite);
+            mintedGender = resolvedGender;
             actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
             appearance.AddActor(durableId, sprite.ForGender(resolvedGender), mobileId);
         }
+        DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
+            _definitions,
+            spawnedDefinition,
+            durableId,
+            explicitGender: mintedGender is not null and not "unspecified" ? mintedGender : null,
+            explicitFaction: entry.Combat?.TeamOverride ?? (entry.Combat?.PlayerAllied == true ? "player-ally" : null),
+            regionIndex: profile.Site?.Region));
 
         WorldPoint profilePose = DaggerfallSceneOrigin.Shift(localPose, -translation);
         actor.Actor.Add(new ActorOriginComponent(entry.Origin, profilePose, headingRadians));
@@ -1435,7 +1464,9 @@ internal sealed class DaggerfallActorRoster
 
     private DaggerfallVitalValues SpawnVitals(DaggerfallActorDefinition definition, int level, long durableId)
     {
-        if (definition.Kind == DaggerfallActorKinds.EnemyClass && definition.HitPointsPerLevel is int hitPointsPerLevel)
+        if ((definition.Capabilities.Scaling == ActorScalingMode.CareerLeveled
+                || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.EnemyClass))
+            && definition.HitPointsPerLevel is int hitPointsPerLevel)
         {
             // Each level roll draws under its own key: a keyed draw is deterministic per key, so
             // reusing one key would repeat the same roll for every level.
@@ -1463,7 +1494,12 @@ internal sealed class DaggerfallActorRoster
 
     private void GrantStartingEquipment(ActorState actor, DaggerfallActorDefinition definition)
     {
-        if (definition.Kind != DaggerfallActorKinds.EnemyClass && definition.MobileId is not (7 or 8 or 12 or 21 or 24)) return;
+        bool generatedClassGear = definition.Capabilities.GearPolicy == ActorGearPolicy.GeneratedClassGear
+            || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.EnemyClass);
+        int? fixedVariant = definition.Capabilities.GearPolicy == ActorGearPolicy.FixedVariantGear
+            ? definition.Capabilities.FixedEquipmentVariant
+            : definition.TemplateId is null ? definition.MobileId switch { 7 or 21 => 0, 8 or 12 => 1, 24 => 2, _ => null } : null;
+        if (!generatedClassGear && fixedVariant is null) return;
         if (definition.MobileId is not int mobileId) throw new InvalidOperationException($"Class actor '{definition.Id.Value}' has no equipment mobile id.");
         MechanicsInventoryCoordinator inventory = _actorInventories.InventoryFor(actor.DurableId)
             ?? throw new InvalidOperationException($"Spawned actor {actor.DurableId} has no registered inventory.");
@@ -1471,8 +1507,8 @@ internal sealed class DaggerfallActorRoster
             actor.DurableId, mobileId, _actors.Player.Progression.Level,
             _character.Identity.RaceId,
             _character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male",
-            fixedVariant: mobileId switch { 7 or 21 => 0, 8 or 12 => 1, 24 => 2, _ => null });
-        if (definition.Kind == DaggerfallActorKinds.EnemyClass)
+            fixedVariant: fixedVariant);
+        if (generatedClassGear)
             DaggerfallClassEnemyEquipmentPolicy.GrantRangedLoadout(_definitions, _random, _itemInstances, _uniqueItems,
                 inventory, _actorInventories.EquipmentFor(actor.DurableId), actor.DurableId, mobileId, _actors.Player.Progression.Level,
                 _character.Identity.RaceId, _character.Identity.Gender == DaggerfallCharacterGender.Female ? "female" : "male");
