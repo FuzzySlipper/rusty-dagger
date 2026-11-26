@@ -554,44 +554,53 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       band.camp, band.spotted, band.isClash ?? false, band.hostile ?? false,
       Math.floor(band.x), Math.floor(band.y),
     ]);
-    redraw(inSight, JSON.stringify(bandSignature), () => {
-      inSight.replaceChildren();
-      if (state.bands.length === 0) {
-        const none = document.createElement('p');
-        none.className = 'dagger-expedition-none';
-        none.textContent = 'No one in sight.';
-        inSight.append(none);
-      }
-      for (const band of state.bands) {
-        const key = bandKey(band);
-        const stateTag = band.isClash ? ' · active clash' : band.spotted ? ' · giving chase' : band.camp ? ' · camped' : '';
-        const control = button('');
-        if (band.category) {
-          const badge = document.createElement('span');
-          badge.className = 'dagger-expedition-band-badge';
-          badge.dataset.kind = band.kind;
-          badge.textContent = band.category;
-          control.append(badge, ' ');
+    let restoringInSightFocus = false;
+    try {
+      restoringInSightFocus = true;
+      redraw(inSight, JSON.stringify(bandSignature), () => {
+        inSight.replaceChildren();
+        if (state.bands.length === 0) {
+          const none = document.createElement('p');
+          none.className = 'dagger-expedition-none';
+          none.textContent = 'No one in sight.';
+          inSight.append(none);
         }
-        control.append(`${band.name}${stateTag}`);
-        control.dataset.kind = band.kind;
-        control.dataset.spotted = String(band.spotted);
-        control.dataset.clash = String(Boolean(band.isClash));
-        control.dataset.hostile = String(Boolean(band.hostile));
-        control.dataset.tooltip = bandTooltip(band);
-        const inspect = (): void => {
-          inspectedBandKey = key;
-          renderBandDetail(band);
-        };
-        control.addEventListener('focus', inspect);
-        control.addEventListener('pointerenter', inspect);
-        control.addEventListener('click', () => {
-          inspect();
-          claim({ action: 'expedition-look', x: Math.floor(band.x), y: Math.floor(band.y) });
-        });
-        inSight.append(control);
-      }
-    });
+        for (const band of state.bands) {
+          const key = bandKey(band);
+          const stateTag = band.isClash ? ' · active clash' : band.spotted ? ' · giving chase' : band.camp ? ' · camped' : '';
+          const control = button('');
+          if (band.category) {
+            const badge = document.createElement('span');
+            badge.className = 'dagger-expedition-band-badge';
+            badge.dataset.kind = band.kind;
+            badge.textContent = band.category;
+            control.append(badge, ' ');
+          }
+          control.append(`${band.name}${stateTag}`);
+          control.dataset.redrawKey = key;
+          control.dataset.kind = band.kind;
+          control.dataset.spotted = String(band.spotted);
+          control.dataset.clash = String(Boolean(band.isClash));
+          control.dataset.hostile = String(Boolean(band.hostile));
+          control.dataset.tooltip = bandTooltip(band);
+          const inspect = (): void => {
+            inspectedBandKey = key;
+            renderBandDetail(band);
+          };
+          control.addEventListener('focus', () => {
+            if (!restoringInSightFocus) inspect();
+          });
+          control.addEventListener('pointerenter', inspect);
+          control.addEventListener('click', () => {
+            inspect();
+            claim({ action: 'expedition-look', x: Math.floor(band.x), y: Math.floor(band.y) });
+          });
+          inSight.append(control);
+        }
+      });
+    } finally {
+      restoringInSightFocus = false;
+    }
     const inspected = inspectedBandKey ? state.bands.find(band => bandKey(band) === inspectedBandKey) ?? null : null;
     if (!inspected) inspectedBandKey = null;
     renderBandDetail(inspected);

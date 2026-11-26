@@ -7,8 +7,10 @@
  */
 const signatures = new WeakMap<Element, string>();
 
-/** A control's identity across rebuilds: its tag, its `data-*` values and its accessible name. */
+/** A control's identity across rebuilds: an explicit `data-redraw-key` when set, else its tag, `data-*` values and accessible name. */
 function identity(element: Element): string {
+  if (element instanceof HTMLElement && element.dataset.redrawKey)
+    return `${element.tagName}|key=${element.dataset.redrawKey}`;
   const data = element instanceof HTMLElement ? Object.entries(element.dataset).sort().map(([key, value]) => `${key}=${value}`).join('&') : '';
   return `${element.tagName}|${data}|${element.getAttribute('aria-label') ?? element.textContent?.trim() ?? ''}`;
 }

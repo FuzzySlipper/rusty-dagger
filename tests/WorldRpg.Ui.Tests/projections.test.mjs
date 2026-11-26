@@ -3654,27 +3654,43 @@ test('the travel map is the view the map camera draws into: names stand where th
     // Clearing bands out of sight hides the inspection readout cleanly.
     f.publish({ expedition: expedition({ bands: [] }) });
     assert.equal(detail.hidden, true);
-    // R11079-1: Duplicate kind+name bands keep inspection pinned to the selected band's unique id across refreshes, reordering, and removal.
+    // R11079-1 & R11079-2: Duplicate kind+name bands keep BOTH DOM focus and inspection pinned to the selected band's unique id
+    // across metadata updates, reordering, and removal (automatic focus fallback never retargets inspection to another band).
     const envoyA = { id: -11, name: 'Court of Daggerfall Envoy', kind: 'courier', category: 'Sealed Envoy', faction: 'Court of Daggerfall', origin: 'Daggerfall', destination: 'Charing', detail: 'Revealed dispatch: Treaty A', isClash: false, hostile: false, x: 208.1, y: 212.1, camp: false, spotted: false };
     const envoyB = { id: -12, name: 'Court of Daggerfall Envoy', kind: 'courier', category: 'Sealed Envoy', faction: 'Court of Daggerfall', origin: 'Daggerfall', destination: 'Chesterwark', detail: 'Revealed dispatch: Treaty B', isClash: false, hostile: false, x: 208.4, y: 212.6, camp: false, spotted: false };
     f.publish({ expedition: expedition({ bands: [envoyA, envoyB] }) });
     const dupButtons = [...screen.querySelectorAll('.dagger-expedition-in-sight button')];
     assert.equal(dupButtons.length, 2);
-    dupButtons[1].click();
+    // Actually focus envoy B so redraw's focus restoration path is exercised on subsequent refreshes.
+    dupButtons[1].focus();
+    assert.equal(document.activeElement, dupButtons[1]);
     assert.equal(detail.hidden, false);
     assert.ok(detail.textContent.includes('Treaty B'));
     assert.ok(detail.textContent.includes('Chesterwark'));
-    // Re-publish with moved coordinates and swapped list order: inspection stays on envoy B (never snaps to envoy A).
-    f.publish({ expedition: expedition({ bands: [{ ...envoyB, x: 208.5 }, { ...envoyA, x: 208.2 }] }) });
+    // Re-publish reordered [B, A] with updated mutable route & summary metadata on B: focus AND inspection stay on B with refreshed details.
+    const envoyBUpdated = { ...envoyB, destination: 'Wayrest', detail: 'Revealed dispatch: Treaty B (updated)', x: 208.5 };
+    f.publish({ expedition: expedition({ bands: [envoyBUpdated, { ...envoyA, x: 208.2 }] }) });
     assert.equal(detail.hidden, false);
-    assert.ok(detail.textContent.includes('Treaty B'));
+    assert.ok(detail.textContent.includes('Treaty B (updated)'));
+    assert.ok(detail.textContent.includes('Wayrest'));
     assert.ok(!detail.textContent.includes('Treaty A'));
-    f.publish({ expedition: expedition({ bands: [{ ...envoyA, x: 208.3 }, { ...envoyB, x: 208.6 }] }) });
+    assert.equal(document.activeElement?.dataset.redrawKey, 'id:-12');
+    // Swap order back to [A, B] with another metadata refresh: focus AND inspection remain on B.
+    const envoyBV2 = { ...envoyBUpdated, detail: 'Revealed dispatch: Treaty B (v2)', x: 208.6 };
+    f.publish({ expedition: expedition({ bands: [{ ...envoyA, x: 208.3 }, envoyBV2] }) });
     assert.equal(detail.hidden, false);
-    assert.ok(detail.textContent.includes('Treaty B'));
-    // When envoy B leaves PartySight while same-named envoy A remains, inspection clears rather than jumping to envoy A.
+    assert.ok(detail.textContent.includes('Treaty B (v2)'));
+    assert.ok(!detail.textContent.includes('Treaty A'));
+    assert.equal(document.activeElement?.dataset.redrawKey, 'id:-12');
+    // When focused envoy B leaves PartySight while same-named envoy A remains, inspection clears instead of jumping to envoy A.
     f.publish({ expedition: expedition({ bands: [envoyA] }) });
     assert.equal(detail.hidden, true);
+    // Explicit user focus on the remaining envoy A still inspects it normally afterward.
+    const remainingButton = screen.querySelector('.dagger-expedition-in-sight button');
+    remainingButton.blur();
+    remainingButton.focus();
+    assert.equal(detail.hidden, false);
+    assert.ok(detail.textContent.includes('Treaty A'));
   } finally { f.dispose(); }
 });
 
