@@ -98,7 +98,7 @@ internal interface IDaggerfallExpeditionSurroundings
 /// <summary>Where Enter puts the player: the party's pixel, the location standing there if any, and the pixel the party came from.</summary>
 internal sealed record DaggerfallExpeditionEntry(DaggerfallTravelMapPixel Pixel, DaggerfallSiteRecord? Location, DaggerfallTravelMapPixel CameFrom);
 
-/// <summary>A band the map shows: where it is, what it looks like, and whether it has seen the party.</summary>
+/// <summary>A band the map shows: where it is, what it looks like, whether it has seen the party, and its inspection details.</summary>
 internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, double Heading, DaggerfallBandKind Kind, string Name,
     bool Camp, bool Spotted, double Distance)
 {
@@ -110,6 +110,30 @@ internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, 
 
     /// <summary>Non-null when this band was staged in response to a <see cref="DaggerfallWorldConditionToken"/>.</summary>
     internal string? ConditionTokenId { get; init; }
+
+    /// <summary>Player-facing band category badge (e.g. "Caravan", "Sealed Envoy", "Patrol", "Faction Clash").</summary>
+    internal string Category { get; init; } = string.Empty;
+
+    /// <summary>Player-facing faction, court, guild, or seat label when known or revealed.</summary>
+    internal string? Faction { get; init; }
+
+    /// <summary>Opposing sides when this band is an active two-sided clash.</summary>
+    internal string? ClashSides { get; init; }
+
+    /// <summary>Discovered origin place name when known to the player.</summary>
+    internal string? OriginName { get; init; }
+
+    /// <summary>Discovered destination place name when known to the player.</summary>
+    internal string? DestinationName { get; init; }
+
+    /// <summary>Concise player-facing inspection summary for tooltip/detail panel.</summary>
+    internal string? Detail { get; init; }
+
+    /// <summary>Whether this band is an active two-sided faction clash.</summary>
+    internal bool IsClash { get; init; }
+
+    /// <summary>Whether this band is actively hostile toward the player.</summary>
+    internal bool Hostile { get; init; }
 }
 
 /// <summary>
@@ -132,7 +156,9 @@ internal sealed record DaggerfallPersistentBandSave(
     bool Hostile = false,
     int? Mobile = null,
     DaggerfallTravelMapPixel? RouteOrigin = null,
-    int RouteStep = 0)
+    int RouteStep = 0,
+    string? Faction = null,
+    DaggerfallSiteIdSave? OriginSite = null)
 {
     internal DaggerfallPersistentBandSave Validate()
     {
@@ -148,6 +174,7 @@ internal sealed record DaggerfallPersistentBandSave(
         RouteOrigin?.RequireInBounds(nameof(RouteOrigin));
         if (RouteStep < 0)
             throw new ArgumentOutOfRangeException(nameof(RouteStep), $"Persistent band '{BandId}' has negative route step {RouteStep}.");
+        _ = OriginSite?.Require();
         return this;
     }
 }
@@ -866,16 +893,125 @@ internal sealed class DaggerfallExpedition
     private DaggerfallExpeditionBandView View(DaggerfallExpeditionBand band)
     {
         (double x, double y) = Position;
-        return new(band.Id, band.X, band.Y, band.Heading, band.Kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y))
-            { Mobile = band.Choice.MobileId, ConditionTokenId = band.ConditionTokenId };
+        bool isClash = band.IsFactionClash;
+        DaggerfallBandKind kind = isClash ? DaggerfallBandKind.Clash : band.Kind;
+        string? clashSides = isClash
+            ? $"{band.PrimarySideName ?? band.Name} vs {band.RivalName}"
+            : null;
+        string category = isClash
+            ? "Faction Clash"
+            : kind switch
+            {
+                DaggerfallBandKind.Patrol => "Patrol",
+                DaggerfallBandKind.Bandits => "Bandits",
+                DaggerfallBandKind.Beasts => "Beasts",
+                DaggerfallBandKind.Undead => "Undead",
+                DaggerfallBandKind.Monsters => "Monsters",
+                DaggerfallBandKind.Hostile => "Hostile Band",
+                _ => "Travellers",
+            };
+        string detail = isClash
+            ? $"Active clash between {band.PrimarySideName ?? band.Name} and {band.RivalName}. Enter to intervene or pass by."
+            : band.Spotted
+                ? $"{category} spotted you and gives chase."
+                : band.Camp
+                    ? $"{category} camped by the road."
+                    : kind == DaggerfallBandKind.Patrol
+                        ? "Armed patrol watching the regional roads."
+                        : $"{category} roaming the wilderness.";
+        return new(band.Id, band.X, band.Y, band.Heading, kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y))
+        {
+            Mobile = band.Choice.MobileId,
+            ConditionTokenId = band.ConditionTokenId,
+            Category = category,
+            ClashSides = clashSides,
+            Detail = detail,
+            IsClash = isClash,
+            Hostile = !isClash && kind is DaggerfallBandKind.Bandits or DaggerfallBandKind.Beasts or DaggerfallBandKind.Undead or DaggerfallBandKind.Monsters or DaggerfallBandKind.Hostile,
+        };
     }
 
     private DaggerfallExpeditionBandView ViewPersistent(DaggerfallPersistentOverlandBand band)
     {
         (double x, double y) = Position;
+        bool isDispatch = band.BandId.StartsWith("dispatch:", StringComparison.Ordinal);
+        bool isTraffic = band.BandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal);
+        bool isHostileProducer = band.BandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal);
+        string category = isDispatch
+            ? "Sealed Envoy"
+            : isHostileProducer
+                ? band.BandId.Contains(":bounty:", StringComparison.Ordinal)
+                    ? "Bounty Hunters"
+                    : band.BandId.Contains(":patrol-", StringComparison.Ordinal)
+                        ? "Hostile Patrol"
+                        : "Hit Squad"
+                : band.Kind switch
+                {
+                    DaggerfallBandKind.Caravan => "Caravan",
+                    DaggerfallBandKind.Courier => "Courier",
+                    DaggerfallBandKind.Patrol => band.Hostile ? "Hostile Patrol" : "Patrol",
+                    DaggerfallBandKind.Hostile => "Hostile Squad",
+                    DaggerfallBandKind.Clash => "Faction Clash",
+                    DaggerfallBandKind.Bandits => "Bandits",
+                    DaggerfallBandKind.Beasts => "Beasts",
+                    DaggerfallBandKind.Undead => "Undead",
+                    DaggerfallBandKind.Monsters => "Monsters",
+                    _ => "Travellers",
+                };
+        string? originName = KnownSiteName(band.OriginSite?.Require());
+        string? destName = KnownSiteName(band.Destination?.Place);
+        string detail;
+        if (isDispatch)
+        {
+            detail = destName is not null
+                ? $"Carrying a sealed political dispatch bound for {destName}."
+                : "Carrying a sealed political dispatch.";
+        }
+        else if (band.Hostile)
+        {
+            detail = band.Spotted
+                ? $"{category} spotted you and gives chase."
+                : $"{category} hunting on the regional roads.";
+        }
+        else if (isTraffic && band.Kind == DaggerfallBandKind.Caravan)
+        {
+            detail = destName is not null
+                ? $"Merchant caravan bound for {destName}."
+                : "Merchant caravan travelling the regional roads.";
+        }
+        else if (isTraffic && band.Kind == DaggerfallBandKind.Courier)
+        {
+            detail = destName is not null
+                ? $"Regional courier bound for {destName}."
+                : "Regional courier riding between settlements.";
+        }
+        else if (band.Camp)
+        {
+            detail = $"{category} camped by the road.";
+        }
+        else
+        {
+            detail = destName is not null
+                ? $"{category} travelling toward {destName}."
+                : $"{category} travelling on the road.";
+        }
+
         return new(band.DisplayId, band.X, band.Y, band.Heading, band.Kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y))
-            { Mobile = band.Mobile, PersistentBandId = band.BandId };
+        {
+            Mobile = band.Mobile,
+            PersistentBandId = band.BandId,
+            Category = category,
+            Faction = band.Faction,
+            OriginName = originName,
+            DestinationName = destName,
+            Detail = detail,
+            IsClash = band.Kind == DaggerfallBandKind.Clash,
+            Hostile = band.Hostile,
+        };
     }
+
+    private string? KnownSiteName(DaggerfallSiteId? id) =>
+        id is { } siteId && Known(siteId) && _sites.TryFind(siteId, out DaggerfallSiteRecord? site) ? site.Name : null;
 
     private DaggerfallBandSightConditions SightConditions()
     {

@@ -16,9 +16,22 @@ export interface ExpeditionFoundProjection {
   readonly region: number; readonly index: number; readonly name: string; readonly kind: string; readonly x: number; readonly y: number;
 }
 
-/** A band within the party's sight: what it is and how many, where it stands, and whether it camps or has seen the party. */
+/** A band within the party's sight: what it is and how many, where it stands, its category/faction/clash inspection metadata, and whether it camps or has seen the party. */
 export interface ExpeditionBandProjection {
-  readonly name: string; readonly kind: string; readonly x: number; readonly y: number; readonly camp: boolean; readonly spotted: boolean;
+  readonly name: string;
+  readonly kind: string;
+  readonly x: number;
+  readonly y: number;
+  readonly camp: boolean;
+  readonly spotted: boolean;
+  readonly category?: string;
+  readonly faction?: string | null;
+  readonly clashSides?: string | null;
+  readonly origin?: string | null;
+  readonly destination?: string | null;
+  readonly detail?: string | null;
+  readonly isClash?: boolean;
+  readonly hostile?: boolean;
 }
 
 /** A name over the travel map, where the view puts it: across and down the view from its top left, 0 to 1. */
@@ -232,7 +245,11 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   inSight.className = 'dagger-expedition-in-sight';
   inSight.setAttribute('role', 'group');
   inSight.setAttribute('aria-label', 'Bands in sight');
-  side.append(findForm, found, imAt, worldMap, centreGo, ship, pinHeading, pinLabel, pinButtons, sightHeading, inSight);
+  const bandDetail = document.createElement('div');
+  bandDetail.className = 'dagger-expedition-band-detail dagger-panel';
+  bandDetail.setAttribute('aria-live', 'polite');
+  bandDetail.hidden = true;
+  side.append(findForm, found, imAt, worldMap, centreGo, ship, pinHeading, pinLabel, pinButtons, sightHeading, inSight, bandDetail);
 
   // The bottom bar: how the party goes, its vitals, the line, and leaving.
   const bottom = document.createElement('footer');
@@ -284,6 +301,53 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   encounterPanel.append(encounterFrame);
 
   let current: ExpeditionProjection | null = null;
+  let inspectedBandKey: string | null = null;
+  const bandKey = (band: ExpeditionBandProjection): string => `${band.kind}:${band.name}`;
+  const bandRouteLine = (band: ExpeditionBandProjection): string | null => {
+    if (band.origin && band.destination) return `Route: ${band.origin} to ${band.destination}`;
+    if (band.destination) return `Bound for: ${band.destination}`;
+    if (band.origin) return `From: ${band.origin}`;
+    return null;
+  };
+  const bandTooltip = (band: ExpeditionBandProjection): string => {
+    const parts: string[] = [];
+    if (band.category) parts.push(band.category);
+    if (band.faction) parts.push(band.faction);
+    if (band.clashSides) parts.push(`Clash: ${band.clashSides}`);
+    const route = bandRouteLine(band);
+    if (route) parts.push(route);
+    if (band.detail) parts.push(band.detail);
+    parts.push('Look at them.');
+    return parts.join(' · ');
+  };
+  const renderBandDetail = (band: ExpeditionBandProjection | null): void => {
+    bandDetail.hidden = band === null;
+    if (!band) { bandDetail.replaceChildren(); return; }
+    const header = document.createElement('p');
+    header.className = 'dagger-expedition-band-detail-title';
+    if (band.category) {
+      const badge = document.createElement('span');
+      badge.className = 'dagger-expedition-band-badge';
+      badge.dataset.kind = band.kind;
+      badge.textContent = band.category;
+      header.append(badge, ' ');
+    }
+    header.append(band.name);
+    const lines: HTMLElement[] = [header];
+    const addLine = (cls: string, text: string | null | undefined): void => {
+      if (!text) return;
+      const p = document.createElement('p');
+      p.className = cls;
+      p.textContent = text;
+      lines.push(p);
+    };
+    const statusText = band.isClash ? 'Active clash' : band.spotted ? 'Giving chase' : band.camp ? 'Camped' : band.hostile ? 'Hostile' : 'On the road';
+    addLine('dagger-expedition-band-detail-meta', band.faction ? `${band.faction} · ${statusText}` : statusText);
+    if (band.clashSides) addLine('dagger-expedition-band-detail-sides', `Sides: ${band.clashSides}`);
+    addLine('dagger-expedition-band-detail-route', bandRouteLine(band));
+    addLine('dagger-expedition-band-detail-note', band.detail);
+    bandDetail.replaceChildren(...lines);
+  };
   const body = document.createElement('div');
   body.className = 'dagger-expedition-body';
   body.append(view, side);
@@ -482,7 +546,13 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       }
     });
     // The bands the party sees, each looked at by choosing it: the map draws them, and keys and the pad reach them here.
-    redraw(inSight, JSON.stringify(state.bands.map(band => [band.name, band.kind, band.camp, band.spotted, Math.floor(band.x), Math.floor(band.y)])), () => {
+    const bandSignature = state.bands.map(band => [
+      band.name, band.kind, band.category ?? '', band.faction ?? '', band.clashSides ?? '',
+      band.origin ?? '', band.destination ?? '', band.detail ?? '',
+      band.camp, band.spotted, band.isClash ?? false, band.hostile ?? false,
+      Math.floor(band.x), Math.floor(band.y),
+    ]);
+    redraw(inSight, JSON.stringify(bandSignature), () => {
       inSight.replaceChildren();
       if (state.bands.length === 0) {
         const none = document.createElement('p');
@@ -491,14 +561,38 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
         inSight.append(none);
       }
       for (const band of state.bands) {
-        const control = button(`${band.name}${band.spotted ? ' · giving chase' : band.camp ? ' · camped' : ''}`);
+        const key = bandKey(band);
+        const stateTag = band.isClash ? ' · active clash' : band.spotted ? ' · giving chase' : band.camp ? ' · camped' : '';
+        const control = button('');
+        if (band.category) {
+          const badge = document.createElement('span');
+          badge.className = 'dagger-expedition-band-badge';
+          badge.dataset.kind = band.kind;
+          badge.textContent = band.category;
+          control.append(badge, ' ');
+        }
+        control.append(`${band.name}${stateTag}`);
         control.dataset.kind = band.kind;
         control.dataset.spotted = String(band.spotted);
-        control.dataset.tooltip = 'Look at them.';
-        control.addEventListener('click', () => claim({ action: 'expedition-look', x: Math.floor(band.x), y: Math.floor(band.y) }));
+        control.dataset.clash = String(Boolean(band.isClash));
+        control.dataset.hostile = String(Boolean(band.hostile));
+        control.dataset.tooltip = bandTooltip(band);
+        const inspect = (): void => {
+          inspectedBandKey = key;
+          renderBandDetail(band);
+        };
+        control.addEventListener('focus', inspect);
+        control.addEventListener('pointerenter', inspect);
+        control.addEventListener('click', () => {
+          inspect();
+          claim({ action: 'expedition-look', x: Math.floor(band.x), y: Math.floor(band.y) });
+        });
         inSight.append(control);
       }
     });
+    const inspected = inspectedBandKey ? state.bands.find(band => bandKey(band) === inspectedBandKey) ?? null : null;
+    if (!inspected) inspectedBandKey = null;
+    renderBandDetail(inspected);
     journey.textContent = journeyLine(state);
     message.textContent = state.message ?? '';
     root.dataset.encounter = String(encounter);

@@ -69,7 +69,8 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
     Action requestTravelPlaces, Func<DaggerfallTransportAccessContext> transportAccess, Action openExpedition, Action enterExpedition,
     Func<DaggerfallTransportActionResult> boardShip, Func<DaggerfallTransportActionResult> leaveShip,
     Action<DaggerfallTransportActionResult> applyTransportChange, PresentationState presentation,
-    DaggerfallOverlandMap overland, Func<DaggerfallTravelMapPixel> playerPixel)
+    DaggerfallOverlandMap overland, Func<DaggerfallTravelMapPixel> playerPixel,
+    Func<string, (string? Faction, string? Detail)>? describePersistentBand = null)
 {
     private DaggerfallTravelMap? _map;
     private bool _worldMapOpen;
@@ -177,6 +178,7 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
         DaggerfallTravelDestination? teleport = expedition.TeleportPlace is { } chosen ? policy.SupportedDestinations().FirstOrDefault(place => place.Id == chosen) : null;
         bool atSea = policy.IsOcean(party);
         StatsComponent stats = actors.Player.Stats;
+        IReadOnlyList<DaggerfallExpeditionBandView> bands = [.. expedition.SeenBands.Select(EnrichBand)];
         return new(overland.Labels, overland.View.Heading, overland.View.Following,
             expedition.Destination, Name(expedition.Destination), expedition.Pin, Name(expedition.Pin),
             expedition.Mode, expedition.Speed, expedition.Tuning.Speeds,
@@ -189,7 +191,21 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             expedition.CanLeave, expedition.Teleporting ? teleport is not null : !atSea && expedition.Held is null,
             expedition.Teleporting ? "Teleport" : here is not null && expedition.Known(here.Id) ? $"Enter {here.Name}" : "Enter",
             Encounter(), expedition.Teleporting, teleport?.Name,
-            expedition.Message, expedition.Found, [.. expedition.SeenBands]);
+            expedition.Message, expedition.Found, bands);
+    }
+
+    private DaggerfallExpeditionBandView EnrichBand(DaggerfallExpeditionBandView band)
+    {
+        if (describePersistentBand is null || string.IsNullOrWhiteSpace(band.PersistentBandId))
+            return band;
+        (string? faction, string? detail) = describePersistentBand(band.PersistentBandId);
+        if (faction is null && detail is null)
+            return band;
+        return band with
+        {
+            Faction = faction ?? band.Faction,
+            Detail = detail ?? band.Detail,
+        };
     }
 
     /// <summary>The waiting encounter's panel: the band that caught the party, or an unseen one; null when none waits.</summary>

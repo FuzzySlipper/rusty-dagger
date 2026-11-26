@@ -208,7 +208,7 @@ public sealed class PoliticalVisibleSurfacesTests
         var (patrolBand, patrolErr) = bands.StageAt(now + 200, party, playerLevel: 5, lowRoll, chosenDistance, chosenBearing, camp: false, [borderTension]);
         Assert.Null(patrolErr);
         Assert.NotNull(patrolBand);
-        Assert.Equal(DaggerfallBandKind.Travellers, patrolBand!.Kind);
+        Assert.Equal(DaggerfallBandKind.Patrol, patrolBand!.Kind);
         Assert.Equal(borderTension.TokenId, patrolBand.ConditionTokenId);
         Assert.Contains("Border Patrol", patrolBand.Name, StringComparison.Ordinal);
     }

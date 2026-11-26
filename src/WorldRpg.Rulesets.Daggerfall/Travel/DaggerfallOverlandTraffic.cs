@@ -153,7 +153,7 @@ internal sealed class DaggerfallOverlandTraffic
         return _overlandParties.DispatchOverlandBand(
             bandId: bandId,
             name: bandName,
-            kind: DaggerfallBandKind.Travellers,
+            kind: isCaravan ? DaggerfallBandKind.Caravan : DaggerfallBandKind.Courier,
             memberIds: [memberId],
             startX: origin.MapPixelX + 0.5,
             startY: origin.MapPixelY + 0.5,
@@ -161,7 +161,9 @@ internal sealed class DaggerfallOverlandTraffic
             destination: new DaggerfallExpeditionMark(destPixel, destination.Id),
             destinationProfile: destProfile,
             camp: false,
-            hostile: false);
+            hostile: false,
+            faction: _definitions.BuildingNames.RegionName(origin.Id.Region),
+            originSite: origin.Id);
     }
 
     private int ActiveTrafficBandCount() =>

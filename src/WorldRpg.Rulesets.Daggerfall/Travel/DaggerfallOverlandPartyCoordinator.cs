@@ -91,7 +91,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         DaggerfallWorldProfileKey? destinationProfile = null,
         bool camp = false,
         bool hostile = false,
-        int? mobile = null)
+        int? mobile = null,
+        string? faction = null,
+        DaggerfallSiteId? originSite = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentNullException.ThrowIfNull(memberIds);
@@ -140,7 +142,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             Hostile: hostile,
             Mobile: mobile,
             RouteOrigin: routeOrigin,
-            RouteStep: 0);
+            RouteStep: 0,
+            Faction: string.IsNullOrWhiteSpace(faction) ? null : faction.Trim(),
+            OriginSite: originSite is { } os ? new DaggerfallSiteIdSave(os.Region, os.Index) : null);
         return _expedition.RegisterPersistentBand(save);
     }
 
@@ -198,7 +202,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                         destinationProfile: hp,
                         camp: false,
                         hostile: false,
-                        mobile: band.Mobile);
+                        mobile: band.Mobile,
+                        faction: band.Faction,
+                        originSite: band.Destination?.Place);
                     return [];
                 }
             }
@@ -262,13 +268,14 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 if (!_expedition.PersistentBands.Any(b => StringComparer.Ordinal.Equals(b.BandId, returnBandId)))
                 {
                     string name = current.Social?.DisplayNameOverride ?? "Regional Traveller";
-                    double speed = string.Equals(current.Social?.Role, "courier", StringComparison.OrdinalIgnoreCase)
+                    bool isCourier = string.Equals(current.Social?.Role, "courier", StringComparison.OrdinalIgnoreCase);
+                    double speed = isCourier
                         ? DaggerfallOverlandTraffic.CourierSpeedPixelsPerHour
                         : DaggerfallOverlandTraffic.CaravanSpeedPixelsPerHour;
                     _ = DispatchOverlandBand(
                         bandId: returnBandId,
                         name: name,
-                        kind: DaggerfallBandKind.Travellers,
+                        kind: isCourier ? DaggerfallBandKind.Courier : DaggerfallBandKind.Caravan,
                         memberIds: [actorId],
                         startX: fromPixel.X + 0.5,
                         startY: fromPixel.Y + 0.5,
@@ -276,7 +283,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                         destination: new DaggerfallExpeditionMark(new(homePixel.X, homePixel.Y), hp.Site),
                         destinationProfile: hp,
                         camp: false,
-                        hostile: false);
+                        hostile: false,
+                        originSite: departingProfile.Site);
                     released.Add(actorId);
                     continue;
                 }

@@ -331,7 +331,7 @@ public sealed class SocialSpineFixesSessionTests
         DaggerfallPersistentOverlandBand? bountyBand = session.HostileOverlandBands.TryDispatchWindow(501L, partyPos);
         Assert.NotNull(bountyBand);
         Assert.True(bountyBand!.Hostile);
-        Assert.Equal(DaggerfallBandKind.Bandits, bountyBand.Kind);
+        Assert.Equal(DaggerfallBandKind.Hostile, bountyBand.Kind);
         Assert.StartsWith("hostile:bounty:", bountyBand.BandId, StringComparison.Ordinal);
 
         IReadOnlyList<ActorLedgerEntry> hunters = session.State.ActorLedger.EntriesOnOverlandBand(bountyBand.BandId);

@@ -168,6 +168,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallOverlandMap _overland;
     /// <summary>The travel panel, whose world map the page reports open or closed.</summary>
     private DaggerfallExpeditionPanel? _travelPanel;
+    internal DaggerfallExpeditionPanel TravelPanel => _travelPanel!;
 
     /// <summary>Whether river water about the player is still being built, a few map pixels an update.</summary>
     internal bool RiverWaterBuilding => _horizon.RiversBuilding;
@@ -492,6 +493,23 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         if (CourierDispatches.OnOverlandBandArrived(band.BandId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)) is not null)
             return;
         _ = OverlandParties.OnPersistentBandArrived(band);
+    }
+
+    private (string? Faction, string? Detail) DescribePersistentExpeditionBand(string bandId)
+    {
+        if (!bandId.StartsWith(DaggerfallCourierDispatches.DispatchBandPrefix, StringComparison.Ordinal))
+            return default;
+        DaggerfallCourierDispatchSave? dispatch = CourierDispatches.All.FirstOrDefault(d =>
+            StringComparer.Ordinal.Equals(d.OverlandBandId, bandId));
+        if (dispatch is null)
+            return default;
+        string? seatName = DaggerfallBoardSeatCatalog.TryGetBySeatId(dispatch.SeatId, out DaggerfallBoardSeatDefinition? seat) && seat is not null
+            ? seat.SeatName
+            : null;
+        string? detail = dispatch.Revealed
+            ? $"Revealed dispatch: {dispatch.Summary}"
+            : null;
+        return (seatName, detail);
     }
 
     IReadOnlyList<DaggerfallWorldConditionToken> IDaggerfallExpeditionSurroundings.WorldConditions(int region) =>

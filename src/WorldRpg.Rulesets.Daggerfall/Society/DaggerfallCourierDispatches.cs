@@ -265,7 +265,7 @@ internal sealed class DaggerfallCourierDispatches(
                 _ = coordinator.DispatchOverlandBand(
                     bandId: bandId,
                     name: $"{seatLabel} Envoy",
-                    kind: DaggerfallBandKind.Travellers,
+                    kind: DaggerfallBandKind.Courier,
                     memberIds: [cid],
                     startX: origin.MapPixelX + 0.5,
                     startY: origin.MapPixelY + 0.5,
@@ -273,7 +273,9 @@ internal sealed class DaggerfallCourierDispatches(
                     destination: new DaggerfallExpeditionMark(destPixel, destination.Id),
                     destinationProfile: destProfile,
                     camp: false,
-                    hostile: false);
+                    hostile: false,
+                    faction: seatLabel,
+                    originSite: origin.Id);
                 overlandBandId = bandId;
             }
         }

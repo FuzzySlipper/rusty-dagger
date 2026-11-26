@@ -76,13 +76,18 @@ export interface AtlasMarks {
   readonly sight?: number | null; readonly bands?: readonly AtlasBand[];
 }
 
-/** Each band kind's token, drawn in a 24-unit square: a hooded bandit, a traveller with a staff, a beast's head, a skull, a horned head. */
+/** Each band kind's token, drawn in a 24-unit square: bandits, travellers, beasts, undead, monsters, caravans, couriers, patrols, hostiles, clashes. */
 const BAND_GLYPHS: Readonly<Record<string, string>> = {
   bandits: 'M12 3a5 5 0 0 0-5 5v3L4 21h16l-3-10V8a5 5 0 0 0-5-5zm-2 7h4v2h-4z',
   travellers: 'M11 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM7 21l1.5-10h5L15 21zM17 4h1.5v17H17z',
   beasts: 'M4 3l4.5 5h7L20 3l-1 9-7 8-7-8zm5 8v1.5h2V11zm4 0v1.5h2V11z',
   undead: 'M12 3a7 7 0 0 0-7 7c0 2.6 1.3 4.2 3 5.3V20h8v-4.7c1.7-1.1 3-2.7 3-5.3a7 7 0 0 0-7-7zm-3 6h2.5v3H9zm3.5 0H15v3h-2.5z',
   monsters: 'M5 3c.5 3 2 5 4 5.5h6C17 8 18.5 6 19 3l1 7c0 6-3.5 10-8 10S4 16 4 10zm4 8v2h2v-2zm4 0v2h2v-2z',
+  caravan: 'M4 13V8a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v5h1v2H3v-2zm3 4a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm10 0a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+  courier: 'M3 6h18v12H3zm2 2v1l7 4.5L19 9V8l-7 4.5z',
+  patrol: 'M12 3l8 3v6c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6zm0 4.5L7.5 9v3c0 3.1 2 5.2 4.5 6.4 2.5-1.2 4.5-3.3 4.5-6.4V9z',
+  hostile: 'M12 2l2.6 6.2L21 9l-5 4.4L17.5 20 12 16.6 6.5 20 8 13.4 3 9l6.4-.8z',
+  clash: 'M5 4l6 6 2-2-6-6H5zm14 0h-2l-6 6 2 2 6-6zm-8 9l-6 6v1h2l6-6zm2 0l6 6h2v-1l-6-6z',
 };
 
 export function isTravelMap(value: unknown): value is TravelMapProjection {

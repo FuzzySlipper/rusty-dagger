@@ -1377,7 +1377,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallExpeditionPanel travelPanel = _travelPanel = new(Expedition, travelPolicy, this, State.Actors, definitions.BuildingNames.RegionNames,
                 definitions.WorldNames, _atlasTiles, () => _classicArt, State.Transport, State.Wagon, State.Inventory, _inventoryUi,
                 _hud.RequestTravelPlaces, TransportAccess, OpenExpedition, EnterExpedition, BoardPropertyShip, LeavePropertyShip,
-                ApplyTransportChange, Presentation, _overland, MapPosition.Position);
+                ApplyTransportChange, Presentation, _overland, MapPosition.Position, DescribePersistentExpeditionBand);
             DaggerfallServiceCounter counter = new(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
             DaggerfallMakerPanels makers = new(_itemMaker, _potionMaker, definitions, counter, Presentation);
             SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, counter,

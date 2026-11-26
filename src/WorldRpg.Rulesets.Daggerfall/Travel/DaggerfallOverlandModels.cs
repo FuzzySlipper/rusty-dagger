@@ -29,12 +29,18 @@ internal sealed class DaggerfallOverlandModels : IDisposable
             [DaggerfallOverlandBanner.Beasts] = Flag(Solid(.48f, .34f, .16f)),
             [DaggerfallOverlandBanner.Undead] = Flag(Solid(.56f, .70f, .52f)),
             [DaggerfallOverlandBanner.Monsters] = Flag(Solid(.42f, .18f, .52f)),
+            [DaggerfallOverlandBanner.Caravan] = Flag(Solid(.83f, .60f, .22f)),
+            [DaggerfallOverlandBanner.Courier] = Flag(Solid(.30f, .65f, .78f)),
+            [DaggerfallOverlandBanner.Patrol] = Flag(Solid(.27f, .41f, .66f)),
+            [DaggerfallOverlandBanner.Hostile] = Flag(Solid(.76f, .14f, .10f)),
+            [DaggerfallOverlandBanner.Clash] = Flag(Solid(.88f, .39f, .12f)),
         };
         Dots = new Dictionary<DaggerfallOverlandDot, Appearance>
         {
             [DaggerfallOverlandDot.Sight] = Mesh(Disk(), Glow(1, .92f, .62f)),
             [DaggerfallOverlandDot.Route] = Mesh(Disk(), Glow(1, 1, 1)),
             [DaggerfallOverlandDot.Spotted] = Mesh(Disk(), Glow(1, .25f, .2f)),
+            [DaggerfallOverlandDot.Clash] = Mesh(Disk(), Glow(1, .52f, .15f)),
         };
     }
 
@@ -145,7 +151,7 @@ internal sealed class DaggerfallOverlandModels : IDisposable
 }
 
 /// <summary>Whose standard a flag is: the party's, where it heads, or a band's by its kind.</summary>
-internal enum DaggerfallOverlandBanner { Party, Destination, Bandits, Travellers, Beasts, Undead, Monsters }
+internal enum DaggerfallOverlandBanner { Party, Destination, Bandits, Travellers, Beasts, Undead, Monsters, Caravan, Courier, Patrol, Hostile, Clash }
 
-/// <summary>What a dot on the map marks: the edge of the party's sight, the way it goes, a band that has seen it.</summary>
-internal enum DaggerfallOverlandDot { Sight, Route, Spotted }
+/// <summary>What a dot on the map marks: the edge of the party's sight, the way it goes, a band that has seen it, or an active clash.</summary>
+internal enum DaggerfallOverlandDot { Sight, Route, Spotted, Clash }

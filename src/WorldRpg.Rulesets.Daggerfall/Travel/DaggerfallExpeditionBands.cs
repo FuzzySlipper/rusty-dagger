@@ -6,8 +6,8 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
-/// <summary>What a band on the map roughly is, as its token shows: read from its foe's team and nature.</summary>
-internal enum DaggerfallBandKind { Bandits, Travellers, Beasts, Undead, Monsters }
+/// <summary>What a band on the map roughly is, as its token shows: read from its role, team, and nature.</summary>
+internal enum DaggerfallBandKind { Bandits, Travellers, Beasts, Undead, Monsters, Caravan, Courier, Patrol, Hostile, Clash }
 
 /// <summary>
 /// One band on the expedition map: a staged token, not a simulated party. Its foe is the one its table gave when it was
@@ -35,6 +35,7 @@ internal sealed class DaggerfallExpeditionBand
     internal string? ConditionTokenId { get; }
 
     /// <summary>When non-null, this band represents an active road/wilderness clash against an opposing creature faction.</summary>
+    internal string? PrimarySideName { get; init; }
     internal DaggerfallEncounterChoice? RivalChoice { get; init; }
     internal int RivalSize { get; init; }
     internal string? RivalName { get; init; }
@@ -96,7 +97,9 @@ internal sealed class DaggerfallPersistentOverlandBand
         bool hostile = false,
         int? mobile = null,
         DaggerfallTravelMapPixel? routeOrigin = null,
-        int routeStep = 0)
+        int routeStep = 0,
+        string? faction = null,
+        DaggerfallSiteIdSave? originSite = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -116,6 +119,8 @@ internal sealed class DaggerfallPersistentOverlandBand
         Mobile = mobile;
         RouteOrigin = routeOrigin ?? (destination is not null ? ClampedPixel(x, y) : null);
         RouteStep = Math.Max(0, routeStep);
+        Faction = string.IsNullOrWhiteSpace(faction) ? null : faction.Trim();
+        OriginSite = originSite;
     }
 
     internal string BandId { get; }
@@ -135,6 +140,8 @@ internal sealed class DaggerfallPersistentOverlandBand
     internal int? Mobile { get; }
     internal DaggerfallTravelMapPixel? RouteOrigin { get; set; }
     internal int RouteStep { get; set; }
+    internal string? Faction { get; }
+    internal DaggerfallSiteIdSave? OriginSite { get; }
 
     internal double Distance(double x, double y) => Math.Sqrt((X - x) * (X - x) + (Y - y) * (Y - y));
 
@@ -272,7 +279,9 @@ internal sealed class DaggerfallPersistentOverlandBand
         Hostile,
         Mobile,
         RouteOrigin,
-        RouteStep);
+        RouteStep,
+        Faction,
+        OriginSite);
 
     internal static DaggerfallPersistentOverlandBand FromSave(DaggerfallPersistentBandSave save, int displayId) => new(
         save.BandId,
@@ -290,7 +299,9 @@ internal sealed class DaggerfallPersistentOverlandBand
         save.Hostile,
         save.Mobile,
         save.RouteOrigin,
-        save.RouteStep);
+        save.RouteStep,
+        save.Faction,
+        save.OriginSite);
 }
 
 /// <summary>
@@ -463,6 +474,7 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
 
         // Downstream of board-game moves: when two opposing regional conditions collide (or a severe MonsterSurge
         // spills over into rival territory), stage an active two-sided faction clash on the map!
+        string? primarySideName = null;
         DaggerfallEncounterChoice? rivalChoice = null;
         int rivalSize = 0;
         string? rivalName = null;
@@ -470,17 +482,20 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
             && TryStageConditionClashRival(drivingCondition, mobile, worldConditions, request.Context, key, draw,
                 out DaggerfallEncounterChoice? pickedRivalChoice, out DaggerfallMobileDefinition? rivalMobile, out string rivalTag))
         {
+            primarySideName = bandName;
             rivalChoice = pickedRivalChoice;
             rivalSize = draw($"{key}:rival-size", tuning.Size.Minimum, tuning.Size.Maximum);
             string rivalBase = rivalSize == 1 ? rivalMobile!.DonorName : $"{rivalSize} {Plural(rivalMobile!.DonorName)}";
             rivalName = string.IsNullOrWhiteSpace(rivalTag) ? rivalBase : $"{rivalBase} ({rivalTag})";
             bandName = $"{bandName} vs {rivalName}";
+            overrideKind = DaggerfallBandKind.Clash;
             camped = false;
         }
 
         DaggerfallExpeditionBand band = new(id, request, choice, bandName,
             overrideKind ?? KindOf(mobile!), size, camped, x, y, when + (long)(tuning.LifetimeHours * SecondsPerHour), conditionTokenId)
         {
+            PrimarySideName = primarySideName,
             RivalChoice = rivalChoice,
             RivalSize = rivalSize,
             RivalName = rivalName,
@@ -558,14 +573,14 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
                     && (pair.Value.DonorName.Contains("Knight", StringComparison.OrdinalIgnoreCase)
                         || pair.Value.DonorName.Contains("Warrior", StringComparison.OrdinalIgnoreCase)
                         || pair.Value.DonorName.Contains("Archer", StringComparison.OrdinalIgnoreCase));
-                bandKind = DaggerfallBandKind.Travellers;
+                bandKind = DaggerfallBandKind.Patrol;
                 labelTag = "Border Patrol";
                 break;
             case DaggerfallWorldConditionKind.CrimeCrackdown:
                 predicate = pair => pair.Value.IsPublished && pair.Value.Affinity == "Human"
                     && (pair.Value.DonorName.Contains("Knight", StringComparison.OrdinalIgnoreCase)
                         || pair.Value.DonorName.Contains("Warrior", StringComparison.OrdinalIgnoreCase));
-                bandKind = DaggerfallBandKind.Travellers;
+                bandKind = DaggerfallBandKind.Patrol;
                 labelTag = "Watch Patrol";
                 break;
             case DaggerfallWorldConditionKind.GrainShortage:

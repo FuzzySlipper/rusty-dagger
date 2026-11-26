@@ -181,7 +181,8 @@ public sealed class OverlandProducersSessionTests
 
         DaggerfallPersistentOverlandBand trafficBand = session.Expedition.PersistentBands
             .First(b => b.BandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal));
-        Assert.Equal(DaggerfallBandKind.Travellers, trafficBand.Kind);
+        Assert.True(trafficBand.Kind is DaggerfallBandKind.Caravan or DaggerfallBandKind.Courier,
+            $"Expected Caravan or Courier kind for regional traffic band, got {trafficBand.Kind}.");
         Assert.NotNull(trafficBand.Destination);
         Assert.NotNull(trafficBand.DestinationProfile);
 

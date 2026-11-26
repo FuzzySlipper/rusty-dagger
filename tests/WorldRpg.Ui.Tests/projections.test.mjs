@@ -3626,6 +3626,34 @@ test('the travel map is the view the map camera draws into: names stand where th
     assert.deepEqual(bands.map(band => [band.textContent, band.dataset.spotted]), [['3 Orcs · camped', 'false'], ['Highwayman · giving chase', 'true']]);
     bands[1].click();
     assert.deepEqual(f.actions.at(-1), { action: 'expedition-look', x: 206, y: 212 });
+    // Rich band projections show category badges, clash/hostile markers, tooltips, and a keyboard/click inspection readout.
+    f.publish({ expedition: expedition({ bands: [
+      { name: 'Court of Daggerfall Envoy', kind: 'courier', category: 'Sealed Envoy', faction: 'Court of Daggerfall', origin: 'Daggerfall', destination: 'Charing', detail: 'Carrying a sealed political dispatch.', isClash: false, hostile: false, x: 208.2, y: 212.4, camp: false, spotted: false },
+      { name: '2 Orcs (Orc Surge) vs 2 Knights (Border Patrol)', kind: 'clash', category: 'Faction Clash', faction: null, clashSides: '2 Orcs (Orc Surge) vs 2 Knights (Border Patrol)', detail: 'Active clash between 2 Orcs and 2 Knights.', isClash: true, hostile: false, x: 207.8, y: 213.1, camp: false, spotted: false },
+      { name: 'Daggerfall Bounty Hunters', kind: 'hostile', category: 'Bounty Hunters', faction: 'Daggerfall', detail: 'Hostile pursuit band hunting you on the roads.', isClash: false, hostile: true, x: 206.5, y: 212.9, camp: false, spotted: true },
+    ] }) });
+    const richBands = [...screen.querySelectorAll('.dagger-expedition-in-sight button')];
+    assert.equal(richBands.length, 3);
+    assert.equal(richBands[0].querySelector('.dagger-expedition-band-badge').textContent, 'Sealed Envoy');
+    assert.equal(richBands[1].dataset.clash, 'true');
+    assert.equal(richBands[2].dataset.hostile, 'true');
+    assert.ok(richBands[0].dataset.tooltip.includes('Court of Daggerfall'));
+    assert.ok(richBands[1].dataset.tooltip.includes('Clash: 2 Orcs (Orc Surge) vs 2 Knights (Border Patrol)'));
+    // Focusing (keyboard/controller) or clicking a band reveals its inspection readout without hover.
+    const detail = screen.querySelector('.dagger-expedition-band-detail');
+    assert.equal(detail.hidden, true);
+    richBands[0].dispatchEvent(new window.FocusEvent('focus'));
+    assert.equal(detail.hidden, false);
+    assert.ok(detail.textContent.includes('Sealed Envoy'));
+    assert.ok(detail.textContent.includes('Route: Daggerfall to Charing'));
+    assert.ok(detail.textContent.includes('Carrying a sealed political dispatch.'));
+    richBands[1].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-look', x: 207, y: 213 });
+    assert.ok(detail.textContent.includes('Active clash'));
+    assert.ok(detail.textContent.includes('Sides: 2 Orcs (Orc Surge) vs 2 Knights (Border Patrol)'));
+    // Clearing bands out of sight hides the inspection readout cleanly.
+    f.publish({ expedition: expedition({ bands: [] }) });
+    assert.equal(detail.hidden, true);
   } finally { f.dispose(); }
 });
 

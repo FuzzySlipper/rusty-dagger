@@ -108,20 +108,20 @@ internal sealed class DaggerfallHostileOverlandBands
         string regionName = _definitions.BuildingNames.RegionName(region);
 
         DaggerfallHostileStandingSnapshot standing = _readStanding(region);
-        List<(string Slug, string BandName, int PreferredMobileId, int MemberCount, double Speed)> candidates = [];
+        List<(string Slug, string BandName, DaggerfallBandKind Kind, string FactionName, int PreferredMobileId, int MemberCount, double Speed)> candidates = [];
         if (standing.WantedOrBanished)
-            candidates.Add(("bounty", $"{regionName} Bounty Hunters", 144, 2, BountyHunterSpeedPixelsPerHour));
+            candidates.Add(("bounty", $"{regionName} Bounty Hunters", DaggerfallBandKind.Hostile, regionName, 144, 2, BountyHunterSpeedPixelsPerHour));
         foreach (DaggerfallHostileFactionStanding guild in standing.HostileGuilds
             .Where(g => g.Reputation <= GuildHitSquadThreshold)
             .OrderBy(g => g.Reputation).ThenBy(g => g.FactionId))
         {
-            candidates.Add(($"hitsquad-{guild.FactionId}", $"{guild.Name} Hit Squad", guild.PreferredMobileId, 2, HitSquadSpeedPixelsPerHour));
+            candidates.Add(($"hitsquad-{guild.FactionId}", $"{guild.Name} Hit Squad", DaggerfallBandKind.Hostile, guild.Name, guild.PreferredMobileId, 2, HitSquadSpeedPixelsPerHour));
         }
         foreach (DaggerfallHostileFactionStanding court in standing.HostileCourts
             .Where(c => c.Reputation <= RivalPatrolThreshold)
             .OrderBy(c => c.Reputation).ThenBy(c => c.FactionId))
         {
-            candidates.Add(($"patrol-{court.FactionId}", $"{court.Name} Patrol", court.PreferredMobileId, 2, RivalPatrolSpeedPixelsPerHour));
+            candidates.Add(($"patrol-{court.FactionId}", $"{court.Name} Patrol", DaggerfallBandKind.Patrol, court.Name, court.PreferredMobileId, 2, RivalPatrolSpeedPixelsPerHour));
         }
         if (candidates.Count == 0) return null;
 
@@ -153,7 +153,7 @@ internal sealed class DaggerfallHostileOverlandBands
         return _overlandParties.DispatchOverlandBand(
             bandId: bandId,
             name: chosen.BandName,
-            kind: DaggerfallBandKind.Bandits,
+            kind: chosen.Kind,
             memberIds: memberIds,
             startX: startX,
             startY: startY,
@@ -162,7 +162,8 @@ internal sealed class DaggerfallHostileOverlandBands
             destinationProfile: null,
             camp: false,
             hostile: true,
-            mobile: enemyDef.MobileId);
+            mobile: enemyDef.MobileId,
+            faction: chosen.FactionName);
     }
 
     private int ActiveHostileBandCount() =>

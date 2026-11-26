@@ -433,13 +433,28 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         string? here = expedition.LocationHere is { } site && expedition.Known(site.Id) ? site.Name : null;
         Label(here is null ? "Your party" : $"Your party · {here}", "party", partyX, partyZ, 0);
 
-        // The bands the party sees, a spotted one ringed in red.
+        // The bands the party sees, ringed in red when giving chase or amber when in an active clash.
         foreach (DaggerfallExpeditionBandView band in expedition.SeenBands)
         {
             (double x, double z) = DaggerfallOverlandView.Metres(band.X, band.Y);
             Figure(band.Mobile, Banner(band.Kind), x, z);
             if (band.Spotted) Stand(models.Dots[DaggerfallOverlandDot.Spotted], x, z, token * .6f, sink: -2);
-            Label(band.Name, band.Camp ? "camp" : band.Spotted ? "chase" : "band", x, z, 0);
+            else if (band.IsClash) Stand(models.Dots[DaggerfallOverlandDot.Clash], x, z, token * .65f, sink: -2);
+            string labelKind = band.IsClash
+                ? "clash"
+                : band.Spotted
+                    ? "chase"
+                    : band.Camp
+                        ? "camp"
+                        : band.Kind switch
+                        {
+                            DaggerfallBandKind.Caravan => "caravan",
+                            DaggerfallBandKind.Courier => "courier",
+                            DaggerfallBandKind.Patrol => "patrol",
+                            DaggerfallBandKind.Hostile => "hostile",
+                            _ => "band",
+                        };
+            Label(band.Name, labelKind, x, z, 0);
         }
     }
 
@@ -506,6 +521,11 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         DaggerfallBandKind.Travellers => DaggerfallOverlandBanner.Travellers,
         DaggerfallBandKind.Beasts => DaggerfallOverlandBanner.Beasts,
         DaggerfallBandKind.Undead => DaggerfallOverlandBanner.Undead,
+        DaggerfallBandKind.Caravan => DaggerfallOverlandBanner.Caravan,
+        DaggerfallBandKind.Courier => DaggerfallOverlandBanner.Courier,
+        DaggerfallBandKind.Patrol => DaggerfallOverlandBanner.Patrol,
+        DaggerfallBandKind.Hostile => DaggerfallOverlandBanner.Hostile,
+        DaggerfallBandKind.Clash => DaggerfallOverlandBanner.Clash,
         _ => DaggerfallOverlandBanner.Monsters,
     };
 

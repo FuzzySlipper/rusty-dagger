@@ -488,6 +488,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("found", Found(builder, view.Found)),
             ("bands", builder.Array(view.Bands.Select(band => builder.Object(
                 ("name", builder.String(band.Name)), ("kind", builder.String(band.Kind.ToString().ToLowerInvariant())),
+                ("category", builder.String(band.Category)),
+                ("faction", band.Faction is null ? builder.Null() : builder.String(band.Faction)),
+                ("clashSides", band.ClashSides is null ? builder.Null() : builder.String(band.ClashSides)),
+                ("origin", band.OriginName is null ? builder.Null() : builder.String(band.OriginName)),
+                ("destination", band.DestinationName is null ? builder.Null() : builder.String(band.DestinationName)),
+                ("detail", band.Detail is null ? builder.Null() : builder.String(band.Detail)),
+                ("isClash", builder.Boolean(band.IsClash)),
+                ("hostile", builder.Boolean(band.Hostile)),
                 ("x", builder.Number(band.X)), ("y", builder.Number(band.Y)),
                 ("camp", builder.Boolean(band.Camp)), ("spotted", builder.Boolean(band.Spotted)))).ToArray())));
     }
