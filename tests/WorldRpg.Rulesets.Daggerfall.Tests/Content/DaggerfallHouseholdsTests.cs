@@ -274,6 +274,23 @@ public sealed class DaggerfallHouseholdsTests
         Assert.Equal(baselineFamily, restored1.State.Actors.Get(metOnlyActor).Actor.Get<ActorOverlayComponent>().FamilyId);
         Assert.True(restored1.State.Actors.Get(metOnlyActor).Actor.Get<ActorOverlayComponent>().Met);
 
+        // R11099-4: actor.inspect must treat cleared overlay.FamilyId == null as authoritative (never resurrect baseline)
+        // and must exclude the cleared actor from baseline kin's localKin list!
+        IDeveloperActorCommands restoredCmds = restored1.Commands<IDeveloperActorCommands>();
+        using (JsonDocument clearedInspect = JsonDocument.Parse(restoredCmds.Inspect(clearedActor.ToString()).Message))
+        {
+            JsonElement clearedSocial = clearedInspect.RootElement.GetProperty("social");
+            Assert.Equal(JsonValueKind.Null, clearedSocial.GetProperty("familyId").ValueKind);
+            Assert.Equal(JsonValueKind.Null, clearedSocial.GetProperty("householdLabel").ValueKind);
+            Assert.Equal("none", clearedSocial.GetProperty("scope").GetString());
+            Assert.Empty(clearedSocial.GetProperty("localKin").EnumerateArray());
+        }
+        using (JsonDocument metInspect = JsonDocument.Parse(restoredCmds.Inspect(metOnlyActor.ToString()).Message))
+        {
+            long[] metKin = [.. metInspect.RootElement.GetProperty("social").GetProperty("localKin").EnumerateArray().Select(k => k.GetProperty("durableId").GetInt64())];
+            Assert.DoesNotContain(clearedActor, metKin);
+        }
+
         // 2. Reset overrideAndResetActor back to baseline A -> MUST return to 0 ledger bytes (not keep stale B)!
         restored1.State.Actors.Get(overrideAndResetActor).Actor.Get<ActorOverlayComponent>().FamilyId = baselineFamily;
         RulesetSavePayload save2 = restored1.CaptureSave();
@@ -321,6 +338,26 @@ public sealed class DaggerfallHouseholdsTests
         });
         Assert.True(houses.Sum(h => h.HeldOffices.Count) > 0, "Expected at least one regional Tier-2 CourtFactor office tied to a Great House.");
         Assert.Empty(offices.Capture().Overrides); // zero save bytes for untouched offices!
+
+        // R11099-3: Recording an appointment or succession for an off-scene candidate holder (empty ledger/registry)
+        // must preserve its deterministic Great House association across office ledger save/restore!
+        DaggerfallRegionalGreatHouse targetHouse = houses.First(h => h.HeldOffices.Count > 0);
+        DaggerfallLocalOffice targetOffice = targetHouse.HeldOffices[0];
+        offices.SetLocalOfficeHolder(
+            targetOffice,
+            holderActorId: targetOffice.HolderActorId,
+            holderDisplayName: targetOffice.DisplayName,
+            cause: DaggerfallOfficeChangeCause.CardMove,
+            changedDay: 10,
+            causeDetail: "reconfirmed by court decree");
+
+        DaggerfallOfficeLedgerSave officeSave = offices.Capture();
+        DaggerfallOfficeLedger restoredOffices = new(defs, holders, ledger, npcs, () => 42UL);
+        restoredOffices.Restore(officeSave);
+
+        IReadOnlyList<DaggerfallRegionalGreatHouse> restoredHouses = restoredOffices.ResolveRegionalGreatHouses(17);
+        DaggerfallRegionalGreatHouse restoredTargetHouse = restoredHouses.Single(h => h.FamilyId == targetHouse.FamilyId);
+        Assert.Contains(restoredTargetHouse.HeldOffices, o => o.OfficeKey == targetOffice.OfficeKey && o.IsOverridden && o.FamilyId == targetHouse.FamilyId);
     }
 
     private static long RegisterAndMaterializeDeterministicStatic(

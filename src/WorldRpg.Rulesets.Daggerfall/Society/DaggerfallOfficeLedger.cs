@@ -933,7 +933,10 @@ internal sealed class DaggerfallOfficeLedger(
 
             bool overrideAlive = over.HolderActorId is not long oid || !IsDeadExcluding(oid, ignoreDeadActorId);
             string name = ResolveActorDisplayName(over.HolderActorId, over.HolderDisplayName, title);
-            string? overrideFamily = ResolveActorFamilyId(over.HolderActorId, over.HolderCastId, fallbackFamilyId: null);
+            string? candidateFamily = over.HolderActorId is long oidForFamily
+                ? fallbackCandidates.FirstOrDefault(c => c.ActorId == oidForFamily).FamilyId
+                : null;
+            string? overrideFamily = ResolveActorFamilyId(over.HolderActorId, over.HolderCastId, fallbackFamilyId: candidateFamily);
             return new DaggerfallLocalOffice(
                 OfficeKey: officeKey,
                 Kind: kind,

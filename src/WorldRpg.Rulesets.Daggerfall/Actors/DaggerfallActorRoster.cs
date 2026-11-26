@@ -1223,6 +1223,9 @@ internal sealed class DaggerfallActorRoster
                     overlay.FamilyId = null;
                 else if (!string.IsNullOrWhiteSpace(social.FamilyId))
                     overlay.FamilyId = social.FamilyId;
+                if ((social.FamilyIdCleared || !string.IsNullOrWhiteSpace(social.FamilyId))
+                    && actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? personComp))
+                    personComp.Snapshot = personComp.Snapshot with { FamilyId = overlay.FamilyId };
                 overlay.Met = social.Met;
                 overlay.LastFavourDay = social.LastFavourDay;
                 overlay.IsMuted = social.Muted;

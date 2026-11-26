@@ -312,13 +312,19 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
         w.WriteEndObject();
     }
 
-    private void WriteSocial(Utf8JsonWriter w, ActorState actor)
+    private static string? EffectiveFamilyId(ActorState actor)
     {
-        string? familyId = actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay) && !string.IsNullOrWhiteSpace(overlay.FamilyId)
-            ? overlay.FamilyId
-            : actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person) && !string.IsNullOrWhiteSpace(person.Snapshot.FamilyId)
+        if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+            return !string.IsNullOrWhiteSpace(overlay.FamilyId) ? overlay.FamilyId : null;
+        return actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? person)
+            && !string.IsNullOrWhiteSpace(person.Snapshot.FamilyId)
                 ? person.Snapshot.FamilyId
                 : null;
+    }
+
+    private void WriteSocial(Utf8JsonWriter w, ActorState actor)
+    {
+        string? familyId = EffectiveFamilyId(actor);
         if (familyId is null && !actor.Actor.Has<ActorPersonComponent>())
             return;
 
@@ -348,9 +354,7 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             {
                 if (other.DurableId == actor.DurableId || other.DurableId == actors.Player.DurableId)
                     continue;
-                string? otherFamily = other.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? otherOv) && !string.IsNullOrWhiteSpace(otherOv.FamilyId)
-                    ? otherOv.FamilyId
-                    : other.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? otherPerson) ? otherPerson.Snapshot.FamilyId : null;
+                string? otherFamily = EffectiveFamilyId(other);
                 if (!StringComparer.Ordinal.Equals(familyId, otherFamily))
                     continue;
                 w.WriteStartObject();
