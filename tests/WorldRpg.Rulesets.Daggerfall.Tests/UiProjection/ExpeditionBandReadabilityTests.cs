@@ -161,5 +161,26 @@ public sealed class ExpeditionBandReadabilityTests
         Assert.Equal("Faction Clash", clashView.Category);
         Assert.Contains(" vs ", clashView.ClashSides, StringComparison.Ordinal);
         Assert.Contains("Active clash", clashView.Detail ?? string.Empty, StringComparison.Ordinal);
+
+        // R11079-1: Two simultaneous same-seat envoys sharing kind and name receive strictly distinct unique Ids.
+        DaggerfallCourierDispatchSave secondDispatch = session.CourierDispatches.StageDispatch(
+            dispatchId: "disp:readability-test-2",
+            seatId: "crown:daggerfall",
+            actionKind: "border-orders",
+            summary: "Second envoy orders",
+            origin: origin,
+            destination: knownDest,
+            currentMinute: nowMinute,
+            currentDay: nowDay,
+            stageOverlandBand: true);
+        DaggerfallPersistentOverlandBand secondEnvoyBand = Assert.Single(
+            session.Expedition.PersistentBands, b => b.BandId == secondDispatch.OverlandBandId);
+        secondEnvoyBand.X = px + 0.35;
+        secondEnvoyBand.Y = py - 0.35;
+
+        DaggerfallExpeditionView twoEnvoysView = session.TravelPanel.Read()!;
+        DaggerfallExpeditionBandView[] sameNameEnvoys = [.. twoEnvoysView.Bands.Where(b => b.Name == revealedEnvoy.Name && b.Kind == DaggerfallBandKind.Courier)];
+        Assert.Equal(2, sameNameEnvoys.Length);
+        Assert.NotEqual(sameNameEnvoys[0].Id, sameNameEnvoys[1].Id);
     }
 }

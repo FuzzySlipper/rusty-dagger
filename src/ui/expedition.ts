@@ -18,6 +18,7 @@ export interface ExpeditionFoundProjection {
 
 /** A band within the party's sight: what it is and how many, where it stands, its category/faction/clash inspection metadata, and whether it camps or has seen the party. */
 export interface ExpeditionBandProjection {
+  readonly id?: number;
   readonly name: string;
   readonly kind: string;
   readonly x: number;
@@ -302,7 +303,8 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
 
   let current: ExpeditionProjection | null = null;
   let inspectedBandKey: string | null = null;
-  const bandKey = (band: ExpeditionBandProjection): string => `${band.kind}:${band.name}`;
+  const bandKey = (band: ExpeditionBandProjection): string =>
+    band.id !== undefined ? `id:${band.id}` : `${band.kind}:${band.name}:${band.origin ?? ''}:${band.destination ?? ''}:${band.detail ?? ''}`;
   const bandRouteLine = (band: ExpeditionBandProjection): string | null => {
     if (band.origin && band.destination) return `Route: ${band.origin} to ${band.destination}`;
     if (band.destination) return `Bound for: ${band.destination}`;
@@ -547,7 +549,7 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
     });
     // The bands the party sees, each looked at by choosing it: the map draws them, and keys and the pad reach them here.
     const bandSignature = state.bands.map(band => [
-      band.name, band.kind, band.category ?? '', band.faction ?? '', band.clashSides ?? '',
+      band.id ?? '', band.name, band.kind, band.category ?? '', band.faction ?? '', band.clashSides ?? '',
       band.origin ?? '', band.destination ?? '', band.detail ?? '',
       band.camp, band.spotted, band.isClash ?? false, band.hostile ?? false,
       Math.floor(band.x), Math.floor(band.y),

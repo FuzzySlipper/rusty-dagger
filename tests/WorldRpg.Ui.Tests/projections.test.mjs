@@ -3654,6 +3654,27 @@ test('the travel map is the view the map camera draws into: names stand where th
     // Clearing bands out of sight hides the inspection readout cleanly.
     f.publish({ expedition: expedition({ bands: [] }) });
     assert.equal(detail.hidden, true);
+    // R11079-1: Duplicate kind+name bands keep inspection pinned to the selected band's unique id across refreshes, reordering, and removal.
+    const envoyA = { id: -11, name: 'Court of Daggerfall Envoy', kind: 'courier', category: 'Sealed Envoy', faction: 'Court of Daggerfall', origin: 'Daggerfall', destination: 'Charing', detail: 'Revealed dispatch: Treaty A', isClash: false, hostile: false, x: 208.1, y: 212.1, camp: false, spotted: false };
+    const envoyB = { id: -12, name: 'Court of Daggerfall Envoy', kind: 'courier', category: 'Sealed Envoy', faction: 'Court of Daggerfall', origin: 'Daggerfall', destination: 'Chesterwark', detail: 'Revealed dispatch: Treaty B', isClash: false, hostile: false, x: 208.4, y: 212.6, camp: false, spotted: false };
+    f.publish({ expedition: expedition({ bands: [envoyA, envoyB] }) });
+    const dupButtons = [...screen.querySelectorAll('.dagger-expedition-in-sight button')];
+    assert.equal(dupButtons.length, 2);
+    dupButtons[1].click();
+    assert.equal(detail.hidden, false);
+    assert.ok(detail.textContent.includes('Treaty B'));
+    assert.ok(detail.textContent.includes('Chesterwark'));
+    // Re-publish with moved coordinates and swapped list order: inspection stays on envoy B (never snaps to envoy A).
+    f.publish({ expedition: expedition({ bands: [{ ...envoyB, x: 208.5 }, { ...envoyA, x: 208.2 }] }) });
+    assert.equal(detail.hidden, false);
+    assert.ok(detail.textContent.includes('Treaty B'));
+    assert.ok(!detail.textContent.includes('Treaty A'));
+    f.publish({ expedition: expedition({ bands: [{ ...envoyA, x: 208.3 }, { ...envoyB, x: 208.6 }] }) });
+    assert.equal(detail.hidden, false);
+    assert.ok(detail.textContent.includes('Treaty B'));
+    // When envoy B leaves PartySight while same-named envoy A remains, inspection clears rather than jumping to envoy A.
+    f.publish({ expedition: expedition({ bands: [envoyA] }) });
+    assert.equal(detail.hidden, true);
   } finally { f.dispose(); }
 });
 
