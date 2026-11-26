@@ -68,11 +68,13 @@ public sealed class DaggerfallMobileCatalogTests
         Assert.All(mobiles.HumanMobiles, mobile => Assert.Null(mobile.Actor));
 
         // Publishing a previously unpublished creature spec reaches the catalog with no new import.
-        JsonObject payload = TestPayload.Sections("actorSpecsCreatures");
+        JsonObject payload = TestPayload.Sections("actorTemplateCreatures", "actorSpecsCreatures");
+        JsonObject horseTemplate = payload["actorTemplateCreatures"]!["templates"]!.AsArray().First(template => template!["id"]!.GetValue<string>() == "horse")!.AsObject();
+        horseTemplate["health"] = new JsonObject { ["minimum"] = 10, ["maximum"] = 20 };
+        horseTemplate["level"] = 1;
+        horseTemplate["attacks"] = new JsonArray { new JsonObject { ["minimumDamage"] = 1, ["maximumDamage"] = 4 } };
         JsonObject horse = payload["actorSpecsCreatures"]!["specs"]!.AsArray().First(spec => spec!["id"]!.GetValue<string>() == "horse")!.AsObject();
         horse["published"] = true;
-        horse["template"] = "rat";
-        horse["genders"] = new JsonArray { new JsonObject { ["gender"] = "male", ["weight"] = 1 }, new JsonObject { ["gender"] = "female", ["weight"] = 1 } };
 
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload));
 

@@ -58,7 +58,10 @@
         "female"
       ],
       "fixedRace": null,
-      "traits": []
+      "traits": [],
+      "allowedRaces": null,
+      "spellPolicy": "none",
+      "spells": null
     },
     {
       "id": "creature-base",

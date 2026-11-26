@@ -9,9 +9,26 @@ internal sealed record DaggerfallEnemySpells(
 {
     internal static DaggerfallEnemySpells Empty { get; } = new(new Dictionary<int, string[]>(), new HashSet<int>(), []);
     internal bool IsCaster(int? mobile) => mobile is int id && (MobileLists.ContainsKey(id) || ClassCasters.Contains(id));
-    internal IReadOnlyList<string> For(DaggerfallActorDefinition actor) => actor.MobileId is not int mobile ? []
-        : ClassCasters.Contains(mobile) ? ClassTiers[Math.Min((actor.Level ?? 1) / 3, ClassTiers.Length - 1)]
-        : MobileLists.GetValueOrDefault(mobile) ?? [];
+    internal bool IsCaster(DaggerfallActorDefinition? actor) => actor is not null && (actor.TemplateId is not null
+        ? actor.SpellPolicy == ActorSpellPolicy.ClassTiers || (actor.SpellPolicy == ActorSpellPolicy.Fixed && actor.Spells.Count > 0)
+        : IsCaster(actor.MobileId));
+    internal IReadOnlyList<string> For(DaggerfallActorDefinition actor)
+    {
+        if (actor.TemplateId is not null)
+        {
+            return actor.SpellPolicy switch
+            {
+                ActorSpellPolicy.Fixed => actor.Spells,
+                ActorSpellPolicy.ClassTiers => ClassTiers.Length > 0
+                    ? ClassTiers[Math.Min((actor.Level ?? 1) / 3, ClassTiers.Length - 1)]
+                    : [],
+                _ => [],
+            };
+        }
+        return actor.MobileId is not int mobile ? []
+            : ClassCasters.Contains(mobile) ? ClassTiers[Math.Min((actor.Level ?? 1) / 3, ClassTiers.Length - 1)]
+            : MobileLists.GetValueOrDefault(mobile) ?? [];
+    }
     internal static readonly string[] Schools = ["destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism"];
     internal static int MagickaMaximum(int level) => checked(10 * level + 100);
 }

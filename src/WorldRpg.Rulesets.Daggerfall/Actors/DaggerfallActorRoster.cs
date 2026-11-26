@@ -189,24 +189,23 @@ internal sealed class DaggerfallActorRoster
         if (actor.Actor.Has<DaggerfallRestoredStats>())
             actor.Actor.Remove<DaggerfallRestoredStats>();
 
-        string npcGender = _npcs.TryGet(actorId, out DaggerfallNpc? npc) ? npc.Appearance.Gender : "unspecified";
+        string? npcGender = _npcs.TryGet(actorId, out DaggerfallNpc? npc) ? npc.Appearance.Gender : null;
         DaggerfallSiteProfile activeProfile = siteProfile ?? _profile();
         NormalizedActorSprite? mobileSprite = activeProfile.MobileSprites.GetValueOrDefault(146);
-        string gender = mobileSprite is not null
-            ? DaggerfallActorGender.Resolve(_random, actorId, npcGender, mobileSprite)
-            : string.Equals(npcGender, "female", StringComparison.OrdinalIgnoreCase) ? "female" : "male";
+        ActorInstanceIdentity watchIdentity = DaggerfallActorInstanceResolver.Resolve(
+            _definitions,
+            watchDef,
+            actorId,
+            explicitGender: npcGender,
+            explicitRace: npc?.Appearance.Race,
+            explicitFaction: "city-watch",
+            regionIndex: activeProfile.Site?.Region);
+        DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, watchIdentity);
+        string gender = ActorGenderFormat.SpriteKey(watchIdentity.Gender);
         if (actor.Actor.Has<DaggerfallActorGender>())
             actor.Actor.Replace(new DaggerfallActorGender(gender));
         else
             actor.Actor.Add(new DaggerfallActorGender(gender));
-        DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
-            _definitions,
-            watchDef,
-            actorId,
-            explicitGender: gender,
-            explicitRace: _npcs.TryGet(actorId, out DaggerfallNpc? watchNpc) ? watchNpc.Appearance.Race : null,
-            explicitFaction: "city-watch",
-            regionIndex: activeProfile.Site?.Region));
 
         _definitionsByActor[actorId] = watchDef;
         if (_dynamicActors.ContainsKey(actorId))
@@ -294,22 +293,21 @@ internal sealed class DaggerfallActorRoster
             DaggerfallActorFactory.RegisterActorInventory(actor, _inventoryStore);
             GrantSpawnLoadout(actor, spawnedDefinition);
             GrantStartingEquipment(actor, spawnedDefinition);
-            string? resolvedGender = null;
+            ActorInstanceIdentity instanceIdentity = DaggerfallActorInstanceResolver.Resolve(
+                _definitions,
+                spawnedDefinition,
+                durableId,
+                explicitFaction: playerAllied ? "player-ally" : null,
+                regionIndex: _profile().Site?.Region);
+            DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, instanceIdentity);
+            string resolvedGender = ActorGenderFormat.SpriteKey(instanceIdentity.Gender);
+            actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
             if (spawnedDefinition.MobileId is int mobileId)
             {
                 if (!_profile().MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Spawned actor '{spawnedDefinition.Id.Value}' has no admitted mobile {mobileId} presentation.");
-                resolvedGender = DaggerfallActorGender.Resolve(_random, durableId, "unspecified", sprite);
-                actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
                 Appearance.AddActor(durableId, sprite.ForGender(resolvedGender), definition.MobileId);
             }
-            DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
-                _definitions,
-                spawnedDefinition,
-                durableId,
-                explicitGender: resolvedGender is not null and not "unspecified" ? resolvedGender : null,
-                explicitFaction: playerAllied ? "player-ally" : null,
-                regionIndex: _profile().Site?.Region));
             actor.Actor.Add(new ActorOriginComponent(
                 ActorOrigin.MintedActor(spawnedDefinition.Id.Value, spawnLevel, gender: resolvedGender),
                 pose.Position, pose.HeadingYawRadians));
@@ -1034,24 +1032,21 @@ internal sealed class DaggerfallActorRoster
             GrantStartingEquipment(actor, spawnedDefinition);
         }
 
-        string? mintedGender = entry.Origin.Gender;
-        if (spawnedDefinition.MobileId is int mobileId
-            && profile.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
-        {
-            string resolvedGender = !string.IsNullOrWhiteSpace(mintedGender)
-                ? mintedGender!
-                : DaggerfallActorGender.Resolve(_random, durableId, "unspecified", sprite);
-            mintedGender = resolvedGender;
-            actor.Actor.Add(new DaggerfallActorGender(resolvedGender));
-            appearance.AddActor(durableId, sprite.ForGender(resolvedGender), mobileId);
-        }
-        DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, DaggerfallActorInstanceResolver.Resolve(
+        ActorInstanceIdentity mintedIdentity = DaggerfallActorInstanceResolver.Resolve(
             _definitions,
             spawnedDefinition,
             durableId,
-            explicitGender: mintedGender is not null and not "unspecified" ? mintedGender : null,
+            explicitGender: entry.Origin.Gender is not null and not "unspecified" ? entry.Origin.Gender : null,
             explicitFaction: entry.Combat?.TeamOverride ?? (entry.Combat?.PlayerAllied == true ? "player-ally" : null),
-            regionIndex: profile.Site?.Region));
+            regionIndex: profile.Site?.Region);
+        DaggerfallActorFactory.SetInstanceIdentity(actor.Actor, mintedIdentity);
+        string resolvedMintedGender = ActorGenderFormat.SpriteKey(mintedIdentity.Gender);
+        actor.Actor.Add(new DaggerfallActorGender(resolvedMintedGender));
+        if (spawnedDefinition.MobileId is int mobileId
+            && profile.MobileSprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
+        {
+            appearance.AddActor(durableId, sprite.ForGender(resolvedMintedGender), mobileId);
+        }
 
         WorldPoint profilePose = DaggerfallSceneOrigin.Shift(localPose, -translation);
         actor.Actor.Add(new ActorOriginComponent(entry.Origin, profilePose, headingRadians));
@@ -1359,7 +1354,10 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!destination.MobileSprites.TryGetValue(authoredMobile, out NormalizedActorSprite? sprite))
                     throw new InvalidOperationException($"Restored authored actor '{placement.EntityId}' has no admitted mobile {authoredMobile} presentation.");
-                appearance.AddActor(actor.DurableId, sprite.ForGender(DaggerfallActorGender.Resolve(_random, placement.EntityId, placement.Gender, sprite)), definition.MobileId);
+                string authoredGender = actor.Actor.TryGet<ActorInstanceIdentity>(out ActorInstanceIdentity? authoredIdentity)
+                    ? ActorGenderFormat.SpriteKey(authoredIdentity.Gender)
+                    : placement.Gender;
+                appearance.AddActor(actor.DurableId, sprite.ForGender(authoredGender), definition.MobileId);
             }
             if (prior is null) GrantStartingEquipment(actor, definition);
             if (prior?.WabbajackDefinition is not null && definition.MobileId is int changedMobile)

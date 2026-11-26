@@ -157,4 +157,104 @@ public sealed class DaggerfallActorTemplatesTests
         Assert.Equal("archer", archerA.TemplateId);
         Assert.Equal("archer", archerA.SpawnerId);
     }
+
+    [Fact]
+    public void Career_defaults_apply_at_declaring_layer_preserving_parent_overrides_and_explicit_null_clears()
+    {
+        JsonObject sections = TestPayload.Sections("actorTemplateClasses");
+        JsonArray classes = sections["actorTemplateClasses"]!["templates"]!.AsArray();
+        JsonObject mage = classes.First(t => t!["id"]!.GetValue<string>() == "mage")!.AsObject();
+        mage["attributes"] = new JsonObject { ["strength"] = 99 };
+        mage["hitPointsPerLevel"] = 25;
+        mage["health"] = new JsonObject { ["minimum"] = 80, ["maximum"] = 120 };
+
+        // Child extending mage with NO overrides inherits mage's overrides (depth 4: actor-base -> humanoid -> combat-class -> mage -> archmage).
+        classes.Add(new JsonObject { ["id"] = "archmage", ["extends"] = "mage" });
+        // Child explicitly clearing hitPointsPerLevel to null keeps null instead of reverting to career default.
+        classes.Add(new JsonObject { ["id"] = "mage-fixed-hp", ["extends"] = "mage", ["hitPointsPerLevel"] = null });
+
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(sections));
+        DaggerfallActorTemplateDefinition archmage = definitions.ActorCatalog.Templates["archmage"];
+        DaggerfallActorTemplateDefinition mageFixed = definitions.ActorCatalog.Templates["mage-fixed-hp"];
+
+        Assert.Equal(99, archmage.Stats.Values[new("strength")]);
+        Assert.Equal(25, archmage.HitPointsPerLevel);
+        Assert.Equal(new DaggerfallVitalRange(80, 120), archmage.Health);
+        Assert.Null(mageFixed.HitPointsPerLevel);
+    }
+
+    [Fact]
+    public void Template_race_constraints_are_enforced_at_load_and_instance_resolution()
+    {
+        // Conflicting fixedRace vs spawner race is refused at load.
+        JsonObject badFixed = TestPayload.Sections("actorTemplateClasses", "actorSpecsEnemies");
+        badFixed["actorTemplateClasses"]!["templates"]!.AsArray().First(t => t!["id"]!.GetValue<string>() == "mage")!["fixedRace"] = "breton";
+        badFixed["actorSpecsEnemies"]!["specs"]!.AsArray().First(s => s!["id"]!.GetValue<string>() == "encounter-mage")!["race"] = "redguard";
+        DaggerfallContentException fixedEx = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(badFixed)));
+        Assert.Contains(fixedEx.Diagnostics, d => d.Contains("encounter-mage", StringComparison.Ordinal) && d.Contains("fixedRace", StringComparison.Ordinal));
+
+        // Conflicting allowedRaces vs spawner race is refused at load.
+        JsonObject badAllowed = TestPayload.Sections("actorTemplateClasses", "actorSpecsEnemies");
+        badAllowed["actorTemplateClasses"]!["templates"]!.AsArray().First(t => t!["id"]!.GetValue<string>() == "mage")!["allowedRaces"] =
+            new JsonArray { "breton", "high-elf" };
+        badAllowed["actorSpecsEnemies"]!["specs"]!.AsArray().First(s => s!["id"]!.GetValue<string>() == "encounter-mage")!["race"] = "nord";
+        DaggerfallContentException allowedEx = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(badAllowed)));
+        Assert.Contains(allowedEx.Diagnostics, d => d.Contains("encounter-mage", StringComparison.Ordinal) && d.Contains("disallowed", StringComparison.Ordinal));
+
+        // Valid allowedRaces prevents even an explicit runtime race from violating the template.
+        JsonObject validAllowed = TestPayload.Sections("actorTemplateClasses");
+        validAllowed["actorTemplateClasses"]!["templates"]!.AsArray().First(t => t!["id"]!.GetValue<string>() == "mage")!["allowedRaces"] =
+            new JsonArray { "breton", "high-elf" };
+        DaggerfallDefinitions defs = DaggerfallBaseContent.Read(TestPayload.Splice(validAllowed));
+        DaggerfallActorDefinition mageDef = defs.RequireActor(new("encounter-mage"));
+        ActorInstanceIdentity identity = DaggerfallActorInstanceResolver.Resolve(defs, mageDef, 4242L, explicitRace: "redguard");
+        Assert.Contains(identity.Race, new[] { "breton", "high-elf" });
+    }
+
+    [Fact]
+    public void Template_owned_spells_validate_references_and_drive_caster_selection()
+    {
+        // Unknown spell key is refused at load.
+        JsonObject badSpell = TestPayload.Sections("actorTemplateCreatures");
+        badSpell["actorTemplateCreatures"]!["templates"]!.AsArray().First(t => t!["id"]!.GetValue<string>() == "rat")!["spells"] =
+            new JsonArray { "spell.does-not-exist" };
+        DaggerfallContentException spellEx = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(badSpell)));
+        Assert.Contains(spellEx.Diagnostics, d => d.Contains("rat", StringComparison.Ordinal) && d.Contains("spell.does-not-exist", StringComparison.Ordinal));
+
+        // Adding spells to a template makes it a live caster; clearing spells on a caster removes its spells.
+        JsonObject customSpells = TestPayload.Sections("actorTemplateCreatures");
+        JsonArray creatures = customSpells["actorTemplateCreatures"]!["templates"]!.AsArray();
+        creatures.First(t => t!["id"]!.GetValue<string>() == "rat")!["spells"] = new JsonArray { "spell.007", "spell.010" };
+        creatures.First(t => t!["id"]!.GetValue<string>() == "orc-shaman")!["spells"] = null;
+
+        DaggerfallDefinitions defs = DaggerfallBaseContent.Read(TestPayload.Splice(customSpells));
+        DaggerfallActorDefinition rat = defs.RequireActor(new("rat"));
+        DaggerfallActorDefinition shaman = defs.RequireActor(new("orc-shaman"));
+
+        Assert.True(defs.EnemySpells.IsCaster(rat));
+        Assert.Equal(["spell.007", "spell.010"], defs.EnemySpells.For(rat));
+        Assert.False(defs.EnemySpells.IsCaster(shaman));
+        Assert.Empty(defs.EnemySpells.For(shaman));
+    }
+
+    [Fact]
+    public void Live_combat_spawn_honors_spawner_gender_distribution_and_matches_appearance()
+    {
+        // Tighten encounter-mage spawner to female-only while keeping mage template allowing male/female.
+        JsonObject femaleOnly = TestPayload.Sections("actorSpecsEnemies");
+        femaleOnly["actorSpecsEnemies"]!["specs"]!.AsArray().First(s => s!["id"]!.GetValue<string>() == "encounter-mage")!["genders"] =
+            new JsonArray { new JsonObject { ["gender"] = "female", ["weight"] = 100 } };
+        DaggerfallDefinitions defs = DaggerfallBaseContent.Read(TestPayload.Splice(femaleOnly), TestPayload.Data);
+
+        using var fixture = new SanguineRoseSessionTests.Fixture(definitions: defs);
+        for (int i = 0; i < 8; i++)
+        {
+            long id = fixture.Session.SpawnActor("encounter-mage", new(new(3f + i, 0f, -4f), 0f));
+            var actor = fixture.Session.State.Actors.Get(id);
+            ActorInstanceIdentity identity = actor.Actor.Get<ActorInstanceIdentity>();
+            DaggerfallActorGender spriteGender = actor.Actor.Get<DaggerfallActorGender>();
+            Assert.Equal(ActorGender.Female, identity.Gender);
+            Assert.Equal("female", spriteGender.Value);
+        }
+    }
 }

@@ -107,7 +107,7 @@ internal sealed class DaggerfallEnemyMagicModule
                 : target.DurableId == DaggerfallActorIdentity.PlayerEntityId ? "player-not-in-sight" : "target-not-in-sight");
         if (_casting.HasPending(actor.DurableId)) return Refuse("eligible", "casting");
         DaggerfallActorDefinition? definition = _definition(actor.DurableId);
-        if (definition is null || !_spells.IsCaster(definition.MobileId)) return Refuse("eligible", "not-a-caster");
+        if (definition is null || !_spells.IsCaster(definition)) return Refuse("eligible", "not-a-caster");
 
         PerceptionPair? observed = receipt.Pairs.ToArray()
             .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
@@ -225,7 +225,7 @@ internal sealed class DaggerfallEnemyMagicModule
     {
         if (actor.IsDefeated || distance <= MinimumRangedDistance || distance >= MaximumRangedDistance) return false;
         DaggerfallActorDefinition? definition = _definition(actor.DurableId);
-        if (definition is null || !_spells.IsCaster(definition.MobileId) || HasBow(definition)) return false;
+        if (definition is null || !_spells.IsCaster(definition) || HasBow(definition)) return false;
         if (!actor.Stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out Track? magicka) || magicka.Current <= 0) return false;
         string? ready = RangedSpellKeys(definition).FirstOrDefault(key => !_casting.EffectsAlreadyOnTarget(key, target.DurableId));
         return ready is not null && TryBuildAttempt(actor, ready, target, out _) && laneClear.Value;

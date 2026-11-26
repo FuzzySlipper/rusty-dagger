@@ -130,6 +130,8 @@ internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Ki
     internal DaggerfallActorCapabilities Capabilities { get; init; } = DaggerfallActorCapabilities.Default;
     internal ActorHarmPolicyKind DefaultHarm { get; init; } = ActorHarmPolicyKind.Combatant;
     internal ActorInteractionPolicyKind DefaultInteraction { get; init; } = ActorInteractionPolicyKind.None;
+    internal ActorSpellPolicy SpellPolicy { get; init; } = ActorSpellPolicy.None;
+    internal IReadOnlyList<string> Spells { get; init; } = [];
 }
 
 /// <summary>

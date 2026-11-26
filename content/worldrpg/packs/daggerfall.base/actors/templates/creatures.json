@@ -86,7 +86,14 @@
       "movement": "flying",
       "seesThroughInvisibility": true,
       "languageSkill": "impish",
-      "fixedRace": "imp"
+      "fixedRace": "imp",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.007",
+        "spell.010",
+        "spell.028",
+        "spell.042"
+      ]
     },
     {
       "id": "spriggan",
@@ -868,7 +875,11 @@
       "lootTableKey": "I",
       "movement": "spectral",
       "seesThroughInvisibility": true,
-      "fixedRace": "ghost"
+      "fixedRace": "ghost",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.033"
+      ]
     },
     {
       "id": "mummy",
@@ -992,7 +1003,15 @@
       ],
       "lootTableKey": "U",
       "resistanceFlags": 0,
-      "fixedRace": "orc-shaman"
+      "fixedRace": "orc-shaman",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.006",
+        "spell.007",
+        "spell.021",
+        "spell.024",
+        "spell.030"
+      ]
     },
     {
       "id": "gargoyle",
@@ -1082,7 +1101,12 @@
       "movement": "spectral",
       "seesThroughInvisibility": true,
       "resistanceFlags": 2,
-      "fixedRace": "wraith"
+      "fixedRace": "wraith",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.027",
+        "spell.030"
+      ]
     },
     {
       "id": "orc-warlord",
@@ -1171,7 +1195,12 @@
       "lootTableKey": "J",
       "seesThroughInvisibility": true,
       "immunityFlags": 16,
-      "fixedRace": "frost-daedra"
+      "fixedRace": "frost-daedra",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.016",
+        "spell.020"
+      ]
     },
     {
       "id": "fire-daedra",
@@ -1217,7 +1246,12 @@
       "lootTableKey": "J",
       "seesThroughInvisibility": true,
       "immunityFlags": 8,
-      "fixedRace": "fire-daedra"
+      "fixedRace": "fire-daedra",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.014",
+        "spell.024"
+      ]
     },
     {
       "id": "daedroth",
@@ -1262,7 +1296,13 @@
       "minMetalToHit": "mithril",
       "lootTableKey": "E",
       "seesThroughInvisibility": true,
-      "fixedRace": "daedroth"
+      "fixedRace": "daedroth",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.021",
+        "spell.022",
+        "spell.030"
+      ]
     },
     {
       "id": "vampire",
@@ -1318,6 +1358,10 @@
       "traits": [
         "undead",
         "vampire"
+      ],
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.048"
       ]
     },
     {
@@ -1366,7 +1410,12 @@
       "allowedGenders": [
         "female"
       ],
-      "fixedRace": "daedra-seducer"
+      "fixedRace": "daedra-seducer",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.049",
+        "spell.063"
+      ]
     },
     {
       "id": "vampire-ancient",
@@ -1397,7 +1446,12 @@
       ],
       "minMetalToHit": "mithril",
       "immunityFlags": 69,
-      "fixedRace": "vampire-ancient"
+      "fixedRace": "vampire-ancient",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.008",
+        "spell.047"
+      ]
     },
     {
       "id": "daedra-lord",
@@ -1443,7 +1497,15 @@
       "lootTableKey": "S",
       "seesThroughInvisibility": true,
       "immunityFlags": 69,
-      "fixedRace": "daedra-lord"
+      "fixedRace": "daedra-lord",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.008",
+        "spell.010",
+        "spell.014",
+        "spell.058",
+        "spell.063"
+      ]
     },
     {
       "id": "lich",
@@ -1488,7 +1550,15 @@
       "lootTableKey": "S",
       "seesThroughInvisibility": true,
       "languageSkill": "etiquette",
-      "fixedRace": "lich"
+      "fixedRace": "lich",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.008",
+        "spell.010",
+        "spell.014",
+        "spell.033",
+        "spell.058"
+      ]
     },
     {
       "id": "ancient-lich",
@@ -1512,7 +1582,17 @@
       "level": 21,
       "xpReward": 1050,
       "seesThroughInvisibility": false,
-      "fixedRace": "ancient-lich"
+      "fixedRace": "ancient-lich",
+      "spellPolicy": "fixed",
+      "spells": [
+        "spell.008",
+        "spell.010",
+        "spell.014",
+        "spell.028",
+        "spell.030",
+        "spell.033",
+        "spell.058"
+      ]
     },
     {
       "id": "dragonling",

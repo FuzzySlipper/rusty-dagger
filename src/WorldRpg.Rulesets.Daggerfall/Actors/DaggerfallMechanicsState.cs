@@ -28,7 +28,7 @@ internal sealed class DaggerfallMechanicsState(DaggerfallEnemySpells? enemySpell
             && (definition.Capabilities.Scaling == ActorScalingMode.LevelScaledSkills
                 || (definition.TemplateId is null && definition.Kind == DaggerfallActorKinds.Monster)))
             definition = DaggerfallEncounterActors.AtLevel(definition, vocabulary, definition.Level ?? 1);
-        bool caster = enemySpells?.IsCaster(definition.MobileId) == true;
+        bool caster = enemySpells?.IsCaster(definition) == true;
         if (caster) vitals = vitals with { MagickaMaximum = DaggerfallEnemySpells.MagickaMaximum(definition.Level ?? 1) };
         ValidateVitals(vitals);
         List<(StatId Id, Stat Value)> stats = [];

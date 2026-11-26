@@ -5,14 +5,16 @@
       "extends": "combat-class",
       "careerRef": "class00",
       "lootTableKey": "U",
-      "castsMagic": true
+      "castsMagic": true,
+      "spellPolicy": "class-tiers"
     },
     {
       "id": "spellsword",
       "extends": "combat-class",
       "careerRef": "class01",
       "lootTableKey": "P",
-      "castsMagic": true
+      "castsMagic": true,
+      "spellPolicy": "class-tiers"
     },
     {
       "id": "battlemage",
@@ -25,7 +27,8 @@
         "discipline": 0.8
       },
       "castsMagic": true,
-      "hasRangedAttack2": true
+      "hasRangedAttack2": true,
+      "spellPolicy": "class-tiers"
     },
     {
       "id": "sorcerer",
@@ -38,7 +41,8 @@
       "extends": "combat-class",
       "careerRef": "class04",
       "lootTableKey": "U",
-      "castsMagic": true
+      "castsMagic": true,
+      "spellPolicy": "class-tiers"
     },
     {
       "id": "nightblade",
@@ -47,7 +51,8 @@
       "lootTableKey": "U",
       "castsMagic": true,
       "hasRangedAttack2": true,
-      "languageSkill": "streetwise"
+      "languageSkill": "streetwise",
+      "spellPolicy": "class-tiers"
     },
     {
       "id": "bard",

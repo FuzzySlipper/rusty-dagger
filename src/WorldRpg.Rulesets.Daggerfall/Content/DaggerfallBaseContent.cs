@@ -159,17 +159,17 @@ internal static partial class DaggerfallBaseContent
             Dictionary<string, int> armorValues = ReadIntegerMap(root, "armorValuesByMaterial", diagnostics);
             Dictionary<string, DaggerfallLootTableDefinition> lootTables = ReadLootTables(root, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, diagnostics);
+            DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallCreatureFactionSet creatureFactions = root.TryGetProperty("creatureFactions", out JsonElement creatureFactionsEl)
                 ? DaggerfallCreatureFactionSet.Read(creatureFactionsEl, diagnostics)
                 : DaggerfallCreatureFactionSet.ClassicDefault;
             (DaggerfallActorCatalog actorCatalog, Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, DaggerfallMobileCatalogSet mobiles) =
-                ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, diagnostics);
+                ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, magic, diagnostics);
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             DaggerfallEncounterSet encounters = ReadEncounters(root, actorCatalog, mobiles, diagnostics);
             ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, itemTemplatesCatalog, diagnostics);
-            DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallEnemySpells enemySpells = ReadEnemySpells(root, mobiles, magic, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, data, diagnostics);
             (DaggerfallTextSet text, DaggerfallNameTablesSet names, DaggerfallRumorCatalogSet rumors, DaggerfallDialogueWorldRules dialogueWorldRules, DaggerfallBiographiesSet biographies, DaggerfallBooksSet books) = ReadTextAndKeyedSections(root, diagnostics);
