@@ -1,6 +1,7 @@
 using System.Globalization;
 using Rusty.Engine.Debugging;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -8,7 +9,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// Live developer commands for authoring, inspecting, and clearing stubbed world-condition tokens, reading
-/// the active town notice board, inspecting word spread, and staging/inspecting board-game courier dispatches.
+/// the active town notice board, inspecting word spread, staging board-game courier dispatches, and staging
+/// creature-faction clashes.
 /// </summary>
 internal sealed class DaggerfallWorldConditionCommands(
     DaggerfallWorldConditions conditions,
@@ -16,6 +18,8 @@ internal sealed class DaggerfallWorldConditionCommands(
     DaggerfallNoticeBoard noticeBoard,
     DaggerfallWordSpread wordSpread,
     DaggerfallCourierDispatches courierDispatches,
+    DaggerfallCreatureFactionClashes creatureClashes,
+    PlayerControlState player,
     DaggerfallDefinitions definitions,
     DaggerfallSiteContext site,
     Func<DaggerfallCalendar> calendar) : IDeveloperWorldConditionCommands
@@ -234,5 +238,43 @@ internal sealed class DaggerfallWorldConditionCommands(
             currentDay: nowDay,
             sourceFactionId: sourceFactionId);
         return ListDispatches();
+    }
+
+    public DebugCommandResult StageClash(string factionA, string factionB, int count)
+    {
+        if (player.Position is not WorldPoint origin)
+            return DaggerfallDeveloperReplies.Refused("Player position is unavailable.");
+        int day = checked((int)calendar().DayNumber);
+        IReadOnlyList<DaggerfallWorldConditionToken> active = site.Region is int region
+            ? conditions.ActiveForRegion(region, day)
+            : [];
+        DaggerfallCreatureClashResult result = creatureClashes.StageClash(
+            origin,
+            player.YawRadians,
+            active,
+            explicitFactionA: factionA,
+            explicitFactionB: factionB,
+            countPerSide: count);
+        if (!result.Staged)
+            return DaggerfallDeveloperReplies.Refused(result.Message);
+
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteBoolean("staged", true);
+            w.WriteString("message", result.Message);
+            w.WriteString("factionA", result.FactionA);
+            w.WriteString("factionB", result.FactionB);
+            w.WriteString("relation", result.Relation.ToString());
+            if (result.DrivingConditionTokenId is not null)
+                w.WriteString("drivingConditionTokenId", result.DrivingConditionTokenId);
+            w.WriteStartArray("sideAActorIds");
+            foreach (long id in result.SideAActorIds ?? []) w.WriteNumberValue(id);
+            w.WriteEndArray();
+            w.WriteStartArray("sideBActorIds");
+            foreach (long id in result.SideBActorIds ?? []) w.WriteNumberValue(id);
+            w.WriteEndArray();
+            w.WriteEndObject();
+        });
     }
 }

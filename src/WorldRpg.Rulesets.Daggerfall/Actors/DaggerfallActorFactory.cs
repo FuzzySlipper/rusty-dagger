@@ -246,11 +246,15 @@ internal static class DaggerfallActorFactory
             actor.Actor.Add(new ActorOriginComponent(ActorOrigin.FixedPlacement(pk, source.EntityId), source.Position, 0F, baselineStats));
         if (restored is not null) RestoreStats(actor.Actor, restored.Stats);
         DaggerfallWabbajack.Restore(actor.Actor, restored?.WabbajackDefinition);
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = source.Passive;
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = source.SpawnDistance;
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(restored?.ForcedHostile ?? false);
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = restored?.LanguagePacified ?? false;
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = restored?.MagicallyPacified ?? false;
+        DaggerfallEnemyPerceptionMemory memory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+        memory.Passive = source.Passive;
+        memory.SpawnDistance = source.SpawnDistance;
+        bool defaultLairTruce = profileKey is { Kind: DaggerfallWorldProfileKind.Dungeon }
+            && definition.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
+        memory.LairTruce = restored?.LairTruce ?? defaultLairTruce;
+        memory.SetForcedHostile(restored?.ForcedHostile ?? false);
+        memory.LanguagePacified = restored?.LanguagePacified ?? false;
+        memory.MagicallyPacified = restored?.MagicallyPacified ?? false;
         RegisterActorInventory(actor, inventoryStore);
         if (restored is null)
         {
@@ -424,11 +428,14 @@ internal static class DaggerfallActorFactory
                     ActorVisualSpec.DirectionalMobile(watchMobile, saved.Gender ?? restoredNpc.Appearance.Gender));
             }
         }
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(saved.ForcedHostile);
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified = saved.LanguagePacified;
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified = saved.MagicallyPacified;
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = saved.SpawnDistance;
-        actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = saved.Passive;
+        DaggerfallEnemyPerceptionMemory dynMemory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+        dynMemory.LairTruce = saved.LairTruce;
+        dynMemory.FactionInfighting = saved.FactionInfighting;
+        dynMemory.SetForcedHostile(saved.ForcedHostile);
+        dynMemory.LanguagePacified = saved.LanguagePacified;
+        dynMemory.MagicallyPacified = saved.MagicallyPacified;
+        dynMemory.SpawnDistance = saved.SpawnDistance;
+        dynMemory.Passive = saved.Passive;
         definitionsByActor.Add(saved.EntityId, definition);
         RegisterActorInventory(actor, inventoryStore);
         return actor;

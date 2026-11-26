@@ -161,6 +161,7 @@ internal sealed record ActorCombatStateDiff(
     DaggerfallCorruptionOrigin? CorruptionOrigin = null,
     string? TeamOverride = null,
     bool? InfightingOverride = null,
+    bool? LairTruce = null,
     string? PromotedArchetype = null,
     int? EncounterBandId = null,
     ulong? EncounterGeneration = null,

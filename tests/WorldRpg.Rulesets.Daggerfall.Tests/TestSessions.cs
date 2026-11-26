@@ -527,6 +527,16 @@ internal static class TestSessions
         foreach (string path in art.Effects.Values.Select(effect => effect.Path).Append(art.EffectGlow!.Path).Concat(art.Meshes.Values.Select(mesh => mesh.File.Path)).Concat(world)
                      .Concat(art.Surfaces.Values.SelectMany(surface => new[] { surface.File.Path, surface.Glass?.Path }).OfType<string>()).Distinct())
             yield return (path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
+
+        string baseShadersDir = Path.Combine(root, "content", "worldrpg", "packs", "daggerfall.base", "shaders");
+        if (Directory.Exists(baseShadersDir))
+        {
+            foreach (string shaderFile in Directory.GetFiles(baseShadersDir, "*.wgsl").Order(StringComparer.Ordinal))
+            {
+                string rel = Path.GetRelativePath(Path.Combine(root, "content"), shaderFile).Replace('\\', '/');
+                yield return (rel, TestContentFiles.ReadCopy(shaderFile));
+            }
+        }
     }
 
     internal static ContentSha256 Digest(ReadOnlySpan<byte> bytes)

@@ -210,6 +210,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                     ForcedHostile = combat?.ForcedHostile ?? false,
                     LanguagePacified = combat?.LanguagePacified ?? false,
                     MagicallyPacified = combat?.MagicallyPacified ?? false,
+                    LairTruce = combat?.LairTruce,
                 });
             }
             else if (entry.Origin.Kind == ActorOriginKind.Minted)
@@ -231,6 +232,8 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                     PromotedArchetype = combat?.PromotedArchetype,
                     EncounterBandId = combat?.EncounterBandId,
                     EncounterGeneration = combat?.EncounterGeneration,
+                    LairTruce = combat?.LairTruce ?? false,
+                    FactionInfighting = combat?.InfightingOverride ?? false,
                 });
             }
             else

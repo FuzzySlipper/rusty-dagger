@@ -300,12 +300,14 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 corpsesByActor.TryGetValue(actor.EntityId, out DaggerfallCorpseSave? corpse);
                 effectsByActor.TryGetValue(actor.EntityId, out DaggerfallActiveEffectSave[]? effects);
                 ActorCombatStateDiff? combat = actor.WabbajackDefinition is not null || actor.ForcedHostile || actor.LanguagePacified || actor.MagicallyPacified
+                    || actor.LairTruce is not null
                     || inv is not null || corpse is not null || effects is { Length: > 0 }
                     ? new ActorCombatStateDiff(
                         WabbajackDefinition: actor.WabbajackDefinition,
                         ForcedHostile: actor.ForcedHostile,
                         LanguagePacified: actor.LanguagePacified,
                         MagicallyPacified: actor.MagicallyPacified,
+                        LairTruce: actor.LairTruce,
                         DetachedInventory: inv,
                         DetachedCorpse: corpse,
                         DetachedEffects: effects is { Length: > 0 } ? effects : null)
@@ -464,14 +466,22 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         string? promotedArchetype = string.Equals(overlay?.ArchetypeId, DaggerfallArchetypeIds.Guard, StringComparison.Ordinal)
             ? DaggerfallArchetypeIds.Guard
             : null;
+        bool defaultLairTruce = activeProfile.Kind == DaggerfallWorldProfileKind.Dungeon
+            && _actorDefinitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? actorDef)
+            && actorDef.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass;
+        bool? lairTruceOverride = memory.LairTruce != defaultLairTruce ? memory.LairTruce : null;
+        bool? infightingOverride = memory.FactionInfighting ? true : null;
         ActorCombatStateDiff? combat = wabbajack is not null || memory.ForcedHostile || memory.LanguagePacified
             || memory.MagicallyPacified || teamOverride is not null || promotedArchetype is not null
+            || lairTruceOverride is not null || infightingOverride is not null
             ? new ActorCombatStateDiff(
                 WabbajackDefinition: wabbajack,
                 ForcedHostile: memory.ForcedHostile,
                 LanguagePacified: memory.LanguagePacified,
                 MagicallyPacified: memory.MagicallyPacified,
                 TeamOverride: teamOverride,
+                InfightingOverride: infightingOverride,
+                LairTruce: lairTruceOverride,
                 PromotedArchetype: promotedArchetype)
             : null;
 
@@ -658,6 +668,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         bool hasAny = dyn.SpawnDistance != 0 || dyn.Passive || dyn.WabbajackActive || dyn.ForcedHostile
             || dyn.LanguagePacified || dyn.MagicallyPacified || dyn.PlayerAllied || dyn.CorruptionOrigin is not null
             || dyn.TeamOverride is not null || dyn.PromotedArchetype is not null || dyn.EncounterBandId is not null
+            || dyn.LairTruce || dyn.FactionInfighting
             || detachedInventory is not null || detachedCorpse is not null || detachedEffects is { Length: > 0 };
         if (!hasAny) return null;
         return new ActorCombatStateDiff(
@@ -670,6 +681,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             PlayerAllied: dyn.PlayerAllied,
             CorruptionOrigin: dyn.CorruptionOrigin,
             TeamOverride: dyn.TeamOverride,
+            InfightingOverride: dyn.FactionInfighting ? true : null,
+            LairTruce: dyn.LairTruce ? true : null,
             PromotedArchetype: dyn.PromotedArchetype,
             EncounterBandId: dyn.EncounterBandId,
             EncounterGeneration: dyn.EncounterGeneration,
@@ -839,7 +852,14 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 : throw new InvalidOperationException($"Site actor {id} disappeared before its site state could be captured.");
             Vector3 position = actor.Position.ToVector() - actorFrameOffset;
             return new DaggerfallActorSave(actor.DurableId, position.X, position.Y, position.Z,
-                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity)) { WabbajackDefinition = DaggerfallWabbajack.DefinitionOf(actor.Actor), ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile, LanguagePacified=actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified, MagicallyPacified=actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified };
+                actor.HeadingYawRadians, DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity))
+            {
+                WabbajackDefinition = DaggerfallWabbajack.DefinitionOf(actor.Actor),
+                ForcedHostile = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile,
+                LanguagePacified = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LanguagePacified,
+                MagicallyPacified = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().MagicallyPacified,
+                LairTruce = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LairTruce,
+            };
         }).ToArray();
         DaggerfallDynamicActorSave[] spawned = dynamicActors
             .Where(entry => actorFilter is null || actorFilter.Contains(entry.Key))
@@ -893,6 +913,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 : null,
             EncounterBandId = actor.Actor.TryGet<DaggerfallEncounterBandMember>(out var bandMember) ? bandMember.BandId : null,
             EncounterGeneration = bandMember?.Generation,
+            LairTruce = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().LairTruce,
+            FactionInfighting = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().FactionInfighting,
         };
     }
 

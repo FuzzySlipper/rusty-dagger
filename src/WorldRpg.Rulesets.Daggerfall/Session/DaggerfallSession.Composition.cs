@@ -377,7 +377,28 @@ internal sealed partial class DaggerfallSession
                 id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), id => quests.IsFoeRestrained(id),
                 id => quests.FoeRelationsFor(id)?.Infighting == true, () => quests.HasInfightingFoes, _spatial, engine.Perception, _random,
                 () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
-                (float)_tuning.Camera.FieldOfViewYDegrees, sight, definitions.CreatureFactions);
+                (float)_tuning.Camera.FieldOfViewYDegrees, sight, definitions.CreatureFactions,
+                isUnderLairTruce: id => _enemyBehavior!.IsUnderLairTruce(id, assembled.PlayerControl.Position, _time.Calendar.MinuteNumber),
+                liftLairTruce: id => _enemyBehavior!.LiftLairTruce(id),
+                joinsFactionInfighting: id => _enemyBehavior!.JoinsFactionInfighting(id),
+                hasFactionInfightingPotential: () =>
+                {
+                    if (_enemyBehavior!.HasFactionInfightingActors())
+                        return true;
+                    return _site.Region is int r
+                        && WorldConditions is not null
+                        && DaggerfallCreatureFactionPolicy.HasClashDrivingCondition(
+                            WorldConditions.ActiveForRegion(r, checked((int)_time.Calendar.DayNumber)));
+                },
+                boardConditionDrivesClash: (teamA, teamB) =>
+                    _site.Region is int r
+                    && WorldConditions is not null
+                    && DaggerfallCreatureFactionPolicy.IsConditionDrivingClash(
+                        definitions.CreatureFactions,
+                        WorldConditions.ActiveForRegion(r, checked((int)_time.Calendar.DayNumber)),
+                        teamA,
+                        teamB),
+                isProvoked: id => _enemyBehavior!.IsProvoked(id, _time.Calendar.MinuteNumber));
             _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, id => QuestFoes.TeamOverride(id),
                 id => _enemyBehavior!.IsPacified(id), () => _enemyBehavior!.LastPerception, effects, _locomotion,
                 () => State!.WeaponDrawn, () => _combat!.PlayerHoldsBow(), () => _time.Calendar.MinuteNumber, _random,
@@ -398,11 +419,21 @@ internal sealed partial class DaggerfallSession
                 tagBandMember: (actorId, bandId, gen) =>
                 {
                     if (actors.TryGet(actorId, out ActorState? spawned))
+                    {
                         spawned.Actor.Add(new DaggerfallEncounterBandMember(bandId, gen));
+                        DaggerfallEnemyPerceptionMemory mem = spawned.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+                        mem.LairTruce = false;
+                        mem.FactionInfighting = true;
+                    }
                 });
             _nearbySpawn = new DaggerfallNearbySpawn(definitions.Actors, mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile), _placement,
                 assembled.PlayerControl, (actor, pose) => SpawnActor(actor, pose),
                 id => { _enemyBehavior!.MakeHostile(id); _enemyBehavior.Provoke(id, _time.Calendar.MinuteNumber); }, line => Presentation.SetOutcome(line));
+            CreatureClashes = new DaggerfallCreatureFactionClashes(
+                definitions,
+                _placement,
+                mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile),
+                (actor, pose, lairTruce, factionInfighting) => SpawnActor(actor, pose, lairTruce: lairTruce, factionInfighting: factionInfighting));
             SpellTargets = new DaggerfallSpellTargets(definitions, actors, character, effects, _spatial, npcs.IsGameplayActive,
                 id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, _placement.CurrentPositions,
                 request => _engine.Perception.QueryVisibility(request));
@@ -681,7 +712,7 @@ internal sealed partial class DaggerfallSession
                 activeProfile: () => _activeProfileKey,
                 exteriorCell: () => _exterior.CurrentExteriorCell());
             Expedition = new DaggerfallExpedition(travelPolicy, _site, tuning.Expedition, this, saved?.Expedition, definitions.Encounters,
-                definitions.Mobiles);
+                definitions.Mobiles, definitions.CreatureFactions);
             Banking = new DaggerfallBanking(State.Bank, State.Currency, State.Loans, State.Services, State.Social, definitions.Factions,
                 State.Progression, definitions.BuildingNames.RegionName,
                 inventorySuppressed: () => State.RacialOverrides.Current?.SuppressInventory == true,
@@ -980,7 +1011,7 @@ internal sealed partial class DaggerfallSession
                 building: CurrentInteriorBuilding,
                 owned: Holdings.OwnsInterior);
             _dungeonPopulation = new DaggerfallDungeonPopulation(definitions, _random, _uniqueItems, _groundContainers, _grounding.RestingPosition, _encounters,
-                (definition, pose, spawnDistance, passive) => _roster.Spawn(definition, pose, spawnDistance: spawnDistance, passive: passive),
+                (definition, pose, spawnDistance, passive) => _roster.Spawn(definition, pose, spawnDistance: spawnDistance, passive: passive, lairTruce: true),
                 State.Character, () => State.Progression.Level);
             Civilians = new DaggerfallCivilians(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance, _site.Require,
                 point => _exterior.ProfileToLocal(point), (npc, pose) => _roster.MaterializeCivilian(npc, pose), id => _roster.UnloadActor(id),
@@ -1436,7 +1467,7 @@ internal sealed partial class DaggerfallSession
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
                 new DaggerfallExpeditionBandReadout(Expedition, OverlandParties, State.Actors, State.Npcs),
                 new DaggerfallOverlandViewCommands(_overland),
-                new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, WordSpread, CourierDispatches, definitions, _site, () => _time.Calendar),
+                new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, WordSpread, CourierDispatches, CreatureClashes, State.PlayerControl, definitions, _site, () => _time.Calendar),
             ];                                                                                     // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,

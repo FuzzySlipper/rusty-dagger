@@ -145,7 +145,7 @@ internal sealed class DaggerfallHostileOverlandBands
             ulong memberSeed = StableHash.NonZeroFnv1a64($"{bandId}:member:{i}:{seed}");
             string gender = ((memberSeed >> 5) & 1UL) != 0 ? "female" : "male";
             ActorOrigin origin = ActorOrigin.MintedActor(enemyDef.Id.Value, level, memberSeed, gender);
-            ActorCombatStateDiff combat = new(ForcedHostile: true);
+            ActorCombatStateDiff combat = new(ForcedHostile: true, InfightingOverride: true);
             _actorLedger.Upsert(new ActorLedgerEntry(durableId, origin, Combat: combat));
             memberIds.Add(durableId);
         }

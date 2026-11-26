@@ -191,6 +191,7 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             w.WriteBoolean("forcedHostile", memory.ForcedHostile); w.WriteBoolean("languagePacified", memory.LanguagePacified);
             w.WriteBoolean("magicallyPacified", memory.MagicallyPacified); w.WriteBoolean("passive", memory.Passive);
             w.WriteBoolean("detected", memory.Detected); w.WriteBoolean("encounteredPlayer", memory.HasEncounteredPlayer);
+            w.WriteBoolean("lairTruce", memory.LairTruce); w.WriteBoolean("factionInfighting", memory.FactionInfighting);
         }
         w.WriteEndObject();
 

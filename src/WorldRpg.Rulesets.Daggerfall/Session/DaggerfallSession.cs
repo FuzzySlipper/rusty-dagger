@@ -474,8 +474,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // The band faces as it went on the map: north is -Z and east +X.
         double radians = band.Heading * Math.PI / 180;
         float yaw = ActorHeading.Yaw(new Vector3((float)Math.Sin(radians), 0F, (float)-Math.Cos(radians)));
-        WorldEncounters.QueueBand(band.Request, band.Choice, new(band.Id, staging, yaw), band.Size,
-            DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId);   // Actors
+        string profileId = DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId;
+        WorldEncounters.QueueBand(band.Request, band.Choice, new(band.Id, staging, yaw), band.Size, profileId);   // Actors
+        if (band.IsFactionClash && band.RivalChoice is { } rivalChoice)
+        {
+            float rivalYaw = ActorHeading.Yaw(new Vector3((float)-Math.Sin(radians), 0F, (float)Math.Cos(radians)));
+            WorldEncounters.QueueBand(band.Request, rivalChoice, new(checked(band.Id + 1_000_000), DaggerfallEncounterStaging.Travelling, rivalYaw),
+                band.RivalSize, profileId);
+        }
     }
 
     void IDaggerfallExpeditionSurroundings.MeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) =>
@@ -538,10 +544,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal IReadOnlyDictionary<long, DaggerfallActorId> DynamicActors => _roster.Dynamic;
 
     /// <summary>Registers one actor from a published definition beyond the authored placements.</summary>
-    internal long SpawnActor(string definitionId, ActorPose pose, int? level = null)
+    internal long SpawnActor(string definitionId, ActorPose pose, int? level = null, bool lairTruce = false, bool factionInfighting = false)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        return _roster.Spawn(definitionId, pose, level);
+        return _roster.Spawn(definitionId, pose, level, lairTruce: lairTruce, factionInfighting: factionInfighting);
     }
 
     /// <summary>Retires one spawned actor through the roster's lifetime policy.</summary>
@@ -889,6 +895,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>Reads the active town's notice board (null when no site is active).</summary>
     internal DaggerfallTownNoticeBoardView? ReadTownNoticeBoard() =>
         _site.ActiveSite is { } active ? NoticeBoard.BuildForSite(active, _time.Calendar.MinuteNumber) : null;
+
+    /// <summary>Staged two-sided creature-faction clashes (downstream of board-game moves or explicit faction pairs).</summary>
+    internal DaggerfallCreatureFactionClashes CreatureClashes { get; } = null!;
 
     /// <summary>Social introductions and vouching: prominence gating, social-skill skips, structured vouches, and better terms.</summary>
     internal DaggerfallIntroductions Introductions { get; } = null!;
