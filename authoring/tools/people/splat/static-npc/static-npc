@@ -224,8 +224,14 @@ def step_init(n, a):
     named = [v for v in ('right', 'left') if a.from_dir and (Path(a.from_dir) / f'{v}.png').exists()]   # her right / left side, by name
     for v in named:
         shutil.copy(Path(a.from_dir) / f'{v}.png', ap / f'{v}.png')
+    if not a.from_dir:   # the CMS approves right and left views too (Patch 2026-11-25: four-view sheets, the standard for armed characters)
+        for v in ('right', 'left'):
+            r = subprocess.run(['python3', 'authoring/cms/concept_cli.py', '--url', cfg['cms_url'], 'approved', a.cms, '--view', v,
+                                '--image', str(ap / f'{v}.png')], cwd=DAGGER, capture_output=True, text=True)
+            if r.returncode == 0 and (ap / f'{v}.png').exists():
+                named.append(v)
     if named:
-        cfg['sides'] = named; print(f'{n.id}: side paintings {named} from {a.from_dir}')
+        cfg['sides'] = named; print(f'{n.id}: side paintings {named} from {a.from_dir or "the CMS"}')
     n.brief.mkdir(parents=True, exist_ok=True)
     (n.brief / 'npc.json').write_text(json.dumps(cfg, indent=1) + '\n')
     for name in BRIEF + (('clay-side.txt',) if cfg.get('side') else ()) + tuple(f'clay-{v}.txt' for v in cfg.get('sides', ())):
