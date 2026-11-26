@@ -49,10 +49,13 @@ def smooth(x):
     x = np.clip(x, 0, 1); return x * x * (3 - 2 * x)
 
 
-def region(rig, T, M, bones, weights, hem=None, top=None, shins=True):
+def region(rig, T, M, bones, weights, hem=None, top=None, shins=True, cloak=None):
     """The skirt of a bound bake (bake frame): every Gaussian a leg bone leads between the hem and the top, less the boot shafts
     (shins=False: with them; on skirt bones the bell swings clear of the legs, and what stayed on a shin above the hem showed as
     skirt-coloured specks round the forward foot: 398, 456, 2026-11-20).
+    cloak=MARGIN (metres): a long cloak hanging behind the legs instead of a skirt round them (npc-472, Patch 2026-11-25): the
+    Gaussians a leg or the hips lead below the top that lie behind the hips and stand more than MARGIN clear of the thigh and shin
+    capsules (8.5 and 6.5 cm). The trousers in front and on the legs stay theirs.
     Returns the rig's joints and vertices in the bake frame, the dense weights, the mask and the heights."""
     names = list(rig["names"]); sc, rot, tr = T["scale"], np.array(T["rotation"]), np.array(T["translation"])
     J = {n: sc * np.asarray(rig["bind"][i], float) @ rot.T + tr for i, n in enumerate(names)}
@@ -69,6 +72,14 @@ def region(rig, T, M, bones, weights, hem=None, top=None, shins=True):
     W = np.zeros((n, len(names))); np.add.at(W, (np.repeat(np.arange(n), bones.shape[1]), bones.ravel()), weights.ravel())
     legs = [idx[k] for k in ("LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg")]
     skirt = np.isin(W.argmax(1), legs) & (M[:, 1] < top)
+    if cloak is not None:
+        fwd = rot @ np.array([0.0, 0.0, 1.0]); dcap = np.full(n, np.inf)
+        for side in ("Left", "Right"):
+            for j0, j1, rr in ((side + "UpLeg", side + "Leg", 0.085), (side + "Leg", side + "Foot", 0.065)):
+                k0, d = J[j0], J[j1] - J[j0]; t = np.clip(((M - k0) @ d) / (d @ d), 0, 1)
+                dcap = np.minimum(dcap, np.linalg.norm(M - (k0 + t[:, None] * d), axis=1) - rr * sc)
+        behind = ((M - J["Hips"]) @ fwd) < 0
+        skirt = np.isin(W.argmax(1), legs + [idx["Hips"]]) & (M[:, 1] < top) & behind & (dcap > cloak * sc)
 
     def shin_dist(side):
         k, f = J[side + "Leg"], J[side + "Foot"]; d = f - k; t = np.clip(((M - k) @ d) / (d @ d), 0, 1)
@@ -104,7 +115,9 @@ def main():
     a = ap.parse_args()
     rig = load_rig(a.scaffold); T = json.loads(a.transform.read_text())
     s = dict(np.load(a.splat)); b = np.load(a.binding); M = s["means"].astype(float); n = len(M)
-    G = region(rig, T, M, b["bones"].astype(np.int64), b["weights"].astype(np.float64), a.hem, a.top, shins=a.bones is None)
+    Cb = json.loads(a.bones.read_text()) if a.bones else {}
+    G = region(rig, T, M, b["bones"].astype(np.int64), b["weights"].astype(np.float64), a.hem, a.top, shins=a.bones is None,
+               cloak=Cb.get("cloak_margin") if Cb.get("mode") == "cloak" else None)
     names, J, V, W, idx, legs, skirt, hem, top, rot = (G[k] for k in ("names", "J", "V", "W", "idx", "legs", "skirt", "hem", "top", "rot"))
 
     def axis_x(side, y):   # the leg's axis (hip joint, knee, ankle) at height y
@@ -128,8 +141,8 @@ def main():
         rep_extra = {"width": a.width, "shared_between_legs": int((skirt & (wl > 0.05) & (wl < 0.95)).sum()),
                      "half_and_half": int((skirt & (wl > 0.4) & (wl < 0.6)).sum()), "hips": a.hips}
     drop = np.zeros(n, bool)
-    if a.drop_inside is None:
-        a.drop_inside = 0.03 if a.bones else 0.0
+    if a.drop_inside is None:   # a cloak hangs behind the legs: nothing inside it to drop
+        a.drop_inside = 0.03 if a.bones and Cb.get("mode") != "cloak" else 0.0
     if a.bones and a.drop_inside > 0:   # the legs inside the bell: on skirt bones they ride the cloth and hang out of the hem in a stride
         P = (M - G["tr"]) @ rot / G["sc"]; c = np.array(C["centre"]); rel = P[:, [0, 2]] - c
         az = np.arctan2(rel[:, 0], rel[:, 1]); rr = np.linalg.norm(rel, axis=1)

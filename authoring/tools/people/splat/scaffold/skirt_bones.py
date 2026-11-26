@@ -65,20 +65,25 @@ def azimuth(p, c):
 def cmd_rig(a):
     rig = load_rig(a.scaffold); T = json.loads(a.transform.read_text())
     sp = np.load(a.splat); b = np.load(a.binding); M = sp['means'].astype(float)
-    G = region(rig, T, M, b['bones'].astype(np.int64), b['weights'].astype(np.float64), shins=False)
+    G = region(rig, T, M, b['bones'].astype(np.int64), b['weights'].astype(np.float64), shins=False, cloak=a.cloak_margin if a.cloak else None)
     names = G['names']; J = {n: np.asarray(rig['bind'][i], float) for i, n in enumerate(names)}
     P = (M - G['tr']) @ G['rot'] / G['sc']; q = P[G['skirt']]                          # scaffold frame (metres)
     top = float((J['LeftUpLeg'][1] + J['RightUpLeg'][1]) / 2); hem = float(np.percentile(q[:, 1], 1))
     c = np.array([(J['LeftUpLeg'][0] + J['RightUpLeg'][0]) / 2, (J['LeftUpLeg'][2] + J['RightUpLeg'][2]) / 2])
     N = a.columns * (2 if a.tiers == 2 else 1)   # two tiers: measured on a sim grid of twice the columns, bones on the even ones
     off0 = np.pi / N if (a.tiers == 2 and a.slit) else 0.0   # a slit falls between two sim columns, at the front
-    th = np.mod(2 * np.pi * np.arange(N) / N + off0, 2 * np.pi); D = np.stack([np.sin(th), np.zeros(N), np.cos(th)], 1)
+    th = np.mod(2 * np.pi * np.arange(N) / N + off0, 2 * np.pi)
+    az = azimuth(q, c); half = (1.25 if a.tiers == 2 else 1.0) * np.pi / N
+    if a.cloak:   # a cloak behind the legs: an open sheet over the cloak's own arc, both edges on bone columns (npc-472, 2026-11-25)
+        if a.tiers != 2:
+            raise SystemExit('skirt_bones: --cloak needs the two-tier cloth sheet')
+        N = 2 * a.columns - 1; lo, hi = np.percentile(az, [3, 97]); th = np.linspace(lo, hi, N); half = 0.625 * (hi - lo) / (N - 1)
+    D = np.stack([np.sin(th), np.zeros(N), np.cos(th)], 1)
     ys = np.linspace(top, hem, 16); band = 0.75 * (top - hem) / 15 + 0.01
-    az = azimuth(q, c)
     rel = q - np.array([c[0], 0, c[1]])
     rad = np.full((N, len(ys)), np.nan)
     for k in range(N):
-        dth = np.abs((az - th[k] + np.pi) % (2 * np.pi) - np.pi); sec = dth < (1.25 if a.tiers == 2 else 1.0) * np.pi / N
+        dth = np.abs((az - th[k] + np.pi) % (2 * np.pi) - np.pi); sec = dth < half
         proj = rel @ D[k]
         for i, y in enumerate(ys):
             m = sec & (np.abs(q[:, 1] - y) < band)
@@ -87,9 +92,10 @@ def cmd_rig(a):
         ok = ~np.isnan(rad[k])
         if ok.sum() >= 2:
             rad[k] = np.interp(np.arange(len(ys)), np.where(ok)[0], rad[k][ok])
-    for k in range(N):   # a column with no skirt measured: its neighbours' mean
+    for k in range(N):   # a column with no skirt measured: its neighbours' mean (a cloak's edge: its one neighbour)
         if np.isnan(rad[k]).any():
-            rad[k] = np.nanmean(rad[[(k - 1) % N, (k + 1) % N]], 0)
+            nb = [(k - 1) % N, (k + 1) % N] if not a.cloak else [x for x in (k - 1, k + 1) if 0 <= x < N]
+            rad[k] = np.nanmean(rad[nb], 0)
     if a.tiers == 2:
         return rig_two_tier(a, rig, G, names, J, top, hem, c, th, D, ys, rad)
     pivots = np.array([[c[0] + D[k, 0] * rad[k, 0], top, c[1] + D[k, 2] * rad[k, 0]] for k in range(N)])
@@ -169,7 +175,7 @@ def rig_two_tier(a, rig, G, names, J, top, hem, c, th, D, ys, rad):
     doc, binary, idx = add_joints(a.scaffold, specs)
     a.out.mkdir(parents=True, exist_ok=True); glb_write(a.out / 'scaffold.glb', doc, binary)
     legs = {s: [names.index(s + n) for n in ('UpLeg', 'Leg', 'Foot')] for s in ('Left', 'Right')}
-    C = {'tiers': 2, 'mode': 'slit' if a.slit else 'bell', 'joints': [n for n, _, _ in specs], 'joint_index': idx[0::2], 'lower_index': idx[1::2],
+    C = {'tiers': 2, 'mode': 'cloak' if a.cloak else 'slit' if a.slit else 'bell', 'cloak_margin': a.cloak_margin if a.cloak else None, 'joints': [n for n, _, _ in specs], 'joint_index': idx[0::2], 'lower_index': idx[1::2],
          'theta': th[cols].tolist(), 'sim_theta': th.tolist(), 'bone_cols': cols, 'nu': nu, 'nv': NV, 'grid0': np.round(grid, 6).tolist(),
          'centre': c.tolist(), 'top': top, 'hem': hem, 'mid': float(rows[3]), 'fade': a.fade, 'hips': names.index('Hips'), 'legs': legs,
          'bake_scale': G['sc'], 'scaffold': str(a.scaffold), 'skirt_gaussians_in_reference': int(G['skirt'].sum())}
@@ -185,8 +191,12 @@ def bind_weights(W, P, skirt, C):
     ji = C['joint_index']; N = len(ji); lo = C.get('lower_index'); nb = max(W.shape[1], max(ji + (lo or [])) + 1)
     W2 = np.zeros((len(W), nb)); W2[:, :W.shape[1]] = W
     th0 = C['theta'][0]
-    u = np.mod(azimuth(P, C['centre']) - th0, 2 * np.pi) / (2 * np.pi / N)
-    k0 = np.floor(u).astype(int) % N; k1 = (k0 + 1) % N; f = u - np.floor(u)
+    if C.get('mode') == 'cloak':   # an open sheet: between the two nearest columns, clamped at the edges, no wrap
+        u = np.clip((azimuth(P, C['centre']) - th0) / (C['theta'][1] - th0), 0, N - 1 - 1e-6)
+        k0 = np.floor(u).astype(int); k1 = k0 + 1; f = u - k0
+    else:
+        u = np.mod(azimuth(P, C['centre']) - th0, 2 * np.pi) / (2 * np.pi / N)
+        k0 = np.floor(u).astype(int) % N; k1 = (k0 + 1) % N; f = u - np.floor(u)
     keep = smooth((P[:, 1] - (C['top'] - C['fade'])) / C['fade'])
     r = np.where(skirt)[0]; kp = keep[r]
     if C.get('mode') == 'slit':   # a skirt that parts at the front: below the hips, no blend across the front
@@ -222,7 +232,7 @@ def frame_down_out(down, out):
 
 def cloth_sheet(C, f, weft=3e-4):
     """The sheet's distance constraints (index a, index b, rest length, compliance) from the rest grid in prep units."""
-    nu, nv = C['nu'], C['nv']; g = np.array(C['grid0']) * f; slit = C.get('mode') == 'slit'; E = []
+    nu, nv = C['nu'], C['nv']; g = np.array(C['grid0']) * f; slit = C.get('mode') == 'slit'; cloak = C.get('mode') == 'cloak'; E = []
 
     def edge(k1, j1, k2, j2, comp):
         L = float(np.linalg.norm(g[k1, j1] - g[k2, j2]))
@@ -233,10 +243,10 @@ def cloth_sheet(C, f, weft=3e-4):
             if j + 1 < nv: edge(k, j, k, j + 1, 1e-5)          # warp: barely stretches   # noqa: E701
             if j + 2 < nv: edge(k, j, k, j + 2, 2e-3)          # bend down the warp       # noqa: E701
             kn = (k + 1) % nu
-            if not (slit and k == nu - 1 and j >= 2):
+            if not (slit and k == nu - 1 and j >= 2) and not (cloak and k == nu - 1):   # a cloak's sheet is open: no wrap round the front
                 edge(k, j, kn, j, weft)                         # weft
                 if j + 1 < nv: edge(k, j, kn, j + 1, 1e-3); edge(kn, j, k, j + 1, 1e-3)   # shear   # noqa: E701,E702
-            if not (slit and k in (nu - 2, nu - 1) and j >= 2):
+            if not (slit and k in (nu - 2, nu - 1) and j >= 2) and not (cloak and k >= nu - 2):
                 edge(k, j, (k + 2) % nu, j, 4e-3)               # bend across
     E = np.array(E, dtype=object)
     return g, E[:, 0].astype(int), E[:, 1].astype(int), E[:, 2].astype(float), E[:, 3].astype(float)
@@ -361,6 +371,8 @@ def main():
     r.add_argument('binding', type=Path); r.add_argument('out', type=Path); r.add_argument('--columns', type=int, default=8)
     r.add_argument('--tiers', type=int, choices=(1, 2), default=2, help='2: upper and lower bone per column, driven by the cloth sheet (the default); 1: one rigid bone per column')
     r.add_argument('--slit', action='store_true', help='two tiers: the skirt parts at the front (a wrap skirt)')
+    r.add_argument('--cloak', action='store_true', help='two tiers: a long cloak hanging behind the legs - an open sheet over its own arc (npc-472)')
+    r.add_argument('--cloak-margin', type=float, default=0.02, help='--cloak: metres clear of the thigh and shin capsules a Gaussian must stand to be cloak')
     r.add_argument('--fade', type=float, default=0.06, help='metres below the top over which a skirt Gaussian moves from its own weights onto the columns')
     d = sp.add_parser('drive'); d.add_argument('prep', type=Path); d.add_argument('skirt', type=Path); d.add_argument('--tags', default='bound400k,body')
     d.add_argument('--gap', type=float, default=0.02, help='metres kept between a leg capsule and the skirt'); d.add_argument('--release', type=float, default=2.5, help='radians a second a column falls back')
