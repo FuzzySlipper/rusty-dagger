@@ -46,6 +46,45 @@ public sealed class SaveTests
         Assert.Throws<BoardSetupException>(() => Board.Load(TestBoards.TwoCrowns(), TestBoards.Cards, save));
     }
 
+    [Fact]
+    public void A_save_naming_seats_or_regions_its_table_lacks_is_refused_naming_each()
+    {
+        BoardSave save = Board.Create(BoardSetup.Canon(), CardSet.Canon()).Save();
+        RegionSave region = save.Regions.First(held => held.Allegiance is null);
+        BoardSave strange = save with
+        {
+            Regions = [.. save.Regions.Select(held => held == region
+                ? held with { Allegiance = "no-such-seat", Influence = new Dictionary<string, int>(held.Influence) { ["ghosts"] = 1 } }
+                : held)],
+            Feuds = [new Feud("feud-1", "daggerfall", "nobody", 1, 0)],
+            Queued = [new LairCleared("atlantis")],
+        };
+
+        BoardSetupException refused = Assert.Throws<BoardSetupException>(() => Board.Load(BoardSetup.Canon(), CardSet.Canon(), strange));
+
+        Assert.Contains($"region '{region.Id}' owes allegiance to 'no-such-seat', which is no crown at the table", refused.Problems);
+        Assert.Contains($"region '{region.Id}' influence names unknown seat 'ghosts'", refused.Problems);
+        Assert.Contains("feud 'feud-1' names unknown seat 'nobody'", refused.Problems);
+
+        BoardSave queued = save with { Queued = [new LairCleared("atlantis")] };
+        Assert.Contains(Assert.Throws<BoardSetupException>(() => Board.Load(BoardSetup.Canon(), CardSet.Canon(), queued)).Problems,
+            problem => problem.Contains("unknown region 'atlantis'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_slow_move_saved_under_way_is_published_with_its_origin_when_it_arrives()
+    {
+        Board board = TestBoards.Create(TestBoards.TwoCrowns());
+        board.Schedule(new PendingMove("0-east", "east", TestBoards.Card("march-on"), ["march"], "east-capital", 0, 2));
+        Board resumed = Board.Load(TestBoards.TwoCrowns(), TestBoards.CardsFor(TestBoards.TwoCrowns()), BoardSave.FromJson(board.Save().ToJson(), "test save"));
+
+        BoardTurn.Play(resumed);
+        TurnTrace arrived = BoardTurn.Play(resumed);
+
+        MoveRecord record = BoardOutputs.Of(resumed, TestBoards.Cards, arrived).Moves.Single(move => move.MoveId == "0-east");
+        Assert.Equal(("east-capital", 0), (record.OriginRegion, record.Turn));
+    }
+
     private static IReadOnlyList<string> Year(Board board, int turns)
     {
         List<string> lines = [];
@@ -122,6 +161,7 @@ public sealed class NudgeTests
         TurnTrace turn = BoardTurn.Play(board);
 
         Assert.Contains(turn.Arrivals, arrival => arrival.Id == "0-east");
+        Assert.Equal("east-capital", BoardOutputs.Of(board, TestBoards.Cards, turn).Moves.Single(move => move.MoveId == "0-east").OriginRegion);
         Assert.Equal(8, board.Pending.Single(move => move.Id == "0-west").Arrives);
         Assert.DoesNotContain(board.Pending, move => move.Id == "1-east");
         Assert.Equal([NudgeOutcome.Applied, NudgeOutcome.Applied, NudgeOutcome.Applied, NudgeOutcome.Stale], turn.Nudges.Select(nudge => nudge.Outcome));

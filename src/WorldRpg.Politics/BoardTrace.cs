@@ -32,12 +32,13 @@ public enum MoveOutcome
     Failed,
 }
 
-/// <summary>A slow move arriving: the move it was, how it ended and what it changed.</summary>
+/// <summary>A slow move arriving: the move it was, the region it set out from, how it ended and what it changed.</summary>
 public sealed record ArrivalTrace(
     string Id,
     string Seat,
     string Card,
     IReadOnlyList<string> Targets,
+    string? Origin,
     Visibility Visibility,
     MoveOutcome Outcome,
     IReadOnlyList<BoardChange> Changes);

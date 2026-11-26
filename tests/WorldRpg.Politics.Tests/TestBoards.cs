@@ -54,8 +54,11 @@ internal static class TestBoards
     ]);
 
     /// <summary>A board from <paramref name="setup"/> with the test cards, less the signatures of seats not at its table.</summary>
-    public static Board Create(BoardSetup setup, ulong? seed = null) =>
-        Board.Create(setup, new CardSet([.. Cards.Cards.Where(card => card.Seat is null || setup.Seats.Any(seat => seat.Id == card.Seat))]), seed);
+    public static Board Create(BoardSetup setup, ulong? seed = null) => Board.Create(setup, CardsFor(setup), seed);
+
+    /// <summary>The test cards, less the signatures of seats not at <paramref name="setup"/>'s table.</summary>
+    public static CardSet CardsFor(BoardSetup setup) =>
+        new([.. Cards.Cards.Where(card => card.Seat is null || setup.Seats.Any(seat => seat.Id == card.Seat))]);
 
     /// <summary>The setup with <paramref name="seat"/> at the top of every resource, so no cost weighs on its choices.</summary>
     public static BoardSetup Rich(this BoardSetup setup, string seat) => setup with

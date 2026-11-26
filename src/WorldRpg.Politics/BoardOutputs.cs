@@ -92,7 +92,7 @@ public sealed record BoardOutputs(
         foreach (PendingMove move in board.InterceptedThisWeek)
             moves.Add(Record(move.Id, move.Played, move.Seat, move.Card, move.Card.Id, move.Targets, move.Origin, move.Card.Visibility, MoveStatus.Intercepted, null));
         foreach (ArrivalTrace arrival in trace.Arrivals)
-            moves.Add(Record(arrival.Id, Played(arrival.Id), arrival.Seat, byId.GetValueOrDefault(arrival.Card), arrival.Card, arrival.Targets, null,
+            moves.Add(Record(arrival.Id, Played(arrival.Id), arrival.Seat, byId.GetValueOrDefault(arrival.Card), arrival.Card, arrival.Targets, arrival.Origin,
                 arrival.Visibility, arrival.Outcome == MoveOutcome.Resolved ? MoveStatus.Resolved : MoveStatus.Failed, null));
         foreach (MoveTrace move in trace.Moves.Where(move => move.Card != Gathering.Id))
         {

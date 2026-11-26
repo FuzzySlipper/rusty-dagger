@@ -74,7 +74,7 @@ public static class BoardTurn
             Prestige.Witness witness = Prestige.Witness.OfCard(board, seat, new Prestige.Before(board), move.Card, move.Targets);
             bool resolved = move.Card.Fits(board, seat, move.Targets) && move.Card.Apply(board, seat, move.Targets);
             if (resolved) Memory.Remember(board, witness);
-            arrivals.Add(new ArrivalTrace(move.Id, move.Seat, move.Card.Id, move.Targets, move.Card.Visibility,
+            arrivals.Add(new ArrivalTrace(move.Id, move.Seat, move.Card.Id, move.Targets, move.Origin, move.Card.Visibility,
                 resolved ? MoveOutcome.Resolved : MoveOutcome.Failed, board.TakeChanges()));
         }
 

@@ -179,6 +179,7 @@ public sealed class Board
             problems.Add($"move '{move.Id}' plays unknown card '{move.Card}'");
         foreach (string card in save.WorldDraw.Concat(save.WorldDiscard).Where(card => !worldById.ContainsKey(card)))
             problems.Add($"the World deck holds unknown card '{card}'");
+        problems.AddRange(ReferenceProblems(setup, save));
         if (problems.Count > 0) throw new BoardSetupException("board save", problems);
 
         Dictionary<string, SeatSave> seatSaves = save.Seats.ToDictionary(seat => seat.Id, StringComparer.Ordinal);
@@ -240,7 +241,50 @@ public sealed class Board
         foreach (HelpSave help in save.Helps) board.helps[(help.Helper, help.Helped)] = help.Count;
         board.queued.AddRange(save.Queued);
         board.arcs.AddRange(save.Arcs);
+        IReadOnlyList<string> nudges = [.. save.Queued.Select(nudge => Nudges.Problem(board, nudge) is { } problem ? $"queued nudge {nudge} {problem}" : null).OfType<string>()];
+        if (nudges.Count > 0) throw new BoardSetupException("board save", nudges);
         return board;
+    }
+
+    /// <summary>
+    /// Every seat, crown and region a save names that its setup does not have: allegiance only to a crown, influence and
+    /// offices of seats at the table, and relations, slow moves, deals, wars, truces, feuds, helps, grudges, courts and the
+    /// leader among them.
+    /// </summary>
+    private static IEnumerable<string> ReferenceProblems(BoardSetup setup, BoardSave save)
+    {
+        HashSet<string> seats = [.. setup.Seats.Select(seat => seat.Id)];
+        HashSet<string> crowns = [.. setup.Seats.Where(seat => seat.Kind == SeatKind.Crown).Select(seat => seat.Id)];
+        Dictionary<string, RegionSetup> regions = setup.Regions.ToDictionary(region => region.Id, StringComparer.Ordinal);
+        string? Unknown(string what, string seat) => seats.Contains(seat) ? null : $"{what} names unknown seat '{seat}'";
+        foreach (RegionSave region in save.Regions)
+        {
+            if (region.Allegiance is { } holder && !crowns.Contains(holder)) yield return $"region '{region.Id}' owes allegiance to '{holder}', which is no crown at the table";
+            if (regions.TryGetValue(region.Id, out RegionSetup? origin) && origin.Capital && region.Allegiance != origin.Allegiance)
+                yield return $"capital '{region.Id}' owes allegiance to '{region.Allegiance}', not its crown";
+            foreach ((string seat, int pieces) in region.Influence)
+            {
+                if (Unknown($"region '{region.Id}' influence", seat) is { } problem) yield return problem;
+                if (pieces is < 1 or > InfluenceLimit) yield return $"region '{region.Id}' influence of '{seat}' {pieces} is outside 1..{InfluenceLimit}";
+            }
+            foreach ((Office office, string seat) in region.Offices)
+                if (Unknown($"region '{region.Id}' {office}", seat) is { } problem) yield return problem;
+        }
+        IEnumerable<string?> named =
+        [
+            .. save.Relations.SelectMany(relation => new[] { Unknown("a relation", relation.A), Unknown("a relation", relation.B) }),
+            .. save.Pending.Select(move => Unknown($"move '{move.Id}'", move.Seat)),
+            .. save.Agreements.SelectMany(deal => new[] { Unknown($"deal '{deal.Id}'", deal.Proposer), Unknown($"deal '{deal.Id}'", deal.Partner) }),
+            .. save.Wars.SelectMany(war => new[] { war.A, war.B }.Concat(war.AlliesOfA).Concat(war.AlliesOfB).Select(seat => Unknown($"war '{war.Id}'", seat))),
+            .. save.Truces.SelectMany(truce => new[] { Unknown("a truce", truce.A), Unknown("a truce", truce.B) }),
+            .. save.Feuds.SelectMany(feud => new[] { Unknown($"feud '{feud.Id}'", feud.A), Unknown($"feud '{feud.Id}'", feud.B) }),
+            .. save.Helps.SelectMany(help => new[] { Unknown("a help", help.Helper), Unknown("a help", help.Helped) }),
+            .. save.Seats.SelectMany(seat => seat.Grudges.Select(grudge => Unknown($"seat '{seat.Id}' grudge", grudge.Against))
+                .Concat(seat.Court.Select(condition => Unknown($"seat '{seat.Id}' court", condition.Source)))),
+            save.Leader is null ? null : Unknown("the leader", save.Leader),
+        ];
+        foreach (string? problem in named)
+            if (problem is not null) yield return problem;
     }
 
     public Seat Seat(string id) => seatsById[id];
