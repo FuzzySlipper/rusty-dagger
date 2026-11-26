@@ -32,8 +32,20 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     private readonly Func<long, ActorLedgerEntry?> _captureLiveForCustody;
     private readonly Func<DaggerfallSiteId, (int X, int Y)?>? _siteCoordinates;
     private readonly Action<long>? _provokeHostile;
+    private readonly Func<int, ActorPose, long?>? _spawnClashMobile;
 
-    private readonly List<(string BandId, DaggerfallEncounterStaging Staging, bool InClash, float FacingOffset, float ForwardDistance)> _pendingIntercepts = [];
+    private sealed record PendingIntercept(
+        string BandId,
+        DaggerfallEncounterStaging Staging,
+        string? RivalBandId,
+        int? TransientRivalMobileId,
+        int TransientRivalSize)
+    {
+        internal bool IsClash => !string.IsNullOrWhiteSpace(RivalBandId)
+            || (TransientRivalMobileId is not null && TransientRivalSize > 0);
+    }
+
+    private readonly List<PendingIntercept> _pendingIntercepts = [];
 
     internal DaggerfallOverlandPartyCoordinator(
         DaggerfallExpedition expedition,
@@ -48,7 +60,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         Func<DaggerfallNpc, ActorSocialDiff?, ActorSocialDiff> toSocialDiff,
         Func<long, ActorLedgerEntry?> captureLiveForCustody,
         Func<DaggerfallSiteId, (int X, int Y)?>? siteCoordinates = null,
-        Action<long>? provokeHostile = null)
+        Action<long>? provokeHostile = null,
+        Func<int, ActorPose, long?>? spawnClashMobile = null)
     {
         _expedition = expedition ?? throw new ArgumentNullException(nameof(expedition));
         _actorLedger = actorLedger ?? throw new ArgumentNullException(nameof(actorLedger));
@@ -63,6 +76,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         _captureLiveForCustody = captureLiveForCustody ?? throw new ArgumentNullException(nameof(captureLiveForCustody));
         _siteCoordinates = siteCoordinates;
         _provokeHostile = provokeHostile;
+        _spawnClashMobile = spawnClashMobile;
     }
 
     internal IReadOnlyList<long> StagedPartyMemberIds =>
@@ -149,19 +163,19 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         return _expedition.RegisterPersistentBand(save);
     }
 
-    /// <summary>Queues a met persistent band's members (and any opposing persistent clash band) to materialize when entering the 3D scene.</summary>
+    /// <summary>Queues a met persistent band's members (and any opposing persistent or transient clash side) to materialize when entering the 3D scene.</summary>
     internal void OnMeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging)
     {
         ArgumentNullException.ThrowIfNull(band);
-        bool inClash = band.ActiveClash is not null;
-        if (!_pendingIntercepts.Any(item => StringComparer.Ordinal.Equals(item.BandId, band.BandId)))
-            _pendingIntercepts.Add((band.BandId, staging, inClash, inClash ? 0f : MathF.PI, 4.0f));
-
-        if (band.ActiveClash is { RivalBandId: { Length: > 0 } rivalBandId }
-            && !_pendingIntercepts.Any(item => StringComparer.Ordinal.Equals(item.BandId, rivalBandId)))
-        {
-            _pendingIntercepts.Add((rivalBandId, DaggerfallEncounterStaging.Caught, true, MathF.PI, 9.0f));
-        }
+        if (_pendingIntercepts.Any(item => StringComparer.Ordinal.Equals(item.BandId, band.BandId)))
+            return;
+        DaggerfallPersistentBandClashSave? clash = band.ActiveClash;
+        _pendingIntercepts.Add(new PendingIntercept(
+            band.BandId,
+            staging,
+            RivalBandId: clash?.RivalBandId,
+            TransientRivalMobileId: clash is { RivalBandId: null } ? clash.RivalMobileId : null,
+            TransientRivalSize: clash is { RivalBandId: null } ? clash.RivalSize : 0));
     }
 
     /// <summary>
@@ -390,7 +404,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
 
     /// <summary>
     /// Runs right after <see cref="DaggerfallExpedition"/> relocates the player into a 3D scene: materializes any
-    /// intercepted persistent overland bands beside the player and stages travelling <c>Driver</c>/<c>Companion</c>
+    /// intercepted persistent overland bands beside the player (staging both sides of a live clash at opposing anchors
+    /// facing each other, whether the rival is persistent or transient) and stages travelling <c>Driver</c>/<c>Companion</c>
     /// party members on foot with their exact durable IDs.
     /// </summary>
     internal void OnEnterSceneFromExpedition(DaggerfallSiteProfile activeProfile, WorldPoint landingLocalPose, float landingYaw)
@@ -398,15 +413,96 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         ArgumentNullException.ThrowIfNull(activeProfile);
         if (_pendingIntercepts.Count > 0)
         {
-            var intercepts = _pendingIntercepts.ToArray();
+            PendingIntercept[] intercepts = [.. _pendingIntercepts];
             _pendingIntercepts.Clear();
-            foreach (var intercept in intercepts)
-                _ = DeliverBandMembers(intercept.BandId, activeProfile.ProfileKey, landingLocalPose, landingYaw,
-                    intercept.InClash, intercept.FacingOffset, intercept.ForwardDistance);
+            foreach (PendingIntercept intercept in intercepts)
+            {
+                if (!intercept.IsClash)
+                {
+                    _ = DeliverBandMembers(intercept.BandId, activeProfile.ProfileKey, landingLocalPose, landingYaw);
+                    continue;
+                }
+
+                IReadOnlyList<long> primaryIds = DeliverBandMembers(
+                    intercept.BandId, activeProfile.ProfileKey, landingLocalPose, landingYaw,
+                    inClash: true, facingOffset: 0f, forwardDistance: 4.0f);
+
+                List<long> rivalIds = [];
+                if (intercept.RivalBandId is { Length: > 0 } rivalBandId)
+                {
+                    rivalIds.AddRange(DeliverBandMembers(
+                        rivalBandId, activeProfile.ProfileKey, landingLocalPose, landingYaw,
+                        inClash: true, facingOffset: MathF.PI, forwardDistance: 9.0f));
+                }
+                else if (intercept.TransientRivalMobileId is int rivalMobileId
+                    && intercept.TransientRivalSize > 0
+                    && _spawnClashMobile is not null)
+                {
+                    float initialRivalYaw = landingYaw + MathF.PI;
+                    for (int i = 0; i < intercept.TransientRivalSize; i++)
+                    {
+                        WorldPoint spot = OffsetBeside(landingLocalPose, landingYaw, i, forwardDistance: 9.0f);
+                        if (_spawnClashMobile(rivalMobileId, new ActorPose(spot, initialRivalYaw)) is long spawnedId)
+                        {
+                            rivalIds.Add(spawnedId);
+                            _provokeHostile?.Invoke(spawnedId);
+                        }
+                    }
+                }
+
+                OrientClashSidesFacingEachOther(primaryIds, rivalIds);
+            }
         }
 
         _ = StagePartyMembers(activeProfile, landingLocalPose, landingYaw,
             role => role is ActorPartyRole.Driver or ActorPartyRole.Companion);
+    }
+
+    private void OrientClashSidesFacingEachOther(IReadOnlyList<long> primaryIds, IReadOnlyList<long> rivalIds)
+    {
+        List<ActorState> primaryActors = [];
+        foreach (long id in primaryIds)
+            if (_actors.TryGet(id, out ActorState? live)) primaryActors.Add(live);
+
+        List<ActorState> rivalActors = [];
+        foreach (long id in rivalIds)
+            if (_actors.TryGet(id, out ActorState? live)) rivalActors.Add(live);
+
+        if (primaryActors.Count == 0 || rivalActors.Count == 0) return;
+
+        Vector3 primaryCenter = MeanPosition(primaryActors);
+        Vector3 rivalCenter = MeanPosition(rivalActors);
+
+        foreach (ActorState actor in primaryActors)
+        {
+            Vector3 dir = rivalCenter - actor.Position.ToVector();
+            if (dir.X * dir.X + dir.Z * dir.Z > 1e-6f)
+                actor.ApplyPose(new ActorPose(actor.Position, ActorHeading.Yaw(dir)));
+            if (actor.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? mem))
+            {
+                mem.LairTruce = false;
+                mem.FactionInfighting = true;
+            }
+        }
+
+        foreach (ActorState actor in rivalActors)
+        {
+            Vector3 dir = primaryCenter - actor.Position.ToVector();
+            if (dir.X * dir.X + dir.Z * dir.Z > 1e-6f)
+                actor.ApplyPose(new ActorPose(actor.Position, ActorHeading.Yaw(dir)));
+            if (actor.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? mem))
+            {
+                mem.LairTruce = false;
+                mem.FactionInfighting = true;
+            }
+        }
+    }
+
+    private static Vector3 MeanPosition(List<ActorState> actors)
+    {
+        Vector3 sum = Vector3.Zero;
+        foreach (ActorState actor in actors) sum += actor.Position.ToVector();
+        return sum / actors.Count;
     }
 
     /// <summary>

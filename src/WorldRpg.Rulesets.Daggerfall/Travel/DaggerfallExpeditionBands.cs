@@ -380,6 +380,17 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
     internal DaggerfallBandEvent? Step(long seconds, long now, (double X, double Y) party, DaggerfallBandSightConditions conditions,
         int playerLevel, Func<string, int, int, int> draw, IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions = null)
     {
+        AdvanceMovement(seconds, now, party, playerLevel, draw, worldConditions);
+        return EvaluatePlayerEvents(party, conditions);
+    }
+
+    /// <summary>
+    /// Advances transient band staging, expiry/pruning, movement, and transient-vs-transient collisions without
+    /// evaluating player sight or encounter stops, so cross-band collisions with persistent bands resolve first.
+    /// </summary>
+    internal void AdvanceMovement(long seconds, long now, (double X, double Y) party, int playerLevel,
+        Func<string, int, int, int> draw, IReadOnlyList<DaggerfallWorldConditionToken>? worldConditions = null)
+    {
         if (_nextStaging < 0) _nextStaging = now - seconds + (long)(tuning.StageEveryHours * SecondsPerHour);
         while (now >= _nextStaging)
         {
@@ -388,13 +399,17 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
         }
         _bands.RemoveAll(band => now >= band.Leaves || band.Distance(party.X, party.Y) > tuning.StageDistance.Maximum * 2);
         double hours = seconds / (double)SecondsPerHour;
-        double sees = BandSight(conditions);
         foreach (DaggerfallExpeditionBand band in _bands)
         {
             if (!band.Camp && !band.IsFactionClash) Move(band, party, hours, draw);
         }
         _ = ResolveTransientBandCollisions();
+    }
 
+    /// <summary>Evaluates player meet and spotting events for remaining transient bands after collisions have settled.</summary>
+    internal DaggerfallBandEvent? EvaluatePlayerEvents((double X, double Y) party, DaggerfallBandSightConditions conditions)
+    {
+        double sees = BandSight(conditions);
         DaggerfallBandEvent? found = null;
         foreach (DaggerfallExpeditionBand band in _bands)
         {

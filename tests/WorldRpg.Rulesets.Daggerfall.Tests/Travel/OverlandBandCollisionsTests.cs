@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -91,7 +92,6 @@ public sealed class OverlandBandCollisionsTests
         session.ApplyProductMode(ProductMode.Playing);
         session.OpenExpedition();
         (double px, double py) = session.Expedition.Position;
-        long now = ((IDaggerfallExpeditionSurroundings)session).Calendar.ToAbsoluteSeconds();
 
         // Dispatch a real seeded regional caravan AND a real hostile bounty hunter squad right next to each other within sight.
         DaggerfallPersistentOverlandBand? caravan = session.OverlandTraffic.TryDispatchWindow(701L, (px, py));
@@ -104,21 +104,27 @@ public sealed class OverlandBandCollisionsTests
         long[] raiderMemberIds = [.. session.State.ActorLedger.EntriesOnOverlandBand(raiders!.BandId).Select(e => e.DurableId)];
         Assert.NotEmpty(raiderMemberIds);
 
-        // Move both persistent bands right beside the player (within meet distance) so they collide in sight.
+        // Move both persistent bands right beside the player (within BOTH collision distance AND player meet/sight distance)
+        // and advance normally through Expedition.Advance (no manual ResolveBandCollisions call!).
+        // Collisions must resolve BEFORE player spotting or early caravan CameUpon can suppress the clash.
         caravan.X = px + 0.10;
         caravan.Y = py;
         raiders.X = px + 0.14;
         raiders.Y = py;
 
-        int collisions = session.Expedition.ResolveBandCollisions(now, (px, py), mapOpen: true);
-        Assert.Equal(1, collisions);
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        session.Expedition.SetSpeed(1);
+        _ = session.Expedition.Advance(0.25);
 
-        // Rival band is absorbed into caravan.ActiveClash as ONE live Caravan Raid token!
+        // Rival band is absorbed into caravan.ActiveClash as ONE live Caravan Raid token, and Advance pauses on the raid!
         Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == raiders.BandId);
         DaggerfallPersistentOverlandBand heldRaid = Assert.Single(session.Expedition.PersistentBands, b => b.BandId == caravan.BandId);
         Assert.NotNull(heldRaid.ActiveClash);
         Assert.Equal(raiders.BandId, heldRaid.ActiveClash!.RivalBandId);
         Assert.Equal(raiders.Name, heldRaid.ActiveClash.RivalName);
+        Assert.NotNull(session.Expedition.BandAhead);
+        Assert.True(session.Expedition.BandAhead!.IsClash);
+        Assert.Contains("intervene", session.Expedition.Message ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         // TravelPanel projects it as a live Caravan Raid Clash within PartySight.
         DaggerfallExpeditionBandView raidView = Assert.Single(session.TravelPanel.Read()!.Bands, b => b.PersistentBandId == caravan.BandId);
@@ -153,18 +159,183 @@ public sealed class OverlandBandCollisionsTests
         restored.EnterExpedition();
         Assert.False(restored.Expedition.Open);
         Assert.True(restored.State.Actors.TryGet(caravanMemberId, out ActorState? liveMerchant));
+        List<ActorState> liveRaiders = [];
         foreach (long raiderId in raiderMemberIds)
         {
             Assert.True(restored.State.Actors.TryGet(raiderId, out ActorState? liveRaider));
+            liveRaiders.Add(liveRaider!);
             DaggerfallEnemyPerceptionMemory mem = liveRaider!.Actor.Get<DaggerfallEnemyPerceptionMemory>();
             Assert.False(mem.LairTruce);
             Assert.True(mem.FactionInfighting);
             // Raiders stand ahead of the merchant (distinct positions facing each other).
             Assert.True(Vector3Distance(liveMerchant!.Position, liveRaider.Position) >= 2.0f);
         }
+        AssertSidesFaceEachOther([liveMerchant!], liveRaiders);
+
         // Zero orphaned OnOverlandBand entries remain for either side!
         Assert.Empty(restored.State.ActorLedger.EntriesOnOverlandBand(caravan.BandId));
         Assert.Empty(restored.State.ActorLedger.EntriesOnOverlandBand(raiders.BandId));
+    }
+
+    [Fact]
+    public void Expedition_advance_resolves_persistent_collision_inside_band_sight_before_spotting_suppresses_it()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord origin = definitions.Locations.Records.First(r =>
+            r.Id.Region == DaggerfallRegion && r.Exterior is not null && r.Kind == DaggerfallSiteKind.TownCity);
+        DaggerfallSiteProfile originProfile = Assembled(DaggerfallWorldProfileIds.Exterior(origin.Id));
+        DaggerfallSiteProfiles profiles = new([originProfile]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, originProfile);
+        SpatialFake spatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, originProfile, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.OpenExpedition();
+        (double px, double py) = session.Expedition.Position;
+
+        DaggerfallPersistentOverlandBand? caravan = session.OverlandTraffic.TryDispatchWindow(751L, (px, py));
+        Assert.NotNull(caravan);
+        session.State.Social.ChangeRegionalReputation(origin.Id.Region, -25);
+        DaggerfallPersistentOverlandBand? raiders = session.HostileOverlandBands.TryDispatchWindow(752L, (px, py));
+        Assert.NotNull(raiders);
+
+        // Place both bands strictly OUTSIDE MeetDistance, strictly INSIDE BandSight, and within collision distance of each other.
+        double sightOffset = Math.Min(session.Expedition.BandSight * 0.75, 1.0);
+        Assert.True(sightOffset > DaggerfallBandTuning.Default.MeetDistance + 0.1);
+        Assert.True(sightOffset < session.Expedition.BandSight);
+        caravan!.X = px + sightOffset;
+        caravan.Y = py;
+        raiders!.X = px + sightOffset + 0.05;
+        raiders.Y = py;
+
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        session.Expedition.SetSpeed(1);
+        _ = session.Expedition.Advance(0.25);
+
+        // Collisions resolve before player spotting: raiders are absorbed into caravan.ActiveClash instead of spotting/chasing the player.
+        Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == raiders.BandId);
+        DaggerfallPersistentOverlandBand held = Assert.Single(session.Expedition.PersistentBands, b => b.BandId == caravan.BandId);
+        Assert.NotNull(held.ActiveClash);
+        Assert.Equal(raiders.BandId, held.ActiveClash!.RivalBandId);
+        Assert.False(held.Spotted);
+        Assert.False(session.Expedition.EncounterWaiting);
+    }
+
+    [Fact]
+    public void Transient_raiders_colliding_with_caravan_via_advance_stage_facing_each_other_on_entry()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord origin = definitions.Locations.Records.First(r =>
+            r.Id.Region == DaggerfallRegion && r.Exterior is not null && r.Kind == DaggerfallSiteKind.TownCity);
+        DaggerfallSiteProfile originProfile = Assembled(DaggerfallWorldProfileIds.Exterior(origin.Id));
+        DaggerfallSiteProfiles profiles = new([originProfile]);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, originProfile);
+        SpatialFake spatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, originProfile, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            "cond:monster-surge:r17:raid-test", DaggerfallWorldConditionKind.MonsterSurge, DaggerfallRegion, Severity: 2, StartedDay: 0, SubjectTag: "orcs"));
+        session.OpenExpedition();
+
+        // Pick an unlocated land pixel adjacent to origin (whose HostAt is origin) so transient raiders can be staged right inside meet distance.
+        DaggerfallTravelMapPixel? wildPixel = null;
+        for (int dy = -2; dy <= 2 && wildPixel is null; dy++)
+        {
+            for (int dx = -2; dx <= 2 && wildPixel is null; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                DaggerfallTravelMapPixel candidate = new(origin.MapPixelX + dx, origin.MapPixelY + dy);
+                if (!candidate.IsInBounds || session.Expedition.Policy.IsOcean(candidate)) continue;
+                if (session.Expedition.LocationAt(candidate) is not null) continue;
+                if (session.Expedition.HostAt(candidate).Id != origin.Id) continue;
+                wildPixel = candidate;
+            }
+        }
+        Assert.NotNull(wildPixel);
+
+        // Stand on the unlocated land pixel with a non-zero arrival direction (different from caravan map heading).
+        session.Expedition.Close();
+        session.Expedition.Begin(wildPixel!.Value, aboardOwnShip: false);
+        (double px, double py) = session.Expedition.Position;
+
+        DaggerfallPersistentOverlandBand? caravan = session.OverlandTraffic.TryDispatchWindow(781L, (px, py));
+        Assert.NotNull(caravan);
+        long caravanMemberId = Assert.Single(session.State.ActorLedger.EntriesOnOverlandBand(caravan!.BandId)).DurableId;
+        caravan.X = px + 0.10;
+        caravan.Y = py;
+        caravan.Heading = 225.0; // Intentionally unrelated to landingYaw (0 rad) to verify raiders orient to the merchant, not map heading.
+
+        // Stage a hostile transient band right beside the caravan, inside BOTH collision distance AND player meet/sight distance.
+        string? stageErr = session.Expedition.StageBand(distance: 0.14, bearing: 90.0, camp: true);
+        Assert.Null(stageErr);
+        DaggerfallExpeditionBandView stagedTransient = Assert.Single(session.Expedition.AllBands, b => b.PersistentBandId is null);
+        Assert.True(stagedTransient.Hostile);
+
+        // Advance normally through Expedition.Advance (no manual ResolveBandCollisions call): transient band must coalesce with caravan
+        // into a live transient-rival Caravan Raid instead of being suppressed by player spotting/Caught or caravan CameUpon.
+        session.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        session.Expedition.SetSpeed(1);
+        _ = session.Expedition.Advance(0.25);
+
+        Assert.DoesNotContain(session.Expedition.AllBands, b => b.PersistentBandId is null && b.Id == stagedTransient.Id);
+        DaggerfallPersistentOverlandBand heldRaid = Assert.Single(session.Expedition.PersistentBands, b => b.BandId == caravan.BandId);
+        Assert.NotNull(heldRaid.ActiveClash);
+        Assert.Null(heldRaid.ActiveClash!.RivalBandId);
+        Assert.NotNull(heldRaid.ActiveClash.RivalMobileId);
+        Assert.True(heldRaid.ActiveClash.RivalSize > 0);
+        int expectedRivalMobileId = heldRaid.ActiveClash.RivalMobileId!.Value;
+        int expectedRivalSize = heldRaid.ActiveClash.RivalSize;
+
+        Assert.NotNull(session.Expedition.BandAhead);
+        Assert.True(session.Expedition.BandAhead!.IsClash);
+        Assert.Contains("intervene", session.Expedition.Message ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+
+        // Save/restore round-trip preserves the transient-rival raid, and EnterExpedition materializes BOTH sides facing each other!
+        RulesetSavePayload saved = session.CaptureSave();
+        List<string> restoreReleases = [];
+        ContentFake restoreContent = new(restoreReleases);
+        PopulateContent(restoreContent, originProfile);
+        SpatialFake restoreSpatial = SpatialFake.Create(originProfile.Geometry.Spatial[0].Sha256, restoreReleases);
+        EngineContextFake restoreEngine = EngineContextFake.Create(restoreContent, restoreSpatial.Service, new AppearanceFake(restoreReleases));
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoreEngine.Context, composition, saved);
+        restored.ApplyProductMode(ProductMode.Playing);
+
+        restored.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
+        restored.Expedition.SetSpeed(1);
+        _ = restored.Expedition.Advance(0.25);
+        Assert.NotNull(restored.Expedition.BandAhead);
+        Assert.True(restored.Expedition.BandAhead!.IsClash);
+
+        HashSet<long> actorsBeforeEntry = [.. restored.State.Actors.All.Select(a => a.DurableId)];
+        restored.EnterExpedition();
+        Assert.False(restored.Expedition.Open);
+
+        Assert.True(restored.State.Actors.TryGet(caravanMemberId, out ActorState? liveMerchant));
+        List<ActorState> spawnedRaiders = [.. restored.State.Actors.All
+            .Where(a => a.DurableId != caravanMemberId
+                && !actorsBeforeEntry.Contains(a.DurableId)
+                && restored.DefinitionsByActor.TryGetValue(a.DurableId, out DaggerfallActorDefinition? def)
+                && def.MobileId == expectedRivalMobileId)];
+        Assert.Equal(expectedRivalSize, spawnedRaiders.Count);
+
+        foreach (ActorState raider in spawnedRaiders)
+        {
+            DaggerfallEnemyPerceptionMemory mem = raider.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+            Assert.False(mem.LairTruce);
+            Assert.True(mem.FactionInfighting);
+            Assert.True(Vector3Distance(liveMerchant!.Position, raider.Position) >= 2.0f);
+        }
+        AssertSidesFaceEachOther([liveMerchant!], spawnedRaiders);
+        Assert.Empty(restored.State.ActorLedger.EntriesOnOverlandBand(caravan.BandId));
     }
 
     [Fact]
@@ -216,6 +387,33 @@ public sealed class OverlandBandCollisionsTests
         using DaggerfallSession restored = DaggerfallSession.Restore(restoreEngine.Context, composition, saved);
         Assert.NotNull(restored);
     }
+
+    private static void AssertSidesFaceEachOther(IReadOnlyList<ActorState> sideA, IReadOnlyList<ActorState> sideB)
+    {
+        Vector3 centerA = MeanPosition(sideA);
+        Vector3 centerB = MeanPosition(sideB);
+        foreach (ActorState a in sideA)
+        {
+            Vector3 toB = HorizontalNormalize(centerB - a.Position.ToVector());
+            float dot = Vector3.Dot(ActorHeading.Forward(a.HeadingYawRadians), toB);
+            Assert.True(dot > 0.95f, $"Expected primary actor {a.DurableId} to face rival centroid (dot={dot:F3}).");
+        }
+        foreach (ActorState b in sideB)
+        {
+            Vector3 toA = HorizontalNormalize(centerA - b.Position.ToVector());
+            float dot = Vector3.Dot(ActorHeading.Forward(b.HeadingYawRadians), toA);
+            Assert.True(dot > 0.95f, $"Expected rival actor {b.DurableId} to face primary centroid (dot={dot:F3}).");
+        }
+    }
+
+    private static Vector3 MeanPosition(IReadOnlyList<ActorState> actors)
+    {
+        Vector3 sum = Vector3.Zero;
+        foreach (ActorState actor in actors) sum += actor.Position.ToVector();
+        return sum / actors.Count;
+    }
+
+    private static Vector3 HorizontalNormalize(Vector3 v) => Vector3.Normalize(new Vector3(v.X, 0f, v.Z));
 
     private static float Vector3Distance(WorldPoint a, WorldPoint b)
     {

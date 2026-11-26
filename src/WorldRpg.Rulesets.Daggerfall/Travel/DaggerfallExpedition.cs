@@ -1071,24 +1071,35 @@ internal sealed class DaggerfallExpedition
     private const long ClashHoldSeconds = 4L * SecondsPerHour;
 
     /// <summary>
-    /// The bands' part of a stretch: persistent travelling parties advance toward their destinations and check for
-    /// arrival or intercept, transient generated chasers move and look, and opposing bands that collide coalesce into
-    /// live joinable clashes (within sight) or resolve cleanly off-screen. At sea no band intercepts the party.
+    /// The bands' part of a stretch: advance persistent and transient band movement first, resolve all band-vs-band
+    /// collisions before player spotting or encounter stops can suppress them, and then arbitrate player meet/spotting
+    /// events and persistent arrivals. At sea no band intercepts the party.
     /// </summary>
     private bool BandsStop(long seconds, DaggerfallCalendar after)
     {
         long now = after.ToAbsoluteSeconds();
         ExpireActiveClashes(now);
-        if (StepPersistentBands(seconds)) return true;
-        if (_policy.IsOcean(_party))
+
+        Dictionary<string, (double X, double Y)> beforePositions = new(_persistentBands.Count, StringComparer.Ordinal);
+        foreach (DaggerfallPersistentOverlandBand persistent in _persistentBands)
+            beforePositions[persistent.BandId] = (persistent.X, persistent.Y);
+
+        HashSet<string> arrivedBandIds = MovePersistentBands(seconds);
+
+        bool atSea = _policy.IsOcean(_party);
+        if (!atSea)
         {
-            ResolveBandCollisions(now, Position, mapOpen: true);
-            return false;
+            IReadOnlyList<DaggerfallWorldConditionToken> activeConditions = _world.WorldConditions(HostAt(_party).Id.Region);
+            _bands.AdvanceMovement(seconds, now, Position, _world.PlayerLevel, _world.Roll, activeConditions);
         }
+
+        _ = ResolveBandCollisions(now, Position, mapOpen: true, beforePositions);
+
+        if (EvaluatePersistentPlayerEvents(arrivedBandIds)) return true;
+        if (atSea) return false;
+
         double partySight = PartySight;
-        IReadOnlyList<DaggerfallWorldConditionToken> activeConditions = _world.WorldConditions(HostAt(_party).Id.Region);
-        DaggerfallBandEvent? found = _bands.Step(seconds, now, Position, SightConditions(), _world.PlayerLevel, _world.Roll, activeConditions);
-        ResolveBandCollisions(now, Position, mapOpen: true);
+        DaggerfallBandEvent? found = _bands.EvaluatePlayerEvents(Position, SightConditions());
         if (found is null || !_bands.All.Contains(found.Band))
             return false;
         DaggerfallExpeditionBand band = found.Band;
@@ -1355,10 +1366,23 @@ internal sealed class DaggerfallExpedition
         return Math.Sqrt(cx * cx + cy * cy);
     }
 
-    private bool StepPersistentBands(long seconds)
+    private HashSet<string> MovePersistentBands(long seconds)
+    {
+        HashSet<string> arrivedBandIds = new(StringComparer.Ordinal);
+        if (_persistentBands.Count == 0) return arrivedBandIds;
+        double hours = seconds / (double)SecondsPerHour;
+        (double px, double py) = Position;
+        foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
+        {
+            if (band.StepMove((px, py), hours, allowPursuit: true, policy: _policy))
+                arrivedBandIds.Add(band.BandId);
+        }
+        return arrivedBandIds;
+    }
+
+    private bool EvaluatePersistentPlayerEvents(HashSet<string> arrivedBandIds)
     {
         if (_persistentBands.Count == 0) return false;
-        double hours = seconds / (double)SecondsPerHour;
         (double px, double py) = Position;
         double partySight = PartySight;
         double sees = _bands.BandSight(SightConditions());
@@ -1368,7 +1392,6 @@ internal sealed class DaggerfallExpedition
         DaggerfallPersistentOverlandBand? spottedStop = null;
         foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
         {
-            bool arrived = band.StepMove((px, py), hours, allowPursuit: true, policy: _policy);
             double distance = band.Distance(px, py);
             if (band.Passed && distance > meetDistance * 2) band.Passed = false;
 
@@ -1396,7 +1419,7 @@ internal sealed class DaggerfallExpedition
                 return true;
             }
 
-            if (arrived)
+            if (band.ActiveClash is null && arrivedBandIds.Contains(band.BandId))
             {
                 _persistentBands.Remove(band);
                 if (_persistentBandAhead == band) _persistentBandAhead = null;

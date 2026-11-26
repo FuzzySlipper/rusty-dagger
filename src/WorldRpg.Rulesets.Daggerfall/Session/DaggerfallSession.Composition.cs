@@ -1028,7 +1028,16 @@ internal sealed partial class DaggerfallSession
                 id => _persistence.CaptureLiveActorForCustody(
                     id, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))),
                 siteCoordinates: siteId => _site.TryFind(siteId, out DaggerfallSiteRecord rec) ? (rec.MapPixelX, rec.MapPixelY) : null,
-                provokeHostile: id => { _enemyBehavior.MakeHostile(id); _enemyBehavior.Provoke(id, _time.Calendar.MinuteNumber); });
+                provokeHostile: id => { _enemyBehavior.MakeHostile(id); _enemyBehavior.Provoke(id, _time.Calendar.MinuteNumber); },
+                spawnClashMobile: (mobileId, pose) =>
+                {
+                    DaggerfallActorDefinition? def = definitions.Actors.Values
+                        .Where(a => a.MobileId == mobileId)
+                        .OrderBy(a => a.Id.Value, StringComparer.Ordinal)
+                        .FirstOrDefault();
+                    if (def is null) return null;
+                    return SpawnActor(def.Id.Value, pose, lairTruce: false, factionInfighting: true);
+                });
             OverlandTraffic = new DaggerfallOverlandTraffic(
                 definitions, State.ActorLedger, actors, State.Npcs, Expedition, OverlandParties,
                 questNames.NpcName, () => _worldSocialSeed, () => _site.ActiveSite?.Id);

@@ -485,24 +485,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         }
     }
 
-    void IDaggerfallExpeditionSurroundings.MeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging)
-    {
+    void IDaggerfallExpeditionSurroundings.MeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) =>
         OverlandParties.OnMeetPersistentBand(band, pixel, staging);
-        if (band.ActiveClash is { RivalBandId: null, RivalMobileId: int rivalMobileId, RivalSize: > 0 } transientRaid)
-        {
-            double radians = band.Heading * Math.PI / 180;
-            float rivalYaw = ActorHeading.Yaw(new Vector3((float)-Math.Sin(radians), 0F, (float)Math.Cos(radians)));
-            string profileId = DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId;
-            DaggerfallEncounterContext context = _time.Calendar.IsDay
-                ? DaggerfallEncounterContext.WildernessDay
-                : DaggerfallEncounterContext.WildernessNight;
-            DaggerfallEncounterRequest request = new(context, Math.Max(1, State.Actors.Player.Progression.Level),
-                Climate: Expedition.Policy.Climate(pixel));
-            DaggerfallEncounterChoice choice = new(context, null, null, rivalMobileId, null, null, null, $"caravan-raid:{band.BandId}");
-            WorldEncounters.QueueBand(request, choice, new(checked(Math.Abs(band.DisplayId) + 2_000_000), DaggerfallEncounterStaging.Travelling, rivalYaw),
-                transientRaid.RivalSize, profileId);
-        }
-    }
 
     void IDaggerfallExpeditionSurroundings.PersistentBandArrived(DaggerfallPersistentOverlandBand band)
     {
