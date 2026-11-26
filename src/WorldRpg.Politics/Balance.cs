@@ -8,16 +8,19 @@ namespace WorldRpg.Politics;
 /// pulled ahead has none. Dampers work against it: the trailing seat moves first (<see cref="Order"/>), harmful
 /// World cards fall twice as often on its regions, and every relation with it drifts towards <see cref="LeaderDrift"/>
 /// each season instead of 0, so coalitions form against it.</item>
-/// <item><b>An arbiter</b>, the Empire in the canon table, keeps the balance of power. Its prestige counts
-/// <see cref="BufferWeight"/> per point of control in each independent region, the buffer baronies, and loses
-/// <see cref="WarCost"/> for each war in force; it weighs the leader's gains as a rival's whatever their relation; and it
-/// may broker a truce with any principal it is not hostile to. Its countermoves are cards that cost Force.</item>
+/// <item><b>An arbiter</b>, the Empire and its Blades in the canon table, holds the crowns in equilibrium, so that none
+/// grows strong enough to break away. It does not keep order: its agents work on divided loyalties, fracturing whatever
+/// coalition gathers around the strongest and backing the weakest. Its prestige loses half the gap between the
+/// strongest crown's prestige and the weakest's, and <see cref="WarCost"/> for each war in force, since it wants no
+/// anarchy either. It weighs the leader's gains, and an outsider's, as a rival's whatever their relation, and it may
+/// broker a truce with any principal it is not hostile to. Its countermoves are cards that cost Force.</item>
+/// <item><b>Outsiders</b> are seats that stand unambiguously outside the Empire. The arbiter backs whoever opposes them
+/// (<see cref="Underdogs"/>).</item>
 /// <item><b>Reserves.</b> A seat may name a reserves point, a region all its Force arrives through: its grants, its
 /// offices' pay, what it gathers and what it is paid or takes. Once the point has been contested for
 /// <see cref="ReservesBite"/> weeks running, the seat gains no Force until the contest lifts, so its countermoves dry
-/// up. A point is
-/// contested while a blockade or skirmish lies on it, or while a seat hostile to the receiver (<see cref="Supply.Hostile"/>
-/// or below) has more influence there than it.</item>
+/// up. A point is contested while a blockade or skirmish lies on it, or while a seat hostile to the receiver
+/// (<see cref="Supply.Hostile"/> or below) has more influence there than it.</item>
 /// </list>
 /// The caps on influence (<see cref="Board.InfluenceLimit"/> a region, <see cref="Board.InfluencePieces"/> pieces) and on
 /// hands (<see cref="Board.HandSize"/>) hold every seat's reach in check.
@@ -25,8 +28,7 @@ namespace WorldRpg.Politics;
 public static class Balance
 {
     public const int ReservesBite = 4;
-    public const int BufferWeight = 2;
-    public const int WarCost = 6;
+    public const int WarCost = 4;
     public const int LeaderDrift = -1;
     public const int LeadMargin = 30;
 
@@ -67,9 +69,28 @@ public static class Balance
     public static bool ReservesCut(Seat seat) => seat.ContestedWeeks >= ReservesBite;
 
     /// <summary>
-    /// The arbiter's part of its bearing: <see cref="BufferWeight"/> per point of control in each independent region,
-    /// less <see cref="WarCost"/> for each war in force.
+    /// The arbiter's part of its bearing: it loses half the gap between the strongest crown's prestige and the
+    /// weakest's, and <see cref="WarCost"/> for each war in force.
     /// </summary>
-    public static int Arbitration(Board board, Seat seat) => !seat.Arbiter ? 0
-        : BufferWeight * board.Regions.Where(region => region.Allegiance is null).Sum(region => region.Control) - WarCost * board.Wars.Count;
+    public static int Arbitration(Board board, Seat seat)
+    {
+        if (!seat.Arbiter) return 0;
+        int[] crowns = [.. board.Seats.Where(crown => crown.Kind == SeatKind.Crown).Select(crown => Prestige.Total(board, crown))];
+        return (crowns.Length == 0 ? 0 : -(crowns.Max() - crowns.Min()) / 2) - WarCost * board.Wars.Count;
+    }
+
+    /// <summary>
+    /// The seats <paramref name="arbiter"/> backs: the weakest crown by prestige, and every seat hostile
+    /// (<see cref="Supply.Hostile"/> or below) to an outsider.
+    /// </summary>
+    public static IEnumerable<Seat> Underdogs(Board board, Seat arbiter)
+    {
+        Seat? weakest = board.Seats.Where(seat => seat.Kind == SeatKind.Crown).MinBy(seat => Prestige.Total(board, seat));
+        return board.Seats.Where(seat => seat != arbiter && !seat.Outsider && (seat == weakest
+            || board.Seats.Any(outsider => outsider.Outsider && outsider != seat && board.Relation(seat.Id, outsider.Id) <= Supply.Hostile)));
+    }
+
+    /// <summary>The seats friendly with the leader (+1 or better): the coalition gathering round it.</summary>
+    public static IEnumerable<Seat> LeadersFriends(Board board) => board.Leader is not { } leader ? []
+        : board.Seats.Where(seat => seat.Id != leader && board.Relation(seat.Id, leader) > 0);
 }

@@ -35,13 +35,14 @@ public sealed class PaceTests(FiftyCanonYears run) : IClassFixture<FiftyCanonYea
     }
 
     /// <summary>
-    /// Crowns and guilds pursuing committed plans play a little more often than the greedy chooser did, about every
-    /// one and a half weeks at the busiest, so the floor sits just below it.
+    /// Crowns and guilds pursuing committed plans play a little more often than the greedy chooser did, and crowns with
+    /// growing lands and wars to fight more often still, about every one and a third weeks at the busiest, so the floor
+    /// sits just below it.
     /// </summary>
     [Fact]
     public void Crowns_and_guilds_play_every_two_weeks_or_so_and_the_shadow_seats_gather_for_three_or_four()
     {
-        Assert.All(run.Board.Seats.Where(seat => !Gatherers.Contains(seat.Id)), seat => Assert.InRange(run.WeeksPerPlay(seat.Id), 1.4, 3.0));
+        Assert.All(run.Board.Seats.Where(seat => !Gatherers.Contains(seat.Id)), seat => Assert.InRange(run.WeeksPerPlay(seat.Id), 1.3, 3.0));
         Assert.All(Gatherers, seat => Assert.InRange(run.WeeksPerPlay(seat), 3.0, 5.0));
     }
 

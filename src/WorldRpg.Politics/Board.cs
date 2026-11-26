@@ -105,7 +105,7 @@ public sealed class Board
         IReadOnlyList<string> problems = [.. setup.Problems(), .. cards.Problems(setup)];
         if (problems.Count > 0) throw new BoardSetupException("board setup", problems);
         Seat[] seats = [.. setup.Seats.Select(seat => new Seat(seat.Id, seat.Name, seat.Kind, seat.Holder, seat.Home, seat.Grants ?? [], seat.Agenda ?? [])
-            { Coin = seat.Coin, Favour = seat.Favour, Force = seat.Force, Reserves = seat.Reserves, Arbiter = seat.Arbiter })];
+            { Coin = seat.Coin, Favour = seat.Favour, Force = seat.Force, Reserves = seat.Reserves, Arbiter = seat.Arbiter, Outsider = seat.Outsider })];
         Region[] regions = [.. setup.Regions.Select(region => new Region(region.Id, region.Name, region.CatalogRegion, region.Capital, [.. region.Borders])
         {
             Allegiance = region.Allegiance,
@@ -821,6 +821,9 @@ public sealed record Seat(string Id, string Name, SeatKind Kind, string Holder, 
 
     /// <summary>Whether the seat keeps the balance of power (<see cref="Balance"/>).</summary>
     public bool Arbiter { get; internal init; }
+
+    /// <summary>Whether the seat stands outside the Empire an arbiter keeps (<see cref="Balance"/>).</summary>
+    public bool Outsider { get; internal init; }
 
     /// <summary>How many weeks running its reserves point has been contested.</summary>
     public int ContestedWeeks { get; internal set; }

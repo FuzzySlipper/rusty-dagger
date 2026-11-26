@@ -64,11 +64,11 @@ public enum CardTarget
     /// <summary>A region the player reaches, then a foe of the player's present there: a crown it feuds with, or an enemy in a war.</summary>
     FeudRival,
 
-    /// <summary>
-    /// A region the player reaches that owes allegiance to no crown and is under threat, its control below
-    /// <see cref="BoardTurn.SettledTrack"/>: a buffer barony in need.
-    /// </summary>
-    IndependentRegion,
+    /// <summary>A seat friendly with the leader, other than the player: a member of the coalition gathering round it (<see cref="Balance.LeadersFriends"/>).</summary>
+    LeaderFriend,
+
+    /// <summary>A seat an arbiter backs (<see cref="Balance.Underdogs"/>).</summary>
+    Underdog,
 
     /// <summary>The seat leading the table (<see cref="Board.Leader"/>), if it is not the player.</summary>
     Leader,
@@ -174,8 +174,8 @@ public enum CardEffectKind
     /// The target region changes allegiance to the player at control <see cref="Card.AnnexedControl"/> and is
     /// consolidated for <see cref="Card.ConsolidationWeeks"/> weeks, during which no seat may contest it. Its former
     /// seat's factors are expelled (its influence there goes to 0) and its relation with the player falls by 2.
-    /// Only a crown may annex, and only where the region's control is 0 and the player holds at least 2 influence
-    /// there and more than its current seat.
+    /// Only a crown may annex, and only where the region's control is 0 and the player holds more influence
+    /// there than its current seat.
     /// </summary>
     Annex,
 
@@ -184,6 +184,12 @@ public enum CardEffectKind
     /// further cost in relation: the two are at war already.
     /// </summary>
     Conquer,
+
+    /// <summary>The target seat's relation with the leader cools by the amount: a coalition fracturing.</summary>
+    Estrange,
+
+    /// <summary>The target seat gains the amount of the resource, paid by no one: an arbiter's quiet funding.</summary>
+    Fund,
 
     /// <summary>The player, a principal of the target war, sues for peace (<see cref="Wars.SueForPeace"/>).</summary>
     Peace,
@@ -234,7 +240,7 @@ public sealed record Card(
     string? Seat = null,
     int Copies = 1)
 {
-    public const int AnnexInfluence = 2;
+    public const int AnnexInfluence = 1;
     public const int AnnexedControl = 2;
     public const int ConsolidationWeeks = 52;
     public const int WatchfulOrder = 4;
@@ -259,6 +265,8 @@ public sealed record Card(
         CardTarget.None => [[]],
         CardTarget.OtherSeat => board.Seats.Select(other => (IReadOnlyList<string>)[other.Id]),
         CardTarget.Leader => board.Leader is { } leader ? [[leader]] : [],
+        CardTarget.LeaderFriend => Balance.LeadersFriends(board).Where(friend => friend != seat).Select(friend => (IReadOnlyList<string>)[friend.Id]),
+        CardTarget.Underdog => seat.Arbiter ? Balance.Underdogs(board, seat).Select(underdog => (IReadOnlyList<string>)[underdog.Id]) : [],
         CardTarget.RegionPair => board.Regions.Where(region => board.Present(seat, region))
             .SelectMany(region => region.Borders.Select(border => (IReadOnlyList<string>)[region.Id, border])),
         CardTarget.RegionRival => board.Regions
@@ -296,8 +304,8 @@ public sealed record Card(
             CardTarget.EnemyFront => targets.Count == 1 && Wars.Against(board, seat, board.Region(targets[0])) is not null,
             CardTarget.OwnFront => targets.Count == 1 && Wars.OwnFront(board, seat, board.Region(targets[0])),
             CardTarget.War => targets.Count == 1 && board.HasWar(targets[0]),
-            CardTarget.IndependentRegion => targets.Count == 1 && board.Region(targets[0]) is { Allegiance: null } barony
-                && barony.Control < BoardTurn.SettledTrack && board.Reaches(seat, barony),
+            CardTarget.LeaderFriend => targets.Count == 1 && targets[0] != seat.Id && Balance.LeadersFriends(board).Any(friend => friend.Id == targets[0]),
+            CardTarget.Underdog => targets.Count == 1 && seat.Arbiter && Balance.Underdogs(board, seat).Any(underdog => underdog.Id == targets[0]),
             CardTarget.Leader => targets.Count == 1 && targets[0] == board.Leader && targets[0] != seat.Id,
             CardTarget.FeudRival => targets.Count == 2 && board.HasSeat(targets[1]) && Wars.Foe(board, seat.Id, targets[1])
                 && board.Reaches(seat, board.Region(targets[0])) && board.Present(board.Seat(targets[1]), board.Region(targets[0])),
@@ -402,6 +410,8 @@ public sealed record Card(
                     if (front?.Aim == WarAim.Conquest && seat.Kind == SeatKind.Crown && regions[0].Control == 0 && !regions[0].Capital)
                         TakeRegion(board, seat, regions[0]);
                     break;
+                case CardEffectKind.Estrange: board.AdjustRelation(board.Seat(targets[0]), board.Seat(board.Leader!), -effect.Amount); break;
+                case CardEffectKind.Fund: board.AdjustResource(board.Seat(targets[0]), effect.Resource!.Value, effect.Amount); break;
                 case CardEffectKind.Peace: Wars.SueForPeace(board, board.War(targets[0]), seat); break;
                 case CardEffectKind.Broker: Wars.Broker(board, board.War(targets[0]), seat); break;
                 case CardEffectKind.Deal:
@@ -436,7 +446,7 @@ public sealed record Card(
     /// </summary>
     public IReadOnlyList<Region> TargetRegions(Board board, IReadOnlyList<string> targets) => Target switch
     {
-        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.Leader => [],
+        CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.Leader or CardTarget.LeaderFriend or CardTarget.Underdog => [],
         CardTarget.War => [.. Wars.TreatyRegions(board, board.War(targets[0]))],
         CardTarget.RegionRival or CardTarget.FeudRival => [board.Region(targets[0])],
         _ => [.. targets.Select(board.Region)],

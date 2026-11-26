@@ -6,8 +6,7 @@ namespace WorldRpg.Politics;
 /// One game's balance, played from <see cref="Seed"/> for <see cref="Years"/>: each seat's prestige at the end, the most
 /// regions it held at once, the weeks it led the table and the card families it played; how often allegiance changed
 /// and wars and feuds opened; the weeks with a war in force; how many conditions of each kind were laid; and, for the
-/// arbiter, the weeks its reserves were cut off and the countermoves it made (cards played on a war, an independent
-/// region or the leader).
+/// arbiter, the weeks its reserves were cut off and the countermoves it made (<see cref="CardFamily.Arbitration"/>).
 /// </summary>
 public sealed record GameBalance(
     ulong Seed,
@@ -57,7 +56,7 @@ public static class BalanceReport
             {
                 if (!byId.TryGetValue(move.Card, out Card? card)) continue;
                 families[move.Seat].Add(card.Family);
-                if (move.Seat == arbiter?.Id && card.Target is CardTarget.War or CardTarget.IndependentRegion or CardTarget.Leader) interventions++;
+                if (move.Seat == arbiter?.Id && card.Family == CardFamily.Arbitration) interventions++;
             }
             foreach (BoardChange change in Changes(trace))
             {

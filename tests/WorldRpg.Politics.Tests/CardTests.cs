@@ -150,7 +150,7 @@ public sealed class CardTests
     }
 
     [Fact]
-    public void Annexing_needs_no_control_left_and_an_influence_lead_of_at_least_two()
+    public void Annexing_needs_no_control_left_and_an_influence_lead()
     {
         Card annex = TestBoards.Card("annex");
         Board guarded = TestBoards.Create(TestBoards.TwoCrowns(marchControl: 1, marchInfluence: new Dictionary<string, int> { ["east"] = 3 }));
@@ -159,8 +159,11 @@ public sealed class CardTests
         Board level = TestBoards.Create(TestBoards.TwoCrowns(marchControl: 0, marchInfluence: new Dictionary<string, int> { ["east"] = 2, ["west"] = 2 }));
         Assert.False(annex.Playable(level, level.Seat("east"), ["march"]));
 
+        Board absent = TestBoards.Create(TestBoards.TwoCrowns(marchAllegiance: null, marchControl: 0));
+        Assert.False(annex.Playable(absent, absent.Seat("east"), ["march"]));
+
         Board alone = TestBoards.Create(TestBoards.TwoCrowns(marchAllegiance: null, marchControl: 0, marchInfluence: new Dictionary<string, int> { ["east"] = 1 }));
-        Assert.False(annex.Playable(alone, alone.Seat("east"), ["march"]));
+        Assert.True(annex.Playable(alone, alone.Seat("east"), ["march"]));
 
         Board ready = TestBoards.Create(TestBoards.TwoCrowns(marchControl: 0, marchInfluence: new Dictionary<string, int> { ["east"] = 2, ["west"] = 1 }));
         Assert.True(annex.Playable(ready, ready.Seat("east"), ["march"]));

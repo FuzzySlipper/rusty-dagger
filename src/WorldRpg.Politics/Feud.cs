@@ -39,7 +39,7 @@ public sealed record Feud(string Id, string A, string B, int Started, int Heat)
 public static class Feuds
 {
     public const int FeudRelation = -2;
-    public const int BlowsToCool = 3;
+    public const int BlowsToCool = 4;
     public const int CoolingWeeks = 4;
     public const int SkirmishWeeks = 4;
     public const int SkirmishChance = 8;

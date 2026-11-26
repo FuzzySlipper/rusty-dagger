@@ -129,8 +129,8 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
     private static string? EffectProblem(Card card, CardEffect effect)
     {
         bool region = card.Target is CardTarget.OwnRegion or CardTarget.ReachableRegion or CardTarget.ContestedRegion or CardTarget.RegionRival
-            or CardTarget.EnemyFront or CardTarget.OwnFront or CardTarget.FeudRival or CardTarget.IndependentRegion;
-        bool needsResource = effect.Kind is CardEffectKind.Gain or CardEffectKind.Take;
+            or CardTarget.EnemyFront or CardTarget.OwnFront or CardTarget.FeudRival;
+        bool needsResource = effect.Kind is CardEffectKind.Gain or CardEffectKind.Take or CardEffectKind.Fund;
         bool needsOffice = effect.Kind == CardEffectKind.ChallengeOffice;
         bool needsCondition = effect.Kind is CardEffectKind.AddCondition or CardEffectKind.RemoveCondition;
         bool needsCourt = effect.Kind == CardEffectKind.AddCourtCondition;
@@ -155,11 +155,14 @@ public sealed record CardSet(IReadOnlyList<Card> Cards, IReadOnlyList<WorldCard>
             CardEffectKind.Influence or CardEffectKind.HolderInfluence or CardEffectKind.ChallengeOffice when !region => "needs a single region target",
             CardEffectKind.MoveInfluence when card.Target != CardTarget.RegionPair => "needs a region pair",
             CardEffectKind.RivalInfluence when card.Target is not (CardTarget.RegionRival or CardTarget.FeudRival) => "needs a rival in a region",
-            CardEffectKind.Relation when card.Target is CardTarget.None or CardTarget.RegionPair or CardTarget.War => "needs a seat or a single region target",
+            CardEffectKind.Relation when card.Target is CardTarget.None or CardTarget.RegionPair or CardTarget.War or CardTarget.LeaderFriend or CardTarget.Underdog => "needs a seat or a single region target",
             CardEffectKind.Take when card.Target is not (CardTarget.OtherSeat or CardTarget.FeudRival or CardTarget.Leader) => "needs a seat target",
             CardEffectKind.Annex when card.Target != CardTarget.ContestedRegion => "needs a contested region",
             CardEffectKind.Conquer when card.Target != CardTarget.EnemyFront => "needs an enemy front",
             CardEffectKind.Peace or CardEffectKind.Broker when card.Target != CardTarget.War => "needs a war target",
+            CardEffectKind.Estrange when card.Target != CardTarget.LeaderFriend => "needs a friend of the leader",
+            CardEffectKind.Fund when card.Target is not (CardTarget.Underdog or CardTarget.OtherSeat) => "needs a seat target",
+            CardEffectKind.Estrange or CardEffectKind.Fund when effect.Amount < 1 => "moves nothing",
             CardEffectKind.AddCondition or CardEffectKind.RemoveCondition when !region => "needs a single region target",
             CardEffectKind.AddCourtCondition when card.Target != CardTarget.OtherSeat => "needs a seat target",
             CardEffectKind.MoveInfluence or CardEffectKind.Take when effect.Amount < 1 => "moves nothing",

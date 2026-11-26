@@ -84,13 +84,13 @@ public static class Prestige
     /// <summary>
     /// The seats whose prestige <paramref name="changes"/> by <paramref name="player"/> can have changed: the player, the
     /// seats changed directly, and every seat present before or after in a region changed. Present before and gone now, a
-    /// seat shows in the change that removed it. An arbiter is touched by any change to an independent region, any change
-    /// of allegiance and any war opening or ending. Any other seat's gain is exactly 0.
+    /// seat shows in the change that removed it. An arbiter, which weighs the balance of every crown, is always touched.
+    /// Any other seat's gain is exactly 0.
     /// </summary>
     private static SortedSet<string> Touched(Board board, Seat player, IEnumerable<BoardChange> changes)
     {
         SortedSet<string> touched = new(StringComparer.Ordinal) { player.Id };
-        string[] arbiters = [.. board.Seats.Where(seat => seat.Arbiter).Select(seat => seat.Id)];
+        touched.UnionWith(board.Seats.Where(seat => seat.Arbiter).Select(seat => seat.Id));
         foreach (BoardChange change in changes)
         {
             string field = change.Field;
@@ -106,12 +106,10 @@ public static class Prestige
             {
                 touched.Add(change.Subject);
                 touched.Add(field[(field.IndexOf(':') + 1)..]);
-                if (field.StartsWith("war:", StringComparison.Ordinal)) touched.UnionWith(arbiters);
             }
             else
             {
                 Region region = board.Region(change.Subject);
-                if (region.Allegiance is null || field == "allegiance") touched.UnionWith(arbiters);
                 if (region.Allegiance is not null) touched.Add(region.Allegiance);
                 touched.UnionWith(region.Influence.Keys);
                 touched.UnionWith(region.Offices.Values);
@@ -169,7 +167,7 @@ public static class Prestige
         /// <summary>The seats a card's targets name: a seat, a rival on its own ground, a deal's partner or a war's principals.</summary>
         public static IReadOnlyList<string> Named(Board board, Card card, IReadOnlyList<string> targets) => card.Target switch
         {
-            CardTarget.OtherSeat or CardTarget.Deal or CardTarget.Leader => [targets[0]],
+            CardTarget.OtherSeat or CardTarget.Deal or CardTarget.Leader or CardTarget.LeaderFriend or CardTarget.Underdog => [targets[0]],
             CardTarget.RegionRival or CardTarget.FeudRival => [targets[1]],
             CardTarget.War => [board.War(targets[0]).A, board.War(targets[0]).B],
             _ => [],

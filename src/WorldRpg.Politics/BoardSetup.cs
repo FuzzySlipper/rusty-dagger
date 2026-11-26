@@ -158,8 +158,8 @@ public sealed record BoardSetup(
 /// A seat at the table: who plays, its kind, the cast individual holding it now (a person of the people pack, whose
 /// persona plays the seat), the home capital a crown holds, its starting resources, the card families its deck is
 /// drawn from, the grants it is paid on a schedule, and its standing goals, up to <see cref="BoardSetup.AgendaLimit"/>.
-/// <paramref name="Reserves"/> is the region all its Force arrives through, and an <paramref name="Arbiter"/>
-/// keeps the balance of power (<see cref="Balance"/>).
+/// <paramref name="Reserves"/> is the region all its Force arrives through, an <paramref name="Arbiter"/> keeps the
+/// balance of power, and an <paramref name="Outsider"/> stands outside the Empire it keeps (<see cref="Balance"/>).
 /// </summary>
 public sealed record SeatSetup(
     string Id,
@@ -174,7 +174,8 @@ public sealed record SeatSetup(
     IReadOnlyList<SeatGrant>? Grants = null,
     IReadOnlyList<Goal>? Agenda = null,
     string? Reserves = null,
-    bool Arbiter = false);
+    bool Arbiter = false,
+    bool Outsider = false);
 
 /// <summary>
 /// A resource paid to a seat in upkeep every <paramref name="EveryWeeks"/> weeks, on top of its income: what makes a

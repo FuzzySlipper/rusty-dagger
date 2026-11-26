@@ -17,7 +17,7 @@ namespace WorldRpg.Politics;
 /// resource terms of trade agreements falling due are paid.</item>
 /// <item>Each region and court condition weighs on its region or crown as <see cref="Conditions.Weigh(Board, Region)"/>
 /// says. A region still cut off loses order and prosperity every <see cref="Supply.CutWeeks"/>th week. A region with
-/// order 1 or less loses a point of control to unrest. Every fourth week an independent region below control 3 regains
+/// order 1 or less loses a point of control to unrest. Every eighth week an independent region below control 3 regains
 /// one, as its own lords reassert themselves.</item>
 /// <item>Every <see cref="SeasonWeeks"/>th week ground left untended drifts: each region's control, prosperity and
 /// order above <see cref="SettledTrack"/> falls by 1, a region not cut off below it regains 1 prosperity, and each
@@ -41,7 +41,7 @@ namespace WorldRpg.Politics;
 public static class BoardTurn
 {
     public const int UnrestOrder = 1;
-    public const int IndependentRecoveryWeeks = 4;
+    public const int IndependentRecoveryWeeks = 8;
     public const int IndependentRecoveryControl = 3;
     public const int OfficeWeeks = 8;
     public const int SeasonWeeks = 13;
@@ -134,7 +134,7 @@ public static class BoardTurn
     /// </summary>
     public static string? Origin(Board board, Seat seat, Card card, IReadOnlyList<string> targets)
     {
-        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.War or CardTarget.Leader))
+        if (card.Target is not (CardTarget.None or CardTarget.OtherSeat or CardTarget.Deal or CardTarget.War or CardTarget.Leader or CardTarget.LeaderFriend or CardTarget.Underdog))
         {
             Region target = board.Region(targets[0]);
             return board.Present(seat, target) ? target.Id : target.Borders.FirstOrDefault(border => board.Present(seat, board.Region(border)));

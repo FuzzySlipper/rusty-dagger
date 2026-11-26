@@ -33,7 +33,7 @@ public sealed class FeudTests
     }
 
     [Fact]
-    public void Feud_cards_strike_a_foe_where_it_is_present_and_every_third_blow_cools_the_crowns_into_war()
+    public void Feud_cards_strike_a_foe_where_it_is_present_and_enough_blows_cool_the_crowns_into_war()
     {
         Board board = InFeud(out Feud feud, rich: "west");
         Seat west = board.Seat("west");
@@ -47,9 +47,8 @@ public sealed class FeudTests
         Assert.Equal((Board.ResourceLimit, 2), (west.Coin, board.Seat("east").Coin));
         Assert.Equal((1, Feuds.FeudRelation), (board.Feud(feud.Id).Heat, board.Relation("west", "east")));
 
-        board.AdjustResource(board.Seat("east"), Resource.Coin, 4);
-        Strike(board, west, raid, ["east-march", "east"]);
-        Strike(board, west, raid, ["east-march", "east"]);
+        board.AdjustResource(board.Seat("east"), Resource.Coin, 2 * Feuds.BlowsToCool);
+        for (int blow = 1; blow < Feuds.BlowsToCool; blow++) Strike(board, west, raid, ["east-march", "east"]);
 
         Assert.Equal((0, -Board.RelationLimit), (board.Feud(feud.Id).Heat, board.Relation("west", "east")));
         board.Turn++;
@@ -78,10 +77,9 @@ public sealed class FeudTests
         Assert.Equal(1, board.Feud(feud.Id).Heat);
 
         board.AdjustResource(east, Resource.Coin, Board.ResourceLimit);
-        Strike(board, west, raid, ["east-march", "east"]);
-        Strike(board, west, raid, ["east-march", "east"]);
+        for (int blow = 1; blow < Feuds.BlowsToCool; blow++) Strike(board, west, raid, ["east-march", "east"]);
 
-        Assert.Equal(Board.ResourceLimit - 4, east.Coin);
+        Assert.Equal(Board.ResourceLimit - 2 * (Feuds.BlowsToCool - 1), east.Coin);
         Assert.Equal((0, -Board.RelationLimit), (board.Feud(feud.Id).Heat, board.Relation("west", "east")));
     }
 

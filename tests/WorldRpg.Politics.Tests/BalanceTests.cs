@@ -118,7 +118,7 @@ public sealed class BalanceTests
     }
 
     [Fact]
-    public void An_arbiter_counts_buffer_baronies_and_wars_and_brokers_a_truce_with_any_principal_it_is_not_hostile_to()
+    public void An_arbiter_loses_for_each_war_and_brokers_a_truce_with_any_principal_it_is_not_hostile_to()
     {
         Board board = TestBoards.Create(TestBoards.Frontier(relation: -3).WithGuild().Rich("guild") is var setup
             ? setup with { Seats = [.. setup.Seats.Select(seat => seat.Id == "guild" ? seat with { Arbiter = true } : seat)] }
@@ -136,6 +136,63 @@ public sealed class BalanceTests
         board.AdjustRelation(guild, board.Seat("east"), Supply.Hostile);
         Assert.False(Wars.MayBroker(board, board.War(war.Id), guild));
     }
+
+    [Fact]
+    public void An_arbiter_loses_half_the_gap_between_the_strongest_crown_and_the_weakest()
+    {
+        Board board = TestBoards.Create(Arbitrated());
+        int gap = Prestige.Total(board, board.Seat("west")) - Prestige.Total(board, board.Seat("east"));
+
+        Assert.True(gap > 0);
+        Assert.Equal(-gap / 2, Balance.Arbitration(board, board.Seat("guild")));
+        Assert.Equal(0, Balance.Arbitration(board, board.Seat("west")));
+    }
+
+    [Fact]
+    public void Sowing_discord_cools_a_friend_of_the_leader_towards_it()
+    {
+        Board board = TestBoards.Create(Arbitrated().Rich("guild"));
+        Seat guild = board.Seat("guild");
+        board.SetLeader(board.Seat("west"));
+        board.AdjustRelation(board.Seat("east"), board.Seat("west"), 2);
+
+        Assert.False(SowDiscord.Playable(board, guild, ["guild"]));
+        Assert.True(SowDiscord.Playable(board, guild, ["east"]));
+        SowDiscord.Play(board, guild, ["east"]);
+
+        Assert.Equal(0, board.Relation("east", "west"));
+        Assert.False(SowDiscord.Playable(board, guild, ["east"]));
+    }
+
+    [Fact]
+    public void An_arbiter_backs_the_weakest_crown_and_whoever_opposes_an_outsider()
+    {
+        BoardSetup arbitrated = Arbitrated().Rich("guild");
+        BoardSetup setup = arbitrated with
+        {
+            Seats = [.. arbitrated.Seats, new SeatSetup("cult", "Cult", SeatKind.Power, "cult-holder", null, 4, 4, 4, [CardFamily.Shadow, CardFamily.Arcane], Outsider: true)],
+            Personas = new Dictionary<string, Persona>(arbitrated.Personas) { ["cult-holder"] = new(new Dictionary<GoalKind, int>(), Risk: Persona.RiskLimit) },
+        };
+        Board board = TestBoards.Create(setup);
+        Seat guild = board.Seat("guild");
+
+        Assert.Equal(["east"], Balance.Underdogs(board, guild).Select(seat => seat.Id));
+
+        board.AdjustRelation(board.Seat("west"), board.Seat("cult"), Supply.Hostile);
+        Assert.Equal(["west", "east"], Balance.Underdogs(board, guild).Select(seat => seat.Id));
+
+        int coin = board.Seat("east").Coin;
+        QuietBacking.Play(board, guild, ["east"]);
+        Assert.Equal(coin + 3, board.Seat("east").Coin);
+        Assert.False(QuietBacking.Playable(board, guild, ["cult"]));
+        Assert.False(QuietBacking.Playable(board, board.Seat("west"), ["east"]));
+    }
+
+    private static readonly Card SowDiscord = new("sow-discord", "Sow Discord", CardFamily.Arbitration, 0, 1, 2, CardTarget.LeaderFriend, Visibility.Secret,
+        [new(CardEffectKind.Estrange, 2)]);
+
+    private static readonly Card QuietBacking = new("quiet-backing", "Quiet Backing", CardFamily.Arbitration, 0, 0, 2, CardTarget.Underdog, Visibility.Secret,
+        [new(CardEffectKind.Fund, 3, Resource.Coin)]);
 
     /// <summary>
     /// Raiders kept on the roads around the Empire's reserves point in Daggerfall, as a seat's raids or the player's
@@ -165,7 +222,7 @@ public sealed class BalanceTests
             if (contest) board.AddCondition(board.Region("daggerfall"), new RegionCondition(ConditionKind.Raiders, null, 1, null, board.Turn, board.Turn + 2));
             TurnTrace trace = BoardTurn.Play(board);
             interventions += trace.Moves.Count(move => move.Seat == "empire" && cards.TryGetValue(move.Card, out Card? card)
-                && card.Target is CardTarget.War or CardTarget.IndependentRegion or CardTarget.Leader);
+                && card.Family == CardFamily.Arbitration);
             if (Balance.ReservesCut(empire)) cut++;
         }
         return (interventions, cut);
@@ -182,7 +239,10 @@ public sealed class FiftyYearsOfSeeds
     public IReadOnlyList<GameBalance> Games { get; } = BalanceReport.Run(BoardSetup.Canon(), CardSet.Canon(), [1, 2, 3], years: 50);
 }
 
-/// <summary>The bands the canon table's balance is held to over fifty years, tuned with Patch on the design thread.</summary>
+/// <summary>
+/// The bands the canon table's balance is held to over fifty years, settled with Patch on the design thread: rare big
+/// changes amid constant froth, with no seat strong enough to break away.
+/// </summary>
 public sealed class BalanceBandTests(FiftyYearsOfSeeds run) : IClassFixture<FiftyYearsOfSeeds>
 {
     [Fact]
@@ -194,9 +254,16 @@ public sealed class BalanceBandTests(FiftyYearsOfSeeds run) : IClassFixture<Fift
     }
 
     [Fact]
-    public void Allegiance_changes_hands_a_few_times_a_decade()
+    public void Allegiance_changes_hands_once_to_a_few_times_a_year()
     {
-        Assert.All(run.Games, game => Assert.InRange((double)game.AllegianceChanges / game.Years, 0.05, 1.0));
+        Assert.All(run.Games, game => Assert.InRange((double)game.AllegianceChanges / game.Years, 0.5, 3.0));
+    }
+
+    [Fact]
+    public void Two_to_eight_wars_break_out_a_decade_and_feuds_simmer_between_them()
+    {
+        Assert.All(run.Games, game => Assert.InRange(game.Wars * 10.0 / game.Years, 2.0, 8.0));
+        Assert.All(run.Games, game => Assert.True(game.Feuds > game.Wars / 2, $"{game.Feuds} feuds, {game.Wars} wars"));
     }
 
     [Fact]
@@ -206,9 +273,9 @@ public sealed class BalanceBandTests(FiftyYearsOfSeeds run) : IClassFixture<Fift
     }
 
     [Fact]
-    public void The_Empire_intervenes_and_its_reserves_are_sometimes_cut()
+    public void The_Empire_intervenes_every_few_weeks_and_its_reserves_are_sometimes_cut()
     {
-        Assert.All(run.Games, game => Assert.True(game.Interventions > 0));
+        Assert.All(run.Games, game => Assert.InRange((double)game.Interventions / game.Years, 5.0, 25.0));
         Assert.Contains(run.Games, game => game.ReservesCutWeeks > 0);
     }
 }
