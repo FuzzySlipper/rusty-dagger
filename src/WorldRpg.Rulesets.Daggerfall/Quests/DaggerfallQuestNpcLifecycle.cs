@@ -44,7 +44,8 @@ internal sealed partial class DaggerfallQuestInstances
                 break;
             case DaggerfallQuestTaskOperationKind.DestroyNpc:
                 SetResource(instance.InstanceId, resource with { IsNpcDestroyed = true, HasPlayerClicked = false });
-                instance.Placements = instance.Placements.Where(value => value.ResourceSymbol != resource.Symbol).ToArray();
+                // The quest no longer places the person: one it had set elsewhere goes home, out of sight while the quest lasts.
+                DropPlacements(instance, value => value.ResourceSymbol == resource.Symbol);
                 // Only a person minted for this quest may become permanently removed in the
                 // registry. A reference to an authored provider never destroys that definition.
                 foreach (long id in resource.Binding.ActorIds)

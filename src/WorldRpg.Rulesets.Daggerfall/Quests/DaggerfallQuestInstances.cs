@@ -1208,11 +1208,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         // Selected resource identities and text remain for journal/post-quest conversation.
         // Visible actors continue under their canonical roster/registry lifetime, save the people this quest placed
         // elsewhere, who go home unless another quest still under way places them.
-        long[] placed = [.. PlacedPeople(instance)];
-        instance.Placements = [];
-        HashSet<long> stillPlaced = [.. _instances.Values.Where(other => other.Lifecycle == DaggerfallQuestLifecycle.Active).SelectMany(PlacedPeople)];
-        long[] released = [.. placed.Distinct().Where(id => !stillPlaced.Contains(id))];
-        if (released.Length > 0) _returnPlacedPeople?.Invoke(released);
+        DropPlacements(instance, _ => true);
         Messages.RemoveDialogue(instance.InstanceId);
         long[] droppedEscorts = instance.Resources
             .Where(resource => resource.EscortFaceMedia is not null)
@@ -1224,8 +1220,22 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         _removeCarriedQuestItems?.Invoke(instance.InstanceId);
     }
 
-    /// <summary>The people <paramref name="instance"/>'s applied placements set somewhere.</summary>
-    private static IEnumerable<long> PlacedPeople(DaggerfallQuestRuntimeInstance instance) => instance.Placements
+    /// <summary>
+    /// Drops <paramref name="instance"/>'s placements that <paramref name="dropped"/> picks, and sends home the people
+    /// those it had applied set somewhere, save those another placement of a quest under way still sets.
+    /// </summary>
+    private void DropPlacements(DaggerfallQuestRuntimeInstance instance, Func<DaggerfallQuestPlacementOperation, bool> dropped)
+    {
+        long[] placed = [.. PlacedPeople(instance, instance.Placements.Where(dropped))];
+        instance.Placements = [.. instance.Placements.Where(placement => !dropped(placement))];
+        HashSet<long> stillPlaced = [.. _instances.Values.Where(other => other.Lifecycle == DaggerfallQuestLifecycle.Active || other == instance)
+            .SelectMany(other => PlacedPeople(other, other.Placements))];
+        long[] released = [.. placed.Distinct().Where(id => !stillPlaced.Contains(id))];
+        if (released.Length > 0) _returnPlacedPeople?.Invoke(released);
+    }
+
+    /// <summary>The people <paramref name="placements"/> of <paramref name="instance"/> set somewhere, those applied.</summary>
+    private static IEnumerable<long> PlacedPeople(DaggerfallQuestRuntimeInstance instance, IEnumerable<DaggerfallQuestPlacementOperation> placements) => placements
         .Where(placement => placement.Applied is not null)
         .SelectMany(placement => instance.Resources.Where(resource => resource.Symbol == placement.ResourceSymbol))
         .SelectMany(resource => resource.Binding.ActorIds);

@@ -192,7 +192,7 @@ public sealed class QuestIndividualAndOfficeBindingTests
     }
 
     [Fact]
-    public void Relocating_cast_individual_via_place_npc_moves_canonical_actor_suppresses_home_slot_survives_save_reload_and_returns_home_when_the_quest_ends()
+    public void Relocating_cast_individual_via_place_npc_moves_canonical_actor_suppresses_home_slot_survives_save_reload_and_returns_home_when_destroyed_or_the_quest_ends()
     {
         JsonArray root = TestPayload.QuestRecords();
         root.Add(JsonNode.Parse("""
@@ -204,7 +204,8 @@ public sealed class QuestIndividualAndOfficeBindingTests
               "blocks": [
                 { "kind": "person", "firstLine": 1, "lines": ["Person _traitor_ named Lord_K'avar male"] },
                 { "kind": "place", "firstLine": 2, "lines": ["Place _dest_ remote dungeon8"] },
-                { "kind": "headless", "firstLine": 10, "lines": ["place npc _traitor_ at _dest_"] }
+                { "kind": "headless", "firstLine": 10, "lines": ["place npc _traitor_ at _dest_"] },
+                { "kind": "task", "firstLine": 20, "lines": ["_gone_ task:", "destroy npc _traitor_"] }
               ]
             }
             """)!);
@@ -290,6 +291,27 @@ public sealed class QuestIndividualAndOfficeBindingTests
         Assert.Single(reloaded.State.Actors.All, actor => actor.DurableId == kavarId);
         Assert.True(reloaded.TryTransitionTo(destSite.ProfileKey));
         Assert.False(reloaded.State.Actors.TryGet(kavarId, out _));
+
+        // A later run of the quest places him again and destroys him (as M0B11Y18 does its traitor): the quest no longer
+        // places him, so he goes home at once, out of sight while the quest lasts, and is there when it ends.
+        Assert.True(reloaded.TryTransitionTo(homeSite.ProfileKey));
+        reloaded.State.Quests.Start(new("kavar:2", "relocate-kavar.txt", "relocate-kavar", DaggerfallQuestLifecycle.Active, null,
+            [new("dest", destBinding)], []));
+        reloaded.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.True(reloaded.TryTransitionTo(destSite.ProfileKey));
+        reloaded.Update(new ProductUpdate(OuterUpdate(4), []));
+        Assert.True(reloaded.State.Actors.TryGet(kavarId, out _));
+        DaggerfallQuestInstancesSave quests = reloaded.State.Quests.Capture();
+        reloaded.State.Quests.Restore(quests with { Instances = [.. quests.Instances.Select(value => value.InstanceId == "kavar:2"
+            ? value with { Tasks = [.. value.Tasks.Select(task => task.Symbol == "gone" ? task with { IsSet = true } : task)] } : value)] });
+        reloaded.Update(new ProductUpdate(OuterUpdate(5), []));
+        Assert.False(reloaded.State.Actors.TryGet(kavarId, out _));
+        Assert.Null(reloaded.State.ActorLedger.TryGet(kavarId, out ActorLedgerEntry? dropped) ? dropped!.Location : null);
+        reloaded.State.Quests.Complete("kavar:2", "done");
+        Assert.True(reloaded.TryTransitionTo(homeSite.ProfileKey));
+        Assert.Single(reloaded.State.Actors.All, actor => actor.DurableId == kavarId);
+        using DaggerfallSession again = DaggerfallSession.Restore(engine.Context, composition, reloaded.CaptureSave());
+        Assert.Single(again.State.Actors.All, actor => actor.DurableId == kavarId);
     }
 
     [Fact]
