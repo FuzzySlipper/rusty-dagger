@@ -303,6 +303,64 @@ public sealed class DaggerfallHouseholdSocialTests
         Assert.False(restored.State.ActorLedger.TryGet(restoredUnrelated, out _));
     }
 
+    [Fact]
+    public void Repeated_mixed_local_household_goodwill_and_crime_events_keep_offsets_bounded_and_save_restore_cleanly()
+    {
+        using var fixture = new HouseholdSessionFixture(random: RandomMinimum.Create());
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallNpcSite localSite = new(site.Id.Region, site.Name, "1/3/0", session.Sites.ActiveProfile.LogicalId);
+        string household = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 3, 0);
+
+        long kinA = AddNpcWithFamily(session, site.Id, localSite, "r11103-2/kin-a", "Maren Holt", household);
+        long kinB = AddNpcWithFamily(session, site.Id, localSite, "r11103-2/kin-b", "Bram Holt", household);
+        long kinC = AddNpcWithFamily(session, site.Id, localSite, "r11103-2/kin-c", "Lina Holt", household);
+
+        // Repeat 25 cycles of +10 goodwill ripple via kinA and -10 reported assault ripple against kinB:
+        // StandingDelta returns to 0 each pair, while per-subject offsets must remain bounded and saveable.
+        for (int i = 0; i < 25; i++)
+        {
+            session.SocialConsequences.ReactToKinGoodwill(kinA, directPositiveDelta: 20, originSite: site, minute: 100L + i * 2L);
+            DaggerfallCrimeIncidentSave assault = new(
+                OperationId: $"r11103-2:assault:{i}",
+                Crime: DaggerfallCrimeKind.Assault,
+                Stage: DaggerfallCrimeStage.Completed,
+                PerpetratorActorId: DaggerfallActorIdentity.PlayerEntityId,
+                AffectedActorOrOwnerId: kinB,
+                Region: site.Id.Region,
+                GameMinute: 101L + i * 2L,
+                TargetKind: DaggerfallCrimeTargetKind.Civilian,
+                Witnesses: new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [kinC]),
+                GuildCredit: DaggerfallCrimeGuildCredit.None,
+                Reported: true);
+            session.SocialConsequences.ReactToAttributedCrime(assault, site, minute: 101L + i * 2L, victimFamilyId: household);
+        }
+
+        // CaptureSave must validate and succeed without throwing; effective dispositions remain bounded.
+        RulesetSavePayload saved = session.CaptureSave();
+        DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
+        DaggerfallLocalHouseholdStandingSave entry = Assert.Single(raw.LocalHouseholds.Standings, s => s.FamilyId == household);
+        Assert.Equal(0, entry.StandingDelta);
+        Assert.NotNull(entry.SubjectOffsets);
+        foreach (DaggerfallLocalHouseholdSubjectOffsetSave offset in entry.SubjectOffsets!)
+            Assert.InRange(offset.Offset, DaggerfallSocialState.MinimumReputation * 2, DaggerfallSocialState.MaximumReputation * 2);
+
+        int dispA = session.SocialConsequences.EffectiveDispositionDelta(kinA);
+        int dispB = session.SocialConsequences.EffectiveDispositionDelta(kinB);
+        int dispC = session.SocialConsequences.EffectiveDispositionDelta(kinC);
+        Assert.InRange(dispA, DaggerfallSocialState.MinimumReputation, DaggerfallSocialState.MaximumReputation);
+        Assert.InRange(dispB, DaggerfallSocialState.MinimumReputation, DaggerfallSocialState.MaximumReputation);
+        Assert.Equal(0, dispC);
+
+        using DaggerfallSession restored = fixture.Restore(saved);
+        long restoredA = AddNpcWithFamily(restored, site.Id, localSite, "r11103-2/kin-a", "Maren Holt", household);
+        long restoredB = AddNpcWithFamily(restored, site.Id, localSite, "r11103-2/kin-b", "Bram Holt", household);
+        long restoredC = AddNpcWithFamily(restored, site.Id, localSite, "r11103-2/kin-c", "Lina Holt", household);
+        Assert.Equal(dispA, restored.SocialConsequences.EffectiveDispositionDelta(restoredA));
+        Assert.Equal(dispB, restored.SocialConsequences.EffectiveDispositionDelta(restoredB));
+        Assert.Equal(dispC, restored.SocialConsequences.EffectiveDispositionDelta(restoredC));
+    }
+
     private static long AddNpcWithFamily(
         DaggerfallSession session,
         DaggerfallSiteId siteId,

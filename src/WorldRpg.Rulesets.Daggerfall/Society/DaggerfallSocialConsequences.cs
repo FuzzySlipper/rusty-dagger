@@ -443,7 +443,10 @@ internal sealed class DaggerfallSocialConsequences(
         state.StandingDelta = nextStanding;
         if (subjectActorId is long sid && appliedDelta != 0)
         {
-            int nextOffset = checked(state.SubjectOffsets.GetValueOrDefault(sid) - appliedDelta);
+            int nextOffset = Math.Clamp(
+                checked(state.SubjectOffsets.GetValueOrDefault(sid) - appliedDelta),
+                DaggerfallSocialState.MinimumReputation * 2,
+                DaggerfallSocialState.MaximumReputation * 2);
             if (nextOffset == 0)
                 state.SubjectOffsets.Remove(sid);
             else
