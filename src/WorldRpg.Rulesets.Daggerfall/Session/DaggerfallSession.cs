@@ -350,7 +350,15 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal PresentationState Presentation { get; }
 
     /// <summary>Admits the full selected site catalog once composition has constructed this session.</summary>
-    internal void AdmitSiteProfiles(DaggerfallSiteProfiles profiles) => _sites.AdmitProfiles(profiles);
+    internal void AdmitSiteProfiles(DaggerfallSiteProfiles profiles)
+    {
+        _sites.AdmitProfiles(profiles);
+        if (_sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Interior)
+            ReconcileInteriorScheduledVisitors(_sites.Projection.Inputs, _appearance);
+    }
+
+    /// <summary>The session's current in-game calendar.</summary>
+    internal DaggerfallCalendar Calendar => _time.Calendar;
 
     /// <summary>The session's site lifecycle: projection, catalog, deltas and transitions.</summary>
     internal DaggerfallSiteCrossing Sites => _sites;
@@ -380,7 +388,117 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation()
     {
         ResetScheduleWeatherBaseline();
-        Population.Reconcile();
+        Population.ReconcileImmediate();
+    }
+
+    void IDaggerfallSiteTransitionHost.ReconcileInteriorScheduledVisitors(
+        DaggerfallSiteProfile destination,
+        DaggerfallSiteAppearance appearance) =>
+        ReconcileInteriorScheduledVisitors(destination, appearance);
+
+    internal void ReconcileInteriorScheduledVisitors(
+        DaggerfallSiteProfile destination,
+        DaggerfallSiteAppearance appearance)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(appearance);
+        if (destination.ProfileKind != DaggerfallWorldProfileKind.Interior
+            || destination.Site is not { } siteId
+            || destination.InteriorBuilding is not { } interiorBuilding)
+            return;
+
+        DaggerfallTownShelterAssignment assignment = ResolveTownShelterAssignment(siteId, destination.BillboardSprites);
+        DaggerfallSiteBuildingId buildingId = new(interiorBuilding.BlockX, interiorBuilding.BlockY, interiorBuilding.Building.Index);
+        IReadOnlyList<DaggerfallScheduledVisitor> visitors = assignment.VisitorsFor(buildingId);
+        if (visitors.Count == 0)
+            return;
+
+        IReadOnlyList<(WorldPoint Position, float HeadingRadians)> standPoints =
+            DaggerfallScheduleShelterResolver.ResolveInteriorStandPoints(destination, visitors.Count);
+        int admitCount = Math.Min(visitors.Count, standPoints.Count);
+        for (int i = 0; i < admitCount; i++)
+        {
+            DaggerfallScheduledVisitor visitor = visitors[i];
+            (WorldPoint pos, float heading) = standPoints[i];
+            ActorOrigin origin = ActorOrigin.Seeded(
+                visitor.HomeProfile,
+                visitor.HomeSlotId,
+                visitor.SpawnerId,
+                visitor.Harm,
+                visitor.Interaction);
+            _ = _roster.MaterializeScheduledInteriorVisitor(
+                destination,
+                appearance,
+                visitor.DurableId,
+                origin,
+                visitor.Kind,
+                visitor.HomeSlotId,
+                visitor.Appearance,
+                visitor.Role,
+                visitor.Services,
+                pos,
+                heading,
+                visitor.FamilyId,
+                visitor.DisplayName,
+                visitor.Harm,
+                visitor.Interaction);
+        }
+    }
+
+    internal IReadOnlySet<long> SuppressedStaticSlotsFor(DaggerfallSiteProfile profile)
+    {
+        if (profile.ProfileKind != DaggerfallWorldProfileKind.Interior
+            || profile.Site is not { } siteId
+            || profile.InteriorBuilding is not { } interiorBuilding
+            || interiorBuilding.BuildingType == 15
+            || DaggerfallScheduleShelterResolver.IsResidenceBuildingType(interiorBuilding.BuildingType))
+            return DaggerfallTownShelterAssignment.Empty.SuppressedSlotsFor(default);
+        DaggerfallTownShelterAssignment assignment = ResolveTownShelterAssignment(siteId, profile.BillboardSprites);
+        DaggerfallSiteBuildingId buildingId = new(interiorBuilding.BlockX, interiorBuilding.BlockY, interiorBuilding.Building.Index);
+        return assignment.SuppressedSlotsFor(buildingId);
+    }
+
+    internal DaggerfallTownShelterAssignment ResolveTownShelterAssignment(
+        DaggerfallSiteId siteId,
+        IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? availableBillboards = null)
+    {
+        if (!_site.TryFind(siteId, out DaggerfallSiteRecord siteRecord)
+            || siteRecord.Exterior is not { Buildings.Count: > 0 } exterior)
+            return DaggerfallTownShelterAssignment.Empty;
+        DaggerfallSiteBuildingSource[] buildings = [.. exterior.Buildings.Values];
+
+        IReadOnlyList<DaggerfallPopulationPlacement> exteriorPlacements = [];
+        DaggerfallWorldProfileKey exteriorKey = DaggerfallWorldProfileIds.Exterior(siteId);
+        if (_sites?.Profiles is { } profiles && profiles.TryGet(exteriorKey, out DaggerfallSiteProfile exteriorProfile))
+            exteriorPlacements = exteriorProfile.Population;
+
+        int minuteOfDay = checked(_time.Calendar.Hour * DaggerfallCalendar.MinutesPerHour + _time.Calendar.Minute);
+        DaggerfallWeatherKind weather = LocalWeather.Current;
+        DaggerfallWeatherShelterElapsed weatherElapsed = ObserveScheduleWeatherElapsed();
+        int holidayId = _time.Calendar.GetHolidayId(siteId.Region);
+        HashSet<long> officeHolderIds = OfficeLedger.CollectOfficeHolderIds(siteRecord);
+
+        return DaggerfallScheduleShelterResolver.ResolveTown(
+            _worldSocialSeed,
+            _definitions,
+            siteRecord,
+            buildings,
+            exteriorPlacements,
+            minuteOfDay,
+            weather,
+            weatherElapsed,
+            holidayId: holidayId,
+            isActiveQuestor: id => State.Quests.QuestContacts(id).Count > 0 || State.Quests.IsNpcUnavailable(id),
+            isOfficeHolder: officeHolderIds.Contains,
+            isHomeSlotSuppressed: (id, homeProfile) =>
+                State.ActorLedger.IsHomeSlotSuppressed(id, homeProfile)
+                || _roster.BanishedActors.Contains(id)
+                || State.Quests.IsEscortWithParty(id)
+                || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry)
+                    && entry?.Location?.Kind is ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand
+                        or ActorLocationKind.Dead or ActorLocationKind.Removed or ActorLocationKind.OffStage)
+                || (State.Npcs.TryGet(id, out DaggerfallNpc? existingNpc) && existingNpc.Presence == DaggerfallNpcPresence.Removed),
+            availableBillboards: availableBillboards);
     }
 
     IReadOnlyList<long> IDaggerfallSiteTransitionHost.BeforeSiteTransition()
@@ -423,7 +541,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             && bandEntry?.Location?.Kind == ActorLocationKind.OnOverlandBand;
         bool isActiveQuestor = State.Quests.QuestContacts(actorId).Count > 0 || State.Quests.IsNpcUnavailable(actorId);
         DaggerfallSiteRecord? siteRecord = _site.TryFind(siteId, out DaggerfallSiteRecord found) ? found : null;
-        bool isOfficeHolder = OfficeLedger.IsOfficeHolder(actorId, siteRecord);
+        bool isOfficeHolder = OfficeLedger.IsExteriorOfficeHolder(actorId, siteRecord);
 
         return DaggerfallNpcSchedulePolicy.EvaluateExteriorPlacement(
             _worldSocialSeed,

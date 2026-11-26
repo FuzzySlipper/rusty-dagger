@@ -342,7 +342,7 @@ internal sealed partial class DaggerfallSession
         // boundary without an Engine admitted frame. Reconcile through the existing NPC/lifetime
         // owner so source civilians hide, retire, restore and preserve their durable identities.
         if (advance.AppliedSeconds > 0)
-            ReconcileNpcProjection();                                                             // Actors
+            ReconcileNpcProjection(immediate: true);                                              // Actors
         // No admitted update refills Stamina through elapsed time, so the time itself does.
         if (advance.AppliedSeconds > 0) _condition.Stamina.Fill(State.Actors.Player.Stats);      // Condition
         // Rest and travel admit many slices and complete the time increase once, at their end.
@@ -1639,14 +1639,14 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>Who stands in the active site after a change: canonical questor actors, then the town's source population.</summary>
-    internal void ReconcileNpcProjection()
+    internal void ReconcileNpcProjection(bool immediate = false)
     {
         _roster.ReconcileQuestActors(_sites.Projection.Inputs, _appearance, _exterior.ActiveLocationLoaded,
             point => _exterior.ProfileToLocal(point),
             id => State.Quests.IsEscortWithParty(id)
                 || (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.WithParty),
             point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector())));  // Actors
-        Population.Reconcile();                                                                   // Actors
+        Population.Reconcile(immediate);                                                          // Actors
     }
 
     /// <summary>
@@ -1780,7 +1780,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>The activation's list for a site the exterior has just admitted.</summary>
     void IDaggerfallExteriorHost.RebuildActivation()
     {
-        ReconcileNpcProjection();                                                                 // Actors
+        ReconcileNpcProjection(immediate: true);                                                  // Actors
         ReconcilePropertyContainers();                                                            // Session: the property containers' list
         ComposeActivation(_engine, _tuning.LootInteraction);                                      // Session: composition
         SyncWeatherContext();                                                                     // Exterior
@@ -1793,6 +1793,7 @@ internal sealed partial class DaggerfallSession
         _combat.RebaseRangedFlight(delta);                                                        // Combat
         Casting.Rebase(delta);                                                                    // Magic
         _encounters.RebasePending(_activeProfileKey.LogicalId, delta);                            // Actors
+        Population.RebaseTransient(delta);                                                        // Actors
         _dialogue?.Rebase(delta);                                                                 // Dialogue
         // Projected quest people keep their placement in the Engine Transform, which the origin
         // commit's EntityOriginRebaser already moved.

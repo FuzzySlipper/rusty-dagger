@@ -494,7 +494,7 @@ internal static class DaggerfallNpcSchedulePolicy
         return minuteOfDay >= startMinute || minuteOfDay < endMinute;
     }
 
-    private static int NormalizeMinute(int minuteOfDay)
+    internal static int NormalizeMinute(int minuteOfDay)
     {
         int m = minuteOfDay % MinutesPerDay;
         return m < 0 ? m + MinutesPerDay : m;

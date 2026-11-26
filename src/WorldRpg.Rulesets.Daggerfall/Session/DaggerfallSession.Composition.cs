@@ -1529,15 +1529,21 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, WordSpread, CourierDispatches, CreatureClashes, State.PlayerControl, definitions, _site, () => _time.Calendar),
                 new DaggerfallSocialInspection(definitions, _site, State.Actors, State.Npcs, State.ActorLedger, State.Social, SocialConsequences, Introductions, OfficeHolders, OfficeLedger, State.Crime, questNames, () => _worldSocialSeed, () => _time.Calendar),
             ];                                                                                     // Developer
+            _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
-                    snapshot => DungeonText.Restore(snapshot, () => DungeonActions.ActiveActions, CurrentTextContext));
+                    snapshot => DungeonText.Restore(snapshot, () => DungeonActions.ActiveActions, CurrentTextContext),
+                    activeProfile => ReconcileInteriorScheduledVisitors(activeProfile, _appearance));
             foreach (var spell in definitions.Magic.Spells.Values.Where(spell => spell.IsCustom))
                 if (Casting.AvailableSpellCost(actors.Player.DurableId, spell.Key) is null)
                     throw new ArgumentException($"Custom spell '{spell.Key}' contains an unavailable compiled construction effect or combination.");
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
-            if (restore is null) _roster.MaterializeStaticNpcs(inputs);
+            if (restore is null)
+            {
+                _roster.MaterializeStaticNpcs(inputs);
+                ReconcileInteriorScheduledVisitors(inputs, _appearance);
+            }
             _sites.Load(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
             // Treasure and dungeon enemies are placed on the floor under their markers, so the site's
             // collision must be admitted first: before it, a ground probe meets nothing and they float.
@@ -1547,7 +1553,7 @@ internal sealed partial class DaggerfallSession
             // Registry positions are profile coordinates; project NPCs and the civilian population
             // only once the save is restored and the saved origin admitted, so dialogue and the
             // first snapshot share its frame and no restored presence is decided from the start pose.
-            ReconcileNpcProjection();
+            ReconcileNpcProjection(immediate: true);
             _itemCastTriggers.Refresh();
             _interiorLook.WarmSite(
                 _sites.Projection.Inputs,

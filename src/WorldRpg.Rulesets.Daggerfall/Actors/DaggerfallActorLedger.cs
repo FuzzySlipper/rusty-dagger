@@ -19,7 +19,8 @@ internal sealed class ActorOriginComponent(
     float baselineHeading,
     DaggerfallStatsSave? baselineStats = null,
     DaggerfallNpc? baselineNpc = null,
-    bool isRelocated = false)
+    bool isRelocated = false,
+    bool isScheduledVisitor = false)
 {
     private WorldPoint? _lastWanderedPose;
     private float _lastWanderedHeading;
@@ -30,6 +31,7 @@ internal sealed class ActorOriginComponent(
     internal DaggerfallStatsSave? BaselineStats { get; } = baselineStats;
     internal DaggerfallNpc? BaselineNpc { get; } = baselineNpc;
     internal bool IsRelocated { get; } = isRelocated;
+    internal bool IsScheduledVisitor { get; } = isScheduledVisitor;
 
     internal void SetBaselinePose(WorldPoint pose) => BaselinePose = pose;
 

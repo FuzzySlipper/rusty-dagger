@@ -59,6 +59,11 @@ internal sealed class DaggerfallActorRoster
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallActorLedger _actorLedger;
     private readonly Action<DaggerfallActorInventorySave?, DaggerfallCorpseSave?, DaggerfallActiveEffectSave[]?>? _restoreDetachedState;
+    private Func<DaggerfallSiteProfile, IReadOnlySet<long>>? _getSuppressedStaticSlots;
+
+    /// <summary>Binds the schedule lookup returning home-building static slot IDs currently away at a tavern.</summary>
+    internal void BindScheduleStaticSuppression(Func<DaggerfallSiteProfile, IReadOnlySet<long>> getSuppressedStaticSlots) =>
+        _getSuppressedStaticSlots = getSuppressedStaticSlots ?? throw new ArgumentNullException(nameof(getSuppressedStaticSlots));
 
     /// <param name="profile">The active site's profile.</param>
     /// <param name="appearance">The active site's appearance.</param>
@@ -586,6 +591,7 @@ internal sealed class DaggerfallActorRoster
             DaggerfallNpcSite binding = new(site.Region, location.Name,
                 profile.InteriorBuilding is { } building ? $"{building.BlockX}/{building.BlockY}/{building.Building.Index}" : string.Empty,
                 profile.ProfileKey.LogicalId);
+            IReadOnlySet<long>? scheduledAway = _getSuppressedStaticSlots?.Invoke(profile);
             List<long> batch = [];
             try
             {
@@ -602,8 +608,11 @@ internal sealed class DaggerfallActorRoster
 
                     string slotKey = $"{profile.ProfileKey.LogicalId}/{placement.Id}";
                     long id = DaggerfallPeopleSlots.SeededSlotIdentity(site, slotKey);
-                    // Step 1: suppress home slot if ledger relocated, WithParty-attached, off-staged, or removed it.
-                    if (_actorLedger.IsHomeSlotSuppressed(id, profile.ProfileKey) || BanishedActors.Contains(id))
+                    // Step 1: suppress home slot if ledger relocated, WithParty-attached, off-staged, removed,
+                    // or currently away at another building on an active schedule (zero duplicate bodies).
+                    if (_actorLedger.IsHomeSlotSuppressed(id, profile.ProfileKey)
+                        || BanishedActors.Contains(id)
+                        || scheduledAway?.Contains(id) == true)
                         continue;
 
                     _npcs.RegisterDeterministic(id, DaggerfallNpcKind.Static, placement.Id, binding,
@@ -1098,9 +1107,102 @@ internal sealed class DaggerfallActorRoster
                 : profile.Project.PlayerPosition ?? default;
     }
 
+    /// <summary>
+    /// Materializes one deterministic exterior walker or off-hours closed-building static NPC inside a tavern,
+    /// temple, or residential interior under its exact home <see cref="ActorOrigin"/> and <paramref name="durableId"/>.
+    /// Hydrates any sparse <see cref="DaggerfallActorLedger"/> social/vitals/combat state while tagging the actor
+    /// as a transient scheduled visitor so untouched visitors write zero save bytes and touched visitors never
+    /// acquire a permanent <c>AtSite</c> lock or overwrite their home pose.
+    /// </summary>
+    internal long? MaterializeScheduledInteriorVisitor(
+        DaggerfallSiteProfile destination,
+        DaggerfallSiteAppearance appearance,
+        long durableId,
+        ActorOrigin homeOrigin,
+        DaggerfallNpcKind kind,
+        string homeSlotId,
+        DaggerfallNpcAppearance look,
+        string role,
+        IReadOnlyList<string> services,
+        WorldPoint standPosition,
+        float headingRadians = 0f,
+        string? familyId = null,
+        string? displayName = null,
+        ActorHarmPolicyKind? harm = null,
+        ActorInteractionPolicyKind? interaction = null)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(appearance);
+        ArgumentNullException.ThrowIfNull(homeOrigin);
+        ArgumentNullException.ThrowIfNull(services);
+        if (destination.Site is not { } site || BanishedActors.Contains(durableId) || _actors.TryGet(durableId, out _))
+            return null;
+
+        ActorLedgerEntry? delta = _actorLedger.TryGet(durableId, out ActorLedgerEntry? existingDelta) ? existingDelta : null;
+        if (delta?.Location?.Kind is ActorLocationKind.Dead or ActorLocationKind.Removed
+            or ActorLocationKind.WithParty or ActorLocationKind.OnOverlandBand or ActorLocationKind.OffStage)
+            return null;
+        if (delta?.Location is { Kind: ActorLocationKind.AtSite, Profile: { } relocatedProfile }
+            && relocatedProfile.Require() != destination.ProfileKey
+            && relocatedProfile.Require() != homeOrigin.SiteProfile?.Require())
+            return null;
+
+        DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
+        DaggerfallNpcSite binding = new(site.Region, location.Name,
+            destination.InteriorBuilding is { } building ? $"{building.BlockX}/{building.BlockY}/{building.Building.Index}" : string.Empty,
+            destination.ProfileKey.LogicalId);
+
+        if (!_npcs.TryGet(durableId, out DaggerfallNpc? npc))
+        {
+            _npcs.RegisterDeterministic(durableId, kind, homeSlotId, binding, look, role, services,
+                displayName, homeProfile: destination.ProfileKey, familyId: familyId);
+            npc = _npcs.Require(durableId);
+        }
+        else if (npc.Presence == DaggerfallNpcPresence.Removed)
+        {
+            return null;
+        }
+        else if (npc.Presence != DaggerfallNpcPresence.Active)
+        {
+            _npcs.SetPresence(durableId, DaggerfallNpcPresence.Active);
+            npc = _npcs.Require(durableId);
+        }
+
+        ActorOrigin resolvedOrigin = homeOrigin with
+        {
+            HarmPolicy = harm ?? homeOrigin.HarmPolicy,
+            InteractionPolicy = interaction ?? homeOrigin.InteractionPolicy,
+        };
+        ActorState actor = MaterializeDeterministicNpc(
+            npc,
+            resolvedOrigin,
+            standPosition,
+            Vector3.Zero,
+            delta,
+            isRelocated: false,
+            siteProfile: destination,
+            staticPlacement: null,
+            baselineFamilyId: familyId ?? npc.FamilyId,
+            isScheduledVisitor: true);
+        // Always stand the visitor at their interior stand slot even if their sparse ledger carries a home-site pose.
+        actor.ApplyPose(new ActorPose(standPosition, headingRadians));
+        if (actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp))
+            originComp.SetBaselinePose(standPosition);
+
+        if (!TryAdmitDirectionalMobileAppearance(destination, appearance, durableId)
+            && destination.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
+        {
+            appearance.AdmitActor(durableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+        }
+        _npcs.Bind(durableId, destination.ProfileKey);
+        _npcs.ReleasePose(durableId);
+        return durableId;
+    }
+
     private ActorState MaterializeDeterministicNpc(DaggerfallNpc npc, ActorOrigin origin, WorldPoint baselineProfilePose,
         Vector3 translation, ActorLedgerEntry? delta, bool isRelocated = false, DaggerfallSiteProfile? siteProfile = null,
-        DaggerfallStaticNpcPlacement? staticPlacement = null, string? baselineFamilyId = null)
+        DaggerfallStaticNpcPlacement? staticPlacement = null, string? baselineFamilyId = null,
+        bool isScheduledVisitor = false)
     {
         WorldPoint worldPose = DaggerfallSceneOrigin.Shift(baselineProfilePose, translation);
         string? spawnerId = staticPlacement?.SpawnerId ?? origin.SpawnerId;
@@ -1116,7 +1218,7 @@ internal sealed class DaggerfallActorRoster
         if ((staticPlacement?.Interaction ?? origin.InteractionPolicy) is { } resolvedInteraction)
             actor.Actor.Get<ActorInteractionPolicy>().Set(resolvedInteraction);
         DaggerfallStatsSave baselineStats = DaggerfallStatsSaveBoundary.Capture(actor.Stats, actor.Actor.Entity);
-        actor.Actor.Add(new ActorOriginComponent(origin, baselineProfilePose, 0f, baselineStats, npcWithFamily, isRelocated));
+        actor.Actor.Add(new ActorOriginComponent(origin, baselineProfilePose, 0f, baselineStats, npcWithFamily, isRelocated, isScheduledVisitor));
         try
         {
             if (!_definitionsByActor.TryAdd(npc.DurableId, definition))

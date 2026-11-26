@@ -461,8 +461,10 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             ? null
             : new ActorVitalsDiff(currentStats);
 
-        bool relocated = (originComp?.IsRelocated == true)
-            || (origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile);
+        bool isScheduledVisitor = originComp?.IsScheduledVisitor == true;
+        bool relocated = !isScheduledVisitor
+            && ((originComp?.IsRelocated == true)
+                || (origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile));
 
         WorldPoint currentPos = origin.IsFixedPlacement ? actor.Position : localToProfile(actor.Position);
         DaggerfallEnemyPerceptionMemory memory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
@@ -523,7 +525,9 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             bool nameChanged = originComp?.BaselineNpc is { DisplayName: not null } baseNpc
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName)
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, referralName);
-            bool presenceChanged = npc.Presence != DaggerfallNpcPresence.Active;
+            bool presenceChanged = DaggerfallCivilians.IsSourcePopulation(npc)
+                ? npc.Presence == DaggerfallNpcPresence.Removed
+                : npc.Presence != DaggerfallNpcPresence.Active;
             ActorPartyRole? stagedPartyRole = actor.IsDefeated
                 ? null
                 : overlay?.StagedPartyRole is { Length: > 0 } rawRole
@@ -576,7 +580,9 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         bool idleWanderOnly = !hasNonPoseDelta && originComp is not null
             && originComp.MatchesIdleWanderPose(currentPos, actor.HeadingYawRadians);
         ActorPoseOverride? pose = (!relocated && !actor.IsDefeated && originComp is not null
-            && (PoseEqual(currentPos, actor.HeadingYawRadians, originComp.BaselinePose, originComp.BaselineHeading) || idleWanderOnly))
+            && (isScheduledVisitor
+                || PoseEqual(currentPos, actor.HeadingYawRadians, originComp.BaselinePose, originComp.BaselineHeading)
+                || idleWanderOnly))
             ? null
             : currentPoseOverride;
         return new ActorLedgerEntry(actor.DurableId, origin, vitals, pose, combat, social, location, referral);
@@ -844,11 +850,13 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     DetachedEffects = detachedEffects.Length > 0 ? detachedEffects : null,
                 }
                 : sparse.Combat;
-            ActorLocationOverride location = sparse.Location is { Kind: ActorLocationKind.Dead }
+            ActorLocationOverride? location = sparse.Location is { Kind: ActorLocationKind.Dead }
                 ? sparse.Location with { Detached = true }
-                : sparse.Location is { Kind: ActorLocationKind.AtSite, Profile: { } locProfile }
-                    ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true, trafficVisitor: sparse.Location.TrafficVisitor)
-                    : ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true);
+                : originComp.IsScheduledVisitor
+                    ? null
+                    : sparse.Location is { Kind: ActorLocationKind.AtSite, Profile: { } locProfile }
+                        ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true, trafficVisitor: sparse.Location.TrafficVisitor)
+                        : ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true);
             ActorSocialDiff? social = sparse.Social;
             if (social is null && actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? detachedPerson))
             {
@@ -1003,7 +1011,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     /// </summary>
     internal void Restore(DaggerfallResolvedRestore restore, DaggerfallSiteCrossing sites, DaggerfallActorRoster roster,
         DaggerfallEncounterRuntime encounters, DaggerfallHeldEnchantments heldEnchantments,
-        Action<DaggerfallDungeonTextSnapshot> restoreDungeonText)
+        Action<DaggerfallDungeonTextSnapshot> restoreDungeonText,
+        Action<DaggerfallSiteProfile>? materializeScheduledVisitors = null)
     {
         ArgumentNullException.ThrowIfNull(restore);
         ArgumentNullException.ThrowIfNull(sites);
@@ -1014,14 +1023,15 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         DaggerfallSavePayload saved = restore.Payload;
         sites.RestoreDeltas(saved.SiteDeltas, saved.ActorLedger);
         encounters.Restore(saved.Encounters);
-        RestoreSections(saved, sites.Projection.Inputs, roster);
+        RestoreSections(saved, sites.Projection.Inputs, roster, materializeScheduledVisitors);
         heldEnchantments.Refresh();
         sites.Projection.Appearance.SyncRestoredDefeat(State.Actors);
         restoreDungeonText(saved.DungeonText);
         sites.Interiors.ActionTriggers.RebaseRestoredPlayer(State.PlayerControl, State.Actors.Player.Actor.Entity);
     }
 
-    private void RestoreSections(DaggerfallSavePayload saved, DaggerfallSiteProfile activeInputs, DaggerfallActorRoster roster)
+    private void RestoreSections(DaggerfallSavePayload saved, DaggerfallSiteProfile activeInputs, DaggerfallActorRoster roster,
+        Action<DaggerfallSiteProfile>? materializeScheduledVisitors = null)
     {
         DaggerfallWorldProfileKey activeProfile = activeInputs.ProfileKey;
         foreach (ActorLedgerEntry entry in saved.ActorLedger.OrderBy(e => e.DurableId))
@@ -1069,6 +1079,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         // deterministic population civilians referenced by saved ledger/inventories/corpses/effects)
         // BEFORE applying saved actor inventories, corpses, and effects.
         roster.MaterializeStaticNpcs(activeInputs);
+        materializeScheduledVisitors?.Invoke(activeInputs);
         HashSet<long> requiredActiveDeterministicIds = [];
         foreach (ActorLedgerEntry entry in saved.ActorLedger)
         {

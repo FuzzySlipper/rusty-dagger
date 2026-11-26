@@ -529,6 +529,48 @@ internal sealed class DaggerfallOfficeLedger(
     /// Whether <paramref name="actorId"/> currently holds an institutional office (board seat, active override,
     /// or local site office such as Watch Captain, Guild Master, Temple Head, or Court Factor).
     /// </summary>
+    /// <summary>
+    /// Fast O(1) office-holder check for exterior source-population walkers: checks active office overrides
+    /// plus the site's exterior Watch Captain without scanning every interior building in town on every frame.
+    /// </summary>
+    internal bool IsExteriorOfficeHolder(long actorId, DaggerfallSiteRecord? site = null)
+    {
+        if (actorId <= 0) return false;
+        foreach (DaggerfallOfficeOverrideSave over in _overrides.Values)
+        {
+            if (!over.Vacant && over.HolderActorId == actorId)
+                return true;
+        }
+        if (site is not null && ResolveWatchCaptain(site) is { IsVacant: false, HolderActorId: long captainId } && captainId == actorId)
+            return true;
+        return false;
+    }
+
+    /// <summary>Collects every active (non-vacant) office holder actor ID for <paramref name="site"/> and board seats in one pass.</summary>
+    internal HashSet<long> CollectOfficeHolderIds(DaggerfallSiteRecord? site = null)
+    {
+        HashSet<long> ids = [];
+        foreach (DaggerfallOfficeOverrideSave over in _overrides.Values)
+        {
+            if (!over.Vacant && over.HolderActorId is long holderId && holderId > 0)
+                ids.Add(holderId);
+        }
+        if (site is not null)
+        {
+            foreach (DaggerfallLocalOffice office in ResolveLocalOffices(site))
+            {
+                if (!office.IsVacant && office.HolderActorId is long localHolder && localHolder > 0)
+                    ids.Add(localHolder);
+            }
+        }
+        foreach (var seat in definitions.BoardSeats.All)
+        {
+            if (ResolveBoardSeatPersona(seat.SeatId) is { IsVacant: false, HolderActorId: long seatHolder } && seatHolder > 0)
+                ids.Add(seatHolder);
+        }
+        return ids;
+    }
+
     internal bool IsOfficeHolder(long actorId, DaggerfallSiteRecord? site = null)
     {
         if (actorId <= 0) return false;

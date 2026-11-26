@@ -38,6 +38,9 @@ internal interface IDaggerfallSiteTransitionHost : IDaggerfallExteriorHost
 
     /// <summary>Re-stages previously staged party members beside the player after arriving at (or rolling back to) a site.</summary>
     void AfterSiteTransition(IReadOnlyList<long> boardedPartyIds) { }
+
+    /// <summary>Admits deterministic exterior and off-hours scheduled visitors into a newly materialized interior.</summary>
+    void ReconcileInteriorScheduledVisitors(DaggerfallSiteProfile destination, DaggerfallSiteAppearance appearance) { }
 }
 
 /// <summary>
@@ -747,6 +750,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     {
         _roster.MaterializeSite(destination, delta?.Actors, delta?.DynamicActors, delta?.BanishedActors, restoreAuthoredAppearance);
         _roster.MaterializeStaticNpcs(destination);
+        _host.ReconcileInteriorScheduledVisitors(destination, Projection.Appearance);
         if (delta is null) return;
         _siteDeltas.Restore(delta);
         Projection.Appearance.SyncRestoredDefeat(_actors);
