@@ -714,7 +714,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         if (State.PlayerControl.Position is not WorldPoint pos) return;
         DaggerfallOverlandPartyCoordinator.DaggerfallPartyTransitionStagingResult result =
-            OverlandParties.StagePartyForSiteTransition(boardedPartyIds, _sites.Projection.Inputs, pos, State.PlayerControl.YawRadians);
+            OverlandParties.StagePartyForSiteTransition(
+                boardedPartyIds,
+                _sites.Projection.Inputs,
+                pos,
+                State.PlayerControl.YawRadians,
+                TryResolveRetainerCatchUpPose);
         if (!string.IsNullOrWhiteSpace(result.StatusMessage))
             Presentation.SetOutcome(result.StatusMessage);
     }
@@ -732,7 +737,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     private ActorPose? TryResolveRetainerCatchUpPose(long actorId, WorldPoint playerPos)
     {
-        string scope = $"retainer-catchup:{_activeProfileKey.LogicalId}:{actorId}";
+        string scope = $"retainer-catchup:{_activeProfileKey.LogicalId}:{actorId}:{(int)MathF.Round(playerPos.X)}:{(int)MathF.Round(playerPos.Y)}:{(int)MathF.Round(playerPos.Z)}";
         if (_placement.TrySpawnPose("retainer-behind", scope, playerPos, 1.25f, 3.5f, out ActorPose behind, SpawnDirection.Behind))
             return behind;
         if (_placement.TrySpawnPose("retainer-any", scope, playerPos, 1.25f, 4.0f, out ActorPose any, SpawnDirection.Any))

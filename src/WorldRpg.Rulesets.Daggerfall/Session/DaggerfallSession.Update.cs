@@ -512,7 +512,11 @@ internal sealed partial class DaggerfallSession
         if (!player.Alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => WorldEncounters.Place(pending, simulationStep));   // Actors
         if (State.PlayerControl.Position is WorldPoint playerPosition)
+        {
             _ = OverlandParties.StepPendingClashSpawns(playerPosition);                                                               // Travel, Actors
+            if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon)
+                _ = OverlandParties.StepPendingDungeonRetainerStaging(_sites.Projection.Inputs, playerPosition, TryResolveRetainerCatchUpPose); // Travel, Actors
+        }
         _nearbySpawn.BringExpected();                                                             // Actors: a start's opening foes
         if (Law.Update(update.DeltaSeconds) is { } arrest) Arrest(arrest);                       // Society
         if (Law.ModalOpen) return;

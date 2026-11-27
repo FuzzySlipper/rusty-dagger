@@ -112,10 +112,23 @@ public sealed class DungeonRetainersTests
             spatial = SpatialFake.Create(startProfile.Geometry.Spatial[0].Sha256, _releases);
             spatial.KeepPosition = true;
             WireStraightLineNavigation(spatial);
+            WireClearFloor(spatial);
             perception = CreateAllVisiblePerception();
             appearance = new AppearanceFake(_releases);
             return EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         }
+
+        internal static void WireClearFloor(SpatialFake spatial, float? fixedFloorY = null) =>
+            spatial.FloorHit = request => request.Direction.Y < -0.5f
+                ? new SpatialHit
+                {
+                    Present = true,
+                    Kind = SpatialHitKind.StaticMesh,
+                    Point = new Vector3(request.Origin.X, fixedFloorY ?? (request.Origin.Y - 1.25f), request.Origin.Z),
+                    Normal = Vector3.UnitY,
+                    Distance = MathF.Max(0.1f, fixedFloorY is float fy ? request.Origin.Y - fy : 1.25f),
+                }
+                : default;
 
         internal DaggerfallSession Start(DaggerfallSiteProfile startProfile)
         {
@@ -365,13 +378,16 @@ public sealed class DungeonRetainersTests
         Assert.True(distAfterYield > distBeforeYield + 0.15f,
             $"Expected retainer in narrow corridor to yield away from overlapping player (before={distBeforeYield:F2}m, after={distAfterYield:F2}m).");
 
-        // 4. Dungeon brick teleporter (same-profile relocation): Follow retainer teleports beside player, Wait retainer stays put!
+        // 4. Dungeon brick teleporter (same-profile relocation): Follow retainer teleports onto an Engine-verified clear floor, Wait retainer stays put!
         Vector3 teleportDest = corridorPlayer + new Vector3(35.0f, 0f, 20.0f);
+        float verifiedTeleportFloorY = teleportDest.Y - 0.3f;
+        DungeonRetainersFixture.WireClearFloor(fixture.Spatial, verifiedTeleportFloorY);
         DaggerfallSiteAnchor brickAnchor = new("teleport:test-brick", WorldPoint.From(teleportDest), 0f, 0f);
         Assert.True(((IDaggerfallTeleportSites)session).TryRelocatePlayer(fixture.DungeonProfile.ProfileKey, brickAnchor));
         float distAfterTeleport = Vector3.Distance(knight.Position.ToVector(), session.State.PlayerControl.Position!.Value.ToVector());
         Assert.True(distAfterTeleport <= 5.0f,
             $"Follow retainer must follow through same-dungeon brick teleporters (got {distAfterTeleport:F2}m away).");
+        Assert.InRange(knight.Position.Y, verifiedTeleportFloorY - 0.05f, verifiedTeleportFloorY + 0.05f);
 
         // Wait stance must NOT follow through brick teleporters.
         Assert.True(session.PartyHire.Resolve(session.State.Npcs.Require(knightNpc.DurableId), DaggerfallDialogueTopic.PartyWait).Accepted);
@@ -505,5 +521,71 @@ public sealed class DungeonRetainersTests
         Assert.False(reloaded.PartyHire.TryGetContract(battlemage.DurableId, out _));
         Assert.True(reloaded.State.Actors.TryGet(battlemage.DurableId, out _));
         Assert.Empty(reloaded.OverlandParties.StagedPartyMemberIds);
+    }
+
+    [Fact]
+    public void Dungeon_entry_and_teleporter_preserve_placement_failure_and_retry_once_clear_floor_is_available()
+    {
+        using var fixture = new DungeonRetainersFixture();
+        using DaggerfallSession session = fixture.Start(fixture.KnightlyProfile);
+        DaggerfallNpc knightNpc = EnlistKnightRetainer(session, fixture.KnightlyProfile);
+
+        // 1. Dungeon entry with missing floor / obstructed clearance: retainer MUST NOT materialize at an unchecked OffsetBeside pose!
+        fixture.Spatial.FloorHit = _ => default;
+        Assert.True(session.TryTransitionTo(fixture.DungeonProfile.ProfileKey));
+        Assert.False(session.State.Actors.TryGet(knightNpc.DurableId, out _),
+            "Dungeon entry must not materialize a retainer when Engine spatial finds no clear floor.");
+        Assert.Equal(ActorLocationKind.WithParty, session.State.ActorLedger.Require(knightNpc.DurableId).Location?.Kind);
+        Assert.Empty(session.OverlandParties.StagedPartyMemberIds);
+
+        // Ticking while floor remains absent continues to hold the retainer safely in WithParty.
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.False(session.State.Actors.TryGet(knightNpc.DurableId, out _));
+        Assert.Equal(ActorLocationKind.WithParty, session.State.ActorLedger.Require(knightNpc.DurableId).Location?.Kind);
+
+        // Once Engine spatial reports a verified clear floor, deferred staging materializes the retainer cleanly onto that verified floor!
+        Vector3 entryPlayerPos = session.State.PlayerControl.Position!.Value.ToVector();
+        float verifiedEntryFloorY = entryPlayerPos.Y - 0.25f;
+        DungeonRetainersFixture.WireClearFloor(fixture.Spatial, verifiedEntryFloorY);
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.True(session.State.Actors.TryGet(knightNpc.DurableId, out ActorState? stagedKnight),
+            "Deferred dungeon retainer staging must materialize the retainer once Engine spatial confirms a clear floor.");
+        Assert.Contains(knightNpc.DurableId, session.OverlandParties.StagedPartyMemberIds);
+        Assert.InRange(stagedKnight!.Position.Y, verifiedEntryFloorY - 0.05f, verifiedEntryFloorY + 0.05f);
+
+        // Pacify pre-existing Privateer's Hold monsters before verifying teleporter failure & deferred catch-up.
+        foreach (ActorState existing in session.State.Actors.All.Where(a => a.DurableId != stagedKnight.DurableId))
+            session.EnemyBehavior.Pacify(existing.DurableId);
+
+        // 2. Same-profile brick teleporter with obstructed landing (FloorHit = null): retainer MUST stay at its prior valid pose!
+        WorldPoint safePosBeforeTeleport = stagedKnight.Position;
+        fixture.Spatial.FloorHit = _ => default;
+        Vector3 obstructedDest = entryPlayerPos + new Vector3(32.0f, 0f, 18.0f);
+        DaggerfallSiteAnchor obstructedAnchor = new("teleport:obstructed", WorldPoint.From(obstructedDest), 0f, 0f);
+        Assert.True(((IDaggerfallTeleportSites)session).TryRelocatePlayer(fixture.DungeonProfile.ProfileKey, obstructedAnchor));
+        Assert.Equal(safePosBeforeTeleport, stagedKnight.Position);
+
+        // Ticking with NoPath and still-obstructed floor keeps the retainer safely untouched (never moving to an unchecked offset).
+        fixture.Spatial.NavigationResult = request => new NavigationStepResult(
+            ReadOnlyMemory<PlanarNavCell>.Empty,
+            ReadOnlyMemory<NavigationPathEdge>.Empty,
+            NavigationPathOutcome.NoPath,
+            request.From,
+            default, default, 0f, 1, 1, 1, 1, 0, false, default, default);
+        ulong step = 4;
+        for (int i = 0; i < 12; i++)
+            session.Update(new ProductUpdate(OuterUpdate(++step), []));
+        Assert.Equal(safePosBeforeTeleport, stagedKnight.Position);
+
+        // Once clear floor becomes available at the new location, blocked dungeon catch-up moves the retainer onto the Engine-verified floor!
+        Vector3 currentPlayerPos = session.State.PlayerControl.Position!.Value.ToVector();
+        float verifiedCatchUpFloorY = currentPlayerPos.Y - 0.35f;
+        DungeonRetainersFixture.WireClearFloor(fixture.Spatial, verifiedCatchUpFloorY);
+        for (int i = 0; i < 4; i++)
+            session.Update(new ProductUpdate(OuterUpdate(++step), []));
+        float distAfterCatchUp = Vector3.Distance(stagedKnight.Position.ToVector(), currentPlayerPos);
+        Assert.True(distAfterCatchUp <= 5.0f,
+            $"Retainer must catch up once Engine spatial provides a clear floor pose (got {distAfterCatchUp:F2}m).");
+        Assert.InRange(stagedKnight.Position.Y, verifiedCatchUpFloorY - 0.05f, verifiedCatchUpFloorY + 0.05f);
     }
 }

@@ -756,7 +756,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         IReadOnlyCollection<long> actorIds,
         DaggerfallSiteProfile activeProfile,
         WorldPoint anchorLocalPose,
-        float yawRadians)
+        float yawRadians,
+        Func<long, WorldPoint, ActorPose?>? tryResolveDungeonPose = null)
     {
         ArgumentNullException.ThrowIfNull(actorIds);
         ArgumentNullException.ThrowIfNull(activeProfile);
@@ -768,7 +769,20 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             if (!_actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) || entry?.Location?.Kind != ActorLocationKind.WithParty)
                 continue;
             ActorPartyRole role = entry.Location.PartyRole ?? ActorPartyRole.Companion;
-            (WorldPoint spot, float spotYaw) = ResolvePartyStagePose(entry.DurableId, activeProfile, anchorLocalPose, yawRadians, ordinal++);
+            WorldPoint spot;
+            float spotYaw;
+            if (activeProfile.ProfileKind == DaggerfallWorldProfileKind.Dungeon)
+            {
+                if (TryResolveDungeonStagePose(entry.DurableId, anchorLocalPose, ordinal++, tryResolveDungeonPose) is not { } verified)
+                    continue;
+                spot = verified.Position;
+                spotYaw = verified.HeadingYawRadians;
+            }
+            else
+            {
+                spot = OffsetBeside(anchorLocalPose, yawRadians, ordinal++, forwardDistance: 2.0f);
+                spotYaw = yawRadians;
+            }
             if (StagePartyMemberCore(entry, role, activeProfile, spot, spotYaw) is not null)
                 staged.Add(actorId);
         }
@@ -779,8 +793,10 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     /// Enforces Option C dungeon-delving rules across site transitions (#11109):
     /// <list type="bullet">
     /// <item>Entering a <see cref="DaggerfallWorldProfileKind.Dungeon"/> stages up to <see cref="MaximumDungeonRetainers"/>
-    /// contracted retainers whose <see cref="ActorPartyContractDiff.CanDelveDungeons"/> is true, while Wagon Drivers and
-    /// Road Guards/Mercenaries hold watch outside in <see cref="ActorLocationKind.WithParty"/> with clear status messaging.</item>
+    /// contracted retainers whose <see cref="ActorPartyContractDiff.CanDelveDungeons"/> is true onto Engine-verified clear-floor
+    /// poses (leaving any retainer whose initial entry pose is obstructed safely in <see cref="ActorLocationKind.WithParty"/>
+    /// for deferred retry via <see cref="StepPendingDungeonRetainerStaging"/>), while Wagon Drivers and Road Guards/Mercenaries
+    /// hold watch outside in <see cref="ActorLocationKind.WithParty"/> with clear status messaging.</item>
     /// <item>Arriving in an <see cref="DaggerfallWorldProfileKind.Exterior"/> re-stages every <c>WithParty</c> Driver and
     /// Companion (including members who held perimeter watch outside a dungeon) alongside any <paramref name="boardedPartyIds"/>.</item>
     /// <item>Entering a town building interior preserves <paramref name="boardedPartyIds"/>.</item>
@@ -790,7 +806,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         IReadOnlyCollection<long> boardedPartyIds,
         DaggerfallSiteProfile destinationProfile,
         WorldPoint anchorLocalPose,
-        float yawRadians)
+        float yawRadians,
+        Func<long, WorldPoint, ActorPose?>? tryResolveDungeonPose = null)
     {
         ArgumentNullException.ThrowIfNull(boardedPartyIds);
         ArgumentNullException.ThrowIfNull(destinationProfile);
@@ -802,6 +819,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             List<long> staged = [];
             List<long> heldOutside = [];
             List<string> heldNames = [];
+            int delveSlotsClaimed = 0;
             int ordinal = 0;
 
             foreach (ActorLedgerEntry entry in candidates)
@@ -809,11 +827,16 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 ActorPartyRole role = entry.Location?.PartyRole ?? ActorPartyRole.Companion;
                 bool canDelve = role == ActorPartyRole.Companion
                     && entry.PartyContract is { CanDelveDungeons: true, HostileBetrayal: false };
-                if (canDelve && staged.Count < MaximumDungeonRetainers)
+                if (canDelve && delveSlotsClaimed < MaximumDungeonRetainers)
                 {
-                    (WorldPoint spot, float spotYaw) = ResolvePartyStagePose(entry.DurableId, destinationProfile, anchorLocalPose, yawRadians, ordinal++);
-                    if (StagePartyMemberCore(entry, role, destinationProfile, spot, spotYaw) is not null)
+                    delveSlotsClaimed++;
+                    if (TryResolveDungeonStagePose(entry.DurableId, anchorLocalPose, ordinal++, tryResolveDungeonPose) is { } verified
+                        && StagePartyMemberCore(entry, role, destinationProfile, verified.Position, verified.HeadingYawRadians) is not null)
+                    {
                         staged.Add(entry.DurableId);
+                    }
+                    // When no Engine-verified clear floor pose exists at the dungeon entrance, keep the delving retainer
+                    // safely in WithParty so StepPendingDungeonRetainerStaging places them once clear floor is available.
                 }
                 else if (role is ActorPartyRole.Driver or ActorPartyRole.Companion)
                 {
@@ -838,8 +861,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             foreach (ActorLedgerEntry entry in candidates)
             {
                 ActorPartyRole role = entry.Location?.PartyRole ?? ActorPartyRole.Companion;
-                (WorldPoint spot, float spotYaw) = ResolvePartyStagePose(entry.DurableId, destinationProfile, anchorLocalPose, yawRadians, ordinal++);
-                if (StagePartyMemberCore(entry, role, destinationProfile, spot, spotYaw) is not null)
+                WorldPoint spot = OffsetBeside(anchorLocalPose, yawRadians, ordinal++, forwardDistance: 2.0f);
+                if (StagePartyMemberCore(entry, role, destinationProfile, spot, yawRadians) is not null)
                 {
                     staged.Add(entry.DurableId);
                     if (!boardedSet.Contains(entry.DurableId) && role is ActorPartyRole.Driver or ActorPartyRole.Companion)
@@ -858,8 +881,50 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     }
 
     /// <summary>
+    /// Retries staging any dungeon-delving <see cref="ActorLocationKind.WithParty"/> retainers whose initial dungeon-entry
+    /// placement was obstructed, staging them only once Engine spatial confirms a clear floor pose (#11109).
+    /// </summary>
+    internal int StepPendingDungeonRetainerStaging(
+        DaggerfallSiteProfile activeProfile,
+        WorldPoint playerLocalPose,
+        Func<long, WorldPoint, ActorPose?>? tryResolveDungeonPose = null)
+    {
+        ArgumentNullException.ThrowIfNull(activeProfile);
+        if (activeProfile.ProfileKind != DaggerfallWorldProfileKind.Dungeon)
+            return 0;
+
+        int stagedDelvers = 0;
+        foreach (long stagedId in StagedPartyMemberIds)
+        {
+            if (_actorLedger.TryGet(stagedId, out ActorLedgerEntry? stagedEntry)
+                && stagedEntry?.PartyContract is { CanDelveDungeons: true, HostileBetrayal: false })
+                stagedDelvers++;
+        }
+        if (stagedDelvers >= MaximumDungeonRetainers)
+            return 0;
+
+        int newlyStaged = 0;
+        int ordinal = 0;
+        foreach (ActorLedgerEntry entry in _actorLedger.EntriesWithParty()
+            .Where(e => e.Location?.PartyRole == ActorPartyRole.Companion
+                && e.PartyContract is { CanDelveDungeons: true, HostileBetrayal: false })
+            .OrderBy(e => e.Social?.EscortOrder is int ord && ord > 0 ? ord : int.MaxValue)
+            .ThenBy(e => e.DurableId))
+        {
+            if (stagedDelvers + newlyStaged >= MaximumDungeonRetainers)
+                break;
+            if (TryResolveDungeonStagePose(entry.DurableId, playerLocalPose, ordinal++, tryResolveDungeonPose) is not { } verified)
+                continue;
+            if (StagePartyMemberCore(entry, ActorPartyRole.Companion, activeProfile, verified.Position, verified.HeadingYawRadians) is not null)
+                newlyStaged++;
+        }
+        return newlyStaged;
+    }
+
+    /// <summary>
     /// Relocates active following companions beside the player after a same-profile relocation (such as an RDB brick
-    /// teleporter inside a dungeon), using Engine-verified clear floor poses so retainers are never stranded (#11109).
+    /// teleporter inside a dungeon), moving them ONLY onto Engine-verified clear floor poses and leaving any companion
+    /// untouched for later safe catch-up when placement is obstructed (#11109).
     /// </summary>
     internal int RelocateFollowingCompanions(
         WorldPoint playerLocalPose,
@@ -868,8 +933,10 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         Func<long, WorldPoint, ActorPose?>? tryResolveCatchUpPose = null)
     {
         ArgumentNullException.ThrowIfNull(shouldFollow);
+        if (tryResolveCatchUpPose is null)
+            return 0;
+
         int relocated = 0;
-        int ordinal = 0;
         foreach (long actorId in StagedPartyMemberIds)
         {
             if (!shouldFollow(actorId) || !_actors.TryGet(actorId, out ActorState? live) || live.IsDefeated)
@@ -878,8 +945,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             if (delta.Length() <= 6.0f && MathF.Abs(delta.Y) <= 3.0f)
                 continue;
 
-            ActorPose targetPose = tryResolveCatchUpPose?.Invoke(actorId, playerLocalPose)
-                ?? new ActorPose(OffsetBeside(playerLocalPose, playerYawRadians, ordinal++, forwardDistance: 2.0f), playerYawRadians);
+            if (tryResolveCatchUpPose(actorId, playerLocalPose) is not { } targetPose)
+                continue;
             live.ApplyPose(targetPose);
             relocated++;
         }
@@ -910,21 +977,21 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         ];
     }
 
-    private (WorldPoint Spot, float Yaw) ResolvePartyStagePose(
+    private ActorPose? TryResolveDungeonStagePose(
         long actorId,
-        DaggerfallSiteProfile activeProfile,
         WorldPoint anchorLocalPose,
-        float yawRadians,
-        int ordinal)
+        int ordinal,
+        Func<long, WorldPoint, ActorPose?>? tryResolveDungeonPose)
     {
-        if (activeProfile.ProfileKind == DaggerfallWorldProfileKind.Dungeon && _tryResolveSpawnPose is not null)
+        if (tryResolveDungeonPose is not null && tryResolveDungeonPose(actorId, anchorLocalPose) is { } resolved)
+            return resolved;
+        if (_tryResolveSpawnPose is not null)
         {
             string op = $"dungeon-retainer-stage:{actorId}:{ordinal}";
-            if ((_tryResolveSpawnPose(op + ":behind", anchorLocalPose, 1.25f, 3.0f, SpawnDirection.Behind)
-                    ?? _tryResolveSpawnPose(op + ":any", anchorLocalPose, 1.25f, 3.5f, SpawnDirection.Any)) is { } clearPose)
-                return (clearPose.Position, clearPose.HeadingYawRadians);
+            return _tryResolveSpawnPose(op + ":behind", anchorLocalPose, 1.25f, 3.0f, SpawnDirection.Behind)
+                ?? _tryResolveSpawnPose(op + ":any", anchorLocalPose, 1.25f, 3.5f, SpawnDirection.Any);
         }
-        return (OffsetBeside(anchorLocalPose, yawRadians, ordinal, forwardDistance: 2.0f), yawRadians);
+        return null;
     }
 
     private static string FormatPartyMemberName(ActorLedgerEntry entry, ActorPartyRole role) =>
