@@ -24,7 +24,15 @@ internal sealed record DaggerfallSocialTuning(
     int DynastyGrudgeDecayDaysPerPoint = 60,
     int KinArrestGrudgePenalty = -5,
     int KinHeadArrestGrudgePenalty = -10,
-    int MourningDurationDays = 7)
+    int MourningDurationDays = 7,
+    int MinorGrudgeBaseWergildPerPoint = 40,
+    int LocalBloodFeudBaseWergild = 5000,
+    int GreatHouseBloodFeudBaseWergild = 35000,
+    int DynastyBloodFeudBaseWergild = 150000,
+    double BloodFeudMurderExponentBase = 3.0,
+    double ReconciliationServiceCostMultiplier = 0.55,
+    double PardonCostMultiplier = 0.65,
+    int PardonCourtFeeGold = 500)
 {
     internal static DaggerfallSocialTuning Default { get; } = new(0UL);
 
@@ -52,6 +60,22 @@ internal sealed record DaggerfallSocialTuning(
             throw new ArgumentOutOfRangeException(nameof(KinHeadArrestGrudgePenalty), "Kin head arrest grudge penalty must be in [-14, 0].");
         if (MourningDurationDays < 0)
             throw new ArgumentOutOfRangeException(nameof(MourningDurationDays), "Mourning duration days must be non-negative.");
+        if (MinorGrudgeBaseWergildPerPoint <= 0)
+            throw new ArgumentOutOfRangeException(nameof(MinorGrudgeBaseWergildPerPoint), "Minor grudge base wergild per point must be positive.");
+        if (LocalBloodFeudBaseWergild <= 0)
+            throw new ArgumentOutOfRangeException(nameof(LocalBloodFeudBaseWergild), "Local blood feud base wergild must be positive.");
+        if (GreatHouseBloodFeudBaseWergild < LocalBloodFeudBaseWergild)
+            throw new ArgumentOutOfRangeException(nameof(GreatHouseBloodFeudBaseWergild), "Great House blood feud base wergild must be at least local base wergild.");
+        if (DynastyBloodFeudBaseWergild < GreatHouseBloodFeudBaseWergild)
+            throw new ArgumentOutOfRangeException(nameof(DynastyBloodFeudBaseWergild), "Royal dynasty blood feud base wergild must be at least Great House base wergild.");
+        if (!double.IsFinite(BloodFeudMurderExponentBase) || BloodFeudMurderExponentBase < 1.5d || BloodFeudMurderExponentBase > 10d)
+            throw new ArgumentOutOfRangeException(nameof(BloodFeudMurderExponentBase), "Blood feud murder exponent base must be in [1.5, 10].");
+        if (!double.IsFinite(ReconciliationServiceCostMultiplier) || ReconciliationServiceCostMultiplier is <= 0.1d or >= 1d)
+            throw new ArgumentOutOfRangeException(nameof(ReconciliationServiceCostMultiplier), "Reconciliation service cost multiplier must be in (0.1, 1).");
+        if (!double.IsFinite(PardonCostMultiplier) || PardonCostMultiplier is <= 0.1d or >= 1d)
+            throw new ArgumentOutOfRangeException(nameof(PardonCostMultiplier), "Pardon cost multiplier must be in (0.1, 1).");
+        if (PardonCourtFeeGold < 0)
+            throw new ArgumentOutOfRangeException(nameof(PardonCourtFeeGold), "Pardon court fee gold must be non-negative.");
         return this;
     }
 
@@ -95,10 +119,36 @@ internal sealed record DaggerfallSocialTuning(
         int mourningDays = element.TryGetProperty("mourningDurationDays", out JsonElement md)
             ? md.GetInt32()
             : 7;
+        int minorWergild = element.TryGetProperty("minorGrudgeBaseWergildPerPoint", out JsonElement mw)
+            ? mw.GetInt32()
+            : 40;
+        int localFeudWergild = element.TryGetProperty("localBloodFeudBaseWergild", out JsonElement lfw)
+            ? lfw.GetInt32()
+            : 5000;
+        int houseFeudWergild = element.TryGetProperty("greatHouseBloodFeudBaseWergild", out JsonElement hfw)
+            ? hfw.GetInt32()
+            : 35000;
+        int dynastyFeudWergild = element.TryGetProperty("dynastyBloodFeudBaseWergild", out JsonElement dfw)
+            ? dfw.GetInt32()
+            : 150000;
+        double murderExpBase = element.TryGetProperty("bloodFeudMurderExponentBase", out JsonElement meb)
+            ? meb.GetDouble()
+            : 3.0;
+        double serviceMult = element.TryGetProperty("reconciliationServiceCostMultiplier", out JsonElement sm)
+            ? sm.GetDouble()
+            : 0.55;
+        double pardonMult = element.TryGetProperty("pardonCostMultiplier", out JsonElement pm)
+            ? pm.GetDouble()
+            : 0.65;
+        int pardonFee = element.TryGetProperty("pardonCourtFeeGold", out JsonElement pf)
+            ? pf.GetInt32()
+            : 500;
         return new DaggerfallSocialTuning(
             seed, bubble, speed, war, surge, plague,
             localDecay, houseDecay, dynastyDecay,
-            arrestPenalty, headArrestPenalty, mourningDays).Validate();
+            arrestPenalty, headArrestPenalty, mourningDays,
+            minorWergild, localFeudWergild, houseFeudWergild, dynastyFeudWergild,
+            murderExpBase, serviceMult, pardonMult, pardonFee).Validate();
     }
 }
 

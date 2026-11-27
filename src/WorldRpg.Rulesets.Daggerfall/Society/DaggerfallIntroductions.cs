@@ -694,7 +694,7 @@ internal sealed class DaggerfallIntroductions(
                 skillSkip,
                 homeBonus,
                 null,
-                $"{feudingName}'s household holds a blood feud against you and will hear no introductions or business from you.");
+                $"{feudingName}'s household holds a blood feud against you and will hear no introductions or business until it is settled — seek a trusted intermediary to broker a truce, or petition a temple priest or court arbiter to arrange wergild, reconciliation service, or a pardon.");
         }
 
         if (prominence == DaggerfallSocialProminence.Ordinary)

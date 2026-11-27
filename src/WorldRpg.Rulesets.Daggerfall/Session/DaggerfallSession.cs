@@ -1215,6 +1215,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>Faction reputation and witness memory consequences when the player kills a faction member.</summary>
     internal DaggerfallSocialConsequences SocialConsequences { get; } = null!;
 
+    /// <summary>Household grudge and blood-feud settlement (exponential wergild, truce mediation, reconciliation service and pardons).</summary>
+    internal DaggerfallFeudSettlement FeudSettlement { get; } = null!;
+
     /// <summary>The guilds' providers: what a guild's NPC answers to its topics, its welcome and its free passage.</summary>
     internal DaggerfallGuildProviders GuildProviders { get; } = null!;
 

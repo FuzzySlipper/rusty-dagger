@@ -114,6 +114,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? _denounceOfficeHolder;
     private readonly Func<ActorVouchRecord, bool>? _isVouchUsable;
     private readonly Func<long, bool>? _wakeSleepingResident;
+    private readonly DaggerfallFeudSettlement? _feudSettlement;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -171,11 +172,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<ActorVouchRecord, bool>? isVouchUsable = null,
         DaggerfallNoticeBounties? noticeBounties = null,
         DaggerfallOfficeAllegiance? officeAllegiance = null,
-        Func<long, bool>? wakeSleepingResident = null)
+        Func<long, bool>? wakeSleepingResident = null,
+        DaggerfallFeudSettlement? feudSettlement = null)
     {
         _noticeBounties = noticeBounties;
         _officeAllegiance = officeAllegiance;
         _wakeSleepingResident = wakeSleepingResident;
+        _feudSettlement = feudSettlement;
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
         _partyHireTopics = partyHireTopics;
@@ -279,9 +282,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_suppressTalk()) return new(false, "You cannot talk while in beast form.");
 
         // TalkManager refuses a target whose persistent faction reaction is below -20 before it
-        // opens the modal. Faction-zero civilians remain neutral through ReactionForNpc and can
-        // still answer; unarrived faction standing wavefronts are subtracted outside the bubble.
-        if (EffectiveReactionValue(npc!, _activeSite()) < -20)
+        // opens the modal. An open unmediated household blood feud explicitly refuses with settlement hints;
+        // once an intermediary mediates a truce, settlement dialogue unlocks even below -20 reaction.
+        DaggerfallSiteRecord? activationSite = _activeSite();
+        DaggerfallFeudSettlementQuote? speakerFeud = _feudSettlement is not null && !string.IsNullOrWhiteSpace(npc!.FamilyId)
+            ? _feudSettlement.CalculateQuote(npc.FamilyId, activationSite)
+            : null;
+        if (speakerFeud is { FeudActive: true, TruceMediated: false })
+        {
+            return new(false, _feudSettlement!.BuildGreetingLine(npc!, activationSite)
+                ?? $"{speakerFeud.HouseholdLabel} holds a blood feud against you and refuses to speak until an intermediary mediates a truce.");
+        }
+        if (EffectiveReactionValue(npc!, activationSite) < -20 && speakerFeud is not { TruceMediated: true })
             return new(false, "That person refuses to respond.");
 
         ActorOverlayComponent? overlay = null;
@@ -449,6 +461,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (!string.IsNullOrWhiteSpace(allegianceLine)) greeting += "\n" + allegianceLine;
         if (_officeLedger?.TryGetExile(npc.DurableId) is { } exiledHolder)
             greeting += "\n" + DaggerfallExileDialogue.BuildGreetingLine(npc, exiledHolder, _officeLedger, _officeHolders, _definitions);
+        if (_feudSettlement?.BuildGreetingLine(npc, activeSite) is { Length: > 0 } feudGreeting)
+            greeting += "\n" + feudGreeting;
         string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(scrutinyLine)) greeting += "\n" + scrutinyLine;
         if (DaggerfallRoadCourierNews.TryResolveEncounter(npc, _actorLedger, _courierDispatches, _definitions, _findSite) is { } roadEncounter
@@ -580,6 +594,27 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                 || !long.TryParse(topicTarget, NumberStyles.Integer, CultureInfo.InvariantCulture, out long targetId))
                 return Reject("That accusation cannot be filed here.");
             DaggerfallHolderDenounceResult result = _denounceOfficeHolder(npc, targetId, site);
+            session.Question = result.Question;
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
+        if (topic is DaggerfallDialogueTopic.SettleWergild
+            or DaggerfallDialogueTopic.MediateTruce
+            or DaggerfallDialogueTopic.ReconcileService
+            or DaggerfallDialogueTopic.RequestPardon)
+        {
+            if (_feudSettlement is null || string.IsNullOrWhiteSpace(topicTarget))
+                return Reject("Household settlement is not available here.");
+            DaggerfallFeudSettlementResult result = topic switch
+            {
+                DaggerfallDialogueTopic.SettleWergild => _feudSettlement.PayWergild(npc, topicTarget, site),
+                DaggerfallDialogueTopic.MediateTruce => _feudSettlement.BrokerMediation(npc, topicTarget, site),
+                DaggerfallDialogueTopic.ReconcileService => _feudSettlement.PerformReconciliationService(npc, topicTarget, site),
+                _ => _feudSettlement.RequestPardon(npc, topicTarget, site),
+            };
             session.Question = result.Question;
             session.Reply = result.Message;
             session.Diagnostics.Clear();
@@ -1902,6 +1937,43 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                     Group: DaggerfallDialogueTopicGroups.Quests));
             }
         }
+        if (_feudSettlement is not null)
+        {
+            foreach (DaggerfallFeudSettlementOption option in _feudSettlement.ListMediationOptions(npc, site))
+            {
+                topics.Add(new(
+                    $"mediate-truce:{option.FamilyId}",
+                    $"Ask to mediate a truce with {option.HouseholdLabel}",
+                    Group: Talk,
+                    Category: "Settlement"));
+            }
+            foreach (DaggerfallFeudSettlementOption option in _feudSettlement.ListReconciliationOptions(npc, site))
+            {
+                topics.Add(new(
+                    $"reconcile-service:{option.FamilyId}",
+                    $"Undertake reconciliation service for {option.HouseholdLabel}",
+                    Group: Talk,
+                    Category: "Settlement"));
+            }
+            foreach (DaggerfallFeudSettlementOption option in _feudSettlement.ListPardonOptions(npc, site))
+            {
+                topics.Add(new(
+                    $"request-pardon:{option.FamilyId}",
+                    $"Petition for formal pardon ({option.Quote.PardonFeeGold}g) for {option.HouseholdLabel}",
+                    Group: Talk,
+                    Category: "Settlement"));
+            }
+            foreach (DaggerfallFeudSettlementOption option in _feudSettlement.ListWergildOptions(npc, site))
+            {
+                string verb = option.Quote.FeudActive ? "Pay wergild to" : "Pay restitution to";
+                string suffix = option.ViaArbiter ? " via arbiter" : string.Empty;
+                topics.Add(new(
+                    $"settle-wergild:{option.FamilyId}",
+                    $"{verb} {option.HouseholdLabel}{suffix} ({option.Quote.EffectiveWergildGold}g)",
+                    Group: Talk,
+                    Category: "Settlement"));
+            }
+        }
         if (_courierDispatches is not null)
         {
             if (_courierDispatches.TryGetForCourier(npc.DurableId) is { } carried)
@@ -2041,6 +2113,30 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             topic = DaggerfallDialogueTopic.DenounceOfficeHolder;
             target = dynamicDenounce["denounce-holder:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 15 } dynamicWergild && dynamicWergild.StartsWith("settle-wergild:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.SettleWergild;
+            target = dynamicWergild["settle-wergild:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 14 } dynamicMediate && dynamicMediate.StartsWith("mediate-truce:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.MediateTruce;
+            target = dynamicMediate["mediate-truce:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 18 } dynamicReconcile && dynamicReconcile.StartsWith("reconcile-service:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.ReconcileService;
+            target = dynamicReconcile["reconcile-service:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 15 } dynamicPardon && dynamicPardon.StartsWith("request-pardon:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.RequestPardon;
+            target = dynamicPardon["request-pardon:".Length..];
             return target.Length > 0;
         }
         if (value is { Length: > 10 } dynamicIntroduce && dynamicIntroduce.StartsWith("introduce:", StringComparison.Ordinal))

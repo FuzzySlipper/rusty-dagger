@@ -34,7 +34,8 @@ internal sealed class DaggerfallSocialInspection(
     Func<DaggerfallSiteId, DaggerfallTownShelterAssignment>? resolveTownShelter = null,
     Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, DaggerfallScheduleDecision>? evaluateExteriorSchedule = null,
     Func<DaggerfallSiteId, IReadOnlyList<DaggerfallPopulationPlacement>>? exteriorPlacements = null,
-    Func<(DaggerfallWeatherKind Weather, DaggerfallWeatherShelterElapsed Elapsed)>? scheduleWeather = null)
+    Func<(DaggerfallWeatherKind Weather, DaggerfallWeatherShelterElapsed Elapsed)>? scheduleWeather = null,
+    DaggerfallFeudSettlement? feudSettlement = null)
     : IDeveloperSocialCommands
 {
     private static readonly (int Group, string Name)[] SocialGroups =
@@ -155,6 +156,15 @@ internal sealed class DaggerfallSocialInspection(
                 else
                     w.WriteNull("mourningUntilDay");
                 w.WriteNumber("lastUpdatedDay", hasSnapshot ? snapshot.LastUpdatedDay : 0);
+                if (hasSnapshot && (snapshot.MurderCount > 0 || snapshot.TruceMediated || snapshot.ReconciliationServiceCompleted || snapshot.PardonGranted || snapshot.FeudActive || standingDelta < 0))
+                {
+                    w.WriteNumber("murderCount", snapshot.MurderCount);
+                    w.WriteBoolean("truceMediated", snapshot.TruceMediated);
+                    w.WriteBoolean("reconciliationServiceCompleted", snapshot.ReconciliationServiceCompleted);
+                    w.WriteBoolean("pardonGranted", snapshot.PardonGranted);
+                    if (feudSettlement?.CalculateQuote(familyId, active) is { } settlementQuote)
+                        w.WriteNumber("effectiveWergildGold", settlementQuote.EffectiveWergildGold);
+                }
                 if (localByFamily.TryGetValue(familyId, out DaggerfallLocalHouseholdStandingSave? localEntry)
                     && localEntry.SubjectOffsets is { Length: > 0 } offsets)
                 {
@@ -319,6 +329,15 @@ internal sealed class DaggerfallSocialInspection(
                     else
                         w.WriteNull("mourningUntilDay");
                     w.WriteNumber("lastUpdatedDay", hasHouseSnap ? houseSnap.LastUpdatedDay : 0);
+                    if (hasHouseSnap && (houseSnap.MurderCount > 0 || houseSnap.TruceMediated || houseSnap.ReconciliationServiceCompleted || houseSnap.PardonGranted || houseSnap.FeudActive || arrivedStanding < 0))
+                    {
+                        w.WriteNumber("murderCount", houseSnap.MurderCount);
+                        w.WriteBoolean("truceMediated", houseSnap.TruceMediated);
+                        w.WriteBoolean("reconciliationServiceCompleted", houseSnap.ReconciliationServiceCompleted);
+                        w.WriteBoolean("pardonGranted", houseSnap.PardonGranted);
+                        if (feudSettlement?.CalculateQuote(house.FamilyId, active) is { } houseQuote)
+                            w.WriteNumber("effectiveWergildGold", houseQuote.EffectiveWergildGold);
+                    }
                     w.WriteStartArray("heldOffices");
                     foreach (DaggerfallLocalOffice office in house.HeldOffices)
                     {

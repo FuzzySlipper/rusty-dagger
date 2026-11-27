@@ -1115,6 +1115,21 @@ internal sealed partial class DaggerfallSession
                 (actorId, atSite) => SocialConsequences.EffectiveDispositionDelta(actorId, atSite),
                 (familyId, atSite) => SocialConsequences.HouseholdStandingDelta(familyId, atSite),
                 (familyId, atSite) => SocialConsequences.IsFeudActiveAt(familyId, atSite));
+            FeudSettlement = new DaggerfallFeudSettlement(
+                SocialConsequences,
+                State.Social,
+                Introductions,
+                OfficeHolders,
+                OfficeLedger,
+                State.Crime,
+                definitions,
+                questNames,
+                () => _worldSocialSeed,
+                () => State.Currency.Read().Gold,
+                cost => State.Currency.TrySpendGold(cost, []),
+                () => checked((int)_time.Calendar.DayNumber),
+                () => _time.Calendar.MinuteNumber,
+                seconds => _ = AdvanceElapsedTime(seconds, idleFatigue: false));
             Introductions.BindHostilityLookup(id =>
                 State.Actors.TryGet(id, out ActorState? live)
                 && live.Actor.TryGet<Modules.Behavior.DaggerfallEnemyPerceptionMemory>(out var memory)
@@ -1655,7 +1670,8 @@ internal sealed partial class DaggerfallSession
                     resolveTownShelter: siteId => ResolveTownShelterAssignment(siteId),
                     evaluateExteriorSchedule: EvaluateExteriorPlacementSchedule,
                     exteriorPlacements: ExteriorPlacementsFor,
-                    scheduleWeather: () => (LocalWeather.Current, ObserveScheduleWeatherElapsed())),
+                    scheduleWeather: () => (LocalWeather.Current, ObserveScheduleWeatherElapsed()),
+                    feudSettlement: FeudSettlement),
                 new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar),
             ];                                                                                     // Developer
             _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);
@@ -1780,7 +1796,8 @@ internal sealed partial class DaggerfallSession
             noticeBounties: NoticeBounties,
             officeAllegiance: OfficeAllegiance,
             wakeSleepingResident: actorId => HomeNightRoutine.WakeForInteraction(
-                actorId, _sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky));
+                actorId, _sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky),
+            feudSettlement: FeudSettlement);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

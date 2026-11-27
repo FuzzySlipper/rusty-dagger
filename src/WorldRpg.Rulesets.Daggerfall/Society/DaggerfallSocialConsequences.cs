@@ -12,7 +12,13 @@ internal readonly record struct DaggerfallHouseholdSnapshot(
     int StandingDelta,
     bool FeudActive,
     int? MourningUntilDay,
-    int LastUpdatedDay);
+    int LastUpdatedDay,
+    int MurderCount = 0,
+    bool TruceMediated = false,
+    string? MediatedByName = null,
+    bool ReconciliationServiceCompleted = false,
+    bool PardonGranted = false,
+    string? PardonGrantedBy = null);
 
 /// <summary>Per-subject offset preventing the actor whose event caused a household ripple from double-counting it.</summary>
 internal sealed record DaggerfallLocalHouseholdSubjectOffsetSave(long ActorId, int Offset)
@@ -39,7 +45,13 @@ internal sealed record DaggerfallLocalHouseholdStandingSave(
     DaggerfallLocalHouseholdSubjectOffsetSave[]? SubjectOffsets = null,
     int LastUpdatedDay = 0,
     bool FeudActive = false,
-    int? MourningUntilDay = null)
+    int? MourningUntilDay = null,
+    int MurderCount = 0,
+    bool TruceMediated = false,
+    string? MediatedByName = null,
+    bool ReconciliationServiceCompleted = false,
+    bool PardonGranted = false,
+    string? PardonGrantedBy = null)
 {
     internal void Validate()
     {
@@ -65,6 +77,8 @@ internal sealed record DaggerfallLocalHouseholdStandingSave(
             throw new ArgumentOutOfRangeException(nameof(LastUpdatedDay), "Saved household standing last-updated day must be non-negative.");
         if (MourningUntilDay is < 0)
             throw new ArgumentOutOfRangeException(nameof(MourningUntilDay), "Saved household mourning day must be non-negative.");
+        if (MurderCount < 0)
+            throw new ArgumentOutOfRangeException(nameof(MurderCount), "Saved household murder count must be non-negative.");
         if (SubjectOffsets is not null)
         {
             HashSet<long> seen = [];
@@ -134,10 +148,34 @@ internal sealed class DaggerfallSocialConsequences(
         internal int LastUpdatedDay { get; set; }
         internal bool FeudActive { get; set; }
         internal int? MourningUntilDay { get; set; }
+        internal int MurderCount { get; set; }
+        internal bool TruceMediated { get; set; }
+        internal string? MediatedByName { get; set; }
+        internal bool ReconciliationServiceCompleted { get; set; }
+        internal bool PardonGranted { get; set; }
+        internal string? PardonGrantedBy { get; set; }
         internal Dictionary<long, int> SubjectOffsets { get; } = [];
 
         internal bool IsEmpty =>
-            StandingDelta == 0 && !FeudActive && MourningUntilDay is null && SubjectOffsets.Count == 0;
+            StandingDelta == 0
+            && !FeudActive
+            && MourningUntilDay is null
+            && MurderCount == 0
+            && !TruceMediated
+            && !ReconciliationServiceCompleted
+            && !PardonGranted
+            && SubjectOffsets.Count == 0;
+
+        internal void ClearSettlementFlags()
+        {
+            FeudActive = false;
+            MurderCount = 0;
+            TruceMediated = false;
+            MediatedByName = null;
+            ReconciliationServiceCompleted = false;
+            PardonGranted = false;
+            PardonGrantedBy = null;
+        }
     }
 
     internal const int PrimaryFactionKillPenalty = -10;
@@ -180,7 +218,13 @@ internal sealed class DaggerfallSocialConsequences(
                 offsets is { Length: > 0 } ? offsets : null,
                 state.LastUpdatedDay,
                 state.FeudActive,
-                state.MourningUntilDay));
+                state.MourningUntilDay,
+                state.MurderCount,
+                state.TruceMediated,
+                state.MediatedByName,
+                state.ReconciliationServiceCompleted,
+                state.PardonGranted,
+                state.PardonGrantedBy));
         }
         return entries.Count == 0 ? DaggerfallLocalHouseholdsSave.Empty : new([.. entries]);
     }
@@ -199,6 +243,12 @@ internal sealed class DaggerfallSocialConsequences(
                 LastUpdatedDay = entry.LastUpdatedDay,
                 FeudActive = entry.FeudActive || entry.StandingDelta <= DaggerfallIntroductions.BloodFeudDispositionThreshold,
                 MourningUntilDay = entry.MourningUntilDay,
+                MurderCount = entry.MurderCount,
+                TruceMediated = entry.TruceMediated,
+                MediatedByName = entry.MediatedByName,
+                ReconciliationServiceCompleted = entry.ReconciliationServiceCompleted,
+                PardonGranted = entry.PardonGranted,
+                PardonGrantedBy = entry.PardonGrantedBy,
             };
             if (entry.SubjectOffsets is { Length: > 0 } offsets)
             {
@@ -226,7 +276,13 @@ internal sealed class DaggerfallSocialConsequences(
                 state.StandingDelta,
                 state.FeudActive,
                 state.MourningUntilDay,
-                state.LastUpdatedDay);
+                state.LastUpdatedDay,
+                state.MurderCount,
+                state.TruceMediated,
+                state.MediatedByName,
+                state.ReconciliationServiceCompleted,
+                state.PardonGranted,
+                state.PardonGrantedBy);
             return true;
         }
         snapshot = default;
@@ -245,8 +301,107 @@ internal sealed class DaggerfallSocialConsequences(
                 pair.Value.StandingDelta,
                 pair.Value.FeudActive,
                 pair.Value.MourningUntilDay,
-                pair.Value.LastUpdatedDay)),
+                pair.Value.LastUpdatedDay,
+                pair.Value.MurderCount,
+                pair.Value.TruceMediated,
+                pair.Value.MediatedByName,
+                pair.Value.ReconciliationServiceCompleted,
+                pair.Value.PardonGranted,
+                pair.Value.PardonGrantedBy)),
     ];
+
+    /// <summary>Records that a trusted intermediary mediated a truce, unlocking direct settlement talks for a feuding household.</summary>
+    internal bool RecordTruceMediated(string familyId, string mediatorName, int day)
+    {
+        if (string.IsNullOrWhiteSpace(familyId)
+            || !_householdStandings.TryGetValue(familyId, out HouseholdStandingState? state)
+            || (!state.FeudActive && state.StandingDelta >= 0))
+        {
+            return false;
+        }
+        state.TruceMediated = true;
+        state.MediatedByName = string.IsNullOrWhiteSpace(mediatorName) ? "a trusted intermediary" : mediatorName.Trim();
+        state.LastUpdatedDay = Math.Max(state.LastUpdatedDay, Math.Max(0, day));
+        return true;
+    }
+
+    /// <summary>Records that the player completed reconciliation service/penance for <paramref name="familyId"/>, reducing wergild cost.</summary>
+    internal bool RecordReconciliationServiceCompleted(string familyId, int day)
+    {
+        if (string.IsNullOrWhiteSpace(familyId)
+            || !_householdStandings.TryGetValue(familyId, out HouseholdStandingState? state)
+            || (!state.FeudActive && state.StandingDelta >= 0))
+        {
+            return false;
+        }
+        if (state.ReconciliationServiceCompleted)
+            return false;
+        state.ReconciliationServiceCompleted = true;
+        state.LastUpdatedDay = Math.Max(state.LastUpdatedDay, Math.Max(0, day));
+        return true;
+    }
+
+    /// <summary>Records a formal court or temple pardon for <paramref name="familyId"/>, reducing wergild cost.</summary>
+    internal bool RecordPardonGranted(string familyId, string issuerName, int day)
+    {
+        if (string.IsNullOrWhiteSpace(familyId)
+            || !_householdStandings.TryGetValue(familyId, out HouseholdStandingState? state)
+            || (!state.FeudActive && state.StandingDelta >= 0))
+        {
+            return false;
+        }
+        if (state.PardonGranted)
+            return false;
+        state.PardonGranted = true;
+        state.PardonGrantedBy = string.IsNullOrWhiteSpace(issuerName) ? "the court" : issuerName.Trim();
+        state.LastUpdatedDay = Math.Max(state.LastUpdatedDay, Math.Max(0, day));
+        return true;
+    }
+
+    /// <summary>
+    /// Clears an active grudge or blood feud upon wergild settlement: resets standing delta to 0, clears feud/murder/mediation/pardon
+    /// flags, clears pending hostile wavefronts for province-wide tiers (publishing a settlement rumor), and self-prunes when empty.
+    /// </summary>
+    internal bool ClearHouseholdGrudgeAndFeud(
+        string familyId,
+        DaggerfallSiteRecord? originSite,
+        long minute,
+        int day,
+        string? settlementNote = null)
+    {
+        if (string.IsNullOrWhiteSpace(familyId)
+            || !_householdStandings.TryGetValue(familyId, out HouseholdStandingState? state)
+            || (!state.FeudActive && state.StandingDelta >= 0))
+        {
+            return false;
+        }
+
+        state.StandingDelta = 0;
+        state.ClearSettlementFlags();
+        state.SubjectOffsets.Clear();
+        state.LastUpdatedDay = Math.Max(0, day);
+
+        if (DaggerfallHouseholds.IsProvinceWide(familyId) && wordSpread is not null)
+        {
+            wordSpread.ClearHouseholdWavefronts(familyId);
+            if (originSite is not null)
+            {
+                string label = DaggerfallHouseholds.FormatLabel(familyId, definitions, null, null, 0UL) ?? familyId;
+                wordSpread.RecordNews(
+                    eventId: $"wf:house:settled:{familyId}:{minute}",
+                    headline: $"Feud settled with {label}",
+                    body: string.IsNullOrWhiteSpace(settlementNote)
+                        ? $"Word spreads that wergild has been paid and peace restored with {label}."
+                        : settlementNote,
+                    originSite: originSite,
+                    currentMinute: minute);
+            }
+        }
+
+        if (state.IsEmpty)
+            _householdStandings.Remove(familyId);
+        return true;
+    }
 
     /// <summary>
     /// Advances daily household state: expires completed mourning windows and decays minor grudges
@@ -293,7 +448,10 @@ internal sealed class DaggerfallSocialConsequences(
                                 wordSpread.DecayHouseholdGrudgeWavefronts(familyId, appliedSteps);
                         }
                         if (state.StandingDelta == 0)
+                        {
+                            state.ClearSettlementFlags();
                             state.SubjectOffsets.Clear();
+                        }
                         entryChanged = true;
                     }
                 }
@@ -745,7 +903,7 @@ internal sealed class DaggerfallSocialConsequences(
                 if (_householdStandings.TryGetValue(familyId, out HouseholdStandingState? existingLocal))
                 {
                     existingLocal.StandingDelta = 0;
-                    existingLocal.FeudActive = false;
+                    existingLocal.ClearSettlementFlags();
                     existingLocal.SubjectOffsets.Clear();
                     existingLocal.LastUpdatedDay = day;
                     if (existingLocal.IsEmpty)
@@ -780,7 +938,7 @@ internal sealed class DaggerfallSocialConsequences(
             if (priorState is not null)
             {
                 priorState.StandingDelta = 0;
-                priorState.FeudActive = false;
+                priorState.ClearSettlementFlags();
                 priorState.SubjectOffsets.Clear();
                 priorState.LastUpdatedDay = day;
                 if (priorState.IsEmpty)
@@ -874,10 +1032,20 @@ internal sealed class DaggerfallSocialConsequences(
         int appliedDelta = nextStanding - state.StandingDelta;
         state.StandingDelta = nextStanding;
         state.LastUpdatedDay = day;
-        if (isMurder || nextStanding <= DaggerfallIntroductions.BloodFeudDispositionThreshold)
+        if (isMurder)
+        {
+            state.MurderCount++;
             state.FeudActive = true;
-        if (isMurder && _tuning.MourningDurationDays > 0)
-            state.MourningUntilDay = Math.Max(state.MourningUntilDay ?? 0, checked(day + _tuning.MourningDurationDays));
+            // A fresh murder breaks any prior mediated truce.
+            state.TruceMediated = false;
+            state.MediatedByName = null;
+            if (_tuning.MourningDurationDays > 0)
+                state.MourningUntilDay = Math.Max(state.MourningUntilDay ?? 0, checked(day + _tuning.MourningDurationDays));
+        }
+        else if (nextStanding <= DaggerfallIntroductions.BloodFeudDispositionThreshold)
+        {
+            state.FeudActive = true;
+        }
 
         if (subjectActorId is long sid && appliedDelta != 0)
         {
