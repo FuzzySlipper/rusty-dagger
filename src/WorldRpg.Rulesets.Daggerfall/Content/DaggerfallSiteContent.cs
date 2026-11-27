@@ -1347,6 +1347,12 @@ internal sealed record DaggerfallPopulationPlacement(string Id, WorldPoint Posit
     internal int SourceBuildingFactionId { get; init; }
     internal bool IsGuard { get; init; }
     internal string? FamilyId { get; init; }
+
+    /// <summary>
+    /// For a guard a town holds in reserve, how many extra guards a crime crackdown must call for before this one walks
+    /// (1 first); 0 for every other walker.
+    /// </summary>
+    internal int CrackdownGuard { get; init; }
 }
 internal sealed record DaggerfallActorFeedback(int MobileId, string MoveCue, string BarkCue, string AttackCue, bool ParrySounds, int BloodIndex);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)

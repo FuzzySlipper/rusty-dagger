@@ -178,7 +178,7 @@ internal static class DaggerfallScheduleShelterResolver
 
         DaggerfallWorldProfileKey exteriorProfile = DaggerfallWorldProfileIds.Exterior(site.Id);
         string? climateRace = DaggerfallSourcePopulation.TryResolveClimateRace(definitions, site, out _);
-        int totalPop = exteriorPlacements.Count;
+        int totalPop = exteriorPlacements.Count(placement => placement.CrackdownGuard == 0);
 
         // Phase A: Exterior source-population walkers currently scheduled indoors (tavern or home/storm shelter).
         if (climateRace is not null && totalPop > 0)

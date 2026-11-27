@@ -159,17 +159,20 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         }
 
         Dictionary<string, DaggerfallNpc> existingByKey = sourceNpcs.ToDictionary(npc => npc.StableKey, StringComparer.Ordinal);
-        int totalPopulationCount = active.Population.Count;
-        DaggerfallPopulationPlacement[] candidates = [.. active.Population
+        // The town's own walkers count towards its size and capacity; the guards a crackdown calls out walk on top.
+        int totalPopulationCount = active.Population.Count(placement => placement.CrackdownGuard == 0);
+        IEnumerable<DaggerfallPopulationPlacement> Walking(bool crackdown) => active.Population
+            .Where(placement => (placement.CrackdownGuard > 0) == crackdown)
             .Where(placement => IsEligiblePlacement(active, definitions, placement))
             .Where(placement => IsScheduledOutdoors(siteId, active.ProfileKey.LogicalId, placement, totalPopulationCount))
-            .Where(placement => IsPlacementAdmitted(placement, existingByKey.GetValueOrDefault(placement.Id), playerProfile))
+            .Where(placement => IsPlacementAdmitted(placement, existingByKey.GetValueOrDefault(placement.Id), playerProfile));
+        DaggerfallPopulationPlacement[] candidates = [.. Walking(crackdown: false)
             // Preserve already active source identities through normal wandering. Stable source
             // order remains the tie-breaker for newly admitted people.
             .OrderByDescending(placement => existingByKey.TryGetValue(placement.Id, out DaggerfallNpc? npc)
                 && npc.Presence == DaggerfallNpcPresence.Active)
             .ThenBy(placement => placement.Id, StringComparer.Ordinal)
-            .Take(Capacity(site, totalPopulationCount))];
+            .Take(Capacity(site, totalPopulationCount)), .. Walking(crackdown: true)];
         HashSet<string> admittedKeys = candidates.Select(placement => placement.Id).ToHashSet(StringComparer.Ordinal);
         if (immediate)
         {

@@ -317,7 +317,8 @@ internal sealed class DaggerfallIntroductions(
 
     /// <summary>
     /// True when the court, seat, or local hall governing <paramref name="region"/> / <paramref name="factionId"/> is
-    /// currently in an unsettled vacancy, interim regency, or active <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/>.
+    /// currently in an unsettled vacancy, interim regency, or active <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/>,
+    /// or holds the board's paranoid court or a hostage treaty.
     /// Excludes post-accession board chronicle arcs whose office already has a lawful non-regency holder seated.
     /// </summary>
     internal bool IsCourtInVacancyOrCrisis(int region, int factionId, DaggerfallNpc? targetNpc = null)
@@ -366,6 +367,9 @@ internal sealed class DaggerfallIntroductions(
             int day = currentDay();
             foreach (DaggerfallWorldConditionToken token in worldConditions.ActiveForRegion(region, day))
             {
+                // A court the board has made paranoid, or that holds a treaty's hostages, receives no new petitioners.
+                if (token is { Kind: DaggerfallWorldConditionKind.Decree, SubjectTag: DaggerfallPoliticalBoard.ParanoidCourtTag or DaggerfallPoliticalBoard.HostageTreatyTag })
+                    return true;
                 if (token.Kind != DaggerfallWorldConditionKind.SuccessionCrisis)
                     continue;
                 if (!token.TokenId.StartsWith("board:", StringComparison.Ordinal))

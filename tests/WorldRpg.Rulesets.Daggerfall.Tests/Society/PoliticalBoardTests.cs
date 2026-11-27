@@ -112,11 +112,14 @@ public sealed class PoliticalBoardTests
             Assert.Equal(board.TurnDay(condition.Start), token.StartedDay);
             Assert.InRange(token.Severity, DaggerfallWorldConditionToken.MinSeverity, DaggerfallWorldConditionToken.MaxSeverity);
         }
-        // Nothing else of the board's shows: each token stands for a condition held, or a succession under way.
+        // Nothing else of the board's shows: each token stands for a condition held, a region cut off, a crown's court
+        // condition (in its capital) or a succession under way (#11120: every condition shows).
         int shown = board.Board.Regions.Select(region => region.CatalogRegion).Distinct()
             .Sum(region => conditions.ActiveForRegion(region, day).Count(token => token.TokenId.StartsWith(DaggerfallPoliticalBoard.TokenPrefix, StringComparison.Ordinal)));
         int successions = board.Board.Arcs.Count(arc => arc.Kind == ArcKind.Succession && board.Board.Seat(arc.Subjects[0]).Home is not null);
-        Assert.Equal(held.Count + successions, shown);
+        int cut = board.Board.Regions.Count(region => region.Cut);
+        int courts = board.Board.Seats.Where(seat => seat.Home is not null).Sum(seat => seat.Court.Count);
+        Assert.Equal(held.Count + cut + courts + successions, shown);
     }
 
     [Fact]

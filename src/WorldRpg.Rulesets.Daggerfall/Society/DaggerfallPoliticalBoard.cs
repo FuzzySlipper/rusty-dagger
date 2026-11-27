@@ -55,6 +55,10 @@ internal sealed class DaggerfallPoliticalBoard
     internal const int DaysPerWeek = 7;
     private const long MinutesPerDay = 24 * 60;
     internal const string TokenPrefix = "board:";
+    /// <summary>The tag of a cut-off region's grain shortage.</summary>
+    internal const string CutOffTag = "cut-off";
+    internal const string ParanoidCourtTag = "paranoid-court";
+    internal const string HostageTreatyTag = "hostage-treaty";
     /// <summary>How many of the latest turns the developer tools can look back over (<see cref="RecentTurns"/>).</summary>
     internal const int RecentTurnsKept = 12;
 
@@ -476,6 +480,41 @@ internal sealed class DaggerfallPoliticalBoard
                 _tokenConditions[token.TokenId] = (region.Id, condition.Kind, condition.Detail);
             }
         }
+        // A region cut off from food shows it from its first week, more sharply the longer it lasts.
+        foreach (Region region in _board.Regions.Where(region => region.Cut))
+        {
+            (string headline, string body) = DaggerfallBoardConditionWords.CutOff(region, region.CutWeeks);
+            Add(region.CatalogRegion, new DaggerfallWorldConditionToken(
+                $"{TokenPrefix}{region.Id}:{CutOffTag}",
+                DaggerfallWorldConditionKind.GrainShortage,
+                Region: region.CatalogRegion,
+                SubjectTag: CutOffTag,
+                Severity: Math.Clamp(1 + region.CutWeeks / Supply.CutWeeks, DaggerfallWorldConditionToken.MinSeverity, DaggerfallWorldConditionToken.MaxSeverity),
+                StartedDay: Day(_board.Turn - region.CutWeeks + 1),
+                Headline: headline,
+                Body: body).Validate());
+        }
+        // A crown's court conditions show in its capital, issued by the crown itself, so a plot never names its plotter.
+        foreach (Seat seat in _board.Seats.Where(seat => seat.Home is not null))
+        {
+            Region capital = _board.Region(seat.Home!);
+            foreach (CourtCondition condition in seat.Court)
+            {
+                (string headline, string body) = DaggerfallBoardConditionWords.Court(_board, seat, capital, condition);
+                string tag = CourtTag(condition.Kind);
+                Add(capital.CatalogRegion, new DaggerfallWorldConditionToken(
+                    $"{TokenPrefix}{capital.Id}:{tag}:{condition.Source}",
+                    DaggerfallWorldConditionKind.Decree,
+                    Region: capital.CatalogRegion,
+                    SourceFactionId: Faction(seat.Id),
+                    TargetFactionId: condition.Kind == CourtConditionKind.HostageTreaty ? Faction(condition.Source) : null,
+                    SubjectTag: tag,
+                    Severity: Math.Clamp(condition.Magnitude, DaggerfallWorldConditionToken.MinSeverity, DaggerfallWorldConditionToken.MaxSeverity),
+                    StartedDay: Day(condition.Start),
+                    Headline: headline,
+                    Body: body).Validate());
+            }
+        }
         foreach (OpenArc arc in _board.Arcs.Where(arc => arc.Kind == ArcKind.Succession))
         {
             Seat seat = _board.Seat(arc.Subjects[0]);
@@ -506,6 +545,7 @@ internal sealed class DaggerfallPoliticalBoard
         {
             ConditionKind.Famine => (DaggerfallWorldConditionKind.GrainShortage, condition.Magnitude, Faction(condition.Source), null, null),
             ConditionKind.PriceSurge when condition.Detail == "grain" => (DaggerfallWorldConditionKind.GrainShortage, condition.Magnitude, Faction(condition.Source), null, "grain"),
+            ConditionKind.PriceSurge => (DaggerfallWorldConditionKind.Decree, condition.Magnitude, Faction(condition.Source), null, DaggerfallConditionPrices.PriceSurgeTag),
             ConditionKind.Raiders => (DaggerfallWorldConditionKind.GrainShortage, condition.Magnitude, Faction(condition.Source), null, "raiders"),
             ConditionKind.Plague => (DaggerfallWorldConditionKind.PlagueScare, condition.Magnitude, Faction(condition.Source), null, null),
             ConditionKind.MonsterSurge => (DaggerfallWorldConditionKind.MonsterSurge, condition.Magnitude, Faction(condition.Source), null, condition.Detail),
@@ -523,13 +563,16 @@ internal sealed class DaggerfallPoliticalBoard
         string id = condition.Detail is null
             ? $"{TokenPrefix}{region.Id}:{Slug(condition.Kind)}"
             : $"{TokenPrefix}{region.Id}:{Slug(condition.Kind)}:{condition.Detail}";
+        (string Headline, string Body)? words = DaggerfallBoardConditionWords.Of(_board, region, condition);
         return new DaggerfallWorldConditionToken(id, token.kind,
             Region: region.CatalogRegion,
             SourceFactionId: token.source,
             TargetFactionId: token.target,
             SubjectTag: token.tag,
             Severity: Math.Clamp(token.severity, DaggerfallWorldConditionToken.MinSeverity, DaggerfallWorldConditionToken.MaxSeverity),
-            StartedDay: Day(condition.Start)).Validate();
+            StartedDay: Day(condition.Start),
+            Headline: words?.Headline,
+            Body: words?.Body).Validate();
     }
 
     /// <summary>The two seats a war front's or skirmish's detail names (<c>a,b</c>).</summary>
@@ -571,6 +614,14 @@ internal sealed class DaggerfallPoliticalBoard
         seat is not null && _seats.TryGetBySeatId(seat, out DaggerfallBoardSeatBinding? binding) ? binding!.OfficeFactionId : null;
 
     private int Day(int turn) => checked((int)Math.Max(0, TurnDay(turn)));
+
+    /// <summary>The tag a court condition's token carries.</summary>
+    private static string CourtTag(CourtConditionKind kind) => kind switch
+    {
+        CourtConditionKind.ParanoidCourt => ParanoidCourtTag,
+        CourtConditionKind.HostageTreaty => HostageTreatyTag,
+        _ => DaggerfallConditionPrices.CorruptAdvisorTag,
+    };
 
     /// <summary>A board condition kind in token ids and tags: <c>MonsterSurge</c> is <c>monster-surge</c>.</summary>
     private static string Slug(ConditionKind kind) =>

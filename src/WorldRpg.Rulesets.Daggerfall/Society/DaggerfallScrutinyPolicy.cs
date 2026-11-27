@@ -123,6 +123,10 @@ internal sealed class DaggerfallScrutinyPolicy(
                 exempt
                     ? $"Court guards in {regionName} are questioning outsiders during the succession dispute, but know your name."
                     : $"Gate scrutiny is tightened across {regionName} while the succession remains unsettled.",
+            DaggerfallWorldConditionKind.Decree when driving.SubjectTag == DaggerfallPoliticalBoard.ParanoidCourtTag =>
+                exempt
+                    ? $"The court's guards in {regionName} suspect every stranger, but your standing clears you."
+                    : $"The court of {regionName} trusts no one: its gates question every stranger.",
             _ => $"Gate scrutiny is heightened in {regionName}.",
         };
 
@@ -274,7 +278,8 @@ internal sealed class DaggerfallScrutinyPolicy(
             if (token.Kind is DaggerfallWorldConditionKind.CrimeCrackdown
                 or DaggerfallWorldConditionKind.BorderTension
                 or DaggerfallWorldConditionKind.PlagueScare
-                or DaggerfallWorldConditionKind.SuccessionCrisis)
+                or DaggerfallWorldConditionKind.SuccessionCrisis
+                || token is { Kind: DaggerfallWorldConditionKind.Decree, SubjectTag: DaggerfallPoliticalBoard.ParanoidCourtTag })
                 return token;
         }
         return null;

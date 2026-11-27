@@ -587,6 +587,7 @@ internal sealed partial class DaggerfallSession
             if (saved?.Property is { } savedProperty) propertyStorage.Restore(savedProperty);
             DaggerfallCrimeState crime = new(saved?.Crime, () => racialOverrides.Current?.SuppressCrime == true);
             WorldConditions = new DaggerfallWorldConditions();
+            CrackdownGuards = new DaggerfallCrackdownGuards(WorldConditions, () => checked((int)_time.Calendar.DayNumber), _tuning.Law);
             if (saved is not null)
                 WorldConditions.Restore(saved.WorldConditions);
             else
@@ -1129,7 +1130,8 @@ internal sealed partial class DaggerfallSession
                 () => State.Currency.Read().Gold,
                 amount => State.Currency.TrySpendGold(amount, []),
                 id => State.Quests.IsNpcMuted(id) || State.Quests.IsEscortWithParty(id),
-                hasDepositWaiver: Introductions.HasDepositWaiverVouch);
+                hasDepositWaiver: Introductions.HasDepositWaiverVouch,
+                hireFee: conditionPrices.HireFee);
             Introductions.BindHireableContactLookup(PartyHire.IsHireable);
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,

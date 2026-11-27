@@ -27,7 +27,8 @@
     "maximumGuards": 5,
     "minimumArrivalDistance": 12.8,
     "maximumArrivalDistance": 51.2,
-    "arrestReach": 3.2
+    "arrestReach": 3.2,
+    "crackdownGuardsPerSeverity": 1
   },
   "normalLight": {
     "distance": 1.4,

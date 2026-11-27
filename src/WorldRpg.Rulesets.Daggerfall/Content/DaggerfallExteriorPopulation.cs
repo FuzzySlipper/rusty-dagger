@@ -33,6 +33,12 @@ internal static class DaggerfallExteriorPopulation
         return slug.Length == 0 ? "source" : slug;
     }
 
+    /// <summary>
+    /// The guards a town holds in reserve for a crime crackdown, after its walkers: the most a crackdown can call out
+    /// (<see cref="DaggerfallPopulationPlacement.CrackdownGuard"/>).
+    /// </summary>
+    internal const int CrackdownGuardSlots = 6;
+
     internal static IReadOnlyList<DaggerfallPopulationPlacement> Create(DaggerfallDefinitions definitions,
         DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear, WorldPoint? gateAnchor = null,
         ulong worldSocialSeed = 0UL)
@@ -51,17 +57,18 @@ internal static class DaggerfallExteriorPopulation
             .OrderBy(cell => cell.X).ThenBy(cell => cell.Z).ToArray();
         int count = Math.Min(Math.Clamp(blocks.Count / 16, 1, 4) * 24, cells.Length);
         string slug = LocationSlug(location.Name);
-        WorldPoint[] positions = new WorldPoint[count];
-        for (int index = 0; index < count; index++)
+        WorldPoint Position((int X, int Z) cell)
         {
-            var cell = cells[(int)((long)index * cells.Length / count)];
             var block = blocks[(cell.X / automapSide, cell.Z / automapSide)];
             int sourceX = cell.X - block.X * automapSide;
             int sourceY = automapSide - 1 - (cell.Z - block.Y * automapSide);
             float x = block.X * blockSide + (sourceX * automapSide + automapSide / 2) * (cellSize / automapSide);
             float z = block.Y * blockSide + (sourceY * automapSide + automapSide / 2) * (cellSize / automapSide);
-            positions[index] = new WorldPoint(x, 0f, -z);
+            return new WorldPoint(x, 0f, -z);
         }
+        WorldPoint[] positions = new WorldPoint[count];
+        for (int index = 0; index < count; index++)
+            positions[index] = Position(cells[(int)((long)index * cells.Length / count)]);
         int gateGuardIndex = 0;
         if (gateAnchor is { } anchor && count > 1)
         {
@@ -99,6 +106,23 @@ internal static class DaggerfallExteriorPopulation
             {
                 IsGuard = isGuard,
                 FamilyId = familyId,
+            });
+        }
+        // The town's reserve watch, spread between the walkers' cells, walks only while a crackdown calls it out.
+        for (int rank = 1; rank <= CrackdownGuardSlots && cells.Length > 0; rank++)
+        {
+            int index = count + rank - 1;
+            string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
+            string walkerSlotKey = DaggerfallPeopleSlots.WalkerSlotKey(index);
+            ulong slotSeed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed, location.Id, walkerSlotKey);
+            ushort nameSeed = (ushort)((slotSeed & 0xFFFFUL) == 0 ? 1 : (slotSeed & 0xFFFFUL));
+            int sprite = people.Sprites[0];
+            var cell = cells[(int)((long)(2 * rank - 1) * cells.Length / (2 * CrackdownGuardSlots))];
+            result.Add(new(id, Position(cell), sprite >> 7, sprite & 0x7f, people.Id, 0, nameSeed)
+            {
+                IsGuard = true,
+                FamilyId = DaggerfallHouseholds.ResolveForExteriorWalker(worldSocialSeed, location.Id, walkerSlotKey, true, townBuckets),
+                CrackdownGuard = rank,
             });
         }
         return result;

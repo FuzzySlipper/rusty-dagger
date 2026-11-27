@@ -615,6 +615,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         long actorId,
         int totalPopulationCount)
     {
+        // A reserve guard no crackdown calls out stays off the street; guards never shelter, so it is simply not there.
+        if (CrackdownGuards.HeldBack(siteId.Region, placement))
+            return new DaggerfallScheduleDecision(DaggerfallSchedulePlacement.ShelteredInHome, DaggerfallScheduleBuildingTarget.None,
+                DaggerfallNpcSchedulePolicy.CityGuardScheduleId, "held in reserve until a crackdown calls the watch out", 0, 0, false);
         int minuteOfDay = checked(_time.Calendar.Hour * DaggerfallCalendar.MinutesPerHour + _time.Calendar.Minute);
         DaggerfallWeatherKind weather = LocalWeather.Current;
         DaggerfallWeatherShelterElapsed weatherElapsed = ObserveScheduleWeatherElapsed();
@@ -1158,6 +1162,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Sparse world-condition seam (authored/stubbed tokens now; B2 weekly board game later).</summary>
     internal DaggerfallWorldConditions WorldConditions { get; } = null!;
+
+    /// <summary>The extra guards a crime crackdown calls out in a region's towns.</summary>
+    internal DaggerfallCrackdownGuards CrackdownGuards { get; } = null!;
 
     /// <summary>Elapsed-time road-distance news and standing spread (instant within bubble, courier-gated outside).</summary>
     internal DaggerfallWordSpread WordSpread { get; } = null!;
