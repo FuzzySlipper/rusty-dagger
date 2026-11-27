@@ -843,6 +843,25 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-developer-social details { border-top: 1px solid #38434a; padding-top: .375rem; }
 .dagger-developer-social summary { color: #f0d890; cursor: pointer; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .dagger-developer-social-pre { background: rgb(10 13 15 / .75); border: 1px solid #2b343a; color: #d8e0e4; font: .75rem/1.4 ui-monospace, monospace; margin: .375rem 0 0; overflow-x: auto; padding: .375rem .5rem; white-space: pre-wrap; }
+.dagger-developer-board { align-content: start; grid-template-rows: auto auto minmax(0, 1fr); max-height: 100%; }
+.dagger-developer-board-bar { align-items: center; display: flex; flex-wrap: wrap; gap: .375rem; }
+.dagger-developer-board-bar select { flex: 1 1 10rem; font: inherit; min-width: 0; padding: .25rem .375rem; }
+.dagger-developer-board-body { display: grid; gap: .5rem; overflow-y: auto; }
+.dagger-developer-board details { border-top: 1px solid #38434a; padding-top: .375rem; }
+.dagger-developer-board summary { color: #f0d890; cursor: pointer; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.dagger-developer-board-pre { background: rgb(10 13 15 / .75); border: 1px solid #2b343a; color: #d8e0e4; font: .75rem/1.4 ui-monospace, monospace; margin: .375rem 0 0; overflow-x: auto; padding: .375rem .5rem; white-space: pre-wrap; }
+.dagger-developer-board-grid { border-collapse: collapse; font: .6875rem/1.2 ui-monospace, monospace; margin-top: .375rem; }
+.dagger-developer-board-grid th { color: #b8c4ca; font-weight: 400; padding: .0625rem .25rem; text-align: left; white-space: nowrap; }
+.dagger-developer-board-grid th[data-leader]::after { color: #f0d890; content: " *"; }
+.dagger-developer-board-grid td { border: 1px solid #2b343a; color: #d8e0e4; height: 1.25rem; min-width: 1.5rem; text-align: center; }
+.dagger-developer-board-grid td[data-state="self"] { background: #1a2024; }
+.dagger-developer-board-grid td[data-state="war"] { background: #7a1f1f; color: #ffe0e0; font-weight: 700; }
+.dagger-developer-board-grid td[data-state="truce"] { background: #6b5a1c; color: #fff3c8; }
+.dagger-developer-board-grid td[data-state="feud"] { background: #7a4317; color: #ffe6cc; }
+.dagger-developer-board-grid td[data-state="trade"] { background: #1f5c3a; color: #d8ffe8; }
+.dagger-developer-board-grid td[data-state="friendly"] { background: #1c3a48; }
+.dagger-developer-board-grid td[data-state="hostile"] { background: #3a2230; }
+.dagger-developer-board-legend { color: #9aa8ae; font-size: .6875rem; margin: .25rem 0 0; }
 
 /* The inventory window's glints (glint.ts): one shared frame per kind, set as CSS variables on the document. The slot
    holds the classic frame; a refreshed frame painted past its edges spills over the slot by as much. */

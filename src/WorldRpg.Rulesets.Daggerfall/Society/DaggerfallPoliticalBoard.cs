@@ -48,6 +48,8 @@ internal sealed class DaggerfallPoliticalBoard
     internal const int DaysPerWeek = 7;
     private const long MinutesPerDay = 24 * 60;
     internal const string TokenPrefix = "board:";
+    /// <summary>How many of the latest turns the developer tools can look back over (<see cref="RecentTurns"/>).</summary>
+    internal const int RecentTurnsKept = 12;
 
     private readonly DaggerfallPoliticalCanon _canon;
     private readonly DaggerfallBoardSeatSet _seats;
@@ -61,6 +63,7 @@ internal sealed class DaggerfallPoliticalBoard
     private readonly Dictionary<string, DaggerfallSiteRecord?> _towns = new(StringComparer.Ordinal);
     private readonly Dictionary<int, List<DaggerfallWorldConditionToken>> _tokens = [];
     private readonly Dictionary<string, (string Region, ConditionKind Kind, string? Detail)> _tokenConditions = new(StringComparer.Ordinal);
+    private readonly List<TurnTrace> _recentTurns = [];
     private long _lastTurnDay;
 
     /// <summary>
@@ -111,6 +114,16 @@ internal sealed class DaggerfallPoliticalBoard
     /// <summary>The trace of the latest turn this session (the nudges it applied among it); null before the first.</summary>
     internal TurnTrace? LatestTrace { get; private set; }
 
+    /// <summary>The latest turns played this session, oldest first, for the developer tools; not saved.</summary>
+    internal IReadOnlyList<TurnTrace> RecentTurns => _recentTurns;
+
+    /// <summary>The courier riding with board move <paramref name="moveId"/>, if one was sent and is still on the books.</summary>
+    internal DaggerfallCourierDispatchSave? CourierFor(string moveId) =>
+        _couriers is not null && _couriers.TryGet(moveId, out DaggerfallCourierDispatchSave? dispatch) ? dispatch : null;
+
+    /// <summary>Who holds seat <paramref name="seat"/>'s office in the world now.</summary>
+    internal DaggerfallSeatLeaderPersona WorldHolder(string seat) => _seatPersona(seat);
+
     /// <summary>
     /// Plays every turn due by <paramref name="day"/>: one for each Sunday from the last played to it, and returns the
     /// news they made (<see cref="DaggerfallPoliticalNews"/>). The counterplay <paramref name="drainCounterplay"/> hands
@@ -132,6 +145,8 @@ internal sealed class DaggerfallPoliticalBoard
             _lastTurnDay += DaysPerWeek;
             SendCouriers(trace);
             LatestTrace = trace;
+            _recentTurns.Add(trace);
+            if (_recentTurns.Count > RecentTurnsKept) _recentTurns.RemoveAt(0);
             Latest = BoardOutputs.Of(_board, _canon.Cards, trace);
             news.AddRange(_news.Of(trace, warsBefore, _lastTurnDay * MinutesPerDay));
             ForgetSettledCouriers();

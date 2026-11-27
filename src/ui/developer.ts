@@ -1,5 +1,6 @@
 import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 import { createLiveDebugHttpTransport, mountDeveloperShell, type DeveloperShellMount, type LiveDebugTransport } from '@rusty-engine/live-debug';
+import { mountBoardPanel } from './developer-board.js';
 
 /**
  * Developer tools: the Engine's developer shell docked beside play, with Dagger's own panel and the first-person
@@ -8,7 +9,8 @@ import { createLiveDebugHttpTransport, mountDeveloperShell, type DeveloperShellM
  * only when the host runs with live-debug, which it asks the host before opening. The Dagger panel pauses and steps
  * the Engine's held time, flies the Engine's observer camera, shows the input readout, and turns the ruleset's debug overlay sets on and off;
  * every control is one or two debug commands, the same ones the console takes. The Commands panel is the console's help:
- * every command the host's catalogue serves, with its parameters and full description, filtered as you type.
+ * every command the host's catalogue serves, with its parameters and full description, filtered as you type. The Social
+ * and Board panels read the live social layer and the political board (`developer-board.ts`).
  */
 export interface DeveloperTools {
   isOpen(): boolean;
@@ -54,6 +56,7 @@ export function mountDeveloperTools(root: HTMLElement, context: Pick<RustyApplic
       { kind: 'console' },
       { kind: 'product', title: 'Commands', mount: element => mountCommandHelp(element, transport) },
       { kind: 'product', title: 'Social', mount: element => mountSocialPanel(element, transport) },
+      { kind: 'product', title: 'Board', mount: element => mountBoardPanel(element, transport) },
       // The pane lists the product's inspection targets (player, dialogue, door) in its own subject choice and frames
       // the chosen one with its default framings; it opens on the player.
       { kind: 'view', title: 'View', options: { viewport: context.viewport, transport, subject: 'target player' } },

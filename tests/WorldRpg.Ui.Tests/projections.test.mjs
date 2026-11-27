@@ -1211,14 +1211,15 @@ test('the developer key opens the developer tools only when the host serves live
     const shell = developer.shells.at(-1);
     assert.equal(shell.isOpen, true);
     assert.equal(note.hidden, true);
-    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'product', 'product', 'view', 'scene', 'metrics']);
+    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'product', 'product', 'product', 'view', 'scene', 'metrics']);
     assert.equal(shell.options.panels[0].title, 'Dagger');
     assert.equal(shell.options.panels[1].title, 'Workbench');
     assert.equal(shell.options.panels[3].title, 'Commands');
     assert.equal(shell.options.panels[4].title, 'Social');
+    assert.equal(shell.options.panels[5].title, 'Board');
     // The view pane opens on the player and keeps its own valid framings.
-    assert.equal(shell.options.panels[5].options.subject, 'target player');
-    assert.equal(shell.options.panels[5].options.framings, undefined);
+    assert.equal(shell.options.panels[6].options.subject, 'target player');
+    assert.equal(shell.options.panels[6].options.framings, undefined);
     assert.equal(f.modes.at(-1), 'interface', 'The open tools hold the cursor, so play stops taking input.');
 
     // Closing (the key again, or the shell's own Close) gives gameplay its input back at once, and the workbench's
@@ -1461,6 +1462,103 @@ test('the Social developer panel renders runtime households, Great Houses, wavef
     await settle();
     assert.equal(developer.commands.at(-1), 'actor.inspect 501');
     assert.match(element.querySelector('[data-social-section="actor"] pre').textContent, /untouched \(0 bytes\)/);
+    panel.dispose();
+  } finally { tools.dispose(); developer.liveDebug = false; developer.answers = {}; }
+});
+
+test('the Board developer panel draws the table at a glance, the seats, supply cuts, recent turns and the chosen seat', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'KeyboardEvent', 'Event']) globalThis[key] = dom.window[key];
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  developer.liveDebug = true; developer.commands.length = 0; developer.shells.length = 0;
+  const seat = (id, name, extra = {}) => ({
+    id, name, kind: 'Crown', holder: `${id}-holder`, playsAs: null, worldHolder: null, prestige: 10, coin: 3, favour: 2, force: 4,
+    plan: null, reserves: null, contestedWeeks: 0, reservesCut: false, arbiter: false, piecesLeft: 5, grudges: 0, ...extra,
+  });
+  const clock = { turn: 9, day: 65, lastTurnDay: 63, nextTurnDay: 70, nextTurnDate: '7 3 405' };
+  developer.answers = {
+    'board.state': JSON.stringify({
+      ...clock, leader: 'daggerfall',
+      seats: [
+        seat('daggerfall', 'Daggerfall', { prestige: 40, worldHolder: 'King Gothryd', plan: 'take betony' }),
+        seat('sentinel', 'Sentinel', { holder: 'vacant:sentinel', playsAs: 'queen-akorithi' }),
+        seat('wayrest', 'Wayrest', { reserves: 'wayrest', reservesCut: true }),
+        seat('empire', 'The Empire', { kind: 'Power', arbiter: true }),
+      ],
+      relations: [{ a: 'daggerfall', b: 'wayrest', value: 2 }],
+      wars: [{ id: 'war-1', a: 'daggerfall', b: 'sentinel', aim: 'Conquest', alliesOfA: [], alliesOfB: [], started: 5, wearinessOfA: 1, wearinessOfB: 2, firstLoss: null }],
+      truces: [], feuds: [],
+      agreements: [{ id: 'deal-1', proposer: 'wayrest', gives: 'Grain', partner: 'empire', asks: 'Coin', start: 3, end: 29 }],
+      regions: [
+        { id: 'betony', name: 'Betony', catalogRegion: 19, capital: false, allegiance: 'daggerfall', control: 2, prosperity: 3, order: 2, supply: 'Cut', cutWeeks: 3,
+          influence: { daggerfall: 2, sentinel: 1 }, offices: { Factor: 'daggerfall' }, conditions: [{ kind: 'WarFront', detail: 'daggerfall,sentinel', magnitude: 2, source: null, end: 12 }], town: 'Betony Hamlet' },
+        { id: 'wayrest', name: 'Wayrest', catalogRegion: 23, capital: true, allegiance: 'wayrest', control: 4, prosperity: 4, order: 3, supply: 'Relieved', cutWeeks: 0,
+          influence: {}, offices: {}, conditions: [], town: 'Wayrest' },
+      ],
+      arbiters: [{ seat: 'empire', arbitration: -6, warsInForce: 1 }],
+      pending: [{ id: '9-daggerfall', seat: 'daggerfall', card: 'march-on', targets: ['betony'], played: 9, arrives: 11, courier: { status: 'InTransit', expectedArrivalMinute: 100000 } }],
+      queued: ['HolderChanged { Seat = sentinel, Holder = vacant:sentinel }'],
+      arcs: [{ kind: 'War', key: 'war-1', subjects: ['daggerfall', 'sentinel'], started: 5, peaked: false, settles: null }],
+    }),
+    'board.turns': JSON.stringify({
+      ...clock, kept: 1,
+      turns: [{
+        turn: 9, day: 63,
+        nudges: [{ nudge: 'QuestOutcome mages-guild [betony] Influence 1', outcome: 'Applied', changes: ['betony influence:mages-guild: 0 -> 1'] }],
+        upkeep: { changes: [] }, world: { card: 'storms', region: 'betony', actor: null, changes: [] }, arrivals: [],
+        moves: [{ id: '9-daggerfall', seat: 'daggerfall', plan: 'take betony', card: 'march-on', targets: ['betony'], score: 12, visibility: 'Public', origin: 'daggerfall', arrives: 11,
+          alternatives: ['garrison daggerfall (8)'], changes: ['daggerfall force: 4 -> 2'], courier: { status: 'InTransit', expectedArrivalMinute: 100000 } }],
+        wars: { changes: [] }, chronicle: [{ kind: 'War', phase: 'Peak', subjects: ['daggerfall', 'sentinel'], headlineKey: 'politics.arc.war.peak' }],
+      }],
+    }),
+    'board.seat daggerfall': JSON.stringify({
+      ...clock, id: 'daggerfall', name: 'Daggerfall', kind: 'Crown', holder: 'king-gothryd', playsAs: null,
+      world: { displayName: 'King Gothryd', castId: 'king-gothryd', vacant: false, officeFactionId: 201 },
+      persona: { goals: { Take: 3 }, families: { Force: 1 }, risk: 2 }, agenda: ['take betony'], plan: { goal: 'take betony', since: 4, baseline: 1 },
+      prestige: 40, coin: 3, favour: 2, force: 4, grants: [], reserves: null, contestedWeeks: 0, reservesCut: false, arbiter: false,
+      grudges: [{ against: 'sentinel', until: 20 }], others: [{ seat: 'sentinel', relation: -3, helpedThem: 0, helpedUs: 0, grudgeHeld: true }],
+      deck: { hand: ['garrison', 'march-on'], drawPile: 8, discard: 2 }, court: [], boons: [], piecesPlaced: 4, piecesLeft: 5, footholds: 7,
+      regionsHeld: ['betony'], officesHeld: ['betony:factor'],
+    }),
+    'board.seat sentinel': JSON.stringify({
+      ...clock, id: 'sentinel', name: 'Sentinel', kind: 'Crown', holder: 'vacant:sentinel', playsAs: 'queen-akorithi',
+      world: { displayName: null, castId: null, vacant: true, officeFactionId: 204 },
+      persona: { goals: {}, families: {}, risk: 0 }, agenda: [], plan: null, prestige: 10, coin: 3, favour: 2, force: 4, grants: [], reserves: null,
+      contestedWeeks: 0, reservesCut: false, arbiter: false, grudges: [], others: [], deck: { hand: [], drawPile: 0, discard: 0 }, court: [], boons: [],
+      piecesPlaced: 0, piecesLeft: 5, footholds: 0, regionsHeld: [], officesHeld: [],
+    }),
+  };
+  const root = document.getElementById('root');
+  const tools = developerTools.mountDeveloperTools(root, { viewport: { anchor: () => () => {} } }, { onChange() {} });
+  try {
+    await tools.toggle();
+    const element = document.createElement('div');
+    root.append(element);
+    const panel = developer.shells.at(-1).options.panels.find(p => p.title === 'Board').mount(element);
+    await settle(); await settle(); await settle();
+
+    assert.match(element.querySelector('.dagger-developer-status').textContent, /Turn 9.*next Sunday 7 3 405 \(day 70\).*leader Daggerfall.*1 wars.*1 trade/);
+    // The grid: war between the two crowns, trade between Wayrest and the Empire, a relation sign otherwise; the leader starred.
+    assert.equal(element.querySelector('td[data-pair="daggerfall|sentinel"]').dataset.state, 'war');
+    assert.equal(element.querySelector('td[data-pair="sentinel|daggerfall"]').textContent, 'W');
+    assert.equal(element.querySelector('td[data-pair="wayrest|empire"]').dataset.state, 'trade');
+    assert.equal(element.querySelector('td[data-pair="daggerfall|wayrest"]').textContent, '+2');
+    assert.ok(element.querySelector('th[data-seat="daggerfall"][data-leader]'));
+    assert.match(element.querySelector('[data-board-supply]').textContent, /Cut off \(1\): Betony 3w.*Relieved by trade \(1\): Wayrest.*Reserves cut: Wayrest/s);
+    assert.match(element.querySelector('[data-board-section="seats"] pre').textContent, /\* Daggerfall: prestige 40.*world: King Gothryd.*plan take betony/s);
+    assert.match(element.querySelector('[data-board-section="seats"] pre').textContent, /vacant:sentinel \(regency, plays as queen-akorithi\)/);
+    assert.match(element.querySelector('[data-board-section="diplomacy"] pre').textContent, /Daggerfall vs Sentinel for conquest.*Wayrest gives Grain to The Empire for Coin.*arbitration -6/s);
+    assert.match(element.querySelector('[data-board-section="regions"] pre').textContent, /Betony \[r19 Betony Hamlet\]: daggerfall.*Cut 3w.*WarFront\(daggerfall,sentinel\) 2/s);
+    assert.match(element.querySelector('[data-board-section="turns"] pre').textContent, /nudge QuestOutcome mages-guild.*daggerfall: march-on -> betony.*courier InTransit.*chronicle: War Peak/s);
+    assert.match(element.querySelector('[data-board-section="pending"] pre').textContent, /9-daggerfall.*courier InTransit.*HolderChanged/s);
+    assert.match(element.querySelector('[data-board-section="seat"] pre').textContent, /World holder: King Gothryd \[king-gothryd\].*Hand: garrison, march-on/s);
+
+    const select = element.querySelector('select[aria-label="Inspect seat"]');
+    select.value = 'sentinel';
+    select.dispatchEvent(new Event('change'));
+    await settle();
+    assert.equal(developer.commands.at(-1), 'board.seat sentinel');
+    assert.match(element.querySelector('[data-board-section="seat"] pre').textContent, /regency, plays as queen-akorithi.*World holder: VACANT/s);
     panel.dispose();
   } finally { tools.dispose(); developer.liveDebug = false; developer.answers = {}; }
 });

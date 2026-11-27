@@ -1549,6 +1549,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallOverlandViewCommands(_overland),
                 new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, WordSpread, CourierDispatches, CreatureClashes, State.PlayerControl, definitions, _site, () => _time.Calendar),
                 new DaggerfallSocialInspection(definitions, _site, State.Actors, State.Npcs, State.ActorLedger, State.Social, SocialConsequences, Introductions, OfficeHolders, OfficeLedger, State.Crime, questNames, () => _worldSocialSeed, () => _time.Calendar),
+                new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar),
             ];                                                                                     // Developer
             _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);
             if (restore is not null)
