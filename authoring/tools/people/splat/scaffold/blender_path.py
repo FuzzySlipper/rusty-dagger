@@ -71,7 +71,9 @@ else:
     pel = (J['rhip'] + J['lhip']) / 2; chest = (J['rsho'] + J['lsho']) / 2 - Vector((0, 0, 0.12))
     capsule(pel + Vector((0, 0, -0.02)), chest, 0.13, 0.155, 'torso')
     capsule(J['rsho'] + Vector((0.03, 0, 0)), J['lsho'] - Vector((0.03, 0, 0)), 0.055, 0.055, 'shoulders')
-    head = Vector((0, 0, 1.62)) + Vector((0, 0, J['neck'].z - 1.46))
+    # the head over the neck, not over the origin: a figure off the origin (creature-007, whose scimitar pulled the centring 35 cm
+    # forward) got its head 35 cm in front of the body, a vulture stoop in the guide (2026-11-27)
+    head = Vector((J['neck'].x, J['neck'].y, 1.62 + J['neck'].z - 1.46))
     capsule(J['neck'], head - Vector((0, 0, 0.04)), 0.05, 0.045, 'neck')
     sphere(head, 0.098, (0.95, 1.05, 1.15))
     for s in 'rl':

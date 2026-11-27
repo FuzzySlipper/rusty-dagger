@@ -19,7 +19,10 @@ from retarget_clip import load_rig   # noqa: E402
 MAP = {'neck': 'Neck', 'rsho': 'RightArm', 'relb': 'RightForeArm', 'rwri': 'RightHand', 'lsho': 'LeftArm', 'lelb': 'LeftForeArm', 'lwri': 'LeftHand',
        'rhip': 'RightUpLeg', 'rkne': 'RightLeg', 'rank': 'RightFoot', 'lhip': 'LeftUpLeg', 'lkne': 'LeftLeg', 'lank': 'LeftFoot'}
 rig = load_rig(sys.argv[1]); names = list(rig['names']); B = np.asarray(rig['bind'], float); P = np.asarray(rig['positions'], float)
-lo, hi = P.min(0), P.max(0); k = 1.72 / (hi[1] - lo[1]); c = np.array([(lo[0] + hi[0]) / 2, lo[1], (lo[2] + hi[2]) / 2])
+# centred on the hips, not on the mesh's box: a weapon held out (creature-007's scimitar, 012's mace) moved the box's centre and
+# stood the figure 35 cm off the orbit's axis (2026-11-27)
+lo, hi = P.min(0), P.max(0); k = 1.72 / (hi[1] - lo[1])
+hip = (B[names.index('RightUpLeg')] + B[names.index('LeftUpLeg')]) / 2; c = np.array([hip[0], lo[1], hip[2]])
 fit = {'joints': {a: [round(float(x), 4) for x in (B[names.index(b)] - c) * k] for a, b in MAP.items()},
        'source': f'{sys.argv[1]}: rig joints scaled to a 1.72 m figure (x left, y up, z front)'}
 Path(sys.argv[2]).write_text(json.dumps(fit, indent=1) + '\n'); print(json.dumps({'joints': len(fit['joints']), 'left_shoulder_x': fit['joints']['lsho'][0]}))
