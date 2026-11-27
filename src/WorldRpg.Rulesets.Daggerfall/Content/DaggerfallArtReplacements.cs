@@ -320,6 +320,22 @@ internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 internal sealed record DaggerfallNoticeBoardArt((int Archive, int Record) Frame, (int Archive, int Record) Board, (int Archive, int Record) Roof,
     DaggerfallArtFile Bounty, DaggerfallArtFile Decree, DaggerfallArtFile Notice);
 
+/// <summary>The street dressing a region's condition puts in its towns (#11169).</summary>
+internal enum DaggerfallTownDressingKind
+{
+    Festival,
+    Prosperity,
+    Unrest,
+    WitchHunt,
+}
+
+/// <summary>
+/// One piece of street dressing (#11169): a flat that stands, its foot on the ground, while a condition of
+/// <paramref name="Kind"/> holds, on a free spot of the first of its <paramref name="Spots"/> kinds that has one.
+/// </summary>
+internal sealed record DaggerfallTownDressingPiece(string Id, DaggerfallTownDressingKind Kind, IReadOnlyList<DaggerfallDressingSpotKind> Spots,
+    DaggerfallArtSprite Sprite);
+
 /// <summary>A coat of arms' art: the banner hung on palaces, gates and offices, and the shield the map's key shows.</summary>
 internal sealed record DaggerfallHeraldryArt(DaggerfallArtFile Banner, DaggerfallArtFile Shield);
 
@@ -393,6 +409,8 @@ internal sealed class DaggerfallArtReplacements
 
     /// <summary>The notice board's wood and parchment (#11138), when the set has them.</summary>
     internal DaggerfallNoticeBoardArt? NoticeBoard { get; private init; }
+    /// <summary>The street dressing's flats, in the order each kind places them (#11169).</summary>
+    internal IReadOnlyList<DaggerfallTownDressingPiece> TownDressing { get; private init; } = [];
 
     /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
@@ -507,6 +525,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallTravelMapArt? travelMap = null;
         Dictionary<string, DaggerfallHeraldryArt> heraldry = new(StringComparer.Ordinal);
         DaggerfallNoticeBoardArt? noticeBoard = null;
+        List<DaggerfallTownDressingPiece> townDressing = [];
         DaggerfallPeopleRig? peopleRig = null;
         DaggerfallSplatPeople? splatPeople = null;
         DaggerfallTitleScene? titleScene = null;
@@ -773,6 +792,28 @@ internal sealed class DaggerfallArtReplacements
                 noticeBoard = new(Record("frame"), Record("board"), Record("roof"), File(sheets.GetProperty("bounty"), "The notice board's bounty sheet"),
                     File(sheets.GetProperty("decree"), "The notice board's decree sheet"), File(sheets.GetProperty("notice"), "The notice board's notice sheet"));
             }
+            if (section.TryGetProperty("townDressing", out JsonElement dressing))
+                foreach (JsonElement piece in dressing.GetProperty("pieces").EnumerateArray())
+                {
+                    string id = piece.GetProperty("id").GetString()!;
+                    string subject = $"the town dressing '{id}'";
+                    int width = piece.GetProperty("width").GetInt32(), height = piece.GetProperty("height").GetInt32();
+                    JsonElement size = Placement(piece.TryGetProperty("placement", out JsonElement placed) ? placed : null, subject, "size", "foot")
+                        .GetProperty("size");
+                    Vector2 metres = new(size.GetProperty("width").GetSingle(), size.GetProperty("height").GetSingle());
+                    Vector2 foot = Point(placed.GetProperty("foot"));
+                    if (width <= 0 || height <= 0 || !float.IsFinite(metres.X) || !float.IsFinite(metres.Y) || metres.X <= 0 || metres.Y <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states an empty size for {subject}.");
+                    DaggerfallDressingSpotKind[] spots = [.. piece.GetProperty("spots").EnumerateArray().Select(spot =>
+                        Enum.TryParse(spot.GetString(), ignoreCase: true, out DaggerfallDressingSpotKind parsed) ? parsed
+                            : throw new InvalidOperationException($"Content pack '{packId}' names an unknown spot '{spot.GetString()}' for {subject}."))];
+                    if (!Enum.TryParse(piece.GetProperty("kind").GetString(), ignoreCase: true, out DaggerfallTownDressingKind kind) || spots.Length == 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states no known kind or no spot for {subject}.");
+                    if (townDressing.Any(other => other.Id == id))
+                        throw new InvalidOperationException($"Content pack '{packId}' names the town dressing '{id}' twice.");
+                    townDressing.Add(new(id, kind, spots, new(File(piece, $"The flat of {subject}"), width, height, [new(0, 0, width, height)],
+                        metres, foot, foot, 0F)));
+                }
             if (section.TryGetProperty("heraldry", out JsonElement arms))
                 foreach (JsonProperty coat in arms.EnumerateObject())
                     heraldry.Add(coat.Name, new(File(coat.Value.GetProperty("banner"), $"The banner of {coat.Name}"),
@@ -883,7 +924,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, scenery, people)
-        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, Heraldry = heraldry, NoticeBoard = noticeBoard, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
+        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, Heraldry = heraldry, NoticeBoard = noticeBoard, TownDressing = townDressing, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {

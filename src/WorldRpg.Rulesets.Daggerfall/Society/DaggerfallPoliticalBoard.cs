@@ -676,7 +676,7 @@ internal sealed class DaggerfallPoliticalBoard
             ConditionKind.MonsterSurge => (DaggerfallWorldConditionKind.MonsterSurge, condition.Magnitude, Faction(condition.Source), null, condition.Detail),
             ConditionKind.WarFront => (DaggerfallWorldConditionKind.BorderTension, condition.Magnitude, Faction(first), Faction(second), null),
             ConditionKind.Skirmish => (DaggerfallWorldConditionKind.BorderTension, 1, Faction(first), Faction(second), null),
-            ConditionKind.Unrest => (DaggerfallWorldConditionKind.BorderTension, 1, Faction(condition.Source), null, "unrest"),
+            ConditionKind.Unrest => (DaggerfallWorldConditionKind.BorderTension, 1, Faction(condition.Source), null, DaggerfallTownDressing.UnrestTag),
             ConditionKind.Crackdown or ConditionKind.CrimeWave or ConditionKind.WitchHunt =>
                 (DaggerfallWorldConditionKind.CrimeCrackdown, condition.Magnitude, Faction(condition.Source), null, Slug(condition.Kind)),
             ConditionKind.Persecution => (DaggerfallWorldConditionKind.GuildEmbargo, condition.Magnitude, Faction(condition.Source), Faction(condition.Detail), condition.Detail),

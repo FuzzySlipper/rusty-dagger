@@ -835,10 +835,11 @@ internal sealed partial class DaggerfallSession
                 wordSpread: WordSpread,
                 courierDispatches: CourierDispatches,
                 officeAllegiance: site => OfficeAllegiance?.All(site) ?? []);
+            TownDressing = new DaggerfallTownDressing(WorldConditions, () => checked((int)_time.Calendar.DayNumber));
             // Decrees, bounties and office news can change between one game minute and the next: post them at once.
-            WorldConditions.AfterMutation += _noticeSheets.Clear;
-            OfficeLedger.OfficeChanged += _ => _noticeSheets.Clear();
-            OfficeLedger.OfficeOverrideCleared += _ => _noticeSheets.Clear();
+            WorldConditions.AfterMutation += ForgetTownShows;
+            OfficeLedger.OfficeChanged += _ => ForgetTownShows();
+            OfficeLedger.OfficeOverrideCleared += _ => ForgetTownShows();
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone,
@@ -2069,7 +2070,36 @@ internal sealed partial class DaggerfallSession
     }
 
     private readonly Dictionary<DaggerfallSiteId, IReadOnlyList<DaggerfallNoticeSheet>> _noticeSheets = [];
-    private long _noticeSheetsMinute = -1;
+    private readonly Dictionary<int, IReadOnlyList<(DaggerfallTownDressingKind Kind, int Severity)>> _townDressingOut = [];
+    private long _townShowsMinute = -1;
+
+    /// <summary>Forgets what the towns' notice boards and street dressing show, to read again at the next draw.</summary>
+    private void ForgetTownShows()
+    {
+        _noticeSheets.Clear();
+        _townDressingOut.Clear();
+    }
+
+    /// <summary>Forgets what the towns show once a game minute has passed since it was read.</summary>
+    private void ForgetStaleTownShows()
+    {
+        long minute = _time.Calendar.MinuteNumber;
+        if (minute == _townShowsMinute) return;
+        ForgetTownShows();
+        _townShowsMinute = minute;
+    }
+
+    /// <summary>
+    /// The street dressing <paramref name="region"/>'s towns put out (#11169), read with the notice boards' sheets: each
+    /// game minute, and at once when the world's conditions change. The same answer is handed back until then.
+    /// </summary>
+    private IReadOnlyList<(DaggerfallTownDressingKind Kind, int Severity)> TownDressingOut(int region)
+    {
+        ForgetStaleTownShows();
+        if (!_townDressingOut.TryGetValue(region, out IReadOnlyList<(DaggerfallTownDressingKind Kind, int Severity)>? dressing))
+            _townDressingOut[region] = dressing = TownDressing.For(region);
+        return dressing;
+    }
 
     /// <summary>
     /// The sheets <paramref name="site"/>'s notice boards show: one for each posting, a wanted poster for a bounty, a
@@ -2079,8 +2109,7 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private IReadOnlyList<DaggerfallNoticeSheet> NoticeSheets(DaggerfallSiteId site)
     {
-        long minute = _time.Calendar.MinuteNumber;
-        if (minute != _noticeSheetsMinute) { _noticeSheets.Clear(); _noticeSheetsMinute = minute; }
+        ForgetStaleTownShows();
         if (_noticeSheets.TryGetValue(site, out IReadOnlyList<DaggerfallNoticeSheet>? cached)) return cached;
         IReadOnlyList<DaggerfallNoticeSheet> sheets = NoticeBoard is not null && _site.TryFind(site, out DaggerfallSiteRecord record)
             ? [.. NoticeBoard.BuildForSite(record, _time.Calendar.MinuteNumber).Entries.Select(entry => entry.Kind switch
@@ -2110,6 +2139,8 @@ internal sealed partial class DaggerfallSession
         // A town's notice boards show a sheet for each posting it has now, in the art pack's wood and parchment (#11138).
         appearance.UseNoticeBoards(_composition.ArtReplacements?.NoticeBoard, _composition.ArtReplacements?.Surfaces
             ?? new Dictionary<(int Archive, int Record), DaggerfallArtSurface>(), NoticeSheets);
+        // A town's streets are dressed for its region's festival, prosperity, unrest or witch hunt (#11169).
+        appearance.UseTownDressing(_composition.ArtReplacements?.TownDressing ?? [], TownDressingOut);
         // A town's banners show the arms its region shows now: its liege's, or its own (#11144).
         if (_composition.ArtReplacements is { } heraldry)
             appearance.UseBanners(heraldry.Heraldry, region => RealmArms.Of(region)?.Id);

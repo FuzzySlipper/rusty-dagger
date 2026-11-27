@@ -146309,6 +146309,287 @@
      "sha256": "a39657d31c0db1ebb70f9eb695bd6e07cabdf754dafdd4b0cd5fce33f56c65bf"
     }
    }
+  },
+  "townDressing": {
+   "pieces": [
+    {
+     "id": "festival-maypole",
+     "kind": "festival",
+     "spots": [
+      "square"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/festival-maypole.png",
+     "byteLength": 225642,
+     "sha256": "4faff5d0fb8b6b89c63ebadee141a52924dc73cfba5fe68dd06106dfd4809b6d",
+     "width": 441,
+     "height": 442,
+     "placement": {
+      "size": {
+       "width": 4.5938,
+       "height": 4.6
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "festival-garland-arch",
+     "kind": "festival",
+     "spots": [
+      "square",
+      "seat",
+      "temple"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/festival-garland-arch.png",
+     "byteLength": 105605,
+     "sha256": "b113436a13cadafa480b1a272435ba3e9874d2efe5b2bafd71643103a8a4498c",
+     "width": 325,
+     "height": 326,
+     "placement": {
+      "size": {
+       "width": 3.3854,
+       "height": 3.4
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "festival-stall",
+     "kind": "festival",
+     "spots": [
+      "square",
+      "shop"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/festival-stall.png",
+     "byteLength": 109026,
+     "sha256": "e7c3fa0041b490ce036d02102b9befab0a6298a67ebfc788ab88db2cae52f369",
+     "width": 226,
+     "height": 250,
+     "placement": {
+      "size": {
+       "width": 2.3542,
+       "height": 2.6
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "prosperity-market-stall",
+     "kind": "prosperity",
+     "spots": [
+      "shop",
+      "square"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/prosperity-market-stall.png",
+     "byteLength": 140945,
+     "sha256": "5caa115bac58e7c5bfc7f9c6257efb4e38b1f7562a3667070e66a57a6392acff",
+     "width": 262,
+     "height": 250,
+     "placement": {
+      "size": {
+       "width": 2.7292,
+       "height": 2.6
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "prosperity-goods",
+     "kind": "prosperity",
+     "spots": [
+      "shop"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/prosperity-goods.png",
+     "byteLength": 39323,
+     "sha256": "5551c96a9bd18ab293595b7df3445e4ef0eab76d07123732e637f7c391be17ce",
+     "width": 128,
+     "height": 125,
+     "placement": {
+      "size": {
+       "width": 1.3333,
+       "height": 1.3
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "prosperity-handcart",
+     "kind": "prosperity",
+     "spots": [
+      "square",
+      "shop"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/prosperity-handcart.png",
+     "byteLength": 56203,
+     "sha256": "71cdf4c36afa11852c554caa1e76b00073513cbc14f49a32e3c723074d96afab",
+     "width": 160,
+     "height": 163,
+     "placement": {
+      "size": {
+       "width": 1.6667,
+       "height": 1.7
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "unrest-barricade",
+     "kind": "unrest",
+     "spots": [
+      "seat",
+      "square"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/unrest-barricade.png",
+     "byteLength": 74798,
+     "sha256": "6d99a88fa34eb7b90bb701a73f6c852cba1f81c2ff189a5f0077949c47b8f48b",
+     "width": 213,
+     "height": 173,
+     "placement": {
+      "size": {
+       "width": 2.2188,
+       "height": 1.8
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "unrest-crates",
+     "kind": "unrest",
+     "spots": [
+      "seat",
+      "square",
+      "shop"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/unrest-crates.png",
+     "byteLength": 66655,
+     "sha256": "34c91f16afab3dbbb1904634c98d4d6fac238aa0f0da4e87487ebf463e661c89",
+     "width": 201,
+     "height": 154,
+     "placement": {
+      "size": {
+       "width": 2.0938,
+       "height": 1.6
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "unrest-torn-notices",
+     "kind": "unrest",
+     "spots": [
+      "square",
+      "shop"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/unrest-torn-notices.png",
+     "byteLength": 34312,
+     "sha256": "4f48a3e96d9a115422cb2ca0d9996d740fa4acad259df00e113b5e77e169dfcf",
+     "width": 74,
+     "height": 211,
+     "placement": {
+      "size": {
+       "width": 0.7708,
+       "height": 2.2
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "witch-hunt-pyre",
+     "kind": "witchHunt",
+     "spots": [
+      "temple",
+      "square"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/witch-hunt-pyre.png",
+     "byteLength": 79212,
+     "sha256": "35a93eb8b7eb7115790593d3ffaed2f4e22218f9e6b998dc0c4d202ac7899e1d",
+     "width": 243,
+     "height": 269,
+     "placement": {
+      "size": {
+       "width": 2.5312,
+       "height": 2.8
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "witch-hunt-stocks",
+     "kind": "witchHunt",
+     "spots": [
+      "square",
+      "seat"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/witch-hunt-stocks.png",
+     "byteLength": 33033,
+     "sha256": "bc869a8aeba0b4b9f7c5c9706d2c310fcabfb573b12748e5922ab1e7c1a15d51",
+     "width": 145,
+     "height": 144,
+     "placement": {
+      "size": {
+       "width": 1.5104,
+       "height": 1.5
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    },
+    {
+     "id": "witch-hunt-warning-post",
+     "kind": "witchHunt",
+     "spots": [
+      "temple",
+      "square",
+      "shop"
+     ],
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/town-dressing/witch-hunt-warning-post.png",
+     "byteLength": 35187,
+     "sha256": "8f7ecebd91a1b466a0ea5f90762adf952029a15ddb42e3615dd35059d9fe3fad",
+     "width": 106,
+     "height": 211,
+     "placement": {
+      "size": {
+       "width": 1.1042,
+       "height": 2.2
+      },
+      "foot": {
+       "x": 0.5,
+       "y": 0.0
+      }
+     }
+    }
+   ]
   }
  }
 }

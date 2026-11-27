@@ -1552,6 +1552,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Town public notice board assembling classic sign rumours, bounties, office notices, and condition decrees.</summary>
     internal DaggerfallNoticeBoard NoticeBoard { get; } = null!;
+    /// <summary>The street dressing each region's towns put out for its conditions (#11169).</summary>
+    internal DaggerfallTownDressing TownDressing { get; } = null!;
 
     /// <summary>Transient UI panel for physical in-world town/tavern notice board reading and lead pickup.</summary>
     internal DaggerfallNoticeBoardPanel NoticeBoardPanel { get; } = null!;

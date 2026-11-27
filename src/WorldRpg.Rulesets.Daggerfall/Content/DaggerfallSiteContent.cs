@@ -1189,6 +1189,31 @@ internal sealed record DaggerfallSiteBanner(string Id, WorldPoint Top, Vector3 S
     }
 }
 
+/// <summary>
+/// Where a town's street dressing may stand (#11169): beside its square (by its tavern, where its notice board is), in
+/// front of a shop, of its temple, or of its seat of power (its palace, else a guild hall). Spots are fixed with the town;
+/// what stands on them comes and goes with the region's conditions.
+/// </summary>
+internal enum DaggerfallDressingSpotKind
+{
+    Square,
+    Shop,
+    Temple,
+    Seat,
+}
+
+/// <summary>One spot a piece of street dressing may stand on: its foot on the ground, and what it is beside.</summary>
+internal sealed record DaggerfallSiteDressingSpot(string Id, WorldPoint Foot, DaggerfallDressingSpotKind Kind)
+{
+    internal DaggerfallSiteDressingSpot Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Id);
+        if (!float.IsFinite(Foot.X) || !float.IsFinite(Foot.Y) || !float.IsFinite(Foot.Z) || !Enum.IsDefined(Kind))
+            throw new ArgumentOutOfRangeException(nameof(Foot), $"Dressing spot '{Id}' needs a finite foot and a kind.");
+        return this;
+    }
+}
+
 internal sealed record DaggerfallSiteNoticeBoard(
     string Id,
     WorldPoint Position,
@@ -1442,6 +1467,8 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
     internal IReadOnlyList<DaggerfallSiteNoticeBoard> NoticeBoards { get; init; } = [];
     /// <summary>The banners of arms hung on the town's gates, palace and offices (#11144).</summary>
     internal IReadOnlyList<DaggerfallSiteBanner> Banners { get; init; } = [];
+    /// <summary>The spots its street dressing may stand on (#11169); none outside a town.</summary>
+    internal IReadOnlyList<DaggerfallSiteDressingSpot> DressingSpots { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteDecoration> Decorations { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteLight> Lights { get; } = Array.AsReadOnly((lights ?? [])
         .Select(light => light.Validate())

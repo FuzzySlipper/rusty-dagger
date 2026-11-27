@@ -1021,6 +1021,8 @@ public sealed class PublishedContentDeliveryTests
                 .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model"))),
             // Each gsplat townsperson's body; their clips ship in the animations container.
             .. section.GetProperty("splatPeople").GetProperty("characters").EnumerateObject().Select(character => character.Value.GetProperty("body")),
+            // The towns' street dressing (#11169).
+            .. section.GetProperty("townDressing").GetProperty("pieces").EnumerateArray(),
             // The notice board's sheets of parchment (#11138); its wood is the refreshed surfaces already listed.
             .. section.GetProperty("noticeBoard").GetProperty("sheets").EnumerateObject().Select(sheet => sheet.Value),
             // Each coat of arms' banner and shield (#11144).

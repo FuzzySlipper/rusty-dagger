@@ -996,6 +996,7 @@ internal sealed class DaggerfallLocationAssembly
             IReadOnlyList<DaggerfallSiteDecoration> decorations = DaggerfallSiteContent.ReadDecorations(normalized, _media.BillboardSprites, key.Kind, climate, diagnostics);
             IReadOnlyList<DaggerfallSiteNoticeBoard> noticeBoards = BuildNoticeBoards(interiorBuilding, doors, position);
             IReadOnlyList<DaggerfallSiteBanner> banners = BuildBanners(doors, gates);
+            IReadOnlyList<DaggerfallSiteDressingSpot> dressingSpots = BuildDressingSpots(doors);
             return new DaggerfallSiteProfile(
                 new ProjectFacts(position, actors),
                 geometry,
@@ -1030,6 +1031,7 @@ internal sealed class DaggerfallLocationAssembly
                 CityGates = gates,
                 NoticeBoards = noticeBoards,
                 Banners = banners,
+                DressingSpots = dressingSpots,
                 Decorations = decorations,
                 PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalized),
             };
@@ -1153,27 +1155,14 @@ internal sealed class DaggerfallLocationAssembly
                     catch (ArgumentException exception) { diagnostics.Add($"Banner '{id}/{side}' is invalid: {exception.Message}"); }
                 }
             }
-            foreach (IGrouping<DaggerfallSiteBuildingId, DaggerfallRdbDoorDefinition> building in doors
-                .Where(door => door.ExteriorBuilding is { } id && exterior.Buildings.TryGetValue(id, out DaggerfallSiteBuildingSource? source)
-                    && source.Source.BuildingType is GuildHall or Temple or Palace)
-                .GroupBy(door => door.ExteriorBuilding!.Value)
-                .OrderBy(group => group.Key.BlockY).ThenBy(group => group.Key.BlockX).ThenBy(group => group.Key.Index))
+            foreach (Entrance entrance in MainEntrances(doors, exterior, GuildHall, Temple, Palace))
             {
-                // The main door is on the ground: a palace or hall may have doors onto upper floors and the back. A double
-                // door is two door planes side by side, so the banners flank the pair.
-                DaggerfallRdbDoorDefinition door = building.OrderBy(entry => entry.Position.Y + entry.BoundsMin.Y)
-                    .ThenBy(entry => entry.Id.SourceKey, StringComparer.Ordinal).First();
-                DaggerfallRdbDoorDefinition[] leaves = [.. building.Where(entry => Vector3.Distance(entry.Position, door.Position) < 4f
-                    && Vector3.Dot(Vector3.Transform(Vector3.UnitZ, entry.Rotation), Vector3.Transform(Vector3.UnitZ, door.Rotation)) > .9f)];
-                Vector3 middle = leaves.Aggregate(Vector3.Zero, (sum, entry) => sum + entry.Position) / leaves.Length;
-                bool palace = exterior.Buildings[building.Key].Source.BuildingType == Palace;
-                Vector3 normal = Vector3.Transform(Vector3.UnitZ, door.Rotation);
-                float halfWidth = Math.Max(0.6f, (door.BoundsMax.X - door.BoundsMin.X) / 2
-                    + leaves.Max(entry => Vector3.Distance(entry.Position with { Y = 0 }, middle with { Y = 0 })));
-                Vector3 top = middle + Vector3.UnitY * (door.BoundsMax.Y + 0.9f) + normal with { Y = 0f } * 0.12f;
+                bool palace = entrance.BuildingType == Palace;
+                Vector3 top = entrance.Middle + Vector3.UnitY * (entrance.Door.BoundsMax.Y + 0.9f) + entrance.Normal * 0.12f;
                 // Close beside the frame: many entrances are recessed between the building's walls.
-                Pair($"banner/{building.Key.BlockX}.{building.Key.BlockY}.{building.Key.Index}", top, normal, halfWidth + (palace ? 0.6f : 0.4f),
-                    palace ? 0.9f : 0.7f, palace ? 1.9f : 1.5f, palace ? DaggerfallSiteBannerPost.Palace : DaggerfallSiteBannerPost.Office);
+                Pair($"banner/{entrance.Building.BlockX}.{entrance.Building.BlockY}.{entrance.Building.Index}", top, entrance.Normal,
+                    entrance.HalfWidth + (palace ? 0.6f : 0.4f), palace ? 0.9f : 0.7f, palace ? 1.9f : 1.5f,
+                    palace ? DaggerfallSiteBannerPost.Palace : DaggerfallSiteBannerPost.Office);
             }
             // A gate's model (ARCH3D 446 open, 447 closed, every town's) is its whole gatehouse, towers and all, and not
             // symmetric: its passage runs through it between x -8.05 and 1.68 under walls faced at z ±4.8, whose parapet
@@ -1187,6 +1176,85 @@ internal sealed class DaggerfallLocationAssembly
                         BannerWidth, BannerDrop, DaggerfallSiteBannerPost.Gate);
                 }
             return banners;
+        }
+
+        /// <summary>A building's main entrance: its lowest door (centred on the pair when it is a double door), facing out.</summary>
+        private sealed record Entrance(DaggerfallSiteBuildingId Building, int BuildingType, DaggerfallRdbDoorDefinition Door, Vector3 Middle,
+            Vector3 Normal, float HalfWidth)
+        {
+            /// <summary>Its foot on the ground, the door's sill.</summary>
+            internal Vector3 Sill => Middle with { Y = Door.Position.Y + Door.BoundsMin.Y };
+            internal Vector3 Right => Vector3.Normalize(Vector3.Cross(Vector3.UnitY, Normal));
+        }
+
+        /// <summary>The main entrances of the exterior's buildings of <paramref name="types"/>, in block and index order.</summary>
+        private static IEnumerable<Entrance> MainEntrances(IReadOnlyList<DaggerfallRdbDoorDefinition> doors, DaggerfallSiteExterior exterior,
+            params int[] types)
+        {
+            foreach (IGrouping<DaggerfallSiteBuildingId, DaggerfallRdbDoorDefinition> building in doors
+                .Where(door => door.ExteriorBuilding is { } id && exterior.Buildings.TryGetValue(id, out DaggerfallSiteBuildingSource? source)
+                    && types.Contains(source.Source.BuildingType))
+                .GroupBy(door => door.ExteriorBuilding!.Value)
+                .OrderBy(group => group.Key.BlockY).ThenBy(group => group.Key.BlockX).ThenBy(group => group.Key.Index))
+            {
+                // The main door is on the ground: a palace or hall may have doors onto upper floors and the back. A double
+                // door is two door planes side by side, so its middle is between the pair.
+                DaggerfallRdbDoorDefinition door = building.OrderBy(entry => entry.Position.Y + entry.BoundsMin.Y)
+                    .ThenBy(entry => entry.Id.SourceKey, StringComparer.Ordinal).First();
+                DaggerfallRdbDoorDefinition[] leaves = [.. building.Where(entry => Vector3.Distance(entry.Position, door.Position) < 4f
+                    && Vector3.Dot(Vector3.Transform(Vector3.UnitZ, entry.Rotation), Vector3.Transform(Vector3.UnitZ, door.Rotation)) > .9f)];
+                Vector3 middle = leaves.Aggregate(Vector3.Zero, (sum, entry) => sum + entry.Position) / leaves.Length;
+                Vector3 normal = Vector3.Transform(Vector3.UnitZ, door.Rotation) with { Y = 0f };
+                if (normal.LengthSquared() < 1e-4f) continue;
+                float halfWidth = Math.Max(0.6f, (door.BoundsMax.X - door.BoundsMin.X) / 2
+                    + leaves.Max(entry => Vector3.Distance(entry.Position with { Y = 0 }, middle with { Y = 0 })));
+                yield return new(building.Key, exterior.Buildings[building.Key].Source.BuildingType, door, middle, Vector3.Normalize(normal), halfWidth);
+            }
+        }
+
+        /// <summary>
+        /// The spots a town's street dressing may stand on (#11169), out in the street before its entrances, clear of the
+        /// doorway and of the notice board (which stands at the tavern door's right): three about its square, by its
+        /// tavern, beside the board rather than before it; one beside each shop's door; two before its temple; and two
+        /// before its seat, the palace or else a guild hall. Only an exterior with buildings has any.
+        /// </summary>
+        private IReadOnlyList<DaggerfallSiteDressingSpot> BuildDressingSpots(IReadOnlyList<DaggerfallRdbDoorDefinition> doors)
+        {
+            const int Alchemist = 0, Armorer = 2, Bookseller = 5, Clothier = 6, Furniture = 7, Gems = 8, GeneralStore = 9, GuildHall = 11,
+                Pawnshop = 12, Weaponsmith = 13, Temple = 14, Tavern = 15, Palace = 16;
+            const int MaxShops = 6;
+            if (key.Kind != DaggerfallWorldProfileKind.Exterior || record.Exterior is not { Buildings.Count: > 0 } exterior) return [];
+            List<DaggerfallSiteDressingSpot> spots = [];
+            void Spot(Entrance entrance, string name, float outward, float across, DaggerfallDressingSpotKind kind)
+            {
+                string id = $"dressing/{entrance.Building.BlockX}.{entrance.Building.BlockY}.{entrance.Building.Index}/{name}";
+                Vector3 foot = entrance.Sill + entrance.Normal * outward + entrance.Right * across;
+                try { spots.Add(new DaggerfallSiteDressingSpot(id, WorldPoint.From(foot), kind).Validate()); }
+                catch (ArgumentException exception) { diagnostics.Add($"Dressing spot '{id}' is invalid: {exception.Message}"); }
+            }
+            // The square is the notice board's: by the first tavern in block-column order, as the board takes it.
+            if (MainEntrances(doors, exterior, Tavern).OrderBy(entrance => entrance.Building.BlockX).ThenBy(entrance => entrance.Building.BlockY)
+                .ThenBy(entrance => entrance.Building.Index).FirstOrDefault() is { } tavern)
+            {
+                // All three clear of the line of sight from the street to the board at the door's right.
+                Spot(tavern, "square-left", 2.4f, -tavern.HalfWidth - 2.2f, DaggerfallDressingSpotKind.Square);
+                Spot(tavern, "square-out", 6.2f, -tavern.HalfWidth - 4.2f, DaggerfallDressingSpotKind.Square);
+                Spot(tavern, "square-right", 4.2f, tavern.HalfWidth + 4.2f, DaggerfallDressingSpotKind.Square);
+            }
+            foreach (Entrance shop in MainEntrances(doors, exterior, Alchemist, Armorer, Bookseller, Clothier, Furniture, Gems, GeneralStore, Pawnshop, Weaponsmith)
+                .Take(MaxShops))
+                Spot(shop, "shop", 1.8f, shop.HalfWidth + 1.4f, DaggerfallDressingSpotKind.Shop);
+            if (MainEntrances(doors, exterior, Temple).FirstOrDefault() is { } temple)
+            {
+                Spot(temple, "temple-left", 4.0f, -temple.HalfWidth - 2.4f, DaggerfallDressingSpotKind.Temple);
+                Spot(temple, "temple-right", 4.0f, temple.HalfWidth + 2.4f, DaggerfallDressingSpotKind.Temple);
+            }
+            if ((MainEntrances(doors, exterior, Palace).FirstOrDefault() ?? MainEntrances(doors, exterior, GuildHall).FirstOrDefault()) is { } seat)
+            {
+                Spot(seat, "seat-left", 3.6f, -seat.HalfWidth - 2.2f, DaggerfallDressingSpotKind.Seat);
+                Spot(seat, "seat-right", 3.6f, seat.HalfWidth + 2.2f, DaggerfallDressingSpotKind.Seat);
+            }
+            return spots;
         }
 
         private DaggerfallInteriorBuilding? ReadInterior(byte[] normalized)
