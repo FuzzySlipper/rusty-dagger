@@ -743,6 +743,14 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         return StagePartyMemberCore(entry, role, activeProfile, localPose, yawRadians);
     }
 
+    /// <summary>Outcome of staging party members across a site transition (e.g. entering/exiting a dungeon, #11109).</summary>
+    internal sealed record DaggerfallPartyTransitionStagingResult(
+        IReadOnlyList<long> StagedIds,
+        IReadOnlyList<long> HeldOutsideIds,
+        string? StatusMessage);
+
+    internal const int MaximumDungeonRetainers = 2;
+
     /// <summary>Re-stages a specific set of <see cref="ActorLocationKind.WithParty"/> members beside <paramref name="anchorLocalPose"/>.</summary>
     internal IReadOnlyList<long> StagePartyMembersById(
         IReadOnlyCollection<long> actorIds,
@@ -760,12 +768,178 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             if (!_actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) || entry?.Location?.Kind != ActorLocationKind.WithParty)
                 continue;
             ActorPartyRole role = entry.Location.PartyRole ?? ActorPartyRole.Companion;
-            WorldPoint spot = OffsetBeside(anchorLocalPose, yawRadians, ordinal++, forwardDistance: 2.0f);
-            if (StagePartyMemberCore(entry, role, activeProfile, spot, yawRadians) is not null)
+            (WorldPoint spot, float spotYaw) = ResolvePartyStagePose(entry.DurableId, activeProfile, anchorLocalPose, yawRadians, ordinal++);
+            if (StagePartyMemberCore(entry, role, activeProfile, spot, spotYaw) is not null)
                 staged.Add(actorId);
         }
         return staged;
     }
+
+    /// <summary>
+    /// Enforces Option C dungeon-delving rules across site transitions (#11109):
+    /// <list type="bullet">
+    /// <item>Entering a <see cref="DaggerfallWorldProfileKind.Dungeon"/> stages up to <see cref="MaximumDungeonRetainers"/>
+    /// contracted retainers whose <see cref="ActorPartyContractDiff.CanDelveDungeons"/> is true, while Wagon Drivers and
+    /// Road Guards/Mercenaries hold watch outside in <see cref="ActorLocationKind.WithParty"/> with clear status messaging.</item>
+    /// <item>Arriving in an <see cref="DaggerfallWorldProfileKind.Exterior"/> re-stages every <c>WithParty</c> Driver and
+    /// Companion (including members who held perimeter watch outside a dungeon) alongside any <paramref name="boardedPartyIds"/>.</item>
+    /// <item>Entering a town building interior preserves <paramref name="boardedPartyIds"/>.</item>
+    /// </list>
+    /// </summary>
+    internal DaggerfallPartyTransitionStagingResult StagePartyForSiteTransition(
+        IReadOnlyCollection<long> boardedPartyIds,
+        DaggerfallSiteProfile destinationProfile,
+        WorldPoint anchorLocalPose,
+        float yawRadians)
+    {
+        ArgumentNullException.ThrowIfNull(boardedPartyIds);
+        ArgumentNullException.ThrowIfNull(destinationProfile);
+
+        HashSet<long> boardedSet = [.. boardedPartyIds];
+        if (destinationProfile.ProfileKind == DaggerfallWorldProfileKind.Dungeon)
+        {
+            List<ActorLedgerEntry> candidates = CollectTransitionCandidates(boardedPartyIds, includeAllWithPartyHires: true);
+            List<long> staged = [];
+            List<long> heldOutside = [];
+            List<string> heldNames = [];
+            int ordinal = 0;
+
+            foreach (ActorLedgerEntry entry in candidates)
+            {
+                ActorPartyRole role = entry.Location?.PartyRole ?? ActorPartyRole.Companion;
+                bool canDelve = role == ActorPartyRole.Companion
+                    && entry.PartyContract is { CanDelveDungeons: true, HostileBetrayal: false };
+                if (canDelve && staged.Count < MaximumDungeonRetainers)
+                {
+                    (WorldPoint spot, float spotYaw) = ResolvePartyStagePose(entry.DurableId, destinationProfile, anchorLocalPose, yawRadians, ordinal++);
+                    if (StagePartyMemberCore(entry, role, destinationProfile, spot, spotYaw) is not null)
+                        staged.Add(entry.DurableId);
+                }
+                else if (role is ActorPartyRole.Driver or ActorPartyRole.Companion)
+                {
+                    heldOutside.Add(entry.DurableId);
+                    heldNames.Add(FormatPartyMemberName(entry, role));
+                }
+            }
+
+            string? status = heldNames.Count > 0
+                ? $"{FormatNameList(heldNames)} {(heldNames.Count == 1 ? "holds" : "hold")} watch outside the dungeon entrance while you delve below."
+                : null;
+            return new(staged, heldOutside, status);
+        }
+
+        if (destinationProfile.ProfileKind == DaggerfallWorldProfileKind.Exterior)
+        {
+            List<ActorLedgerEntry> candidates = CollectTransitionCandidates(boardedPartyIds, includeAllWithPartyHires: true);
+            List<long> staged = [];
+            List<string> rejoinedNames = [];
+            int ordinal = 0;
+
+            foreach (ActorLedgerEntry entry in candidates)
+            {
+                ActorPartyRole role = entry.Location?.PartyRole ?? ActorPartyRole.Companion;
+                (WorldPoint spot, float spotYaw) = ResolvePartyStagePose(entry.DurableId, destinationProfile, anchorLocalPose, yawRadians, ordinal++);
+                if (StagePartyMemberCore(entry, role, destinationProfile, spot, spotYaw) is not null)
+                {
+                    staged.Add(entry.DurableId);
+                    if (!boardedSet.Contains(entry.DurableId) && role is ActorPartyRole.Driver or ActorPartyRole.Companion)
+                        rejoinedNames.Add(FormatPartyMemberName(entry, role));
+                }
+            }
+
+            string? status = rejoinedNames.Count > 0
+                ? $"{FormatNameList(rejoinedNames)} {(rejoinedNames.Count == 1 ? "rejoins" : "rejoin")} you from perimeter watch."
+                : null;
+            return new(staged, [], status);
+        }
+
+        IReadOnlyList<long> interiorStaged = StagePartyMembersById(boardedPartyIds, destinationProfile, anchorLocalPose, yawRadians);
+        return new(interiorStaged, [], null);
+    }
+
+    /// <summary>
+    /// Relocates active following companions beside the player after a same-profile relocation (such as an RDB brick
+    /// teleporter inside a dungeon), using Engine-verified clear floor poses so retainers are never stranded (#11109).
+    /// </summary>
+    internal int RelocateFollowingCompanions(
+        WorldPoint playerLocalPose,
+        float playerYawRadians,
+        Func<long, bool> shouldFollow,
+        Func<long, WorldPoint, ActorPose?>? tryResolveCatchUpPose = null)
+    {
+        ArgumentNullException.ThrowIfNull(shouldFollow);
+        int relocated = 0;
+        int ordinal = 0;
+        foreach (long actorId in StagedPartyMemberIds)
+        {
+            if (!shouldFollow(actorId) || !_actors.TryGet(actorId, out ActorState? live) || live.IsDefeated)
+                continue;
+            Vector3 delta = playerLocalPose.ToVector() - live.Position.ToVector();
+            if (delta.Length() <= 6.0f && MathF.Abs(delta.Y) <= 3.0f)
+                continue;
+
+            ActorPose targetPose = tryResolveCatchUpPose?.Invoke(actorId, playerLocalPose)
+                ?? new ActorPose(OffsetBeside(playerLocalPose, playerYawRadians, ordinal++, forwardDistance: 2.0f), playerYawRadians);
+            live.ApplyPose(targetPose);
+            relocated++;
+        }
+        return relocated;
+    }
+
+    private List<ActorLedgerEntry> CollectTransitionCandidates(IReadOnlyCollection<long> boardedPartyIds, bool includeAllWithPartyHires)
+    {
+        Dictionary<long, ActorLedgerEntry> byId = [];
+        foreach (long actorId in boardedPartyIds)
+        {
+            if (_actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Location?.Kind == ActorLocationKind.WithParty)
+                byId[actorId] = entry;
+        }
+        if (includeAllWithPartyHires)
+        {
+            foreach (ActorLedgerEntry entry in _actorLedger.EntriesWithParty())
+            {
+                if (entry.Location?.PartyRole is ActorPartyRole.Driver or ActorPartyRole.Companion)
+                    byId.TryAdd(entry.DurableId, entry);
+            }
+        }
+        return
+        [
+            .. byId.Values
+                .OrderBy(e => e.Social?.EscortOrder is int ord && ord > 0 ? ord : int.MaxValue)
+                .ThenBy(e => e.DurableId),
+        ];
+    }
+
+    private (WorldPoint Spot, float Yaw) ResolvePartyStagePose(
+        long actorId,
+        DaggerfallSiteProfile activeProfile,
+        WorldPoint anchorLocalPose,
+        float yawRadians,
+        int ordinal)
+    {
+        if (activeProfile.ProfileKind == DaggerfallWorldProfileKind.Dungeon && _tryResolveSpawnPose is not null)
+        {
+            string op = $"dungeon-retainer-stage:{actorId}:{ordinal}";
+            if ((_tryResolveSpawnPose(op + ":behind", anchorLocalPose, 1.25f, 3.0f, SpawnDirection.Behind)
+                    ?? _tryResolveSpawnPose(op + ":any", anchorLocalPose, 1.25f, 3.5f, SpawnDirection.Any)) is { } clearPose)
+                return (clearPose.Position, clearPose.HeadingYawRadians);
+        }
+        return (OffsetBeside(anchorLocalPose, yawRadians, ordinal, forwardDistance: 2.0f), yawRadians);
+    }
+
+    private static string FormatPartyMemberName(ActorLedgerEntry entry, ActorPartyRole role) =>
+        !string.IsNullOrWhiteSpace(entry.Social?.DisplayNameOverride)
+            ? entry.Social.DisplayNameOverride
+            : role == ActorPartyRole.Driver ? "Your wagon driver" : "Your road guard";
+
+    private static string FormatNameList(IReadOnlyList<string> names) =>
+        names.Count switch
+        {
+            0 => string.Empty,
+            1 => names[0],
+            2 => $"{names[0]} and {names[1]}",
+            _ => $"{string.Join(", ", names.Take(names.Count - 1))}, and {names[^1]}",
+        };
 
     private ActorState? StagePartyMemberCore(
         ActorLedgerEntry entry,

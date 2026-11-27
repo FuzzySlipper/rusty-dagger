@@ -712,8 +712,39 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallSiteTransitionHost.AfterSiteTransition(IReadOnlyList<long> boardedPartyIds)
     {
-        if (boardedPartyIds.Count == 0 || State.PlayerControl.Position is not WorldPoint pos) return;
-        _ = OverlandParties.StagePartyMembersById(boardedPartyIds, _sites.Projection.Inputs, pos, State.PlayerControl.YawRadians);
+        if (State.PlayerControl.Position is not WorldPoint pos) return;
+        DaggerfallOverlandPartyCoordinator.DaggerfallPartyTransitionStagingResult result =
+            OverlandParties.StagePartyForSiteTransition(boardedPartyIds, _sites.Projection.Inputs, pos, State.PlayerControl.YawRadians);
+        if (!string.IsNullOrWhiteSpace(result.StatusMessage))
+            Presentation.SetOutcome(result.StatusMessage);
+    }
+
+    void IDaggerfallSiteTransitionHost.AfterSameProfileRelocation()
+    {
+        if (State.PlayerControl.Position is not WorldPoint pos || OverlandParties.StagedPartyMemberIds.Count == 0)
+            return;
+        _ = OverlandParties.RelocateFollowingCompanions(
+            pos,
+            State.PlayerControl.YawRadians,
+            PartyHire.ShouldFollowPlayer,
+            TryResolveRetainerCatchUpPose);
+    }
+
+    private ActorPose? TryResolveRetainerCatchUpPose(long actorId, WorldPoint playerPos)
+    {
+        string scope = $"retainer-catchup:{_activeProfileKey.LogicalId}:{actorId}";
+        if (_placement.TrySpawnPose("retainer-behind", scope, playerPos, 1.25f, 3.5f, out ActorPose behind, SpawnDirection.Behind))
+            return behind;
+        if (_placement.TrySpawnPose("retainer-any", scope, playerPos, 1.25f, 4.0f, out ActorPose any, SpawnDirection.Any))
+            return any;
+        HashSet<long> moving = [actorId];
+        Vector3 forward = ActorHeading.Forward(State.PlayerControl.YawRadians);
+        foreach (float offset in new[] { -1.75f, 1.75f })
+        {
+            if (_placement.StandingAt(playerPos.ToVector() + forward * offset, moving) is WorldPoint standing)
+                return new ActorPose(standing, State.PlayerControl.YawRadians);
+        }
+        return null;
     }
 
     void IDaggerfallExteriorHost.GroundArrivedActors() => _grounding.GroundAwaiting(State.Actors);

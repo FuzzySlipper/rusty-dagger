@@ -217,11 +217,29 @@ internal sealed class DaggerfallEnemyBehaviorModule
 
     private const float AllyFollowStartDistance = 3.0f;
     private const float AllyFollowStopDistance = 2.0f;
+    private const float AllyCorridorYieldDistance = 0.95f;
+    private const float DungeonCatchUpHorizontalDistance = 14.0f;
+    private const float DungeonCatchUpVerticalDistance = 3.5f;
+    private const float DungeonCatchUpMinimumSeparation = 5.0f;
+    private const int DungeonCatchUpBlockedTicks = 8;
     private Func<long, bool>? _shouldFollowPlayer;
+    private Func<bool>? _isInDungeon;
+    private Func<long, WorldPoint, ActorPose?>? _tryResolveCatchUpPose;
+    private readonly Dictionary<long, int> _followBlockedTicks = [];
 
     /// <summary>Binds a predicate identifying staged <c>player-ally</c> retainers in <c>Follow</c> stance (#11105).</summary>
     internal void BindFollowPlayerLookup(Func<long, bool> shouldFollowPlayer) =>
         _shouldFollowPlayer = shouldFollowPlayer ?? throw new ArgumentNullException(nameof(shouldFollowPlayer));
+
+    /// <summary>
+    /// Binds dungeon context and an Engine-verified clear-floor pose resolver for blocked/separated retainer catch-up
+    /// inside RDB dungeons (elevators, shafts, locked/blocked corridors) without introducing any downstream pathfinder (#11109).
+    /// </summary>
+    internal void BindDungeonCatchUp(Func<bool> isInDungeon, Func<long, WorldPoint, ActorPose?> tryResolveCatchUpPose)
+    {
+        _isInDungeon = isInDungeon ?? throw new ArgumentNullException(nameof(isInDungeon));
+        _tryResolveCatchUpPose = tryResolveCatchUpPose ?? throw new ArgumentNullException(nameof(tryResolveCatchUpPose));
+    }
 
     /// <summary>Notifies listeners when a live actor transitions to forced-hostile or provoked against the player.</summary>
     internal event Action<long>? ActorMadeHostile;
@@ -337,6 +355,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         _lastDecisions.Clear();
         _lastSources.Clear();
         _lastTargetDistances.Clear();
+        _followBlockedTicks.Clear();
         LastPerception = new Dictionary<long, DaggerfallEnemyPerceptionDecision>();
     }
 
@@ -398,11 +417,45 @@ internal sealed class DaggerfallEnemyBehaviorModule
             {
                 Vector3 delta = playerPosition.ToVector() - actor.Position.ToVector();
                 float horizontalDistance = MathF.Sqrt((delta.X * delta.X) + (delta.Z * delta.Z));
-                if (horizontalDistance > AllyFollowStartDistance && deltaSeconds > 0f)
+                float verticalDistance = MathF.Abs(delta.Y);
+
+                // 1-tile corridor anti-jamming: if the player steps directly into a following retainer, step aside/back
+                // via Engine navigation so retainers never jam narrow doorways or camera sightlines (#11109).
+                if (horizontalDistance < AllyCorridorYieldDistance && verticalDistance < 1.5f && deltaSeconds > 0f)
+                {
+                    Vector3 away = horizontalDistance > 1e-4f
+                        ? new Vector3(-delta.X / horizontalDistance, 0f, -delta.Z / horizontalDistance)
+                        : ActorHeading.Forward(actor.HeadingYawRadians);
+                    WorldPoint yieldGoal = WorldPoint.From(actor.Position.ToVector() + away * 1.5f);
+                    float yieldStep = MathF.Min(_pursuitTuning.ChaseSpeedUnitsPerSecond * deltaSeconds, 0.75f);
+                    NavigationStepResult yieldNav = _navigation.Evaluate(
+                        actor,
+                        new ActorNavigationRequest(
+                            yieldGoal,
+                            yieldStep,
+                            _pursuitTuning.NavigationMaximumVisited,
+                            _movementPolicy(actor.DurableId).NavigationMode,
+                            deltaSeconds));
+                    _followBlockedTicks.Remove(actor.DurableId);
+                    PursuitState prevYield = actor.Pursuit.TransitionTo(PursuitState.Chase);
+                    _combat.InterruptPendingAttack(actor.DurableId, generation);
+                    _lastDecisions.Remove(actor.DurableId);
+                    _lastSources.Remove(actor.DurableId);
+                    _lastTargetDistances.Remove(actor.DurableId);
+                    if (prevYield != PursuitState.Chase)
+                        facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(prevYield), EnemyBehaviorState.Chase, generation, simulationStep));
+                    evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, EnemyBehaviorState.Chase, null, yieldNav)
+                    {
+                        Target = new PursuitTarget(DaggerfallActorIdentity.PlayerEntityId, playerPosition),
+                    });
+                    return EnemyBehaviorState.Chase;
+                }
+
+                if ((horizontalDistance > AllyFollowStartDistance || verticalDistance > 2.5f) && deltaSeconds > 0f)
                 {
                     float maxStep = MathF.Min(
                         _pursuitTuning.ChaseSpeedUnitsPerSecond * deltaSeconds,
-                        MathF.Max(0.05f, horizontalDistance - AllyFollowStopDistance));
+                        MathF.Max(0.05f, MathF.Max(horizontalDistance - AllyFollowStopDistance, 0.25f)));
                     NavigationStepResult navStep = _navigation.Evaluate(
                         actor,
                         new ActorNavigationRequest(
@@ -411,6 +464,37 @@ internal sealed class DaggerfallEnemyBehaviorModule
                             _pursuitTuning.NavigationMaximumVisited,
                             _movementPolicy(actor.DurableId).NavigationMode,
                             deltaSeconds));
+
+                    // Open closed RDB/building doors along the follow path through the canonical door owner (#11109).
+                    if (navStep.Outcome != NavigationPathOutcome.Reached
+                        && _canOpenDoors(actor.DurableId)
+                        && _openBlockedDoor?.Invoke(actor) == true)
+                    {
+                        _followBlockedTicks.Remove(actor.DurableId);
+                    }
+                    else if (_isInDungeon?.Invoke() == true
+                        && (navStep.Outcome != NavigationPathOutcome.Reached
+                            || verticalDistance > DungeonCatchUpVerticalDistance
+                            || horizontalDistance > DungeonCatchUpHorizontalDistance))
+                    {
+                        int blocked = _followBlockedTicks.TryGetValue(actor.DurableId, out int prior) ? prior + 1 : 1;
+                        if (blocked >= DungeonCatchUpBlockedTicks
+                            && (horizontalDistance > DungeonCatchUpMinimumSeparation || verticalDistance > DungeonCatchUpVerticalDistance)
+                            && _tryResolveCatchUpPose?.Invoke(actor.DurableId, playerPosition) is { } catchUpPose)
+                        {
+                            actor.ApplyPose(catchUpPose);
+                            _followBlockedTicks.Remove(actor.DurableId);
+                        }
+                        else
+                        {
+                            _followBlockedTicks[actor.DurableId] = blocked;
+                        }
+                    }
+                    else
+                    {
+                        _followBlockedTicks.Remove(actor.DurableId);
+                    }
+
                     PursuitState prevFollow = actor.Pursuit.TransitionTo(PursuitState.Chase);
                     _combat.InterruptPendingAttack(actor.DurableId, generation);
                     _lastDecisions.Remove(actor.DurableId);
@@ -424,6 +508,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
                     });
                     return EnemyBehaviorState.Chase;
                 }
+                _followBlockedTicks.Remove(actor.DurableId);
+            }
+            else
+            {
+                _followBlockedTicks.Remove(actor.DurableId);
             }
             PursuitState desired = actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle;
             PursuitState previousState = actor.Pursuit.TransitionTo(desired);

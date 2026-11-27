@@ -1283,6 +1283,9 @@ internal sealed partial class DaggerfallSession
                 consumeHealingDraught: () => TryConsumePlayerHealingDraught(definitions));
             Crimes.BindContractedHireLookup(PartyHire.IsContractedHire);
             _enemyBehavior.BindFollowPlayerLookup(PartyHire.ShouldFollowPlayer);
+            _enemyBehavior.BindDungeonCatchUp(
+                () => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon,
+                TryResolveRetainerCatchUpPose);
             Introductions.BindHireableContactLookup(PartyHire.IsHireable);
             HomeNightRoutine = new DaggerfallHomeNightRoutine(
                 actors,

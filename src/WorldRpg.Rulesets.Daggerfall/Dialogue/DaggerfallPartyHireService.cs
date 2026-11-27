@@ -51,6 +51,7 @@ internal sealed class DaggerfallPartyHireService
     internal const ulong DriverHireFee = 15UL;
     internal const int DefaultDailyWage = 12;
     internal const int MaximumPartyMembers = 3;
+    internal const int MaximumDungeonRetainers = 2;
     internal const string DefaultRoadGuardSpecId = "hire-road-guard";
     internal const string MercenarySpecId = "hire-mercenary";
     internal const string KnightRetainerSpecId = "hire-knight-retainer";
@@ -633,6 +634,9 @@ internal sealed class DaggerfallPartyHireService
         if (!quote.Eligible)
             return new(false, question, quote.RefusalReason ?? $"{name} declines your terms.");
 
+        if (role == ActorPartyRole.Companion && quote.CanDelveDungeons && ActiveDungeonRetainerCount() >= MaximumDungeonRetainers)
+            return new(false, question, $"You can bring at most {MaximumDungeonRetainers} dungeon-delving retainers in your party.");
+
         bool depositWaived = _hasDepositWaiver(npc);
         ulong fee = quote.Deposit;
         if (fee > 0UL && (_availableGold() < fee || !_spendGold(fee)))
@@ -658,13 +662,18 @@ internal sealed class DaggerfallPartyHireService
         _ = _overlandParties.StagePartyMember(npc.DurableId, _activeProfile(), currentPos, currentYaw);
 
         string wageClause = quote.DailyWage > 0 ? $" at {quote.DailyWage} gold a day" : string.Empty;
+        string delveNote = role == ActorPartyRole.Companion
+            ? (quote.CanDelveDungeons
+                ? " They will delve dungeons at your side."
+                : " They will guard the road and hold watch outside dungeon entrances.")
+            : string.Empty;
         string reply = depositWaived
             ? (role == ActorPartyRole.Driver
                 ? $"On account of your introduction, {name} waives the deposit, takes the reins, and joins your party."
-                : $"On account of your introduction, {name} waives the deposit and joins your party{wageClause}.")
+                : $"On account of your introduction, {name} waives the deposit and joins your party{wageClause}.{delveNote}")
             : (role == ActorPartyRole.Driver
                 ? $"Agreed — {name} takes the reins for {fee} gold and joins your party."
-                : $"Agreed — {name} accepts {fee} gold and joins your party{wageClause}.");
+                : $"Agreed — {name} accepts {fee} gold and joins your party{wageClause}.{delveNote}");
         return new(true, question, reply);
     }
 
@@ -751,6 +760,7 @@ internal sealed class DaggerfallPartyHireService
         string roleTitle = _partyHireSpecs.TryGetValue(contract.SpawnerId, out DaggerfallActorSpawnerSpec? spec)
             ? spec.DisplayName
             : "Road Guard";
+        string delveScope = contract.CanDelveDungeons ? "delves dungeons" : "holds watch outside dungeons";
         string stanceLabel = contract.Stance == ActorPartyStance.Wait ? "Wait" : "Follow";
 
         if (contract.UnpaidDays > 0 && contract.DailyWage > 0)
@@ -771,15 +781,15 @@ internal sealed class DaggerfallPartyHireService
                     },
                 });
                 return new(true, question,
-                    $"{name} ({roleTitle}) accepts {owed} gold in overdue wages. Rate: {contract.DailyWage} gold/day, stance: {stanceLabel}, morale: {recoveredMorale}/100.");
+                    $"{name} ({roleTitle}, {delveScope}) accepts {owed} gold in overdue wages. Rate: {contract.DailyWage} gold/day, stance: {stanceLabel}, morale: {recoveredMorale}/100.");
             }
             return new(false, question,
-                $"{name} ({roleTitle}) is owed {owed} gold ({contract.UnpaidDays} unpaid day(s)) at {contract.DailyWage} gold/day. Stance: {stanceLabel}, morale: {contract.Morale}/100.");
+                $"{name} ({roleTitle}, {delveScope}) is owed {owed} gold ({contract.UnpaidDays} unpaid day(s)) at {contract.DailyWage} gold/day. Stance: {stanceLabel}, morale: {contract.Morale}/100.");
         }
 
         string wageClause = contract.DailyWage > 0 ? $"{contract.DailyWage} gold/day (paid through day {contract.PaidThroughDay})" : "no daily wage";
         return new(true, question,
-            $"{name} ({roleTitle}): {wageClause}, stance: {stanceLabel}, morale: {contract.Morale}/100.");
+            $"{name} ({roleTitle}, {delveScope}): {wageClause}, stance: {stanceLabel}, morale: {contract.Morale}/100.");
     }
 
     private DaggerfallPartyHireResult TryDismiss(DaggerfallNpc npc)
@@ -849,6 +859,21 @@ internal sealed class DaggerfallPartyHireService
         foreach (long stagedId in _overlandParties.StagedPartyMemberIds)
             ids.Add(stagedId);
         return ids.Count;
+    }
+
+    internal int ActiveDungeonRetainerCount()
+    {
+        HashSet<long> ids = [.. _actorLedger.EntriesWithParty().Select(e => e.DurableId)];
+        foreach (long stagedId in _overlandParties.StagedPartyMemberIds)
+            ids.Add(stagedId);
+        int count = 0;
+        foreach (long id in ids)
+        {
+            if (_actorLedger.TryGet(id, out ActorLedgerEntry? entry)
+                && entry?.PartyContract is { CanDelveDungeons: true, HostileBetrayal: false })
+                count++;
+        }
+        return count;
     }
 
     private bool HasActiveDriver()

@@ -39,6 +39,9 @@ internal interface IDaggerfallSiteTransitionHost : IDaggerfallExteriorHost
     /// <summary>Re-stages previously staged party members beside the player after arriving at (or rolling back to) a site.</summary>
     void AfterSiteTransition(IReadOnlyList<long> boardedPartyIds) { }
 
+    /// <summary>Relocates active following companions beside the player after a same-profile teleport (e.g. RDB brick teleporter).</summary>
+    void AfterSameProfileRelocation() { }
+
     /// <summary>Admits deterministic exterior and off-hours scheduled visitors into a newly materialized interior.</summary>
     void ReconcileInteriorScheduledVisitors(DaggerfallSiteProfile destination, DaggerfallSiteAppearance appearance) { }
 }
@@ -396,6 +399,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             if (profile.Kind == DaggerfallWorldProfileKind.Exterior) _exterior.FollowRecall();
             _exterior.StandArrivingPlayer();
             if (profile.Kind == DaggerfallWorldProfileKind.Exterior) _host.ReconcileArrivalPopulation();
+            _host.AfterSameProfileRelocation();
             return true;
         }
         return TryTransitionTo(profile, pose, useReturnDestination: false);
@@ -652,8 +656,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             ReturnProfile = !walking && returnDestination is null ? sourceProfile : null;
             _enemyBehavior.ClearPerceptionMemory();
             Interiors.Enter(destination, target);
-            if (boardedPartyIds.Count > 0)
-                _host.AfterSiteTransition(boardedPartyIds);
+            _host.AfterSiteTransition(boardedPartyIds);
         }
         catch (Exception failure)
         {
