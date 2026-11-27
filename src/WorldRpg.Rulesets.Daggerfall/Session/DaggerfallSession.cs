@@ -1235,6 +1235,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         // The walkers' figures (rigs, gsplat characters and their clips) are released once no site appearance draws them.
         try { _people?.Dispose(); }                                                          // Developer
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+        try { HostilityAudioBarks?.Dispose(); }                                               // Scene
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The score's loop and the clips it opened belong to this session, so they are retired before
         // the Engine context that produced them is asked for anything else.
         Music.Dispose(ref failure);
@@ -1324,8 +1326,151 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallFeudSettlement FeudSettlement { get; } = null!;
     /// <summary>Active blood-feud vendetta retaliation (kin confrontations, hired toughs/bounty hunters/assassins, lawful self-defense, and non-blocking hostility signals).</summary>
     internal DaggerfallFeudVendetta FeudVendetta { get; } = null!;
+    /// <summary>Non-blocking near-actor comic speech bubbles projected into HUD camera space (Den #11164).</summary>
+    internal DaggerfallSpeechBubbles SpeechBubbles { get; } = new();
+    /// <summary>Non-blocking spatialized TTS voice-bark director for vendetta hostility signaling (Den #11164).</summary>
+    internal DaggerfallHostilityAudioBarks HostilityAudioBarks { get; } = null!;
+    /// <summary>Active non-blocking hostility signaling mode (Both, SpeechBubbles, AudioBarks, or Off).</summary>
+    internal DaggerfallHostilitySignalingMode HostilitySignalingMode { get; set; } = DaggerfallHostilitySignalingMode.Both;
     private double _vendettaCheckAccumulator;
     private DaggerfallWorldProfileKey? _lastVendettaProfile;
+
+    internal static string HostileSignalKindSlug(DaggerfallHostileSignalKind kind) => kind switch
+    {
+        DaggerfallHostileSignalKind.HiredTough => "hired-tough",
+        DaggerfallHostileSignalKind.BountyHunter => "bounty-hunter",
+        DaggerfallHostileSignalKind.DarkBrotherhoodAssassin => "assassin",
+        _ => "kin-vendetta",
+    };
+
+    /// <summary>Consumes a non-blocking hostility signal and dispatches TTS voice bark and/or near-actor speech bubble without pausing simulation.</summary>
+    internal void HandleHostilitySignal(DaggerfallHostileReasonSignal signal)
+    {
+        ArgumentNullException.ThrowIfNull(signal);
+        string kindSlug = HostileSignalKindSlug(signal.Kind);
+        WorldPoint? position = signal.Position
+            ?? (State.Actors.TryGet(signal.ActorId, out ActorState? actor) ? actor.Position : null);
+
+        if (HostilitySignalingMode is DaggerfallHostilitySignalingMode.Both or DaggerfallHostilitySignalingMode.SpeechBubbles)
+            SpeechBubbles.Show(signal.ActorId, signal.SpeakerName, kindSlug, signal.ReasonLine, position);
+
+        if (HostilitySignalingMode is DaggerfallHostilitySignalingMode.Both or DaggerfallHostilitySignalingMode.AudioBarks)
+            _ = HostilityAudioBarks?.TryPlay(signal.ActorId, kindSlug, signal.Gender, position);
+    }
+
+    private DebugCommandResult HandleHostilitySignalCommand(string action)
+    {
+        string normalized = (action ?? string.Empty).Trim().ToLowerInvariant();
+        switch (normalized)
+        {
+            case "":
+            case "status":
+                break;
+            case "both":
+            case "hybrid":
+                HostilitySignalingMode = DaggerfallHostilitySignalingMode.Both;
+                break;
+            case "bubbles":
+            case "bubble":
+                HostilitySignalingMode = DaggerfallHostilitySignalingMode.SpeechBubbles;
+                break;
+            case "audio":
+            case "tts":
+            case "barks":
+                HostilitySignalingMode = DaggerfallHostilitySignalingMode.AudioBarks;
+                break;
+            case "off":
+            case "none":
+                HostilitySignalingMode = DaggerfallHostilitySignalingMode.Off;
+                SpeechBubbles.Clear();
+                HostilityAudioBarks?.ClearActiveVoices();
+                break;
+            case "demo":
+            case "demo-kin":
+            case "demo-tough":
+            case "demo-hunter":
+            case "demo-assassin":
+            {
+                DaggerfallHostileSignalKind kind = normalized switch
+                {
+                    "demo-tough" => DaggerfallHostileSignalKind.HiredTough,
+                    "demo-hunter" => DaggerfallHostileSignalKind.BountyHunter,
+                    "demo-assassin" => DaggerfallHostileSignalKind.DarkBrotherhoodAssassin,
+                    _ => DaggerfallHostileSignalKind.KinVendettaConfrontation,
+                };
+                WorldPoint playerPos = State.PlayerControl.Position ?? new WorldPoint(0f, 0f, 0f);
+                Vector3 forward = ActorHeading.Forward(State.PlayerControl.YawRadians);
+                WorldPoint ahead = WorldPoint.From(playerPos.ToVector() + (forward * 4.5f));
+                ActorState? nearest = State.Actors.All
+                    .Where(a => a.DurableId != DaggerfallActorIdentity.PlayerEntityId
+                        && !a.IsDefeated
+                        && Vector3.Distance(a.Position.ToVector(), playerPos.ToVector()) <= 18f)
+                    .OrderBy(a => Vector3.Distance(a.Position.ToVector(), playerPos.ToVector()))
+                    .FirstOrDefault();
+                long actorId = nearest?.DurableId ?? 990_001L;
+                DaggerfallNpc? npc = nearest is not null && State.Npcs.TryGet(nearest.DurableId, out DaggerfallNpc? reg) ? reg : null;
+                string speakerName = kind switch
+                {
+                    DaggerfallHostileSignalKind.HiredTough => "Hired Tough",
+                    DaggerfallHostileSignalKind.BountyHunter => "Bounty Hunter",
+                    DaggerfallHostileSignalKind.DarkBrotherhoodAssassin => "Dark Brotherhood Assassin",
+                    _ => npc?.DisplayName ?? "Vengeful Kinsman",
+                };
+                string gender = npc?.Appearance.Gender ?? "Male";
+                string line = kind switch
+                {
+                    DaggerfallHostileSignalKind.HiredTough => "Nothing personal — House Hawkwing paid good coin to break your legs!",
+                    DaggerfallHostileSignalKind.BountyHunter => "There's a blood-feud writ from House Hawkwing on your head — I'm collecting!",
+                    DaggerfallHostileSignalKind.DarkBrotherhoodAssassin => "A blood feud bought your death. The Brotherhood collects.",
+                    _ => "You spilled our blood! House Hawkwing will have its due!",
+                };
+                WorldPoint signalPos = nearest is not null ? nearest.Position : ahead;
+                DaggerfallHostileReasonSignal demoSignal = new(
+                    actorId, speakerName, gender, "fam:demo:hawkwing", "House Hawkwing", kind, line, signalPos);
+                HandleHostilitySignal(demoSignal);
+                Presentation?.SetOutcome($"{speakerName}: \"{line}\"");
+                if (!_inAdmittedUpdate && !_disposed)
+                    PublishPresentation();
+                break;
+            }
+            default:
+                return DaggerfallDeveloperReplies.Refused(
+                    $"Unknown hostility-signal action '{action}'. Use: status, both, bubbles, audio, off, demo, demo-kin, demo-tough, demo-hunter, or demo-assassin.");
+        }
+
+        IReadOnlyList<DaggerfallSpeechBubbleView> projected = SpeechBubbles.Read(State.PlayerControl, _tuning.Camera, State.Actors);
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteString("mode", HostilitySignalingMode.ToString());
+            w.WriteNumber("catalogClips", _definitions.People.HostilityBarks.Clips.Count);
+            w.WriteNumber("activeBubbles", SpeechBubbles.ActiveCount);
+            w.WriteNumber("projectedBubbles", projected.Count);
+            w.WriteNumber("audioPlayedCount", HostilityAudioBarks?.PlayedCount ?? 0);
+            w.WriteNumber("audioThrottledCount", HostilityAudioBarks?.ThrottledCount ?? 0);
+            w.WriteNumber("audioFailedOpenCount", HostilityAudioBarks?.FailedOpenCount ?? 0);
+            w.WriteNumber("activeVoices", HostilityAudioBarks?.ActiveVoiceCount ?? 0);
+            if (HostilityAudioBarks?.LastPlayedClipId is { } clipId) w.WriteString("lastClipId", clipId);
+            else w.WriteNull("lastClipId");
+            w.WriteStartArray("bubbles");
+            foreach (DaggerfallSpeechBubbleView b in projected)
+            {
+                w.WriteStartObject();
+                w.WriteNumber("actorId", b.ActorId);
+                w.WriteString("speakerName", b.SpeakerName);
+                w.WriteString("kind", b.Kind);
+                w.WriteString("text", b.Text);
+                w.WriteNumber("screenX", b.ScreenX);
+                w.WriteNumber("screenY", b.ScreenY);
+                w.WriteNumber("opacity", b.Opacity);
+                w.WriteString("offscreen", b.Offscreen);
+                w.WriteNumber("distanceMeters", b.DistanceMeters);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        });
+    }
     internal DaggerfallShopContinuity ShopContinuity { get; } = null!;
     internal DaggerfallSocialJournalProjection SocialJournal { get; } = null!;
 

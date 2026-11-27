@@ -149,6 +149,7 @@ internal static class TestPayload
     internal static DaggerfallPeoplePackFiles PeoplePack()
     {
         string folder = System.IO.Path.GetDirectoryName(TestData.PackPayload("daggerfall.people"))!;
+        string hostilityBarksPath = System.IO.Path.Combine(folder, DaggerfallHostilityBarkCatalog.ManifestRelativePath);
         return new(
             "daggerfall.people",
             TestContentFiles.Read(TestData.PackPayload("daggerfall.people")),
@@ -157,7 +158,8 @@ internal static class TestPayload
             [.. Directory.EnumerateFiles(System.IO.Path.Combine(folder, DaggerfallPeopleContent.BlocksFolder), "*.json").Order(StringComparer.Ordinal)
                 .Select(file => new DaggerfallPeopleBlockFile(System.IO.Path.GetRelativePath(folder, file), TestContentFiles.Read(file)))],
             ArchetypesBytes: null,
-            BarksBytes: TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.BarksFile)));
+            BarksBytes: TestContentFiles.Read(System.IO.Path.Combine(folder, DaggerfallPeopleContent.BarksFile)),
+            HostilityBarksBytes: File.Exists(hostilityBarksPath) ? TestContentFiles.Read(hostilityBarksPath) : null);
     }
 
     /// <summary>The classic quest records, parsed afresh for a fact that edits or adds some.</summary>

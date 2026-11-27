@@ -77,6 +77,8 @@ internal sealed record DaggerfallHudFrame(
     internal DaggerfallNoticeBoardUiView? NoticeBoard { get; init; }
     /// <summary>Character-relevant social relations, feuds, vouches, and standings for the journal's Relations tab.</summary>
     internal DaggerfallSocialJournalView? SocialJournal { get; init; }
+    /// <summary>Active non-blocking comic speech bubbles anchored near speaking hostile/vendetta NPCs (Den #11164).</summary>
+    internal IReadOnlyList<DaggerfallSpeechBubbleView>? SpeechBubbles { get; init; }
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -301,6 +303,16 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("name", builder.String(entry.Name)),
                 ("standing", builder.String(entry.Standing)),
                 ("detail", builder.String(entry.Detail)))).ToArray()))))];
+        fields = [.. fields, ("speechBubbles", builder.Array((frame.SpeechBubbles ?? []).Select(bubble => builder.Object(
+            ("actorId", builder.Number(bubble.ActorId)),
+            ("speakerName", builder.String(bubble.SpeakerName)),
+            ("kind", builder.String(bubble.Kind)),
+            ("text", builder.String(bubble.Text)),
+            ("screenX", builder.Number(bubble.ScreenX)),
+            ("screenY", builder.Number(bubble.ScreenY)),
+            ("opacity", builder.Number(bubble.Opacity)),
+            ("offscreen", builder.String(bubble.Offscreen)),
+            ("distanceMeters", builder.Number(bubble.DistanceMeters)))).ToArray()))];
         if (frame.CreateItem is { } createItem) fields = [.. fields, ("createItem", builder.Object(("revision", builder.String(createItem.Revision)),
             ("options", builder.Array(createItem.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray()))))];
         if (frame.Teleport is { } teleport) fields = [.. fields, ("teleport", builder.Object(("revision", builder.String(teleport.Revision)),

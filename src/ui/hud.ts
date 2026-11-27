@@ -53,6 +53,7 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
   const strip = compass.querySelector<HTMLElement>('.dagger-compass-strip')!;
   const contactLayer = compass.querySelector<HTMLElement>('.dagger-compass-contacts')!;
   const view = shell.querySelector<HTMLParagraphElement>('.dagger-view')!;
+  const speechBubblesLayer = shell.querySelector<HTMLElement>('.dagger-speech-bubbles')!;
   const prompt = shell.querySelector<HTMLParagraphElement>('.dagger-prompt')!;
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
   const outcome = shell.querySelector<HTMLOListElement>('.dagger-outcome')!;
@@ -239,6 +240,34 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
         for (const mark of marks) place(mark.element, mark.bearing, yaw);
         for (const contact of contacts) place(contact.element, contact.bearing, yaw);
       }
+
+      // Non-blocking near-actor comic speech bubbles projected from C# camera space during play.
+      const bubbles = playing ? value.speechBubbles ?? [] : [];
+      speechBubblesLayer.hidden = bubbles.length === 0;
+      redraw(speechBubblesLayer, JSON.stringify(bubbles), () => speechBubblesLayer.replaceChildren(...bubbles.map(bubble => {
+        const card = document.createElement('aside');
+        card.className = 'dagger-speech-bubble';
+        card.dataset.actorId = String(bubble.actorId);
+        card.dataset.kind = bubble.kind;
+        card.dataset.offscreen = bubble.offscreen;
+        card.style.left = `${bubble.screenX * 100}%`;
+        card.style.top = `${bubble.screenY * 100}%`;
+        card.style.opacity = String(bubble.opacity);
+        const header = document.createElement('div');
+        header.className = 'dagger-speech-bubble-head';
+        const speaker = document.createElement('strong');
+        speaker.className = 'dagger-speech-speaker';
+        speaker.textContent = bubble.speakerName;
+        const distance = document.createElement('span');
+        distance.className = 'dagger-speech-distance';
+        distance.textContent = `${Math.round(bubble.distanceMeters)} m`;
+        header.append(speaker, distance);
+        const body = document.createElement('p');
+        body.className = 'dagger-speech-text';
+        body.textContent = bubble.text;
+        card.append(header, body);
+        return card;
+      })));
 
       const activeEffects = value.effects ?? [];
       effects.hidden = activeEffects.length === 0;

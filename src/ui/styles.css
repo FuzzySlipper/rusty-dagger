@@ -788,6 +788,31 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-outcome:empty { display: none; }
 .dagger-outcome li { text-shadow: 0 1px .1875rem #000; }
 .dagger-outcome li + li { margin-top: .125rem; }
+/* Non-blocking comic speech bubbles anchored near speaking hostile/vendetta NPCs (Den #11164). */
+.dagger-speech-bubbles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.dagger-speech-bubble { position: absolute; transform: translate(-50%, -100%); max-width: 21rem; min-width: 11rem;
+  padding: .45rem .7rem .5rem; background: rgb(244 233 206 / .95); color: #1b130c;
+  border: 2px solid #2b1d12; border-radius: .6rem;
+  box-shadow: 0 .25rem .75rem rgb(0 0 0 / .62), inset 0 0 0 1px rgb(255 248 232 / .65); }
+.dagger-speech-bubble::after { content: ""; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+  border: .45rem solid transparent; border-top-color: #2b1d12; }
+.dagger-speech-bubble[data-kind="kin-vendetta"] { border-color: #8b1e1b; }
+.dagger-speech-bubble[data-kind="kin-vendetta"] .dagger-speech-speaker { color: #7a1412; }
+.dagger-speech-bubble[data-kind="hired-tough"],
+.dagger-speech-bubble[data-kind="bounty-hunter"] { border-color: #8a5216; }
+.dagger-speech-bubble[data-kind="hired-tough"] .dagger-speech-speaker,
+.dagger-speech-bubble[data-kind="bounty-hunter"] .dagger-speech-speaker { color: #6e3d0b; }
+.dagger-speech-bubble[data-kind="assassin"] { background: rgb(32 22 28 / .94); color: #f2e4df; border-color: #b8333a; }
+.dagger-speech-bubble[data-kind="assassin"]::after { border-top-color: #b8333a; }
+.dagger-speech-bubble[data-kind="assassin"] .dagger-speech-speaker { color: #ff8c8c; }
+.dagger-speech-bubble[data-offscreen="left"]::after,
+.dagger-speech-bubble[data-offscreen="behind-left"]::after { left: -.45rem; top: 50%; transform: translateY(-50%); border-top-color: transparent; border-right-color: #2b1d12; }
+.dagger-speech-bubble[data-offscreen="right"]::after,
+.dagger-speech-bubble[data-offscreen="behind-right"]::after { left: 100%; top: 50%; transform: translateY(-50%); border-top-color: transparent; border-left-color: #2b1d12; }
+.dagger-speech-bubble-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; margin-bottom: .15rem; }
+.dagger-speech-speaker { font: 700 .78rem var(--font-label); text-transform: uppercase; letter-spacing: .04em; }
+.dagger-speech-distance { font: 600 .68rem var(--font-label); opacity: .7; white-space: nowrap; }
+.dagger-speech-text { margin: 0; font: 600 .9rem/1.25 var(--font-body); }
 .dagger-breath { position: absolute; left: 50%; bottom: 9.75rem; transform: translateX(-50%); display: grid; grid-template-columns: auto 10rem auto; gap: .5rem; align-items: center; color: #b9e5f7; font-size: .8rem; }
 .dagger-breath .dagger-bar { --bar: #66b8e3; }
 .dagger-breath.low { color: #ff8d77; }

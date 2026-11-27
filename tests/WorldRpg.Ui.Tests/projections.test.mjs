@@ -6430,3 +6430,58 @@ test('retainer gear service page renders two-pane transfer with give, take, equi
     assert.equal(panel.querySelector('.dagger-retainer-result').textContent, 'Gave 5 × Arrows to Alden.');
   } finally { f.dispose(); }
 });
+
+test('non-blocking near-actor comic speech bubbles render during play without opening modals or stealing focus', () => {
+  const f = fixture();
+  try {
+    f.publish({
+      mode: 'playing',
+      speechBubbles: [
+        {
+          actorId: 401,
+          speakerName: 'Baren Hawkwing',
+          kind: 'kin-vendetta',
+          text: 'You spilled our blood! House Hawkwing will have its due!',
+          screenX: 0.42,
+          screenY: 0.36,
+          opacity: 1,
+          offscreen: 'none',
+          distanceMeters: 6.4,
+        },
+        {
+          actorId: 402,
+          speakerName: 'Dark Brotherhood Assassin',
+          kind: 'assassin',
+          text: 'A blood feud bought your death. The Brotherhood collects.',
+          screenX: 0.88,
+          screenY: 0.34,
+          opacity: 0.75,
+          offscreen: 'behind-right',
+          distanceMeters: 9.2,
+        },
+      ],
+    });
+
+    const layer = f.root.querySelector('.dagger-speech-bubbles');
+    assert.equal(layer.hidden, false);
+    const cards = [...layer.querySelectorAll('.dagger-speech-bubble')];
+    assert.equal(cards.length, 2);
+    assert.equal(cards[0].dataset.actorId, '401');
+    assert.equal(cards[0].dataset.kind, 'kin-vendetta');
+    assert.equal(cards[0].dataset.offscreen, 'none');
+    assert.equal(cards[0].querySelector('.dagger-speech-speaker').textContent, 'Baren Hawkwing');
+    assert.match(cards[0].querySelector('.dagger-speech-text').textContent, /House Hawkwing/);
+    assert.equal(cards[0].querySelector('.dagger-speech-distance').textContent, '6 m');
+    assert.equal(cards[1].dataset.kind, 'assassin');
+    assert.equal(cards[1].dataset.offscreen, 'behind-right');
+    assert.equal(cards[1].style.opacity, '0.75');
+
+    // No modal dialog opened and gameplay stays unpaused.
+    assert.equal(f.root.querySelector('.dagger-dialogue').open, false);
+    assert.equal(f.root.querySelector('.dagger-menu').open, false);
+
+    // Bubbles hide cleanly when mode leaves playing or the projection empties.
+    f.publish({ mode: 'playing', speechBubbles: [] });
+    assert.equal(layer.hidden, true);
+  } finally { f.dispose(); }
+});

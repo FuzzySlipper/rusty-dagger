@@ -192,7 +192,8 @@ internal sealed record DaggerfallPeoplePackFiles(
     ReadOnlyMemory<byte>? SpawnersBytes,
     IReadOnlyList<DaggerfallPeopleBlockFile> BlockFiles,
     ReadOnlyMemory<byte>? ArchetypesBytes = null,
-    ReadOnlyMemory<byte>? BarksBytes = null);
+    ReadOnlyMemory<byte>? BarksBytes = null,
+    ReadOnlyMemory<byte>? HostilityBarksBytes = null);
 
 /// <summary>One block-slot file under a people pack's <c>blocks/</c> folder.</summary>
 internal sealed record DaggerfallPeopleBlockFile(string Path, ReadOnlyMemory<byte> Bytes);
@@ -446,13 +447,15 @@ internal sealed record DaggerfallPeopleSet(
     IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>> RdbDungeons,
     IReadOnlyDictionary<string, ArchetypeProfile>? ArchetypesMap = null,
     DaggerfallPeopleBarks? BarksData = null,
-    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>? SiteExteriorsMap = null)
+    IReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>? SiteExteriorsMap = null,
+    DaggerfallHostilityBarkCatalog? HostilityBarksData = null)
 {
     private static readonly IReadOnlyDictionary<string, ArchetypeProfile> EmptyArchetypes =
         new ReadOnlyDictionary<string, ArchetypeProfile>(new Dictionary<string, ArchetypeProfile>(StringComparer.Ordinal));
 
     internal IReadOnlyDictionary<string, ArchetypeProfile> Archetypes => ArchetypesMap ?? EmptyArchetypes;
     internal DaggerfallPeopleBarks Barks => BarksData ?? DaggerfallPeopleBarks.Empty;
+    internal DaggerfallHostilityBarkCatalog HostilityBarks => HostilityBarksData ?? DaggerfallHostilityBarkCatalog.Empty;
 
     internal static DaggerfallPeopleSet Empty { get; } = new(
         new ReadOnlyDictionary<string, DaggerfallCastIndividualDefinition>(new Dictionary<string, DaggerfallCastIndividualDefinition>(StringComparer.Ordinal)),
@@ -623,6 +626,7 @@ internal static class DaggerfallPeopleContent
         }
 
         DaggerfallPeopleBarks barks = ReadBarks(pack.PackId, pack.BarksBytes, archetypes, diagnostics);
+        DaggerfallHostilityBarkCatalog hostilityBarks = DaggerfallHostilityBarkCatalog.Read(pack.HostilityBarksBytes, pack.PackId, diagnostics);
 
         Dictionary<string, DaggerfallCastIndividualDefinition> individuals = pack.CastBytes is { IsEmpty: false } castBytes
             ? ReadIndividuals(pack.PackId, castBytes, factions, archetypes, diagnostics)
@@ -653,7 +657,8 @@ internal static class DaggerfallPeopleContent
             new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(rdbDungeons),
             new ReadOnlyDictionary<string, ArchetypeProfile>(archetypes),
             barks,
-            new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(siteExteriors));
+            new ReadOnlyDictionary<string, IReadOnlyList<DaggerfallPeopleSlotDefinition>>(siteExteriors),
+            hostilityBarks);
     }
 
     private static DaggerfallPeopleBarks ReadBarks(

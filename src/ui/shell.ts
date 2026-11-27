@@ -23,6 +23,7 @@ export function mountShell(root: HTMLElement): { shell: HTMLElement; dispose(): 
 const SHELL_MARKUP = `
     <div class="dagger-compass" aria-hidden="true"><div class="dagger-compass-strip"></div><div class="dagger-compass-contacts"></div></div>
     <p class="dagger-view" aria-live="off"></p>
+    <div class="dagger-speech-bubbles" aria-live="polite"></div>
     <div class="dagger-reticle" aria-hidden="true"></div>
     <p class="dagger-prompt" aria-live="polite" hidden><kbd></kbd><span></span></p>
     <section class="dagger-vitals" aria-label="Vitals"></section>

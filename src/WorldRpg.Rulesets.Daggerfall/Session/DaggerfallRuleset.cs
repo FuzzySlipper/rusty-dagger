@@ -263,7 +263,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
                 && file.RelativePath.EndsWith(".json", StringComparison.Ordinal))
             .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
             .Select(file => new DaggerfallPeopleBlockFile(file.RelativePath, file.Bytes))];
-        return new(pack.Id.Value, pack.Payload, CastBytes: null, SpawnersBytes: null, blocks, ArchetypesBytes: null, BarksBytes: barkFiles[0].Bytes);
+        ProductContentFile? hostilityBarksFile = files.FirstOrDefault(file =>
+            file.RelativePath.EndsWith("/" + DaggerfallHostilityBarkCatalog.ManifestRelativePath, StringComparison.Ordinal));
+        return new(pack.Id.Value, pack.Payload, CastBytes: null, SpawnersBytes: null, blocks, ArchetypesBytes: null,
+            BarksBytes: barkFiles[0].Bytes, HostilityBarksBytes: hostilityBarksFile?.Bytes);
     }
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>

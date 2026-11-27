@@ -2046,6 +2046,10 @@ internal sealed partial class DaggerfallSession
     /// <summary>Evaluates active blood-feud kin confrontations and hired hunter dispatches in the active settlement.</summary>
     private void StepFeudVendetta(double deltaSeconds)
     {
+        float dt = (float)Math.Max(0d, deltaSeconds);
+        SpeechBubbles.Step(dt, State.Actors);
+        HostilityAudioBarks?.Step(dt, State.Actors);
+
         if (_site.ActiveSite is null)
             return;
         if (_sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && !_exterior.ActiveLocationLoaded)
@@ -2058,6 +2062,8 @@ internal sealed partial class DaggerfallSession
             _lastVendettaProfile = currentProfile;
             _vendettaCheckAccumulator = 0d;
             FeudVendetta.ResetSceneSignals();
+            SpeechBubbles.Clear();
+            HostilityAudioBarks?.ClearActiveVoices();
         }
         else
         {

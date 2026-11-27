@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "clips": [
+    {
+      "id": "kin-vendetta-male-01",
+      "kind": "kin-vendetta",
+      "gender": "male",
+      "voice": "bm_george",
+      "text": "You spilled our blood! My family will have its due!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/kin-vendetta-male-01.ogg",
+      "sha256": "42b90e8c46743eae6a658a7f2b86ed954df699aa17bc38083bc73a8cdff8700f",
+      "durationSeconds": 2.99,
+      "byteLength": 25393
+    },
+    {
+      "id": "kin-vendetta-male-02",
+      "kind": "kin-vendetta",
+      "gender": "male",
+      "voice": "bm_lewis",
+      "text": "For the kin you wronged! Draw your steel!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/kin-vendetta-male-02.ogg",
+      "sha256": "d6b784212fdcf238d41ae12421db636e0653f00e630b8a303f77a2f21abec031",
+      "durationSeconds": 2.35,
+      "byteLength": 23175
+    },
+    {
+      "id": "kin-vendetta-male-03",
+      "kind": "kin-vendetta",
+      "gender": "male",
+      "voice": "bm_daniel",
+      "text": "Our house remembers what you did! You will not walk away!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/kin-vendetta-male-03.ogg",
+      "sha256": "17ab75579745b0ae0eb4c5159bba512ed09ee26ccd9942bcdf589257b37049d4",
+      "durationSeconds": 2.99,
+      "byteLength": 27036
+    },
+    {
+      "id": "kin-vendetta-female-01",
+      "kind": "kin-vendetta",
+      "gender": "female",
+      "voice": "bf_emma",
+      "text": "You spilled our blood! My family will have its due!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/kin-vendetta-female-01.ogg",
+      "sha256": "0de034c90074e57f3f35a85d19b3585edda83f6406271fa4f48d9e79d4546509",
+      "durationSeconds": 2.52,
+      "byteLength": 25751
+    },
+    {
+      "id": "kin-vendetta-female-02",
+      "kind": "kin-vendetta",
+      "gender": "female",
+      "voice": "bf_isabella",
+      "text": "For the kin you wronged! Draw your steel!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/kin-vendetta-female-02.ogg",
+      "sha256": "c78b55383d63006bf9bf3173370ffb61ae46f10b9cb121e88fc95489fcd9ab34",
+      "durationSeconds": 2.18,
+      "byteLength": 21739
+    },
+    {
+      "id": "kin-vendetta-female-03",
+      "kind": "kin-vendetta",
+      "gender": "female",
+      "voice": "bf_alice",
+      "text": "Our house remembers what you did! You will not walk away!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/kin-vendetta-female-03.ogg",
+      "sha256": "416137685413fe810d2cfd13c4455a34946c7ed7b17eb16e08b5ec602e5c8475",
+      "durationSeconds": 3.07,
+      "byteLength": 26212
+    },
+    {
+      "id": "hired-tough-male-01",
+      "kind": "hired-tough",
+      "gender": "male",
+      "voice": "bm_lewis",
+      "text": "Nothing personal. A grieving house paid good coin to break your legs!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/hired-tough-male-01.ogg",
+      "sha256": "7d1a478d854d05c3abd5fba52cd5b060737890e30d0f04b200a0811dc224a785",
+      "durationSeconds": 4.27,
+      "byteLength": 40183
+    },
+    {
+      "id": "hired-tough-male-02",
+      "kind": "hired-tough",
+      "gender": "male",
+      "voice": "am_adam",
+      "text": "You made the wrong family angry. They paid me to collect!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/hired-tough-male-02.ogg",
+      "sha256": "c43ee3a2fef5a05341dc9787dc7b2699447fe3a9ec68c95049e465973910fefe",
+      "durationSeconds": 2.82,
+      "byteLength": 29313
+    },
+    {
+      "id": "hired-tough-female-01",
+      "kind": "hired-tough",
+      "gender": "female",
+      "voice": "bf_lily",
+      "text": "Nothing personal. A grieving house paid good coin to break your legs!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/hired-tough-female-01.ogg",
+      "sha256": "6513949b59f1db362462dd2d62f097f75203e199e215aa5b6dfd858f2afdea03",
+      "durationSeconds": 3.9,
+      "byteLength": 31985
+    },
+    {
+      "id": "hired-tough-female-02",
+      "kind": "hired-tough",
+      "gender": "female",
+      "voice": "af_bella",
+      "text": "You made the wrong family angry. They paid me to collect!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/hired-tough-female-02.ogg",
+      "sha256": "2ab79fbdc8b9b75d727f3f8d72717328809d1bed7450d2d8187827d79121a3d2",
+      "durationSeconds": 2.94,
+      "byteLength": 29129
+    },
+    {
+      "id": "bounty-hunter-male-01",
+      "kind": "bounty-hunter",
+      "gender": "male",
+      "voice": "bm_george",
+      "text": "There is a blood-feud writ on your head, and I am collecting!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/bounty-hunter-male-01.ogg",
+      "sha256": "ce1764430a887c16c0b224cb2bcd099dd544d22ec4af5df7476dca926c475f62",
+      "durationSeconds": 3.67,
+      "byteLength": 30840
+    },
+    {
+      "id": "bounty-hunter-male-02",
+      "kind": "bounty-hunter",
+      "gender": "male",
+      "voice": "am_michael",
+      "text": "A noble house put gold on your hide. Stand and fight!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/bounty-hunter-male-02.ogg",
+      "sha256": "752bbf9b4160e042a2ade87ffe9b97eeb327dff579d0b0a290e4ceb38ef02094",
+      "durationSeconds": 3.5,
+      "byteLength": 32154
+    },
+    {
+      "id": "bounty-hunter-female-01",
+      "kind": "bounty-hunter",
+      "gender": "female",
+      "voice": "bf_isabella",
+      "text": "There is a blood-feud writ on your head, and I am collecting!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/bounty-hunter-female-01.ogg",
+      "sha256": "f7bdae90d0365d6a88a9d2fa6fea46d6390fbdb6164a9b8968b11d77a69de439",
+      "durationSeconds": 3.18,
+      "byteLength": 31940
+    },
+    {
+      "id": "bounty-hunter-female-02",
+      "kind": "bounty-hunter",
+      "gender": "female",
+      "voice": "af_jessica",
+      "text": "A noble house put gold on your hide. Stand and fight!",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/bounty-hunter-female-02.ogg",
+      "sha256": "61ddc612e29937a6096aae5224f555a1e1fb4963873e23c63633b13c0772da33",
+      "durationSeconds": 2.88,
+      "byteLength": 26897
+    },
+    {
+      "id": "assassin-male-01",
+      "kind": "assassin",
+      "gender": "male",
+      "voice": "bm_daniel",
+      "text": "A blood feud bought your death. The Brotherhood collects.",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/assassin-male-01.ogg",
+      "sha256": "c73fc7d803851aacfb8eb79ebe9355fea388b1fa309b73cfd6158f00f17bce59",
+      "durationSeconds": 2.99,
+      "byteLength": 25625
+    },
+    {
+      "id": "assassin-male-02",
+      "kind": "assassin",
+      "gender": "male",
+      "voice": "am_onyx",
+      "text": "Your feud brought you to my blade. Make peace with the Divines.",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/assassin-male-02.ogg",
+      "sha256": "a6f8289e1dff980602a66c34279b3ee1b4d87002ada263b4a45c33e80beaecee",
+      "durationSeconds": 3.95,
+      "byteLength": 33196
+    },
+    {
+      "id": "assassin-female-01",
+      "kind": "assassin",
+      "gender": "female",
+      "voice": "bf_emma",
+      "text": "A blood feud bought your death. The Brotherhood collects.",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/assassin-female-01.ogg",
+      "sha256": "bb7254eb7e8e28582f2c424e98a4bf10e492630f90368fa8cb757fbd8d9c25ad",
+      "durationSeconds": 2.92,
+      "byteLength": 29496
+    },
+    {
+      "id": "assassin-female-02",
+      "kind": "assassin",
+      "gender": "female",
+      "voice": "af_nicole",
+      "text": "Your feud brought you to my blade. Make peace with the Divines.",
+      "path": "worldrpg/packs/daggerfall.people/audio/hostility/assassin-female-02.ogg",
+      "sha256": "7142971f489a67a4aca342be38ae5571efc644cd2bfe33ad94a8dbb16293a5c1",
+      "durationSeconds": 5.46,
+      "byteLength": 46445
+    }
+  ]
+}

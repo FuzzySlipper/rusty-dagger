@@ -39,7 +39,8 @@ internal sealed class DaggerfallSocialInspection(
     DaggerfallShopContinuity? shopContinuity = null,
     DaggerfallGuardPosts? guardPosts = null,
     Func<DaggerfallSiteProfile>? activeSiteProfile = null,
-    Func<IReadOnlyList<DaggerfallCityGateDefinition>>? activeCityGates = null)
+    Func<IReadOnlyList<DaggerfallCityGateDefinition>>? activeCityGates = null,
+    Func<string, DebugCommandResult>? handleHostilitySignal = null)
     : IDeveloperSocialCommands
 {
     private static readonly (int Group, string Name)[] SocialGroups =
@@ -1174,6 +1175,11 @@ internal sealed class DaggerfallSocialInspection(
             w.WriteEndObject();
         });
     }
+
+    public DebugCommandResult HostilitySignal(string action) =>
+        handleHostilitySignal is not null
+            ? handleHostilitySignal(action)
+            : DaggerfallDeveloperReplies.Refused("Hostility signaling controls are not bound in this session.");
 
     private bool TryResolveActorId(string? token, out long actorId)
     {

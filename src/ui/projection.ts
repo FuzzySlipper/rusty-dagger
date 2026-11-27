@@ -47,7 +47,22 @@ export interface RadialCommand {
   readonly reason: string | null;
 }
 
+/** One non-blocking comic speech bubble anchored near a hostile or shouting actor in world space (Den #11164). */
+export interface SpeechBubbleProjection {
+  readonly actorId: number;
+  readonly speakerName: string;
+  readonly kind: string;
+  readonly text: string;
+  readonly screenX: number;
+  readonly screenY: number;
+  readonly opacity: number;
+  readonly offscreen: string;
+  readonly distanceMeters: number;
+}
+
 export interface DaggerHud {
+  /** Active non-blocking comic speech bubbles anchored near speaking actors in play. */
+  readonly speechBubbles?: readonly SpeechBubbleProjection[];
   /** Detect spells' contacts: each bearing is clockwise from north, as the view's yaw reads. */
   readonly detectors?: readonly { readonly source: string; readonly kind: string; readonly label?: string; readonly contacts: readonly {
     readonly kind: string; readonly id: string; readonly label: string; readonly distance: number; readonly bearingRadians: number;

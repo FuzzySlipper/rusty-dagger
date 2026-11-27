@@ -31,4 +31,7 @@ public interface IDeveloperSocialCommands : IDebugCommandModule
 
     [DebugCommand("social.vouch.revoke", Description = "Developer: revoke or void vouches on TARGET (durableId, castId, or 'all') from REFERRER (durableId, castId, or 'all') with REASON (remove, wronged, dead, hostile) through Introductions and ActorLedger.")]
     DebugCommandResult RevokeVouch(string target, string referrer, string reason);
+
+    [DebugCommand("social.hostility-signal", Description = "Developer: inspect or switch non-blocking NPC hostility signaling mode ('status', 'both', 'bubbles', 'audio', 'off') or fire a live non-pausing demo confrontation ('demo', 'demo-kin', 'demo-tough', 'demo-hunter', 'demo-assassin').")]
+    DebugCommandResult HostilitySignal(string action);
 }

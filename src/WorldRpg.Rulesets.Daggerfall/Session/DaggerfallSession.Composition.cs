@@ -1204,6 +1204,8 @@ internal sealed partial class DaggerfallSession
                 _tuning.Social);
             if (saved is not null)
                 FeudVendetta.Restore(saved.FeudVendetta);
+            HostilityAudioBarks = new DaggerfallHostilityAudioBarks(engine.Content, engine.Audio, definitions.People.HostilityBarks);
+            FeudVendetta.HostilitySignaled += HandleHostilitySignal;
             Crimes.BindSelfDefenseLookup(FeudVendetta.IsVendettaAggressor);
             SocialConsequences.FeudPausedOrSettled += FeudVendetta.OnFeudPausedOrSettled;
             HostileOverlandBands.VendettaBandDispatched += FeudVendetta.RegisterDispatchedHunters;
@@ -1737,7 +1739,9 @@ internal sealed partial class DaggerfallSession
                 Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone), InputReadout,
                 () => OverlandParties.PartyPortraits(),
                 NoticeBoardPanel,
-                SocialJournal);
+                SocialJournal,
+                SpeechBubbles,
+                _tuning.Camera);
             DaggerfallHeldWorkbench heldWorkbench = new(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
             {
                 if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
@@ -1813,7 +1817,8 @@ internal sealed partial class DaggerfallSession
                     shopContinuity: ShopContinuity,
                     guardPosts: GuardPosts,
                     activeSiteProfile: () => _sites.Projection.Inputs,
-                    activeCityGates: () => _sites.Projection.Inputs.CityGates),
+                    activeCityGates: () => _sites.Projection.Inputs.CityGates,
+                    handleHostilitySignal: HandleHostilitySignalCommand),
                 new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar),
             ];                                                                                     // Developer
             _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);
