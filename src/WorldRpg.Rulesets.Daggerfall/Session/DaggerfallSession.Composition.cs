@@ -1408,7 +1408,7 @@ internal sealed partial class DaggerfallSession
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
                 promoteGuard: id => _roster.PromoteToCityWatch(id));
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
-            Law.BindOfficeHolderBanished((actorId, region, crimeKind, banished, detail) =>
+            Law.BindNpcArrested((actorId, region, crimeKind, banished, detail) =>
             {
                 int currentDay = checked((int)_time.Calendar.DayNumber);
                 long currentMinute = _time.Calendar.MinuteNumber;
@@ -1422,21 +1422,19 @@ internal sealed partial class DaggerfallSession
                 {
                     holderFamilyId = rulerFamily;
                 }
-                int removed = OfficeLedger.ReactToHolderCrimeOrBanishment(
+                int vacatedOffices = OfficeLedger.ReactToHolderCrimeOrBanishment(
                     actorId, region, crimeKind, banished, currentDay,
                     detail, _site.ActiveSite, currentMinute).Count;
-                if (removed > 0)
-                {
-                    SocialConsequences.ReactToHouseholdArrest(
-                        actorId,
-                        isHouseholdHead: true,
-                        _site.ActiveSite,
-                        currentMinute,
-                        dayOverride: currentDay,
-                        familyIdOverride: holderFamilyId,
-                        reason: detail);
-                }
-                return removed;
+                bool isHead = SocialConsequences.IsHouseholdHead(actorId, region, vacatedOffices, OfficeHolders);
+                int appliedDelta = SocialConsequences.ReactToHouseholdArrest(
+                    actorId,
+                    isHouseholdHead: isHead,
+                    _site.ActiveSite,
+                    currentMinute,
+                    dayOverride: currentDay,
+                    familyIdOverride: holderFamilyId,
+                    reason: detail);
+                return new DaggerfallNpcArrestOutcome(actorId, region, vacatedOffices, isHead, appliedDelta);
             });
             Law.BindCrimeSpread((incident, loss) =>
             {

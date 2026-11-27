@@ -28,6 +28,14 @@ internal enum DaggerfallLegalStep
 /// <summary>A legal choice the law admitted, the case it acted on and, for a resisted arrest, its line.</summary>
 internal sealed record DaggerfallLegalChoiceResult(DaggerfallLegalStep Step, DaggerfallLegalResponseSave Response, string? Line = null);
 
+/// <summary>Result of arresting, imprisoning, or banishing a non-player NPC through <see cref="DaggerfallLaw"/>.</summary>
+internal sealed record DaggerfallNpcArrestOutcome(
+    long ActorId,
+    int Region,
+    int VacatedOffices,
+    bool IsHouseholdHead,
+    int HouseholdStandingDelta);
+
 /// <summary>
 /// The law: the legal response to the player's reported crimes, from pursuit and arrest through the court and its
 /// sentence to prison time and release, with the standing law that sends the watch after a wanted or banished player.
@@ -70,6 +78,7 @@ internal sealed class DaggerfallLaw(
     private Func<int, DaggerfallGateScrutinyAssessment>? _gateScrutiny;
     private Action<DaggerfallCrimeIncidentSave, int>? _onCrimeReputationLoss;
     private Func<long, int, DaggerfallCrimeKind?, bool, string?, int>? _onOfficeHolderBanished;
+    private Func<long, int, DaggerfallCrimeKind?, bool, string?, DaggerfallNpcArrestOutcome>? _onNpcArrested;
 
     internal void BindGateScrutiny(Func<int, DaggerfallGateScrutinyAssessment> evaluate) =>
         _gateScrutiny = evaluate ?? throw new ArgumentNullException(nameof(evaluate));
@@ -80,24 +89,44 @@ internal sealed class DaggerfallLaw(
     internal void BindOfficeHolderBanished(Func<long, int, DaggerfallCrimeKind?, bool, string?, int> onHolderBanished) =>
         _onOfficeHolderBanished = onHolderBanished ?? throw new ArgumentNullException(nameof(onHolderBanished));
 
+    internal void BindNpcArrested(Func<long, int, DaggerfallCrimeKind?, bool, string?, DaggerfallNpcArrestOutcome> onNpcArrested) =>
+        _onNpcArrested = onNpcArrested ?? throw new ArgumentNullException(nameof(onNpcArrested));
+
+    /// <summary>
+    /// Canonical NPC arrest/imprisonment/banishment action: vacates any offices held by <paramref name="actorId"/>
+    /// (when applicable) and routes household arrest grudge consequences for both ordinary kin and household/noble heads.
+    /// </summary>
+    internal DaggerfallNpcArrestOutcome ArrestOrImprisonNpc(
+        long actorId,
+        int region,
+        DaggerfallCrimeKind? crimeKind,
+        bool banished = false,
+        string? detail = null)
+    {
+        if (actorId <= 0 || actorId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(actorId), "NPC arrest requires a positive non-player actor id.");
+        if (region is < 0 or > 61)
+            throw new ArgumentOutOfRangeException(nameof(region), "NPC arrest requires a valid classic region.");
+
+        if (_onNpcArrested is not null)
+            return _onNpcArrested(actorId, region, crimeKind, banished, detail);
+
+        int vacated = _onOfficeHolderBanished?.Invoke(actorId, region, crimeKind, banished, detail) ?? 0;
+        return new DaggerfallNpcArrestOutcome(actorId, region, vacated, IsHouseholdHead: vacated > 0, HouseholdStandingDelta: 0);
+    }
+
     /// <summary>
     /// Convicts or banishes an NPC office holder in <paramref name="region"/> for <paramref name="crimeKind"/>,
-    /// routing through the bound <see cref="DaggerfallOfficeLedger"/> so every office they hold is deposed and exiled
-    /// via <see cref="DaggerfallOfficeLedger.OfficeChanged"/>. Returns how many offices were vacated.
+    /// routing through the canonical <see cref="ArrestOrImprisonNpc"/> path so every office they hold is deposed and
+    /// exiled via <see cref="DaggerfallOfficeLedger.OfficeChanged"/> and household consequences apply. Returns how many offices were vacated.
     /// </summary>
     internal int ConvictOrBanishOfficeHolder(
         long actorId,
         int region,
         DaggerfallCrimeKind? crimeKind,
         bool banished,
-        string? detail = null)
-    {
-        if (actorId <= 0 || actorId == DaggerfallActorIdentity.PlayerEntityId)
-            throw new ArgumentOutOfRangeException(nameof(actorId), "Office holder banishment requires a positive non-player actor id.");
-        if (region is < 0 or > 61)
-            throw new ArgumentOutOfRangeException(nameof(region), "Office holder banishment requires a valid classic region.");
-        return _onOfficeHolderBanished?.Invoke(actorId, region, crimeKind, banished, detail) ?? 0;
-    }
+        string? detail = null) =>
+        ArrestOrImprisonNpc(actorId, region, crimeKind, banished, detail).VacatedOffices;
 
     /// <summary>The case in front of the player: the one holding the legal modal, else the active region's.</summary>
     internal DaggerfallLegalResponseSave? Current => crime.LegalResponses.FirstOrDefault(response => response.Modal)

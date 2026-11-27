@@ -282,8 +282,16 @@ internal sealed class DaggerfallSocialConsequences(
                     int next = Math.Min(0, state.StandingDelta + steps);
                     if (next != state.StandingDelta)
                     {
+                        int appliedSteps = next - state.StandingDelta;
                         state.StandingDelta = next;
                         state.LastUpdatedDay += steps * decayDays;
+                        if (DaggerfallHouseholds.IsProvinceWide(familyId) && wordSpread is not null)
+                        {
+                            if (state.StandingDelta == 0)
+                                wordSpread.ClearNegativeHouseholdWavefronts(familyId);
+                            else
+                                wordSpread.DecayHouseholdGrudgeWavefronts(familyId, appliedSteps);
+                        }
                         if (state.StandingDelta == 0)
                             state.SubjectOffsets.Clear();
                         entryChanged = true;
@@ -303,6 +311,60 @@ internal sealed class DaggerfallSocialConsequences(
                 _householdStandings.Remove(key);
         }
         return changed;
+    }
+
+    /// <summary>
+    /// Classifies whether an arrested NPC counts as a household/noble head (heavier arrest grudge) versus an
+    /// ordinary household member (lighter arrest grudge), based on vacated offices, regional rulership, noble titles,
+    /// and proprietor/head roles.
+    /// </summary>
+    internal bool IsHouseholdHead(
+        long actorId,
+        int region,
+        int vacatedOffices = 0,
+        DaggerfallOfficeHolders? officeHolders = null)
+    {
+        if (vacatedOffices > 0)
+            return true;
+        if (region is >= 0 and <= 61
+            && officeHolders?.ResolveRegionalRuler(region) is { ActorId: long rulerId }
+            && rulerId == actorId)
+        {
+            return true;
+        }
+        if (npcs.TryGet(actorId, out DaggerfallNpc? npc) && npc is not null)
+        {
+            if (npc.Role.Contains("ruler", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("noble", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("regent", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("factor", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("head", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("master", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("captain", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("merchant", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("shopkeeper", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("innkeeper", StringComparison.OrdinalIgnoreCase)
+                || npc.Role.Contains("banker", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            string? name = npc.DisplayName;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                string[] headTitles =
+                [
+                    "King ", "Queen ", "Emperor ", "Empress ",
+                    "Lord ", "Lady ", "Duke ", "Duchess ", "Marquis ", "Marquise ",
+                    "Count ", "Countess ", "Baron ", "Baroness ", "Prince ", "Princess ",
+                ];
+                foreach (string title in headTitles)
+                {
+                    if (name.StartsWith(title, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+        }
+        return false;
     }
 
     /// <summary>
@@ -609,20 +671,20 @@ internal sealed class DaggerfallSocialConsequences(
             return 0;
 
         long nowMinute = minute ?? currentMinute?.Invoke() ?? 0L;
-        if (_householdStandings.TryGetValue(familyId, out HouseholdStandingState? persistent))
-        {
-            int unarrived = wordSpread is not null && targetSite is not null
-                ? wordSpread.UnarrivedHouseholdStandingDelta(familyId, targetSite, nowMinute)
-                : 0;
-            return Math.Clamp(
-                checked(persistent.StandingDelta - unarrived),
-                DaggerfallSocialState.MinimumReputation,
-                DaggerfallSocialState.MaximumReputation);
-        }
-
-        if (wordSpread is null || targetSite is null)
+        if (!_householdStandings.TryGetValue(familyId, out HouseholdStandingState? persistent))
             return 0;
-        return wordSpread.ArrivedHouseholdStandingDelta(familyId, targetSite, nowMinute);
+
+        int unarrived = wordSpread is not null && targetSite is not null
+            ? wordSpread.UnarrivedHouseholdStandingDelta(familyId, targetSite, nowMinute)
+            : 0;
+        int effective = checked(persistent.StandingDelta - unarrived);
+        // Pending negative news at an uninformed site can only mask the negative standing; it never invents positive goodwill.
+        if (persistent.StandingDelta <= 0 && unarrived < 0 && effective > 0)
+            effective = 0;
+        return Math.Clamp(
+            effective,
+            DaggerfallSocialState.MinimumReputation,
+            DaggerfallSocialState.MaximumReputation);
     }
 
     /// <summary>

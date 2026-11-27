@@ -979,6 +979,57 @@ internal sealed class DaggerfallWordSpread(
         return toRemove.Count;
     }
 
+    /// <summary>
+    /// Reconciles retained negative <see cref="DaggerfallWordEventKind.HouseholdStanding"/> wavefronts (including
+    /// intercepted or suppressed couriers) toward 0 in lockstep with <see cref="DaggerfallSocialConsequences.AdvanceDay"/>,
+    /// removing any wavefront that decays to 0 so stale news never invents goodwill or resurrects a decayed grudge.
+    /// </summary>
+    internal int DecayHouseholdGrudgeWavefronts(string familyId, int decaySteps)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || decaySteps <= 0 || _wavefronts.Count == 0)
+            return 0;
+
+        int remaining = decaySteps;
+        int adjusted = 0;
+        List<DaggerfallWordWavefrontSave> negatives = [.. _wavefronts.Values
+            .Where(wf => wf.Kind == DaggerfallWordEventKind.HouseholdStanding
+                && wf.Delta < 0
+                && string.Equals(wf.FamilyId, familyId, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(wf => wf.EmittedAtMinute)
+            .ThenBy(wf => wf.EventId, StringComparer.Ordinal)];
+
+        foreach (DaggerfallWordWavefrontSave wf in negatives)
+        {
+            if (remaining <= 0)
+                break;
+            int magnitude = -wf.Delta;
+            int applied = Math.Min(remaining, magnitude);
+            remaining -= applied;
+            adjusted++;
+            int nextDelta = wf.Delta + applied;
+            if (nextDelta >= 0)
+                _wavefronts.Remove(wf.EventId);
+            else
+                _wavefronts[wf.EventId] = wf with { Delta = nextDelta };
+        }
+        return adjusted;
+    }
+
+    /// <summary>Removes all negative <see cref="DaggerfallWordEventKind.HouseholdStanding"/> wavefronts for <paramref name="familyId"/>.</summary>
+    internal int ClearNegativeHouseholdWavefronts(string familyId)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || _wavefronts.Count == 0)
+            return 0;
+        List<string> toRemove = [.. _wavefronts.Values
+            .Where(wf => wf.Kind == DaggerfallWordEventKind.HouseholdStanding
+                && wf.Delta < 0
+                && string.Equals(wf.FamilyId, familyId, StringComparison.OrdinalIgnoreCase))
+            .Select(wf => wf.EventId)];
+        foreach (string id in toRemove)
+            _wavefronts.Remove(id);
+        return toRemove.Count;
+    }
+
     /// <summary>Returns all news/standing wavefronts that have arrived at <paramref name="targetSite"/> (newest first).</summary>
     internal IReadOnlyList<DaggerfallWordWavefrontSave> ArrivedNewsAt(DaggerfallSiteRecord targetSite, long currentMinute, int? currentDay = null)
     {

@@ -204,28 +204,32 @@ public sealed class HouseholdGrudgePersistenceAndDecayTests
         long ordinaryMemberId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/member", "Doran Mills", localMemberFamily);
         long nobleHeadId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/head", "Baron Aldric", nobleHeadFamily);
 
-        long minute = session.Calendar.MinuteNumber;
-        int day = checked((int)session.Calendar.DayNumber);
-
-        // 1. Arresting an ordinary household member inflicts lighter decaying penalty (-5), not a blood feud.
-        int memberApplied = session.SocialConsequences.ReactToHouseholdArrest(
-            ordinaryMemberId, isHouseholdHead: false, site, minute, day, reason: "caught smuggling");
-        Assert.Equal(DaggerfallSocialTuning.Default.KinArrestGrudgePenalty, memberApplied);
+        // 1. Arresting an ordinary household member through canonical DaggerfallLaw.ArrestOrImprisonNpc
+        //    inflicts lighter decaying penalty (-5), not a blood feud, with 0 vacated offices.
+        DaggerfallNpcArrestOutcome memberOutcome = session.Law.ArrestOrImprisonNpc(
+            ordinaryMemberId, site.Id.Region, DaggerfallCrimeKind.Smuggling, banished: false, detail: "caught smuggling");
+        Assert.Equal(0, memberOutcome.VacatedOffices);
+        Assert.False(memberOutcome.IsHouseholdHead);
+        Assert.Equal(DaggerfallSocialTuning.Default.KinArrestGrudgePenalty, memberOutcome.HouseholdStandingDelta);
         Assert.Equal(-5, session.SocialConsequences.HouseholdStandingDelta(localMemberFamily, site));
         Assert.False(session.SocialConsequences.IsFeudActiveAt(localMemberFamily, site));
 
-        // 2. Arresting a household/noble head inflicts a noticeably heavier (still decaying) penalty (-10), not a blood feud.
-        int headApplied = session.SocialConsequences.ReactToHouseholdArrest(
-            nobleHeadId, isHouseholdHead: true, site, minute + 1, day, reason: "conspiracy");
-        Assert.Equal(DaggerfallSocialTuning.Default.KinHeadArrestGrudgePenalty, headApplied);
-        Assert.True(headApplied < memberApplied);
+        // 2. Arresting a household/noble head (even without holding an office) through canonical DaggerfallLaw.ArrestOrImprisonNpc
+        //    inflicts a noticeably heavier (still decaying) penalty (-10), not a blood feud.
+        DaggerfallNpcArrestOutcome headOutcome = session.Law.ArrestOrImprisonNpc(
+            nobleHeadId, site.Id.Region, DaggerfallCrimeKind.CriminalConspiracy, banished: false, detail: "conspiracy");
+        Assert.Equal(0, headOutcome.VacatedOffices);
+        Assert.True(headOutcome.IsHouseholdHead);
+        Assert.Equal(DaggerfallSocialTuning.Default.KinHeadArrestGrudgePenalty, headOutcome.HouseholdStandingDelta);
+        Assert.True(headOutcome.HouseholdStandingDelta < memberOutcome.HouseholdStandingDelta);
         Assert.Equal(-10, session.SocialConsequences.HouseholdStandingDelta(nobleHeadFamily, site));
         Assert.False(session.SocialConsequences.IsFeudActiveAt(nobleHeadFamily, site));
 
         // 3. Repeated arrests alone NEVER cross the -15 blood-feud threshold (capped at -14).
-        int secondArrest = session.SocialConsequences.ReactToHouseholdArrest(
-            nobleHeadId, isHouseholdHead: true, site, minute + 2, day, reason: "second warrant");
-        Assert.Equal(-4, secondArrest);
+        session.AdvanceElapsedTime(60L, idleFatigue: false);
+        DaggerfallNpcArrestOutcome secondArrest = session.Law.ArrestOrImprisonNpc(
+            nobleHeadId, site.Id.Region, DaggerfallCrimeKind.CriminalConspiracy, banished: false, detail: "second warrant");
+        Assert.Equal(-4, secondArrest.HouseholdStandingDelta);
         Assert.Equal(-14, session.SocialConsequences.HouseholdStandingDelta(nobleHeadFamily, site));
         Assert.False(session.SocialConsequences.IsFeudActiveAt(nobleHeadFamily, site));
 
@@ -249,6 +253,61 @@ public sealed class HouseholdGrudgePersistenceAndDecayTests
         Assert.Equal(DaggerfallSocialTuning.Default.KinHeadArrestGrudgePenalty,
             liveSession.SocialConsequences.HouseholdStandingDelta(holderFamily, charing));
         Assert.False(liveSession.SocialConsequences.IsFeudActiveAt(holderFamily, charing));
+    }
+
+    [Fact]
+    public void Intercepted_courier_grudge_decays_without_invented_goodwill_or_resurrection_across_save_load()
+    {
+        using var fixture = new MultiTierHouseholdFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord originSite = session.Site.ActiveSite!;
+        DaggerfallSiteRecord distantSite = TestPayload.Definitions.Locations.Records
+            .First(r => r.Id != originSite.Id
+                && double.Hypot(r.MapPixelX - originSite.MapPixelX, r.MapPixelY - originSite.MapPixelY) is >= 30.0 and <= 80.0);
+
+        DaggerfallNpcSite npcSite = new(originSite.Id.Region, originSite.Name, "1/6/0", session.Sites.ActiveProfile.LogicalId);
+        const string greatHouse = "fam:house:r17:3";
+        long ordinaryKinId = AddNpcWithFamily(session, originSite.Id, npcSite, "t11159/intercept-kin", "Edric Vane", greatHouse);
+
+        // Emit a -5 Great House arrest grudge via canonical DaggerfallLaw.ArrestOrImprisonNpc, then intercept its courier before distantSite.
+        DaggerfallNpcArrestOutcome arrest = session.Law.ArrestOrImprisonNpc(
+            ordinaryKinId, originSite.Id.Region, DaggerfallCrimeKind.Smuggling, banished: false, detail: "smuggling");
+        Assert.False(arrest.IsHouseholdHead);
+        Assert.Equal(-5, arrest.HouseholdStandingDelta);
+
+        DaggerfallWordWavefrontSave wf = Assert.Single(session.WordSpread.Wavefronts, w => w.FamilyId == greatHouse);
+        Assert.True(session.WordSpread.InterceptWavefront(wf.EventId, session.Calendar.MinuteNumber));
+        Assert.Equal(-5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // 1. Partial decay (+30 days -> -5 decays to -4): distantSite MUST remain 0 (NEVER +1 invented goodwill!).
+        session.AdvanceElapsedTime(30L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-4, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // Partial decay survives save/load cleanly with zero invented goodwill.
+        RulesetSavePayload partialSave = session.CaptureSave();
+        using (DaggerfallSession restoredPartial = fixture.Restore(partialSave))
+        {
+            Assert.Equal(-4, restoredPartial.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+            Assert.Equal(0, restoredPartial.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+        }
+
+        // 2. Full decay (+120 more days = 150 total -> -4 decays to 0 and self-prunes):
+        //    retained intercepted wavefront is reconciled & cleared; originSite MUST be 0 (NEVER resurrected to -5!).
+        session.AdvanceElapsedTime(120L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.False(session.SocialConsequences.TryGetHouseholdSnapshot(greatHouse, out _));
+        Assert.DoesNotContain(session.WordSpread.Wavefronts, w => w.FamilyId == greatHouse);
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // Full decay survives save/load with zero standing entries and zero resurrection.
+        RulesetSavePayload finalSave = session.CaptureSave();
+        DaggerfallSavePayload rawFinal = DaggerfallSavePayload.Read(finalSave);
+        Assert.DoesNotContain(rawFinal.LocalHouseholds.Standings, s => s.FamilyId == greatHouse);
+        using DaggerfallSession restoredFinal = fixture.Restore(finalSave);
+        Assert.Equal(0, restoredFinal.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(0, restoredFinal.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
     }
 
     [Fact]
