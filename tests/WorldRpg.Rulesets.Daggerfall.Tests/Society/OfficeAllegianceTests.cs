@@ -83,6 +83,62 @@ public sealed class OfficeAllegianceTests
         }
     }
 
+    /// <summary>The scrutiny of <paramref name="session"/>, standing in <paramref name="town"/>, with its watch's allegiance as the session wires it.</summary>
+    private static DaggerfallScrutinyPolicy ScrutinyIn(DaggerfallSession session, DaggerfallSiteRecord town) => new(
+        session.State.Social, session.State.Crime, session.LegalServices, session.State.ActorLedger, session.WorldConditions, TestPayload.Definitions,
+        () => checked((int)session.Calendar.DayNumber), _ => null, () => null,
+        hasWatchOrRulerVouch: site => session.OfficeAllegiance!.Watch(site) == DaggerfallOfficeStanding.Member,
+        activeSite: () => town, hasUsableVouchFor: _ => false,
+        watchAgainstPlayer: site => session.OfficeAllegiance!.Watch(site) == DaggerfallOfficeStanding.Enemy);
+
+    /// <summary>R11127-1: the town's watch decides service and room-rental scrutiny there, as it does its gates.</summary>
+    [Fact]
+    public void Service_and_room_rental_follow_the_towns_watch_its_seats_members_served_and_its_enemies_refused()
+    {
+        (DaggerfallSession session, Board board, Region glenpoint, DaggerfallSiteRecord town) = Start();
+        using (session)
+        {
+            DaggerfallNpc provider = new(9002, DaggerfallNpcKind.Static, "provider", new DaggerfallNpcSite(town.Id.Region, town.Name, "Shop"),
+                new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, 0), "merchant", ["merchant"], DaggerfallNpcPresence.Active, null, null, null);
+            DaggerfallScrutinyPolicy scrutiny = ScrutinyIn(session, town);
+            session.State.Social.ChangeRegionalReputation(town.Id.Region, -6 - session.State.Social.RegionalReputation(town.Id.Region));
+            board.SetOffice(glenpoint, Office.Watch, board.Seat("mages-guild"));
+
+            // A friendly watch under a crackdown serves and lodges the player.
+            session.WorldConditions.Set(new DaggerfallWorldConditionToken("cond:crackdown:glenpoint", DaggerfallWorldConditionKind.CrimeCrackdown,
+                Region: town.Id.Region, Severity: 1).Validate());
+            Assert.True(scrutiny.EvaluateServiceScrutiny(provider).Denied);
+            Assert.True(scrutiny.IsRoomRentalDenied(town.Id.Region, null, provider));
+            session.State.Social.JoinGuild(MagesGuild, 1);
+            Assert.False(scrutiny.EvaluateServiceScrutiny(provider).Denied);
+            Assert.False(scrutiny.IsRoomRentalDenied(town.Id.Region, null, provider));
+
+            // Wanted is wanted, whoever keeps the watch.
+            session.State.Social.ChangeRegionalReputation(town.Id.Region, -5);
+            Assert.Equal(DaggerfallServiceDenial.WantedOrBanished, scrutiny.EvaluateServiceScrutiny(provider).Denial);
+        }
+
+        (session, board, glenpoint, town) = Start();
+        using (session)
+        {
+            DaggerfallNpc provider = new(9002, DaggerfallNpcKind.Static, "provider", new DaggerfallNpcSite(town.Id.Region, town.Name, "Shop"),
+                new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, 0), "merchant", ["merchant"], DaggerfallNpcPresence.Active, null, null, null);
+            DaggerfallScrutinyPolicy scrutiny = ScrutinyIn(session, town);
+            session.State.Social.ChangeRegionalReputation(town.Id.Region, -6 - session.State.Social.RegionalReputation(town.Id.Region));
+            board.SetOffice(glenpoint, Office.Watch, board.Seat("mages-guild"));
+            Assert.False(scrutiny.EvaluateServiceScrutiny(provider).Denied);
+            Assert.False(scrutiny.IsRoomRentalDenied(town.Id.Region, null, provider));
+
+            // A hostile watch, with no condition in force, still refuses them.
+            session.State.Social.JoinGuild(ThievesGuild, 1);
+            board.AdjustRelation(board.Seat("thieves-guild"), board.Seat("mages-guild"), Supply.Hostile - board.Relation("thieves-guild", "mages-guild"));
+            DaggerfallServiceScrutinyAssessment refused = scrutiny.EvaluateServiceScrutiny(provider);
+            Assert.Equal(DaggerfallServiceDenial.UnderScrutiny, refused.Denial);
+            Assert.Contains("answers to your enemies", refused.Reason, StringComparison.Ordinal);
+            Assert.True(scrutiny.IsRoomRentalDenied(town.Id.Region, null, provider));
+        }
+    }
+
     [Fact]
     public void A_factor_answering_to_the_players_seat_warms_the_towns_shopkeepers_and_the_holder_says_whom_they_answer_to()
     {

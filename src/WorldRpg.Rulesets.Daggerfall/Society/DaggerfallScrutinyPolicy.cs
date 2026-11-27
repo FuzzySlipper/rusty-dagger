@@ -186,7 +186,8 @@ internal sealed class DaggerfallScrutinyPolicy(
 
         int day = currentDay();
         IReadOnlyList<DaggerfallWorldConditionToken> active = conditions.ActiveForRegion(region, day);
-        if (active.Count == 0)
+        // A town watch answering to the player's enemies scrutinises service even without a condition (#11127).
+        if (active.Count == 0 && watchAgainstPlayer?.Invoke(currentSite) != true)
             return new(false, DaggerfallServiceDenial.None, null);
 
         // Personal allies, trusted vouches, and outlaw-exempt underworld providers bypass condition scrutiny.
@@ -222,8 +223,10 @@ internal sealed class DaggerfallScrutinyPolicy(
         }
 
         // 3. Heightened / strict regional watch scrutiny tightens lawful service standing threshold from -10 to -5 / 0.
-        DaggerfallGateScrutinyAssessment gate = EvaluateGateScrutiny(region);
-        if (gate.Level != DaggerfallScrutinyLevel.Normal && !exempt
+        // The town's watch decides it there: one that passes the player (their standing, a vouch, or their own seat's
+        // watch) passes them for service too.
+        DaggerfallGateScrutinyAssessment gate = EvaluateGateScrutiny(region, currentSite);
+        if (gate.Level != DaggerfallScrutinyLevel.Normal && !exempt && !gate.PlayerExempt
             && effectiveRep < gate.EffectiveWantedThreshold)
         {
             return new(true, DaggerfallServiceDenial.UnderScrutiny,
@@ -246,8 +249,10 @@ internal sealed class DaggerfallScrutinyPolicy(
                 return false;
             return !legalServices.IsShadyOrCriminalBuilding(building);
         }
-        DaggerfallGateScrutinyAssessment gate = EvaluateGateScrutiny(region);
-        if (gate.Level == DaggerfallScrutinyLevel.Normal || effectiveRep >= gate.EffectiveWantedThreshold)
+        // The town the player rents in, when it is in this region: its watch decides scrutiny there.
+        DaggerfallSiteRecord? town = activeSite?.Invoke() is { } here && here.Id.Region == region ? here : null;
+        DaggerfallGateScrutinyAssessment gate = EvaluateGateScrutiny(region, town);
+        if (gate.Level == DaggerfallScrutinyLevel.Normal || gate.PlayerExempt || effectiveRep >= gate.EffectiveWantedThreshold)
             return false;
         if (tavernKeeper is not null && (legalServices.IsOutlawExempt(tavernKeeper, building) || HasTrustedVouchFor(tavernKeeper.DurableId)))
             return false;
