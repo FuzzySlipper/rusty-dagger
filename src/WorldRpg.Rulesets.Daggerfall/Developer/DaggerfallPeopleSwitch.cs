@@ -95,6 +95,19 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     public Appearance? Show(ulong id, long actor, float heightMetres, bool walking)
     {
         if (yielded) return null;
+        if (actors.TryGet(actor, out ActorState? state)
+            && state.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
+            && render.Spec.Kind == ActorVisualKind.Billboard)
+        {
+            if (!own || !refreshed()
+                || splats is null
+                || splatCrowd?.Figure is not null
+                || render.Spec.CrowdCharacterHint is not { Length: > 0 } hint
+                || !splats.Characters.ContainsKey(hint))
+                return null;
+            Crowd ??= Splats();
+            return splatCrowd?.Show(id, actor, heightMetres, walking);
+        }
         if (own) Crowd ??= Splats();
         Appearance? character = splatCrowd?.Show(id, actor, heightMetres, walking);
         // A walker drawn as a character goes at its gait's pace, which its walk's stride keeps; one drawn otherwise at the walkers' own.
@@ -344,6 +357,13 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (actors.TryGet(actor, out ActorState? state)
             && state.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render))
         {
+            if (render.Spec.Kind == ActorVisualKind.Billboard)
+            {
+                return render.Spec.CrowdCharacterHint is { Length: > 0 } castHint
+                    && splats.Characters.ContainsKey(castHint)
+                    ? (castHint, null)
+                    : null;
+            }
             if (render.Spec.Kind is not (ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig))
                 return null;
             if (render.Spec.CrowdCharacterHint is { Length: > 0 } hint

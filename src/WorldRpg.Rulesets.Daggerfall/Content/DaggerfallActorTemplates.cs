@@ -317,7 +317,8 @@ internal sealed record DaggerfallActorSpawnerSpec(
     DaggerfallSiteId? HomeSite = null,
     WorldPoint? HomePosition = null,
     string? FamilyId = null,
-    ActorSocialGrouping SocialGrouping = ActorSocialGrouping.None);
+    ActorSocialGrouping SocialGrouping = ActorSocialGrouping.None,
+    string? VisualAssetId = null);
 
 /// <summary>Primary placement posture of a named NPC schedule profile in <c>actors/schedules.json</c>.</summary>
 internal enum DaggerfallSchedulePrimaryMode
@@ -417,7 +418,8 @@ internal sealed record DaggerfallActorCatalog(
                         FormatInteraction(spec.Interaction),
                         FormatHarm(spec.Harm),
                         ArchetypeId: spec.TemplateId,
-                        FamilyId: spec.FamilyId)
+                        FamilyId: spec.FamilyId,
+                        VisualAssetId: spec.VisualAssetId)
                     {
                         HomeSite = spec.HomeSite,
                         HomePosition = spec.HomePosition,
@@ -804,6 +806,7 @@ internal static partial class DaggerfallBaseContent
         // 3. Read spawner specs & project DaggerfallActorDefinition + DaggerfallMobileCatalogSet
         Dictionary<string, DaggerfallActorSpawnerSpec> specs = new(StringComparer.Ordinal);
         Dictionary<int, DaggerfallActorSpawnerSpec> specsByMobile = [];
+        Dictionary<string, DaggerfallActorSpawnerSpec> specsByVisualAsset = new(StringComparer.OrdinalIgnoreCase);
         Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors = [];
         Dictionary<int, DaggerfallMobileDefinition> mobiles = [];
         Dictionary<string, DaggerfallMobileDefinition> mobilesByActor = new(StringComparer.Ordinal);
@@ -836,6 +839,11 @@ internal static partial class DaggerfallBaseContent
                 {
                     if (!specsByMobile.TryAdd(binding.MobileId, spec))
                         diagnostics.Add($"Actor spawner spec '{spec.Id}' claims classic mobileId {binding.MobileId}, already claimed by '{specsByMobile[binding.MobileId].Id}'.");
+                }
+                if (!string.IsNullOrWhiteSpace(spec.VisualAssetId))
+                {
+                    if (!specsByVisualAsset.TryAdd(spec.VisualAssetId, spec))
+                        diagnostics.Add($"Actor spawner spec '{spec.Id}' claims visual assetId '{spec.VisualAssetId}', already claimed by '{specsByVisualAsset[spec.VisualAssetId].Id}'.");
                 }
             }
         }
@@ -1576,6 +1584,7 @@ internal static partial class DaggerfallBaseContent
         int? factionId = null;
         int? visualArchive = null;
         int? visualRecord = null;
+        string? visualAssetId = null;
         string? homeBlock = null;
         string? homeSlotId = null;
         DaggerfallSiteId? homeSite = null;
@@ -1664,6 +1673,9 @@ internal static partial class DaggerfallBaseContent
             visualRecord = Integer(vis, "record", diagnostics);
             if (visualArchive < 0 || visualRecord < 0)
                 diagnostics.Add($"Cast spawner spec '{id}' has invalid visual ({visualArchive}.{visualRecord}).");
+            visualAssetId = OptionalText(vis, "assetId", diagnostics);
+            if (visualAssetId is not null && !ValidId(visualAssetId))
+                diagnostics.Add($"Cast spawner spec '{id}' has invalid visual.assetId '{visualAssetId}'.");
 
             if (item.TryGetProperty("home", out JsonElement homeEl) && homeEl.ValueKind != JsonValueKind.Null)
             {
@@ -1740,7 +1752,8 @@ internal static partial class DaggerfallBaseContent
             homeSite,
             homePosition,
             familyId,
-            socialGrouping);
+            socialGrouping,
+            visualAssetId);
     }
 
     private static IReadOnlyList<DaggerfallPeoplePoolEntry> ReadSpawnerPool(

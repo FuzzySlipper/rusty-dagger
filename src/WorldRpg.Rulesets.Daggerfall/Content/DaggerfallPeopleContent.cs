@@ -287,7 +287,8 @@ internal sealed record DaggerfallCastIndividualDefinition(
     string Interaction,
     string Harm,
     string? ArchetypeId = null,
-    string? FamilyId = null)
+    string? FamilyId = null,
+    string? VisualAssetId = null)
 {
     internal DaggerfallSiteId? HomeSite { get; init; }
 
@@ -880,6 +881,7 @@ internal static class DaggerfallPeopleContent
                 JsonElement visual = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(obj, "visual", diagnostics), $"cast '{id}' visual", diagnostics);
                 int archive = DaggerfallBaseContent.Integer(visual, "archive", diagnostics);
                 int record = DaggerfallBaseContent.Integer(visual, "record", diagnostics);
+                string? visualAssetId = DaggerfallBaseContent.OptionalText(visual, "assetId", diagnostics);
                 string? homeBlock = DaggerfallBaseContent.OptionalText(obj, "homeBlock", diagnostics);
                 string? homeSlotId = DaggerfallBaseContent.OptionalText(obj, "homeSlotId", diagnostics);
                 DaggerfallSiteId? homeSite = null;
@@ -915,7 +917,7 @@ internal static class DaggerfallPeopleContent
                     else if (faction.Type != IndividualFactionType)
                         diagnostics.Add($"Cast individual '{id}' references faction {factionId} ('{faction.Name}') of type {faction.Type}, expected Individual (4).");
                 }
-                if (!result.TryAdd(id, new(id, factionId, name, race, gender, archive, record, homeBlock, homeSlotId, interaction, harm, archetypeId)
+                if (!result.TryAdd(id, new(id, factionId, name, race, gender, archive, record, homeBlock, homeSlotId, interaction, harm, archetypeId, VisualAssetId: visualAssetId)
                     { HomeSite = homeSite, HomePosition = homePosition }))
                     diagnostics.Add($"People pack '{packId}' repeats cast individual '{id}'.");
             }

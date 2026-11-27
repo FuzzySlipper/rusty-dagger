@@ -108,8 +108,10 @@ internal sealed record DaggerfallSplatPeople(IReadOnlyDictionary<string, Daggerf
     IReadOnlyList<string> SkirtWalks, IReadOnlyList<string> Idles, string Joint, string Producer, string License,
     IReadOnlyDictionary<string, DaggerfallSplatPerson> Characters)
 {
-    /// <summary>The character that draws each classic townsperson archive, by its id.</summary>
-    internal IReadOnlyDictionary<int, string> ByArchive { get; } = Characters.ToDictionary(character => character.Value.Archive, character => character.Key);
+    /// <summary>The character that draws each classic townsperson archive, by its id (cast-only characters without an archive are looked up by key).</summary>
+    internal IReadOnlyDictionary<int, string> ByArchive { get; } = Characters
+        .Where(character => character.Value.Archive is int)
+        .ToDictionary(character => character.Value.Archive!.Value, character => character.Key);
 
     /// <summary>The walks <paramref name="person"/>'s walkers walk: the skirt walks in a long skirt, the walks otherwise.</summary>
     internal IReadOnlyList<string> WalksOf(DaggerfallSplatPerson person) => person.Skirt is null ? Walks : SkirtWalks;
@@ -117,11 +119,11 @@ internal sealed record DaggerfallSplatPeople(IReadOnlyDictionary<string, Daggerf
 
 /// <summary>
 /// One gsplat character: what asset-pipeline calls it, the classic townsperson art it draws (a texture archive, which
-/// walkers wearing it draw as this character), its skinned-splat GLB (metres, standing on y = 0, facing +z), the
+/// walkers wearing it draw as this character, or null for a cast-specific character selected by asset id), its skinned-splat GLB (metres, standing on y = 0, facing +z), the
 /// pelvis fit of each clip it plays to its legs, by clip, the colours of its own paint a pixel finish may snap to, its
 /// long skirt, or null, and its eyes (the splat group its eye Gaussians are in, and its lids' colour), which blink, or null.
 /// </summary>
-internal sealed record DaggerfallSplatPerson(string Name, int Archive, DaggerfallArtFile Body, IReadOnlyDictionary<string, DaggerfallSplatClipFit> Fits,
+internal sealed record DaggerfallSplatPerson(string Name, int? Archive, DaggerfallArtFile Body, IReadOnlyDictionary<string, DaggerfallSplatClipFit> Fits,
     IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null, SplatEyes? Eyes = null);
 
 /// <summary>
@@ -385,6 +387,18 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The refreshed standing people, by the classic billboard record each stands in for.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSprite> People { get; }
 
+    /// <summary>The refreshed standing people keyed by stable cast/asset id (e.g. <c>npc-022</c>), taking precedence over shared classic archive/record keys.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallArtSprite> PeopleByAssetId { get; private init; } =
+        new Dictionary<string, DaggerfallArtSprite>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Resolves the refreshed standing person sprite for an optional cast/asset id before falling back to classic <paramref name="source"/>.</summary>
+    internal DaggerfallArtSprite? Person(string? assetId, (int Archive, int Record)? source) =>
+        !string.IsNullOrWhiteSpace(assetId) && PeopleByAssetId.TryGetValue(assetId, out DaggerfallArtSprite? byAsset)
+            ? byAsset
+            : source is { } key && People.TryGetValue(key, out DaggerfallArtSprite? bySource)
+                ? bySource
+                : null;
+
     /// <summary>The walking test figure, when the set has one.</summary>
     internal DaggerfallPeopleRig? PeopleRig { get; private init; }
 
@@ -479,6 +493,7 @@ internal sealed class DaggerfallArtReplacements
         Dictionary<string, DaggerfallArtModel> models = new(StringComparer.Ordinal);
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
         Dictionary<(int Archive, int Record), DaggerfallArtSprite> scenery = [], people = [];
+        Dictionary<string, DaggerfallArtSprite> peopleByAssetId = new(StringComparer.OrdinalIgnoreCase);
         try
         {
             using JsonDocument document = JsonDocument.Parse(payload);
@@ -684,13 +699,21 @@ internal sealed class DaggerfallArtReplacements
                 if (section.TryGetProperty(name, out JsonElement spriteArt))
                 foreach (JsonElement sprite in spriteArt.EnumerateArray())
                 {
-                    (int, int) replaces = (sprite.GetProperty("replaces").GetProperty("archive").GetInt32(), sprite.GetProperty("replaces").GetProperty("record").GetInt32());
+                    string? assetId = name == "people" && sprite.TryGetProperty("assetId", out JsonElement assetIdEl) && assetIdEl.ValueKind != JsonValueKind.Null
+                        ? assetIdEl.GetString()
+                        : null;
+                    if (assetId is not null && string.IsNullOrWhiteSpace(assetId))
+                        throw new InvalidOperationException($"Content pack '{packId}' states a refreshed person with an empty assetId.");
+                    (int, int)? replaces = assetId is null
+                        ? (sprite.GetProperty("replaces").GetProperty("archive").GetInt32(), sprite.GetProperty("replaces").GetProperty("record").GetInt32())
+                        : null;
+                    string label = assetId is not null ? $"'{assetId}'" : $"{replaces!.Value.Item1}/{replaces.Value.Item2}";
                     int width = sprite.GetProperty("width").GetInt32(), height = sprite.GetProperty("height").GetInt32();
                     DaggerfallArtRect[] frames = [.. sprite.GetProperty("frames").EnumerateArray().Select(Rect)];
                     if (frames.Length == 0 || frames.Any(frame => frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0 || frame.X + frame.Width > width || frame.Y + frame.Height > height))
-                        throw new InvalidOperationException($"Content pack '{packId}' places the refreshed {kind} for {replaces.Item1}/{replaces.Item2} outside its atlas.");
+                        throw new InvalidOperationException($"Content pack '{packId}' places the refreshed {kind} for {label} outside its atlas.");
                     // A scenery sprite of several frames plays them at its own rate; a person shows the one frame.
-                    string subject = $"the refreshed {kind} for {replaces.Item1}/{replaces.Item2}";
+                    string subject = $"the refreshed {kind} for {label}";
                     JsonElement placement = Placement(sprite.TryGetProperty("placement", out JsonElement placed) ? placed : null, subject,
                         ["size", "pivot", "foot", .. frames.Length > 1 && kind == "scenery sprite" ? ["framesPerSecond"] : Array.Empty<string>()]);
                     JsonElement size = placement.GetProperty("size");
@@ -701,12 +724,20 @@ internal sealed class DaggerfallArtReplacements
                         || frames.Length > 1 && kind == "scenery sprite" && rate == 0)
                         throw new InvalidOperationException($"Content pack '{packId}' states an empty size or no rate for {subject}.");
                     DaggerfallArtFile? emission = sprite.TryGetProperty("emission", out JsonElement map)
-                        ? new(map.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(map.GetProperty("sha256").GetString()!, $"The emission map for {replaces.Item1}/{replaces.Item2}"))
+                        ? new(map.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(map.GetProperty("sha256").GetString()!, $"The emission map for {label}"))
                         : null;
-                    if (!sprites.TryAdd(replaces, new(new(sprite.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(sprite.GetProperty("sha256").GetString()!, $"The refreshed {kind} for {replaces.Item1}/{replaces.Item2}")),
-                            width, height, frames, metres, pivot, foot, rate, emission)))
-                        throw new InvalidOperationException($"Content pack '{packId}' names two {name} sprites for {replaces.Item1}/{replaces.Item2}.");
+                    DaggerfallArtSprite parsed = new(new(sprite.GetProperty("path").GetString()!,
+                            DaggerfallContentHash.Parse(sprite.GetProperty("sha256").GetString()!, $"The refreshed {kind} for {label}")),
+                            width, height, frames, metres, pivot, foot, rate, emission);
+                    if (assetId is not null)
+                    {
+                        if (!peopleByAssetId.TryAdd(assetId, parsed))
+                            throw new InvalidOperationException($"Content pack '{packId}' names two people sprites for asset '{assetId}'.");
+                    }
+                    else if (!sprites.TryAdd(replaces!.Value, parsed))
+                    {
+                        throw new InvalidOperationException($"Content pack '{packId}' names two {name} sprites for {replaces.Value.Item1}/{replaces.Value.Item2}.");
+                    }
                 }
             if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
             if (section.TryGetProperty("splatPeople", out JsonElement splats)) splatPeople = SplatPeople(splats);
@@ -820,7 +851,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, scenery, people)
-        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
+        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {
@@ -849,7 +880,10 @@ internal sealed class DaggerfallArtReplacements
             string[] walks = Set("walks"), skirtWalks = Set("skirtWalks"), idles = Set("idles");
             Dictionary<string, DaggerfallSplatPerson> characters = splats.GetProperty("characters").EnumerateObject().ToDictionary(character => character.Name, character =>
             {
-                DaggerfallSplatPerson person = new(character.Value.GetProperty("name").GetString()!, character.Value.GetProperty("archive").GetInt32(),
+                int? archive = character.Value.TryGetProperty("archive", out JsonElement archiveEl) && archiveEl.ValueKind != JsonValueKind.Null
+                    ? archiveEl.GetInt32()
+                    : null;
+                DaggerfallSplatPerson person = new(character.Value.GetProperty("name").GetString()!, archive,
                     File(character.Value.GetProperty("body"), $"Splat person {character.Name}'s body"),
                     character.Value.GetProperty("fits").EnumerateObject().ToDictionary(fit => fit.Name, fit => new DaggerfallSplatClipFit(
                         fit.Value.GetProperty("k").GetSingle(), fit.Value.GetProperty("A").GetSingle(),
@@ -873,8 +907,10 @@ internal sealed class DaggerfallArtReplacements
             }, StringComparer.Ordinal);
             if (characters.Count == 0)
                 throw new InvalidOperationException($"Content pack '{packId}' states splat people without a character.");
-            // Two characters drawing one townsperson's art would leave one of them never drawn, whichever the reader kept.
-            if (characters.GroupBy(character => character.Value.Archive).FirstOrDefault(archive => archive.Count() > 1) is { } shared)
+            // Two archive-keyed characters drawing one townsperson's art would leave one of them never drawn, whichever the reader kept.
+            if (characters.Where(character => character.Value.Archive is int)
+                .GroupBy(character => character.Value.Archive!.Value)
+                .FirstOrDefault(archive => archive.Count() > 1) is { } shared)
                 throw new InvalidOperationException($"Content pack '{packId}' gives townsperson archive {shared.Key} to splat people {string.Join(" and ", shared.Select(character => character.Key))}.");
             return new(clips, walks, skirtWalks, idles, splats.GetProperty("joint").GetString()!,
                 splats.GetProperty("producer").GetString()!, splats.GetProperty("license").GetString()!, characters);

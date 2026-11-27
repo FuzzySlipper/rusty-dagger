@@ -364,9 +364,15 @@ internal static class DaggerfallActorFactory
         else
             actor.Actor.Add(new ActorPersonComponent(liveSnapshot));
 
+        string? castAssetId = ResolveCastVisualAssetId(npc, definitions);
         ActorVisualSpec visual = npc.Kind == DaggerfallNpcKind.Civilian
-            ? ActorVisualSpec.SplatCivilian(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, npc.Appearance.Gender)
-            : ActorVisualSpec.Billboard(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, onBase: true);
+            ? ActorVisualSpec.SplatCivilian(npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord, npc.Appearance.Gender, crowdHint: castAssetId)
+            : ActorVisualSpec.Billboard(
+                npc.Appearance.BillboardArchive,
+                npc.Appearance.BillboardRecord,
+                onBase: true,
+                assetKey: castAssetId is { Length: > 0 } ? $"cast/{castAssetId}" : null,
+                crowdHint: castAssetId);
         actor.Actor.Get<ActorRenderComponent>().SetVisual(visual);
 
         ActorGender npcGender = ActorGenderFormat.TryParse(npc.Appearance.Gender, out ActorGender parsedGender)
@@ -377,6 +383,17 @@ internal static class DaggerfallActorFactory
             ? fid.ToString(System.Globalization.CultureInfo.InvariantCulture)
             : string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase) ? "city-watch" : "neutral";
         SetInstanceIdentity(actor.Actor, new ActorInstanceIdentity(npc.StableKey, profile.Id, npcGender, npcRace, npcFaction));
+    }
+
+    private static string? ResolveCastVisualAssetId(DaggerfallNpc npc, DaggerfallDefinitions? definitions)
+    {
+        if (definitions is null) return null;
+        DaggerfallCastIndividualDefinition? cast = null;
+        if (npc.StableKey.StartsWith("cast:", StringComparison.Ordinal))
+            definitions.TryGetCastOrNoble(npc.StableKey["cast:".Length..], out cast);
+        else if (npc.Appearance.FactionId > 0)
+            definitions.TryGetCastOrNobleByFaction(npc.Appearance.FactionId, out cast);
+        return cast?.VisualAssetId;
     }
 
     /// <summary>Resolves authored encounter definitions and content-backed NPC archetype definitions.</summary>

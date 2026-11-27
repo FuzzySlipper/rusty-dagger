@@ -24,8 +24,8 @@ internal sealed record ActorVisualSpec(
 {
     internal static ActorVisualSpec NoneSpec { get; } = new(ActorVisualKind.None, string.Empty, OnBase: true);
 
-    internal static ActorVisualSpec Billboard(int archive, int record, bool onBase = true) =>
-        new(ActorVisualKind.Billboard, $"sprite/texture-{archive}-{record}", Archive: archive, Record: record, OnBase: onBase);
+    internal static ActorVisualSpec Billboard(int archive, int record, bool onBase = true, string? assetKey = null, string? crowdHint = null) =>
+        new(ActorVisualKind.Billboard, assetKey ?? $"sprite/texture-{archive}-{record}", Archive: archive, Record: record, OnBase: onBase, CrowdCharacterHint: crowdHint);
 
     internal static ActorVisualSpec SplatCivilian(int archive, int record, string? gender = null, string? crowdHint = null) =>
         new(ActorVisualKind.SplatCharacter, $"sprite/texture-{archive}-{record}", Archive: archive, Record: record, Gender: gender, OnBase: true, CrowdCharacterHint: crowdHint);

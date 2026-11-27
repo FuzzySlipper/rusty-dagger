@@ -500,7 +500,7 @@ internal sealed class DaggerfallActorRoster
                 MaterializeCivilian(npc, pose);
                 created = true;
             }
-            appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+            appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(id));
             return id;
         }
         catch
@@ -562,7 +562,7 @@ internal sealed class DaggerfallActorRoster
             {
                 if (!appearance.HasActor(npc.DurableId)
                     && active.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? existingSprite))
-                    appearance.AdmitActor(npc.DurableId, existingSprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+                    appearance.AdmitActor(npc.DurableId, existingSprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(npc.DurableId));
                 continue;
             }
             if (npc.X is not float x || npc.Y is not float y || npc.Z is not float z)
@@ -640,7 +640,7 @@ internal sealed class DaggerfallActorRoster
                             created = true;
                         }
                         if (!TryAdmitDirectionalMobileAppearance(profile, appearance, id))
-                            appearance.AdmitActor(id, placement.Sprite);
+                            appearance.AdmitActor(id, placement.Sprite, ActorVisualAssetId(id));
                         _npcs.Bind(id, profile.ProfileKey);
                         batch.Add(id);
                     }
@@ -703,10 +703,11 @@ internal sealed class DaggerfallActorRoster
                 baselineFamilyId: castFamilyId);
         }
         DaggerfallSiteAppearance appearance = siteAppearance ?? _appearance();
+        string? assetId = ActorVisualAssetId(id);
         if (sourcePlacement is not null)
-            appearance.AdmitActor(id, sourcePlacement.Sprite);
+            appearance.AdmitActor(id, sourcePlacement.Sprite, assetId);
         else if (profile.BillboardSprites.TryGetValue((cast.Archive, cast.Record), out NormalizedBillboardSprite? sprite))
-            appearance.AdmitActor(id, sprite.Standing((cast.Archive, cast.Record)));
+            appearance.AdmitActor(id, sprite.Standing((cast.Archive, cast.Record)), assetId);
         _npcs.Bind(id, profile.ProfileKey);
         return id;
     }
@@ -1122,7 +1123,7 @@ internal sealed class DaggerfallActorRoster
                 && !TryAdmitDirectionalMobileAppearance(profile, appearance, id)
                 && profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
             {
-                appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+                appearance.AdmitActor(id, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(id));
             }
             if (npc.Presence == DaggerfallNpcPresence.Active) _npcs.Bind(id, profile.ProfileKey);
             _npcs.ReleasePose(id);
@@ -1204,7 +1205,7 @@ internal sealed class DaggerfallActorRoster
                 && !TryAdmitDirectionalMobileAppearance(profile, appearance, entry.DurableId)
                 && profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
             {
-                appearance.AdmitActor(entry.DurableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+                appearance.AdmitActor(entry.DurableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(entry.DurableId));
             }
             if (npc.Presence == DaggerfallNpcPresence.Active) _npcs.Bind(entry.DurableId, profile.ProfileKey);
             _npcs.ReleasePose(entry.DurableId);
@@ -1293,7 +1294,7 @@ internal sealed class DaggerfallActorRoster
         if (!TryAdmitDirectionalMobileAppearance(profile, appearance, entry.DurableId)
             && profile.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
         {
-            appearance.AdmitActor(entry.DurableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+            appearance.AdmitActor(entry.DurableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(entry.DurableId));
         }
         _npcs.Bind(entry.DurableId, profile.ProfileKey);
         _npcs.ReleasePose(entry.DurableId);
@@ -1533,12 +1534,18 @@ internal sealed class DaggerfallActorRoster
         if (!TryAdmitDirectionalMobileAppearance(destination, appearance, durableId)
             && destination.BillboardSprites.TryGetValue((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord), out NormalizedBillboardSprite? sprite))
         {
-            appearance.AdmitActor(durableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)));
+            appearance.AdmitActor(durableId, sprite.Standing((npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord)), ActorVisualAssetId(durableId));
         }
         _npcs.Bind(durableId, destination.ProfileKey);
         _npcs.ReleasePose(durableId);
         return durableId;
     }
+
+    private string? ActorVisualAssetId(long durableId) =>
+        _actors.TryGet(durableId, out ActorState? actor)
+        && actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
+            ? render.Spec.CrowdCharacterHint
+            : null;
 
     private static DaggerfallNpcSite ResolveHomeSocialBinding(DaggerfallWorldProfileKey homeProfile, DaggerfallSiteRecord homeLocation)
     {

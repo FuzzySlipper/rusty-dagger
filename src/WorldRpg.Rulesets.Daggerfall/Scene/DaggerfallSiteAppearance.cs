@@ -339,20 +339,20 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// never had an entry, so retiring one is a no-op rather than an error.
     /// </summary>
     /// <summary>Admits media for one dynamic actor after its canonical mechanics actor has been created.</summary>
-    internal void AddActor(long durableId, NormalizedActorSprite sprite, int? mobileId = null)
+    internal void AddActor(long durableId, NormalizedActorSprite sprite, int? mobileId = null, string? assetId = null)
     {
         if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
         ArgumentNullException.ThrowIfNull(sprite);
         if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
         if (actors.ContainsKey(durableId)) throw new InvalidOperationException($"Actor {durableId} already has an appearance.");
-        ActorVisual visual = CreateActorVisual(durableId, sprite, mobileId);
+        ActorVisual visual = CreateActorVisual(durableId, sprite, mobileId, assetId);
         try { actors.Add(durableId, visual); }
         catch { List<Exception>? failures = null; visual.Dispose(ref failures); if (failures is { Count: > 0 }) throw new AggregateException(failures); throw; }
     }
 
-    internal void AdmitActor(long durableId, NormalizedActorSprite sprite)
+    internal void AdmitActor(long durableId, NormalizedActorSprite sprite, string? assetId = null)
     {
-        if (!actors.ContainsKey(durableId)) AddActor(durableId, sprite);
+        if (!actors.ContainsKey(durableId)) AddActor(durableId, sprite, assetId: assetId);
     }
 
     /// <summary>Whether a dynamic actor currently has a live visual in this projection.</summary>
@@ -524,8 +524,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
                 : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
             Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : DrawnLive(visual);
-            // A walking person drawn as the crowd's figure reads Tier-2 ActorRenderComponent rather than gameplay kind.
-            bool crowdVisual = render?.Spec.Kind is ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig;
+            // A walking person or a cast individual with a stable asset binding drawn through the crowd reads Tier-2 ActorRenderComponent.
+            bool crowdVisual = render?.Spec.Kind is ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig
+                || (render?.Spec.Kind == ActorVisualKind.Billboard && !string.IsNullOrWhiteSpace(render.Spec.CrowdCharacterHint));
             bool walking = actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander)
                 && IWalkerCrowd.Walks(wander.State);
             Appearance? rigged = !actor.IsDefeated && crowdVisual
@@ -1168,11 +1169,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
-    private ActorVisual CreateActorVisual(long entityId, NormalizedActorSprite sprite, int? mobileId = null)
+    private ActorVisual CreateActorVisual(long entityId, NormalizedActorSprite sprite, int? mobileId = null, string? assetId = null)
     {
         if (mobileId is null && inputs.Project.Actors.TryGetValue(entityId, out var placement))
             mobileId = mobileDefinitions?.RequireActor(placement.ActorId).MobileId;
-        ActorVisual visual = new(entityId, sprite, mobileId is int id ? mobileDefinitions?.Mobiles.Mobiles.GetValueOrDefault(id) : null)
+        ActorVisual visual = new(entityId, sprite, mobileId is int id ? mobileDefinitions?.Mobiles.Mobiles.GetValueOrDefault(id) : null, assetId)
             { LocationOrdinal = NextLocationVisualOrdinal() };
         try
         {
@@ -1736,11 +1737,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile)
+    internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile, string? assetId = null)
     {
         internal long EntityId { get; } = entityId;
         internal ulong LocationOrdinal { get; init; }
         internal NormalizedActorSprite Sprite { get; } = sprite;
+        /// <summary>Optional stable cast/asset id (e.g. <c>npc-022</c>) overriding shared classic archive/record refreshed art.</summary>
+        internal string? AssetId { get; } = assetId;
         /// <summary>The mobile it draws as, whose glow and shadow its classic sprites take; none for a person.</summary>
         internal DaggerfallMobileDefinition? Mobile { get; } = mobile;
         /// <summary>

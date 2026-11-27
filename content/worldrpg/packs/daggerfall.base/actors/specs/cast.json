@@ -51,7 +51,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 182,
-        "record": 23
+        "record": 23,
+        "assetId": "npc-042"
       },
       "home": {
         "site": {
@@ -83,7 +84,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 183,
-        "record": 4
+        "record": 4,
+        "assetId": "npc-045"
       },
       "home": {
         "site": {
@@ -115,7 +117,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 183,
-        "record": 11
+        "record": 11,
+        "assetId": "npc-070"
       },
       "home": {
         "site": {
@@ -175,7 +178,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 182,
-        "record": 0
+        "record": 0,
+        "assetId": "npc-030"
       },
       "home": {
         "site": {
@@ -463,7 +467,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 182,
-        "record": 24
+        "record": 24,
+        "assetId": "npc-066"
       },
       "home": {
         "site": {
@@ -495,7 +500,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 180,
-        "record": 3
+        "record": 3,
+        "assetId": "npc-041"
       },
       "home": {
         "site": {
@@ -583,7 +589,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 182,
-        "record": 19
+        "record": 19,
+        "assetId": "npc-025"
       },
       "home": {
         "site": {
@@ -643,7 +650,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 182,
-        "record": 20
+        "record": 20,
+        "assetId": "npc-028"
       },
       "home": {
         "site": {
@@ -703,7 +711,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 183,
-        "record": 5
+        "record": 5,
+        "assetId": "npc-067"
       },
       "home": {
         "site": {
@@ -1159,7 +1168,8 @@
       "interaction": "full-dialogue",
       "visual": {
         "archive": 182,
-        "record": 23
+        "record": 23,
+        "assetId": "npc-022"
       },
       "home": {
         "site": {
