@@ -8,13 +8,24 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>The donor PopulationManager's bounded pool, shared by published and assembled exteriors.</summary>
 internal static class DaggerfallExteriorPopulation
 {
-    /// <summary>Canonical placement ID for a town's primary gate guard / watch captain slot (index 0).</summary>
-    internal static string WatchCaptainSlotId(DaggerfallSiteRecord location)
+    /// <summary>Canonical placement ID for a town's deterministic exterior walker/guard slot at <paramref name="index"/>.</summary>
+    internal static string ExteriorSlotId(DaggerfallSiteRecord location, int index)
     {
         ArgumentNullException.ThrowIfNull(location);
+        if (index < 0)
+            throw new ArgumentOutOfRangeException(nameof(index), index, "Exterior slot index cannot be negative.");
         string slug = LocationSlug(location.Name);
-        return string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/000");
+        return string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
     }
+
+    /// <summary>Canonical placement ID for a town's primary gate guard / watch captain slot (index 0).</summary>
+    internal static string WatchCaptainSlotId(DaggerfallSiteRecord location) => ExteriorSlotId(location, 0);
+
+    /// <summary>Deterministic maximum exterior walker slot count for <paramref name="location"/>.</summary>
+    internal static int EstimatedSlotCount(DaggerfallSiteRecord location) =>
+        location?.Exterior is { Blocks.Count: > 0 } exterior
+            ? Math.Clamp(exterior.Blocks.Count / 16, 1, 4) * 24
+            : 0;
 
     private static string LocationSlug(string name)
     {

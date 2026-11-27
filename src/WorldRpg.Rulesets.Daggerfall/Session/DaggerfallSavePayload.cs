@@ -437,6 +437,19 @@ internal sealed record DaggerfallSavePayload(
         }
         // A saved profile resolves through the catalog, which assembles the location it names.
         bool Admitted(DaggerfallWorldProfileKey profile) => profile == inputs.ProfileKey || profiles?.TryGet(profile, out _) == true;
+        static bool IsValidCatalogProfile(DaggerfallDefinitions defs, DaggerfallWorldProfileKey profile)
+        {
+            DaggerfallSiteRecord? site = defs.Locations.Records.FirstOrDefault(r => r.Id == profile.Site);
+            if (site is null) return false;
+            return profile.Kind switch
+            {
+                DaggerfallWorldProfileKind.Exterior => site.Exterior is not null,
+                DaggerfallWorldProfileKind.Dungeon => site.DungeonBlocks.Count > 0,
+                DaggerfallWorldProfileKind.Interior => DaggerfallWorldProfileIds.TryParse(profile.LogicalId, out _, out DaggerfallSiteBuildingId? building)
+                    && building is { } b && site.Exterior?.Buildings.ContainsKey(b) == true,
+                _ => false,
+            };
+        }
         foreach (DaggerfallGroundContainerSave ground in GroundContainers)
         {
             DaggerfallWorldProfileKey profile = ground.Profile.Require();
@@ -605,7 +618,7 @@ internal sealed record DaggerfallSavePayload(
                 }
                 else if (entry.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual && !entry.Origin.IsFixedPlacement)
                 {
-                    if (!Admitted(key))
+                    if (!Admitted(key) && !IsValidCatalogProfile(definitions, key))
                         throw new ArgumentException($"Saved relocated deterministic actor {entry.DurableId} names unadmitted profile '{key.LogicalId}'.");
                 }
             }
@@ -772,10 +785,17 @@ internal sealed record DaggerfallSavePayload(
         }
         foreach (var npc in savedNpcs.Values.Where(value => value.Profile is not null))
         {
-            if (!deterministicNpcIds.Contains(npc.DurableId)
+            bool isDeterministic = deterministicNpcIds.Contains(npc.DurableId);
+            if (!isDeterministic
                 && savedLedger.Classify(new(DurableIdentityKind.Actor, checked((ulong)npc.DurableId))) != DurableIdentityClassification.Live)
                 throw new ArgumentException($"Saved placed NPC {npc.DurableId} is not live in the identity ledger.");
             var profile = npc.Profile!.Require();
+            if (isDeterministic && profile != inputs.ProfileKey && !Admitted(profile))
+            {
+                if (!IsValidCatalogProfile(definitions, profile))
+                    throw new ArgumentException($"Saved placed NPC {npc.DurableId} names an unknown world profile '{profile.LogicalId}'.");
+                continue;
+            }
             DaggerfallSiteProfile owner = profiles is null ? inputs : profiles.Require(profile);
             bool needsBillboard = npc.Kind != (int)DaggerfallNpcKind.Civilian || npc.BillboardArchive != 0 || npc.BillboardRecord != 0;
             if (owner.ProfileKey != profile || (needsBillboard && !owner.BillboardSprites.ContainsKey((npc.BillboardArchive, npc.BillboardRecord))))

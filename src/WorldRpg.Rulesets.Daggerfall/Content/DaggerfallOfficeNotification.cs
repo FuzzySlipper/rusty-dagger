@@ -58,6 +58,29 @@ internal enum DaggerfallOfficeChangeKind
 }
 
 /// <summary>
+/// Lightweight identity/appearance blueprint carried in <see cref="DaggerfallOfficeChangedNotification"/> so the
+/// <c>Actors</c> owner can materialize a promoted successor or exiled former holder at their new site even when
+/// their original home building has never been visited yet.
+/// </summary>
+internal sealed record DaggerfallOfficeActorBlueprint(
+    int NpcKind,
+    string StableKey,
+    int Region,
+    string Location,
+    string Building,
+    string? ProfileId,
+    string Race,
+    string Gender,
+    int BillboardArchive,
+    int BillboardRecord,
+    int NameSeed,
+    int FactionId,
+    string Role,
+    string[] Services,
+    string? DisplayName = null,
+    string? FamilyId = null);
+
+/// <summary>
 /// Shared typed notification vocabulary published whenever an office opens a vacancy, enters regency, seats a
 /// successor, or deposes a living holder. Lives in <c>Content/</c> so <c>Content</c>, <c>Actors</c>, and <c>Society</c>
 /// owners each react directly inside their own domain without a coordinator hub or upward folder references.
@@ -86,4 +109,9 @@ internal sealed record DaggerfallOfficeChangedNotification(
     int ChangedDay,
     long ChangedMinute,
     long? VacancyUntilMinute,
-    string? CauseDetail);
+    string? CauseDetail,
+    DaggerfallWorldProfileKey? NewHolderHomeProfile = null,
+    string? NewHolderHomeSlotId = null,
+    DaggerfallOfficeActorBlueprint? NewHolderBlueprint = null,
+    DaggerfallWorldProfileKey? ExileProfileKey = null,
+    DaggerfallOfficeActorBlueprint? PreviousHolderBlueprint = null);

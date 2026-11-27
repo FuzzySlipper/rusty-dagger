@@ -781,25 +781,245 @@ internal sealed class DaggerfallActorRoster
 
     /// <summary>
     /// Reacts directly to a typed <see cref="DaggerfallOfficeChangedNotification"/> inside the <c>Actors</c> owner:
-    /// suppresses a deposed living holder's <c>#11090</c> home/office slot via <see cref="ActorLocationOverride.OffStage"/>
-    /// and unloads any live body in the active scene so the vacated seat stands visibly empty.
+    /// relocates a non-lethally deposed living holder to their deterministic exile destination (or off-stage when no
+    /// exile site exists), and physically seats a promoted successor into the vacated <c>#11090</c> home/office slot
+    /// with updated title/role while suppressing their prior home slot so zero duplicate bodies can exist.
     /// </summary>
     internal void ObserveOfficeChanged(DaggerfallOfficeChangedNotification change)
     {
         ArgumentNullException.ThrowIfNull(change);
-        if (change.ChangeKind is not (DaggerfallOfficeChangeKind.HolderDeposed or DaggerfallOfficeChangeKind.SuccessorSeated))
-            return;
-        if (change.PreviousHolderActorId is not long prevId || !change.PreviousHolderIsAlive || prevId == change.NewHolderActorId)
+
+        // 1. Displaced living predecessor: deterministic exile relocation (replacing OffStage when an exile site exists).
+        if (change.ChangeKind is DaggerfallOfficeChangeKind.HolderDeposed or DaggerfallOfficeChangeKind.SuccessorSeated
+            && change.PreviousHolderActorId is long prevId
+            && change.PreviousHolderIsAlive
+            && prevId != change.NewHolderActorId)
+        {
+            ActorOrigin? prevOrigin = ResolveOriginForOfficeActor(
+                prevId,
+                change.PreviousHolderCastId,
+                change.OfficeProfileKey,
+                change.OfficeSlotId);
+            if (prevOrigin is not null)
+            {
+                if (change.ExileProfileKey is { } exileProfile)
+                {
+                    RelocateOfficeActorToSite(
+                        prevId,
+                        prevOrigin,
+                        exileProfile,
+                        targetSlotId: null,
+                        blueprint: change.PreviousHolderBlueprint,
+                        updatedRole: null,
+                        updatedDisplayName: null);
+                }
+                else
+                {
+                    SuppressOffStage(prevId, prevOrigin);
+                }
+            }
+        }
+
+        // 2. Seated successor: relocate physically into the vacated #11090 office slot with updated office role/title.
+        if (change.ChangeKind == DaggerfallOfficeChangeKind.SuccessorSeated
+            && change.NewHolderActorId is long newId
+            && change.OfficeProfileKey is { } officeProfile)
+        {
+            ActorOrigin? newOrigin = ResolveOriginForOfficeActor(
+                newId,
+                change.NewHolderCastId,
+                change.NewHolderHomeProfile,
+                change.NewHolderHomeSlotId);
+            if (newOrigin is not null)
+            {
+                string officeRole = FormatOfficeRole(change.Kind, change.Title);
+                RelocateOfficeActorToSite(
+                    newId,
+                    newOrigin,
+                    officeProfile,
+                    targetSlotId: change.OfficeSlotId,
+                    blueprint: change.NewHolderBlueprint,
+                    updatedRole: officeRole,
+                    updatedDisplayName: change.NewHolderName);
+            }
+        }
+    }
+
+    private ActorOrigin? ResolveOriginForOfficeActor(
+        long durableId,
+        string? castId,
+        DaggerfallWorldProfileKey? homeProfile,
+        string? homeSlotId)
+    {
+        if (_actorLedger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
+            return existing.Origin.Kind is ActorOriginKind.SeededSlot or ActorOriginKind.CastIndividual ? existing.Origin : null;
+        if (!string.IsNullOrWhiteSpace(castId))
+            return ActorOrigin.Cast(castId, homeProfile);
+        if (homeProfile is { } profile && !string.IsNullOrWhiteSpace(homeSlotId))
+            return ActorOrigin.Seeded(profile, homeSlotId);
+        return null;
+    }
+
+    private void RelocateOfficeActorToSite(
+        long durableId,
+        ActorOrigin origin,
+        DaggerfallWorldProfileKey destinationProfile,
+        string? targetSlotId,
+        DaggerfallOfficeActorBlueprint? blueprint,
+        string? updatedRole,
+        string? updatedDisplayName)
+    {
+        if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
             return;
 
-        ActorOrigin? origin = !string.IsNullOrWhiteSpace(change.PreviousHolderCastId)
-            ? ActorOrigin.Cast(change.PreviousHolderCastId, change.OfficeProfileKey)
-            : change.OfficeProfileKey is { } profile && !string.IsNullOrWhiteSpace(change.OfficeSlotId)
-                ? ActorOrigin.Seeded(profile, change.OfficeSlotId)
-                : null;
-        if (origin is not null)
-            SuppressOffStage(prevId, origin);
+        ActorLedgerEntry? existing = _actorLedger.TryGet(durableId, out ActorLedgerEntry? found) ? found : null;
+        if (existing?.Location?.Kind is ActorLocationKind.Dead or ActorLocationKind.Removed)
+            return;
+
+        DaggerfallNpc? liveNpc = _npcs.TryGet(durableId, out DaggerfallNpc? reg) ? reg : null;
+        ActorSocialDiff? social = BuildRelocatedSocialDiff(
+            durableId,
+            origin,
+            destinationProfile,
+            existing?.Social,
+            liveNpc,
+            blueprint,
+            updatedRole,
+            updatedDisplayName);
+
+        // Unload any live body first so moving between profiles or switching slots within the same profile never duplicates.
+        if (_actors.TryGet(durableId, out _))
+            UnloadActor(durableId);
+        if (_npcs.TryGet(durableId, out _))
+            _npcs.Unplace(durableId);
+
+        ActorLocationOverride location = ActorLocationOverride.AtSite(
+            destinationProfile,
+            pose: null,
+            detached: false,
+            trafficVisitor: false,
+            targetSlotId: targetSlotId);
+        ActorLedgerEntry entry = existing is not null
+            ? existing with
+            {
+                Location = location,
+                Pose = null,
+                Social = social ?? existing.Social,
+            }
+            : new ActorLedgerEntry(
+                durableId,
+                origin,
+                Social: social,
+                Location: location);
+        _actorLedger.Upsert(entry);
+
+        if (liveNpc is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(updatedDisplayName))
+                _npcs.SetDisplayName(durableId, updatedDisplayName);
+            if (!string.IsNullOrWhiteSpace(updatedRole))
+                _npcs.SetRole(durableId, updatedRole);
+        }
+
+        // If the player is currently standing in the destination profile, materialize the relocated actor immediately.
+        DaggerfallSiteProfile activeProfile = _profile();
+        if (activeProfile.ProfileKey == destinationProfile)
+            MaterializeRelocatedLedgerActors(activeProfile, _appearance(), Vector3.Zero);
     }
+
+    private ActorSocialDiff? BuildRelocatedSocialDiff(
+        long durableId,
+        ActorOrigin origin,
+        DaggerfallWorldProfileKey destinationProfile,
+        ActorSocialDiff? prior,
+        DaggerfallNpc? liveNpc,
+        DaggerfallOfficeActorBlueprint? blueprint,
+        string? updatedRole,
+        string? updatedDisplayName)
+    {
+        DaggerfallSiteRecord? destSite = _definitions.Locations.Records.FirstOrDefault(r => r.Id == destinationProfile.Site);
+        string destLocation = destSite?.Name ?? prior?.Location ?? liveNpc?.Site.Location ?? blueprint?.Location ?? string.Empty;
+        string destBuilding = DaggerfallWorldProfileIds.TryParse(destinationProfile.LogicalId, out _, out DaggerfallSiteBuildingId? buildingId)
+            && buildingId is { } b
+            ? $"{b.BlockX}/{b.BlockY}/{b.Index}"
+            : string.Empty;
+
+        ActorSocialDiff? baseSocial = prior;
+        if (baseSocial is null && liveNpc is not null)
+        {
+            baseSocial = ActorSocialDiff.FromNpc(liveNpc);
+        }
+        else if (baseSocial is null && blueprint is not null)
+        {
+            baseSocial = new ActorSocialDiff(
+                NpcKind: blueprint.NpcKind,
+                StableKey: blueprint.StableKey,
+                Region: blueprint.Region,
+                Location: blueprint.Location,
+                Building: blueprint.Building,
+                ProfileId: blueprint.ProfileId,
+                Race: blueprint.Race,
+                Gender: blueprint.Gender,
+                BillboardArchive: blueprint.BillboardArchive,
+                BillboardRecord: blueprint.BillboardRecord,
+                NameSeed: blueprint.NameSeed,
+                FactionId: blueprint.FactionId,
+                Role: blueprint.Role,
+                Services: blueprint.Services,
+                DisplayNameOverride: blueprint.DisplayName,
+                FamilyId: blueprint.FamilyId);
+        }
+        else if (baseSocial is null && origin.Kind == ActorOriginKind.CastIndividual
+            && origin.CastId is { } castId
+            && _definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast))
+        {
+            baseSocial = new ActorSocialDiff(
+                NpcKind: (int)DaggerfallNpcKind.Static,
+                StableKey: $"cast:{castId}",
+                Region: destinationProfile.Site.Region,
+                Location: destLocation,
+                Building: destBuilding,
+                ProfileId: destinationProfile.LogicalId,
+                Race: cast.Race ?? "breton",
+                Gender: cast.Gender,
+                BillboardArchive: cast.Archive,
+                BillboardRecord: cast.Record,
+                NameSeed: 0,
+                FactionId: cast.FactionId,
+                Role: "person",
+                Services: ["talk"],
+                DisplayNameOverride: cast.Name,
+                FamilyId: cast.FamilyId);
+        }
+
+        if (baseSocial is null)
+            return null;
+
+        return baseSocial with
+        {
+            Region = destinationProfile.Site.Region,
+            Location = destLocation,
+            Building = destBuilding,
+            ProfileId = destinationProfile.LogicalId,
+            Role = !string.IsNullOrWhiteSpace(updatedRole) ? updatedRole : baseSocial.Role,
+            DisplayNameOverride = !string.IsNullOrWhiteSpace(updatedDisplayName) ? updatedDisplayName : baseSocial.DisplayNameOverride,
+            Presence = (int)DaggerfallNpcPresence.Active,
+        };
+    }
+
+    private static string FormatOfficeRole(DaggerfallOfficeKind kind, string title) =>
+        !string.IsNullOrWhiteSpace(title)
+            ? title
+            : kind switch
+            {
+                DaggerfallOfficeKind.Ruler => "Ruler",
+                DaggerfallOfficeKind.MajorSeat => "Seat Head",
+                DaggerfallOfficeKind.GuildHallMaster => "Guild Hall Master",
+                DaggerfallOfficeKind.TempleHead => "Temple Head",
+                DaggerfallOfficeKind.WatchCaptain => "Watch Captain",
+                DaggerfallOfficeKind.CourtFactor => "Court Factor",
+                _ => "Officer",
+            };
 
     /// <summary>
     /// Suppresses a deposed living actor's home/office slot via <see cref="ActorLocationOverride.OffStage"/> and
@@ -914,22 +1134,46 @@ internal sealed class DaggerfallActorRoster
             {
                 DaggerfallSiteId site = profile.Site!.Value;
                 DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
+                string castRole = !string.IsNullOrWhiteSpace(entry.Social?.Role) ? entry.Social.Role : "person";
+                string castName = !string.IsNullOrWhiteSpace(entry.Social?.DisplayNameOverride) ? entry.Social.DisplayNameOverride : cast.Name;
+                IReadOnlyList<string> castServices = entry.Social?.Services is { Length: > 0 } svcs ? svcs : ["talk"];
                 _npcs.RegisterDeterministic(entry.DurableId, DaggerfallNpcKind.Static, $"cast:{cid}",
                     new DaggerfallNpcSite(site.Region, location.Name, string.Empty, profile.ProfileKey.LogicalId),
                     new DaggerfallNpcAppearance(cast.Race ?? "breton", cast.Gender, cast.Archive, cast.Record, 0, cast.FactionId),
-                    "person", ["talk"], cast.Name, profile.ProfileKey);
+                    castRole, castServices, castName, entry.Origin.SiteProfile?.Require() ?? profile.ProfileKey,
+                    familyId: entry.Social?.FamilyIdCleared == true ? null : entry.Social?.FamilyId ?? cast.FamilyId);
+                npc = _npcs.Require(entry.DurableId);
+            }
+            else if (npc is null && entry.Social is { } savedSocial)
+            {
+                _npcs.RegisterDeterministic(
+                    entry.DurableId,
+                    (DaggerfallNpcKind)savedSocial.NpcKind,
+                    savedSocial.StableKey,
+                    new DaggerfallNpcSite(savedSocial.Region, savedSocial.Location, savedSocial.Building, savedSocial.ProfileId),
+                    new DaggerfallNpcAppearance(
+                        savedSocial.Race, savedSocial.Gender, savedSocial.BillboardArchive,
+                        savedSocial.BillboardRecord, savedSocial.NameSeed, savedSocial.FactionId),
+                    savedSocial.Role,
+                    savedSocial.Services,
+                    savedSocial.DisplayNameOverride,
+                    entry.Origin.SiteProfile?.Require() ?? profile.ProfileKey,
+                    familyId: savedSocial.FamilyIdCleared ? null : savedSocial.FamilyId);
                 npc = _npcs.Require(entry.DurableId);
             }
             if (npc is null || npc.Presence == DaggerfallNpcPresence.Removed) continue;
 
             bool atHomeSite = entry.Origin.Kind switch
             {
-                ActorOriginKind.SeededSlot => entry.Origin.SiteProfile?.Require() == profile.ProfileKey,
-                ActorOriginKind.CastIndividual => entry.Origin.SiteProfile is { } castHome
+                ActorOriginKind.SeededSlot => entry.Origin.SiteProfile?.Require() == profile.ProfileKey
+                    && (string.IsNullOrWhiteSpace(entry.Location?.TargetSlotId)
+                        || StringComparer.Ordinal.Equals(entry.Location.TargetSlotId, entry.Origin.SlotKey)),
+                ActorOriginKind.CastIndividual => (entry.Origin.SiteProfile is { } castHome
                     ? castHome.Require() == profile.ProfileKey
                     : entry.Origin.CastId is { } castId
                       && _definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? castDef)
-                      && profile.StaticNpcs.Any(s => s.Appearance.FactionId == castDef.FactionId),
+                      && profile.StaticNpcs.Any(s => s.Appearance.FactionId == castDef.FactionId))
+                    && string.IsNullOrWhiteSpace(entry.Location?.TargetSlotId),
                 _ => true,
             };
             WorldPoint basePose = ResolveBaselineProfilePose(profile, entry, npc);
@@ -1127,8 +1371,28 @@ internal sealed class DaggerfallActorRoster
         return actor;
     }
 
-    private static WorldPoint ResolveBaselineProfilePose(DaggerfallSiteProfile profile, ActorLedgerEntry entry, DaggerfallNpc npc)
+    private WorldPoint ResolveBaselineProfilePose(DaggerfallSiteProfile profile, ActorLedgerEntry entry, DaggerfallNpc npc)
     {
+        if (entry.Location?.TargetSlotId is { Length: > 0 } targetSlot)
+        {
+            if (profile.StaticNpcs.FirstOrDefault(s => StringComparer.Ordinal.Equals(s.Id, targetSlot)) is { } targetStatic)
+                return targetStatic.Position;
+            if (profile.Population.FirstOrDefault(p => StringComparer.Ordinal.Equals(p.Id, targetSlot)) is { } targetPop)
+                return targetPop.Position;
+            if (targetSlot.StartsWith("cast:", StringComparison.Ordinal))
+            {
+                string targetCastId = targetSlot["cast:".Length..];
+                if (_definitions.People.Individuals.TryGetValue(targetCastId, out DaggerfallCastIndividualDefinition? targetCast))
+                {
+                    if (profile.StaticNpcs.FirstOrDefault(s =>
+                        s.Appearance.FactionId == targetCast.FactionId
+                        || s.Id.Contains($"cast-{targetCastId}", StringComparison.Ordinal)) is { } castPlacement)
+                    {
+                        return castPlacement.Position;
+                    }
+                }
+            }
+        }
         if (entry.Origin.Kind == ActorOriginKind.SeededSlot
             && entry.Origin.SiteProfile?.Require() == profile.ProfileKey
             && entry.Origin.SlotKey is { } slotKey)
@@ -1138,11 +1402,20 @@ internal sealed class DaggerfallActorRoster
             if (profile.StaticNpcs.FirstOrDefault(p => StringComparer.Ordinal.Equals(p.Id, slotKey)) is { } stat)
                 return stat.Position;
         }
-        return entry.Pose is { } p
-            ? new WorldPoint(p.X, p.Y, p.Z)
-            : entry.Location?.Pose is { } lp
-                ? new WorldPoint(lp.X, lp.Y, lp.Z)
-                : profile.Project.PlayerPosition ?? default;
+        if (entry.Pose is { } p)
+            return new WorldPoint(p.X, p.Y, p.Z);
+        if (entry.Location?.Pose is { } lp)
+            return new WorldPoint(lp.X, lp.Y, lp.Z);
+        if (profile.Project.PlayerPosition is { } playerPos)
+            return playerPos;
+        if (profile.StaticNpcs.Count > 0)
+        {
+            WorldPoint anchor = profile.StaticNpcs[0].Position;
+            return new WorldPoint(anchor.X + 0.9f, anchor.Y, anchor.Z + 0.5f);
+        }
+        if (profile.Population.Count > 0)
+            return profile.Population[0].Position;
+        return default;
     }
 
     /// <summary>
@@ -1326,7 +1599,10 @@ internal sealed class DaggerfallActorRoster
                 ActorLocationOverride? clearedLocation = delta.Location switch
                 {
                     { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } locProfile } =>
-                        delta.Origin.SiteProfile?.Require() == locProfile.Require() ? null : delta.Location with { Detached = false },
+                        delta.Origin.SiteProfile?.Require() == locProfile.Require()
+                            && string.IsNullOrWhiteSpace(delta.Location.TargetSlotId)
+                            ? null
+                            : delta.Location with { Detached = false },
                     { Kind: ActorLocationKind.Dead, Detached: true } => delta.Location with { Detached = false },
                     _ => delta.Location,
                 };
@@ -1336,6 +1612,7 @@ internal sealed class DaggerfallActorRoster
             {
                 ActorLocationOverride? clearedLocation = delta.Location is { Kind: ActorLocationKind.AtSite, Profile: { } detProfile }
                     && delta.Origin.SiteProfile?.Require() == detProfile.Require()
+                    && string.IsNullOrWhiteSpace(delta.Location.TargetSlotId)
                     ? null
                     : delta.Location with { Detached = false };
                 _actorLedger.Upsert(delta with { Location = clearedLocation });
@@ -1345,6 +1622,7 @@ internal sealed class DaggerfallActorRoster
         {
             ActorLocationOverride? clearedLocation = delta.Location is { Kind: ActorLocationKind.AtSite, Profile: { } detProfile }
                 && delta.Origin.SiteProfile?.Require() == detProfile.Require()
+                && string.IsNullOrWhiteSpace(delta.Location.TargetSlotId)
                 ? null
                 : delta.Location with { Detached = false };
             _actorLedger.Upsert(delta with { Location = clearedLocation });
@@ -1367,6 +1645,8 @@ internal sealed class DaggerfallActorRoster
         {
             if (!string.IsNullOrWhiteSpace(social.DisplayNameOverride))
                 _npcs.SetDisplayName(npc.DurableId, social.DisplayNameOverride);
+            if (!string.IsNullOrWhiteSpace(social.Role) && !string.Equals(npc.Role, social.Role, StringComparison.Ordinal))
+                _npcs.SetRole(npc.DurableId, social.Role);
             if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
             {
                 if (social.FamilyIdCleared)

@@ -334,6 +334,13 @@ public sealed class DaggerfallNpcRegistry
         Mutate(durableId, current => current with { DisplayName = name }, updateLocation: null);
     }
 
+    /// <summary>Updates the displayed institutional title/role on the canonical NPC identity.</summary>
+    internal void SetRole(long durableId, string role)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(role);
+        Mutate(durableId, current => current with { Role = role }, updateLocation: null);
+    }
+
     /// <summary>Hides or reveals one NPC without duplicating it.</summary>
     public void SetPresence(long durableId, DaggerfallNpcPresence presence)
     {

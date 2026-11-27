@@ -300,10 +300,17 @@ internal sealed record ActorLocationOverride(
     string? BandId = null,
     ActorPoseOverride? Pose = null,
     bool Detached = false,
-    bool TrafficVisitor = false)
+    bool TrafficVisitor = false,
+    string? TargetSlotId = null)
 {
-    internal static ActorLocationOverride AtSite(DaggerfallWorldProfileKey profile, ActorPoseOverride? pose = null, bool detached = false, bool trafficVisitor = false) =>
-        new(ActorLocationKind.AtSite, DaggerfallWorldProfileKeySave.Capture(profile), Pose: pose, Detached: detached, TrafficVisitor: trafficVisitor);
+    internal static ActorLocationOverride AtSite(
+        DaggerfallWorldProfileKey profile,
+        ActorPoseOverride? pose = null,
+        bool detached = false,
+        bool trafficVisitor = false,
+        string? targetSlotId = null) =>
+        new(ActorLocationKind.AtSite, DaggerfallWorldProfileKeySave.Capture(profile), Pose: pose, Detached: detached,
+            TrafficVisitor: trafficVisitor, TargetSlotId: string.IsNullOrWhiteSpace(targetSlotId) ? null : targetSlotId);
 
     internal static ActorLocationOverride WithParty(ActorPartyRole role = ActorPartyRole.Escort) =>
         new(ActorLocationKind.WithParty, PartyRole: role);
@@ -329,6 +336,8 @@ internal sealed record ActorLocationOverride(
             throw new ArgumentException("A WithParty actor location requires a valid party role.");
         if (Kind == ActorLocationKind.OnOverlandBand && string.IsNullOrWhiteSpace(BandId))
             throw new ArgumentException("An OnOverlandBand actor location requires a band id.");
+        if (TargetSlotId is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(TargetSlotId);
     }
 }
 
@@ -477,7 +486,9 @@ internal sealed class DaggerfallActorLedger
             return false;
         return location.Kind switch
         {
-            ActorLocationKind.AtSite => location.Profile?.Require() != homeProfile,
+            ActorLocationKind.AtSite => location.Profile?.Require() != homeProfile
+                || (!string.IsNullOrWhiteSpace(location.TargetSlotId)
+                    && !StringComparer.Ordinal.Equals(location.TargetSlotId, entry.Origin.SlotKey)),
             ActorLocationKind.WithParty => true,
             ActorLocationKind.OnOverlandBand => true,
             ActorLocationKind.OffStage => true,

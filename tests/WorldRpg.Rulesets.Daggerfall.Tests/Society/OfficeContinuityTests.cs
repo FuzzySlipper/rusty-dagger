@@ -275,7 +275,8 @@ public sealed class OfficeContinuityTests
             DaggerfallOfficeLedger.LocalVacancyMaxMinutes);
         Assert.True(session.State.ActorLedger.IsHomeSlotSuppressed(masterId, fixture.MagesProfile.ProfileKey));
         Assert.True(session.State.ActorLedger.TryGet(masterId, out ActorLedgerEntry? masterLedgerEntry));
-        Assert.Equal(ActorLocationKind.OffStage, masterLedgerEntry!.Location?.Kind);
+        Assert.Equal(ActorLocationKind.AtSite, masterLedgerEntry!.Location?.Kind);
+        Assert.NotEqual(fixture.MagesProfile.ProfileKey, masterLedgerEntry.Location!.Profile!.Require());
 
         // 2. Depose the currently live exterior Watch Captain -> immediately unloads from EntityStore & leaves post empty!
         DaggerfallLocalOffice watchCaptain = session.OfficeLedger.ResolveWatchCaptain(charing);
@@ -320,14 +321,20 @@ public sealed class OfficeContinuityTests
         Assert.Equal(2, restored.OfficeLedger.OverrideCount);
         Assert.Empty(restored.OfficeLedger.DueVacancies(restored.Calendar.MinuteNumber));
 
-        // 5. Advance calendar past both 24–48h local vacancy windows -> DueVacancies reports both matured vacancies!
+        // 5. Advance calendar past both 24–48h local vacancy windows -> AdvanceVacancies automatically seats successors!
         long maxUntil = Math.Max(masterVacancy.VacancyUntilMinute!.Value, captainVacancy.VacancyUntilMinute!.Value);
         long minutesToAdvance = maxUntil - restored.Calendar.MinuteNumber + 1;
         restored.AdvanceElapsedTime(checked(minutesToAdvance * 60L));
-        IReadOnlyList<DaggerfallOfficeOverrideSave> due = restored.OfficeLedger.DueVacancies(restored.Calendar.MinuteNumber);
-        Assert.Equal(2, due.Count);
-        Assert.Contains(due, o => o.OfficeKey == magesMaster.OfficeKey);
-        Assert.Contains(due, o => o.OfficeKey == watchCaptain.OfficeKey);
+        Assert.Empty(restored.OfficeLedger.DueVacancies(restored.Calendar.MinuteNumber));
+        DaggerfallLocalOffice seatedMaster = restored.OfficeLedger.ResolveLocalOffices(charing)
+            .Single(o => o.OfficeKey == magesMaster.OfficeKey);
+        DaggerfallLocalOffice seatedCaptain = restored.OfficeLedger.ResolveWatchCaptain(charing);
+        Assert.False(seatedMaster.IsVacant);
+        Assert.NotNull(seatedMaster.HolderActorId);
+        Assert.NotEqual(masterId, seatedMaster.HolderActorId);
+        Assert.False(seatedCaptain.IsVacant);
+        Assert.NotNull(seatedCaptain.HolderActorId);
+        Assert.NotEqual(captainId, seatedCaptain.HolderActorId);
     }
 
     [Fact]

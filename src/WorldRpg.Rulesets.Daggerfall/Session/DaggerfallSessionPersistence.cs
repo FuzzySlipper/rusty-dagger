@@ -462,9 +462,12 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             : new ActorVitalsDiff(currentStats);
 
         bool isScheduledVisitor = originComp?.IsScheduledVisitor == true;
+        State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorLocationLedger);
+        string? targetSlotId = priorLocationLedger?.Location?.TargetSlotId;
         bool relocated = !isScheduledVisitor
             && ((originComp?.IsRelocated == true)
-                || (origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile));
+                || (origin.SiteProfile is { } homeProfile && homeProfile.Require() != activeProfile)
+                || (!string.IsNullOrWhiteSpace(targetSlotId) && !StringComparer.Ordinal.Equals(targetSlotId, origin.SlotKey)));
 
         WorldPoint currentPos = origin.IsFixedPlacement ? actor.Position : localToProfile(actor.Position);
         DaggerfallEnemyPerceptionMemory memory = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
@@ -493,13 +496,12 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 PromotedArchetype: promotedArchetype)
             : null;
 
-        State.ActorLedger.TryGet(actor.DurableId, out ActorLedgerEntry? priorLocationLedger);
         bool trafficVisitor = priorLocationLedger?.Location?.TrafficVisitor == true && !actor.IsDefeated;
         ActorPoseOverride currentPoseOverride = new(currentPos.X, currentPos.Y, currentPos.Z, actor.HeadingYawRadians);
         ActorLocationOverride? location = actor.IsDefeated
             ? ActorLocationOverride.Dead(activeProfile, currentPoseOverride)
             : relocated
-                ? ActorLocationOverride.AtSite(activeProfile, trafficVisitor: trafficVisitor)
+                ? ActorLocationOverride.AtSite(activeProfile, trafficVisitor: trafficVisitor, targetSlotId: targetSlotId)
                 : null;
 
         ActorSocialDiff? social = null;
@@ -525,6 +527,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             bool nameChanged = originComp?.BaselineNpc is { DisplayName: not null } baseNpc
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, baseNpc.DisplayName)
                 && !StringComparer.Ordinal.Equals(npc.DisplayName, referralName);
+            bool roleChanged = originComp?.BaselineNpc is { } baseNpcRole
+                && !StringComparer.Ordinal.Equals(npc.Role, baseNpcRole.Role);
             bool presenceChanged = DaggerfallCivilians.IsSourcePopulation(npc)
                 ? npc.Presence == DaggerfallNpcPresence.Removed
                 : npc.Presence != DaggerfallNpcPresence.Active;
@@ -554,7 +558,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     || (overlay is null && (ps.FamilyId is not null || ps.FamilyIdCleared)));
             bool mustKeepSocial = met || muted || witnessedCrimes is { Length: > 0 } || lastFavourDay is not null
                 || promotedArchetype is not null || stagedPartyRole is not null || familyChanged
-                || nameChanged || presenceChanged || hasPriorSocialDelta
+                || nameChanged || roleChanged || presenceChanged || hasPriorSocialDelta
                 || relocated || referencedNpcs.Contains(actor.DurableId);
             if (mustKeepSocial)
             {
@@ -908,7 +912,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 : originComp.IsScheduledVisitor
                     ? null
                     : sparse.Location is { Kind: ActorLocationKind.AtSite, Profile: { } locProfile }
-                        ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true, trafficVisitor: sparse.Location.TrafficVisitor)
+                        ? ActorLocationOverride.AtSite(locProfile.Require(), sparse.Location.Pose, detached: true,
+                            trafficVisitor: sparse.Location.TrafficVisitor, targetSlotId: sparse.Location.TargetSlotId)
                         : ActorLocationOverride.AtSite(inputs.ProfileKey, detached: true);
             ActorSocialDiff? social = sparse.Social;
             if (social is null && actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? detachedPerson))
