@@ -1420,7 +1420,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
     }
 
-    private string? ResolveRegionalThroneContinuityLine(DaggerfallNpc npc, int region, bool forBark)
+    /// <summary>
+    /// What a palace speaker says of <paramref name="region"/>'s throne: its lord and the crown the lord is sworn to, a
+    /// regency or a vacancy; the ambient bark when <paramref name="forBark"/>.
+    /// </summary>
+    internal string? ResolveRegionalThroneContinuityLine(DaggerfallNpc npc, int region, bool forBark)
     {
         if (_officeHolders is null || region is < 0 or > 61)
             return null;

@@ -161,6 +161,33 @@ public sealed class RegionLiegeTests
         Assert.NotNull(restored.CurrentTextContext().Faction.Liege);
     }
 
+    /// <summary>Betony answers to Daggerfall from the canon start; its court says so, and says so of Wayrest once Wayrest takes it.</summary>
+    [Fact]
+    public void A_vassals_court_names_the_crown_its_lord_is_sworn_to_and_a_crowns_own_court_names_none()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        DaggerfallNpc speaker = session.State.Npcs.All.First();
+        // The catalog names no individual lord of Betony, so a lord is seated for the court to speak of.
+        session.OfficeLedger.SetFactionOfficeHolder(Betony, DaggerfallOfficeKind.Ruler, holderActorId: null, holderCastId: null,
+            holderFactionId: null, holderDisplayName: "Aldric Mornsey", DaggerfallOfficeChangeCause.Succession, changedDay: 1);
+        session.OfficeLedger.SetFactionOfficeHolder(Daggerfall, DaggerfallOfficeKind.Ruler, holderActorId: null, holderCastId: null,
+            holderFactionId: null, holderDisplayName: "Gothryd", DaggerfallOfficeChangeCause.Succession, changedDay: 1);
+
+        string betony = session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 19, forBark: false)!;
+        Assert.Contains("Aldric Mornsey", betony, StringComparison.Ordinal);
+        Assert.Contains(", sworn to the Crown of Daggerfall", betony, StringComparison.Ordinal);
+        string daggerfall = session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 17, forBark: false)!;
+        Assert.Contains("Gothryd", daggerfall, StringComparison.Ordinal);
+        Assert.DoesNotContain("sworn", daggerfall, StringComparison.Ordinal);
+        Assert.DoesNotContain("homage", session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 19, forBark: true)!, StringComparison.Ordinal);
+
+        Take(session.PoliticalBoard!.Board, "betony", "wayrest");
+        Assert.Contains(", sworn to the Crown of Wayrest", session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 19, forBark: false)!, StringComparison.Ordinal);
+        Assert.Equal("The court of Betony has sworn homage to the Crown of Wayrest.",
+            session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 19, forBark: true));
+    }
+
     private static IReadOnlyList<DaggerfallNoticeEntry> Notices(DaggerfallSession session, DaggerfallSiteRecord town) =>
         session.NoticeBoard.BuildForSite(town, session.Calendar.MinuteNumber).Entries;
 
