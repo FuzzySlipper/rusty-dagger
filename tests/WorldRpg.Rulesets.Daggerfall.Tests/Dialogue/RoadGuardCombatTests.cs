@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Host;
 using WorldRpg.Kit;
@@ -9,6 +10,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -413,5 +415,66 @@ public sealed class RoadGuardCombatTests
         Assert.NotNull(guardEvidence.Target);
         Assert.Contains(guardEvidence.Target!.Value.DurableId, raiderIds);
         Assert.NotEqual(caravanMemberId, guardEvidence.Target.Value.DurableId);
+    }
+
+    [Fact]
+    public void Unequipped_road_guard_does_not_regenerate_starting_gear_across_boarding_save_load_and_restaging()
+    {
+        using var fixture = new ExteriorCombatFixture();
+        using DaggerfallSession session = fixture.Start();
+        session.ApplyProductMode(ProductMode.Playing);
+        DaggerfallNpc guardNpc = HireRoadGuardInTown(session);
+
+        // Initial enlistment grants starting combat gear once and persists StartingEquipmentGranted.
+        Assert.True(session.PartyHire.TryGetContract(guardNpc.DurableId, out ActorPartyContractDiff initialContract));
+        Assert.True(initialContract.StartingEquipmentGranted);
+        Assert.NotEmpty(session.State.ActorInventories.EquipmentFor(guardNpc.DurableId).Read().Assignments);
+
+        // Open dialogue with the Road Guard and unequip every equipped item through the retainer equipment UI owner.
+        DaggerfallActivationTarget guardTarget = session.Dialogue.NpcTargets()
+            .First(t => checked((long)t.Identity.Value) == guardNpc.DurableId);
+        Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, guardTarget)).Applied);
+        while (session.RetainerExchange.Read() is { } retainerView)
+        {
+            DaggerfallRetainerItemView? equipped = retainerView.RetainerItems.FirstOrDefault(i => i.CanUnequip);
+            if (equipped is null)
+                break;
+            session.RetainerExchange.Unequip(retainerView.Revision, equipped.Key);
+        }
+
+        Assert.Empty(session.State.ActorInventories.EquipmentFor(guardNpc.DurableId).Read().Assignments);
+        static ulong[] ReadUniqueDurableIds(DaggerfallSession s, long actorId)
+        {
+            WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator inv = s.State.ActorInventories.InventoryFor(actorId);
+            return [.. inv.Read().UniqueItems.Select(item => inv.Entities.IdentityOf(item.Entity).Value).Order()];
+        }
+        ulong[] expectedItemIds = ReadUniqueDurableIds(session, guardNpc.DurableId);
+        Assert.NotEmpty(expectedItemIds);
+
+        // 1. Board into expedition, re-enter scene -> intentionally empty equipment stays empty and no duplicate items are generated.
+        session.OpenExpedition();
+        session.EnterExpedition();
+        Assert.Empty(session.State.ActorInventories.EquipmentFor(guardNpc.DurableId).Read().Assignments);
+        Assert.Equal(expectedItemIds, ReadUniqueDurableIds(session, guardNpc.DurableId));
+
+        // 2. Board again, save while WithParty, reload, and re-enter scene -> still empty assignments and exact same item identities/count.
+        session.OpenExpedition();
+        RulesetSavePayload savedBoarded = session.CaptureSave();
+        using DaggerfallSession reloadedFromBoarded = fixture.Restore(savedBoarded, out _, out _);
+        reloadedFromBoarded.ApplyProductMode(ProductMode.Playing);
+        reloadedFromBoarded.EnterExpedition();
+        Assert.True(reloadedFromBoarded.PartyHire.TryGetContract(guardNpc.DurableId, out ActorPartyContractDiff reloadedContract));
+        Assert.True(reloadedContract.StartingEquipmentGranted);
+        Assert.Empty(reloadedFromBoarded.State.ActorInventories.EquipmentFor(guardNpc.DurableId).Read().Assignments);
+        Assert.Equal(expectedItemIds, ReadUniqueDurableIds(reloadedFromBoarded, guardNpc.DurableId));
+
+        // 3. Save while staged, reload, board, and restage again -> still exact same inventory and empty equipment.
+        RulesetSavePayload savedStaged = reloadedFromBoarded.CaptureSave();
+        using DaggerfallSession reloadedFromStaged = fixture.Restore(savedStaged, out _, out _);
+        reloadedFromStaged.ApplyProductMode(ProductMode.Playing);
+        reloadedFromStaged.OpenExpedition();
+        reloadedFromStaged.EnterExpedition();
+        Assert.Empty(reloadedFromStaged.State.ActorInventories.EquipmentFor(guardNpc.DurableId).Read().Assignments);
+        Assert.Equal(expectedItemIds, ReadUniqueDurableIds(reloadedFromStaged, guardNpc.DurableId));
     }
 }

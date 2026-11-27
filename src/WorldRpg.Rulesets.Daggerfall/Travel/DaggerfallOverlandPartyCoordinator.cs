@@ -801,7 +801,12 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 }
             }
             if (role == ActorPartyRole.Companion && updated.PartyContract is { HostileBetrayal: false } contract)
-                _roster.ApplyPartyHireSpec(live.DurableId, contract.SpawnerId);
+            {
+                bool grantEquipment = !contract.StartingEquipmentGranted;
+                _roster.ApplyPartyHireSpec(live.DurableId, contract.SpawnerId, grantEquipment: grantEquipment);
+                if (grantEquipment)
+                    _actorLedger.Upsert(updated with { PartyContract = contract with { StartingEquipmentGranted = true } });
+            }
             return live;
         }
         return null;

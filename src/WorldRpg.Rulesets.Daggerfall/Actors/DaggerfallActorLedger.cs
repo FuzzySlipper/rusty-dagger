@@ -391,7 +391,8 @@ internal sealed record ActorPartyContractDiff(
     int UnpaidDays = 0,
     int FriendlyFireStrikes = 0,
     bool HostileBetrayal = false,
-    int? LastBilledDay = null)
+    int? LastBilledDay = null,
+    bool StartingEquipmentGranted = false)
 {
     internal const int DefaultMorale = 70;
     internal const int MinimumMorale = 0;
