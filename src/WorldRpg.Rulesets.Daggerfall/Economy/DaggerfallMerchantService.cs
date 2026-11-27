@@ -94,7 +94,10 @@ internal sealed record DaggerfallMerchantProviderContext(
     int BuildingType,
     int BlockX,
     int BlockY,
-    int BuildingIndex)
+    int BuildingIndex,
+    int? PricingRegion = null,
+    int? PricingOriginRegion = null,
+    bool IsRoadCaravan = false)
 {
     internal string Key => $"{Provider.NpcId}:{Provider.Site.Region}:{Provider.Site.Location}:{Provider.Site.Building}:{BlockX}:{BlockY}:{BuildingIndex}";
 }
@@ -344,7 +347,7 @@ internal sealed class DaggerfallMerchantService
         if (trade is null) return Refused("QuoteUnavailable");
         if (!confirmed && trade.Total >= LargeTradeGold) return Refused("ConfirmationRequired");
         DaggerfallServiceRequest request = new(RequestId(binding, "buy", itemKey, revision), binding.Context.Provider);
-        DaggerfallServiceEligibility eligibility = OpenEligibility;
+        DaggerfallServiceEligibility eligibility = binding.Context.IsRoadCaravan ? RoadCaravanEligibility : OpenEligibility;
         if (potionGuild is not null)
         {
             potionGuild.Definition.TryGetService(guildService!.Value, out var service);
@@ -377,7 +380,7 @@ internal sealed class DaggerfallMerchantService
             ? new(_containers.GetDurableItemId(new EntityId(uniqueEntity)).Value, line.Definition.Id.Value, line.Metadata.CurrentCondition)
             : new(0, line.Definition.Id.Value, line.Metadata.CurrentCondition, selection.Stack!.Value, quantity);
         DaggerfallServiceRequest request = new(RequestId(binding, "sell", itemKey, revision), binding.Context.Provider, item);
-        DaggerfallServiceEligibility eligibility = OpenEligibility;
+        DaggerfallServiceEligibility eligibility = binding.Context.IsRoadCaravan ? RoadCaravanEligibility : OpenEligibility;
         if (context.Provider.Service == "sell-magic-items")
         {
             var guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.SellMagicItems)!;
@@ -705,10 +708,11 @@ internal sealed class DaggerfallMerchantService
     {
         DaggerfallNpc npc = _npcs.Require(binding.Context.Provider.NpcId);
         int reaction = _social.TradeReactionForNpc(npc);
+        int pricingRegion = binding.Context.PricingRegion ?? binding.Context.Provider.Site.Region;
         DaggerfallTradeQuoteResult quote = _tradeQuotes.Quote(side, [line], binding.Context.Quality,
             Math.Clamp(_playerStats.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100),
             Math.Clamp(_playerStats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), reaction,
-            binding.Context.Provider.Site.Region);
+            pricingRegion, binding.Context.PricingOriginRegion);
         return quote.Quote;
     }
 
@@ -1216,6 +1220,62 @@ internal sealed class DaggerfallMerchantService
     }
 
     private static DaggerfallServiceEligibility OpenEligibility { get; } = new(false, OpensAtHour: OpenHour, ClosesAtHour: CloseHour);
+    private static DaggerfallServiceEligibility RoadCaravanEligibility { get; } = new(false, OpensAtHour: 0, ClosesAtHour: DaggerfallCalendar.HoursPerDay);
+
+    /// <summary>
+    /// Cleanly retires any merchant bindings for <paramref name="npcId"/> that carry no pending repairs
+    /// (used when a traveling road caravan returns home so transient containers and identities do not leak).
+    /// </summary>
+    internal bool RetireProvider(long npcId)
+    {
+        List<string> keys = [.. _bindings
+            .Where(pair => pair.Value.Context.Provider.NpcId == npcId && pair.Value.Repairs.Count == 0)
+            .Select(pair => pair.Key)];
+        if (keys.Count == 0) return false;
+        foreach (string key in keys)
+        {
+            Binding binding = _bindings[key];
+            _bindings.Remove(key);
+            ClearAndDestroyContainer(binding.MerchantOwner, binding.MerchantContainerId, DaggerfallItemOwner.Merchant(binding.MerchantContainerId));
+            ClearAndDestroyContainer(binding.CustodyOwner, binding.CustodyContainerId, DaggerfallItemOwner.RepairCustody(binding.CustodyContainerId));
+        }
+        return true;
+    }
+
+    private void ClearAndDestroyContainer(EntityId ownerEntity, long containerId, DaggerfallItemOwner itemOwner)
+    {
+        if (_containers.Entities.Store.IsAlive(ownerEntity))
+        {
+            InventoryView contents = _containers.Read(ownerEntity);
+            List<InventoryStackId> stackIds = [.. contents.Stacks.Select(s => s.Id)];
+            List<ulong> uniqueIds = [];
+            using (InventoryEdit edit = _containers.Entities.Store.Get<InventoryComponent>(ownerEntity).Store.Prepare())
+            {
+                foreach (InventoryStack stack in contents.Stacks)
+                    edit.Consume(ownerEntity, stack.Id, stack.Quantity);
+                foreach (EngineUniqueInventoryItem item in contents.UniqueItems)
+                {
+                    uniqueIds.Add(_containers.GetDurableItemId(item.Entity).Value);
+                    edit.DestroyUnique(item.Entity);
+                }
+                if (stackIds.Count > 0 || uniqueIds.Count > 0) edit.Publish();
+            }
+            foreach (InventoryStackId stackId in stackIds)
+                _instances.RemoveStack(itemOwner, stackId);
+            foreach (ulong uniqueId in uniqueIds)
+            {
+                _instances.RemoveUnique(uniqueId);
+                DurableIdentityReference uniqueRef = new(DurableIdentityKind.Item, uniqueId);
+                if (_containers.Entities.TryResolve(uniqueRef, out _))
+                    _containers.Entities.Destroy(uniqueRef);
+                _uniqueItems.Remove(uniqueRef);
+            }
+        }
+        DurableIdentityReference containerRef = new(DurableIdentityKind.Container, checked((ulong)containerId));
+        if (_containers.Entities.TryResolve(containerRef, out _))
+            _containers.Entities.Destroy(containerRef);
+        _identities.Remove(containerRef);
+    }
 
     private bool Roll(string key, int chance)
     {

@@ -105,6 +105,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly DaggerfallCourierDispatches? _courierDispatches;
     private readonly DaggerfallOfficeHolders? _officeHolders;
     private readonly DaggerfallOfficeLedger? _officeLedger;
+    private readonly DaggerfallActorLedger? _actorLedger;
+    private readonly Func<DaggerfallSiteId, DaggerfallSiteRecord?>? _findSite;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -153,7 +155,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallWordSpread? wordSpread = null,
         DaggerfallCourierDispatches? courierDispatches = null,
         DaggerfallOfficeHolders? officeHolders = null,
-        DaggerfallOfficeLedger? officeLedger = null)
+        DaggerfallOfficeLedger? officeLedger = null,
+        DaggerfallActorLedger? actorLedger = null,
+        Func<DaggerfallSiteId, DaggerfallSiteRecord?>? findSite = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
@@ -171,6 +175,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _courierDispatches = courierDispatches;
         _officeHolders = officeHolders;
         _officeLedger = officeLedger;
+        _actorLedger = actorLedger;
+        _findSite = findSite;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -405,6 +411,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (!string.IsNullOrWhiteSpace(officeLine)) greeting += "\n" + officeLine;
         string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(scrutinyLine)) greeting += "\n" + scrutinyLine;
+        if (DaggerfallRoadCourierNews.TryResolveEncounter(npc, _actorLedger, _courierDispatches, _definitions, _findSite) is { } roadEncounter
+            && DaggerfallRoadCourierNews.BuildGreetingLine(roadEncounter) is { Length: > 0 } roadGreeting)
+            greeting += "\n" + roadGreeting;
         if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
             && liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? openOverlay))
         {
@@ -431,6 +440,45 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallDialogueTopic topic, string? topicTarget, ulong? amount, string? key)
     {
         TalkSession session = _current!;
+        if (topic == DaggerfallDialogueTopic.CourierNews)
+        {
+            DaggerfallRoadEncounterContext? encounter = DaggerfallRoadCourierNews.TryResolveEncounter(
+                npc, _actorLedger, _courierDispatches, _definitions, _findSite);
+            if (encounter is not { IsCourier: true })
+                return Reject("This person has no regional courier news to share.");
+
+            long nowMinute = _currentCalendarMinute();
+            int nowDay = checked((int)_calendar().DayNumber);
+            IReadOnlyList<DaggerfallCourierNewsItem> newsItems = DaggerfallRoadCourierNews.BuildNewsItems(
+                encounter,
+                npc,
+                site,
+                nowMinute,
+                nowDay,
+                _wordSpread,
+                _worldConditions,
+                _courierDispatches,
+                _definitions,
+                (rumor, rumorSite) => _text.Resolve(rumor.TextKey, RumorContext(npc, rumorSite, rumor.Faction1, rumor.Faction2)).Text);
+
+            session.Question = $"What news do you bring from {encounter.OriginRegionName}?";
+            if (newsItems.Count == 0)
+            {
+                session.Reply = DaggerfallRoadCourierNews.EmptyReply(encounter, npc, _courierDispatches);
+            }
+            else if (session.CourierNewsIndex < newsItems.Count)
+            {
+                session.Reply = newsItems[session.CourierNewsIndex++].Reply;
+            }
+            else
+            {
+                session.Reply = $"That is all the word I carried out of {encounter.OriginRegionName}.";
+            }
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(true, session.Reply));
+        }
         if (topic is DaggerfallDialogueTopic.DispatchAccept or DaggerfallDialogueTopic.DispatchBuy
             or DaggerfallDialogueTopic.DispatchIntercept or DaggerfallDialogueTopic.DispatchTurnIn)
         {
@@ -1605,6 +1653,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_current is not { } session) { _publish(null); return; }
         const string Talk = DaggerfallDialogueTopicGroups.Talk;
         List<DaggerfallDialogueTopicOption> topics = [new("directions", "Where is this place?", Group: Talk), new("news", "Any news?", Group: Talk)];
+        if (DaggerfallRoadCourierNews.TryResolveEncounter(npc, _actorLedger, _courierDispatches, _definitions, _findSite) is { IsCourier: true } courierEncounter)
+            topics.Add(new("courier-news", $"News from {courierEncounter.OriginRegionName}", Group: Talk));
         if (_readNoticeBoard is not null && site is { Exterior: not null } && OffersNoticeBoardTopic(npc))
             topics.Add(new("notice-board", "What's on the notice board?", Group: Talk));
         if (_issueReferral is not null)
@@ -1741,6 +1791,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             "directions" => DaggerfallDialogueTopic.Directions,
             "news" => DaggerfallDialogueTopic.News,
+            "courier-news" => DaggerfallDialogueTopic.CourierNews,
             "notice-board" => DaggerfallDialogueTopic.NoticeBoard,
             "referral" => DaggerfallDialogueTopic.Referral,
             "curry-favour" => DaggerfallDialogueTopic.CurryFavour,
@@ -1759,7 +1810,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "dismiss-party" => DaggerfallDialogueTopic.DismissParty,
             _ => default,
         };
-        if (value is "directions" or "news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
+        if (value is "directions" or "news" or "courier-news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
         if (value is { Length: > 10 } dynamicIntroduce && dynamicIntroduce.StartsWith("introduce:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Introduce;
@@ -1843,6 +1894,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         internal string? Reply { get; set; }
         internal int QuestionCount { get; set; }
         internal bool NewsAnswered { get; set; }
+        internal int CourierNewsIndex { get; set; }
         internal Dictionary<DaggerfallDialogueTone, int> ToneModifiers { get; } = [];
         internal HashSet<DaggerfallSkillUseReason> SkillReasons { get; } = [];
         internal List<string> Diagnostics { get; } = [];

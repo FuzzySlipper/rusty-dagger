@@ -66,7 +66,7 @@ internal sealed class DaggerfallTradeQuoteService
     }
 
     internal DaggerfallTradeQuoteResult Quote(DaggerfallTradeSide side, IReadOnlyList<DaggerfallTradeLine> lines,
-        int shopQuality, int playerMercantile, int playerPersonality, int reaction, int? region)
+        int shopQuality, int playerMercantile, int playerPersonality, int reaction, int? region, int? originRegion = null)
     {
         if (side is not (DaggerfallTradeSide.BuyFromMerchant or DaggerfallTradeSide.SellToMerchant))
             return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, "Trade side is not supported.");
@@ -79,6 +79,14 @@ internal sealed class DaggerfallTradeQuoteService
             return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, "Mercantile, personality, or reaction is outside its validated range.");
         if (region is int selectedRegion && (selectedRegion < 0 || selectedRegion >= DaggerfallRegionalEconomyPolicy.RegionCount))
             return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, "Region is outside the admitted classic range.");
+        if (originRegion is int selectedOrigin && (selectedOrigin < 0 || selectedOrigin >= DaggerfallRegionalEconomyPolicy.RegionCount))
+            return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, "Origin region is outside the admitted classic range.");
+
+        int EffectiveRegionFactor(int regionIndex) =>
+            Math.Clamp(
+                _regionalPrices.AdjustmentForRegion(regionIndex) + (_regionalConditionSurcharge?.Invoke(regionIndex) ?? 0),
+                DaggerfallRegionalEconomyPolicy.MinimumRegionalAdjustment,
+                DaggerfallRegionalEconomyPolicy.MaximumRegionalAdjustment);
 
         long subtotal = 0;
         try
@@ -96,12 +104,21 @@ internal sealed class DaggerfallTradeQuoteService
                 if (metadata.MaximumCondition > 0)
                     itemValue = checked((int)(checked((long)itemValue * metadata.CurrentCondition) / metadata.MaximumCondition));
 
-                int regionFactor = region is int regionIndex
-                    ? Math.Clamp(
-                        _regionalPrices.AdjustmentForRegion(regionIndex) + (_regionalConditionSurcharge?.Invoke(regionIndex) ?? 0),
-                        DaggerfallRegionalEconomyPolicy.MinimumRegionalAdjustment,
-                        DaggerfallRegionalEconomyPolicy.MaximumRegionalAdjustment)
-                    : 0;
+                int regionFactor;
+                if (region is int regionIndex)
+                {
+                    int localFactor = EffectiveRegionFactor(regionIndex);
+                    regionFactor = originRegion is int caravanOrigin && caravanOrigin != regionIndex
+                        ? Math.Clamp(
+                            (localFactor + EffectiveRegionFactor(caravanOrigin)) / 2,
+                            DaggerfallRegionalEconomyPolicy.MinimumRegionalAdjustment,
+                            DaggerfallRegionalEconomyPolicy.MaximumRegionalAdjustment)
+                        : localFactor;
+                }
+                else
+                {
+                    regionFactor = 0;
+                }
                 int unitCost = DaggerfallRegionalEconomyPolicy.CalculateCost(itemValue, shopQuality, region, regionFactor);
                 long lineCost = checked((long)unitCost * checked((long)line.Quantity));
                 subtotal = checked(subtotal + lineCost);

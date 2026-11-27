@@ -144,9 +144,18 @@ internal sealed class DaggerfallScrutinyPolicy(
         building ??= currentInteriorBuilding();
 
         // 1. Baseline legal denial (wanted < -10 or banished, respecting outlaw exemptions and courier word spread).
-        int effectiveRep = EffectiveRegionalReputation(npc.Site.Region);
-        bool knownWantedOrBanished = crime.BanishedRegions.Contains(npc.Site.Region)
+        // Traveling providers (e.g. road caravans) check both the active encounter region and their home region.
+        DaggerfallSiteRecord? currentSite = activeSite?.Invoke();
+        int region = currentSite?.Id.Region ?? npc.Site.Region;
+        int effectiveRep = EffectiveRegionalReputation(region, currentSite);
+        bool knownWantedOrBanished = crime.BanishedRegions.Contains(region)
             || effectiveRep < DaggerfallLegalServicePolicy.WantedReputationThreshold;
+        if (!knownWantedOrBanished && npc.Site.Region != region)
+        {
+            int originRep = EffectiveRegionalReputation(npc.Site.Region, site: null);
+            knownWantedOrBanished = crime.BanishedRegions.Contains(npc.Site.Region)
+                || originRep < DaggerfallLegalServicePolicy.WantedReputationThreshold;
+        }
         if (knownWantedOrBanished)
         {
             if (legalServices.IsOutlawExempt(npc, building) || HasTrustedVouchFor(npc.DurableId))
@@ -154,7 +163,6 @@ internal sealed class DaggerfallScrutinyPolicy(
             return new(true, DaggerfallServiceDenial.WantedOrBanished, "I do not deal with wanted outlaws.");
         }
 
-        int region = npc.Site.Region;
         int day = currentDay();
         IReadOnlyList<DaggerfallWorldConditionToken> active = conditions.ActiveForRegion(region, day);
         if (active.Count == 0)

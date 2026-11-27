@@ -24,8 +24,20 @@ internal sealed class DaggerfallOverlandTraffic
     internal const double CaravanSpeedPixelsPerHour = 1.0;
     internal const double CourierSpeedPixelsPerHour = 2.1;
 
-    private static readonly string[] CaravanSpawners = ["town-general-merchant", "town-banker", "town-tavern-keeper", "town-alchemist", "town-clothier", "town-house-resident"];
+    private static readonly string[] CaravanSpawners = ["town-general-merchant", "town-alchemist", "town-clothier", "town-banker", "town-tavern-keeper", "town-house-resident"];
     private static readonly string[] CourierSpawners = ["town-house-resident", "town-guild-member", "town-palace-attendant", "town-courtier", "town-tavern-patron"];
+
+    /// <summary>Maps a caravan member's spawner id to the classic shop building type driving its stock and accepted goods.</summary>
+    internal static int CaravanBuildingTypeForSpawner(string? spawnerId) => spawnerId switch
+    {
+        "town-alchemist" or "alchemist" => 0,
+        "town-clothier" or "clothier" => 6,
+        _ => 9,
+    };
+
+    /// <summary>Deterministic traveling-caravan shop quality in [8, 14] derived from the merchant's durable identity.</summary>
+    internal static int CaravanQualityForActor(long durableId) =>
+        8 + checked((int)(unchecked((ulong)durableId) % 7UL));
 
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallActorLedger _actorLedger;
@@ -180,54 +192,56 @@ internal sealed class DaggerfallOverlandTraffic
 
         if (origin.Exterior is { Blocks.Count: > 0 })
         {
-            foreach (var block in origin.Exterior.Blocks)
+            foreach (string preferredSpawner in preferredSpawners)
             {
-                IReadOnlyList<DaggerfallPeopleSlotDefinition> extSlots = _definitions.People.GetRmbExteriorSlots(block.SourceName);
-                foreach (DaggerfallPeopleSlotDefinition slot in extSlots)
+                foreach (var block in origin.Exterior.Blocks)
                 {
-                    if (slot.CastId is not null || slot.SpawnerId is null) continue;
-                    if (!preferredSpawners.Contains(slot.SpawnerId, StringComparer.Ordinal)) continue;
+                    IReadOnlyList<DaggerfallPeopleSlotDefinition> extSlots = _definitions.People.GetRmbExteriorSlots(block.SourceName);
+                    foreach (DaggerfallPeopleSlotDefinition slot in extSlots)
+                    {
+                        if (slot.CastId is not null || !StringComparer.Ordinal.Equals(slot.SpawnerId, preferredSpawner)) continue;
 
-                    string placementKey = DaggerfallPeopleSlots.ExteriorBlockSlotKey(block.X, block.Y, slot.SlotId);
-                    DaggerfallResolvedPeopleSlot resolved = DaggerfallPeopleSlots.ResolveSlot(
-                        _definitions.People, _definitions.Factions, _worldSocialSeed(), origin.Id, placementKey, slot,
-                        regionKey: regionName, climateKey: climate.Name);
-                    string placedId = DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(block.SourceName, block.X, block.Y, slot.SlotId);
-                    string slotKey = $"{originProfile.LogicalId}/{placedId}";
-                    long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(origin.Id, slotKey);
-                    if (!IsAvailableForDispatch(durableId)) continue;
+                        string placementKey = DaggerfallPeopleSlots.ExteriorBlockSlotKey(block.X, block.Y, slot.SlotId);
+                        DaggerfallResolvedPeopleSlot resolved = DaggerfallPeopleSlots.ResolveSlot(
+                            _definitions.People, _definitions.Factions, _worldSocialSeed(), origin.Id, placementKey, slot,
+                            regionKey: regionName, climateKey: climate.Name);
+                        string placedId = DaggerfallPeopleSlots.PlacedExteriorBlockPersonId(block.SourceName, block.X, block.Y, slot.SlotId);
+                        string slotKey = $"{originProfile.LogicalId}/{placedId}";
+                        long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(origin.Id, slotKey);
+                        if (!IsAvailableForDispatch(durableId)) continue;
 
-                    int nameSeed = (int)(resolved.SlotSeed & 0x7FFFUL);
-                    DaggerfallNpcAppearance look = new(race, resolved.Visual.Gender, resolved.Visual.Archive,
-                        resolved.Visual.Record, nameSeed, resolved.PrimaryFactionId ?? 0);
-                    string displayName = _generateName(look, origin.Id.Region);
-                    ActorHarmPolicyKind harm = DaggerfallPeopleSlots.ParseHarmPolicy(resolved.Harm, ActorHarmPolicyKind.LawProtectedCivilian);
-                    ActorInteractionPolicyKind interaction = DaggerfallPeopleSlots.ParseInteractionPolicy(resolved.Interaction);
-                    ActorOrigin actorOrigin = ActorOrigin.Seeded(originProfile, placedId, resolved.SpawnerId, harm, interaction);
-                    ActorSocialDiff social = new(
-                        (int)DaggerfallNpcKind.Static,
-                        placedId,
-                        origin.Id.Region,
-                        origin.Name,
-                        string.Empty,
-                        originProfile.LogicalId,
-                        look.Race,
-                        look.Gender,
-                        look.BillboardArchive,
-                        look.BillboardRecord,
-                        look.NameSeed,
-                        look.FactionId,
-                        isCaravan ? "merchant" : "courier",
-                        ["talk"],
-                        DisplayNameOverride: displayName);
-                    StageLedgerEntry(durableId, actorOrigin, social);
-                    return durableId;
+                        int nameSeed = (int)(resolved.SlotSeed & 0x7FFFUL);
+                        DaggerfallNpcAppearance look = new(race, resolved.Visual.Gender, resolved.Visual.Archive,
+                            resolved.Visual.Record, nameSeed, resolved.PrimaryFactionId ?? 0);
+                        string displayName = _generateName(look, origin.Id.Region);
+                        ActorHarmPolicyKind harm = DaggerfallPeopleSlots.ParseHarmPolicy(resolved.Harm, ActorHarmPolicyKind.LawProtectedCivilian);
+                        ActorInteractionPolicyKind interaction = DaggerfallPeopleSlots.ParseInteractionPolicy(resolved.Interaction);
+                        ActorOrigin actorOrigin = ActorOrigin.Seeded(originProfile, placedId, resolved.SpawnerId, harm, interaction);
+                        ActorSocialDiff social = new(
+                            (int)DaggerfallNpcKind.Static,
+                            placedId,
+                            origin.Id.Region,
+                            origin.Name,
+                            string.Empty,
+                            originProfile.LogicalId,
+                            look.Race,
+                            look.Gender,
+                            look.BillboardArchive,
+                            look.BillboardRecord,
+                            look.NameSeed,
+                            look.FactionId,
+                            isCaravan ? "merchant" : "courier",
+                            isCaravan ? ["talk", "merchant"] : ["talk"],
+                            DisplayNameOverride: displayName);
+                        StageLedgerEntry(durableId, actorOrigin, social, isCaravan);
+                        return durableId;
+                    }
                 }
             }
         }
 
         // Deterministic seeded traffic slot fallback when a site has no matching exterior block slots.
-        string fallbackSpawner = isCaravan ? "general-merchant" : "house-resident";
+        string fallbackSpawner = isCaravan ? "town-general-merchant" : "town-house-resident";
         for (int attempt = 0; attempt < 8; attempt++)
         {
             int ordinal = (int)((seed + (ulong)attempt) % 64UL);
@@ -256,15 +270,15 @@ internal sealed class DaggerfallOverlandTraffic
                 look.NameSeed,
                 look.FactionId,
                 isCaravan ? "merchant" : "courier",
-                ["talk"],
+                isCaravan ? ["talk", "merchant"] : ["talk"],
                 DisplayNameOverride: displayName);
-            StageLedgerEntry(durableId, actorOrigin, social);
+            StageLedgerEntry(durableId, actorOrigin, social, isCaravan);
             return durableId;
         }
         return null;
     }
 
-    private void StageLedgerEntry(long durableId, ActorOrigin baselineOrigin, ActorSocialDiff baselineSocial)
+    private void StageLedgerEntry(long durableId, ActorOrigin baselineOrigin, ActorSocialDiff baselineSocial, bool isCaravan)
     {
         if (_actorLedger.TryGet(durableId, out ActorLedgerEntry? existing) && existing is not null)
         {
@@ -282,6 +296,14 @@ internal sealed class DaggerfallOverlandTraffic
                 ReferralTags = existing.Referral is { Tags.Length: > 0 } referral ? [.. referral.Tags] : null,
                 Vouches = existing.Referral is { Vouches.Length: > 0 } vouches ? [.. vouches.Vouches] : null,
             };
+            if (isCaravan && !preservedSocial.Services.Contains("merchant", StringComparer.Ordinal))
+            {
+                preservedSocial = preservedSocial with
+                {
+                    Role = "merchant",
+                    Services = [.. preservedSocial.Services, "merchant"],
+                };
+            }
             _actorLedger.Upsert(existing with
             {
                 Origin = preservedOrigin,

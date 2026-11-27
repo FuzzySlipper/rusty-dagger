@@ -34,6 +34,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     private readonly Action<long>? _provokeHostile;
     private readonly Func<int, ActorPose, long?>? _spawnClashMobile;
     private readonly Func<string, WorldPoint, float, float, SpawnDirection, ActorPose?>? _tryResolveSpawnPose;
+    private readonly Action<long>? _onTrafficMemberReturned;
 
     private sealed record PendingIntercept(
         string BandId,
@@ -82,7 +83,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         Func<DaggerfallSiteId, (int X, int Y)?>? siteCoordinates = null,
         Action<long>? provokeHostile = null,
         Func<int, ActorPose, long?>? spawnClashMobile = null,
-        Func<string, WorldPoint, float, float, SpawnDirection, ActorPose?>? tryResolveSpawnPose = null)
+        Func<string, WorldPoint, float, float, SpawnDirection, ActorPose?>? tryResolveSpawnPose = null,
+        Action<long>? onTrafficMemberReturned = null)
     {
         _expedition = expedition ?? throw new ArgumentNullException(nameof(expedition));
         _actorLedger = actorLedger ?? throw new ArgumentNullException(nameof(actorLedger));
@@ -99,6 +101,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         _provokeHostile = provokeHostile;
         _spawnClashMobile = spawnClashMobile;
         _tryResolveSpawnPose = tryResolveSpawnPose;
+        _onTrafficMemberReturned = onTrafficMemberReturned;
     }
 
     /// <summary>Total transient clash rival members still waiting for clear placement in the active scene.</summary>
@@ -427,6 +430,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         List<long> returned = [];
         foreach (ActorLedgerEntry member in members)
         {
+            _onTrafficMemberReturned?.Invoke(member.DurableId);
             if (!HasPlayerDeltas(member))
             {
                 _actorLedger.Remove(member.DurableId);

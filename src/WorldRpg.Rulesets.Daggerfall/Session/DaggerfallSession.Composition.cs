@@ -725,7 +725,8 @@ internal sealed partial class DaggerfallSession
                 currentNpc: revision => _dialogue?.CurrentNpc(revision),
                 building: CurrentInteriorBuilding,
                 activeProfile: () => _activeProfileKey,
-                dialogueRevision: () => _activationPresentation.View.Dialogue?.Revision);
+                dialogueRevision: () => _activationPresentation.View.Dialogue?.Revision,
+                actorLedger: State.ActorLedger);
             RoomRental = new DaggerfallRoomRental(State.Lodging, _site, State.GuildMembership, State.Actors.Player.Stats, State.Currency,
                 calendar: () => _time.Calendar,
                 activeProfile: () => _activeProfileKey,
@@ -1066,7 +1067,8 @@ internal sealed partial class DaggerfallSession
                 tryResolveSpawnPose: (operation, origin, minimum, maximum, direction) =>
                     _placement.TrySpawnPose(operation, "daggerfall.overland-clash", origin, minimum, maximum, out ActorPose pose, direction)
                         ? pose
-                        : null);
+                        : null,
+                onTrafficMemberReturned: id => _ = State.Merchants.RetireProvider(id));
             if (saved?.Expedition.PendingTransientClashes is { Length: > 0 } pendingClashes)
                 OverlandParties.RestorePendingTransientClashes(pendingClashes);
             OverlandTraffic = new DaggerfallOverlandTraffic(
@@ -1659,7 +1661,9 @@ internal sealed partial class DaggerfallSession
             wordSpread: WordSpread,
             courierDispatches: CourierDispatches,
             officeHolders: OfficeHolders,
-            officeLedger: OfficeLedger);
+            officeLedger: OfficeLedger,
+            actorLedger: State.ActorLedger,
+            findSite: id => _site.TryFind(id, out DaggerfallSiteRecord rec) ? rec : null);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

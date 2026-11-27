@@ -359,9 +359,14 @@ internal sealed class DaggerfallServiceTransactions
         if (npc.Site != provider.Site) return DaggerfallServiceDenial.SiteChanged;
         if (!npc.Services.Contains(provider.Service, StringComparer.Ordinal)) return DaggerfallServiceDenial.ServiceUnavailable;
         DaggerfallNpcSite? current = _currentSite();
-        if (!(current is { } site && site.Region == provider.Site.Region
+        bool atHomeSite = current is { } site && site.Region == provider.Site.Region
             && string.Equals(site.Location, provider.Site.Location, StringComparison.Ordinal)
-            && (provider.Site.ProfileId is null || StringComparer.Ordinal.Equals(site.ProfileId, provider.Site.ProfileId))))
+            && (provider.Site.ProfileId is null || StringComparer.Ordinal.Equals(site.ProfileId, provider.Site.ProfileId));
+        bool relocatedHere = !atHomeSite
+            && current is { ProfileId: { } currentProfileId }
+            && npc.Profile is { } liveProfile
+            && StringComparer.Ordinal.Equals(liveProfile.LogicalId, currentProfileId);
+        if (!atHomeSite && !relocatedHere)
             return DaggerfallServiceDenial.SiteChanged;
         return _legalServiceDenial?.Invoke(npc) ?? DaggerfallServiceDenial.None;
     }

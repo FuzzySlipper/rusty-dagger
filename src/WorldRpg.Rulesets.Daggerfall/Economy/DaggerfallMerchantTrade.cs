@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -16,8 +17,8 @@ internal enum DaggerfallMerchantTradeKind
 
 /// <summary>
 /// Trading with the merchant the player is talking to: which of the person's merchant services answers a request in
-/// the admitted building, the merchant's view with the quote the player priced, and the trade itself with its wording.
-/// The stock, prices and custody are the merchant service's.
+/// the admitted building (or with an intercepted overland caravan merchant on the road), the merchant's view with
+/// the quote the player priced, and the trade itself with its wording. The stock, prices and custody are the merchant service's.
 /// </summary>
 /// <param name="currentNpc">The person the player is talking to, for this dialogue revision (any revision when null).</param>
 /// <param name="building">The admitted interior building the player stands in.</param>
@@ -28,7 +29,8 @@ internal sealed class DaggerfallMerchantTrade(
     Func<string?, DaggerfallNpc?> currentNpc,
     Func<DaggerfallInteriorBuilding?> building,
     Func<DaggerfallWorldProfileKey> activeProfile,
-    Func<string?> dialogueRevision)
+    Func<string?> dialogueRevision,
+    DaggerfallActorLedger? actorLedger = null)
 {
     private static readonly string[] MerchantServices = ["shop", "merchant", "buy-items", "sell-items", "repair", "identify", "sell-magic-items", "buy-potions", "buy-magic-items", "buy-soulgems"];
     private static readonly string[] BuyServices = ["shop", "merchant", "buy-items", "buy-potions", "buy-magic-items", "buy-soulgems"];
@@ -39,8 +41,10 @@ internal sealed class DaggerfallMerchantTrade(
     private DaggerfallMerchantProviderContext? Provider(string? revision = null, string? requestedService = null)
     {
         DaggerfallNpc? npc = currentNpc(DialogueRevision(revision));
+        if (npc is null) return null;
         DaggerfallInteriorBuilding? placed = building();
-        if (npc is null || placed is null) return null;
+        if (placed is null)
+            return RoadCaravanProvider(npc, requestedService);
         string? service = requestedService switch
         {
             "buy" => npc.Services.FirstOrDefault(value => BuyServices.Contains(value, StringComparer.Ordinal)),
@@ -61,6 +65,33 @@ internal sealed class DaggerfallMerchantTrade(
         }
         return new(new(npc.DurableId, npc.Site, service), source.Quality, source.Source.BuildingType,
             placed.BlockX, placed.BlockY, placed.Building.Index);
+    }
+
+    private DaggerfallMerchantProviderContext? RoadCaravanProvider(DaggerfallNpc npc, string? requestedService)
+    {
+        if (actorLedger is null || requestedService is "repair" or "identify")
+            return null;
+        if (!string.Equals(npc.Role, "merchant", StringComparison.OrdinalIgnoreCase)
+            || !npc.Services.Contains("merchant", StringComparer.Ordinal))
+            return null;
+        if (!actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? entry)
+            || entry?.Location is not { Kind: ActorLocationKind.AtSite, TrafficVisitor: true })
+            return null;
+
+        int buildingType = DaggerfallOverlandTraffic.CaravanBuildingTypeForSpawner(entry.Origin.SpawnerId);
+        int quality = DaggerfallOverlandTraffic.CaravanQualityForActor(npc.DurableId);
+        int originRegion = entry.Origin.SiteProfile?.Require().Site.Region ?? npc.Site.Region;
+        int localRegion = activeProfile().Site.Region;
+        return new DaggerfallMerchantProviderContext(
+            new DaggerfallServiceProvider(npc.DurableId, npc.Site, "merchant"),
+            quality,
+            buildingType,
+            BlockX: 0,
+            BlockY: 0,
+            BuildingIndex: 0,
+            PricingRegion: localRegion,
+            PricingOriginRegion: originRegion,
+            IsRoadCaravan: true);
     }
 
     /// <summary>The merchant the player is talking to, with the quote the player priced on this revision.</summary>
