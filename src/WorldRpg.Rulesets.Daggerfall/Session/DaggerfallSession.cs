@@ -609,6 +609,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallWeatherShelterElapsed ObserveScheduleWeatherElapsed() =>
         _scheduleWeatherClock.Observe(LocalWeather.Current, _time.Calendar.MinuteNumber);
 
+    internal IReadOnlyList<DaggerfallPopulationPlacement> ExteriorPlacementsFor(DaggerfallSiteId siteId)
+    {
+        DaggerfallWorldProfileKey exteriorKey = DaggerfallWorldProfileIds.Exterior(siteId);
+        return _sites?.Profiles is { } profiles && profiles.TryGet(exteriorKey, out DaggerfallSiteProfile exteriorProfile)
+            ? exteriorProfile.Population
+            : [];
+    }
+
     internal DaggerfallScheduleDecision EvaluateExteriorPlacementSchedule(
         DaggerfallSiteId siteId,
         DaggerfallPopulationPlacement placement,

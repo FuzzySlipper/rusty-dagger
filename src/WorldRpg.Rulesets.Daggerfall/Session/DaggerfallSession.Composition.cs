@@ -1598,7 +1598,11 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallExpeditionBandReadout(Expedition, OverlandParties, State.Actors, State.Npcs),
                 new DaggerfallOverlandViewCommands(_overland),
                 new DaggerfallWorldConditionCommands(WorldConditions, Scrutiny, NoticeBoard, WordSpread, CourierDispatches, CreatureClashes, State.PlayerControl, definitions, _site, () => _time.Calendar),
-                new DaggerfallSocialInspection(definitions, _site, State.Actors, State.Npcs, State.ActorLedger, State.Social, SocialConsequences, Introductions, OfficeHolders, OfficeLedger, State.Crime, questNames, () => _worldSocialSeed, () => _time.Calendar),
+                new DaggerfallSocialInspection(definitions, _site, State.Actors, State.Npcs, State.ActorLedger, State.Social, SocialConsequences, Introductions, OfficeHolders, OfficeLedger, State.Crime, questNames, () => _worldSocialSeed, () => _time.Calendar,
+                    resolveTownShelter: siteId => ResolveTownShelterAssignment(siteId),
+                    evaluateExteriorSchedule: EvaluateExteriorPlacementSchedule,
+                    exteriorPlacements: ExteriorPlacementsFor,
+                    scheduleWeather: () => (LocalWeather.Current, ObserveScheduleWeatherElapsed())),
                 new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar),
             ];                                                                                     // Developer
             _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);

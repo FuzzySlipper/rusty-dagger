@@ -420,6 +420,76 @@ internal sealed class DaggerfallSocialConsequences(
         return wordSpread.ArrivedHouseholdStandingDelta(familyId, targetSite, minute ?? currentMinute?.Invoke() ?? 0L);
     }
 
+    /// <summary>
+    /// Sets a household's standing delta (-100..100) through the canonical owner (local household table for
+    /// <c>fam:local:...</c> or <see cref="DaggerfallWordSpread.RecordHouseholdStanding"/> for Great Houses and royal
+    /// dynasties) so saves, blood-feud gates, and inspection surfaces behave identically to play.
+    /// </summary>
+    internal int SetHouseholdStanding(string familyId, int targetStandingDelta, DaggerfallSiteRecord? atSite = null, long? minute = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(familyId);
+        if (!DaggerfallHouseholds.IsValidFamilyId(familyId))
+            throw new ArgumentException($"Invalid household family id '{familyId}'.", nameof(familyId));
+
+        int clamped = Math.Clamp(targetStandingDelta, DaggerfallSocialState.MinimumReputation, DaggerfallSocialState.MaximumReputation);
+        DaggerfallSiteRecord? site = atSite ?? activeSite?.Invoke();
+
+        if (DaggerfallHouseholds.IsLocal(familyId))
+        {
+            if (clamped == 0)
+            {
+                _localHouseholdStandings.Remove(familyId);
+                return 0;
+            }
+
+            int? targetRegion = null;
+            string? targetLocation = null;
+            if (DaggerfallHouseholds.TryParseLocalSite(familyId, out DaggerfallSiteId localSiteId))
+            {
+                DaggerfallSiteRecord? homeSite = definitions.Locations.Records.FirstOrDefault(r => r.Id == localSiteId);
+                if (homeSite is not null)
+                {
+                    targetRegion = homeSite.Id.Region;
+                    targetLocation = homeSite.Name;
+                }
+            }
+            targetRegion ??= site?.Id.Region ?? currentRegion();
+            targetLocation ??= site?.Name;
+            if (targetRegion is null || string.IsNullOrWhiteSpace(targetLocation))
+                throw new InvalidOperationException($"Cannot resolve settlement for local household '{familyId}'.");
+
+            if (!_localHouseholdStandings.TryGetValue(familyId, out LocalHouseholdStandingState? state))
+            {
+                state = new LocalHouseholdStandingState(targetRegion.Value, targetLocation);
+                _localHouseholdStandings[familyId] = state;
+            }
+            state.StandingDelta = clamped;
+            state.SubjectOffsets.Clear();
+            return clamped;
+        }
+
+        if (!DaggerfallHouseholds.IsProvinceWide(familyId))
+            throw new ArgumentException($"Unsupported household scope for '{familyId}'.", nameof(familyId));
+        if (wordSpread is null || site is null)
+            throw new InvalidOperationException($"Cannot set province-wide household standing for '{familyId}' without an active site and word spread owner.");
+
+        long nowMinute = minute ?? currentMinute?.Invoke() ?? 0L;
+        int current = HouseholdStandingDelta(familyId, site, nowMinute);
+        int delta = clamped - current;
+        if (delta != 0)
+        {
+            string label = DaggerfallHouseholds.FormatLabel(familyId, definitions, null, null, 0UL) ?? familyId;
+            wordSpread.RecordHouseholdStanding(
+                familyId,
+                delta,
+                site,
+                nowMinute,
+                headline: $"Standing shifted with {label}",
+                body: $"Word spreads of a shift in your standing with {label}.");
+        }
+        return HouseholdStandingDelta(familyId, site, nowMinute);
+    }
+
     private void ApplyAttributedHouseholdRipple(
         string familyId,
         int delta,

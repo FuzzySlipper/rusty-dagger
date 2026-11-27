@@ -398,6 +398,108 @@ internal sealed class DaggerfallIntroductions(
     internal int ObserveActorHostile(long actorId) =>
         VoidVouchesFrom(actorId, ActorVouchVoidReason.Hostile);
 
+    /// <summary>
+    /// Grants a validated structured vouch directly through the canonical <see cref="DaggerfallActorLedger"/> and live
+    /// <see cref="ActorOverlayComponent"/> owners (used by developer commands for testing saves, aging, and access).
+    /// </summary>
+    internal ActorVouchRecord GrantVouchDirect(
+        long referrerDurableId,
+        long targetDurableId,
+        ActorVouchKind kind,
+        DaggerfallSiteRecord? atSite = null)
+    {
+        if (referrerDurableId <= 0 || referrerDurableId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(referrerDurableId), "Referrer durable id must be a positive non-player actor id.");
+        if (targetDurableId <= 0 || targetDurableId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(targetDurableId), "Target durable id must be a positive non-player actor id.");
+        if (referrerDurableId == targetDurableId)
+            throw new ArgumentException("An actor cannot vouch for themselves.", nameof(targetDurableId));
+
+        DaggerfallNpc? refNpc = npcs.TryGet(referrerDurableId, out DaggerfallNpc? rn) ? rn : null;
+        int refFactionId = refNpc is not null
+            ? Math.Max(0, social.ResolveNpcReactionFactionId(refNpc))
+            : actorLedger.TryGet(referrerDurableId, out ActorLedgerEntry? refEntry) && refEntry?.Social is { } rs
+                ? Math.Max(0, rs.FactionId)
+                : 0;
+        string? refName = refNpc?.DisplayName
+            ?? (actorLedger.TryGet(referrerDurableId, out ActorLedgerEntry? refEntry2)
+                ? refEntry2?.Social?.DisplayNameOverride ?? refEntry2?.Referral?.DisplayNameOverride
+                : null);
+        string? refFamilyId = ResolveActorFamilyId(referrerDurableId, refNpc);
+        if (string.IsNullOrWhiteSpace(refName) || refFactionId == 0 || string.IsNullOrWhiteSpace(refFamilyId))
+        {
+            foreach (DaggerfallCastIndividualDefinition cast in definitions.People.Individuals.Values)
+            {
+                if (DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id) == referrerDurableId)
+                {
+                    if (string.IsNullOrWhiteSpace(refName)) refName = cast.Name;
+                    if (refFactionId == 0) refFactionId = Math.Max(0, cast.FactionId);
+                    if (string.IsNullOrWhiteSpace(refFamilyId)) refFamilyId = cast.FamilyId;
+                    break;
+                }
+            }
+        }
+
+        DaggerfallSiteRecord? siteRecord = atSite ?? activeSite();
+        ActorVouchRecord vouch = new(
+            ReferrerDurableId: referrerDurableId,
+            ReferrerFactionId: refFactionId,
+            Kind: kind,
+            IssuedDay: currentDay(),
+            ReferrerName: refName,
+            OriginSiteName: siteRecord?.Name,
+            ReferrerFamilyId: refFamilyId);
+        vouch.Validate();
+
+        DaggerfallNpc? targetNpc = npcs.TryGet(targetDurableId, out DaggerfallNpc? tn) ? tn : null;
+        ActorOrigin targetOrigin = TryResolveOriginFromLiveOrNpc(targetDurableId, targetNpc)
+            ?? ActorOrigin.MintedActor(DaggerfallActorKinds.StaticNpc);
+        ActorSocialDiff? targetSocial = ResolveTargetSocialDiff(targetDurableId, targetNpc);
+        actorLedger.RecordVouch(targetDurableId, vouch, targetOrigin, targetSocial);
+        if (actors.TryGet(targetDurableId, out ActorState? liveTarget)
+            && liveTarget.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+        {
+            overlay.RecordVouch(vouch);
+        }
+        return vouch;
+    }
+
+    /// <summary>
+    /// Revokes (removes) or voids matching vouches across both <see cref="DaggerfallActorLedger"/> and live overlays.
+    /// Pass <paramref name="voidReason"/> = <see langword="null"/> to remove the records, or a non-None
+    /// <see cref="ActorVouchVoidReason"/> to mark them persistently voided.
+    /// </summary>
+    internal int RevokeVouches(long? targetDurableId, long? referrerDurableId, ActorVouchVoidReason? voidReason)
+    {
+        bool Matches(long targetId, ActorVouchRecord vouch) =>
+            (targetDurableId is null || targetId == targetDurableId.Value)
+            && (referrerDurableId is null || vouch.ReferrerDurableId == referrerDurableId.Value);
+
+        int affected;
+        if (voidReason is { } reason && reason != ActorVouchVoidReason.None)
+        {
+            affected = actorLedger.VoidVouchesWhere(Matches, reason);
+            foreach (ActorState live in actors.All)
+            {
+                if (live.DurableId <= 0 || live.DurableId == DaggerfallActorIdentity.PlayerEntityId)
+                    continue;
+                if (live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+                    affected += overlay.VoidVouches(v => Matches(live.DurableId, v), reason);
+            }
+            return affected;
+        }
+
+        affected = actorLedger.RemoveVouchesWhere(Matches);
+        foreach (ActorState live in actors.All)
+        {
+            if (live.DurableId <= 0 || live.DurableId == DaggerfallActorIdentity.PlayerEntityId)
+                continue;
+            if (live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+                affected += overlay.RemoveVouches(v => Matches(live.DurableId, v));
+        }
+        return affected;
+    }
+
     /// <summary>True when <paramref name="target"/>'s household currently holds an attributed blood feud against the player.</summary>
     internal bool IsInBloodFeud(DaggerfallNpc target, DaggerfallSiteRecord? atSite = null)
     {

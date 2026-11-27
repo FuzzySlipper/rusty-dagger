@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Rusty.Engine.Debugging;
 using WorldRpg.Kit;
@@ -9,9 +10,11 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// Live developer inspection commands for the runtime social and political layers
-/// (<c>social.site</c>, <c>social.region</c>, <c>social.player</c>).
-/// Reads authoritative runtime owners on demand and owns no state of its own.
+/// Live developer inspection and state-changing commands for the runtime social, schedule, and political layers
+/// (<c>social.site</c>, <c>social.region</c>, <c>social.player</c>, <c>social.schedule</c>,
+/// <c>social.office.vacate</c>, <c>social.household.standing</c>, <c>social.vouch.grant</c>,
+/// <c>social.vouch.revoke</c>).
+/// Reads and mutates authoritative runtime owners on demand and owns no state of its own.
 /// </summary>
 internal sealed class DaggerfallSocialInspection(
     DaggerfallDefinitions definitions,
@@ -27,7 +30,11 @@ internal sealed class DaggerfallSocialInspection(
     DaggerfallCrimeState crime,
     DaggerfallNames names,
     Func<ulong> worldSocialSeed,
-    Func<DaggerfallCalendar> calendar)
+    Func<DaggerfallCalendar> calendar,
+    Func<DaggerfallSiteId, DaggerfallTownShelterAssignment>? resolveTownShelter = null,
+    Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, DaggerfallScheduleDecision>? evaluateExteriorSchedule = null,
+    Func<DaggerfallSiteId, IReadOnlyList<DaggerfallPopulationPlacement>>? exteriorPlacements = null,
+    Func<(DaggerfallWeatherKind Weather, DaggerfallWeatherShelterElapsed Elapsed)>? scheduleWeather = null)
     : IDeveloperSocialCommands
 {
     private static readonly (int Group, string Name)[] SocialGroups =
@@ -585,4 +592,471 @@ internal sealed class DaggerfallSocialInspection(
         DaggerfallHouseholdScope.Local => "local",
         _ => "none",
     };
+
+    public DebugCommandResult Schedule()
+    {
+        if (site.ActiveSite is not { } active)
+            return DaggerfallDeveloperReplies.Refused("No active site is loaded.");
+
+        DaggerfallCalendar cal = calendar();
+        int day = checked((int)cal.DayNumber);
+        int minuteOfDay = checked(cal.Hour * DaggerfallCalendar.MinutesPerHour + cal.Minute);
+        (DaggerfallWeatherKind weather, DaggerfallWeatherShelterElapsed elapsed) = scheduleWeather is not null
+            ? scheduleWeather()
+            : (DaggerfallWeatherKind.Sunny, new DaggerfallWeatherShelterElapsed(0, 0));
+
+        DaggerfallTownShelterAssignment assignment = resolveTownShelter is not null
+            ? resolveTownShelter(active.Id)
+            : DaggerfallTownShelterAssignment.Empty;
+        IReadOnlyList<DaggerfallPopulationPlacement> placements = exteriorPlacements is not null
+            ? exteriorPlacements(active.Id)
+            : [];
+        int totalPopCount = placements.Count(p => p.CrackdownGuard == 0);
+        DaggerfallWorldProfileKey exteriorKey = DaggerfallWorldProfileIds.Exterior(active.Id);
+        Dictionary<DaggerfallSiteBuildingId, DaggerfallSiteBuildingSource> buildingsById = active.Exterior is { Buildings.Count: > 0 } ext
+            ? ext.Buildings.Values.ToDictionary(b => b.Id)
+            : [];
+
+        List<(long DurableId, string Name, string SlotId, string Role, string Source, DaggerfallScheduleDecision Decision, DaggerfallSiteBuildingId? ShelterTarget, bool OffStageOverflow)> rows = [];
+        HashSet<long> seenIds = [];
+
+        foreach (DaggerfallPopulationPlacement placement in placements)
+        {
+            string slotKey = $"{exteriorKey.LogicalId}/{placement.Id}";
+            long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(active.Id, slotKey);
+            DaggerfallScheduleDecision decision = evaluateExteriorSchedule is not null
+                ? evaluateExteriorSchedule(active.Id, placement, durableId, totalPopCount)
+                : DaggerfallNpcSchedulePolicy.EvaluateExteriorPlacement(
+                    worldSocialSeed(), active.Id, placement.Id, placement.IsGuard, totalPopCount,
+                    definitions.ActorCatalog, minuteOfDay, weather,
+                    weatherElapsedMinutes: elapsed.PrecipElapsedMinutes,
+                    severeWeatherElapsedMinutes: elapsed.SevereElapsedMinutes);
+
+            DaggerfallSiteBuildingId? shelterBuilding = assignment.AssignedBuildingByActor.TryGetValue(durableId, out DaggerfallSiteBuildingId assigned)
+                ? assigned
+                : null;
+            bool overflow = assignment.OffStageOverflowActorIds.Contains(durableId);
+            DaggerfallNpc? npc = npcs.TryGet(durableId, out DaggerfallNpc? reg) ? reg : null;
+            string name = npc?.DisplayName ?? (placement.IsGuard ? "City Watch" : $"walker #{durableId}");
+            string role = npc?.Role ?? (placement.IsGuard ? "guard" : "civilian");
+
+            rows.Add((durableId, name, placement.Id, role, "exterior-walker", decision, shelterBuilding, overflow));
+            seenIds.Add(durableId);
+        }
+
+        foreach ((DaggerfallSiteBuildingId buildingId, IReadOnlyList<DaggerfallScheduledVisitor> visitors) in assignment.VisitorsByBuilding
+            .OrderBy(pair => pair.Key.BlockY)
+            .ThenBy(pair => pair.Key.BlockX)
+            .ThenBy(pair => pair.Key.Index))
+        {
+            foreach (DaggerfallScheduledVisitor visitor in visitors)
+            {
+                if (!seenIds.Add(visitor.DurableId))
+                    continue;
+                string name = visitor.DisplayName
+                    ?? (npcs.TryGet(visitor.DurableId, out DaggerfallNpc? reg) ? reg?.DisplayName : null)
+                    ?? $"npc #{visitor.DurableId}";
+                rows.Add((
+                    visitor.DurableId,
+                    name,
+                    visitor.HomeSlotId,
+                    visitor.Role,
+                    visitor.IsExteriorWalker ? "exterior-walker" : "interior-static",
+                    visitor.Decision,
+                    buildingId,
+                    OffStageOverflow: false));
+            }
+        }
+
+        int outdoorsCount = 0;
+        int shelteredInBuildingCount = 0;
+        int shelteredInHomeCount = 0;
+        int offStageOverflowCount = 0;
+        foreach (var row in rows)
+        {
+            if (row.Decision.Placement == DaggerfallSchedulePlacement.ExteriorStreet)
+                outdoorsCount++;
+            else if (row.ShelterTarget is not null)
+                shelteredInBuildingCount++;
+            else if (row.OffStageOverflow)
+                offStageOverflowCount++;
+            else
+                shelteredInHomeCount++;
+        }
+
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteNumber("day", day);
+            w.WriteNumber("hour", cal.Hour);
+            w.WriteNumber("minute", cal.Minute);
+            w.WriteNumber("minuteOfDay", minuteOfDay);
+            w.WriteString("weather", weather.ToString());
+            w.WriteNumber("precipElapsedMinutes", elapsed.PrecipElapsedMinutes);
+            w.WriteNumber("severeElapsedMinutes", elapsed.SevereElapsedMinutes);
+
+            w.WriteStartObject("site");
+            w.WriteNumber("region", active.Id.Region);
+            w.WriteString("regionName", definitions.BuildingNames.RegionName(active.Id.Region));
+            w.WriteNumber("index", active.Id.Index);
+            w.WriteString("name", active.Name);
+            w.WriteEndObject();
+
+            w.WriteStartObject("summary");
+            w.WriteNumber("totalNpcCount", rows.Count);
+            w.WriteNumber("outdoorsCount", outdoorsCount);
+            w.WriteNumber("shelteredInBuildingCount", shelteredInBuildingCount);
+            w.WriteNumber("shelteredInHomeCount", shelteredInHomeCount);
+            w.WriteNumber("offStageOverflowCount", offStageOverflowCount);
+            w.WriteEndObject();
+
+            w.WriteStartArray("buildings");
+            foreach (DaggerfallSiteBuildingSource building in buildingsById.Values
+                .OrderBy(b => b.Id.BlockY)
+                .ThenBy(b => b.Id.BlockX)
+                .ThenBy(b => b.Id.Index))
+            {
+                int capacity = DaggerfallScheduleShelterResolver.DefaultCapacityForBuilding(building);
+                int visitorCount = assignment.VisitorsFor(building.Id).Count;
+                int suppressedCount = assignment.SuppressedSlotsFor(building.Id).Count;
+                if (capacity <= 0 && visitorCount == 0 && suppressedCount == 0)
+                    continue;
+                w.WriteStartObject();
+                w.WriteNumber("blockX", building.Id.BlockX);
+                w.WriteNumber("blockY", building.Id.BlockY);
+                w.WriteNumber("buildingIndex", building.Id.Index);
+                w.WriteNumber("buildingType", building.Source.BuildingType);
+                w.WriteNumber("capacity", capacity);
+                w.WriteNumber("visitorCount", visitorCount);
+                w.WriteNumber("suppressedStaticCount", suppressedCount);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+
+            w.WriteStartArray("npcs");
+            foreach (var row in rows.OrderBy(r => r.DurableId))
+            {
+                w.WriteStartObject();
+                w.WriteNumber("durableId", row.DurableId);
+                w.WriteString("name", row.Name);
+                w.WriteString("slotId", row.SlotId);
+                w.WriteString("role", row.Role);
+                w.WriteString("source", row.Source);
+                w.WriteString("scheduleId", row.Decision.ScheduleId);
+                w.WriteString("placement", row.Decision.Placement.ToString());
+                w.WriteBoolean("outdoors", row.Decision.Placement == DaggerfallSchedulePlacement.ExteriorStreet);
+                w.WriteString("reason", row.Decision.Reason);
+                w.WriteBoolean("pinned", row.Decision.Pinned);
+                w.WriteNumber("jitterMinutes", row.Decision.JitterMinutes);
+                w.WriteNumber("stormDelayMinutes", row.Decision.StormDelayMinutes);
+                w.WriteString("buildingTarget", row.Decision.BuildingTarget.ToString());
+                w.WriteBoolean("offStageOverflow", row.OffStageOverflow);
+                if (row.ShelterTarget is DaggerfallSiteBuildingId targetId)
+                {
+                    w.WriteStartObject("shelterTarget");
+                    w.WriteNumber("blockX", targetId.BlockX);
+                    w.WriteNumber("blockY", targetId.BlockY);
+                    w.WriteNumber("buildingIndex", targetId.Index);
+                    if (buildingsById.TryGetValue(targetId, out DaggerfallSiteBuildingSource? targetBuilding))
+                        w.WriteNumber("buildingType", targetBuilding.Source.BuildingType);
+                    w.WriteEndObject();
+                }
+                else
+                {
+                    w.WriteNull("shelterTarget");
+                }
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        });
+    }
+
+    public DebugCommandResult VacateOffice(string office, string cause)
+    {
+        if (string.IsNullOrWhiteSpace(office))
+            return DaggerfallDeveloperReplies.Refused("OFFICE is required ('ruler', an exact officeKey, 'faction:<id>', or a holder durableId).");
+        if (!TryParseOfficeCause(cause, out DaggerfallOfficeChangeCause parsedCause))
+            return DaggerfallDeveloperReplies.Refused("CAUSE must be one of: death, card, deposed, quest, law, succession.");
+
+        DaggerfallCalendar cal = calendar();
+        int day = checked((int)cal.DayNumber);
+        long minute = cal.MinuteNumber;
+        string trimmed = office.Trim();
+        bool lethal = parsedCause == DaggerfallOfficeChangeCause.Death;
+        List<DaggerfallOfficeOverrideSave> vacated = [];
+
+        if (trimmed.Equals("ruler", StringComparison.OrdinalIgnoreCase))
+        {
+            if (site.Region is not int reg)
+                return DaggerfallDeveloperReplies.Refused("No active region is loaded.");
+            if (lethal)
+            {
+                DaggerfallFactionDefinition? province = definitions.Factions.ProvinceOf(reg);
+                if (province is null)
+                    return DaggerfallDeveloperReplies.Refused($"Region {reg} has no province throne office.");
+                vacated.Add(officeLedger.VacateFactionOffice(province.Id, parsedCause, day, "slain (developer)", currentMinute: minute));
+            }
+            else
+            {
+                DaggerfallOfficeOverrideSave? deposed = officeLedger.DeposeRegionalRuler(reg, parsedCause, day, "deposed (developer)", currentMinute: minute);
+                if (deposed is null)
+                    return DaggerfallDeveloperReplies.Refused($"Region {reg} has no province throne office.");
+                vacated.Add(deposed);
+            }
+        }
+        else if (trimmed.StartsWith("faction:", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(trimmed["faction:".Length..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int factionId)
+            && factionId > 0)
+        {
+            vacated.Add(lethal
+                ? officeLedger.VacateFactionOffice(factionId, parsedCause, day, "slain (developer)", currentMinute: minute)
+                : officeLedger.DeposeFactionOffice(factionId, parsedCause, day, "deposed (developer)", currentMinute: minute));
+        }
+        else if (long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out long actorId) && actorId > 0)
+        {
+            IReadOnlyList<DaggerfallOfficeOverrideSave> actorOffices = officeLedger.DeposeActorOffices(
+                actorId, parsedCause, day, lethal ? "slain (developer)" : "deposed (developer)", site.ActiveSite, currentMinute: minute);
+            if (actorOffices.Count == 0)
+                return DaggerfallDeveloperReplies.Refused($"Actor {actorId} does not hold any active office.");
+            vacated.AddRange(actorOffices);
+        }
+        else
+        {
+            DaggerfallLocalOffice? localMatch = null;
+            if (site.ActiveSite is { } activeSite)
+            {
+                localMatch = officeLedger.ResolveLocalOffices(activeSite)
+                    .FirstOrDefault(o => StringComparer.OrdinalIgnoreCase.Equals(o.OfficeKey, trimmed));
+            }
+            if (localMatch is null && site.Region is int r)
+            {
+                localMatch = officeLedger.ResolveRegionalGreatHouses(r)
+                    .SelectMany(h => h.HeldOffices)
+                    .FirstOrDefault(o => StringComparer.OrdinalIgnoreCase.Equals(o.OfficeKey, trimmed));
+            }
+
+            if (localMatch is not null)
+            {
+                vacated.Add(lethal
+                    ? officeLedger.SetLocalOfficeHolder(localMatch, null, null, parsedCause, day, "slain (developer)", vacant: true, currentMinute: minute)
+                    : officeLedger.DeposeLocalOffice(localMatch, parsedCause, day, "deposed (developer)", currentMinute: minute));
+            }
+            else if (definitions.BoardSeats.All.FirstOrDefault(s =>
+                StringComparer.OrdinalIgnoreCase.Equals(s.SeatId, trimmed)
+                || StringComparer.OrdinalIgnoreCase.Equals(DaggerfallOfficeLedger.FactionOfficeKey(s.OfficeFactionId), trimmed)) is { } seat)
+            {
+                vacated.Add(officeLedger.DeposeBoardSeat(seat.SeatId, parsedCause, day, lethal ? "slain (developer)" : "deposed (developer)", currentMinute: minute));
+            }
+            else
+            {
+                return DaggerfallDeveloperReplies.Refused($"Office '{trimmed}' was not found in the active site, region, or board seats.");
+            }
+        }
+
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteNumber("count", vacated.Count);
+            w.WriteString("cause", parsedCause.ToString());
+            w.WriteNumber("day", day);
+            w.WriteStartArray("vacated");
+            foreach (DaggerfallOfficeOverrideSave over in vacated)
+            {
+                w.WriteStartObject();
+                w.WriteString("officeKey", over.OfficeKey);
+                w.WriteString("kind", over.Kind.ToString());
+                w.WriteBoolean("vacant", over.Vacant);
+                if (!string.IsNullOrWhiteSpace(over.PreviousHolderName)) w.WriteString("previousHolderName", over.PreviousHolderName);
+                if (over.VacancyUntilMinute is long until) w.WriteNumber("vacancyUntilMinute", until);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        });
+    }
+
+    public DebugCommandResult SetHouseholdStanding(string familyId, int standingDelta)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || !DaggerfallHouseholds.IsValidFamilyId(familyId.Trim()))
+            return DaggerfallDeveloperReplies.Refused($"Invalid FAMILY_ID '{familyId}'. Expected fam:local:..., fam:house:..., or fam:dynasty:....");
+        if (standingDelta is < DaggerfallSocialState.MinimumReputation or > DaggerfallSocialState.MaximumReputation)
+            return DaggerfallDeveloperReplies.Refused($"STANDING_DELTA must be between {DaggerfallSocialState.MinimumReputation} and {DaggerfallSocialState.MaximumReputation}.");
+
+        string trimmed = familyId.Trim();
+        DaggerfallSiteRecord? active = site.ActiveSite;
+        long minute = calendar().MinuteNumber;
+        int applied;
+        try
+        {
+            applied = socialConsequences.SetHouseholdStanding(trimmed, standingDelta, active, minute);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            return DaggerfallDeveloperReplies.Refused(ex.Message);
+        }
+
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteString("familyId", trimmed);
+            w.WriteString("scope", ScopeSlug(DaggerfallHouseholds.ScopeOf(trimmed)));
+            w.WriteNumber("standingDelta", applied);
+            w.WriteBoolean("inBloodFeud", applied <= DaggerfallIntroductions.BloodFeudDispositionThreshold);
+            w.WriteEndObject();
+        });
+    }
+
+    public DebugCommandResult GrantVouch(string referrer, string target, string kind)
+    {
+        if (!TryResolveActorId(referrer, out long referrerId))
+            return DaggerfallDeveloperReplies.Refused($"Unknown referrer '{referrer}'. Pass a durableId or castId.");
+        if (!TryResolveActorId(target, out long targetId))
+            return DaggerfallDeveloperReplies.Refused($"Unknown target '{target}'. Pass a durableId or castId.");
+        if (referrerId == targetId)
+            return DaggerfallDeveloperReplies.Refused("Referrer and target cannot be the same actor.");
+        if (!TryParseVouchKind(kind, out ActorVouchKind parsedKind))
+            return DaggerfallDeveloperReplies.Refused("KIND must be one of: contact, trade, guild, court.");
+
+        ActorVouchRecord vouch = introductions.GrantVouchDirect(referrerId, targetId, parsedKind, site.ActiveSite);
+        DaggerfallVouchEvaluation eval = introductions.EvaluateVouch(vouch, site.ActiveSite);
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteNumber("targetDurableId", targetId);
+            w.WriteNumber("referrerDurableId", vouch.ReferrerDurableId);
+            if (!string.IsNullOrWhiteSpace(vouch.ReferrerName)) w.WriteString("referrerName", vouch.ReferrerName); else w.WriteNull("referrerName");
+            w.WriteString("kind", vouch.Kind.ToString());
+            w.WriteNumber("issuedDay", vouch.IssuedDay);
+            w.WriteString("status", eval.Status.ToString());
+            w.WriteBoolean("usable", eval.IsUsable);
+            w.WriteEndObject();
+        });
+    }
+
+    public DebugCommandResult RevokeVouch(string target, string referrer, string reason)
+    {
+        long? targetId = null;
+        if (!string.Equals(target?.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!TryResolveActorId(target, out long parsedTarget))
+                return DaggerfallDeveloperReplies.Refused($"Unknown target '{target}'. Pass a durableId, castId, or 'all'.");
+            targetId = parsedTarget;
+        }
+
+        long? referrerId = null;
+        if (!string.Equals(referrer?.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!TryResolveActorId(referrer, out long parsedRef))
+                return DaggerfallDeveloperReplies.Refused($"Unknown referrer '{referrer}'. Pass a durableId, castId, or 'all'.");
+            referrerId = parsedRef;
+        }
+
+        if (!TryParseRevokeReason(reason, out ActorVouchVoidReason? voidReason))
+            return DaggerfallDeveloperReplies.Refused("REASON must be one of: remove, wronged, dead, hostile.");
+
+        int affected = introductions.RevokeVouches(targetId, referrerId, voidReason);
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteNumber("affectedCount", affected);
+            w.WriteString("reason", voidReason?.ToString() ?? "Removed");
+            if (targetId is long tid) w.WriteNumber("targetDurableId", tid); else w.WriteNull("targetDurableId");
+            if (referrerId is long rid) w.WriteNumber("referrerDurableId", rid); else w.WriteNull("referrerDurableId");
+            w.WriteEndObject();
+        });
+    }
+
+    private bool TryResolveActorId(string? token, out long actorId)
+    {
+        actorId = 0;
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+        string trimmed = token.Trim();
+        if (long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed)
+            && parsed > 0 && parsed != DaggerfallActorIdentity.PlayerEntityId)
+        {
+            actorId = parsed;
+            return true;
+        }
+        if (definitions.TryGetCastOrNoble(trimmed, out DaggerfallCastIndividualDefinition? cast) && cast is not null)
+        {
+            actorId = DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
+            return true;
+        }
+        return false;
+    }
+
+    private static bool TryParseOfficeCause(string? value, out DaggerfallOfficeChangeCause cause)
+    {
+        switch (value?.Trim().ToLowerInvariant())
+        {
+            case "death":
+                cause = DaggerfallOfficeChangeCause.Death;
+                return true;
+            case "card":
+            case "deposed":
+            case "coup":
+                cause = DaggerfallOfficeChangeCause.CardMove;
+                return true;
+            case "quest":
+                cause = DaggerfallOfficeChangeCause.Quest;
+                return true;
+            case "law":
+            case "banished":
+                cause = DaggerfallOfficeChangeCause.Law;
+                return true;
+            case "succession":
+                cause = DaggerfallOfficeChangeCause.Succession;
+                return true;
+            default:
+                cause = default;
+                return false;
+        }
+    }
+
+    private static bool TryParseVouchKind(string? value, out ActorVouchKind kind)
+    {
+        switch (value?.Trim().ToLowerInvariant())
+        {
+            case "contact":
+                kind = ActorVouchKind.Contact;
+                return true;
+            case "trade":
+                kind = ActorVouchKind.Trade;
+                return true;
+            case "guild":
+                kind = ActorVouchKind.Guild;
+                return true;
+            case "court":
+                kind = ActorVouchKind.Court;
+                return true;
+            default:
+                kind = default;
+                return false;
+        }
+    }
+
+    private static bool TryParseRevokeReason(string? value, out ActorVouchVoidReason? voidReason)
+    {
+        switch (value?.Trim().ToLowerInvariant())
+        {
+            case "remove":
+            case "clear":
+                voidReason = null;
+                return true;
+            case "wronged":
+                voidReason = ActorVouchVoidReason.Wronged;
+                return true;
+            case "dead":
+                voidReason = ActorVouchVoidReason.Dead;
+                return true;
+            case "hostile":
+                voidReason = ActorVouchVoidReason.Hostile;
+                return true;
+            default:
+                voidReason = null;
+                return false;
+        }
+    }
 }
