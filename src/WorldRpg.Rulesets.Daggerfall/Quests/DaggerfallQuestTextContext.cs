@@ -21,7 +21,6 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
     DaggerfallOfficeHolders? officeHolders = null)
 {
     private const int TempleBuildingType = 15;
-    private const int ProvinceFactionType = 7;
     private const string RandomScope = "daggerfall.quest.text";
     // A province's ruler code names its title (MacroHelper.GetRulerTitle); an unknown code is a Lord.
     private static readonly string[] RulerTitles = ["King", "Queen", "Duke", "Duchess", "Marquis", "Marquise", "Count", "Countess", "Baron", "Baroness", "Lord", "Lady"];
@@ -72,8 +71,7 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
                 Faction: faction), resource, declared);
         }
         DaggerfallTextContext text = current();
-        DaggerfallFactionDefinition? province = sites.Region is int region ? definitions.Factions.Factions.Values
-            .Where(value => value.Type == ProvinceFactionType && value.Region == region).OrderBy(value => value.Id).FirstOrDefault() : null;
+        DaggerfallFactionDefinition? province = sites.Region is int region ? definitions.Factions.ProvinceOf(region) : null;
         DaggerfallOfficeHolder? regionalRuler = sites.Region is int currentRegion ? _officeHolders.ResolveRegionalRuler(currentRegion) : null;
         DaggerfallOfficeHolder? factionLeader = instance.FactionId != 0
             ? _officeHolders.ResolveOffice(instance.FactionId, sites.Region) ?? regionalRuler

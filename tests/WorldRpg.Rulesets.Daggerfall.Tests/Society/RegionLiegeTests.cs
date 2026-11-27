@@ -37,6 +37,10 @@ public sealed class RegionLiegeTests
     [Fact]
     public void Without_a_board_each_province_keeps_its_catalog_parent_and_the_canon_board_agrees()
     {
+        // One province each, from the catalog; Ilessan Hills also carries The Septim Empire, and its own comes first.
+        Assert.Equal([235, 350], TestPayload.Definitions.Factions.ProvincesOf(60).Select(faction => faction.Id));
+        Assert.Equal(235, TestPayload.Definitions.Factions.ProvinceOf(60)?.Id);
+
         DaggerfallRegionLiege liege = NewLiege();
         Assert.Equal(Daggerfall, liege.LiegeOf(19)?.Id);
         Assert.Null(liege.LiegeOf(GlenpointRegion));
@@ -186,6 +190,35 @@ public sealed class RegionLiegeTests
         Assert.Contains(", sworn to the Crown of Wayrest", session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 19, forBark: false)!, StringComparison.Ordinal);
         Assert.Equal("The court of Betony has sworn homage to the Crown of Wayrest.",
             session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 19, forBark: true));
+    }
+
+    /// <summary>
+    /// Glenpoint and Betony have no lord the catalog names: an annexed Glenpoint's court still says whom it answers to and
+    /// announces its homage, and a vacant throne keeps its vacancy text and names the crown.
+    /// </summary>
+    [Fact]
+    public void A_court_without_a_named_lord_still_tells_its_liege_and_a_vacant_throne_names_it_too()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        DaggerfallNpc speaker = session.State.Npcs.All.First();
+        Assert.Null(session.OfficeHolders.ResolveRegionalRuler(GlenpointRegion));
+        Assert.Null(session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: false));
+
+        Take(session.PoliticalBoard!.Board, "glenpoint", "daggerfall");
+        Assert.Equal("You stand in the court of Glenpoint, which answers to the Crown of Daggerfall.",
+            session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: false));
+        Assert.Equal("The court of Glenpoint has sworn homage to the Crown of Daggerfall.",
+            session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: true));
+        session.PoliticalBoard.Board.Consolidate(session.PoliticalBoard.Board.Region("glenpoint"), session.PoliticalBoard.Board.Turn);
+        Assert.Equal("The court of Glenpoint answers to the Crown of Daggerfall.",
+            session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: true));
+
+        session.OfficeLedger.VacateFactionOffice(Betony, DaggerfallOfficeChangeCause.Death, changedDay: 1, causeDetail: "was slain",
+            previousHolderName: "Aldric Mornsey");
+        string vacant = session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, 19, forBark: false)!;
+        Assert.StartsWith("The throne of Betony stands vacant since Aldric Mornsey was slain", vacant, StringComparison.Ordinal);
+        Assert.EndsWith(" Betony answers to the Crown of Daggerfall.", vacant, StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<DaggerfallNoticeEntry> Notices(DaggerfallSession session, DaggerfallSiteRecord town) =>

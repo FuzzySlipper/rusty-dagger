@@ -101,4 +101,19 @@ internal sealed record DaggerfallFactionsSet(
     /// consumer reads, or the explicit unclaimed region when none does.
     /// </summary>
     internal DaggerfallRegionFactionDefinition ResolveRegion(int region) => Regions[region];
+
+    /// <summary>
+    /// The province factions (rulers) the catalog places in classic region <paramref name="region"/>, lowest identity
+    /// first. Ilessan Hills has two: its own, and The Septim Empire.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallFactionDefinition> ProvincesOf(int region) =>
+        [.. Factions.Values.Where(faction => faction.Type == ProvinceFactionType && faction.Region == region).OrderBy(faction => faction.Id)];
+
+    /// <summary>
+    /// The province faction of classic region <paramref name="region"/>: its ruler, which the region keeps whoever its
+    /// liege on the political board, or null for a region with none. Where two are placed, the lowest identity.
+    /// </summary>
+    internal DaggerfallFactionDefinition? ProvinceOf(int region) => ProvincesOf(region).FirstOrDefault();
+
+    private const int ProvinceFactionType = 7;
 }

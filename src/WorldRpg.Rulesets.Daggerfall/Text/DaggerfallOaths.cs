@@ -17,8 +17,7 @@ internal static class DaggerfallOaths
     {
         int race = definitions.Factions.Factions.GetValueOrDefault(faction)?.Race ?? -1;
         if (race < 0 && region is int index)
-            race = definitions.Factions.Factions.Values.Where(value => value.Type == 7 && value.Region == index)
-                .OrderBy(value => value.Id).FirstOrDefault()?.Race ?? -1;
+            race = definitions.Factions.ProvinceOf(index)?.Race ?? -1;
         DaggerfallTextKey key = new(DaggerfallTextKind.Resource, (201 + race).ToString(CultureInfo.InvariantCulture));
         return race >= 0 && definitions.Text.Resolve(key, out DaggerfallTextValue? value) == DaggerfallTextResolution.Resolved
             ? [.. value!.TextRuns] : [];

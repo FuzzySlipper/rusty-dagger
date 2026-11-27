@@ -221,10 +221,7 @@ internal sealed class DaggerfallOfficeHolders(
     /// <summary>Resolves the province faction for <paramref name="region"/> and its current regional ruler.</summary>
     internal DaggerfallOfficeHolder? ResolveRegionalRuler(int region)
     {
-        DaggerfallFactionDefinition? province = definitions.Factions.Factions.Values
-            .Where(value => value.Type == ProvinceFactionType && value.Region == region)
-            .OrderBy(value => value.Id)
-            .FirstOrDefault();
+        DaggerfallFactionDefinition? province = definitions.Factions.ProvinceOf(region);
         return province is null ? null : ResolveOffice(province.Id, region);
     }
 

@@ -16,7 +16,6 @@ internal sealed class DaggerfallRegionLiege
 
     private readonly DaggerfallFactionsSet _factions;
     private readonly DaggerfallBoardSeatSet _seats;
-    private readonly Dictionary<int, DaggerfallFactionDefinition> _provinces;
     private Board? _board;
     private Dictionary<int, Region> _boardRegions = [];
 
@@ -24,10 +23,6 @@ internal sealed class DaggerfallRegionLiege
     {
         _factions = factions ?? throw new ArgumentNullException(nameof(factions));
         _seats = seats ?? throw new ArgumentNullException(nameof(seats));
-        _provinces = factions.Factions.Values
-            .Where(faction => faction.Type == ProvinceFactionType && faction.Region >= 0)
-            .GroupBy(faction => faction.Region)
-            .ToDictionary(group => group.Key, group => group.MinBy(faction => faction.Id)!);
     }
 
     /// <summary>Reads allegiance from <paramref name="board"/> from now on (<see cref="DaggerfallPoliticalBoard"/> binds its own).</summary>
@@ -37,8 +32,8 @@ internal sealed class DaggerfallRegionLiege
         _boardRegions = board.Regions.ToDictionary(region => region.CatalogRegion);
     }
 
-    /// <summary>The province faction of classic region <paramref name="region"/>: its ruler, which the region keeps whoever its liege.</summary>
-    internal DaggerfallFactionDefinition? ProvinceOf(int region) => _provinces.GetValueOrDefault(region);
+    /// <summary>The province faction of classic region <paramref name="region"/> (<see cref="DaggerfallFactionsSet.ProvinceOf"/>).</summary>
+    internal DaggerfallFactionDefinition? ProvinceOf(int region) => _factions.ProvinceOf(region);
 
     /// <summary>The province of the crown classic region <paramref name="region"/> answers to, or null where it answers to none.</summary>
     internal DaggerfallFactionDefinition? LiegeOf(int region) =>

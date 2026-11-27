@@ -9,8 +9,8 @@ internal static class DaggerfallVampirismPolicy
     internal static DaggerfallFactionDefinition GetVampireClan(DaggerfallFactionsSet factions, int region)
     {
         if (region is < 0 or > 61) throw new ArgumentOutOfRangeException(nameof(region));
-        var provinces = factions.Factions.Values.Where(value => value.Region == region && value.Type == 7).ToArray();
-        if (provinces.Length != 1) throw new NotSupportedException($"Region {region} requires exactly one province faction; found {provinces.Length}.");
+        IReadOnlyList<DaggerfallFactionDefinition> provinces = factions.ProvincesOf(region);
+        if (provinces.Count != 1) throw new NotSupportedException($"Region {region} requires exactly one province faction; found {provinces.Count}.");
         // FormulaHelper.GetVampireClan uses Lyrezi when the source province names no recognized clan.
         int id = provinces[0].Vampire is >= 150 and <= 158 ? provinces[0].Vampire : 153;
         if (!factions.Factions.TryGetValue(id, out var clan) || clan.Type != 6)

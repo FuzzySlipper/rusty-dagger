@@ -866,10 +866,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallTextContext context = Context(npc, site, string.Empty);
         string? first = _definitions.Factions.Factions.GetValueOrDefault(factionOne)?.Name;
         string? second = _definitions.Factions.Factions.GetValueOrDefault(factionTwo)?.Name;
-        DaggerfallFactionDefinition? province = _definitions.Factions.Factions.Values
-            .Where(faction => faction.Type == 7 && faction.Region == site.Id.Region)
-            .OrderBy(faction => faction.Id)
-            .FirstOrDefault();
+        DaggerfallFactionDefinition? province = _definitions.Factions.ProvinceOf(site.Id.Region);
         return context with
         {
             Faction = context.Faction with
@@ -888,10 +885,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallFactionDefinition? faction = npc.Appearance.FactionId == 0
             ? null
             : _definitions.Factions.Factions.GetValueOrDefault(npc.Appearance.FactionId);
-        DaggerfallFactionDefinition? province = site is null ? null : _definitions.Factions.Factions.Values
-            .Where(value => value.Type == 7 && value.Region == site.Id.Region)
-            .OrderBy(value => value.Id)
-            .FirstOrDefault();
+        DaggerfallFactionDefinition? province = site is null ? null : _definitions.Factions.ProvinceOf(site.Id.Region);
         string? oath = DaggerfallOaths.Of(_definitions, npc.Appearance.FactionId, site?.Id.Region).FirstOrDefault();
         return new(
             _currentText?.Invoke().Player ?? DaggerfallPlayerTextContext.For(_definitions, player, _playerStats),
@@ -1452,6 +1446,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             if (throneNewsKnown && (inCourt || throneOver is not null))
                 AddUnique(lines, ResolveRegionalThroneContinuityLine(npc, site.Id.Region, forBark: false));
         }
+        else if (inCourt)
+        {
+            // A court whose lord the catalog doesn't name still tells whom the region answers to.
+            AddUnique(lines, ResolveRegionalThroneContinuityLine(npc, site.Id.Region, forBark: false));
+        }
 
         // 3. Speaker's overarching MajorSeat status (guildhall/temple or arrived proclamation).
         if (TryFindSpeakerMajorSeat(npc) is { } seat)
@@ -1477,11 +1476,22 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_officeHolders is null || region is < 0 or > 61)
             return null;
 
+        string regionName = _definitions.BuildingNames.RegionName(region);
+        // The crown the region answers to on the board is told whether or not a lord is named, and through a vacancy
+        // or a regency; while the crown consolidates a region it has taken, the court's talk is of the new homage.
+        string? liege = _social.Liege.LiegeOf(region)?.Name;
+        string answers = liege is null ? string.Empty : $" {regionName} answers to the Crown of {liege}.";
+        string? homage = _social.Liege.NewLiegeOf(region) is { } sworn ? $"The court of {regionName} has sworn homage to the Crown of {sworn.Name}." : null;
+
         DaggerfallOfficeHolder? ruler = _officeHolders.ResolveRegionalRuler(region);
         if (ruler is null)
-            return null;
+        {
+            if (liege is null) return null;
+            return forBark
+                ? homage ?? $"The court of {regionName} answers to the Crown of {liege}."
+                : $"You stand in the court of {regionName}, which answers to the Crown of {liege}.";
+        }
 
-        string regionName = _definitions.BuildingNames.RegionName(region);
         string throneKey = DaggerfallOfficeLedger.FactionOfficeKey(ruler.OfficeFactionId);
         DaggerfallOfficeOverrideSave? over = _officeLedger?.TryGetOverride(throneKey);
 
@@ -1490,39 +1500,33 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             string? prevName = over?.PreviousHolderName ?? ruler.PreviousHolderName;
             string? prevFate = !string.IsNullOrWhiteSpace(over?.CauseDetail) ? over.CauseDetail : ruler.PreviousHolderFate;
             if (forBark)
-                return $"The throne of {regionName} stands vacant — the court is on edge until a successor is named.";
-            return !string.IsNullOrWhiteSpace(prevName)
+                return $"The throne of {regionName} stands vacant — the court is on edge until a successor is named.{answers}";
+            return (!string.IsNullOrWhiteSpace(prevName)
                 ? $"The throne of {regionName} stands vacant since {prevName} {prevFate ?? "left the throne"}; the court awaits a lawful successor."
-                : $"The throne of {regionName} stands vacant; the court awaits a lawful successor.";
+                : $"The throne of {regionName} stands vacant; the court awaits a lawful successor.") + answers;
         }
 
         if (over is { IsRegency: true })
         {
             string styledRegent = FormatStyledHolder(over.Title ?? "Regent", over.HolderDisplayName ?? ruler.DisplayName);
             if (ruler.ActorId == npc.DurableId)
-                return $"I hold interim regency over {regionName} until the succession is settled.";
-            return forBark
+                return $"I hold interim regency over {regionName} until the succession is settled.{answers}";
+            return (forBark
                 ? $"{styledRegent} holds interim regency over {regionName} while succession remains unsettled."
-                : $"Mind your manners — {styledRegent} governs {regionName} as interim regent until a lawful successor is crowned.";
+                : $"Mind your manners — {styledRegent} governs {regionName} as interim regent until a lawful successor is crowned.") + answers;
         }
 
         string styledRuler = FormatStyledHolder(ruler.Title, ruler.DisplayName);
-        // The lord's liege on the board: a crown the region pays homage to, named after the lord.
-        string? liege = _social.Liege.LiegeOf(region)?.Name;
-        string sworn = liege is null ? string.Empty : $", sworn to the Crown of {liege}";
+        string swornTo = liege is null ? string.Empty : $", sworn to the Crown of {liege}";
         if (ruler.ActorId == npc.DurableId)
-            return $"You address {styledRuler} of {regionName}{sworn}.";
+            return $"You address {styledRuler} of {regionName}{swornTo}.";
         if (forBark)
-        {
-            if (_social.Liege.NewLiegeOf(region) is { } homage)
-                return $"The court of {regionName} has sworn homage to the Crown of {homage.Name}.";
-            return over is not null
+            return homage ?? (over is not null
                 ? $"The court adjusts to the reign of {styledRuler} of {regionName}."
-                : $"All eyes in court turn to {styledRuler} of {regionName}.";
-        }
+                : $"All eyes in court turn to {styledRuler} of {regionName}.");
         return over is not null && !string.IsNullOrWhiteSpace(over.PreviousHolderName)
-            ? $"You stand in the court of {styledRuler} of {regionName}{sworn}, who succeeded {over.PreviousHolderName}."
-            : $"You stand in the court of {styledRuler} of {regionName}{sworn}.";
+            ? $"You stand in the court of {styledRuler} of {regionName}{swornTo}, who succeeded {over.PreviousHolderName}."
+            : $"You stand in the court of {styledRuler} of {regionName}{swornTo}.";
     }
 
     private string? ResolveMajorSeatContinuityLine(DaggerfallNpc npc, DaggerfallSiteRecord site, bool forBark)

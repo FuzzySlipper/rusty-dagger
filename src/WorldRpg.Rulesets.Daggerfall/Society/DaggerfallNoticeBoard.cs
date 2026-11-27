@@ -342,12 +342,7 @@ internal sealed class DaggerfallNoticeBoard(
         string regionName,
         DaggerfallOfficeHolder? ruler)
     {
-        int provinceFactionId = ruler?.OfficeFactionId
-            ?? definitions.Factions.Factions.Values
-                .Where(f => f.Type == 7 && f.Region == region)
-                .OrderBy(f => f.Id)
-                .Select(f => f.Id)
-                .FirstOrDefault();
+        int provinceFactionId = ruler?.OfficeFactionId ?? definitions.Factions.ProvinceOf(region)?.Id ?? 0;
 
         if (provinceFactionId > 0)
         {
@@ -478,10 +473,7 @@ internal sealed class DaggerfallNoticeBoard(
         }
 
         DaggerfallTextContext baseContext = currentText();
-        DaggerfallFactionDefinition? province = definitions.Factions.Factions.Values
-            .Where(faction => faction.Type == 7 && faction.Region == region)
-            .OrderBy(faction => faction.Id)
-            .FirstOrDefault();
+        DaggerfallFactionDefinition? province = definitions.Factions.ProvinceOf(region);
 
         foreach (DaggerfallRumorDefinition rumor in selected)
         {

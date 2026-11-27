@@ -288,11 +288,11 @@ internal sealed class DaggerfallBuildingNameService(
 
     private bool RegentTitle(int region, out string? title, out string? reason)
     {
-        DaggerfallFactionDefinition[] provinces = [.. _definitions.Factions.Factions.Values.Where(faction => faction.Type == 7 && faction.Region == region)];
-        if (provinces.Length != 1)
+        IReadOnlyList<DaggerfallFactionDefinition> provinces = _definitions.Factions.ProvincesOf(region);
+        if (provinces.Count != 1)
         {
             title = null;
-            reason = $"Building name region {region} resolves {provinces.Length} province factions; %rt requires exactly one.";
+            reason = $"Building name region {region} resolves {provinces.Count} province factions; %rt requires exactly one.";
             return false;
         }
 
