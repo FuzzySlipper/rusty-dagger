@@ -39,8 +39,8 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     /// <summary>How far past the view's distance places are drawn, and at most how many of their parts and names.</summary>
     private const double PlaceReach = 2.2;
     private const int MostPlaceParts = 1_200, MostLabels = 60;
-    /// <summary>How many dots ring the party's sight.</summary>
-    private const int SightRingDots = 72;
+    /// <summary>How many curved terrain-hugging dashes form the party's sight ring (#11115).</summary>
+    private const int SightRingSegments = 48;
     private static readonly CameraViewport FullViewport = new(0d, 0d, 1d, 1d);
 
     private readonly IEngineContext _engine;
@@ -147,6 +147,8 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     private bool _winter;
     /// <summary>How far into the night the grading and window glow last updated for, in steps too small to see.</summary>
     private float _night;
+    /// <summary>Real-time animation clock (seconds) driven by Engine-admitted updates for ring pulses, pennant sway and march bob (#11115).</summary>
+    private double _animationClock;
 
     internal DaggerfallOverlandView View { get; }
 
@@ -245,7 +247,9 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     /// </summary>
     internal void Fall(Func<DaggerfallTravelMapPixel, DaggerfallWeatherConditions> weather, float daylight, double seconds)
     {
-        if (!_open || _art is null || _disposed) return;
+        if (!_open || _disposed) return;
+        if (double.IsFinite(seconds) && seconds > 0) _animationClock += Math.Min(seconds, .25);
+        if (_art is null) return;
         _fall ??= new(_engine.Graphics, _tuning.Fall, Atlas(_art.Rain, 64), Atlas(_art.Snow, 32));
         _fall.Update(_backdropView, _aspect, _viewEye, _tuning.FieldOfView, View.Distance, _lookedAt,
             (x, z) => weather(DaggerfallOverlandView.Pixel(x, z)), daylight, seconds);
@@ -268,6 +272,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     {
         if (!_open) return;
         _open = false;
+        _animationClock = 0;
         _fall?.Clear();
         _facts.Clear();
         _labels.Clear();
@@ -346,6 +351,22 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         return top + ((bottom - top) * v);
     }
 
+    /// <summary>The terrain's outward unit normal at a map point, from cached finest-ring heights.</summary>
+    private Vector3 Normal(double x, double z)
+    {
+        const double step = DaggerfallOverlandTerrain.FineCellMetres * .5;
+        float dx = (float)(Height(x + step, z) - Height(x - step, z));
+        float dz = (float)(Height(x, z + step) - Height(x, z - step));
+        return Vector3.Normalize(new(-dx, (float)(2 * step), -dz));
+    }
+
+    private DaggerfallOverlandModels CreateModels()
+    {
+        DaggerfallOverlandModels models = new(_engine, ShadowTexture());
+        models.UpdateTheme(_winter, _night);
+        return models;
+    }
+
     private static Vector3 Backdrop(Vector3 metres) => metres * DaggerfallOverlandTerrain.Scale;
 
     private static WorldOriginGlobalPosition Global(Vector3 point)
@@ -357,7 +378,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     /// <summary>Everything the map stands for this update, and the names over it.</summary>
     private void Compose(DaggerfallExpedition expedition, double partyX, double partyZ)
     {
-        DaggerfallOverlandModels models = _models ??= new(_engine);
+        DaggerfallOverlandModels models = _models ??= CreateModels();
         _facts.Clear();
         _labels.Clear();
         ulong next = FirstCountedPart;
@@ -365,6 +386,8 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         // and close in still stand over the houses.
         float grow = Math.Max(.75f, (float)Math.Sqrt(View.Distance / _tuning.Distance.Opening));
         float token = (float)(_tuning.Token * grow), dot = token * .14f;
+        float groundClear = Math.Max(5f, dot * .14f);
+        float flagSway = MathF.Sin((float)(_animationClock * 2.1)) * .12f;
 
         void Stand(Appearance look, double x, double z, float scale, float turn = 0, float sink = 0, ulong? part = null)
         {
@@ -373,17 +396,45 @@ internal sealed class DaggerfallOverlandMap : IDisposable
                 new Transform(Backdrop(at), Quaternion.CreateFromAxisAngle(Vector3.UnitY, turn), new Vector3(scale * DaggerfallOverlandTerrain.Scale)),
                 look, true, RenderLayer.Backdrop));
         }
-        void Standard(DaggerfallOverlandBanner banner, double x, double z, ulong? part = null)
+        void GroundPlace(Appearance look, Vector3 atMetres, Quaternion rotation, Vector3 scaleMetres, ulong? part = null)
         {
-            Stand(models.Pole, x, z, token, part: part);
-            Stand(models.Flags[banner], x, z, token);
+            _facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.TravelMap(part ?? next++), false, 0,
+                new Transform(Backdrop(atMetres), rotation, scaleMetres * DaggerfallOverlandTerrain.Scale),
+                look, true, RenderLayer.Backdrop));
+        }
+        void AnchorOnGround(Appearance? ring, double x, double z, float ringScale, float shadowScale, double? headingDegrees = null,
+            Appearance? headingArrow = null, float bobFraction = 0f)
+        {
+            Vector3 normal = Normal(x, z);
+            float y = (float)Height(x, z);
+            Vector3 forward = headingDegrees is double deg ? DaggerfallOverlandModels.HeadingForward(deg) : Vector3.UnitZ;
+            Quaternion rot = DaggerfallOverlandModels.AlignToSurface(normal, forward);
+            float shadowShrink = 1f - (.14f * Math.Clamp(bobFraction, 0f, 1f));
+            Vector3 shadowAt = new Vector3((float)x, y, (float)z) + (normal * (groundClear * .55f));
+            GroundPlace(models.TokenShadow, shadowAt, rot, new(shadowScale * shadowShrink));
+            if (ring is not null)
+            {
+                Vector3 ringAt = new Vector3((float)x, y, (float)z) + (normal * groundClear);
+                GroundPlace(ring, ringAt, rot, new(ringScale));
+            }
+            if (headingArrow is not null && headingDegrees is double)
+            {
+                Vector3 tangentFwd = Vector3.Normalize(forward - (normal * Vector3.Dot(forward, normal)));
+                Vector3 tip = new Vector3((float)x, y, (float)z) + (tangentFwd * (ringScale * .54f)) + (normal * (groundClear * 1.15f));
+                GroundPlace(headingArrow, tip, rot, new(ringScale * .55f));
+            }
+        }
+        void Standard(DaggerfallOverlandBanner banner, double x, double z, ulong? part = null, float lift = 0f)
+        {
+            Stand(models.Pole, x, z, token, sink: -lift, part: part);
+            Stand(models.Flags[banner], x, z, token, turn: flagSway, sink: -lift);
         }
         // A figure stands as its mobile's billboard, sized in screen pixels so the party and the bands read the same at
         // every zoom, or as a standard where the site has no sprite for it. Its transform takes no scale.
-        void Figure(int? mobile, DaggerfallOverlandBanner banner, double x, double z, ulong? part = null)
+        void Figure(int? mobile, DaggerfallOverlandBanner banner, double x, double z, float bob = 0f, ulong? part = null)
         {
-            if (mobile is int id && Billboard(id) is { } look) Stand(look, x, z, 1 / DaggerfallOverlandTerrain.Scale, part: part);
-            else Standard(banner, x, z, part);
+            if (mobile is int id && Billboard(id) is { } look) Stand(look, x, z, 1 / DaggerfallOverlandTerrain.Scale, sink: -bob, part: part);
+            else Standard(banner, x, z, part, bob);
         }
         void Label(string name, string kind, double x, double z, float above)
         {
@@ -421,30 +472,77 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         // the map's part budget so places always take priority (#11113).
         ComposeForests(house);
 
-        // The party's sight, its standard, the way it goes and where it heads.
-        for (int index = 0; index < SightRingDots; index++)
+        // Sight ring: 48 terrain-aligned dark-rimmed arc dashes hugging hills and riverbanks smoothly (#11115).
+        double ringStep = Math.Tau / SightRingSegments;
+        double halfArc = ringStep * .29;
+        for (int index = 0; index < SightRingSegments; index++)
         {
-            double angle = index * Math.Tau / SightRingDots;
-            Stand(models.Dots[DaggerfallOverlandDot.Sight], partyX + (Math.Cos(angle) * sight), partyZ + (Math.Sin(angle) * sight), dot);
+            double midAngle = index * ringStep;
+            double mx = partyX + (Math.Cos(midAngle) * sight), mz = partyZ + (Math.Sin(midAngle) * sight);
+            double x0 = partyX + (Math.Cos(midAngle - halfArc) * sight), z0 = partyZ + (Math.Sin(midAngle - halfArc) * sight);
+            double x1 = partyX + (Math.Cos(midAngle + halfArc) * sight), z1 = partyZ + (Math.Sin(midAngle + halfArc) * sight);
+            float y0 = (float)Height(x0, z0), y1 = (float)Height(x1, z1), ym = (float)Height(mx, mz);
+            Vector3 p0 = new((float)x0, y0, (float)z0), p1 = new((float)x1, y1, (float)z1);
+            float chord = Vector3.Distance(p0, p1);
+            if (chord < 1f) continue;
+            bool cardinal = index % (SightRingSegments / 4) == 0;
+            float width = dot * (cardinal ? 1.06f : .82f);
+            float yAt = Math.Max(ym, .5f * (y0 + y1)) + groundClear;
+            Quaternion rot = DaggerfallOverlandModels.AlignChordToSurface(Normal(mx, mz), p0, p1);
+            GroundPlace(models.Dots[DaggerfallOverlandDot.Sight], new((float)mx, yAt, (float)mz), rot, new(width, width, chord));
         }
+
+        // High-contrast dark-rimmed gold directional route trail and ornate destination standard (#11115).
         if (expedition.Destination is { } destination)
         {
             (double toX, double toZ) = DaggerfallOverlandView.Metres(destination.Pixel.X + .5, destination.Pixel.Y + .5);
-            double length = Math.Sqrt(((toX - partyX) * (toX - partyX)) + ((toZ - partyZ) * (toZ - partyZ)));
-            int dots = (int)Math.Clamp(length / (dot * 3.5), 0, 240);
-            for (int index = 1; index < dots; index++)
+            double dx = toX - partyX, dz = toZ - partyZ;
+            double length = Math.Sqrt((dx * dx) + (dz * dz));
+            int dashes = (int)Math.Clamp(length / (dot * 3.4), 0, 180);
+            if (dashes > 1 && length > 1f)
             {
-                double share = index / (double)dots;
-                Stand(models.Dots[DaggerfallOverlandDot.Route], partyX + ((toX - partyX) * share), partyZ + ((toZ - partyZ) * share), dot * .8f);
+                double ux = dx / length, uz = dz / length;
+                double halfDash = Math.Min(dot * .72, length / Math.Max(dashes * 2.4, 2.0));
+                float routeScale = dot * 1.46f;
+                float routeClear = Math.Max(6f, dot * .18f);
+                for (int index = 1; index < dashes; index++)
+                {
+                    double share = index / (double)dashes;
+                    double mx = partyX + (dx * share), mz = partyZ + (dz * share);
+                    double x0 = mx - (ux * halfDash), z0 = mz - (uz * halfDash);
+                    double x1 = mx + (ux * halfDash), z1 = mz + (uz * halfDash);
+                    float y0 = (float)Height(x0, z0), y1 = (float)Height(x1, z1), ym = (float)Height(mx, mz);
+                    Quaternion rot = DaggerfallOverlandModels.AlignChordToSurface(Normal(mx, mz), new((float)x0, y0, (float)z0), new((float)x1, y1, (float)z1));
+                    GroundPlace(models.Dots[DaggerfallOverlandDot.Route], new((float)mx, Math.Max(ym, .5f * (y0 + y1)) + routeClear, (float)mz), rot, new(routeScale));
+                }
             }
+            AnchorOnGround(models.DestinationRing, toX, toZ, token * .62f, token * .72f);
             Standard(DaggerfallOverlandBanner.Destination, toX, toZ);
         }
+
+        // Ornate ruby-and-gold map pin anchored cleanly to the ground (#11115).
         if (expedition.Pin is { } pin)
         {
             (double pinX, double pinZ) = DaggerfallOverlandView.Metres(pin.Pixel.X + .5, pin.Pixel.Y + .5);
-            Stand(models.Pin, pinX, pinZ, token * .7f);
+            AnchorOnGround(models.PinRing, pinX, pinZ, token * .54f, token * .62f);
+            Stand(models.Pin, pinX, pinZ, token * .82f);
         }
-        Figure(_partyMobile(), DaggerfallOverlandBanner.Party, partyX, partyZ, PartyPart);
+
+        // Grounded party token: soft contact shadow, royal-azure anchor ring, travel-heading cue and subtle march bob (#11115).
+        bool partyMoving = expedition.Running && expedition.Destination is not null && expedition.Mode != DaggerfallExpeditionMode.Camp;
+        float partyBob = DaggerfallOverlandModels.MarchBobOffset(_animationClock, 0, token, partyMoving);
+        double? partyHeading = null;
+        if (expedition.Destination is { } dest)
+        {
+            (double tx, double tz) = DaggerfallOverlandView.Metres(dest.Pixel.X + .5, dest.Pixel.Y + .5);
+            if (((tx - partyX) * (tx - partyX)) + ((tz - partyZ) * (tz - partyZ)) > 1.0)
+                partyHeading = (Math.Atan2(tx - partyX, partyZ - tz) * 180.0 / Math.PI + 360.0) % 360.0;
+        }
+        partyHeading ??= expedition.Heading;
+        AnchorOnGround(models.PartyRing, partyX, partyZ, token * .68f, token * .82f, partyHeading,
+            partyHeading is not null ? models.PartyHeading : null, token > 0 ? partyBob / (token * .11f) : 0f);
+        Figure(_partyMobile(), DaggerfallOverlandBanner.Party, partyX, partyZ, partyBob, PartyPart);
+
         // The rain and snow, each one batch whose drops stand in the backdrop already.
         foreach ((Appearance? drops, ulong part) in new[] { (_fall?.Rain, RainPart), (_fall?.Snow, SnowPart) })
             if (drops is not null)
@@ -454,13 +552,30 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         string? here = expedition.LocationHere is { } site && expedition.Known(site.Id) ? site.Name : null;
         Label(here is null ? "Your party" : $"Your party · {here}", "party", partyX, partyZ, 0);
 
-        // The bands the party sees, ringed in red when giving chase or amber when in an active clash.
+        // Visible bands: soft ground shadow, hollow tactical ring (crimson reticle for chasers, amber starburst for clashes),
+        // directional heading cue and subtle stride bob while moving (#11115).
         foreach (DaggerfallExpeditionBandView band in expedition.SeenBands)
         {
             (double x, double z) = DaggerfallOverlandView.Metres(band.X, band.Y);
-            Figure(band.Mobile, Banner(band.Kind), x, z);
-            if (band.Spotted) Stand(models.Dots[DaggerfallOverlandDot.Spotted], x, z, token * .6f, sink: -2);
-            else if (band.IsClash) Stand(models.Dots[DaggerfallOverlandDot.Clash], x, z, token * .65f, sink: -2);
+            bool bandMoving = expedition.Running && !band.Camp && !band.IsClash;
+            float bandBob = DaggerfallOverlandModels.MarchBobOffset(_animationClock, band.Id, token, bandMoving);
+            float pulse = band.IsClash
+                ? DaggerfallOverlandModels.RingPulseScale(_animationClock + (band.Id * .7), 6.2f, .065f)
+                : band.Spotted
+                    ? DaggerfallOverlandModels.RingPulseScale(_animationClock + (band.Id * .7), 5.0f, .055f)
+                    : 1f;
+            Appearance ring = band.Spotted
+                ? models.Dots[DaggerfallOverlandDot.Spotted]
+                : band.IsClash
+                    ? models.Dots[DaggerfallOverlandDot.Clash]
+                    : models.BandRing;
+            float ringScale = (band.IsClash ? token * .78f : band.Spotted ? token * .72f : token * .58f) * pulse;
+            Appearance? headingArrow = !band.Camp && !band.IsClash
+                ? (band.Spotted || band.Hostile ? models.HostileHeading : models.NeutralHeading)
+                : null;
+            AnchorOnGround(ring, x, z, ringScale, token * .76f, !band.Camp && !band.IsClash ? band.Heading : null,
+                headingArrow, token > 0 ? bandBob / (token * .11f) : 0f);
+            Figure(band.Mobile, Banner(band.Kind), x, z, bandBob);
             string labelKind = band.IsClash
                 ? "clash"
                 : band.Spotted
@@ -550,6 +665,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             _engine.Graphics.UpdateMaterial(new(material,
                 DaggerfallOverlandForests.ResolveMaterial(kind, slotName, colour, _winter, _night, shadow)));
         }
+        _models?.UpdateTheme(_winter, _night);
     }
 
     private Appearance? Forest(DaggerfallTravelMapForestKind kind)
