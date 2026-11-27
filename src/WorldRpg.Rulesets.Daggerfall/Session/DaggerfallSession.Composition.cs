@@ -1317,7 +1317,7 @@ internal sealed partial class DaggerfallSession
             partiallyConstructed.Add(_horizon);
             _overland = new DaggerfallOverlandMap(engine, _horizon.Map, tuning.Expedition.Map, Expedition.Policy.AllDestinations(), _camera.Activate,
                 mobile => _sites.Projection.Inputs.MobileSprites.GetValueOrDefault(mobile), PartyMobile, tuning.Sprites.Actors,
-                composition.ArtReplacements?.TravelMap);
+                composition.ArtReplacements?.TravelMap, definitions.BuildingNames.RegionNames, definitions.WorldNames);
             partiallyConstructed.Add(_overland);
             _exterior.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
             if (composition.ArtReplacements?.GroundCover is { } cover)

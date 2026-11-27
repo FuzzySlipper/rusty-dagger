@@ -7,9 +7,9 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
-/// <summary>A name the travel map shows over a place, the party or its destination, where the view puts it: across and
-/// down the map's view, from its top left, 0 to 1.</summary>
-internal sealed record DaggerfallOverlandLabel(string Name, string Kind, double Across, double Down);
+/// <summary>A name the travel map shows over a place, the party, a band, or a wide-zoom region/sea, where the view puts it:
+/// across and down the map's view, from its top left, 0 to 1, with optional translucency <paramref name="Opacity"/>.</summary>
+internal sealed record DaggerfallOverlandLabel(string Name, string Kind, double Across, double Down, double Opacity = 1.0);
 
 /// <summary>The travel map's look as this run draws it: the tuning's, or what a developer set by eye with map.look.</summary>
 internal readonly record struct DaggerfallOverlandLook(DaggerfallOverlandGrading Grading, float Moon, double Haze);
@@ -36,9 +36,9 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     private const double Cell = DaggerfallWorldGrid.HorizontalSize;
     /// <summary>The world the map camera draws ends this close: none of it shows.</summary>
     private const double WorldNear = .01, WorldFar = .02;
-    /// <summary>How far past the view's distance places are drawn, and at most how many of their parts and names.</summary>
+    /// <summary>How far past the view's distance places are drawn, and at most how many of their 3D models.</summary>
     private const double PlaceReach = 2.2;
-    private const int MostPlaceParts = 1_200, MostLabels = 60;
+    private const int MostPlaceParts = 1_200;
     /// <summary>How many curved terrain-hugging dashes form the party's sight ring (#11115).</summary>
     private const int SightRingSegments = 48;
     private static readonly CameraViewport FullViewport = new(0d, 0d, 1d, 1d);
@@ -47,6 +47,9 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     private readonly DaggerfallOverlandTerrain _terrain;
     private readonly DaggerfallOverlandTuning _tuning;
     private readonly IReadOnlyList<DaggerfallTravelDestination> _destinations;
+    private readonly IReadOnlyList<string> _regionNames;
+    private readonly IReadOnlyList<(int Id, string Name, double X, double Y)> _regions;
+    private readonly DaggerfallWorldNames _worldNames;
     private readonly Action _playerCamera;
     private readonly DaggerfallTravelMapArt? _art;
     /// <summary>Each kind and climate's place model, made the first time one is drawn.</summary>
@@ -66,6 +69,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     private readonly Dictionary<(int X, int Y), List<DaggerfallTravelDestination>> _blocks = [];
     private readonly Dictionary<(int X, int Z), double> _heights = [];
     private readonly List<AppearanceFact> _facts = [];
+    private readonly List<DaggerfallOverlandLabel> _labelCandidates = [];
     private readonly List<DaggerfallOverlandLabel> _labels = [];
     private DaggerfallOverlandModels? _models;
     private readonly Func<int, NormalizedActorSprite?> _sprite;
@@ -91,7 +95,8 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     /// <param name="art">The art set's place models and drops; without it no places stand and nothing falls.</param>
     internal DaggerfallOverlandMap(IEngineContext engine, DaggerfallOverlandTerrain terrain, DaggerfallOverlandTuning tuning,
         IReadOnlyList<DaggerfallTravelDestination> destinations, Action playerCamera,
-        Func<int, NormalizedActorSprite?> sprite, Func<int> partyMobile, BillboardMode facing, DaggerfallTravelMapArt? art)
+        Func<int, NormalizedActorSprite?> sprite, Func<int> partyMobile, BillboardMode facing, DaggerfallTravelMapArt? art,
+        IReadOnlyList<string>? regionNames = null, DaggerfallWorldNames? worldNames = null)
     {
         _art = art;
         _sprite = sprite ?? throw new ArgumentNullException(nameof(sprite));
@@ -102,6 +107,14 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _destinations = destinations ?? throw new ArgumentNullException(nameof(destinations));
         _playerCamera = playerCamera ?? throw new ArgumentNullException(nameof(playerCamera));
+        _worldNames = worldNames ?? DaggerfallWorldNames.None;
+        _regionNames = regionNames ?? [];
+        _regions = regionNames is null
+            ? []
+            : [.. destinations.GroupBy(destination => destination.Id.Region).OrderBy(group => group.Key)
+                .Select(group => (group.Key, DaggerfallRegionNames.Name(regionNames, group.Key),
+                    group.Average(item => (double)item.MapPixel.X),
+                    group.Average(item => (double)item.MapPixel.Y)))];
         View = new(tuning);
         Look = new(tuning.Grading, tuning.Moonlight.Intensity, 1);
     }
@@ -380,6 +393,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     {
         DaggerfallOverlandModels models = _models ??= CreateModels();
         _facts.Clear();
+        _labelCandidates.Clear();
         _labels.Clear();
         ulong next = FirstCountedPart;
         // Standards and dots keep their size on the screen better than true size would: they grow with the distance's root,
@@ -436,35 +450,46 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             if (mobile is int id && Billboard(id) is { } look) Stand(look, x, z, 1 / DaggerfallOverlandTerrain.Scale, sink: -bob, part: part);
             else Standard(banner, x, z, part, bob);
         }
-        void Label(string name, string kind, double x, double z, float above)
+        void Label(string name, string kind, double x, double z, float above, double opacity = 1.0)
         {
-            if (_labels.Count >= MostLabels) return;
             CameraProjectionResult seen = CameraQueries.Project(_backdropView, _aspect, Backdrop(new((float)x, (float)Height(x, z) + above, (float)z)));
-            if (seen.InClip) _labels.Add(new(name, kind, seen.NormalizedPoint.X, 1 - seen.NormalizedPoint.Y));
+            if (seen.InClip) _labelCandidates.Add(new(name, kind, seen.NormalizedPoint.X, 1 - seen.NormalizedPoint.Y, opacity));
         }
 
         // The places about the view, the known ones named; the party sees those it does not know within its sight. A model
         // is in house widths, and places grow farther out as the standards do.
         double reach = View.Distance * PlaceReach, sight = expedition.PartySight * Cell;
         float house = (float)_tuning.House * Math.Max(1, (float)Math.Sqrt(View.Distance / _tuning.Distance.Opening));
-        // Settlements, temples and dungeons are named from any distance; homes, farms, inns and graveyards close in.
-        bool close = View.Distance <= _tuning.Distance.Opening / 2;
+        double geoOpacity = DaggerfallOverlandLabels.GeographyOpacity(View.Distance);
+        Dictionary<int, (double SumX, double SumZ, int Count)>? visibleRegions = geoOpacity > .01 && _regionNames.Count > 0 ? [] : null;
         foreach (DaggerfallTravelDestination place in PlacesAbout(View.TargetX, View.TargetZ, reach))
         {
             bool known = expedition.Known(place.Id);
             (double x, double z) = DaggerfallOverlandView.Metres(place.MapPixel.X + .5, place.MapPixel.Y + .5);
-            if (!known && Math.Sqrt(((x - partyX) * (x - partyX)) + ((z - partyZ) * (z - partyZ))) > sight) continue;
-            // The nearest places come first, so a wide view leaves out only the farthest.
-            if (_facts.Count >= MostPlaceParts) break;
-            DaggerfallOverlandPlaceClimate climate = DaggerfallOverlandPlacePalette.Classify(expedition.Policy.Climate(place.MapPixel));
-            if (Place(place.Kind, climate) is { } model)
+            if (visibleRegions is not null)
             {
-                // Each turned its own way, sunk a little so it sits into a slope.
-                uint seed = (uint)HashCode.Combine(place.Id.Region, place.Id.Index);
-                Stand(model, x, z, house, (float)(seed % 360 * Math.PI / 180), house * .03f);
+                CameraProjectionResult inFrame = CameraQueries.Project(_backdropView, _aspect, Backdrop(new((float)x, (float)Height(x, z), (float)z)));
+                if (inFrame.InClip && inFrame.NormalizedPoint.X is >= .08f and <= .92f && inFrame.NormalizedPoint.Y is >= .10f and <= .90f)
+                {
+                    visibleRegions.TryGetValue(place.Id.Region, out (double SumX, double SumZ, int Count) acc);
+                    visibleRegions[place.Id.Region] = (acc.SumX + x, acc.SumZ + z, acc.Count + 1);
+                }
+            }
+            if (!known && Math.Sqrt(((x - partyX) * (x - partyX)) + ((z - partyZ) * (z - partyZ))) > sight) continue;
+            // The nearest places come first for 3D models; major settlements continue collecting labels even past the model cap.
+            if (_facts.Count < MostPlaceParts)
+            {
+                DaggerfallOverlandPlaceClimate climate = DaggerfallOverlandPlacePalette.Classify(expedition.Policy.Climate(place.MapPixel));
+                if (Place(place.Kind, climate) is { } model)
+                {
+                    // Each turned its own way, sunk a little so it sits into a slope.
+                    uint seed = (uint)HashCode.Combine(place.Id.Region, place.Id.Index);
+                    Stand(model, x, z, house, (float)(seed % 360 * Math.PI / 180), house * .03f);
+                }
             }
             // The party's own place is named under its figure instead, which would stand behind this name.
-            if (known && (close || Named.Contains(place.Kind)) && place.MapPixel != expedition.Party)
+            if (known && place.MapPixel != expedition.Party
+                && DaggerfallOverlandLabels.PlaceVisibleAtDistance(place.Kind, View.Distance, _tuning.Distance.Opening))
                 Label(place.Name, DaggerfallSiteKinds.Label(place.Kind), x, z, (float)(_tuning.House * 2.6));
         }
 
@@ -592,6 +617,83 @@ internal sealed class DaggerfallOverlandMap : IDisposable
                         };
             Label(band.Name, labelKind, x, z, 0);
         }
+
+        // High-altitude region, realm, and Iliac Bay sea/bay names fade in smoothly past 22 km (#11116).
+        if (geoOpacity > .01)
+        {
+            float geoLift = (float)(_tuning.House * 4.0);
+            HashSet<int> emittedRegions = [];
+            for (int i = 0; i < _regions.Count; i++)
+            {
+                (int regionId, string regionName, double rx, double ry) = _regions[i];
+                (double x, double z) = DaggerfallOverlandView.Metres(rx, ry);
+                CameraProjectionResult seen = CameraQueries.Project(_backdropView, _aspect, Backdrop(new((float)x, (float)Height(x, z) + geoLift, (float)z)));
+                if (seen.InClip && seen.NormalizedPoint.X is >= .06f and <= .94f && seen.NormalizedPoint.Y is >= .08f and <= .92f)
+                {
+                    _labelCandidates.Add(new(regionName, "region", seen.NormalizedPoint.X, 1 - seen.NormalizedPoint.Y, geoOpacity));
+                    emittedRegions.Add(regionId);
+                }
+            }
+            // Large regions whose static mean sits outside the 3D frustum still label cleanly over their visible land.
+            if (visibleRegions is not null)
+            {
+                foreach ((int regionId, (double sumX, double sumZ, int count)) in visibleRegions)
+                {
+                    if (count < 4 || emittedRegions.Contains(regionId)) continue;
+                    string regionName = DaggerfallRegionNames.Name(_regionNames, regionId);
+                    Label(regionName, "region", sumX / count, sumZ / count, geoLift, geoOpacity);
+                }
+            }
+
+            bool anyWaterInFrame = false;
+            for (int i = 0; i < _worldNames.Names.Count; i++)
+            {
+                DaggerfallWorldName entry = _worldNames.Names[i];
+                if (_worldNames.KindOf(entry).ShownFrom == DaggerfallWorldNameZoom.Close) continue;
+                (double x, double z) = DaggerfallOverlandView.Metres(entry.X, entry.Y);
+                CameraProjectionResult seen = CameraQueries.Project(_backdropView, _aspect, Backdrop(new((float)x, (float)Height(x, z) + geoLift, (float)z)));
+                if (seen.InClip && seen.NormalizedPoint.X is >= .06f and <= .94f && seen.NormalizedPoint.Y is >= .08f and <= .92f)
+                {
+                    _labelCandidates.Add(new(entry.Name, entry.Kind, seen.NormalizedPoint.X, 1 - seen.NormalizedPoint.Y, geoOpacity));
+                    if (entry.Kind is "sea" or "bay") anyWaterInFrame = true;
+                }
+            }
+
+            // When looking over a wide expanse of ocean whose single authored sea anchor sits off-screen, place the nearest
+            // authored sea/bay name (Iliac Bay / Eltheric Ocean) over the centroid of visible open water.
+            if (!anyWaterInFrame && _worldNames.Names.Count > 0)
+            {
+                double waterSumX = 0, waterSumZ = 0;
+                int waterHits = 0;
+                double span = View.Distance * .95;
+                const int Grid = 9;
+                for (int gy = -Grid / 2; gy <= Grid / 2; gy++)
+                for (int gx = -Grid / 2; gx <= Grid / 2; gx++)
+                {
+                    double sx = View.TargetX + (gx * span / (Grid / 2.0));
+                    double sz = View.TargetZ + (gy * span / (Grid / 2.0));
+                    DaggerfallTravelMapPixel px = DaggerfallOverlandView.Pixel(sx, sz);
+                    if (!expedition.Policy.IsOcean(px)) continue;
+                    CameraProjectionResult seen = CameraQueries.Project(_backdropView, _aspect, Backdrop(new((float)sx, (float)DaggerfallHorizonGround.OceanMetres, (float)sz)));
+                    if (seen.InClip && seen.NormalizedPoint.X is >= .10f and <= .90f && seen.NormalizedPoint.Y is >= .12f and <= .88f)
+                    {
+                        waterSumX += sx;
+                        waterSumZ += sz;
+                        waterHits++;
+                    }
+                }
+                if (waterHits >= 4)
+                {
+                    double wx = waterSumX / waterHits, wz = waterSumZ / waterHits;
+                    DaggerfallTravelMapPixel wpx = DaggerfallOverlandView.Pixel(wx, wz);
+                    if (expedition.Policy.IsOcean(wpx) && DaggerfallOverlandLabels.NearestWaterName(_worldNames, wpx.X, wpx.Y) is { } water)
+                        Label(water.Name, water.Kind, wx, wz, geoLift, geoOpacity);
+                }
+            }
+        }
+
+        // Priority-ordered screen-space bounding-box culling keeps every zoom crisp and non-overlapping (#11116).
+        _labels.AddRange(DaggerfallOverlandLabels.Layout(_labelCandidates, _aspect));
     }
 
     /// <summary>
@@ -799,13 +901,6 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         _owned.Add(_shadowTexture);
         return new(_shadowTexture);
     }
-
-    /// <summary>The kinds of place named however far out the view stands.</summary>
-    private static readonly HashSet<DaggerfallSiteKind> Named =
-    [
-        DaggerfallSiteKind.TownCity, DaggerfallSiteKind.TownHamlet, DaggerfallSiteKind.TownVillage, DaggerfallSiteKind.ReligionTemple,
-        DaggerfallSiteKind.DungeonLabyrinth, DaggerfallSiteKind.DungeonKeep, DaggerfallSiteKind.DungeonRuin,
-    ];
 
     private static DaggerfallOverlandBanner Banner(DaggerfallBandKind kind) => kind switch
     {

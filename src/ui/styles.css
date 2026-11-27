@@ -451,16 +451,55 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-expedition-view { position: relative; min-height: 0; border: 1px solid var(--brass); outline-offset: -3px; overflow: hidden; cursor: crosshair; touch-action: none; }
 .dagger-expedition-view.is-panning { cursor: move; box-shadow: inset 0 0 0 2px #dfc987; }
 .dagger-expedition-labels { position: absolute; inset: 0; pointer-events: none; }
-.dagger-expedition-label { position: absolute; transform: translate(-50%, -100%); padding: .05rem .4rem; border-radius: .2rem; white-space: nowrap;
-  background: rgb(18 12 6 / .62); color: #f2e3ba; font: 700 .85rem var(--font-label); letter-spacing: .03em; text-shadow: 0 1px 2px #000; }
-.dagger-expedition-label[data-kind="party"] { color: #b9d2ff; transform: translate(-50%, 40%); }
+.dagger-expedition-label { position: absolute; z-index: 2; transform: translate(-50%, -100%); padding: .05rem .4rem; border-radius: .2rem; white-space: nowrap;
+  background: rgb(18 12 6 / .62); color: #f2e3ba; font: 700 .84rem var(--font-label); letter-spacing: .03em; text-shadow: 0 1px 2px #000; }
+/* Tiered place hierarchy (#11116): major cities stand out in gilded uppercase, towns/temples in clean brass, dungeons in iron-crimson, minor places subtle. */
+.dagger-expedition-label[data-kind="City"] { z-index: 3; padding: .1rem .55rem; background: rgb(14 10 6 / .8); border: 1px solid rgb(212 175 96 / .65);
+  color: #fae4a2; font: 700 .95rem var(--font-label); letter-spacing: .09em; text-transform: uppercase; box-shadow: 0 2px 6px rgb(0 0 0 / .55); }
+.dagger-expedition-label[data-kind="Town"] { z-index: 2; padding: .06rem .44rem; background: rgb(18 12 6 / .7); border: 1px solid rgb(180 154 108 / .36);
+  color: #f3e4bc; font: 700 .84rem var(--font-label); letter-spacing: .04em; }
+.dagger-expedition-label[data-kind="Temple"] { z-index: 2; padding: .06rem .44rem; background: rgb(16 15 24 / .7); border: 1px solid rgb(168 180 226 / .42);
+  color: #e4e8fa; font: 700 .83rem var(--font-label); letter-spacing: .04em; }
+.dagger-expedition-label[data-kind="Village"], .dagger-expedition-label[data-kind="Tavern"] { z-index: 2; padding: .04rem .36rem;
+  background: rgb(18 12 6 / .58); color: #e2d1a8; font: 600 .78rem var(--font-label); }
+.dagger-expedition-label[data-kind="Large dungeon"] { z-index: 2; padding: .05rem .4rem; background: rgb(26 12 12 / .7); border: 1px solid rgb(184 96 78 / .48);
+  color: #ebb99e; font: 700 .8rem var(--font-label); letter-spacing: .04em; }
+.dagger-expedition-label[data-kind="Dungeon"], .dagger-expedition-label[data-kind="Small dungeon"],
+.dagger-expedition-label[data-kind="Graveyard"], .dagger-expedition-label[data-kind="Coven"],
+.dagger-expedition-label[data-kind="Cult"] { z-index: 2; padding: .04rem .36rem; background: rgb(22 12 12 / .64); border: 1px solid rgb(164 84 72 / .38);
+  color: #d8b4a0; font: 600 .76rem var(--font-label); }
+.dagger-expedition-label[data-kind="Farmhouse"], .dagger-expedition-label[data-kind="Wealthy home"],
+.dagger-expedition-label[data-kind="Poor home"], .dagger-expedition-label[data-kind="Location"],
+.dagger-expedition-label[data-kind="Your ship"] { z-index: 1; padding: .02rem .32rem; background: rgb(16 12 8 / .48);
+  color: rgb(232 220 192 / .84); font: 500 .72rem var(--font-label); }
+/* High-altitude region, realm and Iliac Bay sea/bay cartographic lettering at wide strategic zoom (#11116). */
+.dagger-expedition-label[data-kind="region"], .dagger-expedition-label[data-kind="realm"],
+.dagger-expedition-label[data-kind="sea"], .dagger-expedition-label[data-kind="bay"],
+.dagger-expedition-label[data-kind="range"], .dagger-expedition-label[data-kind="desert"],
+.dagger-expedition-label[data-kind="forest"], .dagger-expedition-label[data-kind="moor"],
+.dagger-expedition-label[data-kind="island"], .dagger-expedition-label[data-kind="lake"] {
+  z-index: 0; padding: 0; border: none; background: none; border-radius: 0; transform: translate(-50%, -50%);
+}
+.dagger-expedition-label[data-kind="region"] { color: rgb(246 232 194 / .86); font: 600 1.05rem var(--font-label); letter-spacing: .26em;
+  text-transform: uppercase; text-shadow: 0 1px 4px rgb(0 0 0 / .92), 0 0 10px rgb(0 0 0 / .72); }
+.dagger-expedition-label[data-kind="realm"] { color: rgb(248 228 176 / .9); font: 700 1.45rem var(--font-label); letter-spacing: .42em;
+  text-transform: uppercase; text-shadow: 0 2px 6px rgb(0 0 0 / .95), 0 0 14px rgb(0 0 0 / .78); }
+.dagger-expedition-label[data-kind="sea"], .dagger-expedition-label[data-kind="bay"] { color: rgb(194 226 244 / .9); font: italic 600 1.32rem var(--font-body);
+  letter-spacing: .34em; text-shadow: 0 1px 5px rgb(4 18 32 / .95), 0 0 12px rgb(4 18 32 / .78); }
+.dagger-expedition-label[data-kind="range"], .dagger-expedition-label[data-kind="desert"],
+.dagger-expedition-label[data-kind="forest"], .dagger-expedition-label[data-kind="moor"],
+.dagger-expedition-label[data-kind="island"], .dagger-expedition-label[data-kind="lake"] { color: rgb(232 224 200 / .82);
+  font: 600 .95rem var(--font-label); letter-spacing: .22em; text-transform: uppercase; text-shadow: 0 1px 4px rgb(0 0 0 / .9); }
+/* Party and overland bands sit above place and geography labels. */
+.dagger-expedition-label[data-kind="party"] { z-index: 4; color: #c4dcff; background: rgb(12 18 30 / .78); border: 1px solid rgb(110 165 255 / .55);
+  transform: translate(-50%, 40%); }
 /* A figure stands a fixed 64 screen pixels tall (expedition.map.figure) from the point its name is given at. */
-.dagger-expedition-label[data-kind="band"], .dagger-expedition-label[data-kind="camp"] { color: #ffd2a0; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
-.dagger-expedition-label[data-kind="caravan"] { color: #f2cf78; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
-.dagger-expedition-label[data-kind="courier"] { color: #8ad8f0; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
-.dagger-expedition-label[data-kind="patrol"] { color: #9ebef5; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
-.dagger-expedition-label[data-kind="hostile"], .dagger-expedition-label[data-kind="chase"] { color: #ff9a6a; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
-.dagger-expedition-label[data-kind="clash"] { color: #ffb357; font-size: .8rem; border: 1px solid rgb(255 152 64 / .65); transform: translate(-50%, calc(-100% - 66px)); }
+.dagger-expedition-label[data-kind="band"], .dagger-expedition-label[data-kind="camp"] { z-index: 4; color: #ffd2a0; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
+.dagger-expedition-label[data-kind="caravan"] { z-index: 4; color: #f2cf78; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
+.dagger-expedition-label[data-kind="courier"] { z-index: 4; color: #8ad8f0; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
+.dagger-expedition-label[data-kind="patrol"] { z-index: 4; color: #9ebef5; font-size: .78rem; transform: translate(-50%, calc(-100% - 66px)); }
+.dagger-expedition-label[data-kind="hostile"], .dagger-expedition-label[data-kind="chase"] { z-index: 4; color: #ff9a6a; font-size: .78rem; border: 1px solid rgb(255 96 76 / .55); transform: translate(-50%, calc(-100% - 66px)); }
+.dagger-expedition-label[data-kind="clash"] { z-index: 4; color: #ffb357; font-size: .8rem; border: 1px solid rgb(255 152 64 / .65); transform: translate(-50%, calc(-100% - 66px)); }
 .dagger-expedition-crosshair { position: absolute; left: 50%; top: 50%; width: .9rem; height: .9rem; margin: -.45rem 0 0 -.45rem; pointer-events: none;
   border: 1px solid rgb(242 227 186 / .55); border-radius: 50%; }
 .dagger-expedition-view-controls { position: absolute; right: .5rem; top: .5rem; display: flex; gap: .25rem; align-items: center; }

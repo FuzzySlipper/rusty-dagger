@@ -39,7 +39,13 @@ export interface ExpeditionBandProjection {
 /** An encounter the party must enter to meet: who, and what Enter does. */
 export interface ExpeditionEncounterProjection { readonly title: string; readonly line: string }
 
-export interface ExpeditionLabelProjection { readonly name: string; readonly kind: string; readonly across: number; readonly down: number }
+export interface ExpeditionLabelProjection {
+  readonly name: string;
+  readonly kind: string;
+  readonly across: number;
+  readonly down: number;
+  readonly opacity?: number;
+}
 
 export type ExpeditionMode = 'cautious' | 'reckless' | 'halt' | 'camp';
 
@@ -625,7 +631,8 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
     encounterEnter.disabled = !state.canEnter;
     imAt.setAttribute('aria-pressed', String(state.view.following));
     compass.style.transform = `rotate(${-state.view.heading}deg)`;
-    redraw(labels, JSON.stringify(state.labels.map(label => [label.name, label.kind, Math.round(label.across * 1000), Math.round(label.down * 1000)])), () => {
+    redraw(labels, JSON.stringify(state.labels.map(label => [label.name, label.kind, Math.round(label.across * 1000), Math.round(label.down * 1000),
+      Math.round((label.opacity ?? 1) * 100)])), () => {
       labels.replaceChildren();
       for (const label of state.labels) {
         const tag = document.createElement('span');
@@ -634,6 +641,7 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
         tag.textContent = label.name;
         tag.style.left = `${label.across * 100}%`;
         tag.style.top = `${label.down * 100}%`;
+        if (label.opacity !== undefined && label.opacity < 1) tag.style.opacity = String(label.opacity);
         labels.append(tag);
       }
     });

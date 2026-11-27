@@ -455,9 +455,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         uint Vital(DaggerfallExpeditionVital vital) => builder.Object(
             ("current", builder.Number(vital.Current)), ("maximum", builder.Number(vital.Maximum)));
         return builder.Object(
-            ("labels", builder.Array(view.Labels.Select(label => builder.Object(
-                ("name", builder.String(label.Name)), ("kind", builder.String(label.Kind)),
-                ("across", builder.Number(label.Across)), ("down", builder.Number(label.Down)))).ToArray())),
+            ("labels", builder.Array(view.Labels.Select(label => label.Opacity < .995
+                ? builder.Object(
+                    ("name", builder.String(label.Name)), ("kind", builder.String(label.Kind)),
+                    ("across", builder.Number(label.Across)), ("down", builder.Number(label.Down)),
+                    ("opacity", builder.Number(Math.Round(label.Opacity, 2))))
+                : builder.Object(
+                    ("name", builder.String(label.Name)), ("kind", builder.String(label.Kind)),
+                    ("across", builder.Number(label.Across)), ("down", builder.Number(label.Down)))).ToArray())),
             ("view", builder.Object(("heading", builder.Number(view.ViewHeading)), ("following", builder.Boolean(view.Following)))),
             ("destination", Mark(view.Destination, view.DestinationName)),
             ("pin", Mark(view.Pin, view.PinName)),

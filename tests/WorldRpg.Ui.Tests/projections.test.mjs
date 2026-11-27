@@ -3735,6 +3735,15 @@ test('the travel map is the view the map camera draws into: names stand where th
     const labels = [...screen.querySelectorAll('.dagger-expedition-label')];
     assert.deepEqual(labels.map(label => [label.textContent, label.dataset.kind, label.style.left, label.style.top]),
       [['Daggerfall', 'City', '25%', '50%'], ['Your party', 'party', '50%', '50%']]);
+    // Wide-zoom geography labels carry their translucent opacity while tiered place kinds keep full opacity.
+    f.publish({ expedition: expedition({ labels: [
+      { name: 'Iliac Bay', kind: 'bay', across: .55, down: .7, opacity: .85 },
+      { name: 'Daggerfall', kind: 'region', across: .2, down: .3, opacity: .6 },
+      { name: 'Daggerfall', kind: 'City', across: .25, down: .5 },
+    ], view: { heading: 90, following: true } }) });
+    const wideLabels = [...screen.querySelectorAll('.dagger-expedition-label')];
+    assert.deepEqual(wideLabels.map(label => [label.textContent, label.dataset.kind, label.style.opacity]),
+      [['Iliac Bay', 'bay', '0.85'], ['Daggerfall', 'region', '0.6'], ['Daggerfall', 'City', '']]);
     assert.equal(screen.querySelector('.dagger-expedition-compass').style.transform, 'rotate(-90deg)');
     // JSDOM lays nothing out, so a point falls at the middle of the view.
     const press = (type, init) => view.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: 0, clientY: 0, ...init }));
