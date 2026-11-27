@@ -596,6 +596,7 @@ internal sealed partial class DaggerfallSession
             if (saved is not null)
                 WordSpread.Restore(saved.WordSpread);
             WorldConditions.BeforeMutation += () => WordSpread.CheckpointAll(_time.Calendar.MinuteNumber);
+            WorldConditions.AfterMutation += () => WordSpread.ReconcileRegionalSuppressions(_time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber));
             social.GuildRankChanged += (factionId, newRank) =>
             {
                 if (_site.ActiveSite is not { } origin) return;

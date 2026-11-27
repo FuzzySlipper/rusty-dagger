@@ -178,6 +178,7 @@ internal sealed class DaggerfallPoliticalBoard
             news.AddRange(_news.Of(trace, warsBefore, _lastTurnDay * MinutesPerDay));
             ForgetSettledCouriers();
             Rebuild();
+            _conditions.NotifyAfterExternalMutation();
         }
         return news;
     }

@@ -198,6 +198,48 @@ public sealed class SocialCleanupsTests
         Assert.True(restored.WordSpread.AccelerateInRegion("wf:cleanup-suppression", WayrestRegion));
         Assert.True(restored.WordSpread.TryGet("wf:cleanup-suppression", out DaggerfallWordWavefrontSave? deliveredWf));
         Assert.Equal(DaggerfallWordArrivalStatus.AcceleratedOverride, restored.WordSpread.EvaluateAt(deliveredWf!, wayrestTown, nowMinute, today).Status);
+
+        // Removing a temporary quarantine lifts condition-owned suppression so normal arrival resumes AND old wavefronts prune cleanly!
+        DaggerfallWordWavefrontSave removableWf = restored.WordSpread.RecordNews(
+            "wf:cleanup-reopen", "Reopen Test Bulletin", "Held during quarantine then delivered after lifting.", origin, nowMinute);
+        Assert.Equal(DaggerfallWordArrivalStatus.Blocked, restored.WordSpread.EvaluateAt(removableWf, wayrestTown, nowMinute, today).Status);
+
+        string plagueTokenId = DaggerfallWorldConditions.RegionTokenId(DaggerfallWorldConditionKind.PlagueScare, WayrestRegion);
+        Assert.True(restored.WorldConditions.Remove(plagueTokenId));
+        Assert.True(restored.WordSpread.TryGet("wf:cleanup-reopen", out DaggerfallWordWavefrontSave? reopenedWf));
+        Assert.Null(reopenedWf!.SuppressedRegions);
+        DaggerfallWordArrivalEvaluation reopenedEval = restored.WordSpread.EvaluateAt(reopenedWf, wayrestTown, nowMinute, today);
+        Assert.Equal(DaggerfallWordArrivalStatus.InTransit, reopenedEval.Status);
+        long arriveMinute = nowMinute + reopenedEval.RemainingMinutes + 5;
+        Assert.Equal(DaggerfallWordArrivalStatus.ArrivedByCourier,
+            restored.WordSpread.EvaluateAt(reopenedWf, wayrestTown, arriveMinute, checked((int)(arriveMinute / 1440L))).Status);
+
+        // Expiring a timed quarantine also lifts suppression, resumes arrival, and allows PruneExpired to clean up after 30 days.
+        restored.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            plagueTokenId, DaggerfallWorldConditionKind.PlagueScare, WayrestRegion,
+            Severity: 3, StartedDay: today, ExpiresDay: today + 2));
+        DaggerfallWordWavefrontSave expiringWf = restored.WordSpread.RecordNews(
+            "wf:cleanup-expiry", "Expiry Test Bulletin", "Held until timed quarantine expires.", origin, nowMinute);
+        Assert.Equal(DaggerfallWordArrivalStatus.Blocked, restored.WordSpread.EvaluateAt(expiringWf, wayrestTown, nowMinute, today).Status);
+
+        long afterExpiryMinute = checked((long)(today + 3) * 1440L);
+        int afterExpiryDay = today + 3;
+        DaggerfallWordArrivalEvaluation afterExpiryEval = restored.WordSpread.EvaluateAt(expiringWf, wayrestTown, afterExpiryMinute, afterExpiryDay);
+        Assert.NotEqual(DaggerfallWordArrivalStatus.Blocked, afterExpiryEval.Status);
+        long afterPruneWindow = nowMinute + DaggerfallWordSpread.MaxRetainedWavefrontMinutes + 10;
+        Assert.True(restored.WordSpread.PruneExpired(afterPruneWindow) > 0);
+        Assert.False(restored.WordSpread.TryGet("wf:cleanup-expiry", out _));
+
+        // A newly imposed seal mid-flight also blocks still-travelling cross-region news!
+        Assert.True(restored.WorldConditions.Remove(plagueTokenId));
+        DaggerfallWordWavefrontSave midFlightWf = restored.WordSpread.RecordNews(
+            "wf:cleanup-midflight", "Midflight Bulletin", "Left before quarantine was declared.", origin, nowMinute);
+        Assert.Equal(DaggerfallWordArrivalStatus.InTransit, restored.WordSpread.EvaluateAt(midFlightWf, wayrestTown, nowMinute, today).Status);
+
+        restored.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            plagueTokenId, DaggerfallWorldConditionKind.PlagueScare, WayrestRegion, Severity: 3, StartedDay: today));
+        Assert.True(restored.WordSpread.TryGet("wf:cleanup-midflight", out DaggerfallWordWavefrontSave? sealedMidFlight));
+        Assert.Equal(DaggerfallWordArrivalStatus.Blocked, restored.WordSpread.EvaluateAt(sealedMidFlight!, wayrestTown, nowMinute, today).Status);
     }
 
     [Fact]

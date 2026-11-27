@@ -98,7 +98,8 @@ internal sealed record DaggerfallWordWavefrontSave(
     long? LastCheckpointMinute = null,
     double? BaseReachedRadiusPixels = null,
     DaggerfallWordRegionProgressSave[]? RegionProgress = null,
-    string? FamilyId = null)
+    string? FamilyId = null,
+    int[]? ConditionSuppressedRegions = null)
 {
     internal DaggerfallWordWavefrontSave Validate()
     {
@@ -125,6 +126,11 @@ internal sealed record DaggerfallWordWavefrontSave(
         {
             foreach (int r in SuppressedRegions)
                 if (r is < 0 or > 61) throw new ArgumentOutOfRangeException(nameof(SuppressedRegions), r, "Suppressed region is outside 0..61.");
+        }
+        if (ConditionSuppressedRegions is not null)
+        {
+            foreach (int r in ConditionSuppressedRegions)
+                if (r is < 0 or > 61) throw new ArgumentOutOfRangeException(nameof(ConditionSuppressedRegions), r, "Condition-suppressed region is outside 0..61.");
         }
         if (AcceleratedRegions is not null)
         {
@@ -600,12 +606,16 @@ internal sealed class DaggerfallWordSpread(
     {
         if (region is < 0 or > 61 || !_wavefronts.TryGetValue(eventId, out DaggerfallWordWavefrontSave? wf))
             return false;
-        if (wf.SuppressedRegions is not { Length: > 0 } existing || !existing.Contains(region))
+        bool hadSup = wf.SuppressedRegions is { Length: > 0 } existing && existing.Contains(region);
+        bool hadCond = wf.ConditionSuppressedRegions is { Length: > 0 } condExisting && condExisting.Contains(region);
+        if (!hadSup && !hadCond)
             return false;
-        int[] remaining = [.. existing.Where(r => r != region)];
+        int[] remaining = wf.SuppressedRegions is { Length: > 0 } s ? [.. s.Where(r => r != region)] : [];
+        int[] condRemaining = wf.ConditionSuppressedRegions is { Length: > 0 } c ? [.. c.Where(r => r != region)] : [];
         _wavefronts[eventId] = wf with
         {
             SuppressedRegions = remaining.Length > 0 ? remaining : null,
+            ConditionSuppressedRegions = condRemaining.Length > 0 ? condRemaining : null,
         };
         return true;
     }
@@ -619,17 +629,68 @@ internal sealed class DaggerfallWordSpread(
     /// </summary>
     internal int ApplyRegionalSuppression(string eventId, int originRegion, int currentDay)
     {
-        if (!_wavefronts.ContainsKey(eventId))
+        if (!_wavefronts.TryGetValue(eventId, out DaggerfallWordWavefrontSave? wf))
             return 0;
         int suppressedCount = 0;
         for (int region = 0; region <= 61; region++)
         {
             if (region == originRegion)
                 continue;
-            if (IsRegionSealedFromOutsideNews(region, currentDay) && SuppressInRegion(eventId, region))
+            if (wf.AcceleratedRegions is { Length: > 0 } acc && acc.Contains(region))
+                continue;
+            if (IsRegionSealedFromOutsideNews(region, currentDay) && SuppressByCondition(eventId, region))
                 suppressedCount++;
         }
         return suppressedCount;
+    }
+
+    /// <summary>
+    /// Reconciles condition-owned regional suppressions across all active wavefronts against the current world
+    /// conditions: newly sealed regions suppress still-travelling cross-region wavefronts via <see cref="SuppressInRegion"/>,
+    /// while lifted or expired seals reopen them via <see cref="UnsuppressInRegion"/>. Player-delivered
+    /// (<see cref="AccelerateInRegion"/>) and manual non-condition overrides are preserved.
+    /// </summary>
+    internal void ReconcileRegionalSuppressions(long currentMinute, int? currentDay = null)
+    {
+        if (_wavefronts.Count == 0)
+            return;
+        int day = currentDay ?? MinuteToDay(currentMinute);
+        foreach (string eventId in _wavefronts.Keys.ToArray())
+        {
+            if (!_wavefronts.TryGetValue(eventId, out DaggerfallWordWavefrontSave? wf))
+                continue;
+            for (int region = 0; region <= 61; region++)
+            {
+                if (region == wf.OriginRegion)
+                    continue;
+                if (!_wavefronts.TryGetValue(eventId, out wf))
+                    break;
+                if (wf.AcceleratedRegions is { Length: > 0 } acc && acc.Contains(region))
+                    continue;
+                bool sealedNow = IsRegionSealedFromOutsideNews(region, day);
+                bool wasCondSuppressed = wf.ConditionSuppressedRegions is { Length: > 0 } csup && csup.Contains(region);
+                if (sealedNow)
+                {
+                    if (!wasCondSuppressed && (wf.SuppressedRegions is null || !wf.SuppressedRegions.Contains(region)))
+                        SuppressByCondition(eventId, region);
+                }
+                else if (wasCondSuppressed)
+                {
+                    UnsuppressInRegion(eventId, region);
+                }
+            }
+        }
+    }
+
+    private bool SuppressByCondition(string eventId, int region)
+    {
+        if (!SuppressInRegion(eventId, region))
+            return false;
+        DaggerfallWordWavefrontSave wf = _wavefronts[eventId];
+        HashSet<int> cond = [.. wf.ConditionSuppressedRegions ?? []];
+        cond.Add(region);
+        _wavefronts[eventId] = wf with { ConditionSuppressedRegions = [.. cond.Order()] };
+        return true;
     }
 
     private bool IsRegionSealedFromOutsideNews(int region, int currentDay)
@@ -660,10 +721,13 @@ internal sealed class DaggerfallWordSpread(
         accelerated.Add(region);
         HashSet<int> suppressed = [.. wf.SuppressedRegions ?? []];
         suppressed.Remove(region);
+        HashSet<int> condSuppressed = [.. wf.ConditionSuppressedRegions ?? []];
+        condSuppressed.Remove(region);
         _wavefronts[eventId] = wf with
         {
             AcceleratedRegions = [.. accelerated.Order()],
             SuppressedRegions = suppressed.Count > 0 ? [.. suppressed.Order()] : null,
+            ConditionSuppressedRegions = condSuppressed.Count > 0 ? [.. condSuppressed.Order()] : null,
         };
         return true;
     }
@@ -687,17 +751,32 @@ internal sealed class DaggerfallWordSpread(
         (double disruption, string? reason) = CourierDisruption(wavefront.OriginRegion, targetRegion, day);
         double effectiveSpeed = _tuning.CourierSpeedPixelsPerHour * disruption;
 
-        // 1. Sparse overrides take precedence.
+        // 1. Accelerated override (e.g. player-delivered dispatch) always takes precedence.
         if (wavefront.AcceleratedRegions is { Length: > 0 } acc && acc.Contains(targetRegion))
             return new(wavefront.EventId, DaggerfallWordArrivalStatus.AcceleratedOverride, routeDistance, effectiveSpeed, disruption, 0, reason);
-        if (wavefront.SuppressedRegions is { Length: > 0 } sup && sup.Contains(targetRegion))
-            return new(wavefront.EventId, DaggerfallWordArrivalStatus.Blocked, routeDistance, effectiveSpeed, disruption, long.MaxValue, "suppressed");
 
         // 2. Instant bubble: within configurable direct radius of origin, word is immediate.
         if (directDistance <= _tuning.InstantNewsBubblePixels + 1e-9)
             return new(wavefront.EventId, DaggerfallWordArrivalStatus.InstantBubble, directDistance, effectiveSpeed, disruption, 0, reason);
 
-        // 3. Intercepted courier stops further spread beyond the frozen route reach.
+        long fromMinute = wavefront.LastCheckpointMinute ?? wavefront.EmittedAtMinute;
+        double reachedAtCheckpoint = LookupRegionReached(wavefront, targetRegion)
+            ?? wavefront.BaseReachedRadiusPixels
+            ?? _tuning.InstantNewsBubblePixels;
+
+        // 3. Already-arrived news at the prior checkpoint is monotonic and never retracts if a border later seals.
+        if (reachedAtCheckpoint >= routeDistance - 1e-9)
+            return new(wavefront.EventId, DaggerfallWordArrivalStatus.ArrivedByCourier, routeDistance, effectiveSpeed, disruption, 0, reason);
+
+        // 4. Regional suppression: manual overrides always block, while condition-owned seals block only while the
+        //    sealing condition is active for targetRegion on 'day' (reopening cleanly once removed or expired).
+        bool conditionSuppressed = wavefront.ConditionSuppressedRegions is { Length: > 0 } csup && csup.Contains(targetRegion);
+        bool manuallySuppressed = wavefront.SuppressedRegions is { Length: > 0 } sup && sup.Contains(targetRegion) && !conditionSuppressed;
+        bool sealedNow = targetRegion != wavefront.OriginRegion && IsRegionSealedFromOutsideNews(targetRegion, day);
+        if (manuallySuppressed || sealedNow)
+            return new(wavefront.EventId, DaggerfallWordArrivalStatus.Blocked, routeDistance, effectiveSpeed, disruption, long.MaxValue, "suppressed");
+
+        // 5. Intercepted courier stops further spread beyond the frozen route reach.
         if (wavefront.CourierIntercepted)
         {
             double frozen = LookupRegionReached(wavefront, targetRegion)
@@ -709,11 +788,7 @@ internal sealed class DaggerfallWordSpread(
                 : new(wavefront.EventId, DaggerfallWordArrivalStatus.Blocked, routeDistance, effectiveSpeed, disruption, long.MaxValue, "courier intercepted");
         }
 
-        // 4. Monotonic piecewise-integrated overland route-distance courier spread outside the bubble.
-        long fromMinute = wavefront.LastCheckpointMinute ?? wavefront.EmittedAtMinute;
-        double reachedAtCheckpoint = LookupRegionReached(wavefront, targetRegion)
-            ?? wavefront.BaseReachedRadiusPixels
-            ?? _tuning.InstantNewsBubblePixels;
+        // 6. Monotonic piecewise-integrated overland route-distance courier spread outside the bubble.
         double additional = currentMinute > fromMinute
             ? IntegrateEffectivePixels(wavefront.OriginRegion, targetRegion, fromMinute, currentMinute)
             : 0d;
@@ -884,6 +959,7 @@ internal sealed class DaggerfallWordSpread(
     /// <summary>Prunes ancient unintercepted wavefronts older than <see cref="MaxRetainedWavefrontMinutes"/>.</summary>
     internal int PruneExpired(long currentMinute)
     {
+        ReconcileRegionalSuppressions(currentMinute);
         List<string> stale = [.. _wavefronts.Values
             .Where(wf => !wf.CourierIntercepted
                 && (wf.SuppressedRegions is null || wf.SuppressedRegions.Length == 0)
@@ -947,7 +1023,10 @@ internal sealed class DaggerfallWordSpread(
 
         if (boundaries is null || boundaries.Count == 0)
         {
-            (double mult, _) = CourierDisruption(originRegion, targetRegion, MinuteToDay(fromMinute));
+            int segDay = MinuteToDay(fromMinute);
+            if (targetRegion >= 0 && targetRegion != originRegion && IsRegionSealedFromOutsideNews(targetRegion, segDay))
+                return 0d;
+            (double mult, _) = CourierDisruption(originRegion, targetRegion, segDay);
             return ((toMinute - fromMinute) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
         }
 
@@ -955,14 +1034,22 @@ internal sealed class DaggerfallWordSpread(
         long segStart = fromMinute;
         foreach (long split in boundaries)
         {
-            (double mult, _) = CourierDisruption(originRegion, targetRegion, MinuteToDay(segStart));
-            total += ((split - segStart) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
+            int segDay = MinuteToDay(segStart);
+            if (!(targetRegion >= 0 && targetRegion != originRegion && IsRegionSealedFromOutsideNews(targetRegion, segDay)))
+            {
+                (double mult, _) = CourierDisruption(originRegion, targetRegion, segDay);
+                total += ((split - segStart) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
+            }
             segStart = split;
         }
         if (toMinute > segStart)
         {
-            (double mult, _) = CourierDisruption(originRegion, targetRegion, MinuteToDay(segStart));
-            total += ((toMinute - segStart) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
+            int segDay = MinuteToDay(segStart);
+            if (!(targetRegion >= 0 && targetRegion != originRegion && IsRegionSealedFromOutsideNews(targetRegion, segDay)))
+            {
+                (double mult, _) = CourierDisruption(originRegion, targetRegion, segDay);
+                total += ((toMinute - segStart) / 60d) * (_tuning.CourierSpeedPixelsPerHour * mult);
+            }
         }
         return total;
     }

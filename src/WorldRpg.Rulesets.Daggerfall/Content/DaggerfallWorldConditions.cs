@@ -209,6 +209,9 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     /// <summary>Fired immediately before authored or external world conditions change so elapsed-time spread can checkpoint accumulated progress.</summary>
     internal event Action? BeforeMutation;
 
+    /// <summary>Fired immediately after authored or external world conditions change so elapsed-time spread can reconcile regional suppressions.</summary>
+    internal event Action? AfterMutation;
+
     internal int Count => _tokens.Count;
     internal IReadOnlyCollection<DaggerfallWorldConditionToken> AuthoredTokens => _tokens.Values;
 
@@ -217,10 +220,14 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     {
         BeforeMutation?.Invoke();
         _externalSource = provider;
+        AfterMutation?.Invoke();
     }
 
     /// <summary>Notifies listeners immediately before an external condition provider updates its active tokens.</summary>
     internal void NotifyBeforeExternalMutation() => BeforeMutation?.Invoke();
+
+    /// <summary>Notifies listeners immediately after an external condition provider updates its active tokens.</summary>
+    internal void NotifyAfterExternalMutation() => AfterMutation?.Invoke();
 
     /// <summary>Seeds initial authored/scenario condition tokens on new game start (empty when baseline has none).</summary>
     internal void SeedAuthored(IEnumerable<DaggerfallWorldConditionToken>? tokens)
@@ -242,6 +249,7 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         token.Validate();
         BeforeMutation?.Invoke();
         _tokens[token.TokenId] = token;
+        AfterMutation?.Invoke();
         return token;
     }
 
@@ -254,7 +262,9 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         if (string.IsNullOrWhiteSpace(tokenId) || !_tokens.ContainsKey(tokenId))
             return false;
         BeforeMutation?.Invoke();
-        return _tokens.Remove(tokenId);
+        bool removed = _tokens.Remove(tokenId);
+        AfterMutation?.Invoke();
+        return removed;
     }
 
     /// <summary>Clears all authored/stubbed condition tokens.</summary>
@@ -265,6 +275,7 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         BeforeMutation?.Invoke();
         _tokens.Clear();
         _externalReductions.Clear();
+        AfterMutation?.Invoke();
     }
 
     /// <summary>
@@ -282,24 +293,32 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
             return null;
 
         BeforeMutation?.Invoke();
+        DaggerfallConditionMutationOutcome outcome;
         if (_tokens.TryGetValue(tokenId, out DaggerfallWorldConditionToken? local))
         {
             if (local.Severity <= severityDelta)
             {
                 _tokens.Remove(tokenId);
-                return new(local, Updated: null, Stripped: true);
+                outcome = new(local, Updated: null, Stripped: true);
             }
-            DaggerfallWorldConditionToken updatedLocal = local with { Severity = local.Severity - severityDelta };
-            _tokens[tokenId] = updatedLocal;
-            return new(local, updatedLocal, Stripped: false);
+            else
+            {
+                DaggerfallWorldConditionToken updatedLocal = local with { Severity = local.Severity - severityDelta };
+                _tokens[tokenId] = updatedLocal;
+                outcome = new(local, updatedLocal, Stripped: false);
+            }
         }
-
-        int prior = _externalReductions.GetValueOrDefault(tokenId);
-        _externalReductions[tokenId] = checked(prior + severityDelta);
-        int remaining = active.Severity - severityDelta;
-        return remaining <= 0
-            ? new(active, Updated: null, Stripped: true)
-            : new(active, active with { Severity = remaining }, Stripped: false);
+        else
+        {
+            int prior = _externalReductions.GetValueOrDefault(tokenId);
+            _externalReductions[tokenId] = checked(prior + severityDelta);
+            int remaining = active.Severity - severityDelta;
+            outcome = remaining <= 0
+                ? new(active, Updated: null, Stripped: true)
+                : new(active, active with { Severity = remaining }, Stripped: false);
+        }
+        AfterMutation?.Invoke();
+        return outcome;
     }
 
     /// <summary>Clears a consumed local counter-play reduction for an external B2 board-game token.</summary>
@@ -308,7 +327,9 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         if (string.IsNullOrWhiteSpace(tokenId) || !_externalReductions.ContainsKey(tokenId))
             return false;
         BeforeMutation?.Invoke();
-        return _externalReductions.Remove(tokenId);
+        bool removed = _externalReductions.Remove(tokenId);
+        AfterMutation?.Invoke();
+        return removed;
     }
 
     /// <summary>Clears all local counter-play reductions after Track B consumes pending counter-play on its weekly turn.</summary>
@@ -317,6 +338,7 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         if (_externalReductions.Count == 0) return;
         BeforeMutation?.Invoke();
         _externalReductions.Clear();
+        AfterMutation?.Invoke();
     }
 
     /// <summary>Removes expired authored tokens at or after <paramref name="currentDay"/>.</summary>
@@ -327,6 +349,7 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
             return 0;
         BeforeMutation?.Invoke();
         foreach (string id in expired) _tokens.Remove(id);
+        AfterMutation?.Invoke();
         return expired.Count;
     }
 
