@@ -41,7 +41,8 @@ internal static class DaggerfallExteriorPopulation
 
     internal static IReadOnlyList<DaggerfallPopulationPlacement> Create(DaggerfallDefinitions definitions,
         DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear, WorldPoint? gateAnchor = null,
-        ulong worldSocialSeed = 0UL, DaggerfallGuardTierTuning? guardTiers = null)
+        ulong worldSocialSeed = 0UL, DaggerfallGuardTierTuning? guardTiers = null,
+        IReadOnlyList<WorldPoint>? gateAnchors = null)
     {
         const int automapSide = 64;
         const float blockSide = DaggerfallWorldGrid.HorizontalSize / 8f;
@@ -69,8 +70,9 @@ internal static class DaggerfallExteriorPopulation
         WorldPoint[] positions = new WorldPoint[count];
         for (int index = 0; index < count; index++)
             positions[index] = Position(cells[(int)((long)index * cells.Length / count)]);
+        WorldPoint? primaryGateAnchor = gateAnchors is { Count: > 0 } ? gateAnchors[0] : gateAnchor;
         int gateGuardIndex = 0;
-        if (gateAnchor is { } anchor && count > 1)
+        if (primaryGateAnchor is { } anchor && count > 1)
         {
             float bestDistSq = float.MaxValue;
             for (int index = 0; index < count; index++)
@@ -91,10 +93,45 @@ internal static class DaggerfallExteriorPopulation
         int townBuckets = DaggerfallHouseholds.TownHouseholdBucketCount(location);
         DaggerfallGuardTierProfile watchProfile = (guardTiers ?? DaggerfallGuardTierTuning.Default).ResolveProfile(location);
         HashSet<int> guardIndices = ResolvePatrolGuardIndices(count, watchProfile.BaselinePatrolGuards);
+        // Proper walled cities (gateAnchors.Count > 0) post one liege-livery watch officer/knight at each gate;
+        // unwalled hamlets and villages keep purely local rank-and-file StreetWatch patrols.
+        HashSet<int> gateOfficerIndices = [];
+        if (gateAnchors is { Count: > 0 } walledGates && count > 0)
+        {
+            gateOfficerIndices.Add(0); // Slot 0 is already positioned closest to gate 0 (WatchCaptainSlotId).
+            guardIndices.Add(0);
+            for (int gateIdx = 1; gateIdx < walledGates.Count && gateOfficerIndices.Count < count; gateIdx++)
+            {
+                WorldPoint extraGate = walledGates[gateIdx];
+                int bestIndex = -1;
+                float bestDistSq = float.MaxValue;
+                for (int idx = 1; idx < count; idx++)
+                {
+                    if (gateOfficerIndices.Contains(idx))
+                        continue;
+                    float dx = positions[idx].X - extraGate.X;
+                    float dz = positions[idx].Z - extraGate.Z;
+                    float distSq = dx * dx + dz * dz;
+                    if (distSq < bestDistSq)
+                    {
+                        bestDistSq = distSq;
+                        bestIndex = idx;
+                    }
+                }
+                if (bestIndex >= 0)
+                {
+                    gateOfficerIndices.Add(bestIndex);
+                    guardIndices.Add(bestIndex);
+                }
+            }
+        }
         for (int index = 0; index < count; index++)
         {
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
             bool isGuard = guardIndices.Contains(index);
+            DaggerfallGuardPostKind guardPost = gateOfficerIndices.Contains(index)
+                ? DaggerfallGuardPostKind.WalledCityGateOfficer
+                : DaggerfallGuardPostKind.StreetWatch;
             string walkerSlotKey = DaggerfallPeopleSlots.WalkerSlotKey(index);
             ulong slotSeed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed, location.Id, walkerSlotKey);
             int spriteIndex = isGuard ? 0 : (int)((slotSeed >> 16) % (ulong)people.Sprites.Count);
@@ -107,6 +144,7 @@ internal static class DaggerfallExteriorPopulation
                 flags, nameSeed)
             {
                 IsGuard = isGuard,
+                GuardPost = guardPost,
                 FamilyId = familyId,
             });
         }

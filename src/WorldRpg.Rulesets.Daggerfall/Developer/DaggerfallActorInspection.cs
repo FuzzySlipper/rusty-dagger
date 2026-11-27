@@ -30,7 +30,9 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
     DaggerfallDefinitions? definitions = null, DaggerfallNpcRegistry? npcs = null, DaggerfallNames? names = null,
     Func<ulong>? worldSocialSeed = null, DaggerfallSocialState? socialState = null,
     DaggerfallSocialConsequences? socialConsequences = null, DaggerfallIntroductions? introductions = null,
-    DaggerfallActorLedger? actorLedger = null, Func<DaggerfallSiteRecord?>? activeSite = null)
+    DaggerfallActorLedger? actorLedger = null, Func<DaggerfallSiteRecord?>? activeSite = null,
+    DaggerfallGuardPosts? guardPosts = null, Func<DaggerfallSiteProfile>? activeSiteProfile = null,
+    Func<DaggerfallSiteId, IReadOnlyList<DaggerfallPopulationPlacement>>? exteriorPlacements = null)
     : IDeveloperActorCommands
 {
     /// <summary>How far <c>target</c> and <c>nearest</c> look for an actor.</summary>
@@ -216,6 +218,7 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
         WriteAttack(w, actor);
         WriteSpells(w, actor, definition);
         WriteSocial(w, actor);
+        WriteWatch(w, actor, definition);
         if (actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander))
         {
             w.WriteStartObject("wander");
@@ -322,6 +325,41 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             && !string.IsNullOrWhiteSpace(person.Snapshot.FamilyId)
                 ? person.Snapshot.FamilyId
                 : null;
+    }
+
+    private void WriteWatch(Utf8JsonWriter w, ActorState actor, DaggerfallActorDefinition? definition)
+    {
+        if (guardPosts is null)
+            return;
+        DaggerfallNpc? npc = npcs is not null && npcs.TryGet(actor.DurableId, out DaggerfallNpc? regNpc) ? regNpc : null;
+        bool isGuard = (npc is not null && string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase))
+            || definition is { Capabilities.CityWatchArrest: true }
+            || definition is { MobileId: 146 };
+        if (!isGuard)
+            return;
+
+        DaggerfallSiteRecord? site = activeSite?.Invoke();
+        DaggerfallSiteProfile? profile = activeSiteProfile?.Invoke();
+        IReadOnlyList<DaggerfallPopulationPlacement> placements = site is not null && exteriorPlacements is not null
+            ? exteriorPlacements(site.Id)
+            : [];
+        DaggerfallGuardLiveryResolution resolved = guardPosts.ResolveForLiveGuard(actor.DurableId, site, profile, npc, placements);
+
+        w.WriteStartObject("watch");
+        w.WriteString("tier", resolved.WatchTier.ToString());
+        w.WriteString("tierLabel", resolved.WatchTierLabel);
+        w.WriteString("postKind", resolved.PostKind.ToString());
+        w.WriteString("postLabel", resolved.PostLabel);
+        w.WriteBoolean("isOfficer", resolved.IsOfficer);
+        w.WriteBoolean("usesLiegeLivery", resolved.UsesLiegeLivery);
+        w.WriteBoolean("isOccupyingGarrison", resolved.IsOccupyingGarrison);
+        w.WriteNumber("localRegion", resolved.LocalRegion);
+        w.WriteString("localRegionName", resolved.LocalRegionName);
+        w.WriteNumber("liveryRegion", resolved.LiveryRegion);
+        if (resolved.LiveryFactionId is int lfid) w.WriteNumber("liveryFactionId", lfid); else w.WriteNull("liveryFactionId");
+        w.WriteString("liveryOwner", resolved.LiveryOwnerName);
+        w.WriteString("liverySlug", resolved.LiverySlug);
+        w.WriteEndObject();
     }
 
     private void WriteSocial(Utf8JsonWriter w, ActorState actor)

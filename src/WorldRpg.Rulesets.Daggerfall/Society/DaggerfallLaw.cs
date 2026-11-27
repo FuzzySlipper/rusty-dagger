@@ -79,7 +79,20 @@ internal sealed class DaggerfallLaw(
     Func<long, DaggerfallGuardTierProfile, long?>? promoteGuardTiered = null)
 {
     /// <summary>The resolved settlement watch tier for the active site (Hamlet, Town, or Capital).</summary>
-    internal DaggerfallSettlementWatchTier ActiveWatchTier => tuning.GuardTiers.ResolveTier(site.ActiveSite);
+    internal DaggerfallSettlementWatchTier ActiveWatchTier
+    {
+        get
+        {
+            if (activeProfile().Kind == DaggerfallWorldProfileKind.Interior
+                && activeInputs().InteriorBuilding is { BuildingType: 16 })
+            {
+                return DaggerfallSettlementWatchTier.Capital;
+            }
+            if (site.ActiveSite?.Kind == DaggerfallSiteKind.DungeonKeep)
+                return DaggerfallSettlementWatchTier.Capital;
+            return tuning.GuardTiers.ResolveTier(site.ActiveSite);
+        }
+    }
 
     /// <summary>The resolved settlement watch tuning profile (patrol density, stats, and equipment) for the active site.</summary>
     internal DaggerfallGuardTierProfile ActiveWatchProfile => tuning.GuardTiers.ProfileFor(ActiveWatchTier);

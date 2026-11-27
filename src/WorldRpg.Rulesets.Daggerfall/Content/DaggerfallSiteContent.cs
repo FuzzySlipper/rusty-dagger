@@ -1346,6 +1346,7 @@ internal sealed record DaggerfallPopulationPlacement(string Id, WorldPoint Posit
     internal int SourceBuildingType { get; init; }
     internal int SourceBuildingFactionId { get; init; }
     internal bool IsGuard { get; init; }
+    internal DaggerfallGuardPostKind GuardPost { get; init; } = DaggerfallGuardPostKind.StreetWatch;
     internal string? FamilyId { get; init; }
 
     /// <summary>

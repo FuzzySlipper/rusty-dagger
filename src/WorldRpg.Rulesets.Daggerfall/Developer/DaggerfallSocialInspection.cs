@@ -36,7 +36,10 @@ internal sealed class DaggerfallSocialInspection(
     Func<DaggerfallSiteId, IReadOnlyList<DaggerfallPopulationPlacement>>? exteriorPlacements = null,
     Func<(DaggerfallWeatherKind Weather, DaggerfallWeatherShelterElapsed Elapsed)>? scheduleWeather = null,
     DaggerfallFeudSettlement? feudSettlement = null,
-    DaggerfallShopContinuity? shopContinuity = null)
+    DaggerfallShopContinuity? shopContinuity = null,
+    DaggerfallGuardPosts? guardPosts = null,
+    Func<DaggerfallSiteProfile>? activeSiteProfile = null,
+    Func<IReadOnlyList<DaggerfallCityGateDefinition>>? activeCityGates = null)
     : IDeveloperSocialCommands
 {
     private static readonly (int Group, string Name)[] SocialGroups =
@@ -271,6 +274,57 @@ internal sealed class DaggerfallSocialInspection(
                 }
             }
             w.WriteEndArray();
+
+            if (active is not null && guardPosts is not null)
+            {
+                IReadOnlyList<DaggerfallCityGateDefinition> gates = activeCityGates?.Invoke() ?? [];
+                IReadOnlyList<DaggerfallPopulationPlacement> placements = exteriorPlacements is not null
+                    ? exteriorPlacements(active.Id)
+                    : [];
+                DaggerfallSiteWatchSummary summary = guardPosts.SummarizeSite(active, gates, placements);
+                DaggerfallSiteProfile? profile = activeSiteProfile?.Invoke();
+
+                w.WriteStartObject("watch");
+                w.WriteString("tier", summary.WatchTier.ToString());
+                w.WriteString("tierLabel", summary.WatchTierLabel);
+                w.WriteBoolean("isWalled", summary.IsWalled);
+                w.WriteNumber("gateCount", summary.GateCount);
+                w.WriteString("regionName", summary.RegionName);
+                w.WriteString("localLiveryOwner", summary.LocalLiveryOwner);
+                w.WriteString("localLiverySlug", summary.LocalLiverySlug);
+                if (summary.LocalLiveryFactionId is int locFid) w.WriteNumber("localLiveryFactionId", locFid); else w.WriteNull("localLiveryFactionId");
+                w.WriteString("liegeLiveryOwner", summary.LiegeLiveryOwner);
+                w.WriteString("liegeLiverySlug", summary.LiegeLiverySlug);
+                if (summary.LiegeLiveryFactionId is int liegeFid) w.WriteNumber("liegeLiveryFactionId", liegeFid); else w.WriteNull("liegeLiveryFactionId");
+                w.WriteBoolean("occupied", summary.IsOccupied);
+                w.WriteNumber("occupationGarrisonCount", summary.OccupationGarrisonCount);
+                w.WriteNumber("patrolGuardCount", summary.PatrolGuardCount);
+                w.WriteNumber("gateOfficerCount", summary.GateOfficerCount);
+                w.WriteStartArray("posts");
+                foreach (ActorState actor in actors.All.OrderBy(a => a.DurableId))
+                {
+                    if (actor.DurableId == actors.Player.DurableId)
+                        continue;
+                    DaggerfallNpc? npc = npcs.TryGet(actor.DurableId, out DaggerfallNpc? reg) ? reg : null;
+                    bool isGuard = npc is not null && string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase);
+                    if (!isGuard)
+                        continue;
+                    DaggerfallGuardLiveryResolution resolved = guardPosts.ResolveForLiveGuard(actor.DurableId, active, profile, npc, placements);
+                    w.WriteStartObject();
+                    w.WriteNumber("durableId", actor.DurableId);
+                    w.WriteString("name", npc!.DisplayName ?? "City Watch");
+                    w.WriteString("postKind", resolved.PostKind.ToString());
+                    w.WriteString("postLabel", resolved.PostLabel);
+                    w.WriteBoolean("isOfficer", resolved.IsOfficer);
+                    w.WriteBoolean("usesLiegeLivery", resolved.UsesLiegeLivery);
+                    w.WriteBoolean("isOccupyingGarrison", resolved.IsOccupyingGarrison);
+                    w.WriteString("liveryOwner", resolved.LiveryOwnerName);
+                    w.WriteString("liverySlug", resolved.LiverySlug);
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
+                w.WriteEndObject();
+            }
             w.WriteEndObject();
         });
     }

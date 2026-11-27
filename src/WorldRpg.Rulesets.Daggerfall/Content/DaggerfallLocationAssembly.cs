@@ -371,9 +371,12 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             Vector3? gateAnchor = _gates.Count > 0 ? _gates[0].Pose.Translation : _start;
+            WorldPoint[]? gateAnchors = _gates.Count > 0
+                ? [.. _gates.Select(gate => new WorldPoint(gate.Pose.Translation.X, gate.Pose.Translation.Y, gate.Pose.Translation.Z))]
+                : null;
             _dynamicPopulation = DaggerfallExteriorPopulation.Create(owner._definitions, record, clear,
                 gateAnchor is { } anchor ? new WorldPoint(anchor.X, anchor.Y, anchor.Z) : null, worldSocialSeed,
-                owner._guardTiers);
+                owner._guardTiers, gateAnchors);
         }
 
         private void PlaceStaticNpcs(

@@ -20,6 +20,29 @@ internal enum DaggerfallSettlementWatchTier
 }
 
 /// <summary>
+/// Post role of a town watchman, officer, palace/office guard, or occupation garrison patrol (Den #11167).
+/// Rank-and-file street watch keep the region's local watch livery; special posts and occupation garrisons wear
+/// the current liege's livery (falling back to the region's own arms when independent).
+/// </summary>
+internal enum DaggerfallGuardPostKind
+{
+    /// <summary>Rank-and-file street patrol or crackdown reserve retaining local regional watch identity.</summary>
+    StreetWatch = 0,
+
+    /// <summary>Watch officer or knight posted at a gate of a proper walled city (wears liege livery).</summary>
+    WalledCityGateOfficer = 1,
+
+    /// <summary>Guard or knight posted at a palace or keep (wears liege livery).</summary>
+    PalaceGuard = 2,
+
+    /// <summary>Guard posted at a local crown or governor office (wears liege livery).</summary>
+    CrownOfficeGuard = 3,
+
+    /// <summary>Conquest-occupation garrison patrol layered on top of local watch (wears occupying liege livery).</summary>
+    OccupationGarrison = 4,
+}
+
+/// <summary>
 /// Typed patrol density, reserve cap, crime-response strength, stat/level band, and equipment loadout for one
 /// settlement watch tier (Den #11166).
 /// </summary>

@@ -693,8 +693,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         int totalPopulationCount)
     {
         DaggerfallSiteRecord? siteRecord = _site.TryFind(siteId, out DaggerfallSiteRecord found) ? found : null;
-        // A reserve guard no crackdown calls out (or beyond this settlement tier's reserve cap) stays off the street.
-        if (CrackdownGuards.HeldBack(siteId.Region, placement, siteRecord))
+        // A reserve guard no crackdown or conquest occupation calls out stays off the street.
+        bool calledByOccupation = placement.CrackdownGuard > 0
+            && siteRecord is not null
+            && GuardPosts is not null
+            && placement.CrackdownGuard <= GuardPosts.OccupationGarrisonCount(siteRecord);
+        if (CrackdownGuards.HeldBack(siteId.Region, placement, siteRecord) && !calledByOccupation)
             return new DaggerfallScheduleDecision(DaggerfallSchedulePlacement.ShelteredInHome, DaggerfallScheduleBuildingTarget.None,
                 DaggerfallNpcSchedulePolicy.CityGuardScheduleId, "held in reserve until a crackdown calls the watch out", 0, 0, false);
         int minuteOfDay = checked(_time.Calendar.Hour * DaggerfallCalendar.MinutesPerHour + _time.Calendar.Minute);
@@ -1251,6 +1255,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>The extra guards a crime crackdown calls out in a region's towns.</summary>
     internal DaggerfallCrackdownGuards CrackdownGuards { get; } = null!;
+    /// <summary>Post-differentiated watch officers and live liege-livery resolution (palaces, keeps, offices, walled-city gates, and occupation garrisons).</summary>
+    internal DaggerfallGuardPosts GuardPosts { get; } = null!;
 
     /// <summary>Elapsed-time road-distance news and standing spread (instant within bubble, courier-gated outside).</summary>
     internal DaggerfallWordSpread WordSpread { get; } = null!;

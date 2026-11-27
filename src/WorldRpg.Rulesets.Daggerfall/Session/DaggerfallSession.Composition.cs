@@ -800,6 +800,7 @@ internal sealed partial class DaggerfallSession
                 change,
                 definitions.BuildingNames.RegionName);
             OfficeLedger.OfficeOverrideCleared += WorldConditions.ObserveOfficeOverrideCleared;
+            GuardPosts = new DaggerfallGuardPosts(definitions, State.Social.Liege, OfficeLedger, _tuning.Law.GuardTiers);
             CourierDispatches = new DaggerfallCourierDispatches(
                 definitions, WordSpread, WorldConditions, State.Social, State.ActorLedger,
                 amount => amount <= 0 || State.Currency.TrySpendCarried((ulong)amount),
@@ -1776,7 +1777,8 @@ internal sealed partial class DaggerfallSession
             DaggerfallActorInspection actorInspection = new(State.Actors, State.PlayerControl, _roster, _senses, _enemyBehavior, _enemyMagic,
                 Casting, _combat, State.Effects, id => State.Actors.TryGet(id, out _) ? actorInventories.EquipmentFor(id).Read() : null, id => QuestFoes.Team(id),
                 () => _latestSimulationStep, definitions, State.Npcs, questNames, () => _worldSocialSeed,
-                State.Social, SocialConsequences, Introductions, State.ActorLedger, () => _site.ActiveSite);                                       // Developer
+                State.Social, SocialConsequences, Introductions, State.ActorLedger, () => _site.ActiveSite,
+                GuardPosts, () => _sites.Projection.Inputs, ExteriorPlacementsFor);                                       // Developer
             // One object per module type: the Engine's catalogue binds an instance to the first type it matches.
             DebugCommands =
             [
@@ -1807,7 +1809,10 @@ internal sealed partial class DaggerfallSession
                     exteriorPlacements: ExteriorPlacementsFor,
                     scheduleWeather: () => (LocalWeather.Current, ObserveScheduleWeatherElapsed()),
                     feudSettlement: FeudSettlement,
-                    shopContinuity: ShopContinuity),
+                    shopContinuity: ShopContinuity,
+                    guardPosts: GuardPosts,
+                    activeSiteProfile: () => _sites.Projection.Inputs,
+                    activeCityGates: () => _sites.Projection.Inputs.CityGates),
                 new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar),
             ];                                                                                     // Developer
             _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);
