@@ -53,7 +53,9 @@ internal sealed class DaggerfallSocialJournalProjection(
     DaggerfallNames names,
     Func<DaggerfallSiteRecord?> activeSite,
     Func<ulong> worldSocialSeed,
-    Func<int> currentDay)
+    Func<int> currentDay,
+    DaggerfallOfficeHolders? officeHolders = null,
+    DaggerfallOfficeLedger? officeLedger = null)
 {
     private const int MaximumFactionRows = 12;
 
@@ -327,7 +329,9 @@ internal sealed class DaggerfallSocialJournalProjection(
         if (!feudActive && displayStanding >= 0)
             return null;
 
-        DaggerfallFeudSettlementQuote? quote = feudSettlement.CalculateQuote(familyId, site);
+        // Pass atSite: null so the player's own journal always reflects canonical settlement progress and wergild
+        // even after travelling outside a local household's home town (where dialogue availability is site-local).
+        DaggerfallFeudSettlementQuote? quote = feudSettlement.CalculateQuote(familyId, atSite: null);
         if (quote is null)
             return null;
 
@@ -367,6 +371,69 @@ internal sealed class DaggerfallSocialJournalProjection(
                 return entry.Social.DisplayNameOverride!;
             if (!string.IsNullOrWhiteSpace(entry.Referral?.DisplayNameOverride))
                 return entry.Referral.DisplayNameOverride!;
+            if (entry.Origin.Kind == ActorOriginKind.CastIndividual
+                && !string.IsNullOrWhiteSpace(entry.Origin.CastId)
+                && definitions.TryGetCastOrNoble(entry.Origin.CastId, out DaggerfallCastIndividualDefinition? cast)
+                && cast is not null
+                && !string.IsNullOrWhiteSpace(cast.Name))
+            {
+                return cast.Name;
+            }
+        }
+        if (officeHolders is not null)
+        {
+            if (activeSite() is { } current && officeHolders.ResolveRegionalRuler(current.Id.Region) is { ActorId: long activeRulerId, DisplayName: { Length: > 0 } activeRulerName }
+                && activeRulerId == actorId)
+            {
+                return activeRulerName;
+            }
+            for (int region = 0; region <= 61; region++)
+            {
+                if (officeHolders.ResolveRegionalRuler(region) is { ActorId: long rulerId, DisplayName: { Length: > 0 } rulerName }
+                    && rulerId == actorId)
+                {
+                    return rulerName;
+                }
+            }
+        }
+        if (officeLedger is not null)
+        {
+            DaggerfallOfficeLedgerSave ledgerSave = officeLedger.Capture();
+            foreach (DaggerfallOfficeOverrideSave ov in ledgerSave.Overrides)
+            {
+                if (ov.HolderActorId == actorId && !string.IsNullOrWhiteSpace(ov.HolderDisplayName))
+                    return ov.HolderDisplayName!;
+            }
+            if (ledgerSave.Exiles is { Length: > 0 })
+            {
+                foreach (DaggerfallOfficeExileSave exile in ledgerSave.Exiles)
+                {
+                    if (exile.ActorId == actorId && !string.IsNullOrWhiteSpace(exile.DisplayName))
+                        return exile.DisplayName;
+                }
+            }
+            if (activeSite() is { } active)
+            {
+                foreach (DaggerfallLocalOffice office in officeLedger.ResolveLocalOffices(active))
+                {
+                    if (office.HolderActorId == actorId && !string.IsNullOrWhiteSpace(office.DisplayName))
+                        return office.DisplayName;
+                }
+            }
+            if (actorLedger.TryGet(actorId, out ActorLedgerEntry? officeEntry)
+                && officeEntry?.Origin.SiteProfile is { } originProfileKey)
+            {
+                DaggerfallSiteId originSiteId = originProfileKey.Require().Site;
+                DaggerfallSiteRecord? originSite = definitions.Locations.Records.FirstOrDefault(r => r.Id == originSiteId);
+                if (originSite is not null)
+                {
+                    foreach (DaggerfallLocalOffice office in officeLedger.ResolveLocalOffices(originSite))
+                    {
+                        if (office.HolderActorId == actorId && !string.IsNullOrWhiteSpace(office.DisplayName))
+                            return office.DisplayName;
+                    }
+                }
+            }
         }
         return "Local Contact";
     }

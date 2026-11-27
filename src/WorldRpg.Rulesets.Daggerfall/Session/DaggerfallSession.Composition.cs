@@ -1671,7 +1671,9 @@ internal sealed partial class DaggerfallSession
                 questNames,
                 () => _site.ActiveSite,
                 () => _worldSocialSeed,
-                () => checked((int)_time.Calendar.DayNumber));
+                () => checked((int)_time.Calendar.DayNumber),
+                OfficeHolders,
+                OfficeLedger);
             HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
                 _characterUi, definitions, CurrentTextContext, _controls, ActivationPanel, State.Swimming, State.Effects, State.Quests, _questTexts, _time,
                 _notebook, State.Transport, State.Inventory, TransportAccess, State.Property, State.Wagon, DungeonText, _deathScreen, RestPanel,

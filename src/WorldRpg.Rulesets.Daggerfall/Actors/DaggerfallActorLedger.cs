@@ -708,7 +708,8 @@ internal sealed class DaggerfallActorLedger
         long durableId,
         ActorVouchRecord vouch,
         ActorOrigin? origin = null,
-        ActorSocialDiff? social = null)
+        ActorSocialDiff? social = null,
+        string? displayNameOverride = null)
     {
         ArgumentNullException.ThrowIfNull(vouch);
         vouch.Validate();
@@ -741,9 +742,13 @@ internal sealed class DaggerfallActorLedger
                 ? s with { Vouches = mergedVouches }
                 : null;
             ActorReferralDiff? updatedReferral = existing.Referral is { } r
-                ? r with { Vouches = mergedVouches }
+                ? r with
+                {
+                    Vouches = mergedVouches,
+                    DisplayNameOverride = !string.IsNullOrWhiteSpace(r.DisplayNameOverride) ? r.DisplayNameOverride : displayNameOverride,
+                }
                 : updatedSocial is null
-                    ? new ActorReferralDiff(null, null, mergedVouches)
+                    ? new ActorReferralDiff(null, displayNameOverride, mergedVouches)
                     : null;
             _entries[durableId] = existing with
             {
@@ -755,7 +760,7 @@ internal sealed class DaggerfallActorLedger
 
         ArgumentNullException.ThrowIfNull(origin);
         ActorSocialDiff? initialSocial = social is { } sNew ? sNew with { Vouches = [vouch] } : null;
-        ActorReferralDiff? initialReferral = initialSocial is null ? new ActorReferralDiff(null, null, [vouch]) : null;
+        ActorReferralDiff? initialReferral = initialSocial is null ? new ActorReferralDiff(null, displayNameOverride, [vouch]) : null;
         _entries[durableId] = new ActorLedgerEntry(durableId, origin, Social: initialSocial, Referral: initialReferral);
         return true;
     }

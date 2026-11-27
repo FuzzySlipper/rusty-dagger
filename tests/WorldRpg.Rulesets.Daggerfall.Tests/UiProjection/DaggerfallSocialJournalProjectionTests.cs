@@ -113,6 +113,65 @@ public sealed class DaggerfallSocialJournalProjectionTests
             && f.Detail.Contains("Current region", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Social_journal_preserves_settlement_progress_outside_home_town_and_resolves_unmaterialized_court_vouch_names()
+    {
+        using var fixture = new SocialJournalFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord currentSite = session.Site.ActiveSite!;
+        DaggerfallSiteRecord otherTown = TestPayload.Definitions.Locations.Records
+            .First(r => r.Id != currentSite.Id && r.Exterior is not null);
+
+        int day = checked((int)session.Calendar.DayNumber);
+
+        // 1. Local blood feud in ANOTHER town (outside currentSite) with reconciliation service + pardon recorded.
+        string distantLocalFamily = DaggerfallHouseholds.BuildingHouseholdId(otherTown.Id, 0, 0, 0);
+        session.SocialConsequences.SetHouseholdStanding(distantLocalFamily, -20, atSite: otherTown, minute: session.Calendar.MinuteNumber, dayOverride: day);
+        session.SocialConsequences.RecordTruceMediated(distantLocalFamily, "Magistrate Vane", day);
+        session.SocialConsequences.RecordReconciliationServiceCompleted(distantLocalFamily, day);
+        session.SocialConsequences.RecordPardonGranted(distantLocalFamily, "Court of Wayrest", day);
+
+        // 2. Issue an introduction to the region's UNMATERIALIZED ruler (not in State.Npcs or State.Actors)!
+        DaggerfallOfficeHolder? ruler = session.OfficeHolders.ResolveRegionalRuler(currentSite.Id.Region);
+        Assert.NotNull(ruler);
+        Assert.True(ruler!.HasLivingHolder && ruler.ActorId is long rulerId && !string.IsNullOrWhiteSpace(ruler.DisplayName));
+        long targetRulerId = ruler.ActorId!.Value;
+        Assert.False(session.State.Actors.TryGet(targetRulerId, out _));
+        Assert.False(session.State.Npcs.TryGet(targetRulerId, out _));
+
+        DaggerfallNpcSite npcSite = new(currentSite.Id.Region, currentSite.Name, "1/5/0", session.Sites.ActiveProfile.LogicalId);
+        long nobleReferrerId = AddNpcWithFamily(session, currentSite.Id, npcSite, "t11163/noble-ref", "Lord Cassian", "fam:house:r17:0", role: "noble");
+        session.State.Social.ChangeRegionalReputation(currentSite.Id.Region, 40);
+        session.Introductions.AdjustActorDisposition(nobleReferrerId, 30);
+        DaggerfallNpc referrerNpc = session.State.Npcs.Require(nobleReferrerId);
+
+        DaggerfallIntroductionResult issued = session.Introductions.TryIssueIntroduction(referrerNpc, targetRulerId, currentSite);
+        Assert.True(issued.Accepted, issued.Message);
+
+        // Read SocialJournal from currentSite:
+        DaggerfallSocialJournalView view = session.SocialJournal.Read();
+
+        // Off-site local feud MUST retain settlement progress & wergild hint (never null!).
+        DaggerfallSocialJournalHouseholdEntry offSiteFeud = Assert.Single(view.Households, h => h.IsFeud);
+        Assert.True(offSiteFeud.IsFeud);
+        Assert.NotNull(offSiteFeud.SettlementHint);
+        Assert.Contains("Reconciliation service completed", offSiteFeud.SettlementHint!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Court of Wayrest", offSiteFeud.SettlementHint!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("gp", offSiteFeud.SettlementHint!, StringComparison.OrdinalIgnoreCase);
+
+        // Unmaterialized regional ruler vouch MUST resolve the ruler's actual DisplayName (never "Local Contact"!).
+        DaggerfallSocialJournalVouchEntry rulerVouch = Assert.Single(view.Vouches);
+        Assert.Equal(ruler.DisplayName, rulerVouch.TargetName);
+        Assert.NotEqual("Local Contact", rulerVouch.TargetName);
+        Assert.Equal("Lord Cassian", rulerVouch.VoucherName);
+
+        // Even if a pre-existing referral entry lacked DisplayNameOverride, office/cast fallback still resolves the real name!
+        if (session.State.ActorLedger.TryGet(targetRulerId, out ActorLedgerEntry? rulerEntry) && rulerEntry?.Referral is { } rulerRef)
+            session.State.ActorLedger.Upsert(rulerEntry with { Referral = rulerRef with { DisplayNameOverride = null } });
+        DaggerfallSocialJournalVouchEntry fallbackVouch = Assert.Single(session.SocialJournal.Read().Vouches);
+        Assert.Equal(ruler.DisplayName, fallbackVouch.TargetName);
+    }
+
     private static long AddNpcWithFamily(
         DaggerfallSession session,
         DaggerfallSiteId siteId,

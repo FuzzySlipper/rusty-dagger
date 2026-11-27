@@ -563,7 +563,7 @@ internal sealed class DaggerfallIntroductions(
             {
                 if (vouch.ReferrerDurableId == newId || !EvaluateVouch(vouch, officeSite).IsUsable)
                     continue;
-                actorLedger.RecordVouch(newId, vouch, newOrigin, newSocial);
+                actorLedger.RecordVouch(newId, vouch, newOrigin, newSocial, displayNameOverride: change.NewHolderName);
                 liveOverlay?.RecordVouch(vouch);
             }
             return;
@@ -1154,7 +1154,7 @@ internal sealed class DaggerfallIntroductions(
         // Persist the structured vouch on the target's ActorLedger entry (and live overlay if currently loaded).
         ActorOrigin targetOrigin = ResolveTargetOrigin(targetDurableId, targetNpc, officeTarget, localOfficeTarget);
         ActorSocialDiff? targetSocial = ResolveTargetSocialDiff(targetDurableId, targetNpc);
-        bool added = actorLedger.RecordVouch(targetDurableId, vouch, targetOrigin, targetSocial);
+        bool added = actorLedger.RecordVouch(targetDurableId, vouch, targetOrigin, targetSocial, displayNameOverride: targetName);
         if (actors.TryGet(targetDurableId, out ActorState? liveTarget)
             && liveTarget.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
         {
