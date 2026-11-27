@@ -13,7 +13,7 @@ public sealed class ConditionPricesTests
     {
         DaggerfallWorldConditions conditions = new();
         conditions.SeedAuthored(tokens);
-        return new DaggerfallConditionPrices(conditions, () => 10);
+        return new DaggerfallConditionPrices(conditions, () => 10, DaggerfallConditionPriceTuning.Default);
     }
 
     [Fact]
@@ -27,8 +27,8 @@ public sealed class ConditionPricesTests
             new("crackdown", DaggerfallWorldConditionKind.CrimeCrackdown, Region, SubjectTag: "crackdown", Severity: 3),
             new("recruiting", DaggerfallWorldConditionKind.Decree, Region, SubjectTag: "recruitment", Severity: 3));
 
-        Assert.Equal(2 * DaggerfallConditionPrices.GrainShortagePerSeverity + DaggerfallConditionPrices.CrimeWavePerSeverity
-            + 2 * DaggerfallConditionPrices.FestivalPerSeverity, prices.GoodsAdjustment(Region));
+        Assert.Equal(2 * DaggerfallConditionPriceTuning.Default.GrainShortagePerSeverity + DaggerfallConditionPriceTuning.Default.CrimeWavePerSeverity
+            + 2 * DaggerfallConditionPriceTuning.Default.FestivalPerSeverity, prices.GoodsAdjustment(Region));
         Assert.Equal(0, prices.GoodsAdjustment(Elsewhere));
     }
 

@@ -35,6 +35,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallQuestSpawningTuning QuestSpawning { get; init; } = new(5f, 20f, 8f, 25f, 5, 77.5f, 95f, 105.469f, 25);
     internal DaggerfallLawTuning Law { get; init; } = new(5, 10, 2, 5, 12.8f, 51.2f, 3.2d);
     internal DaggerfallPoliticsTuning Politics { get; init; } = DaggerfallPoliticsTuning.Default;
+    internal DaggerfallConditionPriceTuning ConditionPrices { get; init; } = DaggerfallConditionPriceTuning.Default;
     internal DaggerfallNormalLightTuning NormalLight { get; init; } = new(1.4f, .25f, 15f, 1f);
     internal DaggerfallVampirismTuning Vampirism { get; init; } = DaggerfallVampirismTuning.Classic;
     internal DaggerfallLycanthropyTuning Lycanthropy { get; init; } = DaggerfallLycanthropyTuning.Classic;
@@ -151,6 +152,7 @@ internal sealed record DaggerfallTuning(
             QuestSpawning = DaggerfallQuestSpawningTuning.Read(root.GetProperty("questSpawning")),
             Law = DaggerfallLawTuning.Read(root.GetProperty("law")),
             Politics = DaggerfallPoliticsTuning.Read(root.GetProperty("politics")),
+            ConditionPrices = DaggerfallConditionPriceTuning.Read(root.GetProperty("conditionPrices")),
             NormalLight = DaggerfallNormalLightTuning.Read(root.GetProperty("normalLight")),
             Vampirism = DaggerfallVampirismTuning.Read(root.GetProperty("vampirism")),
             Lycanthropy = DaggerfallLycanthropyTuning.Read(root.GetProperty("lycanthropy")),

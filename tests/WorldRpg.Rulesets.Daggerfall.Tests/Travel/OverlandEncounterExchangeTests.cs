@@ -43,7 +43,7 @@ public sealed class OverlandEncounterExchangeTests
         DaggerfallRegionalPriceState prices = new(definitions.Factions, RandomMinimum.Create(), 0,
             new DaggerfallRegionalPriceSave(0, baseFactors));
         DaggerfallWorldConditions conditions = new();
-        DaggerfallConditionPrices conditionPrices = new(conditions, () => 1);
+        DaggerfallConditionPrices conditionPrices = new(conditions, () => 1, DaggerfallConditionPriceTuning.Default);
         DaggerfallTradeQuoteService quotes = new(definitions, new DaggerfallItemValuation(definitions), prices, conditionPrices.GoodsAdjustment);
 
         // Baseline: neutral origin and local regions match a local shop identically.

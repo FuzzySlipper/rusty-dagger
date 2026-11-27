@@ -652,7 +652,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-            DaggerfallConditionPrices conditionPrices = new(WorldConditions, () => checked((int)_time.Calendar.DayNumber));
+            DaggerfallConditionPrices conditionPrices = new(WorldConditions, () => checked((int)_time.Calendar.DayNumber), _tuning.ConditionPrices);
             DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices,
                 conditionPrices.GoodsAdjustment);
             DaggerfallMerchantService merchants = new(definitions, _random, npcs, social, playerStats, character, progression,

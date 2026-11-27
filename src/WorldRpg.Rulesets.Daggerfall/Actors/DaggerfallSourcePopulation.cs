@@ -248,19 +248,17 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
         Dictionary<string, DaggerfallNpc> existingByKey = sourceNpcs.ToDictionary(npc => npc.StableKey, StringComparer.Ordinal);
         // The town's own walkers count towards its size and capacity; the guards a crackdown calls out walk on top.
-        int totalPopulationCount = active.Population.Count(placement => placement.CrackdownGuard == 0);
-        IEnumerable<DaggerfallPopulationPlacement> Walking(bool crackdown) => active.Population
-            .Where(placement => (placement.CrackdownGuard > 0) == crackdown)
-            .Where(placement => IsEligiblePlacement(active, definitions, placement))
-            .Where(placement => IsScheduledOutdoors(siteId, active.ProfileKey.LogicalId, placement, totalPopulationCount))
-            .Where(placement => IsPlacementAdmitted(placement, existingByKey.GetValueOrDefault(placement.Id), playerProfile));
-        DaggerfallPopulationPlacement[] candidates = [.. Walking(crackdown: false)
+        int totalPopulationCount = OrdinaryCount(active.Population);
+        IReadOnlyList<DaggerfallPopulationPlacement> candidates = Admitted(site, active.Population,
+            placement => IsEligiblePlacement(active, definitions, placement)
+                && IsScheduledOutdoors(siteId, active.ProfileKey.LogicalId, placement, totalPopulationCount)
+                && IsPlacementAdmitted(placement, existingByKey.GetValueOrDefault(placement.Id), playerProfile),
             // Preserve already active source identities through normal wandering. Stable source
             // order remains the tie-breaker for newly admitted people.
-            .OrderByDescending(placement => existingByKey.TryGetValue(placement.Id, out DaggerfallNpc? npc)
-                && npc.Presence == DaggerfallNpcPresence.Active)
-            .ThenBy(placement => placement.Id, StringComparer.Ordinal)
-            .Take(Capacity(site, totalPopulationCount)), .. Walking(crackdown: true)];
+            walkers => walkers
+                .OrderByDescending(placement => existingByKey.TryGetValue(placement.Id, out DaggerfallNpc? npc)
+                    && npc.Presence == DaggerfallNpcPresence.Active)
+                .ThenBy(placement => placement.Id, StringComparer.Ordinal));
         HashSet<string> admittedKeys = candidates.Select(placement => placement.Id).ToHashSet(StringComparer.Ordinal);
         if (immediate)
         {
@@ -1056,6 +1054,24 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     }
 
     /// <summary>Applies the donor's bounded active population pool to real normalized placements.</summary>
+    /// <summary>
+    /// A town's own walkers, which count towards its size, schedules and capacity; the reserve watch a crackdown calls
+    /// out (<see cref="DaggerfallPopulationPlacement.CrackdownGuard"/>) walks on top of them.
+    /// </summary>
+    internal static int OrdinaryCount(IReadOnlyList<DaggerfallPopulationPlacement> population) =>
+        population.Count(placement => placement.CrackdownGuard == 0);
+
+    /// <summary>
+    /// Who of <paramref name="population"/> walks <paramref name="site"/>'s streets now, in the active town or a resident
+    /// one: of those <paramref name="walks"/> lets out, the town's own walkers in <paramref name="order"/> up to its
+    /// capacity, and on top of them every reserve guard a crackdown calls out.
+    /// </summary>
+    internal static IReadOnlyList<DaggerfallPopulationPlacement> Admitted(DaggerfallSiteRecord site,
+        IReadOnlyList<DaggerfallPopulationPlacement> population, Func<DaggerfallPopulationPlacement, bool> walks,
+        Func<IEnumerable<DaggerfallPopulationPlacement>, IEnumerable<DaggerfallPopulationPlacement>> order) =>
+        [.. order(population.Where(placement => placement.CrackdownGuard == 0 && walks(placement))).Take(Capacity(site, OrdinaryCount(population))),
+            .. population.Where(placement => placement.CrackdownGuard > 0 && walks(placement))];
+
     internal static int Capacity(DaggerfallSiteRecord site, int sourceCount)
     {
         ArgumentNullException.ThrowIfNull(site);

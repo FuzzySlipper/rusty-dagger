@@ -33,6 +33,16 @@
     "bountyReputation": 3,
     "bountyClaimDays": 30
   },
+  "conditionPrices": {
+    "grainShortagePerSeverity": 150,
+    "crimeWavePerSeverity": 75,
+    "festivalPerSeverity": -100,
+    "priceSurgePerSeverity": 50,
+    "corruptAdvisorPerSeverity": 50,
+    "prosperityPerSeverity": 50,
+    "witchHuntPercentPerSeverity": 25,
+    "recruitmentHirePercentPerSeverity": 25
+  },
   "politics": {
     "officeMemberReaction": 10,
     "officeEnemyReaction": 10

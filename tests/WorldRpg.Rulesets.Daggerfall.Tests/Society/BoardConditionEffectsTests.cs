@@ -81,17 +81,26 @@ public sealed class BoardConditionEffectsTests
     public void Price_surges_corrupt_advisors_and_prosperity_raise_prices_and_recruitment_makes_hirelings_cheap()
     {
         DaggerfallWorldConditions world = new();
-        DaggerfallConditionPrices prices = new(world, () => 10);
+        DaggerfallConditionPrices prices = new(world, () => 10, DaggerfallConditionPriceTuning.Default);
         Assert.Equal(0, prices.GoodsAdjustment(Glenpoint));
         Assert.Equal(25UL, prices.HireFee(Glenpoint, 25UL));
 
         foreach (string tag in new[] { DaggerfallConditionPrices.PriceSurgeTag, DaggerfallConditionPrices.CorruptAdvisorTag, DaggerfallConditionPrices.ProsperityTag, DaggerfallConditionPrices.RecruitmentTag })
             world.Set(new DaggerfallWorldConditionToken($"board:glenpoint:{tag}", DaggerfallWorldConditionKind.Decree, Region: Glenpoint, SubjectTag: tag, Severity: 2).Validate());
 
-        Assert.Equal(2 * (DaggerfallConditionPrices.PriceSurgePerSeverity + DaggerfallConditionPrices.CorruptAdvisorPerSeverity + DaggerfallConditionPrices.ProsperityPerSeverity),
-            prices.GoodsAdjustment(Glenpoint));
+        DaggerfallConditionPriceTuning tuning = DaggerfallConditionPriceTuning.Default;
+        Assert.Equal(2 * (tuning.PriceSurgePerSeverity + tuning.CorruptAdvisorPerSeverity + tuning.ProsperityPerSeverity), prices.GoodsAdjustment(Glenpoint));
         Assert.Equal(12UL, prices.HireFee(Glenpoint, 25UL));
         Assert.Equal(0, prices.GoodsAdjustment(Betony));
+
+        // The amounts are tuning: another file's values move the same prices by its amounts.
+        DaggerfallConditionPrices retuned = new(world, () => 10, tuning with
+        {
+            PriceSurgePerSeverity = 10, CorruptAdvisorPerSeverity = 20, ProsperityPerSeverity = 30, RecruitmentHirePercentPerSeverity = 10,
+        });
+        Assert.Equal(2 * (10 + 20 + 30), retuned.GoodsAdjustment(Glenpoint));
+        Assert.Equal(20UL, retuned.HireFee(Glenpoint, 25UL));
+        Assert.Throws<ArgumentException>(() => (tuning with { RecruitmentHirePercentPerSeverity = 40 }).Validate());
     }
 
     /// <summary>Patch: "crimecrackdown should increase the number of guard spawns in affected cities".</summary>
@@ -108,6 +117,26 @@ public sealed class BoardConditionEffectsTests
         Assert.Equal(DaggerfallExteriorPopulation.ExteriorSlotId(TestPayload.Definitions.Locations.Records.Single(site => site.Id == Charing), walkers.Length),
             reserve[0].Id);
         Assert.Equal(reserve.Length, reserve.Select(placement => placement.Position).Distinct().Count());
+    }
+
+    /// <summary>
+    /// R11120-2: active and resident towns admit their walkers by one rule: the town's own up to its capacity, and the
+    /// reserve watch a crackdown calls out on top, never squeezed out by a town at capacity.
+    /// </summary>
+    [Fact]
+    public void A_town_at_capacity_still_walks_the_reserve_guards_a_crackdown_calls_out()
+    {
+        DaggerfallSiteRecord charing = TestPayload.Definitions.Locations.Records.Single(site => site.Id == Charing);
+        IReadOnlyList<DaggerfallPopulationPlacement> population = Assembled(DaggerfallWorldProfileIds.Exterior(Charing)).Population;
+        int ordinary = DaggerfallSourcePopulation.OrdinaryCount(population);
+        int capacity = DaggerfallSourcePopulation.Capacity(charing, ordinary);
+        Assert.Equal(population.Count - DaggerfallExteriorPopulation.CrackdownGuardSlots, ordinary);
+
+        // Every walker is out and two reserve guards are called: the town fills its capacity and the two walk on top.
+        IReadOnlyList<DaggerfallPopulationPlacement> walking = DaggerfallSourcePopulation.Admitted(charing, population,
+            placement => placement.CrackdownGuard is 0 or <= 2, walkers => walkers.OrderBy(placement => placement.Id, StringComparer.Ordinal));
+        Assert.Equal(capacity, walking.Count(placement => placement.CrackdownGuard == 0));
+        Assert.Equal([1, 2], walking.Where(placement => placement.CrackdownGuard > 0).Select(placement => placement.CrackdownGuard));
     }
 
     [Fact]

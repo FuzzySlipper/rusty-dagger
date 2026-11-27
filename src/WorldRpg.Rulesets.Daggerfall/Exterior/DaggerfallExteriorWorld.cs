@@ -1187,14 +1187,13 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
                 DaggerfallSiteRecord residentSite = _site.Require(residentSiteId);
                 if (DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, residentSite, out _) is not null)
                 {
-                    int totalCount = profile.Population.Count;
-                    int capacity = DaggerfallSourcePopulation.Capacity(residentSite, totalCount);
-                    foreach (DaggerfallPopulationPlacement pop in profile.Population
-                        .Where(p => DaggerfallSourcePopulation.IsEligiblePlacement(profile, _definitions, p))
-                        .Where(p => _host.IsPlacementScheduledOutdoors(residentSiteId, p,
-                            DaggerfallPeopleSlots.SeededSlotIdentity(residentSiteId, $"{key.LogicalId}/{p.Id}"), totalCount))
-                        .OrderBy(p => p.Id, StringComparer.Ordinal)
-                        .Take(capacity))
+                    // As in the active town: its own walkers up to capacity, and the reserve watch a crackdown calls out on top.
+                    int totalCount = DaggerfallSourcePopulation.OrdinaryCount(profile.Population);
+                    foreach (DaggerfallPopulationPlacement pop in DaggerfallSourcePopulation.Admitted(residentSite, profile.Population,
+                        p => DaggerfallSourcePopulation.IsEligiblePlacement(profile, _definitions, p)
+                            && _host.IsPlacementScheduledOutdoors(residentSiteId, p,
+                                DaggerfallPeopleSlots.SeededSlotIdentity(residentSiteId, $"{key.LogicalId}/{p.Id}"), totalCount),
+                        walkers => walkers.OrderBy(p => p.Id, StringComparer.Ordinal)))
                     {
                         long popId = DaggerfallPeopleSlots.SeededSlotIdentity(residentSiteId, $"{key.LogicalId}/{pop.Id}");
                         if (!_npcs.TryGet(popId, out DaggerfallNpc? existingPop)

@@ -10,17 +10,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// a crown is recruiting. Each scales with the condition's severity. Board crime waves and witch hunts show as
 /// <see cref="DaggerfallWorldConditionKind.CrimeCrackdown"/> tokens, and festivals, recruitment, prosperity, price surges
 /// and court conditions as <see cref="DaggerfallWorldConditionKind.Decree"/> tokens, told apart by their subject tag.
+/// How much each moves them is <paramref name="tuning"/>.
 /// </summary>
-internal sealed class DaggerfallConditionPrices(IDaggerfallWorldConditionSource conditions, Func<int> currentDay)
+internal sealed class DaggerfallConditionPrices(IDaggerfallWorldConditionSource conditions, Func<int> currentDay, DaggerfallConditionPriceTuning tuning)
 {
-    internal const int GrainShortagePerSeverity = 150;
-    internal const int CrimeWavePerSeverity = 75;
-    internal const int FestivalPerSeverity = -100;
-    internal const int PriceSurgePerSeverity = 50;
-    internal const int CorruptAdvisorPerSeverity = 50;
-    internal const int ProsperityPerSeverity = 50;
-    internal const int WitchHuntPercentPerSeverity = 25;
-    internal const int RecruitmentHirePercentPerSeverity = -25;
 
     internal const string CrimeWaveTag = "crime-wave";
     internal const string WitchHuntTag = "witch-hunt";
@@ -34,27 +27,27 @@ internal sealed class DaggerfallConditionPrices(IDaggerfallWorldConditionSource 
     internal int GoodsAdjustment(int region)
     {
         IReadOnlyList<DaggerfallWorldConditionToken> active = conditions.ActiveForRegion(region, currentDay());
-        return Severity(active, DaggerfallWorldConditionKind.GrainShortage, tag: null) * GrainShortagePerSeverity
-            + Severity(active, DaggerfallWorldConditionKind.CrimeCrackdown, CrimeWaveTag) * CrimeWavePerSeverity
-            + Severity(active, DaggerfallWorldConditionKind.Decree, FestivalTag) * FestivalPerSeverity
-            + Severity(active, DaggerfallWorldConditionKind.Decree, PriceSurgeTag) * PriceSurgePerSeverity
-            + Severity(active, DaggerfallWorldConditionKind.Decree, CorruptAdvisorTag) * CorruptAdvisorPerSeverity
-            + Severity(active, DaggerfallWorldConditionKind.Decree, ProsperityTag) * ProsperityPerSeverity;
+        return Severity(active, DaggerfallWorldConditionKind.GrainShortage, tag: null) * tuning.GrainShortagePerSeverity
+            + Severity(active, DaggerfallWorldConditionKind.CrimeCrackdown, CrimeWaveTag) * tuning.CrimeWavePerSeverity
+            + Severity(active, DaggerfallWorldConditionKind.Decree, FestivalTag) * tuning.FestivalPerSeverity
+            + Severity(active, DaggerfallWorldConditionKind.Decree, PriceSurgeTag) * tuning.PriceSurgePerSeverity
+            + Severity(active, DaggerfallWorldConditionKind.Decree, CorruptAdvisorTag) * tuning.CorruptAdvisorPerSeverity
+            + Severity(active, DaggerfallWorldConditionKind.Decree, ProsperityTag) * tuning.ProsperityPerSeverity;
     }
 
     /// <summary><paramref name="fee"/> to hire a companion or driver in <paramref name="region"/>, lowered where a crown is recruiting.</summary>
     internal ulong HireFee(int region, ulong fee)
     {
-        int percent = Severity(conditions.ActiveForRegion(region, currentDay()), DaggerfallWorldConditionKind.Decree, RecruitmentTag)
-            * RecruitmentHirePercentPerSeverity;
-        return percent == 0 ? fee : checked(fee * (ulong)(100 + percent) / 100);
+        int discount = Severity(conditions.ActiveForRegion(region, currentDay()), DaggerfallWorldConditionKind.Decree, RecruitmentTag)
+            * tuning.RecruitmentHirePercentPerSeverity;
+        return discount == 0 ? fee : checked(fee * (ulong)(100 - discount) / 100);
     }
 
     /// <summary><paramref name="price"/> for a magic service in <paramref name="region"/>, raised by a witch hunt there.</summary>
     internal int MagicService(int region, int price)
     {
         int percent = Severity(conditions.ActiveForRegion(region, currentDay()), DaggerfallWorldConditionKind.CrimeCrackdown, WitchHuntTag)
-            * WitchHuntPercentPerSeverity;
+            * tuning.WitchHuntPercentPerSeverity;
         return percent == 0 ? price : checked((int)(((long)price * (100 + percent) + 99) / 100));
     }
 
