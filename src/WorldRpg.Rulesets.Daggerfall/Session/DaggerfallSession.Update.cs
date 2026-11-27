@@ -271,6 +271,7 @@ internal sealed partial class DaggerfallSession
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
         OfficeLedger.AdvanceVacancies(minuteAfter, checked((int)_time.Calendar.DayNumber));       // Society: office vacancy window progression
+        SocialConsequences.AdvanceDay(checked((int)_time.Calendar.DayNumber));                    // Society: daily household grudge decay & mourning expiry
         AdvanceCouriersAndBoard(before, after);                                                   // Society, Travel: couriers and off-map bands, the board each Sunday
         WordSpread.PruneExpired(minuteAfter);                                                     // Society: elapsed-time word spread
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior

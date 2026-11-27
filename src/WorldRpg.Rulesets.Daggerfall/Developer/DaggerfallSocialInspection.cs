@@ -123,6 +123,8 @@ internal sealed class DaggerfallSocialInspection(
             // Include any affected local households at the active site even if none of their members are loaded yet.
             foreach (DaggerfallLocalHouseholdStandingSave standing in localSnapshot.Standings)
             {
+                if (!DaggerfallHouseholds.IsLocal(standing.FamilyId))
+                    continue;
                 if (active is null
                     || (standing.Region == active.Id.Region
                         && string.Equals(standing.Location, active.Name, StringComparison.OrdinalIgnoreCase)))
@@ -138,13 +140,21 @@ internal sealed class DaggerfallSocialInspection(
                 DaggerfallHouseholdScope scope = DaggerfallHouseholds.ScopeOf(familyId);
                 string? label = FormatFamilyLabel(familyId, seed);
                 int standingDelta = socialConsequences.HouseholdStandingDelta(familyId, active);
-                bool feud = standingDelta <= DaggerfallIntroductions.BloodFeudDispositionThreshold;
+                bool hasSnapshot = socialConsequences.TryGetHouseholdSnapshot(familyId, out DaggerfallHouseholdSnapshot snapshot);
+                bool feud = socialConsequences.IsFeudActiveAt(familyId, active);
                 w.WriteStartObject();
                 w.WriteString("familyId", familyId);
                 if (label is not null) w.WriteString("label", label); else w.WriteNull("label");
                 w.WriteString("scope", ScopeSlug(scope));
                 w.WriteNumber("standingDelta", standingDelta);
+                w.WriteNumber("persistentStandingDelta", hasSnapshot ? snapshot.StandingDelta : 0);
                 w.WriteBoolean("inBloodFeud", feud);
+                w.WriteBoolean("feudActive", hasSnapshot && snapshot.FeudActive);
+                if (hasSnapshot && snapshot.MourningUntilDay is int mourningUntil)
+                    w.WriteNumber("mourningUntilDay", mourningUntil);
+                else
+                    w.WriteNull("mourningUntilDay");
+                w.WriteNumber("lastUpdatedDay", hasSnapshot ? snapshot.LastUpdatedDay : 0);
                 if (localByFamily.TryGetValue(familyId, out DaggerfallLocalHouseholdStandingSave? localEntry)
                     && localEntry.SubjectOffsets is { Length: > 0 } offsets)
                 {
@@ -175,12 +185,15 @@ internal sealed class DaggerfallSocialInspection(
             w.WriteStartArray("localStandings");
             foreach (DaggerfallLocalHouseholdStandingSave standing in localSnapshot.Standings)
             {
+                if (!DaggerfallHouseholds.IsLocal(standing.FamilyId))
+                    continue;
                 if (active is not null
                     && (standing.Region != active.Id.Region
                         || !string.Equals(standing.Location, active.Name, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
+                bool feudActive = standing.FeudActive || standing.StandingDelta <= DaggerfallIntroductions.BloodFeudDispositionThreshold;
                 w.WriteStartObject();
                 w.WriteString("familyId", standing.FamilyId);
                 if (FormatFamilyLabel(standing.FamilyId, seed) is { } standingLabel)
@@ -188,7 +201,14 @@ internal sealed class DaggerfallSocialInspection(
                 w.WriteNumber("region", standing.Region);
                 w.WriteString("location", standing.Location);
                 w.WriteNumber("standingDelta", standing.StandingDelta);
-                w.WriteBoolean("inBloodFeud", standing.StandingDelta <= DaggerfallIntroductions.BloodFeudDispositionThreshold);
+                w.WriteNumber("persistentStandingDelta", standing.StandingDelta);
+                w.WriteBoolean("inBloodFeud", feudActive);
+                w.WriteBoolean("feudActive", feudActive);
+                if (standing.MourningUntilDay is int localMourningUntil)
+                    w.WriteNumber("mourningUntilDay", localMourningUntil);
+                else
+                    w.WriteNull("mourningUntilDay");
+                w.WriteNumber("lastUpdatedDay", standing.LastUpdatedDay);
                 w.WriteEndObject();
             }
             w.WriteEndArray();
@@ -252,7 +272,22 @@ internal sealed class DaggerfallSocialInspection(
                 if (!string.IsNullOrWhiteSpace(ruler.Title)) w.WriteString("title", ruler.Title); else w.WriteNull("title");
                 w.WriteNumber("officeFactionId", ruler.OfficeFactionId);
                 if (ruler.HolderFactionId is int hfid) w.WriteNumber("holderFactionId", hfid); else w.WriteNull("holderFactionId");
-                if (!string.IsNullOrWhiteSpace(ruler.FamilyId)) w.WriteString("familyId", ruler.FamilyId); else w.WriteNull("familyId");
+                if (!string.IsNullOrWhiteSpace(ruler.FamilyId))
+                {
+                    w.WriteString("familyId", ruler.FamilyId);
+                    bool hasRulerSnap = socialConsequences.TryGetHouseholdSnapshot(ruler.FamilyId, out DaggerfallHouseholdSnapshot rulerSnap);
+                    int rulerArrived = socialConsequences.HouseholdStandingDelta(ruler.FamilyId, active);
+                    w.WriteNumber("arrivedStandingDelta", rulerArrived);
+                    w.WriteNumber("persistentStandingDelta", hasRulerSnap ? rulerSnap.StandingDelta : 0);
+                    w.WriteBoolean("inBloodFeud", socialConsequences.IsFeudActiveAt(ruler.FamilyId, active));
+                    w.WriteBoolean("feudActive", hasRulerSnap && rulerSnap.FeudActive);
+                    if (hasRulerSnap && rulerSnap.MourningUntilDay is int rulerMourning)
+                        w.WriteNumber("mourningUntilDay", rulerMourning);
+                    else
+                        w.WriteNull("mourningUntilDay");
+                    w.WriteNumber("lastUpdatedDay", hasRulerSnap ? rulerSnap.LastUpdatedDay : 0);
+                }
+                else w.WriteNull("familyId");
                 w.WriteBoolean("hasLivingHolder", ruler.HasLivingHolder);
                 if (!string.IsNullOrWhiteSpace(ruler.PreviousHolderName)) w.WriteString("previousHolderName", ruler.PreviousHolderName);
                 if (!string.IsNullOrWhiteSpace(ruler.PreviousHolderFate)) w.WriteString("previousHolderFate", ruler.PreviousHolderFate);
@@ -269,12 +304,21 @@ internal sealed class DaggerfallSocialInspection(
                 foreach (DaggerfallRegionalGreatHouse house in officeLedger.ResolveRegionalGreatHouses(houseRegion))
                 {
                     int arrivedStanding = socialConsequences.HouseholdStandingDelta(house.FamilyId, active);
+                    bool hasHouseSnap = socialConsequences.TryGetHouseholdSnapshot(house.FamilyId, out DaggerfallHouseholdSnapshot houseSnap);
+                    bool feudKnown = socialConsequences.IsFeudActiveAt(house.FamilyId, active);
                     w.WriteStartObject();
                     w.WriteString("familyId", house.FamilyId);
                     if (FormatFamilyLabel(house.FamilyId, seed) is { } houseLabel) w.WriteString("label", houseLabel); else w.WriteNull("label");
                     w.WriteNumber("houseIndex", house.HouseIndex);
                     w.WriteNumber("arrivedStandingDelta", arrivedStanding);
-                    w.WriteBoolean("inBloodFeud", arrivedStanding <= DaggerfallIntroductions.BloodFeudDispositionThreshold);
+                    w.WriteNumber("persistentStandingDelta", hasHouseSnap ? houseSnap.StandingDelta : 0);
+                    w.WriteBoolean("inBloodFeud", feudKnown);
+                    w.WriteBoolean("feudActive", hasHouseSnap && houseSnap.FeudActive);
+                    if (hasHouseSnap && houseSnap.MourningUntilDay is int houseMourning)
+                        w.WriteNumber("mourningUntilDay", houseMourning);
+                    else
+                        w.WriteNull("mourningUntilDay");
+                    w.WriteNumber("lastUpdatedDay", hasHouseSnap ? houseSnap.LastUpdatedDay : 0);
                     w.WriteStartArray("heldOffices");
                     foreach (DaggerfallLocalOffice office in house.HeldOffices)
                     {
@@ -940,24 +984,34 @@ internal sealed class DaggerfallSocialInspection(
 
         string trimmed = familyId.Trim();
         DaggerfallSiteRecord? active = site.ActiveSite;
-        long minute = calendar().MinuteNumber;
+        DaggerfallCalendar cal = calendar();
+        long minute = cal.MinuteNumber;
+        int day = checked((int)cal.DayNumber);
         int applied;
         try
         {
-            applied = socialConsequences.SetHouseholdStanding(trimmed, standingDelta, active, minute);
+            applied = socialConsequences.SetHouseholdStanding(trimmed, standingDelta, active, minute, day);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             return DaggerfallDeveloperReplies.Refused(ex.Message);
         }
 
+        bool hasSnap = socialConsequences.TryGetHouseholdSnapshot(trimmed, out DaggerfallHouseholdSnapshot snap);
         return DaggerfallDeveloperReplies.Json(w =>
         {
             w.WriteStartObject();
             w.WriteString("familyId", trimmed);
             w.WriteString("scope", ScopeSlug(DaggerfallHouseholds.ScopeOf(trimmed)));
             w.WriteNumber("standingDelta", applied);
-            w.WriteBoolean("inBloodFeud", applied <= DaggerfallIntroductions.BloodFeudDispositionThreshold);
+            w.WriteNumber("persistentStandingDelta", hasSnap ? snap.StandingDelta : 0);
+            w.WriteBoolean("inBloodFeud", socialConsequences.IsFeudActiveAt(trimmed, active, minute));
+            w.WriteBoolean("feudActive", hasSnap && snap.FeudActive);
+            if (hasSnap && snap.MourningUntilDay is int mourningUntil)
+                w.WriteNumber("mourningUntilDay", mourningUntil);
+            else
+                w.WriteNull("mourningUntilDay");
+            w.WriteNumber("lastUpdatedDay", hasSnap ? snap.LastUpdatedDay : 0);
             w.WriteEndObject();
         });
     }

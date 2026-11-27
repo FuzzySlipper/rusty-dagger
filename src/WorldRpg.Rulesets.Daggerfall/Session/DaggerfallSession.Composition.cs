@@ -1106,13 +1106,15 @@ internal sealed partial class DaggerfallSession
             SocialConsequences = new DaggerfallSocialConsequences(
                 State.Social, definitions, State.Actors, State.Npcs, State.ActorLedger,
                 () => Crimes.QueryWitnesses(), Crimes.IsCityWatch, () => _site.Region,
-                WordSpread, () => _site.ActiveSite, () => _time.Calendar.MinuteNumber);
+                WordSpread, () => _site.ActiveSite, () => _time.Calendar.MinuteNumber,
+                () => checked((int)_time.Calendar.DayNumber), _tuning.Social);
             if (saved is not null)
                 SocialConsequences.Restore(saved.LocalHouseholds);
             State.Social.BindActorDisposition(id => SocialConsequences.EffectiveDispositionDelta(id));
             Introductions.BindEffectiveDisposition(
                 (actorId, atSite) => SocialConsequences.EffectiveDispositionDelta(actorId, atSite),
-                (familyId, atSite) => SocialConsequences.HouseholdStandingDelta(familyId, atSite));
+                (familyId, atSite) => SocialConsequences.HouseholdStandingDelta(familyId, atSite),
+                (familyId, atSite) => SocialConsequences.IsFeudActiveAt(familyId, atSite));
             Introductions.BindHostilityLookup(id =>
                 State.Actors.TryGet(id, out ActorState? live)
                 && live.Actor.TryGet<Modules.Behavior.DaggerfallEnemyPerceptionMemory>(out var memory)
@@ -1407,9 +1409,35 @@ internal sealed partial class DaggerfallSession
                 promoteGuard: id => _roster.PromoteToCityWatch(id));
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
             Law.BindOfficeHolderBanished((actorId, region, crimeKind, banished, detail) =>
-                OfficeLedger.ReactToHolderCrimeOrBanishment(
-                    actorId, region, crimeKind, banished, checked((int)_time.Calendar.DayNumber),
-                    detail, _site.ActiveSite, _time.Calendar.MinuteNumber).Count);
+            {
+                int currentDay = checked((int)_time.Calendar.DayNumber);
+                long currentMinute = _time.Calendar.MinuteNumber;
+                string? holderFamilyId = _site.ActiveSite is { } activeSiteNow
+                    ? OfficeLedger.ResolveLocalOffices(activeSiteNow)
+                        .FirstOrDefault(o => o.HolderActorId == actorId && !string.IsNullOrWhiteSpace(o.FamilyId))?.FamilyId
+                    : null;
+                if (string.IsNullOrWhiteSpace(holderFamilyId)
+                    && OfficeHolders.ResolveRegionalRuler(region) is { ActorId: long rulerId, FamilyId: { Length: > 0 } rulerFamily }
+                    && rulerId == actorId)
+                {
+                    holderFamilyId = rulerFamily;
+                }
+                int removed = OfficeLedger.ReactToHolderCrimeOrBanishment(
+                    actorId, region, crimeKind, banished, currentDay,
+                    detail, _site.ActiveSite, currentMinute).Count;
+                if (removed > 0)
+                {
+                    SocialConsequences.ReactToHouseholdArrest(
+                        actorId,
+                        isHouseholdHead: true,
+                        _site.ActiveSite,
+                        currentMinute,
+                        dayOverride: currentDay,
+                        familyIdOverride: holderFamilyId,
+                        reason: detail);
+                }
+                return removed;
+            });
             Law.BindCrimeSpread((incident, loss) =>
             {
                 DaggerfallSiteRecord? origin = _site.ActiveSite;

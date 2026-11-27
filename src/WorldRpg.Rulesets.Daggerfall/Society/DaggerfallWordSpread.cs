@@ -941,6 +941,44 @@ internal sealed class DaggerfallWordSpread(
         return arrived;
     }
 
+    /// <summary>
+    /// Total unarrived attributed grudge/goodwill delta for a Great House or royal dynasty <paramref name="familyId"/>
+    /// at <paramref name="targetSite"/> by <paramref name="currentMinute"/>. Subtracting this from canonical persistent
+    /// household standing reconstructs what <paramref name="targetSite"/> has actually heard at courier pace while
+    /// allowing settled standing to persist permanently after wavefronts expire.
+    /// </summary>
+    internal int UnarrivedHouseholdStandingDelta(string? familyId, DaggerfallSiteRecord? targetSite, long currentMinute, int? currentDay = null)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || targetSite is null || _wavefronts.Count == 0)
+            return 0;
+
+        int unarrived = 0;
+        foreach (DaggerfallWordWavefrontSave wf in _wavefronts.Values)
+        {
+            if (wf.Kind != DaggerfallWordEventKind.HouseholdStanding
+                || wf.Delta == 0
+                || !string.Equals(wf.FamilyId, familyId, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (!EvaluateAt(wf, targetSite, currentMinute, currentDay).HasArrived)
+                unarrived += wf.Delta;
+        }
+        return unarrived;
+    }
+
+    /// <summary>Removes any pending <see cref="DaggerfallWordEventKind.HouseholdStanding"/> wavefronts for <paramref name="familyId"/>.</summary>
+    internal int ClearHouseholdWavefronts(string familyId)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || _wavefronts.Count == 0)
+            return 0;
+        List<string> toRemove = [.. _wavefronts.Values
+            .Where(wf => wf.Kind == DaggerfallWordEventKind.HouseholdStanding
+                && string.Equals(wf.FamilyId, familyId, StringComparison.OrdinalIgnoreCase))
+            .Select(wf => wf.EventId)];
+        foreach (string id in toRemove)
+            _wavefronts.Remove(id);
+        return toRemove.Count;
+    }
+
     /// <summary>Returns all news/standing wavefronts that have arrived at <paramref name="targetSite"/> (newest first).</summary>
     internal IReadOnlyList<DaggerfallWordWavefrontSave> ArrivedNewsAt(DaggerfallSiteRecord targetSite, long currentMinute, int? currentDay = null)
     {

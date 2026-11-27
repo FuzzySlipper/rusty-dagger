@@ -18,7 +18,13 @@ internal sealed record DaggerfallSocialTuning(
     double CourierSpeedPixelsPerHour = 2.1,
     double WarZoneCourierSpeedMultiplier = 0.35,
     double MonsterSurgeCourierSpeedMultiplier = 0.50,
-    double PlagueCourierSpeedMultiplier = 0.40)
+    double PlagueCourierSpeedMultiplier = 0.40,
+    int LocalGrudgeDecayDaysPerPoint = 15,
+    int GreatHouseGrudgeDecayDaysPerPoint = 30,
+    int DynastyGrudgeDecayDaysPerPoint = 60,
+    int KinArrestGrudgePenalty = -5,
+    int KinHeadArrestGrudgePenalty = -10,
+    int MourningDurationDays = 7)
 {
     internal static DaggerfallSocialTuning Default { get; } = new(0UL);
 
@@ -34,6 +40,18 @@ internal sealed record DaggerfallSocialTuning(
             throw new ArgumentOutOfRangeException(nameof(MonsterSurgeCourierSpeedMultiplier), "Monster-surge courier speed multiplier must be in (0, 1].");
         if (!double.IsFinite(PlagueCourierSpeedMultiplier) || PlagueCourierSpeedMultiplier is <= 0d or > 1d)
             throw new ArgumentOutOfRangeException(nameof(PlagueCourierSpeedMultiplier), "Plague courier speed multiplier must be in (0, 1].");
+        if (LocalGrudgeDecayDaysPerPoint <= 0)
+            throw new ArgumentOutOfRangeException(nameof(LocalGrudgeDecayDaysPerPoint), "Local grudge decay days per point must be positive.");
+        if (GreatHouseGrudgeDecayDaysPerPoint <= 0)
+            throw new ArgumentOutOfRangeException(nameof(GreatHouseGrudgeDecayDaysPerPoint), "Great House grudge decay days per point must be positive.");
+        if (DynastyGrudgeDecayDaysPerPoint <= 0)
+            throw new ArgumentOutOfRangeException(nameof(DynastyGrudgeDecayDaysPerPoint), "Royal dynasty grudge decay days per point must be positive.");
+        if (KinArrestGrudgePenalty is > 0 or < -14)
+            throw new ArgumentOutOfRangeException(nameof(KinArrestGrudgePenalty), "Kin arrest grudge penalty must be in [-14, 0].");
+        if (KinHeadArrestGrudgePenalty is > 0 or < -14)
+            throw new ArgumentOutOfRangeException(nameof(KinHeadArrestGrudgePenalty), "Kin head arrest grudge penalty must be in [-14, 0].");
+        if (MourningDurationDays < 0)
+            throw new ArgumentOutOfRangeException(nameof(MourningDurationDays), "Mourning duration days must be non-negative.");
         return this;
     }
 
@@ -59,7 +77,28 @@ internal sealed record DaggerfallSocialTuning(
         double plague = element.TryGetProperty("plagueCourierSpeedMultiplier", out JsonElement p)
             ? p.GetDouble()
             : 0.40;
-        return new DaggerfallSocialTuning(seed, bubble, speed, war, surge, plague).Validate();
+        int localDecay = element.TryGetProperty("localGrudgeDecayDaysPerPoint", out JsonElement ld)
+            ? ld.GetInt32()
+            : 15;
+        int houseDecay = element.TryGetProperty("greatHouseGrudgeDecayDaysPerPoint", out JsonElement hd)
+            ? hd.GetInt32()
+            : 30;
+        int dynastyDecay = element.TryGetProperty("dynastyGrudgeDecayDaysPerPoint", out JsonElement dd)
+            ? dd.GetInt32()
+            : 60;
+        int arrestPenalty = element.TryGetProperty("kinArrestGrudgePenalty", out JsonElement ap)
+            ? ap.GetInt32()
+            : -5;
+        int headArrestPenalty = element.TryGetProperty("kinHeadArrestGrudgePenalty", out JsonElement hap)
+            ? hap.GetInt32()
+            : -10;
+        int mourningDays = element.TryGetProperty("mourningDurationDays", out JsonElement md)
+            ? md.GetInt32()
+            : 7;
+        return new DaggerfallSocialTuning(
+            seed, bubble, speed, war, surge, plague,
+            localDecay, houseDecay, dynastyDecay,
+            arrestPenalty, headArrestPenalty, mourningDays).Validate();
     }
 }
 

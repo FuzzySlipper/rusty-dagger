@@ -365,6 +365,14 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
         int householdStanding = socialConsequences is not null && familyId is not null
             ? socialConsequences.HouseholdStandingDelta(familyId, site)
             : 0;
+        DaggerfallHouseholdSnapshot householdSnap = default;
+        bool hasHouseholdSnap = socialConsequences is not null
+            && familyId is not null
+            && socialConsequences.TryGetHouseholdSnapshot(familyId, out householdSnap);
+        int persistentHouseholdStanding = hasHouseholdSnap ? householdSnap.StandingDelta : 0;
+        bool feudActive = hasHouseholdSnap && householdSnap.FeudActive;
+        int? mourningUntilDay = hasHouseholdSnap ? householdSnap.MourningUntilDay : null;
+        int lastUpdatedDay = hasHouseholdSnap ? householdSnap.LastUpdatedDay : 0;
         bool inBloodFeud = npc is not null && introductions is not null && introductions.IsInBloodFeud(npc, site);
         if (socialState is not null && npc is not null)
         {
@@ -382,13 +390,21 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             w.WriteNumber("vouchBonus", reaction.VouchBonus);
             w.WriteNumber("total", reaction.Value);
             w.WriteNumber("householdStanding", householdStanding);
+            w.WriteNumber("persistentStandingDelta", persistentHouseholdStanding);
             w.WriteBoolean("inBloodFeud", inBloodFeud);
+            w.WriteBoolean("feudActive", feudActive);
+            if (mourningUntilDay is int mDay) w.WriteNumber("mourningUntilDay", mDay); else w.WriteNull("mourningUntilDay");
+            w.WriteNumber("lastUpdatedDay", lastUpdatedDay);
             w.WriteEndObject();
         }
         else
         {
             w.WriteNumber("householdStanding", householdStanding);
+            w.WriteNumber("persistentStandingDelta", persistentHouseholdStanding);
             w.WriteBoolean("inBloodFeud", inBloodFeud);
+            w.WriteBoolean("feudActive", feudActive);
+            if (mourningUntilDay is int mDay) w.WriteNumber("mourningUntilDay", mDay); else w.WriteNull("mourningUntilDay");
+            w.WriteNumber("lastUpdatedDay", lastUpdatedDay);
         }
 
         if (introductions is not null && npc is not null)

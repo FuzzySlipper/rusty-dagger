@@ -1,0 +1,408 @@
+using System.Numerics;
+using System.Text.Json;
+using Rusty.Engine;
+using Rusty.Engine.Debugging;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Crime;
+using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.World;
+using Xunit;
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
+namespace WorldRpg.Rulesets.Daggerfall.Tests;
+
+/// <summary>
+/// Den #11159: Persistent multi-tier household standings (local, Great House, royal dynasty),
+/// tier-scaled minor grudge decay with zero-byte self-pruning, non-decaying blood feuds,
+/// arrest/imprisonment grudges (ordinary kin vs. household/office head), and inspection surface fields.
+/// </summary>
+public sealed class HouseholdGrudgePersistenceAndDecayTests
+{
+    [Fact]
+    public void Great_house_and_royal_dynasty_standings_persist_past_word_spread_expiry_and_save_load_while_preserving_courier_arrival()
+    {
+        using var fixture = new MultiTierHouseholdFixture(random: RandomMinimum.Create());
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord originSite = session.Site.ActiveSite!;
+        DaggerfallSiteRecord distantSite = TestPayload.Definitions.Locations.Records
+            .First(r => r.Id != originSite.Id
+                && double.Hypot(r.MapPixelX - originSite.MapPixelX, r.MapPixelY - originSite.MapPixelY) is >= 30.0 and <= 80.0);
+
+        DaggerfallNpcSite originNpcSite = new(originSite.Id.Region, originSite.Name, "1/1/0", session.Sites.ActiveProfile.LogicalId);
+        const string greatHouse = "fam:house:r17:1";
+        const string royalDynasty = "fam:dynasty:daggerfall";
+
+        long houseVictimId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "t11159/house-victim", "Lord Cassian", greatHouse);
+        long dynastyVictimId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "t11159/dynasty-victim", "Prince Lhotun", royalDynasty);
+        long witnessId = AddNpcWithFamily(session, originSite.Id, originNpcSite, "t11159/witness", "Oren Watch", null);
+
+        fixture.Perception.Responder = _ => new PerceptionReadoutResult(
+            new[] { new PerceptionPair(checked((ulong)witnessId), DaggerfallActorIdentity.PlayerEntityId, 2.0, 1.0, PerceptionPairKind.Visible, 1.0) },
+            ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+        long t0Minute = session.Calendar.MinuteNumber;
+        int t0Day = checked((int)session.Calendar.DayNumber);
+
+        // 1. Witnessed murder of Great House noble -> -20 feud + mourning window.
+        ActorState houseVictim = session.State.Actors.Get(houseVictimId);
+        houseVictim.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        session.SocialConsequences.ReactToDeath(
+            new ActorDiedFact(houseVictimId, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 50, 50.0, 0, 0),
+            houseVictim,
+            minute: t0Minute);
+
+        // 2. Reported assault on royal dynasty member -> -10 minor grudge (not a blood feud).
+        DaggerfallCrimeIncidentSave dynastyAssault = new(
+            OperationId: "t11159:dynasty-assault:1",
+            Crime: DaggerfallCrimeKind.Assault,
+            Stage: DaggerfallCrimeStage.Completed,
+            PerpetratorActorId: DaggerfallActorIdentity.PlayerEntityId,
+            AffectedActorOrOwnerId: dynastyVictimId,
+            Region: originSite.Id.Region,
+            GameMinute: t0Minute,
+            TargetKind: DaggerfallCrimeTargetKind.Civilian,
+            Witnesses: new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [witnessId]),
+            GuildCredit: DaggerfallCrimeGuildCredit.None,
+            Reported: true);
+        session.SocialConsequences.ReactToAttributedCrime(dynastyAssault, originSite, t0Minute, victimFamilyId: royalDynasty);
+
+        // Immediate visibility at originSite; courier-delayed (0 / no feud) at distantSite!
+        Assert.Equal(DaggerfallSocialConsequences.KinMurderDispositionPenalty, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.True(session.SocialConsequences.IsFeudActiveAt(greatHouse, originSite));
+        Assert.Equal(DaggerfallSocialConsequences.KinAssaultDispositionPenalty, session.SocialConsequences.HouseholdStandingDelta(royalDynasty, originSite));
+        Assert.False(session.SocialConsequences.IsFeudActiveAt(royalDynasty, originSite));
+
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+        Assert.False(session.SocialConsequences.IsFeudActiveAt(greatHouse, distantSite));
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(royalDynasty, distantSite));
+
+        // Canonical persistent snapshots exist immediately for both Great House and royal dynasty.
+        Assert.True(session.SocialConsequences.TryGetHouseholdSnapshot(greatHouse, out DaggerfallHouseholdSnapshot houseSnap));
+        Assert.Equal(-20, houseSnap.StandingDelta);
+        Assert.True(houseSnap.FeudActive);
+        Assert.Equal(t0Day + DaggerfallSocialTuning.Default.MourningDurationDays, houseSnap.MourningUntilDay);
+        Assert.Equal(t0Day, houseSnap.LastUpdatedDay);
+
+        // 3. Advance 14 days -> courier arrives at distantSite!
+        session.AdvanceElapsedTime(14L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-20, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+        Assert.True(session.SocialConsequences.IsFeudActiveAt(greatHouse, distantSite));
+        Assert.Equal(-10, session.SocialConsequences.HouseholdStandingDelta(royalDynasty, distantSite));
+
+        // 4. Advance 35 more days (49 total, well past 30-day WordSpread.MaxRetainedWavefrontMinutes):
+        //    wavefronts prune out of WordSpread, YET Great House feud AND royal dynasty grudge persist cleanly!
+        session.AdvanceElapsedTime(35L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.DoesNotContain(session.WordSpread.Wavefronts, wf => wf.FamilyId is greatHouse or royalDynasty);
+
+        Assert.Equal(-20, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(-20, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+        Assert.True(session.SocialConsequences.IsFeudActiveAt(greatHouse, distantSite));
+        // Dynasty decay is 60 days/pt -> after 49 days it has not decayed yet (-10 still intact).
+        Assert.Equal(-10, session.SocialConsequences.HouseholdStandingDelta(royalDynasty, distantSite));
+        // Mourning window (7 days) expired cleanly after 49 days.
+        Assert.True(session.SocialConsequences.TryGetHouseholdSnapshot(greatHouse, out DaggerfallHouseholdSnapshot afterMourning));
+        Assert.Null(afterMourning.MourningUntilDay);
+        Assert.True(afterMourning.FeudActive);
+
+        // 5. Save/load preserves both multi-tier entries and writes zero entries for untouched households.
+        RulesetSavePayload saved = session.CaptureSave();
+        DaggerfallSavePayload raw = DaggerfallSavePayload.Read(saved);
+        Assert.Equal(2, raw.LocalHouseholds.Standings.Length);
+        Assert.Contains(raw.LocalHouseholds.Standings, s => s.FamilyId == greatHouse && s.StandingDelta == -20 && s.FeudActive);
+        Assert.Contains(raw.LocalHouseholds.Standings, s => s.FamilyId == royalDynasty && s.StandingDelta == -10 && !s.FeudActive);
+
+        using DaggerfallSession restored = fixture.Restore(saved);
+        Assert.Equal(-20, restored.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+        Assert.True(restored.SocialConsequences.IsFeudActiveAt(greatHouse, distantSite));
+        Assert.Equal(-10, restored.SocialConsequences.HouseholdStandingDelta(royalDynasty, distantSite));
+        Assert.False(restored.SocialConsequences.TryGetHouseholdSnapshot("fam:house:r17:0", out _));
+    }
+
+    [Fact]
+    public void Minor_grudges_decay_toward_zero_at_tier_rates_and_self_prune_while_blood_feuds_never_decay_from_time()
+    {
+        using var fixture = new MultiTierHouseholdFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        int startDay = checked((int)session.Calendar.DayNumber);
+        long startMinute = session.Calendar.MinuteNumber;
+
+        string localMinor = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 2, 0);
+        const string houseMinor = "fam:house:r17:0";
+        const string dynastyMinor = "fam:dynasty:wayrest";
+
+        string localFeud = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 2, 1);
+        const string houseFeud = "fam:house:r17:1";
+        const string dynastyFeud = "fam:dynasty:sentinel";
+
+        // Seed minor grudges (-3) and blood feuds (-15 / -20) across all three tiers.
+        session.SocialConsequences.SetHouseholdStanding(localMinor, -3, site, startMinute, startDay);
+        session.SocialConsequences.SetHouseholdStanding(houseMinor, -3, site, startMinute, startDay);
+        session.SocialConsequences.SetHouseholdStanding(dynastyMinor, -3, site, startMinute, startDay);
+
+        session.SocialConsequences.SetHouseholdStanding(localFeud, DaggerfallIntroductions.BloodFeudDispositionThreshold, site, startMinute, startDay);
+        session.SocialConsequences.SetHouseholdStanding(houseFeud, -20, site, startMinute, startDay);
+        session.SocialConsequences.SetHouseholdStanding(dynastyFeud, -20, site, startMinute, startDay);
+
+        // +15 days: local (15d/pt) decays -3 -> -2; Great House (30d/pt) & dynasty (60d/pt) unchanged.
+        session.AdvanceElapsedTime(15L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-2, session.SocialConsequences.HouseholdStandingDelta(localMinor, site));
+        Assert.Equal(-3, session.SocialConsequences.HouseholdStandingDelta(houseMinor, site));
+        Assert.Equal(-3, session.SocialConsequences.HouseholdStandingDelta(dynastyMinor, site));
+
+        // +15 more days (30 total): local -1, Great House -2, dynasty -3.
+        session.AdvanceElapsedTime(15L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-1, session.SocialConsequences.HouseholdStandingDelta(localMinor, site));
+        Assert.Equal(-2, session.SocialConsequences.HouseholdStandingDelta(houseMinor, site));
+        Assert.Equal(-3, session.SocialConsequences.HouseholdStandingDelta(dynastyMinor, site));
+
+        // +15 more days (45 total): local reaches 0 and self-prunes to zero save bytes!
+        session.AdvanceElapsedTime(15L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(localMinor, site));
+        Assert.False(session.SocialConsequences.TryGetHouseholdSnapshot(localMinor, out _));
+        Assert.Equal(-2, session.SocialConsequences.HouseholdStandingDelta(houseMinor, site));
+        Assert.Equal(-3, session.SocialConsequences.HouseholdStandingDelta(dynastyMinor, site));
+
+        // +15 more days (60 total): Great House -1, dynasty -2.
+        session.AdvanceElapsedTime(15L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-1, session.SocialConsequences.HouseholdStandingDelta(houseMinor, site));
+        Assert.Equal(-2, session.SocialConsequences.HouseholdStandingDelta(dynastyMinor, site));
+
+        // +365 more days (425 total): all minor grudges reach 0 and self-prune; ALL THREE blood feuds NEVER decay!
+        session.AdvanceElapsedTime(365L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.False(session.SocialConsequences.TryGetHouseholdSnapshot(localMinor, out _));
+        Assert.False(session.SocialConsequences.TryGetHouseholdSnapshot(houseMinor, out _));
+        Assert.False(session.SocialConsequences.TryGetHouseholdSnapshot(dynastyMinor, out _));
+
+        Assert.Equal(DaggerfallIntroductions.BloodFeudDispositionThreshold, session.SocialConsequences.HouseholdStandingDelta(localFeud, site));
+        Assert.True(session.SocialConsequences.IsFeudActiveAt(localFeud, site));
+        Assert.Equal(-20, session.SocialConsequences.HouseholdStandingDelta(houseFeud, site));
+        Assert.True(session.SocialConsequences.IsFeudActiveAt(houseFeud, site));
+        Assert.Equal(-20, session.SocialConsequences.HouseholdStandingDelta(dynastyFeud, site));
+        Assert.True(session.SocialConsequences.IsFeudActiveAt(dynastyFeud, site));
+
+        DaggerfallSavePayload raw = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.Equal(3, raw.LocalHouseholds.Standings.Length);
+        Assert.All(raw.LocalHouseholds.Standings, s => Assert.True(s.FeudActive));
+    }
+
+    [Fact]
+    public void Arrest_grudges_scale_for_member_vs_head_decay_over_time_never_open_blood_feud_and_wire_into_office_holder_conviction()
+    {
+        using var fixture = new MultiTierHouseholdFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/4/0", session.Sites.ActiveProfile.LogicalId);
+
+        string localMemberFamily = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 4, 0);
+        const string nobleHeadFamily = "fam:house:r17:2";
+
+        long ordinaryMemberId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/member", "Doran Mills", localMemberFamily);
+        long nobleHeadId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/head", "Baron Aldric", nobleHeadFamily);
+
+        long minute = session.Calendar.MinuteNumber;
+        int day = checked((int)session.Calendar.DayNumber);
+
+        // 1. Arresting an ordinary household member inflicts lighter decaying penalty (-5), not a blood feud.
+        int memberApplied = session.SocialConsequences.ReactToHouseholdArrest(
+            ordinaryMemberId, isHouseholdHead: false, site, minute, day, reason: "caught smuggling");
+        Assert.Equal(DaggerfallSocialTuning.Default.KinArrestGrudgePenalty, memberApplied);
+        Assert.Equal(-5, session.SocialConsequences.HouseholdStandingDelta(localMemberFamily, site));
+        Assert.False(session.SocialConsequences.IsFeudActiveAt(localMemberFamily, site));
+
+        // 2. Arresting a household/noble head inflicts a noticeably heavier (still decaying) penalty (-10), not a blood feud.
+        int headApplied = session.SocialConsequences.ReactToHouseholdArrest(
+            nobleHeadId, isHouseholdHead: true, site, minute + 1, day, reason: "conspiracy");
+        Assert.Equal(DaggerfallSocialTuning.Default.KinHeadArrestGrudgePenalty, headApplied);
+        Assert.True(headApplied < memberApplied);
+        Assert.Equal(-10, session.SocialConsequences.HouseholdStandingDelta(nobleHeadFamily, site));
+        Assert.False(session.SocialConsequences.IsFeudActiveAt(nobleHeadFamily, site));
+
+        // 3. Repeated arrests alone NEVER cross the -15 blood-feud threshold (capped at -14).
+        int secondArrest = session.SocialConsequences.ReactToHouseholdArrest(
+            nobleHeadId, isHouseholdHead: true, site, minute + 2, day, reason: "second warrant");
+        Assert.Equal(-4, secondArrest);
+        Assert.Equal(-14, session.SocialConsequences.HouseholdStandingDelta(nobleHeadFamily, site));
+        Assert.False(session.SocialConsequences.IsFeudActiveAt(nobleHeadFamily, site));
+
+        // 4. Both arrest grudges decay over time (local 15d/pt, Great House 30d/pt).
+        session.AdvanceElapsedTime(30L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-3, session.SocialConsequences.HouseholdStandingDelta(localMemberFamily, site));
+        Assert.Equal(-13, session.SocialConsequences.HouseholdStandingDelta(nobleHeadFamily, site));
+
+        // 5. Live office-holder conviction/banishment via DaggerfallLaw automatically fires a head arrest grudge (even when off-scene)!
+        using var guildFixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession liveSession = guildFixture.Start(guildFixture.ExteriorProfile);
+        DaggerfallSiteRecord charing = liveSession.Site.ActiveSite!;
+        DaggerfallLocalOffice officeWithFamily = liveSession.OfficeLedger.ResolveLocalOffices(charing)
+            .First(o => !o.IsVacant && o.HolderActorId is long && !string.IsNullOrWhiteSpace(o.FamilyId));
+        long holderId = officeWithFamily.HolderActorId!.Value;
+        string holderFamily = officeWithFamily.FamilyId!;
+
+        int deposed = liveSession.Law.ConvictOrBanishOfficeHolder(
+            holderId, charing.Id.Region, DaggerfallCrimeKind.CriminalConspiracy, banished: true, detail: "corruption uncovered");
+        Assert.True(deposed > 0);
+        Assert.Equal(DaggerfallSocialTuning.Default.KinHeadArrestGrudgePenalty,
+            liveSession.SocialConsequences.HouseholdStandingDelta(holderFamily, charing));
+        Assert.False(liveSession.SocialConsequences.IsFeudActiveAt(holderFamily, charing));
+    }
+
+    [Fact]
+    public void Inspection_surfaces_expose_persistent_standing_feud_mourning_and_last_updated_day_across_site_region_and_actor()
+    {
+        using var fixture = new MultiTierHouseholdFixture(random: RandomMinimum.Create());
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/5/0", session.Sites.ActiveProfile.LogicalId);
+
+        string localFamily = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 5, 0);
+        string regionGreatHouse = DaggerfallHouseholds.GreatHouseId(site.Id.Region, 0);
+
+        long victimId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/inspect-victim", "Tomas Reed", localFamily);
+        long livingKinId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/inspect-kin", "Mina Reed", localFamily);
+        long witnessId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/inspect-witness", "Garrick", null);
+
+        fixture.Perception.Responder = _ => new PerceptionReadoutResult(
+            new[] { new PerceptionPair(checked((ulong)witnessId), DaggerfallActorIdentity.PlayerEntityId, 2.0, 1.0, PerceptionPairKind.Visible, 1.0) },
+            ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+        int day = checked((int)session.Calendar.DayNumber);
+        long minute = session.Calendar.MinuteNumber;
+
+        // Witnessed murder on local household -> -20, feudActive=true, mourningUntilDay = day + 7.
+        ActorState victim = session.State.Actors.Get(victimId);
+        victim.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+        session.SocialConsequences.ReactToDeath(
+            new ActorDiedFact(victimId, DaggerfallActorIdentity.PlayerEntityId, DaggerfallDamageCause.PhysicalAttack, 50, 50.0, 0, 0),
+            victim,
+            minute);
+
+        IDeveloperSocialCommands socialCmds = session.Commands<IDeveloperSocialCommands>();
+        IDeveloperActorCommands actorCmds = session.Commands<IDeveloperActorCommands>();
+
+        // Set a Great House grudge via developer command (and verify reply fields).
+        DebugCommandResult setResult = socialCmds.SetHouseholdStanding(regionGreatHouse, -10);
+        Assert.Equal(DebugCommandStatus.Success, setResult.Status);
+        using (JsonDocument setDoc = JsonDocument.Parse(setResult.Message))
+        {
+            Assert.Equal(-10, setDoc.RootElement.GetProperty("persistentStandingDelta").GetInt32());
+            Assert.False(setDoc.RootElement.GetProperty("feudActive").GetBoolean());
+            Assert.Equal(JsonValueKind.Null, setDoc.RootElement.GetProperty("mourningUntilDay").ValueKind);
+            Assert.Equal(day, setDoc.RootElement.GetProperty("lastUpdatedDay").GetInt32());
+        }
+
+        // Verify social.site reports persistentStandingDelta, feudActive, mourningUntilDay, lastUpdatedDay.
+        DebugCommandResult siteResult = socialCmds.Site();
+        Assert.Equal(DebugCommandStatus.Success, siteResult.Status);
+        using (JsonDocument siteDoc = JsonDocument.Parse(siteResult.Message))
+        {
+            JsonElement localHouseholdJson = siteDoc.RootElement.GetProperty("households").EnumerateArray()
+                .Single(e => e.GetProperty("familyId").GetString() == localFamily);
+            Assert.Equal(-20, localHouseholdJson.GetProperty("standingDelta").GetInt32());
+            Assert.Equal(-20, localHouseholdJson.GetProperty("persistentStandingDelta").GetInt32());
+            Assert.True(localHouseholdJson.GetProperty("inBloodFeud").GetBoolean());
+            Assert.True(localHouseholdJson.GetProperty("feudActive").GetBoolean());
+            Assert.Equal(day + DaggerfallSocialTuning.Default.MourningDurationDays, localHouseholdJson.GetProperty("mourningUntilDay").GetInt32());
+            Assert.Equal(day, localHouseholdJson.GetProperty("lastUpdatedDay").GetInt32());
+
+            JsonElement localStandingJson = siteDoc.RootElement.GetProperty("localStandings").EnumerateArray()
+                .Single(e => e.GetProperty("familyId").GetString() == localFamily);
+            Assert.Equal(-20, localStandingJson.GetProperty("persistentStandingDelta").GetInt32());
+            Assert.True(localStandingJson.GetProperty("feudActive").GetBoolean());
+            Assert.Equal(day + DaggerfallSocialTuning.Default.MourningDurationDays, localStandingJson.GetProperty("mourningUntilDay").GetInt32());
+            Assert.Equal(day, localStandingJson.GetProperty("lastUpdatedDay").GetInt32());
+        }
+
+        // Verify social.region reports the Great House persistent fields.
+        DebugCommandResult regionResult = socialCmds.Region();
+        Assert.Equal(DebugCommandStatus.Success, regionResult.Status);
+        using (JsonDocument regionDoc = JsonDocument.Parse(regionResult.Message))
+        {
+            JsonElement houseJson = regionDoc.RootElement.GetProperty("greatHouses").EnumerateArray()
+                .Single(e => e.GetProperty("familyId").GetString() == regionGreatHouse);
+            Assert.Equal(-10, houseJson.GetProperty("arrivedStandingDelta").GetInt32());
+            Assert.Equal(-10, houseJson.GetProperty("persistentStandingDelta").GetInt32());
+            Assert.False(houseJson.GetProperty("inBloodFeud").GetBoolean());
+            Assert.False(houseJson.GetProperty("feudActive").GetBoolean());
+            Assert.Equal(JsonValueKind.Null, houseJson.GetProperty("mourningUntilDay").ValueKind);
+            Assert.Equal(day, houseJson.GetProperty("lastUpdatedDay").GetInt32());
+        }
+
+        // Verify actor.inspect reports persistentStandingDelta, feudActive, mourningUntilDay, lastUpdatedDay on living kin.
+        DebugCommandResult inspectResult = actorCmds.Inspect(livingKinId.ToString());
+        Assert.Equal(DebugCommandStatus.Success, inspectResult.Status);
+        using (JsonDocument actorDoc = JsonDocument.Parse(inspectResult.Message))
+        {
+            JsonElement reaction = actorDoc.RootElement.GetProperty("social").GetProperty("reaction");
+            Assert.Equal(-20, reaction.GetProperty("householdStanding").GetInt32());
+            Assert.Equal(-20, reaction.GetProperty("persistentStandingDelta").GetInt32());
+            Assert.True(reaction.GetProperty("inBloodFeud").GetBoolean());
+            Assert.True(reaction.GetProperty("feudActive").GetBoolean());
+            Assert.Equal(day + DaggerfallSocialTuning.Default.MourningDurationDays, reaction.GetProperty("mourningUntilDay").GetInt32());
+            Assert.Equal(day, reaction.GetProperty("lastUpdatedDay").GetInt32());
+        }
+    }
+
+    private static long AddNpcWithFamily(
+        DaggerfallSession session,
+        DaggerfallSiteId siteId,
+        DaggerfallNpcSite binding,
+        string slotId,
+        string displayName,
+        string? familyId)
+    {
+        DaggerfallWorldProfileKey profile = session.Sites.ActiveProfile;
+        string slotKey = $"{profile.LogicalId}/{slotId}";
+        long id = DaggerfallPeopleSlots.SeededSlotIdentity(siteId, slotKey);
+        DaggerfallNpcAppearance look = new("breton", "Male", 182, 0, Math.Abs(slotId.GetHashCode()), 0);
+        session.State.Npcs.RegisterDeterministic(
+            id, DaggerfallNpcKind.Static, slotId, binding, look, "person", ["talk"],
+            displayName: displayName, homeProfile: profile, familyId: familyId);
+        DaggerfallNpc npc = session.State.Npcs.Require(id);
+        WorldPoint pose = new(2, 0, -2);
+        session.Roster.MaterializeDeterministicCivilian(
+            npc,
+            ActorOrigin.Seeded(profile, slotId),
+            pose,
+            new ActorPose(pose, 0f),
+            Vector3.Zero,
+            familyId);
+        session.State.Npcs.Bind(id, profile);
+        return id;
+    }
+
+    private sealed class MultiTierHouseholdFixture : IDisposable
+    {
+        private readonly DaggerfallSiteProfile _profile;
+        private readonly List<string> _releases = [];
+        private readonly ContentFake _content;
+        private readonly SpatialFake _spatial;
+        private readonly IRandomService? _random;
+
+        internal PerceptionFake Perception { get; } = PerceptionFake.Create();
+        internal DaggerfallSession Session { get; }
+
+        internal MultiTierHouseholdFixture(IRandomService? random = null)
+        {
+            _random = random;
+            _profile = ReadInputs(TestData.RepositoryRoot);
+            _content = new ContentFake(_releases);
+            PopulateContent(_content, _profile);
+            _spatial = SpatialFake.Create(_profile.Geometry.Spatial[0].Sha256, _releases);
+            EngineContextFake engine = EngineContextFake.Create(_content, _spatial.Service, new AppearanceFake(_releases), Perception.Service, random: _random);
+            Session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, _profile, DaggerfallTuning.Defaults));
+        }
+
+        internal DaggerfallSession Restore(RulesetSavePayload save)
+        {
+            EngineContextFake engine = EngineContextFake.Create(_content, _spatial.Service, new AppearanceFake(_releases), Perception.Service, random: _random);
+            return DaggerfallSession.Restore(engine.Context, new(TestPayload.Definitions, _profile, DaggerfallTuning.Defaults), save);
+        }
+
+        public void Dispose() => Session.Dispose();
+    }
+}

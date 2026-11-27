@@ -160,6 +160,7 @@ internal sealed class DaggerfallIntroductions(
     private Func<DaggerfallNpc, bool>? _isHireableContact;
     private Func<long, DaggerfallSiteRecord?, int>? _effectiveDisposition;
     private Func<string?, DaggerfallSiteRecord?, int>? _householdStandingDelta;
+    private Func<string?, DaggerfallSiteRecord?, bool>? _isFeudActive;
     private Func<long, bool>? _isActorHostile;
 
     /// <summary>Binds the party-hire eligibility lookup so ordinary hireable companions/drivers appear in introduction dialogue.</summary>
@@ -176,10 +177,12 @@ internal sealed class DaggerfallIntroductions(
     /// </summary>
     internal void BindEffectiveDisposition(
         Func<long, DaggerfallSiteRecord?, int> effectiveDisposition,
-        Func<string?, DaggerfallSiteRecord?, int>? householdStandingDelta = null)
+        Func<string?, DaggerfallSiteRecord?, int>? householdStandingDelta = null,
+        Func<string?, DaggerfallSiteRecord?, bool>? isFeudActive = null)
     {
         _effectiveDisposition = effectiveDisposition ?? throw new ArgumentNullException(nameof(effectiveDisposition));
         _householdStandingDelta = householdStandingDelta;
+        _isFeudActive = isFeudActive;
     }
 
     /// <summary>Classifies a person's social prominence tier from their resolved faction, office, and castle context.</summary>
@@ -1584,7 +1587,11 @@ internal sealed class DaggerfallIntroductions(
 
     private bool IsInBloodFeudCore(string? familyId, DaggerfallSiteRecord? atSite)
     {
-        if (string.IsNullOrWhiteSpace(familyId) || _householdStandingDelta is null)
+        if (string.IsNullOrWhiteSpace(familyId))
+            return false;
+        if (_isFeudActive is not null)
+            return _isFeudActive(familyId, atSite);
+        if (_householdStandingDelta is null)
             return false;
         return _householdStandingDelta(familyId, atSite) <= BloodFeudDispositionThreshold;
     }
