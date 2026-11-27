@@ -262,4 +262,173 @@ public sealed class ProvincialNobilityTests
         Assert.Equal(heirId, restoredRuler.ActorId);
         Assert.NotNull(restored.OfficeLedger.TryGetExile(rulerId));
     }
+
+    [Fact]
+    public void Generated_ruler_death_and_actor_based_deposition_record_vacancies_and_seat_named_successors()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallProvincialNobleHouse glenpointHouse = definitions.ProvincialNobility.ByRegion[GlenpointRegion];
+        DaggerfallProvincialNobleHouse betonyHouse = definitions.ProvincialNobility.ByRegion[BetonyRegion];
+
+        DaggerfallSiteRecord capital = definitions.Locations.Records.Single(r => r.Id == glenpointHouse.SeatSite!.Value);
+        DaggerfallSiteBlock block = Assert.Single(capital.Exterior!.Blocks, b => b.SourceName == glenpointHouse.SeatBlock);
+        DaggerfallWorldProfileKey palaceKey = DaggerfallWorldProfileIds.Interior(
+            capital.Id, new DaggerfallSiteBuildingId(block.X, block.Y, glenpointHouse.SeatBuildingIndex!.Value));
+
+        DaggerfallSiteProfile palace = Assembled(palaceKey);
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(capital.Id));
+        DaggerfallSiteProfiles profiles = new([exterior, palace]);
+
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, palace);
+        SpatialFake spatial = SpatialFake.Create(palace.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, palace, DaggerfallTuning.Defaults)
+        {
+            Profiles = profiles,
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))),
+        };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.AdvanceElapsedTime(12 * 60 * 60);
+
+        List<DaggerfallOfficeChangedNotification> notifications = [];
+        session.OfficeLedger.OfficeChanged += notifications.Add;
+
+        // 1. Pre-death ordering: killing a non-ruler house member (Spouse) must NOT vacate the living ruler's throne.
+        DaggerfallProvincialNobleMember glenpointRuler = glenpointHouse.Members.Single(m => m.Role == DaggerfallProvincialNobleRole.Ruler);
+        DaggerfallProvincialNobleMember glenpointHeir = glenpointHouse.Members.Single(m => m.Role == DaggerfallProvincialNobleRole.Heir);
+        DaggerfallProvincialNobleMember glenpointSpouse = glenpointHouse.Members.Single(m => m.Role == DaggerfallProvincialNobleRole.Spouse);
+        long glenpointRulerId = DaggerfallPeopleSlots.CastIndividualIdentity(glenpointRuler.Cast.Id);
+        long glenpointHeirId = DaggerfallPeopleSlots.CastIndividualIdentity(glenpointHeir.Cast.Id);
+        long glenpointSpouseId = DaggerfallPeopleSlots.CastIndividualIdentity(glenpointSpouse.Cast.Id);
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            glenpointSpouseId,
+            ActorOrigin.Cast(glenpointSpouse.Cast.Id, palaceKey),
+            Location: ActorLocationOverride.Dead(palaceKey)));
+        Assert.Empty(session.OfficeLedger.ReactToDeath(
+            glenpointSpouseId,
+            checked((int)session.Calendar.DayNumber),
+            capital,
+            session.Calendar.MinuteNumber));
+        Assert.Equal(glenpointRuler.Cast.Id, session.OfficeHolders.ResolveRegionalRuler(GlenpointRegion)!.CastId);
+
+        // 2. Actual death of Glenpoint's generated ruler (R11156-1): ActorLedger marks Dead first, then ReactToDeath
+        //    must write a regional vacancy override rather than skipping straight to the next living member.
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            glenpointRulerId,
+            ActorOrigin.Cast(glenpointRuler.Cast.Id, palaceKey),
+            Location: ActorLocationOverride.Dead(palaceKey)));
+        IReadOnlyList<DaggerfallOfficeOverrideSave> deathOverrides = session.OfficeLedger.ReactToDeath(
+            glenpointRulerId,
+            checked((int)session.Calendar.DayNumber),
+            capital,
+            session.Calendar.MinuteNumber);
+        DaggerfallOfficeOverrideSave glenpointVacancy = Assert.Single(deathOverrides, o => o.OfficeRegion == GlenpointRegion);
+        Assert.True(glenpointVacancy.Vacant);
+        Assert.NotNull(glenpointVacancy.VacancyUntilMinute);
+        Assert.False(session.OfficeHolders.ResolveRegionalRuler(GlenpointRegion)!.HasLivingHolder);
+
+        // Advance past vacancy -> OfficeChanged fires and seats Glenpoint's named heir.
+        long minutesToGlenpointSuccession = glenpointVacancy.VacancyUntilMinute!.Value - session.Calendar.MinuteNumber + 1;
+        session.AdvanceElapsedTime(checked(minutesToGlenpointSuccession * 60L));
+        DaggerfallOfficeHolder seatedGlenpoint = session.OfficeHolders.ResolveRegionalRuler(GlenpointRegion)!;
+        Assert.True(seatedGlenpoint.HasLivingHolder);
+        Assert.Equal(glenpointHeir.Cast.Id, seatedGlenpoint.CastId);
+        Assert.Contains(notifications, n => n.ChangeKind == DaggerfallOfficeChangeKind.SuccessorSeated && n.Region == GlenpointRegion && n.NewHolderActorId == glenpointHeirId);
+
+        // 3. Actor-based deposition of Betony's generated ruler (R11156-1): DeposeActorOffices by actorId must match
+        //    Betony's generated ruler, write a regional vacancy + exile, and subsequently seat Betony's named heir.
+        DaggerfallProvincialNobleMember betonyRuler = betonyHouse.Members.Single(m => m.Role == DaggerfallProvincialNobleRole.Ruler);
+        DaggerfallProvincialNobleMember betonyHeir = betonyHouse.Members.Single(m => m.Role == DaggerfallProvincialNobleRole.Heir);
+        long betonyRulerId = DaggerfallPeopleSlots.CastIndividualIdentity(betonyRuler.Cast.Id);
+        IReadOnlyList<DaggerfallOfficeOverrideSave> deposed = session.OfficeLedger.DeposeActorOffices(
+            betonyRulerId,
+            DaggerfallOfficeChangeCause.Quest,
+            checked((int)session.Calendar.DayNumber),
+            "was deposed by court decree",
+            capital,
+            session.Calendar.MinuteNumber);
+        DaggerfallOfficeOverrideSave betonyVacancy = Assert.Single(deposed, o => o.OfficeRegion == BetonyRegion);
+        Assert.True(betonyVacancy.Vacant);
+        Assert.NotNull(session.OfficeLedger.TryGetExile(betonyRulerId));
+        Assert.False(session.OfficeHolders.ResolveRegionalRuler(BetonyRegion)!.HasLivingHolder);
+
+        long minutesToBetonySuccession = betonyVacancy.VacancyUntilMinute!.Value - session.Calendar.MinuteNumber + 1;
+        session.AdvanceElapsedTime(checked(minutesToBetonySuccession * 60L));
+        DaggerfallOfficeHolder seatedBetony = session.OfficeHolders.ResolveRegionalRuler(BetonyRegion)!;
+        Assert.True(seatedBetony.HasLivingHolder);
+        Assert.Equal(betonyHeir.Cast.Id, seatedBetony.CastId);
+    }
+
+    [Fact]
+    public void Relocation_and_cast_slot_targeting_distinguish_two_same_faction_provincial_nobles()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallProvincialNobleHouse glenpointHouse = definitions.ProvincialNobility.ByRegion[GlenpointRegion];
+        DaggerfallSiteRecord capital = definitions.Locations.Records.Single(r => r.Id == glenpointHouse.SeatSite!.Value);
+        DaggerfallSiteBlock block = Assert.Single(capital.Exterior!.Blocks, b => b.SourceName == glenpointHouse.SeatBlock);
+        DaggerfallWorldProfileKey palaceKey = DaggerfallWorldProfileIds.Interior(
+            capital.Id, new DaggerfallSiteBuildingId(block.X, block.Y, glenpointHouse.SeatBuildingIndex!.Value));
+
+        DaggerfallSiteProfile palace = Assembled(palaceKey);
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(capital.Id));
+        DaggerfallSiteProfiles profiles = new([exterior, palace]);
+
+        DaggerfallProvincialNobleMember ruler = glenpointHouse.Members.Single(m => m.Role == DaggerfallProvincialNobleRole.Ruler);
+        DaggerfallProvincialNobleMember heir = glenpointHouse.Members.Single(m => m.Role == DaggerfallProvincialNobleRole.Heir);
+        long rulerActorId = DaggerfallPeopleSlots.CastIndividualIdentity(ruler.Cast.Id);
+        long heirActorId = DaggerfallPeopleSlots.CastIndividualIdentity(heir.Cast.Id);
+        Assert.Equal(ruler.Cast.FactionId, heir.Cast.FactionId);
+
+        DaggerfallStaticNpcPlacement rulerSlot = Assert.Single(palace.StaticNpcs, s => s.CastId == ruler.Cast.Id);
+        DaggerfallStaticNpcPlacement heirSlot = Assert.Single(palace.StaticNpcs, s => s.CastId == heir.Cast.Id);
+        Assert.NotEqual(rulerSlot.Position, heirSlot.Position);
+
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        PopulateContent(content, palace);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, exterior, DaggerfallTuning.Defaults)
+        {
+            Profiles = profiles,
+            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))),
+        };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.AdvanceElapsedTime(12 * 60 * 60);
+
+        // 1. Place a relocated ledger entry for the SECOND same-faction noble (heir) returning to its home palace
+        //    with an explicit cast target slot ("cast:noble:r18:heir") AND verify it lands on heirSlot, not rulerSlot.
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            heirActorId,
+            ActorOrigin.Cast(heir.Cast.Id, palaceKey),
+            Location: ActorLocationOverride.AtSite(palaceKey, targetSlotId: $"cast:{heir.Cast.Id}")));
+
+        Assert.True(session.TryTransitionTo(palaceKey));
+        ActorState liveRuler = Assert.Single(session.State.Actors.All, a => a.DurableId == rulerActorId);
+        ActorState liveHeir = Assert.Single(session.State.Actors.All, a => a.DurableId == heirActorId);
+        Assert.Equal(rulerSlot.Position.X, liveRuler.Position.X, precision: 2);
+        Assert.Equal(rulerSlot.Position.Z, liveRuler.Position.Z, precision: 2);
+        Assert.Equal(heirSlot.Position.X, liveHeir.Position.X, precision: 2);
+        Assert.Equal(heirSlot.Position.Z, liveHeir.Position.Z, precision: 2);
+        Assert.NotEqual(liveRuler.Position, liveHeir.Position);
+
+        // 2. Also verify returning to the home palace WITHOUT an explicit TargetSlotId (home cast lookup)
+        //    still places the heir on heirSlot rather than overlapping the earlier same-faction ruler.
+        Assert.True(session.TryTransitionTo(exterior.ProfileKey));
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            heirActorId,
+            ActorOrigin.Cast(heir.Cast.Id, palaceKey),
+            Location: ActorLocationOverride.AtSite(palaceKey)));
+
+        Assert.True(session.TryTransitionTo(palaceKey));
+        ActorState returnedHeir = Assert.Single(session.State.Actors.All, a => a.DurableId == heirActorId);
+        Assert.Equal(heirSlot.Position.X, returnedHeir.Position.X, precision: 2);
+        Assert.Equal(heirSlot.Position.Z, returnedHeir.Position.Z, precision: 2);
+    }
 }

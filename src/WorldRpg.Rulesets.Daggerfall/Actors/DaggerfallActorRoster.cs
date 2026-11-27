@@ -1183,7 +1183,7 @@ internal sealed class DaggerfallActorRoster
                     ? castHome.Require() == profile.ProfileKey
                     : entry.Origin.CastId is { } castId
                       && _definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? castDef) && castDef is not null
-                      && profile.StaticNpcs.Any(s => string.Equals(s.CastId, castDef.Id, StringComparison.Ordinal) || s.Appearance.FactionId == castDef.FactionId))
+                      && TryFindCastPlacement(profile.StaticNpcs, castDef) is not null)
                     && string.IsNullOrWhiteSpace(entry.Location?.TargetSlotId),
                 _ => true,
             };
@@ -1382,6 +1382,39 @@ internal sealed class DaggerfallActorRoster
         return actor;
     }
 
+    private DaggerfallStaticNpcPlacement? TryFindCastPlacement(
+        IReadOnlyList<DaggerfallStaticNpcPlacement> placements,
+        DaggerfallCastIndividualDefinition cast)
+    {
+        foreach (DaggerfallStaticNpcPlacement placement in placements)
+        {
+            if (string.Equals(placement.CastId, cast.Id, StringComparison.Ordinal))
+                return placement;
+        }
+        string slotSuffix = $"cast-{cast.Id}";
+        foreach (DaggerfallStaticNpcPlacement placement in placements)
+        {
+            if (string.IsNullOrWhiteSpace(placement.CastId)
+                && placement.Id.Contains(slotSuffix, StringComparison.Ordinal))
+            {
+                return placement;
+            }
+        }
+        // Only fall back to FactionId when the faction uniquely identifies a classic Individual (type 4),
+        // never when multiple provincial nobles share a province faction (type 7).
+        if (cast.FactionId > 0
+            && _definitions.Factions.Factions.TryGetValue(cast.FactionId, out DaggerfallFactionDefinition? faction)
+            && faction.Type == 4)
+        {
+            foreach (DaggerfallStaticNpcPlacement placement in placements)
+            {
+                if (string.IsNullOrWhiteSpace(placement.CastId) && placement.Appearance.FactionId == cast.FactionId)
+                    return placement;
+            }
+        }
+        return null;
+    }
+
     private WorldPoint ResolveBaselineProfilePose(DaggerfallSiteProfile profile, ActorLedgerEntry entry, DaggerfallNpc npc)
     {
         if (entry.Location?.TargetSlotId is { Length: > 0 } targetSlot)
@@ -1393,15 +1426,10 @@ internal sealed class DaggerfallActorRoster
             if (targetSlot.StartsWith("cast:", StringComparison.Ordinal))
             {
                 string targetCastId = targetSlot["cast:".Length..];
-                if (_definitions.TryGetCastOrNoble(targetCastId, out DaggerfallCastIndividualDefinition? targetCast) && targetCast is not null)
+                if (_definitions.TryGetCastOrNoble(targetCastId, out DaggerfallCastIndividualDefinition? targetCast) && targetCast is not null
+                    && TryFindCastPlacement(profile.StaticNpcs, targetCast) is { } castPlacement)
                 {
-                    if (profile.StaticNpcs.FirstOrDefault(s =>
-                        string.Equals(s.CastId, targetCast.Id, StringComparison.Ordinal)
-                        || s.Appearance.FactionId == targetCast.FactionId
-                        || s.Id.Contains($"cast-{targetCastId}", StringComparison.Ordinal)) is { } castPlacement)
-                    {
-                        return castPlacement.Position;
-                    }
+                    return castPlacement.Position;
                 }
             }
         }
@@ -1417,10 +1445,7 @@ internal sealed class DaggerfallActorRoster
         if (entry.Origin.Kind == ActorOriginKind.CastIndividual
             && entry.Origin.CastId is { Length: > 0 } homeCastId
             && _definitions.TryGetCastOrNoble(homeCastId, out DaggerfallCastIndividualDefinition? homeCast) && homeCast is not null
-            && profile.StaticNpcs.FirstOrDefault(s =>
-                string.Equals(s.CastId, homeCast.Id, StringComparison.Ordinal)
-                || s.Appearance.FactionId == homeCast.FactionId
-                || s.Id.Contains($"cast-{homeCastId}", StringComparison.Ordinal)) is { } ownCastPlacement)
+            && TryFindCastPlacement(profile.StaticNpcs, homeCast) is { } ownCastPlacement)
         {
             return ownCastPlacement.Position;
         }

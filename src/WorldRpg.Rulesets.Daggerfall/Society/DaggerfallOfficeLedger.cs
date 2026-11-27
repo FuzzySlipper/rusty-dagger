@@ -2345,6 +2345,29 @@ internal sealed class DaggerfallOfficeLedger(
                     return false;
             }
         }
+        // Canon-seeded provincial noble house (#11156): match baseline generated rulers while preserving
+        // pre-death succession order when classic factions.json names no individual ruler ahead of them.
+        if (faction.Type == ProvinceFactionType
+            && faction.Region >= 0
+            && definitions.ProvincialNobility.TryGetProvinceHouse(faction.Region, out DaggerfallProvincialNobleHouse? house)
+            && house is not null
+            && !house.HasClassicCastRuler)
+        {
+            foreach (DaggerfallProvincialNobleMember member in house.Members)
+            {
+                long memberActorId = DaggerfallPeopleSlots.CastIndividualIdentity(member.Cast.Id);
+                if (memberActorId == deadActorId)
+                {
+                    slainCastId = member.Cast.Id;
+                    slainName = npcs.TryGet(deadActorId, out DaggerfallNpc? reg) && !string.IsNullOrWhiteSpace(reg?.DisplayName)
+                        ? reg.DisplayName
+                        : member.Cast.Name;
+                    return true;
+                }
+                if (!officeHolders.IsActorDead(memberActorId))
+                    return false;
+            }
+        }
         return false;
     }
 
