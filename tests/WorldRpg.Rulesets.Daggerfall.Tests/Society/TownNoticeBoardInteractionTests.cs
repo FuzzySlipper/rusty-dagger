@@ -50,10 +50,12 @@ public sealed class TownNoticeBoardInteractionTests
             && MathF.Abs(Quaternion.Dot(fact.Transform.Rotation, expectedRotation)) > 0.999f
             && fact.ShadowCasting == ShadowCasting.Cast);
 
-        // 3. Dedicated 3D mesh carries all 6 board parts (timber posts/frame, roof canopy, backboard, parchments, ink, wax seals),
-        //    rests on Y = 0, and winds every triangle counter-clockwise around its outward normal.
-        DaggerfallNoticeBoardMeshData mesh = DaggerfallSiteAppearance.BuildNoticeBoardMeshData();
+        // 3. Dedicated 3D mesh carries the wood (posts and frame, canopy, backboard) and one group for each kind of sheet
+        //    posted, rests on Y = 0, and winds every triangle counter-clockwise around its outward normal.
+        DaggerfallNoticeBoardMeshData mesh = DaggerfallSiteAppearance.BuildNoticeBoardMeshData(
+            [DaggerfallNoticeSheet.Bounty, DaggerfallNoticeSheet.Notice, DaggerfallNoticeSheet.Decree, DaggerfallNoticeSheet.Notice, DaggerfallNoticeSheet.Bounty]);
         Assert.Equal(6, mesh.Groups.Length);
+        Assert.Equal(3, DaggerfallSiteAppearance.BuildNoticeBoardMeshData([]).Groups.Length);
         Assert.All(mesh.Groups, group => Assert.True(group.Count > 0));
         Assert.InRange(mesh.BoundsMin.Y, -1e-4f, 1e-4f);
         Assert.InRange(mesh.BoundsMax.Y, 1.95f, 2.20f);

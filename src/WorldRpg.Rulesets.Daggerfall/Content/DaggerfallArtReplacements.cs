@@ -313,6 +313,13 @@ internal sealed record DaggerfallArtSprite(DaggerfallArtFile File, int Width, in
 /// </summary>
 internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 
+/// <summary>
+/// The notice board's art (#11138): the refreshed plank surfaces its frame, backboard and roof are made of, named by the
+/// classic records they refresh, and one sheet of parchment for each kind of posting.
+/// </summary>
+internal sealed record DaggerfallNoticeBoardArt((int Archive, int Record) Frame, (int Archive, int Record) Board, (int Archive, int Record) Roof,
+    DaggerfallArtFile Bounty, DaggerfallArtFile Decree, DaggerfallArtFile Notice);
+
 /// <summary>A coat of arms' art: the banner hung on palaces, gates and offices, and the shield the map's key shows.</summary>
 internal sealed record DaggerfallHeraldryArt(DaggerfallArtFile Banner, DaggerfallArtFile Shield);
 
@@ -383,6 +390,9 @@ internal sealed class DaggerfallArtReplacements
     /// <c>region:glenpoint</c>); rendered from it by <c>authoring/tools/heraldry/arms.py</c>.
     /// </summary>
     internal IReadOnlyDictionary<string, DaggerfallHeraldryArt> Heraldry { get; private init; } = new Dictionary<string, DaggerfallHeraldryArt>(StringComparer.Ordinal);
+
+    /// <summary>The notice board's wood and parchment (#11138), when the set has them.</summary>
+    internal DaggerfallNoticeBoardArt? NoticeBoard { get; private init; }
 
     /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
@@ -496,6 +506,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallSeaArt? sea = null;
         DaggerfallTravelMapArt? travelMap = null;
         Dictionary<string, DaggerfallHeraldryArt> heraldry = new(StringComparer.Ordinal);
+        DaggerfallNoticeBoardArt? noticeBoard = null;
         DaggerfallPeopleRig? peopleRig = null;
         DaggerfallSplatPeople? splatPeople = null;
         DaggerfallTitleScene? titleScene = null;
@@ -755,6 +766,13 @@ internal sealed class DaggerfallArtReplacements
             if (section.TryGetProperty("sea", out JsonElement seaArt))
                 sea = new(File(seaArt.GetProperty("shader"), "The sea's shader"), File(seaArt.GetProperty("ripples"), "The sea's ripple map"),
                     File(seaArt.GetProperty("foam"), "The sea's foam map"));
+            if (section.TryGetProperty("noticeBoard", out JsonElement board))
+            {
+                JsonElement wood = board.GetProperty("wood"), sheets = board.GetProperty("sheets");
+                (int, int) Record(string part) => (wood.GetProperty(part)[0].GetInt32(), wood.GetProperty(part)[1].GetInt32());
+                noticeBoard = new(Record("frame"), Record("board"), Record("roof"), File(sheets.GetProperty("bounty"), "The notice board's bounty sheet"),
+                    File(sheets.GetProperty("decree"), "The notice board's decree sheet"), File(sheets.GetProperty("notice"), "The notice board's notice sheet"));
+            }
             if (section.TryGetProperty("heraldry", out JsonElement arms))
                 foreach (JsonProperty coat in arms.EnumerateObject())
                     heraldry.Add(coat.Name, new(File(coat.Value.GetProperty("banner"), $"The banner of {coat.Name}"),
@@ -865,7 +883,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, scenery, people)
-        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, Heraldry = heraldry, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
+        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, Heraldry = heraldry, NoticeBoard = noticeBoard, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {

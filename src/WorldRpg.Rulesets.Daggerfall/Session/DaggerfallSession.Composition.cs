@@ -2041,6 +2041,31 @@ internal sealed partial class DaggerfallSession
         return art.Arms(State.Character.Identity.Gender, DaggerfallArmWearPolicy.Heaviest(worn));
     }
 
+    private readonly Dictionary<DaggerfallSiteId, IReadOnlyList<DaggerfallNoticeSheet>> _noticeSheets = [];
+    private long _noticeSheetsHour = -1;
+
+    /// <summary>
+    /// The sheets <paramref name="site"/>'s notice boards show: one for each posting, a wanted poster for a bounty, a
+    /// decree for a decree or an office's news, a plain notice for the rest. Read once a game hour, since postings change
+    /// with the board, the law and the couriers rather than from frame to frame.
+    /// </summary>
+    private IReadOnlyList<DaggerfallNoticeSheet> NoticeSheets(DaggerfallSiteId site)
+    {
+        long hour = _time.Calendar.MinuteNumber / 60;
+        if (hour != _noticeSheetsHour) { _noticeSheets.Clear(); _noticeSheetsHour = hour; }
+        if (_noticeSheets.TryGetValue(site, out IReadOnlyList<DaggerfallNoticeSheet>? cached)) return cached;
+        IReadOnlyList<DaggerfallNoticeSheet> sheets = NoticeBoard is not null && _site.TryFind(site, out DaggerfallSiteRecord record)
+            ? [.. NoticeBoard.BuildForSite(record, _time.Calendar.MinuteNumber).Entries.Select(entry => entry.Kind switch
+            {
+                DaggerfallNoticeEntryKind.Bounty => DaggerfallNoticeSheet.Bounty,
+                DaggerfallNoticeEntryKind.Decree or DaggerfallNoticeEntryKind.OfficeNotice => DaggerfallNoticeSheet.Decree,
+                _ => DaggerfallNoticeSheet.Notice,
+            })]
+            : [];
+        _noticeSheets[site] = sheets;
+        return sheets;
+    }
+
     /// <summary>Binds live session policy once whenever a site appearance is created.</summary>
     private void ConfigureSiteAppearance(DaggerfallSiteAppearance appearance)
     {
@@ -2054,6 +2079,9 @@ internal sealed partial class DaggerfallSession
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
         appearance.UseSurfaceRelief(_tuning.SurfaceRelief, () => (_controls.Settings.SurfaceRelief, _controls.Settings.ReliefDistance));
+        // A town's notice boards show a sheet for each posting it has now, in the art pack's wood and parchment (#11138).
+        appearance.UseNoticeBoards(_composition.ArtReplacements?.NoticeBoard, _composition.ArtReplacements?.Surfaces
+            ?? new Dictionary<(int Archive, int Record), DaggerfallArtSurface>(), NoticeSheets);
         // A town's banners show the arms its region shows now: its liege's, or its own (#11144).
         if (_composition.ArtReplacements is { } heraldry)
             appearance.UseBanners(heraldry.Heraldry, region => RealmArms.Of(region)?.Id);

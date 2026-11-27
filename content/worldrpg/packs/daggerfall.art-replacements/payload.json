@@ -146276,6 +146276,39 @@
      "sha256": "d27bed53ee6c44eced8ac811c1171df03d8317ee32d34be5549b14ad2a60b17d"
     }
    }
+  },
+  "noticeBoard": {
+   "wood": {
+    "frame": [
+     67,
+     3
+    ],
+    "board": [
+     67,
+     4
+    ],
+    "roof": [
+     67,
+     6
+    ]
+   },
+   "sheets": {
+    "bounty": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/notice-board/sheet-bounty.png",
+     "byteLength": 180505,
+     "sha256": "6c535776fbf759e0ecb84848aeca8c27918a9af0365f427fbfab942f76f8c0d0"
+    },
+    "decree": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/notice-board/sheet-decree.png",
+     "byteLength": 186469,
+     "sha256": "e00656c6d2632527762a6cd28bfdb8f3675dfb9f3199f903497ce6c949a583be"
+    },
+    "notice": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/notice-board/sheet-notice.png",
+     "byteLength": 153512,
+     "sha256": "a39657d31c0db1ebb70f9eb695bd6e07cabdf754dafdd4b0cd5fce33f56c65bf"
+    }
+   }
   }
  }
 }

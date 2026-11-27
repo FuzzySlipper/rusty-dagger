@@ -4,10 +4,13 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
+/// <summary>Which sheet of parchment a posting is pinned up as (#11138): a wanted poster, a decree, or a plain notice.</summary>
+internal enum DaggerfallNoticeSheet { Bounty = 0, Decree = 1, Notice = 2 }
+
 /// <summary>
-/// Built 3D geometry for the dedicated physical Town/Tavern Notice Board mesh (#11082):
-/// weathered oak posts &amp; frame, gabled rain canopy, warm timber backboard, pinned parchment notices
-/// (front and back faces), sepia ink lines, and crimson wax seals.
+/// Built 3D geometry for the Town/Tavern Notice Board (#11082, #11138): oak posts and frame, a gabled rain canopy, a
+/// timber backboard, and one sheet of parchment for each live posting, in the slots
+/// <see cref="DaggerfallSiteAppearance.NoticeSheetPlaces"/> gives, front first.
 /// </summary>
 internal readonly record struct DaggerfallNoticeBoardMeshData(
     Vector3[] Positions,
@@ -21,9 +24,9 @@ internal readonly record struct DaggerfallNoticeBoardMeshData(
     internal const uint TimberFrameSlot = 0;
     internal const uint RoofCanopySlot = 1;
     internal const uint BackboardSlot = 2;
-    internal const uint ParchmentSlot = 3;
-    internal const uint InkLinesSlot = 4;
-    internal const uint WaxSealSlot = 5;
+
+    /// <summary>The slot of a sheet of <paramref name="sheet"/>: one per kind, after the wood.</summary>
+    internal static uint SheetSlot(DaggerfallNoticeSheet sheet) => 3 + (uint)sheet;
 
     internal const float BackboardMinY = 0.95f;
     internal const float BackboardMaxY = 1.74f;
@@ -31,61 +34,60 @@ internal readonly record struct DaggerfallNoticeBoardMeshData(
 
 internal sealed partial class DaggerfallSiteAppearance
 {
+    /// <summary>The most sheets a board shows: four on its face and two on its back.</summary>
+    internal const int MaxNoticeSheets = 6;
+
+    /// <summary>Where each sheet is pinned, in the order they fill: centre, size and tilt, and whether on the front face.</summary>
+    internal static readonly (float X, float Y, float Width, float Height, float Tilt, bool Front)[] NoticeSheetPlaces =
+    [
+        (-0.24f, 1.48f, 0.27f, 0.36f, 2.4f, true),
+        (0.23f, 1.47f, 0.26f, 0.34f, -2.8f, true),
+        (-0.22f, 1.14f, 0.24f, 0.32f, -1.9f, true),
+        (0.21f, 1.13f, 0.25f, 0.33f, 2.1f, true),
+        (-0.18f, 1.36f, 0.27f, 0.36f, -2.0f, false),
+        (0.20f, 1.30f, 0.25f, 0.33f, 2.5f, false),
+    ];
+
     private readonly List<(DaggerfallSiteNoticeBoard Definition, ulong Ordinal)> noticeBoards = [];
     private readonly List<IDisposable> noticeBoardResources = [];
-    private Appearance? noticeBoardAppearance;
+    private readonly Dictionary<string, Appearance> noticeBoardMeshes = new(StringComparer.Ordinal);
+    private MeshMaterialBinding[]? noticeBoardBindings;
+    private DaggerfallNoticeBoardArt? noticeBoardArt;
+    private IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> noticeBoardSurfaces = new Dictionary<(int, int), DaggerfallArtSurface>();
+    private Func<DaggerfallSiteId, IReadOnlyList<DaggerfallNoticeSheet>> noticeSheets = _ => [];
 
     /// <summary>
-    /// Admits one shared 3D Notice Board mesh appearance for every physical <see cref="DaggerfallSiteNoticeBoard"/>
-    /// assembled into <paramref name="inputs"/>. Sites without notice boards allocate zero Engine resources.
+    /// Draws the notice boards in the art pack's wood and parchment (<paramref name="art"/> and the
+    /// <paramref name="surfaces"/> its wood names; flat colours without it), each with the sheets
+    /// <paramref name="sheets"/> says its site posts now, read as the location's facts are drawn.
     /// </summary>
+    internal void UseNoticeBoards(DaggerfallNoticeBoardArt? art, IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces,
+        Func<DaggerfallSiteId, IReadOnlyList<DaggerfallNoticeSheet>> sheets)
+    {
+        noticeBoardArt = art;
+        noticeBoardSurfaces = surfaces ?? throw new ArgumentNullException(nameof(surfaces));
+        noticeSheets = sheets ?? throw new ArgumentNullException(nameof(sheets));
+    }
+
+    /// <summary>Admits the site's notice boards; their meshes are made when first drawn, one for each sheet layout.</summary>
     private void AdmitNoticeBoards(DaggerfallSiteProfile inputs)
     {
-        if (inputs.NoticeBoards.Count == 0)
-            return;
-
-        DaggerfallNoticeBoardMeshData data = BuildNoticeBoardMeshData();
-        Material timber = CreateNoticeBoardMaterial(0.24f, 0.16f, 0.10f, 0.90f);
-        Material roof = CreateNoticeBoardMaterial(0.16f, 0.11f, 0.08f, 0.92f);
-        Material backboard = CreateNoticeBoardMaterial(0.41f, 0.28f, 0.17f, 0.88f);
-        Material parchment = CreateNoticeBoardMaterial(0.86f, 0.79f, 0.62f, 0.82f);
-        Material ink = CreateNoticeBoardMaterial(0.21f, 0.15f, 0.10f, 0.90f);
-        Material wax = CreateNoticeBoardMaterial(0.64f, 0.13f, 0.11f, 0.42f);
-
-        MeshMaterialBinding[] bindings =
-        [
-            new(DaggerfallNoticeBoardMeshData.TimberFrameSlot, timber),
-            new(DaggerfallNoticeBoardMeshData.RoofCanopySlot, roof),
-            new(DaggerfallNoticeBoardMeshData.BackboardSlot, backboard),
-            new(DaggerfallNoticeBoardMeshData.ParchmentSlot, parchment),
-            new(DaggerfallNoticeBoardMeshData.InkLinesSlot, ink),
-            new(DaggerfallNoticeBoardMeshData.WaxSealSlot, wax),
-        ];
-
-        MeshResource mesh = appearance.CreateMeshResource(new MeshResourceCreateRequest(
-            data.Positions, data.Normals, data.Uvs, data.Indices, data.Groups, bindings));
-        noticeBoardResources.Add(mesh);
-        noticeBoardAppearance = appearance.CreateMeshAppearance(mesh);
-        noticeBoardResources.Add(noticeBoardAppearance);
-
         foreach (DaggerfallSiteNoticeBoard board in inputs.NoticeBoards)
             noticeBoards.Add((board, NextLocationVisualOrdinal()));
     }
 
-    private Material CreateNoticeBoardMaterial(float r, float g, float b, float roughness)
-    {
-        Material created = appearance.CreateMaterial(
-            new MaterialRequest(Color.FromSrgb(r, g, b), default(RenderResourceReference), roughness,
-                new Color(1f, 1f, 1f, 1f), Vector3.Zero, 0f, false) with { FlatShading = true });
-        noticeBoardResources.Add(created);
-        return created;
-    }
+    /// <summary>The sheets this site's boards show now: its live postings', at most <see cref="MaxNoticeSheets"/>.</summary>
+    internal IReadOnlyList<DaggerfallNoticeSheet> NoticeSheetsShown =>
+        inputs.Site is { } site ? [.. noticeSheets(site).Take(MaxNoticeSheets)] : [];
 
     private void AppendNoticeBoardFacts(List<AppearanceFact> facts, int slot)
     {
-        if (noticeBoardAppearance is not { } mesh || noticeBoards.Count == 0)
+        if (noticeBoards.Count == 0)
             return;
-
+        IReadOnlyList<DaggerfallNoticeSheet> sheets = NoticeSheetsShown;
+        string layout = string.Join(',', sheets.Select(sheet => (int)sheet));
+        if (!noticeBoardMeshes.TryGetValue(layout, out Appearance? mesh))
+            noticeBoardMeshes.Add(layout, mesh = CreateNoticeBoardMesh(sheets));
         foreach ((DaggerfallSiteNoticeBoard board, ulong ordinal) in noticeBoards)
         {
             Transform localPose = new(board.Position.ToVector(), NoticeBoardRotation(board.SurfaceNormal), Vector3.One);
@@ -101,12 +103,65 @@ internal sealed partial class DaggerfallSiteAppearance
         }
     }
 
+    private Appearance CreateNoticeBoardMesh(IReadOnlyList<DaggerfallNoticeSheet> sheets)
+    {
+        noticeBoardBindings ??= NoticeBoardBindings();
+        DaggerfallNoticeBoardMeshData data = BuildNoticeBoardMeshData(sheets);
+        MeshResource resource = appearance.CreateMeshResource(new MeshResourceCreateRequest(
+            data.Positions, data.Normals, data.Uvs, data.Indices, data.Groups, noticeBoardBindings));
+        noticeBoardResources.Add(resource);
+        Appearance shown = appearance.CreateMeshAppearance(resource);
+        noticeBoardResources.Add(shown);
+        return shown;
+    }
+
+    /// <summary>The board's materials: the art pack's planks and sheets where the set has them, else flat colours.</summary>
+    private MeshMaterialBinding[] NoticeBoardBindings()
+    {
+        Material Wood((int Archive, int Record) record, float r, float g, float b) =>
+            noticeBoardArt is not null && noticeBoardSurfaces.TryGetValue(record, out DaggerfallArtSurface? surface)
+                ? NoticeBoardTexture(surface.File, TextureWrap.Repeat, .9f)
+                : NoticeBoardColour(r, g, b, .9f);
+        Material Sheet(DaggerfallArtFile? file) => file is not null
+            ? NoticeBoardTexture(file, TextureWrap.Clamp, .85f)
+            : NoticeBoardColour(0.86f, 0.79f, 0.62f, .82f);
+        DaggerfallNoticeBoardArt? art = noticeBoardArt;
+        return
+        [
+            new(DaggerfallNoticeBoardMeshData.TimberFrameSlot, Wood(art?.Frame ?? default, 0.24f, 0.16f, 0.10f)),
+            new(DaggerfallNoticeBoardMeshData.RoofCanopySlot, Wood(art?.Roof ?? default, 0.16f, 0.11f, 0.08f)),
+            new(DaggerfallNoticeBoardMeshData.BackboardSlot, Wood(art?.Board ?? default, 0.41f, 0.28f, 0.17f)),
+            new(DaggerfallNoticeBoardMeshData.SheetSlot(DaggerfallNoticeSheet.Bounty), Sheet(art?.Bounty)),
+            new(DaggerfallNoticeBoardMeshData.SheetSlot(DaggerfallNoticeSheet.Decree), Sheet(art?.Decree)),
+            new(DaggerfallNoticeBoardMeshData.SheetSlot(DaggerfallNoticeSheet.Notice), Sheet(art?.Notice)),
+        ];
+    }
+
+    private Material NoticeBoardTexture(DaggerfallArtFile file, TextureWrap wrap, float roughness)
+    {
+        RenderResourceInfo texture = appearance.OpenTexture(content, file.Path, file.Sha256, TextureFilter.Linear, wrap);
+        Material created = appearance.CreateMaterial(new MaterialRequest(new Color(1f, 1f, 1f, 1f), new RenderResourceReference(texture.Handle),
+            roughness, new Color(1f, 1f, 1f, 1f), Vector3.Zero, 0f, false));
+        noticeBoardResources.Add(created);
+        return created;
+    }
+
+    private Material NoticeBoardColour(float r, float g, float b, float roughness)
+    {
+        Material created = appearance.CreateMaterial(
+            new MaterialRequest(Color.FromSrgb(r, g, b), default(RenderResourceReference), roughness,
+                new Color(1f, 1f, 1f, 1f), Vector3.Zero, 0f, false) with { FlatShading = true });
+        noticeBoardResources.Add(created);
+        return created;
+    }
+
     private IEnumerable<IDisposable> TakeNoticeBoardResources()
     {
         List<IDisposable> retired = [.. noticeBoardResources.AsEnumerable().Reverse()];
         noticeBoardResources.Clear();
         noticeBoards.Clear();
-        noticeBoardAppearance = null;
+        noticeBoardMeshes.Clear();
+        noticeBoardBindings = null;
         return retired;
     }
 
@@ -122,18 +177,17 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>
-    /// Builds the dedicated 3D Town/Tavern Notice Board mesh in local space: grounded on <c>Y = 0</c>,
-    /// ~1.48 m wide across <c>X</c>, ~2.08 m tall along <c>Y</c>, front posted face oriented along <c>+Z</c>.
-    /// Every triangle is wound counter-clockwise around its outward normal.
+    /// Builds the Town/Tavern Notice Board mesh in local space: grounded on <c>Y = 0</c>, ~1.48 m wide across <c>X</c>,
+    /// ~2.08 m tall along <c>Y</c>, its front face along <c>+Z</c>, with one sheet for each of <paramref name="sheets"/>
+    /// (at most <see cref="MaxNoticeSheets"/>) in its slot's group. Every triangle is wound counter-clockwise around its
+    /// outward normal, and a sheet's image stands upright on its face.
     /// </summary>
-    internal static DaggerfallNoticeBoardMeshData BuildNoticeBoardMeshData()
+    internal static DaggerfallNoticeBoardMeshData BuildNoticeBoardMeshData(IReadOnlyList<DaggerfallNoticeSheet> sheets)
     {
         var timber = new NoticeBoardPartBuilder();
         var roof = new NoticeBoardPartBuilder();
         var backboard = new NoticeBoardPartBuilder();
-        var parchment = new NoticeBoardPartBuilder();
-        var ink = new NoticeBoardPartBuilder();
-        var wax = new NoticeBoardPartBuilder();
+        NoticeBoardPartBuilder[] pinned = [new(), new(), new()];
 
         // 1. Weathered oak posts, grounded base plinths, frame rails, and lower cross-brace.
         timber.AddBox(new(-0.64f, 0.00f, -0.06f), new(-0.53f, 1.92f, 0.06f)); // Left upright post
@@ -147,29 +201,24 @@ internal sealed partial class DaggerfallSiteAppearance
         // 2. Pitched gabled wooden rain canopy overhanging the board.
         AddGabledRoof(roof, halfWidth: 0.74f, ridgeY: 2.08f, eaveY: 1.87f, eaveZ: 0.24f, thickness: 0.055f);
 
-        // 3. Warm wooden backboard panel between the posts and rails.
+        // 3. Timber backboard panel between the posts and rails.
         backboard.AddBox(
             new(-0.53f, DaggerfallNoticeBoardMeshData.BackboardMinY, -0.032f),
             new(0.53f, DaggerfallNoticeBoardMeshData.BackboardMaxY, 0.032f));
 
-        // 4. Pinned parchment notices with sepia ink text lines and crimson wax seals (front +Z face).
-        AddPostedSheet(parchment, ink, wax, centerX: -0.24f, centerY: 1.51f, width: 0.34f, height: 0.27f, tiltDegrees: 2.4f, frontFace: true, inkRows: 3);
-        AddPostedSheet(parchment, ink, wax, centerX: 0.23f, centerY: 1.48f, width: 0.28f, height: 0.33f, tiltDegrees: -2.8f, frontFace: true, inkRows: 4);
-        AddPostedSheet(parchment, ink, wax, centerX: -0.22f, centerY: 1.15f, width: 0.29f, height: 0.24f, tiltDegrees: -1.9f, frontFace: true, inkRows: 3);
-        AddPostedSheet(parchment, ink, wax, centerX: 0.21f, centerY: 1.14f, width: 0.32f, height: 0.22f, tiltDegrees: 2.1f, frontFace: true, inkRows: 2);
+        // 4. One sheet of parchment for each live posting, front face first.
+        for (int index = 0; index < Math.Min(sheets.Count, MaxNoticeSheets); index++)
+        {
+            (float x, float y, float width, float height, float tilt, bool front) = NoticeSheetPlaces[index];
+            AddSheet(pinned[(int)sheets[index]], x, y, width, height, tilt, front);
+        }
 
-        // 5. Two pinned notices on the back (-Z) face so the prop reads as a notice board from every angle.
-        AddPostedSheet(parchment, ink, wax, centerX: -0.18f, centerY: 1.40f, width: 0.30f, height: 0.28f, tiltDegrees: -2.0f, frontFace: false, inkRows: 3);
-        AddPostedSheet(parchment, ink, wax, centerX: 0.20f, centerY: 1.28f, width: 0.28f, height: 0.25f, tiltDegrees: 2.5f, frontFace: false, inkRows: 2);
-
-        (uint Slot, NoticeBoardPartBuilder Part)[] parts =
+        List<(uint Slot, NoticeBoardPartBuilder Part)> parts =
         [
             (DaggerfallNoticeBoardMeshData.TimberFrameSlot, timber),
             (DaggerfallNoticeBoardMeshData.RoofCanopySlot, roof),
             (DaggerfallNoticeBoardMeshData.BackboardSlot, backboard),
-            (DaggerfallNoticeBoardMeshData.ParchmentSlot, parchment),
-            (DaggerfallNoticeBoardMeshData.InkLinesSlot, ink),
-            (DaggerfallNoticeBoardMeshData.WaxSealSlot, wax),
+            .. Enum.GetValues<DaggerfallNoticeSheet>().Select(sheet => (DaggerfallNoticeBoardMeshData.SheetSlot(sheet), pinned[(int)sheet])),
         ];
 
         List<Vector3> positions = [];
@@ -180,6 +229,7 @@ internal sealed partial class DaggerfallSiteAppearance
 
         foreach ((uint slot, NoticeBoardPartBuilder part) in parts)
         {
+            if (part.Indices.Count == 0) continue;
             uint firstIndex = (uint)indices.Count;
             uint vertexBase = (uint)positions.Count;
             positions.AddRange(part.Positions);
@@ -198,14 +248,22 @@ internal sealed partial class DaggerfallSiteAppearance
             max = Vector3.Max(max, p);
         }
 
-        return new DaggerfallNoticeBoardMeshData(
-            [.. positions],
-            [.. normals],
-            [.. uvs],
-            [.. indices],
-            [.. groups],
-            min,
-            max);
+        return new DaggerfallNoticeBoardMeshData([.. positions], [.. normals], [.. uvs], [.. indices], [.. groups], min, max);
+    }
+
+    /// <summary>
+    /// One sheet pinned flat to the board, a little proud of it, tilted by <paramref name="tiltDegrees"/>: a single face
+    /// out from the board, its image's top (<c>v = 0</c>) up and its left on the viewer's left.
+    /// </summary>
+    private static void AddSheet(NoticeBoardPartBuilder sheet, float centerX, float centerY, float width, float height, float tiltDegrees, bool front)
+    {
+        float sign = front ? 1f : -1f, z = 0.036f * sign;
+        float radians = tiltDegrees * MathF.PI / 180f, cos = MathF.Cos(radians), sin = MathF.Sin(radians);
+        Vector3 At(float lx, float ly) => new(centerX + lx * cos - ly * sin, centerY + lx * sin + ly * cos, z);
+        // Seen from its own side, the viewer's left is -X on the front face and +X on the back.
+        float left = -width * 0.5f * sign, right = width * 0.5f * sign;
+        sheet.AddFace([At(left, -height * 0.5f), At(right, -height * 0.5f), At(right, height * 0.5f), At(left, height * 0.5f)],
+            Vector3.UnitZ * sign, [new(0f, 1f), new(1f, 1f), new(1f, 0f), new(0f, 0f)]);
     }
 
     private static void AddGabledRoof(
@@ -256,90 +314,6 @@ internal sealed partial class DaggerfallSiteAppearance
         builder.AddQuad(t10, b10, b11, t11, Vector3.UnitX);  // Right gable end
     }
 
-    private static void AddPostedSheet(
-        NoticeBoardPartBuilder parchment,
-        NoticeBoardPartBuilder ink,
-        NoticeBoardPartBuilder wax,
-        float centerX,
-        float centerY,
-        float width,
-        float height,
-        float tiltDegrees,
-        bool frontFace,
-        int inkRows)
-    {
-        float sign = frontFace ? 1f : -1f;
-        float boardSurfaceZ = 0.032f * sign;
-        float sheetOuterZ = 0.041f * sign;
-        float zMin = MathF.Min(boardSurfaceZ, sheetOuterZ);
-        float zMax = MathF.Max(boardSurfaceZ, sheetOuterZ);
-
-        float radians = tiltDegrees * MathF.PI / 180f;
-        float cos = MathF.Cos(radians);
-        float sin = MathF.Sin(radians);
-        Vector3 TransformLocal(float lx, float ly, float z) => new(
-            centerX + (lx * cos) - (ly * sin),
-            centerY + (lx * sin) + (ly * cos),
-            z);
-
-        // Parchment sheet body.
-        AddRotatedPlate(parchment, TransformLocal, -width * 0.5f, width * 0.5f, -height * 0.5f, height * 0.5f, zMin, zMax);
-
-        // Sepia ink heading & text bars proud of the parchment surface.
-        float inkZ0 = sheetOuterZ;
-        float inkZ1 = sheetOuterZ + (0.0025f * sign);
-        float inkMinZ = MathF.Min(inkZ0, inkZ1);
-        float inkMaxZ = MathF.Max(inkZ0, inkZ1);
-        float marginX = width * 0.14f;
-        float topY = (height * 0.5f) - (height * 0.24f);
-        float stepY = (height * 0.56f) / Math.Max(inkRows, 1);
-        for (int row = 0; row < inkRows; row++)
-        {
-            float rowY = topY - (row * stepY);
-            float lineHalfH = row == 0 ? 0.011f : 0.007f;
-            float rightTrim = row == inkRows - 1 ? width * 0.24f : marginX;
-            AddRotatedPlate(ink, TransformLocal, (-width * 0.5f) + marginX, (width * 0.5f) - rightTrim,
-                rowY - lineHalfH, rowY + lineHalfH, inkMinZ, inkMaxZ);
-        }
-
-        // Crimson wax seal / tack near the top center of the posted notice.
-        float sealHalf = 0.019f;
-        float sealY = (height * 0.5f) - 0.032f;
-        float sealZ0 = sheetOuterZ;
-        float sealZ1 = sheetOuterZ + (0.006f * sign);
-        AddRotatedPlate(wax, TransformLocal, -sealHalf, sealHalf, sealY - sealHalf, sealY + sealHalf,
-            MathF.Min(sealZ0, sealZ1), MathF.Max(sealZ0, sealZ1));
-    }
-
-    private static void AddRotatedPlate(
-        NoticeBoardPartBuilder builder,
-        Func<float, float, float, Vector3> map,
-        float lx0,
-        float lx1,
-        float ly0,
-        float ly1,
-        float zMin,
-        float zMax)
-    {
-        Vector3 f00 = map(lx0, ly0, zMax);
-        Vector3 f10 = map(lx1, ly0, zMax);
-        Vector3 f11 = map(lx1, ly1, zMax);
-        Vector3 f01 = map(lx0, ly1, zMax);
-
-        Vector3 b00 = map(lx0, ly0, zMin);
-        Vector3 b10 = map(lx1, ly0, zMin);
-        Vector3 b11 = map(lx1, ly1, zMin);
-        Vector3 b01 = map(lx0, ly1, zMin);
-
-        Vector3 right = Vector3.Normalize(f10 - f00);
-        Vector3 up = Vector3.Normalize(f01 - f00);
-        builder.AddQuad(f00, f10, f11, f01, Vector3.UnitZ);  // +Z face
-        builder.AddQuad(b10, b00, b01, b11, -Vector3.UnitZ); // -Z face
-        builder.AddQuad(f01, f11, b11, b01, up);             // Top edge
-        builder.AddQuad(b00, b10, f10, f00, -up);            // Bottom edge
-        builder.AddQuad(f10, b10, b11, f11, right);          // Right edge
-        builder.AddQuad(b00, f00, f01, b01, -right);         // Left edge
-    }
 
     private sealed class NoticeBoardPartBuilder
     {
@@ -365,6 +339,16 @@ internal sealed partial class DaggerfallSiteAppearance
             AddQuad(p000, p001, p011, p010, -Vector3.UnitX);  // -X
             AddQuad(p011, p111, p110, p010, Vector3.UnitY);   // +Y
             AddQuad(p000, p100, p101, p001, -Vector3.UnitY);  // -Y
+        }
+
+        /// <summary>One quad with its own texture coordinates, given counter-clockwise about <paramref name="normal"/>.</summary>
+        internal void AddFace(Vector3[] corners, Vector3 normal, Vector2[] uv)
+        {
+            uint baseIndex = (uint)Positions.Count;
+            Positions.AddRange(corners);
+            Normals.AddRange([normal, normal, normal, normal]);
+            Uvs.AddRange(uv);
+            Indices.AddRange([baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3]);
         }
 
         internal void AddQuad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 outwardHint)
