@@ -250,12 +250,27 @@ public sealed class PartyHireContractsTests
         Assert.False(clip2.TurnedHostile);
         Assert.Equal(2, clip2.Strikes);
 
-        // 2. 3rd clip breaches tolerance -> turns hostile & marks HostileBetrayal on contract, then player kill triggers betrayal feud!
+        // 2. 3rd clip breaches tolerance -> turns hostile & marks HostileBetrayal on contract, persists Combatant + hostile across save/load, then player kill triggers betrayal feud!
         DaggerfallFriendlyFireResult clip3 = session.PartyHire.ObserveFriendlyFire(betrayedHire.DurableId, fatal: false);
         Assert.True(clip3.Handled);
         Assert.True(clip3.TurnedHostile);
         Assert.True(session.PartyHire.TryGetContract(betrayedHire.DurableId, out ActorPartyContractDiff betrayalContract));
         Assert.True(betrayalContract.HostileBetrayal);
+        ActorState betrayedLiveBeforeSave = session.State.Actors.Get(betrayedHire.DurableId);
+        Assert.True(betrayedLiveBeforeSave.Actor.Get<ActorHarmPolicy>().IsCombatant);
+        Assert.Equal("outlaws", betrayedLiveBeforeSave.Actor.Get<FactionComponent>().EffectiveTeam);
+        Assert.True(betrayedLiveBeforeSave.Actor.Get<Modules.Behavior.DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+
+        // Save/reload after betrayal MUST preserve Combatant harm, hostile team, ForcedHostile, and combat template!
+        using (DaggerfallSession reloadedAfterBetrayal = fixture.Restore(session.CaptureSave()))
+        {
+            ActorState reloadedBetrayed = reloadedAfterBetrayal.State.Actors.Get(betrayedHire.DurableId);
+            Assert.True(reloadedBetrayed.Actor.Get<ActorHarmPolicy>().IsCombatant);
+            Assert.Equal("outlaws", reloadedBetrayed.Actor.Get<FactionComponent>().EffectiveTeam);
+            Assert.True(reloadedBetrayed.Actor.Get<Modules.Behavior.DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+            Assert.True(reloadedAfterBetrayal.PartyHire.TryGetContract(betrayedHire.DurableId, out ActorPartyContractDiff reloadedBetrayalContract));
+            Assert.True(reloadedBetrayalContract.HostileBetrayal);
+        }
 
         ActorState betrayedActor = session.State.Actors.Get(betrayedHire.DurableId);
         int repBeforeBetrayal = session.State.Social.FactionReputation(betrayedHire.Appearance.FactionId);
@@ -338,9 +353,22 @@ public sealed class PartyHireContractsTests
             Assert.True(liveGuard.Actor.Get<ActorHarmPolicy>().IsCombatant);
             Assert.Equal("player-ally", liveGuard.Actor.Get<FactionComponent>().EffectiveTeam);
             Assert.Equal("warrior", liveGuard.Actor.Get<ActorOverlayComponent>().ArchetypeId);
+            // Live StatsComponent must adopt the shared warrior combat template's stats, not keep civilian baseline stats!
+            DaggerfallActorDefinition warriorSpec = TestPayload.Definitions.RequireActor(new(DaggerfallPartyHireService.DefaultRoadGuardSpecId));
+            Assert.Equal(warriorSpec.Stats.Values[DaggerfallMechanicsIds.Strength], liveGuard.Stats.GetStat(StatId.Parse("strength")).ValueInt);
+            Assert.Equal(warriorSpec.Stats.Values[DaggerfallMechanicsIds.Endurance], liveGuard.Stats.GetStat(StatId.Parse("endurance")).ValueInt);
+            Assert.Equal(warriorSpec.Stats.Values[new("long-blade")], liveGuard.Stats.GetStat(StatId.Parse("long-blade")).ValueInt);
             Assert.True(town.PartyHire.TryGetContract(roadGuardCandidate.DurableId, out ActorPartyContractDiff guardContract));
             Assert.Equal(DaggerfallPartyHireService.DefaultRoadGuardSpecId, guardContract.SpawnerId);
             Assert.False(guardContract.CanDelveDungeons);
+
+            // Save/reload preserves live warrior template stats and combatant status!
+            using DaggerfallSession reloadedTown = fixture.Restore(town.CaptureSave());
+            ActorState reloadedGuard = reloadedTown.State.Actors.Get(roadGuardCandidate.DurableId);
+            Assert.True(reloadedGuard.Actor.Get<ActorHarmPolicy>().IsCombatant);
+            Assert.Equal("player-ally", reloadedGuard.Actor.Get<FactionComponent>().EffectiveTeam);
+            Assert.Equal(warriorSpec.Stats.Values[DaggerfallMechanicsIds.Strength], reloadedGuard.Stats.GetStat(StatId.Parse("strength")).ValueInt);
+            Assert.Equal(warriorSpec.Stats.Values[new("long-blade")], reloadedGuard.Stats.GetStat(StatId.Parse("long-blade")).ValueInt);
         }
 
         // 2. Gated Knightly Retainer generated in Knightly Order hall from hire-knight-retainer spec:

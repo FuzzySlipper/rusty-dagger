@@ -890,14 +890,43 @@ internal sealed class DaggerfallActorRoster
             _definitionsByActor[actorId] = specDef;
         }
 
-        // Raise weak civilian health maximum up to the shared combat template floor while preserving any saved wound delta.
+        // Apply the shared combat template's live attributes, skills, and vitals to StatsComponent while preserving any saved wound/depletion delta (#11101).
+        foreach ((DaggerfallStatId statKey, int targetValue) in specDef.Stats.Values)
+        {
+            StatId statId = StatId.Parse(statKey.Value);
+            if (actor.Stats.Stats.TryGetValue(statId, out Stat? stat))
+                stat.BaseValue = targetValue;
+        }
+        ArchetypeProfile? templateProfile = _definitions.People.Archetypes.TryGetValue(spec.TemplateId, out ArchetypeProfile? foundProfile)
+            ? foundProfile
+            : null;
         Track health = actor.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
         double wound = Math.Max(0d, health.Maximum.Value - health.Current);
-        double combatFloor = Math.Max(specDef.Health.Minimum, 25);
-        if (health.Maximum.BaseValue < combatFloor)
+        double targetHealthMax = templateProfile is not null
+            ? Math.Max(templateProfile.RollDeterministicHealth(actorId), Math.Max(specDef.Health.Minimum, 25))
+            : Math.Max(specDef.Health.Minimum, 25);
+        if (Math.Abs(health.Maximum.BaseValue - targetHealthMax) > 1e-6d && health.Maximum.BaseValue < targetHealthMax)
         {
-            health.Maximum.BaseValue = combatFloor;
+            health.Maximum.BaseValue = targetHealthMax;
             health.SetCurrent(Math.Clamp(health.Maximum.Value - wound, 1d, health.Maximum.Value));
+        }
+        if (templateProfile is not null)
+        {
+            ApplyTemplateTrackMaximum(actor.Stats, DaggerfallMechanicsIds.Fatigue.Value, templateProfile.Fatigue);
+            ApplyTemplateTrackMaximum(actor.Stats, DaggerfallMechanicsIds.Magicka.Value, templateProfile.Magicka);
+        }
+    }
+
+    private static void ApplyTemplateTrackMaximum(StatsComponent stats, string trackKey, int targetMaximum)
+    {
+        TrackId id = TrackId.Parse(trackKey);
+        if (!stats.Tracks.TryGetValue(id, out Track? track))
+            return;
+        double spent = Math.Max(0d, track.Maximum.Value - track.Current);
+        if (track.Maximum.BaseValue < targetMaximum)
+        {
+            track.Maximum.BaseValue = targetMaximum;
+            track.SetCurrent(Math.Clamp(track.Maximum.Value - spent, 0d, track.Maximum.Value));
         }
     }
 
@@ -910,6 +939,8 @@ internal sealed class DaggerfallActorRoster
             faction.SetTeamOverride(hostileBetrayal ? "outlaws" : null);
         if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm))
             harm.Set(hostileBetrayal ? ActorHarmPolicyKind.Combatant : ActorHarmPolicyKind.LawProtectedCivilian);
+        if (hostileBetrayal && actor.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? memory))
+            memory.SetForcedHostile(true);
         if (!hostileBetrayal && _definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? current))
         {
             _definitionsByActor[actorId] = current with
@@ -2027,7 +2058,10 @@ internal sealed class DaggerfallActorRoster
         bool isScheduledVisitor = false)
     {
         WorldPoint worldPose = DaggerfallSceneOrigin.Shift(baselineProfilePose, translation);
-        string? spawnerId = staticPlacement?.SpawnerId ?? origin.SpawnerId;
+        string? spawnerId = delta?.PartyContract is { } activePartyContract
+            && (activePartyContract.HostileBetrayal || delta.Social?.StagedPartyRole == ActorPartyRole.Companion)
+                ? activePartyContract.SpawnerId
+                : staticPlacement?.SpawnerId ?? origin.SpawnerId;
         string? resolvedFamily = baselineFamilyId ?? staticPlacement?.FamilyId ?? npc.FamilyId;
         DaggerfallNpc npcWithFamily = resolvedFamily is not null && !StringComparer.Ordinal.Equals(npc.FamilyId, resolvedFamily)
             ? npc with { FamilyId = resolvedFamily }
@@ -2174,11 +2208,17 @@ internal sealed class DaggerfallActorRoster
                         overlay.RecordVouch(vouch);
             }
         }
-        if (delta.Social?.StagedPartyRole == ActorPartyRole.Companion
-            && delta.PartyContract is { HostileBetrayal: false } stagedContract
-            && !actor.IsDefeated)
+        if (!actor.IsDefeated && delta.PartyContract is { } partyContract)
         {
-            ApplyPartyHireSpec(actor.DurableId, stagedContract.SpawnerId);
+            if (partyContract.HostileBetrayal)
+            {
+                ApplyPartyHireSpec(actor.DurableId, partyContract.SpawnerId);
+                ClearPartyHireSpec(actor.DurableId, hostileBetrayal: true);
+            }
+            else if (delta.Social?.StagedPartyRole == ActorPartyRole.Companion)
+            {
+                ApplyPartyHireSpec(actor.DurableId, partyContract.SpawnerId);
+            }
         }
     }
 
