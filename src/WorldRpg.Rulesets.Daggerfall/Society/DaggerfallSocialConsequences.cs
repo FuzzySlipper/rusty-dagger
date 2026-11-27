@@ -451,8 +451,19 @@ internal sealed class DaggerfallSocialConsequences(
         if (!DaggerfallHouseholds.IsLocal(familyId))
             return;
 
-        int? targetRegion = subjectNpc?.Site.Region ?? originSite?.Id.Region ?? currentRegion();
-        string? targetLocation = subjectNpc?.Site.Location ?? originSite?.Name;
+        int? targetRegion = null;
+        string? targetLocation = null;
+        if (DaggerfallHouseholds.TryParseLocalSite(familyId, out DaggerfallSiteId localSiteId))
+        {
+            DaggerfallSiteRecord? homeSite = definitions.Locations.Records.FirstOrDefault(r => r.Id == localSiteId);
+            if (homeSite is not null)
+            {
+                targetRegion = homeSite.Id.Region;
+                targetLocation = homeSite.Name;
+            }
+        }
+        targetRegion ??= subjectNpc?.Site.Region ?? originSite?.Id.Region ?? currentRegion();
+        targetLocation ??= subjectNpc?.Site.Location ?? originSite?.Name;
         if (targetRegion is null || string.IsNullOrWhiteSpace(targetLocation))
             return;
 

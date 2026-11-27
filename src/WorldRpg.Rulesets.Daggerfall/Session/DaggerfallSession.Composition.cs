@@ -1152,7 +1152,11 @@ internal sealed partial class DaggerfallSession
                     "daggerfall.people", "population", message, string.Empty)),
                 State.ActorLedger, id => State.Quests.IsEscortWithParty(id),
                 (siteId, placement, actorId, totalCount) =>
-                    EvaluateExteriorPlacementSchedule(siteId, placement, actorId, totalCount).Placement == DaggerfallSchedulePlacement.ExteriorStreet);
+                    EvaluateExteriorPlacementSchedule(siteId, placement, actorId, totalCount).Placement == DaggerfallSchedulePlacement.ExteriorStreet,
+                (siteId, placement, totalCount) =>
+                    !placement.IsGuard
+                    && DaggerfallNpcSchedulePolicy.ResolveExteriorScheduleId(_worldSocialSeed, siteId, placement.Id, placement.IsGuard, totalCount)
+                        == DaggerfallNpcSchedulePolicy.UnderworldNightScheduleId);
             State.Quests.BindEscortOverlay((actorId, media, order) =>
             {
                 if (media is not null)

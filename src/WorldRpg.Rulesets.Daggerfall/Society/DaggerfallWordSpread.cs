@@ -237,7 +237,8 @@ internal sealed class DaggerfallWordSpread(
             Delta: delta);
         wf.Validate();
         _wavefronts[id] = wf;
-        return wf;
+        ApplyRegionalSuppression(id, originSite.Id.Region, MinuteToDay(currentMinute));
+        return _wavefronts[id];
     }
 
     /// <summary>
@@ -302,7 +303,8 @@ internal sealed class DaggerfallWordSpread(
             Body: body);
         wf.Validate();
         _wavefronts[id] = wf;
-        return wf;
+        ApplyRegionalSuppression(id, originSite.Id.Region, MinuteToDay(currentMinute));
+        return _wavefronts[id];
     }
 
     /// <summary>Records a news/rumour wavefront spreading outward from <paramref name="originSite"/>.</summary>
@@ -330,7 +332,8 @@ internal sealed class DaggerfallWordSpread(
             Body: body);
         wf.Validate();
         _wavefronts[eventId] = wf;
-        return wf;
+        ApplyRegionalSuppression(eventId, originSite.Id.Region, MinuteToDay(currentMinute));
+        return _wavefronts[eventId];
     }
 
     /// <summary>Extracts the canonical office key from an office proclamation wavefront id (<c>wf:office:{officeKey}|{slug}|{minute}</c>).</summary>
@@ -533,7 +536,8 @@ internal sealed class DaggerfallWordSpread(
             FamilyId: familyId);
         wf.Validate();
         _wavefronts[id] = wf;
-        return wf;
+        ApplyRegionalSuppression(id, originSite.Id.Region, MinuteToDay(currentMinute));
+        return _wavefronts[id];
     }
 
     internal bool TryGet(string eventId, out DaggerfallWordWavefrontSave? wavefront) =>
@@ -589,6 +593,62 @@ internal sealed class DaggerfallWordSpread(
             AcceleratedRegions = accelerated.Count > 0 ? [.. accelerated.Order()] : null,
         };
         return true;
+    }
+
+    /// <summary>Sparse override: lifts a regional suppression so normal courier spread can deliver <paramref name="eventId"/> to <paramref name="region"/>.</summary>
+    internal bool UnsuppressInRegion(string eventId, int region)
+    {
+        if (region is < 0 or > 61 || !_wavefronts.TryGetValue(eventId, out DaggerfallWordWavefrontSave? wf))
+            return false;
+        if (wf.SuppressedRegions is not { Length: > 0 } existing || !existing.Contains(region))
+            return false;
+        int[] remaining = [.. existing.Where(r => r != region)];
+        _wavefronts[eventId] = wf with
+        {
+            SuppressedRegions = remaining.Length > 0 ? remaining : null,
+        };
+        return true;
+    }
+
+    /// <summary>
+    /// Holds back cross-region news and proclamations from regions currently sealed by severe plague quarantine
+    /// (<see cref="DaggerfallWorldConditionKind.PlagueScare"/> severity &gt;= 3), active war-border lockdown
+    /// (<see cref="DaggerfallWorldConditionKind.BorderTension"/> severity &gt;= 3), or an active cut-off blockade
+    /// (<see cref="DaggerfallWorldConditionKind.GrainShortage"/> cut-off token). Player-delivered dispatches
+    /// (<see cref="AccelerateInRegion"/>) still break through the suppression.
+    /// </summary>
+    internal int ApplyRegionalSuppression(string eventId, int originRegion, int currentDay)
+    {
+        if (!_wavefronts.ContainsKey(eventId))
+            return 0;
+        int suppressedCount = 0;
+        for (int region = 0; region <= 61; region++)
+        {
+            if (region == originRegion)
+                continue;
+            if (IsRegionSealedFromOutsideNews(region, currentDay) && SuppressInRegion(eventId, region))
+                suppressedCount++;
+        }
+        return suppressedCount;
+    }
+
+    private bool IsRegionSealedFromOutsideNews(int region, int currentDay)
+    {
+        foreach (DaggerfallWorldConditionToken token in _conditions.ActiveForRegion(region, currentDay))
+        {
+            if (token.Region != region)
+                continue;
+            if (token.Kind == DaggerfallWorldConditionKind.PlagueScare && token.Severity >= 3)
+                return true;
+            if (token.Kind == DaggerfallWorldConditionKind.BorderTension && token.Severity >= 3)
+                return true;
+            if (token.Kind == DaggerfallWorldConditionKind.GrainShortage
+                && token.TokenId.Contains("cut-off", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>Sparse override: accelerates arrival of a wavefront in <paramref name="region"/> (e.g. player-delivered dispatch).</summary>

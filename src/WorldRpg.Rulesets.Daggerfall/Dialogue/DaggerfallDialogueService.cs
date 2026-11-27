@@ -290,15 +290,17 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (interactionKind == ActorInteractionPolicyKind.None)
             return new(false, "That person has nothing to say.");
 
+        bool alreadyMet = overlay?.Met == true
+            || (_actorLedger?.TryGet(npc!.DurableId, out ActorLedgerEntry? metEntry) == true && metEntry?.Social?.Met == true);
         if (overlay is not null) overlay.Met = true;
 
         if (interactionKind == ActorInteractionPolicyKind.AmbientBark)
         {
-            string bark = ResolveAmbientBark(npc!, overlay, _activeSite());
+            string bark = ResolveAmbientBark(npc!, overlay, _activeSite(), alreadyMet);
             return Report(new(true, bark));
         }
 
-        Open(npc!, actor!);
+        Open(npc!, actor!, alreadyMet);
         return new(true, $"You speak with {npc!.DisplayName ?? npc.Role}.");
     }
 
@@ -405,7 +407,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _publish(null);
     }
 
-    private void Open(DaggerfallNpc npc, DaggerfallDialogueNpc actor)
+    private void Open(DaggerfallNpc npc, DaggerfallDialogueNpc actor, bool alreadyMet = false)
     {
         DaggerfallSiteRecord? activeSite = _activeSite();
         int reactionValue = EffectiveReactionValue(npc, activeSite);
@@ -417,6 +419,16 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             greetingContext,
             $"open:{npc.DurableId}:{_nextRevision}:greeting",
             run => !run.Contains("%oth", StringComparison.Ordinal) || greetingContext.Faction.Oath is not null);
+
+        if (alreadyMet)
+        {
+            string familiarityLine = reactionValue >= 10
+                ? "Good to see you again."
+                : reactionValue >= 0
+                    ? "We meet again."
+                    : "You again.";
+            greeting += "\n" + familiarityLine;
+        }
 
         var benefit = _guildWelcome?.Invoke(npc);
         if (!string.IsNullOrEmpty(benefit?.Message)) greeting += "\n" + benefit.Message;
@@ -1052,7 +1064,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return null;
     }
 
-    private string ResolveAmbientBark(DaggerfallNpc npc, ActorOverlayComponent? overlay, DaggerfallSiteRecord? site)
+    private string ResolveAmbientBark(DaggerfallNpc npc, ActorOverlayComponent? overlay, DaggerfallSiteRecord? site, bool alreadyMet = false)
     {
         string speaker = npc.DisplayName ?? npc.Role;
         if (FirstUsableVouch(overlay) is { } usableBarkVouch)
@@ -1072,6 +1084,16 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         ulong barkSeed = unchecked((ulong)npc.DurableId);
 
         (int primaryFactionId, string? creatureFactionId) = ResolveLiveFaction(npc);
+
+        // Late-night underworld-pulse contacts share hushed street warnings and back-alley chatter.
+        if (string.Equals(npc.Role, "underworld", StringComparison.OrdinalIgnoreCase))
+        {
+            bool crackdown = _worldConditions is not null
+                && _worldConditions.ActiveForRegion(regionIndex, checked((int)_calendar().DayNumber))
+                    .Any(t => t.Kind == DaggerfallWorldConditionKind.CrimeCrackdown);
+            string underworldLine = ResolveUnderworldAmbientBark(barkSeed, regionName, crackdown, alreadyMet);
+            return $"{speaker}: \"{underworldLine}\"";
+        }
 
         // 1. Active regional or faction world conditions drive condition-aware ambient barks.
         if (_worldConditions is not null)
@@ -1098,12 +1120,34 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (!string.IsNullOrWhiteSpace(factionBark))
             return $"{speaker}: \"{factionBark}\"";
 
+        if (alreadyMet)
+        {
+            string familiarLine = (barkSeed & 1UL) == 0UL
+                ? "Good to see you again."
+                : $"Still making the rounds in {regionName}, I see.";
+            return $"{speaker}: \"{familiarLine}\"";
+        }
+
         string? climateName = site is not null
             ? _definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY).Name
             : null;
         string line = _definitions.People.Barks.ResolveBarkLine(
             barkSeed, npc.Role, overlay?.ArchetypeId, regionIndex, regionName, climateName);
         return $"{speaker}: \"{line}\"";
+    }
+
+    private static string ResolveUnderworldAmbientBark(ulong barkSeed, string regionName, bool crackdown, bool alreadyMet)
+    {
+        if (crackdown)
+            return "Watch is thick on the streets tonight — keep your hands out of pockets and stay in the shadows.";
+        if (alreadyMet)
+            return "Back on the night streets? Keep your voice down and watch the lanterns.";
+        return (barkSeed % 3UL) switch
+        {
+            0UL => $"Word in the back alleys of {regionName} moves faster than any royal courier.",
+            1UL => "Keep moving if you're not buying or fencing — the watch sweeps this lane past midnight.",
+            _ => "Quiet nights are good for quiet business. Mind whose locks you test.",
+        };
     }
 
     private int EffectiveReactionValue(DaggerfallNpc npc, DaggerfallSiteRecord? site)

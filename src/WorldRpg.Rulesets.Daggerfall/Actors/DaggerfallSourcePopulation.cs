@@ -33,11 +33,13 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     Func<DaggerfallSiteId, DaggerfallSiteRecord> requireSite, Func<bool> isDay, Func<bool> suppressSpawns, Func<long, bool> held,
     Action<ActorState, WanderPolicy, ulong, float> wander, Action<string> report,
     DaggerfallActorLedger? actorLedger = null, Func<long, bool>? isWithParty = null,
-    Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, bool>? isPlacementScheduledOutdoors = null)
+    Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, bool>? isPlacementScheduledOutdoors = null,
+    Func<DaggerfallSiteId, DaggerfallPopulationPlacement, int, bool>? isUnderworldNightSlot = null)
 {
     private readonly DaggerfallActorLedger _actorLedger = actorLedger ?? new DaggerfallActorLedger();
     private readonly Func<long, bool> _isWithParty = isWithParty ?? (_ => false);
     private readonly Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, bool>? _isPlacementScheduledOutdoors = isPlacementScheduledOutdoors;
+    private readonly Func<DaggerfallSiteId, DaggerfallPopulationPlacement, int, bool>? _isUnderworldNightSlot = isUnderworldNightSlot;
     private const byte FemalePopulationFlag = 0x20;
     // PopulationManager's source pool scales by the number of exterior blocks, then clamps
     // the admitted pool to the donor's 24..96 people window.  The source list remains the
@@ -198,8 +200,10 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             if (_actorLedger.IsHomeSlotSuppressed(deterministicId, active.ProfileKey) || _isWithParty(deterministicId))
                 continue;
 
+            bool underworldNight = !placement.IsGuard
+                && _isUnderworldNightSlot?.Invoke(siteId, placement, totalPopulationCount) == true;
             (DaggerfallNpcAppearance look, string role, IReadOnlyList<string> services) =
-                ResolvePlacementIdentity(definitions, placement, race);
+                ResolvePlacementIdentity(definitions, placement, race, underworldNight);
 
             DaggerfallNpc? existing = sourceNpcs.FirstOrDefault(npc =>
                 npc.DurableId == deterministicId || StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
@@ -523,7 +527,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
     /// <summary>Builds the canonical appearance, role, and service facts for an eligible source population placement.</summary>
     internal static (DaggerfallNpcAppearance Appearance, string Role, IReadOnlyList<string> Services) ResolvePlacementIdentity(
-        DaggerfallDefinitions definitions, DaggerfallPopulationPlacement placement, string race)
+        DaggerfallDefinitions definitions, DaggerfallPopulationPlacement placement, string race, bool underworldNight = false)
     {
         DaggerfallFactionDefinition? faction = placement.FactionId == 0
             ? null
@@ -532,7 +536,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
         (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
             definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId,
-            placement.IsGuard ? "guard" : "civilian");
+            placement.IsGuard ? "guard" : underworldNight ? "underworld" : "civilian");
         return (look, role, services);
     }
 

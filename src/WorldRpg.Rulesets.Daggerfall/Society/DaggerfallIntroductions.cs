@@ -123,6 +123,7 @@ internal sealed class DaggerfallIntroductions(
 
     internal const int TrustedVouchStandingBonus = 15;
     internal const int FadingVouchStandingBonus = 7;
+    internal const int FamiliarAcquaintanceFavourBonus = 5;
     internal const int VouchHostileDispositionThreshold = -10;
     internal const int ContactVouchFadeDays = 30;
     internal const int ContactVouchLapseDays = 60;
@@ -1041,6 +1042,44 @@ internal sealed class DaggerfallIntroductions(
         return new(true, !added, targetDurableId, targetName, vouch, reply);
     }
 
+    /// <summary>True when the player has previously met <paramref name="actorId"/> (live overlay or persisted ledger).</summary>
+    internal bool HasMetActor(long actorId)
+    {
+        if (actorId <= 0 || actorId == DaggerfallActorIdentity.PlayerEntityId)
+            return false;
+        if (actors.TryGet(actorId, out ActorState? live)
+            && live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)
+            && overlay.Met)
+        {
+            return true;
+        }
+        return actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Social?.Met == true;
+    }
+
+    /// <summary>Computes the 5..95 success chance percentage for <see cref="TryCurryFavour"/> on <paramref name="target"/>.</summary>
+    internal int ComputeCurryFavourChance(DaggerfallNpc target, bool politeTone, bool bluntTone, DaggerfallSocialProminence? prominenceOverride = null)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        int targetFactionId = social.ResolveNpcReactionFactionId(target);
+        int targetSocialGroup = ResolveSocialGroup(targetFactionId);
+        int socialScore = ComputeSocialSkillScore(targetSocialGroup);
+        bool courtOrScholar = targetSocialGroup is NobilitySocialGroup or ScholarsSocialGroup or MerchantsSocialGroup;
+        int toneModifier = courtOrScholar
+            ? (politeTone ? 10 : bluntTone ? -15 : 0)
+            : (bluntTone ? 10 : politeTone ? -5 : 0);
+        int familiarityBonus = HasMetActor(target.DurableId) ? FamiliarAcquaintanceFavourBonus : 0;
+        DaggerfallSocialProminence prominence = prominenceOverride ?? ClassifyProminence(target);
+        int difficulty = prominence switch
+        {
+            DaggerfallSocialProminence.Ordinary => 30,
+            DaggerfallSocialProminence.MinorCourt => 45,
+            DaggerfallSocialProminence.CourtFavourite => 55,
+            DaggerfallSocialProminence.Prominent => 65,
+            _ => 40,
+        };
+        return Math.Clamp(socialScore + toneModifier + familiarityBonus - difficulty + 50, 5, 95);
+    }
+
     /// <summary>
     /// Lets the player attempt to butter up / flatter <paramref name="target"/> in dialogue once per day.
     /// High-social-skill characters reliably warm personal disposition (enabling a quick court introduction),
@@ -1063,21 +1102,8 @@ internal sealed class DaggerfallIntroductions(
         int targetSocialGroup = ResolveSocialGroup(targetFactionId);
         RecordSocialSkillUse(targetSocialGroup);
 
-        int socialScore = ComputeSocialSkillScore(targetSocialGroup);
         bool courtOrScholar = targetSocialGroup is NobilitySocialGroup or ScholarsSocialGroup or MerchantsSocialGroup;
-        int toneModifier = courtOrScholar
-            ? (politeTone ? 10 : bluntTone ? -15 : 0)
-            : (bluntTone ? 10 : politeTone ? -5 : 0);
-
-        int difficulty = access.Prominence switch
-        {
-            DaggerfallSocialProminence.Ordinary => 30,
-            DaggerfallSocialProminence.MinorCourt => 45,
-            DaggerfallSocialProminence.CourtFavourite => 55,
-            DaggerfallSocialProminence.Prominent => 65,
-            _ => 40,
-        };
-        int chance = Math.Clamp(socialScore + toneModifier - difficulty + 50, 5, 95);
+        int chance = ComputeCurryFavourChance(target, politeTone, bluntTone, access.Prominence);
         int roll = checked((int)random.DrawKeyed(new KeyedRngRequest(
             DaggerfallRandomKey.Seed,
             RandomScope,

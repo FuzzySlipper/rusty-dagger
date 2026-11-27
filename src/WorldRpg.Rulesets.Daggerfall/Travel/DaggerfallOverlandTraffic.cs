@@ -217,6 +217,20 @@ internal sealed class DaggerfallOverlandTraffic
                         ActorHarmPolicyKind harm = DaggerfallPeopleSlots.ParseHarmPolicy(resolved.Harm, ActorHarmPolicyKind.LawProtectedCivilian);
                         ActorInteractionPolicyKind interaction = DaggerfallPeopleSlots.ParseInteractionPolicy(resolved.Interaction);
                         ActorOrigin actorOrigin = ActorOrigin.Seeded(originProfile, placedId, resolved.SpawnerId, harm, interaction);
+                        ActorSocialGrouping grouping = resolved.SpawnerId is { Length: > 0 } spawnerId
+                            && _definitions.People.Spawners.TryGetValue(spawnerId, out DaggerfallPeopleSpawnerDefinition? spawnerSpec)
+                            ? spawnerSpec.SocialGrouping
+                            : ActorSocialGrouping.BuildingHousehold;
+                        string? familyId = DaggerfallHouseholds.ResolveForPlacedSlot(
+                            _worldSocialSeed(),
+                            origin.Id,
+                            slot.BuildingType,
+                            block.X,
+                            block.Y,
+                            buildingIndex: null,
+                            placementKey,
+                            grouping,
+                            townBucketCount: DaggerfallHouseholds.TownHouseholdBucketCount(origin));
                         ActorSocialDiff social = new(
                             (int)DaggerfallNpcKind.Static,
                             placedId,
@@ -232,7 +246,8 @@ internal sealed class DaggerfallOverlandTraffic
                             look.FactionId,
                             isCaravan ? "merchant" : "courier",
                             isCaravan ? ["talk", "merchant"] : ["talk"],
-                            DisplayNameOverride: displayName);
+                            DisplayNameOverride: displayName,
+                            FamilyId: familyId);
                         StageLedgerEntry(durableId, actorOrigin, social, isCaravan);
                         return durableId;
                     }
@@ -256,6 +271,8 @@ internal sealed class DaggerfallOverlandTraffic
             string displayName = _generateName(look, origin.Id.Region);
             ActorOrigin actorOrigin = ActorOrigin.Seeded(originProfile, slotId, fallbackSpawner,
                 ActorHarmPolicyKind.LawProtectedCivilian, ActorInteractionPolicyKind.FullDialogue);
+            string fallbackFamilyId = DaggerfallHouseholds.TownPoolHouseholdId(
+                _worldSocialSeed(), origin.Id, slotId, DaggerfallHouseholds.TownHouseholdBucketCount(origin));
             ActorSocialDiff social = new(
                 (int)DaggerfallNpcKind.Civilian,
                 slotId,
@@ -271,7 +288,8 @@ internal sealed class DaggerfallOverlandTraffic
                 look.FactionId,
                 isCaravan ? "merchant" : "courier",
                 isCaravan ? ["talk", "merchant"] : ["talk"],
-                DisplayNameOverride: displayName);
+                DisplayNameOverride: displayName,
+                FamilyId: fallbackFamilyId);
             StageLedgerEntry(durableId, actorOrigin, social, isCaravan);
             return durableId;
         }
@@ -296,6 +314,12 @@ internal sealed class DaggerfallOverlandTraffic
                 ReferralTags = existing.Referral is { Tags.Length: > 0 } referral ? [.. referral.Tags] : null,
                 Vouches = existing.Referral is { Vouches.Length: > 0 } vouches ? [.. vouches.Vouches] : null,
             };
+            if (!preservedSocial.FamilyIdCleared
+                && string.IsNullOrWhiteSpace(preservedSocial.FamilyId)
+                && !string.IsNullOrWhiteSpace(baselineSocial.FamilyId))
+            {
+                preservedSocial = preservedSocial with { FamilyId = baselineSocial.FamilyId };
+            }
             if (isCaravan && !preservedSocial.Services.Contains("merchant", StringComparer.Ordinal))
             {
                 preservedSocial = preservedSocial with

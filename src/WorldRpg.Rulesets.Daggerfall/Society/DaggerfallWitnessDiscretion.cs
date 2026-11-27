@@ -35,6 +35,7 @@ internal enum DaggerfallWitnessReportReason
     VictimSelf,
     FamilyMember,
     FellowGuildMember,
+    UnderworldDiscretion,
     DiscretionRollReported,
     DiscretionRollIgnored,
 }
@@ -234,6 +235,19 @@ internal static class DaggerfallWitnessDiscretion
                     decisions.Add(new(witnessId, true, DaggerfallWitnessReportReason.FellowGuildMember, 100));
                     continue;
                 }
+            }
+
+            // Late-night underworld-pulse contacts do not run to the city watch over non-violent property crimes
+            // committed against strangers; violent crimes or crimes against themselves/their kin still report normally.
+            if (string.Equals(witnessNpc?.Role, "underworld", StringComparison.OrdinalIgnoreCase)
+                && crime is DaggerfallCrimeKind.Theft
+                    or DaggerfallCrimeKind.Pickpocketing
+                    or DaggerfallCrimeKind.BreakingAndEntering
+                    or DaggerfallCrimeKind.AttemptedBreakingAndEntering
+                    or DaggerfallCrimeKind.Trespassing)
+            {
+                decisions.Add(new(witnessId, false, DaggerfallWitnessReportReason.UnderworldDiscretion, 0));
+                continue;
             }
 
             int dispositionDelta = observed is not null
