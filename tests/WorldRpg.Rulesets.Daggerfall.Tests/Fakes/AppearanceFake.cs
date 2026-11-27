@@ -22,6 +22,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     internal List<StaticMeshMaterialFactorsRequest> StaticMeshFactorUpdates { get; } = [];
     internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
     internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
+    internal Dictionary<Appearance, SpriteFromAtlasRequest> SpriteRequestByAppearance { get; } = new(ReferenceEqualityComparer.Instance);
     internal List<SpriteEmissionUpdateRequest> EmissionUpdates { get; } = [];
     internal List<SpritePlaybackCreateRequest> PlaybackRequests { get; } = [];
     internal List<SpritePlaybackControlRequest> ControlRequests { get; } = [];
@@ -169,6 +170,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     {
         SpriteRequests.Add(request);
         Appearance sprite = CreateAppearance();
+        SpriteRequestByAppearance[sprite] = request;
         liveSprites.Add(sprite, request.Atlas);
         return sprite;
     }

@@ -512,7 +512,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     internal const float SleepingBedHeightMeters = 0.55f;
     internal const float SleepingFloorHeightMeters = 0.18f;
-    internal const float SleepingBillboardHeightScale = 0.45f;
 
     /// <summary>Appends this projection's actors; resident identities share its location slot.</summary>
     internal void AppendActorFacts(List<AppearanceFact> facts, ActorsState state, int slot,
@@ -533,7 +532,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 : null;
             bool sleeping = sleepOverlay?.IsSleeping == true;
             bool sleepingOnBed = sleeping && sleepOverlay!.SleepingOnBed;
-            Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : DrawnLive(visual);
             // A walking person or a cast individual with a stable asset binding drawn through the crowd reads Tier-2 ActorRenderComponent.
             bool crowdVisual = render?.Spec.Kind is ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig
                 || (render?.Spec.Kind == ActorVisualKind.Billboard && !string.IsNullOrWhiteSpace(render.Spec.CrowdCharacterHint));
@@ -542,7 +540,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 && IWalkerCrowd.Walks(wander.State);
             Appearance? rigged = !actor.IsDefeated && crowdVisual
                 ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, walking) : null;
-            chosen = rigged ?? chosen;
+            Appearance? chosen = rigged ?? (actor.IsDefeated
+                ? DrawnCorpse(visual)
+                : sleeping
+                    ? DrawnSleeping(visual)
+                    : DrawnLive(visual));
             if (chosen is null) continue;
             Transform transform = ComposeActorTransform(actor, rigged is not null, chosen == visual.CorpseMesh,
                 visual.CorpseMeshScale, visual.Sprite.Size.Y, sleeping, sleepingOnBed);
@@ -563,14 +565,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (sleeping)
         {
             // Lay the figure supine along the bed's axis on top of the mattress (or low floor mat when no bed mesh exists).
+            // Both rigged figures and non-billboarded sleeping sprites (BillboardMode.None) honor this full 3D orientation.
             Quaternion bedFacing = PartsRigFigure.Facing(actor.HeadingYawRadians);
             Quaternion sleepRotation = Quaternion.Normalize(bedFacing * Quaternion.CreateFromAxisAngle(Vector3.UnitX, -MathF.PI * 0.5f));
             Vector3 bedAxis = ActorHeading.Forward(actor.HeadingYawRadians);
             float lift = sleepingOnBed ? SleepingBedHeightMeters : SleepingFloorHeightMeters;
             float recenter = MathF.Max(0f, spriteHeight) * 0.45f;
             Vector3 sleepPos = actor.Position.ToVector() + (Vector3.UnitY * lift) - (bedAxis * recenter);
-            Vector3 sleepScale = isRigged ? Vector3.One : new Vector3(1f, SleepingBillboardHeightScale, 1f);
-            return new Transform(sleepPos, sleepRotation, sleepScale);
+            return new Transform(sleepPos, sleepRotation, Vector3.One);
         }
 
         // A corpse mesh lies along its creature's heading; a billboard turns to the camera on its own.
@@ -1237,7 +1239,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private Appearance? ClassicLive(ActorVisual visual)
     {
         if (visual.Live is not null || visual.Defeated) return visual.Live;
-        (visual.Atlas, visual.Live) = CreateSprite(content, visual.Sprite, visual.Mobile);
+        (visual.Atlas, visual.Texture, visual.Live) = CreateSpriteWithTexture(content, visual.Sprite, visual.Mobile);
         StartState(visual.EntityId, PreferredRestState(visual.Sprite), visual);
         return visual.Live;
     }
@@ -1258,9 +1260,21 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// </summary>
     private (SpriteAtlas Atlas, Appearance Appearance) CreateSprite(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false)
     {
+        (SpriteAtlas atlas, _, Appearance value) = CreateSpriteWithTexture(content, sprite, mobile, material, glows);
+        return (atlas, value);
+    }
+
+    private (SpriteAtlas Atlas, RenderResource Texture, Appearance Appearance) CreateSpriteWithTexture(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false, BillboardMode? billboardOverride = null)
+    {
         (SpriteAtlas atlas, RenderResource texture) = OpenActorAtlas(content, sprite);
+        Appearance value = CreateSpriteFromExistingAtlas(atlas, texture, sprite, mobile, material, glows, billboardOverride);
+        return (atlas, texture, value);
+    }
+
+    private Appearance CreateSpriteFromExistingAtlas(SpriteAtlas atlas, RenderResource? texture, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false, BillboardMode? billboardOverride = null)
+    {
         var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
-            sprites.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+            billboardOverride ?? sprites.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
         if (material is { } chosen) request = request with { Material = chosen };
         if (mobile is not null)
             request = request with { Material = new SpriteMaterialDescriptor(SpriteLightingMode.Synthetic,
@@ -1273,9 +1287,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             ownedResources.Add(map);
             request = request with { Material = Glowing(request.Material, map, lighting.CreatureGlow) };
         }
-        else if (glows || mobile?.GlowColor is not null) request = request with { Material = Glowing(request.Material, texture, lighting.CreatureGlow) };
-        Appearance value = appearance.CreateSpriteFromAtlas(request);
-        return (atlas, value);
+        else if ((glows || mobile?.GlowColor is not null) && texture is { } tex) request = request with { Material = Glowing(request.Material, tex, lighting.CreatureGlow) };
+        return appearance.CreateSpriteFromAtlas(request);
     }
 
     /// <summary>An actor sprite's texture and its atlas, both owned until the site is released.</summary>
@@ -1693,10 +1706,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Defeated) return;
         if (visual.Playback is { } playback) Retire(playback);
         if (visual.Live is { } live) Retire(live);
+        if (visual.SleepingClassic is { } sleepingClassic) Retire(sleepingClassic);
         if (visual.Refreshed is { } refreshed) Retire(refreshed);
+        if (visual.SleepingRefreshed is { } sleepingRefreshed) Retire(sleepingRefreshed);
         visual.Playback = null;
         visual.Live = null;
+        visual.SleepingClassic = null;
         visual.Refreshed = null;
+        visual.SleepingRefreshed = null;
         visual.ActiveAttack = null;
         visual.Defeated = true;
     }
@@ -1791,9 +1808,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         /// draws anew builds neither while refreshed art is drawn); the sprite is let go when it dies.
         /// </summary>
         internal SpriteAtlas? Atlas { get; set; }
+        internal RenderResource? Texture { get; set; }
         internal Appearance? Live { get; set; }
+        /// <summary>Non-billboarded classic sprite (<see cref="BillboardMode.None"/>) created lazily when a resident lies supine in bed.</summary>
+        internal Appearance? SleepingClassic { get; set; }
         /// <summary>The refreshed sprite drawn in place of a standing person's classic one, when the refreshed set has one.</summary>
         internal Appearance? Refreshed { get; set; }
+        /// <summary>Non-billboarded refreshed sprite (<see cref="BillboardMode.None"/>) created lazily when a resident lies supine in bed.</summary>
+        internal Appearance? SleepingRefreshed { get; set; }
         /// <summary>Its classic remains, built the first time classic art draws them (none while the bone pile mesh lies in their place).</summary>
         internal SpriteAtlas? CorpseAtlas { get; set; }
         internal Appearance? Corpse { get; set; }
@@ -1822,8 +1844,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             Playback = null;
             if (Live is { } live) DaggerfallSiteAppearance.Dispose(live, ref failures);
             Live = null;
+            if (SleepingClassic is { } sleepingClassic) DaggerfallSiteAppearance.Dispose(sleepingClassic, ref failures);
+            SleepingClassic = null;
             if (Refreshed is { } refreshed) DaggerfallSiteAppearance.Dispose(refreshed, ref failures);
             Refreshed = null;
+            if (SleepingRefreshed is { } sleepingRefreshed) DaggerfallSiteAppearance.Dispose(sleepingRefreshed, ref failures);
+            SleepingRefreshed = null;
             if (Corpse is { } corpse) DaggerfallSiteAppearance.Dispose(corpse, ref failures);
             if (CorpseMesh is { } mesh) DaggerfallSiteAppearance.Dispose(mesh, ref failures);
             CorpseMesh = null;

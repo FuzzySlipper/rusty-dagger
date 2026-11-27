@@ -132,7 +132,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <paramref name="source"/> at the art's own size, hung from its own pivot or, where <paramref name="onBase"/>
     /// says, from its foot; null where the set has none.
     /// </summary>
-    private Appearance? RefreshedPerson(string? assetId, (int Archive, int Record)? source, bool onBase)
+    private Appearance? RefreshedPerson(string? assetId, (int Archive, int Record)? source, bool onBase, BillboardMode billboard = BillboardMode.Cylindrical)
     {
         if (surfaceArt?.Person(assetId, source) is not { } art) return null;
         if (!personAtlases.TryGetValue(art.File.Path, out SpriteAtlas? atlas))
@@ -146,11 +146,30 @@ internal sealed partial class DaggerfallSiteAppearance
             personAtlases.Add(art.File.Path, atlas);
         }
         return appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, 0, onBase ? art.Foot : art.Pivot, art.Size,
-            BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
+            billboard, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
     }
 
     /// <summary>The sprite a living actor shows: its refreshed one while refreshed art is drawn, else its classic one.</summary>
     private Appearance? DrawnLive(ActorVisual visual) => drawRefreshedEffects() && visual.Refreshed is { } refreshed ? refreshed : ClassicLive(visual);
+
+    /// <summary>
+    /// The non-billboarded sprite (<see cref="BillboardMode.None"/>) a sleeping non-rigged resident shows so the
+    /// supine bed-aligned transform is honored instead of being overridden by upright cylindrical billboarding.
+    /// </summary>
+    private Appearance? DrawnSleeping(ActorVisual visual)
+    {
+        if (visual.Defeated) return null;
+        if (drawRefreshedEffects() && visual.Refreshed is not null)
+            return visual.SleepingRefreshed ??= RefreshedPerson(visual.AssetId, visual.Sprite.SourceTexture, onBase: true, BillboardMode.None);
+        if (ClassicLive(visual) is null || visual.Atlas is null)
+            return null;
+        return visual.SleepingClassic ??= CreateSpriteFromExistingAtlas(
+            visual.Atlas,
+            visual.Texture,
+            visual.Sprite,
+            visual.Mobile,
+            billboardOverride: BillboardMode.None);
+    }
 
     /// <summary>The corpse a defeated actor shows: the refreshed mesh while refreshed art is drawn, else its sprite.</summary>
     private Appearance? DrawnCorpse(ActorVisual visual) => drawRefreshedEffects() && visual.CorpseMesh is { } mesh ? mesh : ClassicCorpse(visual);
