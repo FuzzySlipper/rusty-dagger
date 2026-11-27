@@ -423,6 +423,7 @@ internal sealed class DaggerfallWordSpread(
                 DaggerfallOfficeChangeCause.CardMove => "was unseated",
                 DaggerfallOfficeChangeCause.Quest => "was removed",
                 DaggerfallOfficeChangeCause.Succession => "stepped aside",
+                DaggerfallOfficeChangeCause.Law => "was banished by the court",
                 _ => "departed",
             };
         string former = !string.IsNullOrWhiteSpace(notification.PreviousHolderName)

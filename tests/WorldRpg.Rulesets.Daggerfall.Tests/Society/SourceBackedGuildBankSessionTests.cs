@@ -315,7 +315,8 @@ public sealed class SourceBackedGuildBankSessionTests
 internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
 {
     private readonly DaggerfallDefinitions _definitions;
-    private readonly DaggerfallSiteProfile[] _sites;
+    private readonly List<DaggerfallSiteProfile> _sites;
+    private readonly List<ContentFake> _contents = [];
     private readonly DaggerfallSiteProfiles _profiles;
     private readonly DaggerfallSessionComposition _composition;
     internal IRandomService? Random { get; set; }
@@ -342,7 +343,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         DaggerfallSiteProfile smallShip)
     {
         _definitions = definitions;
-        _sites = sites;
+        _sites = [.. sites];
         _profiles = profiles;
         _composition = composition;
         BankProfile = bank;
@@ -399,10 +400,21 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         return Assert.Single(matches);
     }
 
+    internal DaggerfallSiteProfile AdmitProfile(DaggerfallWorldProfileKey key)
+    {
+        DaggerfallSiteProfile extra = _profiles.Require(key);
+        if (!_sites.Any(s => s.ProfileKey == key))
+            _sites.Add(extra);
+        foreach (ContentFake content in _contents)
+            PopulateStreamedContent(content, [extra]);
+        return extra;
+    }
+
     internal DaggerfallSession Start(DaggerfallSiteProfile profile, Func<DaggerfallSessionComposition, DaggerfallSessionComposition>? configure = null)
     {
         List<string> releases = [];
         ContentFake content = new(releases);
+        _contents.Add(content);
         PopulateStreamedContent(content, _sites);
         SpatialFake spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random, video: Video);
@@ -418,6 +430,7 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
             : throw new InvalidOperationException("A source-backed save must name its active world profile.");
         List<string> releases = [];
         ContentFake content = new(releases);
+        _contents.Add(content);
         PopulateStreamedContent(content, _sites);
         SpatialFake spatial = SpatialFake.Create(active.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random, video: Video);

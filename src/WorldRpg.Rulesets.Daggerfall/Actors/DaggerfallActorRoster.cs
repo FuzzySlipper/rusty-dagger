@@ -1404,19 +1404,38 @@ internal sealed class DaggerfallActorRoster
             if (profile.StaticNpcs.FirstOrDefault(p => StringComparer.Ordinal.Equals(p.Id, slotKey)) is { } stat)
                 return stat.Position;
         }
+        if (entry.Origin.Kind == ActorOriginKind.CastIndividual
+            && entry.Origin.CastId is { Length: > 0 } homeCastId
+            && _definitions.People.Individuals.TryGetValue(homeCastId, out DaggerfallCastIndividualDefinition? homeCast)
+            && profile.StaticNpcs.FirstOrDefault(s =>
+                s.Appearance.FactionId == homeCast.FactionId
+                || s.Id.Contains($"cast-{homeCastId}", StringComparison.Ordinal)) is { } ownCastPlacement)
+        {
+            return ownCastPlacement.Position;
+        }
         if (entry.Pose is { } p)
             return new WorldPoint(p.X, p.Y, p.Z);
         if (entry.Location?.Pose is { } lp)
             return new WorldPoint(lp.X, lp.Y, lp.Z);
-        if (profile.Project.PlayerPosition is { } playerPos)
-            return playerPos;
         if (profile.StaticNpcs.Count > 0)
         {
-            WorldPoint anchor = profile.StaticNpcs[0].Position;
-            return new WorldPoint(anchor.X + 0.9f, anchor.Y, anchor.Z + 0.5f);
+            // Place relocated visitors/exiles cleanly beside an interior host NPC rather than on top of the entrance door,
+            // using a deterministic per-actor offset so multiple exiles in the same refuge never overlap.
+            ulong slotHash = unchecked((ulong)entry.DurableId);
+            int anchorIndex = checked((int)(slotHash % (ulong)profile.StaticNpcs.Count));
+            WorldPoint anchor = profile.StaticNpcs[anchorIndex].Position;
+            float angle = ((slotHash >> 4) % 8UL) * (MathF.PI / 4f);
+            float offsetX = MathF.Cos(angle) * 1.15f;
+            float offsetZ = MathF.Sin(angle) * 1.15f;
+            return new WorldPoint(anchor.X + offsetX, anchor.Y, anchor.Z + offsetZ);
         }
         if (profile.Population.Count > 0)
-            return profile.Population[0].Position;
+        {
+            WorldPoint anchor = profile.Population[0].Position;
+            return new WorldPoint(anchor.X + 1.0f, anchor.Y, anchor.Z + 0.6f);
+        }
+        if (profile.Project.PlayerPosition is { } playerPos)
+            return playerPos;
         return default;
     }
 

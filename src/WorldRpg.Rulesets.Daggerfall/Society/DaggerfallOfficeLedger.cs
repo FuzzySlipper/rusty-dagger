@@ -87,8 +87,71 @@ internal sealed record DaggerfallOfficeOverrideSave(
     }
 }
 
+/// <summary>
+/// One sparse persisted exile record for a living office holder displaced to a deterministic refuge interior.
+/// Tracks the lost office, the refuge profile where the exile stands, and the origin anchor needed to restore them.
+/// </summary>
+internal sealed record DaggerfallOfficeExileSave(
+    long ActorId,
+    string OfficeKey,
+    DaggerfallOfficeKind Kind,
+    string Title,
+    DaggerfallWorldProfileKeySave RefugeProfile,
+    DaggerfallOfficeChangeCause Cause,
+    int ExiledDay,
+    string? CastId = null,
+    int? OfficeFactionId = null,
+    string? SeatId = null,
+    int? OfficeRegion = null,
+    int? OfficeSiteIndex = null,
+    string? DisplayName = null,
+    string? CauseDetail = null,
+    DaggerfallWorldProfileKeySave? OriginProfile = null,
+    string? OriginSlotId = null)
+{
+    internal DaggerfallSiteId? OfficeSiteId =>
+        OfficeRegion is int region && OfficeSiteIndex is int index
+            ? new DaggerfallSiteId(region, index)
+            : null;
+
+    internal void Validate()
+    {
+        if (ActorId is <= 0 or DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(ActorId), "Saved exiled office holder actor id must be a positive non-player id.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(OfficeKey);
+        if (!Enum.IsDefined(Kind))
+            throw new ArgumentOutOfRangeException(nameof(Kind), "Saved exiled office holder names an invalid office kind.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(Title);
+        ArgumentNullException.ThrowIfNull(RefugeProfile);
+        RefugeProfile.Validate();
+        if (!Enum.IsDefined(Cause))
+            throw new ArgumentOutOfRangeException(nameof(Cause), "Saved exiled office holder names an invalid change cause.");
+        if (CastId is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(CastId);
+        if (OfficeFactionId is < 0)
+            throw new ArgumentOutOfRangeException(nameof(OfficeFactionId), "Saved exiled office holder faction id cannot be negative.");
+        if (SeatId is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(SeatId);
+        if (OfficeRegion is < 0 or > 61)
+            throw new ArgumentOutOfRangeException(nameof(OfficeRegion), "Saved exiled office holder region is outside classic region bounds.");
+        if (OfficeSiteIndex is < 0)
+            throw new ArgumentOutOfRangeException(nameof(OfficeSiteIndex), "Saved exiled office holder site index cannot be negative.");
+        if (OfficeSiteIndex is not null && OfficeRegion is null)
+            throw new ArgumentException("Saved exiled office holder site index requires an OfficeRegion.", nameof(OfficeSiteIndex));
+        if (DisplayName is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(DisplayName);
+        if (CauseDetail is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(CauseDetail);
+        OriginProfile?.Validate();
+        if (OriginSlotId is not null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(OriginSlotId);
+    }
+}
+
 /// <summary>Sparse persisted office-ledger snapshot. Empty when no office has changed from its seeded baseline.</summary>
-internal sealed record DaggerfallOfficeLedgerSave(DaggerfallOfficeOverrideSave[] Overrides)
+internal sealed record DaggerfallOfficeLedgerSave(
+    DaggerfallOfficeOverrideSave[] Overrides,
+    DaggerfallOfficeExileSave[]? Exiles = null)
 {
     internal static DaggerfallOfficeLedgerSave Empty { get; } = new([]);
 
@@ -102,6 +165,17 @@ internal sealed record DaggerfallOfficeLedgerSave(DaggerfallOfficeOverrideSave[]
             entry.Validate();
             if (!keys.Add(entry.OfficeKey))
                 throw new ArgumentException($"Saved office ledger repeats office key '{entry.OfficeKey}'.");
+        }
+        if (Exiles is not null)
+        {
+            HashSet<long> actorIds = [];
+            foreach (DaggerfallOfficeExileSave exile in Exiles)
+            {
+                ArgumentNullException.ThrowIfNull(exile);
+                exile.Validate();
+                if (!actorIds.Add(exile.ActorId))
+                    throw new ArgumentException($"Saved office ledger repeats exiled actor {exile.ActorId}.");
+            }
         }
     }
 }
@@ -204,6 +278,7 @@ internal sealed class DaggerfallOfficeLedger(
     internal const long RegionalVacancyMaxMinutes = 14L * DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour;
 
     private readonly Dictionary<string, DaggerfallOfficeOverrideSave> _overrides = new(StringComparer.Ordinal);
+    private readonly Dictionary<long, DaggerfallOfficeExileSave> _exiles = [];
 
     /// <summary>
     /// Fired whenever an office opens a vacancy, enters regency, seats a successor, or deposes a living holder.
@@ -217,6 +292,27 @@ internal sealed class DaggerfallOfficeLedger(
 
     internal int OverrideCount => _overrides.Count;
     internal IReadOnlyCollection<DaggerfallOfficeOverrideSave> Overrides => _overrides.Values;
+    internal int ExileCount => _exiles.Count;
+    internal IReadOnlyCollection<DaggerfallOfficeExileSave> Exiles => _exiles.Values;
+
+    internal bool TryGetExile(long actorId, out DaggerfallOfficeExileSave? exile)
+    {
+        if (actorId > 0 && _exiles.TryGetValue(actorId, out DaggerfallOfficeExileSave? found))
+        {
+            exile = found;
+            return true;
+        }
+        exile = null;
+        return false;
+    }
+
+    internal DaggerfallOfficeExileSave? TryGetExile(long actorId) =>
+        actorId > 0 && _exiles.TryGetValue(actorId, out DaggerfallOfficeExileSave? found) ? found : null;
+
+    internal IReadOnlyList<DaggerfallOfficeExileSave> ExilesAtProfile(DaggerfallWorldProfileKey profile) =>
+        [.. _exiles.Values
+            .Where(e => e.RefugeProfile.Require() == profile)
+            .OrderBy(e => e.ActorId)];
 
     /// <summary>Returns the inclusive min/max vacancy duration in game minutes for <paramref name="kind"/>.</summary>
     internal static (long MinMinutes, long MaxMinutes) VacancyBoundsFor(DaggerfallOfficeKind kind) => kind switch
@@ -417,6 +513,17 @@ internal sealed class DaggerfallOfficeLedger(
             : null;
         DaggerfallOfficeActorBlueprint? resolvedNewBlueprint = newHolderBlueprint
             ?? BuildActorBlueprint(holderActorId, holderCastId, resolvedName, newFamilyId);
+        if (holderActorId is long seatedId)
+            _exiles.Remove(seatedId);
+        if (displacesLivingIncumbent && outgoing.ActorId is long exiledId && exileProfile is { } refuge)
+        {
+            RecordExile(
+                exiledId, key, kind, resolvedTitle, refuge, cause, changedDay,
+                castId: outgoing.CastId, officeFactionId: officeFactionId, seatId: seat?.SeatId,
+                officeRegion: saved.OfficeRegion, officeSiteIndex: saved.OfficeSiteIndex,
+                displayName: outgoing.DisplayName, causeDetail: causeDetail,
+                originProfile: officeProfileKey, originSlotId: officeSlotId);
+        }
 
         PublishChange(new DaggerfallOfficeChangedNotification(
             OfficeKey: key,
@@ -555,6 +662,15 @@ internal sealed class DaggerfallOfficeLedger(
         DaggerfallOfficeActorBlueprint? prevBlueprint = displacesLivingIncumbent
             ? BuildActorBlueprint(outgoing.ActorId, outgoing.CastId, outgoing.DisplayName, outgoing.FamilyId)
             : null;
+        if (displacesLivingIncumbent && outgoing.ActorId is long exiledId && exileProfile is { } refuge)
+        {
+            RecordExile(
+                exiledId, key, kind, resolvedTitle, refuge, cause, changedDay,
+                castId: outgoing.CastId, officeFactionId: officeFactionId, seatId: seat?.SeatId,
+                officeRegion: saved.OfficeRegion, officeSiteIndex: saved.OfficeSiteIndex,
+                displayName: outgoing.DisplayName, causeDetail: causeDetail,
+                originProfile: officeProfileKey, originSlotId: officeSlotId);
+        }
 
         PublishChange(new DaggerfallOfficeChangedNotification(
             OfficeKey: key,
@@ -624,6 +740,8 @@ internal sealed class DaggerfallOfficeLedger(
     /// Declares an interim regent or acting steward for a faction office while succession remains unsettled
     /// (preserving the active <see cref="DaggerfallOfficeOverrideSave.VacancyUntilMinute"/> window and publishing
     /// <see cref="DaggerfallOfficeChangeKind.RegencyDeclared"/>).
+    /// When <paramref name="exileIncumbent"/> is true and a living incumbent is displaced, relocates them to their
+    /// deterministic refuge and records them in <see cref="Exiles"/>.
     /// </summary>
     internal DaggerfallOfficeOverrideSave DeclareFactionRegency(
         int officeFactionId,
@@ -636,7 +754,11 @@ internal sealed class DaggerfallOfficeLedger(
         string? causeDetail = null,
         string? title = null,
         long? currentMinute = null,
-        long? vacancyUntilMinute = null)
+        long? vacancyUntilMinute = null,
+        bool exileIncumbent = false,
+        DaggerfallWorldProfileKey? regentHomeProfile = null,
+        string? regentHomeSlotId = null,
+        DaggerfallOfficeActorBlueprint? regentBlueprint = null)
     {
         if (officeFactionId <= 0)
             throw new ArgumentOutOfRangeException(nameof(officeFactionId), "Faction office id must be positive.");
@@ -676,7 +798,8 @@ internal sealed class DaggerfallOfficeLedger(
             ?? checked(nowMinute + ComputeVacancyDurationMinutes(worldSocialSeed(), key, kind, openedMinute));
 
         string resolvedTitle = title ?? "Regent";
-        DaggerfallSiteId? officeSiteId = outgoing.Home?.Site.Id ?? ResolveRegionCapitalSite(officeRegion)?.Id;
+        (DaggerfallWorldProfileKey? officeProfileKey, string? officeSlotId, DaggerfallSiteId? officeSiteId) =
+            ResolveCanonicalFactionOfficeAnchor(officeFactionId, key, officeRegion, outgoing, regentCastId);
 
         DaggerfallOfficeOverrideSave saved = new(
             OfficeKey: key,
@@ -701,12 +824,41 @@ internal sealed class DaggerfallOfficeLedger(
             OfficeSiteIndex: officeSiteId?.Index,
             PreviousHolderCastId: outgoing.CastId,
             PreviousHolderFamilyId: outgoing.FamilyId,
-            OfficeProfile: prior?.OfficeProfile,
-            OfficeSlotId: prior?.OfficeSlotId);
+            OfficeProfile: officeProfileKey is { } opk ? DaggerfallWorldProfileKeySave.Capture(opk) : prior?.OfficeProfile,
+            OfficeSlotId: officeSlotId ?? prior?.OfficeSlotId);
         saved.Validate();
         _overrides[key] = saved;
 
         string? regentFamilyId = ResolveActorFamilyId(regentActorId, regentCastId, fallbackFamilyId: null);
+        DaggerfallWorldProfileKey? resolvedRegentHome = regentHomeProfile
+            ?? DaggerfallCastHomes.ResolveProfileKey(ResolveCastHome(regentCastId, officeRegion));
+        DaggerfallOfficeActorBlueprint? resolvedRegentBlueprint = regentBlueprint
+            ?? BuildActorBlueprint(regentActorId, regentCastId, resolvedName, regentFamilyId);
+
+        bool displacesLivingIncumbent = exileIncumbent
+            && outgoing.WasActiveIncumbent
+            && outgoing.IsAlive
+            && outgoing.ActorId is long prevAid
+            && prevAid != regentActorId;
+        DaggerfallWorldProfileKey? exileProfile = displacesLivingIncumbent
+            ? ResolveExileDestination(worldSocialSeed(), key, kind, saved.OfficeRegion, saved.OfficeSiteId, officeProfileKey)
+            : null;
+        DaggerfallOfficeActorBlueprint? prevBlueprint = displacesLivingIncumbent
+            ? BuildActorBlueprint(outgoing.ActorId, outgoing.CastId, outgoing.DisplayName, outgoing.FamilyId)
+            : null;
+        if (regentActorId is long seatedRegentId)
+            _exiles.Remove(seatedRegentId);
+        if (displacesLivingIncumbent && outgoing.ActorId is long exiledId && exileProfile is { } refuge)
+        {
+            string lostTitle = seat?.DefaultTitle ?? ResolveDefaultFactionTitle(officeFactionId) ?? "Ruler";
+            RecordExile(
+                exiledId, key, kind, lostTitle, refuge, cause, changedDay,
+                castId: outgoing.CastId, officeFactionId: officeFactionId, seatId: seat?.SeatId,
+                officeRegion: saved.OfficeRegion, officeSiteIndex: saved.OfficeSiteIndex,
+                displayName: outgoing.DisplayName, causeDetail: saved.CauseDetail,
+                originProfile: officeProfileKey, originSlotId: officeSlotId);
+        }
+
         PublishChange(new DaggerfallOfficeChangedNotification(
             OfficeKey: key,
             Kind: kind,
@@ -714,8 +866,8 @@ internal sealed class DaggerfallOfficeLedger(
             Cause: cause,
             Region: saved.OfficeRegion,
             OfficeSiteId: saved.OfficeSiteId,
-            OfficeProfileKey: DaggerfallCastHomes.ResolveProfileKey(outgoing.Home),
-            OfficeSlotId: null,
+            OfficeProfileKey: officeProfileKey,
+            OfficeSlotId: officeSlotId,
             OfficeFactionId: officeFactionId,
             SeatId: seat?.SeatId,
             Title: resolvedTitle,
@@ -731,7 +883,13 @@ internal sealed class DaggerfallOfficeLedger(
             ChangedDay: changedDay,
             ChangedMinute: nowMinute,
             VacancyUntilMinute: untilMinute,
-            CauseDetail: saved.CauseDetail));
+            CauseDetail: saved.CauseDetail,
+            NewHolderHomeProfile: resolvedRegentHome,
+            NewHolderHomeSlotId: regentHomeSlotId,
+            NewHolderBlueprint: resolvedRegentBlueprint,
+            ExileProfileKey: exileProfile,
+            PreviousHolderBlueprint: prevBlueprint,
+            DisplacesLivingIncumbent: displacesLivingIncumbent));
         return saved;
     }
 
@@ -827,6 +985,17 @@ internal sealed class DaggerfallOfficeLedger(
         DaggerfallOfficeActorBlueprint? resolvedNewBlueprint = !vacant
             ? (newHolderBlueprint ?? BuildActorBlueprint(holderActorId, null, resolvedName, newFamilyId))
             : null;
+        if (!vacant && holderActorId is long seatedLocalId)
+            _exiles.Remove(seatedLocalId);
+        if (displacesLivingIncumbent && prevActorId is long exiledLocalId && exileProfile is { } refuge)
+        {
+            RecordExile(
+                exiledLocalId, office.OfficeKey, office.Kind, office.Title, refuge, cause, changedDay,
+                castId: null, officeFactionId: office.OfficeFactionId > 0 ? office.OfficeFactionId : null,
+                seatId: null, officeRegion: office.SiteId.Region, officeSiteIndex: office.SiteId.Index,
+                displayName: prevName, causeDetail: causeDetail,
+                originProfile: office.ProfileKey, originSlotId: office.SlotId);
+        }
 
         PublishChange(new DaggerfallOfficeChangedNotification(
             OfficeKey: office.OfficeKey,
@@ -1313,6 +1482,7 @@ internal sealed class DaggerfallOfficeLedger(
         if (deadActorId <= 0 || deadActorId == DaggerfallActorIdentity.PlayerEntityId)
             return [];
 
+        _exiles.Remove(deadActorId);
         long nowMinute = ResolveMinute(currentDay, currentMinute);
         List<DaggerfallOfficeOverrideSave> recorded = [];
 
@@ -1444,16 +1614,501 @@ internal sealed class DaggerfallOfficeLedger(
     }
 
     internal DaggerfallOfficeLedgerSave Capture() =>
-        new([.. _overrides.Values.OrderBy(entry => entry.OfficeKey, StringComparer.Ordinal)]);
+        new(
+            [.. _overrides.Values.OrderBy(entry => entry.OfficeKey, StringComparer.Ordinal)],
+            _exiles.Count == 0 ? null : [.. _exiles.Values.OrderBy(entry => entry.ActorId)]);
 
     internal void Restore(DaggerfallOfficeLedgerSave? saved)
     {
         _overrides.Clear();
+        _exiles.Clear();
         if (saved is null)
             return;
         saved.Validate();
         foreach (DaggerfallOfficeOverrideSave entry in saved.Overrides)
             _overrides[entry.OfficeKey] = entry;
+        if (saved.Exiles is not null)
+        {
+            foreach (DaggerfallOfficeExileSave exile in saved.Exiles)
+                _exiles[exile.ActorId] = exile;
+        }
+    }
+
+    /// <summary>
+    /// Restores a living exiled former office holder back to their lost office through <see cref="OfficeChanged"/>,
+    /// physically returning them from their refuge to their office slot, displacing any living usurper, and clearing
+    /// their exile record. Returns null if the actor is not currently exiled or is dead.
+    /// </summary>
+    internal DaggerfallOfficeOverrideSave? RestoreExile(
+        long exiledActorId,
+        DaggerfallOfficeChangeCause cause,
+        int changedDay,
+        string? causeDetail = null,
+        long? currentMinute = null)
+    {
+        if (exiledActorId <= 0 || !_exiles.TryGetValue(exiledActorId, out DaggerfallOfficeExileSave? exile))
+            return null;
+        if (officeHolders.IsActorDead(exiledActorId))
+        {
+            _exiles.Remove(exiledActorId);
+            return null;
+        }
+
+        string detail = !string.IsNullOrWhiteSpace(causeDetail) ? causeDetail : "was restored to office";
+        DaggerfallWorldProfileKey? originProfile = exile.OriginProfile?.Require();
+        if (exile.Kind is DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.MajorSeat && exile.OfficeFactionId is int factionId and > 0)
+        {
+            int? holderFactionId = exile.CastId is { Length: > 0 } cid
+                && definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? cast)
+                    ? cast.FactionId
+                    : factionId;
+            return SetFactionOfficeHolder(
+                factionId,
+                exile.Kind,
+                holderActorId: exiledActorId,
+                holderCastId: exile.CastId,
+                holderFactionId: holderFactionId,
+                holderDisplayName: exile.DisplayName,
+                cause: cause,
+                changedDay: changedDay,
+                causeDetail: detail,
+                title: exile.Title,
+                currentMinute: currentMinute,
+                newHolderHomeProfile: originProfile,
+                newHolderHomeSlotId: exile.OriginSlotId);
+        }
+
+        if (exile.OfficeSiteId is { } siteId && FindSiteById(siteId) is { } site)
+        {
+            DaggerfallLocalOffice? local = ResolveLocalOffices(site)
+                .FirstOrDefault(o => StringComparer.Ordinal.Equals(o.OfficeKey, exile.OfficeKey));
+            if (local is not null)
+            {
+                return SetLocalOfficeHolder(
+                    local,
+                    holderActorId: exiledActorId,
+                    holderDisplayName: exile.DisplayName,
+                    cause: cause,
+                    changedDay: changedDay,
+                    causeDetail: detail,
+                    holderFactionId: exile.OfficeFactionId,
+                    vacant: false,
+                    currentMinute: currentMinute,
+                    newHolderHomeProfile: originProfile,
+                    newHolderHomeSlotId: exile.OriginSlotId);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Shared deposition caller for a regional ruler by classic region index (used by board conquest/cession in
+    /// <c>#11132</c> and <c>#11143</c> as well as quests). Resolves the province faction and deposes its living ruler
+    /// into exile through <see cref="OfficeChanged"/>. Returns null if the region has no province faction.
+    /// </summary>
+    internal DaggerfallOfficeOverrideSave? DeposeRegionalRuler(
+        int region,
+        DaggerfallOfficeChangeCause cause,
+        int changedDay,
+        string? causeDetail = null,
+        long? currentMinute = null)
+    {
+        if (region is < 0 or > 61)
+            return null;
+        DaggerfallFactionDefinition? province = definitions.Factions.ProvinceOf(region);
+        if (province is null)
+            return null;
+        return DeposeFactionOffice(
+            province.Id,
+            cause,
+            changedDay,
+            causeDetail ?? $"was deposed from {province.Name}",
+            currentMinute: currentMinute);
+    }
+
+    /// <summary>
+    /// Non-lethally deposes every institutional office (overridden office, board seat, regional ruler, or local office
+    /// at <paramref name="activeSite"/>) currently held by <paramref name="actorId"/> through <see cref="OfficeChanged"/>.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallOfficeOverrideSave> DeposeActorOffices(
+        long actorId,
+        DaggerfallOfficeChangeCause cause,
+        int changedDay,
+        string? causeDetail = null,
+        DaggerfallSiteRecord? activeSite = null,
+        long? currentMinute = null)
+    {
+        if (actorId <= 0 || actorId == DaggerfallActorIdentity.PlayerEntityId)
+            return [];
+
+        List<DaggerfallOfficeOverrideSave> deposed = [];
+        HashSet<string> handledKeys = new(StringComparer.Ordinal);
+
+        // 1. Overridden offices currently held by this actor.
+        foreach (DaggerfallOfficeOverrideSave existing in _overrides.Values.ToArray())
+        {
+            if (existing.Vacant || existing.HolderActorId != actorId || !handledKeys.Add(existing.OfficeKey))
+                continue;
+            if (existing.OfficeFactionId is int factionId and > 0
+                && existing.Kind is DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.MajorSeat)
+            {
+                deposed.Add(DeposeFactionOffice(factionId, cause, changedDay, causeDetail, currentMinute));
+            }
+            else if (existing.OfficeSiteId is { } sid && FindSiteById(sid) is { } site)
+            {
+                DaggerfallLocalOffice? local = ResolveLocalOffices(site)
+                    .FirstOrDefault(o => StringComparer.Ordinal.Equals(o.OfficeKey, existing.OfficeKey));
+                if (local is not null)
+                    deposed.Add(DeposeLocalOffice(local, cause, changedDay, causeDetail, currentMinute));
+            }
+        }
+
+        // 2. Baseline canonical board seats and province rulers.
+        HashSet<int> checkedFactions = [];
+        foreach (DaggerfallBoardSeatBinding seat in definitions.BoardSeats.All)
+        {
+            string key = FactionOfficeKey(seat.OfficeFactionId);
+            if (!checkedFactions.Add(seat.OfficeFactionId) || handledKeys.Contains(key) || _overrides.ContainsKey(key))
+                continue;
+            if (MatchesHolderActor(seat.OfficeFactionId, seat.HomeRegion, actorId, out _, out _))
+            {
+                handledKeys.Add(key);
+                deposed.Add(DeposeFactionOffice(seat.OfficeFactionId, cause, changedDay, causeDetail, currentMinute));
+            }
+        }
+
+        foreach (DaggerfallFactionDefinition province in definitions.Factions.Factions.Values
+            .Where(f => f.Type == ProvinceFactionType)
+            .OrderBy(f => f.Id))
+        {
+            string key = FactionOfficeKey(province.Id);
+            if (!checkedFactions.Add(province.Id) || handledKeys.Contains(key) || _overrides.ContainsKey(key))
+                continue;
+            if (MatchesHolderActor(province.Id, province.Region >= 0 ? province.Region : null, actorId, out _, out _))
+            {
+                handledKeys.Add(key);
+                deposed.Add(DeposeFactionOffice(province.Id, cause, changedDay, causeDetail, currentMinute));
+            }
+        }
+
+        // 3. Local offices at the active site (or the actor's known site).
+        DaggerfallSiteRecord? localSite = activeSite;
+        if (localSite is null && npcs.TryGet(actorId, out DaggerfallNpc? npc) && npc?.Profile is { } npcProfile)
+            localSite = FindSiteById(npcProfile.Site);
+        if (localSite is not null)
+        {
+            foreach (DaggerfallLocalOffice local in ResolveLocalOffices(localSite))
+            {
+                if (handledKeys.Contains(local.OfficeKey) || local.IsVacant || local.HolderActorId != actorId)
+                    continue;
+                handledKeys.Add(local.OfficeKey);
+                deposed.Add(DeposeLocalOffice(local, cause, changedDay, causeDetail, currentMinute));
+            }
+        }
+
+        return deposed;
+    }
+
+    /// <summary>
+    /// Deposes an office identified by a holder's actor ID and/or faction ID (used by quest outcome actions).
+    /// Tries the actor's held offices first, then falls back to any board seat or province office owned by <paramref name="factionId"/>.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallOfficeOverrideSave> DeposeActorOrFactionOffice(
+        long? actorId,
+        int? factionId,
+        DaggerfallOfficeChangeCause cause,
+        int changedDay,
+        string? causeDetail = null,
+        DaggerfallSiteRecord? activeSite = null,
+        long? currentMinute = null)
+    {
+        if (actorId is long aid && aid > 0)
+        {
+            IReadOnlyList<DaggerfallOfficeOverrideSave> byActor = DeposeActorOffices(aid, cause, changedDay, causeDetail, activeSite, currentMinute);
+            if (byActor.Count > 0)
+                return byActor;
+        }
+        if (factionId is int fid && fid > 0 && TryResolveOfficeFactionId(fid) is int officeFaction)
+            return [DeposeFactionOffice(officeFaction, cause, changedDay, causeDetail, currentMinute)];
+        return [];
+    }
+
+    /// <summary>
+    /// Places a faction office under interim regency, deterministically selecting a living court/dynasty/deputy regent
+    /// when none is explicitly supplied. Publishes <see cref="DaggerfallOfficeChangeKind.RegencyDeclared"/>.
+    /// </summary>
+    internal DaggerfallOfficeOverrideSave DeclareRegencyForFaction(
+        int officeFactionId,
+        DaggerfallOfficeChangeCause cause,
+        int changedDay,
+        long? regentActorId = null,
+        string? regentCastId = null,
+        int? regentFactionId = null,
+        string? regentDisplayName = null,
+        string? causeDetail = null,
+        long? currentMinute = null,
+        long? vacancyUntilMinute = null,
+        bool exileIncumbent = false)
+    {
+        if (officeFactionId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(officeFactionId), "Faction office id must be positive.");
+
+        DaggerfallWorldProfileKey? regentHomeProfile = null;
+        string? regentHomeSlotId = null;
+        DaggerfallOfficeActorBlueprint? regentBlueprint = null;
+        if (regentActorId is null && string.IsNullOrWhiteSpace(regentCastId) && string.IsNullOrWhiteSpace(regentDisplayName))
+        {
+            string key = FactionOfficeKey(officeFactionId);
+            definitions.BoardSeats.TryGetByFactionId(officeFactionId, out DaggerfallBoardSeatBinding? seat);
+            DaggerfallOfficeKind kind = seat is not null ? ToOfficeKind(seat.Kind) : DaggerfallOfficeKind.Ruler;
+            int? officeRegion = ResolveFactionOfficeRegion(officeFactionId, seat);
+            OutgoingHolderSnapshot outgoing = SnapshotOutgoingFactionHolder(officeFactionId, key, seat, officeRegion, null, null);
+            long nowMinute = ResolveMinute(changedDay, currentMinute);
+            DaggerfallOfficeOverrideSave probe = new(
+                OfficeKey: key, Kind: kind, OfficeFactionId: officeFactionId, SeatId: seat?.SeatId,
+                HolderActorId: null, HolderCastId: null, HolderFactionId: null, HolderDisplayName: null,
+                Title: seat?.DefaultTitle ?? ResolveDefaultFactionTitle(officeFactionId),
+                PreviousHolderActorId: outgoing.ActorId, PreviousHolderName: outgoing.DisplayName,
+                Cause: cause, CauseDetail: causeDetail, ChangedDay: changedDay, Vacant: true,
+                VacancyOpenedMinute: nowMinute, VacancyUntilMinute: nowMinute, IsRegency: false,
+                OfficeRegion: officeRegion, OfficeSiteIndex: outgoing.Home?.Site.Id.Index,
+                PreviousHolderCastId: outgoing.CastId, PreviousHolderFamilyId: outgoing.FamilyId);
+            if (TrySelectFactionSuccessor(probe, officeFactionId) is { } picked)
+            {
+                regentActorId = picked.ActorId;
+                regentCastId = picked.CastId;
+                regentFactionId = picked.HolderFactionId;
+                regentDisplayName = picked.DisplayName;
+                regentHomeProfile = picked.HomeProfile;
+                regentHomeSlotId = picked.HomeSlotId;
+                regentBlueprint = picked.Blueprint;
+            }
+            else
+            {
+                string realm = officeRegion is int r ? definitions.BuildingNames.RegionName(r)
+                    : definitions.Factions.Factions.TryGetValue(officeFactionId, out DaggerfallFactionDefinition? f) ? f.Name : "the Realm";
+                regentDisplayName = $"Council of {realm}";
+                regentFactionId = officeFactionId;
+            }
+        }
+
+        return DeclareFactionRegency(
+            officeFactionId,
+            regentActorId,
+            regentCastId,
+            regentFactionId,
+            regentDisplayName,
+            cause,
+            changedDay,
+            causeDetail: causeDetail ?? "holds interim regency",
+            title: "Regent",
+            currentMinute: currentMinute,
+            vacancyUntilMinute: vacancyUntilMinute,
+            exileIncumbent: exileIncumbent,
+            regentHomeProfile: regentHomeProfile,
+            regentHomeSlotId: regentHomeSlotId,
+            regentBlueprint: regentBlueprint);
+    }
+
+    /// <summary>Places a board-game seat under interim regency by its <paramref name="seatId"/>.</summary>
+    internal DaggerfallOfficeOverrideSave DeclareRegencyForBoardSeat(
+        string seatId,
+        DaggerfallOfficeChangeCause cause,
+        int changedDay,
+        string? causeDetail = null,
+        long? currentMinute = null,
+        long? vacancyUntilMinute = null,
+        bool exileIncumbent = false)
+    {
+        if (!definitions.BoardSeats.TryGetBySeatId(seatId, out DaggerfallBoardSeatBinding? seat) || seat is null)
+            throw new ArgumentException($"Unknown board-game seat '{seatId}'.", nameof(seatId));
+        return DeclareRegencyForFaction(
+            seat.OfficeFactionId,
+            cause,
+            changedDay,
+            causeDetail: causeDetail,
+            currentMinute: currentMinute,
+            vacancyUntilMinute: vacancyUntilMinute,
+            exileIncumbent: exileIncumbent);
+    }
+
+    /// <summary>Places an actor's or faction's office under regency (used by quest outcome actions).</summary>
+    internal DaggerfallOfficeOverrideSave? DeclareRegencyForActorOrFaction(
+        long? actorId,
+        int? factionId,
+        long? regentActorId,
+        int? regentFactionId,
+        DaggerfallOfficeChangeCause cause,
+        int changedDay,
+        string? causeDetail = null,
+        long? currentMinute = null,
+        bool exileIncumbent = false)
+    {
+        int? officeFactionId = ResolveOfficeFactionForActor(actorId) ?? (factionId is int fid ? TryResolveOfficeFactionId(fid) : null);
+        if (officeFactionId is not int resolved || resolved <= 0)
+            return null;
+
+        string? regentCastId = null;
+        string? regentName = null;
+        if (regentActorId is long rid && rid > 0)
+        {
+            regentName = ResolveActorDisplayName(rid, null, "Regent");
+            foreach (DaggerfallCastIndividualDefinition c in definitions.People.Individuals.Values)
+            {
+                if (DaggerfallPeopleSlots.CastIndividualIdentity(c.Id) == rid)
+                {
+                    regentCastId = c.Id;
+                    regentName = c.Name;
+                    regentFactionId ??= c.FactionId;
+                    break;
+                }
+            }
+        }
+        else if (regentFactionId is int rfid && rfid > 0
+            && definitions.People.TryGetIndividualByFaction(rfid, out DaggerfallCastIndividualDefinition? regentCast)
+            && regentCast is not null)
+        {
+            regentCastId = regentCast.Id;
+            regentActorId = DaggerfallPeopleSlots.CastIndividualIdentity(regentCast.Id);
+            regentName = regentCast.Name;
+        }
+
+        return DeclareRegencyForFaction(
+            resolved,
+            cause,
+            changedDay,
+            regentActorId: regentActorId,
+            regentCastId: regentCastId,
+            regentFactionId: regentFactionId,
+            regentDisplayName: regentName,
+            causeDetail: causeDetail,
+            currentMinute: currentMinute,
+            exileIncumbent: exileIncumbent);
+    }
+
+    /// <summary>
+    /// Reacts when an office holder is convicted of a crime or banished from a province by the law: deposes every
+    /// office held by <paramref name="actorId"/> with <see cref="DaggerfallOfficeChangeCause.Law"/>, exiling them
+    /// to their refuge and firing <see cref="OfficeChanged"/>.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallOfficeOverrideSave> ReactToHolderCrimeOrBanishment(
+        long actorId,
+        int region,
+        Crime.DaggerfallCrimeKind? crimeKind,
+        bool banished,
+        int currentDay,
+        string? detail = null,
+        DaggerfallSiteRecord? activeSite = null,
+        long? currentMinute = null)
+    {
+        if (actorId <= 0 || actorId == DaggerfallActorIdentity.PlayerEntityId)
+            return [];
+
+        string regionName = region is >= 0 and <= 61 ? definitions.BuildingNames.RegionName(region) : "the province";
+        string causeDetail = !string.IsNullOrWhiteSpace(detail)
+            ? detail
+            : banished
+                ? (crimeKind is { } ck
+                    ? $"was banished from {regionName} for {Crime.DaggerfallLaw.CrimeLabel(ck).ToLowerInvariant()}"
+                    : $"was banished from {regionName}")
+                : (crimeKind is { } convicted
+                    ? $"was convicted of {Crime.DaggerfallLaw.CrimeLabel(convicted).ToLowerInvariant()}"
+                    : "was removed by judgment of the court");
+
+        return DeposeActorOffices(
+            actorId,
+            DaggerfallOfficeChangeCause.Law,
+            currentDay,
+            causeDetail,
+            activeSite,
+            currentMinute);
+    }
+
+    private void RecordExile(
+        long actorId,
+        string officeKey,
+        DaggerfallOfficeKind kind,
+        string title,
+        DaggerfallWorldProfileKey refugeProfile,
+        DaggerfallOfficeChangeCause cause,
+        int exiledDay,
+        string? castId,
+        int? officeFactionId,
+        string? seatId,
+        int? officeRegion,
+        int? officeSiteIndex,
+        string? displayName,
+        string? causeDetail,
+        DaggerfallWorldProfileKey? originProfile,
+        string? originSlotId)
+    {
+        if (actorId <= 0 || actorId == DaggerfallActorIdentity.PlayerEntityId)
+            return;
+        DaggerfallOfficeExileSave record = new(
+            ActorId: actorId,
+            OfficeKey: officeKey,
+            Kind: kind,
+            Title: !string.IsNullOrWhiteSpace(title) ? title : "Officer",
+            RefugeProfile: DaggerfallWorldProfileKeySave.Capture(refugeProfile),
+            Cause: cause,
+            ExiledDay: exiledDay,
+            CastId: string.IsNullOrWhiteSpace(castId) ? null : castId,
+            OfficeFactionId: officeFactionId is > 0 ? officeFactionId : null,
+            SeatId: string.IsNullOrWhiteSpace(seatId) ? null : seatId,
+            OfficeRegion: officeRegion,
+            OfficeSiteIndex: officeSiteIndex,
+            DisplayName: string.IsNullOrWhiteSpace(displayName) ? null : displayName,
+            CauseDetail: string.IsNullOrWhiteSpace(causeDetail) ? null : causeDetail,
+            OriginProfile: originProfile is { } op ? DaggerfallWorldProfileKeySave.Capture(op) : null,
+            OriginSlotId: string.IsNullOrWhiteSpace(originSlotId) ? null : originSlotId);
+        record.Validate();
+        _exiles[actorId] = record;
+    }
+
+    private int? ResolveOfficeFactionForActor(long? actorId)
+    {
+        if (actorId is not long id || id <= 0)
+            return null;
+        foreach (DaggerfallOfficeOverrideSave over in _overrides.Values)
+        {
+            if (!over.Vacant && over.HolderActorId == id && over.OfficeFactionId is int ofid and > 0
+                && over.Kind is DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.MajorSeat)
+                return ofid;
+        }
+        foreach (DaggerfallBoardSeatBinding seat in definitions.BoardSeats.All)
+        {
+            if (MatchesHolderActor(seat.OfficeFactionId, seat.HomeRegion, id, out _, out _))
+                return seat.OfficeFactionId;
+        }
+        foreach (DaggerfallFactionDefinition province in definitions.Factions.Factions.Values
+            .Where(f => f.Type == ProvinceFactionType)
+            .OrderBy(f => f.Id))
+        {
+            if (MatchesHolderActor(province.Id, province.Region >= 0 ? province.Region : null, id, out _, out _))
+                return province.Id;
+        }
+        return null;
+    }
+
+    private int? TryResolveOfficeFactionId(int factionId)
+    {
+        if (factionId <= 0)
+            return null;
+        if (definitions.BoardSeats.TryGetByFactionId(factionId, out _))
+            return factionId;
+        int current = factionId;
+        for (int depth = 0; depth < 6 && current > 0; depth++)
+        {
+            if (!definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
+                break;
+            if (definitions.BoardSeats.TryGetByFactionId(def.Id, out _) || def.Type == ProvinceFactionType)
+                return def.Id;
+            if (def.Parent == current)
+                break;
+            current = def.Parent;
+        }
+        return null;
     }
 
     private readonly record struct OutgoingHolderSnapshot(
@@ -2881,6 +3536,7 @@ internal sealed class DaggerfallOfficeLedger(
                 DaggerfallOfficeChangeCause.CardMove => "was unseated",
                 DaggerfallOfficeChangeCause.Quest => "was removed",
                 DaggerfallOfficeChangeCause.Succession => "stepped aside",
+                DaggerfallOfficeChangeCause.Law => "was banished by the court",
                 _ => "departed",
             };
 }

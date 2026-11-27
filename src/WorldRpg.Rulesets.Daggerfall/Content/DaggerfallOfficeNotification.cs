@@ -39,6 +39,9 @@ internal enum DaggerfallOfficeChangeCause
 
     /// <summary>Institutional succession or formal appointment.</summary>
     Succession = 3,
+
+    /// <summary>Legal conviction or provincial banishment of an office holder.</summary>
+    Law = 4,
 }
 
 /// <summary>Lifecycle transition published when an office changes state.</summary>

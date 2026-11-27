@@ -107,6 +107,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly DaggerfallOfficeLedger? _officeLedger;
     private readonly DaggerfallActorLedger? _actorLedger;
     private readonly Func<DaggerfallSiteId, DaggerfallSiteRecord?>? _findSite;
+    private readonly Func<DaggerfallNpc, DaggerfallOfficeExileSave, DaggerfallExileRestoreResult>? _restoreExile;
+    private readonly Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? _denounceTargets;
+    private readonly Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? _denounceOfficeHolder;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -157,7 +160,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallOfficeHolders? officeHolders = null,
         DaggerfallOfficeLedger? officeLedger = null,
         DaggerfallActorLedger? actorLedger = null,
-        Func<DaggerfallSiteId, DaggerfallSiteRecord?>? findSite = null)
+        Func<DaggerfallSiteId, DaggerfallSiteRecord?>? findSite = null,
+        Func<DaggerfallNpc, DaggerfallOfficeExileSave, DaggerfallExileRestoreResult>? restoreExile = null,
+        Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? denounceTargets = null,
+        Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? denounceOfficeHolder = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
@@ -177,6 +183,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _officeLedger = officeLedger;
         _actorLedger = actorLedger;
         _findSite = findSite;
+        _restoreExile = restoreExile;
+        _denounceTargets = denounceTargets;
+        _denounceOfficeHolder = denounceOfficeHolder;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -409,6 +418,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (!string.IsNullOrWhiteSpace(factionLine)) greeting += "\n" + factionLine;
         string? officeLine = ResolveOfficeContinuityGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(officeLine)) greeting += "\n" + officeLine;
+        if (_officeLedger?.TryGetExile(npc.DurableId) is { } exiledHolder)
+            greeting += "\n" + DaggerfallExileDialogue.BuildGreetingLine(npc, exiledHolder, _officeLedger, _officeHolders, _definitions);
         string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(scrutinyLine)) greeting += "\n" + scrutinyLine;
         if (DaggerfallRoadCourierNews.TryResolveEncounter(npc, _actorLedger, _courierDispatches, _definitions, _findSite) is { } roadEncounter
@@ -501,6 +512,31 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                 DaggerfallDialogueTopic.DispatchIntercept => "Hand over the sealed dispatch — now.",
                 _ => "I have a sealed dispatch to deliver here.",
             };
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
+        if (topic == DaggerfallDialogueTopic.RestoreExile)
+        {
+            if (_restoreExile is null || _officeLedger?.TryGetExile(npc.DurableId) is not { } exile)
+                return Reject("This person is not seeking restoration to office.");
+            DaggerfallExileRestoreResult result = _restoreExile(npc, exile);
+            session.Question = result.Question;
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
+        if (topic == DaggerfallDialogueTopic.DenounceOfficeHolder)
+        {
+            if (_denounceOfficeHolder is null
+                || !long.TryParse(topicTarget, NumberStyles.Integer, CultureInfo.InvariantCulture, out long targetId))
+                return Reject("That accusation cannot be filed here.");
+            DaggerfallHolderDenounceResult result = _denounceOfficeHolder(npc, targetId, site);
+            session.Question = result.Question;
             session.Reply = result.Message;
             session.Diagnostics.Clear();
             session.QuestionCount++;
@@ -992,6 +1028,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             return $"{speaker}: \"{FormatReferralLine(npc, overlay.Vouches[0].DisplaySummary())}\"";
         if (overlay is { ReferralTags.Count: > 0 })
             return $"{speaker}: \"{FormatReferralLine(npc, overlay.ReferralTags[0])}\"";
+
+        if (_officeLedger?.TryGetExile(npc.DurableId) is { } exiledBarkHolder)
+            return $"{speaker}: \"{DaggerfallExileDialogue.BuildAmbientBark(exiledBarkHolder)}\"";
 
         string? officeBark = ResolveOfficeContinuityAmbientBark(npc, site);
         if (!string.IsNullOrWhiteSpace(officeBark))
@@ -1685,6 +1724,21 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_directionDirectory is not null)
             topics.AddRange(_directionDirectory().Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Places }));
         topics.AddRange(_questTopics(npc.DurableId).Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Quests }));
+        if (_restoreExile is not null && _officeLedger?.TryGetExile(npc.DurableId) is { } exileOption)
+        {
+            string exileName = npc.DisplayName ?? exileOption.DisplayName ?? "them";
+            topics.Add(new("restore-exile", $"Help restore {exileName} as {exileOption.Title}", Group: DaggerfallDialogueTopicGroups.Quests));
+        }
+        if (_denounceTargets is not null && _denounceOfficeHolder is not null)
+        {
+            foreach (DaggerfallHolderDenounceTarget target in _denounceTargets(npc, site))
+            {
+                topics.Add(new(
+                    $"denounce-holder:{target.ActorId}",
+                    $"Report {target.Title} {target.DisplayName} to the court",
+                    Group: DaggerfallDialogueTopicGroups.Quests));
+            }
+        }
         if (_courierDispatches is not null)
         {
             if (_courierDispatches.TryGetForCourier(npc.DurableId) is { } carried)
@@ -1812,9 +1866,16 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "hire-companion" => DaggerfallDialogueTopic.HireCompanion,
             "hire-driver" => DaggerfallDialogueTopic.HireDriver,
             "dismiss-party" => DaggerfallDialogueTopic.DismissParty,
+            "restore-exile" => DaggerfallDialogueTopic.RestoreExile,
             _ => default,
         };
-        if (value is "directions" or "news" or "courier-news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party") return true;
+        if (value is "directions" or "news" or "courier-news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party" or "restore-exile") return true;
+        if (value is { Length: > 16 } dynamicDenounce && dynamicDenounce.StartsWith("denounce-holder:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.DenounceOfficeHolder;
+            target = dynamicDenounce["denounce-holder:".Length..];
+            return target.Length > 0;
+        }
         if (value is { Length: > 10 } dynamicIntroduce && dynamicIntroduce.StartsWith("introduce:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.Introduce;

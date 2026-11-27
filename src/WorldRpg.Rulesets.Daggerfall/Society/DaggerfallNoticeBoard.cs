@@ -520,6 +520,7 @@ internal sealed class DaggerfallNoticeBoard(
                 DaggerfallOfficeChangeCause.Death => "was slain",
                 DaggerfallOfficeChangeCause.CardMove => "was unseated",
                 DaggerfallOfficeChangeCause.Quest => "stepped aside",
+                DaggerfallOfficeChangeCause.Law => "was banished by the court",
                 _ => "succeeded",
             };
 

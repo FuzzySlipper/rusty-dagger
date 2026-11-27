@@ -909,6 +909,22 @@ internal sealed partial class DaggerfallSession
             };
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
             State.Quests.BindSocial(State.Social, State.Crime, () => _site.Region);
+            State.Quests.BindOfficeActions(action =>
+            {
+                int day = checked((int)_time.Calendar.DayNumber);
+                long minute = _time.Calendar.MinuteNumber;
+                return action.Kind switch
+                {
+                    DaggerfallQuestOfficeActionKind.Depose => OfficeLedger.DeposeActorOrFactionOffice(
+                        action.TargetActorId, action.TargetFactionId, DaggerfallOfficeChangeCause.Quest,
+                        day, "was deposed by intrigue", _site.ActiveSite, minute).Count > 0,
+                    DaggerfallQuestOfficeActionKind.DeclareRegency => OfficeLedger.DeclareRegencyForActorOrFaction(
+                        action.TargetActorId, action.TargetFactionId, action.RegentActorId, action.RegentFactionId,
+                        DaggerfallOfficeChangeCause.Quest, day, "holds interim regency by quest decree", minute, exileIncumbent: true) is not null,
+                    DaggerfallQuestOfficeActionKind.Restore => ResolveQuestExileRestore(action, day, minute),
+                    _ => false,
+                };
+            });
             State.Quests.BindGuildInvitationAdmission(factionId =>
                 State.ConcreteGuildMembership.AdmitByInvitation(factionId, checked((int)_time.Calendar.DayNumber)));
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
@@ -1102,7 +1118,7 @@ internal sealed partial class DaggerfallSession
             if (definitions.PoliticalCanon is { } politicalCanon)
                 PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, State.Social.Liege,
                     OfficeLedger.ResolveBoardSeatPersona, WorldConditions, definitions.Locations.Records, CourierDispatches,
-                    _time.Calendar.DayNumber, saved?.PoliticalBoard);
+                    _time.Calendar.DayNumber, saved?.PoliticalBoard, OfficeLedger);
             OfficeLedger.OfficeChanged += change => PoliticalBoard?.ObserveOfficeChanged(change);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
@@ -1347,6 +1363,10 @@ internal sealed partial class DaggerfallSession
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
                 promoteGuard: id => _roster.PromoteToCityWatch(id));
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
+            Law.BindOfficeHolderBanished((actorId, region, crimeKind, banished, detail) =>
+                OfficeLedger.ReactToHolderCrimeOrBanishment(
+                    actorId, region, crimeKind, banished, checked((int)_time.Calendar.DayNumber),
+                    detail, _site.ActiveSite, _time.Calendar.MinuteNumber).Count);
             Law.BindCrimeSpread((incident, loss) =>
             {
                 DaggerfallSiteRecord? origin = _site.ActiveSite;
@@ -1663,7 +1683,21 @@ internal sealed partial class DaggerfallSession
             officeHolders: OfficeHolders,
             officeLedger: OfficeLedger,
             actorLedger: State.ActorLedger,
-            findSite: id => _site.TryFind(id, out DaggerfallSiteRecord rec) ? rec : null);
+            findSite: id => _site.TryFind(id, out DaggerfallSiteRecord rec) ? rec : null,
+            restoreExile: (npc, exile) => DaggerfallExileDialogue.EvaluateAndRestore(
+                npc, exile, OfficeLedger, State.Social, State.Crime, _definitions,
+                () => State.Currency.Read().Gold,
+                cost => State.Currency.TrySpendGold(cost, []),
+                (actorId, delta) => Introductions.AdjustActorDisposition(actorId, delta),
+                State.Character.Identity.Name,
+                checked((int)_time.Calendar.DayNumber),
+                _time.Calendar.MinuteNumber),
+            denounceTargets: (speaker, site) => DaggerfallExileDialogue.ListDenounceTargets(
+                speaker, site, OfficeLedger, OfficeHolders, WorldConditions, State.Crime, _definitions,
+                checked((int)_time.Calendar.DayNumber)),
+            denounceOfficeHolder: (speaker, targetId, site) => DaggerfallExileDialogue.EvaluateAndDenounce(
+                speaker, targetId, site, OfficeLedger, OfficeHolders, WorldConditions, State.Social, State.Crime, Law, _definitions,
+                checked((int)_time.Calendar.DayNumber)));
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);
@@ -1674,6 +1708,23 @@ internal sealed partial class DaggerfallSession
         return State.Quests.TryResolveDialogueTopic(npcId, topicId,
             out string? text, out IReadOnlyList<string> diagnostics)
             ? (text!, diagnostics) : null;
+    }
+
+    private bool ResolveQuestExileRestore(DaggerfallQuestOfficeAction action, int day, long minute)
+    {
+        if (action.TargetActorId is long actorId && actorId > 0)
+            return OfficeLedger.RestoreExile(actorId, DaggerfallOfficeChangeCause.Quest, day, "was restored to office", minute) is not null;
+        if (action.TargetFactionId is int factionId && factionId > 0)
+        {
+            DaggerfallOfficeExileSave? matched = OfficeLedger.Exiles.FirstOrDefault(e =>
+                e.OfficeFactionId == factionId
+                || (e.CastId is { Length: > 0 } cid
+                    && _definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? c)
+                    && c.FactionId == factionId));
+            if (matched is not null)
+                return OfficeLedger.RestoreExile(matched.ActorId, DaggerfallOfficeChangeCause.Quest, day, "was restored to office", minute) is not null;
+        }
+        return false;
     }
 
     // A wielded item's template and metal, which choose how the 3D first-person art draws it.

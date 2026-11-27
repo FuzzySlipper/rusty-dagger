@@ -69,12 +69,35 @@ internal sealed class DaggerfallLaw(
 {
     private Func<int, DaggerfallGateScrutinyAssessment>? _gateScrutiny;
     private Action<DaggerfallCrimeIncidentSave, int>? _onCrimeReputationLoss;
+    private Func<long, int, DaggerfallCrimeKind?, bool, string?, int>? _onOfficeHolderBanished;
 
     internal void BindGateScrutiny(Func<int, DaggerfallGateScrutinyAssessment> evaluate) =>
         _gateScrutiny = evaluate ?? throw new ArgumentNullException(nameof(evaluate));
 
     internal void BindCrimeSpread(Action<DaggerfallCrimeIncidentSave, int> recordCrime) =>
         _onCrimeReputationLoss = recordCrime ?? throw new ArgumentNullException(nameof(recordCrime));
+
+    internal void BindOfficeHolderBanished(Func<long, int, DaggerfallCrimeKind?, bool, string?, int> onHolderBanished) =>
+        _onOfficeHolderBanished = onHolderBanished ?? throw new ArgumentNullException(nameof(onHolderBanished));
+
+    /// <summary>
+    /// Convicts or banishes an NPC office holder in <paramref name="region"/> for <paramref name="crimeKind"/>,
+    /// routing through the bound <see cref="DaggerfallOfficeLedger"/> so every office they hold is deposed and exiled
+    /// via <see cref="DaggerfallOfficeLedger.OfficeChanged"/>. Returns how many offices were vacated.
+    /// </summary>
+    internal int ConvictOrBanishOfficeHolder(
+        long actorId,
+        int region,
+        DaggerfallCrimeKind? crimeKind,
+        bool banished,
+        string? detail = null)
+    {
+        if (actorId <= 0 || actorId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(actorId), "Office holder banishment requires a positive non-player actor id.");
+        if (region is < 0 or > 61)
+            throw new ArgumentOutOfRangeException(nameof(region), "Office holder banishment requires a valid classic region.");
+        return _onOfficeHolderBanished?.Invoke(actorId, region, crimeKind, banished, detail) ?? 0;
+    }
 
     /// <summary>The case in front of the player: the one holding the legal modal, else the active region's.</summary>
     internal DaggerfallLegalResponseSave? Current => crime.LegalResponses.FirstOrDefault(response => response.Modal)

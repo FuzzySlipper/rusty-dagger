@@ -67,6 +67,7 @@ internal sealed class DaggerfallPoliticalBoard
     private readonly DaggerfallPoliticalNews _news;
     private readonly DaggerfallCourierDispatches? _couriers;
     private readonly IReadOnlyList<DaggerfallSiteRecord> _sites;
+    private DaggerfallOfficeLedger? _officeLedger;
     private readonly Dictionary<string, DaggerfallSiteRecord?> _towns = new(StringComparer.Ordinal);
     private readonly Dictionary<int, List<DaggerfallWorldConditionToken>> _tokens = [];
     private readonly Dictionary<string, (string Region, ConditionKind Kind, string? Detail)> _tokenConditions = new(StringComparer.Ordinal);
@@ -82,7 +83,8 @@ internal sealed class DaggerfallPoliticalBoard
     /// </summary>
     internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallRegionLiege liege,
         Func<string, DaggerfallSeatLeaderPersona> seatPersona, DaggerfallWorldConditions conditions, IReadOnlyList<DaggerfallSiteRecord> sites,
-        DaggerfallCourierDispatches? couriers, long day, DaggerfallPoliticalBoardSave? saved)
+        DaggerfallCourierDispatches? couriers, long day, DaggerfallPoliticalBoardSave? saved,
+        DaggerfallOfficeLedger? officeLedger = null)
     {
         _canon = canon;
         _seats = seats;
@@ -91,6 +93,7 @@ internal sealed class DaggerfallPoliticalBoard
         _conditions = conditions;
         _sites = sites;
         _couriers = couriers;
+        _officeLedger = officeLedger;
         if (saved is null)
         {
             _board = Board.Create(canon.Setup, canon.Cards);
@@ -115,6 +118,10 @@ internal sealed class DaggerfallPoliticalBoard
         conditions.BindExternalSource(TokensFor);
         couriers?.BindBoardMoveCallback(CourierSettled);
     }
+
+    /// <summary>Binds the office ledger so weekly board holder, regency, and conquest changes write through <see cref="DaggerfallOfficeLedger.OfficeChanged"/>.</summary>
+    internal void BindOfficeLedger(DaggerfallOfficeLedger officeLedger) =>
+        _officeLedger = officeLedger ?? throw new ArgumentNullException(nameof(officeLedger));
 
     internal Board Board => _board;
 
@@ -160,6 +167,7 @@ internal sealed class DaggerfallPoliticalBoard
             DelayCouriersOnTheRoad();
             TurnTrace trace = BoardTurn.Play(_board);
             _lastTurnDay += DaysPerWeek;
+            ApplyBoardOfficeChanges(trace, checked((int)_lastTurnDay), _lastTurnDay * MinutesPerDay);
             SendCouriers(trace);
             _recentTurns.Add(trace);
             if (_recentTurns.Count > RecentTurnsKept) _recentTurns.RemoveAt(0);
@@ -251,6 +259,130 @@ internal sealed class DaggerfallPoliticalBoard
             ? influence
             : new QuestOutcome(seat, [], [new CardEffect(CardEffectKind.Gain, 1, Resource.Favour)]));
     }
+
+    /// <summary>
+    /// Propagates non-nudge board-driven seat holder changes, severe court crises (regency), and forceful regional
+    /// conquests/cessions (deposing the regional ruler) into <see cref="DaggerfallOfficeLedger"/> with
+    /// <see cref="DaggerfallOfficeChangeCause.CardMove"/> so <see cref="ObserveOfficeChanged"/> never echoes them back.
+    /// Peaceful annexations keep the regional lord (suzerainty) and local office challenges belong to #11127.
+    /// </summary>
+    private void ApplyBoardOfficeChanges(TurnTrace trace, int day, long minute)
+    {
+        if (_officeLedger is null)
+            return;
+
+        ApplyBoardChangeSlice(trace.Upkeep, forcefulConquest: false, day, minute);
+        if (trace.World is { } world)
+            ApplyBoardChangeSlice(world.Changes, forcefulConquest: false, day, minute);
+        foreach (ArrivalTrace arrival in trace.Arrivals)
+        {
+            if (arrival.Outcome != MoveOutcome.Resolved) continue;
+            ApplyBoardChangeSlice(arrival.Changes, IsConquestCard(arrival.Card), day, minute);
+        }
+        foreach (MoveTrace move in trace.Moves)
+            ApplyBoardChangeSlice(move.Changes, IsConquestCard(move.Card), day, minute);
+        ApplyBoardChangeSlice(trace.Wars, forcefulConquest: true, day, minute);
+    }
+
+    private void ApplyBoardChangeSlice(IReadOnlyList<BoardChange> changes, bool forcefulConquest, int day, long minute)
+    {
+        foreach (BoardChange change in changes)
+        {
+            // 1. Direct seat holder changes initiated on the board (never from world nudges).
+            if (string.Equals(change.Field, "holder", StringComparison.Ordinal)
+                && _board.HasSeat(change.Subject)
+                && _seats.TryGetBySeatId(change.Subject, out DaggerfallBoardSeatBinding? seatBinding)
+                && seatBinding is not null)
+            {
+                if (change.To.StartsWith("vacant:", StringComparison.Ordinal))
+                {
+                    _officeLedger!.DeposeBoardSeat(
+                        seatBinding.SeatId,
+                        DaggerfallOfficeChangeCause.CardMove,
+                        day,
+                        "was unseated on the political board",
+                        minute);
+                }
+                else if (change.To.StartsWith("regent:", StringComparison.Ordinal))
+                {
+                    _officeLedger!.DeclareRegencyForBoardSeat(
+                        seatBinding.SeatId,
+                        DaggerfallOfficeChangeCause.CardMove,
+                        day,
+                        "holds interim regency by court decree",
+                        minute,
+                        exileIncumbent: true);
+                }
+                else
+                {
+                    _officeLedger!.SetBoardSeatHolder(
+                        seatBinding.SeatId,
+                        holderActorId: null,
+                        holderCastId: change.To,
+                        holderFactionId: null,
+                        holderDisplayName: null,
+                        DaggerfallOfficeChangeCause.CardMove,
+                        day,
+                        "assumed leadership of the seat",
+                        currentMinute: minute);
+                }
+                continue;
+            }
+
+            // 2. Severe court crisis on a crown seat (HostageTreaty from defeat/demand-hostages, OR compounded court
+            //    paralysis from 2+ simultaneous court plots) places the seat under interim regency when it is not
+            //    already vacant or in regency.
+            if (change.Field.StartsWith("court:", StringComparison.Ordinal)
+                && !string.Equals(change.To, "none", StringComparison.Ordinal)
+                && _board.HasSeat(change.Subject)
+                && _seats.TryGetBySeatId(change.Subject, out DaggerfallBoardSeatBinding? courtSeat)
+                && courtSeat is not null)
+            {
+                string officeKey = DaggerfallOfficeLedger.FactionOfficeKey(courtSeat.OfficeFactionId);
+                DaggerfallOfficeOverrideSave? currentOver = _officeLedger!.TryGetOverride(officeKey);
+                if (currentOver is { Vacant: true } or { IsRegency: true })
+                    continue;
+                Seat seat = _board.Seat(change.Subject);
+                CourtCondition? hostage = seat.Court.FirstOrDefault(c => c.Kind == CourtConditionKind.HostageTreaty);
+                bool compoundedCrisis = seat.Court.Count >= 2;
+                if (hostage is not null || compoundedCrisis)
+                {
+                    string reason = hostage is not null
+                        ? $"holds interim regency under hostage treaty with {_board.Seat(hostage.Source).Name}"
+                        : "holds interim regency during compounded court paralysis";
+                    _officeLedger.DeclareRegencyForBoardSeat(
+                        courtSeat.SeatId,
+                        DaggerfallOfficeChangeCause.CardMove,
+                        day,
+                        reason,
+                        minute,
+                        exileIncumbent: false);
+                }
+                continue;
+            }
+
+            // 3. Forceful regional takeover (Conquer siege card or Wars treaty cession) deposes the province ruler
+            //    into exile through the shared DeposeRegionalRuler caller (reused by #11143). Peaceful Annex keeps the lord.
+            if (forcefulConquest
+                && string.Equals(change.Field, "allegiance", StringComparison.Ordinal)
+                && !string.Equals(change.To, "independent", StringComparison.Ordinal)
+                && _board.HasRegion(change.Subject))
+            {
+                Region conquered = _board.Region(change.Subject);
+                string victorName = _board.HasSeat(change.To) ? _board.Seat(change.To).Name : change.To;
+                _ = _officeLedger!.DeposeRegionalRuler(
+                    conquered.CatalogRegion,
+                    DaggerfallOfficeChangeCause.CardMove,
+                    day,
+                    $"was deposed in the conquest of {conquered.Name} by {victorName}",
+                    minute);
+            }
+        }
+    }
+
+    private bool IsConquestCard(string cardId) =>
+        _canon.Cards.Cards.FirstOrDefault(c => string.Equals(c.Id, cardId, StringComparison.Ordinal))
+            ?.Effects.Any(e => e.Kind == CardEffectKind.Conquer) == true;
 
     /// <summary>The day turn <paramref name="turn"/> was played on.</summary>
     internal long TurnDay(int turn) => _lastTurnDay - (long)(_board.Turn - turn) * DaysPerWeek;

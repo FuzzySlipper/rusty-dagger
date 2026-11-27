@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>The source-defined forms whose trigger state belongs to a quest instance.</summary>
 internal enum DaggerfallQuestTaskKind { Headless, Standard, Variable, PersistUntil, Global }
-internal enum DaggerfallQuestTaskOperationKind { ChangeRepute, LegalRepute, ReputeExceeds, WhenRepute, SetCrime, AddDialog, DialogLink, When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, CureVampirism, MakePcDiseased, CurePcDisease, CastSpellDo, CastEffectDo, CastSpellOnFoe, Climate, Season, Weather, PlaySound, PlaySong, PlayVideo, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
+internal enum DaggerfallQuestTaskOperationKind { ChangeRepute, LegalRepute, ReputeExceeds, WhenRepute, SetCrime, DeposeOffice, DeclareRegency, RestoreOffice, AddDialog, DialogLink, When, DroppedAt, RevealPlace, TeleportPlace, WorldUpdate, ClickedItem, TotingItem, ItemUsed, GiveItem, PayMoney, GivePc, FoeTeam, FoeInfighting, FoeRestraint, Enemies, CreateFoe, SpawnCityGuards, CreateNpc, HideNpc, RestoreNpc, DestroyNpc, WhenNpcAvailable, ClickedNpc, ClickedFoe, PcAt, PcAtAny, WhenPcEnters, WhenPcExits, DailyFrom, LevelCompleted, WhenAttributeLevel, WhenSkillLevel, Start, Clear, Unset, StartClock, StopClock, Journal, RemoveJournal, JournalNote, Say, Rumor, Prompt, PickOneOf, RunQuest, StartQuest, CureLycanthropy, CureVampirism, MakePcDiseased, CurePcDisease, CastSpellDo, CastEffectDo, CastSpellOnFoe, Climate, Season, Weather, PlaySound, PlaySong, PlayVideo, TrainPc, GetItem, HaveItem, TakeItem, MakePermanent, ReservePlace, PlaceFoe, PlaceItem, PlaceNpc, AddQuestor, DropQuestor, AddFace, DropFace, MuteNpc, InjuredFoe, KilledFoe, KillFoe, RemoveFoe, End, Unsupported }
 internal enum DaggerfallQuestTaskConditionOperator { When, WhenNot, And, AndNot, Or, OrNot }
 
 /// <summary>One durable trigger state. Operation completion aligns with the compiled source operation order.</summary>
@@ -686,6 +686,9 @@ internal static class DaggerfallQuestTaskRunner
                     case DaggerfallQuestTaskOperationKind.LegalRepute:
                     case DaggerfallQuestTaskOperationKind.SetCrime:
                     case DaggerfallQuestTaskOperationKind.ReputeExceeds:
+                    case DaggerfallQuestTaskOperationKind.DeposeOffice:
+                    case DaggerfallQuestTaskOperationKind.DeclareRegency:
+                    case DaggerfallQuestTaskOperationKind.RestoreOffice:
                         if (operation.Kind == DaggerfallQuestTaskOperationKind.ReputeExceeds) _ = Require(operation.Targets[1], indexes, instance.InstanceId, operation);
                         try
                         {
