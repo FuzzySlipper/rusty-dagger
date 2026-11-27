@@ -27,7 +27,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     DaggerfallLocalMap map, DaggerfallActivationPanel activation, DaggerfallSpellbookPanel spellbook, DaggerfallMakerPanels makers,
     DaggerfallSummoningPanel summoning, DaggerfallEconomyPanels economy, DaggerfallExpeditionPanel travel, DaggerfallRestPanel rest,
     DaggerfallTextActions text, DaggerfallLootActions lootActions, DaggerfallDeathScreen death, DaggerfallUiDispatch.SessionCalls session,
-    PresentationState presentation, DaggerfallInputRefusals refusals)
+    PresentationState presentation, DaggerfallInputRefusals refusals, DaggerfallNoticeBoardPanel? noticeBoard = null)
 {
     /// <summary>What the dispatch asks of the session: its cross-domain lists, its open interactions and the Host's requests.</summary>
     /// <param name="ChooseLegal">The legal choice's list.</param>
@@ -303,6 +303,8 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
                 break;
             case DaggerfallUiActionKind.DungeonTextAnswer:
             case DaggerfallUiActionKind.DungeonTextClose: text.ApplyDungeonText(action); break;
+            case DaggerfallUiActionKind.NoticeBoardTake: _ = noticeBoard?.TakeLead(action.Revision, action.Key); break;
+            case DaggerfallUiActionKind.NoticeBoardClose: noticeBoard?.Close(action.Revision); break;
             case DaggerfallUiActionKind.InventoryMove: inventory.Move(action); break;
             case DaggerfallUiActionKind.InventoryInspect: inventory.Inspect(action); break;
             case DaggerfallUiActionKind.InventoryUse: inventory.Use(action); break;

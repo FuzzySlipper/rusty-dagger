@@ -789,8 +789,10 @@ internal sealed class DaggerfallActorRoster
     {
         ArgumentNullException.ThrowIfNull(change);
 
-        // 1. Displaced living predecessor: deterministic exile relocation (replacing OffStage when an exile site exists).
-        if (change.ChangeKind is DaggerfallOfficeChangeKind.HolderDeposed or DaggerfallOfficeChangeKind.SuccessorSeated
+        // 1. Displaced living incumbent: deterministic exile relocation (replacing OffStage when an exile site exists).
+        //    Only runs when DisplacesLivingIncumbent is true so filling an already-vacant office (e.g. a former
+        //    CourtFactor post vacated by Great House elevation) never exiles the newly elevated ruler.
+        if (change.DisplacesLivingIncumbent
             && change.PreviousHolderActorId is long prevId
             && change.PreviousHolderIsAlive
             && prevId != change.NewHolderActorId)

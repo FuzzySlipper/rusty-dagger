@@ -6,6 +6,7 @@ import { mountDeath } from './death.js';
 import { DEVELOPER_KEY, mountDeveloperTools } from './developer.js';
 import { mountDialogue } from './dialogue.js';
 import { mountDungeonText } from './dungeon-text.js';
+import { mountNoticeBoard } from './notice-board.js';
 import { mountEntry } from './entry.js';
 import { isGlints, useGlints } from './glint.js';
 import { sender } from './host.js';
@@ -126,6 +127,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const choices = mountChoices(shell, quests, send);
   const death = mountDeath(shell, send);
   const dungeonText = mountDungeonText(shell, send);
+  const noticeBoard = mountNoticeBoard(shell, send);
   const scale = mountScale(context);
   // Diagnostic UI, mounted beside the game's shell so the game's skin and modal surfaces never shape it.
   const developer = mountDeveloperTools(root, context, { onChange: () => sync(true) });
@@ -150,6 +152,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const inputClaims = mountInputClaims(send, () => interaction.mode() !== 'interface' ? null
     : loading.open() ? 'loading screen' : developer.isOpen() ? 'developer tools' : menu.dialog.open ? 'menu' : radial.isOpen() ? 'radial'
     : tutorial.isOpen() ? 'tutorial' : dialogue.window.open ? 'conversation' : dialogue.summoningOffer.open ? 'summoning offer'
+    : !noticeBoard.root.hidden ? 'notice board'
     : worldMap.isOpen() ? 'world map' : expedition.isOpen() ? 'travel map'
     : projectedMode === 'playing' ? 'prompt' : `${projectedMode} screen`);
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
@@ -183,6 +186,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       back: dialogue.back, panel: dialogue.panel, initialFocus: dialogue.initialFocus }),
     ...choices.cancellable.map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
       isOpen: () => !service.hidden, back: () => service.querySelector<HTMLButtonElement>('[data-escape]:not(:disabled)')?.click() })),
+    navigation.register({ name: 'notice-board', root: noticeBoard.root, layer: 42, isOpen: () => !noticeBoard.root.hidden, back: noticeBoard.close,
+      initialFocus: noticeBoard.initialFocus }),
     navigation.register({ name: 'dungeon-text', root: dungeonText.root, layer: 40, isOpen: () => !dungeonText.root.hidden, back: dungeonText.close,
       initialFocus: dungeonText.initialFocus }),
     navigation.register({ name: 'death', root: death.root, layer: 20, isOpen: () => !death.root.hidden,
@@ -257,6 +262,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const spellbook = isSpellbookProjection(value.spells) ? value.spells : null;
     choices.update(value);
     dungeonText.update(value);
+    noticeBoard.update(value);
     const questMessages = value.quests ? [value.quests.offer, ...value.quests.deliveries,
       ...[...value.quests.journal.active, ...value.quests.journal.finished].flatMap(group => group.entries), value.quests.pending] : [];
     menu.update(value, dead, spellbook, [
@@ -290,7 +296,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // The Engine owns pointer lock; the product tells it whether any current surface needs a cursor.
     interaction.setProjectionNeedsCursor(value.mode === 'title' || value.mode === 'dead' || value.mode === 'paused' || value.mode === 'modal'
       || hud.cinematicPlaying() || questAnswerRequired
-      || Boolean(value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel));
+      || Boolean(value.dungeonText || value.noticeBoard || value.legal || value.createItem || value.identify || value.teleport || value.dispel));
     // A question outlives nothing it was asked over: death, or the menu or dialogue closing, answers no.
     if (dead) confirmPrompt.cancel(); else confirmPrompt.dropIfOwnerClosed();
     // Play resumes where loading ends: the world takes focus (and the pointer) back without a click.

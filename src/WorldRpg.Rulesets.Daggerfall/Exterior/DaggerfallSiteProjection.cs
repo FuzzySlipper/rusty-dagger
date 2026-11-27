@@ -31,7 +31,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     private bool _suspended;
     private Vector3 _worldOffset;
 
-    private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallCityGates gates, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals, SpatialMovementSystem spatialMovement)
+    private DaggerfallSiteProjection(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, DaggerfallCityGates gates, DaggerfallSiteAppearance appearance, DaggerfallSiteLighting lighting, DaggerfallSitePortalRuntime portals, DaggerfallSiteNoticeBoardRuntime noticeBoards, SpatialMovementSystem spatialMovement)
     {
         Inputs = inputs;
         Doors = doors;
@@ -40,6 +40,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Appearance = appearance;
         Lighting = lighting;
         Portals = portals;
+        NoticeBoards = noticeBoards;
         _spatialMovement = spatialMovement ?? throw new ArgumentNullException(nameof(spatialMovement));
         // Creation admits authored water below. Keep this false until registration and activation
         // have both succeeded so the initial projection cannot skip its trigger admission.
@@ -54,6 +55,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     internal DaggerfallSiteAppearance Appearance { get; }
     internal DaggerfallSiteLighting Lighting { get; }
     internal DaggerfallSitePortalRuntime Portals { get; }
+    internal DaggerfallSiteNoticeBoardRuntime NoticeBoards { get; }
     internal bool IsSuspended => _suspended;
 
     /// <summary>
@@ -92,6 +94,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         DaggerfallSiteAppearance? appearance = null;
         DaggerfallSiteLighting? lighting = null;
         DaggerfallSitePortalRuntime? portals = null;
+        DaggerfallSiteNoticeBoardRuntime? noticeBoards = null;
         try
         {
             motion = new(actors, engine.Spatial, spatialMovement.Session, doors, inputs.ProfileKey.LogicalId,
@@ -109,26 +112,31 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             doors.SoundRequested += appearance.PlayDoorSound;
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar.Sky, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
-            DaggerfallSiteProjection projection = new(inputs, doors, motion, gates, appearance, lighting, portals, spatialMovement);
+            noticeBoards = new(actors, inputs.ProfileKey, inputs.NoticeBoards);
+            DaggerfallSiteProjection projection = new(inputs, doors, motion, gates, appearance, lighting, portals, noticeBoards, spatialMovement);
             projection.ActivateWaterTriggers(tick: 0);
             return projection;
         }
         catch
         {
-            try { portals?.Dispose(); }
+            try { noticeBoards?.Dispose(); }
             finally
             {
-                try { lighting?.Dispose(); }
+                try { portals?.Dispose(); }
                 finally
                 {
-                    try { appearance?.Dispose(); }
+                    try { lighting?.Dispose(); }
                     finally
                     {
-                        try { gates?.Dispose(); }
+                        try { appearance?.Dispose(); }
                         finally
                         {
-                            try { motion?.Dispose(); }
-                            finally { doors.Dispose(); }
+                            try { gates?.Dispose(); }
+                            finally
+                            {
+                                try { motion?.Dispose(); }
+                                finally { doors.Dispose(); }
+                            }
                         }
                     }
                 }
@@ -227,6 +235,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Motion.Suspend();
         Doors.Suspend();
         Portals.Suspend();
+        NoticeBoards.Suspend();
         Lighting.Suspend(keepSky);
         _suspended = true;
     }
@@ -244,6 +253,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         CityGates.Resume();
         Appearance.ResumeLocationResources(offUpdate);
         Portals.Resume();
+        NoticeBoards.Resume();
         Lighting.Resume();
         ActivateWaterTriggers(tick: 0);
         _suspended = false;
@@ -259,6 +269,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Motion.Rebase(delta);
         CityGates.Rebase(delta);
         Portals.Rebase(delta);
+        NoticeBoards.Rebase(delta);
         Appearance.Rebase(delta);
         Lighting.Rebase(delta);
     }
@@ -353,6 +364,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         try { if (_ownsAppearance) Appearance.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { Portals.Dispose(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
+        try { NoticeBoards.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
         try { CityGates.Dispose(); }
         catch (Exception exception) { (failures ??= []).Add(exception); }
@@ -461,6 +474,104 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
     }
 
     private static ulong StableIdentity(string profile, string id) => StableHash.Fnv1a64($"site-portal:{profile}:{id}");
+}
+
+/// <summary>Transient Engine entities exposing deterministic town/tavern notice boards to the ordinary interaction service.</summary>
+internal sealed class DaggerfallSiteNoticeBoardRuntime : IDisposable
+{
+    private static readonly EntityTypeId NoticeBoardType = new("daggerfall.notice-board");
+    private readonly EntityDirectory _entities;
+    private readonly Dictionary<string, (DaggerfallSiteNoticeBoard Board, DurableIdentityReference Identity, EntityId Entity)> _boards;
+    private bool _disposed;
+    private bool _suspended;
+
+    internal DaggerfallSiteNoticeBoardRuntime(EntityDirectory entities, DaggerfallWorldProfileKey profile, IEnumerable<DaggerfallSiteNoticeBoard> boards)
+    {
+        _entities = entities ?? throw new ArgumentNullException(nameof(entities));
+        profile.Validate();
+        ArgumentNullException.ThrowIfNull(boards);
+        Dictionary<string, (DaggerfallSiteNoticeBoard Board, DurableIdentityReference Identity, EntityId Entity)> admitted = new(StringComparer.Ordinal);
+        try
+        {
+            foreach (DaggerfallSiteNoticeBoard board in boards.Select(b => b.Validate()).OrderBy(b => b.Id, StringComparer.Ordinal))
+            {
+                DurableIdentityReference identity = new(DurableIdentityKind.Resource, StableIdentity(profile.LogicalId, board.Id));
+                EntityId entity = _entities.Create(identity, NoticeBoardType);
+                admitted.Add(board.Id, (board, identity, entity));
+            }
+            _boards = admitted;
+        }
+        catch
+        {
+            foreach ((DaggerfallSiteNoticeBoard _, DurableIdentityReference identity, EntityId _) in admitted.Values)
+                _entities.Destroy(identity);
+            throw;
+        }
+    }
+
+    internal IEnumerable<(DaggerfallSiteNoticeBoard Board, DurableIdentityReference Identity, EntityId Entity)> All => _boards.Values
+        .Where(_ => !_suspended)
+        .OrderBy(value => value.Board.Id, StringComparer.Ordinal)
+        .Select(value => (value.Board, value.Identity, value.Entity));
+
+    internal void Suspend()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteNoticeBoardRuntime));
+        if (_suspended) return;
+        foreach (var value in _boards.Values.ToArray())
+        {
+            _entities.Destroy(value.Identity);
+            _boards[value.Board.Id] = (value.Board, value.Identity, default);
+        }
+        _suspended = true;
+    }
+
+    internal void Resume()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteNoticeBoardRuntime));
+        if (!_suspended) return;
+        List<(DaggerfallSiteNoticeBoard Board, DurableIdentityReference Identity, EntityId Entity)> created = [];
+        try
+        {
+            foreach (var value in _boards.Values.ToArray())
+            {
+                EntityId entity = _entities.Create(value.Identity, NoticeBoardType);
+                _boards[value.Board.Id] = (value.Board, value.Identity, entity);
+                created.Add((value.Board, value.Identity, entity));
+            }
+            _suspended = false;
+        }
+        catch
+        {
+            foreach ((DaggerfallSiteNoticeBoard board, DurableIdentityReference identity, EntityId _) in created)
+            {
+                _entities.Destroy(identity);
+                _boards[board.Id] = (board, identity, default);
+            }
+            throw;
+        }
+    }
+
+    internal void Rebase(Vector3 delta)
+    {
+        if (_suspended) return;
+        foreach (string id in _boards.Keys.ToArray())
+        {
+            var value = _boards[id];
+            _boards[id] = (value.Board with { Position = DaggerfallSceneOrigin.Shift(value.Board.Position, delta) }, value.Identity, value.Entity);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (!_suspended)
+            foreach ((DaggerfallSiteNoticeBoard _, DurableIdentityReference identity, EntityId _) in _boards.Values)
+                _entities.Destroy(identity);
+    }
+
+    private static ulong StableIdentity(string profile, string id) => StableHash.Fnv1a64($"site-notice-board:{profile}:{id}");
 }
 
 /// <summary>

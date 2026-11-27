@@ -103,6 +103,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? _evaluateGateScrutiny;
     private readonly DaggerfallWordSpread? _wordSpread;
     private readonly DaggerfallCourierDispatches? _courierDispatches;
+    private readonly DaggerfallOfficeHolders? _officeHolders;
+    private readonly DaggerfallOfficeLedger? _officeLedger;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -149,7 +151,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallSiteRecord, string>? readNoticeBoard = null,
         Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? evaluateGateScrutiny = null,
         DaggerfallWordSpread? wordSpread = null,
-        DaggerfallCourierDispatches? courierDispatches = null)
+        DaggerfallCourierDispatches? courierDispatches = null,
+        DaggerfallOfficeHolders? officeHolders = null,
+        DaggerfallOfficeLedger? officeLedger = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
@@ -165,6 +169,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _evaluateGateScrutiny = evaluateGateScrutiny;
         _wordSpread = wordSpread;
         _courierDispatches = courierDispatches;
+        _officeHolders = officeHolders;
+        _officeLedger = officeLedger;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -395,6 +401,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (!string.IsNullOrEmpty(benefit?.Message)) greeting += "\n" + benefit.Message;
         string? factionLine = ResolveFactionGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(factionLine)) greeting += "\n" + factionLine;
+        string? officeLine = ResolveOfficeContinuityGreetingLine(npc, activeSite);
+        if (!string.IsNullOrWhiteSpace(officeLine)) greeting += "\n" + officeLine;
         string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(scrutinyLine)) greeting += "\n" + scrutinyLine;
         if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
@@ -938,6 +946,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (overlay is { ReferralTags.Count: > 0 })
             return $"{speaker}: \"{FormatReferralLine(npc, overlay.ReferralTags[0])}\"";
 
+        string? officeBark = ResolveOfficeContinuityAmbientBark(npc, site);
+        if (!string.IsNullOrWhiteSpace(officeBark))
+            return $"{speaker}: \"{officeBark}\"";
+
         int regionIndex = site?.Id.Region ?? npc.Site.Region;
         string regionName = _definitions.BuildingNames.RegionName(regionIndex);
         ulong barkSeed = unchecked((ulong)npc.DurableId);
@@ -1211,11 +1223,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     {
         int day = checked((int)_calendar().DayNumber);
         List<string> lines = [];
+        AppendOfficeContinuityNewsLines(npc, site, lines);
         if (_wordSpread is not null)
         {
             foreach (DaggerfallWordWavefrontSave wf in _wordSpread.ArrivedNewsAt(site, _currentCalendarMinute(), day))
             {
-                if (!string.IsNullOrWhiteSpace(wf.Body))
+                if (!string.IsNullOrWhiteSpace(wf.Body) && !lines.Contains(wf.Body, StringComparer.Ordinal))
                     lines.Add(wf.Body);
             }
         }
@@ -1261,6 +1274,332 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             current = def.Parent;
         }
         return false;
+    }
+
+    private string? ResolveOfficeContinuityGreetingLine(DaggerfallNpc npc, DaggerfallSiteRecord? site)
+    {
+        if (site is null || (_officeHolders is null && _officeLedger is null))
+            return null;
+
+        // 1. Active local office in a guildhall, temple, or palace interior (or town watch captain for guards).
+        if (TryFindLocalOfficeAtActiveProfile(npc, site) is { } localOffice)
+        {
+            if (localOffice.Kind is DaggerfallOfficeKind.GuildHallMaster or DaggerfallOfficeKind.TempleHead)
+            {
+                if (localOffice.IsVacant)
+                {
+                    return !string.IsNullOrWhiteSpace(localOffice.PreviousHolderName)
+                        ? $"The post of {localOffice.Title} stands vacant here since {localOffice.PreviousHolderName} left office; we await word of a successor."
+                        : $"The post of {localOffice.Title} stands vacant here while a successor is named.";
+                }
+                if (localOffice.HolderActorId == npc.DurableId)
+                {
+                    if (localOffice.IsOverridden)
+                        return $"I now hold the office of {localOffice.Title} for this hall.";
+                }
+                else if (!string.IsNullOrWhiteSpace(localOffice.DisplayName))
+                {
+                    string styledLocal = FormatStyledHolder(localOffice.Title, localOffice.DisplayName);
+                    string? majorSeatNote = ResolveMajorSeatContinuityLine(npc, site, forBark: false);
+                    return !string.IsNullOrWhiteSpace(majorSeatNote)
+                        ? $"This hall answers to {styledLocal}. {majorSeatNote}"
+                        : $"This hall answers to {styledLocal}.";
+                }
+            }
+            else if (localOffice.Kind == DaggerfallOfficeKind.CourtFactor && localOffice.IsVacant)
+            {
+                return $"The post of {localOffice.Title} here stands vacant until a replacement is appointed.";
+            }
+            else if (localOffice.Kind == DaggerfallOfficeKind.WatchCaptain && (localOffice.IsVacant || localOffice.IsOverridden))
+            {
+                if (localOffice.IsVacant)
+                    return $"Our watch stands without a {localOffice.Title} until a successor is named.";
+                if (localOffice.HolderActorId != npc.DurableId && !string.IsNullOrWhiteSpace(localOffice.DisplayName))
+                    return $"The watch answers now to {FormatStyledHolder(localOffice.Title, localOffice.DisplayName)}.";
+            }
+        }
+
+        // 2. Palace / royal court speaker -> reflect live regional ruler, interim regent, or vacant throne.
+        if (IsPalaceOrCourtContext(npc, site))
+            return ResolveRegionalThroneContinuityLine(npc, site.Id.Region, forBark: false);
+
+        // 3. Guild/order/temple member outside their own hall -> reflect overarching MajorSeat turnover or vacancy.
+        if (TryFindSpeakerMajorSeat(npc) is { } majorSeat)
+        {
+            DaggerfallOfficeOverrideSave? seatOver = _officeLedger?.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(majorSeat.OfficeFactionId));
+            if (seatOver is not null)
+                return ResolveMajorSeatContinuityLine(npc, site, forBark: false);
+        }
+
+        return null;
+    }
+
+    private string? ResolveOfficeContinuityAmbientBark(DaggerfallNpc npc, DaggerfallSiteRecord? site)
+    {
+        if (site is null || (_officeHolders is null && _officeLedger is null))
+            return null;
+
+        if (TryFindLocalOfficeAtActiveProfile(npc, site) is { } localOffice)
+        {
+            if (localOffice.Kind is DaggerfallOfficeKind.GuildHallMaster or DaggerfallOfficeKind.TempleHead)
+            {
+                if (localOffice.IsVacant)
+                    return $"Without a {localOffice.Title}, everyone in this hall is waiting on a successor.";
+                string? majorSeatBark = ResolveMajorSeatContinuityLine(npc, site, forBark: true);
+                if (!string.IsNullOrWhiteSpace(majorSeatBark))
+                    return majorSeatBark;
+                if (localOffice.HolderActorId != npc.DurableId && !string.IsNullOrWhiteSpace(localOffice.DisplayName))
+                    return $"Business in this hall runs by order of {FormatStyledHolder(localOffice.Title, localOffice.DisplayName)}.";
+            }
+            else if (localOffice.Kind == DaggerfallOfficeKind.WatchCaptain && (localOffice.IsVacant || localOffice.IsOverridden))
+            {
+                return localOffice.IsVacant
+                    ? $"We are short a {localOffice.Title} — every watchman is pulling double duty."
+                    : $"Watch orders come from {FormatStyledHolder(localOffice.Title, localOffice.DisplayName)} now.";
+            }
+        }
+
+        if (IsPalaceOrCourtContext(npc, site))
+            return ResolveRegionalThroneContinuityLine(npc, site.Id.Region, forBark: true);
+
+        if (TryFindSpeakerMajorSeat(npc) is { } majorSeat
+            && _officeLedger?.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(majorSeat.OfficeFactionId)) is not null)
+        {
+            return ResolveMajorSeatContinuityLine(npc, site, forBark: true);
+        }
+
+        return null;
+    }
+
+    private void AppendOfficeContinuityNewsLines(DaggerfallNpc npc, DaggerfallSiteRecord site, List<string> lines)
+    {
+        if (_officeHolders is null && _officeLedger is null)
+            return;
+
+        static void AddUnique(List<string> target, string? line)
+        {
+            if (!string.IsNullOrWhiteSpace(line) && !target.Contains(line, StringComparer.Ordinal))
+                target.Add(line);
+        }
+
+        long nowMinute = _currentCalendarMinute();
+        int nowDay = checked((int)_calendar().DayNumber);
+        bool inCourt = IsPalaceOrCourtContext(npc, site);
+        IReadOnlyList<DaggerfallWordWavefrontSave> arrived = _wordSpread is not null
+            ? _wordSpread.ArrivedNewsAt(site, nowMinute, nowDay)
+            : [];
+        bool HasArrivedOfficeWord(string officeKey) =>
+            arrived.Any(wf => wf.EventId.StartsWith($"office:{officeKey}|", StringComparison.Ordinal));
+
+        // 1. Local office status in the active hall or site (always known locally).
+        if (TryFindLocalOfficeAtActiveProfile(npc, site) is { } localOffice)
+        {
+            if (localOffice.IsVacant)
+            {
+                AddUnique(lines, !string.IsNullOrWhiteSpace(localOffice.PreviousHolderName)
+                    ? $"The post of {localOffice.Title} here stands vacant since {localOffice.PreviousHolderName} left office."
+                    : $"The post of {localOffice.Title} here stands vacant while a successor is chosen.");
+            }
+            else if (localOffice.IsOverridden && !string.IsNullOrWhiteSpace(localOffice.DisplayName))
+            {
+                AddUnique(lines, $"{FormatStyledHolder(localOffice.Title, localOffice.DisplayName)} now leads this hall.");
+            }
+        }
+
+        // 2. Regional throne status (always known inside palace/court or at origin; outside, respect WordSpread proclamation arrival).
+        if (_officeHolders?.ResolveRegionalRuler(site.Id.Region) is { } ruler)
+        {
+            string throneKey = DaggerfallOfficeLedger.FactionOfficeKey(ruler.OfficeFactionId);
+            DaggerfallOfficeOverrideSave? throneOver = _officeLedger?.TryGetOverride(throneKey);
+            bool throneNewsKnown = inCourt
+                || throneOver is null
+                || throneOver.OfficeSiteId == site.Id
+                || _wordSpread is null
+                || !_wordSpread.HasOfficeProclamation(throneKey)
+                || HasArrivedOfficeWord(throneKey);
+            if (throneNewsKnown && (inCourt || throneOver is not null))
+                AddUnique(lines, ResolveRegionalThroneContinuityLine(npc, site.Id.Region, forBark: false));
+        }
+
+        // 3. Speaker's overarching MajorSeat status (guildhall/temple or arrived proclamation).
+        if (TryFindSpeakerMajorSeat(npc) is { } seat)
+        {
+            string seatKey = DaggerfallOfficeLedger.FactionOfficeKey(seat.OfficeFactionId);
+            DaggerfallOfficeOverrideSave? seatOver = _officeLedger?.TryGetOverride(seatKey);
+            bool seatNewsKnown = seatOver is null
+                || seatOver.OfficeSiteId == site.Id
+                || _wordSpread is null
+                || !_wordSpread.HasOfficeProclamation(seatKey)
+                || HasArrivedOfficeWord(seatKey);
+            if (seatNewsKnown && seatOver is not null)
+                AddUnique(lines, ResolveMajorSeatContinuityLine(npc, site, forBark: false));
+        }
+    }
+
+    private string? ResolveRegionalThroneContinuityLine(DaggerfallNpc npc, int region, bool forBark)
+    {
+        if (_officeHolders is null || region is < 0 or > 61)
+            return null;
+
+        DaggerfallOfficeHolder? ruler = _officeHolders.ResolveRegionalRuler(region);
+        if (ruler is null)
+            return null;
+
+        string regionName = _definitions.BuildingNames.RegionName(region);
+        string throneKey = DaggerfallOfficeLedger.FactionOfficeKey(ruler.OfficeFactionId);
+        DaggerfallOfficeOverrideSave? over = _officeLedger?.TryGetOverride(throneKey);
+
+        if (over is { Vacant: true } || !ruler.HasLivingHolder)
+        {
+            string? prevName = over?.PreviousHolderName ?? ruler.PreviousHolderName;
+            string? prevFate = !string.IsNullOrWhiteSpace(over?.CauseDetail) ? over.CauseDetail : ruler.PreviousHolderFate;
+            if (forBark)
+                return $"The throne of {regionName} stands vacant — the court is on edge until a successor is named.";
+            return !string.IsNullOrWhiteSpace(prevName)
+                ? $"The throne of {regionName} stands vacant since {prevName} {prevFate ?? "left the throne"}; the court awaits a lawful successor."
+                : $"The throne of {regionName} stands vacant; the court awaits a lawful successor.";
+        }
+
+        if (over is { IsRegency: true })
+        {
+            string styledRegent = FormatStyledHolder(over.Title ?? "Regent", over.HolderDisplayName ?? ruler.DisplayName);
+            if (ruler.ActorId == npc.DurableId)
+                return $"I hold interim regency over {regionName} until the succession is settled.";
+            return forBark
+                ? $"{styledRegent} holds interim regency over {regionName} while succession remains unsettled."
+                : $"Mind your manners — {styledRegent} governs {regionName} as interim regent until a lawful successor is crowned.";
+        }
+
+        string styledRuler = FormatStyledHolder(ruler.Title, ruler.DisplayName);
+        if (ruler.ActorId == npc.DurableId)
+            return $"You address {styledRuler} of {regionName}.";
+        if (forBark)
+            return over is not null
+                ? $"The court adjusts to the reign of {styledRuler} of {regionName}."
+                : $"All eyes in court turn to {styledRuler} of {regionName}.";
+        return over is not null && !string.IsNullOrWhiteSpace(over.PreviousHolderName)
+            ? $"You stand in the court of {styledRuler} of {regionName}, who succeeded {over.PreviousHolderName}."
+            : $"You stand in the court of {styledRuler} of {regionName}.";
+    }
+
+    private string? ResolveMajorSeatContinuityLine(DaggerfallNpc npc, DaggerfallSiteRecord site, bool forBark)
+    {
+        if (_officeHolders is null || TryFindSpeakerMajorSeat(npc) is not { } seat)
+            return null;
+
+        string seatKey = DaggerfallOfficeLedger.FactionOfficeKey(seat.OfficeFactionId);
+        DaggerfallOfficeOverrideSave? over = _officeLedger?.TryGetOverride(seatKey);
+        DaggerfallOfficeHolder? holder = _officeHolders.ResolveOffice(seat.OfficeFactionId, site.Id.Region);
+        if (holder is null && over is null)
+            return null;
+
+        if (over is { Vacant: true } || holder is { HasLivingHolder: false })
+        {
+            return forBark
+                ? $"The {seat.SeatName} stands leaderless while the council chooses a successor."
+                : $"The high seat of the {seat.SeatName} stands vacant while a successor is chosen.";
+        }
+
+        if (over is { IsRegency: true })
+        {
+            string styledRegent = FormatStyledHolder(over.Title ?? "Regent", over.HolderDisplayName ?? holder?.DisplayName);
+            return forBark
+                ? $"{styledRegent} holds interim stewardship over the {seat.SeatName}."
+                : $"{styledRegent} governs the {seat.SeatName} as interim regent while succession remains unsettled.";
+        }
+
+        if (over is not null && holder is { HasLivingHolder: true })
+        {
+            string styledHead = FormatStyledHolder(holder.Title ?? seat.DefaultTitle, holder.DisplayName);
+            if (holder.ActorId == npc.DurableId)
+                return $"I now guide the {seat.SeatName} as {styledHead}.";
+            return forBark
+                ? $"The {seat.SeatName} answers now to {styledHead}."
+                : $"The {seat.SeatName} now answers to {styledHead}.";
+        }
+
+        return null;
+    }
+
+    private DaggerfallLocalOffice? TryFindLocalOfficeAtActiveProfile(DaggerfallNpc npc, DaggerfallSiteRecord site)
+    {
+        if (_officeLedger is null || _activeProfile is null)
+            return null;
+        DaggerfallWorldProfileKey profile = _activeProfile();
+        IReadOnlyList<DaggerfallLocalOffice> locals = _officeLedger.ResolveLocalOffices(site);
+        if (profile.Kind == DaggerfallWorldProfileKind.Interior)
+            return locals.FirstOrDefault(o => o.ProfileKey == profile);
+
+        (_, string? creatureFactionId) = ResolveLiveFaction(npc);
+        bool isGuard = string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(creatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase);
+        if (isGuard && profile.Kind == DaggerfallWorldProfileKind.Exterior)
+            return locals.FirstOrDefault(o => o.Kind == DaggerfallOfficeKind.WatchCaptain && o.ProfileKey == profile);
+        return null;
+    }
+
+    private DaggerfallBoardSeatBinding? TryFindSpeakerMajorSeat(DaggerfallNpc npc)
+    {
+        (int factionId, _) = ResolveLiveFaction(npc);
+        int current = factionId;
+        for (int depth = 0; depth < 8 && current > 0; depth++)
+        {
+            if (_definitions.BoardSeats.TryGetByFactionId(current, out DaggerfallBoardSeatBinding? seat)
+                && seat is not null
+                && seat.Kind != DaggerfallBoardSeatKind.Ruler)
+            {
+                return seat;
+            }
+            if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def) || def.Parent == current)
+                break;
+            current = def.Parent;
+        }
+        return null;
+    }
+
+    private bool IsPalaceOrCourtContext(DaggerfallNpc npc, DaggerfallSiteRecord site)
+    {
+        if (_activeProfile is not null)
+        {
+            DaggerfallWorldProfileKey profile = _activeProfile();
+            if (profile.Kind == DaggerfallWorldProfileKind.Interior
+                && DaggerfallWorldProfileIds.TryParse(profile.LogicalId, out _, out DaggerfallSiteBuildingId? buildingId)
+                && buildingId is { } b
+                && site.Exterior is not null
+                && site.Exterior.Buildings.TryGetValue(b, out DaggerfallSiteBuildingSource? source)
+                && source.Source.BuildingType == 14)
+            {
+                return true;
+            }
+            if (profile.Kind == DaggerfallWorldProfileKind.Dungeon
+                && site.Name.Contains("Castle", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        (int factionId, _) = ResolveLiveFaction(npc);
+        if (factionId > 0 && _definitions.Factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction))
+        {
+            if (faction.Type is 7 or 14 or 5)
+                return true;
+            if (faction.SocialGroup == 3 && faction.Type != 15 && faction.GuildGroup != 9)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static string FormatStyledHolder(string? title, string? displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return !string.IsNullOrWhiteSpace(title) ? title : "an unnamed official";
+        if (string.IsNullOrWhiteSpace(title)
+            || displayName.StartsWith(title, StringComparison.OrdinalIgnoreCase))
+        {
+            return displayName;
+        }
+        return $"{title} {displayName}";
     }
 
     private string FormatReferralLine(DaggerfallNpc npc, string referralTag) =>

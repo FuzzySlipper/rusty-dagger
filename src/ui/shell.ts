@@ -49,6 +49,17 @@ const SHELL_MARKUP = `
       <form class="dagger-dungeon-text-answer" hidden><label>Answer <input maxlength="256" autocomplete="off"></label><button type="submit">Answer</button></form>
       <button class="dagger-dungeon-text-close" type="button">Continue</button>
     </section>
+    <section class="dagger-notice-board dagger-frame" data-skin="parchment" role="dialog" aria-labelledby="dagger-notice-board-title" hidden>
+      <h2 id="dagger-notice-board-title" class="dagger-notice-board-title dagger-frame-title">Town Notice Board</h2>
+      <p class="dagger-notice-board-meta"></p>
+      <p class="dagger-notice-board-status" role="status" aria-live="polite" hidden></p>
+      <p class="dagger-notice-board-empty" hidden>The notice board is bare today.</p>
+      <ol class="dagger-notice-board-list" aria-label="Posted notices"></ol>
+      <hr class="dagger-divider">
+      <div class="dagger-notice-board-footer">
+        <button class="dagger-notice-board-close" type="button">Step back</button>
+      </div>
+    </section>
     <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
     <dialog class="dagger-radial" aria-label="Commands">
       <div class="dagger-radial-ring" role="menu" aria-label="Commands"></div>

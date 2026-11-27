@@ -658,6 +658,7 @@ internal sealed partial class DaggerfallSession
         if (mode == ProductMode.Dead)
         {
             _dialogue?.Close();                                                                   // Dialogue
+            NoticeBoardPanel.Close();                                                             // UiProjection
             if (_deathScreen.Enter())                                                             // UiProjection
             {
                 if (State.PlayerControl.Position is not null)
@@ -1278,6 +1279,7 @@ internal sealed partial class DaggerfallSession
         }
         Expedition.Close();                                                                       // Travel
         _dialogue?.Close();                                                                       // Dialogue
+        NoticeBoardPanel.Close();                                                                 // UiProjection
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
         RequestPanel(DaggerfallPanel.Resume);                                                     // UiProjection
         Presentation.SetOutcome($"The guild teleports you to {choice.Place.Name}.");              // UiProjection

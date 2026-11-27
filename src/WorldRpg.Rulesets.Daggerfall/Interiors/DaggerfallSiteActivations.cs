@@ -124,3 +124,47 @@ internal sealed class DaggerfallGroundActivationOwner(Func<IEnumerable<Daggerfal
         return open(id);
     }
 }
+
+/// <summary>Activation contribution for physical in-world town and tavern notice boards.</summary>
+internal sealed class DaggerfallNoticeBoardActivationOwner(
+    DaggerfallSiteNoticeBoardRuntime noticeBoards,
+    Func<string, DaggerfallActivationOutcome> open) : IDaggerfallNoticeBoardActivationOwner
+{
+    private readonly DaggerfallSiteNoticeBoardRuntime _noticeBoards = noticeBoards ?? throw new ArgumentNullException(nameof(noticeBoards));
+    private readonly Func<string, DaggerfallActivationOutcome> _open = open ?? throw new ArgumentNullException(nameof(open));
+
+    public IEnumerable<DaggerfallActivationTarget> NoticeBoardTargets()
+    {
+        foreach ((DaggerfallSiteNoticeBoard board, DurableIdentityReference identity, EntityId entity) in _noticeBoards.All)
+        {
+            yield return new(
+                DaggerfallActivationTargetKind.NoticeBoard,
+                identity,
+                entity,
+                entity.Value,
+                board.Position,
+                Precedence: 3,
+                Label: board.Label,
+                ReachDistance: board.ReachDistance,
+                SurfaceNormal: board.SurfaceNormal,
+                SightHeight: board.SightHeight);
+        }
+    }
+
+    public DaggerfallActivationOutcome ActivateNoticeBoard(DaggerfallActivationSelection selection)
+    {
+        (DaggerfallSiteNoticeBoard Board, DurableIdentityReference Identity, EntityId Entity) match = _noticeBoards.All
+            .FirstOrDefault(value => value.Identity == selection.Target.Identity);
+        if (match.Board is null)
+            return new(false, "That notice board is no longer available here.");
+        if (selection.Mode == DaggerfallActivationMode.Info)
+            return new(true, $"You see the {match.Board.Label}, posted with public notices and leads.");
+        if (selection.Mode == DaggerfallActivationMode.Bash)
+            return new(false, "The notice board is not a door.");
+        if (selection.Mode == DaggerfallActivationMode.Steal)
+            return new(false, "Nothing on the notice board needs stealing — read it to take a posted lead.");
+        if (selection.Mode == DaggerfallActivationMode.Talk)
+            return new(false, "The notice board does not answer.");
+        return _open(match.Board.Label);
+    }
+}

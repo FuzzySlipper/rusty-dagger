@@ -38,6 +38,7 @@ internal enum DaggerfallUiActionKind
     WagonPut, WagonTake,
     QuestChoice, QuestDismiss, QuestOfferAnswer,
     DungeonTextAnswer, DungeonTextClose,
+    NoticeBoardTake, NoticeBoardClose,
     InventoryMove, InventoryInspect, InventoryUse, InventoryDrop, InventorySort,
     NotebookPage, NotebookAdd, NotebookEdit, NotebookRemove, NotebookMove,
     CurrencyDepositGold, CurrencyWithdrawGold, CurrencyDepositLetters, CurrencyWithdrawLetter, BankTransfer,
@@ -274,6 +275,8 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.QuestDismiss, "quest-dismiss", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DungeonTextAnswer, "dungeon-text-answer", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.DungeonTextClose, "dungeon-text-close", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.NoticeBoardTake, "notice-board-take", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.NoticeBoardClose, "notice-board-close", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.InventoryMove, "inventory-move", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.InventoryInspect, "inventory-inspect", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.InventoryUse, "inventory-use", DaggerfallUiPhases.Interaction),
@@ -616,6 +619,14 @@ internal static class DaggerfallUiAction
                     return fields.SetEquals(["action", "revision", "item"])
                         && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
                         ? new(action, Revision: revision, Item: item) : null;
+                case DaggerfallUiActionKind.NoticeBoardTake:
+                    return fields.SetEquals(["action", "revision", "key"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Revision: revision, Key: key) : null;
+                case DaggerfallUiActionKind.NoticeBoardClose:
+                    return fields.SetEquals(["action", "revision"])
+                        && !string.IsNullOrWhiteSpace(revision)
+                        ? new(action, Revision: revision) : null;
                 case DaggerfallUiActionKind.ArtRequest:
                     return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
                         ? new(action, revision) : null;

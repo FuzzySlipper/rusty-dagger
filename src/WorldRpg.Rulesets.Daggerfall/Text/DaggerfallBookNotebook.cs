@@ -155,6 +155,19 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
     /// <summary>A compiled quest action appends one ordinary durable personal note.</summary>
     internal void AddQuestNote(string id, string text) => Add(id, text);
 
+    /// <summary>Whether the notebook already holds a note with <paramref name="id"/>.</summary>
+    internal bool HasNote(string id) =>
+        !string.IsNullOrWhiteSpace(id) && _notes.Any(note => string.Equals(note.Id, id, StringComparison.Ordinal));
+
+    /// <summary>Idempotently records a personal note under <paramref name="id"/> (returning false if already recorded).</summary>
+    internal bool TryAddNote(string id, string text)
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(text) || HasNote(id))
+            return false;
+        Add(id, text);
+        return true;
+    }
+
     private void Add(string id, string text)
     {
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(text)) throw new ArgumentException("A note needs an identity and text.");

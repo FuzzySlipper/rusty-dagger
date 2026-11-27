@@ -67,6 +67,21 @@ body, dialog { font-family: var(--font-body); }
 .dagger-dungeon-text-answer label { display: grid; flex: 1; gap: .35rem; }
 .dagger-dungeon-text-answer input { width: 100%; padding: .4rem; color: #f2e3ba; background: #151515; border: 1px solid #aa9c7a; }
 
+.dagger-notice-board { position: absolute; left: 50%; top: 50%; width: min(46rem, calc(100% - 4rem)); max-height: calc(100% - 6rem); transform: translate(-50%, -50%); display: grid; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto auto; gap: .6rem; padding: 1.4rem; pointer-events: auto; }
+.dagger-notice-board[hidden], .dagger-notice-board-status[hidden], .dagger-notice-board-empty[hidden] { display: none; }
+.dagger-notice-board-meta { margin: 0; font-size: .92rem; opacity: .85; }
+.dagger-notice-board-status { margin: 0; padding: .4rem .6rem; font-weight: 600; border-left: .2rem solid #8b6a2b; }
+.dagger-notice-board-empty { margin: .5rem 0; font-style: italic; }
+.dagger-notice-board-list { list-style: none; margin: 0; padding: 0 .35rem 0 0; overflow-y: auto; display: grid; gap: .8rem; align-content: start; }
+.dagger-notice-board-entry { display: grid; gap: .35rem; padding: .75rem .9rem; border: 1px solid rgb(80 58 28 / .35); background: rgb(255 248 230 / .32); }
+.dagger-notice-board-entry-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+.dagger-notice-board-kind { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: .1rem .4rem; border: 1px solid rgb(80 58 28 / .45); }
+.dagger-notice-board-heading { font-size: 1.02rem; }
+.dagger-notice-board-body { margin: 0; line-height: 1.45; }
+.dagger-notice-board-lead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .25rem; }
+.dagger-notice-board-lead-target { font-size: .9rem; font-style: italic; }
+.dagger-notice-board-footer { display: flex; justify-content: flex-end; gap: .6rem; }
+
 /* The entry screen the title mode owns, laid out the way the death screen is: the published artifact
    fills the frame and this stylesheet carries layout only. */
 .dagger-entry { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a var(--skin-stone-texture, none) 0 0 / var(--skin-stone-texture-size, auto) repeat; pointer-events: auto; }
