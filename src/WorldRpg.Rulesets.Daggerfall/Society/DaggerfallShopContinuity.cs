@@ -96,6 +96,32 @@ internal sealed record DaggerfallShopKinBlueprintSave(
     }
 }
 
+/// <summary>Sparse persisted release schedule for a temporary counter cover who was themselves arrested while covering a jailed proprietor.</summary>
+internal sealed record DaggerfallShopJailedCoverSave(
+    long ActorId,
+    bool IsKinCover,
+    int ReleaseDay,
+    string HomeProfileLogicalId,
+    int HomeProfileKind,
+    int HomeRegion,
+    int HomeSiteIndex,
+    string? RestoreRole = null,
+    string[]? RestoreServices = null)
+{
+    internal void Validate()
+    {
+        if (ActorId <= 0 || ActorId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(ActorId), "Saved jailed cover actor id must be a positive non-player actor id.");
+        if (ReleaseDay < 0)
+            throw new ArgumentOutOfRangeException(nameof(ReleaseDay), "Saved jailed cover release day must be non-negative.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(HomeProfileLogicalId);
+        if (HomeRegion is < 0 or > 61)
+            throw new ArgumentOutOfRangeException(nameof(HomeRegion), "Saved jailed cover region is out of range.");
+        if (HomeSiteIndex < 0)
+            throw new ArgumentOutOfRangeException(nameof(HomeSiteIndex), "Saved jailed cover site index must be non-negative.");
+    }
+}
+
 /// <summary>Sparse persisted continuity record for one affected shop, tavern, or family counter.</summary>
 internal sealed record DaggerfallShopPremisesSave(
     string ProfileLogicalId,
@@ -126,7 +152,10 @@ internal sealed record DaggerfallShopPremisesSave(
     int Generation = 0,
     string? PriorCoverRole = null,
     string[]? PriorCoverServices = null,
-    DaggerfallShopKinBlueprintSave? PendingKin = null)
+    DaggerfallShopKinBlueprintSave? PendingKin = null,
+    DaggerfallShopContinuityState? SuspendedSuccessionState = null,
+    string? SuspendedSuccessionOriginKind = null,
+    string? SuspendedPredecessorName = null)
 {
     internal void Validate()
     {
@@ -159,12 +188,16 @@ internal sealed record DaggerfallShopPremisesSave(
             throw new ArgumentOutOfRangeException(nameof(Generation), "Saved shop continuity generation must be non-negative.");
         if (!string.IsNullOrWhiteSpace(FamilyId) && !DaggerfallHouseholds.IsValidFamilyId(FamilyId))
             throw new ArgumentException($"Saved shop continuity family id '{FamilyId}' is invalid.", nameof(FamilyId));
+        if (SuspendedSuccessionState is { } suspended && !Enum.IsDefined(suspended))
+            throw new ArgumentOutOfRangeException(nameof(SuspendedSuccessionState), "Saved suspended succession state is invalid.");
         PendingKin?.Validate();
     }
 }
 
 /// <summary>Sparse persisted snapshot of shop bereavement closures, kin inheritances, town replacements, and arrest covers; empty when untouched.</summary>
-internal sealed record DaggerfallShopContinuitySave(DaggerfallShopPremisesSave[] Premises)
+internal sealed record DaggerfallShopContinuitySave(
+    DaggerfallShopPremisesSave[] Premises,
+    DaggerfallShopJailedCoverSave[]? JailedCovers = null)
 {
     internal static DaggerfallShopContinuitySave Empty { get; } = new([]);
 
@@ -178,6 +211,17 @@ internal sealed record DaggerfallShopContinuitySave(DaggerfallShopPremisesSave[]
             entry.Validate();
             if (!keys.Add(entry.ProfileLogicalId))
                 throw new ArgumentException($"Saved shop continuity repeats profile '{entry.ProfileLogicalId}'.");
+        }
+        if (JailedCovers is not null)
+        {
+            HashSet<long> seenCovers = [];
+            foreach (DaggerfallShopJailedCoverSave cover in JailedCovers)
+            {
+                ArgumentNullException.ThrowIfNull(cover);
+                cover.Validate();
+                if (!seenCovers.Add(cover.ActorId))
+                    throw new ArgumentException($"Saved shop continuity repeats jailed cover actor {cover.ActorId}.");
+            }
         }
     }
 }
@@ -200,7 +244,7 @@ internal sealed class DaggerfallShopContinuity(
     Func<ulong> worldSocialSeed,
     Func<DaggerfallNpcAppearance, int, string?, string> generatePersonName,
     Action<DaggerfallShopReplacementSeatRequest> seatReplacement,
-    Action<long, DaggerfallWorldProfileKey> releaseFromCustody,
+    Action<long, DaggerfallWorldProfileKey, string?, string?, string[]?> releaseFromCustody,
     Action<long, bool, string?, string[]?> endTemporaryCover,
     DaggerfallSocialTuning? socialTuning = null)
 {
@@ -235,6 +279,9 @@ internal sealed class DaggerfallShopContinuity(
         internal string? PriorCoverRole { get; set; }
         internal string[]? PriorCoverServices { get; set; }
         internal DaggerfallShopKinBlueprintSave? PendingKin { get; set; }
+        internal DaggerfallShopContinuityState? SuspendedSuccessionState { get; set; }
+        internal string? SuspendedSuccessionOriginKind { get; set; }
+        internal string? SuspendedPredecessorName { get; set; }
 
         internal DaggerfallSiteId SiteId => new(Region, SiteIndex);
         internal DaggerfallWorldProfileKey ProfileKey => new(SiteId, DaggerfallWorldProfileKind.Interior, ProfileLogicalId);
@@ -253,11 +300,12 @@ internal sealed class DaggerfallShopContinuity(
             State, EventDay, ClosedUntilDay, JailedUntilDay,
             ReplacementActorId, ReplacementName, ReplacementOriginKind, Generation,
             PriorCoverRole, PriorCoverServices is null ? null : [.. PriorCoverServices],
-            PendingKin);
+            PendingKin, SuspendedSuccessionState, SuspendedSuccessionOriginKind, SuspendedPredecessorName);
     }
 
     private readonly DaggerfallSocialTuning _tuning = (socialTuning ?? DaggerfallSocialTuning.Default).Validate();
     private readonly Dictionary<string, PremisesState> _premises = new(StringComparer.Ordinal);
+    private readonly Dictionary<long, DaggerfallShopJailedCoverSave> _jailedCovers = [];
 
     internal static bool IsProprietorServices(IReadOnlyList<string>? services)
     {
@@ -279,17 +327,22 @@ internal sealed class DaggerfallShopContinuity(
 
     internal DaggerfallShopContinuitySave Capture()
     {
-        if (_premises.Count == 0)
+        if (_premises.Count == 0 && _jailedCovers.Count == 0)
             return DaggerfallShopContinuitySave.Empty;
-        return new([.. _premises.Values
-            .OrderBy(p => p.ProfileLogicalId, StringComparer.Ordinal)
-            .Select(p => p.ToSave())]);
+        return new(
+            [.. _premises.Values
+                .OrderBy(p => p.ProfileLogicalId, StringComparer.Ordinal)
+                .Select(p => p.ToSave())],
+            _jailedCovers.Count == 0
+                ? null
+                : [.. _jailedCovers.Values.OrderBy(c => c.ActorId)]);
     }
 
     internal void Restore(DaggerfallShopContinuitySave? saved)
     {
         _premises.Clear();
-        if (saved is null || saved.Premises.Length == 0)
+        _jailedCovers.Clear();
+        if (saved is null || (saved.Premises.Length == 0 && (saved.JailedCovers is null || saved.JailedCovers.Length == 0)))
             return;
         saved.Validate();
         foreach (DaggerfallShopPremisesSave entry in saved.Premises)
@@ -325,7 +378,15 @@ internal sealed class DaggerfallShopContinuity(
                 PriorCoverRole = entry.PriorCoverRole,
                 PriorCoverServices = entry.PriorCoverServices is null ? null : [.. entry.PriorCoverServices],
                 PendingKin = entry.PendingKin,
+                SuspendedSuccessionState = entry.SuspendedSuccessionState,
+                SuspendedSuccessionOriginKind = entry.SuspendedSuccessionOriginKind,
+                SuspendedPredecessorName = entry.SuspendedPredecessorName,
             };
+        }
+        if (saved.JailedCovers is { Length: > 0 })
+        {
+            foreach (DaggerfallShopJailedCoverSave cover in saved.JailedCovers)
+                _jailedCovers[cover.ActorId] = cover;
         }
     }
 
@@ -509,6 +570,84 @@ internal sealed class DaggerfallShopContinuity(
                 prior.JailedUntilDay = Math.Max(prior.JailedUntilDay ?? currentDay, checked(currentDay + _tuning.NpcJailSentenceDays));
                 return prior.ToSnapshot();
             }
+
+            if (prior.State == DaggerfallShopContinuityState.ArrestCovered && prior.ReplacementActorId == actorId)
+            {
+                // Arresting the temporary counter cover MUST NOT discard the jailed original proprietor's release timer.
+                // Track the arrested cover's own release schedule separately and assign a fresh cover behind the counter.
+                bool coverWasKin = string.Equals(prior.ReplacementOriginKind, "kin", StringComparison.Ordinal);
+                if (!banished && imprisoned)
+                {
+                    DaggerfallWorldProfileKey coverHome = ResolveActorHomeProfile(actorId, npc, prior.ProfileKey);
+                    _jailedCovers[actorId] = new DaggerfallShopJailedCoverSave(
+                        ActorId: actorId,
+                        IsKinCover: coverWasKin,
+                        ReleaseDay: checked(Math.Max(0, currentDay) + _tuning.NpcJailSentenceDays),
+                        HomeProfileLogicalId: coverHome.LogicalId,
+                        HomeProfileKind: (int)coverHome.Kind,
+                        HomeRegion: coverHome.Site.Region,
+                        HomeSiteIndex: coverHome.Site.Index,
+                        RestoreRole: prior.PriorCoverRole,
+                        RestoreServices: prior.PriorCoverServices is null ? null : [.. prior.PriorCoverServices]);
+                }
+                else if (!coverWasKin)
+                {
+                    endTemporaryCover(actorId, false, null, null);
+                }
+
+                prior.ReplacementActorId = null;
+                prior.ReplacementName = null;
+                prior.ReplacementOriginKind = null;
+                prior.PriorCoverRole = null;
+                prior.PriorCoverServices = null;
+                prior.Generation++;
+                AssignArrestCover(prior, currentDay);
+                return prior.ToSnapshot();
+            }
+
+            if (prior.State is DaggerfallShopContinuityState.KinInherited or DaggerfallShopContinuityState.TownReplaced
+                && prior.ReplacementActorId == actorId)
+            {
+                // Arresting a permanent kin/town successor: preserve permanent succession state so release returns
+                // them to their inherited/appointed counter slot (not an old home slot or vanished synthetic origin).
+                string successorName = !string.IsNullOrWhiteSpace(npc.DisplayName) ? npc.DisplayName! : npc.Role;
+                DaggerfallShopContinuityState priorSuccession = prior.State;
+                string? priorOriginKind = prior.ReplacementOriginKind;
+                string priorPredecessorName = prior.OriginalProprietorName;
+
+                prior.FamilyId = npc.FamilyId;
+                prior.OriginalProprietorId = actorId;
+                prior.OriginalProprietorName = successorName;
+                prior.OriginalRace = npc.Appearance.Race;
+                prior.OriginalGender = npc.Appearance.Gender;
+                prior.OriginalArchive = npc.Appearance.BillboardArchive;
+                prior.OriginalRecord = npc.Appearance.BillboardRecord;
+                prior.EventDay = Math.Max(0, currentDay);
+                prior.Generation++;
+                prior.ReplacementActorId = null;
+                prior.ReplacementName = null;
+                prior.ReplacementOriginKind = null;
+                prior.PriorCoverRole = null;
+                prior.PriorCoverServices = null;
+
+                if (banished || !imprisoned)
+                {
+                    prior.SuspendedSuccessionState = null;
+                    prior.SuspendedSuccessionOriginKind = null;
+                    prior.SuspendedPredecessorName = null;
+                    return TransitionLostProprietorToPermanentReplacement(prior, currentDay);
+                }
+
+                prior.SuspendedSuccessionState = priorSuccession;
+                prior.SuspendedSuccessionOriginKind = priorOriginKind;
+                prior.SuspendedPredecessorName = priorPredecessorName;
+                prior.State = DaggerfallShopContinuityState.ArrestCovered;
+                prior.JailedUntilDay = checked(prior.EventDay + _tuning.NpcJailSentenceDays);
+                prior.ClosedUntilDay = null;
+                AssignArrestCover(prior, currentDay);
+                return prior.ToSnapshot();
+            }
+
             generation = prior.Generation + 1;
             if (!string.IsNullOrWhiteSpace(prior.OriginalSlotId))
                 slotId = prior.OriginalSlotId;
@@ -556,7 +695,7 @@ internal sealed class DaggerfallShopContinuity(
     /// </summary>
     internal int AdvanceDay(int currentDay)
     {
-        if (_premises.Count == 0)
+        if (_premises.Count == 0 && _jailedCovers.Count == 0)
             return 0;
 
         int transitioned = 0;
@@ -571,6 +710,45 @@ internal sealed class DaggerfallShopContinuity(
 
         foreach (string key in toRemove)
             _premises.Remove(key);
+
+        if (_jailedCovers.Count > 0)
+        {
+            List<long> releasedCovers = [];
+            foreach ((long coverId, DaggerfallShopJailedCoverSave cover) in _jailedCovers.OrderBy(p => p.Key).ToArray())
+            {
+                bool coverLost = IsActorDeadOrRemoved(coverId) || isActorBanished(coverId) || isActorExiled(coverId);
+                if (coverLost)
+                {
+                    if (!cover.IsKinCover)
+                        endTemporaryCover(coverId, false, null, null);
+                    releasedCovers.Add(coverId);
+                    transitioned++;
+                    continue;
+                }
+
+                if (currentDay < cover.ReleaseDay)
+                    continue;
+
+                if (cover.IsKinCover)
+                {
+                    DaggerfallWorldProfileKey coverHome = new(
+                        new DaggerfallSiteId(cover.HomeRegion, cover.HomeSiteIndex),
+                        (DaggerfallWorldProfileKind)cover.HomeProfileKind,
+                        cover.HomeProfileLogicalId);
+                    releaseFromCustody(coverId, coverHome, null, cover.RestoreRole, cover.RestoreServices);
+                }
+                else
+                {
+                    // Temporary staff cover finished their sentence: remove synthetic clerk entry cleanly.
+                    endTemporaryCover(coverId, false, null, null);
+                }
+                releasedCovers.Add(coverId);
+                transitioned++;
+            }
+
+            foreach (long coverId in releasedCovers)
+                _jailedCovers.Remove(coverId);
+        }
 
         return transitioned;
     }
@@ -660,7 +838,7 @@ internal sealed class DaggerfallShopContinuity(
                 if (state.JailedUntilDay is int releaseDay && currentDay < releaseDay)
                     return false;
 
-                // Release original proprietor back to their counter and end temporary cover cleanly.
+                // Release proprietor back to their counter and end temporary cover cleanly.
                 if (state.ReplacementActorId is long coverId)
                 {
                     endTemporaryCover(
@@ -669,7 +847,30 @@ internal sealed class DaggerfallShopContinuity(
                         state.PriorCoverRole,
                         state.PriorCoverServices);
                 }
-                releaseFromCustody(state.OriginalProprietorId, state.ProfileKey);
+
+                if (state.SuspendedSuccessionState is { } restoredSuccession)
+                {
+                    // Releasing a permanent kin/town successor: return them to the inherited/appointed counter slot
+                    // and restore their permanent succession state rather than pruning the record.
+                    releaseFromCustody(state.OriginalProprietorId, state.ProfileKey, state.OriginalSlotId, null, null);
+                    state.State = restoredSuccession;
+                    state.ReplacementActorId = state.OriginalProprietorId;
+                    state.ReplacementName = state.OriginalProprietorName;
+                    state.ReplacementOriginKind = state.SuspendedSuccessionOriginKind
+                        ?? (restoredSuccession == DaggerfallShopContinuityState.KinInherited ? "kin" : "town");
+                    if (!string.IsNullOrWhiteSpace(state.SuspendedPredecessorName))
+                        state.OriginalProprietorName = state.SuspendedPredecessorName!;
+                    state.JailedUntilDay = null;
+                    state.ClosedUntilDay = null;
+                    state.PriorCoverRole = null;
+                    state.PriorCoverServices = null;
+                    state.SuspendedSuccessionState = null;
+                    state.SuspendedSuccessionOriginKind = null;
+                    state.SuspendedPredecessorName = null;
+                    return true;
+                }
+
+                releaseFromCustody(state.OriginalProprietorId, state.ProfileKey, null, null, null);
                 removeRecord = true;
                 return true;
             }
@@ -994,6 +1195,15 @@ internal sealed class DaggerfallShopContinuity(
             }
         }
         return true;
+    }
+
+    private DaggerfallWorldProfileKey ResolveActorHomeProfile(long actorId, DaggerfallNpc npc, DaggerfallWorldProfileKey fallback)
+    {
+        if (actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Origin.SiteProfile is { } originProfile)
+            return originProfile.Require();
+        if (npc.Profile is { } npcProfile)
+            return npcProfile;
+        return fallback;
     }
 
     private string? ResolveCandidateFamilyId(DaggerfallNpc candidate)

@@ -1137,7 +1137,8 @@ internal sealed partial class DaggerfallSession
                     new DaggerfallNpcAppearance(req.Race, req.Gender, req.BillboardArchive, req.BillboardRecord, req.NameSeed, req.FactionId),
                     req.FamilyId,
                     req.OriginHomeProfile),
-                (actorId, homeProfile) => _roster.ReleaseFromCustody(actorId, homeProfile),
+                (actorId, homeProfile, targetSlotId, restoreRole, restoreServices) =>
+                    _roster.ReleaseFromCustody(actorId, homeProfile, targetSlotId, restoreRole, restoreServices),
                 (coverId, isKinCover, restoreRole, restoreServices) => _roster.EndTemporaryShopCover(coverId, isKinCover, restoreRole, restoreServices),
                 _tuning.Social);
             if (saved is not null)

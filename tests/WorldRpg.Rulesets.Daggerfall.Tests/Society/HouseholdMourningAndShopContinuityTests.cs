@@ -338,6 +338,179 @@ public sealed class HouseholdMourningAndShopContinuityTests
     }
 
     [Fact]
+    public void Arresting_town_or_kin_successor_proprietor_returns_them_to_counter_with_permanent_succession_preserved_across_save_load()
+    {
+        // 1. Town replacement successor arrested -> covered -> released back to counter with TownReplaced preserved across save/load!
+        using (var fixture = SourceBackedServiceSessionFixture.Create())
+        {
+            var tavern = fixture.TavernProvider();
+            using DaggerfallSession session = fixture.Start(tavern.Profile);
+            DaggerfallNpc proprietor = SourceNpc(session, tavern.Placement.Id);
+
+            const string lonelyFamily = "fam:local:r17:s4:x98y98b8";
+            DaggerfallNpc lonelyProp = proprietor with { FamilyId = lonelyFamily };
+            session.State.Actors.Get(proprietor.DurableId).Actor.Get<ActorPersonComponent>().Snapshot = lonelyProp;
+
+            ActorState propActor = session.State.Actors.Get(proprietor.DurableId);
+            propActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+            session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+                proprietor.DurableId,
+                ActorOrigin.Seeded(tavern.Profile.ProfileKey, proprietor.StableKey),
+                Location: ActorLocationOverride.Dead(
+                    tavern.Profile.ProfileKey,
+                    new ActorPoseOverride(propActor.Position.X, propActor.Position.Y, propActor.Position.Z, 0f))));
+            _ = session.ShopContinuity.ReactToProprietorDeath(
+                proprietor.DurableId, lonelyProp, tavern.Profile.ProfileKey, tavern.Profile, checked((int)session.Calendar.DayNumber));
+
+            // Advance 5 days so town replacement takes over.
+            session.AdvanceElapsedTime(5L * 24L * 60L * 60L, idleFatigue: false);
+            Assert.True(session.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot townSnap));
+            Assert.Equal(DaggerfallShopContinuityState.TownReplaced, townSnap.State);
+            long townSuccessorId = townSnap.ReplacementActorId!.Value;
+            Assert.True(session.State.Actors.TryGet(townSuccessorId, out _));
+
+            // Arrest the town successor (non-fatal) -> temporary cover takes the counter.
+            DaggerfallNpcArrestOutcome successorArrest = session.Law.ArrestOrImprisonNpc(
+                townSuccessorId, tavern.Profile.Site!.Value.Region, DaggerfallCrimeKind.Theft, banished: false, detail: "successor warrant");
+            Assert.True(successorArrest.Imprisoned);
+            Assert.False(session.State.Actors.TryGet(townSuccessorId, out _));
+            Assert.True(session.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot duringJail));
+            Assert.Equal(DaggerfallShopContinuityState.ArrestCovered, duringJail.State);
+            long tempCoverId = duringJail.ReplacementActorId!.Value;
+            Assert.NotEqual(townSuccessorId, tempCoverId);
+            Assert.True(session.State.Actors.TryGet(tempCoverId, out _));
+
+            // Save/load mid-sentence, then advance 5 days -> town successor returns behind the counter with TownReplaced preserved!
+            using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+            restored.AdvanceElapsedTime(5L * 24L * 60L * 60L, idleFatigue: false);
+            Assert.True(restored.State.Actors.TryGet(townSuccessorId, out ActorState? returnedSuccessor));
+            Assert.False(returnedSuccessor.IsDefeated);
+            Assert.False(restored.State.Actors.TryGet(tempCoverId, out _));
+            Assert.True(restored.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot afterRelease));
+            Assert.Equal(DaggerfallShopContinuityState.TownReplaced, afterRelease.State);
+            Assert.Equal(townSuccessorId, afterRelease.ReplacementActorId);
+            Assert.Contains(DaggerfallNpcServiceFacts.TavernService, restored.State.Npcs.Require(townSuccessorId).Services);
+
+            // Survives another save/load cleanly with town successor still behind the counter.
+            using DaggerfallSession reloaded = fixture.Restore(restored.CaptureSave());
+            Assert.True(reloaded.State.Actors.TryGet(townSuccessorId, out _));
+            Assert.True(reloaded.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot reloadedSnap));
+            Assert.Equal(DaggerfallShopContinuityState.TownReplaced, reloadedSnap.State);
+        }
+
+        // 2. Kin successor (from another slot) arrested -> covered -> released back to the INHERITED counter (not old home slot)!
+        using (var fixture = SourceBackedServiceSessionFixture.Create())
+        {
+            var tavern = fixture.TavernProvider();
+            DaggerfallSiteBuildingSource building = fixture.SourceBuilding(tavern.Profile);
+            using DaggerfallSession session = fixture.Start(tavern.Profile);
+            DaggerfallNpc proprietor = SourceNpc(session, tavern.Placement.Id);
+
+            string familyId = DaggerfallHouseholds.BuildingHouseholdId(tavern.Profile.Site!.Value, building.Id.BlockX, building.Id.BlockY, building.Id.Index);
+            DaggerfallNpc updatedProp = proprietor with { FamilyId = familyId };
+            session.State.Actors.Get(proprietor.DurableId).Actor.Get<ActorPersonComponent>().Snapshot = updatedProp;
+
+            DaggerfallNpcSite localSite = new(tavern.Profile.Site!.Value.Region, proprietor.Site.Location,
+                $"{building.Id.BlockX}/{building.Id.BlockY}/{building.Id.Index}", tavern.Profile.ProfileKey.LogicalId);
+            long kinId = AddNpcWithFamily(session, tavern.Profile.Site!.Value, localSite, "t11161/kin-heir-r2", "Maren Greaves", familyId);
+
+            ActorState propActor = session.State.Actors.Get(proprietor.DurableId);
+            propActor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);
+            session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+                proprietor.DurableId,
+                ActorOrigin.Seeded(tavern.Profile.ProfileKey, proprietor.StableKey),
+                Location: ActorLocationOverride.Dead(
+                    tavern.Profile.ProfileKey,
+                    new ActorPoseOverride(propActor.Position.X, propActor.Position.Y, propActor.Position.Z, 0f))));
+            _ = session.ShopContinuity.ReactToProprietorDeath(
+                proprietor.DurableId, updatedProp, tavern.Profile.ProfileKey, tavern.Profile, checked((int)session.Calendar.DayNumber));
+
+            session.AdvanceElapsedTime(2L * 24L * 60L * 60L, idleFatigue: false);
+            Assert.True(session.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot kinSnap));
+            Assert.Equal(DaggerfallShopContinuityState.KinInherited, kinSnap.State);
+            Assert.Equal(kinId, kinSnap.ReplacementActorId);
+
+            // Arrest the kin successor -> temporary cover -> save/load -> release returns kin to the inherited counter slot!
+            _ = session.Law.ArrestOrImprisonNpc(kinId, tavern.Profile.Site!.Value.Region, DaggerfallCrimeKind.Theft, banished: false, detail: "kin warrant");
+            Assert.False(session.State.Actors.TryGet(kinId, out _));
+            using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+            restored.AdvanceElapsedTime(5L * 24L * 60L * 60L, idleFatigue: false);
+            Assert.True(restored.State.Actors.TryGet(kinId, out _));
+            Assert.True(restored.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot kinRestored));
+            Assert.Equal(DaggerfallShopContinuityState.KinInherited, kinRestored.State);
+            Assert.Equal(kinId, kinRestored.ReplacementActorId);
+            Assert.True(restored.State.ActorLedger.TryGet(kinId, out ActorLedgerEntry? kinLedger));
+            Assert.Equal(ActorLocationKind.AtSite, kinLedger!.Location?.Kind);
+            Assert.Equal(proprietor.StableKey, kinLedger.Location?.TargetSlotId);
+        }
+    }
+
+    [Fact]
+    public void Arresting_temporary_counter_cover_preserves_original_proprietor_release_schedule_and_releases_both_across_save_load()
+    {
+        using var fixture = SourceBackedServiceSessionFixture.Create();
+        var tavern = fixture.TavernProvider();
+        DaggerfallSiteBuildingSource building = fixture.SourceBuilding(tavern.Profile);
+        using DaggerfallSession session = fixture.Start(tavern.Profile);
+        DaggerfallNpc proprietor = SourceNpc(session, tavern.Placement.Id);
+
+        // Give proprietor a living adult kin so the first arrest cover is a real kin member.
+        string familyId = DaggerfallHouseholds.BuildingHouseholdId(tavern.Profile.Site!.Value, building.Id.BlockX, building.Id.BlockY, building.Id.Index);
+        DaggerfallNpc updatedProp = proprietor with { FamilyId = familyId };
+        session.State.Actors.Get(proprietor.DurableId).Actor.Get<ActorPersonComponent>().Snapshot = updatedProp;
+        DaggerfallNpcSite localSite = new(tavern.Profile.Site!.Value.Region, proprietor.Site.Location,
+            $"{building.Id.BlockX}/{building.Id.BlockY}/{building.Id.Index}", tavern.Profile.ProfileKey.LogicalId);
+        long firstKinCoverId = AddNpcWithFamily(session, tavern.Profile.Site!.Value, localSite, "t11161/seq-kin-cover", "Bram Greaves", familyId);
+
+        int day0 = checked((int)session.Calendar.DayNumber);
+
+        // Day 0: Arrest the original proprietor (release due on day0 + 5); kin steps in as temporary cover.
+        _ = session.Law.ArrestOrImprisonNpc(proprietor.DurableId, tavern.Profile.Site!.Value.Region, DaggerfallCrimeKind.Theft, banished: false, detail: "first warrant");
+        Assert.True(session.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot afterFirst));
+        Assert.Equal(proprietor.DurableId, afterFirst.OriginalProprietorId);
+        Assert.Equal(day0 + 5, afterFirst.JailedUntilDay);
+        Assert.Equal(firstKinCoverId, afterFirst.ReplacementActorId);
+
+        // Day +2: Arrest the temporary kin cover BEFORE the original's sentence expires!
+        session.AdvanceElapsedTime(2L * 24L * 60L * 60L, idleFatigue: false);
+        _ = session.Law.ArrestOrImprisonNpc(firstKinCoverId, tavern.Profile.Site!.Value.Region, DaggerfallCrimeKind.Assault, banished: false, detail: "cover warrant");
+
+        // Original proprietor's identity and day0 + 5 release schedule MUST be preserved; a fresh cover takes the counter!
+        Assert.True(session.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out DaggerfallShopPremisesSnapshot afterSecond));
+        Assert.Equal(DaggerfallShopContinuityState.ArrestCovered, afterSecond.State);
+        Assert.Equal(proprietor.DurableId, afterSecond.OriginalProprietorId);
+        Assert.Equal(day0 + 5, afterSecond.JailedUntilDay);
+        Assert.NotNull(afterSecond.ReplacementActorId);
+        long secondCoverId = afterSecond.ReplacementActorId!.Value;
+        Assert.NotEqual(firstKinCoverId, secondCoverId);
+        Assert.NotEqual(proprietor.DurableId, secondCoverId);
+        Assert.True(session.State.Actors.TryGet(secondCoverId, out _));
+        Assert.False(session.State.Actors.TryGet(firstKinCoverId, out _));
+
+        // Save/load preserves BOTH release timers!
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+
+        // Day +5 (3 more days): Original proprietor returns behind the counter and second cover leaves;
+        // firstKinCoverId is STILL serving until day0 + 7!
+        restored.AdvanceElapsedTime(3L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.True(restored.State.Actors.TryGet(proprietor.DurableId, out _));
+        Assert.False(restored.State.Actors.TryGet(secondCoverId, out _));
+        Assert.False(restored.ShopContinuity.TryGetPremises(tavern.Profile.ProfileKey.LogicalId, out _));
+        Assert.True(restored.State.ActorLedger.TryGet(firstKinCoverId, out ActorLedgerEntry? kinStillJailed));
+        Assert.Equal(ActorLocationKind.OffStage, kinStillJailed!.Location?.Kind);
+
+        // Day +7 (2 more days): Arrested kin cover is released from OffStage custody with original role restored,
+        // and ShopContinuity prunes completely back to zero save bytes!
+        restored.AdvanceElapsedTime(2L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.True(restored.State.ActorLedger.TryGet(firstKinCoverId, out ActorLedgerEntry? kinReleased));
+        Assert.Null(kinReleased!.Location);
+        Assert.Equal("civilian", kinReleased.Social?.Role);
+        DaggerfallSavePayload finalSave = DaggerfallSavePayload.Read(restored.CaptureSave());
+        Assert.Empty(finalSave.ShopContinuity.Premises);
+        Assert.True(finalSave.ShopContinuity.JailedCovers is null or { Length: 0 });
+    }
+
+    [Fact]
     public void Untouched_shops_write_zero_ShopContinuity_save_bytes_and_social_site_reports_active_continuity_state()
     {
         using var fixture = SourceBackedServiceSessionFixture.Create();

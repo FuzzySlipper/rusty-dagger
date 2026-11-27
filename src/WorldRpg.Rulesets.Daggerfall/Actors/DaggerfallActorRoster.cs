@@ -1058,10 +1058,16 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
-    /// Releases a living actor from <see cref="ActorLocationKind.OffStage"/> jail custody back to their home slot,
-    /// immediately re-materializing them if the player is currently standing in <paramref name="homeProfile"/>.
+    /// Releases a living actor from <see cref="ActorLocationKind.OffStage"/> jail custody back to their home slot
+    /// (or to an explicit inherited/replaced <paramref name="targetSlotId"/> counter slot), immediately re-materializing
+    /// them if the player is currently standing in <paramref name="homeProfile"/>.
     /// </summary>
-    internal void ReleaseFromCustody(long durableId, DaggerfallWorldProfileKey homeProfile)
+    internal void ReleaseFromCustody(
+        long durableId,
+        DaggerfallWorldProfileKey homeProfile,
+        string? targetSlotId = null,
+        string? restoreRole = null,
+        string[]? restoreServices = null)
     {
         if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
             return;
@@ -1069,7 +1075,32 @@ internal sealed class DaggerfallActorRoster
             || entry.Location?.Kind != ActorLocationKind.OffStage)
             return;
 
-        _actorLedger.Upsert(entry with { Location = null, Pose = null });
+        ActorSocialDiff? social = entry.Social;
+        if (social is not null && (!string.IsNullOrWhiteSpace(restoreRole) || restoreServices is { Length: > 0 }))
+        {
+            social = social with
+            {
+                Role = !string.IsNullOrWhiteSpace(restoreRole) ? restoreRole : social.Role,
+                Services = restoreServices is { Length: > 0 } ? [.. restoreServices] : social.Services,
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetSlotId))
+        {
+            ActorLocationOverride counterLocation = ActorLocationOverride.AtSite(
+                homeProfile,
+                pose: null,
+                detached: false,
+                trafficVisitor: false,
+                targetSlotId: targetSlotId);
+            _actorLedger.Upsert(entry with { Location = counterLocation, Pose = null, Social = social });
+            DaggerfallSiteProfile activeSuccessorProfile = _profile();
+            if (activeSuccessorProfile.ProfileKey == homeProfile)
+                MaterializeRelocatedLedgerActors(activeSuccessorProfile, _appearance(), Vector3.Zero);
+            return;
+        }
+
+        _actorLedger.Upsert(entry with { Location = null, Pose = null, Social = social });
         DaggerfallSiteProfile activeProfile = _profile();
         if (activeProfile.ProfileKey == homeProfile)
             MaterializeStaticNpcs(activeProfile, _appearance());
