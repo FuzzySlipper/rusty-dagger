@@ -373,10 +373,10 @@ internal sealed class DaggerfallPoliticalBoard
         foreach (ArrivalTrace arrival in trace.Arrivals)
         {
             if (arrival.Outcome != MoveOutcome.Resolved) continue;
-            ApplyBoardChangeSlice(arrival.Changes, IsConquestCard(arrival.Card), day, minute);
+            ApplyBoardChangeSlice(arrival.Changes, IsForcefulCard(arrival.Card), day, minute);
         }
         foreach (MoveTrace move in trace.Moves)
-            ApplyBoardChangeSlice(move.Changes, IsConquestCard(move.Card), day, minute);
+            ApplyBoardChangeSlice(move.Changes, IsForcefulCard(move.Card), day, minute);
         ApplyBoardChangeSlice(trace.Wars, forcefulConquest: true, day, minute);
     }
 
@@ -459,7 +459,7 @@ internal sealed class DaggerfallPoliticalBoard
                 continue;
             }
 
-            // 3. Forceful regional takeover (Conquer siege card or Wars treaty cession) deposes the province ruler
+            // 3. Forceful regional takeover (Conquer siege card, a sued peace's or a weary war's treaty cession) deposes the province ruler
             //    into exile through the shared DeposeRegionalRuler caller (reused by #11143). Peaceful Annex keeps the lord.
             if (forcefulConquest
                 && string.Equals(change.Field, "allegiance", StringComparison.Ordinal)
@@ -504,9 +504,13 @@ internal sealed class DaggerfallPoliticalBoard
         _board.SyncHolder(_board.Seat(seatId), holder);
     }
 
-    private bool IsConquestCard(string cardId) =>
+    /// <summary>
+    /// Whether card <paramref name="cardId"/> moves a region by force: a siege's capture (Conquer), or a sued peace whose
+    /// treaty cedes a front region (Peace). A brokered truce cedes nothing, and an annexation keeps the lord.
+    /// </summary>
+    private bool IsForcefulCard(string cardId) =>
         _canon.Cards.Cards.FirstOrDefault(c => string.Equals(c.Id, cardId, StringComparison.Ordinal))
-            ?.Effects.Any(e => e.Kind == CardEffectKind.Conquer) == true;
+            ?.Effects.Any(e => e.Kind is CardEffectKind.Conquer or CardEffectKind.Peace) == true;
 
     /// <summary>The day turn <paramref name="turn"/> was played on.</summary>
     internal long TurnDay(int turn) => _lastTurnDay - (long)(_board.Turn - turn) * DaysPerWeek;

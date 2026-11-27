@@ -64,4 +64,39 @@ public sealed class ConquestOccupationTests
             held => held.SubjectTag == DaggerfallPoliticalBoard.OccupationTag);
         Assert.Equal(governor.DisplayName, restored.OfficeHolders.ResolveRegionalRuler(target.CatalogRegion)!.DisplayName);
     }
+
+    [Fact]
+    public void A_province_ceded_by_a_sued_peace_is_taken_by_force_with_exile_governor_and_occupation()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        DaggerfallPoliticalBoard political = session.PoliticalBoard!;
+        Board board = political.Board;
+        Seat wayrest = board.Seat("wayrest"), daggerfall = board.Seat("daggerfall");
+        Card peace = TestPayload.Definitions.PoliticalCanon!.Cards.Cards.First(card => card.Effects.Any(effect => effect.Kind == CardEffectKind.Peace));
+        // Daggerfall holds a province on Wayrest's border and is losing the war; Wayrest is not weary, so the peace cedes.
+        Region front = board.Regions.First(region => !region.Capital && region.Borders.Any(border => board.Region(border).Allegiance == "wayrest"));
+        board.SetAllegiance(front, daggerfall);
+        if (!board.Wars.Any(war => war.Side("wayrest") is { } side && war.Side("daggerfall") is { } other && side != other))
+            board.OpenWar(wayrest, daggerfall, WarAim.Conquest);
+        War war = board.Wars.First(held => held.Principal("daggerfall") && held.Principal("wayrest"));
+        board.AddWeariness(war, "daggerfall", Wars.PeaceWeariness);
+        war = board.War(war.Id);
+        Assert.True(Wars.MaySue(war, daggerfall));
+        Dictionary<string, string?> before = board.Regions.ToDictionary(region => region.Id, region => region.Allegiance);
+
+        board.Schedule(new PendingMove($"{board.Turn}-daggerfall", "daggerfall", peace, [war.Id], daggerfall.Home, board.Turn, board.Turn + 1));
+        political.AdvanceToDay(political.NextTurnDay, () => []);
+
+        Region ceded = Assert.Single(board.Regions, region => before[region.Id] == "daggerfall" && region.Allegiance == "wayrest");
+        DaggerfallOfficeHolder governor = session.OfficeHolders.ResolveRegionalRuler(ceded.CatalogRegion)!;
+        Assert.Equal("Governor", governor.Title);
+        Assert.DoesNotContain(board.Queued, nudge => nudge is HolderChanged);
+        int turnDay = checked((int)(political.NextTurnDay - DaggerfallPoliticalBoard.DaysPerWeek));
+        Assert.Contains(session.WorldConditions.ActiveForRegion(ceded.CatalogRegion, turnDay), token => token.SubjectTag == DaggerfallPoliticalBoard.OccupationTag);
+
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        Assert.Contains(restored.WorldConditions.ActiveForRegion(ceded.CatalogRegion, turnDay), token => token.SubjectTag == DaggerfallPoliticalBoard.OccupationTag);
+        Assert.Equal(governor.DisplayName, restored.OfficeHolders.ResolveRegionalRuler(ceded.CatalogRegion)!.DisplayName);
+    }
 }
