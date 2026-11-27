@@ -61,6 +61,7 @@ internal sealed class DaggerfallLocationAssembly
     private readonly Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> _meshes;
     private readonly IReadOnlyDictionary<string, DaggerfallArtModel> _models;
     private readonly ulong _worldSocialSeed;
+    private readonly DaggerfallGuardTierTuning _guardTiers;
 
     /// <summary>The default <c>WorldSocialSeed</c> this assembly uses when no per-session override is supplied.</summary>
     internal ulong DefaultWorldSocialSeed => _worldSocialSeed;
@@ -69,7 +70,8 @@ internal sealed class DaggerfallLocationAssembly
     internal DaggerfallLocationAssembly(DaggerfallDefinitions definitions, DaggerfallWorldBlocks blocks,
         Func<DaggerfallProductMedia> media, Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes,
         IReadOnlyDictionary<string, DaggerfallArtModel>? models = null,
-        ulong worldSocialSeed = 0UL)
+        ulong worldSocialSeed = 0UL,
+        DaggerfallGuardTierTuning? guardTiers = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         // Streaming asks whether each location in the exterior window places an exterior on every window change.
@@ -79,6 +81,7 @@ internal sealed class DaggerfallLocationAssembly
         _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
         _models = models ?? new Dictionary<string, DaggerfallArtModel>();
         _worldSocialSeed = worldSocialSeed;
+        _guardTiers = (guardTiers ?? DaggerfallGuardTierTuning.Default).Validate();
     }
 
     /// <summary>
@@ -369,7 +372,8 @@ internal sealed class DaggerfallLocationAssembly
 
             Vector3? gateAnchor = _gates.Count > 0 ? _gates[0].Pose.Translation : _start;
             _dynamicPopulation = DaggerfallExteriorPopulation.Create(owner._definitions, record, clear,
-                gateAnchor is { } anchor ? new WorldPoint(anchor.X, anchor.Y, anchor.Z) : null, worldSocialSeed);
+                gateAnchor is { } anchor ? new WorldPoint(anchor.X, anchor.Y, anchor.Z) : null, worldSocialSeed,
+                owner._guardTiers);
         }
 
         private void PlaceStaticNpcs(

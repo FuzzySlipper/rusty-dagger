@@ -208,7 +208,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DaggerfallWorldVariantContent variants = DaggerfallWorldVariantContent.Read([.. roles[QuestsRole].Select(pack => DaggerfallWorldVariantContent.Files(selected.Content, pack.Id.Value, pack.PayloadPath, pack.Payload))],
                 definitions.Locations.Records);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data, variants), () => productMedia.Value, () => meshes.Value, art?.Models, tuning.Social.WorldSocialSeed);
+            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data, variants), () => productMedia.Value, () => meshes.Value, art?.Models, tuning.Social.WorldSocialSeed, tuning.Law.GuardTiers);
             // Every resolved profile names its classic images against the published manifests, and an interior
             // names its building against the block catalog: each is joined when the profile is resolved, before
             // a transition touches the source, so the publication it disagrees with is named.

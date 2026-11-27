@@ -167,6 +167,42 @@ public sealed class SettlementWatchTierTests
         AssertGuardLoadoutMatchesTier(session, calmGuardId, tiers.Capital);
     }
 
+    [Fact]
+    public void Production_location_assembly_threads_custom_guard_tier_tuning_into_exterior_patrols()
+    {
+        // R11166-1: Verify non-default guard-tier tuning (custom block threshold + baseline patrol count)
+        // flows through DaggerfallLocationAssembly -> DaggerfallExteriorPopulation.Create!
+        DaggerfallSiteId charingId = new(17, 745);
+        DaggerfallGuardTierTuning customTiers = (DaggerfallGuardTierTuning.Default with
+        {
+            TownMinimumBlocks = 1,
+            Town = DaggerfallGuardTierTuning.Default.Town with { BaselinePatrolGuards = 4 },
+        }).Validate();
+
+        DaggerfallData data = Data(FullContent(TestData.RepositoryRoot));
+        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(data);
+        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(data, media, TestPayload.Definitions));
+        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(data, media));
+        DaggerfallWorldBlocks blocks = new(data, WorldVariants(FullContent(TestData.RepositoryRoot)));
+
+        DaggerfallLocationAssembly defaultAssembly = new(
+            TestPayload.Definitions, blocks, () => product.Value, () => meshes.Value,
+            guardTiers: DaggerfallGuardTierTuning.Default);
+        DaggerfallLocationAssembly customAssembly = new(
+            TestPayload.Definitions, blocks, () => product.Value, () => meshes.Value,
+            guardTiers: customTiers);
+
+        DaggerfallWorldProfileKey charingExterior = DaggerfallWorldProfileIds.Exterior(charingId);
+        DaggerfallSiteProfile defaultProfile = defaultAssembly.Assemble(charingExterior);
+        DaggerfallSiteProfile customProfile = customAssembly.Assemble(charingExterior);
+
+        int defaultPatrols = defaultProfile.Population.Count(p => p.CrackdownGuard == 0 && p.IsGuard);
+        int customPatrols = customProfile.Population.Count(p => p.CrackdownGuard == 0 && p.IsGuard);
+
+        Assert.Equal(DaggerfallGuardTierTuning.Default.Hamlet.BaselinePatrolGuards, defaultPatrols);
+        Assert.Equal(4, customPatrols);
+    }
+
     private static void AssertGuardLoadoutMatchesTier(DaggerfallSession session, long guardId, DaggerfallGuardTierProfile tier)
     {
         MechanicsEquipmentCoordinator eq = session.State.ActorInventories.EquipmentFor(guardId);
