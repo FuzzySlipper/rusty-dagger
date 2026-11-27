@@ -34,7 +34,8 @@ internal sealed record DaggerfallNpcArrestOutcome(
     int Region,
     int VacatedOffices,
     bool IsHouseholdHead,
-    int HouseholdStandingDelta);
+    int HouseholdStandingDelta,
+    bool Imprisoned = false);
 
 /// <summary>
 /// The law: the legal response to the player's reported crimes, from pursuit and arrest through the court and its

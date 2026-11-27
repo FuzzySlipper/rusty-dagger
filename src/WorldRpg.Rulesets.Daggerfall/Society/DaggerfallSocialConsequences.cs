@@ -835,12 +835,8 @@ internal sealed class DaggerfallSocialConsequences(
         int unarrived = wordSpread is not null && targetSite is not null
             ? wordSpread.UnarrivedHouseholdStandingDelta(familyId, targetSite, nowMinute)
             : 0;
-        int effective = checked(persistent.StandingDelta - unarrived);
-        // Pending negative news at an uninformed site can only mask the negative standing; it never invents positive goodwill.
-        if (persistent.StandingDelta <= 0 && unarrived < 0 && effective > 0)
-            effective = 0;
         return Math.Clamp(
-            effective,
+            checked(persistent.StandingDelta - unarrived),
             DaggerfallSocialState.MinimumReputation,
             DaggerfallSocialState.MaximumReputation);
     }

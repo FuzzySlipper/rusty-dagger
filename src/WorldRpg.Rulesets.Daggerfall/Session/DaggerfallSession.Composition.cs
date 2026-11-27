@@ -1437,10 +1437,35 @@ internal sealed partial class DaggerfallSession
                 {
                     holderFamilyId = rulerFamily;
                 }
+                if (string.IsNullOrWhiteSpace(holderFamilyId)
+                    && State.Npcs.TryGet(actorId, out DaggerfallNpc? npcBeforeCustody)
+                    && !string.IsNullOrWhiteSpace(npcBeforeCustody.FamilyId))
+                {
+                    holderFamilyId = npcBeforeCustody.FamilyId;
+                }
                 int vacatedOffices = OfficeLedger.ReactToHolderCrimeOrBanishment(
                     actorId, region, crimeKind, banished, currentDay,
                     detail, _site.ActiveSite, currentMinute).Count;
                 bool isHead = SocialConsequences.IsHouseholdHead(actorId, region, vacatedOffices, OfficeHolders);
+                bool imprisoned = false;
+                if (vacatedOffices == 0)
+                {
+                    // Ordinary household member or untitled household/noble head: take them into custody off-stage
+                    // so their live body leaves the scene and jail custody persists across save/load.
+                    ActorOrigin? custodyOrigin = State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? priorLedger) && priorLedger is not null
+                        ? priorLedger.Origin
+                        : State.Actors.TryGet(actorId, out ActorState? liveCustodyActor)
+                            && liveCustodyActor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
+                                ? originComp.Origin
+                                : State.Npcs.TryGet(actorId, out DaggerfallNpc? custodyNpc)
+                                    ? ActorOrigin.Seeded(custodyNpc.Profile ?? _activeProfileKey, custodyNpc.StableKey)
+                                    : null;
+                    if (custodyOrigin is not null)
+                    {
+                        _roster.SuppressOffStage(actorId, custodyOrigin);
+                        imprisoned = true;
+                    }
+                }
                 int appliedDelta = SocialConsequences.ReactToHouseholdArrest(
                     actorId,
                     isHouseholdHead: isHead,
@@ -1449,7 +1474,7 @@ internal sealed partial class DaggerfallSession
                     dayOverride: currentDay,
                     familyIdOverride: holderFamilyId,
                     reason: detail);
-                return new DaggerfallNpcArrestOutcome(actorId, region, vacatedOffices, isHead, appliedDelta);
+                return new DaggerfallNpcArrestOutcome(actorId, region, vacatedOffices, isHead, appliedDelta, imprisoned);
             });
             Law.BindCrimeSpread((incident, loss) =>
             {
@@ -1788,10 +1813,10 @@ internal sealed partial class DaggerfallSession
                 _time.Calendar.MinuteNumber),
             denounceTargets: (speaker, site) => DaggerfallExileDialogue.ListDenounceTargets(
                 speaker, site, OfficeLedger, OfficeHolders, WorldConditions, State.Crime, _definitions,
-                checked((int)_time.Calendar.DayNumber)),
+                checked((int)_time.Calendar.DayNumber), State.Npcs, State.Actors, State.ActorLedger),
             denounceOfficeHolder: (speaker, targetId, site) => DaggerfallExileDialogue.EvaluateAndDenounce(
                 speaker, targetId, site, OfficeLedger, OfficeHolders, WorldConditions, State.Social, State.Crime, Law, _definitions,
-                checked((int)_time.Calendar.DayNumber)),
+                checked((int)_time.Calendar.DayNumber), State.Npcs, State.Actors, State.ActorLedger),
             isVouchUsable: vouch => Introductions.IsVouchUsable(vouch),
             noticeBounties: NoticeBounties,
             officeAllegiance: OfficeAllegiance,

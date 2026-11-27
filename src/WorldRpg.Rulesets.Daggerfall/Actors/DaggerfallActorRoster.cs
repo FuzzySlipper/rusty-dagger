@@ -1041,11 +1041,20 @@ internal sealed class DaggerfallActorRoster
         ArgumentNullException.ThrowIfNull(fallbackOrigin);
         if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
             return;
+        // Snapshot social metadata into ActorLedger via Unplace BEFORE UnloadActor destroys the live
+        // ActorPersonComponent so untouched NPCs keep their name/family/role while off-stage in custody.
+        DaggerfallNpc? snapshotBeforeCustody = _npcs.TryGet(durableId, out DaggerfallNpc? reg) ? reg : null;
+        if (snapshotBeforeCustody is not null)
+            _npcs.Unplace(durableId);
         if (_actors.TryGet(durableId, out _))
             UnloadActor(durableId);
-        if (_npcs.TryGet(durableId, out _))
-            _npcs.Unplace(durableId);
         _actorLedger.SetOffStage(durableId, fallbackOrigin);
+        if (snapshotBeforeCustody is { FamilyId: { Length: > 0 } familyId }
+            && _actorLedger.TryGet(durableId, out ActorLedgerEntry? custodyEntry)
+            && custodyEntry?.Social is { FamilyIdCleared: false, FamilyId: null } custodySocial)
+        {
+            _actorLedger.Upsert(custodyEntry with { Social = custodySocial with { FamilyId = familyId } });
+        }
     }
 
     /// <summary>

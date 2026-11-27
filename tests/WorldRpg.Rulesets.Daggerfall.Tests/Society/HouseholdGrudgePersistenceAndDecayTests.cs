@@ -9,6 +9,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -203,27 +204,62 @@ public sealed class HouseholdGrudgePersistenceAndDecayTests
 
         long ordinaryMemberId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/member", "Doran Mills", localMemberFamily);
         long nobleHeadId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/head", "Baron Aldric", nobleHeadFamily);
+        long watchmanId = AddNpcWithFamily(session, site.Id, npcSite, "t11159/watchman", "Captain Vael", null, role: "guard");
 
-        // 1. Arresting an ordinary household member through canonical DaggerfallLaw.ArrestOrImprisonNpc
-        //    inflicts lighter decaying penalty (-5), not a blood feud, with 0 vacated offices.
-        DaggerfallNpcArrestOutcome memberOutcome = session.Law.ArrestOrImprisonNpc(
-            ordinaryMemberId, site.Id.Region, DaggerfallCrimeKind.Smuggling, banished: false, detail: "caught smuggling");
-        Assert.Equal(0, memberOutcome.VacatedOffices);
-        Assert.False(memberOutcome.IsHouseholdHead);
-        Assert.Equal(DaggerfallSocialTuning.Default.KinArrestGrudgePenalty, memberOutcome.HouseholdStandingDelta);
+        // Activate a regional crackdown and give the player standing with the watch so live dialogue denunciation is open.
+        int day = checked((int)session.Calendar.DayNumber);
+        session.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            "t11159:crackdown",
+            DaggerfallWorldConditionKind.CrimeCrackdown,
+            Region: site.Id.Region,
+            Severity: 1,
+            StartedDay: day,
+            ExpiresDay: day + 30));
+        session.State.Social.ChangeRegionalReputation(site.Id.Region, 10);
+
+        // Open real dialogue with the watchman: BOTH ordinary member and untitled noble head are offered as denounce targets!
+        DaggerfallActivationTarget guardTarget = Assert.Single(
+            session.Dialogue.NpcTargets(),
+            candidate => checked((long)candidate.Identity.Value) == watchmanId);
+        DaggerfallActivationOutcome opened = session.Dialogue.ActivateNpc(
+            new DaggerfallActivationSelection(DaggerfallActivationMode.Talk, guardTarget));
+        Assert.True(opened.Applied, opened.Message);
+        DaggerfallDialogueView view1 = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+        Assert.Contains(view1.Topics, t => t.Id == $"denounce-holder:{ordinaryMemberId}");
+        Assert.Contains(view1.Topics, t => t.Id == $"denounce-holder:{nobleHeadId}");
+
+        // 1. Denouncing an ordinary household member through live dialogue takes them into jail custody (removed from live scene,
+        //    OffStage in ActorLedger) and inflicts the lighter decaying arrest grudge (-5), never a blood feud!
+        DaggerfallActivationOutcome memberDenounce = session.Dialogue.Ask(view1.Revision, $"denounce-holder:{ordinaryMemberId}", null, null);
+        Assert.True(memberDenounce.Applied, memberDenounce.Message);
+        Assert.Contains("custody", memberDenounce.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(session.State.Actors.TryGet(ordinaryMemberId, out _));
+        Assert.True(session.State.ActorLedger.TryGet(ordinaryMemberId, out ActorLedgerEntry? memberLedger));
+        Assert.Equal(ActorLocationKind.OffStage, memberLedger!.Location?.Kind);
         Assert.Equal(-5, session.SocialConsequences.HouseholdStandingDelta(localMemberFamily, site));
         Assert.False(session.SocialConsequences.IsFeudActiveAt(localMemberFamily, site));
 
-        // 2. Arresting a household/noble head (even without holding an office) through canonical DaggerfallLaw.ArrestOrImprisonNpc
-        //    inflicts a noticeably heavier (still decaying) penalty (-10), not a blood feud.
-        DaggerfallNpcArrestOutcome headOutcome = session.Law.ArrestOrImprisonNpc(
-            nobleHeadId, site.Id.Region, DaggerfallCrimeKind.CriminalConspiracy, banished: false, detail: "conspiracy");
-        Assert.Equal(0, headOutcome.VacatedOffices);
-        Assert.True(headOutcome.IsHouseholdHead);
-        Assert.Equal(DaggerfallSocialTuning.Default.KinHeadArrestGrudgePenalty, headOutcome.HouseholdStandingDelta);
-        Assert.True(headOutcome.HouseholdStandingDelta < memberOutcome.HouseholdStandingDelta);
+        // 2. Denouncing an untitled noble/household head through live dialogue takes them into custody (OffStage)
+        //    and inflicts the noticeably heavier (still decaying) arrest grudge (-10), never a blood feud!
+        DaggerfallDialogueView view2 = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+        DaggerfallActivationOutcome headDenounce = session.Dialogue.Ask(view2.Revision, $"denounce-holder:{nobleHeadId}", null, null);
+        Assert.True(headDenounce.Applied, headDenounce.Message);
+        Assert.Contains("custody", headDenounce.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(session.State.Actors.TryGet(nobleHeadId, out _));
+        Assert.True(session.State.ActorLedger.TryGet(nobleHeadId, out ActorLedgerEntry? headLedger));
+        Assert.Equal(ActorLocationKind.OffStage, headLedger!.Location?.Kind);
         Assert.Equal(-10, session.SocialConsequences.HouseholdStandingDelta(nobleHeadFamily, site));
         Assert.False(session.SocialConsequences.IsFeudActiveAt(nobleHeadFamily, site));
+        session.Dialogue.Close();
+
+        // Verify jail custody persists cleanly across save/load (jailed actors stay off-stage).
+        using (DaggerfallSession restoredCustody = fixture.Restore(session.CaptureSave()))
+        {
+            Assert.True(restoredCustody.State.ActorLedger.TryGet(ordinaryMemberId, out ActorLedgerEntry? savedMember));
+            Assert.Equal(ActorLocationKind.OffStage, savedMember!.Location?.Kind);
+            Assert.True(restoredCustody.State.ActorLedger.TryGet(nobleHeadId, out ActorLedgerEntry? savedHead));
+            Assert.Equal(ActorLocationKind.OffStage, savedHead!.Location?.Kind);
+        }
 
         // 3. Repeated arrests alone NEVER cross the -15 blood-feud threshold (capped at -14).
         session.AdvanceElapsedTime(60L, idleFatigue: false);
@@ -308,6 +344,41 @@ public sealed class HouseholdGrudgePersistenceAndDecayTests
         using DaggerfallSession restoredFinal = fixture.Restore(finalSave);
         Assert.Equal(0, restoredFinal.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
         Assert.Equal(0, restoredFinal.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+    }
+
+    [Fact]
+    public void Mixed_goodwill_and_unarrived_arrest_preserves_arrived_positive_standing_until_courier_arrives()
+    {
+        using var fixture = new MultiTierHouseholdFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord originSite = session.Site.ActiveSite!;
+        DaggerfallSiteRecord distantSite = TestPayload.Definitions.Locations.Records
+            .First(r => r.Id != originSite.Id
+                && double.Hypot(r.MapPixelX - originSite.MapPixelX, r.MapPixelY - originSite.MapPixelY) is >= 30.0 and <= 80.0);
+
+        DaggerfallNpcSite npcSite = new(originSite.Id.Region, originSite.Name, "1/7/0", session.Sites.ActiveProfile.LogicalId);
+        const string greatHouse = "fam:house:r17:4";
+        long headId = AddNpcWithFamily(session, originSite.Id, npcSite, "t11159/mixed-head", "Lady Seraphina", greatHouse);
+
+        // 1. Earn +5 Great House goodwill (direct +10 -> +5 kin ripple) and let courier deliver it to distantSite.
+        session.SocialConsequences.ReactToKinGoodwill(headId, directPositiveDelta: 10, originSite: originSite, minute: session.Calendar.MinuteNumber);
+        session.AdvanceElapsedTime(14L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // 2. Arrest the Great House head at originSite (-10 -> global persistent standing becomes -5) while courier is still in transit!
+        DaggerfallNpcArrestOutcome arrest = session.Law.ArrestOrImprisonNpc(
+            headId, originSite.Id.Region, DaggerfallCrimeKind.CriminalConspiracy, banished: false, detail: "court warrant");
+        Assert.True(arrest.IsHouseholdHead);
+        Assert.Equal(-10, arrest.HouseholdStandingDelta);
+
+        // originSite immediately sees -5, while distantSite MUST preserve its already-known +5 goodwill until courier arrives!
+        Assert.Equal(-5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // 3. Advance past courier arrival -> distantSite now sees -5!
+        session.AdvanceElapsedTime(14L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
     }
 
     [Fact]
@@ -412,14 +483,15 @@ public sealed class HouseholdGrudgePersistenceAndDecayTests
         DaggerfallNpcSite binding,
         string slotId,
         string displayName,
-        string? familyId)
+        string? familyId,
+        string role = "person")
     {
         DaggerfallWorldProfileKey profile = session.Sites.ActiveProfile;
         string slotKey = $"{profile.LogicalId}/{slotId}";
         long id = DaggerfallPeopleSlots.SeededSlotIdentity(siteId, slotKey);
         DaggerfallNpcAppearance look = new("breton", "Male", 182, 0, Math.Abs(slotId.GetHashCode()), 0);
         session.State.Npcs.RegisterDeterministic(
-            id, DaggerfallNpcKind.Static, slotId, binding, look, "person", ["talk"],
+            id, DaggerfallNpcKind.Static, slotId, binding, look, role, ["talk"],
             displayName: displayName, homeProfile: profile, familyId: familyId);
         DaggerfallNpc npc = session.State.Npcs.Require(id);
         WorldPoint pose = new(2, 0, -2);

@@ -1,4 +1,5 @@
 using System.Globalization;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 
@@ -7,7 +8,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Result of a player dialogue attempt to restore an exiled office holder to their lost office.</summary>
 internal sealed record DaggerfallExileRestoreResult(bool Accepted, string Question, string Message);
 
-/// <summary>One legally implicated living office holder that the player can denounce to the watch or court in dialogue.</summary>
+/// <summary>One legally implicated living office holder or household member that the player can denounce to the watch or court in dialogue.</summary>
 internal sealed record DaggerfallHolderDenounceTarget(
     long ActorId,
     string DisplayName,
@@ -15,7 +16,8 @@ internal sealed record DaggerfallHolderDenounceTarget(
     string OfficeKey,
     int Region,
     string Reason,
-    DaggerfallCrimeKind CrimeKind);
+    DaggerfallCrimeKind CrimeKind,
+    bool IsOfficeHolder = true);
 
 /// <summary>Result of denouncing an implicated office holder to the watch or court in dialogue.</summary>
 internal sealed record DaggerfallHolderDenounceResult(bool Accepted, string Question, string Message);
@@ -176,7 +178,10 @@ internal static class DaggerfallExileDialogue
         IDaggerfallWorldConditionSource? worldConditions,
         DaggerfallCrimeState crime,
         DaggerfallDefinitions definitions,
-        int currentDay)
+        int currentDay,
+        DaggerfallNpcRegistry? npcs = null,
+        ActorsState? actors = null,
+        DaggerfallActorLedger? actorLedger = null)
     {
         if (site is null || worldConditions is null || !IsLawOrCourtAuthority(speaker, definitions))
             return [];
@@ -211,7 +216,7 @@ internal static class DaggerfallExileDialogue
                 continue;
             DaggerfallCrimeKind crimeKind = implicatedByEmbargo ? DaggerfallCrimeKind.Smuggling : DaggerfallCrimeKind.CriminalConspiracy;
             string reason = implicatedByEmbargo ? "violating the guild embargo" : "corruption uncovered in the crackdown";
-            targets.Add(new(holderId, local.DisplayName, local.Title, local.OfficeKey, region, reason, crimeKind));
+            targets.Add(new(holderId, local.DisplayName, local.Title, local.OfficeKey, region, reason, crimeKind, IsOfficeHolder: true));
         }
 
         if ((crackdown is { Severity: >= 2 } || crisis is not null)
@@ -227,15 +232,66 @@ internal static class DaggerfallExileDialogue
                 officeKey,
                 region,
                 "high treason and misrule",
-                DaggerfallCrimeKind.HighTreason));
+                DaggerfallCrimeKind.HighTreason,
+                IsOfficeHolder: true));
+        }
+
+        // During an active crackdown or guild embargo, household-bearing citizens and untitled household/noble heads
+        // present at the active site can also be denounced to the watch for arrest/imprisonment.
+        if (npcs is not null && (crackdown is not null || embargoes.Count > 0))
+        {
+            foreach (DaggerfallNpc resident in npcs.All.OrderBy(n => n.DurableId))
+            {
+                if (resident.DurableId == speaker.DurableId
+                    || resident.Presence != DaggerfallNpcPresence.Active
+                    || string.IsNullOrWhiteSpace(resident.FamilyId)
+                    || resident.Site.Region != region
+                    || !string.Equals(resident.Site.Location, site.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                if (resident.Role.Equals("guard", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (actors is not null && (!actors.TryGet(resident.DurableId, out ActorState? live) || live.IsDefeated))
+                    continue;
+                if (actorLedger is not null
+                    && actorLedger.TryGet(resident.DurableId, out ActorLedgerEntry? entry)
+                    && entry?.Location?.Kind is ActorLocationKind.OffStage or ActorLocationKind.Dead or ActorLocationKind.Removed)
+                {
+                    continue;
+                }
+                if (!seen.Add(resident.DurableId))
+                    continue;
+
+                bool implicatedByEmbargo = resident.Appearance.FactionId > 0
+                    && embargoes.Any(e => e.TargetFactionId == resident.Appearance.FactionId || e.SourceFactionId == resident.Appearance.FactionId);
+                if (crackdown is null && !implicatedByEmbargo)
+                    continue;
+
+                DaggerfallCrimeKind crimeKind = implicatedByEmbargo ? DaggerfallCrimeKind.Smuggling : DaggerfallCrimeKind.CriminalConspiracy;
+                string reason = implicatedByEmbargo ? "smuggling under the guild embargo" : "unlawful dealings uncovered in the crackdown";
+                string title = string.IsNullOrWhiteSpace(resident.Role) || resident.Role.Equals("person", StringComparison.OrdinalIgnoreCase)
+                    ? "Citizen"
+                    : char.ToUpperInvariant(resident.Role[0]) + resident.Role[1..];
+                targets.Add(new(
+                    resident.DurableId,
+                    resident.DisplayName ?? resident.Role,
+                    title,
+                    string.Empty,
+                    region,
+                    reason,
+                    crimeKind,
+                    IsOfficeHolder: false));
+            }
         }
 
         return targets;
     }
 
     /// <summary>
-    /// Evaluates and carries out a player denunciation of an implicated office holder through
-    /// <see cref="DaggerfallLaw.ConvictOrBanishOfficeHolder"/>.
+    /// Evaluates and carries out a player denunciation of an implicated office holder (via
+    /// <see cref="DaggerfallLaw.ConvictOrBanishOfficeHolder"/>) or household member / untitled head
+    /// (via <see cref="DaggerfallLaw.ArrestOrImprisonNpc"/>).
     /// </summary>
     internal static DaggerfallHolderDenounceResult EvaluateAndDenounce(
         DaggerfallNpc speaker,
@@ -248,13 +304,16 @@ internal static class DaggerfallExileDialogue
         DaggerfallCrimeState crime,
         DaggerfallLaw law,
         DaggerfallDefinitions definitions,
-        int currentDay)
+        int currentDay,
+        DaggerfallNpcRegistry? npcs = null,
+        ActorsState? actors = null,
+        DaggerfallActorLedger? actorLedger = null)
     {
         IReadOnlyList<DaggerfallHolderDenounceTarget> targets = ListDenounceTargets(
-            speaker, site, ledger, holders, worldConditions, crime, definitions, currentDay);
+            speaker, site, ledger, holders, worldConditions, crime, definitions, currentDay, npcs, actors, actorLedger);
         DaggerfallHolderDenounceTarget? target = targets.FirstOrDefault(t => t.ActorId == targetActorId);
         if (target is null || site is null)
-            return new(false, "I have evidence against an office holder.", "There is no actionable charge against that official right now.");
+            return new(false, "I have evidence against someone here.", "There is no actionable charge against that person right now.");
 
         string question = $"I am reporting {target.Title} {target.DisplayName} for {target.Reason}.";
         int regionalRep = social.RegionalReputation(site.Id.Region);
@@ -270,19 +329,36 @@ internal static class DaggerfallExileDialogue
         }
 
         string regionName = definitions.BuildingNames.RegionName(site.Id.Region);
-        int removed = law.ConvictOrBanishOfficeHolder(
+        if (target.IsOfficeHolder)
+        {
+            int removed = law.ConvictOrBanishOfficeHolder(
+                target.ActorId,
+                site.Id.Region,
+                target.CrimeKind,
+                banished: true,
+                detail: $"was banished from {regionName} for {target.Reason}");
+            if (removed <= 0)
+                return new(false, question, $"{target.DisplayName} no longer holds office here.");
+
+            return new(
+                true,
+                question,
+                $"The warrant is sealed. {target.DisplayName} has been stripped of the post of {target.Title} and banished from {regionName}.");
+        }
+
+        DaggerfallNpcArrestOutcome outcome = law.ArrestOrImprisonNpc(
             target.ActorId,
             site.Id.Region,
             target.CrimeKind,
-            banished: true,
-            detail: $"was banished from {regionName} for {target.Reason}");
-        if (removed <= 0)
-            return new(false, question, $"{target.DisplayName} no longer holds office here.");
+            banished: false,
+            detail: $"was arrested in {regionName} for {target.Reason}");
+        if (!outcome.Imprisoned)
+            return new(false, question, $"{target.DisplayName} could not be taken into custody right now.");
 
         return new(
             true,
             question,
-            $"The warrant is sealed. {target.DisplayName} has been stripped of the post of {target.Title} and banished from {regionName}.");
+            $"The warrant is sealed. The watch has taken {target.DisplayName} into custody in {regionName} for {target.Reason}.");
     }
 
     private static bool HasRestorationStanding(
