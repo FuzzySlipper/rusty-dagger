@@ -11,6 +11,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -182,6 +183,64 @@ public sealed class BloodFeudVendettaTests
         // Settling the feud prunes sparse FeudVendetta save state completely (zero save bytes).
         Assert.True(session.SocialConsequences.ClearHouseholdGrudgeAndFeud(houseFamily, site, session.Calendar.MinuteNumber, day));
         Assert.Empty(session.FeudVendetta.Capture().Entries);
+    }
+
+    [Fact]
+    public void Materialized_overland_vendetta_hunters_retire_on_settlement_and_stay_gone_after_reload()
+    {
+        using var fixture = new VendettaSessionFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/5/0", session.Sites.ActiveProfile.LogicalId);
+        string houseFamily = $"fam:house:r{site.Id.Region}:0";
+
+        WorldPoint playerPos = session.State.PlayerControl.Position ?? new WorldPoint(0, 0, 0);
+        WorldPoint nearbyPos = new(playerPos.X + 4f, playerPos.Y, playerPos.Z);
+        long houseVictimId = AddCivilianNpc(session, site.Id, npcSite, "t11162/overland-victim", "Lord Halrik", houseFamily, "noble", nearbyPos);
+        long witnessId = AddCivilianNpc(session, site.Id, npcSite, "t11162/overland-witness", "Watchman Toren", null, "guard", nearbyPos);
+
+        int day = checked((int)session.Calendar.DayNumber);
+        CommitMurder(session, fixture.Perception, houseVictimId, witnessId, session.Calendar.MinuteNumber);
+
+        // Dispatch an overland vendetta pursuit band via HostileOverlandBands.
+        session.AdvanceElapsedTime(12L * 3600L, idleFatigue: false);
+        DaggerfallPersistentOverlandBand band = Assert.Single(
+            session.Expedition.PersistentBands,
+            b => b.BandId.StartsWith("hostile:vendetta-", StringComparison.Ordinal));
+        long[] overlandHunterIds = [.. session.State.ActorLedger.EntriesOnOverlandBand(band.BandId).Select(e => e.DurableId)];
+        Assert.NotEmpty(overlandHunterIds);
+
+        // Meet the band so its members materialize into 3D (AtSite) and the persistent band is removed from the map!
+        session.OverlandParties.OnMeetPersistentBand(
+            band,
+            new DaggerfallTravelMapPixel(site.MapPixelX, site.MapPixelY),
+            DaggerfallEncounterStaging.Caught);
+        Assert.True(session.Expedition.RemovePersistentBand(band.BandId));
+        session.OverlandParties.OnEnterSceneFromExpedition(session.Sites.Projection.Inputs, playerPos, 0f);
+
+        Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == band.BandId);
+        Assert.All(overlandHunterIds, id =>
+        {
+            Assert.True(session.State.Actors.TryGet(id, out ActorState? hunter) && !hunter.IsDefeated);
+            Assert.True(session.FeudVendetta.IsVendettaAggressor(id));
+        });
+
+        // Save and reload BEFORE settling: household-to-hunter association must survive save/load!
+        using DaggerfallSession reloadedBeforeSettle = fixture.Restore(session.CaptureSave());
+        Assert.All(overlandHunterIds, id =>
+        {
+            Assert.True(reloadedBeforeSettle.State.Actors.TryGet(id, out ActorState? hunter) && !hunter.IsDefeated);
+            Assert.True(reloadedBeforeSettle.FeudVendetta.IsVendettaAggressor(id));
+        });
+
+        // Settle the feud -> materialized overland hunters MUST be retired through the canonical roster and stay gone after reload!
+        Assert.True(reloadedBeforeSettle.SocialConsequences.ClearHouseholdGrudgeAndFeud(
+            houseFamily, reloadedBeforeSettle.Site.ActiveSite, reloadedBeforeSettle.Calendar.MinuteNumber, checked((int)reloadedBeforeSettle.Calendar.DayNumber)));
+        Assert.All(overlandHunterIds, id => Assert.False(reloadedBeforeSettle.State.Actors.TryGet(id, out _)));
+        Assert.Empty(reloadedBeforeSettle.FeudVendetta.Capture().Entries);
+
+        using DaggerfallSession reloadedAfterSettle = fixture.Restore(reloadedBeforeSettle.CaptureSave());
+        Assert.All(overlandHunterIds, id => Assert.False(reloadedAfterSettle.State.Actors.TryGet(id, out _)));
     }
 
     [Fact]

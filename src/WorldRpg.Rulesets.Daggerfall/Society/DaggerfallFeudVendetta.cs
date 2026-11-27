@@ -243,13 +243,39 @@ internal sealed class DaggerfallFeudVendetta(
     }
 
     /// <summary>
-    /// Cancels active vendetta confrontations and overland hunter bands when a household feud is mediated or settled.
+    /// Registers overland vendetta hunter actor IDs minted by <see cref="DaggerfallHostileOverlandBands"/> so their
+    /// household association persists across encounter materialization, scene unload, and save/load, and truce or
+    /// settlement retires every surviving hunter cleanly.
+    /// </summary>
+    internal void RegisterDispatchedHunters(string familyId, IReadOnlyList<long> hunterActorIds)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || hunterActorIds is null || hunterActorIds.Count == 0)
+            return;
+        VendettaState state = GetOrCreate(familyId);
+        foreach (long id in hunterActorIds)
+        {
+            if (id > 0 && id != DaggerfallActorIdentity.PlayerEntityId)
+                state.ActiveHunterIds.Add(id);
+        }
+    }
+
+    /// <summary>
+    /// Cancels active vendetta confrontations, materialized or detached hired hunters, and overland hunter bands
+    /// when a household feud is mediated or settled.
     /// When <paramref name="settled"/> is true, prunes the sparse vendetta record completely (zero save bytes).
     /// </summary>
     internal void OnFeudPausedOrSettled(string familyId, bool settled)
     {
         if (string.IsNullOrWhiteSpace(familyId))
             return;
+
+        // First retire any active overland pursuit bands still on the map for this household's vendetta.
+        string vendettaSlug = $"hostile:vendetta-{StableHash.NonZeroFnv1a64(familyId):x16}:";
+        foreach (DaggerfallPersistentOverlandBand band in activeOverlandBands().ToArray())
+        {
+            if (band.BandId.StartsWith(vendettaSlug, StringComparison.Ordinal))
+                retireOverlandBand(band.BandId);
+        }
 
         if (_entries.TryGetValue(familyId, out VendettaState? state))
         {
@@ -263,14 +289,6 @@ internal sealed class DaggerfallFeudVendetta(
 
             if (settled)
                 _entries.Remove(familyId);
-        }
-
-        // Retire any active overland pursuit bands belonging to this household's vendetta.
-        string vendettaSlug = $"hostile:vendetta-{StableHash.NonZeroFnv1a64(familyId):x16}:";
-        foreach (DaggerfallPersistentOverlandBand band in activeOverlandBands().ToArray())
-        {
-            if (band.BandId.StartsWith(vendettaSlug, StringComparison.Ordinal))
-                retireOverlandBand(band.BandId);
         }
     }
 

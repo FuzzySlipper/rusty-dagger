@@ -59,6 +59,9 @@ internal sealed class DaggerfallHostileOverlandBands
     private readonly Func<ulong> _worldSocialSeed;
     private readonly Func<DaggerfallSiteId?> _activeSiteId;
 
+    /// <summary>Raised whenever a household blood-feud vendetta overland pursuit band is dispatched, carrying <c>(familyId, memberActorIds)</c>.</summary>
+    internal event Action<string, IReadOnlyList<long>>? VendettaBandDispatched;
+
     internal DaggerfallHostileOverlandBands(
         DaggerfallDefinitions definitions,
         DaggerfallActorLedger actorLedger,
@@ -118,20 +121,20 @@ internal sealed class DaggerfallHostileOverlandBands
         string regionName = _definitions.BuildingNames.RegionName(region);
 
         DaggerfallHostileStandingSnapshot standing = _readStanding(region);
-        List<(string Slug, string BandName, DaggerfallBandKind Kind, string FactionName, int PreferredMobileId, int MemberCount, double Speed)> candidates = [];
+        List<(string Slug, string BandName, DaggerfallBandKind Kind, string FactionName, int PreferredMobileId, int MemberCount, double Speed, string? VendettaFamilyId)> candidates = [];
         if (standing.WantedOrBanished)
-            candidates.Add(("bounty", $"{regionName} Bounty Hunters", DaggerfallBandKind.Hostile, regionName, 144, 2, BountyHunterSpeedPixelsPerHour));
+            candidates.Add(("bounty", $"{regionName} Bounty Hunters", DaggerfallBandKind.Hostile, regionName, 144, 2, BountyHunterSpeedPixelsPerHour, null));
         foreach (DaggerfallHostileFactionStanding guild in standing.HostileGuilds
             .Where(g => g.Reputation <= GuildHitSquadThreshold)
             .OrderBy(g => g.Reputation).ThenBy(g => g.FactionId))
         {
-            candidates.Add(($"hitsquad-{guild.FactionId}", $"{guild.Name} Hit Squad", DaggerfallBandKind.Hostile, guild.Name, guild.PreferredMobileId, 2, HitSquadSpeedPixelsPerHour));
+            candidates.Add(($"hitsquad-{guild.FactionId}", $"{guild.Name} Hit Squad", DaggerfallBandKind.Hostile, guild.Name, guild.PreferredMobileId, 2, HitSquadSpeedPixelsPerHour, null));
         }
         foreach (DaggerfallHostileFactionStanding court in standing.HostileCourts
             .Where(c => c.Reputation <= RivalPatrolThreshold)
             .OrderBy(c => c.Reputation).ThenBy(c => c.FactionId))
         {
-            candidates.Add(($"patrol-{court.FactionId}", $"{court.Name} Patrol", DaggerfallBandKind.Patrol, court.Name, court.PreferredMobileId, 2, RivalPatrolSpeedPixelsPerHour));
+            candidates.Add(($"patrol-{court.FactionId}", $"{court.Name} Patrol", DaggerfallBandKind.Patrol, court.Name, court.PreferredMobileId, 2, RivalPatrolSpeedPixelsPerHour, null));
         }
         if (standing.HostileVendettas is { Count: > 0 } vendettas)
         {
@@ -139,7 +142,7 @@ internal sealed class DaggerfallHostileOverlandBands
             {
                 string slug = $"vendetta-{StableHash.NonZeroFnv1a64(vendetta.FamilyId):x16}";
                 candidates.Add((slug, vendetta.BandTitle, DaggerfallBandKind.Hostile, vendetta.HouseholdLabel,
-                    vendetta.PreferredMobileId, Math.Clamp(vendetta.MemberCount, 1, 3), vendetta.SpeedPixelsPerHour));
+                    vendetta.PreferredMobileId, Math.Clamp(vendetta.MemberCount, 1, 3), vendetta.SpeedPixelsPerHour, vendetta.FamilyId));
             }
         }
         if (candidates.Count == 0) return null;
@@ -169,7 +172,7 @@ internal sealed class DaggerfallHostileOverlandBands
             memberIds.Add(durableId);
         }
 
-        return _overlandParties.DispatchOverlandBand(
+        DaggerfallPersistentOverlandBand dispatched = _overlandParties.DispatchOverlandBand(
             bandId: bandId,
             name: chosen.BandName,
             kind: chosen.Kind,
@@ -183,6 +186,9 @@ internal sealed class DaggerfallHostileOverlandBands
             hostile: true,
             mobile: enemyDef.MobileId,
             faction: chosen.FactionName);
+        if (chosen.VendettaFamilyId is { } vendettaFamily)
+            VendettaBandDispatched?.Invoke(vendettaFamily, memberIds);
+        return dispatched;
     }
 
     private int ActiveHostileBandCount() =>

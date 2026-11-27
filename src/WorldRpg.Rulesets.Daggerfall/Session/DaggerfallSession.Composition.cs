@@ -1205,6 +1205,7 @@ internal sealed partial class DaggerfallSession
                 FeudVendetta.Restore(saved.FeudVendetta);
             Crimes.BindSelfDefenseLookup(FeudVendetta.IsVendettaAggressor);
             SocialConsequences.FeudPausedOrSettled += FeudVendetta.OnFeudPausedOrSettled;
+            HostileOverlandBands.VendettaBandDispatched += FeudVendetta.RegisterDispatchedHunters;
             Introductions.BindHostilityLookup(id =>
                 State.Actors.TryGet(id, out ActorState? live)
                 && live.Actor.TryGet<Modules.Behavior.DaggerfallEnemyPerceptionMemory>(out var memory)
