@@ -1139,6 +1139,8 @@ internal sealed partial class DaggerfallSession
             {
                 OfficeAllegiance = new DaggerfallOfficeAllegiance(PoliticalBoard, State.Social, definitions.BoardSeats, OfficeLedger, _tuning.Politics);
                 State.Social.BindOfficeStanding(OfficeAllegiance.ReactionShift);
+                StandingRipple = new DaggerfallBoardStandingRipple(PoliticalBoard, State.Social, definitions.BoardSeats, _tuning.Politics);
+                State.Social.StandingGained += StandingRipple.ObserveGain;
             }
             OfficeLedger.OfficeChanged += change => PoliticalBoard?.ObserveOfficeChanged(change);
             PartyHire = new DaggerfallPartyHireService(

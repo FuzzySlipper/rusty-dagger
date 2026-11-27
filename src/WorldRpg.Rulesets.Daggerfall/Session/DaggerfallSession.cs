@@ -1253,6 +1253,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>Whom each board region's chief-town offices answer to, and how that takes the player; null without a board.</summary>
     internal DaggerfallOfficeAllegiance? OfficeAllegiance { get; }
 
+    /// <summary>How the board's quarrels follow the player's standing; null without a board.</summary>
+    internal DaggerfallBoardStandingRipple? StandingRipple { get; }
+
     /// <summary>The notice-board bounties the player holds, and who pays them.</summary>
     internal DaggerfallNoticeBounties NoticeBounties { get; } = null!;
 

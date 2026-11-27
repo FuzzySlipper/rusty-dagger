@@ -45,7 +45,8 @@
   },
   "politics": {
     "officeMemberReaction": 10,
-    "officeEnemyReaction": 10
+    "officeEnemyReaction": 10,
+    "opposedStandingPercent": 25
   },
   "normalLight": {
     "distance": 1.4,

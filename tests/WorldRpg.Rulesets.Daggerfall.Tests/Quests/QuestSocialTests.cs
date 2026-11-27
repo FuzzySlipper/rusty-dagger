@@ -32,7 +32,7 @@ public sealed class QuestSocialTests
             actions: ["change repute with _person_ by +20", "legal repute +200", "repute with _person_ exceeds 20 do _done_"], taskBlocks: [["_done_ task:"]]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: defs);
         long npc = QuestNpcOverlayTests.Giver(f, defs, 66);
-        var expected = new DaggerfallSocialState(defs.Factions); expected.Restore(f.Session.State.Social.Capture());
+        var expected = Expected(f.Session, defs);
         expected.ChangeFactionReputation(66, 20, DaggerfallFactionReputationChange.Propagate);
         Start(f, npc); Advance(f.Session);
         Assert.Equal(expected.Capture().Factions, f.Session.State.Social.Capture().Factions);
@@ -76,7 +76,7 @@ public sealed class QuestSocialTests
         var defs = QuestWorldAdmissionTests.Definitions(actions: ["start task _final_", "end quest"],
             taskBlocks: [reward ? ["_final_ task:", "give pc _gift_"] : ["_final_ task:"]], messages: ["Quest complete."], firstMessageId: 1004);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: defs);
-        var expected = new DaggerfallSocialState(defs.Factions); expected.Restore(f.Session.State.Social.Capture());
+        var expected = Expected(f.Session, defs);
         if (faction != 0) expected.ChangeFactionReputation(faction, reward ? 5 : -2, DaggerfallFactionReputationChange.Propagate);
         Start(f, faction: faction); Advance(f.Session);
         Assert.False(Quest(f.Session).FactionSettled);
@@ -167,5 +167,18 @@ public sealed class QuestSocialTests
         f.Session.State.Quests.Start(new("social", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
             [new("location", DaggerfallQuestResourceBinding.Place(new(site.Region, site.Index)) with { PlaceSelection = new(f.Inputs.ProfileKind, site.MapId) })], [])
             { QuestorId = npc, FactionId = faction });
+    }
+
+    /// <summary>
+    /// The standing a session's quests should leave: the session's own as it stands, changed as the quest changes it,
+    /// with the board's quarrels following each gain as the session's do (#11121).
+    /// </summary>
+    private static DaggerfallSocialState Expected(DaggerfallSession session, DaggerfallDefinitions defs)
+    {
+        DaggerfallSocialState expected = new(defs.Factions);
+        expected.Restore(session.State.Social.Capture());
+        if (session.PoliticalBoard is { } board)
+            expected.StandingGained += new DaggerfallBoardStandingRipple(board, expected, defs.BoardSeats, DaggerfallTuning.Defaults.Politics).ObserveGain;
+        return expected;
     }
 }

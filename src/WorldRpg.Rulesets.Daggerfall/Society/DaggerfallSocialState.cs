@@ -78,6 +78,12 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     /// <summary>Raised when a direct/notable faction reputation change occurs: (factionId, delta).</summary>
     internal event Action<int, int>? FactionStandingChanged;
 
+    /// <summary>
+    /// Raised once for each change of standing <see cref="ChangeFactionReputation"/> makes that raises it: the faction the
+    /// change was made with and the amount, before it spreads through the faction tree (the board's opposed seats hear it).
+    /// </summary>
+    internal event Action<int, int>? StandingGained;
+
     internal void BindActorFactions(Func<long, FactionComponent?> lookup) =>
         _actorFactions = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
@@ -282,6 +288,13 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     /// </summary>
     internal int ChangeFactionReputation(int factionId, int amount, DaggerfallFactionReputationChange change = DaggerfallFactionReputationChange.Direct)
     {
+        int standing = ApplyReputationChange(factionId, amount, change);
+        if (amount > 0) StandingGained?.Invoke(factionId, amount);
+        return standing;
+    }
+
+    private int ApplyReputationChange(int factionId, int amount, DaggerfallFactionReputationChange change)
+    {
         DaggerfallFactionDefinition faction = RequireFaction(factionId);
         if (change == DaggerfallFactionReputationChange.Direct)
         {
@@ -324,7 +337,7 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         // A God root also changes the generic temple hierarchy.  This is a second donor propagation,
         // after the deity hierarchy, rather than a universal relationship inference.
         if (root.Type == GodFactionType && _catalog.Factions.ContainsKey(GenericTempleFactionId))
-            ChangeFactionReputation(GenericTempleFactionId, amount, DaggerfallFactionReputationChange.Propagate);
+            ApplyReputationChange(GenericTempleFactionId, amount, DaggerfallFactionReputationChange.Propagate);
         return FactionReputation(faction.Id);
     }
 
