@@ -1,0 +1,139 @@
+{
+  "name": "R0C10Y30",
+  "displayName": "Charter of Restoration",
+  "sourceFile": "R0C10Y30.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>         Loyalists of the old court have petitioned for the",
+        "<ce>         return of _exile_ from exile. Will you carry the",
+        "<ce>         charter of restoration for _reward_ gold pieces?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>         Then _exile_ must wait longer in the shadows."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>         Confirm the charter with me once you are ready to",
+        "<ce>         proclaim _exile_ restored to the provincial seat."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>         The loyalists still await word on _exile_, %pcf."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>         The charter is proclaimed! _exile_ has been recalled",
+        "<ce>         from exile and restored to office. Take your _reward_ gold."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "Loyalists are petitioning the court to recall _exile_ from exile."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "The petition to restore _exile_ came to nothing."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "The court has proclaimed _exile_ restored to office."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "Thank you for backing the restoration of _exile_."
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "The charter lapsed before you returned, %pcf."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " _qgiver_ has asked me to confirm",
+        " the charter restoring _exile_",
+        " from exile to the provincial seat."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 100,
+      "lines": [
+        "Item _reward_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 102,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 103,
+      "lines": [
+        "Person _exile_ office ExiledProvince"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 105,
+      "lines": [
+        "Clock _limit_ 00:00 0 flag 1 range 1 4"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 108,
+      "lines": [
+        "start timer _limit_ ",
+        "log 1010 step 0 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 112,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _qgiver_ ",
+        "restore office _exile_ ",
+        "say 1004 ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 120,
+      "lines": [
+        "_limit_ task:",
+        "change repute with _qgiver_ by -5 ",
+        "end quest "
+      ]
+    }
+  ]
+}

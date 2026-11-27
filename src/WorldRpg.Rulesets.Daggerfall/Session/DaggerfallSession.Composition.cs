@@ -787,6 +787,7 @@ internal sealed partial class DaggerfallSession
                 () => _time.Calendar.MinuteNumber, _site);
             OfficeLedger.Restore(saved?.OfficeLedger);
             OfficeHolders.BindOverrideLookup(OfficeLedger.TryGetFactionOverride);
+            OfficeHolders.BindExiledRegionalRulerLookup(OfficeLedger.ResolveExiledRegionalRuler);
             OfficeLedger.OfficeChanged += change => WordSpread.ObserveOfficeChanged(
                 change,
                 n => OfficeLedger.ResolveOfficeOriginSite(n, _site.ActiveSite),
@@ -909,6 +910,7 @@ internal sealed partial class DaggerfallSession
             };
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
             State.Quests.BindSocial(State.Social, State.Crime, () => _site.Region);
+            State.Quests.BindOfficeOfferEligibility(CanOfferOfficeQuest);
             State.Quests.BindOfficeActions(action =>
             {
                 int day = checked((int)_time.Calendar.DayNumber);
@@ -1708,6 +1710,28 @@ internal sealed partial class DaggerfallSession
         return State.Quests.TryResolveDialogueTopic(npcId, topicId,
             out string? text, out IReadOnlyList<string> diagnostics)
             ? (text!, diagnostics) : null;
+    }
+
+    private bool CanOfferOfficeQuest(DaggerfallQuestSourceDefinition source)
+    {
+        if (_site.Region is not int region)
+            return true;
+        foreach (DaggerfallQuestResourceDefinition resource in _definitions.QuestSources.Resources)
+        {
+            if (resource.SourceFile != source.SourceFile || resource.Kind != "person" || resource.Person?.Office is not { Length: > 0 } office)
+                continue;
+            if (office.Equals("Province", StringComparison.OrdinalIgnoreCase))
+            {
+                if (OfficeHolders.ResolveRegionalRuler(region) is not { HasLivingHolder: true })
+                    return false;
+            }
+            else if (office.Equals("ExiledProvince", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!OfficeHolders.TryResolveExiledRegionalRuler(region, out _))
+                    return false;
+            }
+        }
+        return true;
     }
 
     private bool ResolveQuestExileRestore(DaggerfallQuestOfficeAction action, int day, long minute)

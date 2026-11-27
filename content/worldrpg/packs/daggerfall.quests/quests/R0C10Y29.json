@@ -1,0 +1,170 @@
+{
+  "name": "R0C10Y29",
+  "displayName": "The Court Writ",
+  "sourceFile": "R0C10Y29.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>         Word from the high court has reached me, %pcf.",
+        "<ce>         A sealed writ of inquiry stands against _ruler_.",
+        "<ce>         Will you bear the court's mandate and deliver the",
+        "<ce>         verdict for _reward_ gold pieces?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>         Perhaps wisdom counsels silence in court affairs."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>         Speak with me again once you have weighed whether",
+        "<ce>         _ruler_ should be deposed into exile or placed",
+        "<ce>         under an interim regency."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>         The council awaits your answer on _ruler_, %pcf."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>         So be it. The writ is sealed: _ruler_ stands deposed",
+        "<ce>         and driven into exile. Take your _reward_ gold pieces."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "<ce>         A measured compromise. An interim regency shall govern",
+        "<ce>         in _ruler_'s stead. Take your _reward_ gold pieces."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "The court writ against _ruler_ lapsed before any verdict was sealed."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "The high court has acted on the mandate concerning _ruler_."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "The court remembers your part in the writ against _ruler_."
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "You let the writ expire, %pcf. The court will not ask twice."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " _qgiver_ has entrusted me with a",
+        " court writ concerning _ruler_.",
+        " I must return to _qgiver_ to seal",
+        " either a deposition or a regency."
+      ]
+    },
+    {
+      "id": 1012,
+      "lines": [
+        "<ce>         The council awaits your recommendation on _ruler_.",
+        "<ce>         Enforce full deposition and exile (Yes), or broker",
+        "<ce>         an interim regency in the ruler's stead (No)?"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 100,
+      "lines": [
+        "Item _reward_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 102,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 103,
+      "lines": [
+        "Person _ruler_ office Province"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 105,
+      "lines": [
+        "Clock _limit_ 00:00 0 flag 1 range 1 4"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 108,
+      "lines": [
+        "start timer _limit_ ",
+        "log 1010 step 0 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 112,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _qgiver_ ",
+        "prompt 1012 yes _depose_ no _regency_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 117,
+      "lines": [
+        "_depose_ task:",
+        "depose _ruler_ ",
+        "say 1004 ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 124,
+      "lines": [
+        "_regency_ task:",
+        "declare regency _ruler_ ",
+        "say 1005 ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 131,
+      "lines": [
+        "_limit_ task:",
+        "change repute with _qgiver_ by -5 ",
+        "end quest "
+      ]
+    }
+  ]
+}

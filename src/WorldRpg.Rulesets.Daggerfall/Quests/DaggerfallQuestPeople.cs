@@ -51,10 +51,19 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         DaggerfallOfficeHolder? officeHolder = null;
         if (officeAddressed)
         {
-            officeFactionId = ResolveOfficeFaction(options.Office!, region);
-            officeHolder = _officeHolders.ResolveOffice(officeFactionId.Value, region);
-            if (officeHolder is not { HasLivingHolder: true })
-                throw new NotSupportedException($"Quest Person '{declaration.CanonicalId}' office faction {officeFactionId.Value} has no living office holder.");
+            if (options.Office!.Equals("ExiledProvince", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!_officeHolders.TryResolveExiledRegionalRuler(region, out officeHolder) || officeHolder is null)
+                    throw new NotSupportedException($"Quest Person '{declaration.CanonicalId}' requires an exiled provincial ruler in region {region}.");
+                officeFactionId = officeHolder.OfficeFactionId;
+            }
+            else
+            {
+                officeFactionId = ResolveOfficeFaction(options.Office!, region);
+                officeHolder = _officeHolders.ResolveOffice(officeFactionId.Value, region);
+                if (officeHolder is not { HasLivingHolder: true })
+                    throw new NotSupportedException($"Quest Person '{declaration.CanonicalId}' office faction {officeFactionId.Value} has no living office holder.");
+            }
         }
 
         int factionId = existing?.Appearance.FactionId

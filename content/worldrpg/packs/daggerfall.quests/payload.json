@@ -193,6 +193,8 @@
     {"name": "R0C40Y23", "group": "Nobility", "membership": "N", "minimumRequirement": 4, "requirementKind": "level", "adult": false, "oneTime": false, "active": false},
     {"name": "R0C4XY23", "group": "Nobility", "membership": "M", "minimumRequirement": 4, "requirementKind": "level", "adult": true, "oneTime": false, "active": true},
     {"name": "R0C60Y24", "group": "Nobility", "membership": "M", "minimumRequirement": 6, "requirementKind": "level", "adult": false, "oneTime": false, "active": true},
+    {"name": "R0C10Y29", "group": "Nobility", "membership": "N", "minimumRequirement": 1, "requirementKind": "level", "adult": false, "oneTime": false, "active": true},
+    {"name": "R0C10Y30", "group": "Nobility", "membership": "N", "minimumRequirement": 1, "requirementKind": "level", "adult": false, "oneTime": false, "active": true},
     {"name": "10C00Y00", "group": "Oblivion", "membership": null, "minimumRequirement": 0, "requirementKind": "unspecified", "adult": false, "oneTime": false, "active": false},
     {"name": "20C00Y00", "group": "Oblivion", "membership": null, "minimumRequirement": 0, "requirementKind": "unspecified", "adult": false, "oneTime": false, "active": false},
     {"name": "30C00Y00", "group": "Oblivion", "membership": null, "minimumRequirement": 0, "requirementKind": "unspecified", "adult": false, "oneTime": false, "active": false},
@@ -1521,7 +1523,7 @@
     {
       "id": "nobility",
       "categories": [
-        {"id": "nobility", "catalogGroup": "Nobility", "active": true, "availability": "ordinary", "names": ["R0C10Y00", "R0C10Y01", "R0C10Y02", "R0C10Y04", "R0C10Y05", "R0C10Y06", "R0C10Y08", "R0C10Y09", "R0C10Y10", "R0C10Y11", "R0C10Y12", "R0C10Y13", "R0C10Y14", "R0C10Y15", "R0C10Y17", "R0C10Y18", "R0C10Y20", "R0C10Y21", "R0C11Y03", "R0C11Y16", "R0C11Y19", "R0C11Y26", "R0C11Y28", "R0C20Y07", "R0C20Y22", "R0C30Y25", "R0C4XY23", "R0C60Y24"]}
+        {"id": "nobility", "catalogGroup": "Nobility", "active": true, "availability": "ordinary", "names": ["R0C10Y00", "R0C10Y01", "R0C10Y02", "R0C10Y04", "R0C10Y05", "R0C10Y06", "R0C10Y08", "R0C10Y09", "R0C10Y10", "R0C10Y11", "R0C10Y12", "R0C10Y13", "R0C10Y14", "R0C10Y15", "R0C10Y17", "R0C10Y18", "R0C10Y20", "R0C10Y21", "R0C11Y03", "R0C11Y16", "R0C11Y19", "R0C11Y26", "R0C11Y28", "R0C20Y07", "R0C20Y22", "R0C30Y25", "R0C4XY23", "R0C60Y24", "R0C10Y29", "R0C10Y30"]}
       ]
     },
     {

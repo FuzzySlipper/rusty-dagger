@@ -326,6 +326,7 @@ internal sealed class DaggerfallPoliticalBoard
                         "assumed leadership of the seat",
                         currentMinute: minute);
                 }
+                SyncBoardSeatHolder(seatBinding.SeatId);
                 continue;
             }
 
@@ -357,6 +358,7 @@ internal sealed class DaggerfallPoliticalBoard
                         reason,
                         minute,
                         exileIncumbent: false);
+                    SyncBoardSeatHolder(courtSeat.SeatId);
                 }
                 continue;
             }
@@ -370,14 +372,27 @@ internal sealed class DaggerfallPoliticalBoard
             {
                 Region conquered = _board.Region(change.Subject);
                 string victorName = _board.HasSeat(change.To) ? _board.Seat(change.To).Name : change.To;
-                _ = _officeLedger!.DeposeRegionalRuler(
+                DaggerfallOfficeOverrideSave? deposed = _officeLedger!.DeposeRegionalRuler(
                     conquered.CatalogRegion,
                     DaggerfallOfficeChangeCause.CardMove,
                     day,
                     $"was deposed in the conquest of {conquered.Name} by {victorName}",
                     minute);
+                if (deposed?.OfficeFactionId is int conqueredFaction
+                    && _seats.TryGetByFactionId(conqueredFaction, out DaggerfallBoardSeatBinding? conqueredSeat)
+                    && conqueredSeat is not null)
+                {
+                    SyncBoardSeatHolder(conqueredSeat.SeatId);
+                }
             }
         }
+    }
+
+    private void SyncBoardSeatHolder(string seatId)
+    {
+        if (!_board.HasSeat(seatId)) return;
+        string holder = HolderOf(_seatPersona(seatId));
+        _board.SyncHolder(_board.Seat(seatId), holder);
     }
 
     private bool IsConquestCard(string cardId) =>

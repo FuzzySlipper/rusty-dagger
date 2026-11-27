@@ -179,9 +179,20 @@ internal sealed class DaggerfallOfficeHolders(
         ["King", "Queen", "Duke", "Duchess", "Marquis", "Marquise", "Count", "Countess", "Baron", "Baroness", "Lord", "Lady"];
 
     private Func<int, DaggerfallOfficeOverride?>? _overrideLookup = overrideLookup;
+    private Func<int, DaggerfallOfficeHolder?>? _exiledRegionalRulerLookup;
 
     /// <summary>Attaches or clears the external office-ledger override lookup (used by the political layer).</summary>
     internal void BindOverrideLookup(Func<int, DaggerfallOfficeOverride?>? lookup) => _overrideLookup = lookup;
+
+    /// <summary>Attaches or clears the external lookup for an exiled provincial ruler in a region.</summary>
+    internal void BindExiledRegionalRulerLookup(Func<int, DaggerfallOfficeHolder?>? lookup) => _exiledRegionalRulerLookup = lookup;
+
+    /// <summary>Resolves an exiled provincial ruler for <paramref name="region"/> when one is currently in exile.</summary>
+    internal bool TryResolveExiledRegionalRuler(int region, out DaggerfallOfficeHolder? exiled)
+    {
+        exiled = _exiledRegionalRulerLookup?.Invoke(region);
+        return exiled is { HasLivingHolder: true };
+    }
 
     /// <summary>Returns true when <paramref name="actorId"/> is recorded dead in the canonical actor ledger.</summary>
     internal bool IsActorDead(long actorId) =>

@@ -751,6 +751,11 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         return eligible[selected];
     }
 
+    private Func<DaggerfallQuestSourceDefinition, bool>? _officeOfferEligible;
+
+    /// <summary>Checks whether an office-addressed quest in the ordinary offer pool can bind its target in the active region.</summary>
+    internal void BindOfficeOfferEligibility(Func<DaggerfallQuestSourceDefinition, bool> eligible) => _officeOfferEligible = eligible;
+
     internal DaggerfallQuestCatalogRow[] OrdinaryWorkPool(int factionId, bool playerIsMember, int playerLevel, int playerReputation, int playerRank,
         DaggerfallCharacterGender playerGender)
     {
@@ -777,7 +782,9 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
             .Where(row => _disabledSelection?.IsOrdinaryOffer(row.Name) != false)
             .Where(row => _definitions.QuestSources.Quests.TryGetValue(row.Name + ".txt", out DaggerfallQuestSourceDefinition? source)
                 && source.Disposition == DaggerfallQuestDisposition.Compiled
-                && (_admission?.IsRunnable(source.SourceFile) ?? true) && _programs[source.SourceFile].Tasks.All(task =>
+                && (_admission?.IsRunnable(source.SourceFile) ?? true)
+                && (_officeOfferEligible?.Invoke(source) ?? true)
+                && _programs[source.SourceFile].Tasks.All(task =>
                     task.Operations.All(OfferActionSupported)))
             .Where(row => !_acceptedOneTimeSources.Contains(row.Name + ".txt"))
             .Where(row => !_instances.Values.Any(instance => instance.SourceFile == row.Name + ".txt"

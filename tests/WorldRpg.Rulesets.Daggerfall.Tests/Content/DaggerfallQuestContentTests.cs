@@ -21,7 +21,7 @@ public sealed class DaggerfallQuestContentTests
         Assert.All(admission.Receipts, receipt => Assert.Equal(receipt.Diagnostics.Count == 0, receipt.Runnable));
         Assert.Equal(
             new Dictionary<string, int> { ["fighters"] = 20, ["mages"] = 18, ["temples"] = 24, ["social"] = 45, ["witches-commoners"] = 30,
-                ["merchants-vampires"] = 22, ["disabled"] = 18, ["nobility"] = 28, ["story"] = 36, ["cures"] = 2 },
+                ["merchants-vampires"] = 22, ["disabled"] = 18, ["nobility"] = 30, ["story"] = 36, ["cures"] = 2 },
             sources.Corpora.ToDictionary(corpus => corpus.Id, corpus => corpus.Categories.Sum(category => category.Names.Count)));
         Assert.Equal(
         [
@@ -99,7 +99,7 @@ public sealed class DaggerfallQuestContentTests
             """))]);
 
         DaggerfallQuestSourceSet sources = DaggerfallQuestContent.Read([TestPayload.QuestPack(), scenario]);
-        Assert.Equal(267, sources.Quests.Count);
+        Assert.Equal(269, sources.Quests.Count);
         Assert.Equal("A scenario", sources.Resolve("scenario.txt").DisplayName);
         Assert.True(DaggerfallQuestContent.Admit(sources, new DaggerfallQuestLanguage()).Receipts.Single(receipt => receipt.SourceFile == "scenario.txt").Runnable);
 

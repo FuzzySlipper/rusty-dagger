@@ -166,75 +166,42 @@ public sealed class OfficeDepositionExileAndRestorationTests
     }
 
     [Fact]
-    public void Quest_outcome_operations_depose_declare_regency_and_restore_office_through_OfficeChanged_and_save_load()
+    public void Shipped_nobility_quests_depose_restore_and_declare_regency_through_normal_quest_progression_and_save_load()
     {
         using var fixture = SourceBackedGuildBankSessionFixture.Create();
         using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
         Assert.NotNull(session.PoliticalBoard);
 
-        DaggerfallQuestSourceDefinition source = new(
-            "POL_OFFICE",
-            string.Empty,
-            "POL_OFFICE.txt",
-            DaggerfallQuestDisposition.Compiled,
-            [],
-            [
-                new("task", 1, ["_depose_ task:", "depose _target_"]),
-                new("task", 4, ["_restore_ task:", "restore office _target_"]),
-                new("task", 7, ["_regency_ task:", "declare regency _target_ under _regent_"]),
-            ],
-            []);
-        DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
-        Assert.Equal(DaggerfallQuestTaskOperationKind.DeposeOffice, program.Tasks[0].Operations[0].Kind);
-        Assert.Equal(DaggerfallQuestTaskOperationKind.RestoreOffice, program.Tasks[1].Operations[0].Kind);
-        Assert.Equal(DaggerfallQuestTaskOperationKind.DeclareRegency, program.Tasks[2].Operations[0].Kind);
-
+        // Charing's outdoors tavern/townsperson serves as questor; Nobility faction 201 (Daggerfall) has SocialGroupName = "Nobility".
+        long questorId = session.State.Npcs.All.First(n => n.Services.Contains("talk", StringComparer.Ordinal)).DurableId;
         long gothrydId = DaggerfallPeopleSlots.CastIndividualIdentity("king-gothryd");
-        long aubkiId = DaggerfallPeopleSlots.CastIndividualIdentity("queen-aubk-i");
-        DaggerfallQuestInstanceSave save = new(
-            "pol-office:1",
-            source.SourceFile,
-            source.Name,
-            DaggerfallQuestLifecycle.Active,
-            null,
-            [
-                new DaggerfallQuestResourceState("target", DaggerfallQuestResourceBinding.Pending())
-                {
-                    SelectedPerson = new DaggerfallQuestPersonSelection(
-                        FactionId: 357, Race: "breton", Gender: "Male", HudFace: 0, SourceFace: null,
-                        NameSeed: 1, DisplayName: "King Gothryd", Individual: true, VampireClanFactionId: null)
-                    {
-                        CastId = "king-gothryd",
-                        OfficeFactionId = 201,
-                        OfficeActorId = gothrydId,
-                    },
-                },
-                new DaggerfallQuestResourceState("regent", DaggerfallQuestResourceBinding.Pending())
-                {
-                    SelectedPerson = new DaggerfallQuestPersonSelection(
-                        FactionId: 356, Race: "redguard", Gender: "Female", HudFace: 0, SourceFace: null,
-                        NameSeed: 2, DisplayName: "Queen Aubk-i", Individual: true, VampireClanFactionId: null)
-                    {
-                        CastId = "queen-aubk-i",
-                        OfficeFactionId = 201,
-                        OfficeActorId = aubkiId,
-                    },
-                },
-            ],
-            [])
-        {
-            Tasks = DaggerfallQuestTaskCompiler.InitialState(program),
-            FactionId = 201,
-        };
-        DaggerfallQuestRuntimeInstance runtime = new(save, program);
-        IDaggerfallQuestTaskLifecycle lifecycle = session.State.Quests;
+
+        // 1. While King Gothryd sits on Daggerfall's throne, R0C10Y29 ("The Court Writ") is offered in Nobility's
+        //    ordinary work pool, while R0C10Y30 ("Charter of Restoration") is withheld until a ruler is in exile.
+        DaggerfallQuestCatalogRow[] initialPool = session.State.Quests.OrdinaryWorkPool(
+            factionId: 201, playerIsMember: false, playerLevel: 1, playerReputation: 0, playerRank: 0, DaggerfallCharacterGender.Male);
+        Assert.Contains(initialPool, r => r.Name == "R0C10Y29");
+        Assert.DoesNotContain(initialPool, r => r.Name == "R0C10Y30");
 
         List<DaggerfallOfficeChangedNotification> events = [];
         session.OfficeLedger.OfficeChanged += events.Add;
 
-        // 1. Quest action: depose _target_ -> deposes King Gothryd with Cause.Quest, exiles him, notifies board!
-        Assert.True(lifecycle.SocialAction(runtime, program.Tasks[0].Operations[0]));
-        DaggerfallOfficeChangedNotification deposeEvent = Assert.Single(events);
+        // 2. Start shipped R0C10Y29, click questor -> prompt 1012 opens -> choose Yes (1 = _depose_).
+        DaggerfallQuestInstanceSave writDepose = session.State.Quests.Start(new(
+            "nobility:writ-depose", "R0C10Y29.txt", "R0C10Y29", DaggerfallQuestLifecycle.Active, null, [], [])
+        { FactionId = 201, QuestorId = questorId });
+        Assert.Equal([gothrydId], writDepose.Resources.Single(r => r.Symbol == "ruler").Binding.ActorIds);
+
+        Assert.True(session.State.Quests.ActorClicked(questorId));
+        session.AdvanceElapsedTime(1);
+        DaggerfallQuestPromptSave deposePrompt = Assert.IsType<DaggerfallQuestPromptSave>(session.State.Quests.Messages.Pending);
+        Assert.Equal("nobility:writ-depose", deposePrompt.InstanceId);
+        Assert.Equal(1012, deposePrompt.MessageId);
+        DaggerfallQuestPromptOption yesOption = Assert.Single(deposePrompt.Options, o => o.Target == "depose");
+        Assert.True(session.State.Quests.ChoosePrompt(session.State.Variables, "nobility:writ-depose", deposePrompt.MessageId, deposePrompt.Id, yesOption.Id));
+        session.AdvanceElapsedTime(1);
+
+        DaggerfallOfficeChangedNotification deposeEvent = Assert.Single(events, e => e.OfficeFactionId == 201);
         Assert.Equal(DaggerfallOfficeChangeCause.Quest, deposeEvent.Cause);
         Assert.Equal(DaggerfallOfficeChangeKind.HolderDeposed, deposeEvent.ChangeKind);
         Assert.True(session.OfficeLedger.ResolveBoardSeatPersona("daggerfall").IsVacant);
@@ -242,30 +209,54 @@ public sealed class OfficeDepositionExileAndRestorationTests
         Assert.Contains(session.PoliticalBoard!.Board.Queued,
             n => n is HolderChanged hc && hc.Seat == "daggerfall" && hc.Holder == "vacant:daggerfall");
 
-        // 2. Quest action: restore office _target_ -> restores King Gothryd with Cause.Quest!
+        // 3. Now that King Gothryd is in exile, R0C10Y30 ("Charter of Restoration") enters Nobility's ordinary work pool
+        //    (while R0C10Y29 is withheld while the throne is vacant). Click questor -> restores King Gothryd with Cause.Quest!
+        DaggerfallQuestCatalogRow[] exiledPool = session.State.Quests.OrdinaryWorkPool(
+            factionId: 201, playerIsMember: false, playerLevel: 1, playerReputation: 0, playerRank: 0, DaggerfallCharacterGender.Male);
+        Assert.DoesNotContain(exiledPool, r => r.Name == "R0C10Y29");
+        Assert.Contains(exiledPool, r => r.Name == "R0C10Y30");
+
         events.Clear();
-        Assert.True(lifecycle.SocialAction(runtime, program.Tasks[1].Operations[0]));
-        DaggerfallOfficeChangedNotification restoreEvent = Assert.Single(events);
+        DaggerfallQuestInstanceSave charter = session.State.Quests.Start(new(
+            "nobility:charter-restore", "R0C10Y30.txt", "R0C10Y30", DaggerfallQuestLifecycle.Active, null, [], [])
+        { FactionId = 201, QuestorId = questorId });
+        Assert.Equal([gothrydId], charter.Resources.Single(r => r.Symbol == "exile").Binding.ActorIds);
+
+        Assert.True(session.State.Quests.ActorClicked(questorId));
+        session.AdvanceElapsedTime(1);
+        DaggerfallOfficeChangedNotification restoreEvent = Assert.Single(events, e => e.OfficeFactionId == 201);
         Assert.Equal(DaggerfallOfficeChangeCause.Quest, restoreEvent.Cause);
         Assert.Equal(DaggerfallOfficeChangeKind.SuccessorSeated, restoreEvent.ChangeKind);
         Assert.Equal("king-gothryd", session.OfficeLedger.ResolveBoardSeatPersona("daggerfall").HolderCastId);
         Assert.Null(session.OfficeLedger.TryGetExile(gothrydId));
 
-        // 3. Quest action: declare regency _target_ under _regent_ -> seats Queen Aubk-i as Regent, exiles King Gothryd!
+        // 4. Start shipped R0C10Y29 again, click questor -> prompt 1012 -> choose No (_regency_) -> seats regent & exiles Gothryd!
         events.Clear();
-        Assert.True(lifecycle.SocialAction(runtime, program.Tasks[2].Operations[0]));
-        DaggerfallOfficeChangedNotification regencyEvent = Assert.Single(events);
+        _ = session.State.Quests.Start(new(
+            "nobility:writ-regency", "R0C10Y29.txt", "R0C10Y29", DaggerfallQuestLifecycle.Active, null, [], [])
+        { FactionId = 201, QuestorId = questorId });
+
+        Assert.True(session.State.Quests.ActorClicked(questorId));
+        session.AdvanceElapsedTime(1);
+        DaggerfallQuestPromptSave regencyPrompt = Assert.IsType<DaggerfallQuestPromptSave>(session.State.Quests.Messages.Pending);
+        Assert.Equal("nobility:writ-regency", regencyPrompt.InstanceId);
+        DaggerfallQuestPromptOption noOption = Assert.Single(regencyPrompt.Options, o => o.Target == "regency");
+        Assert.True(session.State.Quests.ChoosePrompt(session.State.Variables, "nobility:writ-regency", regencyPrompt.MessageId, regencyPrompt.Id, noOption.Id));
+        session.AdvanceElapsedTime(1);
+
+        DaggerfallOfficeChangedNotification regencyEvent = Assert.Single(events, e => e.OfficeFactionId == 201);
         Assert.Equal(DaggerfallOfficeChangeCause.Quest, regencyEvent.Cause);
         Assert.Equal(DaggerfallOfficeChangeKind.RegencyDeclared, regencyEvent.ChangeKind);
         DaggerfallSeatLeaderPersona regentPersona = session.OfficeLedger.ResolveBoardSeatPersona("daggerfall");
         Assert.True(regentPersona.IsRegency);
-        Assert.Equal("queen-aubk-i", regentPersona.HolderCastId);
+        Assert.False(string.IsNullOrWhiteSpace(regentPersona.DisplayName));
+        Assert.NotEqual("king-gothryd", regentPersona.HolderCastId);
         Assert.NotNull(session.OfficeLedger.TryGetExile(gothrydId));
 
         // Save/load preserves regency and exile cleanly.
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
         Assert.True(restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall").IsRegency);
-        Assert.Equal("queen-aubk-i", restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall").HolderCastId);
+        Assert.Equal(regentPersona.HolderCastId, restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall").HolderCastId);
         Assert.NotNull(restored.OfficeLedger.TryGetExile(gothrydId));
     }
 
@@ -407,9 +398,19 @@ public sealed class OfficeDepositionExileAndRestorationTests
         Assert.Contains(events, e => e.SeatId == "sentinel" && e.ChangeKind == DaggerfallOfficeChangeKind.RegencyDeclared && e.Cause == DaggerfallOfficeChangeCause.CardMove);
         Assert.DoesNotContain(board.Queued, n => n is HolderChanged hc && hc.Seat == "sentinel");
 
-        // Save/load preserves board-driven regency cleanly!
+        // Board and world must immediately agree on Sentinel's regent holder without queuing any echo nudge!
+        string expectedSentinelHolder = sentinelPersona.HolderCastId
+            ?? (sentinelPersona.HolderActorId is long actor ? $"actor:{actor}" : "untitled:sentinel");
+        Assert.NotEqual("queen-akorithi", expectedSentinelHolder);
+        Assert.Equal(expectedSentinelHolder, board.Seat("sentinel").Holder);
+
+        // Save/load preserves both world regency and synchronized board seat holder cleanly!
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
-        Assert.True(restored.OfficeLedger.ResolveBoardSeatPersona("sentinel").IsRegency);
+        DaggerfallSeatLeaderPersona restoredSentinel = restored.OfficeLedger.ResolveBoardSeatPersona("sentinel");
+        Assert.True(restoredSentinel.IsRegency);
+        Assert.Equal(expectedSentinelHolder, restored.PoliticalBoard!.Board.Seat("sentinel").Holder);
+        Assert.Equal(expectedSentinelHolder, restoredSentinel.HolderCastId
+            ?? (restoredSentinel.HolderActorId is long restoredActor ? $"actor:{restoredActor}" : "untitled:sentinel"));
     }
 
     private static DaggerfallActivationOutcome ActivateNpc(DaggerfallSession session, long durableId)

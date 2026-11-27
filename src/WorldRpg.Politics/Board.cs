@@ -409,6 +409,20 @@ public sealed class Board
         changes.Add(new BoardChange(seat.Id, "holder", before, holder));
     }
 
+    /// <summary>
+    /// Synchronizes <paramref name="seat"/>'s holder and regency persona after the world resolves a board-driven
+    /// regency or conquest without recording a new board change or queuing an echo nudge.
+    /// </summary>
+    public void SyncHolder(Seat seat, string holder)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(holder);
+        if (seat.Holder == holder) return;
+        string before = seat.Holder;
+        string? playedAs = seat.PlaysAs;
+        seat.Holder = holder;
+        seat.PlaysAs = personas.ContainsKey(holder) ? null : playedAs ?? before;
+    }
+
     /// <summary>Makes <paramref name="seat"/> the leader of the table, or no seat.</summary>
     public void SetLeader(Seat? seat)
     {

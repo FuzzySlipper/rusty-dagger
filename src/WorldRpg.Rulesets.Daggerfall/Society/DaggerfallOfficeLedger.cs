@@ -309,6 +309,39 @@ internal sealed class DaggerfallOfficeLedger(
     internal DaggerfallOfficeExileSave? TryGetExile(long actorId) =>
         actorId > 0 && _exiles.TryGetValue(actorId, out DaggerfallOfficeExileSave? found) ? found : null;
 
+    /// <summary>
+    /// Resolves a currently exiled regional ruler for <paramref name="region"/> as a living office-holder record
+    /// so restoration quests (<c>office ExiledProvince</c>) can bind directly to them.
+    /// </summary>
+    internal DaggerfallOfficeHolder? ResolveExiledRegionalRuler(int region)
+    {
+        DaggerfallFactionDefinition? province = definitions.Factions.ProvinceOf(region);
+        if (province is null)
+            return null;
+        DaggerfallOfficeExileSave? exile = _exiles.Values.FirstOrDefault(e => e.OfficeFactionId == province.Id);
+        if (exile is null || officeHolders.IsActorDead(exile.ActorId))
+            return null;
+
+        DaggerfallCastIndividualDefinition? cast = !string.IsNullOrWhiteSpace(exile.CastId)
+            && definitions.People.Individuals.TryGetValue(exile.CastId, out DaggerfallCastIndividualDefinition? foundCast)
+            ? foundCast
+            : null;
+        return new DaggerfallOfficeHolder(
+            OfficeFactionId: province.Id,
+            HolderFactionId: cast?.FactionId ?? province.Id,
+            ActorId: exile.ActorId,
+            CastId: exile.CastId,
+            DisplayName: exile.DisplayName ?? cast?.Name ?? "Exiled Ruler",
+            Title: exile.Title,
+            Gender: cast?.Gender,
+            Race: cast?.Race,
+            BillboardArchive: cast?.Archive,
+            BillboardRecord: cast?.Record,
+            Home: null,
+            IsAlive: true,
+            FamilyId: cast?.FamilyId);
+    }
+
     internal IReadOnlyList<DaggerfallOfficeExileSave> ExilesAtProfile(DaggerfallWorldProfileKey profile) =>
         [.. _exiles.Values
             .Where(e => e.RefugeProfile.Require() == profile)
