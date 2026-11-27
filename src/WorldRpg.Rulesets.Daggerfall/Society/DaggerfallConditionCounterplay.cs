@@ -36,6 +36,7 @@ internal sealed record DaggerfallConditionCounterplayRecord(
     [property: JsonRequired] bool Stripped,
     [property: JsonRequired] int Day,
     [property: JsonRequired] long Minute,
+    [property: JsonRequired] int TokenStartedDay,
     string? SubjectTag = null,
     int? SourceFactionId = null,
     string? SiteName = null,
@@ -407,6 +408,7 @@ internal sealed class DaggerfallConditionCounterplay(
             Stripped: mutation.Stripped,
             Day: currentDay,
             Minute: currentMinute,
+            TokenStartedDay: mutation.Original.StartedDay,
             SubjectTag: token.SubjectTag,
             SourceFactionId: token.SourceFactionId,
             SiteName: siteName,
@@ -446,8 +448,7 @@ internal sealed class DaggerfallConditionCounterplay(
         return null;
     }
 
-    private static string TokenInstanceKey(DaggerfallWorldConditionToken token) =>
-        string.Create(CultureInfo.InvariantCulture, $"{token.TokenId}@{token.StartedDay}");
+    private static string TokenInstanceKey(DaggerfallWorldConditionToken token) => token.OccurrenceKey;
 
     private void AddProgress(string scopeKey, string tokenId, long actorId)
     {

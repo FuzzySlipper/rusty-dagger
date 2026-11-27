@@ -16,13 +16,14 @@ internal enum DaggerfallNoticeBountyStatus
 }
 
 /// <summary>
-/// A bounty the player took from a notice board: the lead it came from, the condition token it is posted against, the
-/// classic region, what it names and who posted it (the town's authority, never a condition's hidden source), its reward
+/// A bounty the player took from a notice board: the lead it came from, the occurrence of the condition it is posted
+/// against (its token, and the day that occurrence started, since a token id recurs), the classic region, what it names and who posted it (the town's authority, never a condition's hidden source), its reward
 /// in gold, and when it was taken and earned.
 /// </summary>
 internal sealed record DaggerfallNoticeBountySave(
     [property: JsonRequired] string LeadId,
     [property: JsonRequired] string TokenId,
+    [property: JsonRequired] int TokenStartedDay,
     [property: JsonRequired] int Region,
     [property: JsonRequired] string Target,
     [property: JsonRequired] string Issuer,
@@ -101,7 +102,7 @@ internal sealed class DaggerfallNoticeBounties(
             || conditions.ActiveForRegion(entry.Region, currentDay()).FirstOrDefault(token => token.TokenId == tokenId) is not { } token)
             return null;
         int reward = checked(token.Severity * law.BountyRewardPerSeverity);
-        _bounties[lead.LeadId] = new DaggerfallNoticeBountySave(lead.LeadId, tokenId, entry.Region, entry.Heading, issuer, reward,
+        _bounties[lead.LeadId] = new DaggerfallNoticeBountySave(lead.LeadId, tokenId, token.StartedDay, entry.Region, entry.Heading, issuer, reward,
             currentDay(), DaggerfallNoticeBountyStatus.Taken).Validate();
         return reward;
     }
@@ -112,7 +113,8 @@ internal sealed class DaggerfallNoticeBounties(
         ArgumentNullException.ThrowIfNull(record);
         if (!record.Stripped) return;
         foreach (DaggerfallNoticeBountySave bounty in _bounties.Values
-            .Where(bounty => bounty.Status == DaggerfallNoticeBountyStatus.Taken && bounty.TokenId == record.TokenId).ToArray())
+            .Where(bounty => bounty.Status == DaggerfallNoticeBountyStatus.Taken && bounty.TokenId == record.TokenId
+                && bounty.TokenStartedDay == record.TokenStartedDay).ToArray())
         {
             _bounties[bounty.LeadId] = bounty with { Status = DaggerfallNoticeBountyStatus.Earned, EarnedDay = record.Day };
             notebook.TryAddNote($"bounty-earned:{bounty.LeadId}",
@@ -179,7 +181,7 @@ internal sealed class DaggerfallNoticeBounties(
         foreach (DaggerfallNoticeBountySave bounty in _bounties.Values.ToArray())
         {
             bool lapsed = bounty.Status == DaggerfallNoticeBountyStatus.Taken
-                ? !conditions.ActiveForRegion(bounty.Region, day).Any(token => token.TokenId == bounty.TokenId)
+                ? !conditions.ActiveForRegion(bounty.Region, day).Any(token => token.TokenId == bounty.TokenId && token.StartedDay == bounty.TokenStartedDay)
                 : day > bounty.EarnedDay + law.BountyClaimDays;
             if (!lapsed) continue;
             _bounties.Remove(bounty.LeadId);

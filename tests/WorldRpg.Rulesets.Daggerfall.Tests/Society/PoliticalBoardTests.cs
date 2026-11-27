@@ -155,7 +155,7 @@ public sealed class PoliticalBoardTests
         DaggerfallConditionMutationOutcome eased = conditions.WeakenOrStrip(id, region.CatalogRegion, checked((int)board.LastTurnDay))!;
         Assert.Equal(2, eased.Updated!.Severity);
         DaggerfallConditionCounterplayRecord record = new("cp-1", DaggerfallConditionCounterplayKind.LairCleared, id, DaggerfallWorldConditionKind.MonsterSurge,
-            region.CatalogRegion, 3, 2, false, checked((int)board.LastTurnDay), 0, SubjectTag: "orcs");
+            region.CatalogRegion, 3, 2, false, checked((int)board.LastTurnDay), 0, eased.Original.StartedDay, SubjectTag: "orcs");
         // The authored-token record the board did not lay is passed over.
         DaggerfallConditionCounterplayRecord authored = record with { RecordId = "cp-2", TokenId = "cond:monster-surge:r17" };
 

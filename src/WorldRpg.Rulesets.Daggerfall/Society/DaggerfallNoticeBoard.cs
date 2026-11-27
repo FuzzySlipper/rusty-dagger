@@ -209,14 +209,16 @@ internal sealed class DaggerfallNoticeBoard(
             : DaggerfallNoticeEntryKind.Decree;
 
         string entryId = $"notice:cond:{token.TokenId}";
+        // A lead belongs to this occurrence of the condition, so one that recurs can be taken afresh.
+        string leadId = $"lead:notice:cond:{token.OccurrenceKey}";
         DaggerfallNoticeLead lead = DaggerfallConditionCounterplay.IsCounterplayable(token.Kind)
             ? new DaggerfallNoticeLead(
-                LeadId: $"lead:{entryId}",
+                LeadId: leadId,
                 Kind: DaggerfallNoticeLeadKind.RegionalBounty,
                 ActionLabel: "Take bounty lead",
                 TargetSummary: ResolveConditionLeadTargetSummary(token, region, regionName))
             : new DaggerfallNoticeLead(
-                LeadId: $"lead:{entryId}",
+                LeadId: leadId,
                 Kind: DaggerfallNoticeLeadKind.PublicLead,
                 ActionLabel: "Note in journal");
 

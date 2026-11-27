@@ -37,8 +37,11 @@ public sealed class NoticeBountiesTests
     private static DaggerfallNpc Npc(long id, string role, int faction, int region = Glenpoint) => new(id, DaggerfallNpcKind.Static, $"npc-{id}",
         new DaggerfallNpcSite(region, "Somewhere", "Gate"), new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, faction), role, [], DaggerfallNpcPresence.Active, null, null, null);
 
-    private static DaggerfallConditionCounterplayRecord Stripped(int day) => new DaggerfallConditionCounterplayRecord("cp-1", DaggerfallConditionCounterplayKind.LairCleared, TokenId,
-        DaggerfallWorldConditionKind.MonsterSurge, Glenpoint, 1, 0, true, day, day * 1440L).Validate();
+    private static DaggerfallConditionCounterplayRecord Stripped(int day, int startedDay = 0) => new DaggerfallConditionCounterplayRecord("cp-1",
+        DaggerfallConditionCounterplayKind.LairCleared, TokenId, DaggerfallWorldConditionKind.MonsterSurge, Glenpoint, 1, 0, true, day, day * 1440L, startedDay).Validate();
+
+    private static DaggerfallWorldConditionToken Surge(int startedDay, int severity = 2) =>
+        new DaggerfallWorldConditionToken(TokenId, DaggerfallWorldConditionKind.MonsterSurge, Region: Glenpoint, SubjectTag: "orc", Severity: severity, StartedDay: startedDay).Validate();
 
     [Fact]
     public void A_taken_bounty_is_earned_when_the_player_breaks_its_condition_and_a_guard_of_its_region_pays_it()
@@ -99,6 +102,53 @@ public sealed class NoticeBountiesTests
         Assert.Empty(resumed.Bounties.All);
 
         Assert.Throws<ArgumentException>(() => resumed.Bounties.Restore(new DaggerfallNoticeBountiesSave([earned with { EarnedDay = null }])));
+    }
+
+    /// <summary>
+    /// A board token id recurs when the same condition comes back (R11137-1): a bounty belongs to its occurrence, so the old
+    /// one lapses with the first, and the new occurrence is a new bounty to take and be paid, across a save.
+    /// </summary>
+    [Fact]
+    public void A_bounty_belongs_to_its_conditions_occurrence_so_a_recurrence_is_a_new_bounty()
+    {
+        Stage stage = new();
+        Assert.NotNull(stage.Bounties.Take(Posting("lead:notice:cond:" + Surge(0).OccurrenceKey), "the watch of Glenpoint"));
+
+        // The first occurrence ends and the same condition comes back on day 20, under the same token id.
+        stage.World.Remove(TokenId);
+        stage.Day = 20;
+        stage.World.Set(Surge(20));
+        Assert.Empty(stage.Bounties.Claimable(Npc(1, "guard", 522)));
+        Assert.Empty(stage.Bounties.All);
+        Assert.True(stage.Notebook.Notes.Any(note => note.Id.StartsWith("bounty-lapsed:", StringComparison.Ordinal)));
+
+        // Breaking the old occurrence would earn nothing; the new one is taken under its own lead and paid.
+        string fresh = "lead:notice:cond:" + Surge(20).OccurrenceKey;
+        Assert.NotNull(stage.Bounties.Take(Posting(fresh), "the watch of Glenpoint"));
+        Stage resumed = new() { Day = 20 };
+        resumed.World.Set(Surge(20));
+        resumed.Bounties.Restore(stage.Bounties.Capture());
+        resumed.Bounties.ObserveCounterplay(Stripped(20, startedDay: 0));
+        Assert.Empty(resumed.Bounties.Claimable(Npc(1, "guard", 522)));
+        resumed.Bounties.ObserveCounterplay(Stripped(20, startedDay: 20));
+        Assert.True(resumed.Bounties.Claim(Npc(1, "guard", 522), fresh).Accepted);
+    }
+
+    [Fact]
+    public void A_notice_boards_lead_names_the_conditions_occurrence()
+    {
+        using DaggerfallSession session = FreshSession();
+        DaggerfallSiteRecord town = TestPayload.Definitions.Locations.Records.First(site => site.Id.Region == Glenpoint && site.Exterior is not null);
+        string Lead() => session.NoticeBoard.BuildForSite(town, session.Calendar.MinuteNumber).Entries
+            .Single(entry => entry.ConditionTokenId == TokenId).Lead!.LeadId;
+
+        session.WorldConditions.Set(Surge(0));
+        string first = Lead();
+        session.WorldConditions.Remove(TokenId);
+        session.AdvanceElapsedTime(6 * 86400);
+        session.WorldConditions.Set(Surge(5));
+        Assert.NotEqual(first, Lead());
+        Assert.Equal("lead:notice:cond:" + Surge(5).OccurrenceKey, Lead());
     }
 
     [Fact]

@@ -212,7 +212,7 @@ public sealed class TownNoticeBoardInteractionTests
         // 7. Save & reload preserves carried courier dispatch and journaled bounty lead, and shows both as PickedUp!
         RulesetSavePayload saved = session.CaptureSave();
         DaggerfallSavePayload decoded = DaggerfallSavePayload.Read(saved);
-        Assert.Contains(decoded.Notebook.Notes, n => n.Id == $"lead:{bountyEntry.Id}" && n.Text.Contains(charing.Name, StringComparison.Ordinal));
+        Assert.Contains(decoded.Notebook.Notes, n => n.Id.StartsWith($"lead:{bountyEntry.Id}@", StringComparison.Ordinal) && n.Text.Contains(charing.Name, StringComparison.Ordinal));
         Assert.Contains(decoded.CourierDispatches.Dispatches, d => d.DispatchId == dispatch.DispatchId && d.Status == DaggerfallDispatchStatus.CarriedByPlayer);
 
         using DaggerfallSession restored = fixture.Restore(saved);

@@ -57,6 +57,12 @@ internal sealed record DaggerfallWorldConditionToken(
 
     internal bool AppliesToRegion(int region) => Region is null || Region == region;
 
+    /// <summary>
+    /// This occurrence of the condition: a token id is reused when the same condition recurs on a region, and the day it
+    /// started tells one occurrence from the next.
+    /// </summary>
+    internal string OccurrenceKey => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{TokenId}@{StartedDay}");
+
     internal bool IsExpired(int currentDay) => ExpiresDay is int end && currentDay >= end;
 
     internal DaggerfallWorldConditionToken Validate()
