@@ -1580,7 +1580,7 @@ test('the Moves developer panel logs every seat\'s moves newest turn first, with
       turns: [
         {
           turn: 10, day: 70, date: '10/3/405', world: { card: 'Storms', region: 'Betony', actor: null, changes: [] },
-          nudges: [{ kind: 'MoveIntercepted', nudge: 'MoveIntercepted { MoveId = 9-sentinel }', move: '9-sentinel', seat: 'sentinel', outcome: 'Applied', changes: [] }],
+          nudges: [{ kind: 'MoveIntercepted', nudge: 'Courier seized: move 9-sentinel intercepted', move: '9-sentinel', seat: 'sentinel', outcome: 'Applied', changes: [] }],
           arrivals: [{ id: '8-daggerfall', seat: 'daggerfall', card: 'march-on', cardName: 'March On', targets: [named('betony', 'Betony')], visibility: 'Public', played: 8, outcome: 'Resolved', changes: ['betony control: 2 -> 3'] }],
           moves: [
             move('10-mages-guild', 'mages-guild', 'Charter Hall', [named('betony', 'Betony')], 'Public', fate('Landed', { turn: 10 }), ['betony influence:mages-guild: 0 -> 1']),
@@ -1610,7 +1610,7 @@ test('the Moves developer panel logs every seat\'s moves newest turn first, with
     await settle(); await settle();
 
     assert.equal(developer.commands.at(-1), 'board.moves');
-    assert.match(element.querySelector('.dagger-developer-status').textContent, /Turn 10.*next turn day 77 \(17\/3\/405\).*2 turns kept/);
+    assert.match(element.querySelector('.dagger-developer-status').textContent, /Turn 10 · next Sunday 17\/3\/405 \(day 77\) · 2 turns kept/);
     // Newest turn first, each headed by its date.
     assert.deepEqual([...element.querySelectorAll('.dagger-developer-moves-turn')].map(block => block.dataset.turn), ['10', '9']);
     assert.match(element.querySelector('[data-turn="10"] h3').textContent, /Turn 10 · 10\/3\/405 \(day 70\)/);
@@ -1618,6 +1618,7 @@ test('the Moves developer panel logs every seat\'s moves newest turn first, with
     // Within a turn: the world's nudges, the arrivals, the moves, then the chronicle.
     assert.deepEqual([...element.querySelectorAll('[data-turn="10"] .dagger-developer-moves-row')].map(row => row.dataset.row), ['nudge', 'arrival', 'move', 'move', 'arc']);
     const row = id => element.querySelector(`[data-move="${id}"]`);
+    assert.match(element.querySelector('[data-turn="10"] [data-row="nudge"]').textContent, /Sentinel.*Courier seized: move 9-sentinel intercepted.*applied/s);
     assert.match(row('10-mages-guild').textContent, /Mages Guild.*Charter Hall → Betony.*public.*landed.*influence:mages-guild/s);
     assert.equal(row('10-daggerfall').dataset.fate, 'Gathered');
     assert.equal(row('9-sentinel').dataset.visibility, 'Secret');

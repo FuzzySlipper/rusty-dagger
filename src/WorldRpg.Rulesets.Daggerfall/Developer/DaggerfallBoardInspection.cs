@@ -667,6 +667,9 @@ internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> 
     {
         QuestOutcome quest => $"QuestOutcome {quest.Seat} [{string.Join(",", quest.Targets)}] {string.Join(", ", quest.Effects.Select(Effect))}",
         MainQuestBoon boon => $"MainQuestBoon {boon.Seat} {boon.Boon} [{string.Join(",", boon.Targets)}] {string.Join(", ", boon.Effects.Select(Effect))}",
+        MoveDelivered delivered => $"Courier delivered move {delivered.MoveId} early",
+        MoveDelayed delayed => $"Courier late: move {delayed.MoveId} delayed {delayed.Weeks} week{(delayed.Weeks == 1 ? "" : "s")}",
+        MoveIntercepted intercepted => $"Courier seized: move {intercepted.MoveId} intercepted",
         _ => nudge.ToString(),
     };
 

@@ -151,6 +151,7 @@ export function mountMovesPanel(element: HTMLElement, transport: LiveDebugTransp
 
       for (const nudge of turn.nudges.filter(nudge => shows(nudge.seat))) {
         const node = row('nudge', nudge.seat, span('dagger-developer-moves-kind', 'world'),
+          ...(nudge.seat ? [span('dagger-developer-moves-seat', name(nudge.seat))] : []),
           span('dagger-developer-moves-what', nudge.nudge), span('dagger-developer-moves-fate', nudge.outcome.toLowerCase()));
         node.dataset.outcome = nudge.outcome;
         changes(node, nudge.changes);
@@ -218,8 +219,7 @@ export function mountMovesPanel(element: HTMLElement, transport: LiveDebugTransp
     }
     last = readout;
     setSeatOptions(readout.seats);
-    status.textContent = `Turn ${readout.turn} · next turn day ${readout.nextTurnDay} (${readout.nextTurnDate}) · today day ${readout.day}`
-      + ` · ${readout.kept} turns kept this session`;
+    status.textContent = `Turn ${readout.turn} · next Sunday ${readout.nextTurnDate} (day ${readout.nextTurnDay}) · ${readout.kept} turns kept`;
     render();
   };
 

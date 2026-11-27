@@ -200,7 +200,8 @@ public sealed class DaggerfallBoardInspectionTests
         Assert.Equal(board.Board.Turn, intercepted.GetProperty("turn").GetInt32());
         JsonElement latest = after.RootElement.GetProperty("turns")[0];
         Assert.Contains(latest.GetProperty("nudges").EnumerateArray(), nudge => nudge.GetProperty("move").GetString() == ridden.Id
-            && nudge.GetProperty("seat").GetString() == ridden.Seat && nudge.GetProperty("kind").GetString() == nameof(MoveIntercepted));
+            && nudge.GetProperty("seat").GetString() == ridden.Seat && nudge.GetProperty("kind").GetString() == nameof(MoveIntercepted)
+            && nudge.GetProperty("nudge").GetString() == $"Courier seized: move {ridden.Id} intercepted");
     }
 
     private static JsonElement MoveRow(JsonDocument moves, string id) =>
