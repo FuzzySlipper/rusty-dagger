@@ -1499,11 +1499,11 @@ internal sealed partial class DaggerfallSession
                 activeInputs: () => _sites.Projection.Inputs,
                 profiles: () => _sites.Profiles,
                 returnProfile: () => _sites.ReturnProfile,
-                spawn: (definition, pose) => _roster.Spawn(definition, pose),
+                spawn: (definition, pose) => { long id = _roster.Spawn(definition, pose); SyncActiveGuardLivery(); return id; },
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
-                promoteGuard: id => _roster.PromoteToCityWatch(id),
-                spawnTiered: (definition, pose, tier) => _roster.Spawn(definition, pose, guardTier: tier),
-                promoteGuardTiered: (id, tier) => _roster.PromoteToCityWatch(id, guardTier: tier));
+                promoteGuard: id => { long? promoted = _roster.PromoteToCityWatch(id); if (promoted is not null) SyncActiveGuardLivery(); return promoted; },
+                spawnTiered: (definition, pose, tier) => { long id = _roster.Spawn(definition, pose, guardTier: tier); SyncActiveGuardLivery(); return id; },
+                promoteGuardTiered: (id, tier) => { long? promoted = _roster.PromoteToCityWatch(id, guardTier: tier); if (promoted is not null) SyncActiveGuardLivery(); return promoted; });
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
             Law.BindNpcArrested((actorId, region, crimeKind, banished, detail) =>
             {

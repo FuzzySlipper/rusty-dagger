@@ -393,7 +393,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         SyncActiveGuardLivery();
     }
 
-    private (DaggerfallSiteId? Site, DaggerfallWorldProfileKey Profile, int? SovereignFactionId, bool Occupied, int ResidentDigest)? _lastGuardLiverySignature;
+    private (DaggerfallSiteId? Site, DaggerfallWorldProfileKey Profile, int? SovereignFactionId, bool Occupied, int ResidentDigest, int LiveGuardDigest)? _lastGuardLiverySignature;
 
     /// <summary>
     /// Synchronizes live guard faction identity, <see cref="ActorRenderComponent"/> livery, and
@@ -432,7 +432,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         return null;
     }
 
-    private (DaggerfallSiteId? Site, DaggerfallWorldProfileKey Profile, int? SovereignFactionId, bool Occupied, int ResidentDigest)
+    private (DaggerfallSiteId? Site, DaggerfallWorldProfileKey Profile, int? SovereignFactionId, bool Occupied, int ResidentDigest, int LiveGuardDigest)
         ComputeGuardLiverySignature(DaggerfallSiteRecord? activeSite, DaggerfallSiteProfile activeProfile)
     {
         int region = activeSite?.Id.Region ?? activeProfile.Site?.Region ?? 0;
@@ -447,12 +447,31 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
                 residentHash.Add(GuardPosts.IsRegionOccupied(resRegion));
             }
         }
+        HashCode guardHash = new();
+        foreach (ActorState actor in State.Actors.All)
+        {
+            if (actor.DurableId == DaggerfallActorIdentity.PlayerEntityId)
+                continue;
+            bool isWatch = (actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc)
+                    && string.Equals(fc.CreatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase))
+                || (State.Npcs.TryGet(actor.DurableId, out DaggerfallNpc? npc)
+                    && string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase));
+            if (!isWatch)
+                continue;
+            guardHash.Add(actor.DurableId);
+            if (actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render))
+            {
+                guardHash.Add((int)render.Spec.Kind);
+                guardHash.Add(render.Spec.LiveryKey ?? string.Empty, StringComparer.Ordinal);
+            }
+        }
         return (
             activeSite?.Id,
             activeProfile.ProfileKey,
             State.Social.Liege.SovereignOf(region)?.Id,
             GuardPosts.IsRegionOccupied(region),
-            residentHash.ToHashCode());
+            residentHash.ToHashCode(),
+            guardHash.ToHashCode());
     }
 
     /// <summary>
@@ -484,6 +503,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         AdmitInteriorScheduledVisitors(destination, appearance, assignment: null);
         ReconcileHomeNightRoutine(destination, appearance, immediate: true);
+        SyncActiveGuardLivery();
     }
 
     /// <summary>

@@ -281,7 +281,13 @@ internal sealed class DaggerfallActorRoster
         actor.Actor.Get<ActorInteractionPolicy>().Set(guardProfile.DefaultInteraction);
         actor.Actor.Get<FactionComponent>().SetCreatureFaction("city-watch");
         actor.Actor.Get<ActorOverlayComponent>().ArchetypeId = guardProfile.Id;
-        actor.Actor.Get<ActorRenderComponent>().SetVisual(ActorVisualSpec.DirectionalMobile(146, gender));
+        ActorRenderComponent renderComp = actor.Actor.Get<ActorRenderComponent>();
+        ActorVisualSpec priorSpec = renderComp.Spec;
+        renderComp.SetVisual(ActorVisualSpec.DirectionalMobile(146, gender) with
+        {
+            Tint = priorSpec.Tint,
+            LiveryKey = priorSpec.LiveryKey,
+        });
         if (actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander))
             wander.MarkUnloaded();
 
@@ -290,6 +296,8 @@ internal sealed class DaggerfallActorRoster
             DaggerfallSiteAppearance appearance = siteAppearance ?? Appearance;
             appearance.RetireActor(actorId);
             appearance.AddActor(actorId, mobileSprite.ForGender(gender), 146);
+            if (priorSpec.Tint is { } preservedTint)
+                appearance.SetActorTint(actorId, preservedTint);
         }
 
         if (grantEquipment && _actorInventories.EquipmentFor(actorId).Read().Assignments.Count == 0)

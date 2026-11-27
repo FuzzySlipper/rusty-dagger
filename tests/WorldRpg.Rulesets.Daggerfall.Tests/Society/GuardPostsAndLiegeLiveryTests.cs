@@ -401,6 +401,80 @@ public sealed class GuardPostsAndLiegeLiveryTests
     }
 
     [Fact]
+    public void Interior_guard_promotion_and_spawn_apply_and_preserve_liege_livery_with_unchanged_politics()
+    {
+        using var fixture = new WatchPostsFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallWorldProfileKey activeKey = session.Sites.ActiveProfile;
+        WorldPoint origin = session.State.PlayerControl.Position ?? new WorldPoint(0, 0, 0);
+
+        // Complete initial arrival sync so _lastGuardLiverySignature is cached with unchanged politics.
+        session.SyncActiveGuardLivery();
+
+        // Register & materialize a crown-office/palace guard (faction Type 1/7/14 classifies as CrownOfficeGuard
+        // in any profile, matching palace/office guards) and sync its initial sovereign livery.
+        DaggerfallFactionDefinition crownFaction = TestPayload.Definitions.Factions.Factions.Values
+            .First(f => f.Type is 1 or 7 or 14);
+        long officeGuardId = DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{activeKey.LogicalId}/t11167-r4/office-guard");
+        DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/1/0", activeKey.LogicalId);
+        DaggerfallNpcAppearance look = new("breton", "Male", 182, 0, 88, crownFaction.Id);
+        session.State.Npcs.RegisterDeterministic(
+            officeGuardId, DaggerfallNpcKind.Civilian, "t11167-r4/office-guard", npcSite, look, "guard", ["talk"],
+            displayName: "Captain Vane", homeProfile: activeKey);
+        session.Roster.MaterializeDeterministicCivilian(
+            session.State.Npcs.Require(officeGuardId),
+            ActorOrigin.Seeded(activeKey, "t11167-r4/office-guard"),
+            new WorldPoint(origin.X + 4f, origin.Y, origin.Z),
+            new ActorPose(new WorldPoint(origin.X + 4f, origin.Y, origin.Z), 0f),
+            Vector3.Zero);
+        session.State.Npcs.Bind(officeGuardId, activeKey);
+
+        NormalizedActorSprite sprite = session.Sites.Projection.Inputs.Project.Actors.Values
+            .Select(p => session.Sites.Projection.Inputs.ActorSprites[p.EntityId])
+            .First();
+        session.ActiveAppearance.AdmitActor(officeGuardId, sprite);
+
+        // Run normal reconciliation with UNCHANGED politics: newly admitted office guard receives sovereign livery!
+        session.ReconcileGuardLiveryIfAllegianceChanged();
+        DaggerfallGuardLiveryResolution expected = session.GuardPosts.ResolveLivery(site, site.Id.Region, DaggerfallGuardPostKind.CrownOfficeGuard);
+        ActorState officeActor = session.State.Actors.Get(officeGuardId);
+        Assert.Equal(expected.LiveryKey, officeActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal(expected.LiveryTint, officeActor.Actor.Get<ActorRenderComponent>().Spec.Tint);
+        Assert.Equal(expected.LiveryTint!.Value, session.ActiveAppearance.ActiveTintFor(officeGuardId));
+
+        // Promote the guard to an active DirectionalMobile(146) city watch combatant (crime response) with UNCHANGED politics!
+        // Promotion MUST preserve LiveryKey, Tint, and ActiveAppearance sprite tint instead of dropping them!
+        DaggerfallGuardTierProfile capitalProfile = DaggerfallGuardTierTuning.Default.Capital;
+        session.Roster.PromoteToCityWatch(officeGuardId, guardTier: capitalProfile);
+        Assert.Equal(ActorVisualKind.DirectionalMobile, officeActor.Actor.Get<ActorRenderComponent>().Spec.Kind);
+        Assert.Equal(expected.LiveryKey, officeActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal(expected.LiveryTint, officeActor.Actor.Get<ActorRenderComponent>().Spec.Tint);
+        Assert.Equal(expected.LiveryTint!.Value, session.ActiveAppearance.ActiveTintFor(officeGuardId));
+
+        // Even after a subsequent normal update check with unchanged politics, livery remains intact.
+        session.ReconcileGuardLiveryIfAllegianceChanged();
+        Assert.Equal(expected.LiveryKey, officeActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal(expected.LiveryTint!.Value, session.ActiveAppearance.ActiveTintFor(officeGuardId));
+
+        // Also verify spawning a fresh crime-response watch guard in a Palace interior with unchanged politics receives PalaceGuard liege livery!
+        DaggerfallSiteProfile baseProfile = session.Sites.Projection.Inputs;
+        DaggerfallInteriorBuilding palaceInterior = new(0, 0, new DaggerfallRmbBuildingId("PALAAA00.RMB", 0), 16, 0);
+        DaggerfallSiteProfile palaceProfile = new(baseProfile.Project, baseProfile.Geometry, baseProfile.WorldAppearance, baseProfile.InitialLook,
+            baseProfile.Materials, baseProfile.ActorSprites, baseProfile.MobileSprites, baseProfile.Audio, baseProfile.ClassicPresentation,
+            site: site.Id, profileKind: DaggerfallWorldProfileKind.Interior, logicalProfileId: $"{activeKey.LogicalId}/palace",
+            interiorBuilding: palaceInterior);
+        DaggerfallActorDefinition watchDef = TestPayload.Definitions.Actors.Values.First(a => a.MobileId == 146);
+        long spawnedGuardId = session.Roster.Spawn(watchDef.Id.Value, new ActorPose(new WorldPoint(origin.X + 6f, origin.Y, origin.Z), 0f), guardTier: capitalProfile);
+        session.GuardPosts.ApplyLiveGuardAppearances(site, palaceProfile, [], session.State.Actors, session.State.Npcs, session.ActiveAppearance);
+        DaggerfallGuardLiveryResolution expectedPalace = session.GuardPosts.ResolveLivery(site, site.Id.Region, DaggerfallGuardPostKind.PalaceGuard);
+        ActorState spawnedGuard = session.State.Actors.Get(spawnedGuardId);
+        Assert.Equal(expectedPalace.LiveryKey, spawnedGuard.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal(expectedPalace.LiveryTint, spawnedGuard.Actor.Get<ActorRenderComponent>().Spec.Tint);
+        Assert.Equal(expectedPalace.LiveryTint!.Value, session.ActiveAppearance.ActiveTintFor(spawnedGuardId));
+    }
+
+    [Fact]
     public void Walled_city_gate_officers_hold_their_assigned_gate_post_instead_of_wandering_away()
     {
         using var fixture = new WatchPostsFixture();
