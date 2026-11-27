@@ -163,11 +163,70 @@ internal sealed class DaggerfallActorRoster
     /// upgrades stats to levelled watch class stats, updates capability policies, faction, overlay archetype,
     /// Tier-2 render spec (<see cref="ActorVisualKind.DirectionalMobile"/> 146), appearance, and watch gear.
     /// </summary>
+    /// <summary>Promotes an existing town guard actor into an active hostile city watchman in place on the same durable ID.</summary>
     internal long? PromoteToCityWatch(long actorId, bool grantEquipment = true, DaggerfallSiteAppearance? siteAppearance = null)
     {
         if (!_actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated)
             return null;
         return ApplyCityWatchPromotion(actor, grantEquipment, swapAppearance: true, _profile(), siteAppearance);
+    }
+
+    /// <summary>
+    /// Equips a live blood-feud kin civilian/static NPC with a usable melee combat action and combatant harm policy
+    /// through the canonical roster owner while preserving their durable identity, NPC registry entry, and appearance.
+    /// </summary>
+    internal bool ArmVendettaKin(long actorId)
+    {
+        if (!_actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated)
+            return false;
+        if (!_definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? currentDef))
+            return false;
+
+        if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant)
+            harm.Set(ActorHarmPolicyKind.Combatant);
+
+        if (string.IsNullOrWhiteSpace(currentDef.ActionId))
+        {
+            _definitionsByActor[actorId] = currentDef with
+            {
+                ActionId = DaggerfallEncounterActors.ClassEquippedMeleeAction,
+                Attacks = currentDef.Attacks.Count > 0 ? currentDef.Attacks : [new DaggerfallAttackRange(2, 6)],
+            };
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Restores a blood-feud kin NPC back to non-combatant status (live or persisted in <see cref="DaggerfallActorLedger"/>)
+    /// when a truce is mediated or the blood feud is settled.
+    /// </summary>
+    internal void DisarmVendettaKin(long actorId)
+    {
+        if (_actors.TryGet(actorId, out ActorState? actor) && !actor.IsDefeated)
+        {
+            if (actor.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? memory))
+                memory.SetForcedHostile(false);
+            actor.Pursuit.ForgetTarget();
+
+            bool isStatic = _npcs.TryGet(actorId, out DaggerfallNpc? npc) && npc.Kind == DaggerfallNpcKind.Static;
+            if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm))
+                harm.Set(isStatic ? ActorHarmPolicyKind.Protected : ActorHarmPolicyKind.LawProtectedCivilian);
+
+            if (_definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? currentDef)
+                && currentDef.MobileId is null
+                && string.Equals(currentDef.ActionId, DaggerfallEncounterActors.ClassEquippedMeleeAction, StringComparison.Ordinal))
+            {
+                _definitionsByActor[actorId] = currentDef with { ActionId = null, Attacks = [] };
+            }
+        }
+
+        if (_actorLedger.TryGet(actorId, out ActorLedgerEntry? ledgerEntry)
+            && ledgerEntry?.Combat is { ForcedHostile: true } combat)
+        {
+            ActorCombatStateDiff cleared = combat with { ForcedHostile = false };
+            bool combatEmpty = cleared == new ActorCombatStateDiff();
+            _actorLedger.Upsert(ledgerEntry with { Combat = combatEmpty ? null : cleared });
+        }
     }
 
     private long ApplyCityWatchPromotion(ActorState actor, bool grantEquipment, bool swapAppearance,

@@ -4,10 +4,13 @@ using Rusty.Engine.Debugging;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -39,6 +42,7 @@ public sealed class BloodFeudVendettaTests
         string unwitnessedHousehold = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 3, 0);
 
         WorldPoint playerPos = session.State.PlayerControl.Position ?? new WorldPoint(0, 0, 0);
+        WorldPoint meleePos = new(playerPos.X + 1.2f, playerPos.Y, playerPos.Z);
         WorldPoint nearbyPos = new(playerPos.X + 4f, playerPos.Y, playerPos.Z);
 
         // 1. Unwitnessed murder produces NO blood feud and NO kin confrontation.
@@ -56,7 +60,7 @@ public sealed class BloodFeudVendettaTests
 
         // 2. Witnessed murder triggers an open unmediated blood feud -> bold kin confronts player on sight!
         long victimId = AddCivilianNpc(session, site.Id, npcSite, "t11162/victim", "Doran Holt", localHousehold, "person", nearbyPos);
-        long boldKinId = AddCivilianNpc(session, site.Id, npcSite, "t11162/bold-kin", "Garrett Holt", localHousehold, "knight", nearbyPos);
+        long boldKinId = AddCivilianNpc(session, site.Id, npcSite, "t11162/bold-kin", "Garrett Holt", localHousehold, "knight", meleePos);
         long guardWitnessId = AddCivilianNpc(session, site.Id, npcSite, "t11162/witness", "Watchman Corvus", null, "guard", nearbyPos);
 
         CommitMurder(session, fixture.Perception, victimId, guardWitnessId, session.Calendar.MinuteNumber);
@@ -68,6 +72,14 @@ public sealed class BloodFeudVendettaTests
         ActorState kinActor = session.State.Actors.Get(boldKinId);
         Assert.True(kinActor.Actor.Get<ActorHarmPolicy>().IsCombatant);
         Assert.True(kinActor.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+
+        // R11162-1: Armed vendetta kin has a usable combat action and actually admits melee attacks!
+        FactBuffer<IProductFact> attackFacts = new();
+        bool kinAttackAdmitted = session.State.Kit.AttackExecution.Start(
+            new AttackRequest(boldKinId, DaggerfallActorIdentity.PlayerEntityId, 1, 1, 0.125, true),
+            attackFacts);
+        Assert.True(kinAttackAdmitted, "Armed vendetta kin must admit a real melee attack rather than returning NoAttackPolicy.");
+        Assert.IsType<DaggerfallCombatRules.DaggerfallPreparedAttack>(kinActor.Actor.Get<AttackState>().Pending!.Value.Attack);
 
         DaggerfallHostileReasonSignal signal = Assert.Single(signals);
         Assert.Equal(boldKinId, signal.ActorId);
@@ -105,9 +117,28 @@ public sealed class BloodFeudVendettaTests
         int day = checked((int)session.Calendar.DayNumber);
         CommitMurder(session, fixture.Perception, houseVictimId, witnessId, session.Calendar.MinuteNumber);
 
-        // Trigger kin confrontation AND overland vendetta pursuit band dispatch.
+        // Trigger kin confrontation, site hunter dispatch, AND overland vendetta pursuit band dispatch.
         Assert.Equal(1, session.FeudVendetta.EvaluateSceneKinConfrontations(site, playerPos, day));
         Assert.True(session.FeudVendetta.IsVendettaAggressor(houseKinId));
+        IReadOnlyList<long> liveHunters = session.FeudVendetta.EvaluateSiteHunterDispatch(
+            site, DaggerfallWorldProfileKind.Exterior, playerPos, day);
+        Assert.NotEmpty(liveHunters);
+        Assert.All(liveHunters, id => Assert.True(session.State.Actors.TryGet(id, out _)));
+
+        // Also seed an unloaded kin aggressor in ActorLedger with persisted ForcedHostile = true (R11162-3).
+        long unloadedKinId = DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{session.Sites.ActiveProfile.LogicalId}/t11162/unloaded-kin");
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            unloadedKinId,
+            ActorOrigin.Seeded(session.Sites.ActiveProfile, "t11162/unloaded-kin"),
+            Combat: new ActorCombatStateDiff(ForcedHostile: true)));
+        session.FeudVendetta.Restore(new DaggerfallFeudVendettaSave([
+            new DaggerfallFeudVendettaEntrySave(
+                houseFamily,
+                LastDispatchDay: day,
+                DispatchedWaveCount: 1,
+                ActiveHunterActorIds: [.. liveHunters],
+                ActiveKinAggressorIds: [houseKinId, unloadedKinId]),
+        ]));
 
         IReadOnlyList<DaggerfallHostileVendettaStanding> overlandVendettas =
             session.FeudVendetta.ResolveOverlandVendettas(site.Id.Region, site);
@@ -121,9 +152,14 @@ public sealed class BloodFeudVendettaTests
             session.Expedition.PersistentBands,
             b => b.BandId.StartsWith("hostile:vendetta-", StringComparison.Ordinal));
 
-        // Mediating a truce immediately calms live kin aggressors and retires the overland pursuit band!
+        // Mediating a truce immediately calms live & unloaded kin, RETIRES live hired hunters (R11162-3), and retires overland pursuit bands!
         Assert.True(session.SocialConsequences.RecordTruceMediated(houseFamily, "Magistrate Vane", day));
         Assert.False(session.FeudVendetta.IsVendettaAggressor(houseKinId));
+        Assert.All(liveHunters, id => Assert.False(session.State.Actors.TryGet(id, out _)));
+
+        // Unloaded kin's persisted ForcedHostile flag is cleared in ActorLedger.
+        bool hasUnloadedLedger = session.State.ActorLedger.TryGet(unloadedKinId, out ActorLedgerEntry? unloadedAfter);
+        Assert.False(hasUnloadedLedger && unloadedAfter?.Combat?.ForcedHostile == true);
 
         ActorState calmedKin = session.State.Actors.Get(houseKinId);
         Assert.False(calmedKin.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
@@ -131,6 +167,12 @@ public sealed class BloodFeudVendettaTests
         Assert.DoesNotContain(
             session.Expedition.PersistentBands,
             b => b.BandId.StartsWith("hostile:vendetta-", StringComparison.Ordinal));
+
+        // Save/restore after truce confirms retired hunters stay gone and do not re-appear hostile.
+        using (DaggerfallSession restoredAfterTruce = fixture.Restore(session.CaptureSave()))
+        {
+            Assert.All(liveHunters, id => Assert.False(restoredAfterTruce.State.Actors.TryGet(id, out _)));
+        }
 
         // While truce is mediated, neither kin confrontations nor hunters re-trigger.
         Assert.Equal(0, session.FeudVendetta.EvaluateSceneKinConfrontations(site, playerPos, day));
@@ -187,6 +229,17 @@ public sealed class BloodFeudVendettaTests
         session.FeudVendetta.HostilitySignaled += signals.Add;
 
         int day = checked((int)session.Calendar.DayNumber);
+
+        // R11162-2: Obstructed placement via DaggerfallActorPlacement.TrySpawnPose defers cleanly without consuming wave or cooldown!
+        fixture.Spatial.OverlapHit = _ => default(SpatialHit) with { Present = true, StartSolid = true, Normal = Vector3.UnitY };
+        IReadOnlyList<long> obstructed = session.FeudVendetta.EvaluateSiteHunterDispatch(
+            site, DaggerfallWorldProfileKind.Exterior, playerPos, day);
+        Assert.Empty(obstructed);
+        Assert.Empty(signals);
+        Assert.Empty(session.FeudVendetta.Capture().Entries);
+
+        // Clear obstruction -> dispatch succeeds via safe placement!
+        fixture.Spatial.OverlapHit = _ => default;
         IReadOnlyList<long> wave1 = session.FeudVendetta.EvaluateSiteHunterDispatch(
             site, DaggerfallWorldProfileKind.Exterior, playerPos, day);
 
@@ -288,8 +341,7 @@ public sealed class BloodFeudVendettaTests
         private readonly DaggerfallSiteProfile _profile;
         private readonly List<string> _releases = [];
         private readonly ContentFake _content;
-        private readonly SpatialFake _spatial;
-
+        internal SpatialFake Spatial { get; }
         internal PerceptionFake Perception { get; } = PerceptionFake.Create();
         internal DaggerfallSession Session { get; }
 
@@ -298,14 +350,17 @@ public sealed class BloodFeudVendettaTests
             _profile = ReadInputs(TestData.RepositoryRoot);
             _content = new ContentFake(_releases);
             PopulateContent(_content, _profile);
-            _spatial = SpatialFake.Create(_profile.Geometry.Spatial[0].Sha256, _releases);
-            EngineContextFake engine = EngineContextFake.Create(_content, _spatial.Service, new AppearanceFake(_releases), Perception.Service);
+            Spatial = SpatialFake.Create(_profile.Geometry.Spatial[0].Sha256, _releases);
+            Spatial.FloorHit = request => request.Direction.Y < -0.5f
+                ? default(SpatialHit) with { Present = true, Point = new Vector3(request.Origin.X, 0f, request.Origin.Z), Normal = Vector3.UnitY, Distance = 1d }
+                : default;
+            EngineContextFake engine = EngineContextFake.Create(_content, Spatial.Service, new AppearanceFake(_releases), Perception.Service);
             Session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, _profile, DaggerfallTuning.Defaults));
         }
 
         internal DaggerfallSession Restore(RulesetSavePayload save)
         {
-            EngineContextFake engine = EngineContextFake.Create(_content, _spatial.Service, new AppearanceFake(_releases), Perception.Service);
+            EngineContextFake engine = EngineContextFake.Create(_content, Spatial.Service, new AppearanceFake(_releases), Perception.Service);
             return DaggerfallSession.Restore(engine.Context, new(TestPayload.Definitions, _profile, DaggerfallTuning.Defaults), save);
         }
 

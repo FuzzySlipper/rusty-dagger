@@ -103,16 +103,20 @@ internal sealed class DaggerfallFeudVendetta(
     DaggerfallNames names,
     Func<ulong> worldSocialSeed,
     Func<int> playerLevel,
+    Func<string, WorldPoint, float, float, ActorPose?> trySpawnPose,
     Func<string, ActorPose, int?, long> spawnCombatant,
+    Action<long> armVendettaKin,
+    Action<long> disarmVendettaKin,
+    Action<long> retireVendettaHunter,
     Action<long> makeHostile,
-    Action<long> calmHostile,
     Action<string> retireOverlandBand,
     Func<IReadOnlyList<DaggerfallPersistentOverlandBand>> activeOverlandBands,
     Action<string> setOutcome,
     DaggerfallSocialTuning? socialTuning = null)
 {
     internal const float KinConfrontationSightMeters = 14f;
-    internal const float HunterAmbushDistanceMeters = 12f;
+    internal const float MinHunterAmbushDistanceMeters = 4f;
+    internal const float HunterAmbushDistanceMeters = 14f;
     internal const int WealthyLocalBlockThreshold = 4;
 
     private const int HiredToughMobileId = 138;             // Rogue / Thief tough
@@ -250,21 +254,11 @@ internal sealed class DaggerfallFeudVendetta(
         if (_entries.TryGetValue(familyId, out VendettaState? state))
         {
             foreach (long kinId in state.ActiveKinAggressorIds.ToArray())
-            {
-                if (actors.TryGet(kinId, out ActorState? kinActor) && !kinActor.IsDefeated)
-                {
-                    calmHostile(kinId);
-                    if (kinActor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm))
-                        harm.Set(ActorHarmPolicyKind.LawProtectedCivilian);
-                }
-            }
+                disarmVendettaKin(kinId);
             state.ActiveKinAggressorIds.Clear();
 
             foreach (long hunterId in state.ActiveHunterIds.ToArray())
-            {
-                if (actors.TryGet(hunterId, out ActorState? hunterActor) && !hunterActor.IsDefeated)
-                    calmHostile(hunterId);
-            }
+                retireVendettaHunter(hunterId);
             state.ActiveHunterIds.Clear();
 
             if (settled)
@@ -304,8 +298,7 @@ internal sealed class DaggerfallFeudVendetta(
             {
                 if (actors.TryGet(kinId, out ActorState? kinActor) && !kinActor.IsDefeated)
                 {
-                    if (kinActor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant)
-                        harm.Set(ActorHarmPolicyKind.Combatant);
+                    armVendettaKin(kinId);
                     makeHostile(kinId);
                 }
             }
@@ -362,8 +355,7 @@ internal sealed class DaggerfallFeudVendetta(
             foreach ((ActorState kinActor, DaggerfallNpc kinNpc, _) in bold)
             {
                 bool alreadyActive = state.ActiveKinAggressorIds.Contains(kinActor.DurableId);
-                if (kinActor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant)
-                    harm.Set(ActorHarmPolicyKind.Combatant);
+                armVendettaKin(kinActor.DurableId);
                 makeHostile(kinActor.DurableId);
                 state.ActiveKinAggressorIds.Add(kinActor.DurableId);
 
@@ -455,21 +447,23 @@ internal sealed class DaggerfallFeudVendetta(
                 CultureInfo.InvariantCulture,
                 $"daggerfall.vendetta-wave:{worldSocialSeed()}:{standing.FamilyId}:{state.DispatchedWaveCount}"));
 
+            int placedForFamily = 0;
             for (int i = 0; i < toSpawn; i++)
             {
-                float angle = (((waveSeed >> (i * 7)) % 360UL) * (MathF.PI / 180f));
-                WorldPoint spawnPoint = new(
-                    pPos.X + MathF.Cos(angle) * HunterAmbushDistanceMeters,
-                    pPos.Y,
-                    pPos.Z + MathF.Sin(angle) * HunterAmbushDistanceMeters);
-                float facingPlayer = MathF.Atan2(pPos.X - spawnPoint.X, pPos.Z - spawnPoint.Z);
-                long hunterId = spawnCombatant(enemyDef.Id.Value, new ActorPose(spawnPoint, facingPlayer), hunterLevel);
+                string opKey = string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"vendetta:{standing.FamilyId}:w{state.DispatchedWaveCount}:m{i}");
+                if (trySpawnPose(opKey, pPos, MinHunterAmbushDistanceMeters, HunterAmbushDistanceMeters) is not { } spawnPose)
+                    continue;
+
+                long hunterId = spawnCombatant(enemyDef.Id.Value, spawnPose, hunterLevel);
                 makeHostile(hunterId);
                 state.ActiveHunterIds.Add(hunterId);
                 spawnedIds.Add(hunterId);
                 liveActiveHunters++;
+                placedForFamily++;
 
-                if (i == 0 && _signaledThisScene.Add(hunterId))
+                if (placedForFamily == 1 && _signaledThisScene.Add(hunterId))
                 {
                     string gender = ((waveSeed >> 3) & 1UL) == 0UL ? "Male" : "Female";
                     string reason = BuildHunterReasonLine(kind, squadTitle, label);
@@ -481,12 +475,15 @@ internal sealed class DaggerfallFeudVendetta(
                         HouseholdLabel: label,
                         Kind: kind,
                         ReasonLine: reason,
-                        Position: spawnPoint));
+                        Position: spawnPose.Position));
                 }
             }
 
-            state.LastDispatchDay = Math.Max(0, currentDay);
-            state.DispatchedWaveCount++;
+            if (placedForFamily > 0)
+            {
+                state.LastDispatchDay = Math.Max(0, currentDay);
+                state.DispatchedWaveCount++;
+            }
         }
 
         return spawnedIds;

@@ -284,6 +284,27 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             if (entry.Value.WithoutEffectsOf(actorId) is { } kept) ReplaceDelta(entry.Key, kept);
     }
 
+    /// <summary>Clears persisted <c>ForcedHostile</c> for an unloaded actor across inactive site deltas (e.g. blood-feud truce or settlement).</summary>
+    internal void ClearDetachedForcedHostile(long actorId)
+    {
+        foreach ((DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta) in _deltas.ToArray())
+        {
+            bool hasActor = delta.Actors.Any(a => a.EntityId == actorId && a.ForcedHostile);
+            bool hasDyn = delta.DynamicActors.Any(a => a.EntityId == actorId && a.ForcedHostile);
+            if (!hasActor && !hasDyn)
+                continue;
+            _deltas[profile] = delta with
+            {
+                Actors = hasActor
+                    ? delta.Actors.Select(a => a.EntityId == actorId ? a with { ForcedHostile = false } : a).ToArray()
+                    : delta.Actors,
+                DynamicActors = hasDyn
+                    ? delta.DynamicActors.Select(a => a.EntityId == actorId ? a with { ForcedHostile = false } : a).ToArray()
+                    : delta.DynamicActors,
+            };
+        }
+    }
+
     internal void ReplaceDelta(DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta)
     {
         if (!_deltas.ContainsKey(profile))

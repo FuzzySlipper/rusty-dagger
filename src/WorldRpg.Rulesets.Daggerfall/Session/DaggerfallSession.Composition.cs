@@ -1166,9 +1166,33 @@ internal sealed partial class DaggerfallSession
                 questNames,
                 () => _worldSocialSeed,
                 () => State.Progression.Level,
+                (opKey, origin, minDist, maxDist) => _placement.TrySpawnPose(
+                    opKey, "daggerfall.vendetta-hunter.v1", origin, minDist, maxDist,
+                    out ActorPose pose, SpawnDirection.Any) ? pose : null,
                 (definitionId, pose, level) => SpawnActor(definitionId, pose, level),
+                id => _roster.ArmVendettaKin(id),
+                id =>
+                {
+                    _roster.DisarmVendettaKin(id);
+                    _enemyBehavior.CalmHostile(id);
+                    State.Kit.AttackExecution.Interrupt(id, _latestUpdateGeneration ?? 0UL);
+                    _sites?.ClearDetachedForcedHostile(id);
+                },
+                id =>
+                {
+                    if (State.Actors.TryGet(id, out _))
+                    {
+                        State.Kit.AttackExecution.Interrupt(id, _latestUpdateGeneration ?? 0UL);
+                        _roster.RemoveQuestActor(id);
+                    }
+                    else
+                    {
+                        _ = RetireDetachedActor(id);
+                        if (State.ActorLedger.TryGet(id, out ActorLedgerEntry? entry) && entry is not null)
+                            State.ActorLedger.MarkRemoved(id, entry.Origin);
+                    }
+                },
                 id => _enemyBehavior.MakeHostile(id),
-                id => _enemyBehavior.CalmHostile(id),
                 bandId =>
                 {
                     OverlandParties.RetireBandOffScreen(bandId);
