@@ -511,6 +511,7 @@ internal sealed partial class DaggerfallSession
         _nearbySpawn.BringExpected();                                                             // Actors: a start's opening foes
         if (Law.Update(update.DeltaSeconds) is { } arrest) Arrest(arrest);                       // Society
         if (Law.ModalOpen) return;
+        StepFeudVendetta(update.DeltaSeconds);                                                    // Society: active blood-feud kin & hunter retaliation
         _reactions.Step(State.Actors, update.DeltaSeconds, ThrownLanding);                       // Actors
         _hazards.Step(update.DeltaSeconds);                                                       // Combat
         WildNavigation.Update(State.PlayerControl.Position,
@@ -1552,6 +1553,7 @@ internal sealed partial class DaggerfallSession
             OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite, _time.Calendar.MinuteNumber); // Society: OfficeLedger vacancy window & OfficeChanged
             CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
+            FeudVendetta.ObserveActorDied(died.ActorId);                                          // Society: prune slain vendetta aggressor/hunter
             DaggerfallNpc? fallenNpc = State.Npcs.TryGet(died.ActorId, out DaggerfallNpc? regFallen) ? regFallen : null;
             ShopContinuity.ReactToProprietorDeath(
                 died.ActorId, fallenNpc, _activeProfileKey, _sites.Projection.Inputs, checked((int)_time.Calendar.DayNumber)); // Society: shop bereavement & replacement
@@ -2037,6 +2039,35 @@ internal sealed partial class DaggerfallSession
         if (actionGraph is not null)
             _ = DungeonActions.Report(_sites.Interiors.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span,
                 State.Actors.Player.Actor.Entity));                                               // Interiors
+    }
+
+    /// <summary>Evaluates active blood-feud kin confrontations and hired hunter dispatches in the active settlement.</summary>
+    private void StepFeudVendetta(double deltaSeconds)
+    {
+        if (_site.ActiveSite is null)
+            return;
+        if (_sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && !_exterior.ActiveLocationLoaded)
+            return;
+
+        DaggerfallWorldProfileKey currentProfile = _activeProfileKey;
+        bool profileChanged = _lastVendettaProfile != currentProfile;
+        if (profileChanged)
+        {
+            _lastVendettaProfile = currentProfile;
+            _vendettaCheckAccumulator = 0d;
+            FeudVendetta.ResetSceneSignals();
+        }
+        else
+        {
+            _vendettaCheckAccumulator += deltaSeconds;
+            if (_vendettaCheckAccumulator < 1.0d)
+                return;
+            _vendettaCheckAccumulator = 0d;
+        }
+
+        int day = checked((int)_time.Calendar.DayNumber);
+        _ = FeudVendetta.EvaluateSceneKinConfrontations(_site.ActiveSite, State.PlayerControl.Position, day);
+        _ = FeudVendetta.EvaluateSiteHunterDispatch(_site.ActiveSite, _sites.Projection.Inputs.ProfileKind, State.PlayerControl.Position, day);
     }
 
     /// <summary>A melee strike a test or tool asks for outside a step: the timeline, the strike, its facts and the publication.</summary>

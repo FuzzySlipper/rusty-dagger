@@ -1217,6 +1217,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Household grudge and blood-feud settlement (exponential wergild, truce mediation, reconciliation service and pardons).</summary>
     internal DaggerfallFeudSettlement FeudSettlement { get; } = null!;
+    /// <summary>Active blood-feud vendetta retaliation (kin confrontations, hired toughs/bounty hunters/assassins, lawful self-defense, and non-blocking hostility signals).</summary>
+    internal DaggerfallFeudVendetta FeudVendetta { get; } = null!;
+    private double _vendettaCheckAccumulator;
+    private DaggerfallWorldProfileKey? _lastVendettaProfile;
     internal DaggerfallShopContinuity ShopContinuity { get; } = null!;
     internal DaggerfallSocialJournalProjection SocialJournal { get; } = null!;
 

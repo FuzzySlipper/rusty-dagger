@@ -55,7 +55,8 @@ internal sealed class DaggerfallSocialJournalProjection(
     Func<ulong> worldSocialSeed,
     Func<int> currentDay,
     DaggerfallOfficeHolders? officeHolders = null,
-    DaggerfallOfficeLedger? officeLedger = null)
+    DaggerfallOfficeLedger? officeLedger = null,
+    Func<string?, string?>? describeVendetta = null)
 {
     private const int MaximumFactionRows = 12;
 
@@ -108,7 +109,7 @@ internal sealed class DaggerfallSocialJournalProjection(
                 _ => "Local Household",
             };
             string standingText = FormatHouseholdStanding(displayStanding, feudActive);
-            string status = BuildHouseholdStatus(standing, displayStanding, feudActive, mourningDaysLeft);
+            string status = BuildHouseholdStatus(standing, displayStanding, feudActive, mourningDaysLeft, describeVendetta?.Invoke(standing.FamilyId));
             string? hint = BuildSettlementHint(standing.FamilyId, site, feudActive, displayStanding);
 
             int priority = feudActive ? 0 : displayStanding < 0 ? 1 : mourningDaysLeft is not null ? 2 : 3;
@@ -294,7 +295,8 @@ internal sealed class DaggerfallSocialJournalProjection(
         DaggerfallLocalHouseholdStandingSave standing,
         int effectiveStanding,
         bool feudActive,
-        int? mourningDaysLeft)
+        int? mourningDaysLeft,
+        string? activeVendetta = null)
     {
         List<string> parts = [];
         if (feudActive)
@@ -304,6 +306,8 @@ internal sealed class DaggerfallSocialJournalProjection(
                     ? $"Blood feud — truce mediated by {standing.MediatedByName}"
                     : "Blood feud — truce mediated"
                 : "Permanent blood feud (refuses direct talks)");
+            if (!standing.TruceMediated && !string.IsNullOrWhiteSpace(activeVendetta))
+                parts.Add(activeVendetta);
         }
         else if (effectiveStanding < 0)
         {

@@ -35,7 +35,9 @@ internal sealed record DaggerfallSocialTuning(
     int PardonCourtFeeGold = 500,
     int ShopBereavementClosureDays = 2,
     int ShopTownReplacementVacancyDays = 5,
-    int NpcJailSentenceDays = 5)
+    int NpcJailSentenceDays = 5,
+    int VendettaHunterCooldownDays = 3,
+    int MaxActiveVendettaHunters = 2)
 {
     internal static DaggerfallSocialTuning Default { get; } = new(0UL);
 
@@ -85,6 +87,10 @@ internal sealed record DaggerfallSocialTuning(
             throw new ArgumentOutOfRangeException(nameof(ShopTownReplacementVacancyDays), "Shop town-replacement vacancy days must be at least shop bereavement closure days.");
         if (NpcJailSentenceDays <= 0)
             throw new ArgumentOutOfRangeException(nameof(NpcJailSentenceDays), "NPC jail sentence days must be positive.");
+        if (VendettaHunterCooldownDays <= 0)
+            throw new ArgumentOutOfRangeException(nameof(VendettaHunterCooldownDays), "Vendetta hunter cooldown days must be positive.");
+        if (MaxActiveVendettaHunters <= 0)
+            throw new ArgumentOutOfRangeException(nameof(MaxActiveVendettaHunters), "Max active vendetta hunters must be positive.");
         return this;
     }
 
@@ -161,13 +167,20 @@ internal sealed record DaggerfallSocialTuning(
         int jailDays = element.TryGetProperty("npcJailSentenceDays", out JsonElement jd)
             ? jd.GetInt32()
             : 5;
+        int vendettaCooldown = element.TryGetProperty("vendettaHunterCooldownDays", out JsonElement vc)
+            ? vc.GetInt32()
+            : 3;
+        int maxVendettaHunters = element.TryGetProperty("maxActiveVendettaHunters", out JsonElement mvh)
+            ? mvh.GetInt32()
+            : 2;
         return new DaggerfallSocialTuning(
             seed, bubble, speed, war, surge, plague,
             localDecay, houseDecay, dynastyDecay,
             arrestPenalty, headArrestPenalty, mourningDays,
             minorWergild, localFeudWergild, houseFeudWergild, dynastyFeudWergild,
             murderExpBase, serviceMult, pardonMult, pardonFee,
-            bereavementDays, townVacancyDays, jailDays).Validate();
+            bereavementDays, townVacancyDays, jailDays,
+            vendettaCooldown, maxVendettaHunters).Validate();
     }
 }
 

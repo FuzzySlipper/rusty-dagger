@@ -1158,6 +1158,29 @@ internal sealed partial class DaggerfallSession
                 () => checked((int)_time.Calendar.DayNumber),
                 () => _time.Calendar.MinuteNumber,
                 seconds => _ = AdvanceElapsedTime(seconds, idleFatigue: false));
+            FeudVendetta = new DaggerfallFeudVendetta(
+                definitions,
+                SocialConsequences,
+                State.Actors,
+                State.Npcs,
+                questNames,
+                () => _worldSocialSeed,
+                () => State.Progression.Level,
+                (definitionId, pose, level) => SpawnActor(definitionId, pose, level),
+                id => _enemyBehavior.MakeHostile(id),
+                id => _enemyBehavior.CalmHostile(id),
+                bandId =>
+                {
+                    OverlandParties.RetireBandOffScreen(bandId);
+                    _ = Expedition.RemovePersistentBand(bandId);
+                },
+                () => Expedition.PersistentBands,
+                line => Presentation?.SetOutcome(line),
+                _tuning.Social);
+            if (saved is not null)
+                FeudVendetta.Restore(saved.FeudVendetta);
+            Crimes.BindSelfDefenseLookup(FeudVendetta.IsVendettaAggressor);
+            SocialConsequences.FeudPausedOrSettled += FeudVendetta.OnFeudPausedOrSettled;
             Introductions.BindHostilityLookup(id =>
                 State.Actors.TryGet(id, out ActorState? live)
                 && live.Actor.TryGet<Modules.Behavior.DaggerfallEnemyPerceptionMemory>(out var memory)
@@ -1342,6 +1365,7 @@ internal sealed partial class DaggerfallSession
             _persistence.WordSpread = WordSpread.Capture;
             _persistence.LocalHouseholds = SocialConsequences.Capture;
             _persistence.ShopContinuity = ShopContinuity.Capture;
+            _persistence.FeudVendetta = FeudVendetta.Capture;
             _persistence.CourierDispatches = CourierDispatches.Capture;
             _persistence.ConditionCounterplay = ConditionCounterplay.Capture;
             _persistence.NoticeBounties = NoticeBounties.Capture;
@@ -1673,7 +1697,8 @@ internal sealed partial class DaggerfallSession
                 () => _worldSocialSeed,
                 () => checked((int)_time.Calendar.DayNumber),
                 OfficeHolders,
-                OfficeLedger);
+                OfficeLedger,
+                FeudVendetta.DescribeActiveVendetta);
             HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
                 _characterUi, definitions, CurrentTextContext, _controls, ActivationPanel, State.Swimming, State.Effects, State.Quests, _questTexts, _time,
                 _notebook, State.Transport, State.Inventory, TransportAccess, State.Property, State.Wagon, DungeonText, _deathScreen, RestPanel,
@@ -2053,7 +2078,9 @@ internal sealed partial class DaggerfallSession
             if (rep <= DaggerfallHostileOverlandBands.RivalPatrolThreshold)
                 hostileCourts.Add(new(faction.Id, faction.Name, rep, 145));
         }
-        return new(wantedOrBanished, hostileGuilds, hostileCourts);
+        IReadOnlyList<DaggerfallHostileVendettaStanding>? hostileVendettas =
+            FeudVendetta?.ResolveOverlandVendettas(region, _site.ActiveSite);
+        return new(wantedOrBanished, hostileGuilds, hostileCourts, hostileVendettas);
     }
 
     private bool HasWatchOrRulerVouch(DaggerfallSiteRecord? site)

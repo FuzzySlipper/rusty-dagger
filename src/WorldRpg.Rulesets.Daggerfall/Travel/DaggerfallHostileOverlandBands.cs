@@ -13,11 +13,21 @@ internal sealed record DaggerfallHostileFactionStanding(
     int Reputation,
     int PreferredMobileId);
 
+/// <summary>One open blood-feud vendetta eligible to hire overland toughs, bounty hunters, or Dark Brotherhood assassins.</summary>
+internal sealed record DaggerfallHostileVendettaStanding(
+    string FamilyId,
+    string HouseholdLabel,
+    string BandTitle,
+    int PreferredMobileId,
+    int MemberCount,
+    double SpeedPixelsPerHour = 2.35);
+
 /// <summary>Standing snapshot read from Society/Crime at dispatch time so Travel never depends on Society types.</summary>
 internal sealed record DaggerfallHostileStandingSnapshot(
     bool WantedOrBanished,
     IReadOnlyList<DaggerfallHostileFactionStanding> HostileGuilds,
-    IReadOnlyList<DaggerfallHostileFactionStanding> HostileCourts);
+    IReadOnlyList<DaggerfallHostileFactionStanding> HostileCourts,
+    IReadOnlyList<DaggerfallHostileVendettaStanding>? HostileVendettas = null);
 
 /// <summary>
 /// Autonomous world producer for hostile persistent <see cref="ActorLocationKind.OnOverlandBand"/> bands:
@@ -122,6 +132,15 @@ internal sealed class DaggerfallHostileOverlandBands
             .OrderBy(c => c.Reputation).ThenBy(c => c.FactionId))
         {
             candidates.Add(($"patrol-{court.FactionId}", $"{court.Name} Patrol", DaggerfallBandKind.Patrol, court.Name, court.PreferredMobileId, 2, RivalPatrolSpeedPixelsPerHour));
+        }
+        if (standing.HostileVendettas is { Count: > 0 } vendettas)
+        {
+            foreach (DaggerfallHostileVendettaStanding vendetta in vendettas.OrderBy(v => v.FamilyId, StringComparer.Ordinal))
+            {
+                string slug = $"vendetta-{StableHash.NonZeroFnv1a64(vendetta.FamilyId):x16}";
+                candidates.Add((slug, vendetta.BandTitle, DaggerfallBandKind.Hostile, vendetta.HouseholdLabel,
+                    vendetta.PreferredMobileId, Math.Clamp(vendetta.MemberCount, 1, 3), vendetta.SpeedPixelsPerHour));
+            }
         }
         if (candidates.Count == 0) return null;
 

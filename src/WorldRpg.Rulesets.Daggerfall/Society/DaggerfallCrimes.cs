@@ -314,6 +314,12 @@ internal sealed class DaggerfallCrimes(
             $"damage:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}:{damage.TargetId}");
     }
 
+    private Func<long, bool>? _isSelfDefenseTarget;
+
+    /// <summary>Binds a lawful self-defense predicate (e.g. active blood-feud kin aggressors or hired hunters who attacked first).</summary>
+    internal void BindSelfDefenseLookup(Func<long, bool> isSelfDefenseTarget) =>
+        _isSelfDefenseTarget = isSelfDefenseTarget ?? throw new ArgumentNullException(nameof(isSelfDefenseTarget));
+
     /// <summary>The player's attack on a civilian or a guard, once per operation: an assault, or a murder when it died.</summary>
     internal void ObserveAttack(long attacker, long target, string operation)
     {
@@ -324,6 +330,8 @@ internal sealed class DaggerfallCrimes(
         bool guard = cityWatch || mobileGuard;
         bool civilian = npc?.Kind == DaggerfallNpcKind.Civilian;
         if (!civilian && !guard) return;
+        // Fighting back against a non-guard aggressor (e.g. blood-feud kin or hired hunter) is lawful self-defense.
+        if (!guard && _isSelfDefenseTarget?.Invoke(target) == true) return;
         bool dead = actors.Get(target).IsDefeated;
         int? region = site.Region ?? npc?.Site.Region;
         if (region is null) return;

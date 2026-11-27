@@ -93,6 +93,8 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallLocalHouseholdsSave LocalHouseholds { get; init; } = DaggerfallLocalHouseholdsSave.Empty;
     /// <summary>Sparse shop bereavement closures, kin inheritances, town replacements, and arrest covers; empty when untouched.</summary>
     public DaggerfallShopContinuitySave ShopContinuity { get; init; } = DaggerfallShopContinuitySave.Empty;
+    /// <summary>Sparse active blood-feud vendetta retaliation tracking (hired hunter waves and live aggressors); empty when untouched or settled.</summary>
+    public DaggerfallFeudVendettaSave FeudVendetta { get; init; } = DaggerfallFeudVendettaSave.Empty;
     /// <summary>Sparse sealed couriers carrying pending board-game actions or warrants; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallCourierDispatchesSave CourierDispatches { get; init; } = DaggerfallCourierDispatchesSave.Empty;
@@ -1217,6 +1219,8 @@ internal sealed record DaggerfallSavePayload(
         LocalHouseholds.Validate();
         ArgumentNullException.ThrowIfNull(ShopContinuity);
         ShopContinuity.Validate();
+        ArgumentNullException.ThrowIfNull(FeudVendetta);
+        FeudVendetta.Validate();
         ArgumentNullException.ThrowIfNull(CourierDispatches);
         CourierDispatches.Validate();
         ArgumentNullException.ThrowIfNull(ConditionCounterplay);

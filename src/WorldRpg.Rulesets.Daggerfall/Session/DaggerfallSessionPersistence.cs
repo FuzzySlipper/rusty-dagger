@@ -70,6 +70,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal Func<DaggerfallWordSpreadSave> WordSpread { get; set; } = () => DaggerfallWordSpreadSave.Empty;
     internal Func<DaggerfallLocalHouseholdsSave> LocalHouseholds { get; set; } = () => DaggerfallLocalHouseholdsSave.Empty;
     internal Func<DaggerfallShopContinuitySave> ShopContinuity { get; set; } = () => DaggerfallShopContinuitySave.Empty;
+    internal Func<DaggerfallFeudVendettaSave> FeudVendetta { get; set; } = () => DaggerfallFeudVendettaSave.Empty;
     internal Func<DaggerfallCourierDispatchesSave> CourierDispatches { get; set; } = () => DaggerfallCourierDispatchesSave.Empty;
     internal Func<DaggerfallConditionCounterplaySave> ConditionCounterplay { get; set; } = () => DaggerfallConditionCounterplaySave.Empty;
     internal Func<DaggerfallNoticeBountiesSave> NoticeBounties { get; set; } = () => DaggerfallNoticeBountiesSave.Empty;
@@ -185,6 +186,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             WordSpread = WordSpread(),
             LocalHouseholds = LocalHouseholds(),
             ShopContinuity = ShopContinuity(),
+            FeudVendetta = FeudVendetta(),
             CourierDispatches = CourierDispatches(),
             ConditionCounterplay = ConditionCounterplay(),
             NoticeBounties = NoticeBounties(),

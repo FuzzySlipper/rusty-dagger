@@ -292,6 +292,13 @@ internal sealed class DaggerfallEnemyBehaviorModule
         ActorMadeHostile?.Invoke(actorId);
     }
 
+    /// <summary>Clears forced hostility without marking an actor magically pacified (e.g. blood-feud truce or settlement).</summary>
+    internal void CalmHostile(long actorId)
+    {
+        if (!_actors.TryGet(actorId, out var actor) || actor.IsDefeated) return;
+        Senses(actor).SetForcedHostile(false);
+    }
+
     /// <summary>The enemy-senses memory the actor factory attaches to every non-player actor.</summary>
     private static DaggerfallEnemyPerceptionMemory Senses(ActorState actor) => actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
 

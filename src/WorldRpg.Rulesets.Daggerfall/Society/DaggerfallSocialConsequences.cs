@@ -310,6 +310,9 @@ internal sealed class DaggerfallSocialConsequences(
                 pair.Value.PardonGrantedBy)),
     ];
 
+    /// <summary>Raised when a household blood feud is paused via truce mediation (<c>settled: false</c>) or fully settled/cleared (<c>settled: true</c>).</summary>
+    internal event Action<string, bool>? FeudPausedOrSettled;
+
     /// <summary>Records that a trusted intermediary mediated a truce, unlocking direct settlement talks for a feuding household.</summary>
     internal bool RecordTruceMediated(string familyId, string mediatorName, int day)
     {
@@ -322,6 +325,7 @@ internal sealed class DaggerfallSocialConsequences(
         state.TruceMediated = true;
         state.MediatedByName = string.IsNullOrWhiteSpace(mediatorName) ? "a trusted intermediary" : mediatorName.Trim();
         state.LastUpdatedDay = Math.Max(state.LastUpdatedDay, Math.Max(0, day));
+        FeudPausedOrSettled?.Invoke(familyId, false);
         return true;
     }
 
@@ -400,6 +404,7 @@ internal sealed class DaggerfallSocialConsequences(
 
         if (state.IsEmpty)
             _householdStandings.Remove(familyId);
+        FeudPausedOrSettled?.Invoke(familyId, true);
         return true;
     }
 
@@ -971,8 +976,10 @@ internal sealed class DaggerfallSocialConsequences(
         {
             if (clamped == 0)
             {
+                bool hadFeud = false;
                 if (_householdStandings.TryGetValue(familyId, out HouseholdStandingState? existingLocal))
                 {
+                    hadFeud = existingLocal.FeudActive;
                     existingLocal.StandingDelta = 0;
                     existingLocal.ClearSettlementFlags();
                     existingLocal.SubjectOffsets.Clear();
@@ -980,6 +987,8 @@ internal sealed class DaggerfallSocialConsequences(
                     if (existingLocal.IsEmpty)
                         _householdStandings.Remove(familyId);
                 }
+                if (hadFeud)
+                    FeudPausedOrSettled?.Invoke(familyId, true);
                 return 0;
             }
 
@@ -989,10 +998,13 @@ internal sealed class DaggerfallSocialConsequences(
                 state = new HouseholdStandingState(targetRegion, targetLocation);
                 _householdStandings[familyId] = state;
             }
+            bool wasFeud = state.FeudActive;
             state.StandingDelta = clamped;
             state.FeudActive = clamped <= DaggerfallIntroductions.BloodFeudDispositionThreshold;
             state.LastUpdatedDay = day;
             state.SubjectOffsets.Clear();
+            if (wasFeud && !state.FeudActive)
+                FeudPausedOrSettled?.Invoke(familyId, false);
             return clamped;
         }
 
@@ -1006,8 +1018,10 @@ internal sealed class DaggerfallSocialConsequences(
 
         if (clamped == 0)
         {
+            bool hadFeud = false;
             if (priorState is not null)
             {
+                hadFeud = priorState.FeudActive;
                 priorState.StandingDelta = 0;
                 priorState.ClearSettlementFlags();
                 priorState.SubjectOffsets.Clear();
@@ -1015,6 +1029,8 @@ internal sealed class DaggerfallSocialConsequences(
                 if (priorState.IsEmpty)
                     _householdStandings.Remove(familyId);
             }
+            if (hadFeud)
+                FeudPausedOrSettled?.Invoke(familyId, true);
             return 0;
         }
 
@@ -1024,10 +1040,13 @@ internal sealed class DaggerfallSocialConsequences(
             houseState = new HouseholdStandingState(houseRegion, string.Empty);
             _householdStandings[familyId] = houseState;
         }
+        bool priorHouseFeud = houseState.FeudActive;
         houseState.StandingDelta = clamped;
         houseState.FeudActive = clamped <= DaggerfallIntroductions.BloodFeudDispositionThreshold;
         houseState.LastUpdatedDay = day;
         houseState.SubjectOffsets.Clear();
+        if (priorHouseFeud && !houseState.FeudActive)
+            FeudPausedOrSettled?.Invoke(familyId, false);
 
         int delta = clamped - priorStanding;
         if (delta != 0 && wordSpread is not null && site is not null)
