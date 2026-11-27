@@ -5267,6 +5267,102 @@ test('the shop is the transfer layout: line totals, confirms for large trades an
   } finally { f.dispose(); }
 });
 
+test('merchant and magic service price tooltips display authoritative breakdown lines for buy, sell, stack quotes, repair, identify, spells and enchanting', () => {
+  const f = fixture();
+  try {
+    const buyLines = ['Base value: 100 gold', 'Shop markup (average shop): +100 gold', '+15% grain shortage in Glenpoint (severity 1): +30 gold', 'Total: 230 gold'];
+    const stackLines = ['Base value (3 × 100 gold): 300 gold', 'Shop markup (average shop): +300 gold', '+15% grain shortage in Glenpoint (severity 1): +90 gold', 'Total: 690 gold'];
+    const sellLines = ['Base value: 100 gold', 'Merchant offer & mercantile: −60 gold', 'Court Factor — Wayrest (member): +8 gold', 'Total: 48 gold'];
+    const repairLines = ['Base repair fee: 40 gold', '+12% regional market in Glenpoint: +5 gold', 'Total: 45 gold'];
+    const identifyLines = ['Base identification fee: 20 gold', '+25% witch hunt in Glenpoint (severity 1): +5 gold', 'Total: 25 gold'];
+    const spellLines = ['Base spell price: 40 gold', '+25% witch hunt in Glenpoint (severity 1): +10 gold', 'Total: 50 gold'];
+    const makerLines = ['Base spell construction: 240 gold', '+25% witch hunt in Glenpoint (severity 1): +60 gold', 'Total: 300 gold'];
+    const enchantLines = ['Base enchanting cost: 800 gold', '+25% witch hunt in Glenpoint (severity 1): +200 gold', 'Total: 1,000 gold'];
+
+    const stock = {
+      key: 'stack:shop.sword', definition: 'template-113', label: 'Longsword', quantity: '5', maximumQuantity: 5, unitPrice: '230',
+      priceBreakdown: buyLines, currentCondition: 100, maximumCondition: 100, identified: true, stolen: false, canBuy: true, canSell: false,
+    };
+    const packItem = {
+      key: 'unique:21', definition: 'template-113', label: 'Worn Blade', quantity: 1, maximumQuantity: 1, unitPrice: '48',
+      priceBreakdown: sellLines, currentCondition: 40, maximumCondition: 100, identified: false, stolen: false, canBuy: false, canSell: true,
+      canRepair: true, repairCost: '45', repairPriceBreakdown: repairLines,
+      canIdentify: true, identifyCost: '25', identifyPriceBreakdown: identifyLines,
+    };
+    const merchant = {
+      revision: 'shop-tip-1', provider: 'Master Smith', quality: 10, gold: '500', buyAvailable: true, sellAvailable: true,
+      repairAvailable: true, identifyAvailable: true, result: '', largeTradeGold: 500, stock: [stock], playerItems: [packItem], repairs: [],
+    };
+    const spells = {
+      available: [], ready: null, result: '',
+      sale: { revision: 'sale-1', provider: 'Mage', offers: [{ key: 'spell.002', name: 'Shock', castingCost: 10, price: 50, known: false, priceBreakdown: spellLines }] },
+      maker: {
+        revision: 'maker-1', provider: 'Mage',
+        limits: { nameLength: 31, icons: 4, effects: 3, duration: 10, chance: 10, magnitude: 10, perLevels: 10 },
+        targets: [{ value: 0, label: 'Caster' }], elements: [{ value: 4, label: 'Magic' }],
+        effects: [{ key: 'e1', name: 'Heal', school: 'Restoration', type: 1, subType: 0, duration: false, chance: false, magnitude: true, targets: 1, elements: 16 }],
+        draft: { name: 'Mend', element: 4, rangeType: 0, icon: 0, effects: [] },
+        quote: { key: 'draft-1', gold: 300, spellPoints: 12, eligible: true, reason: null, priceBreakdown: makerLines },
+      },
+      itemMaker: {
+        revision: 'enc-1', provider: 'Enchanter', eligible: true,
+        items: [{ key: 'unique:21', name: 'Worn Blade', capacity: 500, quantity: 1 }],
+        settings: [{ key: 'feather', name: 'Feather Weight', cost: 200, forced: [] }],
+        draft: { item: 'unique:21', name: 'Light Blade', settings: ['feather'] },
+        quote: { key: 'enc-q1', capacity: 500, power: 200, gold: 1000, eligible: true, reason: null, payloads: [{ key: 'feather', name: 'Feather Weight', cost: 200, forced: [] }], priceBreakdown: enchantLines },
+      },
+    };
+    const dialogue = (m) => ({
+      ...offering(['trade', 'Trade'], ['buy-spells', 'Buy spells'], ['spell-maker', 'Make spells'], ['item-maker', 'Enchant']),
+      revision: 'dlg-tip-1', targetLabel: 'Master Smith', greeting: 'Welcome.', tone: 'normal', question: null, reply: null, topics: [], diagnostics: [], merchant: m,
+    });
+
+    f.publish({ activation: { mode: 'talk', dialogue: dialogue(merchant) }, spells });
+    f.openService('trade');
+
+    const shop = f.root.querySelector('.dagger-dialogue-merchant');
+    const stockRow = shop.querySelector('[data-transfer-side="source"] [data-transfer-item="stack:shop.sword"]');
+    const buyTotal = stockRow.querySelector('.dagger-transfer-total');
+    const buyBtn = stockRow.querySelector('[data-transfer-command="merchant-buy"]');
+    assert.equal(buyTotal.dataset.tooltip, buyLines.join('\n'));
+    assert.equal(buyBtn.dataset.tooltip, buyLines.join('\n'));
+    // Keyboard/controller focus on Buy displays the rendered parchment tooltip with all lines.
+    buyBtn.dispatchEvent(new window.FocusEvent('focusin', { bubbles: true }));
+    const tip = f.root.querySelector('.dagger-tooltip');
+    assert.equal(tip.hidden, false);
+    assert.equal(tip.textContent, buyLines.join('\n'));
+
+    // Stepping quantity to 3 switches the tooltip to the stack quote's authoritative breakdown.
+    const qtyInput = stockRow.querySelector('.dagger-stepper input');
+    qtyInput.value = '3';
+    qtyInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    f.publish({
+      activation: {
+        mode: 'talk',
+        dialogue: dialogue({ ...merchant, quote: { item: 'stack:shop.sword', side: 'buy', amount: 3, total: 690, confirm: true, priceBreakdown: stackLines } }),
+      },
+      spells,
+    });
+    assert.equal(buyTotal.dataset.tooltip, stackLines.join('\n'));
+    assert.equal(buyBtn.dataset.tooltip, stackLines.join('\n'));
+
+    // Player pack row: sell, repair, and identify each carry their own breakdown tooltip.
+    const packRow = shop.querySelector('[data-transfer-side="pack"] [data-transfer-item="unique:21"]');
+    assert.equal(packRow.querySelector('.dagger-transfer-total').dataset.tooltip, sellLines.join('\n'));
+    assert.equal(packRow.querySelector('[data-transfer-command="merchant-sell"]').dataset.tooltip, sellLines.join('\n'));
+    assert.equal(packRow.querySelector('[data-transfer-command="merchant-repair"]').dataset.tooltip, repairLines.join('\n'));
+    assert.equal(packRow.querySelector('[data-transfer-command="merchant-identify"]').dataset.tooltip, identifyLines.join('\n'));
+
+    // Magic services: spell sales, spell maker, and item maker each attach their breakdown tooltip.
+    assert.equal(f.root.querySelector('[data-action="spell-buy"][data-spell="spell.002"]').dataset.tooltip, spellLines.join('\n'));
+    assert.equal(f.root.querySelector('.dagger-dialogue-spellmaker [role="status"]').dataset.tooltip, makerLines.join('\n'));
+    const spellMakerBuy = [...f.root.querySelectorAll('.dagger-dialogue-spellmaker button')].find(b => b.textContent === 'Buy constructed spell');
+    assert.equal(spellMakerBuy.dataset.tooltip, makerLines.join('\n'));
+    const itemMakerBuy = [...f.root.querySelectorAll('.dagger-dialogue-itemmaker button')].find(b => b.textContent === 'Enchant item');
+    assert.equal(itemMakerBuy.dataset.tooltip, enchantLines.join('\n'));
+  } finally { f.dispose(); }
+});
+
 test('create item presents authoritative paid choices and submits a selection or a cancel without optimistic inventory', () => {
   const f = fixture();
   try {

@@ -104,9 +104,27 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     internal void BindActorVouchBonus(Func<long, int> lookup) =>
         _actorVouchBonus = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
+    private Func<DaggerfallNpc, IReadOnlyList<DaggerfallReactionShiftCause>>? _officeStandingDetails;
+
     /// <summary>Binds how a person's office, answering to a board seat, receives the player (<see cref="DaggerfallOfficeAllegiance.ReactionShift"/>).</summary>
-    internal void BindOfficeStanding(Func<DaggerfallNpc, int> lookup) =>
+    internal void BindOfficeStanding(Func<DaggerfallNpc, int> lookup)
+    {
         _officeStanding = lookup ?? throw new ArgumentNullException(nameof(lookup));
+        _officeStandingDetails = null;
+    }
+
+    /// <summary>Binds detailed office-allegiance reaction shifts so price breakdowns report each office's exact contribution (#11158).</summary>
+    internal void BindOfficeStanding(Func<DaggerfallNpc, IReadOnlyList<DaggerfallReactionShiftCause>> lookup)
+    {
+        _officeStandingDetails = lookup ?? throw new ArgumentNullException(nameof(lookup));
+        _officeStanding = npc =>
+        {
+            int sum = 0;
+            foreach (DaggerfallReactionShiftCause shift in lookup(npc))
+                sum += shift.Delta;
+            return sum;
+        };
+    }
 
     /// <summary>
     /// Standing over <paramref name="catalog"/>, rippling through the faction tree as <paramref name="liege"/> has it; without
@@ -237,9 +255,34 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
             : ReactionForFaction(factionId) with { ActorDisposition = disposition, VouchBonus = vouchBonus };
     }
 
-    /// <summary>Bounded trade reaction in [-100, 100] combining the seller's personal standing and faction standing.</summary>
+    /// <summary>Bounded trade reaction in [-100, 100] combining the seller's personal standing, faction standing, and office allegiance.</summary>
     internal int TradeReactionForNpc(DaggerfallNpc npc, FactionComponent? factions = null) =>
-        Math.Clamp(ReactionForNpc(npc, factions).Value, MinimumReputation, MaximumReputation);
+        DescribeTradeReactionForNpc(npc, factions).Total;
+
+    /// <summary>
+    /// Computes the bounded trade reaction for <paramref name="npc"/> together with the exact split between base
+    /// social standing (faction + disposition + vouch) and board office allegiance shifts (#11158).
+    /// </summary>
+    internal DaggerfallTradeReactionBreakdown DescribeTradeReactionForNpc(DaggerfallNpc npc, FactionComponent? factions = null)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        int factionId = ResolveNpcReactionFactionId(npc, factions);
+        int actorDisposition = _actorDisposition?.Invoke(npc.DurableId) ?? 0;
+        IReadOnlyList<DaggerfallReactionShiftCause> officeShifts = _officeStandingDetails?.Invoke(npc)
+            ?? (_officeStanding is not null && _officeStanding(npc) is int rawOffice && rawOffice != 0
+                ? [new DaggerfallReactionShiftCause("Local office allegiance", rawOffice)]
+                : []);
+        int officeTotal = 0;
+        foreach (DaggerfallReactionShiftCause shift in officeShifts)
+            officeTotal += shift.Delta;
+        int vouchBonus = _actorVouchBonus?.Invoke(npc.DurableId) ?? 0;
+        DaggerfallFactionReaction baseReaction = !_catalog.Factions.ContainsKey(factionId)
+            ? new(factionId, 0, 0, actorDisposition, vouchBonus)
+            : ReactionForFaction(factionId) with { ActorDisposition = actorDisposition, VouchBonus = vouchBonus };
+        int baseSocial = baseReaction.Value;
+        int total = Math.Clamp(checked(baseSocial + officeTotal), MinimumReputation, MaximumReputation);
+        return new(total, baseSocial, officeShifts);
+    }
 
     /// <summary>Changes player standing with a social group and clamps it to the current social contract.</summary>
     internal int ChangePersonalReputation(int socialGroup, int amount)

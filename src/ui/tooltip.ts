@@ -40,9 +40,17 @@ export function mountTooltips(root: HTMLElement): { dispose(): void } {
     (target.closest('dialog[open]') ?? root).append(tip);
     tip.hidden = false;
     const rect = target.getBoundingClientRect();
-    const below = rect.bottom + 6;
-    tip.style.left = `${Math.max(4, rect.left)}px`;
-    tip.style.top = `${below}px`;
+    const tipRect = tip.getBoundingClientRect();
+    const vw = typeof window !== 'undefined' && window.innerWidth > 0 ? window.innerWidth : 1920;
+    const vh = typeof window !== 'undefined' && window.innerHeight > 0 ? window.innerHeight : 1080;
+    const maxLeft = Math.max(4, vw - tipRect.width - 8);
+    const left = Math.min(Math.max(4, rect.left), maxLeft);
+    let top = rect.bottom + 6;
+    if (tipRect.height > 0 && top + tipRect.height > vh - 8 && rect.top - tipRect.height - 6 >= 4) {
+      top = rect.top - tipRect.height - 6;
+    }
+    tip.style.left = `${left}px`;
+    tip.style.top = `${Math.max(4, top)}px`;
   };
   const hide = (target: Element | null): void => {
     if (target !== null && target !== shownFor) return;

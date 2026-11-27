@@ -169,7 +169,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("offers", builder.Array(sale.Offers.Select(offer => builder.Object(
                         ("key", builder.String(offer.Key)), ("name", builder.String(offer.Name)),
                         ("castingCost", builder.Number(offer.CastingCost)), ("price", builder.Number(checked((long)offer.Price))),
-                        ("known", builder.Boolean(offer.Known)))).ToArray())))),
+                        ("known", builder.Boolean(offer.Known)),
+                        ("priceBreakdown", PriceBreakdown(builder, offer.PriceBreakdown)))).ToArray())))),
                 ("summoning", frame.Spells.Summoning is not { } summon ? builder.Null() : builder.Object(
                     ("revision",builder.String(summon.Revision)),("provider",builder.String(summon.Provider)),
                     ("offerRevision",summon.OfferRevision is null ? builder.Null() : builder.String(summon.OfferRevision)),
@@ -808,7 +809,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("magnitudePerLevel", builder.Number(effect.MagnitudePerLevel)))).ToArray())))),
         ("quote", maker.Quote is not { } quote ? builder.Null() : builder.Object(("key", builder.String(quote.Key)),
             ("gold", builder.Number(quote.Gold)), ("spellPoints", builder.Number(quote.SpellPoints)), ("eligible", builder.Boolean(quote.Eligible)),
-            ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallSpellbookPanel.SpellMakerOutcomeText(quote.Reason))))));
+            ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallSpellbookPanel.SpellMakerOutcomeText(quote.Reason))),
+            ("priceBreakdown", PriceBreakdown(builder, quote.PriceBreakdown)))));
 
     private static uint ItemMaker(UiValueBuilder builder, DaggerfallItemMakerView maker) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)), ("eligible", builder.Boolean(maker.Eligible)),
@@ -820,7 +822,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("quote", maker.Quote is not { } quote ? builder.Null() : builder.Object(("key", builder.String(quote.Key)),
             ("capacity", builder.Number(quote.Capacity)), ("power", builder.Number(quote.Power)), ("gold", builder.Number(quote.Gold)),
             ("eligible", builder.Boolean(quote.Eligible)), ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallMakerPanels.ItemMakerOutcomeText(quote.Reason))),
-            ("payloads", builder.Array(quote.Payloads.Select(setting => ItemMakerSetting(builder, setting)).ToArray())))));
+            ("payloads", builder.Array(quote.Payloads.Select(setting => ItemMakerSetting(builder, setting)).ToArray())),
+            ("priceBreakdown", PriceBreakdown(builder, quote.PriceBreakdown)))));
 
     internal static uint PotionMaker(UiValueBuilder builder, DaggerfallPotionMakerView maker) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)), ("eligible", builder.Boolean(maker.Eligible)),
@@ -842,11 +845,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("identifyAvailable", builder.Boolean(merchant.CanIdentify)),
         ("result", builder.String(merchant.Result)),
         ("largeTradeGold", builder.Number(DaggerfallMerchantService.LargeTradeGold)),
-        // The ruleset's price for the amount last chosen on a row: the line total and whether it asks first.
+        // The ruleset's price for the amount last chosen on a row: the line total, breakdown, and whether it asks first.
         ("quote", merchant.Quote is not { } quote ? builder.Null() : builder.Object(
             ("item", builder.String(quote.Item)), ("side", builder.String(quote.Buying ? "buy" : "sell")),
             ("amount", builder.Number(quote.Amount)), ("total", builder.Number(quote.Total)),
-            ("confirm", builder.Boolean(quote.NeedsConfirmation)))),
+            ("confirm", builder.Boolean(quote.NeedsConfirmation)),
+            ("priceBreakdown", PriceBreakdown(builder, quote.PriceBreakdown)))),
         ("stock", builder.Array(merchant.Stock.Select(item => MerchantItem(builder, item, false, false)).ToArray())),
         ("playerItems", builder.Array(merchant.PlayerItems.Select(item => MerchantItem(builder, item,
             merchant.CanRepair && item.RepairCost is not null, merchant.CanIdentify && item.IdentifyCost is not null)).ToArray())),
@@ -859,6 +863,11 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("label", builder.String(repair.Label)),
             ("status", builder.String(repair.Status)))).ToArray())));
 
+    private static uint PriceBreakdown(UiValueBuilder builder, DaggerfallPriceBreakdown? breakdown) =>
+        breakdown is null
+            ? builder.Null()
+            : builder.Array(breakdown.FormatLines().Select(builder.String).ToArray());
+
     private static uint MerchantItem(UiValueBuilder builder, DaggerfallMerchantItemView item, bool canRepair, bool canIdentify) => builder.Object(
         ("key", builder.String(item.Key)),
         ("definition", builder.String(item.Definition)),
@@ -867,6 +876,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("quantity", builder.String(item.Quantity.ToString(CultureInfo.InvariantCulture))),
         ("maximumQuantity", builder.Number(item.Key.StartsWith("stack:", StringComparison.Ordinal) ? checked((long)item.Quantity) : 1)),
         ("unitPrice", builder.String(item.UnitPrice.ToString(CultureInfo.InvariantCulture))),
+        ("priceBreakdown", PriceBreakdown(builder, item.PriceBreakdown)),
         ("currentCondition", builder.Number(item.CurrentCondition)),
         ("maximumCondition", builder.Number(item.MaximumCondition)),
         ("identified", builder.Boolean(item.Identified)),
@@ -878,7 +888,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("canRepair", builder.Boolean(canRepair)),
         ("canIdentify", builder.Boolean(canIdentify)),
         ("repairCost", canRepair && item.RepairCost is ulong repairCost ? builder.String(repairCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()),
-        ("identifyCost", canIdentify && item.IdentifyCost is ulong identifyCost ? builder.String(identifyCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()));
+        ("repairPriceBreakdown", canRepair && item.RepairCost is not null ? PriceBreakdown(builder, item.RepairPriceBreakdown) : builder.Null()),
+        ("identifyCost", canIdentify && item.IdentifyCost is ulong identifyCost ? builder.String(identifyCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()),
+        ("identifyPriceBreakdown", canIdentify && item.IdentifyCost is not null ? PriceBreakdown(builder, item.IdentifyPriceBreakdown) : builder.Null()));
 
     private static uint Retainer(UiValueBuilder builder, DaggerfallRetainerView retainer) => builder.Object(
         ("revision", builder.String(retainer.Revision)),

@@ -25,14 +25,15 @@ internal sealed record DaggerfallTradeLine(
     DaggerfallItemInstanceMetadata Metadata,
     ulong Quantity);
 
-/// <summary>The calculated shop subtotal and final player price. A quote does not commit a transaction.</summary>
+/// <summary>The calculated shop subtotal, final player price, and exact line-by-line price breakdown. A quote does not commit a transaction.</summary>
 internal sealed record DaggerfallTradeQuote(
     DaggerfallTradeSide Side,
     int? Region,
     int ShopQuality,
     int ShopSubtotal,
     int Total,
-    IReadOnlyList<DaggerfallTradeLine> Lines);
+    IReadOnlyList<DaggerfallTradeLine> Lines,
+    DaggerfallPriceBreakdown? Breakdown = null);
 
 internal sealed record DaggerfallTradeQuoteResult(
     DaggerfallTradeQuote? Quote,
@@ -47,26 +48,40 @@ internal sealed record DaggerfallTradeQuoteResult(
 
 /// <summary>
 /// The product's buy/sell quote caller. It reads caller-selected Engine inventory rows and item
-/// metadata, calculates a price, and leaves inventory and currency mutation to their owners.
+/// metadata, calculates a price and its exact breakdown in one pass, and leaves inventory and currency
+/// mutation to their owners.
 /// </summary>
 internal sealed class DaggerfallTradeQuoteService
 {
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallItemValuation _valuation;
     private readonly DaggerfallRegionalPriceState _regionalPrices;
-    private readonly Func<int, int>? _regionalConditionSurcharge;
+    private readonly Func<int, IReadOnlyList<DaggerfallGoodsPriceFactor>>? _regionalConditionFactors;
 
     internal DaggerfallTradeQuoteService(DaggerfallDefinitions definitions, DaggerfallItemValuation valuation, DaggerfallRegionalPriceState regionalPrices,
-        Func<int, int>? regionalConditionSurcharge = null)
+        Func<int, int>? regionalConditionSurcharge = null,
+        Func<int, IReadOnlyList<DaggerfallGoodsPriceFactor>>? regionalConditionFactors = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _valuation = valuation ?? throw new ArgumentNullException(nameof(valuation));
         _regionalPrices = regionalPrices ?? throw new ArgumentNullException(nameof(regionalPrices));
-        _regionalConditionSurcharge = regionalConditionSurcharge;
+        _regionalConditionFactors = regionalConditionFactors
+            ?? (regionalConditionSurcharge is null
+                ? null
+                : region =>
+                {
+                    int delta = regionalConditionSurcharge(region);
+                    if (delta == 0)
+                        return [];
+                    string regionLabel = RegionLabel(region);
+                    string reason = string.IsNullOrEmpty(regionLabel) ? "regional conditions" : $"regional conditions in {regionLabel}";
+                    return [new DaggerfallGoodsPriceFactor(reason, delta, 1)];
+                });
     }
 
     internal DaggerfallTradeQuoteResult Quote(DaggerfallTradeSide side, IReadOnlyList<DaggerfallTradeLine> lines,
-        int shopQuality, int playerMercantile, int playerPersonality, int reaction, int? region, int? originRegion = null)
+        int shopQuality, int playerMercantile, int playerPersonality, int reaction, int? region, int? originRegion = null,
+        DaggerfallTradeReactionBreakdown? reactionBreakdown = null)
     {
         if (side is not (DaggerfallTradeSide.BuyFromMerchant or DaggerfallTradeSide.SellToMerchant))
             return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, "Trade side is not supported.");
@@ -82,15 +97,105 @@ internal sealed class DaggerfallTradeQuoteService
         if (originRegion is int selectedOrigin && (selectedOrigin < 0 || selectedOrigin >= DaggerfallRegionalEconomyPolicy.RegionCount))
             return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidInput, "Origin region is outside the admitted classic range.");
 
-        int EffectiveRegionFactor(int regionIndex) =>
-            Math.Clamp(
-                _regionalPrices.AdjustmentForRegion(regionIndex) + (_regionalConditionSurcharge?.Invoke(regionIndex) ?? 0),
-                DaggerfallRegionalEconomyPolicy.MinimumRegionalAdjustment,
-                DaggerfallRegionalEconomyPolicy.MaximumRegionalAdjustment);
+        static int ClampFactor(int factor) => Math.Clamp(
+            factor,
+            DaggerfallRegionalEconomyPolicy.MinimumRegionalAdjustment,
+            DaggerfallRegionalEconomyPolicy.MaximumRegionalAdjustment);
 
-        long subtotal = 0;
+        IReadOnlyList<DaggerfallGoodsPriceFactor> ConditionFactors(int regionIndex) =>
+            _regionalConditionFactors?.Invoke(regionIndex) ?? [];
+
+        int ConditionSum(IReadOnlyList<DaggerfallGoodsPriceFactor> factors)
+        {
+            int sum = 0;
+            foreach (DaggerfallGoodsPriceFactor factor in factors)
+                sum += factor.FactorDelta;
+            return sum;
+        }
+
+        // Build ordered regional-factor stages once so both the final subtotal and the line-by-line
+        // breakdown step through the exact same regional price factor arithmetic.
+        List<(string Reason, string Detail, int TargetFactor)> regionalSteps = [];
+        int finalRegionFactor = 0;
+        if (region is int regionIndex)
+        {
+            int localClassic = _regionalPrices.AdjustmentForRegion(regionIndex);
+            IReadOnlyList<DaggerfallGoodsPriceFactor> localConditions = ConditionFactors(regionIndex);
+            int localEffective = ClampFactor(localClassic + ConditionSum(localConditions));
+
+            if (originRegion is int caravanOrigin && caravanOrigin != regionIndex)
+            {
+                int originClassic = _regionalPrices.AdjustmentForRegion(caravanOrigin);
+                IReadOnlyList<DaggerfallGoodsPriceFactor> originConditions = ConditionFactors(caravanOrigin);
+                int originEffective = ClampFactor(originClassic + ConditionSum(originConditions));
+                finalRegionFactor = ClampFactor((localEffective + originEffective) / 2);
+
+                int runningLocal = DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment;
+                int runningOrigin = DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment;
+                int classicMid = ClampFactor((localClassic + originClassic) / 2);
+                if (classicMid != DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment)
+                {
+                    regionalSteps.Add((
+                        $"caravan markets ({RegionLabel(originRegion.Value)} & {RegionLabel(regionIndex)})",
+                        DaggerfallPriceBreakdown.FormatSignedPercentFromThousandths(classicMid - DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment),
+                        classicMid));
+                }
+                runningLocal = localClassic;
+                runningOrigin = originClassic;
+
+                foreach (DaggerfallGoodsPriceFactor factor in localConditions)
+                {
+                    runningLocal += factor.FactorDelta;
+                    int nextMid = ClampFactor((ClampFactor(runningLocal) + ClampFactor(runningOrigin)) / 2);
+                    regionalSteps.Add((
+                        $"{factor.Reason} (caravan share)",
+                        DaggerfallPriceBreakdown.FormatSignedPercentFromThousandths(factor.FactorDelta / 2),
+                        nextMid));
+                }
+                foreach (DaggerfallGoodsPriceFactor factor in originConditions)
+                {
+                    runningOrigin += factor.FactorDelta;
+                    int nextMid = ClampFactor((ClampFactor(runningLocal) + ClampFactor(runningOrigin)) / 2);
+                    regionalSteps.Add((
+                        $"{factor.Reason} (caravan origin)",
+                        DaggerfallPriceBreakdown.FormatSignedPercentFromThousandths(factor.FactorDelta / 2),
+                        nextMid));
+                }
+            }
+            else
+            {
+                finalRegionFactor = localEffective;
+                int running = DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment;
+                if (localClassic != DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment)
+                {
+                    running = localClassic;
+                    string place = RegionLabel(regionIndex);
+                    string label = string.IsNullOrEmpty(place) ? "regional market" : $"regional market in {place}";
+                    regionalSteps.Add((
+                        label,
+                        DaggerfallPriceBreakdown.FormatSignedPercentFromThousandths(localClassic - DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment),
+                        ClampFactor(running)));
+                }
+                else
+                {
+                    running = localClassic;
+                }
+                foreach (DaggerfallGoodsPriceFactor factor in localConditions)
+                {
+                    running += factor.FactorDelta;
+                    regionalSteps.Add((
+                        factor.Reason,
+                        DaggerfallPriceBreakdown.FormatSignedPercentFromThousandths(factor.FactorDelta),
+                        ClampFactor(running)));
+                }
+            }
+        }
+
         try
         {
+            List<(int UnwornValue, int WornValue, long Quantity, int CurCondition, int MaxCondition)> pricedLines = [];
+            long unwornTotal = 0;
+            long wornTotal = 0;
             foreach (DaggerfallTradeLine? line in lines)
             {
                 if (line?.Definition is null || line.Metadata is null || line.Quantity == 0)
@@ -100,37 +205,128 @@ internal sealed class DaggerfallTradeQuoteService
                         $"Quantity {line.Quantity} exceeds the admitted maximum {line.Definition.MaximumQuantity} for '{line.Definition.Id.Value}'.");
 
                 DaggerfallItemInstanceMetadata metadata = line.Metadata.Validate();
-                int itemValue = TradeValue(line.Definition, metadata);
-                if (metadata.MaximumCondition > 0)
-                    itemValue = checked((int)(checked((long)itemValue * metadata.CurrentCondition) / metadata.MaximumCondition));
-
-                int regionFactor;
-                if (region is int regionIndex)
-                {
-                    int localFactor = EffectiveRegionFactor(regionIndex);
-                    regionFactor = originRegion is int caravanOrigin && caravanOrigin != regionIndex
-                        ? Math.Clamp(
-                            (localFactor + EffectiveRegionFactor(caravanOrigin)) / 2,
-                            DaggerfallRegionalEconomyPolicy.MinimumRegionalAdjustment,
-                            DaggerfallRegionalEconomyPolicy.MaximumRegionalAdjustment)
-                        : localFactor;
-                }
-                else
-                {
-                    regionFactor = 0;
-                }
-                int unitCost = DaggerfallRegionalEconomyPolicy.CalculateCost(itemValue, shopQuality, region, regionFactor);
-                long lineCost = checked((long)unitCost * checked((long)line.Quantity));
-                subtotal = checked(subtotal + lineCost);
-                if (subtotal > int.MaxValue)
-                    return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.Overflow, "The selected items exceed the supported shop subtotal.");
+                int unwornValue = TradeValue(line.Definition, metadata);
+                int itemValue = metadata.MaximumCondition > 0
+                    ? checked((int)(checked((long)unwornValue * metadata.CurrentCondition) / metadata.MaximumCondition))
+                    : unwornValue;
+                long qty = checked((long)line.Quantity);
+                pricedLines.Add((unwornValue, itemValue, qty, metadata.CurrentCondition, metadata.MaximumCondition));
+                unwornTotal = checked(unwornTotal + checked((long)unwornValue * qty));
+                wornTotal = checked(wornTotal + checked((long)itemValue * qty));
             }
 
-            int shopSubtotal = checked((int)subtotal);
+            int SubtotalAtFactor(int? targetRegion, int factor)
+            {
+                long sum = 0;
+                foreach (var item in pricedLines)
+                {
+                    int unitCost = DaggerfallRegionalEconomyPolicy.CalculateCost(item.WornValue, shopQuality, targetRegion, factor);
+                    sum = checked(sum + checked((long)unitCost * item.Quantity));
+                    if (sum > int.MaxValue)
+                        throw new OverflowException("The selected items exceed the supported shop subtotal.");
+                }
+                return checked((int)sum);
+            }
+
+            int shopNeutral = SubtotalAtFactor(region, DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment);
+            int shopSubtotal = region is null
+                ? shopNeutral
+                : SubtotalAtFactor(region, finalRegionFactor);
+
             bool selling = side == DaggerfallTradeSide.SellToMerchant;
             int total = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(shopSubtotal, shopQuality, selling,
                 playerMercantile, playerPersonality, reaction);
-            DaggerfallTradeQuote quote = new(side, region, shopQuality, shopSubtotal, total, Array.AsReadOnly(lines.ToArray()));
+
+            // Assemble exact telescoping breakdown whose steps sum identically to `total`.
+            List<DaggerfallPriceLine> steps = [];
+            int baseGold = unwornTotal <= int.MaxValue ? checked((int)unwornTotal) : int.MaxValue;
+            int runningGold = baseGold;
+
+            if (wornTotal != unwornTotal)
+            {
+                int wornGold = checked((int)wornTotal);
+                string wearReason = pricedLines.Count == 1 && pricedLines[0].MaxCondition > 0
+                    ? $"Item condition ({pricedLines[0].CurCondition}/{pricedLines[0].MaxCondition})"
+                    : "Item wear";
+                steps.Add(new(wearReason, wornGold - runningGold));
+                runningGold = wornGold;
+            }
+
+            if (shopNeutral != runningGold)
+            {
+                steps.Add(new(FormatShopQualityLabel(shopQuality), shopNeutral - runningGold));
+                runningGold = shopNeutral;
+            }
+
+            if (region is not null && regionalSteps.Count > 0)
+            {
+                foreach ((string reason, string detail, int targetFactor) in regionalSteps)
+                {
+                    int nextShop = SubtotalAtFactor(region, targetFactor);
+                    int delta = nextShop - runningGold;
+                    if (delta != 0)
+                    {
+                        steps.Add(new(reason, delta, detail));
+                        runningGold = nextShop;
+                    }
+                }
+            }
+
+            if (runningGold != shopSubtotal)
+            {
+                steps.Add(new("Regional price clamp", shopSubtotal - runningGold));
+                runningGold = shopSubtotal;
+            }
+
+            int atNeutralReaction = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(shopSubtotal, shopQuality, selling,
+                playerMercantile, playerPersonality, 0);
+            if (atNeutralReaction != runningGold)
+            {
+                string haggleLabel = selling ? "Merchant offer & mercantile" : "Mercantile & haggling";
+                steps.Add(new(haggleLabel, atNeutralReaction - runningGold));
+                runningGold = atNeutralReaction;
+            }
+
+            DaggerfallTradeReactionBreakdown effectiveReaction = reactionBreakdown ?? DaggerfallTradeReactionBreakdown.Plain(reaction);
+            int unclampedReaction = effectiveReaction.BaseSocialReaction;
+            int clampedStanding = Math.Clamp(unclampedReaction, DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
+            int atStanding = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(shopSubtotal, shopQuality, selling,
+                playerMercantile, playerPersonality, clampedStanding);
+            if (atStanding != runningGold)
+            {
+                string standingLabel = clampedStanding >= 0
+                    ? $"Standing with merchant (+{clampedStanding})"
+                    : $"Standing with merchant (\u2212{Math.Abs(clampedStanding)})";
+                steps.Add(new(standingLabel, atStanding - runningGold));
+                runningGold = atStanding;
+            }
+
+            foreach (DaggerfallReactionShiftCause shift in effectiveReaction.OfficeShifts)
+            {
+                unclampedReaction += shift.Delta;
+                int clampedNext = Math.Clamp(unclampedReaction, DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
+                int nextPrice = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(shopSubtotal, shopQuality, selling,
+                    playerMercantile, playerPersonality, clampedNext);
+                int delta = nextPrice - runningGold;
+                if (delta != 0)
+                {
+                    steps.Add(new(shift.Label, delta));
+                    runningGold = nextPrice;
+                }
+            }
+
+            if (runningGold != total)
+            {
+                steps.Add(new("Standing adjustment", total - runningGold));
+                runningGold = total;
+            }
+
+            string baseLabel = lines.Count == 1 && lines[0].Quantity > 1
+                ? $"Base value ({lines[0].Quantity} \u00D7 {pricedLines[0].UnwornValue:N0} gold)"
+                : "Base value";
+            DaggerfallPriceBreakdown breakdown = new(baseLabel, baseGold, steps, total);
+
+            DaggerfallTradeQuote quote = new(side, region, shopQuality, shopSubtotal, total, Array.AsReadOnly(lines.ToArray()), breakdown);
             return new(quote, DaggerfallTradeQuoteFailure.None, null);
         }
         catch (OverflowException exception)
@@ -146,6 +342,19 @@ internal sealed class DaggerfallTradeQuoteService
             return DaggerfallTradeQuoteResult.Rejected(DaggerfallTradeQuoteFailure.InvalidItemMetadata, exception.Message);
         }
     }
+
+    private string RegionLabel(int region)
+    {
+        string name = _definitions.BuildingNames.RegionName(region);
+        return string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+    }
+
+    private static string FormatShopQualityLabel(int shopQuality) => shopQuality switch
+    {
+        <= 5 => "Shop markup (modest shop)",
+        <= 13 => "Shop markup (average shop)",
+        _ => "Shop markup (fine shop)",
+    };
 
     private int TradeValue(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata)
     {

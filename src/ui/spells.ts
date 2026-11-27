@@ -202,7 +202,9 @@ function drawSpellSales(root:HTMLElement,view:SpellbookProjection|null):void {
   for(const offer of view.sale.offers) {
     const buy=document.createElement('button');buy.type='button';buy.dataset.action='spell-buy';buy.dataset.spell=offer.key;
     buy.dataset.revision=view.sale.revision;buy.dataset.price=String(offer.price);buy.disabled=offer.known;
-    buy.textContent=`${offer.name} · ${offer.price} gold · ${offer.castingCost} magicka${offer.known ? ' · Known' : ''}`;root.append(buy);
+    buy.textContent=`${offer.name} · ${offer.price} gold · ${offer.castingCost} magicka${offer.known ? ' · Known' : ''}`;
+    if(offer.priceBreakdown?.length) buy.dataset.tooltip=offer.priceBreakdown.join('\n');
+    root.append(buy);
     const info=document.createElement('button');info.type='button';info.dataset.action='spell-info';info.dataset.spell=offer.key;
     info.textContent=`Info ${offer.name}`;root.append(info);
   }

@@ -369,10 +369,18 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
   const sideOf = (side: TransferSideName): 'buy' | 'sell' => side === 'source' ? 'buy' : 'sell';
   // The ruleset's price for an amount: one item is the row's own quote; more waits for the ruleset to
   // quote the whole line, which the trade formula rounds once rather than per item.
+  const breakdownText = (lines: readonly string[] | null | undefined): string | null =>
+    lines && lines.length > 0 ? lines.join('\n') : null;
   const priceOf = (side: TransferSideName, item: MerchantItemProjection, amount: number): number | null => {
     if (amount === 1) return Number(item.unitPrice);
     const quote = current?.quote;
     return quote && quote.item === item.key && quote.side === sideOf(side) && quote.amount === amount ? quote.total : null;
+  };
+  const priceTooltipOf = (side: TransferSideName, item: MerchantItemProjection, amount: number): string | null => {
+    if (amount === 1) return breakdownText(item.priceBreakdown);
+    const quote = current?.quote;
+    return quote && quote.item === item.key && quote.side === sideOf(side) && quote.amount === amount
+      ? breakdownText(quote.priceBreakdown) : null;
   };
   const quoteFor = (side: TransferSideName, key: string, amount: number): void => {
     if (current !== null && amount > 1) send({ action: 'merchant-quote', revision: current.revision, item: key, key: sideOf(side), amount });
@@ -419,7 +427,8 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
       stealable: commands.some(command => command.id === 'merchant-shoplift'),
       quantity: item.maximumQuantity > 1 ? String(item.quantity) : null,
       maximumQuantity: item.maximumQuantity, facts, commands, refusal: item.refusal ?? null,
-      price: commands.some(command => command.takesAmount && command.id !== 'merchant-shoplift') ? amount => priceOf(seller ? 'pack' : 'source', item, amount) : undefined };
+      price: commands.some(command => command.takesAmount && command.id !== 'merchant-shoplift') ? amount => priceOf(seller ? 'pack' : 'source', item, amount) : undefined,
+      priceTooltip: commands.some(command => command.takesAmount && command.id !== 'merchant-shoplift') ? amount => priceTooltipOf(seller ? 'pack' : 'source', item, amount) : undefined };
   };
 
   return {
@@ -437,8 +446,8 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
         pack: { title: 'Your items', empty: 'You carry nothing this shop deals in.',
           rows: value.sellAvailable || value.repairAvailable || value.identifyAvailable ? value.playerItems.map(item => row(item, [
             ...(value.sellAvailable && item.canSell ? [{ id: 'merchant-sell', label: 'Sell', takesAmount: true }] : []),
-            ...(item.canRepair === true ? [{ id: 'merchant-repair', label: item.repairCost == null ? 'Repair' : `Repair · ${item.repairCost} gold` }] : []),
-            ...(item.canIdentify === true ? [{ id: 'merchant-identify', label: item.identifyCost == null ? 'Identify' : `Identify · ${item.identifyCost} gold` }] : []),
+            ...(item.canRepair === true ? [{ id: 'merchant-repair', label: item.repairCost == null ? 'Repair' : `Repair · ${item.repairCost} gold`, tooltip: breakdownText(item.repairPriceBreakdown) }] : []),
+            ...(item.canIdentify === true ? [{ id: 'merchant-identify', label: item.identifyCost == null ? 'Identify' : `Identify · ${item.identifyCost} gold`, tooltip: breakdownText(item.identifyPriceBreakdown) }] : []),
           ], true)) : [] },
         takeAll: null,
       });

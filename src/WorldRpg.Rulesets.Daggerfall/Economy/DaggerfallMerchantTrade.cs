@@ -106,8 +106,8 @@ internal sealed class DaggerfallMerchantTrade(
     internal void Quote(string revision, string item, bool buying, ulong amount)
     {
         DaggerfallMerchantProviderContext? context = Provider(revision, buying ? "buy" : "sell");
-        _quote = context is not null && merchants.TradeTotal(context, revision, item, buying, amount) is long total
-            ? new(revision, item, buying, amount, total) : null;
+        _quote = context is not null && merchants.TradeQuote(context, revision, item, buying, amount) is { } quote
+            ? new(revision, item, buying, amount, quote.Total, quote.Breakdown) : null;
     }
 
     /// <summary>Applies a trade with the merchant on this revision.</summary>

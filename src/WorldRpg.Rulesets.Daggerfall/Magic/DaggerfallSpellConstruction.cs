@@ -10,7 +10,7 @@ internal sealed record DaggerfallSpellDraft(string Name, int Element, int RangeT
 internal sealed record DaggerfallSpellMakerEffect(string Key, int Type, int SubType, string School,
     bool Duration, bool Chance, bool Magnitude, int Targets, int Elements);
 internal sealed record DaggerfallSpellConstructionQuote(string Key, DaggerfallSpellDraft Draft,
-    int Gold, int SpellPoints, bool Eligible, string? Reason);
+    int Gold, int SpellPoints, bool Eligible, string? Reason, DaggerfallPriceBreakdown? PriceBreakdown = null);
 
 /// <summary>Classic construction settings over compiled effects and the common normalized catalog.</summary>
 internal static class DaggerfallSpellConstruction

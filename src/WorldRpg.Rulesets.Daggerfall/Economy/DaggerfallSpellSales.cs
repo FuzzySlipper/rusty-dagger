@@ -7,7 +7,8 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallSpellOffer(string Key, string Name, int CastingCost, ulong Price, bool Known);
+internal sealed record DaggerfallSpellOffer(string Key, string Name, int CastingCost, ulong Price, bool Known,
+    DaggerfallPriceBreakdown? PriceBreakdown = null);
 internal sealed record DaggerfallSpellSaleResult(bool Accepted, string Outcome, ulong Paid = 0);
 
 /// <summary>
@@ -18,7 +19,9 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
     DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
     DaggerfallCharacterState character, MechanicsInventoryCoordinator inventory, StatsComponent playerStats,
     Func<string, int?> castingCost, Func<DaggerfallCalendar> calendar,
-    Func<DaggerfallNpc, int>? tradeReaction = null, Func<int, int, int>? magicServicePrice = null)
+    Func<DaggerfallNpc, int>? tradeReaction = null, Func<int, int, int>? magicServicePrice = null,
+    Func<DaggerfallNpc, DaggerfallTradeReactionBreakdown>? tradeReactionBreakdown = null,
+    Func<int, int, string, (int Price, DaggerfallPriceBreakdown Breakdown)>? magicServiceQuote = null)
 {
     // DFLocation.Holidays.Witches_Festival, whose date is owned by the existing calendar.
     private const int WitchesFestival = 43;
@@ -31,7 +34,7 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
     internal DaggerfallSpellOffer[] Offers(DaggerfallServiceProvider provider, int quality)
     {
         if (!CanUse(provider)) return [];
-        int reaction = ResolveReaction(provider);
+        DaggerfallTradeReactionBreakdown reaction = ResolveReactionBreakdown(provider);
         return definitions.Magic.Spells.Values.Where(spell => spell.SpellsForSale).OrderBy(spell => spell.Name, StringComparer.Ordinal)
             .Select(spell => Offer(spell.Key, quality, reaction, provider.Site.Region)).OfType<DaggerfallSpellOffer>().ToArray();
     }
@@ -40,7 +43,7 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
     {
         if (!confirm) return new(false, "ConfirmationRequired");
         if (!CanUse(provider)) return new(false, "ProviderUnavailable");
-        var offer = Offer(key, quality, ResolveReaction(provider), provider.Site.Region);
+        var offer = Offer(key, quality, ResolveReactionBreakdown(provider), provider.Site.Region);
         if (offer is null) return new(false, "SpellUnavailable");
         if (offer.Known) return new(false, "AlreadyKnown");
         if (offer.Price != quotedPrice) return new(false, "PriceChanged");
@@ -67,22 +70,94 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
             DaggerfallConcreteGuildService.BuySpells, checked((int)calendar().DayNumber), new(provider)).CanUse;
     }
 
-    private int ResolveReaction(DaggerfallServiceProvider provider) =>
-        tradeReaction is not null && npcs.TryGet(provider.NpcId, out DaggerfallNpc? npc)
+    private DaggerfallTradeReactionBreakdown ResolveReactionBreakdown(DaggerfallServiceProvider provider)
+    {
+        if (!npcs.TryGet(provider.NpcId, out DaggerfallNpc? npc))
+            return DaggerfallTradeReactionBreakdown.Plain(0);
+        if (tradeReactionBreakdown is not null)
+            return tradeReactionBreakdown(npc);
+        int raw = tradeReaction is not null
             ? Math.Clamp(tradeReaction(npc), DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction)
             : 0;
+        return DaggerfallTradeReactionBreakdown.Plain(raw);
+    }
 
-    private DaggerfallSpellOffer? Offer(string key, int quality, int reaction, int region)
+    private DaggerfallSpellOffer? Offer(string key, int quality, DaggerfallTradeReactionBreakdown reaction, int region)
     {
         if (!definitions.Magic.Spells.TryGetValue(key, out var spell) || !spell.SpellsForSale || castingCost(key) is not int cost) return null;
-        int presented = checked(cost * 4);
-        if (calendar().GetHolidayId(0) == WitchesFestival) presented = Math.Max(1, presented >> 1);
-        var stats = playerStats;
-        int price = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(presented, quality, false,
-            Math.Clamp(stats.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100),
-            Math.Clamp(stats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), reaction);
-        price = magicServicePrice?.Invoke(region, price) ?? price;
-        return new(key, spell.Name, cost, checked((ulong)price), character.KnownSpells.Contains(key));
+        int basePresented = checked(cost * 4);
+        int presented = basePresented;
+        List<DaggerfallPriceLine> steps = [];
+        int running = basePresented;
+        if (calendar().GetHolidayId(0) == WitchesFestival)
+        {
+            presented = Math.Max(1, presented >> 1);
+            if (presented != running)
+            {
+                steps.Add(new("Witches Festival", presented - running, "\u221250%"));
+                running = presented;
+            }
+        }
+        int mercantile = Math.Clamp(playerStats.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100);
+        int personality = Math.Clamp(playerStats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100);
+        int clampedReaction = Math.Clamp(reaction.Total, DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
+
+        int atNeutral = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(presented, quality, false, mercantile, personality, 0);
+        if (atNeutral != running)
+        {
+            steps.Add(new("Mercantile & haggling", atNeutral - running));
+            running = atNeutral;
+        }
+
+        int unclamped = reaction.BaseSocialReaction;
+        int clampedStanding = Math.Clamp(unclamped, DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
+        int atStanding = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(presented, quality, false, mercantile, personality, clampedStanding);
+        if (atStanding != running)
+        {
+            string standingLabel = clampedStanding >= 0
+                ? $"Standing with provider (+{clampedStanding})"
+                : $"Standing with provider (\u2212{Math.Abs(clampedStanding)})";
+            steps.Add(new(standingLabel, atStanding - running));
+            running = atStanding;
+        }
+
+        foreach (DaggerfallReactionShiftCause shift in reaction.OfficeShifts)
+        {
+            unclamped += shift.Delta;
+            int clampedNext = Math.Clamp(unclamped, DaggerfallRegionalEconomyPolicy.MinimumReaction, DaggerfallRegionalEconomyPolicy.MaximumReaction);
+            int nextPrice = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(presented, quality, false, mercantile, personality, clampedNext);
+            if (nextPrice != running)
+            {
+                steps.Add(new(shift.Label, nextPrice - running));
+                running = nextPrice;
+            }
+        }
+
+        int beforeMagicCondition = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(presented, quality, false, mercantile, personality, clampedReaction);
+        if (beforeMagicCondition != running)
+        {
+            steps.Add(new("Standing adjustment", beforeMagicCondition - running));
+            running = beforeMagicCondition;
+        }
+
+        int price = beforeMagicCondition;
+        if (magicServiceQuote is not null)
+        {
+            (int adjusted, DaggerfallPriceBreakdown magicBreakdown) = magicServiceQuote(region, beforeMagicCondition, "Spell price");
+            foreach (DaggerfallPriceLine step in magicBreakdown.Steps)
+                steps.Add(step);
+            price = adjusted;
+        }
+        else if (magicServicePrice is not null)
+        {
+            int adjusted = magicServicePrice(region, beforeMagicCondition);
+            if (adjusted != beforeMagicCondition)
+                steps.Add(new("Magic service surcharge", adjusted - beforeMagicCondition));
+            price = adjusted;
+        }
+
+        DaggerfallPriceBreakdown breakdown = new("Base spell price", basePresented, steps, price);
+        return new(key, spell.Name, cost, checked((ulong)price), character.KnownSpells.Contains(key), breakdown);
     }
 
     private bool HasSpellbook() => inventory.Read().UniqueItems.Any(item =>

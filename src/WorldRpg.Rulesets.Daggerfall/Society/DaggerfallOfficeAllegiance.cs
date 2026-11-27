@@ -72,17 +72,17 @@ internal sealed class DaggerfallOfficeAllegiance(
         site is not null && Of(site, DaggerfallOfficeKind.WatchCaptain) is { } watch ? Standing(watch) : DaggerfallOfficeStanding.None;
 
     /// <summary>
-    /// The reaction shift <paramref name="npc"/> gives the player, as one of the people of an office of their town that
-    /// answers to a seat: positive for the seat's members, negative for its enemies, else 0.
+    /// Each office-allegiance reaction shift <paramref name="npc"/> applies to the player, with its player-facing label (#11158).
+    /// Covert offices describe only the visible influence so secret board holds are never leaked in player text.
     /// </summary>
-    internal int ReactionShift(DaggerfallNpc npc)
+    internal IReadOnlyList<DaggerfallReactionShiftCause> DescribeReactionShifts(DaggerfallNpc npc)
     {
         ArgumentNullException.ThrowIfNull(npc);
         if (board.Board.Regions.FirstOrDefault(held => held.CatalogRegion == npc.Site.Region) is not { } region
             || board.Town(region.Id) is not { } town || !string.Equals(town.Name, npc.Site.Location, StringComparison.Ordinal))
-            return 0;
+            return [];
         IReadOnlyList<DaggerfallLocalOffice> offices = officeLedger.ResolveLocalOffices(town);
-        int shift = 0;
+        List<DaggerfallReactionShiftCause> shifts = [];
         foreach (DaggerfallOfficeAllegianceView held in All(town).Where(held => held.Kind != DaggerfallOfficeKind.WatchCaptain))
         {
             bool ofThisOffice = held.Kind == DaggerfallOfficeKind.CourtFactor
@@ -90,15 +90,44 @@ internal sealed class DaggerfallOfficeAllegiance(
                 : offices.FirstOrDefault(office => office.Kind == held.Kind) is { } office
                     && social.Liege.Lineage(npc.Appearance.FactionId).Any(faction => faction.Id == office.OfficeFactionId);
             if (!ofThisOffice) continue;
-            shift += Standing(held) switch
+            DaggerfallOfficeStanding standing = Standing(held);
+            int delta = standing switch
             {
                 DaggerfallOfficeStanding.Member => tuning.OfficeMemberReaction,
                 DaggerfallOfficeStanding.Enemy => -tuning.OfficeEnemyReaction,
                 _ => 0,
             };
+            if (delta == 0) continue;
+            string officeTitle = OfficeLabel(held.Kind);
+            string label = held.Covert
+                ? (standing == DaggerfallOfficeStanding.Member ? $"{officeTitle} favor" : $"{officeTitle} hostility")
+                : (standing == DaggerfallOfficeStanding.Member
+                    ? $"{officeTitle} — {held.SeatName} (member)"
+                    : $"{officeTitle} — {held.SeatName} (enemy)");
+            shifts.Add(new(label, delta));
         }
+        return shifts;
+    }
+
+    /// <summary>
+    /// The reaction shift <paramref name="npc"/> gives the player, as one of the people of an office of their town that
+    /// answers to a seat: positive for the seat's members, negative for its enemies, else 0.
+    /// </summary>
+    internal int ReactionShift(DaggerfallNpc npc)
+    {
+        int shift = 0;
+        foreach (DaggerfallReactionShiftCause cause in DescribeReactionShifts(npc))
+            shift += cause.Delta;
         return shift;
     }
+
+    private static string OfficeLabel(DaggerfallOfficeKind kind) => kind switch
+    {
+        DaggerfallOfficeKind.CourtFactor => "Court Factor",
+        DaggerfallOfficeKind.GuildHallMaster => "Guild Hall Master",
+        DaggerfallOfficeKind.TempleHead => "Temple Head",
+        _ => "Watch Captain",
+    };
 
     /// <summary>The seats the player belongs to: those whose office faction one of their guild memberships comes under.</summary>
     private IReadOnlyList<string> PlayerSeats() =>

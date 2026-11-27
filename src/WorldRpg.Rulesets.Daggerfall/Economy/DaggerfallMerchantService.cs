@@ -35,7 +35,10 @@ internal sealed record DaggerfallMerchantItemView(
     ulong? RepairCost = null,
     ulong? IdentifyCost = null,
     DaggerfallItemInstanceMetadata? IconMetadata = null,
-    string? Refusal = null)
+    string? Refusal = null,
+    DaggerfallPriceBreakdown? PriceBreakdown = null,
+    DaggerfallPriceBreakdown? RepairPriceBreakdown = null,
+    DaggerfallPriceBreakdown? IdentifyPriceBreakdown = null)
 {
     /// <summary>The icon the row's item draws in the pack, resolved from its definition and <see cref="IconMetadata"/> by the inventory presentation.</summary>
     internal string? Icon { get; init; }
@@ -79,7 +82,8 @@ internal sealed record DaggerfallMerchantView(
 /// The gold a chosen amount of one row costs or pays, by the same quote Buy and Sell charge. A stack's
 /// price is not its unit price times the amount: the trade formula rounds the whole line once.
 /// </summary>
-internal sealed record DaggerfallMerchantQuoteView(string Revision, string Item, bool Buying, ulong Amount, long Total)
+internal sealed record DaggerfallMerchantQuoteView(string Revision, string Item, bool Buying, ulong Amount, long Total,
+    DaggerfallPriceBreakdown? PriceBreakdown = null)
 {
     /// <summary>Whether the trade is large enough that the player confirms it first.</summary>
     internal bool NeedsConfirmation => Total >= DaggerfallMerchantService.LargeTradeGold;
@@ -224,6 +228,7 @@ internal sealed class DaggerfallMerchantService
     private readonly Func<string, DaggerfallCrimeKind, DaggerfallCrimeVictimContext?, DaggerfallCrimeWitnessEvidence, DaggerfallCrimeWitnessEvidence>? _evaluateWitnesses;
     private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<int, int, int>? _magicServicePrice;
+    private readonly Func<int, int, string, (int Price, DaggerfallPriceBreakdown Breakdown)>? _magicServiceQuote;
     private readonly Func<DaggerfallNpcSite?> _currentSite;
     private readonly Dictionary<string, Binding> _bindings = new(StringComparer.Ordinal);
     private long _nextRequest;
@@ -270,7 +275,8 @@ internal sealed class DaggerfallMerchantService
         IEnumerable<DaggerfallMerchantSave>? restored = null,
         Func<DaggerfallCrimeWitnessEvidence>? crimeWitnesses = null,
         Func<string, DaggerfallCrimeKind, DaggerfallCrimeVictimContext?, DaggerfallCrimeWitnessEvidence, DaggerfallCrimeWitnessEvidence>? evaluateWitnesses = null,
-        Func<int, int, int>? magicServicePrice = null)
+        Func<int, int, int>? magicServicePrice = null,
+        Func<int, int, string, (int Price, DaggerfallPriceBreakdown Breakdown)>? magicServiceQuote = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _random = random ?? throw new ArgumentNullException(nameof(random));
@@ -298,6 +304,7 @@ internal sealed class DaggerfallMerchantService
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         _currentSite = currentSite ?? throw new ArgumentNullException(nameof(currentSite));
         _magicServicePrice = magicServicePrice;
+        _magicServiceQuote = magicServiceQuote;
         foreach (DaggerfallMerchantSave save in restored ?? []) MaterializeSaved(save);
     }
 
@@ -316,15 +323,19 @@ internal sealed class DaggerfallMerchantService
         return Project(binding, result, dialogueRevision);
     }
 
-    /// <summary>The total a trade of this many of a row costs (buying) or pays (selling), or null when it cannot be quoted.</summary>
-    internal long? TradeTotal(DaggerfallMerchantProviderContext context, string revision, string itemKey, bool buying, ulong quantity)
+    /// <summary>The quote (total and line-by-line breakdown) for this many of a row, or null when it cannot be quoted (#11158).</summary>
+    internal DaggerfallTradeQuote? TradeQuote(DaggerfallMerchantProviderContext context, string revision, string itemKey, bool buying, ulong quantity)
     {
         Binding binding = Ensure(context);
         if (!RevisionMatches(binding, revision)) return null;
         DaggerfallItemOwner owner = buying ? DaggerfallItemOwner.Merchant(binding.MerchantContainerId) : DaggerfallItemOwner.Player;
         if (!TrySelection(owner, itemKey, quantity, out _, out DaggerfallTradeLine line)) return null;
-        return Quote(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant, line)?.Total;
+        return Quote(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant, line);
     }
+
+    /// <summary>The total a trade of this many of a row costs (buying) or pays (selling), or null when it cannot be quoted.</summary>
+    internal long? TradeTotal(DaggerfallMerchantProviderContext context, string revision, string itemKey, bool buying, ulong quantity) =>
+        TradeQuote(context, revision, itemKey, buying, quantity)?.Total;
 
     /// <param name="confirmed">
     /// Whether the player confirmed the trade. A trade of <see cref="LargeTradeGold"/> or more is refused unconfirmed,
@@ -582,31 +593,67 @@ internal sealed class DaggerfallMerchantService
         DaggerfallNpcServiceFacts.IsGenericRepairShop(context.BuildingType)
         && _npcs.Require(context.Provider.NpcId).Services.Contains("repair", StringComparer.Ordinal);
 
-    /// <summary>The price this provider asks to repair an item, with a Fighters Guild member's rank reduction.</summary>
-    private int RepairCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata,
-        DaggerfallConcreteGuildServiceRuntimeDecision? guild)
-    {
-        int cost = DaggerfallRegionalEconomyPolicy.CalculateItemRepairCost(definition.Value, binding.Context.Quality,
-            metadata.CurrentCondition, metadata.MaximumCondition, binding.Context.Provider.Site.Region,
-            _regionalPrices.AdjustmentForRegion(binding.Context.Provider.Site.Region));
-        if (guild is { Definition.FactionId: DaggerfallConcreteGuildCatalog.FightersFactionId, CanUse: true })
-            cost = DaggerfallConcreteGuildPolicy.FightersRepairCost(cost, guild.Membership.Rank);
-        return cost;
-    }
-
-    /// <summary>
-    /// The price this provider asks to identify an item. The donor makes identification free during
-    /// Witches Festival. Mages Guild does not override ReducedIdentifyCost, so its canonical service
-    /// admission changes eligibility and provider identity while leaving the ordinary cost unchanged
-    /// outside that holiday.
-    /// </summary>
-    private int IdentifyCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata)
+    /// <summary>The price this provider asks to repair an item, with a Fighters Guild member's rank reduction and exact breakdown (#11158).</summary>
+    private (int Cost, DaggerfallPriceBreakdown Breakdown) QuoteRepair(Binding binding, DaggerfallItemDefinition definition,
+        DaggerfallItemInstanceMetadata metadata, DaggerfallConcreteGuildServiceRuntimeDecision? guild)
     {
         int region = binding.Context.Provider.Site.Region;
-        if (_calendar().GetHolidayId(region) == WitchesFestival) return 0;
-        int cost = DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(IdentifySourceValue(definition, metadata));
-        return _magicServicePrice?.Invoke(region, cost) ?? cost;
+        int regionalFactor = _regionalPrices.AdjustmentForRegion(region);
+        int neutralCost = DaggerfallRegionalEconomyPolicy.CalculateItemRepairCost(definition.Value, binding.Context.Quality,
+            metadata.CurrentCondition, metadata.MaximumCondition, region, DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment);
+        int regionalCost = DaggerfallRegionalEconomyPolicy.CalculateItemRepairCost(definition.Value, binding.Context.Quality,
+            metadata.CurrentCondition, metadata.MaximumCondition, region, regionalFactor);
+        int cost = regionalCost;
+        List<DaggerfallPriceLine> steps = [];
+        if (regionalCost != neutralCost)
+        {
+            string place = _definitions.BuildingNames.RegionName(region);
+            string label = string.IsNullOrWhiteSpace(place) ? "regional market" : $"regional market in {place.Trim()}";
+            steps.Add(new(label, regionalCost - neutralCost,
+                DaggerfallPriceBreakdown.FormatSignedPercentFromThousandths(regionalFactor - DaggerfallRegionalEconomyPolicy.NeutralRegionalAdjustment)));
+        }
+        if (guild is { Definition.FactionId: DaggerfallConcreteGuildCatalog.FightersFactionId, CanUse: true })
+        {
+            int discounted = DaggerfallConcreteGuildPolicy.FightersRepairCost(cost, guild.Membership.Rank);
+            if (discounted != cost)
+                steps.Add(new("Fighters Guild member discount", discounted - cost));
+            cost = discounted;
+        }
+        return (cost, new DaggerfallPriceBreakdown("Base repair fee", neutralCost, steps, cost));
     }
+
+    private int RepairCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata,
+        DaggerfallConcreteGuildServiceRuntimeDecision? guild) =>
+        QuoteRepair(binding, definition, metadata, guild).Cost;
+
+    /// <summary>
+    /// The price this provider asks to identify an item, with exact breakdown (#11158). The donor makes identification
+    /// free during Witches Festival. Mages Guild does not override ReducedIdentifyCost, so its canonical service
+    /// admission changes eligibility and provider identity while leaving the ordinary cost unchanged outside that holiday.
+    /// </summary>
+    private (int Cost, DaggerfallPriceBreakdown Breakdown) QuoteIdentify(Binding binding, DaggerfallItemDefinition definition,
+        DaggerfallItemInstanceMetadata metadata)
+    {
+        int region = binding.Context.Provider.Site.Region;
+        int baseCost = DaggerfallRegionalEconomyPolicy.CalculateItemIdentifyCost(IdentifySourceValue(definition, metadata));
+        if (_calendar().GetHolidayId(region) == WitchesFestival)
+        {
+            DaggerfallPriceLine[] holidaySteps = baseCost != 0
+                ? [new DaggerfallPriceLine("Witches Festival (free identification)", -baseCost, "\u2212100%")]
+                : [];
+            return (0, new DaggerfallPriceBreakdown("Base identification fee", baseCost, holidaySteps, 0));
+        }
+        if (_magicServiceQuote is not null)
+            return _magicServiceQuote(region, baseCost, "Base identification fee");
+        int finalCost = _magicServicePrice?.Invoke(region, baseCost) ?? baseCost;
+        DaggerfallPriceLine[] steps = finalCost != baseCost
+            ? [new DaggerfallPriceLine("Magic service surcharge", finalCost - baseCost)]
+            : [];
+        return (finalCost, new DaggerfallPriceBreakdown("Base identification fee", baseCost, steps, finalCost));
+    }
+
+    private int IdentifyCost(Binding binding, DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
+        QuoteIdentify(binding, definition, metadata).Cost;
 
     private static string GuildRefusal(DaggerfallConcreteGuildServiceRuntimeDecision decision) =>
         !decision.Policy.Eligible ? decision.Policy.Denial.ToString()
@@ -659,13 +706,21 @@ internal sealed class DaggerfallMerchantService
     private DaggerfallMerchantItemView[] Rows(InventoryView inventory, DaggerfallItemOwner owner, Binding binding, bool buying,
         bool quoteRepair = false, DaggerfallConcreteGuildServiceRuntimeDecision? repairGuild = null, bool quoteIdentify = false)
     {
-        // Costs are quoted only for the player's rows, and only for services this provider offers.
-        ulong? Repair(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
-            quoteRepair && metadata.MaximumCondition > 0 && metadata.CurrentCondition < metadata.MaximumCondition
-                ? checked((ulong)Math.Max(0, RepairCost(binding, definition, metadata, repairGuild))) : null;
-        ulong? Identify(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata) =>
-            quoteIdentify && metadata.HasEnchantment && !metadata.Identified
-                ? checked((ulong)Math.Max(0, IdentifyCost(binding, definition, metadata))) : null;
+        // Costs and their breakdowns are quoted only for the player's rows, and only for services this provider offers.
+        (ulong? Cost, DaggerfallPriceBreakdown? Breakdown) Repair(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata)
+        {
+            if (!quoteRepair || metadata.MaximumCondition <= 0 || metadata.CurrentCondition >= metadata.MaximumCondition)
+                return (null, null);
+            (int cost, DaggerfallPriceBreakdown breakdown) = QuoteRepair(binding, definition, metadata, repairGuild);
+            return (checked((ulong)Math.Max(0, cost)), breakdown);
+        }
+        (ulong? Cost, DaggerfallPriceBreakdown? Breakdown) Identify(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata metadata)
+        {
+            if (!quoteIdentify || !metadata.HasEnchantment || metadata.Identified)
+                return (null, null);
+            (int cost, DaggerfallPriceBreakdown breakdown) = QuoteIdentify(binding, definition, metadata);
+            return (checked((ulong)Math.Max(0, cost)), breakdown);
+        }
         List<DaggerfallMerchantItemView> rows = [];
         foreach (InventoryStack stack in inventory.Stacks.OrderBy(value => value.Id.Value, StringComparer.Ordinal))
         {
@@ -673,30 +728,34 @@ internal sealed class DaggerfallMerchantService
             DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(stack.Definition.Value));
             // The player's gold is the purse the trade is paid from, stated as the gold carried, never an item on offer.
             if (!buying && DaggerfallEncumbrancePolicy.IsGold(definition)) continue;
-            ulong price = Price(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant,
-                // The projection field is UnitPrice. The caller supplies its selected quantity to
-                // Quote during the action, so a stack row must price one item here rather than
-                // displaying the total for the complete stock beside a one-item control.
+            // The projection field is UnitPrice. The caller supplies its selected quantity to
+            // Quote during the action, so a stack row must price one item here rather than
+            // displaying the total for the complete stock beside a one-item control.
+            DaggerfallTradeQuote? tradeQuote = Quote(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant,
                 new(definition, metadata, 1));
+            ulong price = tradeQuote is { Total: >= 0 } ? checked((ulong)tradeQuote.Total) : 0;
             string? refusal = buying ? null : _exits.Refusal(metadata);
             rows.Add(new("stack:" + stack.Id.Value, definition.Id.Value, ItemLabel(definition, metadata), stack.Quantity, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
                 buying, !buying && refusal is null && CanSellToProvider(binding.Context, metadata),
-                IconMetadata: metadata, Refusal: refusal));
+                IconMetadata: metadata, Refusal: refusal, PriceBreakdown: tradeQuote?.Breakdown));
         }
         foreach (EngineUniqueInventoryItem item in inventory.UniqueItems.OrderBy(value => value.Entity.Value))
         {
             ulong id = _containers.GetDurableItemId(item.Entity).Value;
             DaggerfallItemInstanceMetadata metadata = _instances.RequireUnique(id);
             DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(item.Definition.Value));
-            ulong price = Price(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant,
+            DaggerfallTradeQuote? tradeQuote = Quote(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant,
                 new(definition, metadata, 1));
+            ulong price = tradeQuote is { Total: >= 0 } ? checked((ulong)tradeQuote.Total) : 0;
             // A quest item its quest keeps can be neither sold nor handed over for repair; the row says why.
             string? refusal = buying ? null : _exits.Refusal(metadata);
+            (ulong? repairCost, DaggerfallPriceBreakdown? repairBreakdown) = refusal is null ? Repair(definition, metadata) : (null, null);
+            (ulong? identifyCost, DaggerfallPriceBreakdown? identifyBreakdown) = Identify(definition, metadata);
             rows.Add(new("unique:" + id, definition.Id.Value, ItemLabel(definition, metadata), 1, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
                 buying, !buying && refusal is null && CanSellToProvider(binding.Context, metadata),
-                refusal is null ? Repair(definition, metadata) : null, Identify(definition, metadata), metadata, refusal));
+                repairCost, identifyCost, metadata, refusal, tradeQuote?.Breakdown, repairBreakdown, identifyBreakdown));
         }
         return [.. rows];
     }
@@ -707,12 +766,12 @@ internal sealed class DaggerfallMerchantService
     private DaggerfallTradeQuote? Quote(Binding binding, DaggerfallTradeSide side, DaggerfallTradeLine line)
     {
         DaggerfallNpc npc = _npcs.Require(binding.Context.Provider.NpcId);
-        int reaction = _social.TradeReactionForNpc(npc);
+        DaggerfallTradeReactionBreakdown reaction = _social.DescribeTradeReactionForNpc(npc);
         int pricingRegion = binding.Context.PricingRegion ?? binding.Context.Provider.Site.Region;
         DaggerfallTradeQuoteResult quote = _tradeQuotes.Quote(side, [line], binding.Context.Quality,
             Math.Clamp(_playerStats.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100),
-            Math.Clamp(_playerStats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), reaction,
-            pricingRegion, binding.Context.PricingOriginRegion);
+            Math.Clamp(_playerStats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), reaction.Total,
+            pricingRegion, binding.Context.PricingOriginRegion, reaction);
         return quote.Quote;
     }
 

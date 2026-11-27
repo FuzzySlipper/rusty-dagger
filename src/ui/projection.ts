@@ -185,7 +185,7 @@ export interface SpellMakerProjection {
   readonly targets:readonly SpellMakerOption[];readonly elements:readonly SpellMakerOption[];
   readonly effects:readonly {readonly key:string;readonly name:string;readonly type:number;readonly subType:number;readonly school:string;
     readonly duration:boolean;readonly chance:boolean;readonly magnitude:boolean;readonly targets:number;readonly elements:number}[];
-  readonly quote:{readonly key:string;readonly gold:number;readonly spellPoints:number;readonly eligible:boolean;readonly reason:string|null}|null;
+  readonly quote:{readonly key:string;readonly gold:number;readonly spellPoints:number;readonly eligible:boolean;readonly reason:string|null;readonly priceBreakdown?:readonly string[]|null}|null;
 }
 
 export interface SummoningProjection {
@@ -198,7 +198,7 @@ export interface ItemMakerProjection {
   readonly items:readonly {readonly key:string;readonly name:string;readonly capacity:number;readonly quantity:number}[];
   readonly settings:readonly ItemMakerSetting[];
   readonly draft:{readonly item:string;readonly name:string;readonly settings:readonly string[]};
-  readonly quote:{readonly key:string;readonly capacity:number;readonly power:number;readonly gold:number;readonly eligible:boolean;readonly reason:string|null;readonly payloads:readonly ItemMakerSetting[]}|null;
+  readonly quote:{readonly key:string;readonly capacity:number;readonly power:number;readonly gold:number;readonly eligible:boolean;readonly reason:string|null;readonly payloads:readonly ItemMakerSetting[];readonly priceBreakdown?:readonly string[]|null}|null;
 }
 export interface PotionMakerProjection {
   readonly revision:string; readonly provider:string; readonly eligible:boolean;
@@ -217,7 +217,7 @@ export interface SpellbookProjection {
   readonly selectors?:SpellSelectors;
   /** The schools in the order the tabs show them. */
   readonly schools?:readonly {readonly id:string;readonly label:string}[];
-  readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean}[]} | null;
+  readonly sale?: {readonly revision:string;readonly provider:string;readonly offers:readonly {readonly key:string;readonly name:string;readonly castingCost:number;readonly price:number;readonly known:boolean;readonly priceBreakdown?:readonly string[]|null}[]} | null;
   readonly maker?:SpellMakerProjection|null;
   readonly potionMaker?:PotionMakerProjection|null;
   readonly itemMaker?:ItemMakerProjection|null;
@@ -308,6 +308,8 @@ export interface MerchantItemProjection {
   /** The most of this row one trade moves: a stack's count, or one. */
   readonly maximumQuantity: number;
   readonly unitPrice: string | number;
+  /** Line-by-line price breakdown lines for buying or selling one unit, or null. */
+  readonly priceBreakdown?: readonly string[] | null;
   readonly currentCondition: number;
   readonly maximumCondition: number;
   readonly identified: boolean;
@@ -321,8 +323,12 @@ export interface MerchantItemProjection {
   readonly canIdentify?: boolean;
   /** The provider's quoted repair price in gold, where it would repair this item. */
   readonly repairCost?: string | null;
+  /** Line-by-line price breakdown lines for repairing this item, or null. */
+  readonly repairPriceBreakdown?: readonly string[] | null;
   /** The provider's quoted identification price in gold, where it would identify this item. */
   readonly identifyCost?: string | null;
+  /** Line-by-line price breakdown lines for identifying this item, or null. */
+  readonly identifyPriceBreakdown?: readonly string[] | null;
 }
 
 export interface MerchantProjection {
@@ -337,7 +343,7 @@ export interface MerchantProjection {
   /** A purchase or sale totalling this many gold or more is confirmed first. */
   readonly largeTradeGold: number;
   /** The ruleset's price for the amount last chosen on a row, and whether that trade asks first. */
-  readonly quote?: { readonly item: string; readonly side: 'buy' | 'sell'; readonly amount: number; readonly total: number; readonly confirm: boolean } | null;
+  readonly quote?: { readonly item: string; readonly side: 'buy' | 'sell'; readonly amount: number; readonly total: number; readonly confirm: boolean; readonly priceBreakdown?: readonly string[] | null } | null;
   readonly stock: readonly MerchantItemProjection[];
   readonly playerItems: readonly MerchantItemProjection[];
   readonly repairs: readonly { readonly requestId: string; readonly durableItemId: string | number; readonly definition: string; readonly dueMinute: number; readonly ready: boolean;

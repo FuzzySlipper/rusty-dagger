@@ -14,7 +14,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallSpellMaker(DaggerfallDefinitions definitions, DaggerfallEffectCatalog effects,
     DaggerfallNpcRegistry npcs, DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
     DaggerfallCharacterState character, MechanicsInventoryCoordinator inventory, StatsComponent playerStats,
-    Func<DaggerfallCalendar> calendar, Func<int, int, int>? magicServicePrice = null)
+    Func<DaggerfallCalendar> calendar, Func<int, int, int>? magicServicePrice = null,
+    Func<int, int, string, (int Price, DaggerfallPriceBreakdown Breakdown)>? magicServiceQuote = null)
 {
     private DaggerfallSpellDraft? _draft;
     private long _draftRevision;
@@ -48,7 +49,21 @@ internal sealed class DaggerfallSpellMaker(DaggerfallDefinitions definitions, Da
                 school => Math.Clamp(DaggerfallCasting.Read(playerStats, school), 0, 100));
             var cost = DaggerfallMagicCostPolicy.CalculateTotalEffectCosts(definitions.Magic, _draft.Effects,
                 DaggerfallMagicCostPolicy.TargetForRangeType(_draft.RangeType), skills);
-            return new(Revision, _draft, magicServicePrice?.Invoke(provider.Site.Region, cost.Gold) ?? cost.Gold, cost.SpellPoints, true, null);
+            int finalGold;
+            DaggerfallPriceBreakdown breakdown;
+            if (magicServiceQuote is not null)
+            {
+                (finalGold, breakdown) = magicServiceQuote(provider.Site.Region, cost.Gold, "Base spell construction");
+            }
+            else
+            {
+                finalGold = magicServicePrice?.Invoke(provider.Site.Region, cost.Gold) ?? cost.Gold;
+                DaggerfallPriceLine[] steps = finalGold != cost.Gold
+                    ? [new DaggerfallPriceLine("Magic service surcharge", finalGold - cost.Gold)]
+                    : [];
+                breakdown = new("Base spell construction", cost.Gold, steps, finalGold);
+            }
+            return new(Revision, _draft, finalGold, cost.SpellPoints, true, null, breakdown);
         }
         catch (Exception exception) when (exception is ArgumentException or OverflowException or InvalidOperationException)
         { return new(Revision, _draft, 0, 0, false, "InvalidSettings"); }

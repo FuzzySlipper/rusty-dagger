@@ -269,7 +269,7 @@ body, dialog { font-family: var(--font-body); }
 /* A drawn context menu: the window shows no native one. */
 
 /* A drawn tooltip: the window never shows a title attribute. It is text to read, so parchment. */
-.dagger-tooltip { position: fixed; z-index: 60; max-width: 22rem; padding: .3rem .55rem; border: 1px solid #6b4a24; background: #e8d9b5 var(--skin-parchment-texture, none) 0 0 / var(--skin-parchment-texture-size, auto) repeat; color: var(--ink-dark); text-shadow: none; font: .75rem var(--font-body); pointer-events: none; }
+.dagger-tooltip { position: fixed; z-index: 60; max-width: 26rem; padding: .35rem .6rem; border: 1px solid #6b4a24; background: #e8d9b5 var(--skin-parchment-texture, none) 0 0 / var(--skin-parchment-texture-size, auto) repeat; color: var(--ink-dark); text-shadow: none; font: .75rem/1.35 var(--font-body); white-space: pre-line; pointer-events: none; }
 .dagger-tooltip[hidden] { display: none; }
 
 /* A spell's choice (create item, identify, teleport, dispel), centred over the world. */

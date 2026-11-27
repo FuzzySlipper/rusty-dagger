@@ -13,7 +13,7 @@ internal sealed record DaggerfallItemMakerDraft(string Item, string Name, string
 internal sealed record DaggerfallItemMakerItem(string Key, string Name, int Capacity, ulong Quantity);
 internal sealed record DaggerfallItemMakerSetting(string Key, string Name, int Cost, string[] Forced);
 internal sealed record DaggerfallItemMakerQuote(string Key, DaggerfallItemMakerDraft Draft, int Capacity, int Power, int Gold,
-    DaggerfallItemMakerSetting[] Payloads, bool Eligible, string? Reason);
+    DaggerfallItemMakerSetting[] Payloads, bool Eligible, string? Reason, DaggerfallPriceBreakdown? PriceBreakdown = null);
 internal sealed record DaggerfallItemMakerResult(bool Accepted, string Outcome, ulong? Item = null, ulong Paid = 0);
 internal sealed record DaggerfallItemMakerView(string Revision, string Provider, bool Eligible,
     DaggerfallItemMakerItem[] Items, DaggerfallItemMakerSetting[] Settings, DaggerfallItemMakerDraft Draft, DaggerfallItemMakerQuote? Quote);
@@ -26,7 +26,8 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
     DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
     MechanicsInventoryCoordinator inventory, DaggerfallItemInstances instances,
     DaggerfallItemEnchanting enchanting, DaggerfallSoulGems souls, DaggerfallUniqueItemAllocator identities,
-    Func<DaggerfallCalendar> calendar, Func<int, int, int>? magicServicePrice = null)
+    Func<DaggerfallCalendar> calendar, Func<int, int, int>? magicServicePrice = null,
+    Func<int, int, string, (int Price, DaggerfallPriceBreakdown Breakdown)>? magicServiceQuote = null)
 {
     private DaggerfallItemMakerDraft? _draft;
     private long _revision;
@@ -97,8 +98,21 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
             var quote = DaggerfallEnchantmentConstruction.Quote(definitions, item.Metadata, _draft.Name, _draft.Settings);
             var settings = quote.Enchantment.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key]).ToArray();
             if (settings.Any(value => value.Type == 15 && !souls.HasSoul(value.Param))) return Refused("SoulUnavailable");
-            int gold = magicServicePrice?.Invoke(provider.Site.Region, quote.Gold) ?? quote.Gold;
-            return new(Revision, Draft, quote.Capacity, quote.Power, gold, [.. settings.Select(Setting)], true, null);
+            int gold;
+            DaggerfallPriceBreakdown breakdown;
+            if (magicServiceQuote is not null)
+            {
+                (gold, breakdown) = magicServiceQuote(provider.Site.Region, quote.Gold, "Base enchanting cost");
+            }
+            else
+            {
+                gold = magicServicePrice?.Invoke(provider.Site.Region, quote.Gold) ?? quote.Gold;
+                DaggerfallPriceLine[] steps = gold != quote.Gold
+                    ? [new DaggerfallPriceLine("Magic service surcharge", gold - quote.Gold)]
+                    : [];
+                breakdown = new("Base enchanting cost", quote.Gold, steps, gold);
+            }
+            return new(Revision, Draft, quote.Capacity, quote.Power, gold, [.. settings.Select(Setting)], true, null, breakdown);
         }
         catch (Exception exception) when (exception is ArgumentException or OverflowException)
         { return Refused(DaggerfallRejectionText.For(exception)); }

@@ -18,6 +18,8 @@ export interface TransferCommand {
   readonly danger?: boolean;
   /** Whether the command moves a chosen amount; a command on a whole row leaves the stepper alone. */
   readonly takesAmount?: boolean;
+  /** Optional drawn tooltip (e.g., price calculation breakdown for Repair or Identify). */
+  readonly tooltip?: string | null;
 }
 
 export interface TransferRow {
@@ -41,6 +43,8 @@ export interface TransferRow {
    * shows this total; it is the ruleset's quote, never the unit price times the amount.
    */
   readonly price?: (amount: number) => number | null;
+  /** Authoritative line-by-line price breakdown tooltip for the chosen amount, or null. */
+  readonly priceTooltip?: (amount: number) => string | null;
   /** Why the row's commands are closed, when they are. */
   readonly refusal?: string | null;
   readonly commands: readonly TransferCommand[];
@@ -158,23 +162,9 @@ export function mountTransfer(root: HTMLElement, handlers: {
           picked.input.addEventListener('change', report);
           amounts.append(stepper.element);
         }
-        if (row.price !== undefined) {
-          const total = document.createElement('span');
-          total.className = 'dagger-transfer-total';
-          const price = row.price;
-          const show = (): void => {
-            const value = price(stepper?.value() ?? 1);
-            total.textContent = value === null ? '… gold' : `${formatNumber(value)} gold`;
-          };
-          stepper?.input.addEventListener('input', show);
-          stepper?.input.addEventListener('change', show);
-          totals.set(`${name}:${row.key}`, show);
-          show();
-          amounts.append(total);
-        }
-        if (amounts.childElementCount > 0) { entry.append(amounts); entry.classList.add('has-amount'); }
         const commands = document.createElement('div');
         commands.className = 'dagger-transfer-commands';
+        const priceButtons: HTMLButtonElement[] = [];
         for (const command of row.commands) {
           const button = document.createElement('button');
           button.type = 'button';
@@ -185,8 +175,35 @@ export function mountTransfer(root: HTMLElement, handlers: {
           button.disabled = command.disabled === true;
           button.classList.toggle('is-danger', command.danger === true);
           button.setAttribute('aria-label', `${command.label} ${row.label}`);
+          if (command.tooltip) button.dataset.tooltip = command.tooltip;
+          if (command.takesAmount && !command.danger && row.priceTooltip !== undefined) priceButtons.push(button);
           commands.append(button);
         }
+        if (row.price !== undefined) {
+          const total = document.createElement('span');
+          total.className = 'dagger-transfer-total';
+          const price = row.price;
+          const priceTooltip = row.priceTooltip;
+          const show = (): void => {
+            const amount = stepper?.value() ?? 1;
+            const value = price(amount);
+            total.textContent = value === null ? '… gold' : `${formatNumber(value)} gold`;
+            const tip = priceTooltip?.(amount) ?? null;
+            if (tip) {
+              total.dataset.tooltip = tip;
+              for (const control of priceButtons) control.dataset.tooltip = tip;
+            } else {
+              delete total.dataset.tooltip;
+              for (const control of priceButtons) delete control.dataset.tooltip;
+            }
+          };
+          stepper?.input.addEventListener('input', show);
+          stepper?.input.addEventListener('change', show);
+          totals.set(`${name}:${row.key}`, show);
+          show();
+          amounts.append(total);
+        }
+        if (amounts.childElementCount > 0) { entry.append(amounts); entry.classList.add('has-amount'); }
         if (row.commands.length > 0) entry.append(commands);
         return entry;
       })));

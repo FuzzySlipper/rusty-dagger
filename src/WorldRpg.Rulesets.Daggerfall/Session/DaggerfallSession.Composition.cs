@@ -652,16 +652,18 @@ internal sealed partial class DaggerfallSession
             DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-            DaggerfallConditionPrices conditionPrices = new(WorldConditions, () => checked((int)_time.Calendar.DayNumber), _tuning.ConditionPrices);
+            DaggerfallConditionPrices conditionPrices = new(WorldConditions, () => checked((int)_time.Calendar.DayNumber), _tuning.ConditionPrices,
+                definitions.BuildingNames.RegionName);
             DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices,
-                conditionPrices.GoodsAdjustment);
+                regionalConditionFactors: conditionPrices.DescribeGoodsAdjustments);
             DaggerfallMerchantService merchants = new(definitions, _random, npcs, social, playerStats, character, progression,
                 inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
                 regionalPrices, _itemCondition, skillUses, crime, questItemExits, () => _time.Calendar,
                 () => _dialogue?.CurrentNpc()?.Site,
                 saved?.Merchants, () => Crimes.QueryWitnesses(),
                 (op, kind, victim, raw) => Crimes.EvaluateWitnesses(op, kind, victim, raw).ReportingEvidence,
-                conditionPrices.MagicService);
+                conditionPrices.MagicService,
+                conditionPrices.QuoteMagicService);
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport, questItemExits);
@@ -774,16 +776,17 @@ internal sealed partial class DaggerfallSession
                 });
             _itemMaker = new DaggerfallItemMaker(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
                 State.Inventory, State.ItemInstances, _itemEnchanting, ItemSouls.Gems, _uniqueItems, () => _time.Calendar,
-                conditionPrices.MagicService);
+                conditionPrices.MagicService, conditionPrices.QuoteMagicService);
             _potionMaker = new DaggerfallPotionMaking(definitions, State.Npcs, State.ConcreteGuildServices, State.Inventory,
                 State.Containers, State.Wagon, State.ItemInstances, _random, () => _time.Calendar);
             SpellSales = new DaggerfallSpellSales(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
                 State.Character, State.Inventory, State.Actors.Player.Stats,
                 key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar,
-                npc => State.Social.TradeReactionForNpc(npc), conditionPrices.MagicService);
+                npc => State.Social.TradeReactionForNpc(npc), conditionPrices.MagicService,
+                npc => State.Social.DescribeTradeReactionForNpc(npc), conditionPrices.QuoteMagicService);
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar,
-                conditionPrices.MagicService);
+                conditionPrices.MagicService, conditionPrices.QuoteMagicService);
             OfficeHolders = new DaggerfallOfficeHolders(definitions, _site, State.ActorLedger, State.Npcs);
             OfficeLedger = new DaggerfallOfficeLedger(
                 definitions, OfficeHolders, State.ActorLedger, State.Npcs,
@@ -1237,7 +1240,7 @@ internal sealed partial class DaggerfallSession
             if (PoliticalBoard is not null)
             {
                 OfficeAllegiance = new DaggerfallOfficeAllegiance(PoliticalBoard, State.Social, definitions.BoardSeats, OfficeLedger, _tuning.Politics);
-                State.Social.BindOfficeStanding(OfficeAllegiance.ReactionShift);
+                State.Social.BindOfficeStanding(OfficeAllegiance.DescribeReactionShifts);
                 StandingRipple = new DaggerfallBoardStandingRipple(PoliticalBoard, State.Social, definitions.BoardSeats, _tuning.Politics);
                 State.Social.StandingGained += StandingRipple.ObserveGain;
                 PoliticalQuests = new DaggerfallPoliticalQuests(PoliticalBoard, StandingRipple, OfficeLedger, _random, _tuning.Politics);

@@ -114,9 +114,14 @@ export function renderSpellMaker(root:HTMLElement,view:SpellMakerProjection|null
       rangeType:target.value,icon,effects})});
   });
   const status=document.createElement('p');status.setAttribute('role','status');
-  status.textContent=view.quote?.eligible ? `${view.quote.gold} gold · ${view.quote.spellPoints} magicka to cast` : view.quote?.reason ?? 'Update the preview with valid settings.';root.append(status);
-  const buy=document.createElement('button');buy.type='button';buy.textContent='Buy constructed spell';buy.disabled=!view.quote?.eligible;root.append(buy);
-  const stale=():void=>{buy.disabled=true;status.textContent='Update the cost preview after editing.';};
+  status.textContent=view.quote?.eligible ? `${view.quote.gold} gold · ${view.quote.spellPoints} magicka to cast` : view.quote?.reason ?? 'Update the preview with valid settings.';
+  const quoteTip=view.quote?.eligible && view.quote.priceBreakdown?.length ? view.quote.priceBreakdown.join('\n') : null;
+  if(quoteTip) status.dataset.tooltip=quoteTip;
+  root.append(status);
+  const buy=document.createElement('button');buy.type='button';buy.textContent='Buy constructed spell';buy.disabled=!view.quote?.eligible;
+  if(quoteTip) buy.dataset.tooltip=quoteTip;
+  root.append(buy);
+  const stale=():void=>{buy.disabled=true;delete status.dataset.tooltip;delete buy.dataset.tooltip;status.textContent='Update the cost preview after editing.';};
   form.addEventListener('input',stale);form.addEventListener('change',stale);
   buy.addEventListener('click',()=>{const quote=view.quote;if(buy.disabled || !quote?.eligible) return;
     ask({message:`Make this spell for ${quote.gold} gold?`,accept:'Buy',
@@ -208,10 +213,14 @@ export function renderItemMaker(root:HTMLElement,view:ItemMakerProjection|null,c
     const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.addEventListener('click',()=>submit(selected.filter((_,i)=>i!==index)));row.append(' ',remove);list.append(row);});
   const preview=document.createElement('button');preview.type='submit';preview.textContent='Update preview';form.append(preview);
   form.addEventListener('submit',event=>{event.preventDefault();submit();});
-  if(view.quote){const quote=view.quote;const summary=document.createElement('p');summary.textContent=quote.eligible?`${quote.power}/${quote.capacity} power · ${quote.gold} gold`:quote.reason??'Choose valid enchantments.';root.append(summary);
+  if(view.quote){const quote=view.quote;const summary=document.createElement('p');summary.textContent=quote.eligible?`${quote.power}/${quote.capacity} power · ${quote.gold} gold`:quote.reason??'Choose valid enchantments.';
+    const quoteTip=quote.eligible && quote.priceBreakdown?.length ? quote.priceBreakdown.join('\n') : null;
+    if(quoteTip) summary.dataset.tooltip=quoteTip;
+    root.append(summary);
     const payloads=document.createElement('ul');for(const payload of quote.payloads){const row=document.createElement('li');row.textContent=payload.name;payloads.append(row);}root.append(payloads);
     const buy=document.createElement('button');buy.type='button';buy.textContent='Enchant item';buy.disabled=!quote.eligible;
-    form.addEventListener('input',()=>{buy.disabled=true;});form.addEventListener('change',()=>{buy.disabled=true;});
+    if(quoteTip) buy.dataset.tooltip=quoteTip;
+    form.addEventListener('input',()=>{buy.disabled=true;delete summary.dataset.tooltip;delete buy.dataset.tooltip;});form.addEventListener('change',()=>{buy.disabled=true;delete summary.dataset.tooltip;delete buy.dataset.tooltip;});
     buy.addEventListener('click',()=>ask({message:`Enchant ${view.draft.name} for ${quote.gold} gold?`,accept:'Enchant',
       onAccept:()=>claim({action:'itemmaker-buy',revision:view.revision,key:quote.key,amount:quote.gold,confirm:true})}));root.append(buy);
   }
