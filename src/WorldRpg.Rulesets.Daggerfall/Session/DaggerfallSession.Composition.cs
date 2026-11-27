@@ -821,6 +821,10 @@ internal sealed partial class DaggerfallSession
                 wordSpread: WordSpread,
                 courierDispatches: CourierDispatches,
                 officeAllegiance: site => OfficeAllegiance?.All(site) ?? []);
+            // Decrees, bounties and office news can change between one game minute and the next: post them at once.
+            WorldConditions.AfterMutation += _noticeSheets.Clear;
+            OfficeLedger.OfficeChanged += _ => _noticeSheets.Clear();
+            OfficeLedger.OfficeOverrideCleared += _ => _noticeSheets.Clear();
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone,
@@ -2045,17 +2049,18 @@ internal sealed partial class DaggerfallSession
     }
 
     private readonly Dictionary<DaggerfallSiteId, IReadOnlyList<DaggerfallNoticeSheet>> _noticeSheets = [];
-    private long _noticeSheetsHour = -1;
+    private long _noticeSheetsMinute = -1;
 
     /// <summary>
     /// The sheets <paramref name="site"/>'s notice boards show: one for each posting, a wanted poster for a bounty, a
-    /// decree for a decree or an office's news, a plain notice for the rest. Read once a game hour, since postings change
-    /// with the board, the law and the couriers rather than from frame to frame.
+    /// decree for a decree or an office's news, a plain notice for the rest. A board's postings take milliseconds to
+    /// assemble, too long for every frame, so they are read again each game minute, which brings in arriving word, the
+    /// law and the couriers, and at once when the world's conditions or an office change.
     /// </summary>
     private IReadOnlyList<DaggerfallNoticeSheet> NoticeSheets(DaggerfallSiteId site)
     {
-        long hour = _time.Calendar.MinuteNumber / 60;
-        if (hour != _noticeSheetsHour) { _noticeSheets.Clear(); _noticeSheetsHour = hour; }
+        long minute = _time.Calendar.MinuteNumber;
+        if (minute != _noticeSheetsMinute) { _noticeSheets.Clear(); _noticeSheetsMinute = minute; }
         if (_noticeSheets.TryGetValue(site, out IReadOnlyList<DaggerfallNoticeSheet>? cached)) return cached;
         IReadOnlyList<DaggerfallNoticeSheet> sheets = NoticeBoard is not null && _site.TryFind(site, out DaggerfallSiteRecord record)
             ? [.. NoticeBoard.BuildForSite(record, _time.Calendar.MinuteNumber).Entries.Select(entry => entry.Kind switch
