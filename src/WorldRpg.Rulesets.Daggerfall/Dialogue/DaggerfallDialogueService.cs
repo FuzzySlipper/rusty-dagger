@@ -1128,9 +1128,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             return $"Well met, fellow member of {guild.DisplayName}.";
         }
 
-        // 2. Rival-faction friction: check if the player belongs to an authored enemy of this NPC's faction or parent guild.
+        // 2. Rival-faction friction: check if the player belongs to an authored enemy of this NPC's faction or parent guild,
+        //    or holds positive standing with a direct individual rival (such as Lord Harth <-> Baron Shrike).
         if (TryFindRivalMemberFaction(faction, out DaggerfallFactionDefinition? enemyDef) && enemyDef is not null)
             return $"{faction.Name} keeps a wary eye on friends of {enemyDef.Name}.";
+        if (TryFindRivalStandingFaction(faction, out DaggerfallFactionDefinition? rivalDef) && rivalDef is not null)
+            return $"{faction.Name} hears you stand well with {rivalDef.Name} — mind where your loyalties lie.";
 
         // 3. Strong standing or distrust with a non-generic faction (guild, knightly order, temple, noble court, crown).
         // Unarrived standing wavefronts are subtracted so distant towns don't react before couriers bring word.
@@ -1161,9 +1164,58 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             }
         }
 
+        // 5. Notable classic cast faction identity introductions (Blades HQ, regional courts, underworld & rivalries).
+        if (ResolveClassicCastFactionGreeting(faction.Id) is { } castGreeting)
+            return castGreeting;
+
         _ = creatureFactionId;
         return null;
     }
+
+    private bool TryFindRivalStandingFaction(DaggerfallFactionDefinition startFaction, out DaggerfallFactionDefinition? rivalDef)
+    {
+        rivalDef = null;
+        if (startFaction.Type != 4)
+            return false;
+        foreach (int enemyId in startFaction.Enemies)
+        {
+            if (enemyId > 0
+                && _definitions.Factions.Factions.TryGetValue(enemyId, out DaggerfallFactionDefinition? matched)
+                && matched.Type == 4
+                && _social.FactionReputation(enemyId) >= 5)
+            {
+                rivalDef = matched;
+                return true;
+            }
+        }
+        foreach (DaggerfallFactionDefinition candidate in _definitions.Factions.Factions.Values)
+        {
+            if (candidate.Type == 4
+                && candidate.Id != startFaction.Id
+                && candidate.Enemies.Contains(startFaction.Id)
+                && _social.FactionReputation(candidate.Id) >= 5)
+            {
+                rivalDef = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static string? ResolveClassicCastFactionGreeting(int factionId) => factionId switch
+    {
+        351 => "I stand for the Septim Empire and the Blades at Hearthwing Manor, alongside Lady Brisienna.",
+        355 => "I am Lord Harth of the Host of the True Horn — no friend to Baron Shrike's rule in Lainlyn.",
+        379 => "You stand in Lainlyn's hall before Baron Shrike of the Host of the Horn.",
+        359 => "Lord Plessington of the Order of the Cup bids you speak cleanly in Urvaius.",
+        361 => "Chulmore Quill of the Quill Circus — my friends in the Dark Brotherhood value discretion.",
+        375 => "Lord Bertram Spode, at The Squid's service here in Daggerfall.",
+        376 => "Baltham Greyman — if you want the pulse of Daggerfall's court, you're in the right tavern.",
+        401 => "House Flyte welcomes worthy visitors to Anticlere's court.",
+        402 => "May Mara steady your path — I keep counsel here in Anticlere for House Flyte and the Benevolence.",
+        405 => "Baroness Dh'emka of Lainlyn's court — state your business plainly.",
+        _ => null,
+    };
 
     private bool TryResolveConcreteGuild(int factionId, out Guilds.DaggerfallConcreteGuildDefinition? guild)
     {

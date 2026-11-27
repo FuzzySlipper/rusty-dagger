@@ -23,9 +23,14 @@ public sealed class DaggerfallPeopleContentTests
         // site places the home block, and a slot home is one of that block's people slots.
         foreach ((string id, DaggerfallSiteId site) in new[]
         {
-            ("lady-brisienna", new DaggerfallSiteId(17, 1045)), ("the-squid", new DaggerfallSiteId(23, 601)),
-            ("aldous-verreine", new DaggerfallSiteId(23, 601)), ("oswin-harrowgate", new DaggerfallSiteId(52, 152)),
-            ("the-underking", new DaggerfallSiteId(16, 559)),
+            ("lady-brisienna", new DaggerfallSiteId(17, 1045)), ("the-great-knight", new DaggerfallSiteId(17, 1045)),
+            ("the-squid", new DaggerfallSiteId(23, 601)), ("aldous-verreine", new DaggerfallSiteId(23, 601)),
+            ("chulmore-quill", new DaggerfallSiteId(23, 601)), ("oswin-harrowgate", new DaggerfallSiteId(52, 152)),
+            ("the-underking", new DaggerfallSiteId(16, 559)), ("baron-shrike", new DaggerfallSiteId(22, 103)),
+            ("baroness-dh-emka", new DaggerfallSiteId(22, 103)), ("lord-auberon-flyte", new DaggerfallSiteId(21, 600)),
+            ("lord-quistley", new DaggerfallSiteId(21, 600)), ("lord-plessington", new DaggerfallSiteId(39, 263)),
+            ("lord-bertram-spode", new DaggerfallSiteId(17, 1231)), ("baltham-greyman", new DaggerfallSiteId(17, 1231)),
+            ("lord-harth", new DaggerfallSiteId(50, 90)),
         })
         {
             DaggerfallCastIndividualDefinition cast = people.Individuals[id];

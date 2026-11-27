@@ -201,12 +201,20 @@ internal static class DaggerfallHouseholds
             case "fam:dynasty:direnni":
                 region = 9;
                 return true;
+            case "fam:dynasty:anticlere":
+                region = 21;
+                return true;
+            case "fam:dynasty:lainlyn":
+                region = 22;
+                return true;
         }
         ReadOnlySpan<char> span = familyId.AsSpan();
         if (span.StartsWith(LocalPrefix, StringComparison.Ordinal))
             span = span[LocalPrefix.Length..];
         else if (span.StartsWith(GreatHousePrefix, StringComparison.Ordinal))
             span = span[GreatHousePrefix.Length..];
+        else if (span.StartsWith(DynastyPrefix, StringComparison.Ordinal))
+            span = span[DynastyPrefix.Length..];
         else
             return false;
         if (span.Length < 2 || span[0] != 'r') return false;
@@ -244,6 +252,8 @@ internal static class DaggerfallHouseholds
             case "fam:dynasty:wayrest": return "House of Wayrest";
             case "fam:dynasty:sentinel": return "House of Sentinel";
             case "fam:dynasty:direnni": return "Clan Direnni";
+            case "fam:dynasty:anticlere": return "House Flyte";
+            case "fam:dynasty:lainlyn": return "House of Lainlyn";
             case "fam:house:bridwell": return "House Bridwell";
         }
         string? regionName = definitions is not null && TryParseRegion(familyId, out int region)
@@ -257,6 +267,17 @@ internal static class DaggerfallHouseholds
             houseSurname = surnameForBank?.Invoke(bank, identity);
             if (string.IsNullOrWhiteSpace(houseSurname))
                 houseSurname = firstNameForBank?.Invoke(bank, identity);
+        }
+
+        if (IsDynasty(familyId))
+        {
+            if (!string.IsNullOrWhiteSpace(houseSurname))
+                return !string.IsNullOrWhiteSpace(regionName) && regionName != DaggerfallRegionNames.Unnamed
+                    ? $"House {houseSurname} of {regionName}"
+                    : $"House {houseSurname}";
+            return !string.IsNullOrWhiteSpace(regionName) && regionName != DaggerfallRegionNames.Unnamed
+                ? $"House of {regionName}"
+                : familyId;
         }
 
         if (IsGreatHouse(familyId))

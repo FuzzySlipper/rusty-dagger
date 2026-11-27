@@ -53,7 +53,14 @@
         "archive": 182,
         "record": 23
       },
-      "home": null,
+      "home": {
+        "site": {
+          "region": 17,
+          "index": 1231
+        },
+        "block": "TVRNAL06.RMB",
+        "slotId": "b:13:p02"
+      },
       "familyId": null,
       "schedule": "court-noble"
     },
@@ -78,9 +85,16 @@
         "archive": 183,
         "record": 4
       },
-      "home": null,
-      "familyId": null,
-      "schedule": "court-noble"
+      "home": {
+        "site": {
+          "region": 22,
+          "index": 103
+        },
+        "block": "PALAAA00.RMB",
+        "slotId": "b:0:p02"
+      },
+      "familyId": "fam:dynasty:lainlyn",
+      "schedule": "always-stationed"
     },
     {
       "id": "baroness-dh-emka",
@@ -103,8 +117,15 @@
         "archive": 183,
         "record": 11
       },
-      "home": null,
-      "familyId": null,
+      "home": {
+        "site": {
+          "region": 22,
+          "index": 103
+        },
+        "block": "PALAAA00.RMB",
+        "slotId": "b:0:p00"
+      },
+      "familyId": "fam:dynasty:lainlyn",
       "schedule": "court-noble"
     },
     {
@@ -156,7 +177,14 @@
         "archive": 182,
         "record": 0
       },
-      "home": null,
+      "home": {
+        "site": {
+          "region": 23,
+          "index": 601
+        },
+        "block": "DARKAA02.RMB",
+        "slotId": "b:0:p02"
+      },
       "familyId": null,
       "schedule": "always-stationed"
     },
@@ -437,9 +465,16 @@
         "archive": 182,
         "record": 24
       },
-      "home": null,
-      "familyId": null,
-      "schedule": "court-noble"
+      "home": {
+        "site": {
+          "region": 21,
+          "index": 600
+        },
+        "block": "PALAAA02.RMB",
+        "slotId": "b:0:p02"
+      },
+      "familyId": "fam:dynasty:anticlere",
+      "schedule": "always-stationed"
     },
     {
       "id": "lord-bertram-spode",
@@ -462,9 +497,16 @@
         "archive": 180,
         "record": 3
       },
-      "home": null,
+      "home": {
+        "site": {
+          "region": 17,
+          "index": 1231
+        },
+        "block": "THIEAL00.RMB",
+        "slotId": "b:16:p02"
+      },
       "familyId": null,
-      "schedule": "court-noble"
+      "schedule": "guild-member"
     },
     {
       "id": "lord-bridwell",
@@ -543,7 +585,14 @@
         "archive": 182,
         "record": 19
       },
-      "home": null,
+      "home": {
+        "site": {
+          "region": 50,
+          "index": 90
+        },
+        "block": "TVRNAL04.RMB",
+        "slotId": "b:17:p01"
+      },
       "familyId": null,
       "schedule": "court-noble"
     },
@@ -596,7 +645,14 @@
         "archive": 182,
         "record": 20
       },
-      "home": null,
+      "home": {
+        "site": {
+          "region": 39,
+          "index": 263
+        },
+        "block": "PALAAA00.RMB",
+        "slotId": "b:0:p00"
+      },
       "familyId": null,
       "schedule": "court-noble"
     },
@@ -649,7 +705,14 @@
         "archive": 183,
         "record": 5
       },
-      "home": null,
+      "home": {
+        "site": {
+          "region": 21,
+          "index": 600
+        },
+        "block": "TEMPAAC0.RMB",
+        "slotId": "b:21:p00"
+      },
       "familyId": null,
       "schedule": "guild-member"
     },
@@ -1098,7 +1161,14 @@
         "archive": 182,
         "record": 23
       },
-      "home": null,
+      "home": {
+        "site": {
+          "region": 17,
+          "index": 1045
+        },
+        "block": "PALAAA00.RMB",
+        "slotId": "b:0:p00"
+      },
       "familyId": null,
       "schedule": "always-stationed"
     },
