@@ -1475,7 +1475,7 @@ test('the Board developer panel draws the table at a glance, the seats, supply c
     id, name, kind: 'Crown', holder: `${id}-holder`, playsAs: null, worldHolder: null, prestige: 10, coin: 3, favour: 2, force: 4,
     plan: null, reserves: null, contestedWeeks: 0, reservesCut: false, arbiter: false, piecesLeft: 5, grudges: 0, ...extra,
   });
-  const clock = { turn: 9, day: 65, lastTurnDay: 63, nextTurnDay: 70, nextTurnDate: '7 3 405' };
+  const clock = { turn: 9, day: 65, lastTurnDay: 63, nextTurnDay: 70, nextTurnDate: '7/3/405' };
   developer.answers = {
     'board.state': JSON.stringify({
       ...clock, leader: 'daggerfall',
@@ -1537,7 +1537,7 @@ test('the Board developer panel draws the table at a glance, the seats, supply c
     const panel = developer.shells.at(-1).options.panels.find(p => p.title === 'Board').mount(element);
     await settle(); await settle(); await settle();
 
-    assert.match(element.querySelector('.dagger-developer-status').textContent, /Turn 9.*next Sunday 7 3 405 \(day 70\).*leader Daggerfall.*1 wars.*1 trade/);
+    assert.match(element.querySelector('.dagger-developer-status').textContent, /Turn 9.*next turn day 70 \(7\/3\/405\).*leader Daggerfall.*1 wars.*1 trade/);
     // The grid: war between the two crowns, trade between Wayrest and the Empire, a relation sign otherwise; the leader starred.
     assert.equal(element.querySelector('td[data-pair="daggerfall|sentinel"]').dataset.state, 'war');
     assert.equal(element.querySelector('td[data-pair="sentinel|daggerfall"]').textContent, 'W');

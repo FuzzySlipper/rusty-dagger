@@ -432,7 +432,7 @@ internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> 
         w.WriteNumber("lastTurnDay", owner.LastTurnDay);
         w.WriteNumber("nextTurnDay", owner.NextTurnDay);
         DaggerfallCalendar next = DaggerfallCalendar.FromAbsoluteSeconds(owner.NextTurnDay * DaggerfallCalendar.SecondsPerDay);
-        w.WriteString("nextTurnDate", $"{next.Day} {next.Month} {next.Year}");
+        w.WriteString("nextTurnDate", $"{next.Day}/{next.Month}/{next.Year}");
     }
 
     private static string? WorldHolderName(DaggerfallPoliticalBoard owner, string seat) =>

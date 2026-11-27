@@ -850,6 +850,7 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-developer-board details { border-top: 1px solid #38434a; padding-top: .375rem; }
 .dagger-developer-board summary { color: #f0d890; cursor: pointer; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .dagger-developer-board-pre { background: rgb(10 13 15 / .75); border: 1px solid #2b343a; color: #d8e0e4; font: .75rem/1.4 ui-monospace, monospace; margin: .375rem 0 0; overflow-x: auto; padding: .375rem .5rem; white-space: pre-wrap; }
+.dagger-developer-board-grid-scroll { max-width: 100%; overflow-x: auto; }
 .dagger-developer-board-grid { border-collapse: collapse; font: .6875rem/1.2 ui-monospace, monospace; margin-top: .375rem; }
 .dagger-developer-board-grid th { color: #b8c4ca; font-weight: 400; padding: .0625rem .25rem; text-align: left; white-space: nowrap; }
 .dagger-developer-board-grid th[data-leader]::after { color: #f0d890; content: " *"; }

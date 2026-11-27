@@ -239,7 +239,7 @@ export function mountBoardPanel(element: HTMLElement, transport: LiveDebugTransp
     for (const row of state.seats) {
       const tr = document.createElement('tr');
       const th = document.createElement('th');
-      th.textContent = row.name;
+      th.textContent = row.id;
       th.dataset.seat = row.id;
       if (row.id === state.leader) th.dataset.leader = '';
       tr.append(th);
@@ -254,6 +254,10 @@ export function mountBoardPanel(element: HTMLElement, transport: LiveDebugTransp
       }
       table.append(tr);
     }
+    // The grid scrolls sideways in a narrow dock rather than losing its last columns.
+    const grid = document.createElement('div');
+    grid.className = 'dagger-developer-board-grid-scroll';
+    grid.append(table);
     const legend = document.createElement('p');
     legend.className = 'dagger-developer-board-legend';
     legend.textContent = 'W war · T truce · F feud · $ trade · +/- relation · leader starred';
@@ -266,7 +270,7 @@ export function mountBoardPanel(element: HTMLElement, transport: LiveDebugTransp
       `Reserves cut: ${list(state.seats.filter(seat => seat.reservesCut).map(seat => seat.name))}`,
     ].join('\n'));
     supply.dataset.boardSupply = '';
-    shapeSection.body.replaceChildren(table, legend, supply);
+    shapeSection.body.replaceChildren(grid, legend, supply);
   };
 
   const renderState = (state: BoardStateReadout): void => {
@@ -392,7 +396,7 @@ export function mountBoardPanel(element: HTMLElement, transport: LiveDebugTransp
     const state = stateRes.data;
     setSeatOptions(state.seats, seatSelect.value);
     const leader = state.leader ? state.seats.find(seat => seat.id === state.leader)?.name ?? state.leader : 'none';
-    status.textContent = `Turn ${state.turn} · next Sunday ${state.nextTurnDate} (day ${state.nextTurnDay}) · today day ${state.day} · leader ${leader}`
+    status.textContent = `Turn ${state.turn} · next turn day ${state.nextTurnDay} (${state.nextTurnDate}) · today day ${state.day} · leader ${leader}`
       + ` · ${state.wars.length} wars · ${state.agreements.length} trade`;
     renderState(state);
     if (turnsRes.ok) renderTurns(turnsRes.data);
