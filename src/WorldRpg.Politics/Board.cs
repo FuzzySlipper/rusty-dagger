@@ -144,7 +144,7 @@ public sealed class Board
             [.. decks[seat.Id].discard.Select(card => card.Id)]))],
         [.. Regions.Select(region => new RegionSave(region.Id, region.Allegiance, region.Control, region.Prosperity, region.Order, region.ContestableFrom,
             new SortedDictionary<string, int>(region.Influence, StringComparer.Ordinal), new SortedDictionary<Office, string>(region.Offices),
-            [.. region.Conditions], region.Supply, region.CutWeeks, region.StrainWeeks))],
+            [.. region.Conditions], region.Supply, region.CutWeeks, region.StrainWeeks, [.. region.Covert]))],
         [.. relations.Where(entry => entry.Value != 0).OrderBy(entry => entry.Key.Item1, StringComparer.Ordinal).ThenBy(entry => entry.Key.Item2, StringComparer.Ordinal)
             .Select(entry => new RelationSetup(entry.Key.Item1, entry.Key.Item2, entry.Value))],
         [.. pending.Select(move => new PendingMoveSave(move.Id, move.Seat, move.Card.Id, move.Targets, move.Origin, move.Played, move.Arrives))],
@@ -183,6 +183,9 @@ public sealed class Board
             foreach (string card in seat.DrawPile.Concat(seat.Hand).Concat(seat.Discard).Where(card => !byId.ContainsKey(card)))
                 problems.Add($"seat '{seat.Id}' holds unknown card '{card}'");
         }
+        foreach (RegionSave region in save.Regions)
+            foreach (Office office in region.CovertOffices.Where(office => !region.Offices.ContainsKey(office)))
+                problems.Add($"region '{region.Id}' keeps its {office.ToString().ToLowerInvariant()} office covert, but no seat holds it");
         foreach (PendingMoveSave move in save.Pending.Where(move => !byId.ContainsKey(move.Card)))
             problems.Add($"move '{move.Id}' plays unknown card '{move.Card}'");
         foreach (string card in save.WorldDraw.Concat(save.WorldDiscard).Where(card => !worldById.ContainsKey(card)))
@@ -227,6 +230,7 @@ public sealed class Board
                 Supply = saved.Supply,
                 CutWeeks = saved.CutWeeks,
                 StrainWeeks = saved.StrainWeeks,
+                Covert = [.. saved.CovertOffices],
             };
         })];
         Dictionary<string, SeatDeck> decks = save.Seats.ToDictionary(seat => seat.Id,
@@ -696,12 +700,24 @@ public sealed class Board
     }
 
     /// <summary>Gives <paramref name="region"/>'s <paramref name="office"/> to <paramref name="seat"/>, or to local people with no seat.</summary>
-    public void SetOffice(Region region, Office office, Seat? seat)
+    /// <summary>
+    /// Gives <paramref name="region"/>'s <paramref name="office"/> to <paramref name="seat"/>, or to local people with no
+    /// seat; <paramref name="covert"/> when a secret card took it.
+    /// </summary>
+    public void SetOffice(Region region, Office office, Seat? seat, bool covert = false)
     {
         string? before = region.Offices.GetValueOrDefault(office);
         if (before == seat?.Id) return;
+        bool wasCovert = region.Covert.Contains(office);
         SetOfficeHolder(region, office, seat?.Id);
-        Undo(() => SetOfficeHolder(region, office, before));
+        if (seat is not null && covert) region.Covert.Add(office);
+        else region.Covert.Remove(office);
+        Undo(() =>
+        {
+            SetOfficeHolder(region, office, before);
+            if (wasCovert) region.Covert.Add(office);
+            else region.Covert.Remove(office);
+        });
         changes.Add(new BoardChange(region.Id, $"office:{office.ToString().ToLowerInvariant()}", before ?? "local", seat?.Id ?? "local"));
     }
 
@@ -1171,6 +1187,9 @@ public sealed record Region(string Id, string Name, int CatalogRegion, bool Capi
 
     /// <summary>The offices a seat holds; an office missing here is held by local people with no seat.</summary>
     public SortedDictionary<Office, string> Offices { get; internal init; } = [];
+
+    /// <summary>The held offices their seat took with a secret card: the world sees the symptom, never the seat.</summary>
+    public SortedSet<Office> Covert { get; internal init; } = [];
 
     /// <summary>The conditions on the region, in the order they were laid.</summary>
     public List<RegionCondition> Conditions { get; internal init; } = [];

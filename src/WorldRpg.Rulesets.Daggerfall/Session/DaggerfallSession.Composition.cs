@@ -634,7 +634,8 @@ internal sealed partial class DaggerfallSession
                 wordSpread: WordSpread,
                 currentMinute: () => _time.Calendar.MinuteNumber,
                 activeSite: () => _site.ActiveSite,
-                hasUsableVouchFor: id => Introductions?.HasUsableVouch(id, _site.ActiveSite) == true);
+                hasUsableVouchFor: id => Introductions?.HasUsableVouch(id, _site.ActiveSite) == true,
+                watchAgainstPlayer: site => OfficeAllegiance?.Watch(site) == DaggerfallOfficeStanding.Enemy);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
@@ -813,7 +814,8 @@ internal sealed partial class DaggerfallSession
                 definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
                 () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,
                 wordSpread: WordSpread,
-                courierDispatches: CourierDispatches);
+                courierDispatches: CourierDispatches,
+                officeAllegiance: site => OfficeAllegiance?.All(site) ?? []);
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone,
@@ -1133,6 +1135,11 @@ internal sealed partial class DaggerfallSession
                 PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, State.Social.Liege,
                     OfficeLedger.ResolveBoardSeatPersona, WorldConditions, definitions.Locations.Records, CourierDispatches,
                     _time.Calendar.DayNumber, saved?.PoliticalBoard, OfficeLedger);
+            if (PoliticalBoard is not null)
+            {
+                OfficeAllegiance = new DaggerfallOfficeAllegiance(PoliticalBoard, State.Social, definitions.BoardSeats, OfficeLedger, _tuning.Politics);
+                State.Social.BindOfficeStanding(OfficeAllegiance.ReactionShift);
+            }
             OfficeLedger.OfficeChanged += change => PoliticalBoard?.ObserveOfficeChanged(change);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
@@ -1725,7 +1732,8 @@ internal sealed partial class DaggerfallSession
                 speaker, targetId, site, OfficeLedger, OfficeHolders, WorldConditions, State.Social, State.Crime, Law, _definitions,
                 checked((int)_time.Calendar.DayNumber)),
             isVouchUsable: vouch => Introductions.IsVouchUsable(vouch),
-            noticeBounties: NoticeBounties);
+            noticeBounties: NoticeBounties,
+            officeAllegiance: OfficeAllegiance);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);
@@ -1902,6 +1910,9 @@ internal sealed partial class DaggerfallSession
     {
         if (site is null || OfficeHolders is null || OfficeLedger is null)
             return false;
+        // A watch answering to the player's own seat lets them through as if vouched for (#11127).
+        if (OfficeAllegiance?.Watch(site) == DaggerfallOfficeStanding.Member)
+            return true;
         long? rulerId = OfficeHolders.ResolveRegionalRuler(site.Id.Region)?.ActorId;
         long? captainId = OfficeLedger.ResolveWatchCaptain(site).HolderActorId;
         if (rulerId is null && captainId is null)

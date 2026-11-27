@@ -33,6 +33,10 @@
     "bountyReputation": 3,
     "bountyClaimDays": 30
   },
+  "politics": {
+    "officeMemberReaction": 10,
+    "officeEnemyReaction": 10
+  },
   "normalLight": {
     "distance": 1.4,
     "heightFraction": 0.25,

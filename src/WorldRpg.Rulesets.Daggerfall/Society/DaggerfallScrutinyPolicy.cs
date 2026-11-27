@@ -55,7 +55,8 @@ internal sealed class DaggerfallScrutinyPolicy(
     DaggerfallWordSpread? wordSpread = null,
     Func<long>? currentMinute = null,
     Func<DaggerfallSiteRecord?>? activeSite = null,
-    Func<long, bool>? hasUsableVouchFor = null)
+    Func<long, bool>? hasUsableVouchFor = null,
+    Func<DaggerfallSiteRecord?, bool>? watchAgainstPlayer = null)
 {
     internal const int HighStandingExemptThreshold = 20;
     internal const int HeightenedWantedThreshold = -5;
@@ -79,6 +80,21 @@ internal sealed class DaggerfallScrutinyPolicy(
         int day = currentDay();
 
         DaggerfallWorldConditionToken? driving = SelectGateScrutinyCondition(conditions.ActiveForRegion(region, day));
+        // A watch answering to a seat hostile to the player's holds them to heightened scrutiny, and clears no one.
+        bool hostileWatch = watchAgainstPlayer?.Invoke(site) == true;
+        if (driving is null && hostileWatch)
+        {
+            bool challenged = banished || regionalRep < HeightenedWantedThreshold;
+            return new(
+                Level: DaggerfallScrutinyLevel.Heightened,
+                Region: region,
+                PlayerExempt: false,
+                WatchChallengeActive: challenged,
+                EffectiveWantedThreshold: HeightenedWantedThreshold,
+                WatchDetectionChancePercent: challenged ? (banished ? 15 : 10) : 0,
+                Reason: $"The watch of {site?.Name ?? definitions.BuildingNames.RegionName(region)} answers to your enemies and watches you closely.",
+                ConditionTokenId: null);
+        }
         if (driving is null)
         {
             bool baseWanted = regionalRep < DaggerfallLegalServicePolicy.WantedReputationThreshold;
@@ -99,7 +115,7 @@ internal sealed class DaggerfallScrutinyPolicy(
             : DaggerfallScrutinyLevel.Heightened;
         int threshold = level == DaggerfallScrutinyLevel.Strict ? StrictWantedThreshold : HeightenedWantedThreshold;
         bool vouched = hasWatchOrRulerVouch?.Invoke(site) == true;
-        bool exempt = !banished && (regionalRep >= HighStandingExemptThreshold || vouched);
+        bool exempt = !banished && !hostileWatch && (regionalRep >= HighStandingExemptThreshold || vouched);
         bool challenge = banished || (!exempt && regionalRep < threshold);
         int chance = challenge
             ? Math.Min(30, (banished ? 10 : 5) + 5 * driving.Severity)

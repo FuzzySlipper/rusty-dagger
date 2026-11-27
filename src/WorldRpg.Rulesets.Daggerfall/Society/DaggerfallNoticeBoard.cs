@@ -84,7 +84,8 @@ internal sealed class DaggerfallNoticeBoard(
     Func<DaggerfallTextContext> currentText,
     Func<DaggerfallCharacterIdentity> playerIdentity,
     DaggerfallWordSpread? wordSpread = null,
-    DaggerfallCourierDispatches? courierDispatches = null)
+    DaggerfallCourierDispatches? courierDispatches = null,
+    Func<DaggerfallSiteRecord, IReadOnlyList<DaggerfallOfficeAllegianceView>>? officeAllegiance = null)
 {
     private const int MaxClassicSignRumors = 3;
 
@@ -108,6 +109,29 @@ internal sealed class DaggerfallNoticeBoard(
         // 2. Active world-condition decrees and regional bounties (stubbed/authored or B2 board-driven).
         foreach (DaggerfallWorldConditionToken token in conditions.ActiveForRegion(region, day))
             entries.Add(BuildConditionEntry(token, region, regionName, authorityName));
+
+        // A town office a seat took on the board: a public take is posted, a secret one shows only in the talk of the town (#11127).
+        foreach (DaggerfallOfficeAllegianceView held in officeAllegiance?.Invoke(site) ?? [])
+            entries.Add(held.Covert
+                ? new(
+                    Id: $"notice:office-rumor:{site.Id.Region}:{site.Id.Index}:{held.Kind}",
+                    Kind: DaggerfallNoticeEntryKind.SignRumor,
+                    Heading: "Talk of the Town",
+                    Body: held.Kind switch
+                    {
+                        DaggerfallOfficeKind.WatchCaptain => $"They say the watch of {site.Name} looks the other way these days, for the right friends.",
+                        DaggerfallOfficeKind.CourtFactor => $"They say the factor's ledgers in {site.Name} have new friends, and the prices know it.",
+                        DaggerfallOfficeKind.GuildHallMaster => $"They say the guild hall of {site.Name} takes its orders from somewhere else now.",
+                        _ => $"They say the temple of {site.Name} has a new patron, and no one will name them.",
+                    },
+                    Region: region)
+                : new(
+                    Id: $"notice:office:{site.Id.Region}:{site.Id.Index}:{held.Kind}",
+                    Kind: DaggerfallNoticeEntryKind.OfficeNotice,
+                    Heading: $"{OfficeName(held.Kind)} of {site.Name}",
+                    Body: $"The {OfficeName(held.Kind).ToLowerInvariant()} of {site.Name} answers to {held.SeatName}.",
+                    Region: region,
+                    FactionId: held.SeatFactionId));
 
         // A region the board gave a new liege posts its homage while the crown consolidates its hold (wiki region-liege).
         if (social.Liege.NewLiegeOf(region) is { } liege)
@@ -275,7 +299,15 @@ internal sealed class DaggerfallNoticeBoard(
             Lead: lead);
     }
 
-    private void AddCourierDeliveryOffers(List<DaggerfallNoticeEntry> entries, DaggerfallSiteRecord site, int region)
+    private static string OfficeName(DaggerfallOfficeKind kind) => kind switch
+    {
+        DaggerfallOfficeKind.WatchCaptain => "Watch",
+        DaggerfallOfficeKind.CourtFactor => "Court Factor",
+        DaggerfallOfficeKind.GuildHallMaster => "Guild Hall",
+        _ => "Temple",
+    };
+
+        private void AddCourierDeliveryOffers(List<DaggerfallNoticeEntry> entries, DaggerfallSiteRecord site, int region)
     {
         if (courierDispatches is null)
             return;

@@ -401,7 +401,7 @@ public sealed record Card(
                 case CardEffectKind.MoveInfluence:
                     board.MoveInfluence(regions[0], regions[1], seat, effect.Amount);
                     break;
-                case CardEffectKind.ChallengeOffice: Challenge(board, seat, regions[0], effect.Office!.Value, effect.Amount); break;
+                case CardEffectKind.ChallengeOffice: Challenge(board, seat, regions[0], effect.Office!.Value, effect.Amount, Visibility == Visibility.Secret); break;
                 case CardEffectKind.Relation:
                     string? other = Target switch
                     {
@@ -492,13 +492,13 @@ public sealed record Card(
     private static bool Contestable(Board board, Seat seat, Region region) =>
         !region.Capital && region.Allegiance != seat.Id && board.Turn >= region.ContestableFrom && board.Reaches(seat, region);
 
-    private static void Challenge(Board board, Seat seat, Region region, Office office, int strength)
+    private static void Challenge(Board board, Seat seat, Region region, Office office, int strength, bool covert)
     {
         string? holder = region.Offices.GetValueOrDefault(office);
         if (holder == seat.Id || board.PiecesLeft(seat) == 0 || (holder is not null && board.Footholds(board.Seat(holder)) == 1)) return;
         int defence = 1 + (holder is null ? 0 : region.InfluenceOf(holder)) + (region.Order >= WatchfulOrder ? 1 : 0);
         if (region.InfluenceOf(seat.Id) + strength <= defence) return;
-        board.SetOffice(region, office, seat);
+        board.SetOffice(region, office, seat, covert);
         if (holder is not null) board.AdjustRelation(seat, board.Seat(holder), -1);
     }
 }

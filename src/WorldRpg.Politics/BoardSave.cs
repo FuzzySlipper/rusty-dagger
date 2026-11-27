@@ -75,7 +75,8 @@ public sealed record RegionSave(
     IReadOnlyList<RegionCondition> Conditions,
     RegionSupply Supply,
     int CutWeeks,
-    int StrainWeeks);
+    int StrainWeeks,
+    IReadOnlyList<Office> CovertOffices);
 
 /// <summary>A slow move under way, its card named by id.</summary>
 public sealed record PendingMoveSave(string Id, string Seat, string Card, IReadOnlyList<string> Targets, string? Origin, int Played, int Arrives);

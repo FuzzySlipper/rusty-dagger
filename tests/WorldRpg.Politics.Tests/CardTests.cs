@@ -261,6 +261,32 @@ public sealed class CardTests
         Assert.Equal(-1, held.Relation("guild", "west"));
     }
 
+    /// <summary>An office a secret card took is covert, so the world sees only its symptom (#11127); taken openly or lost, it is not.</summary>
+    [Fact]
+    public void An_office_taken_by_a_secret_card_is_covert_until_it_changes_hands_and_saves_so()
+    {
+        Board board = TestBoards.Create(TestBoards.TwoCrowns(marchInfluence: new Dictionary<string, int> { ["guild"] = 1 }).WithGuild());
+        Region march = board.Region("march");
+        Assert.True(TestBoards.Card("suborn").Play(board, board.Seat("guild"), ["march"]));
+        Assert.Equal([Office.Watch], march.Covert);
+
+        Board resumed = Board.Load(TestBoards.TwoCrowns(marchInfluence: new Dictionary<string, int> { ["guild"] = 1 }).WithGuild(),
+            TestBoards.CardsFor(TestBoards.TwoCrowns().WithGuild()), BoardSave.FromJson(board.Save().ToJson(), "covert save"));
+        Assert.Equal([Office.Watch], resumed.Region("march").Covert);
+
+        board.SetOffice(march, Office.Watch, board.Seat("west"));
+        Assert.Empty(march.Covert);
+        board.SetOffice(march, Office.Watch, board.Seat("guild"), covert: true);
+        board.SetOffice(march, Office.Watch, null);
+        Assert.Empty(march.Covert);
+
+        BoardSave save = board.Save();
+        BoardSave stray = save with { Regions = [.. save.Regions.Select(region => region.Id == "march" ? region with { CovertOffices = [Office.Hall] } : region)] };
+        BoardSetupException refused = Assert.Throws<BoardSetupException>(() =>
+            Board.Load(TestBoards.TwoCrowns().WithGuild(), TestBoards.CardsFor(TestBoards.TwoCrowns().WithGuild()), stray));
+        Assert.Contains("region 'march' keeps its hall office covert, but no seat holds it", refused.Problems);
+    }
+
     [Fact]
     public void An_office_that_is_its_holders_last_foothold_is_never_taken()
     {

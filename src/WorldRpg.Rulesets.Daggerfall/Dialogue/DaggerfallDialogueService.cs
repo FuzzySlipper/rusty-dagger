@@ -104,6 +104,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly DaggerfallWordSpread? _wordSpread;
     private readonly DaggerfallCourierDispatches? _courierDispatches;
     private readonly DaggerfallNoticeBounties? _noticeBounties;
+    private readonly DaggerfallOfficeAllegiance? _officeAllegiance;
     private readonly DaggerfallOfficeHolders? _officeHolders;
     private readonly DaggerfallOfficeLedger? _officeLedger;
     private readonly DaggerfallActorLedger? _actorLedger;
@@ -167,9 +168,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? denounceTargets = null,
         Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? denounceOfficeHolder = null,
         Func<ActorVouchRecord, bool>? isVouchUsable = null,
-        DaggerfallNoticeBounties? noticeBounties = null)
+        DaggerfallNoticeBounties? noticeBounties = null,
+        DaggerfallOfficeAllegiance? officeAllegiance = null)
     {
         _noticeBounties = noticeBounties;
+        _officeAllegiance = officeAllegiance;
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
         _partyHireTopics = partyHireTopics;
@@ -436,6 +439,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (!string.IsNullOrWhiteSpace(factionLine)) greeting += "\n" + factionLine;
         string? officeLine = ResolveOfficeContinuityGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(officeLine)) greeting += "\n" + officeLine;
+        string? allegianceLine = ResolveOfficeAllegianceLine(npc, activeSite);
+        if (!string.IsNullOrWhiteSpace(allegianceLine)) greeting += "\n" + allegianceLine;
         if (_officeLedger?.TryGetExile(npc.DurableId) is { } exiledHolder)
             greeting += "\n" + DaggerfallExileDialogue.BuildGreetingLine(npc, exiledHolder, _officeLedger, _officeHolders, _definitions);
         string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
@@ -1466,6 +1471,23 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (targetFactionId is not int wanted || wanted <= 0 || candidateFactionId <= 0)
             return false;
         return _social.Liege.Lineage(candidateFactionId).Any(faction => faction.Id == wanted);
+    }
+
+    /// <summary>
+    /// What a local office holder whose office answers to a board seat says of it (#11127): openly, when the seat took
+    /// it in public; to a member of that seat only, when it took it in secret.
+    /// </summary>
+    internal string? ResolveOfficeAllegianceLine(DaggerfallNpc npc, DaggerfallSiteRecord? site)
+    {
+        if (_officeAllegiance is null || _officeLedger is null || site is null
+            || _officeLedger.ResolveLocalOffices(site).FirstOrDefault(office => office.HolderActorId == npc.DurableId) is not { } office
+            || _officeAllegiance.Of(site, office.Kind) is not { } held)
+            return null;
+        if (!held.Covert)
+            return $"As {office.Title}, I answer to {held.SeatName} now.";
+        return _officeAllegiance.Standing(held) == DaggerfallOfficeStanding.Member
+            ? $"Between us, the {office.Title.ToLowerInvariant()} answers to {held.SeatName} these days. Keep that to yourself."
+            : null;
     }
 
     private string? ResolveOfficeContinuityGreetingLine(DaggerfallNpc npc, DaggerfallSiteRecord? site)

@@ -70,6 +70,7 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     private Func<long, FactionComponent?>? _actorFactions;
     private Func<long, int>? _actorDisposition;
     private Func<long, int>? _actorVouchBonus;
+    private Func<DaggerfallNpc, int>? _officeStanding;
 
     /// <summary>Raised when a guild rank changes via join/promotion/demotion: (factionId, newRank).</summary>
     internal event Action<int, int>? GuildRankChanged;
@@ -85,6 +86,10 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
 
     internal void BindActorVouchBonus(Func<long, int> lookup) =>
         _actorVouchBonus = lookup ?? throw new ArgumentNullException(nameof(lookup));
+
+    /// <summary>Binds how a person's office, answering to a board seat, receives the player (<see cref="DaggerfallOfficeAllegiance.ReactionShift"/>).</summary>
+    internal void BindOfficeStanding(Func<DaggerfallNpc, int> lookup) =>
+        _officeStanding = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
     /// <summary>
     /// Standing over <paramref name="catalog"/>, rippling through the faction tree as <paramref name="liege"/> has it; without
@@ -205,7 +210,8 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     {
         ArgumentNullException.ThrowIfNull(npc);
         int factionId = ResolveNpcReactionFactionId(npc, factions);
-        int disposition = _actorDisposition?.Invoke(npc.DurableId) ?? 0;
+        // A person's own disposition, and how the seat their office answers to takes the player.
+        int disposition = (_actorDisposition?.Invoke(npc.DurableId) ?? 0) + (_officeStanding?.Invoke(npc) ?? 0);
         int vouchBonus = _actorVouchBonus?.Invoke(npc.DurableId) ?? 0;
         // Classic sprite placements also carry faction ids absent from FACTION.TXT. Preserve that source
         // identity, give people without a catalog faction a neutral faction baseline, and still honor personal disposition and trusted vouches.
