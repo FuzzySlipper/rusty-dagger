@@ -14,7 +14,8 @@ public sealed record BoardSetup(
     IReadOnlyList<SeatSetup> Seats,
     IReadOnlyList<RegionSetup> Regions,
     IReadOnlyList<RelationSetup> Relations,
-    IReadOnlyDictionary<string, Persona> Personas)
+    IReadOnlyDictionary<string, Persona> Personas,
+    RevoltTuning? Revolts = null)
 {
     /// <summary>The most standing goals a seat holds.</summary>
     public const int AgendaLimit = 3;
@@ -49,7 +50,7 @@ public sealed record BoardSetup(
     /// <summary>Everything wrong with this setup; an empty list means a board can be made from it.</summary>
     public IReadOnlyList<string> Problems()
     {
-        List<string> problems = [];
+        List<string> problems = [.. (Revolts ?? RevoltTuning.Default).Problems()];
         HashSet<string> seats = new(StringComparer.Ordinal);
         HashSet<string> regions = new(StringComparer.Ordinal);
         foreach (SeatSetup seat in Seats)

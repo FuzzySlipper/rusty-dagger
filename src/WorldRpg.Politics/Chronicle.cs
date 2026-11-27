@@ -13,7 +13,7 @@ public enum ArcKind
     Succession,
 
     /// <summary>
-    /// A region breaking free of its liege: it peaks the week it breaks free and settles <see cref="Revolts.FreedWeeks"/>
+    /// A region breaking free of its liege: it peaks the week it breaks free and settles <see cref="RevoltTuning.FreedWeeks"/>
     /// weeks later, once its own lords hold it. Its subjects are the region and the crown it threw off.
     /// </summary>
     Revolt,

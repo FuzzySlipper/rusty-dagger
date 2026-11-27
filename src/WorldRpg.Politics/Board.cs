@@ -48,9 +48,10 @@ public sealed class Board
 
     private Board(IReadOnlyList<Seat> seats, IReadOnlyList<Region> regions, Dictionary<(string, string), int> relations,
         Dictionary<string, SeatDeck> decks, List<WorldCard> worldDraw, IReadOnlyList<Card> standingCards, BoardRandom random,
-        IReadOnlyDictionary<string, Persona> personas)
+        IReadOnlyDictionary<string, Persona> personas, RevoltTuning revolts)
     {
         this.personas = personas;
+        Revolts = revolts;
         StandingCards = standingCards;
         Seats = seats;
         Regions = regions;
@@ -67,6 +68,9 @@ public sealed class Board
 
     /// <summary>Seats in table order.</summary>
     public IReadOnlyList<Seat> Seats { get; }
+
+    /// <summary>When a region strains against its liege and breaks free (<see cref="Politics.Revolts"/>), from its setup.</summary>
+    public RevoltTuning Revolts { get; }
 
     /// <summary>Regions in board order.</summary>
     public IReadOnlyList<Region> Regions { get; }
@@ -123,7 +127,7 @@ public sealed class Board
         Dictionary<(string, string), int> relations = setup.Relations.ToDictionary(relation => Pair(relation.A, relation.B), relation => relation.Value);
         Dictionary<string, SeatDeck> decks = setup.Seats.ToDictionary(seat => seat.Id, seat => new SeatDeck([.. cards.Deck(seat)], [], []), StringComparer.Ordinal);
         Board board = new(seats, regions, relations, decks, [.. cards.WorldDeck()], [.. cards.StandingCards()], new BoardRandom(seed ?? setup.Seed),
-            new Dictionary<string, Persona>(setup.Personas!, StringComparer.Ordinal));
+            new Dictionary<string, Persona>(setup.Personas!, StringComparer.Ordinal), setup.Revolts ?? RevoltTuning.Default);
         foreach (Seat seat in seats) board.Shuffle(decks[seat.Id].drawPile);
         board.Shuffle(board.worldDraw);
         foreach (Seat seat in seats) board.DrawHand(seat);
@@ -230,7 +234,7 @@ public sealed class Board
             StringComparer.Ordinal);
         Board board = new(seats, regions, save.Relations.ToDictionary(relation => Pair(relation.A, relation.B), relation => relation.Value), decks,
             [.. save.WorldDraw.Select(id => worldById[id])], [.. cards.StandingCards()], new BoardRandom(save.Random),
-            new Dictionary<string, Persona>(setup.Personas, StringComparer.Ordinal))
+            new Dictionary<string, Persona>(setup.Personas, StringComparer.Ordinal), setup.Revolts ?? RevoltTuning.Default)
         {
             Turn = save.Turn,
             Leader = save.Leader,

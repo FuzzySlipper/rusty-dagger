@@ -87,7 +87,7 @@ internal sealed class DaggerfallPoliticalNews
                     break;
                 case (ArcKind.Revolt, ArcPhase.Settled):
                     Add(key, $"{RegionName(arc.Subjects[0])} Stands on Its Own",
-                        $"Half a year after throwing off {Name(arc.Subjects[1])}, {RegionName(arc.Subjects[0])} answers to no crown.",
+                        $"A year after throwing off {Name(arc.Subjects[1])}, {RegionName(arc.Subjects[0])} answers to no crown.",
                         arc.Subjects[0], null);
                     break;
             }
