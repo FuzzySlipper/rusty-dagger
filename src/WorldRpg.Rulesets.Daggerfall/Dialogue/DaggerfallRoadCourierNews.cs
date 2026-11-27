@@ -103,11 +103,8 @@ internal static class DaggerfallRoadCourierNews
         {
             foreach (DaggerfallCourierDispatchSave dispatch in courierDispatches.All)
             {
-                if (dispatch.Revealed
-                    || dispatch.Status is not (DaggerfallDispatchStatus.InTransit or DaggerfallDispatchStatus.CarriedByPlayer))
-                {
+                if (dispatch.Revealed)
                     continue;
-                }
                 if (!string.IsNullOrWhiteSpace(dispatch.LinkedWavefrontId))
                     blockedWavefronts.Add(dispatch.LinkedWavefrontId);
                 if (!string.IsNullOrWhiteSpace(dispatch.LinkedConditionTokenId))

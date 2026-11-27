@@ -173,6 +173,40 @@ public sealed class OverlandEncounterExchangeTests
         IReadOnlyList<DaggerfallCourierNewsItem> afterReveal = DaggerfallRoadCourierNews.BuildNewsItems(
             encounter, courierNpc, localSite, nowMinute, nowDay, wordSpread, conditions, dispatches, definitions);
         Assert.Contains(afterReveal, i => i.Reply.Contains("SECRET SEALED SUMMARY", StringComparison.Ordinal));
+
+        // Regression (R11083-1): an unrevealed sealed dispatch that settles automatically to Delivered via
+        // AdvanceToMinute (without BuyDispatch/InterceptDispatch) still keeps its linked wavefront & condition filtered.
+        conditions.Set(new DaggerfallWorldConditionToken("cond:auto-delivered-sealed", DaggerfallWorldConditionKind.CrimeCrackdown,
+            farOrigin.Id.Region, Severity: 1, StartedDay: 0, ExpiresDay: 30,
+            Body: "AUTO-DELIVERED SEALED CONDITION MUST STAY HIDDEN"));
+        DaggerfallWordWavefrontSave autoSealedWf = wordSpread.RecordNews(
+            "wf:auto-delivered-sealed:11083",
+            "Auto Delivered Secret",
+            "AUTO-DELIVERED SEALED WAVEFRONT MUST STAY HIDDEN",
+            farOrigin,
+            currentMinute: 195);
+        DaggerfallCourierDispatchSave autoSealed = dispatches.StageDispatch(
+            dispatchId: "disp:auto-delivered:11083",
+            seatId: "sentinel",
+            actionKind: "raise-levy",
+            summary: "AUTO-DELIVERED SEALED SUMMARY",
+            origin: farOrigin,
+            destination: localSite,
+            currentMinute: 195,
+            currentDay: nowDay,
+            linkedWavefrontId: autoSealedWf.EventId,
+            linkedConditionTokenId: "cond:auto-delivered-sealed",
+            stageOverlandBand: false);
+        long afterArrivalMinute = autoSealed.ExpectedArrivalMinute + 10;
+        int afterArrivalDay = checked((int)(afterArrivalMinute / (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour)));
+        _ = dispatches.AdvanceToMinute(afterArrivalMinute, afterArrivalDay);
+        Assert.True(dispatches.TryGet(autoSealed.DispatchId, out DaggerfallCourierDispatchSave? settled));
+        Assert.Equal(DaggerfallDispatchStatus.Delivered, settled!.Status);
+        Assert.False(settled.Revealed);
+
+        IReadOnlyList<DaggerfallCourierNewsItem> afterAutoDelivery = DaggerfallRoadCourierNews.BuildNewsItems(
+            encounter, courierNpc, localSite, afterArrivalMinute, afterArrivalDay, wordSpread, conditions, dispatches, definitions);
+        Assert.DoesNotContain(afterAutoDelivery, i => i.Reply.Contains("AUTO-DELIVERED SEALED", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
