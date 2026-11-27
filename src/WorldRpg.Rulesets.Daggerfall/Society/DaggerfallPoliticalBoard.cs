@@ -124,6 +124,10 @@ internal sealed class DaggerfallPoliticalBoard
     /// <summary>Who holds seat <paramref name="seat"/>'s office in the world now.</summary>
     internal DaggerfallSeatLeaderPersona WorldHolder(string seat) => _seatPersona(seat);
 
+    /// <summary>The name of seat card or World card <paramref name="id"/>; a gather or a withdrawal, which are no cards, by its id.</summary>
+    internal string CardName(string id) =>
+        _canon.Cards.Cards.FirstOrDefault(card => card.Id == id)?.Name ?? _canon.Cards.World?.FirstOrDefault(card => card.Id == id)?.Name ?? id;
+
     /// <summary>
     /// Plays every turn due by <paramref name="day"/>: one for each Sunday from the last played to it, and returns the
     /// news they made (<see cref="DaggerfallPoliticalNews"/>). The counterplay <paramref name="drainCounterplay"/> hands

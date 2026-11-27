@@ -1211,15 +1211,16 @@ test('the developer key opens the developer tools only when the host serves live
     const shell = developer.shells.at(-1);
     assert.equal(shell.isOpen, true);
     assert.equal(note.hidden, true);
-    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'product', 'product', 'product', 'view', 'scene', 'metrics']);
+    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'product', 'product', 'product', 'product', 'view', 'scene', 'metrics']);
     assert.equal(shell.options.panels[0].title, 'Dagger');
     assert.equal(shell.options.panels[1].title, 'Workbench');
     assert.equal(shell.options.panels[3].title, 'Commands');
     assert.equal(shell.options.panels[4].title, 'Social');
     assert.equal(shell.options.panels[5].title, 'Board');
+    assert.equal(shell.options.panels[6].title, 'Moves');
     // The view pane opens on the player and keeps its own valid framings.
-    assert.equal(shell.options.panels[6].options.subject, 'target player');
-    assert.equal(shell.options.panels[6].options.framings, undefined);
+    assert.equal(shell.options.panels[7].options.subject, 'target player');
+    assert.equal(shell.options.panels[7].options.framings, undefined);
     assert.equal(f.modes.at(-1), 'interface', 'The open tools hold the cursor, so play stops taking input.');
 
     // Closing (the key again, or the shell's own Close) gives gameplay its input back at once, and the workbench's
@@ -1559,6 +1560,86 @@ test('the Board developer panel draws the table at a glance, the seats, supply c
     await settle();
     assert.equal(developer.commands.at(-1), 'board.seat sentinel');
     assert.match(element.querySelector('[data-board-section="seat"] pre').textContent, /regency, plays as queen-akorithi.*World holder: VACANT/s);
+    panel.dispose();
+  } finally { tools.dispose(); developer.liveDebug = false; developer.answers = {}; }
+});
+
+test('the Moves developer panel logs every seat\'s moves newest turn first, with each outcome, and filters by seat', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'KeyboardEvent', 'Event']) globalThis[key] = dom.window[key];
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  developer.liveDebug = true; developer.commands.length = 0; developer.shells.length = 0;
+  const named = (id, name) => ({ id, name });
+  const fate = (state, extra = {}) => ({ state, turn: null, due: null, delays: [], deliveredEarly: null, courier: null, ...extra });
+  const move = (id, seat, cardName, targets, visibility, moveFate, changes = []) =>
+    ({ id, seat, card: cardName.toLowerCase().replaceAll(' ', '-'), cardName, targets, visibility, plan: null, origin: null, changes, fate: moveFate });
+  developer.answers = {
+    'board.moves': JSON.stringify({
+      turn: 10, day: 72, lastTurnDay: 70, nextTurnDay: 77, nextTurnDate: '17/3/405', kept: 2,
+      seats: [named('daggerfall', 'Daggerfall'), named('sentinel', 'Sentinel'), named('mages-guild', 'Mages Guild')],
+      turns: [
+        {
+          turn: 10, day: 70, date: '10/3/405', world: { card: 'Storms', region: 'Betony', actor: null, changes: [] },
+          nudges: [{ kind: 'MoveIntercepted', nudge: 'MoveIntercepted { MoveId = 9-sentinel }', move: '9-sentinel', seat: 'sentinel', outcome: 'Applied', changes: [] }],
+          arrivals: [{ id: '8-daggerfall', seat: 'daggerfall', card: 'march-on', cardName: 'March On', targets: [named('betony', 'Betony')], visibility: 'Public', played: 8, outcome: 'Resolved', changes: ['betony control: 2 -> 3'] }],
+          moves: [
+            move('10-mages-guild', 'mages-guild', 'Charter Hall', [named('betony', 'Betony')], 'Public', fate('Landed', { turn: 10 }), ['betony influence:mages-guild: 0 -> 1']),
+            move('10-daggerfall', 'daggerfall', 'Gather', [], 'Public', fate('Gathered', { turn: 10 })),
+          ],
+          arcs: [{ kind: 'War', phase: 'Peak', key: 'war-1', subjects: [named('daggerfall', 'Daggerfall'), named('sentinel', 'Sentinel')], started: 6 }],
+        },
+        {
+          turn: 9, day: 63, date: '3/3/405', world: null, nudges: [], arrivals: [],
+          moves: [
+            move('9-sentinel', 'sentinel', 'Suborn the Watch', [named('betony', 'Betony')], 'Secret', fate('Intercepted', { turn: 10, due: 11 })),
+            move('9-daggerfall', 'daggerfall', 'Envoy', [named('wayrest', 'Wayrest')], 'Public',
+              fate('UnderWay', { turn: 13, due: 12, delays: [{ turn: 10, weeks: 1 }], courier: { status: 'InTransit', expectedArrivalMinute: 1 } })),
+          ],
+          arcs: [{ kind: 'Blockade', phase: 'Opened', key: 'blockade:betony:9', subjects: [named('betony', 'Betony')], started: 9 }],
+        },
+      ],
+    }),
+  };
+  const root = document.getElementById('root');
+  const tools = developerTools.mountDeveloperTools(root, { viewport: { anchor: () => () => {} } }, { onChange() {} });
+  try {
+    await tools.toggle();
+    const element = document.createElement('div');
+    root.append(element);
+    const panel = developer.shells.at(-1).options.panels.find(p => p.title === 'Moves').mount(element);
+    await settle(); await settle();
+
+    assert.equal(developer.commands.at(-1), 'board.moves');
+    assert.match(element.querySelector('.dagger-developer-status').textContent, /Turn 10.*next turn day 77 \(17\/3\/405\).*2 turns kept/);
+    // Newest turn first, each headed by its date.
+    assert.deepEqual([...element.querySelectorAll('.dagger-developer-moves-turn')].map(block => block.dataset.turn), ['10', '9']);
+    assert.match(element.querySelector('[data-turn="10"] h3').textContent, /Turn 10 · 10\/3\/405 \(day 70\)/);
+    assert.match(element.querySelector('[data-turn="10"] .dagger-developer-moves-world').textContent, /Storms in Betony/);
+    // Within a turn: the world's nudges, the arrivals, the moves, then the chronicle.
+    assert.deepEqual([...element.querySelectorAll('[data-turn="10"] .dagger-developer-moves-row')].map(row => row.dataset.row), ['nudge', 'arrival', 'move', 'move', 'arc']);
+    const row = id => element.querySelector(`[data-move="${id}"]`);
+    assert.match(row('10-mages-guild').textContent, /Mages Guild.*Charter Hall → Betony.*public.*landed.*influence:mages-guild/s);
+    assert.equal(row('10-daggerfall').dataset.fate, 'Gathered');
+    assert.equal(row('9-sentinel').dataset.visibility, 'Secret');
+    assert.match(row('9-sentinel').textContent, /secret.*intercepted turn 10/s);
+    assert.match(row('9-daggerfall').textContent, /under way, due turn 13 · delayed 1w at turn 10 · courier InTransit/);
+    assert.match(element.querySelector('[data-turn="10"] [data-row="arrival"]').textContent, /Daggerfall.*March On → Betony.*resolved, played turn 8/s);
+    assert.match(element.querySelector('[data-turn="10"] [data-row="arc"]').textContent, /War Daggerfall \/ Sentinel.*peak, opened turn 6/s);
+    assert.equal(element.querySelector('[data-turn="9"] [data-row="arc"]').dataset.phase, 'Opened');
+
+    // Filtering by seat keeps that seat's rows (and the arcs and nudges that name it) without asking again.
+    const asked = developer.commands.length;
+    const select = element.querySelector('select[aria-label="Filter by seat"]');
+    assert.deepEqual([...select.options].map(option => option.textContent), ['All seats', 'Daggerfall', 'Sentinel', 'Mages Guild']);
+    select.value = 'sentinel';
+    select.dispatchEvent(new Event('change'));
+    assert.equal(developer.commands.length, asked);
+    assert.deepEqual([...element.querySelectorAll('.dagger-developer-moves-row')].map(node => `${node.dataset.row}:${node.dataset.seat ?? ''}`),
+      ['nudge:sentinel', 'arc:', 'move:sentinel']);
+    assert.equal(element.querySelector('.dagger-developer-moves-world'), null);
+    select.value = 'mages-guild';
+    select.dispatchEvent(new Event('change'));
+    assert.deepEqual([...element.querySelectorAll('.dagger-developer-moves-turn')].map(block => block.dataset.turn), ['10']);
     panel.dispose();
   } finally { tools.dispose(); developer.liveDebug = false; developer.answers = {}; }
 });

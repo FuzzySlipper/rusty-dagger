@@ -1,6 +1,7 @@
 import type { RustyApplicationUiContext } from '@rusty-engine/product-ui';
 import { createLiveDebugHttpTransport, mountDeveloperShell, type DeveloperShellMount, type LiveDebugTransport } from '@rusty-engine/live-debug';
 import { mountBoardPanel } from './developer-board.js';
+import { mountMovesPanel } from './developer-moves.js';
 
 /**
  * Developer tools: the Engine's developer shell docked beside play, with Dagger's own panel and the first-person
@@ -57,6 +58,7 @@ export function mountDeveloperTools(root: HTMLElement, context: Pick<RustyApplic
       { kind: 'product', title: 'Commands', mount: element => mountCommandHelp(element, transport) },
       { kind: 'product', title: 'Social', mount: element => mountSocialPanel(element, transport) },
       { kind: 'product', title: 'Board', mount: element => mountBoardPanel(element, transport) },
+      { kind: 'product', title: 'Moves', mount: element => mountMovesPanel(element, transport) },
       // The pane lists the product's inspection targets (player, dialogue, door) in its own subject choice and frames
       // the chosen one with its default framings; it opens on the player.
       { kind: 'view', title: 'View', options: { viewport: context.viewport, transport, subject: 'target player' } },

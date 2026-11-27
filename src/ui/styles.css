@@ -878,6 +878,26 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-developer-board-grid td[data-state="friendly"] { background: #1c3a48; }
 .dagger-developer-board-grid td[data-state="hostile"] { background: #3a2230; }
 .dagger-developer-board-legend { color: #9aa8ae; font-size: .6875rem; margin: .25rem 0 0; }
+.dagger-developer-moves { align-content: start; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); max-height: 100%; }
+.dagger-developer-moves-log { display: grid; gap: .625rem; grid-template-columns: minmax(0, 1fr); min-width: 0; overflow-y: auto; }
+.dagger-developer-moves-turn { border-top: 1px solid #38434a; display: grid; gap: .1875rem; min-width: 0; padding-top: .375rem; }
+.dagger-developer-moves-turn h3 { color: #f0d890; font-size: .75rem; letter-spacing: .04em; margin: 0; text-transform: uppercase; }
+.dagger-developer-moves-world { color: #9aa8ae; font-size: .6875rem; }
+.dagger-developer-moves-row { align-items: baseline; border-left: 3px solid #38434a; display: flex; flex-wrap: wrap; font: .75rem/1.35 ui-monospace, monospace; gap: .125rem .5rem; min-width: 0; padding: .125rem 0 .125rem .375rem; }
+.dagger-developer-moves-row > span { overflow-wrap: anywhere; }
+.dagger-developer-moves-kind { color: #7f8c92; min-width: 4.5rem; text-transform: uppercase; }
+.dagger-developer-moves-seat { color: #f0d890; font-weight: 700; }
+.dagger-developer-moves-what { color: #d8e0e4; }
+.dagger-developer-moves-visibility { color: #9aa8ae; }
+.dagger-developer-moves-row[data-visibility="Secret"] .dagger-developer-moves-visibility { color: #d29cf0; font-weight: 700; }
+.dagger-developer-moves-fate { color: #b8c4ca; font-style: italic; }
+.dagger-developer-moves-changes { color: #7f8c92; flex-basis: 100%; font-size: .6875rem; }
+.dagger-developer-moves-row[data-row="nudge"] { border-left-color: #2f6f8f; }
+.dagger-developer-moves-row[data-row="arrival"] { border-left-color: #1f5c3a; }
+.dagger-developer-moves-row[data-row="arc"] { border-left-color: #6b5a1c; }
+.dagger-developer-moves-row[data-fate="UnderWay"] { border-left-color: #8f7a2f; }
+.dagger-developer-moves-row[data-fate="Intercepted"], .dagger-developer-moves-row[data-fate="Failed"], .dagger-developer-moves-row[data-outcome="Failed"] { border-left-color: #7a1f1f; }
+.dagger-developer-moves-empty { color: #9aa8ae; font-size: .75rem; }
 
 /* The inventory window's glints (glint.ts): one shared frame per kind, set as CSS variables on the document. The slot
    holds the classic frame; a refreshed frame painted past its edges spills over the slot by as much. */

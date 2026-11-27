@@ -4,7 +4,7 @@ namespace WorldRpg.Kit;
 
 /// <summary>
 /// Developer runtime inspection commands for the political board the session runs: the table at a glance, one seat in
-/// depth, and the recent turns as they were played.
+/// depth, the recent turns as they were played, and every seat's moves as one log.
 /// </summary>
 public interface IDeveloperBoardCommands : IDebugCommandModule
 {
@@ -16,4 +16,7 @@ public interface IDeveloperBoardCommands : IDebugCommandModule
 
     [DebugCommand("board.turns", Description = "Developer: inspect the board's last few turns this session (up to 12) as JSON, newest first: the world's nudges applied, upkeep, the World card, arrivals, each seat's move with its alternatives, changes and courier, war checks and chronicle arcs.")]
     DebugCommandResult Turns(int count);
+
+    [DebugCommand("board.moves", Description = "Developer: the board's moves this session as a chronological log in JSON, newest turn first (up to 12 turns): each seat's move with its card, targets and visibility, and how it came out (landed, under way with its courier, delayed, delivered early, intercepted, arrived or failed); the world's nudges, the slow moves arriving and the chronicle arcs at the turn they open, peak or settle.")]
+    DebugCommandResult Moves();
 }

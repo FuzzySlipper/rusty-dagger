@@ -9,7 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// Live developer inspection of the political board the session runs (<c>board.state</c>, <c>board.seat</c>,
-/// <c>board.turns</c>). Reads the board owner on demand and owns no state of its own.
+/// <c>board.turns</c>, <c>board.moves</c>). Reads the board owner on demand and owns no state of its own.
 /// </summary>
 internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> politicalBoard, Func<DaggerfallCalendar> calendar)
     : IDeveloperBoardCommands
@@ -424,6 +424,208 @@ internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> 
         });
     }
 
+    public DebugCommandResult Moves()
+    {
+        if (politicalBoard() is not { } owner) return DaggerfallDeveloperReplies.Refused("No political board runs in this session.");
+        Board board = owner.Board;
+        IReadOnlyList<TurnTrace> kept = owner.RecentTurns;
+        Dictionary<string, (int Turn, MoveOutcome Outcome)> arrived = new(StringComparer.Ordinal);
+        Dictionary<string, List<(int Turn, WorldNudge Nudge)>> moveNudges = new(StringComparer.Ordinal);
+        Dictionary<int, List<(ArcKind Kind, string Key, string Phase, IReadOnlyList<string> Subjects, int Started)>> arcs = [];
+        HashSet<string> opened = new(StringComparer.Ordinal);
+        void Arc(int turn, ArcKind kind, string key, string phase, IReadOnlyList<string> subjects, int started)
+        {
+            if (!arcs.TryGetValue(turn, out var list)) arcs[turn] = list = [];
+            list.Add((kind, key, phase, subjects, started));
+        }
+        foreach (TurnTrace trace in kept)
+        {
+            foreach (ArrivalTrace arrival in trace.Arrivals) arrived[arrival.Id] = (trace.Turn, arrival.Outcome);
+            foreach (NudgeTrace nudge in trace.Nudges.Where(nudge => nudge.Outcome == NudgeOutcome.Applied))
+                if (MoveOf(nudge.Nudge) is { } id)
+                    (moveNudges.TryGetValue(id, out var list) ? list : moveNudges[id] = []).Add((trace.Turn, nudge.Nudge));
+            foreach (ArcRecord arc in trace.Chronicle)
+            {
+                Arc(arc.Turn, arc.Kind, arc.Key, arc.Phase.ToString(), arc.Subjects, arc.Started);
+                if (opened.Add(arc.Key)) Arc(arc.Started, arc.Kind, arc.Key, "Opened", arc.Subjects, arc.Started);
+            }
+        }
+        foreach (OpenArc arc in board.Arcs.Where(arc => opened.Add(arc.Key)))
+            Arc(arc.Started, arc.Kind, arc.Key, "Opened", arc.Subjects, arc.Started);
+
+        string Name(string id) => board.HasSeat(id) ? board.Seat(id).Name : board.HasRegion(id) ? board.Region(id).Name : id;
+        void Named(Utf8JsonWriter w, string name, IEnumerable<string> ids)
+        {
+            w.WriteStartArray(name);
+            foreach (string id in ids)
+            {
+                w.WriteStartObject();
+                w.WriteString("id", id);
+                w.WriteString("name", Name(id));
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+        }
+
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            WriteClock(w, owner);
+            w.WriteNumber("kept", kept.Count);
+            Named(w, "seats", board.Seats.Select(seat => seat.Id));
+            w.WriteStartArray("turns");
+            foreach (TurnTrace trace in kept.Reverse())
+            {
+                w.WriteStartObject();
+                w.WriteNumber("turn", trace.Turn);
+                long day = owner.TurnDay(trace.Turn);
+                w.WriteNumber("day", day);
+                w.WriteString("date", Date(day));
+                if (trace.World is { } world)
+                {
+                    w.WriteStartObject("world");
+                    w.WriteString("card", owner.CardName(world.Card));
+                    w.WriteString("region", Name(world.Region));
+                    w.WriteString("actor", world.Actor);
+                    Changes(w, world.Changes);
+                    w.WriteEndObject();
+                }
+                else w.WriteNull("world");
+
+                w.WriteStartArray("nudges");
+                foreach (NudgeTrace nudge in trace.Nudges)
+                {
+                    w.WriteStartObject();
+                    w.WriteString("kind", nudge.Nudge.GetType().Name);
+                    w.WriteString("nudge", Describe(nudge.Nudge));
+                    w.WriteString("move", MoveOf(nudge.Nudge));
+                    w.WriteString("seat", SeatOf(board, nudge.Nudge));
+                    w.WriteString("outcome", nudge.Outcome.ToString());
+                    Changes(w, nudge.Changes);
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
+
+                w.WriteStartArray("arrivals");
+                foreach (ArrivalTrace arrival in trace.Arrivals)
+                {
+                    w.WriteStartObject();
+                    w.WriteString("id", arrival.Id);
+                    w.WriteString("seat", arrival.Seat);
+                    w.WriteString("card", arrival.Card);
+                    w.WriteString("cardName", owner.CardName(arrival.Card));
+                    Named(w, "targets", arrival.Targets);
+                    w.WriteString("visibility", arrival.Visibility.ToString());
+                    if (PlayedTurn(arrival.Id) is int played) w.WriteNumber("played", played); else w.WriteNull("played");
+                    w.WriteString("outcome", arrival.Outcome.ToString());
+                    Changes(w, arrival.Changes);
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
+
+                w.WriteStartArray("moves");
+                foreach (MoveTrace move in trace.Moves)
+                {
+                    w.WriteStartObject();
+                    w.WriteString("id", move.Id);
+                    w.WriteString("seat", move.Seat);
+                    w.WriteString("card", move.Card);
+                    w.WriteString("cardName", owner.CardName(move.Card));
+                    Named(w, "targets", move.Targets);
+                    w.WriteString("visibility", move.Visibility.ToString());
+                    w.WriteString("plan", move.Plan);
+                    w.WriteString("origin", move.Origin is null ? null : Name(move.Origin));
+                    Changes(w, move.Changes);
+                    WriteFate(w, owner, move, trace.Turn, arrived, moveNudges);
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
+
+                w.WriteStartArray("arcs");
+                foreach (var arc in arcs.GetValueOrDefault(trace.Turn) ?? [])
+                {
+                    w.WriteStartObject();
+                    w.WriteString("kind", arc.Kind.ToString());
+                    w.WriteString("phase", arc.Phase);
+                    w.WriteString("key", arc.Key);
+                    Named(w, "subjects", arc.Subjects);
+                    w.WriteNumber("started", arc.Started);
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        });
+    }
+
+    /// <summary>
+    /// How <paramref name="move"/>, played in turn <paramref name="played"/>, came out, as far as the kept turns and the board tell: a quick move landed when
+    /// played; a slow one is under way (with its courier), or arrived, failed on arrival or was intercepted, with the
+    /// delays and early delivery the world's nudges gave it on the way.
+    /// </summary>
+    private static void WriteFate(Utf8JsonWriter w, DaggerfallPoliticalBoard owner, MoveTrace move, int played,
+        Dictionary<string, (int Turn, MoveOutcome Outcome)> arrived, Dictionary<string, List<(int Turn, WorldNudge Nudge)>> moveNudges)
+    {
+        IReadOnlyList<(int Turn, WorldNudge Nudge)> nudges = moveNudges.GetValueOrDefault(move.Id) ?? [];
+        PendingMove? pending = owner.Board.Pending.FirstOrDefault(held => held.Id == move.Id);
+        (string state, int? turn) = move.Arrives is null
+            ? (move.Card == Gathering.Id ? "Gathered" : "Landed", played)
+            : nudges.FirstOrDefault(nudge => nudge.Nudge is MoveIntercepted) is { Nudge: not null } intercepted ? ("Intercepted", intercepted.Turn)
+            : arrived.TryGetValue(move.Id, out var arrival) ? (arrival.Outcome == MoveOutcome.Resolved ? "Arrived" : "Failed", arrival.Turn)
+            : pending is not null ? ("UnderWay", pending.Arrives)
+            : ("Gone", (int?)null);
+        w.WriteStartObject("fate");
+        w.WriteString("state", state);
+        if (turn is int at) w.WriteNumber("turn", at); else w.WriteNull("turn");
+        if (move.Arrives is int due) w.WriteNumber("due", due); else w.WriteNull("due");
+        w.WriteStartArray("delays");
+        foreach ((int at2, WorldNudge nudge) in nudges)
+            if (nudge is MoveDelayed delayed)
+            {
+                w.WriteStartObject();
+                w.WriteNumber("turn", at2);
+                w.WriteNumber("weeks", delayed.Weeks);
+                w.WriteEndObject();
+            }
+        w.WriteEndArray();
+        if (nudges.FirstOrDefault(nudge => nudge.Nudge is MoveDelivered) is { Nudge: not null } delivered) w.WriteNumber("deliveredEarly", delivered.Turn);
+        else w.WriteNull("deliveredEarly");
+        WriteCourier(w, owner.CourierFor(move.Id));
+        w.WriteEndObject();
+    }
+
+    /// <summary>The move a nudge speaks of: a courier's delivery, delay or interception.</summary>
+    private static string? MoveOf(WorldNudge nudge) => nudge switch
+    {
+        MoveDelivered delivered => delivered.MoveId,
+        MoveDelayed delayed => delayed.MoveId,
+        MoveIntercepted intercepted => intercepted.MoveId,
+        _ => null,
+    };
+
+    /// <summary>The seat a nudge concerns, where it names one: the seat a quest, a holder or a boon is for, or a courier's mover.</summary>
+    private static string? SeatOf(Board board, WorldNudge nudge) => nudge switch
+    {
+        QuestOutcome quest => quest.Seat,
+        HolderChanged holder => holder.Seat,
+        MainQuestBoon boon => boon.Seat,
+        _ => MoveOf(nudge) is { } id && id.IndexOf('-', StringComparison.Ordinal) is > 0 and var dash && board.HasSeat(id[(dash + 1)..]) ? id[(dash + 1)..] : null,
+    };
+
+    /// <summary>The turn a move id (<c>turn-seat</c>) was played in.</summary>
+    private static int? PlayedTurn(string moveId) =>
+        moveId.IndexOf('-', StringComparison.Ordinal) is > 0 and var dash
+        && int.TryParse(moveId.AsSpan(0, dash), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int turn)
+            ? turn : null;
+
+    private static string Date(long day)
+    {
+        DaggerfallCalendar date = DaggerfallCalendar.FromAbsoluteSeconds(day * DaggerfallCalendar.SecondsPerDay);
+        return $"{date.Day}/{date.Month}/{date.Year}";
+    }
+
     /// <summary>The board's turn, the calendar's day and the next Sunday the board plays on.</summary>
     private void WriteClock(Utf8JsonWriter w, DaggerfallPoliticalBoard owner)
     {
@@ -431,8 +633,7 @@ internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> 
         w.WriteNumber("day", calendar().DayNumber);
         w.WriteNumber("lastTurnDay", owner.LastTurnDay);
         w.WriteNumber("nextTurnDay", owner.NextTurnDay);
-        DaggerfallCalendar next = DaggerfallCalendar.FromAbsoluteSeconds(owner.NextTurnDay * DaggerfallCalendar.SecondsPerDay);
-        w.WriteString("nextTurnDate", $"{next.Day}/{next.Month}/{next.Year}");
+        w.WriteString("nextTurnDate", Date(owner.NextTurnDay));
     }
 
     private static string? WorldHolderName(DaggerfallPoliticalBoard owner, string seat) =>
