@@ -92,10 +92,10 @@ internal sealed class DaggerfallHeraldry
     /// <summary>The colour <paramref name="tincture"/> is drawn in.</summary>
     internal Color Colour(DaggerfallTincture tincture) => _tinctures[tincture];
 
-    /// <summary><paramref name="colour"/> as <c>#RRGGBB</c>, white for none.</summary>
+    /// <summary><paramref name="colour"/> (linear, as the Engine holds it) as sRGB <c>#RRGGBB</c>, white for none.</summary>
     internal static string Hex(Color? colour)
     {
-        Color c = colour ?? new Color(1f, 1f, 1f, 1f);
+        Color c = (colour ?? new Color(1f, 1f, 1f, 1f)).ToSrgb();
         static int Channel(float value) => Math.Clamp((int)MathF.Round(value * 255f), 0, 255);
         return string.Create(CultureInfo.InvariantCulture, $"#{Channel(c.R):X2}{Channel(c.G):X2}{Channel(c.B):X2}");
     }
