@@ -23,6 +23,41 @@ internal enum DaggerfallSocialProminence
     Prominent = 3,
 }
 
+/// <summary>Live validity state of a recorded <see cref="ActorVouchRecord"/>.</summary>
+internal enum DaggerfallVouchStatus
+{
+    /// <summary>Fresh and in full force.</summary>
+    Active = 0,
+
+    /// <summary>Aging: still opens doors at reduced reach (-1) and reduced standing bonus (+7), and no longer waives deposits.</summary>
+    Fading = 1,
+
+    /// <summary>Too old: no longer grants access, standing bonus, or deposit waiver (can be renewed by asking again).</summary>
+    Lapsed = 2,
+
+    /// <summary>Voided because the voucher is dead.</summary>
+    VoidedDead = 3,
+
+    /// <summary>Voided because the player wronged (murdered, assaulted, or robbed) the voucher.</summary>
+    VoidedWronged = 4,
+
+    /// <summary>Voided because the voucher turned hostile toward the player.</summary>
+    VoidedHostile = 5,
+}
+
+/// <summary>Point-in-time evaluation of a structured <see cref="ActorVouchRecord"/>'s age, strength, and validity.</summary>
+internal sealed record DaggerfallVouchEvaluation(
+    DaggerfallVouchStatus Status,
+    int AgeDays,
+    int? DaysUntilLapse,
+    int ReachPenalty,
+    int StandingBonus,
+    bool AllowsDepositWaiver,
+    string? Reason)
+{
+    internal bool IsUsable => Status is DaggerfallVouchStatus.Active or DaggerfallVouchStatus.Fading;
+}
+
 /// <summary>Result of evaluating whether the player currently has social access to approach <c>target</c> for work or court business.</summary>
 internal sealed record DaggerfallIntroductionAccess(
     bool Allowed,
@@ -32,7 +67,8 @@ internal sealed record DaggerfallIntroductionAccess(
     int SocialSkillSkip,
     int HomeStandingBonus,
     ActorVouchRecord? QualifyingVouch,
-    string? DenialReason);
+    string? DenialReason,
+    DaggerfallVouchEvaluation? QualifyingVouchEvaluation = null);
 
 /// <summary>One concrete person a speaker knows well enough to vouch the player to.</summary>
 internal sealed record DaggerfallIntroductionTarget(
@@ -86,6 +122,16 @@ internal sealed class DaggerfallIntroductions(
     private const string RandomScope = "daggerfall.introductions.v1";
 
     internal const int TrustedVouchStandingBonus = 15;
+    internal const int FadingVouchStandingBonus = 7;
+    internal const int VouchHostileDispositionThreshold = -10;
+    internal const int ContactVouchFadeDays = 30;
+    internal const int ContactVouchLapseDays = 60;
+    internal const int TradeVouchFadeDays = 45;
+    internal const int TradeVouchLapseDays = 90;
+    internal const int GuildVouchFadeDays = 60;
+    internal const int GuildVouchLapseDays = 120;
+    internal const int CourtVouchFadeDays = 60;
+    internal const int CourtVouchLapseDays = 120;
     internal const int QuestSuccessDispositionBonus = 8;
     internal const int QuestFailureDispositionPenalty = -4;
     internal const int FavourSuccessDispositionBonus = 20;
@@ -113,10 +159,15 @@ internal sealed class DaggerfallIntroductions(
     private Func<DaggerfallNpc, bool>? _isHireableContact;
     private Func<long, DaggerfallSiteRecord?, int>? _effectiveDisposition;
     private Func<string?, DaggerfallSiteRecord?, int>? _householdStandingDelta;
+    private Func<long, bool>? _isActorHostile;
 
     /// <summary>Binds the party-hire eligibility lookup so ordinary hireable companions/drivers appear in introduction dialogue.</summary>
     internal void BindHireableContactLookup(Func<DaggerfallNpc, bool> lookup) =>
         _isHireableContact = lookup ?? throw new ArgumentNullException(nameof(lookup));
+
+    /// <summary>Binds a live hostility check (e.g. forced-hostile perception memory) so hostile vouchers lose their word.</summary>
+    internal void BindHostilityLookup(Func<long, bool> isActorHostile) =>
+        _isActorHostile = isActorHostile ?? throw new ArgumentNullException(nameof(isActorHostile));
 
     /// <summary>
     /// Binds effective disposition and arrived province-wide household standing lookups (from
@@ -226,6 +277,112 @@ internal sealed class DaggerfallIntroductions(
         return TrustsReferrerCore(targetFactionId, targetRegion, targetProminence, vouch, targetFamilyId);
     }
 
+    /// <summary>Returns the fade and lapse day thresholds for one vouch kind.</summary>
+    internal static (int FadeDays, int LapseDays) GetAgingThresholds(ActorVouchKind kind) => kind switch
+    {
+        ActorVouchKind.Contact => (ContactVouchFadeDays, ContactVouchLapseDays),
+        ActorVouchKind.Trade => (TradeVouchFadeDays, TradeVouchLapseDays),
+        ActorVouchKind.Guild => (GuildVouchFadeDays, GuildVouchLapseDays),
+        ActorVouchKind.Court => (CourtVouchFadeDays, CourtVouchLapseDays),
+        _ => (ContactVouchFadeDays, ContactVouchLapseDays),
+    };
+
+    /// <summary>Evaluates a recorded vouch's current age, strength, and validity (fading, lapsed, or voided by death/wronging/hostility).</summary>
+    internal DaggerfallVouchEvaluation EvaluateVouch(ActorVouchRecord vouch, DaggerfallSiteRecord? atSite = null)
+    {
+        ArgumentNullException.ThrowIfNull(vouch);
+        int ageDays = Math.Max(0, currentDay() - vouch.IssuedDay);
+        string refSummary = vouch.DisplaySummary();
+
+        if (vouch.VoidReason == ActorVouchVoidReason.Wronged)
+            return new(DaggerfallVouchStatus.VoidedWronged, ageDays, null, 0, 0, false, $"You wronged {refSummary}.");
+
+        if (vouch.VoidReason == ActorVouchVoidReason.Dead
+            || officeHolders.IsActorDead(vouch.ReferrerDurableId)
+            || (actors.TryGet(vouch.ReferrerDurableId, out ActorState? liveRef) && liveRef.IsDefeated))
+        {
+            return new(DaggerfallVouchStatus.VoidedDead, ageDays, null, 0, 0, false, $"{refSummary} is dead.");
+        }
+
+        if (vouch.VoidReason == ActorVouchVoidReason.Hostile || IsVoucherHostile(vouch, atSite))
+            return new(DaggerfallVouchStatus.VoidedHostile, ageDays, null, 0, 0, false, $"{refSummary} is hostile toward you.");
+
+        (int fadeDays, int lapseDays) = GetAgingThresholds(vouch.Kind);
+        if (ageDays >= lapseDays)
+            return new(DaggerfallVouchStatus.Lapsed, ageDays, 0, 0, 0, false, $"Lapsed after {ageDays} days.");
+
+        int remaining = lapseDays - ageDays;
+        if (ageDays >= fadeDays)
+            return new(DaggerfallVouchStatus.Fading, ageDays, remaining, 1, FadingVouchStandingBonus, false, $"Aging ({ageDays} days old; {remaining} days until lapse).");
+
+        return new(DaggerfallVouchStatus.Active, ageDays, remaining, 0, TrustedVouchStandingBonus, true, null);
+    }
+
+    /// <summary>True when <paramref name="vouch"/> is currently usable (Active or Fading; not lapsed or voided).</summary>
+    internal bool IsVouchUsable(ActorVouchRecord vouch, DaggerfallSiteRecord? atSite = null) =>
+        EvaluateVouch(vouch, atSite).IsUsable;
+
+    /// <summary>True when <paramref name="actorId"/> holds at least one currently usable vouch.</summary>
+    internal bool HasUsableVouch(long actorId, DaggerfallSiteRecord? atSite = null)
+    {
+        if (actorId <= 0) return false;
+        foreach (ActorVouchRecord vouch in ReadVouches(actorId))
+        {
+            if (EvaluateVouch(vouch, atSite).IsUsable)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Voids every vouch issued by <paramref name="referrerDurableId"/> across the ledger and live overlays.</summary>
+    internal int VoidVouchesFrom(long referrerDurableId, ActorVouchVoidReason reason)
+    {
+        if (referrerDurableId <= 0 || reason == ActorVouchVoidReason.None)
+            return 0;
+
+        int voided = actorLedger.VoidVouchesWhere((_, vouch) => vouch.ReferrerDurableId == referrerDurableId, reason);
+        foreach (ActorState liveActor in actors.All)
+        {
+            if (liveActor.DurableId <= 0 || liveActor.DurableId == DaggerfallActorIdentity.PlayerEntityId)
+                continue;
+            if (liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+                voided += overlay.VoidVouches(vouch => vouch.ReferrerDurableId == referrerDurableId, reason);
+        }
+        return voided;
+    }
+
+    /// <summary>Voids all vouches issued by a dying actor (marked Wronged when slain by the player, else Dead).</summary>
+    internal int ObserveActorDied(long deadActorId, bool killedByPlayer) =>
+        VoidVouchesFrom(deadActorId, killedByPlayer ? ActorVouchVoidReason.Wronged : ActorVouchVoidReason.Dead);
+
+    /// <summary>Voids all vouches issued by the victim of a player crime (murder, assault, theft, pickpocketing, B&amp;E, or trespassing).</summary>
+    internal int ObserveAttributedCrime(DaggerfallCrimeIncidentSave incident)
+    {
+        ArgumentNullException.ThrowIfNull(incident);
+        if (incident.PerpetratorActorId != DaggerfallActorIdentity.PlayerEntityId
+            || incident.AffectedActorOrOwnerId is not long victimId
+            || victimId <= 0)
+        {
+            return 0;
+        }
+
+        return incident.Crime switch
+        {
+            DaggerfallCrimeKind.Murder
+                or DaggerfallCrimeKind.Assault
+                or DaggerfallCrimeKind.Theft
+                or DaggerfallCrimeKind.Pickpocketing
+                or DaggerfallCrimeKind.BreakingAndEntering
+                or DaggerfallCrimeKind.AttemptedBreakingAndEntering
+                or DaggerfallCrimeKind.Trespassing => VoidVouchesFrom(victimId, ActorVouchVoidReason.Wronged),
+            _ => 0,
+        };
+    }
+
+    /// <summary>Voids all vouches issued by an actor who has turned hostile toward the player.</summary>
+    internal int ObserveActorHostile(long actorId) =>
+        VoidVouchesFrom(actorId, ActorVouchVoidReason.Hostile);
+
     /// <summary>True when <paramref name="target"/>'s household currently holds an attributed blood feud against the player.</summary>
     internal bool IsInBloodFeud(DaggerfallNpc target, DaggerfallSiteRecord? atSite = null)
     {
@@ -279,7 +436,7 @@ internal sealed class DaggerfallIntroductions(
 
             foreach (ActorVouchRecord vouch in priorVouches)
             {
-                if (vouch.ReferrerDurableId == newId)
+                if (vouch.ReferrerDurableId == newId || !EvaluateVouch(vouch, officeSite).IsUsable)
                     continue;
                 actorLedger.RecordVouch(newId, vouch, newOrigin, newSocial);
                 liveOverlay?.RecordVouch(vouch);
@@ -422,8 +579,10 @@ internal sealed class DaggerfallIntroductions(
 
         if (prominence == DaggerfallSocialProminence.Ordinary)
         {
-            ActorVouchRecord? bestPeerVouch = FindBestTrustedVouch(target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite, out _);
-            return new(true, prominence, 0, 0, skillSkip, homeBonus, bestPeerVouch, null);
+            ActorVouchRecord? bestPeerVouch = FindBestTrustedVouch(
+                target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite,
+                out _, out DaggerfallVouchEvaluation? peerEval, out _, out _);
+            return new(true, prominence, 0, 0, skillSkip, homeBonus, bestPeerVouch, null, peerEval);
         }
 
         // Longtime direct standing with this exact figure/faction still grants access once earned (tightened during vacancy/crisis).
@@ -442,14 +601,19 @@ internal sealed class DaggerfallIntroductions(
         };
         if (directStanding)
         {
-            ActorVouchRecord? existingVouch = FindBestTrustedVouch(target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite, out _);
-            return new(true, prominence, requiredReach, requiredReach, skillSkip, homeBonus, existingVouch, null);
+            ActorVouchRecord? existingVouch = FindBestTrustedVouch(
+                target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite,
+                out _, out DaggerfallVouchEvaluation? existingEval, out _, out _);
+            return new(true, prominence, requiredReach, requiredReach, skillSkip, homeBonus, existingVouch, null, existingEval);
         }
 
-        // Evaluate trusted vouches held by target.
-        ActorVouchRecord? bestVouch = FindBestTrustedVouch(target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite, out int bestVouchReachBase);
+        // Evaluate trusted usable vouches held by target (accounting for age fade/lapse and voiding).
+        ActorVouchRecord? bestVouch = FindBestTrustedVouch(
+            target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite,
+            out int bestVouchReachBase, out DaggerfallVouchEvaluation? bestVouchEval,
+            out ActorVouchRecord? invalidVouch, out DaggerfallVouchEvaluation? invalidEval);
         int vouchReach = bestVouch is not null
-            ? checked(bestVouchReachBase + 1 + skillSkip + homeBonus)
+            ? Math.Max(0, checked(bestVouchReachBase + 1 + skillSkip + homeBonus))
             : 0;
         bool requiresIntermediary = prominence == DaggerfallSocialProminence.Prominent
             || (courtCrisis && prominence == DaggerfallSocialProminence.CourtFavourite);
@@ -463,14 +627,16 @@ internal sealed class DaggerfallIntroductions(
             : achievedReach >= requiredReach;
 
         if (allowed)
-            return new(true, prominence, requiredReach, achievedReach, skillSkip, homeBonus, bestVouch, null);
+            return new(true, prominence, requiredReach, achievedReach, skillSkip, homeBonus, bestVouch, null, bestVouchEval);
 
         string targetName = target.DisplayName ?? target.Role;
-        string denial = BuildAccessDenialMessage(targetName, prominence, bestVouch, bestVouchReachBase, requiredReach, vouchReach, courtCrisis);
-        return new(false, prominence, requiredReach, achievedReach, skillSkip, homeBonus, bestVouch, denial);
+        string denial = BuildAccessDenialMessage(
+            targetName, prominence, bestVouch, bestVouchEval, invalidVouch, invalidEval,
+            bestVouchReachBase, requiredReach, vouchReach, courtCrisis);
+        return new(false, prominence, requiredReach, achievedReach, skillSkip, homeBonus, bestVouch, denial, bestVouchEval ?? invalidEval);
     }
 
-    /// <summary>Returns the strongest trusted vouch held by <paramref name="target"/>, if any.</summary>
+    /// <summary>Returns the strongest usable trusted vouch held by <paramref name="target"/>, if any.</summary>
     internal ActorVouchRecord? BestTrustedVouch(DaggerfallNpc target)
     {
         ArgumentNullException.ThrowIfNull(target);
@@ -479,28 +645,42 @@ internal sealed class DaggerfallIntroductions(
         DaggerfallSocialProminence prominence = ClassifyProminence(target);
         string? targetFamilyId = ResolveActorFamilyId(target.DurableId, target);
         DaggerfallSiteRecord? targetSite = ResolveActorSite(target);
-        return FindBestTrustedVouch(target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite, out _);
+        return FindBestTrustedVouch(target, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite, out _, out _, out _, out _);
     }
 
     /// <summary>
     /// Flat, idempotent social standing bonus for <see cref="DaggerfallSocialState.BindActorVouchBonus"/>:
-    /// grants <see cref="TrustedVouchStandingBonus"/> (+15) once any trusted vouch is present on <paramref name="actorId"/>,
-    /// improving merchant buy/sell quotes, spell prices, room rentals, and greetings.
+    /// grants <see cref="TrustedVouchStandingBonus"/> (+15) for an Active trusted vouch, <see cref="FadingVouchStandingBonus"/> (+7)
+    /// for a Fading vouch, and 0 for lapsed or voided vouches.
     /// </summary>
     internal int TrustedVouchReactionBonus(long actorId)
     {
         if (actorId <= 0 || !npcs.TryGet(actorId, out DaggerfallNpc? npc) || npc is null)
             return 0;
-        return BestTrustedVouch(npc) is not null ? TrustedVouchStandingBonus : 0;
+        int targetFactionId = social.ResolveNpcReactionFactionId(npc);
+        int targetRegion = ResolveRegion(npc, targetFactionId);
+        DaggerfallSocialProminence prominence = ClassifyProminence(npc);
+        string? targetFamilyId = ResolveActorFamilyId(npc.DurableId, npc);
+        DaggerfallSiteRecord? targetSite = ResolveActorSite(npc);
+        _ = FindBestTrustedVouch(npc, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite,
+            out _, out DaggerfallVouchEvaluation? eval, out _, out _);
+        return eval?.StandingBonus ?? 0;
     }
 
-    /// <summary>True when <paramref name="npc"/> holds a trusted vouch that waives upfront hiring deposits and is not in a household blood feud.</summary>
+    /// <summary>True when <paramref name="npc"/> holds a fresh Active trusted vouch that waives upfront hiring deposits and is not in a household blood feud.</summary>
     internal bool HasDepositWaiverVouch(DaggerfallNpc npc)
     {
         ArgumentNullException.ThrowIfNull(npc);
         if (IsInBloodFeud(npc))
             return false;
-        return BestTrustedVouch(npc) is not null;
+        int targetFactionId = social.ResolveNpcReactionFactionId(npc);
+        int targetRegion = ResolveRegion(npc, targetFactionId);
+        DaggerfallSocialProminence prominence = ClassifyProminence(npc);
+        string? targetFamilyId = ResolveActorFamilyId(npc.DurableId, npc);
+        DaggerfallSiteRecord? targetSite = ResolveActorSite(npc);
+        _ = FindBestTrustedVouch(npc, targetFactionId, targetRegion, prominence, targetFamilyId, targetSite,
+            out _, out DaggerfallVouchEvaluation? eval, out _, out _);
+        return eval?.AllowsDepositWaiver == true;
     }
 
     /// <summary>All merged structured vouches currently recorded for <paramref name="actorId"/> (live overlay + ledger).</summary>
@@ -586,7 +766,7 @@ internal sealed class DaggerfallIntroductions(
             if (!TrustsReferrerCore(candidateFactionId, candidateRegion, candidateProminence, probe, candidateFamilyId))
                 return;
 
-            bool already = ReadVouches(candidate.DurableId).Any(v => v.SameGrant(probe));
+            bool already = ReadVouches(candidate.DurableId).Any(v => v.SameGrant(probe) && EvaluateVouch(v, candidateSite).Status == DaggerfallVouchStatus.Active);
             results[candidate.DurableId] = new(
                 candidate.DurableId,
                 candidate.DisplayName ?? candidate.Role,
@@ -622,7 +802,7 @@ internal sealed class DaggerfallIntroductions(
                     ActorVouchRecord probe = new(speaker.DurableId, Math.Max(0, speakerFactionId), kind, day, speakerName, site?.Name, speakerFamilyId);
                     if (TrustsReferrerCore(rulerFactionId, speakerRegion, DaggerfallSocialProminence.Prominent, probe, rulerFamilyId))
                     {
-                        bool already = ReadVouches(rulerId).Any(v => v.SameGrant(probe));
+                        bool already = ReadVouches(rulerId).Any(v => v.SameGrant(probe) && EvaluateVouch(v, rulerSite).Status == DaggerfallVouchStatus.Active);
                         results[rulerId] = new(
                             rulerId,
                             ruler.DisplayName,
@@ -676,7 +856,7 @@ internal sealed class DaggerfallIntroductions(
                         ActorVouchRecord probe = new(speaker.DurableId, Math.Max(0, speakerFactionId), kind, day, speakerName, site?.Name, speakerFamilyId);
                         if (TrustsReferrerCore(office.OfficeFactionId, office.SiteId.Region, officeProminence, probe, holderFamilyId))
                         {
-                            bool already = ReadVouches(holderId).Any(v => v.SameGrant(probe));
+                            bool already = ReadVouches(holderId).Any(v => v.SameGrant(probe) && EvaluateVouch(v, officeSite).Status == DaggerfallVouchStatus.Active);
                             results[holderId] = new(
                                 holderId,
                                 office.DisplayName,
@@ -798,8 +978,10 @@ internal sealed class DaggerfallIntroductions(
             site?.Name,
             speakerFamilyId);
 
-        // Idempotent check before trust/standing work: repeat asks return cleanly without duplicating records.
-        if (ReadVouches(targetDurableId).FirstOrDefault(existing => existing.SameGrant(vouch)) is { } prior)
+        // Idempotent check before trust/standing work: repeat asks return cleanly only while the prior vouch is still fresh (Active).
+        // A Fading or Lapsed vouch can be renewed with today's IssuedDay once the speaker still trusts the player.
+        if (ReadVouches(targetDurableId).FirstOrDefault(existing => existing.SameGrant(vouch)) is { } prior
+            && EvaluateVouch(prior, targetSite).Status == DaggerfallVouchStatus.Active)
         {
             return new(true, true, targetDurableId, targetName, prior,
                 $"I have already sent my word to {targetName} on your behalf.");
@@ -1168,9 +1350,15 @@ internal sealed class DaggerfallIntroductions(
         DaggerfallSocialProminence targetProminence,
         string? targetFamilyId,
         DaggerfallSiteRecord? targetSite,
-        out int bestVouchReachBase)
+        out int bestVouchReachBase,
+        out DaggerfallVouchEvaluation? bestEvaluation,
+        out ActorVouchRecord? bestInvalidVouch,
+        out DaggerfallVouchEvaluation? bestInvalidEvaluation)
     {
         bestVouchReachBase = -1;
+        bestEvaluation = null;
+        bestInvalidVouch = null;
+        bestInvalidEvaluation = null;
         if (IsInBloodFeudCore(targetFamilyId, targetSite))
             return null;
 
@@ -1181,20 +1369,59 @@ internal sealed class DaggerfallIntroductions(
                 continue;
             if (!TrustsReferrerCore(targetFactionId, targetRegion, targetProminence, vouch, targetFamilyId))
                 continue;
+            DaggerfallVouchEvaluation eval = EvaluateVouch(vouch, targetSite);
+            if (!eval.IsUsable)
+            {
+                if (bestInvalidVouch is null
+                    || InvalidStatusPriority(eval.Status) > InvalidStatusPriority(bestInvalidEvaluation!.Status)
+                    || (eval.Status == bestInvalidEvaluation.Status && vouch.IssuedDay > bestInvalidVouch.IssuedDay))
+                {
+                    bestInvalidVouch = vouch;
+                    bestInvalidEvaluation = eval;
+                }
+                continue;
+            }
             int refProminence = (int)ResolveReferrerProminence(vouch, targetRegion);
             bool isKinVouch = DaggerfallWitnessDiscretion.AreFamily(targetFamilyId, ResolveReferrerFamilyId(vouch));
-            int reachBase = isKinVouch
+            int rawReachBase = isKinVouch
                 ? Math.Max(refProminence + 1, (int)targetProminence - 1)
                 : refProminence;
+            int reachBase = checked(rawReachBase - eval.ReachPenalty);
             if (best is null
                 || reachBase > bestVouchReachBase
-                || (reachBase == bestVouchReachBase && vouch.Kind > best.Kind))
+                || (reachBase == bestVouchReachBase && eval.StandingBonus > bestEvaluation!.StandingBonus)
+                || (reachBase == bestVouchReachBase && eval.StandingBonus == bestEvaluation!.StandingBonus && vouch.Kind > best.Kind))
             {
                 best = vouch;
                 bestVouchReachBase = reachBase;
+                bestEvaluation = eval;
             }
         }
         return best;
+    }
+
+    private static int InvalidStatusPriority(DaggerfallVouchStatus status) => status switch
+    {
+        DaggerfallVouchStatus.VoidedWronged => 4,
+        DaggerfallVouchStatus.VoidedHostile => 3,
+        DaggerfallVouchStatus.VoidedDead => 2,
+        DaggerfallVouchStatus.Lapsed => 1,
+        _ => 0,
+    };
+
+    private bool IsVoucherHostile(ActorVouchRecord vouch, DaggerfallSiteRecord? atSite)
+    {
+        long refId = vouch.ReferrerDurableId;
+        if (_isActorHostile?.Invoke(refId) == true)
+            return true;
+        if (actorLedger.TryGet(refId, out ActorLedgerEntry? refEntry) && refEntry?.Combat?.ForcedHostile == true)
+            return true;
+        if (ReadActorDisposition(refId, atSite) <= VouchHostileDispositionThreshold)
+            return true;
+        string? refFamilyId = ResolveReferrerFamilyId(vouch);
+        if (IsInBloodFeudCore(refFamilyId, atSite))
+            return true;
+        return false;
     }
 
     private DaggerfallSocialProminence ResolveReferrerProminence(ActorVouchRecord vouch, int fallbackRegion)
@@ -1494,11 +1721,30 @@ internal sealed class DaggerfallIntroductions(
         string targetName,
         DaggerfallSocialProminence prominence,
         ActorVouchRecord? bestVouch,
+        DaggerfallVouchEvaluation? bestVouchEval,
+        ActorVouchRecord? invalidVouch,
+        DaggerfallVouchEvaluation? invalidEval,
         int bestReferrerProminence,
         int requiredReach,
         int vouchReach,
         bool courtCrisis = false)
     {
+        if (bestVouch is null && invalidVouch is not null && invalidEval is not null)
+        {
+            return invalidEval.Status switch
+            {
+                DaggerfallVouchStatus.VoidedWronged =>
+                    $"{targetName} refuses to honor {invalidVouch.DisplaySummary()}'s word after you wronged them.",
+                DaggerfallVouchStatus.VoidedDead =>
+                    $"{targetName} will no longer honor {invalidVouch.DisplaySummary()}'s word now that they are dead.",
+                DaggerfallVouchStatus.VoidedHostile =>
+                    $"{targetName} refuses to honor {invalidVouch.DisplaySummary()}'s word now that they have turned hostile toward you.",
+                DaggerfallVouchStatus.Lapsed =>
+                    $"{targetName} notes that {invalidVouch.DisplaySummary()}'s word has lapsed after {invalidEval.AgeDays} days; earn a fresh introduction.",
+                _ => $"{targetName} will not accept {invalidVouch.DisplaySummary()}'s word.",
+            };
+        }
+
         if (courtCrisis)
         {
             return bestVouch is not null && vouchReach < requiredReach
@@ -1508,7 +1754,9 @@ internal sealed class DaggerfallIntroductions(
 
         if (bestVouch is not null && vouchReach < requiredReach)
         {
-            return $"{targetName} acknowledges {bestVouch.DisplaySummary()}'s word, but requires an introduction from someone higher in their court circle before entrusting you with work.";
+            return bestVouchEval?.Status == DaggerfallVouchStatus.Fading
+                ? $"{targetName} notes that {bestVouch.DisplaySummary()}'s word has grown stale ({bestVouchEval.AgeDays} days old) and no longer carries enough weight; seek a fresh or higher introduction."
+                : $"{targetName} acknowledges {bestVouch.DisplaySummary()}'s word, but requires an introduction from someone higher in their court circle before entrusting you with work.";
         }
 
         return prominence switch

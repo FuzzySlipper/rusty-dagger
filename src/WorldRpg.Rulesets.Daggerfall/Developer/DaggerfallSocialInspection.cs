@@ -535,6 +535,7 @@ internal sealed class DaggerfallSocialInspection(
                         : null;
                 foreach (ActorVouchRecord vouch in introductions.ReadVouches(targetId))
                 {
+                    DaggerfallVouchEvaluation eval = introductions.EvaluateVouch(vouch, site.ActiveSite);
                     w.WriteStartObject();
                     w.WriteNumber("targetDurableId", targetId);
                     if (!string.IsNullOrWhiteSpace(targetName)) w.WriteString("targetName", targetName); else w.WriteNull("targetName");
@@ -543,6 +544,11 @@ internal sealed class DaggerfallSocialInspection(
                     if (!string.IsNullOrWhiteSpace(vouch.ReferrerFamilyId)) w.WriteString("referrerFamilyId", vouch.ReferrerFamilyId); else w.WriteNull("referrerFamilyId");
                     w.WriteString("kind", vouch.Kind.ToString());
                     w.WriteNumber("issuedDay", vouch.IssuedDay);
+                    w.WriteString("status", eval.Status.ToString());
+                    w.WriteBoolean("usable", eval.IsUsable);
+                    w.WriteNumber("ageDays", eval.AgeDays);
+                    if (eval.DaysUntilLapse is int remaining) w.WriteNumber("daysUntilLapse", remaining); else w.WriteNull("daysUntilLapse");
+                    if (!string.IsNullOrWhiteSpace(eval.Reason)) w.WriteString("reason", eval.Reason); else w.WriteNull("reason");
                     if (!string.IsNullOrWhiteSpace(vouch.OriginSiteName)) w.WriteString("originSiteName", vouch.OriginSiteName); else w.WriteNull("originSiteName");
                     w.WriteEndObject();
                 }

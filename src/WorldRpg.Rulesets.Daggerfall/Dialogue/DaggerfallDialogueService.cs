@@ -110,6 +110,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallNpc, DaggerfallOfficeExileSave, DaggerfallExileRestoreResult>? _restoreExile;
     private readonly Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? _denounceTargets;
     private readonly Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? _denounceOfficeHolder;
+    private readonly Func<ActorVouchRecord, bool>? _isVouchUsable;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -163,7 +164,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallSiteId, DaggerfallSiteRecord?>? findSite = null,
         Func<DaggerfallNpc, DaggerfallOfficeExileSave, DaggerfallExileRestoreResult>? restoreExile = null,
         Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? denounceTargets = null,
-        Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? denounceOfficeHolder = null)
+        Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? denounceOfficeHolder = null,
+        Func<ActorVouchRecord, bool>? isVouchUsable = null)
     {
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
@@ -186,6 +188,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _restoreExile = restoreExile;
         _denounceTargets = denounceTargets;
         _denounceOfficeHolder = denounceOfficeHolder;
+        _isVouchUsable = isVouchUsable;
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _social = social ?? throw new ArgumentNullException(nameof(social));
@@ -428,8 +431,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
             && liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? openOverlay))
         {
-            if (openOverlay.Vouches.Count > 0)
-                greeting += "\n" + FormatReferralLine(npc, openOverlay.Vouches[0].DisplaySummary());
+            ActorVouchRecord? usableVouch = FirstUsableVouch(openOverlay);
+            if (usableVouch is not null)
+                greeting += "\n" + FormatReferralLine(npc, usableVouch.DisplaySummary());
             else if (openOverlay.ReferralTags.Count > 0)
                 greeting += "\n" + FormatReferralLine(npc, openOverlay.ReferralTags[0]);
         }
@@ -1021,11 +1025,23 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         && (npc.Profile is { } profile ? profile.Site == site.Id
             : npc.Site.Region == site.Id.Region && string.Equals(npc.Site.Location, site.Name, StringComparison.Ordinal));
 
+    private ActorVouchRecord? FirstUsableVouch(ActorOverlayComponent? overlay)
+    {
+        if (overlay is null || overlay.Vouches.Count == 0)
+            return null;
+        foreach (ActorVouchRecord vouch in overlay.Vouches)
+        {
+            if (_isVouchUsable is null ? vouch.VoidReason == ActorVouchVoidReason.None : _isVouchUsable(vouch))
+                return vouch;
+        }
+        return null;
+    }
+
     private string ResolveAmbientBark(DaggerfallNpc npc, ActorOverlayComponent? overlay, DaggerfallSiteRecord? site)
     {
         string speaker = npc.DisplayName ?? npc.Role;
-        if (overlay is { Vouches.Count: > 0 })
-            return $"{speaker}: \"{FormatReferralLine(npc, overlay.Vouches[0].DisplaySummary())}\"";
+        if (FirstUsableVouch(overlay) is { } usableBarkVouch)
+            return $"{speaker}: \"{FormatReferralLine(npc, usableBarkVouch.DisplaySummary())}\"";
         if (overlay is { ReferralTags.Count: > 0 })
             return $"{speaker}: \"{FormatReferralLine(npc, overlay.ReferralTags[0])}\"";
 

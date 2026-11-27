@@ -1549,6 +1549,7 @@ internal sealed partial class DaggerfallSession
             OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite, _time.Calendar.MinuteNumber); // Society: OfficeLedger vacancy window & OfficeChanged
             CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
+            Introductions.ObserveActorDied(died.ActorId, died.KillerId == DaggerfallActorIdentity.PlayerEntityId); // Society: void vouches from slain voucher
             if (ConditionCounterplay.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)) is { } counterplay)
                 Presentation.SetOutcome(counterplay.OutcomeMessage);                              // Society, UiProjection
         }
@@ -1734,6 +1735,7 @@ internal sealed partial class DaggerfallSession
         if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();         // Actors
         State.Quests.ReleaseFoeRestraint(target);                                                 // Quests
         _enemyBehavior.MakeHostile(target);                                                       // Actors
+        Introductions.ObserveActorHostile(target);                                                // Society: void vouches from attacked/hostile voucher
     }
 
     /// <summary>

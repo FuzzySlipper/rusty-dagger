@@ -632,7 +632,8 @@ internal sealed partial class DaggerfallSession
                 HasWatchOrRulerVouch,
                 wordSpread: WordSpread,
                 currentMinute: () => _time.Calendar.MinuteNumber,
-                activeSite: () => _site.ActiveSite);
+                activeSite: () => _site.ActiveSite,
+                hasUsableVouchFor: id => Introductions?.HasUsableVouch(id, _site.ActiveSite) == true);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
@@ -1046,6 +1047,7 @@ internal sealed partial class DaggerfallSession
                 {
                     if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
                     _enemyBehavior.MakeHostile(target);
+                    Introductions.ObserveActorHostile(target);
                 },
                 actorLedger: State.ActorLedger);
             PropertyLoot = new DaggerfallPropertyLoot(_groundContainers, definitions, _random, _uniqueItems, Crimes, State.Crime,
@@ -1106,6 +1108,10 @@ internal sealed partial class DaggerfallSession
             Introductions.BindEffectiveDisposition(
                 (actorId, atSite) => SocialConsequences.EffectiveDispositionDelta(actorId, atSite),
                 (familyId, atSite) => SocialConsequences.HouseholdStandingDelta(familyId, atSite));
+            Introductions.BindHostilityLookup(id =>
+                State.Actors.TryGet(id, out ActorState? live)
+                && live.Actor.TryGet<Modules.Behavior.DaggerfallEnemyPerceptionMemory>(out var memory)
+                && memory.ForcedHostile);
             Introductions.BindDispositionAdjusted((actorId, delta) =>
             {
                 if (delta > 0)
@@ -1364,7 +1370,7 @@ internal sealed partial class DaggerfallSession
                 profiles: () => _sites.Profiles,
                 returnProfile: () => _sites.ReturnProfile,
                 spawn: (definition, pose) => _roster.Spawn(definition, pose),
-                makeHostile: id => _enemyBehavior.MakeHostile(id),
+                makeHostile: id => { _enemyBehavior.MakeHostile(id); Introductions.ObserveActorHostile(id); },
                 promoteGuard: id => _roster.PromoteToCityWatch(id));
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
             Law.BindOfficeHolderBanished((actorId, region, crimeKind, banished, detail) =>
@@ -1381,6 +1387,7 @@ internal sealed partial class DaggerfallSession
                     origin,
                     _time.Calendar.MinuteNumber,
                     Crimes.TryGetVictimFamilyId(incident.OperationId));
+                Introductions.ObserveAttributedCrime(incident);
             });
             crime.IncidentRecorded += Law.Admit;
             GuildProviders = new DaggerfallGuildProviders(State.ConcreteGuildServices, State.ConcreteGuildMembership, State.KnightlyClaimActions,
@@ -1701,7 +1708,8 @@ internal sealed partial class DaggerfallSession
                 checked((int)_time.Calendar.DayNumber)),
             denounceOfficeHolder: (speaker, targetId, site) => DaggerfallExileDialogue.EvaluateAndDenounce(
                 speaker, targetId, site, OfficeLedger, OfficeHolders, WorldConditions, State.Social, State.Crime, Law, _definitions,
-                checked((int)_time.Calendar.DayNumber)));
+                checked((int)_time.Calendar.DayNumber)),
+            isVouchUsable: vouch => Introductions.IsVouchUsable(vouch));
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);
@@ -1886,10 +1894,12 @@ internal sealed partial class DaggerfallSession
         {
             if (entry.Social?.Vouches is not { Length: > 0 } vouches)
                 continue;
-            if ((rulerId is long r && entry.DurableId == r) || (captainId is long c && entry.DurableId == c))
-                return true;
             foreach (ActorVouchRecord vouch in vouches)
             {
+                if (Introductions is not null && !Introductions.IsVouchUsable(vouch, site))
+                    continue;
+                if ((rulerId is long r && entry.DurableId == r) || (captainId is long c && entry.DurableId == c))
+                    return true;
                 if ((rulerId is long r2 && vouch.ReferrerDurableId == r2)
                     || (captainId is long c2 && vouch.ReferrerDurableId == c2))
                     return true;

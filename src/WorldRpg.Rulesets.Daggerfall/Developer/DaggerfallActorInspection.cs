@@ -396,6 +396,16 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             w.WriteNumber("skillSkip", access.SocialSkillSkip);
             w.WriteNumber("homeBonus", access.HomeStandingBonus);
             w.WriteBoolean("hasDepositWaiver", introductions.HasDepositWaiverVouch(npc));
+            if (access.QualifyingVouchEvaluation is { } qEval)
+            {
+                w.WriteString("qualifyingVouchStatus", qEval.Status.ToString());
+                w.WriteNumber("qualifyingVouchAgeDays", qEval.AgeDays);
+                w.WriteNumber("qualifyingVouchReachPenalty", qEval.ReachPenalty);
+            }
+            else
+            {
+                w.WriteNull("qualifyingVouchStatus");
+            }
             if (!string.IsNullOrWhiteSpace(access.DenialReason)) w.WriteString("denialReason", access.DenialReason);
             else w.WriteNull("denialReason");
             w.WriteEndObject();
@@ -417,8 +427,19 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
             w.WriteString("kind", vouch.Kind.ToString());
             w.WriteNumber("issuedDay", vouch.IssuedDay);
             if (!string.IsNullOrWhiteSpace(vouch.OriginSiteName)) w.WriteString("originSiteName", vouch.OriginSiteName); else w.WriteNull("originSiteName");
-            if (npc is not null && introductions is not null)
-                w.WriteBoolean("trusted", introductions.TrustsReferrer(npc, vouch));
+            if (introductions is not null)
+            {
+                DaggerfallVouchEvaluation eval = introductions.EvaluateVouch(vouch, site);
+                w.WriteString("status", eval.Status.ToString());
+                w.WriteBoolean("usable", eval.IsUsable);
+                w.WriteNumber("ageDays", eval.AgeDays);
+                if (eval.DaysUntilLapse is int remaining) w.WriteNumber("daysUntilLapse", remaining); else w.WriteNull("daysUntilLapse");
+                w.WriteNumber("reachPenalty", eval.ReachPenalty);
+                w.WriteNumber("standingBonus", eval.StandingBonus);
+                if (!string.IsNullOrWhiteSpace(eval.Reason)) w.WriteString("reason", eval.Reason); else w.WriteNull("reason");
+                if (npc is not null)
+                    w.WriteBoolean("trusted", introductions.TrustsReferrer(npc, vouch));
+            }
             w.WriteEndObject();
         }
         w.WriteEndArray();

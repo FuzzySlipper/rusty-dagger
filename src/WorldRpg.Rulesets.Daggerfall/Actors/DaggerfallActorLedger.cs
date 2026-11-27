@@ -718,8 +718,24 @@ internal sealed class DaggerfallActorLedger
         if (_entries.TryGetValue(durableId, out ActorLedgerEntry? existing))
         {
             ActorVouchRecord[] priorVouches = MergeVouches(existing.Referral?.Vouches, existing.Social?.Vouches) ?? [];
-            bool added = !priorVouches.Any(existingVouch => existingVouch.SameGrant(vouch));
-            ActorVouchRecord[] mergedVouches = added ? [.. priorVouches, vouch] : priorVouches;
+            List<ActorVouchRecord> updatedList = [.. priorVouches];
+            bool changed = false;
+            int matchIdx = updatedList.FindIndex(existingVouch => existingVouch.SameGrant(vouch));
+            if (matchIdx >= 0)
+            {
+                ActorVouchRecord preferred = ActorVouchRecord.Prefer(updatedList[matchIdx], vouch);
+                if (preferred != updatedList[matchIdx])
+                {
+                    updatedList[matchIdx] = preferred;
+                    changed = true;
+                }
+            }
+            else
+            {
+                updatedList.Add(vouch);
+                changed = true;
+            }
+            ActorVouchRecord[] mergedVouches = [.. updatedList];
             ActorSocialDiff? baseSocial = existing.Social ?? social;
             ActorSocialDiff? updatedSocial = baseSocial is { } s
                 ? s with { Vouches = mergedVouches }
@@ -734,7 +750,7 @@ internal sealed class DaggerfallActorLedger
                 Social = updatedSocial,
                 Referral = updatedReferral,
             };
-            return added;
+            return changed;
         }
 
         ArgumentNullException.ThrowIfNull(origin);
@@ -812,29 +828,108 @@ internal sealed class DaggerfallActorLedger
         return totalRemoved;
     }
 
+    /// <summary>
+    /// Marks every structured vouch matching <paramref name="match"/> across all ledger entries as voided
+    /// with <paramref name="reason"/>, preserving the record for diagnostics and save/load.
+    /// </summary>
+    internal int VoidVouchesWhere(Func<long, ActorVouchRecord, bool> match, ActorVouchVoidReason reason)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        if (reason == ActorVouchVoidReason.None)
+            return 0;
+
+        int totalVoided = 0;
+        foreach (long durableId in _entries.Keys.ToArray())
+        {
+            ActorLedgerEntry entry = _entries[durableId];
+            int entryChanged = 0;
+            ActorSocialDiff? updatedSocial = entry.Social;
+            if (updatedSocial?.Vouches is { Length: > 0 } socialVouches)
+            {
+                ActorVouchRecord[] next = new ActorVouchRecord[socialVouches.Length];
+                bool socialChanged = false;
+                for (int i = 0; i < socialVouches.Length; i++)
+                {
+                    ActorVouchRecord current = socialVouches[i];
+                    if (match(durableId, current))
+                    {
+                        ActorVouchRecord preferred = ActorVouchRecord.Prefer(current, current with { VoidReason = reason });
+                        next[i] = preferred;
+                        if (preferred != current)
+                        {
+                            socialChanged = true;
+                            entryChanged++;
+                        }
+                    }
+                    else
+                    {
+                        next[i] = current;
+                    }
+                }
+                if (socialChanged)
+                    updatedSocial = updatedSocial with { Vouches = next };
+            }
+
+            ActorReferralDiff? updatedReferral = entry.Referral;
+            if (updatedReferral?.Vouches is { Length: > 0 } refVouches)
+            {
+                ActorVouchRecord[] next = new ActorVouchRecord[refVouches.Length];
+                bool refChanged = false;
+                for (int i = 0; i < refVouches.Length; i++)
+                {
+                    ActorVouchRecord current = refVouches[i];
+                    if (match(durableId, current))
+                    {
+                        ActorVouchRecord preferred = ActorVouchRecord.Prefer(current, current with { VoidReason = reason });
+                        next[i] = preferred;
+                        if (preferred != current)
+                        {
+                            refChanged = true;
+                            entryChanged = Math.Max(entryChanged, 1);
+                        }
+                    }
+                    else
+                    {
+                        next[i] = current;
+                    }
+                }
+                if (refChanged)
+                    updatedReferral = updatedReferral with { Vouches = next };
+            }
+
+            if (entryChanged > 0)
+            {
+                _entries[durableId] = entry with
+                {
+                    Social = updatedSocial,
+                    Referral = updatedReferral,
+                };
+                totalVoided += entryChanged;
+            }
+        }
+        return totalVoided;
+    }
+
     internal static ActorVouchRecord[]? MergeVouches(
         IEnumerable<ActorVouchRecord>? first,
         IEnumerable<ActorVouchRecord>? second)
     {
         List<ActorVouchRecord>? merged = null;
-        if (first is not null)
+        void AddOrMerge(IEnumerable<ActorVouchRecord>? source)
         {
-            foreach (ActorVouchRecord vouch in first)
+            if (source is null) return;
+            foreach (ActorVouchRecord vouch in source)
             {
                 merged ??= [];
-                if (!merged.Any(existing => existing.SameGrant(vouch)))
+                int idx = merged.FindIndex(existing => existing.SameGrant(vouch));
+                if (idx >= 0)
+                    merged[idx] = ActorVouchRecord.Prefer(merged[idx], vouch);
+                else
                     merged.Add(vouch);
             }
         }
-        if (second is not null)
-        {
-            foreach (ActorVouchRecord vouch in second)
-            {
-                merged ??= [];
-                if (!merged.Any(existing => existing.SameGrant(vouch)))
-                    merged.Add(vouch);
-            }
-        }
+        AddOrMerge(first);
+        AddOrMerge(second);
         return merged is { Count: > 0 } ? [.. merged] : null;
     }
 

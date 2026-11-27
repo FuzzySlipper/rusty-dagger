@@ -163,6 +163,22 @@ internal enum ActorVouchKind
     Court = 3,
 }
 
+/// <summary>Explicit persisted reason why a structured <see cref="ActorVouchRecord"/> has been voided.</summary>
+internal enum ActorVouchVoidReason
+{
+    /// <summary>Not explicitly voided (still subject to age and live voucher state).</summary>
+    None = 0,
+
+    /// <summary>Voided because the voucher died.</summary>
+    Dead = 1,
+
+    /// <summary>Voided because the player wronged (murdered, assaulted, or robbed) the voucher.</summary>
+    Wronged = 2,
+
+    /// <summary>Voided because the voucher turned hostile toward the player.</summary>
+    Hostile = 3,
+}
+
 /// <summary>
 /// Structured social vouch issued by a specific person (<see cref="ReferrerDurableId"/>) on the player's behalf.
 /// Replaces bare <c>referred-from:{site}</c> strings with durable, trust-evaluated provenance.
@@ -174,7 +190,8 @@ internal sealed record ActorVouchRecord(
     int IssuedDay,
     string? ReferrerName = null,
     string? OriginSiteName = null,
-    string? ReferrerFamilyId = null)
+    string? ReferrerFamilyId = null,
+    ActorVouchVoidReason VoidReason = ActorVouchVoidReason.None)
 {
     internal void Validate()
     {
@@ -184,6 +201,8 @@ internal sealed record ActorVouchRecord(
             throw new ArgumentOutOfRangeException(nameof(ReferrerFactionId), "Saved actor vouch referrer faction id cannot be negative.");
         if (!Enum.IsDefined(Kind))
             throw new ArgumentOutOfRangeException(nameof(Kind), "Saved actor vouch names an invalid kind.");
+        if (!Enum.IsDefined(VoidReason))
+            throw new ArgumentOutOfRangeException(nameof(VoidReason), "Saved actor vouch names an invalid void reason.");
         if (ReferrerName is not null)
             ArgumentException.ThrowIfNullOrWhiteSpace(ReferrerName);
         if (OriginSiteName is not null)
@@ -198,6 +217,22 @@ internal sealed record ActorVouchRecord(
 
     internal bool SameGrant(ActorVouchRecord other) =>
         other is not null && ReferrerDurableId == other.ReferrerDurableId && Kind == other.Kind;
+
+    /// <summary>Chooses the fresher or more authoritative record when merging two grants with the same key.</summary>
+    internal static ActorVouchRecord Prefer(ActorVouchRecord current, ActorVouchRecord incoming)
+    {
+        if (incoming.IssuedDay > current.IssuedDay)
+            return incoming;
+        if (incoming.IssuedDay < current.IssuedDay)
+            return current;
+        if (incoming.VoidReason != ActorVouchVoidReason.None && current.VoidReason == ActorVouchVoidReason.None)
+            return incoming;
+        if (incoming.VoidReason == ActorVouchVoidReason.Wronged && current.VoidReason != ActorVouchVoidReason.Wronged)
+            return incoming;
+        if (incoming.VoidReason == ActorVouchVoidReason.Dead && current.VoidReason == ActorVouchVoidReason.Hostile)
+            return incoming;
+        return current;
+    }
 
     /// <summary>Human-readable summary for dialogue greetings and ambient barks.</summary>
     internal string DisplaySummary() =>
@@ -251,10 +286,39 @@ internal sealed class ActorOverlayComponent
     {
         ArgumentNullException.ThrowIfNull(vouch);
         vouch.Validate();
-        if (_vouches.Any(existing => existing.SameGrant(vouch)))
-            return false;
+        for (int i = 0; i < _vouches.Count; i++)
+        {
+            if (_vouches[i].SameGrant(vouch))
+            {
+                if (_vouches[i] == vouch)
+                    return false;
+                _vouches[i] = ActorVouchRecord.Prefer(_vouches[i], vouch);
+                return _vouches[i] == vouch;
+            }
+        }
         _vouches.Add(vouch);
         return true;
+    }
+
+    internal int VoidVouches(Predicate<ActorVouchRecord> match, ActorVouchVoidReason reason)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        if (reason == ActorVouchVoidReason.None)
+            return 0;
+        int voided = 0;
+        for (int i = 0; i < _vouches.Count; i++)
+        {
+            ActorVouchRecord existing = _vouches[i];
+            if (!match(existing))
+                continue;
+            ActorVouchRecord updated = ActorVouchRecord.Prefer(existing, existing with { VoidReason = reason });
+            if (updated != existing)
+            {
+                _vouches[i] = updated;
+                voided++;
+            }
+        }
+        return voided;
     }
 
     internal bool HasVouchFrom(long referrerDurableId) =>

@@ -54,7 +54,8 @@ internal sealed class DaggerfallScrutinyPolicy(
     Func<DaggerfallSiteRecord?, bool>? hasWatchOrRulerVouch = null,
     DaggerfallWordSpread? wordSpread = null,
     Func<long>? currentMinute = null,
-    Func<DaggerfallSiteRecord?>? activeSite = null)
+    Func<DaggerfallSiteRecord?>? activeSite = null,
+    Func<long, bool>? hasUsableVouchFor = null)
 {
     internal const int HighStandingExemptThreshold = 20;
     internal const int HeightenedWantedThreshold = -5;
@@ -238,8 +239,10 @@ internal sealed class DaggerfallScrutinyPolicy(
     }
 
     private bool HasTrustedVouchFor(long npcDurableId) =>
-        actorLedger.TryGet(npcDurableId, out ActorLedgerEntry? entry)
-        && entry?.Social?.Vouches is { Length: > 0 };
+        hasUsableVouchFor is not null
+            ? hasUsableVouchFor(npcDurableId)
+            : actorLedger.TryGet(npcDurableId, out ActorLedgerEntry? entry)
+              && entry?.Social?.Vouches is { Length: > 0 };
 
     private int ResolveProviderFactionId(DaggerfallNpc npc, DaggerfallInteriorBuilding? building)
     {
