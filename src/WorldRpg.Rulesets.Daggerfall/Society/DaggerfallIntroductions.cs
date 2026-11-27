@@ -380,6 +380,20 @@ internal sealed class DaggerfallIntroductions(
         };
     }
 
+    /// <summary>Voids all vouches issued by a victim when a player theft/pickpocket attempt successfully transfers their property, independent of legal reporting.</summary>
+    internal int ObserveCrimeAttempt(DaggerfallCrimeAttemptSave attempt)
+    {
+        ArgumentNullException.ThrowIfNull(attempt);
+        if (attempt.PerpetratorActorId != DaggerfallActorIdentity.PlayerEntityId
+            || attempt.AffectedActorOrOwnerId is not long victimId
+            || victimId <= 0
+            || attempt.Outcome != DaggerfallCrimeAttemptOutcome.PropertyTransferred)
+        {
+            return 0;
+        }
+        return VoidVouchesFrom(victimId, ActorVouchVoidReason.Wronged);
+    }
+
     /// <summary>Voids all vouches issued by an actor who has turned hostile toward the player.</summary>
     internal int ObserveActorHostile(long actorId) =>
         VoidVouchesFrom(actorId, ActorVouchVoidReason.Hostile);

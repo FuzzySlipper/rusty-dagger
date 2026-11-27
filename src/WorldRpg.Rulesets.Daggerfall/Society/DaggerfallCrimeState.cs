@@ -264,6 +264,7 @@ internal sealed partial class DaggerfallCrimeState
         ScriptedCrime = _suppressed() ? null : crime;
     }
 
+    internal event Action<DaggerfallCrimeAttemptSave>? AttemptRecorded;
     internal event Action<DaggerfallCrimeIncidentSave>? IncidentRecorded;
 
     internal int OperationCount => _attempts.Count + _incidents.Count + _guildProgress.Count;
@@ -290,6 +291,7 @@ internal sealed partial class DaggerfallCrimeState
             return false;
         }
         _attempts.Add(value.OperationId, value);
+        AttemptRecorded?.Invoke(value);
         return true;
     }
 

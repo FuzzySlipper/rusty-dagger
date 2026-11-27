@@ -211,6 +211,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal bool IsPacified(long actorId) => _actors.TryGet(actorId, out ActorState actor) && !Overrides.IsHostile(actorId)
         && (Senses(actor).Pacified || _questRestrained(actorId));
 
+    /// <summary>Notifies listeners when a live actor transitions to forced-hostile or provoked against the player.</summary>
+    internal event Action<long>? ActorMadeHostile;
+
     /// <summary>
     /// A blow tells an actor who struck it: it turns on its attacker, even from behind. It knows at once, since an
     /// actor that can't move skips its senses, and being struck is already an encounter no language can pacify.
@@ -223,6 +226,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         memory.Detected = memory.HasEncounteredPlayer = true;
         memory.LairTruce = false;
         memory.Reengage();
+        ActorMadeHostile?.Invoke(actorId);
     }
 
     /// <summary>Whether <paramref name="actorId"/> was recently struck/provoked and turns toward attackers from any direction.</summary>
@@ -285,6 +289,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         if (!_actors.TryGet(actorId, out var actor) || actor.IsDefeated || !includePlayerAllies && _isPlayerAllied(actorId)) return;
         var memory = Senses(actor);
         memory.SetForcedHostile(true);
+        ActorMadeHostile?.Invoke(actorId);
     }
 
     /// <summary>The enemy-senses memory the actor factory attaches to every non-player actor.</summary>
@@ -298,6 +303,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
             if (actor.IsDefeated || (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant) || _isPlayerAllied(actor.DurableId)) continue;
             DaggerfallEnemyPerceptionMemory memory = Senses(actor);
             memory.SetForcedHostile(true);
+            ActorMadeHostile?.Invoke(actor.DurableId);
         }
     }
 

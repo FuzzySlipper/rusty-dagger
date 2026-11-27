@@ -1050,7 +1050,6 @@ internal sealed partial class DaggerfallSession
                 {
                     if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
                     _enemyBehavior.MakeHostile(target);
-                    Introductions.ObserveActorHostile(target);
                 },
                 actorLedger: State.ActorLedger);
             PropertyLoot = new DaggerfallPropertyLoot(_groundContainers, definitions, _random, _uniqueItems, Crimes, State.Crime,
@@ -1115,6 +1114,7 @@ internal sealed partial class DaggerfallSession
                 State.Actors.TryGet(id, out ActorState? live)
                 && live.Actor.TryGet<Modules.Behavior.DaggerfallEnemyPerceptionMemory>(out var memory)
                 && memory.ForcedHostile);
+            _enemyBehavior.ActorMadeHostile += id => Introductions.ObserveActorHostile(id);
             Introductions.BindDispositionAdjusted((actorId, delta) =>
             {
                 if (delta > 0)
@@ -1379,7 +1379,7 @@ internal sealed partial class DaggerfallSession
                 profiles: () => _sites.Profiles,
                 returnProfile: () => _sites.ReturnProfile,
                 spawn: (definition, pose) => _roster.Spawn(definition, pose),
-                makeHostile: id => { _enemyBehavior.MakeHostile(id); Introductions.ObserveActorHostile(id); },
+                makeHostile: id => _enemyBehavior.MakeHostile(id),
                 promoteGuard: id => _roster.PromoteToCityWatch(id));
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
             Law.BindOfficeHolderBanished((actorId, region, crimeKind, banished, detail) =>
@@ -1396,8 +1396,9 @@ internal sealed partial class DaggerfallSession
                     origin,
                     _time.Calendar.MinuteNumber,
                     Crimes.TryGetVictimFamilyId(incident.OperationId));
-                Introductions.ObserveAttributedCrime(incident);
             });
+            crime.AttemptRecorded += attempt => Introductions.ObserveCrimeAttempt(attempt);
+            crime.IncidentRecorded += incident => Introductions.ObserveAttributedCrime(incident);
             crime.IncidentRecorded += Law.Admit;
             GuildProviders = new DaggerfallGuildProviders(State.ConcreteGuildServices, State.ConcreteGuildMembership, State.KnightlyClaimActions,
                 new DaggerfallGuildAdmission(State.ConcreteGuildMembership, State.Social, State.SkillUses, State.Crime,

@@ -9,6 +9,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -229,6 +230,81 @@ public sealed class VouchAgingAndVoidingTests
         Assert.Equal(DaggerfallVouchStatus.VoidedWronged, murderedPatronAccess.QualifyingVouchEvaluation?.Status);
     }
 
+    [Fact]
+    public void Successful_pickpocket_of_voucher_voids_grants_and_survives_save_load()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        // Force success (roll=1 <= chance), valuable found (roll=80 > 33), and 4 stolen gold pieces.
+        fixture.Random = new PickpocketSuccessRandom();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        SetSocialStats(session, etiquette: 15, streetwise: 15, personality: 30);
+        session.State.Actors.Player.Stats.GetStat(StatId.Parse("pickpocket")).BaseValue = 100;
+
+        long ladyId = SpawnNpc(session, "vouch-pickpocket/lady", "Lady Bridwell", LadyBridwellFaction, DaggerfallRegion, ["talk", "quest"]);
+        long kingId = SpawnNpc(session, "vouch-pickpocket/king", "King Gothryd", KingGothrydFaction, DaggerfallRegion, ["talk", "quest"]);
+
+        session.Introductions.AdjustActorDisposition(ladyId, 40);
+        DaggerfallIntroductionResult issued = session.Introductions.TryIssueIntroduction(
+            session.State.Npcs.Require(ladyId), kingId, session.Site.ActiveSite);
+        Assert.True(issued.Accepted, issued.Message);
+        Assert.True(session.Introductions.AssessAccess(session.State.Npcs.Require(kingId)).Allowed);
+
+        // Silent successful pickpocket transfers stolen gold (PropertyTransferred) with zero crime incident reported.
+        DaggerfallActivationOutcome pickpocket = session.Crimes.Pickpocket(ladyId);
+        Assert.True(pickpocket.Applied, pickpocket.Message);
+        Assert.Contains("pinched", pickpocket.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(session.State.Crime.Incidents);
+        Assert.Contains(session.State.Crime.Attempts,
+            a => a.AffectedActorOrOwnerId == ladyId && a.Outcome == DaggerfallCrimeAttemptOutcome.PropertyTransferred);
+
+        // Voucher's grant is persistently voided as VoidedWronged and survives save/reload!
+        DaggerfallIntroductionAccess accessAfterPickpocket = session.Introductions.AssessAccess(session.State.Npcs.Require(kingId));
+        Assert.False(accessAfterPickpocket.Allowed);
+        Assert.Equal(DaggerfallVouchStatus.VoidedWronged, accessAfterPickpocket.QualifyingVouchEvaluation?.Status);
+
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        DaggerfallIntroductionAccess restoredAccess = restored.Introductions.AssessAccess(restored.State.Npcs.Require(kingId));
+        Assert.False(restoredAccess.Allowed);
+        Assert.Equal(DaggerfallVouchStatus.VoidedWronged, restoredAccess.QualifyingVouchEvaluation?.Status);
+    }
+
+    [Fact]
+    public void Hostility_transition_via_enemy_behavior_permanently_voids_vouch_even_after_pacify_and_save_load()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        SetSocialStats(session, etiquette: 15, streetwise: 15, personality: 30);
+
+        long ladyId = SpawnNpc(session, "vouch-pacify/lady", "Lady Corvus", LadyBridwellFaction, DaggerfallRegion, ["talk", "quest"]);
+        long kingId = SpawnNpc(session, "vouch-pacify/king", "King Gothryd", KingGothrydFaction, DaggerfallRegion, ["talk", "quest"]);
+
+        session.Introductions.AdjustActorDisposition(ladyId, 40);
+        DaggerfallIntroductionResult issued = session.Introductions.TryIssueIntroduction(
+            session.State.Npcs.Require(ladyId), kingId, session.Site.ActiveSite);
+        Assert.True(issued.Accepted, issued.Message);
+        Assert.True(session.Introductions.AssessAccess(session.State.Npcs.Require(kingId)).Allowed);
+
+        // Hostility transition via canonical EnemyBehavior.MakeHostile (used by QuestFoes, OverlandParties, Law, Crimes, Magic)
+        // must persistently write VoidReason=Hostile onto the grant so Pacify does NOT resurrect it!
+        session.EnemyBehavior.MakeHostile(ladyId, includePlayerAllies: true);
+        Assert.True(session.State.Actors.Get(ladyId).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        Assert.Equal(DaggerfallVouchStatus.VoidedHostile,
+            session.Introductions.AssessAccess(session.State.Npcs.Require(kingId)).QualifyingVouchEvaluation?.Status);
+
+        // Pacifying the voucher clears ForcedHostile, yet the original grant MUST remain VoidedHostile and unusable!
+        session.EnemyBehavior.Pacify(ladyId);
+        Assert.False(session.State.Actors.Get(ladyId).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
+        DaggerfallIntroductionAccess afterPacify = session.Introductions.AssessAccess(session.State.Npcs.Require(kingId));
+        Assert.False(afterPacify.Allowed);
+        Assert.Equal(DaggerfallVouchStatus.VoidedHostile, afterPacify.QualifyingVouchEvaluation?.Status);
+
+        // Save/reload preserves the permanent VoidedHostile state!
+        using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
+        DaggerfallIntroductionAccess restoredAccess = restored.Introductions.AssessAccess(restored.State.Npcs.Require(kingId));
+        Assert.False(restoredAccess.Allowed);
+        Assert.Equal(DaggerfallVouchStatus.VoidedHostile, restoredAccess.QualifyingVouchEvaluation?.Status);
+    }
+
     private static void AssertInspectVouchStatus(IDeveloperActorCommands cmds, long actorId, string expectedStatus)
     {
         DebugCommandResult res = cmds.Inspect(actorId.ToString());
@@ -266,5 +342,26 @@ public sealed class VouchAgingAndVoidingTests
         ActorState live = session.State.Actors.Get(id);
         live.Actor.Get<FactionComponent>().SetPeopleFactions(factionId > 0 ? factionId : null, null);
         return id;
+    }
+
+    private sealed class PickpocketSuccessRandom : IRandomService
+    {
+        private readonly IRandomService _fallback = RandomMinimum.Create();
+
+        public KeyedRngReceipt DrawKeyed(KeyedRngRequest request)
+        {
+            if (request.Key.EndsWith(":valuable", StringComparison.Ordinal))
+                return new KeyedRngReceipt(Math.Clamp(80, request.Minimum, request.Maximum));
+            if (request.Key.EndsWith(":gold", StringComparison.Ordinal))
+                return new KeyedRngReceipt(Math.Clamp(4, request.Minimum, request.Maximum));
+            return _fallback.DrawKeyed(request);
+        }
+
+        public Lcg15Receipt DrawLcg15(Lcg15Request request) => _fallback.DrawLcg15(request);
+        public Rng CreateScoped(ScopedRngCreateRequest request) => _fallback.CreateScoped(request);
+        public Rng ForkScoped(ScopedRngForkRequest request) => _fallback.ForkScoped(request);
+        public RngValue NextU64(Rng rng) => _fallback.NextU64(rng);
+        public RngValue NextBoundedU32(ScopedRngBoundedRequest request) => _fallback.NextBoundedU32(request);
+        public RngValue NextBool(Rng rng) => _fallback.NextBool(rng);
     }
 }
