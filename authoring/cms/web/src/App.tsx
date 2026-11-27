@@ -21,6 +21,7 @@ import { BlockSlotsPage } from './pages/BlockSlotsPage';
 import { WorldBlockDetailPage, WorldBlocksListPage } from './pages/WorldBlocksPage';
 import { LocationDetailPage, LocationsListPage } from './pages/LocationsPage';
 import { WorldAtlasPage } from './pages/WorldAtlasPage';
+import { ServicePage } from './pages/ServicePage';
 
 interface WorkspaceGitStatus {
   gitAvailable: boolean;
@@ -71,6 +72,8 @@ function renderRoute(route: Route) {
       return <LocationDetailPage region={route.region} index={route.index} mode={route.mode} />;
     case 'world-map':
       return <WorldAtlasPage initialRegion={route.region} />;
+    case 'service':
+      return <ServicePage />;
   }
 }
 
@@ -213,6 +216,10 @@ export function App() {
           <div class="nav-group-label">Pipelines</div>
           <a href="#pipelines" data-page="pipelines" aria-current={currentSection === 'pipelines' ? 'page' : undefined}>
             Character stages
+          </a>
+          <div class="nav-group-label">System</div>
+          <a href="#service" data-page="service" aria-current={currentSection === 'service' ? 'page' : undefined}>
+            Service &amp; status
           </a>
         </nav>
         <a class="external" href="/media/npc/">

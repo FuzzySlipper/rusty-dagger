@@ -420,7 +420,7 @@ class ActorsCatalogTests(TestCase):
         real_ov = real_ws.actors_catalog.overview(real_ws.catalog(), real_ws.concept_store)
         self.assertTrue(real_ov["available"])
         self.assertGreaterEqual(real_ov["counts"]["templates"], 70)
-        self.assertEqual(real_ov["counts"]["byFamily"]["cast"], 33)
+        self.assertEqual(real_ov["counts"]["byFamily"]["cast"], 43)
         self.assertEqual(real_ov["counts"]["byFamily"]["town"], 31)
         real_gothryd = real_ws.actors_catalog.get_spec("king-gothryd", real_ws.catalog(), real_ws.concept_store)
         self.assertEqual([s["seatId"] for s in real_gothryd["reverseRefs"]["boardSeats"]], ["daggerfall"])

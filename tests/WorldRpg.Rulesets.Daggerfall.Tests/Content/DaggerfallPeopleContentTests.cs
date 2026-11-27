@@ -17,7 +17,7 @@ public sealed class DaggerfallPeopleContentTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallPeopleSet people = definitions.People;
 
-        Assert.Equal(33, people.Individuals.Count);
+        Assert.Equal(43, people.Individuals.Count);
         Assert.Contains("king-gothryd", people.Individuals.Keys);
         // The political board's seat heads that no classic block places live at homes pinned to one site each: the
         // site places the home block, and a slot home is one of that block's people slots.
@@ -74,9 +74,13 @@ public sealed class DaggerfallPeopleContentTests
         Assert.Contains("town-house-resident", people.Spawners.Keys);
         Assert.Contains("town-clutter-person", people.Spawners.Keys);
 
-        // Authored regional & climate spawner pools are populated with zero cast-individual visual clashes.
-        HashSet<(int Archive, int Record)> castVisuals =
-            [.. people.Individuals.Values.Select(c => (c.Archive, c.Record))];
+        // Authored regional & climate spawner pools are populated and never leak dedicated cast-only portraits
+        // (classic cast entries whose fallback billboard is a shared generic townsfolk sprite already in default pools are excluded).
+        HashSet<(int Archive, int Record)> genericTownVisuals =
+            [.. people.Spawners.Values.SelectMany(s => s.DefaultPool).Select(e => (e.Archive, e.Record))];
+        HashSet<(int Archive, int Record)> castOnlyVisuals =
+            [.. people.Individuals.Values.Select(c => (c.Archive, c.Record)).Where(v => !genericTownVisuals.Contains(v))];
+        Assert.True(castOnlyVisuals.Count >= 30);
         Assert.True(people.Spawners.Values.Count(s => s.RegionalPools.Count >= 4) >= 20);
         Assert.True(people.Spawners.Values.Count(s => s.ClimatePools.Count >= 4) >= 20);
         foreach (DaggerfallPeopleSpawnerDefinition spawner in people.Spawners.Values)
@@ -84,7 +88,7 @@ public sealed class DaggerfallPeopleContentTests
             foreach (DaggerfallPeoplePoolEntry poolEntry in spawner.RegionalPools.Values.SelectMany(p => p)
                 .Concat(spawner.ClimatePools.Values.SelectMany(p => p)))
             {
-                Assert.DoesNotContain((poolEntry.Archive, poolEntry.Record), castVisuals);
+                Assert.DoesNotContain((poolEntry.Archive, poolEntry.Record), castOnlyVisuals);
             }
         }
 

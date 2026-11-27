@@ -392,7 +392,7 @@ class PeoplePackTests(TestCase):
         store = PeoplePackStore(real_lib, self.workspace.cache, self.workspace.packs)
         report = store.validate_all()
         self.assertTrue(report["valid"], f"Unexpected pack validation issues: {report['issues']}")
-        self.assertEqual(report["counts"]["cast"], 33)
+        self.assertEqual(report["counts"]["cast"], 43)
         self.assertEqual(report["counts"]["spawners"], 31)
         self.assertGreaterEqual(report["counts"]["archetypes"], 6)
         self.assertGreaterEqual(report["counts"]["barks"], 1)

@@ -294,3 +294,19 @@ class ServerIntegrationTests(TestCase):
         self.assertIsNot(first_catalog, self.workspace.catalog())
         status, catalog_b = self._request("GET", "/api/catalog")
         self.assertEqual([row["id"] for row in catalog_b["people"]], ["npc-381", "npc-382"])
+
+    def test_workspace_service_status_and_restart_endpoint(self):
+        restarts = []
+        self.workspace._restart_runner = lambda: restarts.append(True)
+
+        status, info = self._request("GET", "/api/workspace/service")
+        self.assertEqual(status, 200)
+        self.assertEqual(info["service"], "Rusty Dagger Authoring")
+        self.assertIsInstance(info["pid"], int)
+        self.assertIn(info["restartStrategy"], ("den-serve", "exec"))
+        self.assertIn("git", info)
+
+        status, resp = self._request("POST", "/api/workspace/restart", {})
+        self.assertEqual(status, 202)
+        self.assertTrue(resp["restarting"])
+        self.assertEqual(restarts, [True])

@@ -33,6 +33,81 @@
       "schedule": "always-stationed"
     },
     {
+      "id": "baltham-greyman",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Baltham Greyman",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 376,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 23
+      },
+      "home": null,
+      "familyId": null,
+      "schedule": "court-noble"
+    },
+    {
+      "id": "baron-shrike",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Baron Shrike",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 379,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 4
+      },
+      "home": null,
+      "familyId": null,
+      "schedule": "court-noble"
+    },
+    {
+      "id": "baroness-dh-emka",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Baroness Dh'emka",
+      "genders": [
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "race": "redguard",
+      "factionId": 405,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 11
+      },
+      "home": null,
+      "familyId": null,
+      "schedule": "court-noble"
+    },
+    {
       "id": "charvek-si",
       "family": "cast",
       "template": "static-npc",
@@ -57,6 +132,31 @@
         "block": "S0000041.RDB",
         "slotId": "d:p01"
       },
+      "familyId": null,
+      "schedule": "always-stationed"
+    },
+    {
+      "id": "chulmore-quill",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Chulmore Quill",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 361,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 0
+      },
+      "home": null,
       "familyId": null,
       "schedule": "always-stationed"
     },
@@ -317,6 +417,56 @@
       "schedule": "court-noble"
     },
     {
+      "id": "lord-auberon-flyte",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Auberon Flyte",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 401,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 24
+      },
+      "home": null,
+      "familyId": null,
+      "schedule": "court-noble"
+    },
+    {
+      "id": "lord-bertram-spode",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Bertram Spode",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 375,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 180,
+        "record": 3
+      },
+      "home": null,
+      "familyId": null,
+      "schedule": "court-noble"
+    },
+    {
       "id": "lord-bridwell",
       "family": "cast",
       "template": "static-npc",
@@ -373,6 +523,31 @@
       "schedule": "court-noble"
     },
     {
+      "id": "lord-harth",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Harth",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 355,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 19
+      },
+      "home": null,
+      "familyId": null,
+      "schedule": "court-noble"
+    },
+    {
       "id": "lord-k-avar",
       "family": "cast",
       "template": "static-npc",
@@ -397,6 +572,31 @@
         "block": "S0000040.RDB",
         "slotId": "d:p18"
       },
+      "familyId": null,
+      "schedule": "court-noble"
+    },
+    {
+      "id": "lord-plessington",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Plessington",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 359,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 20
+      },
+      "home": null,
       "familyId": null,
       "schedule": "court-noble"
     },
@@ -427,6 +627,31 @@
       },
       "familyId": null,
       "schedule": "court-noble"
+    },
+    {
+      "id": "lord-quistley",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "Lord Quistley",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 402,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 183,
+        "record": 5
+      },
+      "home": null,
+      "familyId": null,
+      "schedule": "guild-member"
     },
     {
       "id": "lord-vhosek",
@@ -850,6 +1075,31 @@
         "slotId": "d:p06"
       },
       "familyId": "fam:dynasty:wayrest",
+      "schedule": "always-stationed"
+    },
+    {
+      "id": "the-great-knight",
+      "family": "cast",
+      "template": "static-npc",
+      "published": false,
+      "displayName": "The Great Knight",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 1
+        }
+      ],
+      "race": "breton",
+      "factionId": 351,
+      "naming": "designated",
+      "harm": "protected",
+      "interaction": "full-dialogue",
+      "visual": {
+        "archive": 182,
+        "record": 23
+      },
+      "home": null,
+      "familyId": null,
       "schedule": "always-stationed"
     },
     {

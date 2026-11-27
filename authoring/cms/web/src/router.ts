@@ -18,7 +18,8 @@ export type Route =
   | { page: 'world-block'; key: string }
   | { page: 'locations'; query: Record<string, string> }
   | { page: 'location'; region: number; index: number; mode?: 'exterior' | 'dungeon' }
-  | { page: 'world-map'; region?: number };
+  | { page: 'world-map'; region?: number }
+  | { page: 'service' };
 
 export const encodeKey = (value: string): string => encodeURIComponent(value);
 
@@ -63,6 +64,7 @@ export const locationUrl = (region: number, index: number, mode?: 'exterior' | '
   mode === 'dungeon' ? `#location/${region}/${index}/dungeon` : `#location/${region}/${index}`;
 export const worldMapUrl = (region?: number): string =>
   region !== undefined ? `#world-map/${region}` : '#world-map';
+export const serviceUrl = (): string => '#service';
 
 function safeDecode(value: string): string {
   try {
@@ -135,6 +137,7 @@ export function parseHash(hash: string): Route {
     const reg = encoded ? Number(id) : NaN;
     return Number.isInteger(reg) ? { page: 'world-map', region: reg } : { page: 'world-map' };
   }
+  if (page === 'service') return { page: 'service' };
   if (page === 'pipelines') return { page: 'listing', category: 'pipelines' };
   if ((ASSET_PAGES as string[]).includes(page)) {
     return { page: 'listing', category: page as AssetCategory };
@@ -176,6 +179,8 @@ export function activeSection(
       return 'locations';
     case 'world-map':
       return 'world-map';
+    case 'service':
+      return 'service';
     case 'search':
       return '';
   }

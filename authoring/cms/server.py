@@ -2,14 +2,19 @@
 """Serve the Rusty Dagger authoring workspace on the LAN."""
 
 import argparse
+from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import shutil
 import sqlite3
 from pathlib import Path
 import subprocess
+import sys
 from tempfile import TemporaryDirectory
+import threading
+import time
 from urllib.parse import unquote, urlsplit
 
 from cache import FileCache
@@ -43,12 +48,38 @@ from reviews import ReviewStore, Reviews
 from router import Response, Router
 
 WEB = CMS / "web"
+_PROCESS_STARTED_AT = datetime.now(timezone.utc).isoformat()
+_PROCESS_STARTED_MONO = time.monotonic()
+
+
+def _git_head(repo: Path) -> tuple[str | None, str | None]:
+    if not (repo / ".git").exists():
+        return None, None
+    try:
+        proc = subprocess.run(
+            ["git", "log", "-1", "--format=%h%n%s"],
+            cwd=repo, capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None, None
+    if proc.returncode != 0:
+        return None, None
+    lines = proc.stdout.splitlines()
+    return (lines[0].strip() if lines else None), (lines[1].strip() if len(lines) > 1 else None)
+
+
+def _den_serve_executable() -> str | None:
+    found = shutil.which("den-serve")
+    if found:
+        return found
+    candidate = Path.home() / ".local/bin/den-serve"
+    return str(candidate) if candidate.is_file() else None
 
 
 class Workspace:
     """Composition root connecting the local library, caches, pack I/O, and domain stores."""
 
-    def __init__(self, library, links, merges, review_store=None, concept_store=None, cache=None, packs=None):
+    def __init__(self, library, links, merges, review_store=None, concept_store=None, cache=None, packs=None, restart_runner=None):
         self.library = library
         self.links = links
         self.merges = merges
@@ -56,6 +87,8 @@ class Workspace:
         self.concept_store = concept_store
         self.cache = cache if cache is not None else FileCache()
         self.packs = packs if packs is not None else PackStore(self.cache)
+        self._restart_runner = restart_runner
+        self._launch_commit, self._launch_subject = _git_head(library.repo)
         self.catalog_store = CatalogStore(library, links, self.cache, self.packs)
         self.people_pack = PeoplePackStore(library, self.cache, self.packs)
         self.actors_catalog = ActorsCatalogStore(library, self.cache, self.packs, self.people_pack)
@@ -204,6 +237,88 @@ class Workspace:
                 modified.append({"status": code, "path": file_path})
         return {"gitAvailable": True, "modified": modified}
 
+    def _den_serve_project(self) -> tuple[str | None, str | None, Path]:
+        cms_dir = self.library.repo / "authoring/cms"
+        config_path = cms_dir / ".den-serve.json"
+        den_serve = _den_serve_executable()
+        if not den_serve or not config_path.is_file():
+            return None, None, cms_dir
+        try:
+            cfg = json.loads(config_path.read_text(encoding="utf-8"))
+            project = cfg.get("project") if isinstance(cfg, dict) else None
+            if isinstance(project, str) and project.strip():
+                return den_serve, project.strip(), cms_dir
+        except (OSError, ValueError):
+            pass
+        return None, None, cms_dir
+
+    def service_status(self):
+        current_commit, current_subject = _git_head(self.library.repo)
+        den_serve, project, cms_dir = self._den_serve_project()
+        stale = bool(self._launch_commit and current_commit and self._launch_commit != current_commit)
+        return {
+            "service": "Rusty Dagger Authoring",
+            "pid": os.getpid(),
+            "startedAt": _PROCESS_STARTED_AT,
+            "uptimeSeconds": round(max(0.0, time.monotonic() - _PROCESS_STARTED_MONO), 1),
+            "launchCommit": self._launch_commit,
+            "launchSubject": self._launch_subject,
+            "currentCommit": current_commit,
+            "currentSubject": current_subject,
+            "stale": stale,
+            "restartStrategy": "den-serve" if (den_serve and project) else "exec",
+            "denServeProject": project,
+            "repoRoot": str(self.library.repo),
+            "cmsRoot": str(cms_dir),
+            "git": self.authoring_git_status(),
+        }
+
+    def trigger_restart(self):
+        pid = os.getpid()
+        if self._restart_runner is not None:
+            self._restart_runner()
+            return {
+                "restarting": True,
+                "strategy": "custom",
+                "pid": pid,
+                "message": "Restart scheduled.",
+            }
+
+        den_serve, project, cms_dir = self._den_serve_project()
+        if den_serve and project:
+            def _run_den_serve():
+                subprocess.Popen(
+                    [den_serve, "restart", project, "-repo", str(cms_dir)],
+                    cwd=str(cms_dir),
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+
+            timer = threading.Timer(0.25, _run_den_serve)
+            timer.daemon = True
+            timer.start()
+            return {
+                "restarting": True,
+                "strategy": "den-serve",
+                "pid": pid,
+                "message": f"Scheduled restart via den-serve ({project}).",
+            }
+
+        def _run_exec():
+            os.execv(sys.executable, [sys.executable, *sys.argv])
+
+        timer = threading.Timer(0.25, _run_exec)
+        timer.daemon = True
+        timer.start()
+        return {
+            "restarting": True,
+            "strategy": "exec",
+            "pid": pid,
+            "message": "Scheduled in-place server restart.",
+        }
+
 
 def create_router(workspace: Workspace) -> Router:
     """Assemble the CMS route table from each domain module."""
@@ -211,6 +326,15 @@ def create_router(workspace: Workspace) -> Router:
 
     router.get("/health", lambda _req: {"service": "Rusty Dagger Authoring"})
     router.get("/api/workspace/status", lambda _req: workspace.authoring_git_status())
+    router.get("/api/workspace/service", lambda _req: workspace.service_status())
+    router.post(
+        "/api/workspace/restart",
+        lambda _req: Response(
+            json.dumps(workspace.trigger_restart()).encode("utf-8"),
+            HTTPStatus.ACCEPTED,
+            "application/json; charset=utf-8",
+        ),
+    )
 
     def npc_chart_html(_req):
         page = (workspace.library.npcs / "index.html").read_text(encoding="utf-8")
