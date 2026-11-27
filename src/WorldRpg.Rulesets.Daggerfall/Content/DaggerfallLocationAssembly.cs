@@ -1159,25 +1159,33 @@ internal sealed class DaggerfallLocationAssembly
                 .GroupBy(door => door.ExteriorBuilding!.Value)
                 .OrderBy(group => group.Key.BlockY).ThenBy(group => group.Key.BlockX).ThenBy(group => group.Key.Index))
             {
-                DaggerfallRdbDoorDefinition door = building.OrderBy(entry => entry.Id.SourceKey, StringComparer.Ordinal).First();
+                // The main door is on the ground: a palace or hall may have doors onto upper floors and the back. A double
+                // door is two door planes side by side, so the banners flank the pair.
+                DaggerfallRdbDoorDefinition door = building.OrderBy(entry => entry.Position.Y + entry.BoundsMin.Y)
+                    .ThenBy(entry => entry.Id.SourceKey, StringComparer.Ordinal).First();
+                DaggerfallRdbDoorDefinition[] leaves = [.. building.Where(entry => Vector3.Distance(entry.Position, door.Position) < 4f
+                    && Vector3.Dot(Vector3.Transform(Vector3.UnitZ, entry.Rotation), Vector3.Transform(Vector3.UnitZ, door.Rotation)) > .9f)];
+                Vector3 middle = leaves.Aggregate(Vector3.Zero, (sum, entry) => sum + entry.Position) / leaves.Length;
                 bool palace = exterior.Buildings[building.Key].Source.BuildingType == Palace;
                 Vector3 normal = Vector3.Transform(Vector3.UnitZ, door.Rotation);
-                float halfWidth = Math.Max(0.6f, (door.BoundsMax.X - door.BoundsMin.X) / 2);
-                Vector3 top = door.Position + Vector3.UnitY * (door.BoundsMax.Y + 0.9f) + normal with { Y = 0f } * 0.12f;
-                Pair($"banner/{building.Key.BlockX}.{building.Key.BlockY}.{building.Key.Index}", top, normal, halfWidth + (palace ? 1.4f : 1.0f),
-                    palace ? 1.3f : 1.0f, palace ? 2.6f : 2.0f, palace ? DaggerfallSiteBannerPost.Palace : DaggerfallSiteBannerPost.Office);
+                float halfWidth = Math.Max(0.6f, (door.BoundsMax.X - door.BoundsMin.X) / 2
+                    + leaves.Max(entry => Vector3.Distance(entry.Position with { Y = 0 }, middle with { Y = 0 })));
+                Vector3 top = middle + Vector3.UnitY * (door.BoundsMax.Y + 0.9f) + normal with { Y = 0f } * 0.12f;
+                // Close beside the frame: many entrances are recessed between the building's walls.
+                Pair($"banner/{building.Key.BlockX}.{building.Key.BlockY}.{building.Key.Index}", top, normal, halfWidth + (palace ? 0.6f : 0.4f),
+                    palace ? 0.9f : 0.7f, palace ? 1.9f : 1.5f, palace ? DaggerfallSiteBannerPost.Palace : DaggerfallSiteBannerPost.Office);
             }
+            // A gate's model (ARCH3D 446 open, 447 closed, every town's) is its whole gatehouse, towers and all, and not
+            // symmetric: its passage runs through it between x -8.05 and 1.68 under walls faced at z ±4.8, whose parapet
+            // starts 6.5 m up. A banner hangs on the wall either side of the passage, below the parapet, on both faces.
+            const float GatewayMiddle = -3.2f, BannerApart = 7.25f, WallFace = 4.8f, BannerTop = 6.3f, BannerDrop = 2.6f, BannerWidth = 1.4f;
             foreach (DaggerfallCityGateDefinition gate in gates)
-            {
-                Vector3 min = gate.Open.LocalBoundsMin, max = gate.Open.LocalBoundsMax;
-                float apart = (max.X - min.X) / 2 + 1.2f;
-                foreach ((string face, float z, Vector3 outward) in new[] { ("out", max.Z + 0.15f, Vector3.UnitZ), ("in", min.Z - 0.15f, -Vector3.UnitZ) })
+                foreach ((string face, float z, Vector3 outward) in new[] { ("out", WallFace + 0.15f, Vector3.UnitZ), ("in", -WallFace - 0.15f, -Vector3.UnitZ) })
                 {
-                    Vector3 local = new Vector3((min.X + max.X) / 2, max.Y - 0.2f, z) * gate.Pose.Scale;
-                    Vector3 middle = gate.Pose.Translation + Vector3.Transform(local, gate.Pose.Rotation);
-                    Pair($"banner/{gate.Id}/{face}", middle, Vector3.Transform(outward, gate.Pose.Rotation), apart, 1.4f, 2.8f, DaggerfallSiteBannerPost.Gate);
+                    Vector3 middle = gate.Pose.Translation + Vector3.Transform(new Vector3(GatewayMiddle, BannerTop, z) * gate.Pose.Scale, gate.Pose.Rotation);
+                    Pair($"banner/{gate.Id}/{face}", middle, Vector3.Transform(outward, gate.Pose.Rotation), BannerApart * gate.Pose.Scale.X,
+                        BannerWidth, BannerDrop, DaggerfallSiteBannerPost.Gate);
                 }
-            }
             return banners;
         }
 
