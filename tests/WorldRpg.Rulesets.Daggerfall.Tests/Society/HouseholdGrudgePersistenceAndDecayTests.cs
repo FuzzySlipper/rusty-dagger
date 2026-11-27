@@ -382,6 +382,61 @@ public sealed class HouseholdGrudgePersistenceAndDecayTests
     }
 
     [Fact]
+    public void Mixed_goodwill_and_intercepted_arrest_preserves_arrived_positive_standing_through_partial_and_full_decay_and_save_load()
+    {
+        using var fixture = new MultiTierHouseholdFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord originSite = session.Site.ActiveSite!;
+        DaggerfallSiteRecord distantSite = TestPayload.Definitions.Locations.Records
+            .First(r => r.Id != originSite.Id
+                && double.Hypot(r.MapPixelX - originSite.MapPixelX, r.MapPixelY - originSite.MapPixelY) is >= 30.0 and <= 80.0);
+
+        DaggerfallNpcSite npcSite = new(originSite.Id.Region, originSite.Name, "1/8/0", session.Sites.ActiveProfile.LogicalId);
+        const string greatHouse = "fam:house:r17:5";
+        long headId = AddNpcWithFamily(session, originSite.Id, npcSite, "t11159/mixed-intercept-head", "Duke Corvus", greatHouse);
+
+        // 1. Earn +5 Great House goodwill and let it arrive at distantSite.
+        session.SocialConsequences.ReactToKinGoodwill(headId, directPositiveDelta: 10, originSite: originSite, minute: session.Calendar.MinuteNumber);
+        session.AdvanceElapsedTime(14L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // 2. Arrest the Great House head (-10 -> canonical -5) and intercept the arrest wavefront before it reaches distantSite.
+        DaggerfallNpcArrestOutcome arrest = session.Law.ArrestOrImprisonNpc(
+            headId, originSite.Id.Region, DaggerfallCrimeKind.CriminalConspiracy, banished: false, detail: "intercepted warrant");
+        Assert.Equal(-10, arrest.HouseholdStandingDelta);
+        DaggerfallWordWavefrontSave arrestWavefront = Assert.Single(
+            session.WordSpread.Wavefronts,
+            wf => wf.Kind == DaggerfallWordEventKind.HouseholdStanding
+                && wf.FamilyId == greatHouse
+                && wf.Delta == -10);
+        Assert.True(session.WordSpread.InterceptWavefront(arrestWavefront.EventId, session.Calendar.MinuteNumber));
+
+        Assert.Equal(-5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // 3. Partial decay (120 days = 4 Great House decay steps): canonical -1, distant MUST stay +5!
+        session.AdvanceElapsedTime(120L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(-1, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+
+        // 4. Full decay (150 days total = 5th Great House step): canonical reaches 0 (sparse entry pruned),
+        //    yet distantSite NEVER received the arrest report so its known +5 goodwill MUST be preserved!
+        session.AdvanceElapsedTime(30L * 24L * 60L * 60L, idleFatigue: false);
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(5, session.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+        Assert.False(session.SocialConsequences.TryGetHouseholdSnapshot(greatHouse, out _));
+
+        // 5. Save/load after full decay preserves origin=0, distant=+5, and sparse LocalHouseholds!
+        RulesetSavePayload save = session.CaptureSave();
+        DaggerfallSavePayload raw = DaggerfallSavePayload.Read(save);
+        Assert.DoesNotContain(raw.LocalHouseholds.Standings, s => s.FamilyId == greatHouse);
+        using DaggerfallSession restored = fixture.Restore(save);
+        Assert.Equal(0, restored.SocialConsequences.HouseholdStandingDelta(greatHouse, originSite));
+        Assert.Equal(5, restored.SocialConsequences.HouseholdStandingDelta(greatHouse, distantSite));
+    }
+
+    [Fact]
     public void Inspection_surfaces_expose_persistent_standing_feud_mourning_and_last_updated_day_across_site_region_and_actor()
     {
         using var fixture = new MultiTierHouseholdFixture(random: RandomMinimum.Create());

@@ -441,12 +441,7 @@ internal sealed class DaggerfallSocialConsequences(
                         state.StandingDelta = next;
                         state.LastUpdatedDay += steps * decayDays;
                         if (DaggerfallHouseholds.IsProvinceWide(familyId) && wordSpread is not null)
-                        {
-                            if (state.StandingDelta == 0)
-                                wordSpread.ClearNegativeHouseholdWavefronts(familyId);
-                            else
-                                wordSpread.DecayHouseholdGrudgeWavefronts(familyId, appliedSteps);
-                        }
+                            wordSpread.DecayHouseholdGrudgeWavefronts(familyId, appliedSteps);
                         if (state.StandingDelta == 0)
                         {
                             state.ClearSettlementFlags();
@@ -829,14 +824,16 @@ internal sealed class DaggerfallSocialConsequences(
             return 0;
 
         long nowMinute = minute ?? currentMinute?.Invoke() ?? 0L;
-        if (!_householdStandings.TryGetValue(familyId, out HouseholdStandingState? persistent))
-            return 0;
-
+        int canonicalStanding = _householdStandings.TryGetValue(familyId, out HouseholdStandingState? persistent)
+            ? persistent.StandingDelta
+            : 0;
         int unarrived = wordSpread is not null && targetSite is not null
             ? wordSpread.UnarrivedHouseholdStandingDelta(familyId, targetSite, nowMinute)
             : 0;
+        if (canonicalStanding == 0 && unarrived == 0)
+            return 0;
         return Math.Clamp(
-            checked(persistent.StandingDelta - unarrived),
+            checked(canonicalStanding - unarrived),
             DaggerfallSocialState.MinimumReputation,
             DaggerfallSocialState.MaximumReputation);
     }
