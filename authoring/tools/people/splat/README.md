@@ -201,6 +201,16 @@ to it after the fact, and motion from Tripo's presets, a retarget, a scripted ga
 - **BiRefNet is required:** `static-npc bake` sets `BIREFNET_REQUIRED=1`, and the stage retries once and then stops instead of
   falling back to the colour key (the ghost's rebake lost BiRefNet and kept the pink room).
 - Every creature record in the CMS has an approved four-view turnaround (Patch 2026-11-26; creature-010 is being redesigned).
+- **Check the side views against the front and back** before using them: on batch 1 (2026-11-27) creature-012's and
+  017's sides carried the weapon or the gear differently, so their npc.json drops `sides` and the orbit is front/back only.
+- **One-handed weapons in the clay front:** Qwen drew 007's scimitar lying across the thigh. Describe what the painting
+  shows, literally ("below the vambrace only the fist, the guard and a short blade tip pointing down beside the right
+  thigh show, exactly as painted. No blade crosses in front of the body"), with a negative ("sword lying sideways, blade
+  across the body"), and try a few seeds (`02-guide/wip/clay-try/`). Note the weapon in `weapon_note`, leave `rigid_prop`
+  out (staffs only), and bind it after `bound` with asset-pipeline `tools/splat-prop/rigid_weapon.py`.
+- **Stick guides centre on the hips** (`stick_fit.py`) and the guide's head sits over the neck (`blender_path.py`), both
+  since 2026-11-27: a big forward-leaning orc (007) was centred on its bounding box, and its head floated 35 cm forward.
+- H3 drew batch 1's magenta key as a pale lilac studio with floor shadows (as on 457); BiRefNet cut it clean (007's mattes).
 
 Settings live in `00-brief/npc.json`:
 
