@@ -183,19 +183,18 @@ export function mountWorldMap(parent: HTMLElement, send: (action: WorldMapAction
     redraw(realmKey, JSON.stringify(on ? realms!.key : []), () => {
       realmKey.replaceChildren();
       if (!on) return;
-      const line = (colour: string, text: string, tooltip: string | null, faint: boolean, arms?: string): HTMLLIElement => {
+      const line = (colour: string | null, text: string, tooltip: string | null, arms?: string): HTMLLIElement => {
         const item = document.createElement('li');
         if (arms) item.dataset.arms = arms;
         const swatch = document.createElement('span');
         swatch.className = 'dagger-world-map-realm-swatch';
-        swatch.style.background = colour;
-        if (faint) swatch.style.opacity = '.45';
+        swatch.style.background = colour ?? 'transparent';
         item.append(swatch, text);
         if (tooltip) item.dataset.tooltip = tooltip;
         return item;
       };
-      for (const crown of realms!.key) realmKey.append(line(crown.colour, crown.name, crown.blazon, false, crown.arms));
-      realmKey.append(line('#b9ad8f', 'Answers to no crown', 'Shown faintly in its own colours.', true));
+      for (const crown of realms!.key) realmKey.append(line(crown.colour, crown.name, crown.blazon, crown.arms));
+      realmKey.append(line(null, 'Answers to no crown', 'Left unshaded.'));
     });
   };
   realmsToggle.addEventListener('change', () => drawRealms(current));

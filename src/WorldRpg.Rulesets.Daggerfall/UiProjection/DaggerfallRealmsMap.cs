@@ -12,7 +12,7 @@ internal sealed record DaggerfallRealmKey(string Arms, string Name, string Blazo
 /// <summary>
 /// The world map's Realms view (#11144, Patch: a toggled view): each board region's shape, shaded by the arms it shows
 /// now, with a key of the crowns that hold regions. A region that answers to a crown takes the crown's colour; one that
-/// answers to no one shows its own, faintly. The page toggles the view and draws it; this is read fresh each time.
+/// answers to no one is left unshaded. The page toggles the view and draws it; this is read fresh each time.
 /// </summary>
 internal sealed record DaggerfallRealmsView(IReadOnlyList<DaggerfallRegionOutline> Outlines, IReadOnlyList<DaggerfallRealmShade> Regions,
     IReadOnlyList<DaggerfallRealmKey> Key);

@@ -4208,8 +4208,14 @@ test('the world map draws the atlas tiles in view, asks for the ones it lacks, n
     toggle.dispatchEvent(new window.Event('change'));
     const { outlines: _outlines, ...shades } = realms;
     f.publish({ mode: 'modal', worldMap: worldMap(map, { ...charing, realms: shades }) });
-    const shapes = [...atlas.querySelectorAll('.dagger-atlas-realms path')];
-    assert.deepEqual(shapes.map(shape => [shape.dataset.region, shape.getAttribute('fill-opacity')]), [['17', '.42'], ['18', '.14']]);
+    // A crown's region is shaded; one that answers to no crown is left unshaded, and follows its liege as it changes.
+    const fills = () => [...atlas.querySelectorAll('.dagger-atlas-realms path')].map(shape => [shape.dataset.region, shape.getAttribute('fill')]);
+    assert.deepEqual(fills(), [['17', '#2f6e3b'], ['18', 'none']]);
+    const annexed = { ...shades, regions: [shades.regions[0], { region: 18, arms: 'seat:wayrest', colour: '#2a4f9e', liege: true }] };
+    f.publish({ mode: 'modal', worldMap: worldMap(map, { ...charing, realms: annexed }) });
+    assert.deepEqual(fills(), [['17', '#2f6e3b'], ['18', '#2a4f9e']]);
+    f.publish({ mode: 'modal', worldMap: worldMap(map, { ...charing, realms: shades }) });
+    assert.deepEqual(fills(), [['17', '#2f6e3b'], ['18', 'none']]);
     const key = screen.querySelector('.dagger-world-map-realm-key');
     assert.equal(key.hidden, false);
     assert.match(key.textContent, /Kingdom of Daggerfall/);

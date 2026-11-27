@@ -116,7 +116,7 @@ export interface AtlasRealm {
   readonly arms: string;
   readonly path: string;
   readonly colour: string;
-  /** Whether a crown's: a liege's region is shaded fully, one answering to no one faintly. */
+  /** Whether a crown's: a liege's region is shaded, one answering to no crown left unshaded. */
   readonly liege: boolean;
 }
 
@@ -597,8 +597,9 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
         for (const region of regions ?? []) {
           const shape = document.createElementNS(SVG, 'path');
           // The window's Servo draws SVG from its markup alone, without the page's stylesheet.
-          for (const [name, value] of [['d', region.path], ['fill', region.colour], ['fill-opacity', region.liege ? '.42' : '.14'],
-            ['fill-rule', 'nonzero'], ['stroke', region.colour], ['stroke-opacity', region.liege ? '.8' : '.35'], ['stroke-width', '.6']] as const)
+          // A crown's region is shaded in its arms' colour; one that answers to no crown is left unshaded, outlined only.
+          for (const [name, value] of [['d', region.path], ['fill', region.liege ? region.colour : 'none'], ['fill-opacity', region.liege ? '.42' : '0'],
+            ['fill-rule', 'nonzero'], ['stroke', region.liege ? region.colour : '#2a2622'], ['stroke-opacity', region.liege ? '.8' : '.35'], ['stroke-width', '.6']] as const)
             shape.setAttribute(name, value);
           shape.dataset.region = String(region.region);
           shape.dataset.arms = region.arms;
