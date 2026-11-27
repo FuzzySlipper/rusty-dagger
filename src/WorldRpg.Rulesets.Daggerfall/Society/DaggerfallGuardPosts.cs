@@ -9,9 +9,28 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// Resolved watch tier, post role, and active livery/heraldry owner for one guard or watch officer (Den #11167).
-/// Read live from <see cref="DaggerfallRegionLiege"/> so political-board allegiance changes update special posts
-/// immediately while rank-and-file street watch remain regional.
+/// Structured heraldry colour set, crest/charge token, and blazon for one guard post or region livery (Den #11165).
+/// Derived live from <see cref="DaggerfallRealmArms"/> and <see cref="DaggerfallHeraldry"/> so banners, the Realms
+/// map, guard posts, and developer inspection share one source of truth.
+/// </summary>
+internal sealed record DaggerfallLiveryPalette(
+    string ArmsId,
+    string Blazon,
+    string Division,
+    string FieldTincture,
+    string PrimaryHex,
+    string SecondaryTincture,
+    string SecondaryHex,
+    string Charge,
+    string ChargeTincture,
+    string AccentHex,
+    string LiveryTincture,
+    string LiveryHex);
+
+/// <summary>
+/// Resolved watch tier, post role, and active livery/heraldry owner for one guard or watch officer (Den #11167, #11165).
+/// Read live from <see cref="DaggerfallRegionLiege"/> and <see cref="DaggerfallRealmArms"/> so political-board
+/// allegiance changes update special posts immediately while rank-and-file street watch remain regional.
 /// </summary>
 internal sealed record DaggerfallGuardLiveryResolution(
     DaggerfallSettlementWatchTier WatchTier,
@@ -28,9 +47,10 @@ internal sealed record DaggerfallGuardLiveryResolution(
     string LiveryOwnerName,
     string LiverySlug,
     string LiveryKey,
-    Color? LiveryTint);
+    Color? LiveryTint,
+    DaggerfallLiveryPalette? Palette = null);
 
-/// <summary>Site-level watch posture summary surfaced by <c>social.site</c> (Den #11167).</summary>
+/// <summary>Site-level watch posture summary surfaced by <c>social.site</c> (Den #11167, #11165).</summary>
 internal sealed record DaggerfallSiteWatchSummary(
     DaggerfallSettlementWatchTier WatchTier,
     string WatchTierLabel,
@@ -47,7 +67,9 @@ internal sealed record DaggerfallSiteWatchSummary(
     bool IsOccupied,
     int OccupationGarrisonCount,
     int PatrolGuardCount,
-    int GateOfficerCount);
+    int GateOfficerCount,
+    DaggerfallLiveryPalette? LocalPalette = null,
+    DaggerfallLiveryPalette? LiegePalette = null);
 
 /// <summary>
 /// Post-differentiated watch and liege-livery resolution (Den #11167, settled in <c>wiki/rusty-dagger/guards.md</c>):
@@ -191,9 +213,11 @@ internal sealed class DaggerfallGuardPosts(
             ? liveryFaction.Name
             : localRegionName;
         string liverySlug = Slugify(liveryOwnerName);
-        (string liveryKey, Color? liveryTint) = usesLiege && realmArms.Of(region) is { } arms
-            ? (arms.Seat is { } seat ? $"crown:{seat}" : $"region:{region}", LiveryTint(realmArms.Heraldry.Colour(arms.Livery)))
+        DaggerfallArms? activeArms = usesLiege ? realmArms.Of(region) : realmArms.Own(region);
+        (string liveryKey, Color? liveryTint) = usesLiege && activeArms is not null
+            ? (activeArms.Seat is { } seat ? $"crown:{seat}" : $"region:{region}", LiveryTint(realmArms.Heraldry.Colour(activeArms.Livery)))
             : ($"watch:region:{region}", (Color?)null);
+        DaggerfallLiveryPalette? palette = activeArms is not null ? BuildPalette(activeArms, realmArms.Heraldry) : null;
 
         return new DaggerfallGuardLiveryResolution(
             WatchTier: tier,
@@ -210,7 +234,28 @@ internal sealed class DaggerfallGuardPosts(
             LiveryOwnerName: liveryOwnerName,
             LiverySlug: liverySlug,
             LiveryKey: liveryKey,
-            LiveryTint: liveryTint);
+            LiveryTint: liveryTint,
+            Palette: palette);
+    }
+
+    internal static DaggerfallLiveryPalette BuildPalette(DaggerfallArms arms, DaggerfallHeraldry heraldry)
+    {
+        ArgumentNullException.ThrowIfNull(arms);
+        ArgumentNullException.ThrowIfNull(heraldry);
+        DaggerfallTincture secondary = arms.Second ?? arms.ChargeTincture;
+        return new DaggerfallLiveryPalette(
+            ArmsId: arms.Id,
+            Blazon: arms.Blazon,
+            Division: arms.Division.ToString(),
+            FieldTincture: DaggerfallArms.Word(arms.Field).ToLowerInvariant(),
+            PrimaryHex: DaggerfallHeraldry.Hex(heraldry.Colour(arms.Field)),
+            SecondaryTincture: DaggerfallArms.Word(secondary).ToLowerInvariant(),
+            SecondaryHex: DaggerfallHeraldry.Hex(heraldry.Colour(secondary)),
+            Charge: arms.Charge,
+            ChargeTincture: DaggerfallArms.Word(arms.ChargeTincture).ToLowerInvariant(),
+            AccentHex: DaggerfallHeraldry.Hex(heraldry.Colour(arms.ChargeTincture)),
+            LiveryTincture: DaggerfallArms.Word(arms.Livery).ToLowerInvariant(),
+            LiveryHex: DaggerfallHeraldry.Hex(heraldry.Colour(arms.Livery)));
     }
 
     /// <summary>
@@ -372,7 +417,9 @@ internal sealed class DaggerfallGuardPosts(
             IsOccupied: isOccupied,
             OccupationGarrisonCount: occupationCount,
             PatrolGuardCount: patrolGuardCount,
-            GateOfficerCount: gateOfficerCount);
+            GateOfficerCount: gateOfficerCount,
+            LocalPalette: local.Palette,
+            LiegePalette: sovereign.Palette);
     }
 
     private bool IsCrownOrGovernorOffice(DaggerfallSiteRecord site, DaggerfallInteriorBuilding interior)

@@ -294,9 +294,11 @@ internal sealed class DaggerfallSocialInspection(
                 w.WriteString("localLiveryOwner", summary.LocalLiveryOwner);
                 w.WriteString("localLiverySlug", summary.LocalLiverySlug);
                 if (summary.LocalLiveryFactionId is int locFid) w.WriteNumber("localLiveryFactionId", locFid); else w.WriteNull("localLiveryFactionId");
+                DaggerfallActorInspection.WriteLiveryPalette(w, "localHeraldry", summary.LocalPalette);
                 w.WriteString("liegeLiveryOwner", summary.LiegeLiveryOwner);
                 w.WriteString("liegeLiverySlug", summary.LiegeLiverySlug);
                 if (summary.LiegeLiveryFactionId is int liegeFid) w.WriteNumber("liegeLiveryFactionId", liegeFid); else w.WriteNull("liegeLiveryFactionId");
+                DaggerfallActorInspection.WriteLiveryPalette(w, "liegeHeraldry", summary.LiegePalette);
                 w.WriteBoolean("occupied", summary.IsOccupied);
                 w.WriteNumber("occupationGarrisonCount", summary.OccupationGarrisonCount);
                 w.WriteNumber("patrolGuardCount", summary.PatrolGuardCount);
@@ -323,6 +325,7 @@ internal sealed class DaggerfallSocialInspection(
                     w.WriteString("liverySlug", resolved.LiverySlug);
                     w.WriteString("liveryKey", resolved.LiveryKey);
                     w.WriteString("liveryTintHex", DaggerfallHeraldry.Hex(resolved.LiveryTint));
+                    DaggerfallActorInspection.WriteLiveryPalette(w, "heraldry", resolved.Palette);
                     w.WriteEndObject();
                 }
                 w.WriteEndArray();

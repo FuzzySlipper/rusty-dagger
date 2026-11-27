@@ -700,9 +700,17 @@ public sealed class GuardPostsAndLiegeLiveryTests
             Assert.False(watch.GetProperty("usesLiegeLivery").GetBoolean());
             Assert.False(string.IsNullOrWhiteSpace(watch.GetProperty("liveryOwner").GetString()));
             Assert.False(string.IsNullOrWhiteSpace(watch.GetProperty("liverySlug").GetString()));
+            JsonElement heraldry = watch.GetProperty("heraldry");
+            Assert.Matches(@"^(seat|region):", heraldry.GetProperty("armsId").GetString()!);
+            Assert.False(string.IsNullOrWhiteSpace(heraldry.GetProperty("blazon").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(heraldry.GetProperty("charge").GetString()));
+            Assert.Matches(@"^#[0-9A-F]{6}$", heraldry.GetProperty("primaryHex").GetString()!);
+            Assert.Matches(@"^#[0-9A-F]{6}$", heraldry.GetProperty("secondaryHex").GetString()!);
+            Assert.Matches(@"^#[0-9A-F]{6}$", heraldry.GetProperty("accentHex").GetString()!);
+            Assert.Matches(@"^#[0-9A-F]{6}$", heraldry.GetProperty("liveryHex").GetString()!);
         }
 
-        // Verify social.site exposes the site watch summary and loaded guard post list!
+        // Verify social.site exposes the site watch summary, local/liege heraldry palettes, and loaded guard post list!
         IDeveloperSocialCommands socialCmds = session.DebugCommands.OfType<IDeveloperSocialCommands>().Single();
         DebugCommandResult siteResult = socialCmds.Site();
         Assert.True(siteResult.Succeeded, siteResult.Message);
@@ -713,9 +721,73 @@ public sealed class GuardPostsAndLiegeLiveryTests
             Assert.False(string.IsNullOrWhiteSpace(watch.GetProperty("localLiveryOwner").GetString()));
             Assert.False(string.IsNullOrWhiteSpace(watch.GetProperty("liegeLiveryOwner").GetString()));
             Assert.False(string.IsNullOrWhiteSpace(watch.GetProperty("liegeLiverySlug").GetString()));
+            Assert.Matches(@"^(seat|region):", watch.GetProperty("localHeraldry").GetProperty("armsId").GetString()!);
+            Assert.Matches(@"^(seat|region):", watch.GetProperty("liegeHeraldry").GetProperty("armsId").GetString()!);
             JsonElement posts = watch.GetProperty("posts");
-            Assert.Contains(posts.EnumerateArray(), p => p.GetProperty("durableId").GetInt64() == guardId);
+            JsonElement guardPost = Assert.Single(posts.EnumerateArray(), p => p.GetProperty("durableId").GetInt64() == guardId);
+            Assert.Matches(@"^(seat|region):", guardPost.GetProperty("heraldry").GetProperty("armsId").GetString()!);
+            Assert.Matches(@"^#[0-9A-F]{6}$", guardPost.GetProperty("heraldry").GetProperty("liveryHex").GetString()!);
         }
+    }
+
+    [Fact]
+    public void Every_bay_region_and_crown_resolves_complete_heraldry_livery_palettes_and_officer_palette_follows_annexation()
+    {
+        using var fixture = new WatchPostsFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallDefinitions defs = TestPayload.Definitions;
+        DaggerfallHeraldry heraldry = defs.Heraldry;
+
+        // Four crowns + Empire all resolve complete livery palettes directly from heraldry.json.
+        foreach (string seat in new[] { "daggerfall", "wayrest", "sentinel", "orsinium", "empire" })
+        {
+            DaggerfallArms? arms = session.RealmArms.OfSeat(seat);
+            Assert.NotNull(arms);
+            DaggerfallLiveryPalette palette = DaggerfallGuardPosts.BuildPalette(arms!, heraldry);
+            Assert.Equal($"seat:{seat}", palette.ArmsId);
+            Assert.False(string.IsNullOrWhiteSpace(palette.Blazon));
+            Assert.False(string.IsNullOrWhiteSpace(palette.Charge));
+            Assert.Matches(@"^#[0-9A-F]{6}$", palette.PrimaryHex);
+            Assert.Matches(@"^#[0-9A-F]{6}$", palette.SecondaryHex);
+            Assert.Matches(@"^#[0-9A-F]{6}$", palette.AccentHex);
+            Assert.Matches(@"^#[0-9A-F]{6}$", palette.LiveryHex);
+        }
+
+        // Every one of the 44 Iliac Bay board regions resolves both local StreetWatch palette (own arms)
+        // and liege-liveried PalaceGuard palette (liege's crown arms or own arms when independent).
+        var boardRegions = defs.PoliticalCanon!.Setup.Regions;
+        Assert.Equal(44, boardRegions.Count);
+        foreach (var region in boardRegions)
+        {
+            DaggerfallGuardLiveryResolution local = session.GuardPosts.ResolveLivery(null, region.CatalogRegion, DaggerfallGuardPostKind.StreetWatch);
+            DaggerfallGuardLiveryResolution officer = session.GuardPosts.ResolveLivery(null, region.CatalogRegion, DaggerfallGuardPostKind.PalaceGuard);
+            Assert.NotNull(local.Palette);
+            Assert.Null(local.LiveryTint);
+            Assert.NotNull(officer.Palette);
+            Assert.NotNull(officer.LiveryTint);
+            Assert.Matches(@"^#[0-9A-F]{6}$", local.Palette!.PrimaryHex);
+            Assert.Matches(@"^#[0-9A-F]{6}$", local.Palette.SecondaryHex);
+            Assert.Matches(@"^#[0-9A-F]{6}$", local.Palette.AccentHex);
+            Assert.Matches(@"^#[0-9A-F]{6}$", local.Palette.LiveryHex);
+            Assert.Matches(@"^#[0-9A-F]{6}$", officer.Palette!.LiveryHex);
+        }
+
+        // Betony starts under Daggerfall: StreetWatch wears Betony's own arms, Gate Officer wears Daggerfall's arms.
+        DaggerfallGuardLiveryResolution betonyWatchBefore = session.GuardPosts.ResolveLivery(null, BetonyRegion, DaggerfallGuardPostKind.StreetWatch);
+        DaggerfallGuardLiveryResolution betonyOfficerBefore = session.GuardPosts.ResolveLivery(null, BetonyRegion, DaggerfallGuardPostKind.WalledCityGateOfficer);
+        Assert.Equal("region:betony", betonyWatchBefore.Palette!.ArmsId);
+        Assert.Equal("seat:daggerfall", betonyOfficerBefore.Palette!.ArmsId);
+        Assert.Equal("dragon", betonyOfficerBefore.Palette.Charge);
+
+        // Wayrest annexes Betony -> Gate Officer palette switches to Wayrest's arms; StreetWatch palette stays Betony's own!
+        Board board = session.PoliticalBoard!.Board;
+        board.SetAllegiance(board.Region("betony"), board.Seat("wayrest"));
+        DaggerfallGuardLiveryResolution betonyWatchAfter = session.GuardPosts.ResolveLivery(null, BetonyRegion, DaggerfallGuardPostKind.StreetWatch);
+        DaggerfallGuardLiveryResolution betonyOfficerAfter = session.GuardPosts.ResolveLivery(null, BetonyRegion, DaggerfallGuardPostKind.WalledCityGateOfficer);
+        Assert.Equal("region:betony", betonyWatchAfter.Palette!.ArmsId);
+        Assert.Equal("seat:wayrest", betonyOfficerAfter.Palette!.ArmsId);
+        Assert.Equal("three-flowers", betonyOfficerAfter.Palette.Charge);
+        Assert.NotEqual(betonyOfficerBefore.Palette.LiveryHex, betonyOfficerAfter.Palette.LiveryHex);
     }
 
     private static IEnumerable<(int X, int Z)> ClearCells(DaggerfallSiteRecord site)

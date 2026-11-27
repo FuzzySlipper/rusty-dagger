@@ -361,6 +361,30 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
         w.WriteString("liverySlug", resolved.LiverySlug);
         w.WriteString("liveryKey", resolved.LiveryKey);
         w.WriteString("liveryTintHex", DaggerfallHeraldry.Hex(resolved.LiveryTint));
+        WriteLiveryPalette(w, "heraldry", resolved.Palette);
+        w.WriteEndObject();
+    }
+
+    internal static void WriteLiveryPalette(Utf8JsonWriter w, string propertyName, DaggerfallLiveryPalette? palette)
+    {
+        if (palette is null)
+        {
+            w.WriteNull(propertyName);
+            return;
+        }
+        w.WriteStartObject(propertyName);
+        w.WriteString("armsId", palette.ArmsId);
+        w.WriteString("blazon", palette.Blazon);
+        w.WriteString("division", palette.Division);
+        w.WriteString("fieldTincture", palette.FieldTincture);
+        w.WriteString("primaryHex", palette.PrimaryHex);
+        w.WriteString("secondaryTincture", palette.SecondaryTincture);
+        w.WriteString("secondaryHex", palette.SecondaryHex);
+        w.WriteString("charge", palette.Charge);
+        w.WriteString("chargeTincture", palette.ChargeTincture);
+        w.WriteString("accentHex", palette.AccentHex);
+        w.WriteString("liveryTincture", palette.LiveryTincture);
+        w.WriteString("liveryHex", palette.LiveryHex);
         w.WriteEndObject();
     }
 
