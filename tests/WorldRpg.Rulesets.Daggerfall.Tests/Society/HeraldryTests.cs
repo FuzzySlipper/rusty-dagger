@@ -28,7 +28,7 @@ public sealed class HeraldryTests
         Assert.Equal(DaggerfallTincture.Vert, heraldry.Seats["daggerfall"].Livery);
         Assert.Equal("Per pale gules and or, a bull passant or", heraldry.Regions["isle-of-balfiera"].Blazon);
         // The page draws the arms' colours as the heraldry states them: linear Engine colours go back to sRGB.
-        Assert.Equal("#1C4F2C", DaggerfallHeraldry.Hex(heraldry.Colour(DaggerfallTincture.Vert)));
+        Assert.Equal("#11381D", DaggerfallHeraldry.Hex(heraldry.Colour(DaggerfallTincture.Vert)));
     }
 
     [Fact]

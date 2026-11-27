@@ -145739,13 +145739,13 @@
    "seat:daggerfall": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/seat-daggerfall-banner.png",
-     "byteLength": 41982,
-     "sha256": "215e3dd76af0773c13fd7957f1c12282c15d87279000fb853c2711fd9519ceed"
+     "byteLength": 41159,
+     "sha256": "f37db7df791de94d8dc5348c4ca3dd3e78a5594a206285733cd232698cfc1cae"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/seat-daggerfall-shield.png",
-     "byteLength": 34256,
-     "sha256": "cc3840bf1e60689967a2b8e9dfb7b8f7d2821f27f91613a32e4fd621b0635767"
+     "byteLength": 33546,
+     "sha256": "f987a7ecc3d9edfc70885469fa335a1b9dd1839c37ae7d4fdebe78990b754f4d"
     }
    },
    "seat:wayrest": {
@@ -145835,13 +145835,13 @@
    "region:betony": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-betony-banner.png",
-     "byteLength": 12624,
-     "sha256": "05142725cfd695f51f11d701388f0c1fcbfacb221a570d503ee9b8b12e5c8e0c"
+     "byteLength": 12503,
+     "sha256": "e3d35b6fa643f12709b062cb219f0ba5a64e43e1c4eb655e216ca6d7cc2a66d7"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-betony-shield.png",
-     "byteLength": 16262,
-     "sha256": "bfd64d736fda6eb795aece4478262e08a513a49b1d11c7939dabd38cf329e628"
+     "byteLength": 15990,
+     "sha256": "50f5ea477fc5166cb5e4510e649485e2a98d6ed55abc69dd2f3b510ed1e48ef1"
     }
    },
    "region:bhoraine": {
@@ -145883,25 +145883,25 @@
    "region:glenpoint": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-glenpoint-banner.png",
-     "byteLength": 4669,
-     "sha256": "4088571ac34d84a340fc89e3d8f9eb1f4b7ac0fd0aa3160b6c1ac0ecc9bbe9f4"
+     "byteLength": 4705,
+     "sha256": "79e48341ebf1df4c9325d7bfdd8c1fa7828e73723783339e294f13c2bd18f293"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-glenpoint-shield.png",
-     "byteLength": 9553,
-     "sha256": "3345bc2f5f1798bfd7fcd3cb347e0512bedc1829b3d7356cb0993daa2e90a07b"
+     "byteLength": 9530,
+     "sha256": "bd38dcbe710ca960b388092ad912eee8e3123d09f38c53eb6b75a98a247651c5"
     }
    },
    "region:glenumbra-moors": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-glenumbra-moors-banner.png",
-     "byteLength": 7984,
-     "sha256": "cf59927970f0292c41c9a4c15f345c8ae83b9b6cf4074fb29b44a5e7ef99ebdc"
+     "byteLength": 7937,
+     "sha256": "376c011cb8f049f6d1207c21684cc1ee50f5208cea3045fcc44e79b3e5a21164"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-glenumbra-moors-shield.png",
-     "byteLength": 14771,
-     "sha256": "3268b47dffbb74279047123417ae9e58a49de9d959a892520dc84335fe362a55"
+     "byteLength": 14725,
+     "sha256": "5f6cfb73cd9089bdb648e14acd27d8660c8a54c7f01163e86fbcbe64292b4f57"
     }
    },
    "region:ilessan-hills": {
@@ -145979,13 +145979,13 @@
    "region:phrygias": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-phrygias-banner.png",
-     "byteLength": 6177,
-     "sha256": "61c2aa22499154d0b4861368220aba6baebbda74b11ce079db7f59132b5da805"
+     "byteLength": 6047,
+     "sha256": "8e648ffa113051f45a018e23ecef70b47c9e1dca8c3b13d9d92e81472452d829"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-phrygias-shield.png",
-     "byteLength": 9376,
-     "sha256": "a367e25421bec004ac1c899fecc53f21f6e7f90d3dd7c3e42c31a7491eb94457"
+     "byteLength": 8932,
+     "sha256": "ce991423e8ac4f1063e59a7d68179accad0a099b7757073d9c494d5ec6270a7b"
     }
    },
    "region:shalgora": {
@@ -146051,25 +146051,25 @@
    "region:wrothgaria": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-wrothgaria-banner.png",
-     "byteLength": 5102,
-     "sha256": "0acbf0b5e33e2a613ef1366a86ceb4fa047f4761df7abd4112d1978949156656"
+     "byteLength": 4976,
+     "sha256": "2ac8131ab1f262169fdfbd2e607cf7e3e21ad583231c3eaa5957b96dd0ec51be"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-wrothgaria-shield.png",
-     "byteLength": 8575,
-     "sha256": "806a73350398fbe59d5d0ae368301d476fefc477e3c4b4febdebae28739cbba5"
+     "byteLength": 8256,
+     "sha256": "9c066c7a956aed97baffc033a4dafce9aa865736c42aa9f00127bd910eff7d55"
     }
    },
    "region:abibon-gora": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-abibon-gora-banner.png",
-     "byteLength": 18268,
-     "sha256": "f5cf6c2f6b9e62286260862d29f818c166b1bfaff15f97485499199507fef03a"
+     "byteLength": 17971,
+     "sha256": "455362969abcce1ea8bb63ba5732c188ba4177c1fbcc42596c58cd1d663db437"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-abibon-gora-shield.png",
-     "byteLength": 18264,
-     "sha256": "adb53de10ddb3cbc0c3430581054f71448e68a828c041ad53d3990ec8569d16f"
+     "byteLength": 17717,
+     "sha256": "af3aacbc54c2b54ff1ca02ce6bb5a30432269770849afabe2be369afdd730d02"
     }
    },
    "region:alikra": {
@@ -146111,25 +146111,25 @@
    "region:bergama": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-bergama-banner.png",
-     "byteLength": 16894,
-     "sha256": "f3342bcbda7ed4db7fdcaf784817adbef41ec2691ef9e75d4c48feaefb8e7294"
+     "byteLength": 16456,
+     "sha256": "4c2261ced981302e2c9b3230f9bb1bb0c26e95e4d2ac06ed1ff79731f88301ef"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-bergama-shield.png",
-     "byteLength": 18516,
-     "sha256": "4d2939dd1dbf195241a9f537f91ab34d976c845d77e9aa408351ace5759fe8ed"
+     "byteLength": 17867,
+     "sha256": "576d02469a575a58b354804d519f6f16e20b40d9167eb423f4fbd8d30ade3948"
     }
    },
    "region:cybiades": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-cybiades-banner.png",
-     "byteLength": 12921,
-     "sha256": "03c615a8fcb3cd0188f2dfc2f353dba9e14114e401ee8d0c0a11f62918fb2690"
+     "byteLength": 12849,
+     "sha256": "7f9b16d2b8ee6c2e7e1468ef2a8ddc0140438e0ae96d5424c82582652d565426"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-cybiades-shield.png",
-     "byteLength": 15020,
-     "sha256": "8735147b87a3ea37b177a5ed27502c69ae523c196ca39b40f9571a280943932a"
+     "byteLength": 14690,
+     "sha256": "e161fac3d09d67b0052021ccd9b26375f01852fa637934fb7044d4304ab1a2b0"
     }
    },
    "region:dakfron": {
@@ -146159,13 +146159,13 @@
    "region:ephesus": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-ephesus-banner.png",
-     "byteLength": 18185,
-     "sha256": "c69059aa34f6079c578edd35b4dce6e946e7532bf79b35a1c47b893218ef5c4e"
+     "byteLength": 18820,
+     "sha256": "062dbd38cc5885d478efc65d3d20aca78ce906503f7614eee9897018ff8533d5"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-ephesus-shield.png",
-     "byteLength": 20770,
-     "sha256": "01d877c7a5878cdc1fc9f26def67c5023a0b30e2579f8a603f16c5764ae37032"
+     "byteLength": 21171,
+     "sha256": "107197a992d39f16b216a8bd4c3eb2cbb9d7c223caa178e8aef6e0b94b1ab7fa"
     }
    },
    "region:kairou": {
@@ -146183,13 +146183,13 @@
    "region:kozanset": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-kozanset-banner.png",
-     "byteLength": 9206,
-     "sha256": "5d308dc3a151f5268f4cf6e78fcd3b89d93c8df6d0f4650499d555487a9d9bf2"
+     "byteLength": 9173,
+     "sha256": "5c4b3b59da26bd7c76e12ff9b5255fd2336d0d75fbfcbfd635cedb0ced50c76e"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-kozanset-shield.png",
-     "byteLength": 15023,
-     "sha256": "a914b25f1fce91449b32855cfd480239056afe2461ac1aa0cf479be1c47b6286"
+     "byteLength": 14873,
+     "sha256": "cb19c651ff5ce8b86191fbd62a6538bf6c5f68d86796fc4b094324e014c84e6b"
     }
    },
    "region:mournoth": {
@@ -146207,13 +146207,13 @@
    "region:myrkwasa": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-myrkwasa-banner.png",
-     "byteLength": 10427,
-     "sha256": "a9397c706d78ea0851e93f722db440500b25f46496bc3d7f2515e556da09fc31"
+     "byteLength": 10106,
+     "sha256": "e29b96af9e6b43820f93e4f76c3d66a3e2c853e0a8841d5eb548bcf6999e55a6"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-myrkwasa-shield.png",
-     "byteLength": 15147,
-     "sha256": "71f933980a525620e08b28c59045b47db9241dcb34330493598cf67cac22c7bd"
+     "byteLength": 14879,
+     "sha256": "8b10d89d851330cb19a121bc6cc5754e94ed444fb9b3b5403b79d2f48f7259b4"
     }
    },
    "region:pothago": {
@@ -146243,13 +146243,13 @@
    "region:satakalaam": {
     "banner": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-satakalaam-banner.png",
-     "byteLength": 15543,
-     "sha256": "cabdd53b4671baeb7491f5d25b7f227530b3f482f5178f403ab9b358d6715d19"
+     "byteLength": 15310,
+     "sha256": "7684489ca949dd6b8d6e6e9a94d43bedc4caf776f1c86c5154e56186e816ca86"
     },
     "shield": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/heraldry/region-satakalaam-shield.png",
-     "byteLength": 18562,
-     "sha256": "9fd347536592a385f57a24480e2d939349480fde145cfa843c47173e5e066c7b"
+     "byteLength": 18297,
+     "sha256": "b38b4031a948cbabaf5ea0bc2c2d02b452d2c78aa1e5349ba7cb1fc6c5bd5009"
     }
    },
    "region:tigonus": {

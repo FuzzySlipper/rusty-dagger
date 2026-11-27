@@ -598,7 +598,7 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
           const shape = document.createElementNS(SVG, 'path');
           // The window's Servo draws SVG from its markup alone, without the page's stylesheet.
           // A crown's region is shaded in its arms' colour; one that answers to no crown is left unshaded, outlined only.
-          for (const [name, value] of [['d', region.path], ['fill', region.liege ? region.colour : 'none'], ['fill-opacity', region.liege ? '.42' : '0'],
+          for (const [name, value] of [['d', region.path], ['fill', region.liege ? region.colour : 'none'], ['fill-opacity', region.liege ? '.6' : '0'],
             ['fill-rule', 'nonzero'], ['stroke', region.liege ? region.colour : '#2a2622'], ['stroke-opacity', region.liege ? '.8' : '.35'], ['stroke-width', '.6']] as const)
             shape.setAttribute(name, value);
           shape.dataset.region = String(region.region);
