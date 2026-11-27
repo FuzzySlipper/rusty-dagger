@@ -1,4 +1,6 @@
+using System.Numerics;
 using System.Text;
+using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
@@ -12,6 +14,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// Physical in-world Town &amp; Tavern Notice Board interaction and lead pickup (#11082):
 /// - Deterministic notice board prop + interaction target placement in exterior towns and tavern interiors.
+/// - Dedicated 3D wooden notice board mesh (posts, pitched canopy, backboard, pinned parchments, ink lines, wax seals)
+///   published directly by <see cref="DaggerfallSiteAppearance"/> rather than reusing a lamp-post sprite.
 /// - Ordinary Grab/Info activation, HUD prompt verbs, and transient modal UI projection (`DaggerfallNoticeBoardPanel`).
 /// - Direct pickup of posted courier delivery offers and regional bounty/decree leads with zero save bytes when untouched.
 /// </summary>
@@ -20,18 +24,51 @@ public sealed class TownNoticeBoardInteractionTests
     private const int DaggerfallRegion = 17;
 
     [Fact]
-    public void Exterior_town_and_tavern_interior_assemble_deterministic_physical_notice_boards_with_zero_save_bytes()
+    public void Exterior_town_and_tavern_interior_assemble_deterministic_physical_notice_boards_with_dedicated_mesh_and_zero_save_bytes()
     {
         using var fixture = SourceBackedGuildBankSessionFixture.Create();
         using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
 
-        // 1. Exterior town profile carries one deterministic physical notice board + matching visual prop decoration.
+        // 1. Exterior town profile carries one deterministic physical notice board with NO substituted lamp-post decoration.
         DaggerfallSiteNoticeBoard board = Assert.Single(fixture.ExteriorProfile.NoticeBoards);
         Assert.Equal("notice-board/town", board.Id);
         Assert.Contains(session.Site.ActiveSite!.Name, board.Label, StringComparison.Ordinal);
-        Assert.Contains(fixture.ExteriorProfile.Decorations, d => d.Id == "prop/notice-board/town" && d.Position == board.Position);
+        Assert.DoesNotContain(fixture.ExteriorProfile.Decorations, d => d.Id.StartsWith("prop/notice-board/", StringComparison.Ordinal));
+        Assert.InRange(board.SightHeight, DaggerfallNoticeBoardMeshData.BackboardMinY, DaggerfallNoticeBoardMeshData.BackboardMaxY);
 
-        // 2. Activation module exposes the physical board with Read/Examine prompt verbs and refuses Bash/Steal/Talk.
+        // 2. Site appearance publishes the dedicated 3D notice board mesh co-located with the live rebased interactive board.
+        DaggerfallSiteNoticeBoard liveBoard = Assert.Single(session.Sites.Projection.NoticeBoards.All).Board;
+        Assert.Equal(DaggerfallSceneOrigin.Shift(board.Position, session.Sites.Projection.WorldOffset), liveBoard.Position);
+        List<AppearanceFact> locationFacts = [];
+        session.Sites.Projection.Appearance.AppendLocationFacts(locationFacts, DaggerfallPresentationObjectIds.ActiveLocationSlot);
+        Quaternion expectedRotation = DaggerfallSiteAppearance.NoticeBoardRotation(liveBoard.SurfaceNormal);
+        Vector3 expectedFacing = Vector3.Normalize(liveBoard.SurfaceNormal with { Y = 0f });
+        Vector3 actualFacing = Vector3.Normalize(Vector3.Transform(Vector3.UnitZ, expectedRotation));
+        Assert.True(Vector3.Dot(expectedFacing, actualFacing) > 0.999f);
+        Assert.Contains(locationFacts, fact =>
+            Vector3.Distance(fact.Transform.Translation, liveBoard.Position.ToVector()) < 1e-3f
+            && MathF.Abs(Quaternion.Dot(fact.Transform.Rotation, expectedRotation)) > 0.999f
+            && fact.ShadowCasting == ShadowCasting.Cast);
+
+        // 3. Dedicated 3D mesh carries all 6 board parts (timber posts/frame, roof canopy, backboard, parchments, ink, wax seals),
+        //    rests on Y = 0, and winds every triangle counter-clockwise around its outward normal.
+        DaggerfallNoticeBoardMeshData mesh = DaggerfallSiteAppearance.BuildNoticeBoardMeshData();
+        Assert.Equal(6, mesh.Groups.Length);
+        Assert.All(mesh.Groups, group => Assert.True(group.Count > 0));
+        Assert.InRange(mesh.BoundsMin.Y, -1e-4f, 1e-4f);
+        Assert.InRange(mesh.BoundsMax.Y, 1.95f, 2.20f);
+        Assert.InRange(mesh.BoundsMax.X - mesh.BoundsMin.X, 1.30f, 1.65f);
+        for (int i = 0; i < mesh.Indices.Length; i += 3)
+        {
+            Vector3 a = mesh.Positions[mesh.Indices[i]];
+            Vector3 b = mesh.Positions[mesh.Indices[i + 1]];
+            Vector3 c = mesh.Positions[mesh.Indices[i + 2]];
+            Vector3 geometricNormal = Vector3.Normalize(Vector3.Cross(b - a, c - a));
+            Assert.True(Vector3.Dot(geometricNormal, mesh.Normals[mesh.Indices[i]]) > 0.999f,
+                $"Triangle {i / 3} has inverted winding against its outward normal.");
+        }
+
+        // 4. Activation module exposes the physical board with Read/Examine prompt verbs and refuses Bash/Steal/Talk.
         DaggerfallActivationTarget target = Assert.Single(
             session.Activation.Module!.InspectTargets(),
             t => t.Kind == DaggerfallActivationTargetKind.NoticeBoard);
@@ -42,7 +79,7 @@ public sealed class TownNoticeBoardInteractionTests
         Assert.Null(DaggerfallActivationPrompt.Action(DaggerfallActivationMode.Steal, target.Kind));
         Assert.Null(DaggerfallActivationPrompt.Action(DaggerfallActivationMode.Talk, target.Kind));
 
-        // 3. Tavern interior (BuildingType == 15) also assembles a deterministic Tavern Notice Board!
+        // 5. Tavern interior (BuildingType == 15) also assembles a deterministic Tavern Notice Board with no lamp-post substitution!
         DaggerfallSiteRecord charing = session.Site.ActiveSite!;
         DaggerfallSiteBuildingSource? tavernBuilding = charing.Exterior!.Buildings.Values
             .OrderBy(b => b.Id.BlockX).ThenBy(b => b.Id.BlockY).ThenBy(b => b.Id.Index)
@@ -54,10 +91,11 @@ public sealed class TownNoticeBoardInteractionTests
             DaggerfallSiteNoticeBoard tavernBoard = Assert.Single(tavernProfile!.NoticeBoards);
             Assert.Equal("notice-board/tavern", tavernBoard.Id);
             Assert.Equal("Tavern Notice Board", tavernBoard.Label);
-            Assert.Contains(tavernProfile.Decorations, d => d.Id == "prop/notice-board/tavern" && d.Position == tavernBoard.Position);
+            Assert.DoesNotContain(tavernProfile.Decorations, d => d.Id.StartsWith("prop/notice-board/", StringComparison.Ordinal));
+            Assert.InRange(tavernBoard.SightHeight, DaggerfallNoticeBoardMeshData.BackboardMinY, DaggerfallNoticeBoardMeshData.BackboardMaxY);
         }
 
-        // 4. Untouched town notice board writes zero save bytes (no spurious conditions, dispatches, or notebook notes).
+        // 6. Untouched town notice board writes zero save bytes (no spurious conditions, dispatches, or notebook notes).
         DaggerfallSavePayload raw = DaggerfallSavePayload.Read(session.CaptureSave());
         Assert.Empty(raw.WorldConditions.Tokens);
         Assert.Empty(raw.CourierDispatches.Dispatches);

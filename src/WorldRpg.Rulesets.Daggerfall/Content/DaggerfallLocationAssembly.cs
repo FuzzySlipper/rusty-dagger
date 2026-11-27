@@ -976,7 +976,7 @@ internal sealed class DaggerfallLocationAssembly
             });
             DaggerfallInteriorBuilding? interiorBuilding = ReadInterior(normalized);
             IReadOnlyList<DaggerfallSiteDecoration> decorations = DaggerfallSiteContent.ReadDecorations(normalized, _media.BillboardSprites, key.Kind, climate, diagnostics);
-            IReadOnlyList<DaggerfallSiteNoticeBoard> noticeBoards = BuildNoticeBoards(interiorBuilding, doors, position, decorations, out IReadOnlyList<DaggerfallSiteDecoration> mergedDecorations);
+            IReadOnlyList<DaggerfallSiteNoticeBoard> noticeBoards = BuildNoticeBoards(interiorBuilding, doors, position);
             return new DaggerfallSiteProfile(
                 new ProjectFacts(position, actors),
                 geometry,
@@ -1010,7 +1010,7 @@ internal sealed class DaggerfallLocationAssembly
                 DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalized, diagnostics),
                 CityGates = gates,
                 NoticeBoards = noticeBoards,
-                Decorations = mergedDecorations,
+                Decorations = decorations,
                 PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalized),
             };
         }
@@ -1018,12 +1018,10 @@ internal sealed class DaggerfallLocationAssembly
         private IReadOnlyList<DaggerfallSiteNoticeBoard> BuildNoticeBoards(
             DaggerfallInteriorBuilding? interiorBuilding,
             IReadOnlyList<DaggerfallRdbDoorDefinition> doors,
-            WorldPoint? startPosition,
-            IReadOnlyList<DaggerfallSiteDecoration> existingDecorations,
-            out IReadOnlyList<DaggerfallSiteDecoration> mergedDecorations)
+            WorldPoint? startPosition)
         {
             const int TavernBuildingType = 15;
-            mergedDecorations = existingDecorations;
+            const double BoardSightHeight = 1.30;
             DaggerfallSiteNoticeBoard? board = null;
             double reach = Math.Max(presentation.DoorReach, 3.0);
 
@@ -1063,7 +1061,7 @@ internal sealed class DaggerfallLocationAssembly
                         SurfaceNormal: normal,
                         Label: $"{record.Name} Notice Board",
                         ReachDistance: reach,
-                        SightHeight: 1.15).Validate();
+                        SightHeight: BoardSightHeight).Validate();
                 }
                 else if (startPosition is { } fallback)
                 {
@@ -1074,7 +1072,7 @@ internal sealed class DaggerfallLocationAssembly
                         SurfaceNormal: Vector3.UnitZ,
                         Label: $"{record.Name} Notice Board",
                         ReachDistance: reach,
-                        SightHeight: 1.15).Validate();
+                        SightHeight: BoardSightHeight).Validate();
                 }
             }
             else if (key.Kind == DaggerfallWorldProfileKind.Interior && interiorBuilding?.BuildingType == TavernBuildingType)
@@ -1095,7 +1093,7 @@ internal sealed class DaggerfallLocationAssembly
                         SurfaceNormal: normal,
                         Label: "Tavern Notice Board",
                         ReachDistance: reach,
-                        SightHeight: 1.15).Validate();
+                        SightHeight: BoardSightHeight).Validate();
                 }
                 else if (startPosition is { } fallback)
                 {
@@ -1106,40 +1104,11 @@ internal sealed class DaggerfallLocationAssembly
                         SurfaceNormal: Vector3.UnitZ,
                         Label: "Tavern Notice Board",
                         ReachDistance: reach,
-                        SightHeight: 1.15).Validate();
+                        SightHeight: BoardSightHeight).Validate();
                 }
             }
 
-            if (board is null)
-                return [];
-
-            // Attach a visible in-world billboard prop using the best published wooden post/plaque/sign sprite.
-            (int Archive, int Record)[] preferredBoardSprites =
-            [
-                (210, 29), (210, 28), (210, 24), (210, 3), (201, 0), (202, 0),
-            ];
-            foreach ((int archive, int rec) in preferredBoardSprites)
-            {
-                if (_media.BillboardSprites.TryGetValue((archive, rec), out NormalizedBillboardSprite? sprite))
-                {
-                    mergedDecorations =
-                    [
-                        .. existingDecorations,
-                        new DaggerfallSiteDecoration(
-                            Id: $"prop/{board.Id}",
-                            Position: board.Position,
-                            BaseAligned: true,
-                            Summer: sprite,
-                            Winter: sprite,
-                            Source: (archive, rec),
-                            WinterSource: (archive, rec),
-                            Lamp: false),
-                    ];
-                    break;
-                }
-            }
-
-            return [board];
+            return board is null ? [] : [board];
         }
 
         private DaggerfallInteriorBuilding? ReadInterior(byte[] normalized)

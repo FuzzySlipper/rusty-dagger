@@ -561,6 +561,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(facts);
         if (disposed) return;
         AppendDecorationFacts(facts, slot);
+        AppendNoticeBoardFacts(facts, slot);
         bool refreshed = drawRefreshedEffects();
         foreach ((ModelVisual model, Transform pose, int index) in world)
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
@@ -1022,6 +1023,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             world.Add((model, mesh.Pose, index));
         }
         AdmitDecorations(inputs);
+        AdmitNoticeBoards(inputs);
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
         {
             // An assembled exterior's door is a plane of its model's mesh, which draws it: the door is entered
@@ -1083,6 +1085,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         List<IDisposable> retired = [];
         retired.AddRange(TakeDecorationResources());
+        retired.AddRange(TakeNoticeBoardResources());
         TakeInteriorShellResources(retired);
         TakeInteriorExtrudeResources(retired);
         TakeExteriorExtrudeResources(retired);
