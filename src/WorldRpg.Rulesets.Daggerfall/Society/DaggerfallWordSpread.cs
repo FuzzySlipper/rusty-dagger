@@ -181,6 +181,7 @@ internal sealed class DaggerfallWordSpread(
 {
     internal const long MaxRetainedWavefrontMinutes = 30L * DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour;
     internal const double MinCourierDisruptionMultiplier = 0.10;
+    internal const string OfficeProclamationPrefix = "wf:office:";
     private const double GrainShortageCourierMultiplier = 0.75;
     private const long MinutesPerDay = DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour;
 
@@ -330,6 +331,112 @@ internal sealed class DaggerfallWordSpread(
         wf.Validate();
         _wavefronts[eventId] = wf;
         return wf;
+    }
+
+    /// <summary>Extracts the canonical office key from an office proclamation wavefront id (<c>wf:office:{officeKey}|{slug}|{minute}</c>).</summary>
+    internal static bool TryParseOfficeProclamationKey(string? eventId, out string officeKey)
+    {
+        officeKey = string.Empty;
+        if (string.IsNullOrWhiteSpace(eventId)
+            || !eventId.StartsWith(OfficeProclamationPrefix, StringComparison.Ordinal))
+            return false;
+        int separator = eventId.IndexOf('|', OfficeProclamationPrefix.Length);
+        if (separator <= OfficeProclamationPrefix.Length)
+            return false;
+        officeKey = eventId[OfficeProclamationPrefix.Length..separator];
+        return !string.IsNullOrWhiteSpace(officeKey);
+    }
+
+    /// <summary>
+    /// Reacts to a typed <see cref="DaggerfallOfficeChangedNotification"/> by emitting a regional news proclamation
+    /// wavefront originating at the office's capital or town so neighboring towns hear of vacancies, regencies, and
+    /// successions at courier speed.
+    /// </summary>
+    internal DaggerfallWordWavefrontSave ObserveOfficeChanged(
+        DaggerfallOfficeChangedNotification notification,
+        DaggerfallSiteRecord originSite,
+        string? regionName = null)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+        ArgumentNullException.ThrowIfNull(originSite);
+
+        string slug = notification.ChangeKind switch
+        {
+            DaggerfallOfficeChangeKind.VacancyOpened => "vacancy",
+            DaggerfallOfficeChangeKind.HolderDeposed => "deposed",
+            DaggerfallOfficeChangeKind.RegencyDeclared => "regency",
+            DaggerfallOfficeChangeKind.SuccessorSeated => "seated",
+            _ => "change",
+        };
+        string eventId = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{OfficeProclamationPrefix}{notification.OfficeKey}|{slug}|{notification.ChangedMinute}");
+        string officePrefix = $"{OfficeProclamationPrefix}{notification.OfficeKey}|";
+        foreach (string staleId in _wavefronts.Values
+            .Where(wf => wf.EmittedAtMinute == notification.ChangedMinute
+                && wf.EventId.StartsWith(officePrefix, StringComparison.Ordinal)
+                && !StringComparer.Ordinal.Equals(wf.EventId, eventId))
+            .Select(wf => wf.EventId)
+            .ToArray())
+        {
+            _wavefronts.Remove(staleId);
+        }
+        string realm = !string.IsNullOrWhiteSpace(regionName) ? regionName : originSite.Name;
+        string fate = !string.IsNullOrWhiteSpace(notification.CauseDetail)
+            ? notification.CauseDetail
+            : notification.Cause switch
+            {
+                DaggerfallOfficeChangeCause.Death => "was slain",
+                DaggerfallOfficeChangeCause.CardMove => "was unseated",
+                DaggerfallOfficeChangeCause.Quest => "was removed",
+                DaggerfallOfficeChangeCause.Succession => "stepped aside",
+                _ => "departed",
+            };
+        string former = !string.IsNullOrWhiteSpace(notification.PreviousHolderName)
+            ? notification.PreviousHolderName
+            : "its former holder";
+        string officeLabel = notification.Kind == DaggerfallOfficeKind.Ruler
+            ? $"Throne of {realm}"
+            : notification.Title;
+
+        (string headline, string body) = notification.ChangeKind switch
+        {
+            DaggerfallOfficeChangeKind.VacancyOpened => notification.Kind == DaggerfallOfficeKind.Ruler
+                ? ($"Throne of {realm} Vacant",
+                   $"Word from {originSite.Name}: the {officeLabel} stands vacant after {former} ({fate}). A succession period is underway.")
+                : ($"{officeLabel} Post Vacant",
+                   $"Word from {originSite.Name}: the office of {officeLabel} stands vacant after {former} ({fate})."),
+
+            DaggerfallOfficeChangeKind.HolderDeposed => notification.Kind == DaggerfallOfficeKind.Ruler
+                ? ($"Throne of {realm} Unsettled",
+                   $"Word from {originSite.Name}: {former} has been removed from the {officeLabel} ({fate}). The seat stands vacant pending succession.")
+                : ($"{officeLabel} Deposed",
+                   $"Word from {originSite.Name}: {former} has been removed as {officeLabel} ({fate}). The post stands vacant pending appointment."),
+
+            DaggerfallOfficeChangeKind.RegencyDeclared => (
+                $"Regency Declared for {officeLabel}",
+                $"Word from {originSite.Name}: {notification.NewHolderName ?? "an interim steward"} governs {officeLabel} in regency while the succession after {former} remains unsettled."),
+
+            DaggerfallOfficeChangeKind.SuccessorSeated => notification.Kind == DaggerfallOfficeKind.Ruler
+                ? ($"Proclamation of {notification.NewHolderName ?? officeLabel}",
+                   $"Word from {originSite.Name}: {notification.NewHolderName ?? "a lawful heir"} has taken the {officeLabel}"
+                   + (string.IsNullOrWhiteSpace(notification.PreviousHolderName) ? "." : $", succeeding {notification.PreviousHolderName} ({fate})."))
+                : ($"New {officeLabel}",
+                   $"Word from {originSite.Name}: {notification.NewHolderName ?? "a successor"} has been named {officeLabel}"
+                   + (string.IsNullOrWhiteSpace(notification.PreviousHolderName) ? "." : $", succeeding {notification.PreviousHolderName} ({fate}).")),
+
+            _ => (
+                $"Proclamation: {officeLabel}",
+                $"Word from {originSite.Name}: the office of {officeLabel} has changed hands."),
+        };
+
+        return RecordNews(
+            eventId: eventId,
+            headline: headline,
+            body: body,
+            originSite: originSite,
+            currentMinute: notification.ChangedMinute,
+            factionId: notification.OfficeFactionId);
     }
 
     /// <summary>

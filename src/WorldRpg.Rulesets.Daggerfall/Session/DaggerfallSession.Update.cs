@@ -270,6 +270,7 @@ internal sealed partial class DaggerfallSession
         long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
+        OfficeLedger.AdvanceVacancies(minuteAfter, checked((int)_time.Calendar.DayNumber));       // Society: office vacancy window progression
         foreach (DaggerfallPoliticalNewsItem news in PoliticalBoard?.AdvanceToDay(_time.Calendar.DayNumber, ConditionCounterplay.ConsumeBoardEvents) ?? [])
             WordSpread.RecordNews(news.EventId, news.Headline, news.Body, news.Origin, news.Minute, news.FactionId); // Society: a board turn each Sunday reached, its news spreading
         CourierDispatches.AdvanceToMinute(minuteAfter, checked((int)_time.Calendar.DayNumber));   // Society: elapsed-time board-game couriers
@@ -1520,7 +1521,7 @@ internal sealed partial class DaggerfallSession
         {
             fallen.ApplyPose(new ActorPose(_grounding.RestingPosition(fallen.Position), fallen.HeadingYawRadians)); // Actors
             _persistence.RecordActorDeath(fallen, _activeProfileKey, point => WorldPoint.From(_exterior.LocalToProfile(point.ToVector()))); // Session: ActorLedger Dead
-            OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite); // Society: OfficeLedger sparse override
+            OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite, _time.Calendar.MinuteNumber); // Society: OfficeLedger vacancy window & OfficeChanged
             CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
             if (ConditionCounterplay.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)) is { } counterplay)

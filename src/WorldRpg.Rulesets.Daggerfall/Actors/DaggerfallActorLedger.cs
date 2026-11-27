@@ -482,9 +482,37 @@ internal sealed class DaggerfallActorLedger
             ActorLocationKind.OnOverlandBand => true,
             ActorLocationKind.OffStage => true,
             ActorLocationKind.Removed => true,
-            ActorLocationKind.Dead => location.Profile is { } deadProfile && deadProfile.Require() != homeProfile,
+            ActorLocationKind.Dead => location.Profile is null || location.Profile.Require() != homeProfile,
             _ => false,
         };
+    }
+
+    /// <summary>
+    /// Moves a living actor off-stage so Step 1 scene admission suppresses its home/office slot without marking it dead.
+    /// Existing <see cref="ActorLocationKind.Dead"/> and <see cref="ActorLocationKind.Removed"/> entries are preserved.
+    /// </summary>
+    internal void SetOffStage(long durableId, ActorOrigin fallbackOrigin)
+    {
+        ArgumentNullException.ThrowIfNull(fallbackOrigin);
+        if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
+            throw new ArgumentOutOfRangeException(nameof(durableId), "Off-stage actor id must be a positive non-player id.");
+
+        if (_entries.TryGetValue(durableId, out ActorLedgerEntry? existing))
+        {
+            if (existing.Location?.Kind is ActorLocationKind.Dead or ActorLocationKind.Removed)
+                return;
+            _entries[durableId] = existing with
+            {
+                Location = ActorLocationOverride.OffStage,
+                Pose = null,
+            };
+            return;
+        }
+
+        _entries[durableId] = new ActorLedgerEntry(
+            durableId,
+            fallbackOrigin,
+            Location: ActorLocationOverride.OffStage);
     }
 
     /// <summary>All ledger entries explicitly residing at <paramref name="profile"/> (living or dead).</summary>

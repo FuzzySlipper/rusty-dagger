@@ -780,6 +780,22 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
+    /// Suppresses a deposed living actor's home/office slot via <see cref="ActorLocationOverride.OffStage"/> and
+    /// immediately unloads any live body in the active scene so the vacated seat stands visibly empty.
+    /// </summary>
+    internal void SuppressOffStage(long durableId, ActorOrigin fallbackOrigin)
+    {
+        ArgumentNullException.ThrowIfNull(fallbackOrigin);
+        if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
+            return;
+        if (_actors.TryGet(durableId, out _))
+            UnloadActor(durableId);
+        if (_npcs.TryGet(durableId, out _))
+            _npcs.Unplace(durableId);
+        _actorLedger.SetOffStage(durableId, fallbackOrigin);
+    }
+
+    /// <summary>
     /// Sends home a cast individual or a seeded person a quest placed elsewhere, now that no quest places it: its
     /// relocation and placed pose are dropped, so its home admits it again on the next visit, and a body standing at
     /// the placement leaves. One that is dead, with the party, on a band, off stage or removed stays as it is.

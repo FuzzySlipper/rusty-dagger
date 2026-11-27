@@ -79,16 +79,36 @@ internal sealed class DaggerfallNoticeBoard(
             entries.Add(BuildConditionEntry(token, region, regionName, authorityName));
 
         // 2. Sparse office proclamations (regional throne or local town offices that changed from baseline).
-        AddOfficeNotices(entries, site, region, regionName, ruler);
+        HashSet<string> postedOfficeKeys = new(StringComparer.Ordinal);
+        AddOfficeNotices(entries, postedOfficeKeys, site, region, regionName, ruler);
 
         // 3. Live wanted / bounty posting when word of the player's crimes/warrant has arrived at this town.
         AddPlayerBountyNotice(entries, site, region, regionName, authorityName, currentMinute, day);
 
-        // 4. Arrived courier news/standing wavefronts (e.g. leaked board-game dispatches or distant news that reached this town).
+        // 4. Arrived courier news/standing wavefronts (office proclamations from distant capitals, board dispatches, and rumours).
         if (wordSpread is not null)
         {
-            foreach (DaggerfallWordWavefrontSave arrived in wordSpread.ArrivedNewsAt(site, currentMinute, day).Take(3))
+            int nonOfficeCount = 0;
+            foreach (DaggerfallWordWavefrontSave arrived in wordSpread.ArrivedNewsAt(site, currentMinute, day))
             {
+                if (DaggerfallWordSpread.TryParseOfficeProclamationKey(arrived.EventId, out string officeKey))
+                {
+                    // Newest arrived proclamation wins per office key; skip if already rendered locally above.
+                    if (!postedOfficeKeys.Add(officeKey))
+                        continue;
+                    entries.Add(new(
+                        Id: $"notice:word:{arrived.EventId}",
+                        Kind: DaggerfallNoticeEntryKind.OfficeNotice,
+                        Heading: arrived.Headline ?? "Office Proclamation",
+                        Body: arrived.Body!,
+                        Region: region,
+                        FactionId: arrived.FactionId));
+                    continue;
+                }
+
+                if (nonOfficeCount >= 3)
+                    continue;
+                nonOfficeCount++;
                 entries.Add(new(
                     Id: $"notice:word:{arrived.EventId}",
                     Kind: arrived.Kind == DaggerfallWordEventKind.NewsRumor
@@ -192,6 +212,7 @@ internal sealed class DaggerfallNoticeBoard(
 
     private void AddOfficeNotices(
         List<DaggerfallNoticeEntry> entries,
+        HashSet<string> postedOfficeKeys,
         DaggerfallSiteRecord site,
         int region,
         string regionName,
@@ -208,15 +229,20 @@ internal sealed class DaggerfallNoticeBoard(
             && officeLedger.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(provinceFactionId), out DaggerfallOfficeOverrideSave? throneOverride)
             && throneOverride is not null)
         {
+            postedOfficeKeys.Add(throneOverride.OfficeKey);
             string heading = throneOverride.Vacant
                 ? $"Throne of {regionName} Vacant"
-                : $"Proclamation of {throneOverride.HolderDisplayName}";
+                : throneOverride.IsRegency
+                    ? $"Regency of {throneOverride.HolderDisplayName} in {regionName}"
+                    : $"Proclamation of {throneOverride.HolderDisplayName}";
             string body = throneOverride.Vacant
                 ? $"The seat of {regionName} stands vacant since {throneOverride.PreviousHolderName ?? "the former ruler"} ({FormatCause(throneOverride)})."
-                : $"{throneOverride.HolderDisplayName} now holds the throne of {regionName}"
-                  + (string.IsNullOrWhiteSpace(throneOverride.PreviousHolderName)
-                      ? "."
-                      : $", succeeding {throneOverride.PreviousHolderName} ({FormatCause(throneOverride)}).");
+                : throneOverride.IsRegency
+                    ? $"{throneOverride.HolderDisplayName} governs {regionName} in regency while the succession after {throneOverride.PreviousHolderName ?? "the former ruler"} remains unsettled."
+                    : $"{throneOverride.HolderDisplayName} now holds the throne of {regionName}"
+                      + (string.IsNullOrWhiteSpace(throneOverride.PreviousHolderName)
+                          ? "."
+                          : $", succeeding {throneOverride.PreviousHolderName} ({FormatCause(throneOverride)}).");
             entries.Add(new(
                 Id: $"notice:office:{throneOverride.OfficeKey}",
                 Kind: DaggerfallNoticeEntryKind.OfficeNotice,
@@ -230,13 +256,18 @@ internal sealed class DaggerfallNoticeBoard(
         {
             if (!local.IsOverridden)
                 continue;
+            postedOfficeKeys.Add(local.OfficeKey);
             string heading = local.IsVacant
                 ? $"{local.Title} Post Vacant"
-                : $"New {local.Title}";
+                : local.IsRegency
+                    ? $"Interim {local.Title}"
+                    : $"New {local.Title}";
             string body = local.IsVacant
                 ? $"The office of {local.Title} is currently vacant following the loss of {local.PreviousHolderName ?? "its former holder"}."
-                : $"{local.DisplayName} has been named {local.Title}"
-                  + (string.IsNullOrWhiteSpace(local.PreviousHolderName) ? "." : $", replacing {local.PreviousHolderName}.");
+                : local.IsRegency
+                    ? $"{local.DisplayName} serves as interim {local.Title} pending formal succession."
+                    : $"{local.DisplayName} has been named {local.Title}"
+                      + (string.IsNullOrWhiteSpace(local.PreviousHolderName) ? "." : $", replacing {local.PreviousHolderName}.");
             entries.Add(new(
                 Id: $"notice:office:{local.OfficeKey}",
                 Kind: DaggerfallNoticeEntryKind.OfficeNotice,

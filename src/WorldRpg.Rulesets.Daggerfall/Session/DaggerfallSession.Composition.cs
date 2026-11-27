@@ -782,9 +782,51 @@ internal sealed partial class DaggerfallSession
             OfficeHolders = new DaggerfallOfficeHolders(definitions, _site, State.ActorLedger, State.Npcs);
             OfficeLedger = new DaggerfallOfficeLedger(
                 definitions, OfficeHolders, State.ActorLedger, State.Npcs,
-                () => _worldSocialSeed, new DaggerfallNames(definitions, _random).NpcName);
+                () => _worldSocialSeed, new DaggerfallNames(definitions, _random).NpcName,
+                () => _time.Calendar.MinuteNumber, _site);
             OfficeLedger.Restore(saved?.OfficeLedger);
             OfficeHolders.BindOverrideLookup(OfficeLedger.TryGetFactionOverride);
+            OfficeLedger.OfficeChanged += change =>
+            {
+                if (OfficeLedger.ResolveOfficeOriginSite(change, _site.ActiveSite) is { } origin)
+                {
+                    string? regionName = change.Region is int r
+                        ? definitions.BuildingNames.RegionName(r)
+                        : definitions.BuildingNames.RegionName(origin.Id.Region);
+                    WordSpread.ObserveOfficeChanged(change, origin, regionName);
+                }
+
+                if (change.Kind == DaggerfallOfficeKind.Ruler && change.Region is int rulerRegion)
+                {
+                    if (change.ChangeKind is DaggerfallOfficeChangeKind.VacancyOpened
+                        or DaggerfallOfficeChangeKind.HolderDeposed
+                        or DaggerfallOfficeChangeKind.RegencyDeclared)
+                    {
+                        string regionName = definitions.BuildingNames.RegionName(rulerRegion);
+                        string former = !string.IsNullOrWhiteSpace(change.PreviousHolderName)
+                            ? change.PreviousHolderName
+                            : "the former ruler";
+                        string headline = change.ChangeKind == DaggerfallOfficeChangeKind.RegencyDeclared
+                            ? $"Regency Unsettled in {regionName}"
+                            : $"Succession Crisis in {regionName}";
+                        string body = change.ChangeKind == DaggerfallOfficeChangeKind.RegencyDeclared
+                            ? $"{change.NewHolderName ?? "An interim regent"} governs {regionName} in regency after {former}. Guards remain on strict watch until a lawful successor secures the throne."
+                            : $"The throne of {regionName} stands vacant after {former}. Gate and court scrutiny remain tightened across {regionName} until a lawful successor takes the seat.";
+                        WorldConditions.RaiseSuccessionCrisis(
+                            change.OfficeKey,
+                            rulerRegion,
+                            change.OfficeFactionId,
+                            change.ChangedDay,
+                            headline: headline,
+                            body: body);
+                    }
+                    else if (change.ChangeKind == DaggerfallOfficeChangeKind.SuccessorSeated)
+                    {
+                        WorldConditions.ClearSuccessionCrisis(change.OfficeKey);
+                    }
+                }
+            };
+            OfficeLedger.OfficeOverrideCleared += officeKey => WorldConditions.ClearSuccessionCrisis(officeKey);
             NoticeBoard = new DaggerfallNoticeBoard(
                 definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
                 () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,
@@ -999,6 +1041,22 @@ internal sealed partial class DaggerfallSession
                 authored, saved?.ActiveDynamicActors(inputs.ProfileKey) ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
                 _lootUi.CloseActor, _corpseLoot, State.ActorLedger, _persistence.RestoreDetachedActorState);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
+            OfficeLedger.OfficeChanged += change =>
+            {
+                if (change.ChangeKind is DaggerfallOfficeChangeKind.HolderDeposed or DaggerfallOfficeChangeKind.SuccessorSeated
+                    && change.PreviousHolderActorId is long prevId
+                    && change.PreviousHolderIsAlive
+                    && prevId != change.NewHolderActorId)
+                {
+                    ActorOrigin? origin = !string.IsNullOrWhiteSpace(change.PreviousHolderCastId)
+                        ? ActorOrigin.Cast(change.PreviousHolderCastId, change.OfficeProfileKey)
+                        : change.OfficeProfileKey is { } profile && !string.IsNullOrWhiteSpace(change.OfficeSlotId)
+                            ? ActorOrigin.Seeded(profile, change.OfficeSlotId)
+                            : null;
+                    if (origin is not null)
+                        _roster.SuppressOffStage(prevId, origin);
+                }
+            };
             Crimes = new DaggerfallCrimes(State.Crime, State.Actors, State.Npcs, State.PlayerControl, _site, _roster.Definitions, definitions,
                 State.ItemInstances, State.SkillUses, State.RacialOverrides, _random, engine.Perception, () => _spatial.Session,
                 calendar: () => _time.Calendar,

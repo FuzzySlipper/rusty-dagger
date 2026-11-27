@@ -204,6 +204,8 @@ internal sealed class DaggerfallSocialInspection(
                     if (!string.IsNullOrWhiteSpace(office.PreviousHolderName)) w.WriteString("previousHolderName", office.PreviousHolderName);
                     if (office.ChangeCause is { } cause) w.WriteString("changeCause", cause.ToString());
                     if (!string.IsNullOrWhiteSpace(office.CauseDetail)) w.WriteString("causeDetail", office.CauseDetail);
+                    if (office.VacancyUntilMinute is long localVacancyUntil) w.WriteNumber("vacancyUntilMinute", localVacancyUntil);
+                    if (office.IsRegency) w.WriteBoolean("isRegency", true);
                     w.WriteEndObject();
                 }
             }
@@ -304,6 +306,8 @@ internal sealed class DaggerfallSocialInspection(
                 if (!string.IsNullOrWhiteSpace(seat.PreviousHolderName)) w.WriteString("previousHolderName", seat.PreviousHolderName);
                 if (seat.ChangeCause is { } cause) w.WriteString("changeCause", cause.ToString());
                 if (!string.IsNullOrWhiteSpace(seat.CauseDetail)) w.WriteString("causeDetail", seat.CauseDetail);
+                if (seat.VacancyUntilMinute is long seatVacancyUntil) w.WriteNumber("vacancyUntilMinute", seatVacancyUntil);
+                if (seat.IsRegency) w.WriteBoolean("isRegency", true);
                 w.WriteEndObject();
             }
             w.WriteEndArray();
@@ -318,6 +322,9 @@ internal sealed class DaggerfallSocialInspection(
                 if (over.HolderActorId is long hid) w.WriteNumber("holderActorId", hid); else w.WriteNull("holderActorId");
                 if (!string.IsNullOrWhiteSpace(over.HolderDisplayName)) w.WriteString("holderDisplayName", over.HolderDisplayName);
                 w.WriteBoolean("vacant", over.Vacant);
+                if (over.IsRegency) w.WriteBoolean("isRegency", true);
+                if (over.VacancyOpenedMinute is long openedMin) w.WriteNumber("vacancyOpenedMinute", openedMin);
+                if (over.VacancyUntilMinute is long untilMin) w.WriteNumber("vacancyUntilMinute", untilMin);
                 w.WriteString("cause", over.Cause.ToString());
                 if (!string.IsNullOrWhiteSpace(over.CauseDetail)) w.WriteString("causeDetail", over.CauseDetail);
                 w.WriteNumber("changedDay", over.ChangedDay);

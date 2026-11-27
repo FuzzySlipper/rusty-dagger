@@ -401,4 +401,37 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         string.IsNullOrWhiteSpace(tag)
             ? string.Create(CultureInfo.InvariantCulture, $"cond:{DaggerfallWorldConditionToken.KindSlug(kind)}:r{region}")
             : string.Create(CultureInfo.InvariantCulture, $"cond:{DaggerfallWorldConditionToken.KindSlug(kind)}:r{region}:{tag}");
+
+    /// <summary>Deterministic token id for a regional <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/> owned by a vacant office.</summary>
+    internal static string OfficeSuccessionCrisisTokenId(string officeKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(officeKey);
+        return $"office:crisis:{officeKey}";
+    }
+
+    /// <summary>Raises or refreshes a regional <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/> tied to a vacant ruler office.</summary>
+    internal DaggerfallWorldConditionToken RaiseSuccessionCrisis(
+        string officeKey,
+        int region,
+        int? sourceFactionId,
+        int startedDay,
+        string? headline = null,
+        string? body = null,
+        int severity = 2)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(officeKey);
+        return Set(new DaggerfallWorldConditionToken(
+            TokenId: OfficeSuccessionCrisisTokenId(officeKey),
+            Kind: DaggerfallWorldConditionKind.SuccessionCrisis,
+            Region: region,
+            SourceFactionId: sourceFactionId,
+            Severity: Math.Clamp(severity, DaggerfallWorldConditionToken.MinSeverity, DaggerfallWorldConditionToken.MaxSeverity),
+            StartedDay: Math.Max(0, startedDay),
+            Headline: string.IsNullOrWhiteSpace(headline) ? null : headline,
+            Body: string.IsNullOrWhiteSpace(body) ? null : body));
+    }
+
+    /// <summary>Clears any active <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/> tied to <paramref name="officeKey"/> once a lawful successor is seated.</summary>
+    internal bool ClearSuccessionCrisis(string officeKey) =>
+        !string.IsNullOrWhiteSpace(officeKey) && Remove(OfficeSuccessionCrisisTokenId(officeKey));
 }

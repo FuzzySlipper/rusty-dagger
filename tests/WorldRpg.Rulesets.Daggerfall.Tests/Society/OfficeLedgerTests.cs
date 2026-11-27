@@ -280,7 +280,7 @@ public sealed class OfficeLedgerTests
         Assert.Empty(nonOfficeRecorded);
         Assert.Equal(0, session.OfficeLedger.OverrideCount);
 
-        // 2. Killing the Watch Captain writes ONE sparse Death override recording the slain captain.
+        // 2. Killing the Watch Captain writes ONE sparse Death vacancy override with a 24–48h Tier 3 window.
         session.State.ActorLedger.Upsert(new ActorLedgerEntry(
             captainId,
             ActorOrigin.Seeded(fixture.ExteriorProfile.ProfileKey, watchCaptain.SlotId),
@@ -292,8 +292,12 @@ public sealed class OfficeLedgerTests
         Assert.Equal(DaggerfallOfficeChangeCause.Death, captainOverride.Cause);
         Assert.Equal(captainName, captainOverride.PreviousHolderName);
         Assert.True(captainOverride.Vacant);
+        Assert.NotNull(captainOverride.VacancyOpenedMinute);
+        Assert.NotNull(captainOverride.VacancyUntilMinute);
+        long captainDuration = captainOverride.VacancyUntilMinute!.Value - captainOverride.VacancyOpenedMinute!.Value;
+        Assert.InRange(captainDuration, DaggerfallOfficeLedger.LocalVacancyMinMinutes, DaggerfallOfficeLedger.LocalVacancyMaxMinutes);
 
-        // 3. Marking King Gothryd dead + ReactToDeath writes a sparse succession override promoting Mobar!
+        // 3. Marking King Gothryd dead + ReactToDeath opens a 7–14 day Tier 1 vacancy window (no instant pop-in).
         long gothrydId = DaggerfallPeopleSlots.CastIndividualIdentity("king-gothryd");
         session.State.ActorLedger.Upsert(new ActorLedgerEntry(
             gothrydId,
@@ -305,16 +309,24 @@ public sealed class OfficeLedgerTests
         Assert.Equal(DaggerfallOfficeLedger.FactionOfficeKey(DaggerfallProvinceFaction), rulerOverride.OfficeKey);
         Assert.Equal(DaggerfallOfficeChangeCause.Death, rulerOverride.Cause);
         Assert.Equal("King Gothryd", rulerOverride.PreviousHolderName);
-        Assert.Equal("Mobar", rulerOverride.HolderDisplayName);
-        Assert.False(rulerOverride.Vacant);
+        Assert.Null(rulerOverride.HolderDisplayName);
+        Assert.True(rulerOverride.Vacant);
+        Assert.NotNull(rulerOverride.VacancyOpenedMinute);
+        Assert.NotNull(rulerOverride.VacancyUntilMinute);
+        long rulerDuration = rulerOverride.VacancyUntilMinute!.Value - rulerOverride.VacancyOpenedMinute!.Value;
+        Assert.InRange(rulerDuration, DaggerfallOfficeLedger.RegionalVacancyMinMinutes, DaggerfallOfficeLedger.RegionalVacancyMaxMinutes);
 
         // Survives save & reload cleanly.
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
         Assert.Equal(2, restored.OfficeLedger.OverrideCount);
-        Assert.True(restored.OfficeLedger.ResolveWatchCaptain(charing).IsVacant);
-        Assert.Equal(captainName, restored.OfficeLedger.ResolveWatchCaptain(charing).PreviousHolderName);
-        Assert.Equal("Mobar", restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall").DisplayName);
-        Assert.Equal("King Gothryd", restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall").PreviousHolderName);
+        DaggerfallLocalOffice restoredCaptain = restored.OfficeLedger.ResolveWatchCaptain(charing);
+        Assert.True(restoredCaptain.IsVacant);
+        Assert.Equal(captainName, restoredCaptain.PreviousHolderName);
+        Assert.Equal(captainOverride.VacancyUntilMinute, restoredCaptain.VacancyUntilMinute);
+        DaggerfallSeatLeaderPersona restoredSeat = restored.OfficeLedger.ResolveBoardSeatPersona("daggerfall");
+        Assert.True(restoredSeat.IsVacant);
+        Assert.Equal("King Gothryd", restoredSeat.PreviousHolderName);
+        Assert.Equal(rulerOverride.VacancyUntilMinute, restoredSeat.VacancyUntilMinute);
     }
 
     [Fact]
@@ -354,16 +366,18 @@ public sealed class OfficeLedgerTests
         Assert.Equal("was slain", deathOverride.CauseDetail);
         Assert.Equal(bridwellId, deathOverride.PreviousHolderActorId);
         Assert.Equal("Regent Bridwell", deathOverride.PreviousHolderName);
-        Assert.Equal("King Gothryd", deathOverride.HolderDisplayName);
-        Assert.False(deathOverride.Vacant);
+        Assert.Null(deathOverride.HolderDisplayName);
+        Assert.True(deathOverride.Vacant);
+        Assert.NotNull(deathOverride.VacancyUntilMinute);
 
-        // Verify death succession & predecessor history survive a second save/reload.
+        // Verify death vacancy window & predecessor history survive a second save/reload.
         using DaggerfallSession reloaded = fixture.Restore(restored.CaptureSave());
         DaggerfallSeatLeaderPersona persona = reloaded.OfficeLedger.ResolveBoardSeatPersona("daggerfall");
-        Assert.Equal("King Gothryd", persona.DisplayName);
+        Assert.True(persona.IsVacant);
         Assert.Equal("Regent Bridwell", persona.PreviousHolderName);
         Assert.Equal(DaggerfallOfficeChangeCause.Death, persona.ChangeCause);
         Assert.Equal("was slain", persona.CauseDetail);
+        Assert.Equal(deathOverride.VacancyUntilMinute, persona.VacancyUntilMinute);
     }
 
     [Fact]
