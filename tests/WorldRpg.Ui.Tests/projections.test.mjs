@@ -2191,6 +2191,83 @@ test('quest journal shows active quests grouped by title and deadline, and a fin
   } finally { f.dispose(); }
 });
 
+test('the journal Relations tab renders feuds, settlement hints, vouches, and standings with focus-preserving redraw and section paging', () => {
+  const f = fixture();
+  try {
+    const socialJournal = {
+      households: [
+        {
+          name: 'House of Vale',
+          tier: 'Local Household',
+          standing: 'Blood Feud (-20)',
+          status: 'Permanent blood feud (refuses direct talks) · In mourning (6 days remaining)',
+          isFeud: true,
+          settlementHint: 'Wergild: 5,000 gp (blood price). Seek a trusted ally, patron, or local authority to mediate a truce before paying wergild.',
+        },
+      ],
+      vouches: [
+        {
+          targetName: 'Lord Gothryd',
+          voucherName: 'Captain Vael',
+          kind: 'Court Introduction',
+          status: 'Active (120 days remaining)',
+        },
+      ],
+      factions: [
+        {
+          name: 'Daggerfall (Region)',
+          standing: 'Respected (+15)',
+          detail: 'Current region',
+        },
+      ],
+    };
+    f.publish({ quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [] }, socialJournal });
+    f.root.querySelector('[data-action="journal"]').click();
+
+    const relTab = f.root.querySelector('[data-journal-page="relations"]');
+    assert.equal(relTab.textContent, 'Relations (3)');
+    assert.equal(relTab.getAttribute('aria-controls'), 'dagger-journal-panel-relations');
+    relTab.click();
+    assert.equal(relTab.getAttribute('aria-selected'), 'true');
+    assert.equal(f.root.querySelector('#dagger-journal-panel-relations').hidden, false);
+
+    const page = f.root.querySelector('#dagger-journal-panel-relations .dagger-social-journal-page');
+    const sections = [...page.querySelectorAll('.dagger-social-journal-section')];
+    assert.deepEqual(sections.map(s => s.dataset.socialSection), ['households', 'vouches', 'factions']);
+
+    const feudEntry = sections[0].querySelector('li[data-feud="true"]');
+    assert.ok(feudEntry);
+    assert.equal(feudEntry.tabIndex, 0);
+    assert.match(feudEntry.textContent, /House of Vale \(Local Household\) — Blood Feud \(-20\)/);
+    assert.match(feudEntry.textContent, /In mourning \(6 days remaining\)/);
+    assert.match(feudEntry.textContent, /5,000 gp/);
+
+    const vouchEntry = sections[1].querySelector('li');
+    assert.match(vouchEntry.textContent, /Lord Gothryd — Court Introduction/);
+    assert.match(vouchEntry.textContent, /Vouched by Captain Vael · Active \(120 days remaining\)/);
+
+    const factionEntry = sections[2].querySelector('li');
+    assert.match(factionEntry.textContent, /Daggerfall \(Region\) — Respected \(\+15\)/);
+    assert.match(factionEntry.textContent, /Current region/);
+
+    // Focus survives identical HUD snapshot redraws, and PageDown/PageUp steps across sections.
+    feudEntry.focus();
+    f.publish({ quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [] }, socialJournal });
+    assert.equal(document.activeElement, feudEntry);
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageDown', bubbles: true, cancelable: true }));
+    assert.equal(document.activeElement, vouchEntry);
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageDown', bubbles: true, cancelable: true }));
+    assert.equal(document.activeElement, factionEntry);
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'PageUp', bubbles: true, cancelable: true }));
+    assert.equal(document.activeElement, vouchEntry);
+
+    // Empty state renders cleanly when no notable relations exist.
+    f.publish({ quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [] }, socialJournal: { households: [], vouches: [], factions: [] } });
+    assert.equal(relTab.textContent, 'Relations (0)');
+    assert.equal(page.querySelector('.dagger-quest-journal-empty').textContent, 'No notable household feuds, vouches, or standings yet.');
+  } finally { f.dispose(); }
+});
+
 test('the notebook key and an opened book open the journal on their own page, and a book turns by the triggers', () => {
   const f = fixture();
   try {

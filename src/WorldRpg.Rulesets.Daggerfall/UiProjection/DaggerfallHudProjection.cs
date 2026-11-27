@@ -75,6 +75,8 @@ internal sealed record DaggerfallHudFrame(
     internal DaggerfallQuitView? Quit { get; init; }
     /// <summary>The open in-world Town Notice Board modal, or null when closed.</summary>
     internal DaggerfallNoticeBoardUiView? NoticeBoard { get; init; }
+    /// <summary>Character-relevant social relations, feuds, vouches, and standings for the journal's Relations tab.</summary>
+    internal DaggerfallSocialJournalView? SocialJournal { get; init; }
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -282,6 +284,23 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("page", frame.Tutorial is { } shown ? builder.Object(("index", builder.Number(shown.Index)), ("count", builder.Number(shown.Count)),
                     ("content", HelpPage(builder, shown.Page))) : builder.Null())))];
         if (notebook is not null) fields = [.. fields, ("notebook", Notebook(builder, notebook))];
+        fields = [.. fields, ("socialJournal", frame.SocialJournal is not { } socialJournal ? builder.Null() : builder.Object(
+            ("households", builder.Array(socialJournal.Households.Select(entry => builder.Object(
+                ("name", builder.String(entry.Name)),
+                ("tier", builder.String(entry.Tier)),
+                ("standing", builder.String(entry.Standing)),
+                ("status", builder.String(entry.Status)),
+                ("isFeud", builder.Boolean(entry.IsFeud)),
+                ("settlementHint", entry.SettlementHint is { } hint ? builder.String(hint) : builder.Null()))).ToArray())),
+            ("vouches", builder.Array(socialJournal.Vouches.Select(entry => builder.Object(
+                ("targetName", builder.String(entry.TargetName)),
+                ("voucherName", builder.String(entry.VoucherName)),
+                ("kind", builder.String(entry.Kind)),
+                ("status", builder.String(entry.Status)))).ToArray())),
+            ("factions", builder.Array(socialJournal.Factions.Select(entry => builder.Object(
+                ("name", builder.String(entry.Name)),
+                ("standing", builder.String(entry.Standing)),
+                ("detail", builder.String(entry.Detail)))).ToArray()))))];
         if (frame.CreateItem is { } createItem) fields = [.. fields, ("createItem", builder.Object(("revision", builder.String(createItem.Revision)),
             ("options", builder.Array(createItem.Options.Select(option => builder.Object(("id", builder.String(option.Id)), ("label", builder.String(option.Label)))).ToArray()))))];
         if (frame.Teleport is { } teleport) fields = [.. fields, ("teleport", builder.Object(("revision", builder.String(teleport.Revision)),

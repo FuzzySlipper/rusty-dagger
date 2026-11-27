@@ -1657,6 +1657,20 @@ internal sealed partial class DaggerfallSession
                 Presentation, InputRefusals, NoticeBoardPanel);
             InputReadout = new DaggerfallInputReadout(PlayerAttack, State.Actors, _guard, Casting, definitions, () => _appearance.DrawnHeld,
                 () => State.WeaponDrawn, InputRefusals);                                                  // UiProjection
+            SocialJournal = new DaggerfallSocialJournalProjection(
+                definitions,
+                State.Social,
+                SocialConsequences,
+                FeudSettlement,
+                Introductions,
+                State.Crime,
+                State.Actors,
+                State.Npcs,
+                State.ActorLedger,
+                questNames,
+                () => _site.ActiveSite,
+                () => _worldSocialSeed,
+                () => checked((int)_time.Calendar.DayNumber));
             HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
                 _characterUi, definitions, CurrentTextContext, _controls, ActivationPanel, State.Swimming, State.Effects, State.Quests, _questTexts, _time,
                 _notebook, State.Transport, State.Inventory, TransportAccess, State.Property, State.Wagon, DungeonText, _deathScreen, RestPanel,
@@ -1665,7 +1679,8 @@ internal sealed partial class DaggerfallSession
                 () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
                 Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone), InputReadout,
                 () => OverlandParties.PartyPortraits(),
-                NoticeBoardPanel);
+                NoticeBoardPanel,
+                SocialJournal);
             DaggerfallHeldWorkbench heldWorkbench = new(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
             {
                 if (!_inAdmittedUpdate && !_disposed) PublishPresentation();

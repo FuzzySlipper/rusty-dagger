@@ -491,7 +491,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       lastMap = value.map;
       mapView.update(isMapProjection(value.map) ? value.map : null, value.mapAbsence);
       if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
-      journalView.update(value.quests?.journal, value.notebook);
+      journalView.update(value.quests?.journal, value.notebook, value.socialJournal ?? undefined);
       lodgingView.update(isLodgingProjection(value.lodging) ? value.lodging : null);
       if (value.rest && isRestProjection(value.rest)) {
         restHours.limit(1, value.rest.maximumRestHours, 1);

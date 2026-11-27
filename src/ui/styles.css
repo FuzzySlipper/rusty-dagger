@@ -314,6 +314,12 @@ body, dialog { font-family: var(--font-body); }
 .dagger-quest-journal-entries { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; white-space: pre-line; line-height: 1.5; }
 .dagger-quest-journal-entries li { padding: .25rem .5rem; border-left: 3px solid transparent; scroll-margin: .75rem; }
 .dagger-quest-journal-entries li:focus { outline: none; border-left-color: #8a5a1c; background: rgb(138 90 28 / .12); }
+.dagger-social-entry { display: grid; gap: .2rem; }
+.dagger-social-entry[data-feud="true"] { border-left-color: #8f2219; }
+.dagger-social-entry[data-feud="true"] .dagger-social-entry-title { color: #7a1f12; }
+.dagger-social-entry-title { display: block; font-weight: 700; }
+.dagger-social-entry-status, .dagger-social-entry-hint { margin: 0; font-size: .92rem; line-height: 1.4; }
+.dagger-social-entry-hint { font-style: italic; opacity: .9; }
 .dagger-book-reader { padding: 1rem 1.25rem; }
 
 

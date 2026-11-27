@@ -2,7 +2,7 @@ import type { ArtTint, UiArt, UiArtDemanded } from './art.js';
 import type { CharacterProjection } from './character.js';
 import type { ControlsProjection } from './controls.js';
 import type { InventoryProjection } from './inventory.js';
-import type { QuestJournalProjection } from './journal.js';
+import type { QuestJournalProjection, SocialJournalProjection } from './journal.js';
 import type { SpellIconAtlas, SpellSelectors } from './spell-icon.js';
 import type { LodgingProjection } from './lodging.js';
 import type { LootProjection } from './loot.js';
@@ -126,6 +126,7 @@ export interface DaggerHud {
   readonly mapAbsence?: string | null;
   readonly quests?: QuestPresentation;
   readonly notebook?: NotebookProjection;
+  readonly socialJournal?: SocialJournalProjection | null;
   /** The look the camera uses; `heading` is the ruleset's compass word for the yaw. */
   readonly view?: { readonly yawRadians: number; readonly interaction: string; readonly heading?: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];

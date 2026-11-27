@@ -32,12 +32,50 @@ export interface QuestJournalProjection {
   readonly finished: readonly FinishedQuestJournalProjection[];
 }
 
-export type JournalTab = 'active' | 'finished' | 'notes' | 'book';
-const TABS: readonly JournalTab[] = ['active', 'finished', 'notes', 'book'];
-const TAB_NAMES: Readonly<Record<JournalTab, string>> = { active: 'Quests', finished: 'Finished', notes: 'Notes', book: 'Book' };
+export interface SocialJournalHouseholdProjection {
+  readonly name: string;
+  readonly tier: string;
+  readonly standing: string;
+  readonly status: string;
+  readonly isFeud: boolean;
+  readonly settlementHint: string | null;
+}
+
+export interface SocialJournalVouchProjection {
+  readonly targetName: string;
+  readonly voucherName: string;
+  readonly kind: string;
+  readonly status: string;
+}
+
+export interface SocialJournalFactionProjection {
+  readonly name: string;
+  readonly standing: string;
+  readonly detail: string;
+}
+
+export interface SocialJournalProjection {
+  readonly households: readonly SocialJournalHouseholdProjection[];
+  readonly vouches: readonly SocialJournalVouchProjection[];
+  readonly factions: readonly SocialJournalFactionProjection[];
+}
+
+export type JournalTab = 'active' | 'finished' | 'relations' | 'notes' | 'book';
+const TABS: readonly JournalTab[] = ['active', 'finished', 'relations', 'notes', 'book'];
+const TAB_NAMES: Readonly<Record<JournalTab, string>> = {
+  active: 'Quests',
+  finished: 'Finished',
+  relations: 'Relations',
+  notes: 'Notes',
+  book: 'Book',
+};
 
 export interface Journal {
-  update(quests: QuestJournalProjection | undefined, notebook: NotebookProjection | undefined): void;
+  update(
+    quests: QuestJournalProjection | undefined,
+    notebook: NotebookProjection | undefined,
+    social?: SocialJournalProjection | undefined,
+  ): void;
   /** Show a page of the journal, as a request for the notebook or a book does. */
   select(tab: JournalTab): void;
   /** The triggers or Page Up and Down: the next or previous quest, or a book's next or previous page. */
@@ -86,9 +124,12 @@ export function mountJournal(root: HTMLElement, claim: (action: NotebookAction) 
   const finished = document.createElement('div');
   finished.className = 'dagger-quest-journal-page dagger-frame'; finished.dataset.skin = 'parchment';
   panels.get('finished')!.append(finished);
+  const relations = document.createElement('div');
+  relations.className = 'dagger-quest-journal-page dagger-social-journal-page dagger-frame'; relations.dataset.skin = 'parchment';
+  panels.get('relations')!.append(relations);
   // An entry taller than the page is read by scrolling it: up and down scroll until its edge shows,
   // and only then move to the entry before or after it.
-  for (const page of [quests, finished]) page.addEventListener(DIRECTION_EVENT, event => {
+  for (const page of [quests, finished, relations]) page.addEventListener(DIRECTION_EVENT, event => {
     const direction = (event as CustomEvent<Direction>).detail;
     const entry = event.target instanceof HTMLElement ? event.target.closest('li') : null;
     if (!entry || (direction !== 'up' && direction !== 'down')) return;
@@ -105,6 +146,7 @@ export function mountJournal(root: HTMLElement, claim: (action: NotebookAction) 
   let shown: JournalTab = 'active';
   let latest: QuestJournalProjection = { active: [], finished: [] };
   let latestNotebook: NotebookProjection | undefined;
+  let latestSocial: SocialJournalProjection = { households: [], vouches: [], factions: [] };
 
   const select = (tab: JournalTab): void => {
     shown = tab;
@@ -158,28 +200,130 @@ export function mountJournal(root: HTMLElement, claim: (action: NotebookAction) 
     });
   };
 
+  const drawRelations = (): void => {
+    redraw(relations, JSON.stringify(latestSocial), () => {
+      const sections: HTMLElement[] = [];
+
+      if (latestSocial.households.length > 0) {
+        const article = document.createElement('article');
+        article.className = 'dagger-quest-journal-group dagger-social-journal-section';
+        article.dataset.socialSection = 'households';
+        const heading = document.createElement('h3');
+        heading.textContent = 'Households & Feuds';
+        const list = document.createElement('ol');
+        list.className = 'dagger-quest-journal-entries dagger-social-journal-list';
+        for (const entry of latestSocial.households) {
+          const item = document.createElement('li');
+          item.className = 'dagger-social-entry';
+          item.tabIndex = 0;
+          item.dataset.feud = String(entry.isFeud);
+          const title = document.createElement('strong');
+          title.className = 'dagger-social-entry-title';
+          title.textContent = `${entry.name} (${entry.tier}) — ${entry.standing}`;
+          const status = document.createElement('p');
+          status.className = 'dagger-social-entry-status';
+          status.textContent = entry.status;
+          item.append(title, status);
+          if (entry.settlementHint) {
+            const hint = document.createElement('p');
+            hint.className = 'dagger-social-entry-hint';
+            hint.textContent = entry.settlementHint;
+            item.append(hint);
+          }
+          list.append(item);
+        }
+        article.append(heading, list);
+        sections.push(article);
+      }
+
+      if (latestSocial.vouches.length > 0) {
+        const article = document.createElement('article');
+        article.className = 'dagger-quest-journal-group dagger-social-journal-section';
+        article.dataset.socialSection = 'vouches';
+        const heading = document.createElement('h3');
+        heading.textContent = 'Active Vouches';
+        const list = document.createElement('ol');
+        list.className = 'dagger-quest-journal-entries dagger-social-journal-list';
+        for (const entry of latestSocial.vouches) {
+          const item = document.createElement('li');
+          item.className = 'dagger-social-entry';
+          item.tabIndex = 0;
+          const title = document.createElement('strong');
+          title.className = 'dagger-social-entry-title';
+          title.textContent = `${entry.targetName} — ${entry.kind}`;
+          const detail = document.createElement('p');
+          detail.className = 'dagger-social-entry-status';
+          detail.textContent = `Vouched by ${entry.voucherName} · ${entry.status}`;
+          item.append(title, detail);
+          list.append(item);
+        }
+        article.append(heading, list);
+        sections.push(article);
+      }
+
+      if (latestSocial.factions.length > 0) {
+        const article = document.createElement('article');
+        article.className = 'dagger-quest-journal-group dagger-social-journal-section';
+        article.dataset.socialSection = 'factions';
+        const heading = document.createElement('h3');
+        heading.textContent = 'Factions & Standings';
+        const list = document.createElement('ol');
+        list.className = 'dagger-quest-journal-entries dagger-social-journal-list';
+        for (const entry of latestSocial.factions) {
+          const item = document.createElement('li');
+          item.className = 'dagger-social-entry';
+          item.tabIndex = 0;
+          const title = document.createElement('strong');
+          title.className = 'dagger-social-entry-title';
+          title.textContent = `${entry.name} — ${entry.standing}`;
+          const detail = document.createElement('p');
+          detail.className = 'dagger-social-entry-status';
+          detail.textContent = entry.detail;
+          item.append(title, detail);
+          list.append(item);
+        }
+        article.append(heading, list);
+        sections.push(article);
+      }
+
+      if (sections.length === 0) {
+        const line = document.createElement('p');
+        line.className = 'dagger-quest-journal-empty';
+        line.textContent = 'No notable household feuds, vouches, or standings yet.';
+        relations.replaceChildren(line);
+        return;
+      }
+
+      relations.replaceChildren(...sections);
+    });
+  };
+
   const render = (): void => {
     const count = (tab: JournalTab, n: number | null): void => {
       buttons.get(tab)!.textContent = n === null ? TAB_NAMES[tab] : `${TAB_NAMES[tab]} (${n})`;
     };
     count('active', latest.active.length);
     count('finished', latest.finished.length);
+    count('relations', latestSocial.households.length + latestSocial.vouches.length + latestSocial.factions.length);
     count('notes', latestNotebook?.notes.length ?? 0);
     count('book', null);
     drawPage(quests, latest.active, 'No active quests.');
     drawPage(finished, latest.finished, 'No finished quests.');
+    drawRelations();
   };
   select('active');
   render();
 
-  /** The page's quests, and the one holding focus or the first shown. */
-  const questPage = (): HTMLElement | null => shown === 'active' ? quests : shown === 'finished' ? finished : null;
+  /** The active paged list (quests or relations sections) that PageUp/PageDown and triggers step through. */
+  const pagedList = (): HTMLElement | null =>
+    shown === 'active' ? quests : shown === 'finished' ? finished : shown === 'relations' ? relations : null;
 
   return {
-    update(value, notes): void {
+    update(value, notes, social): void {
       latest = value ?? { active: [], finished: [] };
       const opened = notes?.book && notes.book.id !== latestNotebook?.book?.id;
       latestNotebook = notes;
+      latestSocial = social ?? { households: [], vouches: [], factions: [] };
       if (notes) notebook.update(notes);
       render();
       // A book that has just been opened is the page the player asked for.
@@ -193,7 +337,7 @@ export function mountJournal(root: HTMLElement, claim: (action: NotebookAction) 
     },
     page(direction): void {
       if (shown === 'book') { notebook.turn(direction); return; }
-      const page = questPage();
+      const page = pagedList();
       if (!page) return;
       const groups = Array.from(page.querySelectorAll<HTMLElement>('.dagger-quest-journal-group'));
       const at = groups.findIndex(group => group.contains(document.activeElement));
@@ -204,8 +348,9 @@ export function mountJournal(root: HTMLElement, claim: (action: NotebookAction) 
     },
     pageHint(): string | null {
       if (shown === 'book') return latestNotebook?.book && latestNotebook.book.pageCount > 1 ? 'Pages' : null;
-      const page = questPage();
-      return page && page.querySelectorAll('.dagger-quest-journal-group').length > 1 ? 'Quests' : null;
+      const page = pagedList();
+      if (!page || page.querySelectorAll('.dagger-quest-journal-group').length <= 1) return null;
+      return shown === 'relations' ? 'Sections' : 'Quests';
     },
     dispose(): void { notebook.dispose(); shell.remove(); },
   };
