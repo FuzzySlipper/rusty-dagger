@@ -1115,6 +1115,33 @@ internal sealed partial class DaggerfallSession
                 (actorId, atSite) => SocialConsequences.EffectiveDispositionDelta(actorId, atSite),
                 (familyId, atSite) => SocialConsequences.HouseholdStandingDelta(familyId, atSite),
                 (familyId, atSite) => SocialConsequences.IsFeudActiveAt(familyId, atSite));
+            Introductions.BindMourningLookup(familyId =>
+                SocialConsequences.IsHouseholdMourning(familyId, checked((int)_time.Calendar.DayNumber)));
+            ShopContinuity = new DaggerfallShopContinuity(
+                State.Npcs,
+                State.ActorLedger,
+                State.Actors,
+                id => _roster.BanishedActors.Contains(id),
+                id => OfficeLedger.TryGetExile(id) is not null,
+                () => _worldSocialSeed,
+                (look, region, familyId) => questNames.NpcName(look, region, familyId, _worldSocialSeed),
+                req => _roster.SeatShopReplacement(
+                    req.ActorId,
+                    req.IsExistingActor,
+                    req.ShopProfile,
+                    req.TargetSlotId,
+                    req.OriginSlotKey,
+                    req.DisplayName,
+                    req.Role,
+                    req.Services,
+                    new DaggerfallNpcAppearance(req.Race, req.Gender, req.BillboardArchive, req.BillboardRecord, req.NameSeed, req.FactionId),
+                    req.FamilyId,
+                    req.OriginHomeProfile),
+                (actorId, homeProfile) => _roster.ReleaseFromCustody(actorId, homeProfile),
+                (coverId, isKinCover, restoreRole, restoreServices) => _roster.EndTemporaryShopCover(coverId, isKinCover, restoreRole, restoreServices),
+                _tuning.Social);
+            if (saved is not null)
+                ShopContinuity.Restore(saved.ShopContinuity);
             FeudSettlement = new DaggerfallFeudSettlement(
                 SocialConsequences,
                 State.Social,
@@ -1313,6 +1340,7 @@ internal sealed partial class DaggerfallSession
             _persistence.WorldConditions = WorldConditions.Capture;
             _persistence.WordSpread = WordSpread.Capture;
             _persistence.LocalHouseholds = SocialConsequences.Capture;
+            _persistence.ShopContinuity = ShopContinuity.Capture;
             _persistence.CourierDispatches = CourierDispatches.Capture;
             _persistence.ConditionCounterplay = ConditionCounterplay.Capture;
             _persistence.NoticeBounties = NoticeBounties.Capture;
@@ -1437,11 +1465,14 @@ internal sealed partial class DaggerfallSession
                 {
                     holderFamilyId = rulerFamily;
                 }
+                DaggerfallNpc? arrestedNpcSnapshot = State.Npcs.TryGet(actorId, out DaggerfallNpc? npcBeforeCustody)
+                    ? npcBeforeCustody
+                    : null;
                 if (string.IsNullOrWhiteSpace(holderFamilyId)
-                    && State.Npcs.TryGet(actorId, out DaggerfallNpc? npcBeforeCustody)
-                    && !string.IsNullOrWhiteSpace(npcBeforeCustody.FamilyId))
+                    && arrestedNpcSnapshot is not null
+                    && !string.IsNullOrWhiteSpace(arrestedNpcSnapshot.FamilyId))
                 {
-                    holderFamilyId = npcBeforeCustody.FamilyId;
+                    holderFamilyId = arrestedNpcSnapshot.FamilyId;
                 }
                 int vacatedOffices = OfficeLedger.ReactToHolderCrimeOrBanishment(
                     actorId, region, crimeKind, banished, currentDay,
@@ -1457,8 +1488,8 @@ internal sealed partial class DaggerfallSession
                         : State.Actors.TryGet(actorId, out ActorState? liveCustodyActor)
                             && liveCustodyActor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
                                 ? originComp.Origin
-                                : State.Npcs.TryGet(actorId, out DaggerfallNpc? custodyNpc)
-                                    ? ActorOrigin.Seeded(custodyNpc.Profile ?? _activeProfileKey, custodyNpc.StableKey)
+                                : arrestedNpcSnapshot is not null
+                                    ? ActorOrigin.Seeded(arrestedNpcSnapshot.Profile ?? _activeProfileKey, arrestedNpcSnapshot.StableKey)
                                     : null;
                     if (custodyOrigin is not null)
                     {
@@ -1466,6 +1497,14 @@ internal sealed partial class DaggerfallSession
                         imprisoned = true;
                     }
                 }
+                ShopContinuity.ReactToProprietorArrest(
+                    actorId,
+                    arrestedNpcSnapshot,
+                    banished,
+                    imprisoned,
+                    _activeProfileKey,
+                    _sites.Projection.Inputs,
+                    currentDay);
                 int appliedDelta = SocialConsequences.ReactToHouseholdArrest(
                     actorId,
                     isHouseholdHead: isHead,
@@ -1526,7 +1565,8 @@ internal sealed partial class DaggerfallSession
                 ownsHouse: (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
                 ownsShip: () => State.Property.OwnsShip,
                 ownsInterior: interior => Holdings.OwnsInterior(interior),
-                questClaims: State.Quests.ClaimsBuilding);
+                questClaims: State.Quests.ClaimsBuilding,
+                shopClosedNotice: (siteId, building) => ShopContinuity.GetClosedNotice(siteId, building.Id, checked((int)_time.Calendar.DayNumber)));
             Locks = new DaggerfallLocks(State.Actors, State.SkillUses, State.Equipment, _site, definitions, _random);
             _sight = new DaggerfallActivationSight(() => _sites.Projection.Inputs, State.Npcs, State.Actors, _roster.Definitions);
             DungeonActions = new DaggerfallDungeonActions(State.DungeonActions, () => _activeProfileKey,
@@ -1696,7 +1736,8 @@ internal sealed partial class DaggerfallSession
                     evaluateExteriorSchedule: EvaluateExteriorPlacementSchedule,
                     exteriorPlacements: ExteriorPlacementsFor,
                     scheduleWeather: () => (LocalWeather.Current, ObserveScheduleWeatherElapsed()),
-                    feudSettlement: FeudSettlement),
+                    feudSettlement: FeudSettlement,
+                    shopContinuity: ShopContinuity),
                 new DaggerfallBoardInspection(() => PoliticalBoard, () => _time.Calendar),
             ];                                                                                     // Developer
             _roster.BindScheduleStaticSuppression(SuppressedStaticSlotsFor);
@@ -1822,7 +1863,9 @@ internal sealed partial class DaggerfallSession
             officeAllegiance: OfficeAllegiance,
             wakeSleepingResident: actorId => HomeNightRoutine.WakeForInteraction(
                 actorId, _sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky),
-            feudSettlement: FeudSettlement);
+            feudSettlement: FeudSettlement,
+            socialConsequences: SocialConsequences,
+            shopContinuity: ShopContinuity);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

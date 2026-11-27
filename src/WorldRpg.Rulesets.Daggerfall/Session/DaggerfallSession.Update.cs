@@ -272,6 +272,7 @@ internal sealed partial class DaggerfallSession
         WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
         OfficeLedger.AdvanceVacancies(minuteAfter, checked((int)_time.Calendar.DayNumber));       // Society: office vacancy window progression
         SocialConsequences.AdvanceDay(checked((int)_time.Calendar.DayNumber));                    // Society: daily household grudge decay & mourning expiry
+        ShopContinuity.AdvanceDay(checked((int)_time.Calendar.DayNumber));                        // Society: shop bereavement reopening, kin/town replacement & jail release
         AdvanceCouriersAndBoard(before, after);                                                   // Society, Travel: couriers and off-map bands, the board each Sunday
         WordSpread.PruneExpired(minuteAfter);                                                     // Society: elapsed-time word spread
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
@@ -1551,6 +1552,9 @@ internal sealed partial class DaggerfallSession
             OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite, _time.Calendar.MinuteNumber); // Society: OfficeLedger vacancy window & OfficeChanged
             CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
+            DaggerfallNpc? fallenNpc = State.Npcs.TryGet(died.ActorId, out DaggerfallNpc? regFallen) ? regFallen : null;
+            ShopContinuity.ReactToProprietorDeath(
+                died.ActorId, fallenNpc, _activeProfileKey, _sites.Projection.Inputs, checked((int)_time.Calendar.DayNumber)); // Society: shop bereavement & replacement
             Introductions.ObserveActorDied(died.ActorId, died.KillerId == DaggerfallActorIdentity.PlayerEntityId); // Society: void vouches from slain voucher
             if (ConditionCounterplay.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)) is { } counterplay)
                 Presentation.SetOutcome(counterplay.OutcomeMessage);                              // Society, UiProjection

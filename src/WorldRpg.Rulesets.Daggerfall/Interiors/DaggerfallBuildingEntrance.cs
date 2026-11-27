@@ -46,7 +46,8 @@ internal sealed class DaggerfallBuildingEntrance(
     Func<DaggerfallSiteId, DaggerfallSiteBuildingSource, bool> ownsHouse,
     Func<bool> ownsShip,
     Func<DaggerfallInteriorBuilding, bool> ownsInterior,
-    Func<DaggerfallSiteId, DaggerfallSiteBuildingSource, bool> questClaims)
+    Func<DaggerfallSiteId, DaggerfallSiteBuildingSource, bool> questClaims,
+    Func<DaggerfallSiteId, DaggerfallSiteBuildingSource, string?>? shopClosedNotice = null)
 {
     /// <summary>
     /// What entering through an exterior door comes to: null for a door that enters no building; otherwise a refusal,
@@ -117,18 +118,22 @@ internal sealed class DaggerfallBuildingEntrance(
         if (!TryBuilding(doors, door, active, out DaggerfallSiteBuildingSource building)) return null;
         int faction = building.Source.FactionId;
         (bool guildMember, bool hallAnytime) = hallStanding(faction, active.Region);
+        string? bereavementNotice = shopClosedNotice?.Invoke(active, building);
         DaggerfallBuildingEntry entry = DaggerfallBuildingEntryPolicy.Evaluate(new(building.Source.BuildingType, faction, building.Quality,
             time.Calendar.Hour, time.Calendar.GetHolidayId(active.Region),
             OwnedByPlayer: ownsHouse(active, building),
             ActiveQuestBuilding: questClaims(active, building),
             GuildHallAccessAnytime: hallAnytime,
             GuildMember: guildMember,
-            OwnsShip: ownsShip()));
-        string? closed = entry.Closed is { } notice
-            ? InternalText(notice.GuildHall ? "guildClosed" : "storeClosed")
-                .Replace("%d1", notice.OpensAtHour.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
-                .Replace("%d2", notice.ClosesAtHour.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
-            : null;
+            OwnsShip: ownsShip(),
+            ClosedOverrideNotice: bereavementNotice));
+        string? closed = !entry.Unlocked && !string.IsNullOrWhiteSpace(bereavementNotice)
+            ? bereavementNotice
+            : entry.Closed is { } notice
+                ? InternalText(notice.GuildHall ? "guildClosed" : "storeClosed")
+                    .Replace("%d1", notice.OpensAtHour.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                    .Replace("%d2", notice.ClosesAtHour.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                : null;
         return new(DisplayName(active, building), entry, closed, InternalText("lockedExteriorDoor"));
     }
 

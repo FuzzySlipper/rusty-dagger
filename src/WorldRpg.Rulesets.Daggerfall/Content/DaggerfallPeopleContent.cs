@@ -32,7 +32,10 @@ internal sealed record DaggerfallSocialTuning(
     double BloodFeudMurderExponentBase = 3.0,
     double ReconciliationServiceCostMultiplier = 0.55,
     double PardonCostMultiplier = 0.65,
-    int PardonCourtFeeGold = 500)
+    int PardonCourtFeeGold = 500,
+    int ShopBereavementClosureDays = 2,
+    int ShopTownReplacementVacancyDays = 5,
+    int NpcJailSentenceDays = 5)
 {
     internal static DaggerfallSocialTuning Default { get; } = new(0UL);
 
@@ -76,6 +79,12 @@ internal sealed record DaggerfallSocialTuning(
             throw new ArgumentOutOfRangeException(nameof(PardonCostMultiplier), "Pardon cost multiplier must be in (0.1, 1).");
         if (PardonCourtFeeGold < 0)
             throw new ArgumentOutOfRangeException(nameof(PardonCourtFeeGold), "Pardon court fee gold must be non-negative.");
+        if (ShopBereavementClosureDays < 0)
+            throw new ArgumentOutOfRangeException(nameof(ShopBereavementClosureDays), "Shop bereavement closure days must be non-negative.");
+        if (ShopTownReplacementVacancyDays < ShopBereavementClosureDays)
+            throw new ArgumentOutOfRangeException(nameof(ShopTownReplacementVacancyDays), "Shop town-replacement vacancy days must be at least shop bereavement closure days.");
+        if (NpcJailSentenceDays <= 0)
+            throw new ArgumentOutOfRangeException(nameof(NpcJailSentenceDays), "NPC jail sentence days must be positive.");
         return this;
     }
 
@@ -143,12 +152,22 @@ internal sealed record DaggerfallSocialTuning(
         int pardonFee = element.TryGetProperty("pardonCourtFeeGold", out JsonElement pf)
             ? pf.GetInt32()
             : 500;
+        int bereavementDays = element.TryGetProperty("shopBereavementClosureDays", out JsonElement bd)
+            ? bd.GetInt32()
+            : 2;
+        int townVacancyDays = element.TryGetProperty("shopTownReplacementVacancyDays", out JsonElement tvd)
+            ? tvd.GetInt32()
+            : 5;
+        int jailDays = element.TryGetProperty("npcJailSentenceDays", out JsonElement jd)
+            ? jd.GetInt32()
+            : 5;
         return new DaggerfallSocialTuning(
             seed, bubble, speed, war, surge, plague,
             localDecay, houseDecay, dynastyDecay,
             arrestPenalty, headArrestPenalty, mourningDays,
             minorWergild, localFeudWergild, houseFeudWergild, dynastyFeudWergild,
-            murderExpBase, serviceMult, pardonMult, pardonFee).Validate();
+            murderExpBase, serviceMult, pardonMult, pardonFee,
+            bereavementDays, townVacancyDays, jailDays).Validate();
     }
 }
 

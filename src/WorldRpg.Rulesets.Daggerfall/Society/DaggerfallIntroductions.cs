@@ -161,7 +161,12 @@ internal sealed class DaggerfallIntroductions(
     private Func<long, DaggerfallSiteRecord?, int>? _effectiveDisposition;
     private Func<string?, DaggerfallSiteRecord?, int>? _householdStandingDelta;
     private Func<string?, DaggerfallSiteRecord?, bool>? _isFeudActive;
+    private Func<string?, bool>? _isHouseholdMourning;
     private Func<long, bool>? _isActorHostile;
+
+    /// <summary>Binds a mourning-window lookup so grieving kin decline non-essential favours and introductions.</summary>
+    internal void BindMourningLookup(Func<string?, bool> isHouseholdMourning) =>
+        _isHouseholdMourning = isHouseholdMourning ?? throw new ArgumentNullException(nameof(isHouseholdMourning));
 
     /// <summary>Binds the party-hire eligibility lookup so ordinary hireable companions/drivers appear in introduction dialogue.</summary>
     internal void BindHireableContactLookup(Func<DaggerfallNpc, bool> lookup) =>
@@ -823,8 +828,10 @@ internal sealed class DaggerfallIntroductions(
     internal IReadOnlyList<DaggerfallIntroductionTarget> ListIntroductionTargets(DaggerfallNpc speaker, DaggerfallSiteRecord? site)
     {
         ArgumentNullException.ThrowIfNull(speaker);
-        // A guarded/prominent person who will not grant you audience, or a feuding household, does not offer vouches.
+        // A guarded/prominent person who will not grant you audience, a feuding household, or a mourning household does not offer vouches.
         if (!AssessAccess(speaker).Allowed)
+            return [];
+        if (IsSpeakerMourning(speaker))
             return [];
 
         int speakerFactionId = social.ResolveNpcReactionFactionId(speaker);
@@ -1023,6 +1030,9 @@ internal sealed class DaggerfallIntroductions(
         if (!speakerAccess.Allowed)
             return new(false, false, targetDurableId, speakerName, null,
                 speakerAccess.DenialReason ?? $"{speakerName} will not vouch for an unintroduced stranger.");
+        if (IsSpeakerMourning(speaker))
+            return new(false, false, targetDurableId, speakerName, null,
+                $"{speakerName} is in mourning and declines non-essential introductions right now.");
 
         DaggerfallNpc? targetNpc = npcs.TryGet(targetDurableId, out DaggerfallNpc? reg) ? reg : null;
         DaggerfallOfficeHolder? officeTarget = null;
@@ -1214,6 +1224,9 @@ internal sealed class DaggerfallIntroductions(
         if (!access.Allowed)
             return new(false, false, 0, access.DenialReason ?? $"{targetName} will not entertain flattery from an unintroduced stranger.");
 
+        if (IsSpeakerMourning(target))
+            return new(false, false, 0, $"{targetName} is in mourning and has no heart for flattery or favours right now.");
+
         if (ReadLastFavourDay(target.DurableId) == day)
             return new(false, false, 0, $"You have already pressed your charm with {targetName} today.");
 
@@ -1245,15 +1258,25 @@ internal sealed class DaggerfallIntroductions(
         return new(true, succeeded, delta, message);
     }
 
-    /// <summary>Returns true when <paramref name="target"/> has not yet been flattered today and can be approached.</summary>
+    /// <summary>Returns true when <paramref name="target"/> has not yet been flattered today, is not mourning, and can be approached.</summary>
     internal bool CanCurryFavourToday(DaggerfallNpc target)
     {
         ArgumentNullException.ThrowIfNull(target);
         if (DaggerfallNpcServiceFacts.IsChild(target.Appearance))
             return false;
+        if (IsSpeakerMourning(target))
+            return false;
         if (ReadLastFavourDay(target.DurableId) == currentDay())
             return false;
         return AssessAccess(target).Allowed;
+    }
+
+    private bool IsSpeakerMourning(DaggerfallNpc npc)
+    {
+        if (_isHouseholdMourning is null)
+            return false;
+        string? familyId = ResolveActorFamilyId(npc.DurableId, npc);
+        return !string.IsNullOrWhiteSpace(familyId) && _isHouseholdMourning(familyId);
     }
 
     private Action<long, int>? _onDispositionAdjusted;

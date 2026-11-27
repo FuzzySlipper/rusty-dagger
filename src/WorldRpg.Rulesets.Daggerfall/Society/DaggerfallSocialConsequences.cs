@@ -466,6 +466,80 @@ internal sealed class DaggerfallSocialConsequences(
         return changed;
     }
 
+    /// <summary>Returns true when <paramref name="familyId"/> is currently inside its active mourning window.</summary>
+    internal bool IsHouseholdMourning(string? familyId, int? dayOverride = null)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || !_householdStandings.TryGetValue(familyId, out HouseholdStandingState? state))
+            return false;
+        if (state.MourningUntilDay is not int until)
+            return false;
+        int day = dayOverride ?? CurrentDayValue(currentMinute?.Invoke() ?? 0L);
+        return day <= until;
+    }
+
+    /// <summary>Returns the active mourning expiry day for <paramref name="familyId"/>, or null when not mourning.</summary>
+    internal int? HouseholdMourningUntilDay(string? familyId, int? dayOverride = null) =>
+        IsHouseholdMourning(familyId, dayOverride) && _householdStandings.TryGetValue(familyId!, out HouseholdStandingState? state)
+            ? state.MourningUntilDay
+            : null;
+
+    /// <summary>Returns true when <paramref name="actorId"/> belongs to a household currently in mourning.</summary>
+    internal bool IsActorMourning(long actorId, DaggerfallNpc? npc = null, int? dayOverride = null)
+    {
+        DaggerfallNpc? resolvedNpc = npc ?? (npcs.TryGet(actorId, out DaggerfallNpc? reg) ? reg : null);
+        ActorState? live = actors.TryGet(actorId, out ActorState? act) ? act : null;
+        string? familyId = ResolveActorFamilyId(actorId, live, resolvedNpc);
+        return IsHouseholdMourning(familyId, dayOverride);
+    }
+
+    /// <summary>Builds a grieving greeting line when <paramref name="npc"/>'s household is in mourning, else null.</summary>
+    internal string? BuildMourningGreetingLine(DaggerfallNpc npc, int? dayOverride = null)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        if (!IsActorMourning(npc.DurableId, npc, dayOverride))
+            return null;
+        return "Forgive my tone — our household is still in mourning for our slain kin, and we have no heart for favours right now.";
+    }
+
+    /// <summary>Builds a grieving ambient bark when <paramref name="npc"/>'s household is in mourning, else null.</summary>
+    internal string? BuildMourningAmbientBark(DaggerfallNpc npc, int? dayOverride = null)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        if (!IsActorMourning(npc.DurableId, npc, dayOverride))
+            return null;
+        return "Leave us to our grief — our household is still in mourning for our slain kin.";
+    }
+
+    /// <summary>Records a household mourning window without assigning player blame or grudge (used for unwitnessed kin deaths).</summary>
+    internal void RecordHouseholdMourning(string familyId, DaggerfallNpc? subjectNpc, DaggerfallSiteRecord? originSite, long minute, int? dayOverride = null)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || !DaggerfallHouseholds.IsValidFamilyId(familyId) || _tuning.MourningDurationDays <= 0)
+            return;
+
+        int day = dayOverride ?? CurrentDayValue(minute);
+        if (!_householdStandings.TryGetValue(familyId, out HouseholdStandingState? state))
+        {
+            if (DaggerfallHouseholds.IsLocal(familyId))
+            {
+                if (!TryResolveLocalSettlement(familyId, subjectNpc, originSite, out int targetRegion, out string targetLocation))
+                    return;
+                state = new HouseholdStandingState(targetRegion, targetLocation);
+            }
+            else if (DaggerfallHouseholds.IsProvinceWide(familyId))
+            {
+                state = new HouseholdStandingState(ResolveProvinceWideRegion(familyId, originSite), string.Empty);
+            }
+            else
+            {
+                return;
+            }
+            _householdStandings[familyId] = state;
+        }
+
+        state.MourningUntilDay = Math.Max(state.MourningUntilDay ?? 0, checked(day + _tuning.MourningDurationDays));
+        state.LastUpdatedDay = Math.Max(state.LastUpdatedDay, day);
+    }
+
     /// <summary>
     /// Classifies whether an arrested NPC counts as a household/noble head (heavier arrest grudge) versus an
     /// ordinary household member (lighter arrest grudge), based on vacated offices, regional rulership, noble titles,
@@ -605,6 +679,11 @@ internal sealed class DaggerfallSocialConsequences(
         if (primaryFaction is null && regionalFaction is null && npc is null && !watch)
             return;
 
+        // Even an unwitnessed killing puts the victim's surviving household into mourning without blaming the player.
+        string? victimFamilyId = ResolveActorFamilyId(died.ActorId, fallen, npc);
+        if (victimFamilyId is not null)
+            RecordHouseholdMourning(victimFamilyId, npc, activeSite?.Invoke(), minute);
+
         DaggerfallCrimeWitnessEvidence witnesses = queryWitnesses();
         if (witnesses.WitnessActorIds.Length == 0)
             return;
@@ -623,7 +702,6 @@ internal sealed class DaggerfallSocialConsequences(
             RecordWitnessGrudge(witnessId, witnessActor, crimeRecord);
         }
 
-        string? victimFamilyId = ResolveActorFamilyId(died.ActorId, fallen, npc);
         if (victimFamilyId is not null)
         {
             string victimName = npc?.DisplayName ?? $"actor #{died.ActorId}";

@@ -1058,6 +1058,150 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
+    /// Releases a living actor from <see cref="ActorLocationKind.OffStage"/> jail custody back to their home slot,
+    /// immediately re-materializing them if the player is currently standing in <paramref name="homeProfile"/>.
+    /// </summary>
+    internal void ReleaseFromCustody(long durableId, DaggerfallWorldProfileKey homeProfile)
+    {
+        if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
+            return;
+        if (!_actorLedger.TryGet(durableId, out ActorLedgerEntry? entry) || entry is null
+            || entry.Location?.Kind != ActorLocationKind.OffStage)
+            return;
+
+        _actorLedger.Upsert(entry with { Location = null, Pose = null });
+        DaggerfallSiteProfile activeProfile = _profile();
+        if (activeProfile.ProfileKey == homeProfile)
+            MaterializeStaticNpcs(activeProfile, _appearance());
+    }
+
+    /// <summary>
+    /// Seats an existing surviving kin member or newly appointed town replacement / arrest cover behind a shop,
+    /// tavern, or family counter at <paramref name="targetSlotId"/> inside <paramref name="shopProfile"/> with
+    /// the counter's canonical role and services and zero duplicate bodies.
+    /// </summary>
+    internal void SeatShopReplacement(
+        long durableId,
+        bool isExistingActor,
+        DaggerfallWorldProfileKey shopProfile,
+        string targetSlotId,
+        string originSlotKey,
+        string displayName,
+        string role,
+        string[] services,
+        DaggerfallNpcAppearance appearance,
+        string? familyId,
+        DaggerfallWorldProfileKey? originHomeProfile = null)
+    {
+        if (durableId <= 0 || durableId == DaggerfallActorIdentity.PlayerEntityId)
+            return;
+
+        ActorLedgerEntry? existing = _actorLedger.TryGet(durableId, out ActorLedgerEntry? found) ? found : null;
+        if (existing?.Location?.Kind is ActorLocationKind.Dead or ActorLocationKind.Removed)
+            return;
+
+        DaggerfallNpc? liveNpc = _npcs.TryGet(durableId, out DaggerfallNpc? reg) ? reg : null;
+        ActorOrigin origin = existing?.Origin
+            ?? (isExistingActor && _actors.TryGet(durableId, out ActorState? liveActor)
+                && liveActor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
+                    ? originComp.Origin
+                    : ActorOrigin.Seeded(isExistingActor ? (originHomeProfile ?? liveNpc?.Profile ?? shopProfile) : shopProfile, originSlotKey));
+
+        DaggerfallSiteRecord? destSite = _definitions.Locations.Records.FirstOrDefault(r => r.Id == shopProfile.Site);
+        string destLocation = destSite?.Name ?? liveNpc?.Site.Location ?? existing?.Social?.Location ?? string.Empty;
+        string destBuilding = DaggerfallWorldProfileIds.TryParse(shopProfile.LogicalId, out _, out DaggerfallSiteBuildingId? buildingId)
+            && buildingId is { } b
+            ? $"{b.BlockX}/{b.BlockY}/{b.Index}"
+            : string.Empty;
+
+        ActorSocialDiff? priorSocial = existing?.Social ?? (liveNpc is not null ? ActorSocialDiff.FromNpc(liveNpc) : null);
+        ActorSocialDiff updatedSocial = priorSocial is not null
+            ? priorSocial with
+            {
+                NpcKind = (int)DaggerfallNpcKind.Static,
+                Region = shopProfile.Site.Region,
+                Location = destLocation,
+                Building = destBuilding,
+                ProfileId = shopProfile.LogicalId,
+                Role = role,
+                Services = [.. services],
+                DisplayNameOverride = displayName,
+                Presence = (int)DaggerfallNpcPresence.Active,
+                FamilyId = familyId ?? priorSocial.FamilyId,
+                FamilyIdCleared = false,
+            }
+            : new ActorSocialDiff(
+                NpcKind: (int)DaggerfallNpcKind.Static,
+                StableKey: originSlotKey,
+                Region: shopProfile.Site.Region,
+                Location: destLocation,
+                Building: destBuilding,
+                ProfileId: shopProfile.LogicalId,
+                Race: appearance.Race,
+                Gender: appearance.Gender,
+                BillboardArchive: appearance.BillboardArchive,
+                BillboardRecord: appearance.BillboardRecord,
+                NameSeed: appearance.NameSeed,
+                FactionId: appearance.FactionId,
+                Role: role,
+                Services: [.. services],
+                DisplayNameOverride: displayName,
+                Presence: (int)DaggerfallNpcPresence.Active,
+                FamilyId: familyId);
+
+        if (_actors.TryGet(durableId, out _))
+            UnloadActor(durableId);
+        if (_npcs.TryGet(durableId, out _))
+            _npcs.Unplace(durableId);
+
+        ActorLocationOverride location = ActorLocationOverride.AtSite(
+            shopProfile,
+            pose: null,
+            detached: false,
+            trafficVisitor: false,
+            targetSlotId: targetSlotId);
+        ActorLedgerEntry updatedEntry = existing is not null
+            ? existing with { Origin = origin, Location = location, Pose = null, Social = updatedSocial }
+            : new ActorLedgerEntry(durableId, origin, Social: updatedSocial, Location: location);
+        _actorLedger.Upsert(updatedEntry);
+
+        DaggerfallSiteProfile activeProfile = _profile();
+        if (activeProfile.ProfileKey == shopProfile)
+            MaterializeRelocatedLedgerActors(activeProfile, _appearance(), Vector3.Zero);
+    }
+
+    /// <summary>
+    /// Ends temporary arrest cover when the original proprietor returns: returns a kin cover back to their home slot
+    /// with their prior role/services restored, or removes a temporary staff cover cleanly so zero duplicate clerks remain.
+    /// </summary>
+    internal void EndTemporaryShopCover(long coverActorId, bool isKinCover, string? restoreRole, string[]? restoreServices)
+    {
+        if (coverActorId <= 0 || coverActorId == DaggerfallActorIdentity.PlayerEntityId)
+            return;
+
+        if (isKinCover)
+        {
+            if (_actorLedger.TryGet(coverActorId, out ActorLedgerEntry? entry) && entry?.Social is { } social)
+            {
+                ActorSocialDiff restoredSocial = social with
+                {
+                    Role = !string.IsNullOrWhiteSpace(restoreRole) ? restoreRole : social.Role,
+                    Services = restoreServices is { Length: > 0 } ? [.. restoreServices] : social.Services,
+                };
+                _actorLedger.Upsert(entry with { Social = restoredSocial });
+            }
+            ReturnPlacedPersonHome(coverActorId);
+            return;
+        }
+
+        if (_actors.TryGet(coverActorId, out _))
+            UnloadActor(coverActorId);
+        if (_npcs.TryGet(coverActorId, out _))
+            _npcs.Unplace(coverActorId);
+        _actorLedger.Remove(coverActorId);
+    }
+
+    /// <summary>
     /// Sends home a cast individual or a seeded person a quest placed elsewhere, now that no quest places it: its
     /// relocation and placed pose are dropped, so its home admits it again on the next visit, and a body standing at
     /// the placement leaves. One that is dead, with the party, on a band, off stage or removed stays as it is.

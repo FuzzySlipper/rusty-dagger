@@ -1217,6 +1217,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Household grudge and blood-feud settlement (exponential wergild, truce mediation, reconciliation service and pardons).</summary>
     internal DaggerfallFeudSettlement FeudSettlement { get; } = null!;
+    internal DaggerfallShopContinuity ShopContinuity { get; } = null!;
 
     /// <summary>The guilds' providers: what a guild's NPC answers to its topics, its welcome and its free passage.</summary>
     internal DaggerfallGuildProviders GuildProviders { get; } = null!;

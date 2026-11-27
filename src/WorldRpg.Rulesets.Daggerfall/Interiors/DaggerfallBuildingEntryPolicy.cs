@@ -16,7 +16,8 @@ internal sealed record DaggerfallBuildingEntryFacts(
     bool ActiveQuestBuilding = false,
     bool GuildHallAccessAnytime = false,
     bool GuildMember = false,
-    bool OwnsShip = false);
+    bool OwnsShip = false,
+    string? ClosedOverrideNotice = null);
 
 /// <summary>Why a closed public building is closed, for the Information-mode notice.</summary>
 internal readonly record struct DaggerfallBuildingClosedNotice(bool GuildHall, int OpensAtHour, int ClosesAtHour);
@@ -98,6 +99,8 @@ internal static class DaggerfallBuildingEntryPolicy
         // A player-owned house is always open, as is a residence an active quest has placed something in.
         if (facts.OwnedByPlayer) return true;
         if (facts.ActiveQuestBuilding && type is >= House1 and <= 22) return true;
+        // Temporary shop/tavern bereavement or vacancy closure holds the exterior door shut regardless of hours.
+        if (!string.IsNullOrWhiteSpace(facts.ClosedOverrideNotice)) return false;
         if (type == GuildHall) return facts.GuildHallAccessAnytime || IsOpenHour(type, facts.Hour);
         // A Thieves Guild or Dark Brotherhood house admits only that guild's members.
         if (type == House2 && facts.FactionId != 0) return facts.GuildMember;

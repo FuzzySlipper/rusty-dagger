@@ -35,7 +35,8 @@ internal sealed class DaggerfallSocialInspection(
     Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, DaggerfallScheduleDecision>? evaluateExteriorSchedule = null,
     Func<DaggerfallSiteId, IReadOnlyList<DaggerfallPopulationPlacement>>? exteriorPlacements = null,
     Func<(DaggerfallWeatherKind Weather, DaggerfallWeatherShelterElapsed Elapsed)>? scheduleWeather = null,
-    DaggerfallFeudSettlement? feudSettlement = null)
+    DaggerfallFeudSettlement? feudSettlement = null,
+    DaggerfallShopContinuity? shopContinuity = null)
     : IDeveloperSocialCommands
 {
     private static readonly (int Group, string Name)[] SocialGroups =
@@ -104,6 +105,7 @@ internal sealed class DaggerfallSocialInspection(
                     DaggerfallFactionReaction reaction = social.ReactionForNpc(npc);
                     w.WriteNumber("reactionTotal", reaction.Value);
                     w.WriteBoolean("inBloodFeud", introductions.IsInBloodFeud(npc, active));
+                    w.WriteBoolean("mourning", socialConsequences.IsActorMourning(actor.DurableId, npc, day));
                 }
                 w.WriteNumber("vouchCount", introductions.ReadVouches(actor.DurableId).Count);
                 w.WriteBoolean("ledgerUntouched", !actorLedger.TryGet(actor.DurableId, out _));
@@ -243,6 +245,28 @@ internal sealed class DaggerfallSocialInspection(
                     if (!string.IsNullOrWhiteSpace(office.CauseDetail)) w.WriteString("causeDetail", office.CauseDetail);
                     if (office.VacancyUntilMinute is long localVacancyUntil) w.WriteNumber("vacancyUntilMinute", localVacancyUntil);
                     if (office.IsRegency) w.WriteBoolean("isRegency", true);
+                    w.WriteEndObject();
+                }
+            }
+            w.WriteEndArray();
+
+            w.WriteStartArray("shopContinuity");
+            if (shopContinuity is not null)
+            {
+                foreach (DaggerfallShopPremisesSnapshot premises in shopContinuity.AllSnapshots())
+                {
+                    if (active is not null && premises.SiteId != active.Id)
+                        continue;
+                    w.WriteStartObject();
+                    w.WriteString("profileLogicalId", premises.ProfileLogicalId);
+                    w.WriteString("state", premises.State.ToString());
+                    w.WriteNumber("originalProprietorId", premises.OriginalProprietorId);
+                    w.WriteString("originalProprietorName", premises.OriginalProprietorName);
+                    if (premises.ClosedUntilDay is int closedUntil) w.WriteNumber("closedUntilDay", closedUntil); else w.WriteNull("closedUntilDay");
+                    if (premises.JailedUntilDay is int jailedUntil) w.WriteNumber("jailedUntilDay", jailedUntil); else w.WriteNull("jailedUntilDay");
+                    if (premises.ReplacementActorId is long repId) w.WriteNumber("replacementActorId", repId); else w.WriteNull("replacementActorId");
+                    if (!string.IsNullOrWhiteSpace(premises.ReplacementName)) w.WriteString("replacementName", premises.ReplacementName); else w.WriteNull("replacementName");
+                    if (!string.IsNullOrWhiteSpace(premises.ReplacementOriginKind)) w.WriteString("replacementOriginKind", premises.ReplacementOriginKind); else w.WriteNull("replacementOriginKind");
                     w.WriteEndObject();
                 }
             }

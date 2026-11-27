@@ -115,6 +115,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<ActorVouchRecord, bool>? _isVouchUsable;
     private readonly Func<long, bool>? _wakeSleepingResident;
     private readonly DaggerfallFeudSettlement? _feudSettlement;
+    private readonly DaggerfallSocialConsequences? _socialConsequences;
+    private readonly DaggerfallShopContinuity? _shopContinuity;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -173,12 +175,16 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         DaggerfallNoticeBounties? noticeBounties = null,
         DaggerfallOfficeAllegiance? officeAllegiance = null,
         Func<long, bool>? wakeSleepingResident = null,
-        DaggerfallFeudSettlement? feudSettlement = null)
+        DaggerfallFeudSettlement? feudSettlement = null,
+        DaggerfallSocialConsequences? socialConsequences = null,
+        DaggerfallShopContinuity? shopContinuity = null)
     {
         _noticeBounties = noticeBounties;
         _officeAllegiance = officeAllegiance;
         _wakeSleepingResident = wakeSleepingResident;
         _feudSettlement = feudSettlement;
+        _socialConsequences = socialConsequences;
+        _shopContinuity = shopContinuity;
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
         _partyHireTopics = partyHireTopics;
@@ -463,6 +469,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             greeting += "\n" + DaggerfallExileDialogue.BuildGreetingLine(npc, exiledHolder, _officeLedger, _officeHolders, _definitions);
         if (_feudSettlement?.BuildGreetingLine(npc, activeSite) is { Length: > 0 } feudGreeting)
             greeting += "\n" + feudGreeting;
+        if (_shopContinuity?.BuildGreetingLine(npc, checked((int)_calendar().DayNumber)) is { Length: > 0 } shopContinuityGreeting)
+            greeting += "\n" + shopContinuityGreeting;
+        else if (_socialConsequences?.BuildMourningGreetingLine(npc, checked((int)_calendar().DayNumber)) is { Length: > 0 } mourningGreeting)
+            greeting += "\n" + mourningGreeting;
         string? scrutinyLine = ResolveGuardScrutinyGreetingLine(npc, activeSite);
         if (!string.IsNullOrWhiteSpace(scrutinyLine)) greeting += "\n" + scrutinyLine;
         if (DaggerfallRoadCourierNews.TryResolveEncounter(npc, _actorLedger, _courierDispatches, _definitions, _findSite) is { } roadEncounter
@@ -1127,6 +1137,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
         if (_officeLedger?.TryGetExile(npc.DurableId) is { } exiledBarkHolder)
             return $"{speaker}: \"{DaggerfallExileDialogue.BuildAmbientBark(exiledBarkHolder)}\"";
+
+        if (_shopContinuity?.BuildAmbientBark(npc, checked((int)_calendar().DayNumber)) is { Length: > 0 } shopContinuityBark)
+            return $"{speaker}: \"{shopContinuityBark}\"";
+        if (_socialConsequences?.BuildMourningAmbientBark(npc, checked((int)_calendar().DayNumber)) is { Length: > 0 } mourningBark)
+            return $"{speaker}: \"{mourningBark}\"";
 
         string? officeBark = ResolveOfficeContinuityAmbientBark(npc, site);
         if (!string.IsNullOrWhiteSpace(officeBark))

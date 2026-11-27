@@ -91,6 +91,8 @@ internal sealed record DaggerfallSavePayload(
     public DaggerfallWordSpreadSave WordSpread { get; init; } = DaggerfallWordSpreadSave.Empty;
     /// <summary>Sparse settlement-local household grudge/goodwill standings; empty when untouched.</summary>
     public DaggerfallLocalHouseholdsSave LocalHouseholds { get; init; } = DaggerfallLocalHouseholdsSave.Empty;
+    /// <summary>Sparse shop bereavement closures, kin inheritances, town replacements, and arrest covers; empty when untouched.</summary>
+    public DaggerfallShopContinuitySave ShopContinuity { get; init; } = DaggerfallShopContinuitySave.Empty;
     /// <summary>Sparse sealed couriers carrying pending board-game actions or warrants; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallCourierDispatchesSave CourierDispatches { get; init; } = DaggerfallCourierDispatchesSave.Empty;
@@ -1213,6 +1215,8 @@ internal sealed record DaggerfallSavePayload(
         WordSpread.Validate();
         ArgumentNullException.ThrowIfNull(LocalHouseholds);
         LocalHouseholds.Validate();
+        ArgumentNullException.ThrowIfNull(ShopContinuity);
+        ShopContinuity.Validate();
         ArgumentNullException.ThrowIfNull(CourierDispatches);
         CourierDispatches.Validate();
         ArgumentNullException.ThrowIfNull(ConditionCounterplay);
