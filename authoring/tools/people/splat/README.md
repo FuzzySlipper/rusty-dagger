@@ -215,7 +215,7 @@ Settings live in `00-brief/npc.json`:
 | `sizes` | The runtime sizes to distil. |
 | `front_only` | No back painting. The orbit's back is H3's own. Patch prefers this to drift from an angled back painting. |
 | `sides` | `["right", "left"]`: side paintings from a four-view sheet (set by `init --from`). `side_guide` also pins them in the orbit. |
-| `rigid_prop` | `Right` or `Left`: a staff painted in that hand, bound wholly to it by `fit_rig.py --rigid-prop`. |
+| `rigid_prop` | `Right` or `Left`: a staff painted in that hand, bound wholly to it by `fit_rig.py --rigid-prop` (or, on a Meshy rig, `prop_weights.py`). Staffs only, floor to head: `prop_weights.py` refuses a one-handed weapon (under half its pick on the hand already; creature-007's scimitar, 012's mace) and the rig keeps Meshy's weights; bind such a weapon after `bound` with `rigid_weapon.py`. |
 | `clips_dir` | The character's own walking/around/idle clip JSONs (e.g. the weapon arm held as painted, `layer_clip.py --hold rig`). |
 | `rigger` | `fit` to fit the target skeleton instead of Meshy's rig (automatic without a Meshy task). |
 | `creature` | `quadruped`, `spider`, `ghost`, `flyer` or `biped` (set by `init --creature`): the creature prompts and no walker steps. |

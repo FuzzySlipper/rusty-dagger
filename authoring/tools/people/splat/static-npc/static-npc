@@ -360,8 +360,12 @@ def rig_walker(n, a):
         # Meshy's weights give a staff's lower shaft to the nearest leg and its head to Head/shoulder: in the walk the staff broke at
         # the knee and its foot stayed on the floor (npc-468, npc-458, 2026-11-26). Put the whole staff on the hand, as fit_rig does.
         tmp = n.scaffold / 'scaffold.noprop.glb'; shutil.move(n.scaffold / 'scaffold.glb', tmp)
-        sh(['blender', '-b', '-P', AP / 'tools/splat-rig/prop_weights.py', '--', tmp, n.scaffold / 'scaffold.glb', '--side', n.cfg['rigid_prop'],
-            '--report', n.scaffold / 'prop_weights.json'], log=log)
+        rc = sh(['blender', '-b', '-P', AP / 'tools/splat-rig/prop_weights.py', '--', tmp, n.scaffold / 'scaffold.glb', '--side', n.cfg['rigid_prop'],
+                 '--report', n.scaffold / 'prop_weights.json'], log=log, check=False)
+        if rc or not (n.scaffold / 'scaffold.glb').exists():   # not a staff (a one-handed weapon: creature-007, 012): keep Meshy's weights
+            shutil.copy(tmp, n.scaffold / 'scaffold.glb')
+            print(f"{n.id}: prop_weights found no staff in the {n.cfg['rigid_prop']} hand (see prop_weights.json); kept Meshy's weights. "
+                  f"Bind a one-handed weapon after bound with asset-pipeline tools/splat-prop/rigid_weapon.py")
     chk = n.ch / '02-guide/wip/check'
     sh(['blender', '-b', '-P', 'authoring/tools/people/splat/scaffold/scaffold_views.py', '--', n.scaffold / 'scaffold.glb', chk], log=log, check=False)
     rep = json.loads((n.scaffold / 'scaffold.json').read_text())
