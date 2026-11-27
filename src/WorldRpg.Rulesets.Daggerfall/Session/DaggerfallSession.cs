@@ -1251,6 +1251,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>Trading with the merchant the player is talking to.</summary>
     internal DaggerfallMerchantTrade MerchantTrade { get; } = null!;
+    internal DaggerfallRetainerExchange RetainerExchange { get; } = null!;
 
     /// <summary>Renting a room at the tavern the player stands in.</summary>
     internal DaggerfallRoomRental RoomRental { get; } = null!;

@@ -2,7 +2,8 @@ import type { ConfirmQuestion } from './confirm.js';
 import { renderItemMaker, renderPotionMaker, renderSpellMaker, renderSummoning } from './crafting.js';
 import { button, type Send } from './host.js';
 import { FOCUSABLE } from './navigation.js';
-import type { DaggerHud, DialogueProjection, MerchantItemProjection, MerchantProjection, SpellbookProjection } from './projection.js';
+import type { DaggerHud, DialogueProjection, MerchantItemProjection, MerchantProjection, RetainerItemProjection, RetainerProjection, SpellbookProjection } from './projection.js';
+import type { Encumbrance } from './inventory.js';
 import { redraw } from './redraw.js';
 import { renderSpellSales, spellAction } from './spells.js';
 import { createStepper } from './stepper.js';
@@ -61,6 +62,7 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
   const trainingSkills = shell.querySelector<HTMLElement>('.dagger-dialogue-training-skills')!;
   const tavernRoot = shell.querySelector<HTMLElement>('.dagger-dialogue-tavern')!;
   const merchantRoot = shell.querySelector<HTMLElement>('.dagger-dialogue-merchant')!;
+  const retainerRoot = shell.querySelector<HTMLElement>('.dagger-dialogue-retainer')!;
   const spellSales = shell.querySelector<HTMLElement>('.dagger-dialogue-spells')!;
   const summoningRoot = shell.querySelector<HTMLElement>('.dagger-dialogue-summoning')!;
   const summoningOffer = shell.querySelector<HTMLDialogElement>('.dagger-daedric-offer')!;
@@ -162,6 +164,7 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
   });
 
   const shop = mountShop(merchantRoot, send, ask);
+  const retainer = mountRetainer(retainerRoot, send);
 
   const recordExchange = (dialogue: DialogueProjection): void => {
     const key = `${dialogue.targetLabel}`;
@@ -231,6 +234,7 @@ export function mountDialogue(shell: HTMLElement, send: Send, ask: (question: Co
         }
       });
       shop.update(dialogue?.merchant ?? null);
+      retainer.update(dialogue?.retainer ?? null, value.inventory?.encumbrance ?? null);
       if (dialogue === null) {
         conversation = null;
         exchanges = [];
@@ -460,6 +464,97 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
           list.append(entry);
         }
         repairs.append(title, list);
+      });
+    },
+  };
+}
+
+/**
+ * Retainer gear exchange on the two-pane transfer layout: the retainer's carried and equipped
+ * items on the left (with Equip / Unequip / Take) and the player's pack on the right (with Give).
+ */
+function mountRetainer(root: HTMLElement, send: Send): { update(value: RetainerProjection | null, encumbrance: Encumbrance | null): void } {
+  const result = document.createElement('p');
+  result.className = 'dagger-retainer-result';
+  result.setAttribute('role', 'status');
+  let current: RetainerProjection | null = null;
+
+  const transfer = mountTransfer(root, {
+    command(_side, key, command, amount) {
+      if (current === null) return;
+      if (command === 'retainer-equip' || command === 'retainer-unequip') {
+        send({ action: command, revision: current.revision, item: key });
+        return;
+      }
+      if (command === 'retainer-give' || command === 'retainer-take') {
+        const list = command === 'retainer-give' ? current.playerItems : current.retainerItems;
+        const item = list.find(row => row.key === key);
+        const isStack = item ? item.maximumQuantity > 1 : key.startsWith('stack:');
+        send(isStack
+          ? { action: command, revision: current.revision, item: key, amount }
+          : { action: command, revision: current.revision, item: key });
+      }
+    },
+  });
+  root.append(result);
+
+  const factsFor = (item: RetainerItemProjection): string => {
+    const equipped = item.equippedSlotLabels && item.equippedSlotLabels.length > 0
+      ? `Equipped: ${item.equippedSlotLabels.join(', ')}`
+      : item.equippedSlots.length > 0
+        ? `Equipped: ${item.equippedSlots.join(', ')}`
+        : null;
+    const weight = item.weightKilograms > 0 ? `${item.weightKilograms.toFixed(item.weightKilograms % 1 === 0 ? 0 : 2)} kg` : null;
+    const value = item.value > 0 ? `${formatNumber(item.value)} gold` : null;
+    const condition = item.maximumCondition > 0 && item.currentCondition < item.maximumCondition
+      ? `condition ${item.currentCondition}/${item.maximumCondition}` : null;
+    return [equipped, weight, value, condition, item.identified ? null : 'unidentified']
+      .filter((part): part is string => part !== null)
+      .join(' · ');
+  };
+
+  const toRow = (item: RetainerItemProjection, commands: TransferRow['commands']): TransferRow => ({
+    key: item.key,
+    label: item.label,
+    icon: item.icon ?? null,
+    iconTint: item.iconTint ?? null,
+    enchanted: item.enchanted === true,
+    quantity: item.maximumQuantity > 1 ? String(item.quantity) : null,
+    maximumQuantity: item.maximumQuantity,
+    facts: factsFor(item),
+    refusal: item.transferRefusal ?? item.equipRefusal ?? null,
+    commands,
+  });
+
+  return {
+    update(value, encumbrance) {
+      current = value;
+      root.hidden = value === null;
+      if (value === null) {
+        result.textContent = '';
+        transfer.update(null);
+        return;
+      }
+      result.textContent = value.result;
+      transfer.update({
+        source: {
+          title: `${value.name} (${value.role})`,
+          empty: `${value.name} carries nothing.`,
+          rows: value.retainerItems.map(item => toRow(item, [
+            ...(item.canEquip ? [{ id: 'retainer-equip', label: 'Equip' }] : []),
+            ...(item.canUnequip ? [{ id: 'retainer-unequip', label: 'Unequip' }] : []),
+            { id: 'retainer-take', label: 'Take', disabled: item.transferRefusal != null, takesAmount: true },
+          ])),
+        },
+        pack: {
+          title: 'Your pack',
+          empty: 'You carry nothing to give.',
+          rows: value.playerItems.map(item => toRow(item, [
+            { id: 'retainer-give', label: 'Give', disabled: item.transferRefusal != null, takesAmount: true },
+          ])),
+        },
+        takeAll: null,
+        encumbrance,
       });
     },
   };

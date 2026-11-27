@@ -249,6 +249,7 @@ export interface DialogueProjection {
   /** The page contact opens on: talk for a person who offers nothing else, otherwise the chooser ('services'). */
   readonly opensOn: 'talk' | 'services';
   readonly merchant?: MerchantProjection | null;
+  readonly retainer?: RetainerProjection | null;
   readonly comprehendLanguagesBonus?: number;
   readonly revision: string;
   readonly targetLabel: string;
@@ -325,6 +326,36 @@ export interface MerchantProjection {
   readonly playerItems: readonly MerchantItemProjection[];
   readonly repairs: readonly { readonly requestId: string; readonly durableItemId: string | number; readonly definition: string; readonly dueMinute: number; readonly ready: boolean;
     readonly label?: string; readonly status?: string }[];
+}
+
+export interface RetainerItemProjection {
+  readonly key: string;
+  readonly label: string;
+  readonly icon?: string | null;
+  readonly iconTint?: ArtTint | null;
+  readonly quantity: string | number;
+  readonly maximumQuantity: number;
+  readonly value: number;
+  readonly weightKilograms: number;
+  readonly currentCondition: number;
+  readonly maximumCondition: number;
+  readonly identified: boolean;
+  readonly enchanted?: boolean;
+  readonly equippedSlots: readonly string[];
+  readonly equippedSlotLabels?: readonly string[];
+  readonly canEquip: boolean;
+  readonly canUnequip: boolean;
+  readonly equipRefusal?: string | null;
+  readonly transferRefusal?: string | null;
+}
+
+export interface RetainerProjection {
+  readonly revision: string;
+  readonly name: string;
+  readonly role: string;
+  readonly result: string;
+  readonly retainerItems: readonly RetainerItemProjection[];
+  readonly playerItems: readonly RetainerItemProjection[];
 }
 
 export interface QuestMessageProjection {

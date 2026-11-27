@@ -121,7 +121,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
         if (racialOverrides.Current?.SuppressInventory == true && action.Kind is
             DaggerfallUiActionKind.InventoryMove or
             DaggerfallUiActionKind.InventoryInspect or DaggerfallUiActionKind.InventoryUse or DaggerfallUiActionKind.InventoryDrop or DaggerfallUiActionKind.InventorySort
-            or DaggerfallUiActionKind.BankOpen)
+            or DaggerfallUiActionKind.BankOpen or DaggerfallUiActionKind.RetainerGive or DaggerfallUiActionKind.RetainerTake)
         {
             presentation.SetOutcome(DaggerfallRacialOverrideView.InventoryRefusal);
             return;
@@ -252,6 +252,10 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.MerchantIdentify:
             case DaggerfallUiActionKind.MerchantShoplift: economy.ChangeMerchant(action); break;
             case DaggerfallUiActionKind.MerchantQuote: economy.QuoteMerchantTrade(action); break;
+            case DaggerfallUiActionKind.RetainerGive:
+            case DaggerfallUiActionKind.RetainerTake:
+            case DaggerfallUiActionKind.RetainerEquip:
+            case DaggerfallUiActionKind.RetainerUnequip: economy.ChangeRetainer(action); break;
             case DaggerfallUiActionKind.TransportSelect:
             case DaggerfallUiActionKind.TransportLeaveShip:
             case DaggerfallUiActionKind.TransportBoardShip: travel.ChangeTransport(action); break;

@@ -59,6 +59,7 @@ internal sealed record DaggerfallDialogueView(
     internal DaggerfallTavernView? Tavern { get; init; }
     internal DaggerfallSkillTrainingProviderView? Training { get; init; }
     internal DaggerfallMerchantView? Merchant { get; init; }
+    internal DaggerfallRetainerView? Retainer { get; init; }
     /// <summary>What the person offers, in the order the person screen's chooser lists it; talk is always first.</summary>
     internal IReadOnlyList<DaggerfallPersonService> Services { get; init; } = DaggerfallPersonServices.TalkOnly;
     /// <summary>The page contact opens on: talk for a person who offers nothing else, otherwise the chooser.</summary>

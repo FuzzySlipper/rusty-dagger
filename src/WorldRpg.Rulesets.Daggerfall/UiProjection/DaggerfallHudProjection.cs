@@ -655,6 +655,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("id", builder.String(service.Id)), ("label", builder.String(service.Label)))).ToArray())),
         ("opensOn", builder.String(dialogue.OpensOn)),
         ("merchant", dialogue.Merchant is null ? builder.Null() : Merchant(builder, dialogue.Merchant)),
+        ("retainer", dialogue.Retainer is null ? builder.Null() : Retainer(builder, dialogue.Retainer)),
         ("greeting", builder.String(dialogue.Greeting)),
         ("comprehendLanguagesBonus", builder.Number(dialogue.ComprehendLanguagesBonus)),
         ("tone", builder.String(dialogue.Tone)),
@@ -825,6 +826,34 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("canIdentify", builder.Boolean(canIdentify)),
         ("repairCost", canRepair && item.RepairCost is ulong repairCost ? builder.String(repairCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()),
         ("identifyCost", canIdentify && item.IdentifyCost is ulong identifyCost ? builder.String(identifyCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()));
+
+    private static uint Retainer(UiValueBuilder builder, DaggerfallRetainerView retainer) => builder.Object(
+        ("revision", builder.String(retainer.Revision)),
+        ("name", builder.String(retainer.Name)),
+        ("role", builder.String(retainer.Role)),
+        ("result", builder.String(retainer.Result)),
+        ("retainerItems", builder.Array(retainer.RetainerItems.Select(item => RetainerItem(builder, item)).ToArray())),
+        ("playerItems", builder.Array(retainer.PlayerItems.Select(item => RetainerItem(builder, item)).ToArray())));
+
+    private static uint RetainerItem(UiValueBuilder builder, DaggerfallRetainerItemView item) => builder.Object(
+        ("key", builder.String(item.Key)),
+        ("label", builder.String(item.Label)),
+        ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
+        ("iconTint", Tint(builder, item.IconTint)),
+        ("quantity", builder.String(item.Quantity.ToString(CultureInfo.InvariantCulture))),
+        ("maximumQuantity", builder.Number(item.Key.StartsWith("stack:", StringComparison.Ordinal) ? checked((long)item.Quantity) : 1)),
+        ("value", builder.Number(item.Value)),
+        ("weightKilograms", builder.Number(item.WeightKilograms)),
+        ("currentCondition", builder.Number(item.CurrentCondition)),
+        ("maximumCondition", builder.Number(item.MaximumCondition)),
+        ("identified", builder.Boolean(item.Identified)),
+        ("enchanted", builder.Boolean(item.Enchanted)),
+        ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
+        ("equippedSlotLabels", builder.Array(item.EquippedSlotLabels.Select(builder.String).ToArray())),
+        ("canEquip", builder.Boolean(item.CanEquip)),
+        ("canUnequip", builder.Boolean(item.CanUnequip)),
+        ("equipRefusal", item.EquipRefusal is null ? builder.Null() : builder.String(item.EquipRefusal)),
+        ("transferRefusal", item.TransferRefusal is null ? builder.Null() : builder.String(item.TransferRefusal)));
 
     private static uint Death(UiValueBuilder builder, DaggerfallDeathView death) => builder.Object(
         ("active", builder.Boolean(death.Active)),

@@ -14,6 +14,7 @@ internal static class DaggerfallPersonServices
     internal const string Chooser = "services";
     internal const string Talk = "talk";
     internal const string Trade = "trade";
+    internal const string Retainer = "retainer";
     internal const string Training = "training";
     internal const string Tavern = "tavern";
     internal const string Spells = "spells";
@@ -25,9 +26,10 @@ internal static class DaggerfallPersonServices
     internal static readonly IReadOnlyList<DaggerfallPersonService> TalkOnly = [new(Talk, "Talk")];
 
     internal static IReadOnlyList<DaggerfallPersonService> For(DaggerfallMerchantView? merchant, bool training, bool tavern,
-        bool spells, bool itemMaker, bool potionMaker, bool spellMaker, bool summoning)
+        bool spells, bool itemMaker, bool potionMaker, bool spellMaker, bool summoning, bool retainer = false)
     {
         List<DaggerfallPersonService> services = [.. TalkOnly];
+        if (retainer) services.Add(new(Retainer, "Gear"));
         if (merchant is not null && TradeLabel(merchant) is { } trade) services.Add(new(Trade, trade));
         if (training) services.Add(new(Training, "Training"));
         if (tavern) services.Add(new(Tavern, "Food and drink"));

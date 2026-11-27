@@ -64,11 +64,12 @@ internal sealed class DaggerfallActivationPanel(DaggerfallActivationPresentation
             Training = training.ReadProvider(dialogue()?.CurrentNpc(page.Revision)),
             Tavern = tavern.ReadAt(dialogue()?.CurrentNpc(page.Revision), building),
             Merchant = economy.ReadCurrentMerchant(),
+            Retainer = economy.ReadCurrentRetainer(),
         }) : null,
     };
 
     // The chooser lists a service exactly when the view its page draws is published: the dialogue's own
-    // trade, training and tavern, and the spellbook's sale, makers and summoning for this person.
+    // trade, retainer gear, training and tavern, and the spellbook's sale, makers and summoning for this person.
     private DaggerfallDialogueView WithServices(DaggerfallDialogueView page) => page with
     {
         Services = DaggerfallPersonServices.For(page.Merchant, page.Training is not null, page.Tavern is not null,
@@ -76,6 +77,7 @@ internal sealed class DaggerfallActivationPanel(DaggerfallActivationPresentation
             counter.Provider(service: "make-magic-items") is not null,
             counter.Provider(service: "make-potions") is not null,
             counter.Provider(service: "make-spells") is not null,
-            counter.Summoner() is not null),
+            counter.Summoner() is not null,
+            retainer: page.Retainer is not null),
     };
 }

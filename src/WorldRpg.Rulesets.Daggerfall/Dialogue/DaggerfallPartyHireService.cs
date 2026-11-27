@@ -223,7 +223,7 @@ internal sealed class DaggerfallPartyHireService
         return npc.Kind == DaggerfallNpcKind.Civilian;
     }
 
-    private bool TryGetStagedHiredRole(long actorId, out ActorPartyRole role)
+    internal bool TryGetStagedHiredRole(long actorId, out ActorPartyRole role)
     {
         if (_actors.TryGet(actorId, out ActorState? live)
             && live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)

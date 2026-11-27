@@ -28,6 +28,7 @@ internal enum DaggerfallUiActionKind
     CharacterLevelAllocate, CharacterLevelCommit,
     ActivationMode, Attack, Loot, WeaponToggle, Menu, TutorialStart, TutorialContinue, TutorialEnd, InputClaimed,
     DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift, MerchantQuote,
+    RetainerGive, RetainerTake, RetainerEquip, RetainerUnequip,
     LegalChoice, CreateItemSelect, CreateItemCancel, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportLeaveShip, TransportBoardShip,
     PropertyBuy, PropertySell, PropertyEnter, PropertyPut, PropertyTake,
@@ -230,6 +231,10 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.MerchantIdentify, "merchant-identify", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MerchantShoplift, "merchant-shoplift", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.MerchantQuote, "merchant-quote", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.RetainerGive, "retainer-give", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.RetainerTake, "retainer-take", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.RetainerEquip, "retainer-equip", DaggerfallUiPhases.Interaction),
+        new(DaggerfallUiActionKind.RetainerUnequip, "retainer-unequip", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportSelect, "transport-select", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TransportBoardShip, "transport-board-ship", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.PropertyBuy, "property-buy", DaggerfallUiPhases.Interaction),
@@ -795,7 +800,7 @@ internal static class DaggerfallUiAction
                             ? new(action, Revision: revision, Topic: topic, Key: key) : null;
                     return fields.SetEquals(["action", "revision", "topic"])
                         && !string.IsNullOrWhiteSpace(revision)
-                        && (ValidDialogueTopic(topic) || topic is "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster")
+                        && (ValidDialogueTopic(topic) || topic is "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "hire-companion" or "hire-driver" or "dismiss-party")
                         ? new(action, Revision: revision, Topic: topic) : null;
                 }
                 case DaggerfallUiActionKind.DialogueClose:
@@ -826,6 +831,27 @@ internal static class DaggerfallUiAction
                     return fields.SetEquals(["action", "revision", "item", "key", "amount"])
                         && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && key is "buy" or "sell" && amount is > 0
                         ? new(action, Revision: revision, Item: item, Key: key, Amount: amount) : null;
+                case DaggerfallUiActionKind.RetainerGive or DaggerfallUiActionKind.RetainerTake:
+                {
+                    bool shape = fields.SetEquals(["action", "revision", "item"])
+                        || fields.SetEquals(["action", "revision", "item", "amount"]);
+                    return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        && (amount is null or > 0)
+                        && (!item.StartsWith("unique:", StringComparison.Ordinal) || (amount is null or 1))
+                        ? new(action, Revision: revision, Item: item, Amount: amount) : null;
+                }
+                case DaggerfallUiActionKind.RetainerEquip:
+                {
+                    bool shape = fields.SetEquals(["action", "revision", "item"])
+                        || fields.SetEquals(["action", "revision", "item", "targetEquipment"]);
+                    return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        && (targetEquipment is null || !string.IsNullOrWhiteSpace(targetEquipment))
+                        ? new(action, Revision: revision, Item: item, TargetEquipment: targetEquipment) : null;
+                }
+                case DaggerfallUiActionKind.RetainerUnequip:
+                    return fields.SetEquals(["action", "revision", "item"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        ? new(action, Revision: revision, Item: item) : null;
                 case DaggerfallUiActionKind.MerchantRepair or DaggerfallUiActionKind.MerchantIdentify:
                     return fields.SetEquals(["action", "revision", "item"])
                         && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)

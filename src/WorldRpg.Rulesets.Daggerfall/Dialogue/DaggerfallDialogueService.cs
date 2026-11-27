@@ -584,6 +584,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             if (_partyHireService is null)
                 return Reject("Party hiring is not available here.");
             DaggerfallPartyHireResult result = _partyHireService(npc, topic);
+            if (result.Accepted && TryReadLiveNpc(npc.DurableId, out _, out DaggerfallDialogueNpc? rebound) && rebound is not null)
+            {
+                session.Actor = rebound.Entity;
+                session.Position = rebound.Position;
+            }
             session.Question = result.Question;
             session.Reply = result.Message;
             session.Diagnostics.Clear();
@@ -2107,7 +2112,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private sealed class TalkSession(long targetId, EntityId actor, WorldPoint position, DaggerfallNpcSite site, string revision, string greeting)
     {
         internal long TargetId { get; } = targetId;
-        internal EntityId Actor { get; } = actor;
+        internal EntityId Actor { get; set; } = actor;
         internal WorldPoint Position { get; set; } = position;
         internal DaggerfallNpcSite Site { get; } = site;
         internal string Revision { get; } = revision;

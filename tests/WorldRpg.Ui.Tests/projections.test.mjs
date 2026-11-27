@@ -6174,3 +6174,182 @@ test('in-world notice board renders posted entries, sends notice-board-take on l
     assert.equal(board.hidden, true);
   } finally { f.dispose(); }
 });
+
+test('retainer gear service page renders two-pane transfer with give, take, equip, unequip and refusals', () => {
+  const f = fixture();
+  try {
+    const retainerProjection = {
+      revision: '12:7:4',
+      name: 'Alden',
+      role: 'Companion',
+      result: '',
+      retainerItems: [
+        {
+          key: 'unique:501',
+          label: 'Steel Broadsword',
+          icon: null,
+          iconTint: null,
+          quantity: '1',
+          maximumQuantity: 1,
+          value: 120,
+          weightKilograms: 2,
+          currentCondition: 250,
+          maximumCondition: 250,
+          identified: true,
+          enchanted: false,
+          equippedSlots: ['right-hand'],
+          equippedSlotLabels: ['Right hand'],
+          canEquip: false,
+          canUnequip: true,
+          equipRefusal: null,
+          transferRefusal: 'Unequip before taking.',
+        },
+        {
+          key: 'unique:502',
+          label: 'Iron Buckler',
+          icon: null,
+          iconTint: null,
+          quantity: '1',
+          maximumQuantity: 1,
+          value: 45,
+          weightKilograms: 1.5,
+          currentCondition: 100,
+          maximumCondition: 100,
+          identified: true,
+          enchanted: false,
+          equippedSlots: [],
+          equippedSlotLabels: [],
+          canEquip: true,
+          canUnequip: false,
+          equipRefusal: null,
+          transferRefusal: null,
+        },
+      ],
+      playerItems: [
+        {
+          key: 'stack:arrows-1',
+          label: 'Arrows',
+          icon: null,
+          iconTint: null,
+          quantity: '12',
+          maximumQuantity: 12,
+          value: 1,
+          weightKilograms: 0.1,
+          currentCondition: 0,
+          maximumCondition: 0,
+          identified: true,
+          enchanted: false,
+          equippedSlots: [],
+          equippedSlotLabels: [],
+          canEquip: false,
+          canUnequip: false,
+          equipRefusal: null,
+          transferRefusal: null,
+        },
+        {
+          key: 'unique:101',
+          label: 'Equipped Sword',
+          icon: null,
+          iconTint: null,
+          quantity: '1',
+          maximumQuantity: 1,
+          value: 80,
+          weightKilograms: 1.5,
+          currentCondition: 100,
+          maximumCondition: 100,
+          identified: true,
+          enchanted: false,
+          equippedSlots: ['right-hand'],
+          equippedSlotLabels: ['Right hand'],
+          canEquip: false,
+          canUnequip: false,
+          equipRefusal: null,
+          transferRefusal: 'Unequip that item before giving it.',
+        },
+      ],
+    };
+
+    f.publish({
+      mode: 'modal',
+      activation: {
+        mode: 'talk',
+        message: 'Talking to Alden.',
+        applied: true,
+        dialogue: {
+          ...offering(['retainer', 'Gear']),
+          revision: '1',
+          targetLabel: 'Alden',
+          greeting: 'Ready when you are.',
+          tone: 'normal',
+          question: null,
+          reply: null,
+          topics: [{ id: 'dismiss-party', label: 'Part ways here', group: 'services' }],
+          diagnostics: [],
+          retainer: retainerProjection,
+        },
+      },
+    });
+
+    f.openService('retainer');
+    const panel = f.root.querySelector('.dagger-dialogue-retainer');
+    assert.equal(panel.hidden, false);
+
+    // Retainer pane shows equipped weapon (Unequip enabled, Take disabled with refusal) and unequipped shield (Equip & Take enabled).
+    const swordRow = panel.querySelector('[data-transfer-item="unique:501"]');
+    assert.ok(swordRow, 'Equipped weapon row rendered');
+    assert.match(swordRow.textContent, /Equipped: Right hand/);
+    assert.match(swordRow.textContent, /Unequip before taking\./);
+    const unequipBtn = swordRow.querySelector('button[data-transfer-command="retainer-unequip"]');
+    const swordTakeBtn = swordRow.querySelector('button[data-transfer-command="retainer-take"]');
+    assert.equal(unequipBtn.disabled, false);
+    assert.equal(swordTakeBtn.disabled, true);
+    unequipBtn.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'retainer-unequip', revision: '12:7:4', item: 'unique:501' });
+
+    const shieldRow = panel.querySelector('[data-transfer-item="unique:502"]');
+    const equipBtn = shieldRow.querySelector('button[data-transfer-command="retainer-equip"]');
+    const shieldTakeBtn = shieldRow.querySelector('button[data-transfer-command="retainer-take"]');
+    assert.equal(equipBtn.disabled, false);
+    assert.equal(shieldTakeBtn.disabled, false);
+    equipBtn.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'retainer-equip', revision: '12:7:4', item: 'unique:502' });
+    shieldTakeBtn.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'retainer-take', revision: '12:7:4', item: 'unique:502' });
+
+    // Player pack pane shows stackable Arrows (Give with amount) and equipped sword (Give disabled with refusal).
+    const arrowRow = panel.querySelector('[data-transfer-item="stack:arrows-1"]');
+    const arrowInput = arrowRow.querySelector('input[type="number"]');
+    assert.ok(arrowInput, 'Stack row has quantity stepper');
+    arrowInput.value = '5';
+    arrowInput.dispatchEvent(new Event('change', { bubbles: true }));
+    arrowRow.querySelector('button[data-transfer-command="retainer-give"]').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'retainer-give', revision: '12:7:4', item: 'stack:arrows-1', amount: 5 });
+
+    const equippedPlayerRow = panel.querySelector('[data-transfer-item="unique:101"]');
+    assert.equal(equippedPlayerRow.querySelector('button[data-transfer-command="retainer-give"]').disabled, true);
+    assert.match(equippedPlayerRow.textContent, /Unequip that item before giving it\./);
+
+    // Status message updates cleanly.
+    f.publish({
+      mode: 'modal',
+      activation: {
+        mode: 'talk',
+        message: 'Gave 5 × Arrows to Alden.',
+        applied: true,
+        dialogue: {
+          ...offering(['retainer', 'Gear']),
+          revision: '1',
+          targetLabel: 'Alden',
+          greeting: 'Ready when you are.',
+          tone: 'normal',
+          question: null,
+          reply: null,
+          topics: [{ id: 'dismiss-party', label: 'Part ways here', group: 'services' }],
+          diagnostics: [],
+          retainer: { ...retainerProjection, revision: '13:8:5', result: 'Gave 5 × Arrows to Alden.' },
+        },
+      },
+    });
+    assert.equal(panel.querySelector('.dagger-retainer-result').textContent, 'Gave 5 × Arrows to Alden.');
+  } finally { f.dispose(); }
+});

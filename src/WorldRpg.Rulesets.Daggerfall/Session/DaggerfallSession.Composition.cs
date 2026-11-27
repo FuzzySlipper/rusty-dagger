@@ -1507,9 +1507,12 @@ internal sealed partial class DaggerfallSession
             _lootActions = new DaggerfallLootActions(_lootUi, _corpseLoot, _groundContainers, _facts, State.Encumbrance, definitions,
                 State.ItemInstances, State.Inventory, State.PlayerControl, State.Quests.ItemClicked, PropertyLoot.Open, PropertyLoot.ObserveTake,
                 Presentation);
+            RetainerExchange = new DaggerfallRetainerExchange(
+                State.Actors, State.ActorInventories, State.Containers, State.Inventory, State.Equipment,
+                State.ItemInstances, questItemExits, State.Encumbrance, definitions, PartyHire, () => _dialogue);
             EconomyPanels = new DaggerfallEconomyPanels(Banking, State.Bank, MerchantTrade, RoomRental, State.Tavern, State.SkillTraining, Holdings,
                 State.Inventory, State.Wagon, _inventoryUi, definitions, () => _dialogue, CurrentInteriorBuilding, TransportAccess, RequestPanel,
-                destination => TryTransitionTo(destination), Presentation);
+                destination => TryTransitionTo(destination), Presentation, RetainerExchange);
             DaggerfallExpeditionPanel travelPanel = _travelPanel = new(Expedition, travelPolicy, this, State.Actors, definitions.BuildingNames.RegionNames,
                 definitions.WorldNames, _atlasTiles, () => _classicArt, State.Transport, State.Wagon, State.Inventory, _inventoryUi,
                 _hud.RequestTravelPlaces, TransportAccess, OpenExpedition, EnterExpedition, BoardPropertyShip, LeavePropertyShip,

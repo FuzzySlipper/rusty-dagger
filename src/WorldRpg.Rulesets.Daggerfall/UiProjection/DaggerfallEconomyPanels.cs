@@ -33,7 +33,7 @@ internal sealed class DaggerfallEconomyPanels(DaggerfallBanking banking, Daggerf
     DaggerfallPropertyHoldings holdings, MechanicsInventoryCoordinator inventory, DaggerfallWagonStorage wagon,
     DaggerfallInventoryPresentation inventoryUi, DaggerfallDefinitions definitions, Func<DaggerfallDialogueService?> dialogue,
     Func<DaggerfallInteriorBuilding?> building, Func<DaggerfallTransportAccessContext> transportAccess, Action<string> requestPanel,
-    Func<DaggerfallWorldProfileKey, bool> enterInterior, PresentationState presentation)
+    Func<DaggerfallWorldProfileKey, bool> enterInterior, PresentationState presentation, DaggerfallRetainerExchange? retainerExchange = null)
 {
     internal void BuyTavernMeal(DaggerfallPlayerUiAction action)
     {
@@ -61,6 +61,40 @@ internal sealed class DaggerfallEconomyPanels(DaggerfallBanking banking, Daggerf
             return row with { Icon = icon, IconTint = tint };
         }
         return view with { Stock = [.. view.Stock.Select(WithIcon)], PlayerItems = [.. view.PlayerItems.Select(WithIcon)] };
+    }
+
+    /// <summary>The hired retainer the player is talking to, each row drawing the icon its item would draw in the pack.</summary>
+    internal DaggerfallRetainerView? ReadCurrentRetainer()
+    {
+        if (retainerExchange?.Read() is not { } view) return null;
+        DaggerfallRetainerItemView WithIcon(DaggerfallRetainerItemView row)
+        {
+            (string? icon, PaperDollTint? tint) = inventoryUi.Icon(definitions.RequireItem(new DaggerfallItemId(row.Definition)), row.IconMetadata);
+            return row with { Icon = icon, IconTint = tint };
+        }
+        return view with
+        {
+            RetainerItems = [.. view.RetainerItems.Select(WithIcon)],
+            PlayerItems = [.. view.PlayerItems.Select(WithIcon)],
+        };
+    }
+
+    internal void ChangeRetainer(DaggerfallPlayerUiAction action)
+    {
+        if (retainerExchange is null)
+        {
+            presentation.SetOutcome("That retainer is no longer available.");
+            return;
+        }
+        string outcome = action.Kind switch
+        {
+            DaggerfallUiActionKind.RetainerGive => retainerExchange.Give(action.Revision, action.Item, action.Amount),
+            DaggerfallUiActionKind.RetainerTake => retainerExchange.Take(action.Revision, action.Item, action.Amount),
+            DaggerfallUiActionKind.RetainerEquip => retainerExchange.Equip(action.Revision, action.Item, action.TargetEquipment),
+            DaggerfallUiActionKind.RetainerUnequip => retainerExchange.Unequip(action.Revision, action.Item),
+            _ => throw new ArgumentException($"'{action.Action}' is not a retainer gear operation.", nameof(action)),
+        };
+        presentation.SetOutcome(outcome);
     }
 
     internal void QuoteMerchantTrade(DaggerfallPlayerUiAction action) =>

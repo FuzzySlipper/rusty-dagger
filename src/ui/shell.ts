@@ -169,6 +169,9 @@ const SHELL_MARKUP = `
         <div class="dagger-dialogue-page" data-page="trade" role="tabpanel" aria-label="Trade" hidden>
           <section class="dagger-dialogue-merchant" aria-label="Merchant services"></section>
         </div>
+        <div class="dagger-dialogue-page" data-page="retainer" role="tabpanel" aria-label="Retainer gear" hidden>
+          <section class="dagger-dialogue-retainer" aria-label="Retainer gear"></section>
+        </div>
         <div class="dagger-dialogue-page" data-page="training" role="tabpanel" aria-label="Training" hidden>
           <section class="dagger-dialogue-training" aria-label="Skill training">
             <h3>Training</h3>
