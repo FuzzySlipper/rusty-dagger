@@ -40,6 +40,15 @@ internal static class DaggerfallBoardConditionWords
         };
     }
 
+    /// <summary>The words of a region under occupation: who took it, and who governs it now.</summary>
+    internal static (string Headline, string Body) Governor(Board board, DaggerfallOccupationSave occupation)
+    {
+        string region = board.Region(occupation.Region).Name, crown = board.Seat(occupation.Seat).Name;
+        return occupation.Governor is { } governor
+            ? ($"{governor} Governs {region}", $"{region} is held by {crown}. {governor} governs it in their name, and their soldiers keep the streets.")
+            : ($"{region} Under Occupation", $"{region} is held by {crown}, whose soldiers keep the streets until a governor is named.");
+    }
+
     /// <summary>The words of <paramref name="region"/> cut off from food for <paramref name="weeks"/> weeks.</summary>
     internal static (string Headline, string Body) CutOff(Region region, int weeks) =>
         ($"Roads Cut: {region.Name} Goes Hungry",

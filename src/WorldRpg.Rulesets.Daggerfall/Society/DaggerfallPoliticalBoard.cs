@@ -15,6 +15,10 @@ internal sealed record DaggerfallPoliticalBoardSave(
     [property: JsonRequired] JsonElement Board,
     [property: JsonRequired] JsonElement RecentTurns)
 {
+    /// <summary>The regions under a conqueror's occupation (#11143).</summary>
+    [JsonRequired]
+    public DaggerfallOccupationSave[] Occupations { get; init; } = [];
+
     internal DaggerfallPoliticalBoardSave Validate()
     {
         if (LastTurnDay % DaggerfallPoliticalBoard.DaysPerWeek != 0)
@@ -23,7 +27,24 @@ internal sealed record DaggerfallPoliticalBoardSave(
             throw new ArgumentException("The political board save holds no board.", nameof(Board));
         if (RecentTurns.ValueKind != JsonValueKind.Array || RecentTurns.GetArrayLength() > DaggerfallPoliticalBoard.RecentTurnsKept)
             throw new ArgumentException($"The political board save must keep a list of at most {DaggerfallPoliticalBoard.RecentTurnsKept} turns.", nameof(RecentTurns));
+        ArgumentNullException.ThrowIfNull(Occupations);
+        foreach (DaggerfallOccupationSave occupation in Occupations) occupation.Validate();
+        if (Occupations.Select(occupation => occupation.Region).Distinct(StringComparer.Ordinal).Count() != Occupations.Length)
+            throw new ArgumentException("The political board save occupies a region twice.", nameof(Occupations));
         return this;
+    }
+}
+
+/// <summary>
+/// A region taken by force (#11143): its board region, the seat that took it, the governor its court seated, if one
+/// could be found, and the day the occupation began. It lasts <see cref="DaggerfallPoliticalBoard.OccupationWeeks"/>.
+/// </summary>
+internal sealed record DaggerfallOccupationSave(string Region, string Seat, string? Governor, long StartedDay)
+{
+    internal void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Region) || string.IsNullOrWhiteSpace(Seat) || Governor is { Length: 0 } || StartedDay < 0)
+            throw new ArgumentException($"The occupation of '{Region}' is malformed.");
     }
 }
 
@@ -61,6 +82,10 @@ internal sealed class DaggerfallPoliticalBoard
     internal const string HostageTreatyTag = "hostage-treaty";
     /// <summary>How many of the latest turns the developer tools can look back over (<see cref="RecentTurns"/>).</summary>
     internal const int RecentTurnsKept = 12;
+    /// <summary>How many weeks a region taken by force stays under occupation (#11143).</summary>
+    internal const int OccupationWeeks = 13;
+    /// <summary>The tag of an occupied region's crackdown.</summary>
+    internal const string OccupationTag = "occupation";
 
     private readonly DaggerfallPoliticalCanon _canon;
     private readonly DaggerfallBoardSeatSet _seats;
@@ -76,6 +101,7 @@ internal sealed class DaggerfallPoliticalBoard
     private readonly Dictionary<int, List<DaggerfallWorldConditionToken>> _tokens = [];
     private readonly Dictionary<string, (string Region, ConditionKind Kind, string? Detail)> _tokenConditions = new(StringComparer.Ordinal);
     private readonly List<TurnTrace> _recentTurns = [];
+    private readonly List<DaggerfallOccupationSave> _occupations = [];
     private long _lastTurnDay;
 
     /// <summary>
@@ -108,6 +134,9 @@ internal sealed class DaggerfallPoliticalBoard
             saved.Validate();
             _board = Board.Load(canon.Setup, canon.Cards, BoardSave.FromJson(saved.Board.GetRawText(), "the political board save"));
             _lastTurnDay = saved.LastTurnDay;
+            foreach (DaggerfallOccupationSave occupation in saved.Occupations)
+                _occupations.Add(_board.HasRegion(occupation.Region) && _board.HasSeat(occupation.Seat) ? occupation
+                    : throw new ArgumentException($"The political board's saved occupation names unknown region '{occupation.Region}' or seat '{occupation.Seat}'.", nameof(saved)));
             foreach (JsonElement turn in saved.RecentTurns.EnumerateArray())
                 _recentTurns.Add(TurnTrace.FromRecordJson(turn.GetRawText(), "the political board's saved turns"));
             for (int index = 0; index < _recentTurns.Count; index++)
@@ -171,7 +200,15 @@ internal sealed class DaggerfallPoliticalBoard
             DelayCouriersOnTheRoad();
             TurnTrace trace = BoardTurn.Play(_board);
             _lastTurnDay += DaysPerWeek;
+            _occupations.RemoveAll(occupation => _lastTurnDay >= occupation.StartedDay + OccupationWeeks * DaysPerWeek);
+            int occupied = _occupations.Count;
             ApplyBoardOfficeChanges(trace, checked((int)_lastTurnDay), _lastTurnDay * MinutesPerDay);
+            foreach (DaggerfallOccupationSave occupation in _occupations.Skip(occupied))
+                if (Town(occupation.Region) is { } town)
+                {
+                    (string headline, string body) = DaggerfallBoardConditionWords.Governor(_board, occupation);
+                    news.Add(new($"governor:{occupation.Region}:{occupation.StartedDay}", headline, body, town, _lastTurnDay * MinutesPerDay, Faction(occupation.Seat)));
+                }
             SendCouriers(trace);
             _recentTurns.Add(trace);
             if (_recentTurns.Count > RecentTurnsKept) _recentTurns.RemoveAt(0);
@@ -187,7 +224,7 @@ internal sealed class DaggerfallPoliticalBoard
     {
         using JsonDocument board = JsonDocument.Parse(_board.Save().ToJson());
         using JsonDocument turns = JsonDocument.Parse($"[{string.Join(',', _recentTurns.Select(trace => trace.ToRecordJson()))}]");
-        return new DaggerfallPoliticalBoardSave(_lastTurnDay, board.RootElement.Clone(), turns.RootElement.Clone());
+        return new DaggerfallPoliticalBoardSave(_lastTurnDay, board.RootElement.Clone(), turns.RootElement.Clone()) { Occupations = [.. _occupations] };
     }
 
     /// <summary>
@@ -443,6 +480,19 @@ internal sealed class DaggerfallPoliticalBoard
                 {
                     SyncBoardSeatHolder(conqueredSeat.SeatId);
                 }
+                // A governor from the conqueror's court takes the seat, and the region is occupied (#11143). Written with
+                // the board's own cause, so the board never hears it back.
+                string? governor = null;
+                if (_board.HasSeat(change.To) && _officeLedger.TrySelectConquestGovernorCandidate(change.To, conquered.CatalogRegion) is { } candidate
+                    && _liege.ProvinceOf(conquered.CatalogRegion) is { } province)
+                    governor = _officeLedger.SetFactionOfficeHolder(province.Id, DaggerfallOfficeKind.Ruler, null, candidate.Cast.Id, null, null,
+                        DaggerfallOfficeChangeCause.CardMove, day, $"governs {conquered.Name} for {victorName}", title: "Governor",
+                        currentMinute: minute).HolderDisplayName;
+                if (_board.HasSeat(change.To))
+                {
+                    _occupations.RemoveAll(occupation => occupation.Region == conquered.Id);
+                    _occupations.Add(new DaggerfallOccupationSave(conquered.Id, change.To, governor, day));
+                }
             }
         }
     }
@@ -546,6 +596,22 @@ internal sealed class DaggerfallPoliticalBoard
                 SubjectTag: CutOffTag,
                 Severity: Math.Clamp(1 + region.CutWeeks / Supply.CutWeeks, DaggerfallWorldConditionToken.MinSeverity, DaggerfallWorldConditionToken.MaxSeverity),
                 StartedDay: Day(_board.Turn - region.CutWeeks + 1),
+                Headline: headline,
+                Body: body).Validate());
+        }
+        // A region taken by force is occupied: the conqueror's watch cracks down, and the notice boards say who governs.
+        foreach (DaggerfallOccupationSave occupation in _occupations)
+        {
+            Region region = _board.Region(occupation.Region);
+            (string headline, string body) = DaggerfallBoardConditionWords.Governor(_board, occupation);
+            Add(region.CatalogRegion, new DaggerfallWorldConditionToken(
+                $"{TokenPrefix}{region.Id}:{OccupationTag}",
+                DaggerfallWorldConditionKind.CrimeCrackdown,
+                Region: region.CatalogRegion,
+                SourceFactionId: Faction(occupation.Seat),
+                SubjectTag: OccupationTag,
+                Severity: 2,
+                StartedDay: checked((int)occupation.StartedDay),
                 Headline: headline,
                 Body: body).Validate());
         }

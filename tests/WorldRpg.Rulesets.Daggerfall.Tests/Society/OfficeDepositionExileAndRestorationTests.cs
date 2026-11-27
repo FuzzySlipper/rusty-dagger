@@ -377,9 +377,11 @@ public sealed class OfficeDepositionExileAndRestorationTests
         politicalBoard.AdvanceToDay(politicalBoard.NextTurnDay, () => []);
 
         Assert.Equal(wayrest.Id, conquerTarget.Allegiance);
-        DaggerfallOfficeChangedNotification conquestEvent = Assert.Single(events,
+        // The lord is deposed, then a governor from Wayrest's court takes the seat (#11143), both by the board's own cause.
+        DaggerfallOfficeChangedNotification conquestEvent = events.First(
             e => e.Region == conquerTarget.CatalogRegion && e.Cause == DaggerfallOfficeChangeCause.CardMove);
         Assert.True(conquestEvent.ChangeKind is DaggerfallOfficeChangeKind.HolderDeposed or DaggerfallOfficeChangeKind.VacancyOpened);
+        Assert.All(events.Where(e => e.Region == conquerTarget.CatalogRegion), e => Assert.Equal(DaggerfallOfficeChangeCause.CardMove, e.Cause));
         Assert.DoesNotContain(board.Queued, n => n is HolderChanged);
 
         // 3. Severe court crisis (HostageTreaty via demand-hostages card on a crown seat) places that seat under
