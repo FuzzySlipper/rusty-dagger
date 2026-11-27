@@ -114,4 +114,5 @@ internal sealed record DaggerfallOfficeChangedNotification(
     string? NewHolderHomeSlotId = null,
     DaggerfallOfficeActorBlueprint? NewHolderBlueprint = null,
     DaggerfallWorldProfileKey? ExileProfileKey = null,
-    DaggerfallOfficeActorBlueprint? PreviousHolderBlueprint = null);
+    DaggerfallOfficeActorBlueprint? PreviousHolderBlueprint = null,
+    bool DisplacesLivingIncumbent = false);

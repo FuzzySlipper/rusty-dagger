@@ -399,10 +399,14 @@ internal sealed class DaggerfallOfficeLedger(
         string? newFamilyId = ResolveActorFamilyId(holderActorId, holderCastId, fallbackFamilyId: null);
         DaggerfallWorldProfileKey? resolvedNewHome = newHolderHomeProfile
             ?? DaggerfallCastHomes.ResolveProfileKey(ResolveCastHome(holderCastId, officeRegion));
-        DaggerfallWorldProfileKey? exileProfile = outgoing.IsAlive && outgoing.ActorId != holderActorId
+        bool displacesLivingIncumbent = outgoing.WasActiveIncumbent
+            && outgoing.IsAlive
+            && outgoing.ActorId is long prevAid
+            && prevAid != holderActorId;
+        DaggerfallWorldProfileKey? exileProfile = displacesLivingIncumbent
             ? ResolveExileDestination(worldSocialSeed(), key, kind, saved.OfficeRegion, saved.OfficeSiteId, officeProfileKey)
             : null;
-        DaggerfallOfficeActorBlueprint? prevBlueprint = outgoing.IsAlive && outgoing.ActorId != holderActorId
+        DaggerfallOfficeActorBlueprint? prevBlueprint = displacesLivingIncumbent
             ? BuildActorBlueprint(outgoing.ActorId, outgoing.CastId, outgoing.DisplayName, outgoing.FamilyId)
             : null;
         DaggerfallOfficeActorBlueprint? resolvedNewBlueprint = newHolderBlueprint
@@ -437,7 +441,8 @@ internal sealed class DaggerfallOfficeLedger(
             NewHolderHomeSlotId: newHolderHomeSlotId,
             NewHolderBlueprint: resolvedNewBlueprint,
             ExileProfileKey: exileProfile,
-            PreviousHolderBlueprint: prevBlueprint));
+            PreviousHolderBlueprint: prevBlueprint,
+            DisplacesLivingIncumbent: displacesLivingIncumbent));
         return saved;
     }
 
@@ -531,13 +536,17 @@ internal sealed class DaggerfallOfficeLedger(
         saved.Validate();
         _overrides[key] = saved;
 
-        DaggerfallOfficeChangeKind changeKind = cause != DaggerfallOfficeChangeCause.Death && outgoing.IsAlive
+        bool displacesLivingIncumbent = cause != DaggerfallOfficeChangeCause.Death
+            && outgoing.WasActiveIncumbent
+            && outgoing.IsAlive
+            && outgoing.ActorId is not null;
+        DaggerfallOfficeChangeKind changeKind = displacesLivingIncumbent
             ? DaggerfallOfficeChangeKind.HolderDeposed
             : DaggerfallOfficeChangeKind.VacancyOpened;
-        DaggerfallWorldProfileKey? exileProfile = changeKind == DaggerfallOfficeChangeKind.HolderDeposed
+        DaggerfallWorldProfileKey? exileProfile = displacesLivingIncumbent
             ? ResolveExileDestination(worldSocialSeed(), key, kind, saved.OfficeRegion, saved.OfficeSiteId, officeProfileKey)
             : null;
-        DaggerfallOfficeActorBlueprint? prevBlueprint = changeKind == DaggerfallOfficeChangeKind.HolderDeposed
+        DaggerfallOfficeActorBlueprint? prevBlueprint = displacesLivingIncumbent
             ? BuildActorBlueprint(outgoing.ActorId, outgoing.CastId, outgoing.DisplayName, outgoing.FamilyId)
             : null;
 
@@ -567,7 +576,8 @@ internal sealed class DaggerfallOfficeLedger(
             VacancyUntilMinute: untilMinute,
             CauseDetail: causeDetail,
             ExileProfileKey: exileProfile,
-            PreviousHolderBlueprint: prevBlueprint));
+            PreviousHolderBlueprint: prevBlueprint,
+            DisplacesLivingIncumbent: displacesLivingIncumbent));
         return saved;
     }
 
@@ -749,10 +759,10 @@ internal sealed class DaggerfallOfficeLedger(
                     ? npc.DisplayName ?? npc.Role
                     : null);
 
+        bool hasPrior = _overrides.TryGetValue(office.OfficeKey, out DaggerfallOfficeOverrideSave? prior);
+        bool wasVacant = hasPrior ? prior!.Vacant : office.IsVacant;
         long? prevActorId = office.HolderActorId
-            ?? (_overrides.TryGetValue(office.OfficeKey, out DaggerfallOfficeOverrideSave? prior)
-                ? prior.HolderActorId ?? prior.PreviousHolderActorId
-                : null);
+            ?? (hasPrior ? prior!.HolderActorId ?? prior.PreviousHolderActorId : null);
         string? prevName = !string.IsNullOrWhiteSpace(office.DisplayName)
             ? office.DisplayName
             : office.PreviousHolderName;
@@ -787,19 +797,21 @@ internal sealed class DaggerfallOfficeLedger(
         saved.Validate();
         _overrides[office.OfficeKey] = saved;
 
+        bool displacesLivingIncumbent = !suppressExile
+            && !wasVacant
+            && prevAlive
+            && prevActorId is long prevId
+            && (vacant ? cause != DaggerfallOfficeChangeCause.Death : prevId != holderActorId);
         DaggerfallOfficeChangeKind changeKind = vacant
-            ? (cause != DaggerfallOfficeChangeCause.Death && prevAlive && !suppressExile
+            ? (displacesLivingIncumbent
                 ? DaggerfallOfficeChangeKind.HolderDeposed
                 : DaggerfallOfficeChangeKind.VacancyOpened)
             : DaggerfallOfficeChangeKind.SuccessorSeated;
         string? newFamilyId = vacant ? null : ResolveActorFamilyId(holderActorId, null, null);
-        bool displaceLivingPrev = !suppressExile && prevAlive && prevActorId != holderActorId
-            && (changeKind == DaggerfallOfficeChangeKind.HolderDeposed
-                || (changeKind == DaggerfallOfficeChangeKind.SuccessorSeated && !vacant));
-        DaggerfallWorldProfileKey? exileProfile = displaceLivingPrev
+        DaggerfallWorldProfileKey? exileProfile = displacesLivingIncumbent
             ? ResolveExileDestination(worldSocialSeed(), office.OfficeKey, office.Kind, office.SiteId.Region, office.SiteId, office.ProfileKey)
             : null;
-        DaggerfallOfficeActorBlueprint? prevBlueprint = displaceLivingPrev
+        DaggerfallOfficeActorBlueprint? prevBlueprint = displacesLivingIncumbent
             ? BuildLocalOfficeHolderBlueprint(office, prevActorId, prevName, prevFamilyId)
             : null;
         DaggerfallOfficeActorBlueprint? resolvedNewBlueprint = !vacant
@@ -835,7 +847,8 @@ internal sealed class DaggerfallOfficeLedger(
             NewHolderHomeSlotId: !vacant ? newHolderHomeSlotId : null,
             NewHolderBlueprint: resolvedNewBlueprint,
             ExileProfileKey: exileProfile,
-            PreviousHolderBlueprint: prevBlueprint));
+            PreviousHolderBlueprint: prevBlueprint,
+            DisplacesLivingIncumbent: displacesLivingIncumbent));
         return saved;
     }
 
@@ -1439,6 +1452,7 @@ internal sealed class DaggerfallOfficeLedger(
         string? DisplayName,
         string? FamilyId,
         bool IsAlive,
+        bool WasActiveIncumbent,
         DaggerfallCastHomeLocation? Home);
 
     private void PublishChange(DaggerfallOfficeChangedNotification notification) =>
@@ -1457,11 +1471,14 @@ internal sealed class DaggerfallOfficeLedger(
         string? name = explicitName;
         string? familyId = null;
         DaggerfallCastHomeLocation? home = null;
+        bool hasPrior = _overrides.TryGetValue(officeKey, out DaggerfallOfficeOverrideSave? prior);
+        bool wasActiveIncumbent = false;
 
-        if (_overrides.TryGetValue(officeKey, out DaggerfallOfficeOverrideSave? prior))
+        if (hasPrior)
         {
-            if (!prior.Vacant)
+            if (!prior!.Vacant)
             {
+                wasActiveIncumbent = true;
                 actorId ??= prior.HolderActorId
                     ?? (!string.IsNullOrWhiteSpace(prior.HolderCastId)
                         ? DaggerfallPeopleSlots.CastIndividualIdentity(prior.HolderCastId)
@@ -1478,16 +1495,22 @@ internal sealed class DaggerfallOfficeLedger(
             }
         }
 
-        if (actorId is null || name is null || castId is null)
+        if (!hasPrior || actorId is null || name is null || castId is null)
         {
             DaggerfallOfficeHolder? current = officeHolders.ResolveOffice(officeFactionId, officeRegion ?? seat?.HomeRegion);
             if (current is { HasLivingHolder: true })
             {
+                if (!hasPrior)
+                    wasActiveIncumbent = true;
                 actorId ??= current.ActorId;
                 castId ??= current.CastId;
                 name ??= current.DisplayName;
                 familyId ??= current.FamilyId;
                 home ??= current.Home;
+            }
+            else if (!hasPrior && explicitActorId is not null)
+            {
+                wasActiveIncumbent = true;
             }
         }
 
@@ -1508,7 +1531,7 @@ internal sealed class DaggerfallOfficeLedger(
         home ??= ResolveCastHome(castId, officeRegion);
         familyId ??= ResolveActorFamilyId(actorId, castId, null);
         bool isAlive = actorId is long id && !officeHolders.IsActorDead(id);
-        return new OutgoingHolderSnapshot(actorId, castId, name, familyId, isAlive, home);
+        return new OutgoingHolderSnapshot(actorId, castId, name, familyId, isAlive, wasActiveIncumbent, home);
     }
 
     private int? ResolveFactionOfficeRegion(int officeFactionId, DaggerfallBoardSeatBinding? seat)
@@ -1613,7 +1636,7 @@ internal sealed class DaggerfallOfficeLedger(
             }
         }
         DaggerfallCastHomeLocation? home = ResolveCastHome(resolvedCastId, officeRegion);
-        OutgoingHolderSnapshot outgoing = new(deadActorId, resolvedCastId, slainName, ResolveActorFamilyId(deadActorId, resolvedCastId, null), false, home);
+        OutgoingHolderSnapshot outgoing = new(deadActorId, resolvedCastId, slainName, ResolveActorFamilyId(deadActorId, resolvedCastId, null), false, true, home);
         (DaggerfallWorldProfileKey? officeProfileKey, string? officeSlotId, DaggerfallSiteId? officeSiteId) =
             ResolveCanonicalFactionOfficeAnchor(officeFactionId, key, officeRegion, outgoing, null);
         string? slainFamilyId = outgoing.FamilyId;

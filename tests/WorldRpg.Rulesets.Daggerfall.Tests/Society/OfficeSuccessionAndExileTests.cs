@@ -294,8 +294,30 @@ public sealed class OfficeSuccessionAndExileTests
         Assert.Equal(ActorLocationKind.AtSite, elevatedEntry!.Location?.Kind);
         Assert.Equal("cast:king-gothryd", elevatedEntry.Location!.TargetSlotId);
         // The elevated Great House CourtFactor's prior local office is now vacant (awaiting its own successor), not duplicated.
-        Assert.Contains(session.OfficeLedger.Overrides, o =>
+        DaggerfallOfficeOverrideSave vacatedCourtFactor = Assert.Single(session.OfficeLedger.Overrides, o =>
             o.Kind == DaggerfallOfficeKind.CourtFactor && o.Vacant && o.PreviousHolderActorId == elevatedRuler.HolderActorId);
+        DaggerfallWorldProfileKey throneProfile = elevatedEntry.Location!.Profile!.Require();
+        long elevatedRulerId = elevatedRuler.HolderActorId!.Value;
+
+        // Save/reload mid-vacancy and let the former CourtFactor vacancy expire -> filling the old CourtFactor post
+        // must seat a new local successor WITHOUT exiling or unseating the newly elevated ruler!
+        using DaggerfallSession restoredAfterElevation = fixture.Restore(session.CaptureSave());
+        long factorExpiryMinutes = vacatedCourtFactor.VacancyUntilMinute!.Value - restoredAfterElevation.Calendar.MinuteNumber + 1;
+        restoredAfterElevation.AdvanceElapsedTime(checked(factorExpiryMinutes * 60L));
+
+        DaggerfallOfficeOverrideSave filledCourtFactor = Assert.Single(restoredAfterElevation.OfficeLedger.Overrides,
+            o => o.OfficeKey == vacatedCourtFactor.OfficeKey);
+        Assert.False(filledCourtFactor.Vacant);
+        Assert.NotNull(filledCourtFactor.HolderActorId);
+        Assert.NotEqual(elevatedRulerId, filledCourtFactor.HolderActorId);
+        Assert.True(restoredAfterElevation.State.ActorLedger.TryGet(filledCourtFactor.HolderActorId!.Value, out ActorLedgerEntry? newFactorEntry));
+        Assert.Equal(ActorLocationKind.AtSite, newFactorEntry!.Location?.Kind);
+        Assert.Equal(vacatedCourtFactor.OfficeSlotId, newFactorEntry.Location!.TargetSlotId);
+
+        Assert.True(restoredAfterElevation.State.ActorLedger.TryGet(elevatedRulerId, out ActorLedgerEntry? stillRulerEntry));
+        Assert.Equal(ActorLocationKind.AtSite, stillRulerEntry!.Location?.Kind);
+        Assert.Equal(throneProfile, stillRulerEntry.Location!.Profile!.Require());
+        Assert.Equal("cast:king-gothryd", stillRulerEntry.Location.TargetSlotId);
 
         // 2. Depose Charing's exterior Watch Captain -> after 24-48h vacancy, promoted exterior deputy takes dynamic/000
         //    with updated Watch Captain role and zero duplicate bodies!
