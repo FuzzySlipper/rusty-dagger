@@ -45,10 +45,11 @@ public sealed record BoardSave(
     }
 }
 
-/// <summary>A seat's changing state: its holder, plan, grudges, resources, court, reserves, boons and cards.</summary>
+/// <summary>A seat's changing state: its holder (and under a regency whom it plays as), plan, grudges, resources, court, reserves, boons and cards.</summary>
 public sealed record SeatSave(
     string Id,
     string Holder,
+    string? PlaysAs,
     Plan? Plan,
     IReadOnlyList<Grudge> Grudges,
     int Coin,

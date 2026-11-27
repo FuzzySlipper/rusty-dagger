@@ -135,7 +135,7 @@ public sealed class Board
         Turn,
         Random.State,
         Leader,
-        [.. Seats.Select(seat => new SeatSave(seat.Id, seat.Holder, seat.Plan, [.. seat.Grudges], seat.Coin, seat.Favour, seat.Force, [.. seat.Court],
+        [.. Seats.Select(seat => new SeatSave(seat.Id, seat.Holder, seat.PlaysAs, seat.Plan, [.. seat.Grudges], seat.Coin, seat.Favour, seat.Force, [.. seat.Court],
             seat.ContestedWeeks, [.. seat.Boons], [.. decks[seat.Id].drawPile.Select(card => card.Id)], [.. decks[seat.Id].hand.Select(card => card.Id)],
             [.. decks[seat.Id].discard.Select(card => card.Id)]))],
         [.. Regions.Select(region => new RegionSave(region.Id, region.Allegiance, region.Control, region.Prosperity, region.Order, region.ContestableFrom,
@@ -171,7 +171,11 @@ public sealed class Board
         if (!save.Regions.Select(region => region.Id).SequenceEqual(setup.Regions.Select(region => region.Id))) problems.Add("its regions are not the setup's");
         foreach (SeatSave seat in save.Seats)
         {
-            if (!setup.Personas.ContainsKey(seat.Holder)) problems.Add($"seat '{seat.Id}' holder '{seat.Holder}' has no persona");
+            if (string.IsNullOrWhiteSpace(seat.Holder)) problems.Add($"seat '{seat.Id}' has no holder");
+            else if (!setup.Personas.ContainsKey(seat.PlaysAs ?? seat.Holder))
+                problems.Add($"seat '{seat.Id}' plays as '{seat.PlaysAs ?? seat.Holder}', who has no persona");
+            else if (seat.PlaysAs is not null && setup.Personas.ContainsKey(seat.Holder))
+                problems.Add($"seat '{seat.Id}' plays as '{seat.PlaysAs}' though its holder '{seat.Holder}' has a persona");
             foreach (string card in seat.DrawPile.Concat(seat.Hand).Concat(seat.Discard).Where(card => !byId.ContainsKey(card)))
                 problems.Add($"seat '{seat.Id}' holds unknown card '{card}'");
         }
@@ -189,6 +193,7 @@ public sealed class Board
             SeatSave saved = seatSaves[seat.Id];
             return new Seat(seat.Id, seat.Name, seat.Kind, saved.Holder, seat.Home, seat.Grants ?? [], seat.Agenda ?? [])
             {
+                PlaysAs = saved.PlaysAs,
                 Coin = saved.Coin,
                 Favour = saved.Favour,
                 Force = saved.Force,
@@ -294,8 +299,6 @@ public sealed class Board
 
     public bool HasRegion(string id) => regionsById.ContainsKey(id);
 
-    public bool HasPersona(string holder) => personas.ContainsKey(holder);
-
     /// <summary>The nudges queued for the next Sunday, in the order they came.</summary>
     public IReadOnlyList<WorldNudge> Queued => queued;
 
@@ -387,20 +390,22 @@ public sealed class Board
     /// <summary>The war <paramref name="a"/> and <paramref name="b"/> fight as its principals, if any.</summary>
     public War? WarBetween(string a, string b) => wars.FirstOrDefault(war => war.Principal(a) && war.Principal(b));
 
-    /// <summary>The persona of the cast individual holding <paramref name="seat"/> now.</summary>
-    public Persona Persona(Seat seat) => personas[seat.Holder];
+    /// <summary>The persona playing <paramref name="seat"/> now: its holder's, or under a regency its predecessor's.</summary>
+    public Persona Persona(Seat seat) => personas[seat.PlaysAs ?? seat.Holder];
 
     /// <summary>
-    /// Gives <paramref name="seat"/> to <paramref name="holder"/>, whose persona then plays it; the seat keeps its hand,
-    /// pieces, plan and grudges.
+    /// Gives <paramref name="seat"/> to <paramref name="holder"/>; the seat keeps its hand, pieces, plan and grudges.
+    /// A holder with a persona plays it. One without, such as a successor no persona is written for yet, or no one while
+    /// the seat stands vacant, keeps the persona that played the seat before, as a regency.
     /// </summary>
     public void SetHolder(Seat seat, string holder)
     {
-        if (!personas.ContainsKey(holder)) throw new ArgumentException($"holder '{holder}' has no persona on this board", nameof(holder));
-        string before = seat.Holder;
+        ArgumentException.ThrowIfNullOrWhiteSpace(holder);
+        (string before, string? playedAs) = (seat.Holder, seat.PlaysAs);
         if (before == holder) return;
         seat.Holder = holder;
-        Undo(() => seat.Holder = before);
+        seat.PlaysAs = personas.ContainsKey(holder) ? null : playedAs ?? before;
+        Undo(() => (seat.Holder, seat.PlaysAs) = (before, playedAs));
         changes.Add(new BoardChange(seat.Id, "holder", before, holder));
     }
 
@@ -1074,6 +1079,12 @@ public enum SeatKind
 public sealed record Seat(string Id, string Name, SeatKind Kind, string Holder, string? Home, IReadOnlyList<SeatGrant> Grants, IReadOnlyList<Goal> Agenda)
 {
     public string Holder { get; internal set; } = Holder;
+
+    /// <summary>
+    /// Under a regency, the predecessor whose persona plays the seat because <see cref="Holder"/> has none of their own;
+    /// otherwise null (<see cref="Board.SetHolder"/>).
+    /// </summary>
+    public string? PlaysAs { get; internal set; }
 
     /// <summary>The plan the seat is committed to, if any.</summary>
     public Plan? Plan { get; internal set; }

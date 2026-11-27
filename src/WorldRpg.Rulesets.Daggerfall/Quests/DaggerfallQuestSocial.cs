@@ -37,10 +37,13 @@ internal sealed partial class DaggerfallQuestInstances
     private Func<int?>? _socialRegion;
     private Action<int>? _admitInvitationGuild;
     private Action<long, int>? _adjustQuestorDisposition;
+    private Action<int, bool, long?>? _factionQuestSettled;
     internal void BindSocial(DaggerfallSocialState social, DaggerfallCrimeState crime, Func<int?> region)
     { _social = social; _crime = crime; _socialRegion = region; }
     internal void BindGuildInvitationAdmission(Action<int> admit) => _admitInvitationGuild = admit;
     internal void BindQuestorDisposition(Action<long, int> adjust) => _adjustQuestorDisposition = adjust;
+    /// <summary>Who hears that a quest given for a faction settled: its faction, whether it succeeded and its questor.</summary>
+    internal void BindFactionQuestSettled(Action<int, bool, long?> settled) => _factionQuestSettled = settled;
 
     bool IDaggerfallQuestTaskLifecycle.SocialAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation)
     {
@@ -87,8 +90,11 @@ internal sealed partial class DaggerfallQuestInstances
     {
         if (instance.FactionSettled) return;
         if (instance.FactionId != 0)
+        {
             (_social ?? throw new InvalidOperationException("Quest retirement requires the canonical social owner."))
                 .ChangeFactionReputation(instance.FactionId, instance.Succeeded == true ? 5 : -2, DaggerfallFactionReputationChange.Propagate);
+            _factionQuestSettled?.Invoke(instance.FactionId, instance.Succeeded == true, instance.QuestorId);
+        }
         if (instance.QuestorId is long questorId && questorId > 0)
             _adjustQuestorDisposition?.Invoke(questorId,
                 instance.Succeeded == true

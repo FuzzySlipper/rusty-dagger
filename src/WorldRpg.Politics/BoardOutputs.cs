@@ -18,13 +18,14 @@ public sealed record RegionFact(
 public sealed record WarFact(string War, string Enemy, WarAim Aim, string Side);
 
 /// <summary>
-/// A seat's standing this week: its holder, its relations with every seat it is not neutral with, the wars it fights,
+/// A seat's standing this week: its holder (and under a regency, whose persona plays it), its relations with every seat it is not neutral with, the wars it fights,
 /// the crowns it feuds with, the truces binding it (other seat to the week the truce ends), whether it leads the table,
 /// whether its reserves are cut off, and the main quest's boons it holds.
 /// </summary>
 public sealed record SeatFact(
     string Seat,
     string Holder,
+    string? PlaysAs,
     IReadOnlyDictionary<string, int> Relations,
     IReadOnlyList<WarFact> Wars,
     IReadOnlyList<string> Feuds,
@@ -112,6 +113,7 @@ public sealed record BoardOutputs(
     private static SeatFact Fact(Board board, Seat seat) => new(
         seat.Id,
         seat.Holder,
+        seat.PlaysAs,
         new SortedDictionary<string, int>(board.Seats.Where(other => other != seat && board.Relation(seat.Id, other.Id) != 0)
             .ToDictionary(other => other.Id, other => board.Relation(seat.Id, other.Id)), StringComparer.Ordinal),
         [.. board.Wars.Where(war => war.Fights(seat.Id)).Select(war => new WarFact(war.Id, war.Enemy(war.Side(seat.Id)!), war.Aim, war.Side(seat.Id)!))],

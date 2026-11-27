@@ -14,8 +14,24 @@ public sealed class PoliticalBoardTests
 
     private static DaggerfallPoliticalCanon Canon => TestPayload.Definitions.PoliticalCanon!;
 
-    private static DaggerfallPoliticalBoard NewBoard(DaggerfallWorldConditions conditions, long day = Wednesday, DaggerfallPoliticalBoardSave? saved = null) =>
-        new(Canon, TestPayload.Definitions.BoardSeats, conditions, TestPayload.Definitions.Locations.Records, null, day, saved);
+    private static DaggerfallPoliticalBoard NewBoard(DaggerfallWorldConditions conditions, long day = Wednesday, DaggerfallPoliticalBoardSave? saved = null,
+        Func<string, DaggerfallSeatLeaderPersona>? seatPersona = null) =>
+        new(Canon, TestPayload.Definitions.BoardSeats, TestPayload.Definitions.Factions, seatPersona ?? CanonHolder, conditions,
+            TestPayload.Definitions.Locations.Records, null, day, saved);
+
+    /// <summary>The seat held by its canon holder, as the world starts.</summary>
+    private static DaggerfallSeatLeaderPersona CanonHolder(string seat) => Holding(seat, Canon.Setup.Seats.Single(held => held.Id == seat).Holder);
+
+    private static DaggerfallSeatLeaderPersona Holding(string seat, string? cast, bool vacant = false) =>
+        new(seat, seat, $"office:{seat}", DaggerfallOfficeKind.Ruler, 0, cast is null ? null : DaggerfallPeopleSlots.CastIndividualIdentity(cast),
+            cast, null, cast ?? string.Empty, null, vacant, IsOverridden: true);
+
+    private static DaggerfallOfficeChangedNotification Changed(DaggerfallOfficeKind kind, int? officeFaction, DaggerfallSiteId? site = null) =>
+        new("office:changed", kind, DaggerfallOfficeChangeKind.VacancyOpened, DaggerfallOfficeChangeCause.Death, null, site, null, null, officeFaction,
+            null, "Office", null, null, "the late holder", null, false, null, null, null, null, 10, 14_400, null, "was slain");
+
+    private static int FactionOf(string seat) =>
+        TestPayload.Definitions.BoardSeats.TryGetBySeatId(seat, out DaggerfallBoardSeatBinding? binding) ? binding!.OfficeFactionId : throw new ArgumentException(seat);
 
     private static IReadOnlyList<DaggerfallConditionCounterplayRecord> None() => [];
 
@@ -248,6 +264,120 @@ public sealed class PoliticalBoardTests
         Assert.False(session.CourierDispatches.TryGet(ridden.Id, out _));
         // Every courier still on the board's books carries a move still under way.
         Assert.All(session.CourierDispatches.All, courier => Assert.Contains(board.Board.Pending, move => move.Id == courier.DispatchId));
+    }
+
+    /// <summary>
+    /// Patch's Q2: a seat holder dying or replaced in the world gives the seat its new holder at the next Sunday and opens
+    /// a succession. A successor with no persona, or a vacant seat, plays on with the predecessor's persona as a regency.
+    /// </summary>
+    [Fact]
+    public void A_seat_holder_changed_in_the_world_takes_the_seat_at_the_next_sunday_and_one_without_a_persona_rules_as_a_regency()
+    {
+        Dictionary<string, DaggerfallSeatLeaderPersona> world = new(StringComparer.Ordinal);
+        DaggerfallWorldConditions conditions = new();
+        DaggerfallPoliticalBoard board = NewBoard(conditions, seatPersona: seat => world.TryGetValue(seat, out DaggerfallSeatLeaderPersona? held) ? held : CanonHolder(seat));
+
+        // An office change that leaves the seat's holder as it was tells the board nothing.
+        board.ObserveOfficeChanged(Changed(DaggerfallOfficeKind.Ruler, FactionOf("daggerfall")));
+        Assert.Empty(board.Board.Queued);
+
+        world["daggerfall"] = Holding("daggerfall", "lord-bridwell");
+        board.ObserveOfficeChanged(Changed(DaggerfallOfficeKind.Ruler, FactionOf("daggerfall")));
+        board.AdvanceToDay(board.NextTurnDay, None);
+
+        Seat daggerfall = board.Board.Seat("daggerfall");
+        Assert.Equal(("lord-bridwell", "king-gothryd"), (daggerfall.Holder, daggerfall.PlaysAs));
+        Assert.Contains(board.LatestTrace!.Chronicle, arc => arc is { Kind: ArcKind.Succession, Phase: ArcPhase.Peak, Subjects: ["daggerfall"] });
+        Assert.Contains(conditions.ActiveForRegion(board.Board.Region("daggerfall").CatalogRegion, checked((int)board.LastTurnDay)),
+            token => token.Kind == DaggerfallWorldConditionKind.SuccessionCrisis && token.SubjectTag == "daggerfall");
+        // While the world shows its own crisis for the vacant throne, the board's is left out, so it is told once.
+        int home = board.Board.Region("daggerfall").CatalogRegion;
+        conditions.RaiseSuccessionCrisis(DaggerfallOfficeLedger.FactionOfficeKey(FactionOf("daggerfall")), home, FactionOf("daggerfall"), 10);
+        Assert.Single(conditions.ActiveForRegion(home, checked((int)board.LastTurnDay)), token => token.Kind == DaggerfallWorldConditionKind.SuccessionCrisis);
+        conditions.ClearSuccessionCrisis(DaggerfallOfficeLedger.FactionOfficeKey(FactionOf("daggerfall")));
+
+        world["daggerfall"] = Holding("daggerfall", cast: null, vacant: true);
+        board.ObserveOfficeChanged(Changed(DaggerfallOfficeKind.Ruler, FactionOf("daggerfall")));
+        board.AdvanceToDay(board.NextTurnDay, None);
+        Assert.Equal(("vacant:daggerfall", "king-gothryd"), (daggerfall.Holder, daggerfall.PlaysAs));
+    }
+
+    [Fact]
+    public void A_local_office_holder_killed_in_a_regions_chief_town_takes_the_seats_piece_off_that_office()
+    {
+        DaggerfallPoliticalBoard board = NewBoard(new DaggerfallWorldConditions());
+        Region region = board.Board.Region("daggerfall");
+        Assert.Equal("daggerfall", region.Offices[Office.Watch]);
+        DaggerfallSiteRecord town = board.Town(region.Id)!;
+
+        board.ObserveOfficeChanged(Changed(DaggerfallOfficeKind.WatchCaptain, null,
+            TestPayload.Definitions.Locations.Records.First(site => site.Id.Region == town.Id.Region && site.Id != town.Id).Id));
+        Assert.Empty(board.Board.Queued);
+
+        board.ObserveOfficeChanged(Changed(DaggerfallOfficeKind.WatchCaptain, null, town.Id));
+        board.AdvanceToDay(board.NextTurnDay, None);
+
+        NudgeTrace removed = Assert.Single(board.LatestTrace!.Nudges);
+        Assert.Equal(new OfficeHolderRemoved("daggerfall", Office.Watch), removed.Nudge);
+        Assert.Contains(new BoardChange("daggerfall", "office:watch", "daggerfall", "local"), removed.Changes);
+    }
+
+    /// <summary>Patch's Q3: a finished quest for a seat's faction gives it +1 influence in the quest's region, or +1 favour where the board has none.</summary>
+    [Fact]
+    public void A_quest_finished_for_a_seats_faction_gives_it_influence_in_the_quests_region_or_else_favour()
+    {
+        DaggerfallPoliticalBoard board = NewBoard(new DaggerfallWorldConditions());
+        int mages = FactionOf("mages-guild");
+        Region open = board.Board.Regions.First(region => region.InfluenceOf("mages-guild") == 0);
+
+        board.ObserveQuestSettled(mages, succeeded: false, open.CatalogRegion);
+        board.ObserveQuestSettled(0, succeeded: true, open.CatalogRegion);
+        Assert.Empty(board.Board.Queued);
+
+        board.ObserveQuestSettled(mages, succeeded: true, open.CatalogRegion);
+        AssertQuest(Assert.Single(board.Board.Queued), [open.Id], new CardEffect(CardEffectKind.Influence, 1));
+
+        // A quest given by a faction under the seat's counts for the seat; one in a region off the board gives favour.
+        int boardless = Enumerable.Range(0, 62).First(classic => board.Board.Regions.All(held => held.CatalogRegion != classic));
+        int underMages = TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Parent == mages).Id;
+        board.ObserveQuestSettled(underMages, succeeded: true, boardless);
+        AssertQuest(board.Board.Queued[^1], [], new CardEffect(CardEffectKind.Gain, 1, Resource.Favour));
+
+        board.AdvanceToDay(board.NextTurnDay, None);
+        Assert.All(board.LatestTrace!.Nudges, nudge => Assert.Equal(NudgeOutcome.Applied, nudge.Outcome));
+        Assert.Contains(new BoardChange(open.Id, "influence:mages-guild", "0", "1"), board.LatestTrace.Nudges[0].Changes);
+
+        static void AssertQuest(WorldNudge nudge, string[] targets, CardEffect effect)
+        {
+            QuestOutcome quest = Assert.IsType<QuestOutcome>(nudge);
+            Assert.Equal("mages-guild", quest.Seat);
+            Assert.Equal(targets, quest.Targets);
+            Assert.Equal([effect], quest.Effects);
+        }
+    }
+
+    /// <summary>
+    /// The canon table and the world agree on who holds each seat the world names a holder for, so no succession opens by
+    /// itself; a king slain in the world reaches the board, through the ledger's office change, as his successor.
+    /// </summary>
+    [Fact]
+    public void The_world_holds_each_seat_as_the_canon_board_does_and_a_slain_king_reaches_the_board_as_his_successor()
+    {
+        using DaggerfallSession session = FreshSession();
+        DaggerfallPoliticalBoard board = session.PoliticalBoard!;
+        // Where the world names a cast holder (the crowns), it is the board's; the rest the world leaves to the board.
+        Dictionary<string, string?> cast = Canon.Setup.Seats.ToDictionary(seat => seat.Id, seat => session.OfficeLedger.ResolveBoardSeatPersona(seat.Id).HolderCastId);
+        Assert.All(Canon.Setup.Seats, seat => Assert.True(cast[seat.Id] is null || cast[seat.Id] == seat.Holder, $"{seat.Id}: world {cast[seat.Id]}, board {seat.Holder}"));
+        Assert.All(["daggerfall", "wayrest", "sentinel", "orsinium"], crown => Assert.NotNull(cast[crown]));
+
+        long gothryd = DaggerfallPeopleSlots.CastIndividualIdentity("king-gothryd");
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(gothryd, ActorOrigin.Cast("king-gothryd"),
+            Location: ActorLocationOverride.Dead(DaggerfallWorldProfileIds.Exterior(board.Town("daggerfall")!.Id))));
+        session.OfficeLedger.ReactToDeath(gothryd, currentDay: 11);
+
+        HolderChanged change = Assert.IsType<HolderChanged>(Assert.Single(board.Board.Queued));
+        Assert.Equal("daggerfall", change.Seat);
+        Assert.NotEqual("king-gothryd", change.Holder);
     }
 
     private static string Slug(ConditionKind kind) =>

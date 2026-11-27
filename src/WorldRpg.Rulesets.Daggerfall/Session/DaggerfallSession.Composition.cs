@@ -815,6 +815,9 @@ internal sealed partial class DaggerfallSession
                 findSite: id => _site.TryFind(id, out DaggerfallSiteRecord record) ? record : null);
             State.Social.BindActorVouchBonus(Introductions.TrustedVouchReactionBonus);
             State.Quests.BindQuestorDisposition((actorId, delta) => Introductions.AdjustActorDisposition(actorId, delta));
+            // A quest for a seat's faction moves the board a little, in the questor's region (or the player's).
+            State.Quests.BindFactionQuestSettled((factionId, succeeded, questorId) => PoliticalBoard?.ObserveQuestSettled(factionId, succeeded,
+                questorId is long questor && State.Npcs.TryGet(questor, out DaggerfallNpc? npc) ? npc.Site.Region : _site.Region));
             _questTexts = new DaggerfallQuestTextContext(definitions, _site, State.Npcs, State.ItemInstances,
                 item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, _random,
                 faction => State.Social.GuildEligibility(faction) is { IsMember: true } membership
@@ -1089,8 +1092,10 @@ internal sealed partial class DaggerfallSession
             if (saved is not null)
                 ConditionCounterplay.Restore(saved.ConditionCounterplay);
             if (definitions.PoliticalCanon is { } politicalCanon)
-                PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, WorldConditions,
-                    definitions.Locations.Records, CourierDispatches, _time.Calendar.DayNumber, saved?.PoliticalBoard);
+                PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, definitions.Factions,
+                    OfficeLedger.ResolveBoardSeatPersona, WorldConditions, definitions.Locations.Records, CourierDispatches,
+                    _time.Calendar.DayNumber, saved?.PoliticalBoard);
+            OfficeLedger.OfficeChanged += change => PoliticalBoard?.ObserveOfficeChanged(change);
             PartyHire = new DaggerfallPartyHireService(
                 definitions, actors, State.ActorLedger, OverlandParties,
                 () => _sites.Projection.Inputs, CurrentInteriorBuilding,

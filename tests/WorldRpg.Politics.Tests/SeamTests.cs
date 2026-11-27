@@ -155,6 +155,41 @@ public sealed class NudgeTests
         Assert.DoesNotContain(after[..^1].SelectMany(week => week.Chronicle), arc => arc.Kind == ArcKind.Succession);
     }
 
+    /// <summary>
+    /// Patch's regency (#11055): a successor no persona is written for, or no one while the seat stands vacant, keeps
+    /// the seat playing as its predecessor did, through a reload, until a holder with a persona of their own takes it.
+    /// </summary>
+    [Fact]
+    public void A_holder_without_a_persona_plays_on_as_the_predecessor_did_until_one_with_a_persona_takes_the_seat()
+    {
+        BoardSetup setup = TestBoards.TwoCrowns() is var two
+            ? two with { Personas = new Dictionary<string, Persona>(two.Personas) { ["west-heir"] = new(new Dictionary<GoalKind, int> { [GoalKind.Hold] = 3 }) } }
+            : two;
+        Board board = TestBoards.Create(setup);
+        Persona predecessor = board.Persona(board.Seat("west"));
+        board.Queue(new HolderChanged("west", "regent-council"));
+        TurnTrace turn = BoardTurn.Play(board);
+
+        Seat west = board.Seat("west");
+        Assert.Equal(("regent-council", "west-holder"), (west.Holder, west.PlaysAs));
+        Assert.Same(predecessor, board.Persona(west));
+        Assert.Contains(turn.Chronicle, arc => arc is { Kind: ArcKind.Succession, Phase: ArcPhase.Peak, Subjects: ["west"] });
+
+        board.Queue(new HolderChanged("west", "pretender"));
+        TurnTrace named = BoardTurn.Play(board);
+        // The succession under way runs on as one: no second arc opens while it does.
+        Assert.Single(board.Arcs, arc => arc.Kind == ArcKind.Succession);
+        Assert.DoesNotContain(named.Chronicle, arc => arc.Kind == ArcKind.Succession);
+        Board resumed = Board.Load(setup, TestBoards.CardsFor(setup), BoardSave.FromJson(board.Save().ToJson(), "regency save"));
+        Assert.Equal(("pretender", "west-holder"), (resumed.Seat("west").Holder, resumed.Seat("west").PlaysAs));
+        Assert.Equal("west-holder", BoardOutputs.Of(resumed, TestBoards.Cards, BoardTurn.Play(resumed)).Seats.Single(seat => seat.Seat == "west").PlaysAs);
+
+        resumed.Queue(new HolderChanged("west", "west-heir"));
+        BoardTurn.Play(resumed);
+        Assert.Equal(("west-heir", (string?)null), (resumed.Seat("west").Holder, resumed.Seat("west").PlaysAs));
+        Assert.Equal(3, resumed.Persona(resumed.Seat("west")).Weight(GoalKind.Hold));
+    }
+
     [Fact]
     public void A_removed_office_holder_leaves_the_office_to_local_people()
     {
@@ -232,7 +267,7 @@ public sealed class NudgeTests
         Board board = TestBoards.Create(TestBoards.TwoCrowns());
 
         Assert.Contains("unknown seat 'north'", Assert.Throws<ArgumentException>(() => board.Queue(new HolderChanged("north", "west-holder"))).Message);
-        Assert.Contains("no persona", Assert.Throws<ArgumentException>(() => board.Queue(new HolderChanged("west", "stranger"))).Message);
+        Assert.Contains("names no holder", Assert.Throws<ArgumentException>(() => board.Queue(new HolderChanged("west", " "))).Message);
         Assert.Contains("unknown region", Assert.Throws<ArgumentException>(() => board.Queue(new LairCleared("atlantis"))).Message);
         Assert.Contains("needs a region target",
             Assert.Throws<ArgumentException>(() => board.Queue(new QuestOutcome("west", [], [new CardEffect(CardEffectKind.Control, 1)]))).Message);
@@ -256,7 +291,7 @@ public sealed class OutputTests
         Assert.Equal(["turn", "year", "day", "conditions", "regions", "seats", "moves", "chronicle"], Names(outputs));
         Assert.Equal(["region", "catalogRegion", "kind", "detail", "magnitude", "source", "start", "end"], Names(outputs.GetProperty("conditions")[0]));
         Assert.Equal(["region", "catalogRegion", "allegiance", "control", "prosperity", "order", "supply", "offices"], Names(outputs.GetProperty("regions")[1]));
-        Assert.Equal(["seat", "holder", "relations", "wars", "feuds", "truces", "leader", "reservesCut", "boons"], Names(outputs.GetProperty("seats")[0]));
+        Assert.Equal(["seat", "holder", "playsAs", "relations", "wars", "feuds", "truces", "leader", "reservesCut", "boons"], Names(outputs.GetProperty("seats")[0]));
         Assert.Equal(["moveId", "turn", "seat", "card", "targets", "originRegion", "visibility", "outcome", "headlineKey", "pendingUntil", "officeKey"],
             Names(outputs.GetProperty("moves")[0]));
     }

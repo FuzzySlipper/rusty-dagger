@@ -37,6 +37,11 @@ internal sealed record DaggerfallPoliticalBoardSave(
 /// Sunday; one still on the road, or in the player's pack, on the Sunday the move is due delays it a week. Courier
 /// friction is the world's. Once its move has settled the board forgets the dispatch.
 /// </para>
+/// <para>
+/// The board hears the world's office changes and quests (<see cref="ObserveOfficeChanged"/>, <see cref="ObserveQuestSettled"/>):
+/// a seat holder dying or replaced gives the seat its new holder, a local office holder killed in a region's chief town
+/// takes the seat's piece off that office, and a quest finished for a seat's faction gives the seat a little ground.
+/// </para>
 /// </summary>
 internal sealed class DaggerfallPoliticalBoard
 {
@@ -46,6 +51,8 @@ internal sealed class DaggerfallPoliticalBoard
 
     private readonly DaggerfallPoliticalCanon _canon;
     private readonly DaggerfallBoardSeatSet _seats;
+    private readonly DaggerfallFactionsSet _factions;
+    private readonly Func<string, DaggerfallSeatLeaderPersona> _seatPersona;
     private readonly DaggerfallWorldConditions _conditions;
     private readonly Board _board;
     private readonly DaggerfallPoliticalNews _news;
@@ -59,13 +66,17 @@ internal sealed class DaggerfallPoliticalBoard
     /// <summary>
     /// The board for a new game starting on <paramref name="day"/> (<paramref name="saved"/> null), or the board a save
     /// carried. A save made before the board existed starts the canon board on its own day. Without
-    /// <paramref name="couriers"/> slow moves travel unseen.
+    /// <paramref name="couriers"/> slow moves travel unseen. <paramref name="seatPersona"/> is who holds a seat in the world
+    /// now (<see cref="DaggerfallOfficeLedger.ResolveBoardSeatPersona"/>).
     /// </summary>
-    internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallWorldConditions conditions,
-        IReadOnlyList<DaggerfallSiteRecord> sites, DaggerfallCourierDispatches? couriers, long day, DaggerfallPoliticalBoardSave? saved)
+    internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallFactionsSet factions,
+        Func<string, DaggerfallSeatLeaderPersona> seatPersona, DaggerfallWorldConditions conditions, IReadOnlyList<DaggerfallSiteRecord> sites,
+        DaggerfallCourierDispatches? couriers, long day, DaggerfallPoliticalBoardSave? saved)
     {
         _canon = canon;
         _seats = seats;
+        _factions = factions;
+        _seatPersona = seatPersona;
         _conditions = conditions;
         _sites = sites;
         _couriers = couriers;
@@ -134,9 +145,22 @@ internal sealed class DaggerfallPoliticalBoard
         return new DaggerfallPoliticalBoardSave(_lastTurnDay, board.RootElement.Clone());
     }
 
-    /// <summary>The board's tokens on classic region <paramref name="region"/>.</summary>
-    internal IReadOnlyList<DaggerfallWorldConditionToken> TokensFor(int region) =>
-        _tokens.TryGetValue(region, out List<DaggerfallWorldConditionToken>? tokens) ? tokens : [];
+    /// <summary>
+    /// The board's tokens on classic region <paramref name="region"/>. A seat's succession is left out while the world
+    /// shows its own crisis for the seat's office (<see cref="DaggerfallWorldConditions.RaiseSuccessionCrisis"/>), so a
+    /// throne left vacant is told once.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallWorldConditionToken> TokensFor(int region)
+    {
+        if (!_tokens.TryGetValue(region, out List<DaggerfallWorldConditionToken>? tokens)) return [];
+        return tokens.Any(token => token.Kind == DaggerfallWorldConditionKind.SuccessionCrisis && ShownByTheWorld(token))
+            ? [.. tokens.Where(token => token.Kind != DaggerfallWorldConditionKind.SuccessionCrisis || !ShownByTheWorld(token))]
+            : tokens;
+    }
+
+    private bool ShownByTheWorld(DaggerfallWorldConditionToken succession) =>
+        succession.SourceFactionId is int faction
+        && _conditions.Has(DaggerfallWorldConditions.OfficeSuccessionCrisisTokenId(DaggerfallOfficeLedger.FactionOfficeKey(faction)));
 
     /// <summary>
     /// The largest town in board region <paramref name="region"/>'s classic region, where its couriers and news set out:
@@ -155,6 +179,43 @@ internal sealed class DaggerfallPoliticalBoard
             .FirstOrDefault();
         _towns[region] = town;
         return town;
+    }
+
+    /// <summary>
+    /// An office changed hands in the world (<see cref="DaggerfallOfficeLedger.OfficeChanged"/>), heard at the next
+    /// Sunday. A seat's office changing gives the seat its new holder; one with no persona of their own, or no one while
+    /// the office stands vacant, plays on as the predecessor did, as a regency, and a succession opens (Patch's Q2). A
+    /// local office in a region's chief town that a seat holds on the board goes back to local people.
+    /// </summary>
+    internal void ObserveOfficeChanged(DaggerfallOfficeChangedNotification change)
+    {
+        if (change.Kind is DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.MajorSeat)
+        {
+            if (change.OfficeFactionId is not int faction || !_seats.TryGetByFactionId(faction, out DaggerfallBoardSeatBinding? binding)
+                || !_board.HasSeat(binding!.SeatId)) return;
+            string holder = HolderOf(_seatPersona(binding.SeatId));
+            if (holder != _board.Seat(binding.SeatId).Holder) _board.Queue(new HolderChanged(binding.SeatId, holder));
+        }
+        else if (change.OfficeSiteId is { } site && BoardOffice(change.Kind) is { } office)
+        {
+            foreach (Region region in _board.Regions.Where(region => region.Offices.ContainsKey(office) && Town(region.Id)?.Id == site))
+                _board.Queue(new OfficeHolderRemoved(region.Id, office));
+        }
+    }
+
+    /// <summary>
+    /// A quest for <paramref name="factionId"/> settled. One finished for a seat's faction (or a faction under it) gives the
+    /// seat +1 influence in <paramref name="region"/>, or +1 favour where the board has no region there or the seat can
+    /// place no more influence (Patch's Q3). A failed quest moves nothing.
+    /// </summary>
+    internal void ObserveQuestSettled(int factionId, bool succeeded, int? region)
+    {
+        if (!succeeded || SeatOfFaction(factionId) is not { } seat) return;
+        string? boardRegion = region is int catalogRegion ? _board.Regions.FirstOrDefault(held => held.CatalogRegion == catalogRegion)?.Id : null;
+        QuestOutcome influence = new(seat, boardRegion is null ? [] : [boardRegion], [new CardEffect(CardEffectKind.Influence, 1)]);
+        _board.Queue(boardRegion is not null && Nudges.Problem(_board, influence) is null && _board.PiecesLeft(_board.Seat(seat)) > 0
+            ? influence
+            : new QuestOutcome(seat, [], [new CardEffect(CardEffectKind.Gain, 1, Resource.Favour)]));
     }
 
     /// <summary>The day turn <paramref name="turn"/> was played on.</summary>
@@ -293,6 +354,35 @@ internal sealed class DaggerfallPoliticalBoard
     /// <summary>The two seats a war front's or skirmish's detail names (<c>a,b</c>).</summary>
     private static (string? First, string? Second) Pair(string? detail) =>
         detail?.Split(',') is [var first, var second] ? (first, second) : (null, null);
+
+    /// <summary>
+    /// The board's name for whoever holds a seat in the world: the cast individual, else the actor, else the seat's
+    /// vacancy. Only cast individuals the canon names have a persona; anyone else plays as a regency.
+    /// </summary>
+    private static string HolderOf(DaggerfallSeatLeaderPersona persona) =>
+        persona.IsVacant ? $"vacant:{persona.SeatId}"
+            : persona.HolderCastId ?? (persona.HolderActorId is long actor ? $"actor:{actor}" : $"untitled:{persona.SeatId}");
+
+    /// <summary>The board office a local office kind is.</summary>
+    private static Office? BoardOffice(DaggerfallOfficeKind kind) => kind switch
+    {
+        DaggerfallOfficeKind.WatchCaptain => Office.Watch,
+        DaggerfallOfficeKind.CourtFactor => Office.Factor,
+        DaggerfallOfficeKind.TempleHead => Office.Temple,
+        DaggerfallOfficeKind.GuildHallMaster => Office.Hall,
+        _ => null,
+    };
+
+    /// <summary>The seat whose office faction is <paramref name="factionId"/> or one of its parents.</summary>
+    private string? SeatOfFaction(int factionId)
+    {
+        HashSet<int> seen = [];
+        for (int faction = factionId; faction > 0 && seen.Add(faction);
+             faction = _factions.Factions.TryGetValue(faction, out DaggerfallFactionDefinition? definition) ? definition.Parent : 0)
+            if (_seats.TryGetByFactionId(faction, out DaggerfallBoardSeatBinding? binding) && _board.HasSeat(binding!.SeatId))
+                return binding.SeatId;
+        return null;
+    }
 
     /// <summary>The office faction of seat <paramref name="seat"/>, or null for none (the world laid it).</summary>
     private int? Faction(string? seat) =>

@@ -180,7 +180,7 @@ public sealed class IntentionTests
         Assert.Equal(["garrison", "trade-charter"], board.Deck(west).Hand.Select(card => card.Id));
         Assert.Equal(Board.ResourceLimit, west.Coin);
         Assert.Contains(new BoardChange("west", "holder", "west-holder", "west-heir"), board.TakeChanges());
-        Assert.Throws<ArgumentException>(() => board.SetHolder(west, "nobody"));
+        Assert.Throws<ArgumentException>(() => board.SetHolder(west, ""));
     }
 
     [Fact]

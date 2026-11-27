@@ -239,6 +239,9 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         return token;
     }
 
+    /// <summary>Whether a stored (not external) token <paramref name="tokenId"/> is held.</summary>
+    internal bool Has(string tokenId) => _tokens.ContainsKey(tokenId);
+
     /// <summary>Removes an authored/stubbed condition token by id.</summary>
     internal bool Remove(string tokenId)
     {

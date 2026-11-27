@@ -25,7 +25,10 @@ public abstract record WorldNudge;
 /// </summary>
 public sealed record QuestOutcome(string Seat, IReadOnlyList<string> Targets, IReadOnlyList<CardEffect> Effects) : WorldNudge;
 
-/// <summary>The cast individual holding <paramref name="Seat"/> has changed to <paramref name="Holder"/>, who must have a persona.</summary>
+/// <summary>
+/// The cast individual holding <paramref name="Seat"/> has changed to <paramref name="Holder"/>. A holder with no persona
+/// keeps the seat playing as its predecessor did, as a regency (<see cref="Board.SetHolder"/>).
+/// </summary>
 public sealed record HolderChanged(string Seat, string Holder) : WorldNudge;
 
 /// <summary>The seat's holder of <paramref name="Office"/> in <paramref name="Region"/> is gone: local people hold it again.</summary>
@@ -103,7 +106,7 @@ public static class Nudges
         QuestOutcome quest => SeatProblem(board, quest.Seat) ?? EffectsProblem(board, quest.Seat, quest.Targets, quest.Effects),
         MainQuestBoon boon => SeatProblem(board, boon.Seat) ?? (string.IsNullOrWhiteSpace(boon.Boon) ? "names no boon" : null)
             ?? EffectsProblem(board, boon.Seat, boon.Targets, boon.Effects),
-        HolderChanged change => SeatProblem(board, change.Seat) ?? (board.HasPersona(change.Holder) ? null : $"holder '{change.Holder}' has no persona"),
+        HolderChanged change => SeatProblem(board, change.Seat) ?? (string.IsNullOrWhiteSpace(change.Holder) ? "names no holder" : null),
         OfficeHolderRemoved office => RegionProblem(board, office.Region),
         MoveDelivered or MoveIntercepted => null,
         MoveDelayed delayed => delayed.Weeks < 1 ? $"delays move '{delayed.MoveId}' by {delayed.Weeks} weeks" : null,
@@ -126,7 +129,9 @@ public static class Nudges
                 return NudgeOutcome.Applied;
             case HolderChanged change:
                 board.SetHolder(board.Seat(change.Seat), change.Holder);
-                board.OpenSuccession(board.Seat(change.Seat), board.Turn + SuccessionWeeks);
+                // A succession already under way, such as a vacancy whose successor is now named, runs on as one.
+                if (!board.Arcs.Any(arc => arc.Kind == ArcKind.Succession && arc.Subjects[0] == change.Seat))
+                    board.OpenSuccession(board.Seat(change.Seat), board.Turn + SuccessionWeeks);
                 return NudgeOutcome.Applied;
             case OfficeHolderRemoved office:
                 board.SetOffice(board.Region(office.Region), office.Office, null);
