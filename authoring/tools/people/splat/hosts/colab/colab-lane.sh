@@ -11,7 +11,14 @@ C=local/art/generated/people/dagger-characters
 T=$D/$SES.tsv
 first=${1%%:*}
 t0=$(date +%s); echo "== setup $first $(date +%T)" >> $D/$SES.log
-authoring/tools/people/splat/hosts/runpod/setup.sh $first >> $D/$SES.log 2>&1 || { echo "!! setup failed" >> $D/$SES.log; for x in "$@"; do echo "!! ${x#*:} failed at setup" >> $D/${x#*:}-colab.log; done; exit 1; }
+# The first connection creates the runtime and now and then fails with nothing printed (creature-007, 2026-11-27): close the
+# ssh master and try again, three tries in all.
+for try in 1 2 3; do
+  authoring/tools/people/splat/hosts/runpod/setup.sh $first >> $D/$SES.log 2>&1 && break
+  echo "!! setup try $try failed (rc $?) $(date +%T)" >> $D/$SES.log; ssh -O exit $first >> $D/$SES.log 2>&1
+  [ $try = 3 ] && { echo "!! setup failed" >> $D/$SES.log; for x in "$@"; do echo "!! ${x#*:} failed at setup" >> $D/${x#*:}-colab.log; done; exit 1; }
+  timeout 60 tail -f /dev/null
+done
 printf 'setup\t-\t%s\t%s\n' $t0 $(date +%s) >> $T
 one() {
   local host=${1%%:*} id=${1#*:}; local L=$D/$id-colab.log
