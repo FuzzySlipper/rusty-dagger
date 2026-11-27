@@ -510,6 +510,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         peopleRigs()?.Settle();
     }
 
+    internal const float SleepingBedHeightMeters = 0.55f;
+    internal const float SleepingFloorHeightMeters = 0.18f;
+    internal const float SleepingBillboardHeightScale = 0.45f;
+
     /// <summary>Appends this projection's actors; resident identities share its location slot.</summary>
     internal void AppendActorFacts(List<AppearanceFact> facts, ActorsState state, int slot,
         Func<long, DaggerfallPerceptionEffectState>? perception = null, Func<long, bool>? actorActive = null)
@@ -523,23 +527,58 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             ulong id = slot == DaggerfallPresentationObjectIds.ActiveLocationSlot
                 ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
                 : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
+            ActorOverlayComponent? sleepOverlay = !actor.IsDefeated
+                && actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? attachedOverlay)
+                ? attachedOverlay
+                : null;
+            bool sleeping = sleepOverlay?.IsSleeping == true;
+            bool sleepingOnBed = sleeping && sleepOverlay!.SleepingOnBed;
             Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : DrawnLive(visual);
             // A walking person or a cast individual with a stable asset binding drawn through the crowd reads Tier-2 ActorRenderComponent.
             bool crowdVisual = render?.Spec.Kind is ActorVisualKind.SplatCharacter or ActorVisualKind.PartsRig
                 || (render?.Spec.Kind == ActorVisualKind.Billboard && !string.IsNullOrWhiteSpace(render.Spec.CrowdCharacterHint));
-            bool walking = actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander)
+            bool walking = !sleeping
+                && actor.Actor.TryGet<WanderMemoryComponent>(out WanderMemoryComponent? wander)
                 && IWalkerCrowd.Walks(wander.State);
             Appearance? rigged = !actor.IsDefeated && crowdVisual
                 ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, walking) : null;
             chosen = rigged ?? chosen;
             if (chosen is null) continue;
-            // A corpse mesh lies along its creature's heading; a billboard turns to the camera on its own.
-            Quaternion rotation = rigged is not null ? PartsRigFigure.Facing(actor.HeadingYawRadians)
-                : actor.IsDefeated && chosen == visual.CorpseMesh
-                ? Quaternion.CreateFromAxisAngle(Vector3.UnitY, -actor.HeadingYawRadians) : Quaternion.Identity;
-            facts.Add(new AppearanceFact(id, false, 0, new Transform(actor.Position.ToVector(), rotation, chosen == visual.CorpseMesh ? new Vector3(visual.CorpseMeshScale) : Vector3.One), chosen,
+            Transform transform = ComposeActorTransform(actor, rigged is not null, chosen == visual.CorpseMesh,
+                visual.CorpseMeshScale, visual.Sprite.Size.Y, sleeping, sleepingOnBed);
+            facts.Add(new AppearanceFact(id, false, 0, transform, chosen,
                 actorActive?.Invoke(actor.DurableId) != false && (actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true), RenderLayer.Scene));
         }
+    }
+
+    internal static Transform ComposeActorTransform(
+        ActorState actor,
+        bool isRigged,
+        bool isCorpseMesh,
+        float corpseMeshScale,
+        float spriteHeight,
+        bool sleeping,
+        bool sleepingOnBed)
+    {
+        if (sleeping)
+        {
+            // Lay the figure supine along the bed's axis on top of the mattress (or low floor mat when no bed mesh exists).
+            Quaternion bedFacing = PartsRigFigure.Facing(actor.HeadingYawRadians);
+            Quaternion sleepRotation = Quaternion.Normalize(bedFacing * Quaternion.CreateFromAxisAngle(Vector3.UnitX, -MathF.PI * 0.5f));
+            Vector3 bedAxis = ActorHeading.Forward(actor.HeadingYawRadians);
+            float lift = sleepingOnBed ? SleepingBedHeightMeters : SleepingFloorHeightMeters;
+            float recenter = MathF.Max(0f, spriteHeight) * 0.45f;
+            Vector3 sleepPos = actor.Position.ToVector() + (Vector3.UnitY * lift) - (bedAxis * recenter);
+            Vector3 sleepScale = isRigged ? Vector3.One : new Vector3(1f, SleepingBillboardHeightScale, 1f);
+            return new Transform(sleepPos, sleepRotation, sleepScale);
+        }
+
+        // A corpse mesh lies along its creature's heading; a billboard turns to the camera on its own.
+        Quaternion rotation = isRigged ? PartsRigFigure.Facing(actor.HeadingYawRadians)
+            : actor.IsDefeated && isCorpseMesh
+            ? Quaternion.CreateFromAxisAngle(Vector3.UnitY, -actor.HeadingYawRadians) : Quaternion.Identity;
+        Vector3 scale = isCorpseMesh ? new Vector3(corpseMeshScale) : Vector3.One;
+        return new Transform(actor.Position.ToVector(), rotation, scale);
     }
 
     /// <summary>Resident actor reactions without duplicating the active projection's global audio and effects.</summary>
@@ -623,7 +662,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (!actorState.TryGet(visual.EntityId, out ActorState? actor)
                 || visual.Live is null
                 || visual.ActiveState is null
-                || visual.SourceFrameIndices.Count == 0) continue;
+                || visual.SourceFrameIndices.Count == 0
+                || (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? dirOverlay) && dirOverlay.IsSleeping)) continue;
             float dx = viewpoint.X - actor.Position.X;
             float dz = viewpoint.Z - actor.Position.Z;
             if (dx == 0f && dz == 0f) continue;

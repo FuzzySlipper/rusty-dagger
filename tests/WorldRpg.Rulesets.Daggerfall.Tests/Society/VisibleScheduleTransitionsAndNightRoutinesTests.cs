@@ -114,10 +114,20 @@ public sealed class VisibleScheduleTransitionsAndNightRoutinesTests
         Assert.NotNull(actor.Wander.Route);
         Assert.True(actor.Wander.Route![0].HorizontalDistanceTo(doorThreshold) < 0.05f);
 
-        // 3. Step walker to the door: door swings open visibly, walker crosses inside and hides, lock stays intact, door closes behind!
+        // 3. Step walker to the door:
+        //    - First reaches approach threshold outside the door -> opens door, enters CrossingDoor phase,
+        //      restages route to an inside-door point (signedOutward < 0), and stays ACTIVE (no outside pop-out!).
+        //    - Then physically crosses the door plane (signedOutward <= -DoorCrossingThresholdMeters) before hiding.
+        //    - Door swings shut behind the walker without clearing the lock or persisting open on mid-swing save.
+        WorldPoint doorPlane = WorldPoint.From(targetDoor.Position + new Vector3(0f, targetDoor.BoundsMin.Y, 0f));
+        float SignedOutward(WorldPoint p) =>
+            Vector3.Dot(new Vector3(p.X - doorPlane.X, 0f, p.Z - doorPlane.Z), flatNormal);
+
         bool sawDoorOpening = false;
+        bool sawCrossingPhaseWhileActive = false;
         bool checkedMidSwingSave = false;
-        for (ulong step = 1; step <= 20; step++)
+        float lastActiveSignedOutward = float.PositiveInfinity;
+        for (ulong step = 1; step <= 24; step++)
         {
             population.Step(step, 0.5f);
             doors.Advance(0.5);
@@ -133,12 +143,27 @@ public sealed class VisibleScheduleTransitionsAndNightRoutinesTests
                     Assert.True(midSwingSave.IsLocked);
                 }
             }
+            if (stage.Npcs.Require(walkerId).Presence == DaggerfallNpcPresence.Active)
+            {
+                lastActiveSignedOutward = SignedOutward(actor.Position);
+                if (population.IsCrossingDoor(walkerId))
+                {
+                    sawCrossingPhaseWhileActive = true;
+                    Assert.NotNull(actor.Wander.Route);
+                    Assert.True(SignedOutward(actor.Wander.Route![0]) < -0.5f,
+                        $"Expected crossing route target inside doorway (signedOutward < -0.5), got {SignedOutward(actor.Wander.Route![0]):F2}.");
+                }
+            }
         }
 
         Assert.True(sawDoorOpening, "Expected the assigned building's exterior door to visibly open as the walker arrived.");
+        Assert.True(sawCrossingPhaseWhileActive, "Expected retiring walker to remain Active while crossing through the open doorway.");
+        Assert.True(SignedOutward(actor.Position) <= -DaggerfallSourcePopulation.DoorCrossingThresholdMeters,
+            $"Expected retiring walker to physically cross past the door plane before hiding; final signedOutward={SignedOutward(actor.Position):F2}, lastActive={lastActiveSignedOutward:F2}.");
         Assert.Contains(DaggerfallDoorOperationKind.Open, doorSounds);
         Assert.Contains(DaggerfallDoorOperationKind.Close, doorSounds);
         Assert.False(population.IsRetiring(walkerId));
+        Assert.False(population.IsCrossingDoor(walkerId));
         Assert.Equal(DaggerfallNpcPresence.Hidden, stage.Npcs.Require(walkerId).Presence);
         Assert.Equal(DaggerfallDoorMotion.Closed, doors.Read(lockedDoor.Id).Motion);
         Assert.True(doors.Read(lockedDoor.Id).IsLocked, "Resident using their own door must not permanently unlock it for the player.");
@@ -302,6 +327,19 @@ public sealed class VisibleScheduleTransitionsAndNightRoutinesTests
         Assert.True(session.HomeNightRoutine.BedAssignments.TryGetValue(primarySleeper.DurableId, out DaggerfallBedSpot assignedSpot));
         Assert.True(primarySleeper.Position.HorizontalDistanceTo(assignedSpot.Position) < 0.05f);
 
+        // Verify visible sleeping presentation via DaggerfallSiteAppearance.AppendActorFacts (supine bed-aligned pose!).
+        ulong primaryVisualId = DaggerfallPresentationObjectIds.Gameplay(primarySleeper.DurableId, "Actor");
+        List<AppearanceFact> sleepingFacts = [];
+        session.Sites.Projection.Appearance.AppendActorFacts(sleepingFacts, session.State.Actors, DaggerfallPresentationObjectIds.ActiveLocationSlot);
+        AppearanceFact sleepFact = Assert.Single(sleepingFacts, f => f.ObjectId == primaryVisualId);
+        Vector3 sleepingUp = Vector3.Transform(Vector3.UnitY, sleepFact.Transform.Rotation);
+        Assert.True(MathF.Abs(Vector3.Dot(sleepingUp, Vector3.UnitY)) < 0.05f,
+            $"Expected sleeping resident to render supine (horizontal), got up vector {sleepingUp}.");
+        float expectedLift = assignedSpot.IsRealBedMesh
+            ? DaggerfallSiteAppearance.SleepingBedHeightMeters
+            : DaggerfallSiteAppearance.SleepingFloorHeightMeters;
+        Assert.Equal(primarySleeper.Position.Y + expectedLift, sleepFact.Transform.Translation.Y, precision: 3);
+
         // Untouched sleeping residents must write ZERO save bytes!
         DaggerfallSavePayload nightSave = DaggerfallSavePayload.Read(session.CaptureSave());
         foreach (ActorState sleeper in sleepingResidents)
@@ -331,6 +369,16 @@ public sealed class VisibleScheduleTransitionsAndNightRoutinesTests
         Assert.False(primarySleeper.Actor.Get<ActorOverlayComponent>().IsSleeping);
         Assert.True(primarySleeper.Actor.Get<ActorOverlayComponent>().AwakenedByIntruder);
         Assert.Contains(session.Presentation.Messages, m => m.Contains("Get out of my house", StringComparison.OrdinalIgnoreCase));
+
+        // Verify waking immediately restores upright presentation transform in AppendActorFacts!
+        List<AppearanceFact> awakeFacts = [];
+        session.Sites.Projection.Appearance.AppendActorFacts(awakeFacts, session.State.Actors, DaggerfallPresentationObjectIds.ActiveLocationSlot);
+        AppearanceFact awakeFact = Assert.Single(awakeFacts, f => f.ObjectId == primaryVisualId);
+        Vector3 awakeUp = Vector3.Transform(Vector3.UnitY, awakeFact.Transform.Rotation);
+        Assert.True(Vector3.Dot(awakeUp, Vector3.UnitY) > 0.99f,
+            $"Expected awakened resident to restore upright orientation, got up vector {awakeUp}.");
+        Assert.Equal(primarySleeper.Position.Y, awakeFact.Transform.Translation.Y, precision: 3);
+        Assert.Equal(Vector3.One, awakeFact.Transform.Scale);
 
         Assert.True(session.State.Crime.Incidents.Count > crimesBefore);
         DaggerfallCrimeIncidentSave incident = session.State.Crime.Incidents[^1];
@@ -466,6 +514,83 @@ public sealed class VisibleScheduleTransitionsAndNightRoutinesTests
         Assert.True(sleeper.Actor.Get<ActorOverlayComponent>().AwakenedByIntruder);
         Assert.NotNull(session.ActivationPanel.View.Dialogue);
         Assert.Contains("What are you doing in my home", session.ActivationPanel.View.Dialogue!.Greeting, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Live_session_exterior_retirement_uses_real_civilian_movement_to_approach_doorway_without_popping_out()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfiles profiles = new([exterior]);
+
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, exterior);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
+        spatial.NavigationResult = request =>
+        {
+            Vector3 delta = request.Target - request.From;
+            float dist = delta.Length();
+            float step = MathF.Min(dist, request.MaxStepUnits);
+            Vector3 next = dist > 1e-4f ? request.From + ((delta / dist) * step) : request.Target;
+            PlanarNavCell[] navPath = [new(0, 0, 0), new(1, 0, 0)];
+            return new(navPath, navPath.Select(_ => new NavigationPathEdge(NavigationEdgeKind.Walk)).ToArray(),
+                NavigationPathOutcome.Reached, next, navPath[1], NavigationEdgeKind.Walk, step, 1, 2, 1, 1, 1, false, default, default);
+        };
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSessionComposition composition = new(definitions, exterior, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Sunny);
+        AdvanceToMinuteOfDay(session, 12 * 60);
+
+        // Pick a live non-guard civilian walker in Charing and place the player nearby (within 45m visible transition range).
+        DaggerfallNpc walkerNpc = session.State.Npcs.All.First(n =>
+            DaggerfallCivilians.IsSourcePopulation(n)
+            && n.Presence == DaggerfallNpcPresence.Active
+            && n.Role != "guard"
+            && session.State.Actors.TryGet(n.DurableId, out _));
+        ActorState walker = session.State.Actors.Get(walkerNpc.DurableId);
+        WorldPoint startPos = walker.Position;
+        session.State.PlayerControl.Restore(
+            new WorldPoint(startPos.X + 8f, startPos.Y, startPos.Z + 8f),
+            session.State.PlayerControl.Motion);
+
+        // Trigger settled storm on a live outdoor tick: walker must enter visible retirement with a staged doorway route.
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Thunder);
+        session.ResetScheduleWeatherBaseline();
+        session.Population.Reconcile(immediate: false);
+
+        Assert.True(session.Population.IsRetiring(walker.DurableId));
+        Assert.Equal(DaggerfallNpcPresence.Active, session.State.Npcs.Require(walker.DurableId).Presence);
+        Assert.NotNull(walker.Wander.Route);
+        WorldPoint stagedGoal = walker.Wander.Route![0];
+        float initialGoalDist = startPos.HorizontalDistanceTo(stagedGoal);
+
+        // Advance through real session Population.Step (using real DaggerfallEnemyBehaviorModule.UpdateCivilian + ActorWanderCoordinator)
+        // and real Doors.Advance: confirm real movement advances toward the doorway, opens a door, crosses through, and hides!
+        bool sawMovedCloser = false;
+        bool sawCrossing = false;
+        for (ulong step = 1; step <= 360; step++)
+        {
+            session.Population.Step(step, 0.1f);
+            session.Sites.Projection.Doors.Advance(0.1);
+            if (session.State.Npcs.Require(walker.DurableId).Presence == DaggerfallNpcPresence.Active)
+            {
+                if (walker.Position.HorizontalDistanceTo(stagedGoal) < initialGoalDist - 0.5f)
+                    sawMovedCloser = true;
+                if (session.Population.IsCrossingDoor(walker.DurableId))
+                    sawCrossing = true;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        Assert.True(sawMovedCloser, "Expected real civilian movement to advance toward staged doorway goal.");
+        Assert.True(sawCrossing, "Expected real civilian retirement to enter the through-door crossing phase before hiding.");
+        Assert.Equal(DaggerfallNpcPresence.Hidden, session.State.Npcs.Require(walker.DurableId).Presence);
     }
 
     private static void MoveTowardStagedGoal(ActorState actor, WorldRpg.Kit.Ai.WanderPolicy _, ulong __, float dt)

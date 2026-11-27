@@ -68,6 +68,7 @@ internal sealed class DaggerfallHomeNightRoutine(
             if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
             {
                 overlay.IsSleeping = false;
+                overlay.SleepingOnBed = false;
                 overlay.AwakenedByIntruder = false;
                 overlay.PreSleepPosition = null;
                 overlay.PreSleepHeading = null;
@@ -170,6 +171,7 @@ internal sealed class DaggerfallHomeNightRoutine(
                 overlay.PreSleepHeading ??= resident.HeadingYawRadians;
                 resident.ApplyPose(new ActorPose(spot.Position, spot.HeadingRadians));
                 overlay.IsSleeping = true;
+                overlay.SleepingOnBed = spot.IsRealBedMesh;
                 overlay.AwakenedByIntruder = false;
             }
         }
@@ -237,6 +239,7 @@ internal sealed class DaggerfallHomeNightRoutine(
 
         // Owned house or non-intruder wake: simply wake this resident calmly.
         overlay.IsSleeping = false;
+        overlay.SleepingOnBed = false;
         FaceTarget(resident, playerPos);
         return true;
     }
@@ -296,6 +299,7 @@ internal sealed class DaggerfallHomeNightRoutine(
             if (overlay.IsSleeping && overlay.PreSleepPosition is WorldPoint standPos)
                 resident.ApplyPose(new ActorPose(standPos, overlay.PreSleepHeading ?? resident.HeadingYawRadians));
             overlay.IsSleeping = false;
+            overlay.SleepingOnBed = false;
             overlay.AwakenedByIntruder = false;
             overlay.PreSleepPosition = null;
             overlay.PreSleepHeading = null;
@@ -385,6 +389,7 @@ internal sealed class DaggerfallHomeNightRoutine(
                 FaceTarget(resident, playerPos);
             }
             overlay.IsSleeping = false;
+            overlay.SleepingOnBed = false;
             overlay.AwakenedByIntruder = true;
             _awakenedActors.Add(resident.DurableId);
             awakenedIds.Add(resident.DurableId);

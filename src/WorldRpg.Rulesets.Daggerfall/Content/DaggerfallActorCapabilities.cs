@@ -264,6 +264,8 @@ internal sealed class ActorOverlayComponent
     internal string? StagedPartyRole { get; set; }
     /// <summary>Transient runtime state: resident is currently sleeping in a home bed during night hours (not persisted to ledger).</summary>
     internal bool IsSleeping { get; set; }
+    /// <summary>Transient runtime state: whether the sleeping resident is resting on a real bed 3D mesh (mattress height) vs a fallback floor spot.</summary>
+    internal bool SleepingOnBed { get; set; }
     /// <summary>Transient runtime state: resident was awakened by an intruder inside their residence during night hours.</summary>
     internal bool AwakenedByIntruder { get; set; }
     internal WorldPoint? PreSleepPosition { get; set; }

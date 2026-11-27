@@ -491,8 +491,8 @@ public sealed class DaggerfallScheduleShelterTests
         Assert.NotNull(visibleActor.Wander.Route);
         Assert.Equal(doorway.Position, visibleActor.Wander.Route![0]);
 
-        // 3. Stepping moves the retiring walker toward the doorway; once within RetireDoorArrivalMeters (2.5m), it hides cleanly!
-        for (ulong step = 1; step <= 6; step++)
+        // 3. Stepping moves the retiring walker to the doorway, opens it, and crosses through the doorway before hiding!
+        for (ulong step = 1; step <= 8; step++)
             population.Step(step, 0.5f);
         Assert.False(population.IsRetiring(visibleId));
         Assert.Equal(DaggerfallNpcPresence.Hidden, stage.Npcs.Require(visibleId).Presence);
