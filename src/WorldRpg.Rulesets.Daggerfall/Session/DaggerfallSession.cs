@@ -1175,6 +1175,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>Town public notice board assembling classic sign rumours, bounties, office notices, and condition decrees.</summary>
     internal DaggerfallNoticeBoard NoticeBoard { get; } = null!;
 
+    /// <summary>Transient UI panel for physical in-world town/tavern notice board reading and lead pickup.</summary>
+    internal DaggerfallNoticeBoardPanel NoticeBoardPanel { get; } = null!;
+
     /// <summary>Reads the active town's notice board (null when no site is active).</summary>
     internal DaggerfallTownNoticeBoardView? ReadTownNoticeBoard() =>
         _site.ActiveSite is { } active ? NoticeBoard.BuildForSite(active, _time.Calendar.MinuteNumber) : null;

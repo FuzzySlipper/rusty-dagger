@@ -53,7 +53,8 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
     DaggerfallDetectors detectors, DaggerfallPlayerTime playerTime, LoadingScreen? loading, DaggerfallTutorial tutorial,
     DaggerfallRadialCommands radial, DaggerfallActivation aim, PlayerInputSystem playerInput, Func<DaggerfallArtReplacements?> drawnArt,
     Func<bool> weaponDrawn, Func<bool> holdsWorldOpen, float deadzone, DaggerfallInputReadout readout,
-    Func<IReadOnlyList<DaggerfallPartyPortrait>>? partyPortraits = null)
+    Func<IReadOnlyList<DaggerfallPartyPortrait>>? partyPortraits = null,
+    DaggerfallNoticeBoardPanel? noticeBoardPanel = null)
 {
     /// <summary>The device the player last pressed something on ("keyboard" or "controller"), so the HUD names its bindings for it.</summary>
     internal string InputDevice { get; private set; } = "keyboard";
@@ -107,6 +108,7 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
             Tutorial = tutorial.View,
             Readout = readout.Read(),
             Quit = session.Quit,
+            NoticeBoard = noticeBoardPanel?.Read(),
         });
     }
 

@@ -1169,6 +1169,34 @@ internal static partial class DaggerfallSiteContent
     private static RenderLayer InvalidLayer(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Appearance layer must be scene."); return RenderLayer.Scene; }
 }
 
+/// <summary>Deterministic interactive in-world notice board placed at a town square or tavern entrance.</summary>
+internal sealed record DaggerfallSiteNoticeBoard(
+    string Id,
+    WorldPoint Position,
+    Vector3 SurfaceNormal,
+    string Label,
+    double ReachDistance = 3.0,
+    double SightHeight = 1.15)
+{
+    internal DaggerfallSiteNoticeBoard Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Label);
+        if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
+            throw new ArgumentOutOfRangeException(nameof(Position), $"Notice board '{Id}' position must be finite.");
+        if (!float.IsFinite(SurfaceNormal.X) || !float.IsFinite(SurfaceNormal.Y) || !float.IsFinite(SurfaceNormal.Z)
+            || SurfaceNormal.LengthSquared() < 1e-4f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(SurfaceNormal), $"Notice board '{Id}' surface normal must be non-zero and finite.");
+        }
+        if (!double.IsFinite(ReachDistance) || ReachDistance <= 0d)
+            throw new ArgumentOutOfRangeException(nameof(ReachDistance), $"Notice board '{Id}' reach distance must be positive.");
+        if (!double.IsFinite(SightHeight) || SightHeight < 0d)
+            throw new ArgumentOutOfRangeException(nameof(SightHeight), $"Notice board '{Id}' sight height must be non-negative.");
+        return this;
+    }
+}
+
 /// <summary>The product-wide world media every assembled location draws from.</summary>
 internal sealed record DaggerfallProductMedia(
     IReadOnlyDictionary<int, NormalizedActorSprite> MobileSprites,
@@ -1382,6 +1410,8 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
     internal IReadOnlyList<DaggerfallAmbientZone> AmbientZones { get; init; } = [];
     /// <summary>The city gates an assembled exterior places, which open by day and close at night.</summary>
     internal IReadOnlyList<DaggerfallCityGateDefinition> CityGates { get; init; } = [];
+    /// <summary>Deterministic interactive town/tavern notice boards placed during site assembly.</summary>
+    internal IReadOnlyList<DaggerfallSiteNoticeBoard> NoticeBoards { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteDecoration> Decorations { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteLight> Lights { get; } = Array.AsReadOnly((lights ?? [])
         .Select(light => light.Validate())

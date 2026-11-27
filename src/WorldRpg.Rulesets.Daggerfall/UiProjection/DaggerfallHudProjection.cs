@@ -73,6 +73,8 @@ internal sealed record DaggerfallHudFrame(
     internal DaggerfallInputReadoutView? Readout { get; init; }
     /// <summary>Quit as the menus show it, or null where the product cannot quit.</summary>
     internal DaggerfallQuitView? Quit { get; init; }
+    /// <summary>The open in-world Town Notice Board modal, or null when closed.</summary>
+    internal DaggerfallNoticeBoardUiView? NoticeBoard { get; init; }
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -293,6 +295,25 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("text", builder.String(dungeonText.Text)),
             ("revision", builder.String(dungeonText.Revision.ToString(CultureInfo.InvariantCulture))),
             ("requiresAnswer", builder.Boolean(dungeonText.Kind == DaggerfallDungeonTextActionKind.ShowTextWithInput))))];
+        fields = [.. fields, ("noticeBoard", frame.NoticeBoard is not { } noticeBoard ? builder.Null() : builder.Object(
+            ("revision", builder.String(noticeBoard.Revision)),
+            ("title", builder.String(noticeBoard.Title)),
+            ("townName", builder.String(noticeBoard.TownName)),
+            ("regionName", builder.String(noticeBoard.RegionName)),
+            ("authorityName", noticeBoard.AuthorityName is { } authority ? builder.String(authority) : builder.Null()),
+            ("status", noticeBoard.Status is { } status ? builder.String(status) : builder.Null()),
+            ("entries", builder.Array(noticeBoard.Entries.Select(entry => builder.Object(
+                ("id", builder.String(entry.Id)),
+                ("kind", builder.String(entry.Kind)),
+                ("kindLabel", builder.String(entry.KindLabel)),
+                ("heading", builder.String(entry.Heading)),
+                ("body", builder.String(entry.Body)),
+                ("lead", entry.Lead is not { } lead ? builder.Null() : builder.Object(
+                    ("kind", builder.String(lead.Kind)),
+                    ("actionLabel", builder.String(lead.ActionLabel)),
+                    ("pickedUp", builder.Boolean(lead.PickedUp)),
+                    ("targetSummary", lead.TargetSummary is { } target ? builder.String(target) : builder.Null()),
+                    ("rewardGold", lead.RewardGold is int gold ? builder.Number(gold) : builder.Null()))))).ToArray()))))];
         fields = [.. fields, ("death", death is null ? builder.Null() : Death(builder, death))];
         fields = [.. fields, ("rest", rest is null ? builder.Null() : Rest(builder, rest))];
         fields = [.. fields, ("lodging", lodging is null ? builder.Null() : builder.Object(

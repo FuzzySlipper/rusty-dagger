@@ -47,6 +47,7 @@ internal static class DaggerfallHudText
         DaggerfallActivationTargetKind.Container => "the container",
         DaggerfallActivationTargetKind.Corpse => "the body",
         DaggerfallActivationTargetKind.Item => "the item",
+        DaggerfallActivationTargetKind.NoticeBoard => "the notice board",
         _ => "them",
     };
 

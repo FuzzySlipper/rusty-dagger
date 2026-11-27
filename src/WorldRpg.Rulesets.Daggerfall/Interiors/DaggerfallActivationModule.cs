@@ -17,7 +17,7 @@ internal enum DaggerfallActivationMode { Grab, Info, Talk, Steal, Bash }
 /// policy joins this switch when its real owner lands; an unavailable owner reports that fact and
 /// never pretends an action succeeded.
 /// </remarks>
-internal enum DaggerfallActivationTargetKind { Door, Portal, Container, Npc, Item, Corpse }
+internal enum DaggerfallActivationTargetKind { Door, Portal, Container, Npc, Item, Corpse, NoticeBoard }
 
 /// <summary>One live Daggerfall target contributed by its owning domain.</summary>
 internal readonly record struct DaggerfallActivationTarget(
@@ -56,9 +56,12 @@ internal static class DaggerfallActivationPrompt
         // Information names a static person and opens a conversation with a passer-by; either way it is about them.
         (DaggerfallActivationMode.Info, DaggerfallActivationTargetKind.Npc) => "Ask about",
         (DaggerfallActivationMode.Info, _) => "Examine",
-        // A person is not approached by force, and a door does not answer talk.
+        // A person is not approached by force, a door does not answer talk, and a notice board is only read or examined.
         (DaggerfallActivationMode.Bash, DaggerfallActivationTargetKind.Npc) => null,
+        (DaggerfallActivationMode.Bash, DaggerfallActivationTargetKind.NoticeBoard) => null,
+        (DaggerfallActivationMode.Steal, DaggerfallActivationTargetKind.NoticeBoard) => null,
         (DaggerfallActivationMode.Talk, DaggerfallActivationTargetKind.Door) => null,
+        (DaggerfallActivationMode.Talk, DaggerfallActivationTargetKind.NoticeBoard) => null,
         (DaggerfallActivationMode.Steal, DaggerfallActivationTargetKind.Door) => "Pick the lock of",
         (DaggerfallActivationMode.Steal, DaggerfallActivationTargetKind.Npc) => "Pickpocket",
         (DaggerfallActivationMode.Steal, _) => "Steal from",
@@ -68,6 +71,7 @@ internal static class DaggerfallActivationPrompt
         (_, DaggerfallActivationTargetKind.Portal) => "Go through",
         (_, DaggerfallActivationTargetKind.Corpse) => "Search",
         (_, DaggerfallActivationTargetKind.Item) => "Take",
+        (_, DaggerfallActivationTargetKind.NoticeBoard) => "Read",
         _ => "Open",
     };
 }
@@ -123,6 +127,12 @@ internal interface IDaggerfallCorpseActivationOwner
     DaggerfallActivationOutcome ActivateCorpse(DaggerfallActivationSelection selection);
 }
 
+internal interface IDaggerfallNoticeBoardActivationOwner
+{
+    IEnumerable<DaggerfallActivationTarget> NoticeBoardTargets();
+    DaggerfallActivationOutcome ActivateNoticeBoard(DaggerfallActivationSelection selection);
+}
+
 /// <summary>Explicitly composed activation owners. A missing owner contributes no target and cannot report success.</summary>
 internal sealed class DaggerfallActivationContributions(
     IDaggerfallCorpseActivationOwner corpse,
@@ -130,7 +140,8 @@ internal sealed class DaggerfallActivationContributions(
     IDaggerfallPortalActivationOwner? portal = null,
     IDaggerfallContainerActivationOwner? container = null,
     IDaggerfallNpcActivationOwner? npc = null,
-    IDaggerfallItemActivationOwner? item = null)
+    IDaggerfallItemActivationOwner? item = null,
+    IDaggerfallNoticeBoardActivationOwner? noticeBoard = null)
 {
     private readonly IDaggerfallCorpseActivationOwner _corpse = corpse ?? throw new ArgumentNullException(nameof(corpse));
     private readonly IDaggerfallDoorActivationOwner? _door = door;
@@ -138,6 +149,7 @@ internal sealed class DaggerfallActivationContributions(
     private readonly IDaggerfallContainerActivationOwner? _container = container;
     private readonly IDaggerfallNpcActivationOwner? _npc = npc;
     private readonly IDaggerfallItemActivationOwner? _item = item;
+    private readonly IDaggerfallNoticeBoardActivationOwner? _noticeBoard = noticeBoard;
 
     /// <summary>Every owner's targets; with <paramref name="reach"/>, an owner may leave out targets it could not select.</summary>
     internal IEnumerable<DaggerfallActivationTarget> Targets(DaggerfallActivationMode mode = DaggerfallActivationMode.Grab, DaggerfallActivationReach? reach = null)
@@ -148,6 +160,7 @@ internal sealed class DaggerfallActivationContributions(
         if (_container is not null) foreach (DaggerfallActivationTarget target in _container.ContainerTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Container);
         if (_npc is not null) foreach (DaggerfallActivationTarget target in _npc.NpcTargets(mode)) yield return RequireKind(target, DaggerfallActivationTargetKind.Npc);
         if (_item is not null) foreach (DaggerfallActivationTarget target in _item.ItemTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.Item);
+        if (_noticeBoard is not null) foreach (DaggerfallActivationTarget target in _noticeBoard.NoticeBoardTargets()) yield return RequireKind(target, DaggerfallActivationTargetKind.NoticeBoard);
     }
 
     /// <summary>What activating the selected target would do, worded by its owner; null when use would do nothing.</summary>
@@ -165,6 +178,7 @@ internal sealed class DaggerfallActivationContributions(
         DaggerfallActivationTargetKind.Container when _container is not null => _container.ActivateContainer(selection),
         DaggerfallActivationTargetKind.Npc when _npc is not null => _npc.ActivateNpc(selection),
         DaggerfallActivationTargetKind.Item when _item is not null => _item.ActivateItem(selection),
+        DaggerfallActivationTargetKind.NoticeBoard when _noticeBoard is not null => _noticeBoard.ActivateNoticeBoard(selection),
         _ => new(false, $"{selection.Target.Kind} activation is not available in this session."),
     };
 

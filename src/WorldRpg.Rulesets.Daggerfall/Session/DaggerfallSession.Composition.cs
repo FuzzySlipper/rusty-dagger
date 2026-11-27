@@ -794,10 +794,6 @@ internal sealed partial class DaggerfallSession
                 change,
                 definitions.BuildingNames.RegionName);
             OfficeLedger.OfficeOverrideCleared += WorldConditions.ObserveOfficeOverrideCleared;
-            NoticeBoard = new DaggerfallNoticeBoard(
-                definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
-                () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,
-                wordSpread: WordSpread);
             CourierDispatches = new DaggerfallCourierDispatches(
                 definitions, WordSpread, WorldConditions, State.Social, State.ActorLedger,
                 amount => amount <= 0 || State.Currency.TrySpendCarried((ulong)amount),
@@ -808,6 +804,11 @@ internal sealed partial class DaggerfallSession
                 () => Expedition);
             if (saved is not null)
                 CourierDispatches.Restore(saved.CourierDispatches);
+            NoticeBoard = new DaggerfallNoticeBoard(
+                definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
+                () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,
+                wordSpread: WordSpread,
+                courierDispatches: CourierDispatches);
             Introductions = new DaggerfallIntroductions(
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone,
@@ -889,6 +890,8 @@ internal sealed partial class DaggerfallSession
                     ? WorldPoint.From(_grounding.RestingPosition(at).ToVector() + Vector3.UnitY * _tuning.LooseItems.DropHeight) : null,
                 id => LooseItems.Drop(id, Toss()));
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
+            NoticeBoardPanel = new DaggerfallNoticeBoardPanel(
+                NoticeBoard, CourierDispatches, _notebook, () => _site.ActiveSite, () => _time.Calendar.MinuteNumber, Presentation);
             quests.BindNotebook(_notebook.AddQuestNote);
             quests.BindItemCleanup(RemoveCarriedQuestItems);
             State.QuestItems = new(State.Quests, State.Actors.Entities, State.InventoryStore, State.Containers, State.Equipment, State.ItemInstances,
@@ -934,7 +937,8 @@ internal sealed partial class DaggerfallSession
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => Banking.ActiveRegion is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => Law.ModalOpen,
-                tutorialOpen: () => _tutorial.Shown, expeditionOpen: () => Expedition.Open, worldMapOpen: () => _travelPanel?.WorldMapOpen == true);
+                tutorialOpen: () => _tutorial.Shown, expeditionOpen: () => Expedition.Open, worldMapOpen: () => _travelPanel?.WorldMapOpen == true,
+                noticeBoardOpen: () => NoticeBoardPanel.IsOpen);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             itemInstances.Transferred += questItemExits.Moved;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
@@ -1474,7 +1478,7 @@ internal sealed partial class DaggerfallSession
                 EconomyPanels, travelPanel, RestPanel, textActions, _lootActions, _deathScreen,
                 new DaggerfallUiDispatch.SessionCalls(ChooseLegal, AnswerQuestOffer, ToggleWeapon, RequestPanel,
                     request => _saveSlotRequest = request, key => _bundleChoice.Choose(key, _mode, _newGameInitialized), _bundleChoice.StartUnderChoice, open => _interactions.SetMenuOpen(open), _quit.Request, _quit.Applied, () => _interactions.HoldsWorldOpen),
-                Presentation, InputRefusals);
+                Presentation, InputRefusals, NoticeBoardPanel);
             InputReadout = new DaggerfallInputReadout(PlayerAttack, State.Actors, _guard, Casting, definitions, () => _appearance.DrawnHeld,
                 () => State.WeaponDrawn, InputRefusals);                                                  // UiProjection
             HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
@@ -1484,7 +1488,8 @@ internal sealed partial class DaggerfallSession
                 IdentifyChoice, Spellbook, Detectors, _playerTime, _loading, _tutorial, Radial, Activation, _input, () => DrawnArt,
                 () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
                 Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone), InputReadout,
-                () => OverlandParties.PartyPortraits());
+                () => OverlandParties.PartyPortraits(),
+                NoticeBoardPanel);
             DaggerfallHeldWorkbench heldWorkbench = new(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
             {
                 if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
@@ -1729,6 +1734,7 @@ internal sealed partial class DaggerfallSession
     private void ComposeActivation(IEngineContext engine, DaggerfallLootInteractionTuning reach)
     {
         ArgumentNullException.ThrowIfNull(engine);
+        NoticeBoardPanel.Close();
         IDaggerfallNpcActivationOwner people = ComposeDialogue();
         DaggerfallDoorActivationOwner door;
         DaggerfallActivationModule module = new(
@@ -1745,7 +1751,8 @@ internal sealed partial class DaggerfallSession
                         .RequireLogicalKey(logicalProfile),
                     EnterPortal),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyLoot.InteractionPoint, id => _lootActions.OpenGround(id)),
-                npc: people));
+                npc: people,
+                noticeBoard: new DaggerfallNoticeBoardActivationOwner(_sites.Projection.NoticeBoards, label => NoticeBoardPanel.Open(label))));
         Activation.Use(module, door);
     }
 

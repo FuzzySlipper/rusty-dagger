@@ -387,6 +387,8 @@ public sealed class DaggerfallUiActionTests
         [DaggerfallUiActionKind.QuestDismiss] = "\"questInstance\":\"quest:1\",\"questDelivery\":\"quest-message:2\"",
         [DaggerfallUiActionKind.DungeonTextAnswer] = "\"revision\":\"1\",\"item\":\"riddle:1\",\"text\":\"a shadow\"",
         [DaggerfallUiActionKind.DungeonTextClose] = "\"revision\":\"1\",\"item\":\"riddle:1\"",
+        [DaggerfallUiActionKind.NoticeBoardTake] = "\"revision\":\"1\",\"key\":\"notice:dispatch:1\"",
+        [DaggerfallUiActionKind.NoticeBoardClose] = "\"revision\":\"1\"",
         [DaggerfallUiActionKind.InventoryMove] = "\"revision\":\"1:2\",\"item\":\"unique:1002\",\"targetGrid\":3",
         [DaggerfallUiActionKind.InventoryInspect] = "\"revision\":\"1:2\",\"item\":\"unique:1002\"",
         [DaggerfallUiActionKind.InventoryUse] = "\"revision\":\"1:2\",\"item\":\"unique:1002\"",

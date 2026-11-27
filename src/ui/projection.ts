@@ -8,6 +8,7 @@ import type { LodgingProjection } from './lodging.js';
 import type { LootProjection } from './loot.js';
 import type { MapProjection } from './maps.js';
 import type { NotebookProjection } from './notebook.js';
+import type { NoticeBoardProjection } from './notice-board.js';
 import type { PropertyProjection } from './property.js';
 import type { ExpeditionProjection } from './expedition.js';
 import type { WorldMapProjection } from './world-map.js';
@@ -129,6 +130,7 @@ export interface DaggerHud {
   readonly view?: { readonly yawRadians: number; readonly interaction: string; readonly heading?: string };
   readonly slots?: readonly { readonly owner: string; readonly id: string; readonly label: string; readonly detail: string; readonly order: number }[];
   readonly dungeonText?: { readonly actionId: string; readonly kind: string; readonly text: string; readonly revision: string; readonly requiresAnswer: boolean } | null;
+  readonly noticeBoard?: NoticeBoardProjection | null;
   readonly death?: DeathProjection | null;
   readonly rest?: RestProjection | null;
   readonly lodging?: LodgingProjection | null;

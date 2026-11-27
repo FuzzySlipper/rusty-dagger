@@ -23,6 +23,31 @@ internal enum DaggerfallNoticeEntryKind
     SignRumor = 3,
 }
 
+/// <summary>Kind of actionable lead attached to a town notice board posting.</summary>
+internal enum DaggerfallNoticeLeadKind
+{
+    /// <summary>Informational posting with no direct lead action.</summary>
+    None = 0,
+
+    /// <summary>Sealed courier dispatch offer backed by <see cref="DaggerfallCourierDispatches"/>.</summary>
+    CourierDelivery = 1,
+
+    /// <summary>Regional bounty, monster surge, or supply-raider counter-play lead recorded in the notebook.</summary>
+    RegionalBounty = 2,
+
+    /// <summary>Office proclamation or public decree clipped into the player's notebook.</summary>
+    PublicLead = 3,
+}
+
+/// <summary>Actionable lead metadata attached to a posted notice so players can pick it up directly at the board.</summary>
+internal sealed record DaggerfallNoticeLead(
+    string LeadId,
+    DaggerfallNoticeLeadKind Kind,
+    string ActionLabel,
+    string? DispatchId = null,
+    string? TargetSummary = null,
+    int? RewardGold = null);
+
 /// <summary>One entry posted on a town notice board.</summary>
 internal sealed record DaggerfallNoticeEntry(
     string Id,
@@ -31,7 +56,8 @@ internal sealed record DaggerfallNoticeEntry(
     string Body,
     int Region,
     int? FactionId = null,
-    string? ConditionTokenId = null);
+    string? ConditionTokenId = null,
+    DaggerfallNoticeLead? Lead = null);
 
 /// <summary>Resolved town notice board view assembled on demand with zero save bytes of its own.</summary>
 internal sealed record DaggerfallTownNoticeBoardView(
@@ -43,8 +69,9 @@ internal sealed record DaggerfallTownNoticeBoardView(
 
 /// <summary>
 /// Assembles a town's public notice board on demand from classic sign-message rumours, active
-/// <see cref="IDaggerfallWorldConditionSource"/> decrees/bounties, live regional wanted bounties, and
-/// recent <see cref="DaggerfallOfficeLedger"/> changes. Holds no persisted state of its own.
+/// <see cref="IDaggerfallWorldConditionSource"/> decrees/bounties, live regional wanted bounties, posted
+/// <see cref="DaggerfallCourierDispatches"/> delivery offers, and recent <see cref="DaggerfallOfficeLedger"/> changes.
+/// Holds no persisted state of its own.
 /// </summary>
 internal sealed class DaggerfallNoticeBoard(
     DaggerfallDefinitions definitions,
@@ -56,7 +83,8 @@ internal sealed class DaggerfallNoticeBoard(
     Func<int> currentDay,
     Func<DaggerfallTextContext> currentText,
     Func<DaggerfallCharacterIdentity> playerIdentity,
-    DaggerfallWordSpread? wordSpread = null)
+    DaggerfallWordSpread? wordSpread = null,
+    DaggerfallCourierDispatches? courierDispatches = null)
 {
     private const int MaxClassicSignRumors = 3;
 
@@ -74,18 +102,21 @@ internal sealed class DaggerfallNoticeBoard(
 
         List<DaggerfallNoticeEntry> entries = [];
 
-        // 1. Active world-condition decrees and regional bounties (stubbed/authored or B2 board-driven).
+        // 1. Posted courier delivery offers originating from this town (or unclaimed in this region).
+        AddCourierDeliveryOffers(entries, site, region);
+
+        // 2. Active world-condition decrees and regional bounties (stubbed/authored or B2 board-driven).
         foreach (DaggerfallWorldConditionToken token in conditions.ActiveForRegion(region, day))
             entries.Add(BuildConditionEntry(token, region, regionName, authorityName));
 
-        // 2. Sparse office proclamations (regional throne or local town offices that changed from baseline).
+        // 3. Sparse office proclamations (regional throne or local town offices that changed from baseline).
         HashSet<string> postedOfficeKeys = new(StringComparer.Ordinal);
         AddOfficeNotices(entries, postedOfficeKeys, site, region, regionName, ruler);
 
-        // 3. Live wanted / bounty posting when word of the player's crimes/warrant has arrived at this town.
+        // 4. Live wanted / bounty posting when word of the player's crimes/warrant has arrived at this town.
         AddPlayerBountyNotice(entries, site, region, regionName, authorityName, currentMinute, day);
 
-        // 4. Arrived courier news/standing wavefronts (office proclamations from distant capitals, board dispatches, and rumours).
+        // 5. Arrived courier news/standing wavefronts (office proclamations from distant capitals, board dispatches, and rumours).
         if (wordSpread is not null)
         {
             int nonOfficeCount = 0;
@@ -96,32 +127,39 @@ internal sealed class DaggerfallNoticeBoard(
                     // Newest arrived proclamation wins per office key; skip if already rendered locally above.
                     if (!postedOfficeKeys.Add(officeKey))
                         continue;
+                    string id = $"notice:word:{arrived.EventId}";
                     entries.Add(new(
-                        Id: $"notice:word:{arrived.EventId}",
+                        Id: id,
                         Kind: DaggerfallNoticeEntryKind.OfficeNotice,
                         Heading: arrived.Headline ?? "Office Proclamation",
                         Body: arrived.Body!,
                         Region: region,
-                        FactionId: arrived.FactionId));
+                        FactionId: arrived.FactionId,
+                        Lead: new DaggerfallNoticeLead($"lead:{id}", DaggerfallNoticeLeadKind.PublicLead, "Note in journal")));
                     continue;
                 }
 
                 if (nonOfficeCount >= 3)
                     continue;
                 nonOfficeCount++;
+                DaggerfallNoticeEntryKind wordKind = arrived.Kind == DaggerfallWordEventKind.NewsRumor
+                    ? DaggerfallNoticeEntryKind.Decree
+                    : DaggerfallNoticeEntryKind.SignRumor;
+                string wordId = $"notice:word:{arrived.EventId}";
                 entries.Add(new(
-                    Id: $"notice:word:{arrived.EventId}",
-                    Kind: arrived.Kind == DaggerfallWordEventKind.NewsRumor
-                        ? DaggerfallNoticeEntryKind.Decree
-                        : DaggerfallNoticeEntryKind.SignRumor,
+                    Id: wordId,
+                    Kind: wordKind,
                     Heading: arrived.Headline ?? "Courier Bulletin",
                     Body: arrived.Body!,
                     Region: region,
-                    FactionId: arrived.FactionId));
+                    FactionId: arrived.FactionId,
+                    Lead: wordKind == DaggerfallNoticeEntryKind.Decree
+                        ? new DaggerfallNoticeLead($"lead:{wordId}", DaggerfallNoticeLeadKind.PublicLead, "Note in journal")
+                        : null));
             }
         }
 
-        // 5. Classic Daggerfall sign-message rumours (rumor.IsSignMessage == true) rendered with live context.
+        // 6. Classic Daggerfall sign-message rumours (rumor.IsSignMessage == true) rendered with live context.
         AddClassicSignRumors(entries, site, region, regionName, currentMinute);
 
         return new(site.Id, site.Name, regionName, authorityName, entries);
@@ -159,16 +197,29 @@ internal sealed class DaggerfallNoticeBoard(
             ? DaggerfallNoticeEntryKind.Bounty
             : DaggerfallNoticeEntryKind.Decree;
 
+        string entryId = $"notice:cond:{token.TokenId}";
+        DaggerfallNoticeLead lead = DaggerfallConditionCounterplay.IsCounterplayable(token.Kind)
+            ? new DaggerfallNoticeLead(
+                LeadId: $"lead:{entryId}",
+                Kind: DaggerfallNoticeLeadKind.RegionalBounty,
+                ActionLabel: "Take bounty lead",
+                TargetSummary: ResolveConditionLeadTargetSummary(token, region, regionName))
+            : new DaggerfallNoticeLead(
+                LeadId: $"lead:{entryId}",
+                Kind: DaggerfallNoticeLeadKind.PublicLead,
+                ActionLabel: "Note in journal");
+
         if (!string.IsNullOrWhiteSpace(token.Headline) && !string.IsNullOrWhiteSpace(token.Body))
         {
             return new(
-                Id: $"notice:cond:{token.TokenId}",
+                Id: entryId,
                 Kind: kind,
                 Heading: token.Headline,
                 Body: token.Body,
                 Region: region,
                 FactionId: token.SourceFactionId,
-                ConditionTokenId: token.TokenId);
+                ConditionTokenId: token.TokenId,
+                Lead: lead);
         }
 
         string subject = string.IsNullOrWhiteSpace(token.SubjectTag) ? "monsters" : token.SubjectTag;
@@ -201,14 +252,76 @@ internal sealed class DaggerfallNoticeBoard(
         };
 
         return new(
-            Id: $"notice:cond:{token.TokenId}",
+            Id: entryId,
             Kind: kind,
             Heading: token.Headline ?? heading,
             Body: token.Body ?? body,
             Region: region,
             FactionId: token.SourceFactionId,
-            ConditionTokenId: token.TokenId);
+            ConditionTokenId: token.TokenId,
+            Lead: lead);
     }
+
+    private void AddCourierDeliveryOffers(List<DaggerfallNoticeEntry> entries, DaggerfallSiteRecord site, int region)
+    {
+        if (courierDispatches is null)
+            return;
+
+        foreach (DaggerfallCourierDispatchSave dispatch in courierDispatches.All
+            .Where(d => d.Status is DaggerfallDispatchStatus.InTransit or DaggerfallDispatchStatus.BoughtAndRevealed or DaggerfallDispatchStatus.CarriedByPlayer)
+            .Where(d => d.OriginSite.Require() == site.Id || (d.Status != DaggerfallDispatchStatus.CarriedByPlayer && d.OriginSite.Require().Region == region))
+            .OrderByDescending(d => d.OriginSite.Require() == site.Id ? 1 : 0)
+            .ThenBy(d => d.DispatchedAtMinute)
+            .ThenBy(d => d.DispatchId, StringComparer.Ordinal)
+            .Take(3))
+        {
+            DaggerfallSiteId destId = dispatch.DestinationSite.Require();
+            string destName = ResolveSiteName(destId) ?? definitions.BuildingNames.RegionName(destId.Region);
+            string entryId = $"notice:dispatch:{dispatch.DispatchId}";
+            entries.Add(new(
+                Id: entryId,
+                Kind: DaggerfallNoticeEntryKind.Bounty,
+                Heading: $"Courier Wanted: {destName}",
+                Body: $"Sealed dispatch ({dispatch.Summary}) bound for {destName}. Pays {dispatch.DeliveryRewardGold} gold upon delivery.",
+                Region: region,
+                FactionId: dispatch.SourceFactionId,
+                ConditionTokenId: dispatch.LinkedConditionTokenId,
+                Lead: new DaggerfallNoticeLead(
+                    LeadId: $"lead:dispatch:{dispatch.DispatchId}",
+                    Kind: DaggerfallNoticeLeadKind.CourierDelivery,
+                    ActionLabel: $"Take dispatch ({dispatch.DeliveryRewardGold}g)",
+                    DispatchId: dispatch.DispatchId,
+                    TargetSummary: $"Deliver sealed dispatch to {destName}",
+                    RewardGold: dispatch.DeliveryRewardGold)));
+        }
+    }
+
+    private string? ResolveConditionLeadTargetSummary(DaggerfallWorldConditionToken token, int region, string regionName)
+    {
+        if (token.Kind == DaggerfallWorldConditionKind.MonsterSurge)
+        {
+            string subject = string.IsNullOrWhiteSpace(token.SubjectTag) ? "monsters" : token.SubjectTag;
+            DaggerfallSiteRecord? matchingLair = definitions.Locations.Records
+                .Where(site => site.Id.Region == region
+                    && site.DungeonBlocks.Count > 0
+                    && site.DungeonType is int dt
+                    && (string.IsNullOrWhiteSpace(token.SubjectTag)
+                        || DaggerfallConditionCounterplay.DungeonTypeFactions(dt).Contains(token.SubjectTag, StringComparer.OrdinalIgnoreCase)))
+                .OrderBy(site => site.Id.Index)
+                .FirstOrDefault();
+            return matchingLair is not null
+                ? $"Clear {subject} forces at {matchingLair.Name} or across {regionName}"
+                : $"Clear {subject} forces across {regionName}";
+        }
+
+        if (token.Kind == DaggerfallWorldConditionKind.GrainShortage)
+            return $"Clear supply raiders along the roads of {regionName}";
+
+        return null;
+    }
+
+    private string? ResolveSiteName(DaggerfallSiteId siteId) =>
+        definitions.Locations.Records.FirstOrDefault(r => r.Id == siteId)?.Name;
 
     private void AddOfficeNotices(
         List<DaggerfallNoticeEntry> entries,
@@ -248,13 +361,15 @@ internal sealed class DaggerfallNoticeBoard(
                           + (string.IsNullOrWhiteSpace(throneOverride.PreviousHolderName)
                               ? "."
                               : $", succeeding {throneOverride.PreviousHolderName} ({FormatCause(throneOverride)}).");
+                string throneEntryId = $"notice:office:{throneOverride.OfficeKey}";
                 entries.Add(new(
-                    Id: $"notice:office:{throneOverride.OfficeKey}",
+                    Id: throneEntryId,
                     Kind: DaggerfallNoticeEntryKind.OfficeNotice,
                     Heading: heading,
                     Body: body,
                     Region: region,
-                    FactionId: provinceFactionId));
+                    FactionId: provinceFactionId,
+                    Lead: new DaggerfallNoticeLead($"lead:{throneEntryId}", DaggerfallNoticeLeadKind.PublicLead, "Note in journal")));
             }
         }
 
@@ -274,13 +389,15 @@ internal sealed class DaggerfallNoticeBoard(
                     ? $"{local.DisplayName} serves as interim {local.Title} pending formal succession."
                     : $"{local.DisplayName} has been named {local.Title}"
                       + (string.IsNullOrWhiteSpace(local.PreviousHolderName) ? "." : $", replacing {local.PreviousHolderName}.");
+            string localEntryId = $"notice:office:{local.OfficeKey}";
             entries.Add(new(
-                Id: $"notice:office:{local.OfficeKey}",
+                Id: localEntryId,
                 Kind: DaggerfallNoticeEntryKind.OfficeNotice,
                 Heading: heading,
                 Body: body,
                 Region: region,
-                FactionId: local.OfficeFactionId > 0 ? local.OfficeFactionId : null));
+                FactionId: local.OfficeFactionId > 0 ? local.OfficeFactionId : null,
+                Lead: new DaggerfallNoticeLead($"lead:{localEntryId}", DaggerfallNoticeLeadKind.PublicLead, "Note in journal")));
         }
     }
 

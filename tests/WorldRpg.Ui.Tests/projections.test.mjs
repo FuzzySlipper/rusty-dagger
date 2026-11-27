@@ -6008,3 +6008,87 @@ test('Quit asks first in the game menu when the game was played since it was kep
     assert.equal(group.hidden, true);
   } finally { f.dispose(); }
 });
+
+test('in-world notice board renders posted entries, sends notice-board-take on lead pickup, reflects picked-up state, and closes via button or Escape', () => {
+  const f = fixture();
+  try {
+    const board = f.root.querySelector('.dagger-notice-board');
+    assert.equal(board.hidden, true);
+
+    const openSnapshot = {
+      mode: 'modal',
+      noticeBoard: {
+        revision: '1',
+        title: 'Charing Notice Board',
+        townName: 'Charing',
+        regionName: 'Daggerfall',
+        authorityName: 'King Gothryd',
+        status: null,
+        entries: [
+          {
+            id: 'notice:dispatch:disp-1',
+            kind: 'bounty',
+            kindLabel: 'Bounty',
+            heading: 'Courier Wanted: Daggerfall',
+            body: 'Sealed dispatch bound for Daggerfall. Pays 175 gold.',
+            lead: {
+              kind: 'courier-delivery',
+              actionLabel: 'Take dispatch (175g)',
+              pickedUp: false,
+              targetSummary: 'Deliver sealed dispatch to Daggerfall',
+              rewardGold: 175,
+            },
+          },
+          {
+            id: 'notice:sign:1',
+            kind: 'sign-rumor',
+            kindLabel: 'Notice',
+            heading: 'Public Broadsheet',
+            body: 'Travelers speak of unrest along the northern roads.',
+            lead: null,
+          },
+        ],
+      },
+    };
+    f.publish(openSnapshot);
+    assert.equal(board.hidden, false);
+    assert.equal(board.querySelector('.dagger-notice-board-title').textContent, 'Charing Notice Board');
+    assert.match(board.querySelector('.dagger-notice-board-meta').textContent, /Charing, Daggerfall · King Gothryd/);
+    assert.equal(board.querySelectorAll('.dagger-notice-board-entry').length, 2);
+
+    const takeButton = board.querySelector('.dagger-notice-board-take');
+    assert.equal(takeButton.disabled, false);
+    assert.equal(takeButton.textContent, 'Take dispatch (175g)');
+    takeButton.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'notice-board-take', revision: '1', key: 'notice:dispatch:disp-1' });
+
+    // Next snapshot reflects the picked-up lead and status message.
+    f.publish({
+      mode: 'modal',
+      noticeBoard: {
+        ...openSnapshot.noticeBoard,
+        revision: '2',
+        status: 'You take custody of the sealed dispatch.',
+        entries: [
+          {
+            ...openSnapshot.noticeBoard.entries[0],
+            lead: { ...openSnapshot.noticeBoard.entries[0].lead, actionLabel: 'Dispatch carried', pickedUp: true },
+          },
+          openSnapshot.noticeBoard.entries[1],
+        ],
+      },
+    });
+    assert.equal(board.querySelector('.dagger-notice-board-status').hidden, false);
+    assert.match(board.querySelector('.dagger-notice-board-status').textContent, /sealed dispatch/);
+    assert.equal(board.querySelector('.dagger-notice-board-take').disabled, true);
+    assert.equal(board.querySelector('.dagger-notice-board-take').textContent, 'Dispatch carried');
+
+    // Escape closes the notice board cleanly via notice-board-close.
+    f.pressEscape();
+    assert.deepEqual(f.actions.at(-1), { action: 'notice-board-close', revision: '2' });
+
+    // Closing projection hides the board.
+    f.publish({ mode: 'playing', noticeBoard: null });
+    assert.equal(board.hidden, true);
+  } finally { f.dispose(); }
+});
