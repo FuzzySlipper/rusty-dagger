@@ -7,6 +7,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Politics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -193,6 +194,210 @@ public sealed class GuardPostsAndLiegeLiveryTests
         Assert.Equal(gateOverrideIndep.Tint, gateActor.Actor.Get<ActorRenderComponent>().Spec.Tint);
         Assert.NotEqual(wayrestTint, gateActor.Actor.Get<ActorRenderComponent>().Spec.Tint);
         Assert.Equal(gateOverrideIndep.Tint!.Value, session.ActiveAppearance.ActiveTintFor(gateId));
+    }
+
+    [Fact]
+    public void Refreshed_crowd_snapshot_changes_officer_appearance_on_liege_swap_while_street_watch_stays_unchanged()
+    {
+        using var fixture = new WatchPostsFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord betonySite = TestPayload.Definitions.Locations.Records.First(site =>
+            site.Id.Region == BetonyRegion && site.Exterior is { Blocks.Count: > 0 });
+        DaggerfallWorldProfileKey betonyExteriorKey = DaggerfallWorldProfileIds.Exterior(betonySite.Id);
+        DaggerfallFactionDefinition betonyPeople = TestPayload.Definitions.Factions.Factions.Values
+            .Where(f => f.Type == 15 && f.Region == BetonyRegion && f.Sprites.Count > 0)
+            .OrderBy(f => f.Id)
+            .First();
+
+        WorldPoint gatePos = new(10f, 0f, -10f);
+        WorldPoint streetPos = new(24f, 0f, -18f);
+        DaggerfallPopulationPlacement gatePlacement = new("population/betony-crowd/dynamic/000", gatePos, 182, 0, betonyPeople.Id, 0, 31)
+        {
+            IsGuard = true,
+            GuardPost = DaggerfallGuardPostKind.WalledCityGateOfficer,
+            GatePostAnchor = gatePos,
+        };
+        DaggerfallPopulationPlacement streetPlacement = new("population/betony-crowd/dynamic/001", streetPos, 182, 0, betonyPeople.Id, 0, 32)
+        {
+            IsGuard = true,
+            GuardPost = DaggerfallGuardPostKind.StreetWatch,
+        };
+        DaggerfallPopulationPlacement[] placements = [gatePlacement, streetPlacement];
+
+        DaggerfallNpcSite npcSite = new(betonySite.Id.Region, betonySite.Name, string.Empty, betonyExteriorKey.LogicalId);
+        long gateId = DaggerfallPeopleSlots.SeededSlotIdentity(betonySite.Id, $"{betonyExteriorKey.LogicalId}/{gatePlacement.Id}");
+        long streetId = DaggerfallPeopleSlots.SeededSlotIdentity(betonySite.Id, $"{betonyExteriorKey.LogicalId}/{streetPlacement.Id}");
+        DaggerfallNpcAppearance initialLook = new("breton", "Male", 182, 0, 31, betonyPeople.Id);
+        session.State.Npcs.RegisterDeterministic(gateId, DaggerfallNpcKind.Civilian, gatePlacement.Id, npcSite, initialLook, "guard", ["talk"], homeProfile: betonyExteriorKey);
+        session.State.Npcs.RegisterDeterministic(streetId, DaggerfallNpcKind.Civilian, streetPlacement.Id, npcSite, initialLook, "guard", ["talk"], homeProfile: betonyExteriorKey);
+        session.Roster.MaterializeDeterministicCivilian(session.State.Npcs.Require(gateId), ActorOrigin.Seeded(betonyExteriorKey, gatePlacement.Id), gatePos, new ActorPose(gatePos, 0f), Vector3.Zero);
+        session.Roster.MaterializeDeterministicCivilian(session.State.Npcs.Require(streetId), ActorOrigin.Seeded(betonyExteriorKey, streetPlacement.Id), streetPos, new ActorPose(streetPos, 0f), Vector3.Zero);
+        session.State.Npcs.Bind(gateId, session.Sites.ActiveProfile);
+        session.State.Npcs.Bind(streetId, session.Sites.ActiveProfile);
+
+        NormalizedActorSprite sprite = session.Sites.Projection.Inputs.Project.Actors.Values
+            .Select(p => session.Sites.Projection.Inputs.ActorSprites[p.EntityId])
+            .First();
+        session.ActiveAppearance.AdmitActor(gateId, sprite);
+        session.ActiveAppearance.AdmitActor(streetId, sprite);
+
+        // Wire the real refreshed gsplat crowd (DaggerfallPeopleSwitch) onto ActiveAppearance and verify
+        // the actual AppearanceFact submitted to Engine swaps on liege change while street watch stays unchanged!
+        DaggerfallArtReplacements art = DaggerfallPeopleSwitchTests.Art();
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = DaggerfallPeopleSwitchTests.Clips(art.SplatPeople!);
+        PartsRigsRecorder rigs = PartsRigsRecorder.Create();
+        DaggerfallPeopleStage stage = new(session.State.Actors, _ => true, session.State.PlayerControl, (at, _) => WorldPoint.From(at));
+        using DaggerfallPeopleSwitch people = new(
+            art.PeopleRig,
+            art.SplatPeople,
+            DaggerfallPeopleSwitchTests.Shipped(),
+            () => rigs.Service,
+            () => animation.Service,
+            () => new ContentFake([]),
+            1.3f,
+            DaggerfallSplatPeopleTuning.Default,
+            session.State.Actors,
+            stage,
+            [385],
+            _ => 385,
+            _ => 1,
+            () => true,
+            _ => { });
+        session.ActiveAppearance.UsePeopleRigs(() => people);
+
+        ulong gateObjId = DaggerfallPresentationObjectIds.Gameplay(gateId, "Actor");
+        ulong streetObjId = DaggerfallPresentationObjectIds.Gameplay(streetId, "Actor");
+
+        // 1. Before board transfer: Betony answers to Daggerfall.
+        session.GuardPosts.ApplyLiveGuardAppearances(betonySite, session.Sites.Projection.Inputs, placements, session.State.Actors, session.State.Npcs, session.ActiveAppearance);
+        session.ActiveAppearance.Publish(session.State.Actors);
+        AppearanceFact[] snapBefore = fixture.Appearance.Snapshots[^1];
+        Appearance gateAppBefore = Assert.Single(snapBefore, f => f.ObjectId == gateObjId).Appearance;
+        Appearance streetAppBefore = Assert.Single(snapBefore, f => f.ObjectId == streetObjId).Appearance;
+        SplatAppearanceRequest gateSplatBefore = animation.Splats.Last(s => ReferenceEquals(s.Appearance, gateAppBefore));
+        SplatAppearanceRequest streetSplatBefore = animation.Splats.Last(s => ReferenceEquals(s.Appearance, streetAppBefore));
+        Assert.NotEqual(Vector3.One, gateSplatBefore.Multiplier);
+        Assert.Equal(Vector3.One, streetSplatBefore.Multiplier);
+
+        // 2. Political board transfers Betony to Wayrest -> published crowd Appearance for gate officer changes to Wayrest tint!
+        Board board = session.PoliticalBoard!.Board;
+        Region betonyBoardRegion = board.Region("betony");
+        board.SetAllegiance(betonyBoardRegion, board.Seat("wayrest"));
+        board.Consolidate(betonyBoardRegion, board.Turn + Card.ConsolidationWeeks);
+        session.GuardPosts.ApplyLiveGuardAppearances(betonySite, session.Sites.Projection.Inputs, placements, session.State.Actors, session.State.Npcs, session.ActiveAppearance);
+        session.ActiveAppearance.Publish(session.State.Actors);
+        AppearanceFact[] snapWayrest = fixture.Appearance.Snapshots[^1];
+        Appearance gateAppWayrest = Assert.Single(snapWayrest, f => f.ObjectId == gateObjId).Appearance;
+        Appearance streetAppWayrest = Assert.Single(snapWayrest, f => f.ObjectId == streetObjId).Appearance;
+        Assert.NotSame(gateAppBefore, gateAppWayrest);
+        Assert.Same(streetAppBefore, streetAppWayrest);
+        SplatAppearanceRequest gateSplatWayrest = animation.Splats.Last(s => ReferenceEquals(s.Appearance, gateAppWayrest));
+        Assert.NotEqual(gateSplatBefore.Multiplier, gateSplatWayrest.Multiplier);
+        Assert.NotEqual(Vector3.One, gateSplatWayrest.Multiplier);
+
+        // 3. Independent fallback -> published crowd Appearance for gate officer changes to Betony regional arms tint!
+        board.SetAllegiance(betonyBoardRegion, null);
+        board.Consolidate(betonyBoardRegion, board.Turn);
+        session.GuardPosts.ApplyLiveGuardAppearances(betonySite, session.Sites.Projection.Inputs, placements, session.State.Actors, session.State.Npcs, session.ActiveAppearance);
+        session.ActiveAppearance.Publish(session.State.Actors);
+        AppearanceFact[] snapIndep = fixture.Appearance.Snapshots[^1];
+        Appearance gateAppIndep = Assert.Single(snapIndep, f => f.ObjectId == gateObjId).Appearance;
+        Appearance streetAppIndep = Assert.Single(snapIndep, f => f.ObjectId == streetObjId).Appearance;
+        Assert.NotSame(gateAppWayrest, gateAppIndep);
+        Assert.Same(streetAppBefore, streetAppIndep);
+        SplatAppearanceRequest gateSplatIndep = animation.Splats.Last(s => ReferenceEquals(s.Appearance, gateAppIndep));
+        Assert.NotEqual(gateSplatWayrest.Multiplier, gateSplatIndep.Multiplier);
+    }
+
+    [Fact]
+    public void Sync_resolves_each_resident_guard_against_its_own_site_without_cross_site_corruption()
+    {
+        using var fixture = new WatchPostsFixture();
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord daggerfallSite = TestPayload.Definitions.Locations.Records.First(site =>
+            site.Id.Region == DaggerfallRegion && site.Exterior is { Blocks.Count: >= 16 });
+        DaggerfallSiteRecord betonySite = TestPayload.Definitions.Locations.Records.First(site =>
+            site.Id.Region == BetonyRegion && site.Exterior is { Blocks.Count: > 0 });
+        DaggerfallWorldProfileKey daggerfallKey = DaggerfallWorldProfileIds.Exterior(daggerfallSite.Id);
+        DaggerfallWorldProfileKey betonyKey = DaggerfallWorldProfileIds.Exterior(betonySite.Id);
+        DaggerfallFactionDefinition daggerfallPeople = TestPayload.Definitions.Factions.Factions.Values
+            .Where(f => f.Type == 15 && f.Region == DaggerfallRegion && f.Sprites.Count > 0).OrderBy(f => f.Id).First();
+        DaggerfallFactionDefinition betonyPeople = TestPayload.Definitions.Factions.Factions.Values
+            .Where(f => f.Type == 15 && f.Region == BetonyRegion && f.Sprites.Count > 0).OrderBy(f => f.Id).First();
+
+        DaggerfallPopulationPlacement dfGate = new("population/df-resident-test/dynamic/000", new WorldPoint(10, 0, -10), 182, 0, daggerfallPeople.Id, 0, 41)
+        {
+            IsGuard = true,
+            GuardPost = DaggerfallGuardPostKind.WalledCityGateOfficer,
+            GatePostAnchor = new WorldPoint(10, 0, -8),
+        };
+        DaggerfallPopulationPlacement betonyGate = new("population/betony-resident-test/dynamic/000", new WorldPoint(50, 0, -50), 182, 0, betonyPeople.Id, 0, 42)
+        {
+            IsGuard = true,
+            GuardPost = DaggerfallGuardPostKind.WalledCityGateOfficer,
+            GatePostAnchor = new WorldPoint(50, 0, -48),
+        };
+
+        // Transfer Betony to Wayrest while Daggerfall remains Daggerfall.
+        Board board = session.PoliticalBoard!.Board;
+        board.SetAllegiance(board.Region("betony"), board.Seat("wayrest"));
+        board.Consolidate(board.Region("betony"), board.Turn + Card.ConsolidationWeeks);
+
+        long dfGateId = DaggerfallPeopleSlots.SeededSlotIdentity(daggerfallSite.Id, $"{daggerfallKey.LogicalId}/{dfGate.Id}");
+        long betonyGateId = DaggerfallPeopleSlots.SeededSlotIdentity(betonySite.Id, $"{betonyKey.LogicalId}/{betonyGate.Id}");
+
+        DaggerfallNpcAppearance dfLook = new("breton", "Male", 182, 0, 41, daggerfallPeople.Id);
+        DaggerfallNpcAppearance betonyLook = new("breton", "Male", 182, 0, 42, betonyPeople.Id);
+        session.State.Npcs.RegisterDeterministic(dfGateId, DaggerfallNpcKind.Civilian, dfGate.Id,
+            new DaggerfallNpcSite(daggerfallSite.Id.Region, daggerfallSite.Name, string.Empty, daggerfallKey.LogicalId), dfLook, "guard", ["talk"], homeProfile: daggerfallKey);
+        session.State.Npcs.RegisterDeterministic(betonyGateId, DaggerfallNpcKind.Civilian, betonyGate.Id,
+            new DaggerfallNpcSite(betonySite.Id.Region, betonySite.Name, string.Empty, betonyKey.LogicalId), betonyLook, "guard", ["talk"], homeProfile: betonyKey);
+        session.Roster.MaterializeDeterministicCivilian(session.State.Npcs.Require(dfGateId), ActorOrigin.Seeded(daggerfallKey, dfGate.Id), dfGate.Position, new ActorPose(dfGate.Position, 0f), Vector3.Zero);
+        session.Roster.MaterializeDeterministicCivilian(session.State.Npcs.Require(betonyGateId), ActorOrigin.Seeded(betonyKey, betonyGate.Id), betonyGate.Position, new ActorPose(betonyGate.Position, 0f), Vector3.Zero);
+        session.State.Npcs.Bind(dfGateId, daggerfallKey);
+        session.State.Npcs.Bind(betonyGateId, betonyKey);
+
+        DaggerfallSiteProfile baseProfile = session.Sites.Projection.Inputs;
+        DaggerfallSiteProfile dfProfile = new(baseProfile.Project, baseProfile.Geometry, baseProfile.WorldAppearance, baseProfile.InitialLook,
+            baseProfile.Materials, baseProfile.ActorSprites, baseProfile.MobileSprites, baseProfile.Audio, baseProfile.ClassicPresentation,
+            site: daggerfallSite.Id, profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: daggerfallKey.LogicalId, population: [dfGate]);
+        DaggerfallSiteProfile betonyProfile = new(baseProfile.Project, baseProfile.Geometry, baseProfile.WorldAppearance, baseProfile.InitialLook,
+            baseProfile.Materials, baseProfile.ActorSprites, baseProfile.MobileSprites, baseProfile.Audio, baseProfile.ClassicPresentation,
+            site: betonySite.Id, profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: betonyKey.LogicalId, population: [betonyGate]);
+
+        // 1. Apply with Betony active first so Betony's gate officer gets Wayrest livery.
+        session.GuardPosts.ApplyLiveGuardAppearances(betonySite, betonyProfile, [betonyGate], session.State.Actors, session.State.Npcs, null);
+        ActorState dfActor = session.State.Actors.Get(dfGateId);
+        ActorState betonyActor = session.State.Actors.Get(betonyGateId);
+        Color wayrestTint = session.GuardPosts.ResolveLivery(betonySite, BetonyRegion, DaggerfallGuardPostKind.WalledCityGateOfficer).LiveryTint!.Value;
+        Assert.Equal("crown:wayrest", betonyActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal(wayrestTint, betonyActor.Actor.Get<ActorRenderComponent>().Spec.Tint);
+        // Daggerfall's resident guard was NOT corrupted by Betony's active sync!
+        Assert.Null(dfActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+
+        // 2. Now switch active site to Daggerfall WITHOUT a resident resolver: Daggerfall gets crown:daggerfall,
+        // and Betony's resident gate officer MUST keep its Wayrest livery untouched (never overwritten to Daggerfall or StreetWatch)!
+        session.GuardPosts.ApplyLiveGuardAppearances(daggerfallSite, dfProfile, [dfGate], session.State.Actors, session.State.Npcs, null);
+        Assert.Equal("crown:daggerfall", dfActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal("crown:wayrest", betonyActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal(wayrestTint, betonyActor.Actor.Get<ActorRenderComponent>().Spec.Tint);
+
+        // 3. Now transfer Betony to Sentinel and run with Daggerfall active + a resident profile resolver:
+        // Daggerfall keeps crown:daggerfall while Betony's resident gate officer updates accurately to crown:sentinel!
+        board.SetAllegiance(board.Region("betony"), board.Seat("sentinel"));
+        session.GuardPosts.ApplyLiveGuardAppearances(
+            daggerfallSite,
+            dfProfile,
+            [dfGate],
+            session.State.Actors,
+            session.State.Npcs,
+            null,
+            resolveProfileContext: key => key == betonyKey
+                ? (betonySite, betonyProfile, [betonyGate], null)
+                : null);
+        Assert.Equal("crown:daggerfall", dfActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
+        Assert.Equal("crown:sentinel", betonyActor.Actor.Get<ActorRenderComponent>().Spec.LiveryKey);
     }
 
     [Fact]
@@ -456,6 +661,7 @@ public sealed class GuardPostsAndLiegeLiveryTests
         private readonly ContentFake _content;
         private readonly SpatialFake _spatial;
 
+        internal AppearanceFake Appearance { get; }
         internal DaggerfallSession Session { get; }
 
         internal WatchPostsFixture()
@@ -464,7 +670,8 @@ public sealed class GuardPostsAndLiegeLiveryTests
             _content = new ContentFake(_releases);
             PopulateContent(_content, _profile);
             _spatial = SpatialFake.Create(_profile.Geometry.Spatial[0].Sha256, _releases);
-            EngineContextFake engine = EngineContextFake.Create(_content, _spatial.Service, new AppearanceFake(_releases), PerceptionFake.Create().Service);
+            Appearance = new AppearanceFake(_releases);
+            EngineContextFake engine = EngineContextFake.Create(_content, _spatial.Service, Appearance, PerceptionFake.Create().Service);
             Session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, _profile, DaggerfallTuning.Defaults));
         }
 

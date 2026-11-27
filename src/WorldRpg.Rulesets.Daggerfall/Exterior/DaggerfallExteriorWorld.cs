@@ -1237,6 +1237,24 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         }
     }
 
+    internal IReadOnlyCollection<DaggerfallWorldProfileKey> ResidentLocationKeys => _residentExteriorLocations.Keys;
+
+    internal bool TryGetResidentLocationContext(
+        DaggerfallWorldProfileKey key,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out DaggerfallSiteProfile? profile,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out DaggerfallSiteAppearance? appearance)
+    {
+        if (_residentExteriorLocations.TryGetValue(key, out ResidentExteriorLocation? resident))
+        {
+            profile = resident.Profile;
+            appearance = resident.Projection.Appearance;
+            return true;
+        }
+        profile = null;
+        appearance = null;
+        return false;
+    }
+
     internal void RebaseActors(IReadOnlySet<long> actorIds, Vector3 translation)
     {
         foreach (long actorId in actorIds)

@@ -236,10 +236,9 @@ internal sealed class DaggerfallGuardPosts(
     }
 
     /// <summary>
-    /// Applies resolved regional/liege livery to every live guard actor in the active scene (street watch,
-    /// walled-city gate officers, palace/office guards, and occupation garrisons), refreshing faction identity,
-    /// <see cref="ActorRenderComponent"/>, and <see cref="DaggerfallSiteAppearance"/> tint in place when
-    /// political allegiance changes. Rank-and-file street watch keep their regional appearance untouched.
+    /// Applies resolved regional/liege livery to live guard actors, resolving each guard strictly against its
+    /// own owning site/profile/placements (so neighboring resident exterior actors never inherit the active site's
+    /// classification or sovereign). Rank-and-file street watch keep their regional appearance untouched.
     /// </summary>
     internal void ApplyLiveGuardAppearances(
         DaggerfallSiteRecord? site,
@@ -247,13 +246,11 @@ internal sealed class DaggerfallGuardPosts(
         IReadOnlyList<DaggerfallPopulationPlacement> exteriorPlacements,
         ActorsState actors,
         DaggerfallNpcRegistry npcs,
-        DaggerfallSiteAppearance? siteAppearance)
+        DaggerfallSiteAppearance? siteAppearance,
+        Func<DaggerfallWorldProfileKey, (DaggerfallSiteRecord? Site, DaggerfallSiteProfile? Profile, IReadOnlyList<DaggerfallPopulationPlacement> Placements, DaggerfallSiteAppearance? Appearance)?>? resolveProfileContext = null)
     {
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(npcs);
-
-        int siteRegion = site?.Id.Region ?? activeProfile?.Site?.Region ?? 0;
-        int? regionalPeopleId = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, siteRegion)?.Id;
 
         foreach (ActorState actor in actors.All)
         {
@@ -267,11 +264,30 @@ internal sealed class DaggerfallGuardPosts(
             if (!isGuard)
                 continue;
 
+            // Resolve the guard's own owning site/profile/placements/appearance rather than blindly applying
+            // the active site's context to neighboring resident exterior actors (R11167-4).
+            DaggerfallSiteRecord? ownerSite = site;
+            DaggerfallSiteProfile? ownerProfile = activeProfile;
+            IReadOnlyList<DaggerfallPopulationPlacement> ownerPlacements = exteriorPlacements;
+            DaggerfallSiteAppearance? ownerAppearance = siteAppearance;
+
+            if (npc?.Profile is { } npcProfile && activeProfile is not null && npcProfile != activeProfile.ProfileKey)
+            {
+                if (resolveProfileContext?.Invoke(npcProfile) is not { } residentContext)
+                    continue;
+                (ownerSite, ownerProfile, ownerPlacements, ownerAppearance) = residentContext;
+            }
+            else if (npc is not null && npc.Profile is null && site is not null
+                && (npc.Site.Region != site.Id.Region || !StringComparer.Ordinal.Equals(npc.Site.Location, site.Name)))
+            {
+                continue;
+            }
+
+            int ownerRegion = ownerSite?.Id.Region ?? npc?.Site.Region ?? ownerProfile?.Site?.Region ?? 0;
+            int? localRegionalId = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, ownerRegion)?.Id;
+
             DaggerfallGuardLiveryResolution resolution = ResolveForLiveGuard(
-                actor.DurableId, site, activeProfile, npc, exteriorPlacements);
-            int? localRegionalId = npc is not null
-                ? DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, npc.Site.Region)?.Id ?? regionalPeopleId
-                : regionalPeopleId;
+                actor.DurableId, ownerSite, ownerProfile, npc, ownerPlacements);
             int? targetFactionId = resolution.UsesLiegeLivery
                 ? resolution.LiveryFactionId ?? localRegionalId
                 : localRegionalId ?? resolution.LiveryFactionId;
@@ -297,7 +313,7 @@ internal sealed class DaggerfallGuardPosts(
                     render.SetVisual(render.Spec with { Tint = targetTint, LiveryKey = targetLiveryKey });
             }
 
-            siteAppearance?.SetActorTint(actor.DurableId, resolution.LiveryTint);
+            ownerAppearance?.SetActorTint(actor.DurableId, resolution.LiveryTint);
         }
     }
 

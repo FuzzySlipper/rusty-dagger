@@ -77,18 +77,26 @@ internal static class DaggerfallGuardLiveryColors
         if (postKind == DaggerfallGuardPostKind.StreetWatch)
             return ($"watch:region:{liveryRegion}", null);
 
-        if (!isIndependentFallback)
+        // Major crown seats wear their crown livery both in their own home province and across vassal/occupied regions.
+        switch (liverySlug)
         {
-            return liverySlug switch
-            {
-                "daggerfall" => ("crown:daggerfall", DaggerfallRoyalBlue),
-                "wayrest" => ("crown:wayrest", WayrestCrimson),
-                "sentinel" => ("crown:sentinel", SentinelGold),
-                "orsinium" or "orsinium-area" => ("crown:orsinium", OrsiniumEmerald),
-                "empire" or "imperial-legion" or "the-empire" => ("crown:empire", EmpirePurple),
-                _ => ($"crown:{liverySlug}", RegionalTint(liveryRegion + 101)),
-            };
+            case "daggerfall":
+                return ("crown:daggerfall", DaggerfallRoyalBlue);
+            case "wayrest":
+                return ("crown:wayrest", WayrestCrimson);
+            case "sentinel":
+                return ("crown:sentinel", SentinelGold);
+            case "orsinium":
+            case "orsinium-area":
+                return ("crown:orsinium", OrsiniumEmerald);
+            case "empire":
+            case "imperial-legion":
+            case "the-empire":
+                return ("crown:empire", EmpirePurple);
         }
+
+        if (!isIndependentFallback)
+            return ($"crown:{liverySlug}", RegionalTint(liveryRegion + 101));
 
         return ($"region:{liveryRegion}", RegionalTint(liveryRegion));
     }

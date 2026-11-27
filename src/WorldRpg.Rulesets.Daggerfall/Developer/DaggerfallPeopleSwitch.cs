@@ -61,7 +61,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private static readonly Transform Unplaced = new(Vector3.Zero, Quaternion.Identity, Vector3.One);
     private static readonly float[] SpawnRows = [4F, 5.5F, 7F, 8.5F];
 
-    private readonly Dictionary<string, (RenderResource Body, Appearance Appearance, SplatFigure Figure)> characters = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (RenderResource Body, SplatWalk[] Walks, string[] Idles, SplatSkirtRig? Skirt)> bodies = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Id, string LiveryKey), (Appearance Appearance, SplatFigure Figure, Color? Tint)> characters = [];
     /// <summary>How the gsplat people are finished: the tuning's look until a developer sets another for the run.</summary>
     private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow) look =
         (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster);
@@ -203,7 +204,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             || palette == "own" && grid == 0)
             return DaggerfallDeveloperReplies.Refused("people.splat-look takes GRID 0 to 16, COVERAGE above 0 to 1, own (needs a grid) or none, and POSERATE 0 or more.");
         look = look with { Grid = (uint)grid, Coverage = (float)coverage, OwnPalette = palette == "own", PoseRate = (float)poseRate };
-        foreach ((string id, var opened) in characters) Finish(opened.Appearance, splats!.Characters[id]);
+        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
         return DebugCommandResult.Success(grid == 0
             ? $"Gsplat people draw smooth, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}."
             : $"Gsplat people draw on a {grid}-pixel grid, blocks where they cover {coverage:0.##}, {(look.OwnPalette ? "in their own palette" : "in their own colours")}, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}.");
@@ -214,11 +215,17 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (DaggerfallSplatPeopleTuning.Slow(pace) is not { } walksSlow) return DaggerfallDeveloperReplies.Refused("people.splat-pace takes slow or clip.");
         slow = walksSlow;
         // Each character's walks play at the new rates: its figure is replaced wherever it is drawn.
-        foreach ((string id, var opened) in characters.ToArray())
+        foreach (var (id, openedBody) in bodies.ToArray())
         {
             DaggerfallSplatPerson person = splats!.Characters[id];
-            SplatFigure figure = opened.Figure with { Walks = [.. splats.WalksOf(person).Select((clip, at) => Walk(person, clip) with { Clip = opened.Figure.Walks[at].Clip })] };
-            characters[id] = opened with { Figure = figure };
+            SplatWalk[] updatedWalks = [.. splats.WalksOf(person).Select((clip, at) => Walk(person, clip) with { Clip = openedBody.Walks[at].Clip })];
+            bodies[id] = openedBody with { Walks = updatedWalks };
+        }
+        foreach (var (key, opened) in characters.ToArray())
+        {
+            SplatWalk[] updatedWalks = bodies[key.Id].Walks;
+            SplatFigure figure = opened.Figure with { Walks = updatedWalks };
+            characters[key] = opened with { Figure = figure };
             if (splatCrowd?.Figure?.Appearance == opened.Appearance) splatCrowd.Use(figure);
             foreach ((long actor, SplatFigure given) in splatCrowd?.Assigned.ToArray() ?? [])
                 if (given.Appearance == opened.Appearance) splatCrowd!.Assign(actor, figure);
@@ -243,7 +250,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (DaggerfallSplatPeopleTuning.Caster(caster) is not { } shadow)
             return DaggerfallDeveloperReplies.Refused("people.splat-shadow takes none, ellipsoids or splats.");
         look = look with { Shadow = shadow };
-        foreach ((string id, var opened) in characters) Finish(opened.Appearance, splats!.Characters[id]);
+        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
         return DebugCommandResult.Success(shadow switch
         {
             SplatShadowCaster.None => "Gsplat people cast no shadow.",
@@ -264,13 +271,15 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         List<Exception>? failures = null;
         // The walkers' instances and rigs go before the characters they draw, and the characters before their clips.
         foreach (IDisposable? owned in new IDisposable?[] { rigCrowd, splatCrowd }
-            .Concat(characters.Values.SelectMany(opened => new IDisposable[] { opened.Appearance, opened.Body }))
+            .Concat(characters.Values.Select(opened => (IDisposable)opened.Appearance))
+            .Concat(bodies.Values.Select(opened => (IDisposable)opened.Body))
             .Concat(packs.Values))
         {
             try { owned?.Dispose(); }
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
         characters.Clear();
+        bodies.Clear();
         packs.Clear();
         rigCrowd = null;
         splatCrowd = null;
@@ -297,16 +306,20 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         letGo = false;
         HashSet<SplatFigure> spawned = [.. splatCrowd?.Assigned.Values ?? []];
         List<Exception>? failures = null;
-        foreach ((string id, var opened) in characters.Where(opened => !spawned.Contains(opened.Value.Figure)).ToArray())
+        foreach (var (key, opened) in characters.Where(opened => !spawned.Contains(opened.Value.Figure)).ToArray())
         {
-            characters.Remove(id);
-            foreach (IDisposable owned in new IDisposable[] { opened.Appearance, opened.Body })
-            {
-                try { owned.Dispose(); }
-                catch (Exception exception) { (failures ??= []).Add(exception); }
-            }
+            characters.Remove(key);
+            try { opened.Appearance.Dispose(); }
+            catch (Exception exception) { (failures ??= []).Add(exception); }
         }
-        if (characters.Count == 0)
+        HashSet<string> retainedBodies = [.. characters.Keys.Select(key => key.Id)];
+        foreach (var (id, openedBody) in bodies.Where(pair => !retainedBodies.Contains(pair.Key)).ToArray())
+        {
+            bodies.Remove(id);
+            try { openedBody.Body.Dispose(); }
+            catch (Exception exception) { (failures ??= []).Add(exception); }
+        }
+        if (bodies.Count == 0)
         {
             foreach (RenderResource pack in packs.Values)
             {
@@ -392,7 +405,12 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     {
         if (!own || !refreshed()) return null;
         if (ResolveCrowdCharacter(actor) is not { } resolved || broken.Contains(resolved.Id)) return null;
-        try { return Open(splats!, resolved.Id, splats!.Characters[resolved.Id]); }
+        (string liveryKey, Color? liveryTint) = actors.TryGet(actor, out ActorState? state)
+            && state.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
+            && render.Spec.Tint is { } tint
+            ? (render.Spec.LiveryKey ?? DaggerfallGuardLiveryColors.FormatHex(tint), (Color?)tint)
+            : (string.Empty, null);
+        try { return Open(splats!, resolved.Id, splats!.Characters[resolved.Id], liveryKey, liveryTint); }
         catch (Exception exception)
         {
             broken.Add(resolved.Id);
@@ -423,59 +441,85 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     }
 
     /// <summary>
-    /// Character <paramref name="id"/>, opened on its first use: its body with each walk and idle its walkers may play
-    /// bound by joint names and fitted to its legs, drawn lit. One in a long skirt plays the skirt walks, its skirt fitted
-    /// to its rig as it stands at rest.
+    /// Character <paramref name="id"/> (optionally in <paramref name="liveryKey"/> / <paramref name="tint"/> livery),
+    /// opened on its first use: its body with each walk and idle its walkers may play bound by joint names and fitted
+    /// to its legs, drawn lit. One in a long skirt plays the skirt walks, its skirt fitted to its rig as it stands at rest.
     /// </summary>
-    private SplatFigure Open(DaggerfallSplatPeople art, string id, DaggerfallSplatPerson person)
+    private SplatFigure Open(DaggerfallSplatPeople art, string id, DaggerfallSplatPerson person, string liveryKey = "", Color? tint = null)
     {
-        if (characters.TryGetValue(id, out var opened)) return opened.Figure;
+        (string Id, string LiveryKey) cacheKey = (id, liveryKey);
+        if (characters.TryGetValue(cacheKey, out var opened)) return opened.Figure;
         IAnimationService engine = animation();
-        IReadOnlyList<string> walks = art.WalksOf(person);
-        RenderResource body;
-        using (ContentReference reference = Reference(person.Body)) body = engine.OpenAnimatedMeshFromContent(new(reference));
+        if (!bodies.TryGetValue(id, out var openedBody))
+        {
+            IReadOnlyList<string> walks = art.WalksOf(person);
+            RenderResource body;
+            using (ContentReference reference = Reference(person.Body)) body = engine.OpenAnimatedMeshFromContent(new(reference));
+            try
+            {
+                foreach (string clip in walks.Concat(art.Idles))
+                {
+                    if (!packs.TryGetValue(clip, out RenderResource? pack))
+                    {
+                        using ContentReference reference = clips!.Open(art.Clips[clip]);
+                        packs.Add(clip, pack = engine.OpenAnimationClipPackFromContent(new(reference)));
+                    }
+                    engine.AssociateAnimationClipPackByJointNames(new(body, pack, art.Producer, art.License));
+                    // A walk's pelvis carries its travel forward (+z); the walker moves itself, so the walk keeps only its sway.
+                    DaggerfallSplatClipFit fit = person.Fits[clip];
+                    engine.FitAnimationClipTranslation(new(body, pack, clip, art.Joint,
+                        fit.Speed is null ? new(fit.Scale) : new(fit.Scale, fit.Scale, 0F), new(0F, fit.Lift, 0F)));
+                }
+                AnimationClipInfo[] bound = engine.ReadClips(body).ToArray();
+                SplatWalk[] walking = [.. walks.Select(clip => Walk(person, clip) with { Clip = ClipId(bound, clip) })];
+                string[] idles = [.. art.Idles.Select(clip => ClipId(bound, clip))];
+                SplatSkirtRig? skirtRig = person.Skirt is { } worn
+                    ? SplatSkirtRig.Resolve(worn, engine.ReadJoints(body).Span, engine.SampleModelJointPose(new(body, "", 0, "", 0, 0, false, Unplaced)).Span)
+                    : null;
+                openedBody = (body, walking, idles, skirtRig);
+                bodies.Add(id, openedBody);
+            }
+            catch
+            {
+                body.Dispose();
+                throw;
+            }
+
+            string ClipId(AnimationClipInfo[] bound, string name) => bound.Where(clip => clip.Name == name).Select(clip => clip.Id).FirstOrDefault()
+                ?? throw new InvalidOperationException($"Gsplat character {id} carries no clip '{name}' after its clip packs were bound; it has {string.Join(", ", bound.Select(clip => clip.Name))}.");
+        }
+
         Appearance? appearance = null;
         try
         {
-            foreach (string clip in walks.Concat(art.Idles))
-            {
-                if (!packs.TryGetValue(clip, out RenderResource? pack))
-                {
-                    using ContentReference reference = clips!.Open(art.Clips[clip]);
-                    packs.Add(clip, pack = engine.OpenAnimationClipPackFromContent(new(reference)));
-                }
-                engine.AssociateAnimationClipPackByJointNames(new(body, pack, art.Producer, art.License));
-                // A walk's pelvis carries its travel forward (+z); the walker moves itself, so the walk keeps only its sway.
-                DaggerfallSplatClipFit fit = person.Fits[clip];
-                engine.FitAnimationClipTranslation(new(body, pack, clip, art.Joint,
-                    fit.Speed is null ? new(fit.Scale) : new(fit.Scale, fit.Scale, 0F), new(0F, fit.Lift, 0F)));
-            }
-            AnimationClipInfo[] bound = engine.ReadClips(body).ToArray();
-            SplatWalk[] walking = [.. walks.Select(clip => Walk(person, clip) with { Clip = ClipId(bound, clip) })];
-            string[] idles = [.. art.Idles.Select(clip => ClipId(bound, clip))];
-            SplatSkirtRig? skirtRig = person.Skirt is { } worn
-                ? SplatSkirtRig.Resolve(worn, engine.ReadJoints(body).Span, engine.SampleModelJointPose(new(body, "", 0, "", 0, 0, false, Unplaced)).Span)
-                : null;
-            appearance = engine.CreateAnimatedMeshAppearance(new(body));
-            Finish(appearance, person);
-            SplatFigure figure = new($"{id} ({person.Name})", appearance, walking, idles, tuning.CrossfadeSeconds, skirtRig, person.Eyes);
-            characters.Add(id, (body, appearance, figure));
+            appearance = engine.CreateAnimatedMeshAppearance(new(openedBody.Body));
+            Finish(appearance, person, tint);
+            string figureLabel = string.IsNullOrEmpty(liveryKey)
+                ? $"{id} ({person.Name})"
+                : $"{id} ({person.Name}) [{liveryKey}]";
+            SplatFigure figure = new(figureLabel, appearance, openedBody.Walks, openedBody.Idles, tuning.CrossfadeSeconds, openedBody.Skirt, person.Eyes);
+            characters.Add(cacheKey, (appearance, figure, tint));
             return figure;
         }
         catch
         {
             appearance?.Dispose();
-            body.Dispose();
             throw;
         }
-
-        string ClipId(AnimationClipInfo[] bound, string name) => bound.Where(clip => clip.Name == name).Select(clip => clip.Id).FirstOrDefault()
-            ?? throw new InvalidOperationException($"Gsplat character {id} carries no clip '{name}' after its clip packs were bound; it has {string.Join(", ", bound.Select(clip => clip.Name))}.");
     }
 
-    /// <summary>Draws <paramref name="person"/>'s appearance lit, in the run's look.</summary>
-    private void Finish(Appearance appearance, DaggerfallSplatPerson person) => animation().SetSplatAppearance(new(appearance, Vector3.One, look.Grid, look.Coverage,
-        look.OwnPalette ? person.Palette.ToArray() : ReadOnlyMemory<Color>.Empty, look.PoseRate, SplatLighting.Lit, tuning.LightFloor, look.Shadow));
+    /// <summary>Draws <paramref name="person"/>'s appearance lit, in the run's look and optional guard livery tint.</summary>
+    private void Finish(Appearance appearance, DaggerfallSplatPerson person, Color? tint = null)
+    {
+        Vector3 tintVec = tint is { } c ? new Vector3(c.R, c.G, c.B) : Vector3.One;
+        ReadOnlyMemory<Color> palette = look.OwnPalette
+            ? (tint is { } tc
+                ? person.Palette.Select(p => new Color(p.R * tc.R, p.G * tc.G, p.B * tc.B, p.A)).ToArray()
+                : person.Palette.ToArray())
+            : ReadOnlyMemory<Color>.Empty;
+        animation().SetSplatAppearance(new(appearance, tintVec, look.Grid, look.Coverage,
+            palette, look.PoseRate, SplatLighting.Lit, tuning.LightFloor, look.Shadow));
+    }
 
     private ContentReference Reference(DaggerfallArtFile file) => content().ResolveReference(new ContentResolveRequest(file.Path, file.Sha256));
 }
