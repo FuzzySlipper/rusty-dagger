@@ -1,3 +1,4 @@
+using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -6,20 +7,67 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>Outcome of a party hiring or dismissal dialogue action.</summary>
+/// <summary>Outcome of a party hiring, field-sustain, or dismissal dialogue action.</summary>
 internal sealed record DaggerfallPartyHireResult(bool Accepted, string Question, string Message);
 
+/// <summary>Authoritative price and eligibility quote for hiring an actor under a <c>party-hire</c> spec (#11101).</summary>
+internal sealed record DaggerfallPartyHireQuote(
+    string SpawnerId,
+    ulong Deposit,
+    int DailyWage,
+    bool CanDelveDungeons,
+    bool Eligible,
+    string? RefusalReason = null);
+
+/// <summary>Outcome emitted when daily wages roll over for one contracted party member (#11101).</summary>
+internal sealed record DaggerfallPartyDailyOutcome(
+    long ActorId,
+    string Name,
+    bool Paid,
+    bool Deserted,
+    int UnpaidDays,
+    int Morale,
+    ulong PaidGold,
+    string Message);
+
+/// <summary>Outcome of the single friendly-fire tolerance rule inside the party morale owner (#11101).</summary>
+internal sealed record DaggerfallFriendlyFireResult(
+    bool Handled,
+    bool TurnedHostile,
+    int Strikes,
+    int Morale,
+    string? Message);
+
 /// <summary>
-/// Gameplay producer for enlisting seeded townsfolk, tavern patrons, and guild mercenaries into
+/// Gameplay producer for enlisting seeded townsfolk, tavern patrons, road guards, and guild retainers into
 /// <see cref="ActorLocationKind.WithParty"/> as a <see cref="ActorPartyRole.Companion"/> or
-/// <see cref="ActorPartyRole.Driver"/> via normal conversation, and releasing them via
-/// <see cref="DaggerfallOverlandPartyCoordinator.ReleaseFromParty"/>.
+/// <see cref="ActorPartyRole.Driver"/> via normal conversation, pricing upfront deposits and daily wages from
+/// <c>party-hire</c> specs and world conditions, rolling over daily wages and morale, applying the single
+/// friendly-fire tolerance rule, and releasing them via <see cref="DaggerfallOverlandPartyCoordinator.ReleaseFromParty"/> (#11101).
 /// </summary>
 internal sealed class DaggerfallPartyHireService
 {
     internal const ulong CompanionHireFee = 25UL;
     internal const ulong DriverHireFee = 15UL;
+    internal const int DefaultDailyWage = 12;
     internal const int MaximumPartyMembers = 3;
+    internal const string DefaultRoadGuardSpecId = "hire-road-guard";
+    internal const string MercenarySpecId = "hire-mercenary";
+    internal const string KnightRetainerSpecId = "hire-knight-retainer";
+    internal const string BattleMageSpecId = "hire-battle-mage";
+    internal const string WarFrontTag = "war-front";
+
+    internal const int FriendlyFireTolerance = 2;
+    internal const int FriendlyFireMoralePenalty = 12;
+    internal const int UnpaidMoralePenaltyPerDay = 15;
+    internal const int PaidMoraleRecovery = 2;
+    internal const int MaxUnpaidDaysBeforeDesertion = 2;
+    internal const int DesertionMoraleThreshold = 20;
+    internal const int DesertionDispositionPenalty = -15;
+    internal const int HealingDraughtHealthAmount = 35;
+    internal const int HealingDraughtMoraleBonus = 8;
+    internal const int HazardBonusMoraleBonus = 15;
+
     private const int TavernBuildingType = 15;
     private const int GuildHallBuildingType = 11;
 
@@ -35,6 +83,7 @@ internal sealed class DaggerfallPartyHireService
     };
 
     private readonly DaggerfallDefinitions _definitions;
+    private readonly IReadOnlyDictionary<string, DaggerfallActorSpawnerSpec> _partyHireSpecs;
     private readonly ActorsState _actors;
     private readonly DaggerfallActorLedger _actorLedger;
     private readonly DaggerfallOverlandPartyCoordinator _overlandParties;
@@ -46,6 +95,11 @@ internal sealed class DaggerfallPartyHireService
     private readonly Func<long, bool> _isQuestUnavailable;
     private readonly Func<DaggerfallNpc, bool> _hasDepositWaiver;
     private readonly Func<int, ulong, ulong> _hireFee;
+    private readonly DaggerfallWorldConditions? _worldConditions;
+    private readonly Func<int> _currentDay;
+    private readonly Func<string, int> _readPlayerSkill;
+    private readonly Func<int, int?> _readGuildRank;
+    private readonly Func<bool> _consumeHealingDraught;
 
     internal DaggerfallPartyHireService(
         DaggerfallDefinitions definitions,
@@ -59,9 +113,15 @@ internal sealed class DaggerfallPartyHireService
         Func<ulong, bool> spendGold,
         Func<long, bool>? isQuestUnavailable = null,
         Func<DaggerfallNpc, bool>? hasDepositWaiver = null,
-        Func<int, ulong, ulong>? hireFee = null)
+        Func<int, ulong, ulong>? hireFee = null,
+        DaggerfallWorldConditions? worldConditions = null,
+        Func<int>? currentDay = null,
+        Func<string, int>? readPlayerSkill = null,
+        Func<int, int?>? readGuildRank = null,
+        Func<bool>? consumeHealingDraught = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+        _partyHireSpecs = definitions.ActorCatalog.ProjectPartyHireSpecs();
         _actors = actors ?? throw new ArgumentNullException(nameof(actors));
         _actorLedger = actorLedger ?? throw new ArgumentNullException(nameof(actorLedger));
         _overlandParties = overlandParties ?? throw new ArgumentNullException(nameof(overlandParties));
@@ -73,6 +133,31 @@ internal sealed class DaggerfallPartyHireService
         _isQuestUnavailable = isQuestUnavailable ?? (_ => false);
         _hasDepositWaiver = hasDepositWaiver ?? (_ => false);
         _hireFee = hireFee ?? ((_, fee) => fee);
+        _worldConditions = worldConditions;
+        _currentDay = currentDay ?? (() => 0);
+        _readPlayerSkill = readPlayerSkill ?? (_ => 25);
+        _readGuildRank = readGuildRank ?? (_ => null);
+        _consumeHealingDraught = consumeHealingDraught ?? (() => false);
+    }
+
+    /// <summary>Validated <c>party-hire</c> spawner specs loaded from <c>actors/specs/party-hire.json</c>.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallActorSpawnerSpec> Specs => _partyHireSpecs;
+
+    /// <summary>True when <paramref name="actorId"/> currently holds an active non-betrayed party contract (#11101).</summary>
+    internal bool IsContractedHire(long actorId) =>
+        _actorLedger.TryGet(actorId, out ActorLedgerEntry? entry)
+        && entry?.PartyContract is { HostileBetrayal: false };
+
+    /// <summary>Reads the sparse <see cref="ActorPartyContractDiff"/> for <paramref name="actorId"/> if present.</summary>
+    internal bool TryGetContract(long actorId, out ActorPartyContractDiff contract)
+    {
+        if (_actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.PartyContract is { } found)
+        {
+            contract = found;
+            return true;
+        }
+        contract = null!;
+        return false;
     }
 
     /// <summary>Dialogue service options offered for <paramref name="npc"/> under the Services topic group.</summary>
@@ -80,18 +165,37 @@ internal sealed class DaggerfallPartyHireService
     {
         ArgumentNullException.ThrowIfNull(npc);
         if (TryGetStagedHiredRole(npc.DurableId, out _))
-            return [new("dismiss-party", "Part ways here")];
+        {
+            List<DaggerfallDialogueTopicOption> activeTopics = [];
+            if (TryGetContract(npc.DurableId, out ActorPartyContractDiff contract) && !contract.HostileBetrayal)
+            {
+                activeTopics.Add(new("give-healing-draught", "Give healing draught"));
+                ulong bonus = HazardBonusGold(contract);
+                string bonusLabel = contract.UnpaidDays > 0
+                    ? $"Pay overdue wages & hazard bonus ({bonus} gold)"
+                    : $"Pay hazard bonus ({bonus} gold)";
+                activeTopics.Add(new("pay-hazard-bonus", bonusLabel));
+            }
+            activeTopics.Add(new("dismiss-party", "Part ways here"));
+            return activeTopics;
+        }
 
         if (!IsHireable(npc))
             return [];
 
         bool waived = _hasDepositWaiver(npc);
-        List<DaggerfallDialogueTopicOption> topics =
-        [
-            new("hire-companion", waived ? "Travel with me (deposit waived)" : $"Travel with me ({Fee(npc, ActorPartyRole.Companion)} gold)"),
-        ];
+        DaggerfallPartyHireQuote companionQuote = QuoteHire(npc, ActorPartyRole.Companion);
+        string companionLabel = waived
+            ? $"Travel with me (deposit waived, {companionQuote.DailyWage} gold/day)"
+            : $"Travel with me ({companionQuote.Deposit} gold, {companionQuote.DailyWage} gold/day)";
+        List<DaggerfallDialogueTopicOption> topics = [new("hire-companion", companionLabel)];
         if (_ownsCart() && !HasActiveDriver())
-            topics.Add(new("hire-driver", waived ? "Drive my wagon (deposit waived)" : $"Drive my wagon ({Fee(npc, ActorPartyRole.Driver)} gold)"));
+        {
+            DaggerfallPartyHireQuote driverQuote = QuoteHire(npc, ActorPartyRole.Driver);
+            topics.Add(new("hire-driver", waived
+                ? "Drive my wagon (deposit waived)"
+                : $"Drive my wagon ({driverQuote.Deposit} gold)"));
+        }
         return topics;
     }
 
@@ -103,8 +207,233 @@ internal sealed class DaggerfallPartyHireService
             DaggerfallDialogueTopic.HireCompanion => TryHire(npc, ActorPartyRole.Companion),
             DaggerfallDialogueTopic.HireDriver => TryHire(npc, ActorPartyRole.Driver),
             DaggerfallDialogueTopic.DismissParty => TryDismiss(npc),
+            DaggerfallDialogueTopic.GiveHealingDraught => TryGiveHealingDraught(npc),
+            DaggerfallDialogueTopic.PayHazardBonus => TryPayHazardBonus(npc),
             _ => throw new ArgumentOutOfRangeException(nameof(topic), topic, "Not a party hire dialogue topic."),
         };
+    }
+
+    /// <summary>
+    /// Computes the authoritative deposit, daily wage, and eligibility for hiring <paramref name="npc"/>
+    /// from its resolved <c>party-hire</c> spec <c>hireTerms</c>, active regional A6 world conditions
+    /// (<c>MonsterSurge</c>, <c>GrainShortage</c>, <c>BorderTension</c>/<c>WarFront</c>, recruitment decrees),
+    /// social skills (<c>Mercantile</c>, <c>Etiquette</c>, <c>Streetwise</c>), and <see cref="DaggerfallIntroductions"/>
+    /// deposit waivers (#11101).
+    /// </summary>
+    internal DaggerfallPartyHireQuote QuoteHire(DaggerfallNpc npc, ActorPartyRole role, string? explicitSpecId = null)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        bool depositWaived = _hasDepositWaiver(npc);
+        if (role == ActorPartyRole.Driver)
+        {
+            ulong driverFee = depositWaived ? 0UL : ApplyPricingAdjustments(npc.Site.Region, DriverHireFee, applySocialDiscount: true);
+            return new("hire-driver", driverFee, 0, CanDelveDungeons: false, Eligible: true);
+        }
+
+        string specId = ResolveSpecId(npc, explicitSpecId);
+        DaggerfallActorSpawnerSpec? spec = _partyHireSpecs.TryGetValue(specId, out DaggerfallActorSpawnerSpec? found) ? found : null;
+        DaggerfallPartyHireTerms? terms = spec?.HireTerms;
+
+        int baseDeposit = terms?.BaseDeposit ?? (int)CompanionHireFee;
+        int baseDailyWage = terms?.BaseDailyWage ?? DefaultDailyWage;
+        bool canDelve = terms?.CanDelveDungeons ?? false;
+
+        // Enforce explicit guild rank / vouch gates when hiring under a gated spec.
+        if (terms is not null)
+        {
+            if (terms.GuildFactionId is int guildId && terms.MinimumGuildRank is int minRank)
+            {
+                int? playerRank = _readGuildRank(guildId);
+                if (playerRank is null || playerRank.Value < minRank)
+                    return new(specId, 0UL, baseDailyWage, canDelve, Eligible: false,
+                        RefusalReason: $"Requires guild rank {minRank} to enlist a {spec!.DisplayName}.");
+            }
+            if (terms.RequiresVouch && !depositWaived)
+            {
+                return new(specId, 0UL, baseDailyWage, canDelve, Eligible: false,
+                    RefusalReason: $"Requires a trusted introduction or vouch to enlist a {spec!.DisplayName}.");
+            }
+        }
+
+        ulong deposit = depositWaived
+            ? 0UL
+            : ApplyPricingAdjustments(npc.Site.Region, (ulong)Math.Max(0, baseDeposit), applySocialDiscount: true);
+        int dailyWage = checked((int)ApplyPricingAdjustments(npc.Site.Region, (ulong)Math.Max(1, baseDailyWage), applySocialDiscount: true));
+        return new(specId, deposit, Math.Max(1, dailyWage), canDelve, Eligible: true);
+    }
+
+    /// <summary>Enlists <paramref name="npc"/> explicitly under a named <c>party-hire</c> spec (e.g. <c>hire-knight-retainer</c>).</summary>
+    internal DaggerfallPartyHireResult TryHireSpec(DaggerfallNpc npc, string specId)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        ArgumentException.ThrowIfNullOrWhiteSpace(specId);
+        return TryHire(npc, ActorPartyRole.Companion, specId);
+    }
+
+    /// <summary>
+    /// Rolls over daily wages on calendar day boundaries for every contracted party member (both travelling in
+    /// <see cref="ActorLocationKind.WithParty"/> and staged in the active scene). Unpaid days drop morale and warn
+    /// the player; sustained unpaid wages or collapsed morale causes desertion via <see cref="DaggerfallOverlandPartyCoordinator.ReleaseFromParty"/>
+    /// with a disposition penalty (#11101).
+    /// </summary>
+    internal IReadOnlyList<DaggerfallPartyDailyOutcome> AdvanceDay(int currentDay)
+    {
+        if (currentDay < 0)
+            return [];
+
+        List<DaggerfallPartyDailyOutcome> outcomes = [];
+        ActorLedgerEntry[] candidates =
+        [
+            .. _actorLedger.All
+                .Where(e => e.PartyContract is { HostileBetrayal: false }
+                    && (e.Location?.Kind == ActorLocationKind.WithParty
+                        || e.Social?.StagedPartyRole is ActorPartyRole.Companion or ActorPartyRole.Driver))
+                .OrderBy(e => e.DurableId),
+        ];
+
+        foreach (ActorLedgerEntry entry in candidates)
+        {
+            ActorPartyContractDiff contract = entry.PartyContract!;
+            if (contract.DailyWage <= 0 || currentDay <= contract.PaidThroughDay)
+                continue;
+
+            string name = entry.Social?.DisplayNameOverride ?? entry.Social?.Role ?? "Your hire";
+            int dueDays = currentDay - contract.PaidThroughDay;
+            ulong dailyWage = (ulong)contract.DailyWage;
+            ulong available = _availableGold();
+            int affordableDays = (int)Math.Min((ulong)dueDays, available / dailyWage);
+            ulong paidGold = 0UL;
+            if (affordableDays > 0)
+            {
+                ulong toSpend = checked((ulong)affordableDays * dailyWage);
+                if (_spendGold(toSpend))
+                    paidGold = toSpend;
+                else
+                    affordableDays = 0;
+            }
+
+            int unpaidNow = dueDays - affordableDays;
+            if (unpaidNow == 0)
+            {
+                int boostedMorale = Math.Min(ActorPartyContractDiff.MaximumMorale, contract.Morale + PaidMoraleRecovery);
+                _actorLedger.Upsert(entry with
+                {
+                    PartyContract = contract with
+                    {
+                        PaidThroughDay = currentDay,
+                        UnpaidDays = 0,
+                        Morale = boostedMorale,
+                    },
+                });
+                outcomes.Add(new(entry.DurableId, name, Paid: true, Deserted: false, 0, boostedMorale, paidGold,
+                    $"Paid {name} {paidGold} gold in daily wages."));
+                continue;
+            }
+
+            int totalUnpaid = contract.UnpaidDays + unpaidNow;
+            int newMorale = Math.Max(ActorPartyContractDiff.MinimumMorale, contract.Morale - (unpaidNow * UnpaidMoralePenaltyPerDay));
+            if (totalUnpaid >= MaxUnpaidDaysBeforeDesertion || newMorale <= DesertionMoraleThreshold)
+            {
+                WorldPoint? livePos = _actors.TryGet(entry.DurableId, out ActorState? live) ? live.Position : null;
+                _overlandParties.ReleaseFromParty(entry.DurableId, _activeProfile().ProfileKey, livePos, clearContract: true);
+                if (_actorLedger.TryGet(entry.DurableId, out ActorLedgerEntry? released) && released?.Social is { } rs)
+                {
+                    _actorLedger.Upsert(released with
+                    {
+                        Social = rs with { DispositionDelta = rs.DispositionDelta + DesertionDispositionPenalty },
+                    });
+                }
+                outcomes.Add(new(entry.DurableId, name, Paid: false, Deserted: true, totalUnpaid, newMorale, paidGold,
+                    $"{name} has had enough of unpaid wages and parts ways with your party."));
+            }
+            else
+            {
+                int newPaidThrough = contract.PaidThroughDay + affordableDays;
+                _actorLedger.Upsert(entry with
+                {
+                    PartyContract = contract with
+                    {
+                        PaidThroughDay = newPaidThrough,
+                        UnpaidDays = totalUnpaid,
+                        Morale = newMorale,
+                    },
+                });
+                ulong owed = checked((ulong)totalUnpaid * dailyWage);
+                outcomes.Add(new(entry.DurableId, name, Paid: false, Deserted: false, totalUnpaid, newMorale, paidGold,
+                    $"{name} warns you that {owed} gold in wages is overdue."));
+            }
+        }
+
+        return outcomes;
+    }
+
+    /// <summary>
+    /// Single friendly-fire tolerance rule owned inside the morale owner (#11101): incidental player clips against a
+    /// contracted hire emit a warning bark and drop morale without turning them hostile (up to <see cref="FriendlyFireTolerance"/>
+    /// strikes); exceeding tolerance or dealing a lethal blow marks <see cref="ActorPartyContractDiff.HostileBetrayal"/>,
+    /// dissolves the contract, and allows hostile retaliation and betrayal social consequences.
+    /// </summary>
+    internal DaggerfallFriendlyFireResult ObserveFriendlyFire(long targetActorId, bool fatal)
+    {
+        if (!_actorLedger.TryGet(targetActorId, out ActorLedgerEntry? entry)
+            || entry?.PartyContract is not { HostileBetrayal: false } contract)
+            return new(Handled: false, TurnedHostile: false, 0, 0, null);
+
+        string name = entry.Social?.DisplayNameOverride ?? entry.Social?.Role ?? "Your hire";
+        int strikes = contract.FriendlyFireStrikes + 1;
+        int morale = fatal ? 0 : Math.Max(ActorPartyContractDiff.MinimumMorale, contract.Morale - FriendlyFireMoralePenalty);
+
+        if (fatal)
+        {
+            _actorLedger.Upsert(entry with
+            {
+                PartyContract = contract with
+                {
+                    FriendlyFireStrikes = strikes,
+                    Morale = 0,
+                    HostileBetrayal = true,
+                },
+            });
+            return new(Handled: true, TurnedHostile: true, strikes, 0, null);
+        }
+
+        if (strikes <= FriendlyFireTolerance && morale > DesertionMoraleThreshold)
+        {
+            _actorLedger.Upsert(entry with
+            {
+                PartyContract = contract with
+                {
+                    FriendlyFireStrikes = strikes,
+                    Morale = morale,
+                },
+            });
+            string bark = strikes == FriendlyFireTolerance
+                ? $"{name}: \"Watch your blade! One more strike like that and our contract is finished.\""
+                : $"{name}: \"Careful with that weapon — I'm on your side!\"";
+            return new(Handled: true, TurnedHostile: false, strikes, morale, bark);
+        }
+
+        // Tolerance breached: mark betrayal (kept until death so SocialConsequences distinguishes betrayal) and drop party custody.
+        _actorLedger.Upsert(entry with
+        {
+            PartyContract = contract with
+            {
+                FriendlyFireStrikes = strikes,
+                Morale = morale,
+                HostileBetrayal = true,
+            },
+        });
+        WorldPoint? livePos = _actors.TryGet(targetActorId, out ActorState? live) ? live.Position : null;
+        _overlandParties.ReleaseFromParty(targetActorId, _activeProfile().ProfileKey, livePos, clearContract: false);
+        return new(Handled: true, TurnedHostile: true, strikes, morale,
+            $"{name}: \"That's betrayal! Our contract is finished — defend yourself!\"");
+    }
+
+    /// <summary>Clears any lingering party contract after death consequences have run so slain hires are never billed wages (#11101).</summary>
+    internal void ClearContractOnDeath(long actorId)
+    {
+        if (_actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.PartyContract is not null)
+            _actorLedger.Upsert(entry with { PartyContract = null });
     }
 
     /// <summary>Resolves a real published Daggerfall portrait media ID for a hired party member.</summary>
@@ -126,11 +455,76 @@ internal sealed class DaggerfallPartyHireService
         return heads[seed % heads.Count].MediaId;
     }
 
-    /// <summary>What hiring <paramref name="npc"/> as <paramref name="role"/> costs where they are: recruitment drives it down.</summary>
-    private ulong Fee(DaggerfallNpc npc, ActorPartyRole role) =>
-        _hireFee(npc.Site.Region, role == ActorPartyRole.Driver ? DriverHireFee : CompanionHireFee);
+    private string ResolveSpecId(DaggerfallNpc npc, string? explicitSpecId)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitSpecId))
+            return explicitSpecId;
+        if (_actors.TryGet(npc.DurableId, out ActorState? live)
+            && live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? ov))
+        {
+            if (string.Equals(ov.ArchetypeId, "archer", StringComparison.OrdinalIgnoreCase)
+                && _partyHireSpecs.ContainsKey(MercenarySpecId))
+                return MercenarySpecId;
+        }
+        return DefaultRoadGuardSpecId;
+    }
 
-    private DaggerfallPartyHireResult TryHire(DaggerfallNpc npc, ActorPartyRole role)
+    /// <summary>
+    /// Computes the combined hazard percent from active regional A6 world conditions (<c>MonsterSurge</c>,
+    /// <c>GrainShortage</c>, <c>BorderTension</c>, and <c>WarFront</c> decrees) on the current day.
+    /// </summary>
+    internal int RegionalHazardPercent(int region)
+    {
+        if (_worldConditions is null)
+            return 100;
+        int extra = 0;
+        foreach (DaggerfallWorldConditionToken token in _worldConditions.ActiveForRegion(region, _currentDay()))
+        {
+            extra += token.Kind switch
+            {
+                DaggerfallWorldConditionKind.MonsterSurge => 15 * token.Severity,
+                DaggerfallWorldConditionKind.GrainShortage => 10 * token.Severity,
+                DaggerfallWorldConditionKind.BorderTension => 15 * token.Severity,
+                DaggerfallWorldConditionKind.Decree when IsWarFrontTag(token.SubjectTag) => 15 * token.Severity,
+                _ => 0,
+            };
+        }
+        return 100 + extra;
+    }
+
+    private static bool IsWarFrontTag(string? tag) =>
+        string.Equals(tag, WarFrontTag, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(tag, "warfront", StringComparison.OrdinalIgnoreCase);
+
+    private ulong ApplyPricingAdjustments(int region, ulong baseGold, bool applySocialDiscount)
+    {
+        if (baseGold == 0UL)
+            return 0UL;
+        int hazardPercent = RegionalHazardPercent(region);
+        ulong adjusted = checked(baseGold * (ulong)hazardPercent / 100UL);
+        adjusted = _hireFee(region, Math.Max(1UL, adjusted));
+        if (applySocialDiscount)
+        {
+            int bestSkill = Math.Max(
+                _readPlayerSkill("mercantile"),
+                Math.Max(_readPlayerSkill("etiquette"), _readPlayerSkill("streetwise")));
+            if (bestSkill > 25)
+            {
+                int discountPercent = Math.Min(25, (bestSkill - 25) / 3);
+                adjusted = Math.Max(1UL, checked(adjusted * (ulong)(100 - discountPercent) / 100UL));
+            }
+        }
+        return Math.Max(1UL, adjusted);
+    }
+
+    private static ulong HazardBonusGold(ActorPartyContractDiff contract)
+    {
+        ulong baseBonus = (ulong)Math.Max(10, contract.DailyWage);
+        ulong arrears = contract.UnpaidDays > 0 ? checked((ulong)contract.UnpaidDays * (ulong)Math.Max(0, contract.DailyWage)) : 0UL;
+        return checked(baseBonus + arrears);
+    }
+
+    private DaggerfallPartyHireResult TryHire(DaggerfallNpc npc, ActorPartyRole role, string? explicitSpecId = null)
     {
         string name = npc.DisplayName ?? npc.Role;
         string question = role == ActorPartyRole.Driver
@@ -151,8 +545,12 @@ internal sealed class DaggerfallPartyHireService
                 return new(false, question, "You already have a driver handling your wagon.");
         }
 
+        DaggerfallPartyHireQuote quote = QuoteHire(npc, role, explicitSpecId);
+        if (!quote.Eligible)
+            return new(false, question, quote.RefusalReason ?? $"{name} declines your terms.");
+
         bool depositWaived = _hasDepositWaiver(npc);
-        ulong fee = depositWaived ? 0UL : Fee(npc, role);
+        ulong fee = quote.Deposit;
         if (fee > 0UL && (_availableGold() < fee || !_spendGold(fee)))
             return new(false, question, $"You need {fee} gold to hire {name}.");
 
@@ -162,18 +560,80 @@ internal sealed class DaggerfallPartyHireService
         WorldPoint currentPos = live.Position;
         float currentYaw = live.HeadingYawRadians;
         string portrait = ResolvePortraitMedia(_definitions, npc);
+        ActorPartyContractDiff contract = new(
+            SpawnerId: quote.SpawnerId,
+            DailyWage: quote.DailyWage,
+            PaidThroughDay: Math.Max(0, _currentDay()),
+            Morale: ActorPartyContractDiff.DefaultMorale,
+            Stance: ActorPartyStance.Follow,
+            CanDelveDungeons: quote.CanDelveDungeons);
 
-        _overlandParties.JoinParty(npc.DurableId, role, portraitMedia: portrait);
+        _overlandParties.JoinParty(npc.DurableId, role, portraitMedia: portrait, contract: contract);
         _ = _overlandParties.StagePartyMember(npc.DurableId, _activeProfile(), currentPos, currentYaw);
 
+        string wageClause = quote.DailyWage > 0 ? $" at {quote.DailyWage} gold a day" : string.Empty;
         string reply = depositWaived
             ? (role == ActorPartyRole.Driver
                 ? $"On account of your introduction, {name} waives the deposit, takes the reins, and joins your party."
-                : $"On account of your introduction, {name} waives the deposit and joins your party.")
+                : $"On account of your introduction, {name} waives the deposit and joins your party{wageClause}.")
             : (role == ActorPartyRole.Driver
                 ? $"Agreed — {name} takes the reins for {fee} gold and joins your party."
-                : $"Agreed — {name} accepts {fee} gold and joins your party.");
+                : $"Agreed — {name} accepts {fee} gold and joins your party{wageClause}.");
         return new(true, question, reply);
+    }
+
+    private DaggerfallPartyHireResult TryGiveHealingDraught(DaggerfallNpc npc)
+    {
+        string name = npc.DisplayName ?? npc.Role;
+        const string question = "Take this healing draught.";
+        if (!TryGetStagedHiredRole(npc.DurableId, out _)
+            || !_actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? entry)
+            || entry?.PartyContract is not { HostileBetrayal: false } contract)
+            return new(false, question, $"{name} is not under contract with your party.");
+
+        if (!_actors.TryGet(npc.DurableId, out ActorState? live) || live.IsDefeated)
+            return new(false, question, $"{name} cannot take a draught right now.");
+
+        if (!_consumeHealingDraught())
+            return new(false, question, "You have no healing draught in your pack to share.");
+
+        Track health = live.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        double before = health.Current;
+        double healedTo = Math.Min(health.Maximum.Value, before + HealingDraughtHealthAmount);
+        health.SetCurrent(healedTo);
+
+        int newMorale = Math.Min(ActorPartyContractDiff.MaximumMorale, contract.Morale + HealingDraughtMoraleBonus);
+        _actorLedger.Upsert(entry with { PartyContract = contract with { Morale = newMorale } });
+        return new(true, question, $"{name} drinks the healing draught and steadies their footing.");
+    }
+
+    private DaggerfallPartyHireResult TryPayHazardBonus(DaggerfallNpc npc)
+    {
+        string name = npc.DisplayName ?? npc.Role;
+        const string question = "Here is extra coin for the hazards ahead.";
+        if (!TryGetStagedHiredRole(npc.DurableId, out _)
+            || !_actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? entry)
+            || entry?.PartyContract is not { HostileBetrayal: false } contract)
+            return new(false, question, $"{name} is not under contract with your party.");
+
+        ulong bonus = HazardBonusGold(contract);
+        if (_availableGold() < bonus || !_spendGold(bonus))
+            return new(false, question, $"You need {bonus} gold to pay {name}'s hazard bonus.");
+
+        int newMorale = Math.Min(ActorPartyContractDiff.MaximumMorale, contract.Morale + HazardBonusMoraleBonus);
+        int newStrikes = Math.Max(0, contract.FriendlyFireStrikes - 1);
+        int paidThrough = Math.Max(contract.PaidThroughDay + contract.UnpaidDays, Math.Max(0, _currentDay()));
+        _actorLedger.Upsert(entry with
+        {
+            PartyContract = contract with
+            {
+                PaidThroughDay = paidThrough,
+                UnpaidDays = 0,
+                Morale = newMorale,
+                FriendlyFireStrikes = newStrikes,
+            },
+        });
+        return new(true, question, $"{name} pockets the {bonus} gold with a sharp nod. \"Fair coin — I've got your back.\"");
     }
 
     private DaggerfallPartyHireResult TryDismiss(DaggerfallNpc npc)
@@ -184,7 +644,7 @@ internal sealed class DaggerfallPartyHireService
             return new(false, question, $"{name} is not travelling in your party.");
 
         WorldPoint? currentPos = _actors.TryGet(npc.DurableId, out ActorState? live) ? live.Position : null;
-        _overlandParties.ReleaseFromParty(npc.DurableId, _activeProfile().ProfileKey, currentPos);
+        _overlandParties.ReleaseFromParty(npc.DurableId, _activeProfile().ProfileKey, currentPos, clearContract: true);
         return new(true, question, $"Safe travels. {name} parts ways with your party here.");
     }
 

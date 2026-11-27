@@ -289,7 +289,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 Location: dynDefeated
                     ? ActorLocationOverride.Dead(activeProfile, dynPose)
                     : ActorLocationOverride.AtSite(activeProfile),
-                Referral: priorDynLedger?.Referral);
+                Referral: priorDynLedger?.Referral,
+                PartyContract: priorDynLedger?.PartyContract);
         }
 
         // 3. Inactive-site (and unloaded active exterior) detached actors + banished placements
@@ -347,7 +348,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                     Combat: ToDynamicCombatDiff(dyn, inv, corpse, effects),
                     Social: priorDetachedLedger?.Social,
                     Location: ActorLocationOverride.AtSite(profile, detached: true),
-                    Referral: priorDetachedLedger?.Referral);
+                    Referral: priorDetachedLedger?.Referral,
+                    PartyContract: priorDetachedLedger?.PartyContract);
             }
 
             foreach (long banishedId in delta.BanishedActors.Order())
@@ -585,8 +587,9 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             }
         }
 
+        ActorPartyContractDiff? partyContract = priorLocationLedger?.PartyContract;
         inventoryIsDefault = IsDefaultActorInventory(actor.DurableId, origin, capturedInventory);
-        bool hasNonPoseDelta = vitals is not null || combat is not null || social is not null || referral is not null || relocated || location is not null || !inventoryIsDefault;
+        bool hasNonPoseDelta = vitals is not null || combat is not null || social is not null || referral is not null || partyContract is not null || relocated || location is not null || !inventoryIsDefault;
         bool idleWanderOnly = !hasNonPoseDelta && originComp is not null
             && originComp.MatchesIdleWanderPose(currentPos, actor.HeadingYawRadians);
         ActorPoseOverride? pose = (!relocated && !actor.IsDefeated && originComp is not null
@@ -595,7 +598,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
                 || idleWanderOnly))
             ? null
             : currentPoseOverride;
-        return new ActorLedgerEntry(actor.DurableId, origin, vitals, pose, combat, social, location, referral);
+        return new ActorLedgerEntry(actor.DurableId, origin, vitals, pose, combat, social, location, referral, partyContract);
     }
 
     /// <summary>
@@ -652,7 +655,8 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             Combat: prior?.Combat,
             Social: social,
             Location: ActorLocationOverride.Dead(activeProfile, corpsePose),
-            Referral: prior?.Referral));
+            Referral: prior?.Referral,
+            PartyContract: prior?.PartyContract));
     }
 
     private bool IsDefaultActorInventory(long actorId, ActorOrigin origin, DaggerfallActorInventorySave? saved)

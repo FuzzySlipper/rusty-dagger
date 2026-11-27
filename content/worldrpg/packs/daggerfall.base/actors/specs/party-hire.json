@@ -1,0 +1,230 @@
+{
+  "specs": [
+    {
+      "id": "hire-road-guard",
+      "family": "party-hire",
+      "template": "warrior",
+      "published": false,
+      "displayName": "Road Guard",
+      "role": "road-guard",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 2
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
+      "harm": "combatant",
+      "interaction": "full-dialogue",
+      "team": "player-ally",
+      "visualMode": "pool",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 17,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 182,
+          "record": 20,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 8
+        }
+      ],
+      "hireTerms": {
+        "venue": "tavern",
+        "guildFactionId": null,
+        "baseDeposit": 25,
+        "baseDailyWage": 12,
+        "minimumGuildRank": null,
+        "requiresVouch": false,
+        "canDelveDungeons": false
+      }
+    },
+    {
+      "id": "hire-mercenary",
+      "family": "party-hire",
+      "template": "archer",
+      "published": false,
+      "displayName": "Mercenary Scout",
+      "role": "mercenary",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 2
+        },
+        {
+          "gender": "female",
+          "weight": 2
+        }
+      ],
+      "naming": "generated",
+      "harm": "combatant",
+      "interaction": "full-dialogue",
+      "team": "player-ally",
+      "visualMode": "pool",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 20,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 182,
+          "record": 17,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 8
+        }
+      ],
+      "hireTerms": {
+        "venue": "tavern-or-guild",
+        "guildFactionId": 41,
+        "baseDeposit": 35,
+        "baseDailyWage": 18,
+        "minimumGuildRank": null,
+        "requiresVouch": false,
+        "canDelveDungeons": false
+      }
+    },
+    {
+      "id": "hire-knight-retainer",
+      "family": "party-hire",
+      "template": "knight",
+      "published": false,
+      "displayName": "Knightly Retainer",
+      "role": "knight-retainer",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 3
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
+      "harm": "combatant",
+      "interaction": "full-dialogue",
+      "team": "player-ally",
+      "visualMode": "pool",
+      "defaultPool": [
+        {
+          "archive": 183,
+          "record": 2,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 183,
+          "record": 3,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 4
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 4
+        }
+      ],
+      "hireTerms": {
+        "venue": "guild",
+        "guildFactionId": 41,
+        "baseDeposit": 60,
+        "baseDailyWage": 30,
+        "minimumGuildRank": 1,
+        "requiresVouch": true,
+        "canDelveDungeons": true
+      }
+    },
+    {
+      "id": "hire-battle-mage",
+      "family": "party-hire",
+      "template": "battlemage",
+      "published": false,
+      "displayName": "Guild Battlemage",
+      "role": "battle-mage",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 2
+        },
+        {
+          "gender": "female",
+          "weight": 2
+        }
+      ],
+      "naming": "generated",
+      "harm": "combatant",
+      "interaction": "full-dialogue",
+      "team": "player-ally",
+      "visualMode": "pool",
+      "defaultPool": [
+        {
+          "archive": 177,
+          "record": 4,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 177,
+          "record": 5,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 177,
+          "record": 1,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 182,
+          "record": 25,
+          "gender": "Male",
+          "weight": 5
+        }
+      ],
+      "hireTerms": {
+        "venue": "guild",
+        "guildFactionId": 40,
+        "baseDeposit": 65,
+        "baseDailyWage": 32,
+        "minimumGuildRank": 1,
+        "requiresVouch": true,
+        "canDelveDungeons": true
+      }
+    }
+  ]
+}

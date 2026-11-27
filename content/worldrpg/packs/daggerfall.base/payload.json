@@ -11,6 +11,7 @@
     "actorSpecsCreatures": "actors/specs/creatures.json",
     "actorSpecsEnemies": "actors/specs/enemies.json",
     "actorSpecsTownsfolk": "actors/specs/townsfolk.json",
+    "actorSpecsPartyHire": "actors/specs/party-hire.json",
     "actorSpecsCast": "actors/specs/cast.json",
     "actorSchedules": "actors/schedules.json",
     "items": "items/items.json",

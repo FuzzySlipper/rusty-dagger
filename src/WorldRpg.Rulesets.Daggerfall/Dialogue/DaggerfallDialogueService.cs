@@ -632,7 +632,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             Publish(npc, site);
             return Report(new(result.Accepted, result.Message));
         }
-        if (topic is DaggerfallDialogueTopic.HireCompanion or DaggerfallDialogueTopic.HireDriver or DaggerfallDialogueTopic.DismissParty)
+        if (topic is DaggerfallDialogueTopic.HireCompanion or DaggerfallDialogueTopic.HireDriver or DaggerfallDialogueTopic.DismissParty
+            or DaggerfallDialogueTopic.GiveHealingDraught or DaggerfallDialogueTopic.PayHazardBonus)
         {
             if (_partyHireService is null)
                 return Reject("Party hiring is not available here.");
@@ -2120,10 +2121,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             "hire-companion" => DaggerfallDialogueTopic.HireCompanion,
             "hire-driver" => DaggerfallDialogueTopic.HireDriver,
             "dismiss-party" => DaggerfallDialogueTopic.DismissParty,
+            "give-healing-draught" => DaggerfallDialogueTopic.GiveHealingDraught,
+            "pay-hazard-bonus" => DaggerfallDialogueTopic.PayHazardBonus,
             "restore-exile" => DaggerfallDialogueTopic.RestoreExile,
             _ => default,
         };
-        if (value is "directions" or "news" or "courier-news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party" or "restore-exile") return true;
+        if (value is "directions" or "news" or "courier-news" or "notice-board" or "referral" or "curry-favour" or "work" or "donate" or "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster" or "restore-attributes" or "hire-companion" or "hire-driver" or "dismiss-party" or "give-healing-draught" or "pay-hazard-bonus" or "restore-exile") return true;
         if (value is { Length: > 16 } dynamicDenounce && dynamicDenounce.StartsWith("denounce-holder:", StringComparison.Ordinal))
         {
             topic = DaggerfallDialogueTopic.DenounceOfficeHolder;

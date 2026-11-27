@@ -273,6 +273,11 @@ internal sealed partial class DaggerfallSession
         OfficeLedger.AdvanceVacancies(minuteAfter, checked((int)_time.Calendar.DayNumber));       // Society: office vacancy window progression
         SocialConsequences.AdvanceDay(checked((int)_time.Calendar.DayNumber));                    // Society: daily household grudge decay & mourning expiry
         ShopContinuity.AdvanceDay(checked((int)_time.Calendar.DayNumber));                        // Society: shop bereavement reopening, kin/town replacement & jail release
+        foreach (DaggerfallPartyDailyOutcome wageOutcome in PartyHire.AdvanceDay(checked((int)_time.Calendar.DayNumber)))
+        {
+            if (!wageOutcome.Paid || wageOutcome.Deserted)
+                Presentation.SetOutcome(wageOutcome.Message);                                     // Dialogue: daily retainer wages, morale & desertion
+        }
         AdvanceCouriersAndBoard(before, after);                                                   // Society, Travel: couriers and off-map bands, the board each Sunday
         WordSpread.PruneExpired(minuteAfter);                                                     // Society: elapsed-time word spread
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
@@ -1556,6 +1561,7 @@ internal sealed partial class DaggerfallSession
             OfficeLedger.ReactToDeath(died.ActorId, checked((int)_time.Calendar.DayNumber), _site.ActiveSite, _time.Calendar.MinuteNumber); // Society: OfficeLedger vacancy window & OfficeChanged
             CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
+            PartyHire.ClearContractOnDeath(died.ActorId);                                         // Dialogue: clear slain hire contract after death/betrayal split
             FeudVendetta.ObserveActorDied(died.ActorId);                                          // Society: prune slain vendetta aggressor/hunter
             DaggerfallNpc? fallenNpc = State.Npcs.TryGet(died.ActorId, out DaggerfallNpc? regFallen) ? regFallen : null;
             ShopContinuity.ReactToProprietorDeath(
@@ -1751,6 +1757,15 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallConcealmentEffects.BreakNormal(State.Effects, caster);                          // Magic
         if (caster != DaggerfallActorIdentity.PlayerEntityId || target == caster) return;
+        bool targetDefeated = State.Actors.TryGet(target, out ActorState? hitActor) && hitActor.IsDefeated;
+        DaggerfallFriendlyFireResult friendlyFire = PartyHire.ObserveFriendlyFire(target, targetDefeated); // Dialogue: friendly-fire grace & morale
+        if (friendlyFire.Handled)
+        {
+            if (!string.IsNullOrWhiteSpace(friendlyFire.Message))
+                Presentation.SetOutcome(friendlyFire.Message);                                    // UiProjection
+            if (!friendlyFire.TurnedHostile)
+                return;
+        }
         if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();         // Actors
         State.Quests.ReleaseFoeRestraint(target);                                                 // Quests
         _enemyBehavior.MakeHostile(target);                                                       // Actors

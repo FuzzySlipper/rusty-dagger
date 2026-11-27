@@ -654,15 +654,32 @@ internal sealed class DaggerfallSocialConsequences(
 
     /// <summary>
     /// Applies faction standing loss, direct witness memory, and attributed kin grudge ripple when the player
-    /// kills a faction-affiliated or household-affiliated actor. An unwitnessed killing never triggers a kin grudge.
+    /// kills a faction-affiliated or household-affiliated actor. An unwitnessed killing never triggers a kin grudge,
+    /// except when betraying a contracted party hire (#11101). Hostile-inflicted combat death of a contracted hire
+    /// places their household in mourning without blaming the player or triggering a blood feud.
     /// </summary>
     internal void ReactToDeath(ActorDiedFact died, ActorState? fallen, long minute)
     {
         ArgumentNullException.ThrowIfNull(died);
-        if (died.KillerId != DaggerfallActorIdentity.PlayerEntityId
-            || died.ActorId == DaggerfallActorIdentity.PlayerEntityId
-            || fallen is null)
+        if (died.ActorId == DaggerfallActorIdentity.PlayerEntityId || fallen is null)
             return;
+
+        bool hasContract = actorLedger.TryGet(died.ActorId, out ActorLedgerEntry? ledgerEntry)
+            && ledgerEntry?.PartyContract is not null;
+
+        // Hostile-inflicted combat death of a contracted retainer: their kin mourn them, but the player is never
+        // blamed (no faction penalty, no witness murder grudge, no blood feud) (#11101).
+        if (died.KillerId != DaggerfallActorIdentity.PlayerEntityId)
+        {
+            if (!hasContract)
+                return;
+
+            DaggerfallNpc? fallenHire = npcs.TryGet(died.ActorId, out DaggerfallNpc? regHire) ? regHire : null;
+            string? hireFamilyId = ResolveActorFamilyId(died.ActorId, fallen, fallenHire);
+            if (hireFamilyId is not null)
+                RecordHouseholdMourning(hireFamilyId, fallenHire, activeSite?.Invoke(), minute);
+            return;
+        }
 
         FactionComponent? factions = fallen.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null;
         DaggerfallNpc? npc = npcs.TryGet(died.ActorId, out DaggerfallNpc? registered) ? registered : null;
@@ -690,26 +707,36 @@ internal sealed class DaggerfallSocialConsequences(
             RecordHouseholdMourning(victimFamilyId, npc, activeSite?.Invoke(), minute);
 
         DaggerfallCrimeWitnessEvidence witnesses = queryWitnesses();
-        if (witnesses.WitnessActorIds.Length == 0)
-            return;
-
-        string crimeRecord = $"murder:{died.ActorId}:{minute}";
-        foreach (long witnessId in witnesses.WitnessActorIds)
+        if (witnesses.WitnessActorIds.Length > 0)
         {
-            if (witnessId == died.ActorId || witnessId == DaggerfallActorIdentity.PlayerEntityId)
-                continue;
-            if (!actors.TryGet(witnessId, out ActorState? witnessActor) || witnessActor.IsDefeated)
-                continue;
+            string crimeRecord = $"murder:{died.ActorId}:{minute}";
+            foreach (long witnessId in witnesses.WitnessActorIds)
+            {
+                if (witnessId == died.ActorId || witnessId == DaggerfallActorIdentity.PlayerEntityId)
+                    continue;
+                if (!actors.TryGet(witnessId, out ActorState? witnessActor) || witnessActor.IsDefeated)
+                    continue;
 
-            if (witnessActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
-                overlay.RecordWitnessedCrime(crimeRecord);
+                if (witnessActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+                    overlay.RecordWitnessedCrime(crimeRecord);
 
-            RecordWitnessGrudge(witnessId, witnessActor, crimeRecord);
+                RecordWitnessGrudge(witnessId, witnessActor, crimeRecord);
+            }
+        }
+        else if (!hasContract)
+        {
+            return;
         }
 
         if (victimFamilyId is not null)
         {
             string victimName = npc?.DisplayName ?? $"actor #{died.ActorId}";
+            string headline = hasContract
+                ? $"Betrayal of {victimName}'s kin"
+                : $"Blood feud against {victimName}'s kin";
+            string body = hasContract
+                ? $"Word spreads that {victimName} was slain by the very employer who hired them; their house will not forgive the betrayal."
+                : $"Word spreads that {victimName} was slain before witnesses; their house will not forgive the killer.";
             ApplyAttributedHouseholdRipple(
                 victimFamilyId,
                 KinMurderDispositionPenalty,
@@ -717,9 +744,9 @@ internal sealed class DaggerfallSocialConsequences(
                 subjectNpc: npc,
                 originSite: activeSite?.Invoke(),
                 minute: minute,
-                rippleKey: $"murder:{died.ActorId}",
-                headline: $"Blood feud against {victimName}'s kin",
-                body: $"Word spreads that {victimName} was slain before witnesses; their house will not forgive the killer.",
+                rippleKey: hasContract ? $"betrayal:{died.ActorId}" : $"murder:{died.ActorId}",
+                headline: headline,
+                body: body,
                 isMurder: true);
         }
     }

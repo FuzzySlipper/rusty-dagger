@@ -315,15 +315,22 @@ internal sealed class DaggerfallCrimes(
     }
 
     private Func<long, bool>? _isSelfDefenseTarget;
+    private Func<long, bool>? _isContractedHire;
 
     /// <summary>Binds a lawful self-defense predicate (e.g. active blood-feud kin aggressors or hired hunters who attacked first).</summary>
     internal void BindSelfDefenseLookup(Func<long, bool> isSelfDefenseTarget) =>
         _isSelfDefenseTarget = isSelfDefenseTarget ?? throw new ArgumentNullException(nameof(isSelfDefenseTarget));
 
+    /// <summary>Binds a predicate identifying contracted party hires so incidental friendly fire is never treated as a crime (#11101).</summary>
+    internal void BindContractedHireLookup(Func<long, bool> isContractedHire) =>
+        _isContractedHire = isContractedHire ?? throw new ArgumentNullException(nameof(isContractedHire));
+
     /// <summary>The player's attack on a civilian or a guard, once per operation: an assault, or a murder when it died.</summary>
     internal void ObserveAttack(long attacker, long target, string operation)
     {
         if (attacker != DaggerfallActorIdentity.PlayerEntityId) return;
+        // Hitting a contracted party hire is handled by the morale/friendly-fire owner and is never a legal crime (#11101).
+        if (_isContractedHire?.Invoke(target) == true) return;
         var npc = npcs.All.SingleOrDefault(value => value.DurableId == target);
         bool cityWatch = IsCityWatch(target);
         bool mobileGuard = npc?.Kind == DaggerfallNpcKind.Civilian && npc.Role == "guard";

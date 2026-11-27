@@ -370,6 +370,50 @@ internal sealed record ActorReferralDiff(
     }
 }
 
+/// <summary>Stance of a contracted hired escort or retainer (<see cref="ActorPartyContractDiff"/>, #11101).</summary>
+internal enum ActorPartyStance
+{
+    Follow = 0,
+    Wait = 1,
+}
+
+/// <summary>
+/// Sparse contract state for a hired companion/retainer in <see cref="DaggerfallActorLedger"/> (#11101).
+/// Null (0 save bytes) for all non-party actors; cleared on dismissal, desertion, or death cleanup.
+/// </summary>
+internal sealed record ActorPartyContractDiff(
+    string SpawnerId,
+    int DailyWage,
+    int PaidThroughDay,
+    int Morale = ActorPartyContractDiff.DefaultMorale,
+    ActorPartyStance Stance = ActorPartyStance.Follow,
+    bool CanDelveDungeons = false,
+    int UnpaidDays = 0,
+    int FriendlyFireStrikes = 0,
+    bool HostileBetrayal = false)
+{
+    internal const int DefaultMorale = 70;
+    internal const int MinimumMorale = 0;
+    internal const int MaximumMorale = 100;
+
+    internal void Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(SpawnerId);
+        if (DailyWage < 0)
+            throw new ArgumentOutOfRangeException(nameof(DailyWage), "Saved party contract daily wage cannot be negative.");
+        if (PaidThroughDay < 0)
+            throw new ArgumentOutOfRangeException(nameof(PaidThroughDay), "Saved party contract paid-through day cannot be negative.");
+        if (Morale is < MinimumMorale or > MaximumMorale)
+            throw new ArgumentOutOfRangeException(nameof(Morale), "Saved party contract morale must be in [0, 100].");
+        if (!Enum.IsDefined(Stance))
+            throw new ArgumentOutOfRangeException(nameof(Stance), "Saved party contract names an invalid stance.");
+        if (UnpaidDays < 0)
+            throw new ArgumentOutOfRangeException(nameof(UnpaidDays), "Saved party contract unpaid days cannot be negative.");
+        if (FriendlyFireStrikes < 0)
+            throw new ArgumentOutOfRangeException(nameof(FriendlyFireStrikes), "Saved party contract friendly-fire strike count cannot be negative.");
+    }
+}
+
 /// <summary>
 /// One sparse world-scoped actor record in <see cref="DaggerfallActorLedger"/>. Covers all actors
 /// (people and creatures alike) with no split. <see cref="ActorOriginKind.SeededSlot"/> and
@@ -383,7 +427,8 @@ internal sealed record ActorLedgerEntry(
     ActorCombatStateDiff? Combat = null,
     ActorSocialDiff? Social = null,
     ActorLocationOverride? Location = null,
-    ActorReferralDiff? Referral = null)
+    ActorReferralDiff? Referral = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ActorPartyContractDiff? PartyContract = null)
 {
     /// <summary>True when a deterministic slot or cast entry has no non-default delta left to persist.</summary>
     [JsonIgnore]
@@ -394,7 +439,8 @@ internal sealed record ActorLedgerEntry(
         && Combat is null
         && Social is null
         && Location is null
-        && Referral is null;
+        && Referral is null
+        && PartyContract is null;
 
     internal void Validate()
     {
@@ -408,6 +454,7 @@ internal sealed record ActorLedgerEntry(
         Social?.Validate();
         Location?.Validate();
         Referral?.Validate();
+        PartyContract?.Validate();
     }
 }
 

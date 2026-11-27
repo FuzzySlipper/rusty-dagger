@@ -271,6 +271,16 @@ internal sealed record DaggerfallActorClassicBinding(
     int DonorWeight,
     string? DonorLootTableKey);
 
+/// <summary>Validated hiring terms attached to an <see cref="ActorSpawnerFamily.PartyHire"/> spawner spec (#11101).</summary>
+internal sealed record DaggerfallPartyHireTerms(
+    string Venue,
+    int? GuildFactionId,
+    int BaseDeposit,
+    int BaseDailyWage,
+    int? MinimumGuildRank,
+    bool RequiresVouch,
+    bool CanDelveDungeons);
+
 /// <summary>
 /// Typed spawner instance spec describing how a template enters the world (art, gender split, race, naming,
 /// sound cues, faction/team, context policies, and optional classic binding).
@@ -318,7 +328,8 @@ internal sealed record DaggerfallActorSpawnerSpec(
     WorldPoint? HomePosition = null,
     string? FamilyId = null,
     ActorSocialGrouping SocialGrouping = ActorSocialGrouping.None,
-    string? VisualAssetId = null);
+    string? VisualAssetId = null,
+    DaggerfallPartyHireTerms? HireTerms = null);
 
 /// <summary>Primary placement posture of a named NPC schedule profile in <c>actors/schedules.json</c>.</summary>
 internal enum DaggerfallSchedulePrimaryMode
@@ -376,6 +387,13 @@ internal sealed record DaggerfallActorCatalog(
             Templates.Values
                 .Where(t => !t.Capabilities.IsPlayer && t.Health.Minimum > 1)
                 .ToDictionary(t => t.Id, t => t.ToArchetypeProfile(), StringComparer.Ordinal));
+
+    /// <summary>Projects all <see cref="ActorSpawnerFamily.PartyHire"/> spawner specs indexed by spec id (#11101).</summary>
+    internal IReadOnlyDictionary<string, DaggerfallActorSpawnerSpec> ProjectPartyHireSpecs() =>
+        new ReadOnlyDictionary<string, DaggerfallActorSpawnerSpec>(
+            Specs.Values
+                .Where(spec => spec.Family == ActorSpawnerFamily.PartyHire)
+                .ToDictionary(spec => spec.Id, spec => spec, StringComparer.Ordinal));
 
     /// <summary>Projects all <see cref="ActorSpawnerFamily.Town"/> specs into people-slot spawner definitions.</summary>
     internal IReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition> ProjectTownSpawners() =>
@@ -583,7 +601,10 @@ internal static partial class DaggerfallBaseContent
         ["actorTemplateBases", "actorTemplateCreatures", "actorTemplateClasses", "actorTemplateRoles"];
 
     private static readonly string[] SpecSectionNames =
-        ["actorSpecsCreatures", "actorSpecsEnemies", "actorSpecsTownsfolk", "actorSpecsCast"];
+        ["actorSpecsCreatures", "actorSpecsEnemies", "actorSpecsTownsfolk", "actorSpecsPartyHire", "actorSpecsCast"];
+
+    private static readonly HashSet<string> ValidPartyHireVenues =
+        new(["tavern", "guild", "tavern-or-guild", "town"], StringComparer.Ordinal);
 
     private static readonly HashSet<string> CompiledTacticNames =
         new(["legacy", "intelligent", "beast"], StringComparer.Ordinal);
@@ -979,6 +1000,7 @@ internal static partial class DaggerfallBaseContent
 
     private static string DeriveActorKind(DaggerfallActorSpawnerSpec spec, DaggerfallActorTemplateDefinition template) =>
         template.Capabilities.IsPlayer ? DaggerfallActorKinds.Player
+        : spec.Family == ActorSpawnerFamily.PartyHire ? DaggerfallActorKinds.Civilian
         : spec.Family == ActorSpawnerFamily.Enemy || template.Capabilities.Scaling == ActorScalingMode.CareerLeveled ? DaggerfallActorKinds.EnemyClass
         : spec.Family == ActorSpawnerFamily.Creature ? DaggerfallActorKinds.Monster
         : spec.Family == ActorSpawnerFamily.Cast ? DaggerfallActorKinds.StaticNpc
@@ -1591,6 +1613,7 @@ internal static partial class DaggerfallBaseContent
         WorldPoint? homePosition = null;
         string? familyId = null;
         ActorSocialGrouping socialGrouping = ActorSocialGrouping.None;
+        DaggerfallPartyHireTerms? hireTerms = null;
 
         if (family == ActorSpawnerFamily.Town)
         {
@@ -1709,6 +1732,50 @@ internal static partial class DaggerfallBaseContent
             if (familyId is not null && !DaggerfallHouseholds.IsValidFamilyId(familyId))
                 diagnostics.Add($"Cast spawner spec '{id}' has invalid familyId '{familyId}'.");
         }
+        else if (family == ActorSpawnerFamily.PartyHire)
+        {
+            role = OptionalText(item, "role", diagnostics) ?? "road-guard";
+            if (harm != ActorHarmPolicyKind.Combatant)
+                diagnostics.Add($"PartyHire spawner spec '{id}' must declare harm='combatant'.");
+            if (!string.Equals(team, "player-ally", StringComparison.Ordinal))
+                diagnostics.Add($"PartyHire spawner spec '{id}' must declare team='player-ally'.");
+            visualMode = OptionalText(item, "visualMode", diagnostics) ?? "pool";
+            if (visualMode is not ("classic-slot" or "pool"))
+                diagnostics.Add($"PartyHire spawner spec '{id}' has invalid visualMode '{visualMode}'.");
+            if (item.TryGetProperty("defaultPool", out JsonElement poolEl) && poolEl.ValueKind == JsonValueKind.Array)
+                defaultPool = ReadSpawnerPool(poolEl.EnumerateArray(), $"spec '{id}' defaultPool", diagnostics);
+            else if (visualMode == "pool")
+                diagnostics.Add($"PartyHire spawner spec '{id}' with visualMode='pool' requires a non-empty defaultPool.");
+
+            JsonElement termsObj = Object(Property(item, "hireTerms", diagnostics), $"party-hire spec '{id}' hireTerms", diagnostics);
+            if (termsObj.ValueKind == JsonValueKind.Object)
+            {
+                string venue = Text(termsObj, "venue", diagnostics);
+                if (!ValidPartyHireVenues.Contains(venue))
+                    diagnostics.Add($"PartyHire spawner spec '{id}' has unknown hireTerms.venue '{venue}'.");
+                int? guildFactionId = OptionalInteger(termsObj, "guildFactionId", diagnostics);
+                if (guildFactionId is int gf)
+                {
+                    if (gf <= 0)
+                        diagnostics.Add($"PartyHire spawner spec '{id}' hireTerms.guildFactionId must be positive.");
+                    else if (factions.Factions.Count > 0 && !factions.Factions.ContainsKey(gf))
+                        diagnostics.Add($"PartyHire spawner spec '{id}' hireTerms.guildFactionId references missing faction {gf}.");
+                }
+                int baseDeposit = Integer(termsObj, "baseDeposit", diagnostics);
+                int baseDailyWage = Integer(termsObj, "baseDailyWage", diagnostics);
+                if (baseDeposit < 0)
+                    diagnostics.Add($"PartyHire spawner spec '{id}' hireTerms.baseDeposit cannot be negative.");
+                if (baseDailyWage <= 0)
+                    diagnostics.Add($"PartyHire spawner spec '{id}' hireTerms.baseDailyWage must be positive.");
+                int? minGuildRank = OptionalInteger(termsObj, "minimumGuildRank", diagnostics);
+                if (minGuildRank is < 0)
+                    diagnostics.Add($"PartyHire spawner spec '{id}' hireTerms.minimumGuildRank cannot be negative.");
+                bool requiresVouch = OptionalBool(termsObj, "requiresVouch");
+                bool canDelveDungeons = OptionalBool(termsObj, "canDelveDungeons");
+                hireTerms = new DaggerfallPartyHireTerms(
+                    venue, guildFactionId, baseDeposit, baseDailyWage, minGuildRank, requiresVouch, canDelveDungeons);
+            }
+        }
 
         return new DaggerfallActorSpawnerSpec(
             id,
@@ -1753,7 +1820,8 @@ internal static partial class DaggerfallBaseContent
             homePosition,
             familyId,
             socialGrouping,
-            visualAssetId);
+            visualAssetId,
+            hireTerms);
     }
 
     private static IReadOnlyList<DaggerfallPeoplePoolEntry> ReadSpawnerPool(

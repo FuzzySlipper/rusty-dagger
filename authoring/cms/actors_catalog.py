@@ -26,6 +26,7 @@ SPEC_SECTIONS = (
     ("creature", "actorSpecsCreatures"),
     ("enemy", "actorSpecsEnemies"),
     ("town", "actorSpecsTownsfolk"),
+    ("party-hire", "actorSpecsPartyHire"),
     ("cast", "actorSpecsCast"),
 )
 
@@ -44,6 +45,7 @@ LOOKUP_SECTIONS = (
     "actorSpecsCreatures",
     "actorSpecsEnemies",
     "actorSpecsTownsfolk",
+    "actorSpecsPartyHire",
     "actorSpecsCast",
     "actorSchedules",
     "catalogs",
@@ -982,7 +984,7 @@ class ActorsCatalogStore:
             },
             "enums": {
                 "branches": [b for b, _ in TEMPLATE_SECTIONS],
-                "families": ["creature", "enemy", "town", "cast", "player"],
+                "families": ["creature", "enemy", "town", "party-hire", "cast", "player"],
                 "genders": ["male", "female", "neutral"],
                 "regions": index["regions"],
                 "races": index["races"],
@@ -1144,6 +1146,7 @@ class ActorsCatalogStore:
             "defaultPoolCount": len(sp.get("defaultPool") or []),
             "regionalPoolCount": len(sp.get("regionalPools") or {}),
             "climatePoolCount": len(sp.get("climatePools") or {}),
+            "hireTerms": sp.get("hireTerms"),
             "editorHref": f"#cast/{spec_id}" if fam == "cast" else (f"#spawners/{spec_id}" if fam == "town" else None),
             "templateFields": tpl["fields"] if tpl else [],
             "attributeRows": tpl["attributeRows"] if tpl else [],
@@ -1292,7 +1295,7 @@ class ActorsCatalogStore:
         visual_preview: dict = {"mode": "none", "entries": []}
         if spec:
             fam = spec["family"]
-            if fam == "town":
+            if fam in ("town", "party-hire"):
                 reg_pools = spec.get("regionalPools") or {}
                 rkey = str(region) if region is not None else None
                 if rkey and rkey in reg_pools:

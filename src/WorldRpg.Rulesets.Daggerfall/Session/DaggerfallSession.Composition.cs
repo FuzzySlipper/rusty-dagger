@@ -1259,7 +1259,13 @@ internal sealed partial class DaggerfallSession
                 amount => State.Currency.TrySpendGold(amount, []),
                 id => State.Quests.IsNpcMuted(id) || State.Quests.IsEscortWithParty(id),
                 hasDepositWaiver: Introductions.HasDepositWaiverVouch,
-                hireFee: conditionPrices.HireFee);
+                hireFee: conditionPrices.HireFee,
+                worldConditions: WorldConditions,
+                currentDay: () => checked((int)_time.Calendar.DayNumber),
+                readPlayerSkill: skillId => State.Actors.Player.Stats.GetStat(StatId.Parse(skillId)).ValueInt,
+                readGuildRank: guildFactionId => State.Social.ReadAffiliations().FirstOrDefault(m => m.FactionId == guildFactionId)?.Rank,
+                consumeHealingDraught: () => TryConsumePlayerHealingDraught(definitions));
+            Crimes.BindContractedHireLookup(PartyHire.IsContractedHire);
             Introductions.BindHireableContactLookup(PartyHire.IsHireable);
             HomeNightRoutine = new DaggerfallHomeNightRoutine(
                 actors,
@@ -2195,6 +2201,48 @@ internal sealed partial class DaggerfallSession
         }
         return false;
     }
+
+    private bool TryConsumePlayerHealingDraught(DaggerfallDefinitions definitions)
+    {
+        InventoryView view = State.Inventory.Read();
+        foreach (InventoryStack stack in view.Stacks)
+        {
+            if (definitions.RequireItem(new DaggerfallItemId(stack.Definition.Value)).Template?.Index != 83)
+                continue;
+            if (!State.ItemInstances.ContainsStack(DaggerfallItemOwner.Player, stack.Id))
+                continue;
+            DaggerfallItemInstanceMetadata meta = State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, stack.Id);
+            if (!IsHealingPotionMetadata(definitions, meta))
+                continue;
+            InventoryMutationReceipt receipt = State.Inventory.Consume(new InventoryConsume(stack.Id, 1));
+            if (receipt.AfterQuantity == 0)
+                State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, stack.Id);
+            return true;
+        }
+        foreach (Rusty.Engine.Mechanics.UniqueInventoryItem item in view.UniqueItems)
+        {
+            if (definitions.RequireItem(new DaggerfallItemId(item.Definition.Value)).Template?.Index != 83)
+                continue;
+            DurableIdentityReference identity = State.Inventory.Entities.IdentityOf(item.Entity);
+            if (!State.ItemInstances.ContainsUnique(identity.Value))
+                continue;
+            DaggerfallItemInstanceMetadata meta = State.ItemInstances.RequireUnique(identity.Value);
+            if (!IsHealingPotionMetadata(definitions, meta))
+                continue;
+            _ = State.Inventory.Destroy(new WorldRpg.Kit.Inventory.UniqueInventoryItem(item.Entity.Value, new InventoryItemId(item.Definition.Value)));
+            State.Inventory.Entities.Destroy(identity);
+            State.ItemInstances.RemoveUnique(identity.Value);
+            UniqueItemAllocator.Remove(identity);
+            return true;
+        }
+        return false;
+    }
+
+    private static bool IsHealingPotionMetadata(DaggerfallDefinitions definitions, DaggerfallItemInstanceMetadata? metadata) =>
+        metadata?.PotionRecipeKey is int recipeKey
+        && definitions.Magic.PotionRecipes.TryGetValue(recipeKey, out DaggerfallPotionRecipeDefinition? recipe)
+        && (recipe.Name.Contains("Heal", StringComparison.OrdinalIgnoreCase)
+            || recipe.Name.Contains("Restore", StringComparison.OrdinalIgnoreCase));
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
 }

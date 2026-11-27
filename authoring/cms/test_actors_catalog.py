@@ -571,3 +571,33 @@ class ActorsCatalogTests(TestCase):
         self.assertIn("Social grouping", app_bundle)
         self.assertIn("Time of day", app_bundle)
         self.assertIn("Schedule & weather", app_bundle)
+
+    def test_party_hire_specs_are_indexed_with_hire_terms_and_pool_preview(self):
+        # Verify real daggerfall.base/actors/specs/party-hire.json loads in CMS #actors (#11101).
+        real_lib = Library(self.lib.npcs, self.root / "pipeline", repo=REPO)
+        real_ws = Workspace(
+            real_lib,
+            self.root / "ph-links.json",
+            self.root / "ph-merges.json",
+            ReviewStore(self.root / "ph.sqlite3"),
+            ConceptStore(self.root / "phc"),
+        )
+        overview = real_ws.actors_catalog.overview(real_ws.catalog(), real_ws.concept_store)
+        self.assertIn("party-hire", overview["enums"]["families"])
+        spec_ids = {s["id"] for s in overview["specs"]}
+        for expected in ("hire-road-guard", "hire-mercenary", "hire-knight-retainer", "hire-battle-mage"):
+            self.assertIn(expected, spec_ids)
+
+        detail = real_ws.actors_catalog.get_spec("hire-road-guard", real_ws.catalog(), real_ws.concept_store)
+        self.assertIsNotNone(detail)
+        self.assertEqual(detail["family"], "party-hire")
+        self.assertEqual(detail["template"], "warrior")
+        self.assertEqual(detail["team"], "player-ally")
+        self.assertIsNotNone(detail["hireTerms"])
+        self.assertEqual(detail["hireTerms"]["baseDailyWage"], 12)
+        self.assertFalse(detail["hireTerms"]["canDelveDungeons"])
+
+        preview = real_ws.actors_catalog.preview("spec", "hire-road-guard", real_ws.catalog(), real_ws.concept_store, level=5, gender="male")
+        self.assertEqual(preview["effective"]["visual"]["mode"], "pool")
+        self.assertGreater(len(preview["effective"]["visual"]["entries"]), 0)
+

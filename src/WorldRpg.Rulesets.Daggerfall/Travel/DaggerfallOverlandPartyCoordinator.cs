@@ -465,6 +465,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         entry.Vitals is not null
         || entry.Combat is not null
         || entry.Referral is not null
+        || entry.PartyContract is not null
         || entry.Social is { } s && (
             s.Met
             || s.DispositionDelta != 0
@@ -654,7 +655,12 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     /// persisting its HUD portrait in <see cref="DaggerfallActorLedger"/> and unloading it from <c>EntityStore</c>
     /// so <c>QueryNearby</c> never sees travelling party members while on the expedition map.
     /// </summary>
-    internal void JoinParty(long actorId, ActorPartyRole role, string? portraitMedia = null, int? explicitOrder = null)
+    internal void JoinParty(
+        long actorId,
+        ActorPartyRole role,
+        string? portraitMedia = null,
+        int? explicitOrder = null,
+        ActorPartyContractDiff? contract = null)
     {
         ActorPoseOverride? rememberedPose = null;
         if (_actors.TryGet(actorId, out ActorState? liveActor))
@@ -682,6 +688,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             Location = ActorLocationOverride.WithParty(role),
             Pose = rememberedPose ?? entry.Pose,
             Social = social,
+            PartyContract = contract ?? entry.PartyContract,
         });
         _roster.UnloadActor(actorId);
     }
@@ -834,8 +841,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         return boarded;
     }
 
-    /// <summary>Releases a party member permanently at <paramref name="profile"/> (e.g., delivery or dismissal).</summary>
-    internal void ReleaseFromParty(long actorId, DaggerfallWorldProfileKey profile, WorldPoint? localPose = null)
+    /// <summary>Releases a party member permanently at <paramref name="profile"/> (e.g., delivery, dismissal, desertion, or betrayal).</summary>
+    internal void ReleaseFromParty(long actorId, DaggerfallWorldProfileKey profile, WorldPoint? localPose = null, bool clearContract = true)
     {
         if (_actors.TryGet(actorId, out ActorState? live)
             && live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? liveOverlay))
@@ -858,6 +865,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             Location = isHome ? null : ActorLocationOverride.AtSite(profile, pose, detached: false),
             Pose = pose ?? entry.Pose,
             Social = entry.Social is { } s ? s with { EscortPortrait = null, EscortOrder = 0, StagedPartyRole = null } : null,
+            PartyContract = clearContract ? null : entry.PartyContract,
         };
         _actorLedger.Upsert(released);
         if (profile == _activeProfile().ProfileKey && localPose is { } spot)
