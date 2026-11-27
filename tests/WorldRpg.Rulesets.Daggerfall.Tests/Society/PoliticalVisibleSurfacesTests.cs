@@ -39,7 +39,7 @@ public sealed class PoliticalVisibleSurfacesTests
         Assert.Contains(board!.Entries, entry => entry.Kind == DaggerfallNoticeEntryKind.SignRumor && !string.IsNullOrWhiteSpace(entry.Body));
         Assert.DoesNotContain(board.Entries, entry => entry.Kind == DaggerfallNoticeEntryKind.Bounty);
 
-        // 3. Wanted player + deposed ruler immediately surface as Bounty & OfficeNotice entries on the town board!
+        // 3. Wanted player + deposed ruler surface as Bounty & OfficeNotice entries on Charing's town board once couriers arrive from Daggerfall!
         session.State.Social.ChangeRegionalReputation(DaggerfallRegion, -20);
         session.OfficeLedger.SetBoardSeatHolder(
             seatId: "daggerfall",
@@ -50,6 +50,7 @@ public sealed class PoliticalVisibleSurfacesTests
             cause: DaggerfallOfficeChangeCause.CardMove,
             changedDay: 2,
             causeDetail: "was deposed in a palace coup");
+        session.AdvanceElapsedTime(72 * 60 * 60);
 
         DaggerfallTownNoticeBoardView updated = session.ReadTownNoticeBoard()!;
         Assert.Contains(updated.Entries, e => e.Kind == DaggerfallNoticeEntryKind.Bounty && e.Body.Contains(session.State.Character.Identity.Name, StringComparison.Ordinal));

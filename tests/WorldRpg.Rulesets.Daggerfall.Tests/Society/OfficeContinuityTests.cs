@@ -113,10 +113,11 @@ public sealed class OfficeContinuityTests
         Assert.Equal(0, crisisGate.EffectiveWantedThreshold);
         Assert.Equal(crisisTokenId, crisisGate.ConditionTokenId);
 
-        // Local notice board shows SuccessionCrisis decree and ONE non-duplicated Throne Vacant OfficeNotice.
-        DaggerfallTownNoticeBoardView localBoard = session.ReadTownNoticeBoard()!;
-        Assert.Contains(localBoard.Entries, e => e.Kind == DaggerfallNoticeEntryKind.Decree && e.ConditionTokenId == crisisTokenId);
-        int daggerfallOfficeNotices = localBoard.Entries.Count(e =>
+        // Origin capital notice board shows SuccessionCrisis decree and ONE non-duplicated Throne Vacant OfficeNotice immediately.
+        DaggerfallSiteRecord originCapital = session.OfficeLedger.ResolveOfficeOriginSite(deathEvent, charing)!;
+        DaggerfallTownNoticeBoardView capitalBoard = session.NoticeBoard.BuildForSite(originCapital, session.Calendar.MinuteNumber);
+        Assert.Contains(capitalBoard.Entries, e => e.Kind == DaggerfallNoticeEntryKind.Decree && e.ConditionTokenId == crisisTokenId);
+        int daggerfallOfficeNotices = capitalBoard.Entries.Count(e =>
             e.Kind == DaggerfallNoticeEntryKind.OfficeNotice
             && e.FactionId == DaggerfallProvinceFaction);
         Assert.Equal(1, daggerfallOfficeNotices);
@@ -327,5 +328,165 @@ public sealed class OfficeContinuityTests
         Assert.Equal(2, due.Count);
         Assert.Contains(due, o => o.OfficeKey == magesMaster.OfficeKey);
         Assert.Contains(due, o => o.OfficeKey == watchCaptain.OfficeKey);
+    }
+
+    [Fact]
+    public void Same_region_non_origin_town_gates_throne_vacancy_and_succession_notices_on_WordSpread_arrival()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+
+        // Depose Daggerfall's king -> emits wf:office:faction:201|deposed|... originating from Daggerfall's capital.
+        long t0 = session.Calendar.MinuteNumber;
+        int day0 = checked((int)session.Calendar.DayNumber);
+        DaggerfallOfficeOverrideSave deposed = session.OfficeLedger.DeposeBoardSeat(
+            seatId: "daggerfall",
+            cause: DaggerfallOfficeChangeCause.CardMove,
+            changedDay: day0,
+            causeDetail: "ousted by rival faction",
+            currentMinute: t0);
+
+        DaggerfallWordWavefrontSave vacancyWavefront = Assert.Single(session.WordSpread.Wavefronts,
+            wf => DaggerfallWordSpread.TryParseOfficeProclamationKey(wf.EventId, out string key) && key == deposed.OfficeKey);
+
+        // Select a same-region (Region 17) town outside the capital's instant bubble where news is InTransit.
+        DaggerfallSiteRecord sameRegionTown = TestPayload.Definitions.Locations.Records
+            .Where(r => r.Id.Region == DaggerfallRegion && r.Exterior is { Buildings.Count: > 0 })
+            .OrderByDescending(r => session.WordSpread.RouteDistancePixels(
+                vacancyWavefront.OriginPixelX, vacancyWavefront.OriginPixelY, r.MapPixelX, r.MapPixelY))
+            .First();
+        DaggerfallWordArrivalEvaluation vacancyEval0 = session.WordSpread.EvaluateAt(vacancyWavefront, sameRegionTown, t0, day0);
+        Assert.Equal(DaggerfallWordArrivalStatus.InTransit, vacancyEval0.Status);
+
+        // 1. At emission time, same-region non-origin town must NOT expose the vacancy before couriers arrive.
+        DaggerfallTownNoticeBoardView boardAtT0 = session.NoticeBoard.BuildForSite(sameRegionTown, t0);
+        Assert.DoesNotContain(boardAtT0.Entries, e =>
+            e.Kind == DaggerfallNoticeEntryKind.OfficeNotice && e.FactionId == DaggerfallProvinceFaction);
+
+        // 2. Once couriers reach the same-region town, the vacancy proclamation appears.
+        session.AdvanceElapsedTime(checked((vacancyEval0.RemainingMinutes + 60L) * 60L));
+        long t1 = session.Calendar.MinuteNumber;
+        int day1 = checked((int)session.Calendar.DayNumber);
+        Assert.True(session.WordSpread.EvaluateAt(vacancyWavefront, sameRegionTown, t1, day1).HasArrived);
+        DaggerfallTownNoticeBoardView boardAfterVacancy = session.NoticeBoard.BuildForSite(sameRegionTown, t1);
+        DaggerfallNoticeEntry arrivedVacancy = Assert.Single(boardAfterVacancy.Entries, e =>
+            e.Kind == DaggerfallNoticeEntryKind.OfficeNotice && e.FactionId == DaggerfallProvinceFaction);
+        Assert.Contains("King Gothryd", arrivedVacancy.Body, StringComparison.Ordinal);
+        Assert.Contains("vacant", arrivedVacancy.Body, StringComparison.OrdinalIgnoreCase);
+
+        // 3. Seat a successor at t1 -> while the succession wavefront is still InTransit, the same-region town
+        //    must continue displaying the arrived historical vacancy rather than leaking future successor news!
+        session.OfficeLedger.SetBoardSeatHolder(
+            seatId: "daggerfall",
+            holderActorId: null,
+            holderCastId: "lord-bridwell",
+            holderFactionId: 367,
+            holderDisplayName: "Lord Bridwell",
+            cause: DaggerfallOfficeChangeCause.Succession,
+            changedDay: day1,
+            causeDetail: "crowned by the council",
+            currentMinute: t1);
+
+        DaggerfallWordWavefrontSave seatedWavefront = Assert.Single(session.WordSpread.Wavefronts,
+            wf => wf.EventId.StartsWith($"{DaggerfallWordSpread.OfficeProclamationPrefix}{deposed.OfficeKey}|seated|", StringComparison.Ordinal));
+        DaggerfallWordArrivalEvaluation seatedEvalAtT1 = session.WordSpread.EvaluateAt(seatedWavefront, sameRegionTown, t1, day1);
+        Assert.Equal(DaggerfallWordArrivalStatus.InTransit, seatedEvalAtT1.Status);
+
+        DaggerfallTownNoticeBoardView boardWhileSeatedInTransit = session.NoticeBoard.BuildForSite(sameRegionTown, t1);
+        DaggerfallNoticeEntry stillVacancy = Assert.Single(boardWhileSeatedInTransit.Entries, e =>
+            e.Kind == DaggerfallNoticeEntryKind.OfficeNotice && e.FactionId == DaggerfallProvinceFaction);
+        Assert.Contains("vacant", stillVacancy.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Lord Bridwell", stillVacancy.Body, StringComparison.Ordinal);
+
+        // 4. After couriers carry the succession proclamation to the same-region town, its notice updates to Lord Bridwell.
+        session.AdvanceElapsedTime(checked((seatedEvalAtT1.RemainingMinutes + 60L) * 60L));
+        DaggerfallTownNoticeBoardView boardAfterSeating = session.NoticeBoard.BuildForSite(sameRegionTown, session.Calendar.MinuteNumber);
+        DaggerfallNoticeEntry arrivedSeated = Assert.Single(boardAfterSeating.Entries, e =>
+            e.Kind == DaggerfallNoticeEntryKind.OfficeNotice && e.FactionId == DaggerfallProvinceFaction);
+        Assert.Contains("Lord Bridwell", arrivedSeated.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WorldConditions_ObserveOfficeChanged_owns_succession_crisis_policy_without_session()
+    {
+        DaggerfallWorldConditions conditions = new();
+
+        DaggerfallOfficeChangedNotification localVacancy = new(
+            OfficeKey: "local:guild-hall-master:17:1:0:0:0",
+            Kind: DaggerfallOfficeKind.GuildHallMaster,
+            ChangeKind: DaggerfallOfficeChangeKind.VacancyOpened,
+            Cause: DaggerfallOfficeChangeCause.Death,
+            Region: DaggerfallRegion,
+            OfficeSiteId: new DaggerfallSiteId(DaggerfallRegion, 1),
+            OfficeProfileKey: null,
+            OfficeSlotId: "person/0",
+            OfficeFactionId: 40,
+            SeatId: null,
+            Title: "Hall Master",
+            PreviousHolderActorId: 1001,
+            PreviousHolderCastId: null,
+            PreviousHolderName: "Old Master",
+            PreviousHolderFamilyId: null,
+            PreviousHolderIsAlive: false,
+            NewHolderActorId: null,
+            NewHolderCastId: null,
+            NewHolderName: null,
+            NewHolderFamilyId: null,
+            ChangedDay: 3,
+            ChangedMinute: 3 * 1440L,
+            VacancyUntilMinute: 5 * 1440L,
+            CauseDetail: "was slain");
+
+        // Non-ruler offices never raise a regional SuccessionCrisis.
+        conditions.ObserveOfficeChanged(localVacancy, _ => "Daggerfall");
+        Assert.Equal(0, conditions.Count);
+
+        // Ruler vacancy raises SuccessionCrisis with owner-authored headline & body.
+        DaggerfallOfficeChangedNotification rulerVacancy = localVacancy with
+        {
+            OfficeKey = "faction:201",
+            Kind = DaggerfallOfficeKind.Ruler,
+            OfficeFactionId = DaggerfallProvinceFaction,
+            SeatId = "daggerfall",
+            Title = "King",
+            PreviousHolderName = "King Gothryd",
+        };
+        conditions.ObserveOfficeChanged(rulerVacancy, _ => "Daggerfall");
+        Assert.True(conditions.HasActive(DaggerfallRegion, DaggerfallWorldConditionKind.SuccessionCrisis, currentDay: 3));
+        DaggerfallWorldConditionToken crisis = Assert.Single(conditions.ActiveForRegion(DaggerfallRegion, currentDay: 3));
+        Assert.Equal(DaggerfallWorldConditions.OfficeSuccessionCrisisTokenId("faction:201"), crisis.TokenId);
+        Assert.Contains("Daggerfall", crisis.Headline!, StringComparison.Ordinal);
+        Assert.Contains("King Gothryd", crisis.Body!, StringComparison.Ordinal);
+
+        // Interim regency keeps the crisis active with regency prose.
+        conditions.ObserveOfficeChanged(rulerVacancy with
+        {
+            ChangeKind = DaggerfallOfficeChangeKind.RegencyDeclared,
+            NewHolderName = "Lord Bridwell",
+        }, _ => "Daggerfall");
+        DaggerfallWorldConditionToken regency = Assert.Single(conditions.ActiveForRegion(DaggerfallRegion, currentDay: 3));
+        Assert.Contains("Regency", regency.Headline!, StringComparison.Ordinal);
+        Assert.Contains("Lord Bridwell", regency.Body!, StringComparison.Ordinal);
+
+        // Seating a successor clears the crisis token.
+        conditions.ObserveOfficeChanged(rulerVacancy with
+        {
+            ChangeKind = DaggerfallOfficeChangeKind.SuccessorSeated,
+            NewHolderName = "Mobar",
+            VacancyUntilMinute = null,
+        }, _ => "Daggerfall");
+        Assert.False(conditions.HasActive(DaggerfallRegion, DaggerfallWorldConditionKind.SuccessionCrisis, currentDay: 3));
+        Assert.Equal(0, conditions.Count);
+
+        // Deposition raises and override reset clears cleanly.
+        conditions.ObserveOfficeChanged(rulerVacancy with
+        {
+            ChangeKind = DaggerfallOfficeChangeKind.HolderDeposed,
+            Cause = DaggerfallOfficeChangeCause.CardMove,
+            PreviousHolderIsAlive = true,
+        }, _ => "Daggerfall");
+        Assert.True(conditions.HasActive(DaggerfallRegion, DaggerfallWorldConditionKind.SuccessionCrisis, currentDay: 3));
+        conditions.ObserveOfficeOverrideCleared("faction:201");
+        Assert.Equal(0, conditions.Count);
     }
 }

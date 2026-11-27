@@ -434,4 +434,50 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
     /// <summary>Clears any active <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/> tied to <paramref name="officeKey"/> once a lawful successor is seated.</summary>
     internal bool ClearSuccessionCrisis(string officeKey) =>
         !string.IsNullOrWhiteSpace(officeKey) && Remove(OfficeSuccessionCrisisTokenId(officeKey));
+
+    /// <summary>
+    /// Reacts directly to a typed <see cref="DaggerfallOfficeChangedNotification"/> inside the <c>Content</c> owner:
+    /// raises a regional <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/> whenever a regional ruler office
+    /// enters vacancy, non-lethal deposition, or unsettled regency, and clears it once a lawful successor is seated.
+    /// Non-ruler offices do not raise a regional succession crisis.
+    /// </summary>
+    internal void ObserveOfficeChanged(
+        DaggerfallOfficeChangedNotification change,
+        Func<int, string>? regionName = null)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        if (change.Kind != DaggerfallOfficeKind.Ruler || change.Region is not int rulerRegion)
+            return;
+
+        if (change.ChangeKind is DaggerfallOfficeChangeKind.VacancyOpened
+            or DaggerfallOfficeChangeKind.HolderDeposed
+            or DaggerfallOfficeChangeKind.RegencyDeclared)
+        {
+            string resolvedRegion = regionName?.Invoke(rulerRegion) ?? $"Region {rulerRegion}";
+            string former = !string.IsNullOrWhiteSpace(change.PreviousHolderName)
+                ? change.PreviousHolderName
+                : "the former ruler";
+            string headline = change.ChangeKind == DaggerfallOfficeChangeKind.RegencyDeclared
+                ? $"Regency Unsettled in {resolvedRegion}"
+                : $"Succession Crisis in {resolvedRegion}";
+            string body = change.ChangeKind == DaggerfallOfficeChangeKind.RegencyDeclared
+                ? $"{change.NewHolderName ?? "An interim regent"} governs {resolvedRegion} in regency after {former}. Guards remain on strict watch until a lawful successor secures the throne."
+                : $"The throne of {resolvedRegion} stands vacant after {former}. Gate and court scrutiny remain tightened across {resolvedRegion} until a lawful successor takes the seat.";
+            RaiseSuccessionCrisis(
+                change.OfficeKey,
+                rulerRegion,
+                change.OfficeFactionId,
+                change.ChangedDay,
+                headline: headline,
+                body: body);
+            return;
+        }
+
+        if (change.ChangeKind == DaggerfallOfficeChangeKind.SuccessorSeated)
+            ClearSuccessionCrisis(change.OfficeKey);
+    }
+
+    /// <summary>Clears any succession crisis tied to an office override that was reset back to baseline.</summary>
+    internal void ObserveOfficeOverrideCleared(string officeKey) =>
+        ClearSuccessionCrisis(officeKey);
 }

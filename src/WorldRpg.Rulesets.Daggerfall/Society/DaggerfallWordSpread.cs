@@ -347,6 +347,39 @@ internal sealed class DaggerfallWordSpread(
         return !string.IsNullOrWhiteSpace(officeKey);
     }
 
+    /// <summary>Whether any office proclamation wavefront (in transit or arrived) is currently tracked for <paramref name="officeKey"/>.</summary>
+    internal bool HasOfficeProclamation(string officeKey)
+    {
+        if (string.IsNullOrWhiteSpace(officeKey) || _wavefronts.Count == 0)
+            return false;
+        string prefix = $"{OfficeProclamationPrefix}{officeKey}|";
+        foreach (string eventId in _wavefronts.Keys)
+        {
+            if (eventId.StartsWith(prefix, StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Direct owner reaction for <see cref="DaggerfallOfficeLedger.OfficeChanged"/>: resolves the origin site and
+    /// region name and emits the regional proclamation wavefront when an origin exists.
+    /// </summary>
+    internal DaggerfallWordWavefrontSave? ObserveOfficeChanged(
+        DaggerfallOfficeChangedNotification notification,
+        Func<DaggerfallOfficeChangedNotification, DaggerfallSiteRecord?> resolveOrigin,
+        Func<int, string>? regionName = null)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+        ArgumentNullException.ThrowIfNull(resolveOrigin);
+        if (resolveOrigin(notification) is not { } origin)
+            return null;
+        string? resolvedRegion = notification.Region is int r
+            ? regionName?.Invoke(r)
+            : regionName?.Invoke(origin.Id.Region);
+        return ObserveOfficeChanged(notification, origin, resolvedRegion);
+    }
+
     /// <summary>
     /// Reacts to a typed <see cref="DaggerfallOfficeChangedNotification"/> by emitting a regional news proclamation
     /// wavefront originating at the office's capital or town so neighboring towns hear of vacancies, regencies, and

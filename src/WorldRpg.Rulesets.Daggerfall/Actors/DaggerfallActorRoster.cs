@@ -780,6 +780,28 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
+    /// Reacts directly to a typed <see cref="DaggerfallOfficeChangedNotification"/> inside the <c>Actors</c> owner:
+    /// suppresses a deposed living holder's <c>#11090</c> home/office slot via <see cref="ActorLocationOverride.OffStage"/>
+    /// and unloads any live body in the active scene so the vacated seat stands visibly empty.
+    /// </summary>
+    internal void ObserveOfficeChanged(DaggerfallOfficeChangedNotification change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        if (change.ChangeKind is not (DaggerfallOfficeChangeKind.HolderDeposed or DaggerfallOfficeChangeKind.SuccessorSeated))
+            return;
+        if (change.PreviousHolderActorId is not long prevId || !change.PreviousHolderIsAlive || prevId == change.NewHolderActorId)
+            return;
+
+        ActorOrigin? origin = !string.IsNullOrWhiteSpace(change.PreviousHolderCastId)
+            ? ActorOrigin.Cast(change.PreviousHolderCastId, change.OfficeProfileKey)
+            : change.OfficeProfileKey is { } profile && !string.IsNullOrWhiteSpace(change.OfficeSlotId)
+                ? ActorOrigin.Seeded(profile, change.OfficeSlotId)
+                : null;
+        if (origin is not null)
+            SuppressOffStage(prevId, origin);
+    }
+
+    /// <summary>
     /// Suppresses a deposed living actor's home/office slot via <see cref="ActorLocationOverride.OffStage"/> and
     /// immediately unloads any live body in the active scene so the vacated seat stands visibly empty.
     /// </summary>

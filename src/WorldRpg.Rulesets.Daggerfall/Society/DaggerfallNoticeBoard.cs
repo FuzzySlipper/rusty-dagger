@@ -225,31 +225,37 @@ internal sealed class DaggerfallNoticeBoard(
                 .Select(f => f.Id)
                 .FirstOrDefault();
 
-        if (provinceFactionId > 0
-            && officeLedger.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(provinceFactionId), out DaggerfallOfficeOverrideSave? throneOverride)
-            && throneOverride is not null)
+        if (provinceFactionId > 0)
         {
-            postedOfficeKeys.Add(throneOverride.OfficeKey);
-            string heading = throneOverride.Vacant
-                ? $"Throne of {regionName} Vacant"
-                : throneOverride.IsRegency
-                    ? $"Regency of {throneOverride.HolderDisplayName} in {regionName}"
-                    : $"Proclamation of {throneOverride.HolderDisplayName}";
-            string body = throneOverride.Vacant
-                ? $"The seat of {regionName} stands vacant since {throneOverride.PreviousHolderName ?? "the former ruler"} ({FormatCause(throneOverride)})."
-                : throneOverride.IsRegency
-                    ? $"{throneOverride.HolderDisplayName} governs {regionName} in regency while the succession after {throneOverride.PreviousHolderName ?? "the former ruler"} remains unsettled."
-                    : $"{throneOverride.HolderDisplayName} now holds the throne of {regionName}"
-                      + (string.IsNullOrWhiteSpace(throneOverride.PreviousHolderName)
-                          ? "."
-                          : $", succeeding {throneOverride.PreviousHolderName} ({FormatCause(throneOverride)}).");
-            entries.Add(new(
-                Id: $"notice:office:{throneOverride.OfficeKey}",
-                Kind: DaggerfallNoticeEntryKind.OfficeNotice,
-                Heading: heading,
-                Body: body,
-                Region: region,
-                FactionId: provinceFactionId));
+            string throneKey = DaggerfallOfficeLedger.FactionOfficeKey(provinceFactionId);
+            // When WordSpread tracks proclamation wavefronts for this throne, gate notice posting on courier arrival
+            // (including same-region towns outside the capital's instant bubble) so future news never leaks early.
+            if (officeLedger.TryGetOverride(throneKey, out DaggerfallOfficeOverrideSave? throneOverride)
+                && throneOverride is not null
+                && (wordSpread is null || !wordSpread.HasOfficeProclamation(throneKey)))
+            {
+                postedOfficeKeys.Add(throneOverride.OfficeKey);
+                string heading = throneOverride.Vacant
+                    ? $"Throne of {regionName} Vacant"
+                    : throneOverride.IsRegency
+                        ? $"Regency of {throneOverride.HolderDisplayName} in {regionName}"
+                        : $"Proclamation of {throneOverride.HolderDisplayName}";
+                string body = throneOverride.Vacant
+                    ? $"The seat of {regionName} stands vacant since {throneOverride.PreviousHolderName ?? "the former ruler"} ({FormatCause(throneOverride)})."
+                    : throneOverride.IsRegency
+                        ? $"{throneOverride.HolderDisplayName} governs {regionName} in regency while the succession after {throneOverride.PreviousHolderName ?? "the former ruler"} remains unsettled."
+                        : $"{throneOverride.HolderDisplayName} now holds the throne of {regionName}"
+                          + (string.IsNullOrWhiteSpace(throneOverride.PreviousHolderName)
+                              ? "."
+                              : $", succeeding {throneOverride.PreviousHolderName} ({FormatCause(throneOverride)}).");
+                entries.Add(new(
+                    Id: $"notice:office:{throneOverride.OfficeKey}",
+                    Kind: DaggerfallNoticeEntryKind.OfficeNotice,
+                    Heading: heading,
+                    Body: body,
+                    Region: region,
+                    FactionId: provinceFactionId));
+            }
         }
 
         foreach (DaggerfallLocalOffice local in officeLedger.ResolveLocalOffices(site))
