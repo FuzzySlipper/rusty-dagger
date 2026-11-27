@@ -53,7 +53,7 @@ internal sealed class DaggerfallPoliticalBoard
 
     private readonly DaggerfallPoliticalCanon _canon;
     private readonly DaggerfallBoardSeatSet _seats;
-    private readonly DaggerfallFactionsSet _factions;
+    private readonly DaggerfallRegionLiege _liege;
     private readonly Func<string, DaggerfallSeatLeaderPersona> _seatPersona;
     private readonly DaggerfallWorldConditions _conditions;
     private readonly Board _board;
@@ -70,15 +70,16 @@ internal sealed class DaggerfallPoliticalBoard
     /// The board for a new game starting on <paramref name="day"/> (<paramref name="saved"/> null), or the board a save
     /// carried. A save made before the board existed starts the canon board on its own day. Without
     /// <paramref name="couriers"/> slow moves travel unseen. <paramref name="seatPersona"/> is who holds a seat in the world
-    /// now (<see cref="DaggerfallOfficeLedger.ResolveBoardSeatPersona"/>).
+    /// now (<see cref="DaggerfallOfficeLedger.ResolveBoardSeatPersona"/>). The board binds <paramref name="liege"/>, so the
+    /// world reads each region's liege from its allegiance.
     /// </summary>
-    internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallFactionsSet factions,
+    internal DaggerfallPoliticalBoard(DaggerfallPoliticalCanon canon, DaggerfallBoardSeatSet seats, DaggerfallRegionLiege liege,
         Func<string, DaggerfallSeatLeaderPersona> seatPersona, DaggerfallWorldConditions conditions, IReadOnlyList<DaggerfallSiteRecord> sites,
         DaggerfallCourierDispatches? couriers, long day, DaggerfallPoliticalBoardSave? saved)
     {
         _canon = canon;
         _seats = seats;
-        _factions = factions;
+        _liege = liege;
         _seatPersona = seatPersona;
         _conditions = conditions;
         _sites = sites;
@@ -95,6 +96,7 @@ internal sealed class DaggerfallPoliticalBoard
             _lastTurnDay = saved.LastTurnDay;
         }
         _news = new DaggerfallPoliticalNews(_board, canon.Cards, Town, Faction);
+        liege.Bind(_board);
         Rebuild();
         conditions.BindExternalSource(TokensFor);
         couriers?.BindBoardMoveCallback(CourierSettled);
@@ -205,10 +207,12 @@ internal sealed class DaggerfallPoliticalBoard
     /// An office changed hands in the world (<see cref="DaggerfallOfficeLedger.OfficeChanged"/>), heard at the next
     /// Sunday. A seat's office changing gives the seat its new holder; one with no persona of their own, or no one while
     /// the office stands vacant, plays on as the predecessor did, as a regency, and a succession opens (Patch's Q2). A
-    /// local office in a region's chief town that a seat holds on the board goes back to local people.
+    /// local office in a region's chief town that a seat holds on the board goes back to local people. A change the
+    /// board made itself (<see cref="DaggerfallOfficeChangeCause.CardMove"/>) is already on the board and is not heard back.
     /// </summary>
     internal void ObserveOfficeChanged(DaggerfallOfficeChangedNotification change)
     {
+        if (change.Cause == DaggerfallOfficeChangeCause.CardMove) return;
         if (change.Kind is DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.MajorSeat)
         {
             if (change.OfficeFactionId is not int faction || !_seats.TryGetByFactionId(faction, out DaggerfallBoardSeatBinding? binding)
@@ -393,13 +397,14 @@ internal sealed class DaggerfallPoliticalBoard
         _ => null,
     };
 
-    /// <summary>The seat whose office faction is <paramref name="factionId"/> or one of its parents.</summary>
+    /// <summary>
+    /// The seat whose office faction is <paramref name="factionId"/> or one above it, through each province's liege: a
+    /// quest for an annexed region's court is the new liege's.
+    /// </summary>
     private string? SeatOfFaction(int factionId)
     {
-        HashSet<int> seen = [];
-        for (int faction = factionId; faction > 0 && seen.Add(faction);
-             faction = _factions.Factions.TryGetValue(faction, out DaggerfallFactionDefinition? definition) ? definition.Parent : 0)
-            if (_seats.TryGetByFactionId(faction, out DaggerfallBoardSeatBinding? binding) && _board.HasSeat(binding!.SeatId))
+        foreach (DaggerfallFactionDefinition faction in _liege.Lineage(factionId))
+            if (_seats.TryGetByFactionId(faction.Id, out DaggerfallBoardSeatBinding? binding) && _board.HasSeat(binding!.SeatId))
                 return binding.SeatId;
         return null;
     }

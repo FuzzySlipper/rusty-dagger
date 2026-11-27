@@ -337,20 +337,11 @@ internal sealed class DaggerfallIntroductions(
                 }
             }
 
-            if (factionId > 0)
+            if (factionId > 0
+                && social.Liege.Lineage(factionId).Any(faction =>
+                    officeLedger.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(faction.Id)) is { } over && (over.Vacant || over.IsRegency)))
             {
-                int current = factionId;
-                for (int depth = 0; depth < 8 && current > 0; depth++)
-                {
-                    if (officeLedger.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(current)) is { } over
-                        && (over.Vacant || over.IsRegency))
-                    {
-                        return true;
-                    }
-                    if (!definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def) || def.Parent == current)
-                        break;
-                    current = def.Parent;
-                }
+                return true;
             }
 
             if (targetNpc?.Profile is { } profile)
@@ -1069,8 +1060,8 @@ internal sealed class DaggerfallIntroductions(
     }
 
     private bool IsParentedByCourtOrNoble(DaggerfallFactionDefinition faction) =>
-        faction.Parent > 0
-        && definitions.Factions.Factions.TryGetValue(faction.Parent, out DaggerfallFactionDefinition? parent)
+        social.Liege.ParentOf(faction) is > 0 and var parentId
+        && definitions.Factions.Factions.TryGetValue(parentId, out DaggerfallFactionDefinition? parent)
         && (parent.Type is ProvinceFactionType or CourtsFactionType or IndividualFactionType
             || parent.SocialGroup == NobilitySocialGroup);
 
@@ -1099,15 +1090,19 @@ internal sealed class DaggerfallIntroductions(
             if (targetDef.Id == refDef.Id)
                 return true;
 
+            // A province answers to its liege on the board, so an annexed court shares its crown's root.
+            int targetParent = social.Liege.ParentOf(targetDef);
+            int refParent = social.Liege.ParentOf(refDef);
+
             // Direct ally or parent/child in either direction.
             if (targetDef.Allies.Contains(refDef.Id) || refDef.Allies.Contains(targetDef.Id)
-                || targetDef.Parent == refDef.Id || refDef.Parent == targetDef.Id)
+                || targetParent == refDef.Id || refParent == targetDef.Id)
             {
                 return true;
             }
 
             // Shared non-zero parent or shared province/court root (e.g., two nobles under 201 Daggerfall).
-            if (targetDef.Parent != 0 && targetDef.Parent == refDef.Parent)
+            if (targetParent != 0 && targetParent == refParent)
                 return true;
 
             int targetRoot = FindHierarchyRoot(targetDef);
@@ -1116,7 +1111,7 @@ internal sealed class DaggerfallIntroductions(
                 return true;
 
             // Allied to target's parent or target's hierarchy root (e.g., Popudax allied to King Gothryd under Daggerfall).
-            if (targetDef.Parent != 0 && (refDef.Allies.Contains(targetDef.Parent) || targetDef.Allies.Contains(refDef.Parent)))
+            if (targetParent != 0 && (refDef.Allies.Contains(targetParent) || targetDef.Allies.Contains(refParent)))
                 return true;
 
             // Same-region nobility/court circle (e.g., Lady Bridwell and Mobar both in Region 17 Nobility).
@@ -1155,23 +1150,12 @@ internal sealed class DaggerfallIntroductions(
     {
         if (a is null || b is null) return false;
         if (a.Enemies.Contains(b.Id) || b.Enemies.Contains(a.Id)) return true;
-        if (a.Parent != 0 && b.Enemies.Contains(a.Parent)) return true;
-        if (b.Parent != 0 && a.Enemies.Contains(b.Parent)) return true;
+        if (social.Liege.ParentOf(a) is not 0 and var aParent && b.Enemies.Contains(aParent)) return true;
+        if (social.Liege.ParentOf(b) is not 0 and var bParent && a.Enemies.Contains(bParent)) return true;
         return false;
     }
 
-    private int FindHierarchyRoot(DaggerfallFactionDefinition faction)
-    {
-        HashSet<int> seen = [faction.Id];
-        DaggerfallFactionDefinition current = faction;
-        while (current.Parent != 0
-            && definitions.Factions.Factions.TryGetValue(current.Parent, out DaggerfallFactionDefinition? parent)
-            && seen.Add(parent.Id))
-        {
-            current = parent;
-        }
-        return current.Id;
-    }
+    private int FindHierarchyRoot(DaggerfallFactionDefinition faction) => social.Liege.Lineage(faction.Id).Last().Id;
 
     private ActorVouchRecord? FindBestTrustedVouch(
         DaggerfallNpc target,
@@ -1475,17 +1459,10 @@ internal sealed class DaggerfallIntroductions(
             actorRegion = s.Region;
         }
 
-        if (change.OfficeFactionId is int officeFaction && officeFaction > 0 && actorFactionId > 0)
+        if (change.OfficeFactionId is int officeFaction && officeFaction > 0 && actorFactionId > 0
+            && social.Liege.Lineage(actorFactionId).Any(faction => faction.Id == officeFaction))
         {
-            int cur = actorFactionId;
-            for (int depth = 0; depth < 8 && cur > 0; depth++)
-            {
-                if (cur == officeFaction)
-                    return true;
-                if (!definitions.Factions.Factions.TryGetValue(cur, out DaggerfallFactionDefinition? def) || def.Parent == cur)
-                    break;
-                cur = def.Parent;
-            }
+            return true;
         }
 
         return change.Region is int r && r >= 0 && actorRegion == r;

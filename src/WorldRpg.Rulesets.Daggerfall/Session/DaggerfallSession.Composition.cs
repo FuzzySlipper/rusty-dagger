@@ -143,7 +143,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallVariableStore variables = new(definitions.QuestSources.Tables.Globals.Lookup);
             if (saved?.Variables is { } restoredVariables)
                 variables.Restore(restoredVariables.Entries.Select(entry => (entry.Require(), entry.Value)));
-            DaggerfallSocialState social = new(definitions.Factions);
+            DaggerfallSocialState social = new(definitions.Factions, new DaggerfallRegionLiege(definitions.Factions, definitions.BoardSeats));
             if (saved?.Social is { } restoredSocial) social.Restore(restoredSocial);
             social.BindActorFactions(id => actors.TryGet(id, out ActorState? actor)
                 && actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc) ? fc : null);
@@ -1098,7 +1098,7 @@ internal sealed partial class DaggerfallSession
             if (saved is not null)
                 ConditionCounterplay.Restore(saved.ConditionCounterplay);
             if (definitions.PoliticalCanon is { } politicalCanon)
-                PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, definitions.Factions,
+                PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, State.Social.Liege,
                     OfficeLedger.ResolveBoardSeatPersona, WorldConditions, definitions.Locations.Records, CourierDispatches,
                     _time.Calendar.DayNumber, saved?.PoliticalBoard);
             OfficeLedger.OfficeChanged += change => PoliticalBoard?.ObserveOfficeChanged(change);

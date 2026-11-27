@@ -256,16 +256,7 @@ internal sealed class DaggerfallScrutinyPolicy(
     {
         if (targetFactionId is not int wanted || wanted <= 0 || candidateFactionId <= 0)
             return false;
-        int current = candidateFactionId;
-        for (int depth = 0; depth < 8 && current > 0; depth++)
-        {
-            if (current == wanted) return true;
-            if (!definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
-                break;
-            if (def.Parent == current) break;
-            current = def.Parent;
-        }
-        return false;
+        return social.Liege.Lineage(candidateFactionId).Any(faction => faction.Id == wanted);
     }
 
     private static DaggerfallWorldConditionToken? SelectGateScrutinyCondition(IReadOnlyList<DaggerfallWorldConditionToken> active)

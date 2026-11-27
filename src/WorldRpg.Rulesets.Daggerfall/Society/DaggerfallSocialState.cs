@@ -54,6 +54,7 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     internal const long NormalizeIntervalMinutes = 112L * 24L * 60L;
 
     private readonly DaggerfallFactionsSet _catalog;
+    private readonly DaggerfallRegionLiege _liege;
     private readonly Dictionary<int, int> _factionReputations;
     private readonly Dictionary<int, int> _regionalReputations = [];
     private readonly Dictionary<int, int> _personalReputations = [];
@@ -85,11 +86,19 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     internal void BindActorVouchBonus(Func<long, int> lookup) =>
         _actorVouchBonus = lookup ?? throw new ArgumentNullException(nameof(lookup));
 
-    internal DaggerfallSocialState(DaggerfallFactionsSet catalog)
+    /// <summary>
+    /// Standing over <paramref name="catalog"/>, rippling through the faction tree as <paramref name="liege"/> has it; without
+    /// one, as the catalog has it, as in a game with no political board.
+    /// </summary>
+    internal DaggerfallSocialState(DaggerfallFactionsSet catalog, DaggerfallRegionLiege? liege = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        _liege = liege ?? new DaggerfallRegionLiege(catalog, DaggerfallBoardSeatSet.Empty);
         _factionReputations = catalog.Factions.Values.ToDictionary(faction => faction.Id, faction => Clamp(faction.Reputation));
     }
+
+    /// <summary>The shape of the faction tree standing ripples through: each province's liege on the board.</summary>
+    internal DaggerfallRegionLiege Liege => _liege;
 
     internal int FactionReputation(int factionId) => _factionReputations[RequireFaction(factionId).Id];
 
@@ -448,9 +457,10 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
 
     private DaggerfallFactionDefinition FindDonorPropagationRoot(DaggerfallFactionDefinition faction)
     {
+        // A province climbs to its liege on the board, so standing with a crown reaches its vassals' courts and people.
         HashSet<int> seen = [faction.Id];
-        while (faction.Id != DarkBrotherhoodFactionId && faction.Parent != 0
-            && _catalog.Factions.TryGetValue(faction.Parent, out DaggerfallFactionDefinition? parent) && seen.Add(parent.Id))
+        while (faction.Id != DarkBrotherhoodFactionId && _liege.ParentOf(faction) is not 0 and var parentId
+            && _catalog.Factions.TryGetValue(parentId, out DaggerfallFactionDefinition? parent) && seen.Add(parent.Id))
         {
             faction = parent;
         }
@@ -463,11 +473,11 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
         // PersistentFactionData.PropagateReputationChange gives full standing to the initiator,
         // a parentless root, and the six guild questor service identities; all other descendants
         // receive half.  Preserve authored child order to retain donor propagation order.
-        int applied = faction.Id == initiator || faction.Parent == 0 || QuestorFactionIds.Contains(faction.Id)
+        int applied = faction.Id == initiator || _liege.ParentOf(faction) == 0 || QuestorFactionIds.Contains(faction.Id)
             ? amount
             : amount / 2;
         ApplyFactionChange(faction.Id, applied);
-        foreach (int child in faction.Children)
+        foreach (int child in _liege.ChildrenOf(faction))
             if (_catalog.Factions.TryGetValue(child, out DaggerfallFactionDefinition? definition)) PropagateDonorHierarchy(definition, initiator, amount, visited);
     }
 

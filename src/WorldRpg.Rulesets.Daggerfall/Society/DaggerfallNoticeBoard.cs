@@ -109,6 +109,17 @@ internal sealed class DaggerfallNoticeBoard(
         foreach (DaggerfallWorldConditionToken token in conditions.ActiveForRegion(region, day))
             entries.Add(BuildConditionEntry(token, region, regionName, authorityName));
 
+        // A region the board gave a new liege posts its homage while the crown consolidates its hold (wiki region-liege).
+        if (social.Liege.NewLiegeOf(region) is { } liege)
+            entries.Add(new(
+                Id: $"notice:homage:{region}:{liege.Id}",
+                Kind: DaggerfallNoticeEntryKind.Decree,
+                Heading: $"Homage to the Crown of {liege.Name}",
+                Body: $"{regionName} pays homage to the Crown of {liege.Name}. "
+                    + (authorityName is null ? "Its court" : $"By order of {authorityName}, its court") + $" now answers to {liege.Name}.",
+                Region: region,
+                FactionId: liege.Id));
+
         // 3. Sparse office proclamations (regional throne or local town offices that changed from baseline).
         HashSet<string> postedOfficeKeys = new(StringComparer.Ordinal);
         AddOfficeNotices(entries, postedOfficeKeys, site, region, regionName, ruler);

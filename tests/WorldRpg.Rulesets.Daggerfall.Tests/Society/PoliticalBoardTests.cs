@@ -16,7 +16,8 @@ public sealed class PoliticalBoardTests
 
     private static DaggerfallPoliticalBoard NewBoard(DaggerfallWorldConditions conditions, long day = Wednesday, DaggerfallPoliticalBoardSave? saved = null,
         Func<string, DaggerfallSeatLeaderPersona>? seatPersona = null) =>
-        new(Canon, TestPayload.Definitions.BoardSeats, TestPayload.Definitions.Factions, seatPersona ?? CanonHolder, conditions,
+        new(Canon, TestPayload.Definitions.BoardSeats, new DaggerfallRegionLiege(TestPayload.Definitions.Factions, TestPayload.Definitions.BoardSeats),
+            seatPersona ?? CanonHolder, conditions,
             TestPayload.Definitions.Locations.Records, null, day, saved);
 
     /// <summary>The seat held by its canon holder, as the world starts.</summary>

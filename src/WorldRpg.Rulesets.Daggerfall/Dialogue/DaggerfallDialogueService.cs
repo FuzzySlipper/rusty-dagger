@@ -824,7 +824,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             .FirstOrDefault();
         return context with
         {
-            Faction = context.Faction with { NewsFactionOne = first, NewsFactionTwo = second, RegionInContext = province?.Name ?? site.Name },
+            Faction = context.Faction with
+            {
+                NewsFactionOne = first, NewsFactionTwo = second, RegionInContext = province?.Name ?? site.Name,
+                Liege = _social.Liege.SovereignOf(site.Id.Region)?.Name,
+            },
             Location = context.Location with { Region = province?.Name ?? site.Name },
         };
     }
@@ -854,7 +858,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                 NpcFaction: faction?.Name,
                 FactionName: faction?.Name,
                 RegionInContext: province?.Name,
-                Oath: oath),
+                Oath: oath,
+                Liege: site is null ? null : _social.Liege.SovereignOf(site.Id.Region)?.Name),
             new DaggerfallTextItemContext(),
             new DaggerfallTextStoryContext(GreetingOrFollowUp: opening));
     }
@@ -1100,11 +1105,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private bool TryFindRivalMemberFaction(DaggerfallFactionDefinition startFaction, out DaggerfallFactionDefinition? enemyDef)
     {
         enemyDef = null;
-        int current = startFaction.Id;
-        for (int depth = 0; depth < 6 && current > 0; depth++)
+        foreach (DaggerfallFactionDefinition def in _social.Liege.Lineage(startFaction.Id).Take(6))
         {
-            if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
-                break;
             if (def.Type == 15)
                 break;
             foreach (int enemyId in def.Enemies)
@@ -1117,8 +1119,6 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                     return true;
                 }
             }
-            if (def.Parent == current) break;
-            current = def.Parent;
         }
         return false;
     }
@@ -1146,17 +1146,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         List<string> keys = [];
         // Generic regional townsfolk (Type 15) speak regional/climate/role barks unless they hold a specific
         // non-generic institutional identity (such as "city-watch"); non-generic factions walk up their guild/court lineage.
-        if (!isRegionalPeople)
+        if (!isRegionalPeople && primaryFactionId > 0)
         {
-            int current = primaryFactionId;
-            for (int depth = 0; depth < 6 && current > 0; depth++)
-            {
-                keys.Add(current.ToString(CultureInfo.InvariantCulture));
-                if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
-                    break;
-                if (def.Parent == current) break;
-                current = def.Parent;
-            }
+            keys.Add(primaryFactionId.ToString(CultureInfo.InvariantCulture));
+            keys.AddRange(_social.Liege.Lineage(primaryFactionId).Skip(1).Take(5).Select(faction => faction.Id.ToString(CultureInfo.InvariantCulture)));
         }
         if (!string.IsNullOrWhiteSpace(creatureFactionId))
             keys.Add(creatureFactionId);
@@ -1264,16 +1257,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     {
         if (targetFactionId is not int wanted || wanted <= 0 || candidateFactionId <= 0)
             return false;
-        int current = candidateFactionId;
-        for (int depth = 0; depth < 8 && current > 0; depth++)
-        {
-            if (current == wanted) return true;
-            if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def))
-                break;
-            if (def.Parent == current) break;
-            current = def.Parent;
-        }
-        return false;
+        return _social.Liege.Lineage(candidateFactionId).Any(faction => faction.Id == wanted);
     }
 
     private string? ResolveOfficeContinuityGreetingLine(DaggerfallNpc npc, DaggerfallSiteRecord? site)
@@ -1471,15 +1455,22 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
 
         string styledRuler = FormatStyledHolder(ruler.Title, ruler.DisplayName);
+        // The lord's liege on the board: a crown the region pays homage to, named after the lord.
+        string? liege = _social.Liege.LiegeOf(region)?.Name;
+        string sworn = liege is null ? string.Empty : $", sworn to the Crown of {liege}";
         if (ruler.ActorId == npc.DurableId)
-            return $"You address {styledRuler} of {regionName}.";
+            return $"You address {styledRuler} of {regionName}{sworn}.";
         if (forBark)
+        {
+            if (_social.Liege.NewLiegeOf(region) is { } homage)
+                return $"The court of {regionName} has sworn homage to the Crown of {homage.Name}.";
             return over is not null
                 ? $"The court adjusts to the reign of {styledRuler} of {regionName}."
                 : $"All eyes in court turn to {styledRuler} of {regionName}.";
+        }
         return over is not null && !string.IsNullOrWhiteSpace(over.PreviousHolderName)
-            ? $"You stand in the court of {styledRuler} of {regionName}, who succeeded {over.PreviousHolderName}."
-            : $"You stand in the court of {styledRuler} of {regionName}.";
+            ? $"You stand in the court of {styledRuler} of {regionName}{sworn}, who succeeded {over.PreviousHolderName}."
+            : $"You stand in the court of {styledRuler} of {regionName}{sworn}.";
     }
 
     private string? ResolveMajorSeatContinuityLine(DaggerfallNpc npc, DaggerfallSiteRecord site, bool forBark)
@@ -1541,18 +1532,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private DaggerfallBoardSeatBinding? TryFindSpeakerMajorSeat(DaggerfallNpc npc)
     {
         (int factionId, _) = ResolveLiveFaction(npc);
-        int current = factionId;
-        for (int depth = 0; depth < 8 && current > 0; depth++)
+        foreach (DaggerfallFactionDefinition faction in _social.Liege.Lineage(factionId))
         {
-            if (_definitions.BoardSeats.TryGetByFactionId(current, out DaggerfallBoardSeatBinding? seat)
+            if (_definitions.BoardSeats.TryGetByFactionId(faction.Id, out DaggerfallBoardSeatBinding? seat)
                 && seat is not null
                 && seat.Kind != DaggerfallBoardSeatKind.Ruler)
             {
                 return seat;
             }
-            if (!_definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def) || def.Parent == current)
-                break;
-            current = def.Parent;
         }
         return null;
     }

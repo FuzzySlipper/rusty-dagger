@@ -1206,7 +1206,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         Location = new(City: _site.ActiveSite?.Name,
             Region: _site.Region is int region ? _definitions.BuildingNames.RegionName(region) : null),
         Faction = new(VampireClan: State.RacialOverrides.Current?.State.Vampire is { } vampire
-            ? DaggerfallVampirismPolicy.ClanName(_definitions, vampire.Clan) : null),
+            ? DaggerfallVampirismPolicy.ClanName(_definitions, vampire.Clan) : null,
+            Liege: _site.Region is int here ? State.Social.Liege.SovereignOf(here)?.Name : null),
     };
 
     /// <summary>The conversation with the person the player talks to; activation rebuilds it with each site.</summary>
