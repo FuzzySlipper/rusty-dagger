@@ -1170,6 +1170,25 @@ internal static partial class DaggerfallSiteContent
 }
 
 /// <summary>Deterministic interactive in-world notice board placed at a town square or tavern entrance.</summary>
+/// <summary>Where a banner of arms hangs (#11144): a town gate, the palace, or an office (a guild hall or a temple).</summary>
+internal enum DaggerfallSiteBannerPost { Gate, Palace, Office }
+
+/// <summary>
+/// One banner of arms hung flat on a wall: the middle of its top edge, the way the wall faces, its cloth's width and
+/// drop in metres, and the post it marks. Whose arms it shows is read live where it is drawn.
+/// </summary>
+internal sealed record DaggerfallSiteBanner(string Id, WorldPoint Top, Vector3 SurfaceNormal, float Width, float Drop, DaggerfallSiteBannerPost Post)
+{
+    internal DaggerfallSiteBanner Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Id);
+        if (!float.IsFinite(Top.X) || !float.IsFinite(Top.Y) || !float.IsFinite(Top.Z) || !float.IsFinite(SurfaceNormal.LengthSquared())
+            || SurfaceNormal.LengthSquared() < 1e-4f || !float.IsFinite(Width) || Width <= 0 || !float.IsFinite(Drop) || Drop <= 0 || !Enum.IsDefined(Post))
+            throw new ArgumentOutOfRangeException(nameof(Top), $"Banner '{Id}' needs a finite top, a facing, a positive size and a post.");
+        return this;
+    }
+}
+
 internal sealed record DaggerfallSiteNoticeBoard(
     string Id,
     WorldPoint Position,
@@ -1421,6 +1440,8 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
     internal IReadOnlyList<DaggerfallCityGateDefinition> CityGates { get; init; } = [];
     /// <summary>Deterministic interactive town/tavern notice boards placed during site assembly.</summary>
     internal IReadOnlyList<DaggerfallSiteNoticeBoard> NoticeBoards { get; init; } = [];
+    /// <summary>The banners of arms hung on the town's gates, palace and offices (#11144).</summary>
+    internal IReadOnlyList<DaggerfallSiteBanner> Banners { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteDecoration> Decorations { get; init; } = [];
     internal IReadOnlyList<DaggerfallSiteLight> Lights { get; } = Array.AsReadOnly((lights ?? [])
         .Select(light => light.Validate())

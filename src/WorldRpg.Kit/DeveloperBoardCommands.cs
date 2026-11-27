@@ -19,4 +19,7 @@ public interface IDeveloperBoardCommands : IDebugCommandModule
 
     [DebugCommand("board.moves", Description = "Developer: the board's moves this session as a chronological log in JSON, newest turn first (up to 12 turns): each seat's move with its card, targets and visibility, and how it came out (landed, under way with its courier, delayed, delivered early, intercepted, arrived or failed); the world's nudges, the slow moves arriving and the chronicle arcs at the turn they open, peak or settle.")]
     DebugCommandResult Moves();
+
+    [DebugCommand("board.allegiance", Description = "Developer: give a political board region (its id, such as glenpoint) to a seat (such as wayrest), or to no one (none), at once, as an annexation would, so the world's liege, heraldry, banners and the map's Realms view follow it. A capital keeps its crown.")]
+    DebugCommandResult Allegiance(string region, string seat);
 }

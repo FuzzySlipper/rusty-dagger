@@ -313,6 +313,9 @@ internal sealed record DaggerfallArtSprite(DaggerfallArtFile File, int Width, in
 /// </summary>
 internal sealed record DaggerfallDyeTint(string Multiply, double Brightness);
 
+/// <summary>A coat of arms' art: the banner hung on palaces, gates and offices, and the shield the map's key shows.</summary>
+internal sealed record DaggerfallHeraldryArt(DaggerfallArtFile Banner, DaggerfallArtFile Shield);
+
 /// <summary>
 /// The refreshed art set: generated images promoted from <c>authoring/</c> (<c>promote.py</c>), each standing in for
 /// one classic media identity. A presentation that draws a classic identity draws its replacement instead unless a
@@ -374,6 +377,12 @@ internal sealed class DaggerfallArtReplacements
 
     /// <summary>The travel map's drops, land detail and place models, when the set has them.</summary>
     internal DaggerfallTravelMapArt? TravelMap { get; private init; }
+
+    /// <summary>
+    /// Each coat of arms' hanging banner and shield (#11144), by the arms' id in the heraldry (<c>seat:daggerfall</c>,
+    /// <c>region:glenpoint</c>); rendered from it by <c>authoring/tools/heraldry/arms.py</c>.
+    /// </summary>
+    internal IReadOnlyDictionary<string, DaggerfallHeraldryArt> Heraldry { get; private init; } = new Dictionary<string, DaggerfallHeraldryArt>(StringComparer.Ordinal);
 
     /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
@@ -486,6 +495,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallArtFile? treeSnow = null;
         DaggerfallSeaArt? sea = null;
         DaggerfallTravelMapArt? travelMap = null;
+        Dictionary<string, DaggerfallHeraldryArt> heraldry = new(StringComparer.Ordinal);
         DaggerfallPeopleRig? peopleRig = null;
         DaggerfallSplatPeople? splatPeople = null;
         DaggerfallTitleScene? titleScene = null;
@@ -745,6 +755,10 @@ internal sealed class DaggerfallArtReplacements
             if (section.TryGetProperty("sea", out JsonElement seaArt))
                 sea = new(File(seaArt.GetProperty("shader"), "The sea's shader"), File(seaArt.GetProperty("ripples"), "The sea's ripple map"),
                     File(seaArt.GetProperty("foam"), "The sea's foam map"));
+            if (section.TryGetProperty("heraldry", out JsonElement arms))
+                foreach (JsonProperty coat in arms.EnumerateObject())
+                    heraldry.Add(coat.Name, new(File(coat.Value.GetProperty("banner"), $"The banner of {coat.Name}"),
+                        File(coat.Value.GetProperty("shield"), $"The shield of {coat.Name}")));
             if (section.TryGetProperty("travelMap", out JsonElement mapArt))
             {
                 Dictionary<DaggerfallSiteKind, DaggerfallTravelMapPlace> places = [];
@@ -851,7 +865,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, scenery, people)
-        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
+        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, Heraldry = heraldry, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {

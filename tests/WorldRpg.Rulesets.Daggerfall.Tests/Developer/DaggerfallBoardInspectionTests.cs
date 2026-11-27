@@ -7,7 +7,10 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>The political board's runtime diagnostics (B3, #11119): <c>board.state</c>, <c>board.seat</c>, <c>board.turns</c> and <c>board.moves</c> over the live board.</summary>
+/// <summary>
+/// The political board's runtime diagnostics (B3, #11119): <c>board.state</c>, <c>board.seat</c>, <c>board.turns</c> and
+/// <c>board.moves</c> over the live board, and <c>board.allegiance</c> (#11144).
+/// </summary>
 public sealed class DaggerfallBoardInspectionTests
 {
     [Fact]
@@ -207,4 +210,21 @@ public sealed class DaggerfallBoardInspectionTests
     private static JsonElement MoveRow(JsonDocument moves, string id) =>
         moves.RootElement.GetProperty("turns").EnumerateArray().SelectMany(turn => turn.GetProperty("moves").EnumerateArray())
             .Single(move => move.GetProperty("id").GetString() == id);
+
+    [Fact]
+    public void Board_allegiance_hands_a_region_to_a_seat_or_to_no_one_and_leaves_a_capital_to_its_crown()
+    {
+        using DaggerfallSession session = FreshSession();
+        Board board = session.PoliticalBoard!.Board;
+        IDeveloperBoardCommands commands = session.Commands<IDeveloperBoardCommands>();
+
+        Assert.True(commands.Allegiance("glenpoint", "wayrest").Succeeded);
+        Assert.Equal("wayrest", board.Region("glenpoint").Allegiance);
+        Assert.Equal("seat:wayrest", session.RealmArms.Of(board.Region("glenpoint").CatalogRegion)!.Id);
+        Assert.True(commands.Allegiance("glenpoint", "none").Succeeded);
+        Assert.Null(board.Region("glenpoint").Allegiance);
+        Assert.False(commands.Allegiance("daggerfall", "wayrest").Succeeded);
+        Assert.False(commands.Allegiance("nowhere", "wayrest").Succeeded);
+        Assert.False(commands.Allegiance("glenpoint", "nobody").Succeeded);
+    }
 }

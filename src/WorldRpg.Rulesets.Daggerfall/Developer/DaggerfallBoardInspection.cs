@@ -9,11 +9,32 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// Live developer inspection of the political board the session runs (<c>board.state</c>, <c>board.seat</c>,
-/// <c>board.turns</c>, <c>board.moves</c>). Reads the board owner on demand and owns no state of its own.
+/// <c>board.turns</c>, <c>board.moves</c>), and <c>board.allegiance</c>, which hands a region to a seat at once for
+/// checking what follows a liege. Reads the board owner on demand and owns no state of its own.
 /// </summary>
 internal sealed class DaggerfallBoardInspection(Func<DaggerfallPoliticalBoard?> politicalBoard, Func<DaggerfallCalendar> calendar)
     : IDeveloperBoardCommands
 {
+    public DebugCommandResult Allegiance(string region, string seat)
+    {
+        if (politicalBoard() is not { } owner) return DaggerfallDeveloperReplies.Refused("No political board runs in this session.");
+        Board board = owner.Board;
+        if (!board.HasRegion(region))
+            return DaggerfallDeveloperReplies.Refused($"No board region '{region}'. Regions: {string.Join(", ", board.Regions.Select(held => held.Id))}.");
+        if (seat != "none" && !board.HasSeat(seat))
+            return DaggerfallDeveloperReplies.Refused($"No board seat '{seat}'. Seats: none, {string.Join(", ", board.Seats.Select(held => held.Id))}.");
+        Region held = board.Region(region);
+        if (held.Capital) return DaggerfallDeveloperReplies.Refused($"{held.Name} is a capital and keeps its crown.");
+        board.SetAllegiance(held, seat == "none" ? null : board.Seat(seat));
+        return DaggerfallDeveloperReplies.Json(w =>
+        {
+            w.WriteStartObject();
+            w.WriteString("region", held.Id);
+            w.WriteString("allegiance", held.Allegiance);
+            w.WriteEndObject();
+        });
+    }
+
     public DebugCommandResult State()
     {
         if (politicalBoard() is not { } owner) return DaggerfallDeveloperReplies.Refused("No political board runs in this session.");

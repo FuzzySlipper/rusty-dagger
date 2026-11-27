@@ -995,6 +995,7 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallInteriorBuilding? interiorBuilding = ReadInterior(normalized);
             IReadOnlyList<DaggerfallSiteDecoration> decorations = DaggerfallSiteContent.ReadDecorations(normalized, _media.BillboardSprites, key.Kind, climate, diagnostics);
             IReadOnlyList<DaggerfallSiteNoticeBoard> noticeBoards = BuildNoticeBoards(interiorBuilding, doors, position);
+            IReadOnlyList<DaggerfallSiteBanner> banners = BuildBanners(doors, gates);
             return new DaggerfallSiteProfile(
                 new ProjectFacts(position, actors),
                 geometry,
@@ -1028,6 +1029,7 @@ internal sealed class DaggerfallLocationAssembly
                 DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalized, diagnostics),
                 CityGates = gates,
                 NoticeBoards = noticeBoards,
+                Banners = banners,
                 Decorations = decorations,
                 PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalized),
             };
@@ -1127,6 +1129,56 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             return board is null ? [] : [board];
+        }
+
+        /// <summary>
+        /// The banners of arms a town hangs (#11144, Patch: the palace, every town gate and every office): a pair either
+        /// side of the main door of the palace and of each guild hall and temple, and a pair either side of each gate on
+        /// both its faces. Only an exterior with buildings hangs any.
+        /// </summary>
+        private IReadOnlyList<DaggerfallSiteBanner> BuildBanners(IReadOnlyList<DaggerfallRdbDoorDefinition> doors, IReadOnlyList<DaggerfallCityGateDefinition> gates)
+        {
+            const int GuildHall = 11, Temple = 14, Palace = 16;
+            if (key.Kind != DaggerfallWorldProfileKind.Exterior || record.Exterior is not { Buildings.Count: > 0 } exterior) return [];
+            List<DaggerfallSiteBanner> banners = [];
+            void Pair(string id, Vector3 middle, Vector3 normal, float apart, float width, float drop, DaggerfallSiteBannerPost post)
+            {
+                normal = normal with { Y = 0f };
+                if (normal.LengthSquared() < 1e-4f) return;
+                normal = Vector3.Normalize(normal);
+                Vector3 right = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, normal));
+                foreach ((string side, float sign) in new[] { ("left", -1f), ("right", 1f) })
+                {
+                    try { banners.Add(new DaggerfallSiteBanner($"{id}/{side}", WorldPoint.From(middle + right * (sign * apart)), normal, width, drop, post).Validate()); }
+                    catch (ArgumentException exception) { diagnostics.Add($"Banner '{id}/{side}' is invalid: {exception.Message}"); }
+                }
+            }
+            foreach (IGrouping<DaggerfallSiteBuildingId, DaggerfallRdbDoorDefinition> building in doors
+                .Where(door => door.ExteriorBuilding is { } id && exterior.Buildings.TryGetValue(id, out DaggerfallSiteBuildingSource? source)
+                    && source.Source.BuildingType is GuildHall or Temple or Palace)
+                .GroupBy(door => door.ExteriorBuilding!.Value)
+                .OrderBy(group => group.Key.BlockY).ThenBy(group => group.Key.BlockX).ThenBy(group => group.Key.Index))
+            {
+                DaggerfallRdbDoorDefinition door = building.OrderBy(entry => entry.Id.SourceKey, StringComparer.Ordinal).First();
+                bool palace = exterior.Buildings[building.Key].Source.BuildingType == Palace;
+                Vector3 normal = Vector3.Transform(Vector3.UnitZ, door.Rotation);
+                float halfWidth = Math.Max(0.6f, (door.BoundsMax.X - door.BoundsMin.X) / 2);
+                Vector3 top = door.Position + Vector3.UnitY * (door.BoundsMax.Y + 0.9f) + normal with { Y = 0f } * 0.12f;
+                Pair($"banner/{building.Key.BlockX}.{building.Key.BlockY}.{building.Key.Index}", top, normal, halfWidth + (palace ? 1.4f : 1.0f),
+                    palace ? 1.3f : 1.0f, palace ? 2.6f : 2.0f, palace ? DaggerfallSiteBannerPost.Palace : DaggerfallSiteBannerPost.Office);
+            }
+            foreach (DaggerfallCityGateDefinition gate in gates)
+            {
+                Vector3 min = gate.Open.LocalBoundsMin, max = gate.Open.LocalBoundsMax;
+                float apart = (max.X - min.X) / 2 + 1.2f;
+                foreach ((string face, float z, Vector3 outward) in new[] { ("out", max.Z + 0.15f, Vector3.UnitZ), ("in", min.Z - 0.15f, -Vector3.UnitZ) })
+                {
+                    Vector3 local = new Vector3((min.X + max.X) / 2, max.Y - 0.2f, z) * gate.Pose.Scale;
+                    Vector3 middle = gate.Pose.Translation + Vector3.Transform(local, gate.Pose.Rotation);
+                    Pair($"banner/{gate.Id}/{face}", middle, Vector3.Transform(outward, gate.Pose.Rotation), apart, 1.4f, 2.8f, DaggerfallSiteBannerPost.Gate);
+                }
+            }
+            return banners;
         }
 
         private DaggerfallInteriorBuilding? ReadInterior(byte[] normalized)
