@@ -5455,6 +5455,18 @@ test('quest escort portraits use published art and remove only ended quest overl
     assert.equal(portraits[0].dataset.questInstance, 'second');
     f.publish({ uiArt: art, quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [] } });
     assert.equal(f.root.querySelector('.dagger-escort-faces'), null);
+
+    // Contracted companion portraits project live health share bar and stance badge (#11105).
+    const companion = { ...face, instance: 'party:1001', symbol: 'companion', name: 'Alden the Guard', healthShare: 0.65, stance: 'follow' };
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [companion] } });
+    const card = f.root.querySelector('.dagger-escort-face');
+    assert.ok(card);
+    assert.equal(card.querySelector('.dagger-escort-health').getAttribute('aria-valuenow'), '65');
+    assert.equal(card.querySelector('.dagger-escort-health-fill').style.width, '65%');
+    assert.equal(card.querySelector('.dagger-escort-stance').textContent, 'Follow');
+    f.publish({ uiArt: art, quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [{ ...companion, healthShare: 1, stance: 'wait' }] } });
+    assert.equal(f.root.querySelector('.dagger-escort-health').getAttribute('aria-valuenow'), '100');
+    assert.equal(f.root.querySelector('.dagger-escort-stance').textContent, 'Wait');
   } finally { f.dispose(); }
 });
 

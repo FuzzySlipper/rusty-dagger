@@ -394,7 +394,14 @@ export interface QuestMessageProjection {
 }
 export interface QuestPresentation {
   readonly offer?: { readonly instance: string; readonly text: string; readonly diagnostics: readonly string[] } | null;
-  readonly escortFaces: readonly { readonly instance: string; readonly symbol: string; readonly name: string; readonly mediaId: string }[];
+  readonly escortFaces: readonly {
+    readonly instance: string;
+    readonly symbol: string;
+    readonly name: string;
+    readonly mediaId: string;
+    readonly healthShare?: number | null;
+    readonly stance?: string | null;
+  }[];
   readonly deliveries: readonly QuestMessageProjection[];
   readonly journal: QuestJournalProjection;
   readonly pending: QuestMessageProjection | null;

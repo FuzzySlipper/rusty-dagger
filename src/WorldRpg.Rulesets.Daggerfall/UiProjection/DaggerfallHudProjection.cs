@@ -969,7 +969,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("diagnostics", builder.Array(offer.Diagnostics.Select(builder.String).ToArray())))),
         ("escortFaces", builder.Array(quests.EscortFaces.Select(face => builder.Object(
             ("instance", builder.String(face.InstanceId)), ("symbol", builder.String(face.Symbol)),
-            ("name", builder.String(face.Name)), ("mediaId", builder.String(face.MediaId)))).ToArray())),
+            ("name", builder.String(face.Name)), ("mediaId", builder.String(face.MediaId)),
+            ("healthShare", face.HealthShare is double hs ? builder.Number(hs) : builder.Null()),
+            ("stance", face.Stance is string st ? builder.String(st) : builder.Null()))).ToArray())),
         ("deliveries", builder.Array(quests.Deliveries.Select(message => QuestMessage(builder, message)).ToArray())),
         ("journal", builder.Object(
             ("active", builder.Array(quests.Journal.Active.Select(group => builder.Object(

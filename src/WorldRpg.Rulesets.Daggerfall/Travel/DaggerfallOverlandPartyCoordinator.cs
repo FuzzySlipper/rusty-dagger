@@ -1,4 +1,5 @@
 using System.Numerics;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -10,7 +11,14 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
 /// <summary>HUD portrait entry projected directly from an <see cref="ActorLocationKind.WithParty"/> ledger member.</summary>
-internal sealed record DaggerfallPartyPortrait(long DurableId, ActorPartyRole Role, string Name, string MediaId, int Order);
+internal sealed record DaggerfallPartyPortrait(
+    long DurableId,
+    ActorPartyRole Role,
+    string Name,
+    string MediaId,
+    int Order,
+    double? HealthShare = null,
+    string? Stance = null);
 
 /// <summary>
 /// Coordinates persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling parties and cross-boundary
@@ -875,16 +883,120 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         _roster.ClearPartyHireSpec(actorId, hostileBetrayal: !clearContract);
     }
 
+    /// <summary>
+    /// Heals living hired party companions naturally during expedition camp hours or inn/scene rest — covering both
+    /// currently staged live companions in <c>EntityStore</c> and boarded <see cref="ActorLocationKind.WithParty"/>
+    /// companions in <see cref="DaggerfallActorLedger"/> (#11105).
+    /// </summary>
+    internal int HealPartyMembersForRest(double healthShareRecovered, bool fullHeal = false)
+    {
+        if (!fullHeal && (!double.IsFinite(healthShareRecovered) || healthShareRecovered <= 0d))
+            return 0;
+
+        double clampedShare = Math.Clamp(healthShareRecovered, 0d, 1d);
+        TrackId healthId = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
+        int healedCount = 0;
+
+        // 1. Heal live staged companions in the active scene.
+        foreach (ActorState live in _actors.All)
+        {
+            if (live.IsDefeated) continue;
+            if (!live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay)
+                || !string.Equals(overlay.StagedPartyRole, nameof(ActorPartyRole.Companion), StringComparison.Ordinal))
+                continue;
+            Track health = live.Stats.GetTrack(healthId);
+            double max = health.Maximum.Value;
+            if (health.Current <= 0d || health.Current >= max) continue;
+            double next = fullHeal ? max : Math.Min(max, health.Current + max * clampedShare);
+            if (next > health.Current)
+            {
+                health.SetCurrent(next, clamp: true);
+                healedCount++;
+            }
+        }
+
+        // 2. Heal boarded WithParty companions stored in the sparse actor ledger (e.g. during expedition camp).
+        foreach (ActorLedgerEntry entry in _actorLedger.EntriesWithParty().ToArray())
+        {
+            if (entry.Location?.PartyRole != ActorPartyRole.Companion || entry.Vitals is not { } vitals)
+                continue;
+            StatsComponentSnapshot snapshot = vitals.Stats.Snapshot;
+            int trackIndex = -1;
+            for (int i = 0; i < snapshot.Tracks.Count; i++)
+            {
+                if (StringComparer.Ordinal.Equals(snapshot.Tracks[i].Id, DaggerfallMechanicsIds.Health.Value))
+                {
+                    trackIndex = i;
+                    break;
+                }
+            }
+            if (trackIndex < 0) continue;
+            TrackCapture healthTrack = snapshot.Tracks[trackIndex];
+            if (healthTrack.Current <= 0d) continue;
+            StatCapture? maxStat = snapshot.Stats.FirstOrDefault(s => StringComparer.Ordinal.Equals(s.Id, healthTrack.MaximumId));
+            double max = Math.Max(1d, maxStat?.BaseValue ?? healthTrack.Current);
+            if (healthTrack.Current >= max) continue;
+            double next = fullHeal ? max : Math.Min(max, healthTrack.Current + max * clampedShare);
+            if (next <= healthTrack.Current) continue;
+
+            TrackCapture[] updatedTracks = [.. snapshot.Tracks];
+            updatedTracks[trackIndex] = healthTrack with { Current = next };
+            StatsComponentSnapshot updatedSnapshot = snapshot with { Tracks = updatedTracks };
+            _actorLedger.Upsert(entry with
+            {
+                Vitals = new ActorVitalsDiff(vitals.Stats with { Snapshot = updatedSnapshot }),
+            });
+            healedCount++;
+        }
+
+        return healedCount;
+    }
+
+    /// <summary>
+    /// Removes staged party role &amp; HUD portrait state immediately when a hired party member dies, leaving their
+    /// permanent <see cref="ActorLocationKind.Dead"/> ledger entry and corpse loot container intact (#11105).
+    /// </summary>
+    internal void ClearStagedPartyOnDeath(long actorId)
+    {
+        if (_actors.TryGet(actorId, out ActorState? live)
+            && live.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? liveOverlay))
+        {
+            liveOverlay.StagedPartyRole = null;
+            liveOverlay.EscortPortraitMedia = null;
+            liveOverlay.EscortOrder = 0;
+        }
+        if (_actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Social is { } social
+            && (social.StagedPartyRole is not null || social.EscortPortrait is not null || social.EscortOrder != 0))
+        {
+            _actorLedger.Upsert(entry with
+            {
+                Social = social with
+                {
+                    StagedPartyRole = null,
+                    EscortPortrait = null,
+                    EscortOrder = 0,
+                },
+            });
+        }
+    }
+
     /// <summary>HUD portraits driven directly from <see cref="DaggerfallActorLedger.EntriesWithParty"/> and currently staged hired party members.</summary>
     internal IReadOnlyList<DaggerfallPartyPortrait> PartyPortraits()
     {
+        TrackId healthId = TrackId.Parse(DaggerfallMechanicsIds.Health.Value);
         Dictionary<long, DaggerfallPartyPortrait> result = [];
         foreach (ActorLedgerEntry entry in _actorLedger.EntriesWithParty())
         {
             if (entry.Social is not { EscortPortrait: { Length: > 0 } media } social) continue;
             string name = social.DisplayNameOverride ?? social.Role;
             ActorPartyRole role = entry.Location?.PartyRole ?? ActorPartyRole.Escort;
-            result[entry.DurableId] = new(entry.DurableId, role, name, media, social.EscortOrder);
+            double? healthShare = role == ActorPartyRole.Companion
+                ? ReadLedgerHealthShare(entry)
+                : null;
+            string? stance = role == ActorPartyRole.Companion && entry.PartyContract is { HostileBetrayal: false } c
+                ? c.Stance.ToString().ToLowerInvariant()
+                : null;
+            result[entry.DurableId] = new(entry.DurableId, role, name, media, social.EscortOrder, healthShare, stance);
         }
         foreach (ActorState live in _actors.All)
         {
@@ -897,9 +1009,33 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             string name = _npcs.TryGet(live.DurableId, out DaggerfallNpc? npc)
                 ? npc.DisplayName ?? npc.Role
                 : role.ToString();
-            result[live.DurableId] = new(live.DurableId, role, name, overlay.EscortPortraitMedia, overlay.EscortOrder);
+            double? healthShare = null;
+            string? stance = null;
+            if (role == ActorPartyRole.Companion)
+            {
+                Track health = live.Stats.GetTrack(healthId);
+                healthShare = Math.Clamp(health.Current / Math.Max(1d, health.Maximum.Value), 0d, 1d);
+                if (_actorLedger.TryGet(live.DurableId, out ActorLedgerEntry? ledgerEntry)
+                    && ledgerEntry?.PartyContract is { HostileBetrayal: false } contract)
+                    stance = contract.Stance.ToString().ToLowerInvariant();
+            }
+            result[live.DurableId] = new(live.DurableId, role, name, overlay.EscortPortraitMedia, overlay.EscortOrder, healthShare, stance);
         }
         return [.. result.Values.OrderBy(p => p.Order).ThenBy(p => p.DurableId)];
+    }
+
+    private static double ReadLedgerHealthShare(ActorLedgerEntry entry)
+    {
+        if (entry.Vitals?.Stats.Snapshot is not { } snapshot)
+            return 1d;
+        TrackCapture? healthTrack = snapshot.Tracks.FirstOrDefault(t =>
+            StringComparer.Ordinal.Equals(t.Id, DaggerfallMechanicsIds.Health.Value));
+        if (healthTrack is null)
+            return 1d;
+        StatCapture? maxStat = snapshot.Stats.FirstOrDefault(s =>
+            StringComparer.Ordinal.Equals(s.Id, healthTrack.MaximumId));
+        double max = Math.Max(1d, maxStat?.BaseValue ?? healthTrack.Current);
+        return Math.Clamp(healthTrack.Current / max, 0d, 1d);
     }
 
     private IReadOnlyList<long> DeliverBandMembers(

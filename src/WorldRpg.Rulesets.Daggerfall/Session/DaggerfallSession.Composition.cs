@@ -412,7 +412,8 @@ internal sealed partial class DaggerfallSession
                         WorldConditions.ActiveForRegion(r, checked((int)_time.Calendar.DayNumber)),
                         teamA,
                         teamB),
-                isProvoked: id => _enemyBehavior!.IsProvoked(id, _time.Calendar.MinuteNumber));
+                isProvoked: id => _enemyBehavior!.IsProvoked(id, _time.Calendar.MinuteNumber),
+                isForcedHostile: id => _enemyBehavior!.IsForcedHostile(id));
             _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, EffectiveTeamOverride,
                 id => _enemyBehavior!.IsPacified(id), () => _enemyBehavior!.LastPerception, effects, _locomotion,
                 () => State!.WeaponDrawn, () => _combat!.PlayerHoldsBow(), () => _time.Calendar.MinuteNumber, _random,
@@ -1281,6 +1282,7 @@ internal sealed partial class DaggerfallSession
                 readGuildRank: guildFactionId => State.Social.ReadAffiliations().FirstOrDefault(m => m.FactionId == guildFactionId)?.Rank,
                 consumeHealingDraught: () => TryConsumePlayerHealingDraught(definitions));
             Crimes.BindContractedHireLookup(PartyHire.IsContractedHire);
+            _enemyBehavior.BindFollowPlayerLookup(PartyHire.ShouldFollowPlayer);
             Introductions.BindHireableContactLookup(PartyHire.IsHireable);
             HomeNightRoutine = new DaggerfallHomeNightRoutine(
                 actors,

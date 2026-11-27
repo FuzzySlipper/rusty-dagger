@@ -897,8 +897,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             completeTimeIncrease: false).AppliedSeconds;                                          // Session: the elapsed interval's list
     }
 
-    void IDaggerfallExpeditionSurroundings.RecoverCampHour(bool sheltered) =>
+    void IDaggerfallExpeditionSurroundings.RecoverCampHour(bool sheltered)
+    {
         _rest.RecoverCampHour(State.Actors.Player.Stats, _passives.PlayerSpecials, sheltered);
+        _ = OverlandParties.HealPartyMembersForRest(sheltered ? 0.15d : 0.10d);
+    }
 
     void IDaggerfallExpeditionSurroundings.Collapse(bool inWater) => Collapse(inWater, enemiesNearby: false);
 

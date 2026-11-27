@@ -52,7 +52,8 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     Func<long, bool>? joinsFactionInfighting = null,
     Func<bool>? hasFactionInfightingPotential = null,
     Func<string?, string?, bool>? boardConditionDrivesClash = null,
-    Func<long, bool>? isProvoked = null)
+    Func<long, bool>? isProvoked = null,
+    Func<long, bool>? isForcedHostile = null)
 {
     private readonly IActorSight _sight = sight ?? PoseSight.Instance;
     private readonly DaggerfallCreatureFactionSet _creatureFactions = creatureFactions ?? DaggerfallCreatureFactionSet.ClassicDefault;
@@ -62,6 +63,7 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     private readonly Func<bool> _hasFactionInfightingPotential = hasFactionInfightingPotential ?? (() => false);
     private readonly Func<string?, string?, bool> _boardConditionDrivesClash = boardConditionDrivesClash ?? ((_, _) => false);
     private readonly Func<long, bool> _isProvoked = isProvoked ?? (_ => false);
+    private readonly Func<long, bool> _isForcedHostile = isForcedHostile ?? (_ => false);
 
     // FoeSpawner's placement envelope, in normalized world metres.
     private const float SummonFloorDistance = 4f;
@@ -142,14 +144,18 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
             ? faction.EffectiveTeam
             : definitions.TryGetValue(actorId, out DaggerfallActorDefinition? definition) ? definition.Team : null);
 
-    /// <summary>The nearest visible foe of the player's side an ally can attack, if any.</summary>
+    /// <summary>
+    /// The nearest visible foe of the player's side an ally can attack, if any.
+    /// Respects <c>LairTruce</c> (never waking dormant dungeon foes) and crime law (never attacking peaceful townsfolk
+    /// or city-watch guards unless those guards are actively provoked or hostile) (#11105).
+    /// </summary>
     internal PursuitTarget? SelectAllyTarget(long observerId)
     {
         if (!actors.TryGet(observerId, out var observer) || observer.IsDefeated) return null;
         Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
         foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
                      Math.Max(detectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
-                     DaggerfallPerceptionQueryDefaults.MinimumFacingCosine,
+                     -1d,
                      _ => true)
                      .Where(pair => pair.Kind == PerceptionPairKind.Visible)
                      .OrderBy(pair => pair.Distance).ThenBy(pair => pair.Target))
@@ -158,6 +164,14 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
             if (EffectiveTeam(id) == "player-ally") continue;
             // EnemySenses excludes pacified enemies and protected quest actors from ally attacks.
             if (isPacified(id) || !allowsFoeInfighting(id)) continue;
+            // Respect static-dungeon LairTruce: never wake dormant foes unprovoked.
+            if (_isUnderLairTruce(id)) continue;
+            // Respect crime law: never attack city-watch guards unless provoked/hostile.
+            if (definitions.TryGetValue(id, out DaggerfallActorDefinition? targetDef)
+                && (targetDef.Capabilities.CityWatchArrest || targetDef.MobileId == 146)
+                && !_isProvoked(id)
+                && !_isForcedHostile(id))
+                continue;
             return new PursuitTarget(id, actors.Get(id).Position);
         }
         return null;

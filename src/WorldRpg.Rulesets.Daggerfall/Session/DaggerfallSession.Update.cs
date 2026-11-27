@@ -1365,7 +1365,18 @@ internal sealed partial class DaggerfallSession
         DaggerfallRestResult result = _rest.Apply(request, eligibility, State.Actors.Player.Stats, this, advanceTime,
             rapidHealing, noRegeneration, () => _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind));   // Time
         if (result.ElapsedSeconds > 0) ReconcileNpcProjection(immediate: true);                   // Actors
-        if (result.Accepted && result.ElapsedSeconds > 0) CompleteTimeIncrease();                // Session: the increase's end
+        if (result.Accepted && result.ElapsedSeconds > 0)
+        {
+            if (request.Mode != DaggerfallRestMode.Loiter)
+            {
+                bool shelteredRest = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior;
+                double restHours = result.ElapsedSeconds / 3600d;
+                _ = OverlandParties.HealPartyMembersForRest(
+                    Math.Min(1d, restHours * (shelteredRest ? 0.15d : 0.10d)),
+                    fullHeal: request.Mode == DaggerfallRestMode.UntilHealed && result.Interruption == DaggerfallRestInterruption.None);
+            }
+            CompleteTimeIncrease();                                                               // Session: the increase's end
+        }
         RestPanel.Publish(result);                                                                // UiProjection
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));   // UiProjection
         return result;
@@ -1562,6 +1573,7 @@ internal sealed partial class DaggerfallSession
             CourierDispatches.ReactToCourierDeath(died.ActorId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber)); // Society: slain board-game courier
             SocialConsequences.ReactToDeath(died, fallen, _time.Calendar.MinuteNumber);           // Society
             PartyHire.ClearContractOnDeath(died.ActorId);                                         // Dialogue: clear slain hire contract after death/betrayal split
+            OverlandParties.ClearStagedPartyOnDeath(died.ActorId);                                // Travel: remove fallen companion portrait & staged role immediately
             FeudVendetta.ObserveActorDied(died.ActorId);                                          // Society: prune slain vendetta aggressor/hunter
             DaggerfallNpc? fallenNpc = State.Npcs.TryGet(died.ActorId, out DaggerfallNpc? regFallen) ? regFallen : null;
             ShopContinuity.ReactToProprietorDeath(

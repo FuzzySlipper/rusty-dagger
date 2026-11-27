@@ -41,7 +41,38 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
       const source = image(face.mediaId);
       if (source) { portrait.src = source; smoothIfRefreshed(portrait, face.mediaId); }
       else portrait.dataset.artMissing = face.mediaId;
-      escorts.append(portrait);
+      if (face.healthShare != null || face.stance != null) {
+        const card = document.createElement('figure');
+        card.className = 'dagger-escort-face';
+        card.dataset.questInstance = face.instance;
+        card.append(portrait);
+        if (face.healthShare != null) {
+          const clamped = Math.max(0, Math.min(1, face.healthShare));
+          const pct = Math.round(clamped * 100);
+          const bar = document.createElement('span');
+          bar.className = 'dagger-escort-health';
+          bar.setAttribute('role', 'progressbar');
+          bar.setAttribute('aria-label', `${face.name} health`);
+          bar.setAttribute('aria-valuemin', '0');
+          bar.setAttribute('aria-valuemax', '100');
+          bar.setAttribute('aria-valuenow', String(pct));
+          const fill = document.createElement('span');
+          fill.className = 'dagger-escort-health-fill';
+          fill.style.width = `${pct}%`;
+          bar.append(fill);
+          card.append(bar);
+        }
+        if (face.stance) {
+          const badge = document.createElement('span');
+          badge.className = 'dagger-escort-stance';
+          badge.dataset.stance = face.stance;
+          badge.textContent = face.stance.charAt(0).toUpperCase() + face.stance.slice(1);
+          card.append(badge);
+        }
+        escorts.append(card);
+      } else {
+        escorts.append(portrait);
+      }
     }
     keep("escorts", [value.escortFaces, heldRevision()], escorts);
   }

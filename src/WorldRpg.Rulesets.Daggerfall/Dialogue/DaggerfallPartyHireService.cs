@@ -169,6 +169,16 @@ internal sealed class DaggerfallPartyHireService
             List<DaggerfallDialogueTopicOption> activeTopics = [];
             if (TryGetContract(npc.DurableId, out ActorPartyContractDiff contract) && !contract.HostileBetrayal)
             {
+                activeTopics.Add(contract.Stance == ActorPartyStance.Wait
+                    ? new("party-follow", "Follow me")
+                    : new("party-wait", "Wait here"));
+                ulong owed = contract.UnpaidDays > 0
+                    ? checked((ulong)contract.UnpaidDays * (ulong)Math.Max(0, contract.DailyWage))
+                    : 0UL;
+                string termsLabel = owed > 0UL
+                    ? $"Check terms / Pay wages ({owed} gold due)"
+                    : "Check terms / Pay wages";
+                activeTopics.Add(new("party-terms", termsLabel));
                 activeTopics.Add(new("give-healing-draught", "Give healing draught"));
                 ulong bonus = HazardBonusGold(contract);
                 string bonusLabel = contract.UnpaidDays > 0
@@ -214,9 +224,23 @@ internal sealed class DaggerfallPartyHireService
             DaggerfallDialogueTopic.DismissParty => TryDismiss(npc),
             DaggerfallDialogueTopic.GiveHealingDraught => TryGiveHealingDraught(npc),
             DaggerfallDialogueTopic.PayHazardBonus => TryPayHazardBonus(npc),
+            DaggerfallDialogueTopic.PartyFollow => TrySetStance(npc, ActorPartyStance.Follow),
+            DaggerfallDialogueTopic.PartyWait => TrySetStance(npc, ActorPartyStance.Wait),
+            DaggerfallDialogueTopic.CheckPartyTerms => TryCheckTermsAndPayWages(npc),
             _ => throw new ArgumentOutOfRangeException(nameof(topic), topic, "Not a party hire dialogue topic."),
         };
     }
+
+    /// <summary>
+    /// True when <paramref name="actorId"/> is a staged combat companion in <see cref="ActorPartyStance.Follow"/>
+    /// stance, so <see cref="DaggerfallEnemyBehaviorModule"/> navigates them cleanly toward the player when idle (#11105).
+    /// </summary>
+    internal bool ShouldFollowPlayer(long actorId) =>
+        TryGetStagedHiredRole(actorId, out ActorPartyRole role)
+        && role == ActorPartyRole.Companion
+        && TryGetContract(actorId, out ActorPartyContractDiff contract)
+        && !contract.HostileBetrayal
+        && contract.Stance == ActorPartyStance.Follow;
 
     /// <summary>
     /// Computes the authoritative deposit, daily wage, and eligibility for hiring <paramref name="npc"/>
@@ -697,6 +721,65 @@ internal sealed class DaggerfallPartyHireService
             },
         });
         return new(true, question, $"{name} pockets the {bonus} gold with a sharp nod. \"Fair coin — I've got your back.\"");
+    }
+
+    private DaggerfallPartyHireResult TrySetStance(DaggerfallNpc npc, ActorPartyStance stance)
+    {
+        string name = npc.DisplayName ?? npc.Role;
+        string question = stance == ActorPartyStance.Follow ? "Follow me." : "Wait here.";
+        if (!TryGetStagedHiredRole(npc.DurableId, out _)
+            || !_actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? entry)
+            || entry?.PartyContract is not { HostileBetrayal: false } contract)
+            return new(false, question, $"{name} is not under contract with your party.");
+
+        _actorLedger.Upsert(entry with { PartyContract = contract with { Stance = stance } });
+        string reply = stance == ActorPartyStance.Follow
+            ? $"{name} nods and falls in behind you."
+            : $"{name} plants their boots. \"I'll hold position here until you call.\"";
+        return new(true, question, reply);
+    }
+
+    private DaggerfallPartyHireResult TryCheckTermsAndPayWages(DaggerfallNpc npc)
+    {
+        string name = npc.DisplayName ?? npc.Role;
+        const string question = "Let's review our terms and settle any wages due.";
+        if (!TryGetStagedHiredRole(npc.DurableId, out _)
+            || !_actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? entry)
+            || entry?.PartyContract is not { HostileBetrayal: false } contract)
+            return new(false, question, $"{name} is not under contract with your party.");
+
+        string roleTitle = _partyHireSpecs.TryGetValue(contract.SpawnerId, out DaggerfallActorSpawnerSpec? spec)
+            ? spec.DisplayName
+            : "Road Guard";
+        string stanceLabel = contract.Stance == ActorPartyStance.Wait ? "Wait" : "Follow";
+
+        if (contract.UnpaidDays > 0 && contract.DailyWage > 0)
+        {
+            ulong owed = checked((ulong)contract.UnpaidDays * (ulong)contract.DailyWage);
+            if (_availableGold() >= owed && _spendGold(owed))
+            {
+                int settledDay = Math.Max(contract.EffectiveLastBilledDay, Math.Max(0, _currentDay()));
+                int recoveredMorale = Math.Min(ActorPartyContractDiff.MaximumMorale, contract.Morale + PaidMoraleRecovery * 2);
+                _actorLedger.Upsert(entry with
+                {
+                    PartyContract = contract with
+                    {
+                        PaidThroughDay = settledDay,
+                        LastBilledDay = settledDay,
+                        UnpaidDays = 0,
+                        Morale = recoveredMorale,
+                    },
+                });
+                return new(true, question,
+                    $"{name} ({roleTitle}) accepts {owed} gold in overdue wages. Rate: {contract.DailyWage} gold/day, stance: {stanceLabel}, morale: {recoveredMorale}/100.");
+            }
+            return new(false, question,
+                $"{name} ({roleTitle}) is owed {owed} gold ({contract.UnpaidDays} unpaid day(s)) at {contract.DailyWage} gold/day. Stance: {stanceLabel}, morale: {contract.Morale}/100.");
+        }
+
+        string wageClause = contract.DailyWage > 0 ? $"{contract.DailyWage} gold/day (paid through day {contract.PaidThroughDay})" : "no daily wage";
+        return new(true, question,
+            $"{name} ({roleTitle}): {wageClause}, stance: {stanceLabel}, morale: {contract.Morale}/100.");
     }
 
     private DaggerfallPartyHireResult TryDismiss(DaggerfallNpc npc)

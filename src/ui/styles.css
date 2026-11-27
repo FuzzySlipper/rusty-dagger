@@ -377,8 +377,12 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-quest-message > strong { font: 700 1.35rem/1.2 var(--font-title); }
 .dagger-quest-message p { margin: 0; white-space: pre-line; }
 .dagger-quest-message button { justify-self: start; margin-right: .5rem; padding: .5rem 1rem; font: 700 .8rem var(--font-label); pointer-events: auto; }
-.dagger-escort-faces { display: flex; gap: .5rem; }
+.dagger-escort-faces { display: flex; gap: .5rem; align-items: flex-start; }
 .dagger-escort-faces img { width: 3rem; height: 3rem; object-fit: contain; image-rendering: pixelated; }
+.dagger-escort-face { margin: 0; display: grid; gap: .2rem; justify-items: center; }
+.dagger-escort-health { display: block; width: 3rem; height: .3rem; background: rgb(18 12 10 / .85); border: 1px solid rgb(164 134 86 / .65); overflow: hidden; }
+.dagger-escort-health-fill { display: block; height: 100%; background: #b8332a; }
+.dagger-escort-stance { font: 700 .65rem/1 var(--font-label); letter-spacing: .04em; padding: .1rem .3rem; background: rgb(10 10 8 / .82); border: 1px solid rgb(164 134 86 / .6); color: var(--ink); text-transform: uppercase; }
 
 /* What a title choice came to (a load that failed, a game that could not start), on a stone plate. */
 .dagger-entry-outcome { margin: 0; max-width: min(48rem, 90vw); padding: .5rem .875rem; color: var(--ink); background: rgb(10 10 8 / .85); border: 1px solid var(--brass); border-left-width: .25rem; font-size: .9rem; }

@@ -175,7 +175,9 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
                         $"party:{member.Role.ToString().ToLowerInvariant()}",
                         $"actor:{member.DurableId}",
                         member.Name,
-                        member.MediaId));
+                        member.MediaId,
+                        member.HealthShare,
+                        member.Stance));
                 }
                 faces = merged;
             }

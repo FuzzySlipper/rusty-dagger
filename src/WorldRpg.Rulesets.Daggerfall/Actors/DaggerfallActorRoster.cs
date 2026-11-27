@@ -836,7 +836,7 @@ internal sealed class DaggerfallActorRoster
     /// <see cref="ActorHarmPolicyKind.Combatant"/> harm policy to a staged companion so recruits fight and persist
     /// through their authored template without a separate retainer stat table (#11101).
     /// </summary>
-    internal void ApplyPartyHireSpec(long actorId, string? spawnerId)
+    internal void ApplyPartyHireSpec(long actorId, string? spawnerId, bool grantEquipment = true)
     {
         if (!_actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated)
             return;
@@ -915,6 +915,31 @@ internal sealed class DaggerfallActorRoster
             ApplyTemplateTrackMaximum(actor.Stats, DaggerfallMechanicsIds.Fatigue.Value, templateProfile.Fatigue);
             ApplyTemplateTrackMaximum(actor.Stats, DaggerfallMechanicsIds.Magicka.Value, templateProfile.Magicka);
         }
+
+        // Equip starting combat gear from the shared class template if the companion has no equipped gear yet (#11105).
+        if (!grantEquipment)
+            return;
+        MechanicsInventoryCoordinator? companionInventory = _actorInventories.InventoryFor(actorId);
+        MechanicsEquipmentCoordinator? companionEquipment = _actorInventories.EquipmentFor(actorId);
+        if (companionInventory is not null
+            && companionEquipment is not null
+            && companionEquipment.Read().Assignments.Count == 0
+            && ResolveClassEquipmentMobileId(spec.TemplateId) is int classMobileId)
+        {
+            string gender = actor.Actor.TryGet<DaggerfallActorGender>(out DaggerfallActorGender? resolvedGender)
+                && string.Equals(resolvedGender.Value, "female", StringComparison.OrdinalIgnoreCase)
+                ? "female"
+                : "male";
+            DaggerfallClassEnemyEquipmentPolicy.Equip(_definitions, _random, _itemInstances, _uniqueItems,
+                companionInventory, companionEquipment, actorId, classMobileId,
+                Math.Max(1, _actors.Player.Progression.Level), _character.Identity.RaceId, gender);
+            if (specDef.Capabilities.PrefersRanged)
+            {
+                DaggerfallClassEnemyEquipmentPolicy.GrantRangedLoadout(_definitions, _random, _itemInstances, _uniqueItems,
+                    companionInventory, companionEquipment, actorId, classMobileId,
+                    Math.Max(1, _actors.Player.Progression.Level), _character.Identity.RaceId, gender);
+            }
+        }
     }
 
     private static void ApplyTemplateTrackMaximum(StatsComponent stats, string trackKey, int targetMaximum)
@@ -928,6 +953,17 @@ internal sealed class DaggerfallActorRoster
             track.Maximum.BaseValue = targetMaximum;
             track.SetCurrent(Math.Clamp(track.Maximum.Value - spent, 0d, track.Maximum.Value));
         }
+    }
+
+    private int? ResolveClassEquipmentMobileId(string templateId)
+    {
+        foreach (DaggerfallActorSpawnerSpec candidate in _definitions.ActorCatalog.Specs.Values)
+        {
+            if (string.Equals(candidate.TemplateId, templateId, StringComparison.Ordinal)
+                && candidate.ClassicBinding is { } binding)
+                return binding.MobileId;
+        }
+        return null;
     }
 
     /// <summary>Clears active <c>party-hire</c> combat/team promotion when a hire is dismissed, deserts, or betrays the player.</summary>
@@ -2212,12 +2248,12 @@ internal sealed class DaggerfallActorRoster
         {
             if (partyContract.HostileBetrayal)
             {
-                ApplyPartyHireSpec(actor.DurableId, partyContract.SpawnerId);
+                ApplyPartyHireSpec(actor.DurableId, partyContract.SpawnerId, grantEquipment: false);
                 ClearPartyHireSpec(actor.DurableId, hostileBetrayal: true);
             }
             else if (delta.Social?.StagedPartyRole == ActorPartyRole.Companion)
             {
-                ApplyPartyHireSpec(actor.DurableId, partyContract.SpawnerId);
+                ApplyPartyHireSpec(actor.DurableId, partyContract.SpawnerId, grantEquipment: false);
             }
         }
     }

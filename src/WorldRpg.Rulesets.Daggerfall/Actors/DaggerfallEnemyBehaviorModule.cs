@@ -211,6 +211,18 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal bool IsPacified(long actorId) => _actors.TryGet(actorId, out ActorState actor) && !Overrides.IsHostile(actorId)
         && (Senses(actor).Pacified || _questRestrained(actorId));
 
+    internal bool IsForcedHostile(long actorId) =>
+        Overrides.IsHostile(actorId)
+        || (_actors.TryGet(actorId, out ActorState actor) && Senses(actor).ForcedHostile);
+
+    private const float AllyFollowStartDistance = 3.0f;
+    private const float AllyFollowStopDistance = 2.0f;
+    private Func<long, bool>? _shouldFollowPlayer;
+
+    /// <summary>Binds a predicate identifying staged <c>player-ally</c> retainers in <c>Follow</c> stance (#11105).</summary>
+    internal void BindFollowPlayerLookup(Func<long, bool> shouldFollowPlayer) =>
+        _shouldFollowPlayer = shouldFollowPlayer ?? throw new ArgumentNullException(nameof(shouldFollowPlayer));
+
     /// <summary>Notifies listeners when a live actor transitions to forced-hostile or provoked against the player.</summary>
     internal event Action<long>? ActorMadeHostile;
 
@@ -382,6 +394,37 @@ internal sealed class DaggerfallEnemyBehaviorModule
         PursuitTarget? target = SelectTarget(actor.DurableId, playerPosition);
         if (target is null)
         {
+            if (!actor.IsDefeated && _shouldFollowPlayer?.Invoke(actor.DurableId) == true)
+            {
+                Vector3 delta = playerPosition.ToVector() - actor.Position.ToVector();
+                float horizontalDistance = MathF.Sqrt((delta.X * delta.X) + (delta.Z * delta.Z));
+                if (horizontalDistance > AllyFollowStartDistance && deltaSeconds > 0f)
+                {
+                    float maxStep = MathF.Min(
+                        _pursuitTuning.ChaseSpeedUnitsPerSecond * deltaSeconds,
+                        MathF.Max(0.05f, horizontalDistance - AllyFollowStopDistance));
+                    NavigationStepResult navStep = _navigation.Evaluate(
+                        actor,
+                        new ActorNavigationRequest(
+                            playerPosition,
+                            maxStep,
+                            _pursuitTuning.NavigationMaximumVisited,
+                            _movementPolicy(actor.DurableId).NavigationMode,
+                            deltaSeconds));
+                    PursuitState prevFollow = actor.Pursuit.TransitionTo(PursuitState.Chase);
+                    _combat.InterruptPendingAttack(actor.DurableId, generation);
+                    _lastDecisions.Remove(actor.DurableId);
+                    _lastSources.Remove(actor.DurableId);
+                    _lastTargetDistances.Remove(actor.DurableId);
+                    if (prevFollow != PursuitState.Chase)
+                        facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(prevFollow), EnemyBehaviorState.Chase, generation, simulationStep));
+                    evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, EnemyBehaviorState.Chase, null, navStep)
+                    {
+                        Target = new PursuitTarget(DaggerfallActorIdentity.PlayerEntityId, playerPosition),
+                    });
+                    return EnemyBehaviorState.Chase;
+                }
+            }
             PursuitState desired = actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle;
             PursuitState previousState = actor.Pursuit.TransitionTo(desired);
             _combat.InterruptPendingAttack(actor.DurableId, generation);
