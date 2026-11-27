@@ -1347,6 +1347,8 @@ internal sealed record DaggerfallPopulationPlacement(string Id, WorldPoint Posit
     internal int SourceBuildingFactionId { get; init; }
     internal bool IsGuard { get; init; }
     internal DaggerfallGuardPostKind GuardPost { get; init; } = DaggerfallGuardPostKind.StreetWatch;
+    /// <summary>For a <see cref="DaggerfallGuardPostKind.WalledCityGateOfficer"/>, the profile-frame gate anchor this officer guards.</summary>
+    internal WorldPoint? GatePostAnchor { get; init; }
     internal string? FamilyId { get; init; }
 
     /// <summary>

@@ -1,5 +1,9 @@
+using System.Globalization;
 using System.Text;
+using Rusty.Engine;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -22,7 +26,9 @@ internal sealed record DaggerfallGuardLiveryResolution(
     int LiveryRegion,
     int? LiveryFactionId,
     string LiveryOwnerName,
-    string LiverySlug);
+    string LiverySlug,
+    string LiveryKey,
+    Color? LiveryTint);
 
 /// <summary>Site-level watch posture summary surfaced by <c>social.site</c> (Den #11167).</summary>
 internal sealed record DaggerfallSiteWatchSummary(
@@ -175,14 +181,18 @@ internal sealed class DaggerfallGuardPosts(
         if (string.IsNullOrWhiteSpace(localRegionName))
             localRegionName = $"Region {region}";
 
+        DaggerfallFactionDefinition? sovereignLiege = usesLiege ? liege.LiegeOf(region) : null;
         DaggerfallFactionDefinition? liveryFaction = usesLiege
             ? liege.SovereignOf(region)
             : localProvince;
+        bool isIndependentFallback = usesLiege && sovereignLiege is null;
         int liveryRegion = liveryFaction is { Region: >= 0 and <= 61 } ? liveryFaction.Region : region;
         string liveryOwnerName = !string.IsNullOrWhiteSpace(liveryFaction?.Name)
             ? liveryFaction.Name
             : localRegionName;
         string liverySlug = Slugify(liveryOwnerName);
+        (string liveryKey, Color? liveryTint) = DaggerfallGuardLiveryColors.Resolve(
+            postKind, liverySlug, liveryRegion, isIndependentFallback);
 
         return new DaggerfallGuardLiveryResolution(
             WatchTier: tier,
@@ -197,7 +207,98 @@ internal sealed class DaggerfallGuardPosts(
             LiveryRegion: liveryRegion,
             LiveryFactionId: liveryFaction?.Id,
             LiveryOwnerName: liveryOwnerName,
-            LiverySlug: liverySlug);
+            LiverySlug: liverySlug,
+            LiveryKey: liveryKey,
+            LiveryTint: liveryTint);
+    }
+
+    /// <summary>
+    /// Resolves canonical guard appearance inputs (livery faction, livery key, and sprite tint) for an
+    /// exterior population guard placement at <paramref name="site"/>.
+    /// </summary>
+    internal DaggerfallGuardAppearanceOverride ResolvePlacementAppearance(
+        DaggerfallSiteRecord site,
+        DaggerfallPopulationPlacement placement)
+    {
+        ArgumentNullException.ThrowIfNull(site);
+        ArgumentNullException.ThrowIfNull(placement);
+        DaggerfallGuardPostKind postKind = ClassifyPlacement(site, placement);
+        DaggerfallGuardLiveryResolution resolution = ResolveLivery(site, site.Id.Region, postKind);
+        int factionId = resolution.UsesLiegeLivery && resolution.LiveryFactionId is int liegeFactionId && liegeFactionId > 0
+            ? liegeFactionId
+            : placement.FactionId;
+        return new DaggerfallGuardAppearanceOverride(
+            FactionId: factionId,
+            LiveryKey: resolution.LiveryKey,
+            Tint: resolution.LiveryTint,
+            PostKind: postKind,
+            UsesLiegeLivery: resolution.UsesLiegeLivery);
+    }
+
+    /// <summary>
+    /// Applies resolved regional/liege livery to every live guard actor in the active scene (street watch,
+    /// walled-city gate officers, palace/office guards, and occupation garrisons), refreshing faction identity,
+    /// <see cref="ActorRenderComponent"/>, and <see cref="DaggerfallSiteAppearance"/> tint in place when
+    /// political allegiance changes. Rank-and-file street watch keep their regional appearance untouched.
+    /// </summary>
+    internal void ApplyLiveGuardAppearances(
+        DaggerfallSiteRecord? site,
+        DaggerfallSiteProfile? activeProfile,
+        IReadOnlyList<DaggerfallPopulationPlacement> exteriorPlacements,
+        ActorsState actors,
+        DaggerfallNpcRegistry npcs,
+        DaggerfallSiteAppearance? siteAppearance)
+    {
+        ArgumentNullException.ThrowIfNull(actors);
+        ArgumentNullException.ThrowIfNull(npcs);
+
+        int siteRegion = site?.Id.Region ?? activeProfile?.Site?.Region ?? 0;
+        int? regionalPeopleId = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, siteRegion)?.Id;
+
+        foreach (ActorState actor in actors.All)
+        {
+            if (actor.DurableId == DaggerfallActorIdentity.PlayerEntityId)
+                continue;
+
+            DaggerfallNpc? npc = npcs.TryGet(actor.DurableId, out DaggerfallNpc? foundNpc) ? foundNpc : null;
+            bool isGuard = (npc is not null && string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase))
+                || (actor.Actor.TryGet<FactionComponent>(out FactionComponent? fc)
+                    && string.Equals(fc.CreatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase));
+            if (!isGuard)
+                continue;
+
+            DaggerfallGuardLiveryResolution resolution = ResolveForLiveGuard(
+                actor.DurableId, site, activeProfile, npc, exteriorPlacements);
+            int? localRegionalId = npc is not null
+                ? DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, npc.Site.Region)?.Id ?? regionalPeopleId
+                : regionalPeopleId;
+            int? targetFactionId = resolution.UsesLiegeLivery
+                ? resolution.LiveryFactionId ?? localRegionalId
+                : localRegionalId ?? resolution.LiveryFactionId;
+
+            if (npc is not null && targetFactionId is int npcFactionId && npcFactionId > 0)
+                npcs.RefreshGuardFaction(actor.DurableId, npcFactionId);
+
+            if (actor.Actor.TryGet<FactionComponent>(out FactionComponent? factionComp))
+                factionComp.SetPeopleFactions(targetFactionId, localRegionalId);
+
+            if (actor.Actor.TryGet<ActorInstanceIdentity>(out ActorInstanceIdentity? identity) && targetFactionId is int fid)
+            {
+                string factionText = fid.ToString(CultureInfo.InvariantCulture);
+                if (!string.Equals(identity.FactionId, factionText, StringComparison.Ordinal))
+                    actor.Actor.Replace(new ActorInstanceIdentity(identity.SpawnerId, identity.TemplateId, identity.Gender, identity.Race, factionText));
+            }
+
+            if (actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render))
+            {
+                Color? targetTint = resolution.LiveryTint;
+                string targetLiveryKey = resolution.LiveryKey;
+                if (render.Spec.Tint != targetTint || !string.Equals(render.Spec.LiveryKey, targetLiveryKey, StringComparison.Ordinal))
+                    render.SetVisual(render.Spec with { Tint = targetTint, LiveryKey = targetLiveryKey });
+            }
+
+            siteAppearance?.SetActorTint(actor.DurableId, resolution.LiveryTint);
+        }
     }
 
     /// <summary>Resolves the active livery &amp; post metadata for one live guard actor.</summary>

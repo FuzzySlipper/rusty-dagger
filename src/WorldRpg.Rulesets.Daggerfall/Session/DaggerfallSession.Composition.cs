@@ -1274,7 +1274,8 @@ internal sealed partial class DaggerfallSession
                         == DaggerfallNpcSchedulePolicy.UnderworldNightScheduleId,
                 resolveShelterBuilding: ResolveScheduledShelterBuildingForWalker,
                 resolveHomeBuilding: ResolveHomeResidenceForWalker,
-                openResidentDoor: (pos, building) => _sites?.Projection?.Doors.TryOpenForResident(pos, building) == true);
+                openResidentDoor: (pos, building) => _sites?.Projection?.Doors.TryOpenForResident(pos, building) == true,
+                resolveGuardAppearance: GuardPosts.ResolvePlacementAppearance);
             State.Quests.BindEscortOverlay((actorId, media, order) =>
             {
                 if (media is not null)

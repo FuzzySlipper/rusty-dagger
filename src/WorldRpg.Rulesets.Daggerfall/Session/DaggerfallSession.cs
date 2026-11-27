@@ -390,6 +390,56 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         ResetScheduleWeatherBaseline();
         Population.ReconcileImmediate();
+        SyncActiveGuardLivery();
+    }
+
+    private (DaggerfallSiteId? Site, DaggerfallWorldProfileKey Profile, int? SovereignFactionId, bool Occupied)? _lastGuardLiverySignature;
+
+    /// <summary>
+    /// Synchronizes live guard faction identity, <see cref="ActorRenderComponent"/> livery, and
+    /// <see cref="DaggerfallSiteAppearance"/> tint with the active site's live political allegiance and
+    /// conquest-occupation state (Den #11167).
+    /// </summary>
+    internal void SyncActiveGuardLivery()
+    {
+        if (GuardPosts is null || _sites?.Projection is not { } projection)
+            return;
+        DaggerfallSiteRecord? activeSite = _site.ActiveSite;
+        DaggerfallSiteProfile activeProfile = projection.Inputs;
+        IReadOnlyList<DaggerfallPopulationPlacement> placements = activeSite is not null
+            ? ExteriorPlacementsFor(activeSite.Id)
+            : [];
+        GuardPosts.ApplyLiveGuardAppearances(activeSite, activeProfile, placements, State.Actors, State.Npcs, _appearance);
+
+        int region = activeSite?.Id.Region ?? activeProfile.Site?.Region ?? 0;
+        _lastGuardLiverySignature = (
+            activeSite?.Id,
+            activeProfile.ProfileKey,
+            State.Social.Liege.SovereignOf(region)?.Id,
+            GuardPosts.IsRegionOccupied(region));
+    }
+
+    /// <summary>
+    /// Detects live board allegiance or conquest-occupation changes for the active site and refreshes
+    /// exterior garrison admission plus live special-post guard appearances immediately.
+    /// </summary>
+    internal void ReconcileGuardLiveryIfAllegianceChanged()
+    {
+        if (GuardPosts is null || _sites?.Projection is not { } projection)
+            return;
+        DaggerfallSiteRecord? activeSite = _site.ActiveSite;
+        DaggerfallSiteProfile activeProfile = projection.Inputs;
+        int region = activeSite?.Id.Region ?? activeProfile.Site?.Region ?? 0;
+        var current = (
+            activeSite?.Id,
+            activeProfile.ProfileKey,
+            State.Social.Liege.SovereignOf(region)?.Id,
+            GuardPosts.IsRegionOccupied(region));
+        if (_lastGuardLiverySignature == current)
+            return;
+        if (activeProfile.ProfileKind == DaggerfallWorldProfileKind.Exterior && _exterior.ActiveLocationLoaded)
+            Population.Reconcile(immediate: false);
+        SyncActiveGuardLivery();
     }
 
     void IDaggerfallSiteTransitionHost.ReconcileInteriorScheduledVisitors(

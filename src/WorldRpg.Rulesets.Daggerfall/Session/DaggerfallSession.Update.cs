@@ -548,6 +548,7 @@ internal sealed partial class DaggerfallSession
         State.Quests.ReconcileFoeCommands();                                                      // Quests
         ReconcileNpcProjection();                                                                 // Actors
         Population.Step(simulationStep, update.DeltaSeconds);                                     // Actors
+        ReconcileGuardLiveryIfAllegianceChanged();                                                // Society, Scene: live liege-livery guard sync
         HomeNightRoutine.Step(_sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky, update.DeltaSeconds);   // Society
         _dialogue?.RefreshEligibility();                                                          // Dialogue
     }
@@ -1111,6 +1112,7 @@ internal sealed partial class DaggerfallSession
             foreach (DaggerfallPoliticalNewsItem news in board.AdvanceToDay(board.NextTurnDay, ConditionCounterplay.ConsumeBoardEvents))
                 WordSpread.RecordNews(news.EventId, news.Headline, news.Body, news.Origin, news.Minute, news.FactionId); // Society: its news spreading
             if (sunday.ToAbsoluteSeconds() > reached.ToAbsoluteSeconds()) reached = sunday;
+            ReconcileGuardLiveryIfAllegianceChanged();                                            // Society, Scene: board Sunday liege-livery swap
         }
         AdvanceCouriers(reached, after);
     }

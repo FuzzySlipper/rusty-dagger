@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json;
+using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
@@ -40,6 +42,74 @@ internal enum DaggerfallGuardPostKind
 
     /// <summary>Conquest-occupation garrison patrol layered on top of local watch (wears occupying liege livery).</summary>
     OccupationGarrison = 4,
+}
+
+/// <summary>
+/// Appearance &amp; faction livery resolved for a guard placement or live guard actor (Den #11167).
+/// Rank-and-file <see cref="DaggerfallGuardPostKind.StreetWatch"/> retain their local regional identity and
+/// neutral tint; special posts and occupation garrisons receive the sovereign's faction and heraldic livery tint.
+/// </summary>
+internal sealed record DaggerfallGuardAppearanceOverride(
+    int FactionId,
+    string LiveryKey,
+    Color? Tint,
+    DaggerfallGuardPostKind PostKind,
+    bool UsesLiegeLivery);
+
+/// <summary>
+/// Deterministic heraldic livery colors for sovereign crown seats, the Empire, and independent regional arms
+/// consumed by guard appearance and inspection until the full 44-region heraldry pack (#11144/#11165) replaces them.
+/// </summary>
+internal static class DaggerfallGuardLiveryColors
+{
+    private static readonly Color DaggerfallRoyalBlue = new(0.54f, 0.70f, 1.00f, 1f);
+    private static readonly Color WayrestCrimson = new(1.00f, 0.54f, 0.56f, 1f);
+    private static readonly Color SentinelGold = new(1.00f, 0.86f, 0.48f, 1f);
+    private static readonly Color OrsiniumEmerald = new(0.56f, 0.90f, 0.62f, 1f);
+    private static readonly Color EmpirePurple = new(0.86f, 0.60f, 1.00f, 1f);
+
+    internal static (string LiveryKey, Color? Tint) Resolve(
+        DaggerfallGuardPostKind postKind,
+        string liverySlug,
+        int liveryRegion,
+        bool isIndependentFallback)
+    {
+        if (postKind == DaggerfallGuardPostKind.StreetWatch)
+            return ($"watch:region:{liveryRegion}", null);
+
+        if (!isIndependentFallback)
+        {
+            return liverySlug switch
+            {
+                "daggerfall" => ("crown:daggerfall", DaggerfallRoyalBlue),
+                "wayrest" => ("crown:wayrest", WayrestCrimson),
+                "sentinel" => ("crown:sentinel", SentinelGold),
+                "orsinium" or "orsinium-area" => ("crown:orsinium", OrsiniumEmerald),
+                "empire" or "imperial-legion" or "the-empire" => ("crown:empire", EmpirePurple),
+                _ => ($"crown:{liverySlug}", RegionalTint(liveryRegion + 101)),
+            };
+        }
+
+        return ($"region:{liveryRegion}", RegionalTint(liveryRegion));
+    }
+
+    internal static string FormatHex(Color? tint)
+    {
+        Color c = tint ?? new Color(1f, 1f, 1f, 1f);
+        int r = Math.Clamp((int)MathF.Round(c.R * 255f), 0, 255);
+        int g = Math.Clamp((int)MathF.Round(c.G * 255f), 0, 255);
+        int b = Math.Clamp((int)MathF.Round(c.B * 255f), 0, 255);
+        return string.Create(CultureInfo.InvariantCulture, $"#{r:X2}{g:X2}{b:X2}");
+    }
+
+    private static Color RegionalTint(int seed)
+    {
+        uint h = unchecked((uint)(seed * 2654435761L) ^ 0x9E3779B9U);
+        float r = 0.62f + ((h & 0xFFU) / 255f) * 0.34f;
+        float g = 0.62f + (((h >> 8) & 0xFFU) / 255f) * 0.34f;
+        float b = 0.62f + (((h >> 16) & 0xFFU) / 255f) * 0.34f;
+        return new Color(r, g, b, 1f);
+    }
 }
 
 /// <summary>

@@ -359,6 +359,8 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
         if (resolved.LiveryFactionId is int lfid) w.WriteNumber("liveryFactionId", lfid); else w.WriteNull("liveryFactionId");
         w.WriteString("liveryOwner", resolved.LiveryOwnerName);
         w.WriteString("liverySlug", resolved.LiverySlug);
+        w.WriteString("liveryKey", resolved.LiveryKey);
+        w.WriteString("liveryTintHex", DaggerfallGuardLiveryColors.FormatHex(resolved.LiveryTint));
         w.WriteEndObject();
     }
 

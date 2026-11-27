@@ -38,7 +38,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     Func<DaggerfallSiteId, DaggerfallPopulationPlacement, int, bool>? isUnderworldNightSlot = null,
     Func<DaggerfallSiteId, long, DaggerfallSiteBuildingId?>? resolveShelterBuilding = null,
     Func<DaggerfallSiteId, string?, string, DaggerfallSiteBuildingId?>? resolveHomeBuilding = null,
-    Func<WorldPoint, DaggerfallSiteBuildingId?, bool>? openResidentDoor = null)
+    Func<WorldPoint, DaggerfallSiteBuildingId?, bool>? openResidentDoor = null,
+    Func<DaggerfallSiteRecord, DaggerfallPopulationPlacement, DaggerfallGuardAppearanceOverride?>? resolveGuardAppearance = null)
 {
     private readonly DaggerfallActorLedger _actorLedger = actorLedger ?? new DaggerfallActorLedger();
     private readonly Func<long, bool> _isWithParty = isWithParty ?? (_ => false);
@@ -47,6 +48,9 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     private readonly Func<DaggerfallSiteId, long, DaggerfallSiteBuildingId?>? _resolveShelterBuilding = resolveShelterBuilding;
     private readonly Func<DaggerfallSiteId, string?, string, DaggerfallSiteBuildingId?>? _resolveHomeBuilding = resolveHomeBuilding;
     private readonly Func<WorldPoint, DaggerfallSiteBuildingId?, bool>? _openResidentDoor = openResidentDoor;
+    private readonly Func<DaggerfallSiteRecord, DaggerfallPopulationPlacement, DaggerfallGuardAppearanceOverride?>? _resolveGuardAppearance = resolveGuardAppearance;
+    private const float GateOfficerPostToleranceMeters = 0.05F;
+    private const float GateOfficerFacingRadiusMeters = 0.35F;
     private const byte FemalePopulationFlag = 0x20;
     // PopulationManager's source pool scales by the number of exterior blocks, then clamps
     // the admitted pool to the donor's 24..96 people window.  The source list remains the
@@ -179,6 +183,12 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         NavigationMode: ActorNavigationMode.Ground,
         TurnRadiansPerSecond: float.DegreesToRadians(tuning.TurnDegreesPerSecond),
         EaseSeconds: tuning.EaseSeconds);
+
+    private WanderPolicy GateOfficerWanderPolicy => WanderPolicy with
+    {
+        WaypointDistance = MathF.Min(tuning.WaypointDistance, 3.0F),
+        IdleDurationSeconds = MathF.Max(tuning.IdleDurationSeconds, 6.0F),
+    };
     /// <summary>The sites already said to have no race, so each is said once.</summary>
     private readonly HashSet<DaggerfallSiteId> raceless = [];
 
@@ -286,8 +296,11 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
             bool underworldNight = !placement.IsGuard
                 && _isUnderworldNightSlot?.Invoke(siteId, placement, totalPopulationCount) == true;
+            DaggerfallGuardAppearanceOverride? guardAppearance = placement.IsGuard
+                ? _resolveGuardAppearance?.Invoke(site, placement)
+                : null;
             (DaggerfallNpcAppearance look, string role, IReadOnlyList<string> services) =
-                ResolvePlacementIdentity(definitions, placement, race, underworldNight);
+                ResolvePlacementIdentity(definitions, placement, race, underworldNight, guardAppearance);
 
             DaggerfallNpc? existing = sourceNpcs.FirstOrDefault(npc =>
                 npc.DurableId == deterministicId || StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
@@ -354,6 +367,14 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             else
                 civilians.Materialize(npcId, new ActorPose(position, initialHeading));
 
+            if (actors.TryGet(npcId, out ActorState? materializedActor))
+            {
+                if (placement.IsGuard)
+                    ApplyGuardPlacementAppearance(materializedActor, look, guardAppearance);
+                if (!emergedFromDoor && placement.GuardPost == DaggerfallGuardPostKind.WalledCityGateOfficer)
+                    EnsureGatePostRoute(materializedActor, placement);
+            }
+
             if (emergedFromDoor && actors.TryGet(npcId, out ActorState? emergingActor) && emergingActor.Actor.Has<WanderMemoryComponent>())
             {
                 _ = _openResidentDoor?.Invoke(emergeDoorLocal, emergeBuilding);
@@ -407,6 +428,13 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             ClearTransientTransitions();
         bool admitted = profile().ProfileKind == DaggerfallWorldProfileKind.Exterior
             && (_isPlacementScheduledOutdoors is not null || isDay() || _retiringWalkers.Count > 0 || _emergingWalkers.Count > 0);
+        DaggerfallSiteProfile activeSiteProfile = profile();
+        Dictionary<string, DaggerfallPopulationPlacement>? gatePlacementsByKey = null;
+        foreach (DaggerfallPopulationPlacement candidatePlacement in activeSiteProfile.Population)
+        {
+            if (candidatePlacement.GuardPost == DaggerfallGuardPostKind.WalledCityGateOfficer)
+                (gatePlacementsByKey ??= new(StringComparer.Ordinal))[candidatePlacement.Id] = candidatePlacement;
+        }
         foreach (ActorState actor in actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>()))
         {
             if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsCombatant)
@@ -444,7 +472,17 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
             actor.Wander.MarkLoaded();
             if (held(actor.DurableId)) continue;
-            wander(actor, WanderPolicy, simulationStep, deltaSeconds);
+            WanderPolicy stepPolicy = WanderPolicy;
+            if (populationNpc is not null
+                && gatePlacementsByKey is not null
+                && gatePlacementsByKey.TryGetValue(populationNpc.StableKey, out DaggerfallPopulationPlacement? gatePlacement)
+                && !_retiringWalkers.ContainsKey(actor.DurableId)
+                && !_emergingWalkers.ContainsKey(actor.DurableId))
+            {
+                EnsureGatePostRoute(actor, gatePlacement);
+                stepPolicy = GateOfficerWanderPolicy;
+            }
+            wander(actor, stepPolicy, simulationStep, deltaSeconds);
             if (actor.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? originComp)
                 && !originComp.IsRelocated)
             {
@@ -1025,17 +1063,66 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
 
     /// <summary>Builds the canonical appearance, role, and service facts for an eligible source population placement.</summary>
     internal static (DaggerfallNpcAppearance Appearance, string Role, IReadOnlyList<string> Services) ResolvePlacementIdentity(
-        DaggerfallDefinitions definitions, DaggerfallPopulationPlacement placement, string race, bool underworldNight = false)
+        DaggerfallDefinitions definitions, DaggerfallPopulationPlacement placement, string race, bool underworldNight = false,
+        DaggerfallGuardAppearanceOverride? guardAppearance = null)
     {
-        DaggerfallFactionDefinition? faction = placement.FactionId == 0
+        int effectiveFactionId = guardAppearance is { UsesLiegeLivery: true, FactionId: > 0 }
+            ? guardAppearance.FactionId
+            : placement.FactionId;
+        DaggerfallFactionDefinition? faction = effectiveFactionId == 0
             ? null
-            : definitions.Factions.Factions.GetValueOrDefault(placement.FactionId);
+            : definitions.Factions.Factions.GetValueOrDefault(effectiveFactionId);
         DaggerfallNpcAppearance look = new(race, (placement.Flags & FemalePopulationFlag) != 0 ? "Female" : "Male",
-            placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, placement.FactionId);
+            placement.BillboardArchive, placement.BillboardRecord, placement.NameSeed, effectiveFactionId);
         (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
             definitions, faction, placement.SourceBuildingType, placement.SourceBuildingFactionId,
             placement.IsGuard ? "guard" : underworldNight ? "underworld" : "civilian");
         return (look, role, services);
+    }
+
+    private void ApplyGuardPlacementAppearance(ActorState actor, DaggerfallNpcAppearance look, DaggerfallGuardAppearanceOverride? guardAppearance)
+    {
+        int? regionalPeopleId = profile().Site is { } siteId
+            ? DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, siteId.Region)?.Id
+            : null;
+        int? primaryFactionId = look.FactionId != 0 ? look.FactionId : regionalPeopleId;
+        if (actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction))
+            faction.SetPeopleFactions(primaryFactionId, regionalPeopleId);
+        if (actor.Actor.TryGet<ActorInstanceIdentity>(out ActorInstanceIdentity? existingId) && primaryFactionId is int fid)
+        {
+            string factionKey = fid.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (!string.Equals(existingId.FactionId, factionKey, StringComparison.Ordinal))
+                actor.Actor.Replace(new ActorInstanceIdentity(existingId.SpawnerId, existingId.TemplateId, existingId.Gender, existingId.Race, factionKey));
+        }
+        if (actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render))
+        {
+            Rusty.Engine.Color? targetTint = guardAppearance?.Tint;
+            string? targetLiveryKey = guardAppearance?.LiveryKey;
+            if (render.Spec.Tint != targetTint || !string.Equals(render.Spec.LiveryKey, targetLiveryKey, StringComparison.Ordinal))
+                render.SetVisual(render.Spec with { Tint = targetTint, LiveryKey = targetLiveryKey });
+        }
+        appearance().SetActorTint(actor.DurableId, guardAppearance?.Tint);
+    }
+
+    private void EnsureGatePostRoute(ActorState actor, DaggerfallPopulationPlacement placement)
+    {
+        if (!actor.Actor.Has<WanderMemoryComponent>())
+            return;
+        WorldPoint postLocal = profileToLocal(placement.Position);
+        IReadOnlyList<WorldPoint>? currentRoute = actor.Wander.Route;
+        if (currentRoute is not [var existingPoint]
+            || existingPoint.HorizontalDistanceTo(postLocal) > GateOfficerPostToleranceMeters)
+        {
+            actor.Wander.Stage([postLocal]);
+        }
+        if (placement.GatePostAnchor is { } gateAnchor
+            && actor.Wander.State == WanderState.Idle
+            && actor.Position.HorizontalDistanceTo(postLocal) <= GateOfficerFacingRadiusMeters)
+        {
+            WorldPoint gateLocal = profileToLocal(gateAnchor);
+            if (postLocal.HorizontalDistanceTo(gateLocal) > 0.05F)
+                actor.ApplyPose(new ActorPose(actor.Position, YawToward(postLocal, gateLocal)));
+        }
     }
 
     /// <summary>

@@ -93,24 +93,54 @@ internal static class DaggerfallExteriorPopulation
         int townBuckets = DaggerfallHouseholds.TownHouseholdBucketCount(location);
         DaggerfallGuardTierProfile watchProfile = (guardTiers ?? DaggerfallGuardTierTuning.Default).ResolveProfile(location);
         HashSet<int> guardIndices = ResolvePatrolGuardIndices(count, watchProfile.BaselinePatrolGuards);
-        // Proper walled cities (gateAnchors.Count > 0) post one liege-livery watch officer/knight at each gate;
+        // Proper walled cities (gateAnchors.Count > 0) post one liege-livery watch officer/knight at each gate,
+        // placed directly on the nearest walkable clear ground cell to that gate and retaining its gate anchor;
         // unwalled hamlets and villages keep purely local rank-and-file StreetWatch patrols.
-        HashSet<int> gateOfficerIndices = [];
+        Dictionary<int, WorldPoint> gatePostAnchorByIndex = [];
         if (gateAnchors is { Count: > 0 } walledGates && count > 0)
         {
-            gateOfficerIndices.Add(0); // Slot 0 is already positioned closest to gate 0 (WatchCaptainSlotId).
+            HashSet<(int X, int Z)> claimedGateCells = [];
+            WorldPoint SnapToNearestClearCell(WorldPoint gatePoint)
+            {
+                (int X, int Z) bestCell = cells[0];
+                WorldPoint bestPos = Position(bestCell);
+                float bestDistSq = float.MaxValue;
+                foreach ((int X, int Z) cell in cells)
+                {
+                    if (claimedGateCells.Contains(cell))
+                        continue;
+                    WorldPoint candidate = Position(cell);
+                    float dx = candidate.X - gatePoint.X;
+                    float dz = candidate.Z - gatePoint.Z;
+                    float distSq = dx * dx + dz * dz;
+                    if (distSq < bestDistSq)
+                    {
+                        bestDistSq = distSq;
+                        bestCell = cell;
+                        bestPos = candidate;
+                    }
+                }
+                claimedGateCells.Add(bestCell);
+                return bestPos;
+            }
+
+            // Slot 0 (WatchCaptainSlotId) is stationed at gate 0.
+            positions[0] = SnapToNearestClearCell(walledGates[0]);
+            gatePostAnchorByIndex[0] = walledGates[0];
             guardIndices.Add(0);
-            for (int gateIdx = 1; gateIdx < walledGates.Count && gateOfficerIndices.Count < count; gateIdx++)
+
+            for (int gateIdx = 1; gateIdx < walledGates.Count && gatePostAnchorByIndex.Count < count; gateIdx++)
             {
                 WorldPoint extraGate = walledGates[gateIdx];
+                WorldPoint postPosition = SnapToNearestClearCell(extraGate);
                 int bestIndex = -1;
                 float bestDistSq = float.MaxValue;
                 for (int idx = 1; idx < count; idx++)
                 {
-                    if (gateOfficerIndices.Contains(idx))
+                    if (gatePostAnchorByIndex.ContainsKey(idx))
                         continue;
-                    float dx = positions[idx].X - extraGate.X;
-                    float dz = positions[idx].Z - extraGate.Z;
+                    float dx = positions[idx].X - postPosition.X;
+                    float dz = positions[idx].Z - postPosition.Z;
                     float distSq = dx * dx + dz * dz;
                     if (distSq < bestDistSq)
                     {
@@ -120,7 +150,8 @@ internal static class DaggerfallExteriorPopulation
                 }
                 if (bestIndex >= 0)
                 {
-                    gateOfficerIndices.Add(bestIndex);
+                    positions[bestIndex] = postPosition;
+                    gatePostAnchorByIndex[bestIndex] = extraGate;
                     guardIndices.Add(bestIndex);
                 }
             }
@@ -129,7 +160,8 @@ internal static class DaggerfallExteriorPopulation
         {
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
             bool isGuard = guardIndices.Contains(index);
-            DaggerfallGuardPostKind guardPost = gateOfficerIndices.Contains(index)
+            bool isGateOfficer = gatePostAnchorByIndex.TryGetValue(index, out WorldPoint gatePostAnchor);
+            DaggerfallGuardPostKind guardPost = isGateOfficer
                 ? DaggerfallGuardPostKind.WalledCityGateOfficer
                 : DaggerfallGuardPostKind.StreetWatch;
             string walkerSlotKey = DaggerfallPeopleSlots.WalkerSlotKey(index);
@@ -145,6 +177,7 @@ internal static class DaggerfallExteriorPopulation
             {
                 IsGuard = isGuard,
                 GuardPost = guardPost,
+                GatePostAnchor = isGateOfficer ? gatePostAnchor : null,
                 FamilyId = familyId,
             });
         }

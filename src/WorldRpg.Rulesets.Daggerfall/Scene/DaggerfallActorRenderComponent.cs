@@ -1,3 +1,5 @@
+using Rusty.Engine;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>How an actor is drawn in the world, decoupled from gameplay kind.</summary>
@@ -20,7 +22,9 @@ internal sealed record ActorVisualSpec(
     int? MobileId = null,
     string? Gender = null,
     bool OnBase = true,
-    string? CrowdCharacterHint = null)
+    string? CrowdCharacterHint = null,
+    Color? Tint = null,
+    string? LiveryKey = null)
 {
     internal static ActorVisualSpec NoneSpec { get; } = new(ActorVisualKind.None, string.Empty, OnBase: true);
 

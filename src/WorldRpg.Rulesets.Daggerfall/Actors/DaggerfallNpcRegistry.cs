@@ -268,6 +268,19 @@ public sealed class DaggerfallNpcRegistry
         Mutate(durableId, current => current with { Appearance = appearance, Role = role, Services = [.. services] }, updateLocation: null);
     }
 
+    /// <summary>
+    /// Updates the sovereign/regional faction carried on a live guard's appearance record when regional
+    /// allegiance or post livery changes (Den #11167). Works for both exterior population and interior static guards.
+    /// </summary>
+    internal void RefreshGuardFaction(long durableId, int factionId)
+    {
+        if (factionId < 0)
+            throw new ArgumentOutOfRangeException(nameof(factionId), "Guard faction id must be non-negative.");
+        if (!TryGet(durableId, out DaggerfallNpc? current) || current.Appearance.FactionId == factionId)
+            return;
+        Mutate(durableId, npc => npc with { Appearance = npc.Appearance with { FactionId = factionId } }, updateLocation: null);
+    }
+
     /// <summary>Reads one NPC by its durable identity.</summary>
     public DaggerfallNpc Require(long durableId) =>
         TryGet(durableId, out DaggerfallNpc? npc)

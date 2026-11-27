@@ -362,6 +362,51 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal NormalizedActorSprite? SpriteFor(long durableId) =>
         actors.TryGetValue(durableId, out ActorVisual? visual) ? visual.Sprite : null;
 
+    /// <summary>The active livery/heraldry tint currently applied to <paramref name="durableId"/>'s live sprite appearance.</summary>
+    internal Color ActiveTintFor(long durableId) =>
+        actors.TryGetValue(durableId, out ActorVisual? visual) && visual.Tint is { } tint
+            ? tint
+            : new Color(1F, 1F, 1F, 1F);
+
+    /// <summary>
+    /// Updates the livery/heraldry tint for a live actor visual in place, retiring any superseded sprite
+    /// appearances after the next snapshot and rebuilding the drawn sprite with the new color.
+    /// </summary>
+    internal void SetActorTint(long durableId, Color? tint)
+    {
+        if (disposed || !actors.TryGetValue(durableId, out ActorVisual? visual) || visual.Tint == tint)
+            return;
+        visual.Tint = tint;
+        if (visual.Playback is { } playback)
+        {
+            Retire(playback);
+            visual.Playback = null;
+        }
+        if (visual.Live is { } live)
+        {
+            Retire(live);
+            visual.Live = null;
+        }
+        if (visual.SleepingClassic is { } sleepingClassic)
+        {
+            Retire(sleepingClassic);
+            visual.SleepingClassic = null;
+        }
+        if (visual.Refreshed is { } refreshed)
+        {
+            Retire(refreshed);
+            visual.Refreshed = null;
+        }
+        if (visual.SleepingRefreshed is { } sleepingRefreshed)
+        {
+            Retire(sleepingRefreshed);
+            visual.SleepingRefreshed = null;
+        }
+        AttachRefreshedPerson(visual);
+        if (!drawRefreshedEffects() || visual.Refreshed is null)
+            ClassicLive(visual);
+    }
+
     internal void RetireActor(long durableId)
     {
         List<Exception>? failures = null;
@@ -523,6 +568,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (!state.TryGet(visual.EntityId, out ActorState? actor)) continue;
             ActorRenderComponent? render = actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? attached) ? attached : null;
             if (render?.Spec.Kind is ActorVisualKind.PortraitOnly or ActorVisualKind.None) continue;
+            if (render is not null && visual.Tint != render.Spec.Tint)
+                SetActorTint(actor.DurableId, render.Spec.Tint);
             ulong id = slot == DaggerfallPresentationObjectIds.ActiveLocationSlot
                 ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
                 : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
@@ -1239,7 +1286,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private Appearance? ClassicLive(ActorVisual visual)
     {
         if (visual.Live is not null || visual.Defeated) return visual.Live;
-        (visual.Atlas, visual.Texture, visual.Live) = CreateSpriteWithTexture(content, visual.Sprite, visual.Mobile);
+        if (visual.Atlas is not null)
+            visual.Live = CreateSpriteFromExistingAtlas(visual.Atlas, visual.Texture, visual.Sprite, visual.Mobile, tint: visual.Tint);
+        else
+            (visual.Atlas, visual.Texture, visual.Live) = CreateSpriteWithTexture(content, visual.Sprite, visual.Mobile, tint: visual.Tint);
         StartState(visual.EntityId, PreferredRestState(visual.Sprite), visual);
         return visual.Live;
     }
@@ -1264,17 +1314,17 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         return (atlas, value);
     }
 
-    private (SpriteAtlas Atlas, RenderResource Texture, Appearance Appearance) CreateSpriteWithTexture(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false, BillboardMode? billboardOverride = null)
+    private (SpriteAtlas Atlas, RenderResource Texture, Appearance Appearance) CreateSpriteWithTexture(IContentService content, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false, BillboardMode? billboardOverride = null, Color? tint = null)
     {
         (SpriteAtlas atlas, RenderResource texture) = OpenActorAtlas(content, sprite);
-        Appearance value = CreateSpriteFromExistingAtlas(atlas, texture, sprite, mobile, material, glows, billboardOverride);
+        Appearance value = CreateSpriteFromExistingAtlas(atlas, texture, sprite, mobile, material, glows, billboardOverride, tint);
         return (atlas, texture, value);
     }
 
-    private Appearance CreateSpriteFromExistingAtlas(SpriteAtlas atlas, RenderResource? texture, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false, BillboardMode? billboardOverride = null)
+    private Appearance CreateSpriteFromExistingAtlas(SpriteAtlas atlas, RenderResource? texture, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile = null, SpriteMaterialDescriptor? material = null, bool glows = false, BillboardMode? billboardOverride = null, Color? tint = null)
     {
         var request = new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size,
-            billboardOverride ?? sprites.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
+            billboardOverride ?? sprites.Actors, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, tint ?? new Color(1F, 1F, 1F, 1F));
         if (material is { } chosen) request = request with { Material = chosen };
         if (mobile is not null)
             request = request with { Material = new SpriteMaterialDescriptor(SpriteLightingMode.Synthetic,
@@ -1803,6 +1853,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal string? AssetId { get; } = assetId;
         /// <summary>The mobile it draws as, whose glow and shadow its classic sprites take; none for a person.</summary>
         internal DaggerfallMobileDefinition? Mobile { get; } = mobile;
+        /// <summary>Optional heraldic livery tint applied to this actor's sprite appearances.</summary>
+        internal Color? Tint { get; set; }
         /// <summary>
         /// Its classic atlas and sprite, built the first time classic art draws it (a standing person the refreshed set
         /// draws anew builds neither while refreshed art is drawn); the sprite is let go when it dies.

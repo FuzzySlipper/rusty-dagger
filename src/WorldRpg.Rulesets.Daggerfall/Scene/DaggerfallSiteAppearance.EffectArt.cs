@@ -124,7 +124,7 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (visual.Refreshed is not null || visual.Defeated) return;
         // A painted hem or foot can reach below the classic frame, so the person stands on the art's own base.
-        visual.Refreshed = RefreshedPerson(visual.AssetId, visual.Sprite.SourceTexture, onBase: true);
+        visual.Refreshed = RefreshedPerson(visual.AssetId, visual.Sprite.SourceTexture, onBase: true, tint: visual.Tint);
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <paramref name="source"/> at the art's own size, hung from its own pivot or, where <paramref name="onBase"/>
     /// says, from its foot; null where the set has none.
     /// </summary>
-    private Appearance? RefreshedPerson(string? assetId, (int Archive, int Record)? source, bool onBase, BillboardMode billboard = BillboardMode.Cylindrical)
+    private Appearance? RefreshedPerson(string? assetId, (int Archive, int Record)? source, bool onBase, BillboardMode billboard = BillboardMode.Cylindrical, Color? tint = null)
     {
         if (surfaceArt?.Person(assetId, source) is not { } art) return null;
         if (!personAtlases.TryGetValue(art.File.Path, out SpriteAtlas? atlas))
@@ -146,7 +146,7 @@ internal sealed partial class DaggerfallSiteAppearance
             personAtlases.Add(art.File.Path, atlas);
         }
         return appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, 0, onBase ? art.Foot : art.Pivot, art.Size,
-            billboard, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
+            billboard, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, tint ?? new Color(1F, 1F, 1F, 1F)));
     }
 
     /// <summary>The sprite a living actor shows: its refreshed one while refreshed art is drawn, else its classic one.</summary>
@@ -160,7 +160,7 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (visual.Defeated) return null;
         if (drawRefreshedEffects() && visual.Refreshed is not null)
-            return visual.SleepingRefreshed ??= RefreshedPerson(visual.AssetId, visual.Sprite.SourceTexture, onBase: true, BillboardMode.None);
+            return visual.SleepingRefreshed ??= RefreshedPerson(visual.AssetId, visual.Sprite.SourceTexture, onBase: true, BillboardMode.None, visual.Tint);
         if (ClassicLive(visual) is null || visual.Atlas is null)
             return null;
         return visual.SleepingClassic ??= CreateSpriteFromExistingAtlas(
@@ -168,7 +168,8 @@ internal sealed partial class DaggerfallSiteAppearance
             visual.Texture,
             visual.Sprite,
             visual.Mobile,
-            billboardOverride: BillboardMode.None);
+            billboardOverride: BillboardMode.None,
+            tint: visual.Tint);
     }
 
     /// <summary>The corpse a defeated actor shows: the refreshed mesh while refreshed art is drawn, else its sprite.</summary>
