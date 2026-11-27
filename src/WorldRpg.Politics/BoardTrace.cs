@@ -62,6 +62,22 @@ public sealed record TurnTrace(
     public const int DaysPerWeek = 7;
     public const int DaysPerYear = 360;
 
+    /// <summary>The trace as a record a game saves: every field written, nulls included.</summary>
+    public string ToRecordJson() => JsonSerializer.Serialize(this, PoliticsRecordJson.Default.TurnTrace);
+
+    /// <summary>A trace a game saved; a malformed one is refused, naming what is wrong (<paramref name="source"/> names where it came from).</summary>
+    public static TurnTrace FromRecordJson(string json, string source)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize(json, PoliticsRecordJson.Default.TurnTrace) ?? throw new BoardSetupException(source, ["the record holds no turn"]);
+        }
+        catch (JsonException exception)
+        {
+            throw new BoardSetupException(source, [exception.Message]);
+        }
+    }
+
     public int Year => (Turn - 1) * DaysPerWeek / DaysPerYear + 1;
 
     public int Day => DayOf(Turn);

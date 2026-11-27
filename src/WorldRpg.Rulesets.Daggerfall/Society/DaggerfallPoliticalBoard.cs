@@ -5,10 +5,15 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>The political board as saved: the day of its last Sunday and the board itself (<see cref="BoardSave"/>).</summary>
+/// <summary>
+/// The political board as saved: the day of its last Sunday, the board itself (<see cref="BoardSave"/>) and the traces of
+/// its latest turns, oldest first (<see cref="DaggerfallPoliticalBoard.RecentTurns"/>), so the developer tools keep their
+/// record across a load.
+/// </summary>
 internal sealed record DaggerfallPoliticalBoardSave(
     [property: JsonRequired] long LastTurnDay,
-    [property: JsonRequired] JsonElement Board)
+    [property: JsonRequired] JsonElement Board,
+    [property: JsonRequired] JsonElement RecentTurns)
 {
     internal DaggerfallPoliticalBoardSave Validate()
     {
@@ -16,6 +21,8 @@ internal sealed record DaggerfallPoliticalBoardSave(
             throw new ArgumentOutOfRangeException(nameof(LastTurnDay), LastTurnDay, "The political board's last turn must fall on a Sunday.");
         if (Board.ValueKind != JsonValueKind.Object)
             throw new ArgumentException("The political board save holds no board.", nameof(Board));
+        if (RecentTurns.ValueKind != JsonValueKind.Array || RecentTurns.GetArrayLength() > DaggerfallPoliticalBoard.RecentTurnsKept)
+            throw new ArgumentException($"The political board save must keep a list of at most {DaggerfallPoliticalBoard.RecentTurnsKept} turns.", nameof(RecentTurns));
         return this;
     }
 }
@@ -94,6 +101,13 @@ internal sealed class DaggerfallPoliticalBoard
             saved.Validate();
             _board = Board.Load(canon.Setup, canon.Cards, BoardSave.FromJson(saved.Board.GetRawText(), "the political board save"));
             _lastTurnDay = saved.LastTurnDay;
+            foreach (JsonElement turn in saved.RecentTurns.EnumerateArray())
+                _recentTurns.Add(TurnTrace.FromRecordJson(turn.GetRawText(), "the political board's saved turns"));
+            for (int index = 0; index < _recentTurns.Count; index++)
+                if (_recentTurns[index].Turn != _board.Turn - _recentTurns.Count + 1 + index)
+                    throw new ArgumentException(
+                        $"The political board's saved turns must be the {_recentTurns.Count} turns up to its turn {_board.Turn}; turn {_recentTurns[index].Turn} is out of place.",
+                        nameof(saved));
         }
         _news = new DaggerfallPoliticalNews(_board, canon.Cards, Town, Faction);
         liege.Bind(_board);
@@ -110,13 +124,10 @@ internal sealed class DaggerfallPoliticalBoard
     /// <summary>The day the next turn plays on.</summary>
     internal long NextTurnDay => _lastTurnDay + DaysPerWeek;
 
-    /// <summary>What the board published after its latest turn this session; null before the first.</summary>
-    internal BoardOutputs? Latest { get; private set; }
+    /// <summary>The trace of the latest turn kept (the nudges it applied among it); null before the first.</summary>
+    internal TurnTrace? LatestTrace => _recentTurns.Count > 0 ? _recentTurns[^1] : null;
 
-    /// <summary>The trace of the latest turn this session (the nudges it applied among it); null before the first.</summary>
-    internal TurnTrace? LatestTrace { get; private set; }
-
-    /// <summary>The latest turns played this session, oldest first, for the developer tools; not saved.</summary>
+    /// <summary>The latest turns played, up to <see cref="RecentTurnsKept"/>, oldest first, for the developer tools; saved with the board.</summary>
     internal IReadOnlyList<TurnTrace> RecentTurns => _recentTurns;
 
     /// <summary>The courier riding with board move <paramref name="moveId"/>, if one was sent and is still on the books.</summary>
@@ -150,10 +161,8 @@ internal sealed class DaggerfallPoliticalBoard
             TurnTrace trace = BoardTurn.Play(_board);
             _lastTurnDay += DaysPerWeek;
             SendCouriers(trace);
-            LatestTrace = trace;
             _recentTurns.Add(trace);
             if (_recentTurns.Count > RecentTurnsKept) _recentTurns.RemoveAt(0);
-            Latest = BoardOutputs.Of(_board, _canon.Cards, trace);
             news.AddRange(_news.Of(trace, warsBefore, _lastTurnDay * MinutesPerDay));
             ForgetSettledCouriers();
             Rebuild();
@@ -164,7 +173,8 @@ internal sealed class DaggerfallPoliticalBoard
     internal DaggerfallPoliticalBoardSave Capture()
     {
         using JsonDocument board = JsonDocument.Parse(_board.Save().ToJson());
-        return new DaggerfallPoliticalBoardSave(_lastTurnDay, board.RootElement.Clone());
+        using JsonDocument turns = JsonDocument.Parse($"[{string.Join(',', _recentTurns.Select(trace => trace.ToRecordJson()))}]");
+        return new DaggerfallPoliticalBoardSave(_lastTurnDay, board.RootElement.Clone(), turns.RootElement.Clone());
     }
 
     /// <summary>

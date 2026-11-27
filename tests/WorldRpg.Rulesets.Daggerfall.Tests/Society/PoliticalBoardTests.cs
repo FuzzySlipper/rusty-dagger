@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using WorldRpg.Kit;
 using WorldRpg.Politics;
@@ -74,7 +75,7 @@ public sealed class PoliticalBoardTests
         Assert.Equal(0, board.Board.Turn);
         board.AdvanceToDay(7 * 101, None);
         Assert.Equal(1, board.Board.Turn);
-        Assert.Equal(1, board.Latest!.Turn);
+        Assert.Equal(1, board.LatestTrace!.Turn);
 
         // A three-week rest plays the three Sundays it crossed, one after another.
         board.AdvanceToDay(7 * 104 + 5, None);
@@ -230,11 +231,36 @@ public sealed class PoliticalBoardTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults), saved);
         Assert.Equal(board.Board.Save().ToJson(), restored.PoliticalBoard!.Board.Save().ToJson());
+        // The turns the developer tools look back over come back with it (#11135).
+        Assert.Equal([1, 2, 3], restored.PoliticalBoard.RecentTurns.Select(trace => trace.Turn));
+        Assert.Equal(Kept(board), Kept(restored.PoliticalBoard));
 
         session.AdvanceElapsedTime(7 * 86400);
         restored.AdvanceElapsedTime(7 * 86400);
         Assert.Equal(4, restored.PoliticalBoard.Board.Turn);
         Assert.Equal(board.Board.Save().ToJson(), restored.PoliticalBoard.Board.Save().ToJson());
+        Assert.Equal(Kept(board), Kept(restored.PoliticalBoard));
+
+        static IEnumerable<string> Kept(DaggerfallPoliticalBoard board) => board.RecentTurns.Select(trace => trace.ToRecordJson());
+    }
+
+    /// <summary>The board keeps its latest turns, up to <see cref="DaggerfallPoliticalBoard.RecentTurnsKept"/>, through a save; a save whose turns don't lead up to its board's is refused.</summary>
+    [Fact]
+    public void A_saved_board_keeps_its_latest_turns_bounded_and_refuses_turns_that_dont_lead_up_to_it()
+    {
+        DaggerfallPoliticalBoard board = NewBoard(new DaggerfallWorldConditions());
+        board.AdvanceToDay(board.LastTurnDay + 7L * (DaggerfallPoliticalBoard.RecentTurnsKept + 3), None);
+        DaggerfallPoliticalBoardSave saved = board.Capture();
+        Assert.Equal(DaggerfallPoliticalBoard.RecentTurnsKept, saved.RecentTurns.GetArrayLength());
+
+        DaggerfallPoliticalBoard resumed = NewBoard(new DaggerfallWorldConditions(), saved: saved);
+        Assert.Equal(Enumerable.Range(4, DaggerfallPoliticalBoard.RecentTurnsKept), resumed.RecentTurns.Select(trace => trace.Turn));
+        Assert.Equal(board.LatestTrace!.ToRecordJson(), resumed.LatestTrace!.ToRecordJson());
+
+        using JsonDocument skipped = JsonDocument.Parse($"[{string.Join(',', board.RecentTurns.Skip(1).SkipLast(1).Select(trace => trace.ToRecordJson()))}]");
+        Assert.Throws<ArgumentException>(() => NewBoard(new DaggerfallWorldConditions(), saved: saved with { RecentTurns = skipped.RootElement.Clone() }));
+        using JsonDocument tooMany = JsonDocument.Parse($"[{string.Join(',', Enumerable.Repeat(board.LatestTrace.ToRecordJson(), DaggerfallPoliticalBoard.RecentTurnsKept + 1))}]");
+        Assert.Throws<ArgumentException>(() => (saved with { RecentTurns = tooMany.RootElement.Clone() }).Validate());
     }
 
     [Fact]

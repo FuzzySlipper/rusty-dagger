@@ -21,7 +21,7 @@ namespace WorldRpg.Politics;
 internal sealed partial class PoliticsJson : JsonSerializerContext;
 
 /// <summary>
-/// The JSON of records the world reads back: saved boards and each week's outputs. Every field is written, nulls
+/// The JSON of records the world reads back: saved boards, each week's outputs and the turn traces a game keeps. Every field is written, nulls
 /// included, so the outputs' schema never shifts with the week, and every field is required back, so a save that lost
 /// anything is refused rather than resumed with a default.
 /// </summary>
@@ -33,4 +33,5 @@ internal sealed partial class PoliticsJson : JsonSerializerContext;
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(BoardSave))]
 [JsonSerializable(typeof(BoardOutputs))]
+[JsonSerializable(typeof(TurnTrace))]
 internal sealed partial class PoliticsRecordJson : JsonSerializerContext;

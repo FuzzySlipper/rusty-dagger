@@ -30,6 +30,26 @@ public sealed class SaveTests
         Assert.Equal(unbroken.Save().ToJson(), resumed.Save().ToJson());
     }
 
+    /// <summary>A game keeps its latest turns' traces in its save (#11135): every trace of a canon year reads back as it was written.</summary>
+    [Fact]
+    public void A_turn_trace_saved_as_a_record_reads_back_whole_and_a_cut_one_is_refused()
+    {
+        Board board = Board.Create(BoardSetup.Canon(), CardSet.Canon());
+        List<TurnTrace> traces = [.. Enumerable.Range(0, TurnTrace.TurnsIn(1)).Select(_ => BoardTurn.Play(board))];
+        Assert.Contains(traces, trace => trace.World is { Actor: null });
+        Assert.Contains(traces, trace => trace.Arrivals.Count > 0);
+
+        foreach (TurnTrace trace in traces)
+        {
+            string json = trace.ToRecordJson();
+            Assert.Equal(json, TurnTrace.FromRecordJson(json, "saved turn").ToRecordJson());
+        }
+
+        string first = traces[0].ToRecordJson();
+        BoardSetupException cut = Assert.Throws<BoardSetupException>(() => TurnTrace.FromRecordJson(first.Replace("\"turn\":1,", "", StringComparison.Ordinal), "cut turn"));
+        Assert.Contains("turn", cut.Problems[0], StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_save_missing_a_field_or_not_fitting_its_table_is_refused_naming_what_is_wrong()
     {
