@@ -39,12 +39,14 @@ internal sealed record DaggerfallNoticeBoardUiView(
 /// Opens when the player activates an in-world notice board, projects live entries from
 /// <see cref="DaggerfallNoticeBoard.BuildForSite"/>, and handles direct pickup of posted leads
 /// (courier delivery contracts via <see cref="DaggerfallCourierDispatches"/> and regional bounty/decree
-/// leads recorded idempotently in <see cref="DaggerfallBookNotebook"/>). Holds zero save bytes of its own.
+/// leads recorded idempotently in <see cref="DaggerfallBookNotebook"/>, a bounty's reward held by
+/// <see cref="DaggerfallNoticeBounties"/>). Holds zero save bytes of its own.
 /// </summary>
 internal sealed class DaggerfallNoticeBoardPanel(
     DaggerfallNoticeBoard noticeBoard,
     DaggerfallCourierDispatches courierDispatches,
     DaggerfallBookNotebook notebook,
+    DaggerfallNoticeBounties bounties,
     Func<DaggerfallSiteRecord?> activeSite,
     Func<long> currentMinute,
     PresentationState presentation)
@@ -108,10 +110,12 @@ internal sealed class DaggerfallNoticeBoardPanel(
             return Report(false, "You have already recorded this lead in your journal.");
 
         _revision++;
-        string taken = lead.Kind == DaggerfallNoticeLeadKind.RegionalBounty
-            ? $"Bounty lead recorded in your journal: {entry.Heading}."
-            : $"Notice recorded in your journal: {entry.Heading}.";
-        return Report(true, taken);
+        if (lead.Kind != DaggerfallNoticeLeadKind.RegionalBounty)
+            return Report(true, $"Notice recorded in your journal: {entry.Heading}.");
+        int? reward = bounties.Take(entry, view.AuthorityName ?? $"the authorities of {view.RegionName}");
+        return Report(true, reward is int gold
+            ? $"Bounty taken: {entry.Heading}. Break it and claim {gold} gold from the watch or the court of {view.RegionName}."
+            : $"Bounty lead recorded in your journal: {entry.Heading}.");
     }
 
     internal DaggerfallNoticeBoardUiView? Read()

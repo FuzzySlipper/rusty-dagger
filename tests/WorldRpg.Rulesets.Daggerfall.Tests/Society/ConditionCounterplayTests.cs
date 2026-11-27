@@ -87,7 +87,7 @@ public sealed class ConditionCounterplayTests
             SubjectTag: subjectTag, Severity: 2, StartedDay: 0));
 
         List<DaggerfallConditionCounterplayRecord> callbacks = [];
-        session.ConditionCounterplay.BindBoardCounterplayCallback(callbacks.Add);
+        session.ConditionCounterplay.Countered += callbacks.Add;
 
         WorldPoint playerPos = session.State.PlayerControl.Position ?? default;
         long foe1 = session.SpawnActor(matchingDef.Id.Value, new ActorPose(new WorldPoint(playerPos.X + 1.2f, playerPos.Y, playerPos.Z), 0f));

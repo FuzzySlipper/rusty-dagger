@@ -28,7 +28,10 @@
     "minimumArrivalDistance": 12.8,
     "maximumArrivalDistance": 51.2,
     "arrestReach": 3.2,
-    "crackdownGuardsPerSeverity": 1
+    "crackdownGuardsPerSeverity": 1,
+    "bountyRewardPerSeverity": 150,
+    "bountyReputation": 3,
+    "bountyClaimDays": 30
   },
   "normalLight": {
     "distance": 1.4,

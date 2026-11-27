@@ -894,8 +894,11 @@ internal sealed partial class DaggerfallSession
                     ? WorldPoint.From(_grounding.RestingPosition(at).ToVector() + Vector3.UnitY * _tuning.LooseItems.DropHeight) : null,
                 id => LooseItems.Drop(id, Toss()));
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
+            NoticeBounties = new DaggerfallNoticeBounties(WorldConditions, _notebook, State.Social, definitions, _tuning.Law,
+                () => checked((int)_time.Calendar.DayNumber), gold => { if (gold > 0) _ = State.Currency.ReceiveGold((ulong)gold); });
+            NoticeBounties.Restore(saved?.NoticeBounties);
             NoticeBoardPanel = new DaggerfallNoticeBoardPanel(
-                NoticeBoard, CourierDispatches, _notebook, () => _site.ActiveSite, () => _time.Calendar.MinuteNumber, Presentation);
+                NoticeBoard, CourierDispatches, _notebook, NoticeBounties, () => _site.ActiveSite, () => _time.Calendar.MinuteNumber, Presentation);
             quests.BindNotebook(_notebook.AddQuestNote);
             quests.BindItemCleanup(RemoveCarriedQuestItems);
             State.QuestItems = new(State.Quests, State.Actors.Entities, State.InventoryStore, State.Containers, State.Equipment, State.ItemInstances,
@@ -1124,6 +1127,7 @@ internal sealed partial class DaggerfallSession
                 hasPendingBandMembers: (bandId, gen) => _encounters.Pending.Any(p => p.Band is { Id: int id } && id == bandId && p.Generation == gen));
             if (saved is not null)
                 ConditionCounterplay.Restore(saved.ConditionCounterplay);
+            ConditionCounterplay.Countered += NoticeBounties.ObserveCounterplay;
             if (definitions.PoliticalCanon is { } politicalCanon)
                 PoliticalBoard = new DaggerfallPoliticalBoard(politicalCanon, definitions.BoardSeats, State.Social.Liege,
                     OfficeLedger.ResolveBoardSeatPersona, WorldConditions, definitions.Locations.Records, CourierDispatches,
@@ -1266,6 +1270,7 @@ internal sealed partial class DaggerfallSession
             _persistence.LocalHouseholds = SocialConsequences.Capture;
             _persistence.CourierDispatches = CourierDispatches.Capture;
             _persistence.ConditionCounterplay = ConditionCounterplay.Capture;
+            _persistence.NoticeBounties = NoticeBounties.Capture;
             _persistence.PoliticalBoard = () => PoliticalBoard?.Capture();
             _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
             _persistence.PendingIdentify = () => IdentifyChoice.Pending;
@@ -1709,7 +1714,8 @@ internal sealed partial class DaggerfallSession
             denounceOfficeHolder: (speaker, targetId, site) => DaggerfallExileDialogue.EvaluateAndDenounce(
                 speaker, targetId, site, OfficeLedger, OfficeHolders, WorldConditions, State.Social, State.Crime, Law, _definitions,
                 checked((int)_time.Calendar.DayNumber)),
-            isVouchUsable: vouch => Introductions.IsVouchUsable(vouch));
+            isVouchUsable: vouch => Introductions.IsVouchUsable(vouch),
+            noticeBounties: NoticeBounties);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

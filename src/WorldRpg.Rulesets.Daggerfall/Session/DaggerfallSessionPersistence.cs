@@ -71,6 +71,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal Func<DaggerfallLocalHouseholdsSave> LocalHouseholds { get; set; } = () => DaggerfallLocalHouseholdsSave.Empty;
     internal Func<DaggerfallCourierDispatchesSave> CourierDispatches { get; set; } = () => DaggerfallCourierDispatchesSave.Empty;
     internal Func<DaggerfallConditionCounterplaySave> ConditionCounterplay { get; set; } = () => DaggerfallConditionCounterplaySave.Empty;
+    internal Func<DaggerfallNoticeBountiesSave> NoticeBounties { get; set; } = () => DaggerfallNoticeBountiesSave.Empty;
     internal Func<DaggerfallPoliticalBoardSave?> PoliticalBoard { get; set; } = () => null;
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
@@ -184,6 +185,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             LocalHouseholds = LocalHouseholds(),
             CourierDispatches = CourierDispatches(),
             ConditionCounterplay = ConditionCounterplay(),
+            NoticeBounties = NoticeBounties(),
             PoliticalBoard = PoliticalBoard(),
             Doors = _doors().Capture(),
             SiteDeltas = siteDeltas,

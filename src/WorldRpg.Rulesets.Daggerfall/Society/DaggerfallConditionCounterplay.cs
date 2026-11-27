@@ -188,15 +188,13 @@ internal sealed class DaggerfallConditionCounterplay(
     private readonly HashSet<(string SourceKey, string TokenId)> _clearedSources = [];
     private readonly Dictionary<(string ScopeKey, string TokenId), HashSet<long>> _progress = [];
     private readonly List<DaggerfallConditionCounterplayRecord> _pendingBoardEvents = [];
-    private Action<DaggerfallConditionCounterplayRecord>? _boardCallback;
     private int _nextSequence;
 
     internal int PendingBoardEventCount => _pendingBoardEvents.Count;
     internal IReadOnlyList<DaggerfallConditionCounterplayRecord> PendingBoardEvents => _pendingBoardEvents;
 
-    /// <summary>Binds a live callback invoked whenever player counter-play weakens or strips a condition (for Track B #11055).</summary>
-    internal void BindBoardCounterplayCallback(Action<DaggerfallConditionCounterplayRecord>? callback) =>
-        _boardCallback = callback;
+    /// <summary>Raised whenever player counter-play weakens or strips a condition (a notice-board bounty is earned by it).</summary>
+    internal event Action<DaggerfallConditionCounterplayRecord>? Countered;
 
     /// <summary>
     /// Drains all unconsumed <c>World -&gt; Board</c> counter-play records for Track B's weekly Sunday board turn
@@ -416,7 +414,7 @@ internal sealed class DaggerfallConditionCounterplay(
             NewsEventId: originSite is not null ? newsEventId : null);
 
         _pendingBoardEvents.Add(record);
-        _boardCallback?.Invoke(record);
+        Countered?.Invoke(record);
 
         string outcomeMessage = mutation.Stripped
             ? $"The {threatLabel.ToLowerInvariant()} in {regionName} has been broken!"

@@ -97,6 +97,9 @@ internal sealed record DaggerfallSavePayload(
     /// <summary>Sparse dungeon/band counter-play progress and unconsumed World-&gt;Board events; empty when untouched.</summary>
     [JsonRequired]
     public DaggerfallConditionCounterplaySave ConditionCounterplay { get; init; } = DaggerfallConditionCounterplaySave.Empty;
+    /// <summary>The notice-board bounties the player holds, taken or earned; empty when none.</summary>
+    [JsonRequired]
+    public DaggerfallNoticeBountiesSave NoticeBounties { get; init; } = DaggerfallNoticeBountiesSave.Empty;
     /// <summary>The political board in play; null when the base pack carries no board (or the save was made before it ran).</summary>
     public DaggerfallPoliticalBoardSave? PoliticalBoard { get; init; }
     /// <summary>Every selected RDB door's current state, including a partially completed motion.</summary>
@@ -1214,6 +1217,8 @@ internal sealed record DaggerfallSavePayload(
         CourierDispatches.Validate();
         ArgumentNullException.ThrowIfNull(ConditionCounterplay);
         ConditionCounterplay.Validate();
+        ArgumentNullException.ThrowIfNull(NoticeBounties);
+        NoticeBounties.Validate();
         PoliticalBoard?.Validate();
         ArgumentNullException.ThrowIfNull(Quests);
         Quests.Validate();

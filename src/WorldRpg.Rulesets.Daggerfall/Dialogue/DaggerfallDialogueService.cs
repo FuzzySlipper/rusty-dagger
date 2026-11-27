@@ -103,6 +103,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<int, DaggerfallSiteRecord?, DaggerfallGateScrutinyAssessment>? _evaluateGateScrutiny;
     private readonly DaggerfallWordSpread? _wordSpread;
     private readonly DaggerfallCourierDispatches? _courierDispatches;
+    private readonly DaggerfallNoticeBounties? _noticeBounties;
     private readonly DaggerfallOfficeHolders? _officeHolders;
     private readonly DaggerfallOfficeLedger? _officeLedger;
     private readonly DaggerfallActorLedger? _actorLedger;
@@ -165,8 +166,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, DaggerfallOfficeExileSave, DaggerfallExileRestoreResult>? restoreExile = null,
         Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? denounceTargets = null,
         Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? denounceOfficeHolder = null,
-        Func<ActorVouchRecord, bool>? isVouchUsable = null)
+        Func<ActorVouchRecord, bool>? isVouchUsable = null,
+        DaggerfallNoticeBounties? noticeBounties = null)
     {
+        _noticeBounties = noticeBounties;
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
         _partyHireTopics = partyHireTopics;
@@ -527,6 +530,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             if (_restoreExile is null || _officeLedger?.TryGetExile(npc.DurableId) is not { } exile)
                 return Reject("This person is not seeking restoration to office.");
             DaggerfallExileRestoreResult result = _restoreExile(npc, exile);
+            session.Question = result.Question;
+            session.Reply = result.Message;
+            session.Diagnostics.Clear();
+            session.QuestionCount++;
+            Publish(npc, site);
+            return Report(new(result.Accepted, result.Message));
+        }
+        if (topic == DaggerfallDialogueTopic.ClaimBounty)
+        {
+            if (_noticeBounties is null || string.IsNullOrWhiteSpace(topicTarget))
+                return Reject("No bounty can be claimed here.");
+            DaggerfallNoticeBountyClaim result = _noticeBounties.Claim(npc, topicTarget);
             session.Question = result.Question;
             session.Reply = result.Message;
             session.Diagnostics.Clear();
@@ -1839,6 +1854,10 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             topics.Add(new("cure", "Cure afflictions"));
         if (_partyHireTopics is not null)
             topics.AddRange(_partyHireTopics(npc));
+        if (_noticeBounties is not null)
+            foreach (DaggerfallNoticeBountySave bounty in _noticeBounties.Claimable(npc))
+                topics.Add(new($"claim-bounty:{bounty.LeadId}", $"Claim the bounty: {bounty.Target} ({bounty.Reward}g)",
+                    Group: DaggerfallDialogueTopicGroups.Quests));
         if (session.ProviderTopics.Count != 0)
             topics.AddRange(session.ProviderTopics);
         else
@@ -1976,6 +1995,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             topic = DaggerfallDialogueTopic.DispatchIntercept;
             target = dynamicIntercept["dispatch:intercept:".Length..];
+            return target.Length > 0;
+        }
+        if (value is { Length: > 13 } dynamicBounty && dynamicBounty.StartsWith("claim-bounty:", StringComparison.Ordinal))
+        {
+            topic = DaggerfallDialogueTopic.ClaimBounty;
+            target = dynamicBounty["claim-bounty:".Length..];
             return target.Length > 0;
         }
         if (value is { Length: > 17 } dynamicTurnIn && dynamicTurnIn.StartsWith("dispatch:turn-in:", StringComparison.Ordinal))
