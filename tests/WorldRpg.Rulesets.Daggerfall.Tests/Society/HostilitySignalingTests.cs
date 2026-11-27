@@ -167,10 +167,9 @@ public sealed class HostilitySignalingTests
         Assert.False(session.Law.ModalOpen);
         Assert.Null(session.DungeonText.Projection);
 
-        // Switching to bubbles-only suppresses further audio barks while still emitting bubbles.
+        // Switching to bubbles-only immediately clears active voices and suppresses further audio barks while still emitting bubbles.
         Assert.True(socialCmds.HostilitySignal("bubbles").Succeeded);
-        session.SpeechBubbles.Clear();
-        session.HostilityAudioBarks.ClearActiveVoices();
+        Assert.Equal(0, session.HostilityAudioBarks.ActiveVoiceCount);
         DebugCommandResult bubblesOnly = socialCmds.HostilitySignal("demo-assassin");
         Assert.True(bubblesOnly.Succeeded, bubblesOnly.Message);
         using (JsonDocument doc = JsonDocument.Parse(bubblesOnly.Message))
@@ -180,9 +179,9 @@ public sealed class HostilitySignalingTests
             Assert.Equal(1, doc.RootElement.GetProperty("audioPlayedCount").GetInt32()); // unchanged!
         }
 
-        // Switching to audio-only suppresses bubbles while emitting audio barks.
+        // Switching to audio-only immediately clears active bubbles and suppresses bubbles while emitting audio barks.
         Assert.True(socialCmds.HostilitySignal("audio").Succeeded);
-        session.SpeechBubbles.Clear();
+        Assert.Equal(0, session.SpeechBubbles.ActiveCount);
         DebugCommandResult audioOnly = socialCmds.HostilitySignal("demo-hunter");
         Assert.True(audioOnly.Succeeded, audioOnly.Message);
         using (JsonDocument doc = JsonDocument.Parse(audioOnly.Message))

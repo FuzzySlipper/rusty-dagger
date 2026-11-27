@@ -1373,17 +1373,23 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             case "bubbles":
             case "bubble":
                 HostilitySignalingMode = DaggerfallHostilitySignalingMode.SpeechBubbles;
+                HostilityAudioBarks?.ClearActiveVoices();
                 break;
             case "audio":
             case "tts":
             case "barks":
                 HostilitySignalingMode = DaggerfallHostilitySignalingMode.AudioBarks;
+                SpeechBubbles.Clear();
+                if (!_inAdmittedUpdate && !_disposed)
+                    PublishPresentation();
                 break;
             case "off":
             case "none":
                 HostilitySignalingMode = DaggerfallHostilitySignalingMode.Off;
                 SpeechBubbles.Clear();
                 HostilityAudioBarks?.ClearActiveVoices();
+                if (!_inAdmittedUpdate && !_disposed)
+                    PublishPresentation();
                 break;
             case "demo":
             case "demo-kin":
