@@ -17,7 +17,11 @@ internal sealed record DaggerfallHolderDenounceTarget(
     int Region,
     string Reason,
     DaggerfallCrimeKind CrimeKind,
-    bool IsOfficeHolder = true);
+    bool IsOfficeHolder = true)
+{
+    /// <summary>The target as named in public, its title given once (see <see cref="DaggerfallOfficeHolder.StyledName"/>).</summary>
+    internal string StyledName => DaggerfallOfficeHolder.Styled(DisplayName, Title);
+}
 
 /// <summary>Result of denouncing an implicated office holder to the watch or court in dialogue.</summary>
 internal sealed record DaggerfallHolderDenounceResult(bool Accepted, string Question, string Message);
@@ -315,7 +319,7 @@ internal static class DaggerfallExileDialogue
         if (target is null || site is null)
             return new(false, "I have evidence against someone here.", "There is no actionable charge against that person right now.");
 
-        string question = $"I am reporting {target.Title} {target.DisplayName} for {target.Reason}.";
+        string question = $"I am reporting {target.StyledName} for {target.Reason}.";
         int regionalRep = social.RegionalReputation(site.Id.Region);
         int speakerReaction = social.ReactionForNpc(speaker).Value;
         if (regionalRep < DenounceStandingRequirement && speakerReaction < DenounceStandingRequirement)

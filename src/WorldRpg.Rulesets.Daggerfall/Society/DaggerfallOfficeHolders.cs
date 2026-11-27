@@ -54,9 +54,11 @@ internal sealed record DaggerfallOfficeHolder(
     /// The holder as named in public: the title before the name, unless the name already carries it, as a canonical
     /// ruler's (King Gothryd) and a provincial noble's names do.
     /// </summary>
-    internal string StyledName => string.IsNullOrWhiteSpace(Title) || DisplayName.StartsWith($"{Title} ", StringComparison.Ordinal)
-        ? DisplayName
-        : $"{Title} {DisplayName}";
+    internal string StyledName => Styled(DisplayName, Title);
+
+    /// <summary><paramref name="name"/> with <paramref name="title"/> before it, unless the name already begins with it.</summary>
+    internal static string Styled(string name, string? title) =>
+        string.IsNullOrWhiteSpace(title) || name.StartsWith($"{title} ", StringComparison.Ordinal) ? name : $"{title} {name}";
 
     internal static DaggerfallOfficeHolder Vacant(
         int officeFactionId,

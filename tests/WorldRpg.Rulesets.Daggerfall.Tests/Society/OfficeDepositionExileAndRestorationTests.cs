@@ -261,6 +261,35 @@ public sealed class OfficeDepositionExileAndRestorationTests
     }
 
     [Fact]
+    public void Denouncing_the_ruler_names_him_once_although_his_name_carries_his_title()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        DaggerfallSiteRecord charing = session.Site.ActiveSite!;
+        long captainId = session.OfficeLedger.ResolveWatchCaptain(charing).HolderActorId!.Value;
+        long gothrydId = DaggerfallPeopleSlots.CastIndividualIdentity("king-gothryd");
+
+        // A severe crackdown implicates the region's ruler, King Gothryd, whose canonical name carries his title.
+        session.WorldConditions.Set(new DaggerfallWorldConditionToken(
+            "test:charing:severe-crackdown",
+            DaggerfallWorldConditionKind.CrimeCrackdown,
+            Region: DaggerfallRegion,
+            Severity: 2,
+            StartedDay: checked((int)session.Calendar.DayNumber),
+            ExpiresDay: checked((int)session.Calendar.DayNumber) + 14));
+
+        Assert.True(ActivateNpc(session, captainId).Applied);
+        DaggerfallDialogueView view = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+        DaggerfallDialogueTopicOption report = Assert.Single(view.Topics, t => t.Id == $"denounce-holder:{gothrydId}");
+        Assert.Equal("Report King Gothryd to the court", report.Label);
+
+        session.Dialogue.Ask(view.Revision, report.Id, null, null);
+        DaggerfallDialogueView asked = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+        Assert.Equal("I am reporting King Gothryd for high treason and misrule.", asked.Question);
+    }
+
+    [Fact]
     public void Law_banishment_and_dialogue_denunciation_of_implicated_holder_depose_exile_and_notify_board()
     {
         using var fixture = SourceBackedGuildBankSessionFixture.Create();

@@ -1948,7 +1948,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             {
                 topics.Add(new(
                     $"denounce-holder:{target.ActorId}",
-                    $"Report {target.Title} {target.DisplayName} to the court",
+                    $"Report {target.StyledName} to the court",
                     Group: DaggerfallDialogueTopicGroups.Quests));
             }
         }
