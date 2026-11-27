@@ -224,4 +224,18 @@ public sealed class TownNoticeBoardInteractionTests
         Assert.True(restoredView.Entries.Single(e => e.Id == courierEntry.Id).Lead!.PickedUp);
         Assert.True(restoredView.Entries.Single(e => e.Id == bountyEntry.Id).Lead!.PickedUp);
     }
+
+    [Fact]
+    public void A_board_names_its_ruler_once_when_the_ruler_name_already_carries_the_title()
+    {
+        static DaggerfallOfficeHolder Holder(string name, string? title) =>
+            new(OfficeFactionId: 1, HolderFactionId: null, ActorId: null, CastId: null, DisplayName: name, Title: title, Gender: null, Race: null,
+                BillboardArchive: null, BillboardRecord: null, Home: null, IsAlive: true);
+
+        // A canonical ruler's and a provincial noble's names carry the title already; a seated governor's does not.
+        Assert.Equal("King Gothryd", Holder("King Gothryd", "King").StyledName);
+        Assert.Equal("Governor Ana Rellis", Holder("Ana Rellis", "Governor").StyledName);
+        Assert.Equal("King Kingsley Ord", Holder("Kingsley Ord", "King").StyledName);
+        Assert.Equal("Ana Rellis", Holder("Ana Rellis", null).StyledName);
+    }
 }

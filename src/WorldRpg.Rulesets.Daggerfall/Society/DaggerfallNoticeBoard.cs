@@ -97,9 +97,7 @@ internal sealed class DaggerfallNoticeBoard(
         int day = currentDay();
         string regionName = definitions.BuildingNames.RegionName(region);
         DaggerfallOfficeHolder? ruler = officeHolders.ResolveRegionalRuler(region);
-        string? authorityName = ruler is { HasLivingHolder: true }
-            ? (string.IsNullOrWhiteSpace(ruler.Title) ? ruler.DisplayName : $"{ruler.Title} {ruler.DisplayName}")
-            : null;
+        string? authorityName = ruler is { HasLivingHolder: true } ? ruler.StyledName : null;
 
         List<DaggerfallNoticeEntry> entries = [];
 

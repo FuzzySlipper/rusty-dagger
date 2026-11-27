@@ -50,6 +50,14 @@ internal sealed record DaggerfallOfficeHolder(
     /// <summary>True only when the office is held by a living person (never a dead or vacant placeholder).</summary>
     internal bool HasLivingHolder => IsAlive && !string.IsNullOrWhiteSpace(DisplayName);
 
+    /// <summary>
+    /// The holder as named in public: the title before the name, unless the name already carries it, as a canonical
+    /// ruler's (King Gothryd) and a provincial noble's names do.
+    /// </summary>
+    internal string StyledName => string.IsNullOrWhiteSpace(Title) || DisplayName.StartsWith($"{Title} ", StringComparison.Ordinal)
+        ? DisplayName
+        : $"{Title} {DisplayName}";
+
     internal static DaggerfallOfficeHolder Vacant(
         int officeFactionId,
         string? defaultTitle,
