@@ -266,6 +266,60 @@ internal sealed class DaggerfallPoliticalBoard
     }
 
     /// <summary>
+    /// The political plays the live board offers <paramref name="seat"/> in the board region of catalog region
+    /// <paramref name="catalogRegion"/>, where its questgiver stands (#11121): none without an opportunity there, or with
+    /// no piece left to place. The opportunity sets the seat against a rival: the enemy whose war front it is, else a
+    /// foe of a feud present there, else the seat that leads it in influence over the seat, where the seat reaches it.
+    /// Carrying the seat's word is always offered; undermining the rival while it has influence there; winning over
+    /// each office the seat may take (<see cref="Card.MayTakeOffice"/>).
+    /// </summary>
+    internal IReadOnlyList<DaggerfallPoliticalPlay> PoliticalPlays(string seat, int catalogRegion)
+    {
+        if (!_board.HasSeat(seat) || _board.Regions.FirstOrDefault(held => held.CatalogRegion == catalogRegion) is not { } region) return [];
+        Seat sponsor = _board.Seat(seat);
+        if (_board.PiecesLeft(sponsor) == 0 || PoliticalRival(sponsor, region) is not { } rival) return [];
+        List<DaggerfallPoliticalPlay> plays = [new(DaggerfallPoliticalPlayKind.CarryWord, seat, region.Id, rival, null)];
+        if (region.InfluenceOf(rival) > 0) plays.Add(new(DaggerfallPoliticalPlayKind.UndermineRival, seat, region.Id, rival, null));
+        foreach (Office office in Enum.GetValues<Office>())
+            if (Card.MayTakeOffice(_board, sponsor, region, office))
+                plays.Add(new(DaggerfallPoliticalPlayKind.TurnOfficial, seat, region.Id, rival, office));
+        return plays;
+    }
+
+    private string? PoliticalRival(Seat seat, Region region)
+    {
+        if (Wars.Against(_board, seat, region) is { } war) return war.Enemy(war.Side(seat.Id)!);
+        if (!_board.Reaches(seat, region)) return null;
+        if (_board.Seats.FirstOrDefault(other => other.Id != seat.Id && Feuds.Between(_board, seat.Id, other.Id) is not null
+            && _board.Present(other, region)) is { } foe) return foe.Id;
+        int own = region.InfluenceOf(seat.Id);
+        return region.Influence.Where(held => held.Key != seat.Id && held.Value > own)
+            .OrderByDescending(held => held.Value).ThenBy(held => held.Key, StringComparer.Ordinal)
+            .Select(held => held.Key).FirstOrDefault();
+    }
+
+    /// <summary>
+    /// A political quest for <paramref name="play"/> succeeded (#11121), heard at the next Sunday. Carrying the seat's
+    /// word gives it <see cref="DaggerfallPoliticsTuning.CarryWordInfluence"/> influence in the region, or as much favour
+    /// where it can place no more; winning over an official gives it the office, its incumbent turned
+    /// (<see cref="OfficeTurned"/>); undermining a rival takes <see cref="DaggerfallPoliticsTuning.UndermineInfluence"/>
+    /// of the rival's influence there and gives the seat as much.
+    /// </summary>
+    internal void ObservePoliticalQuest(DaggerfallPoliticalPlay play, DaggerfallPoliticsTuning tuning)
+    {
+        play.Validate();
+        _board.Queue(play.Kind switch
+        {
+            DaggerfallPoliticalPlayKind.CarryWord => _board.PiecesLeft(_board.Seat(play.Seat)) > 0
+                ? new QuestOutcome(play.Seat, [play.Region], [new CardEffect(CardEffectKind.Influence, tuning.CarryWordInfluence)])
+                : new QuestOutcome(play.Seat, [], [new CardEffect(CardEffectKind.Gain, tuning.CarryWordInfluence, Resource.Favour)]),
+            DaggerfallPoliticalPlayKind.TurnOfficial => new OfficeTurned(play.Seat, play.Region, play.Office!.Value),
+            _ => new QuestOutcome(play.Seat, [play.Region, play.Rival],
+                [new CardEffect(CardEffectKind.RivalInfluence, -tuning.UndermineInfluence), new CardEffect(CardEffectKind.Influence, tuning.UndermineInfluence)]),
+        });
+    }
+
+    /// <summary>
     /// Propagates non-nudge board-driven seat holder changes, severe court crises (regency), and forceful regional
     /// conquests/cessions (deposing the regional ruler) into <see cref="DaggerfallOfficeLedger"/> with
     /// <see cref="DaggerfallOfficeChangeCause.CardMove"/> so <see cref="ObserveOfficeChanged"/> never echoes them back.
@@ -602,7 +656,8 @@ internal sealed class DaggerfallPoliticalBoard
     /// The seat whose office faction is <paramref name="factionId"/> or one above it, through each province's liege: a
     /// quest for an annexed region's court is the new liege's.
     /// </summary>
-    private string? SeatOfFaction(int factionId)
+    /// <summary>The seat <paramref name="factionId"/> belongs to, through each province's liege; null for a faction under no seat.</summary>
+    internal string? SeatOfFaction(int factionId)
     {
         foreach (DaggerfallFactionDefinition faction in _liege.Lineage(factionId))
             if (_seats.TryGetByFactionId(faction.Id, out DaggerfallBoardSeatBinding? binding) && _board.HasSeat(binding!.SeatId))

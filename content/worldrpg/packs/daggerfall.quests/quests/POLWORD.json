@@ -1,0 +1,177 @@
+{
+  "name": "POLWORD",
+  "displayName": "The Seat's Word",
+  "sourceFile": "POLWORD.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>      %pcf, I need a courier I can trust. A sealed letter",
+        "<ce>      must reach _envoy_ at __envoy_ in ___envoy_.",
+        "<ce>      It carries the word of _seat_ to the notables of",
+        "<ce>      _region_, where _rival_ would have them hear no",
+        "<ce>      voice but its own. Put it in _envoy_'s hand within",
+        "<ce>      =traveltime_ days and the _gold_ gold is yours, and",
+        "<ce>      _seat_ will count more friends in _region_.",
+        "<ce>",
+        "<ce>      Know this before you answer: this is a political",
+        "<ce>      errand, and those set against _seat_ will think",
+        "<ce>      the less of you for it: _against_.",
+        "<ce>                     Will you carry it?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>      Then forget I spoke of it. Some letters are best",
+        "<ce>                  left in the drawer."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>      Here it is, sealed with the mark of _seat_. Into",
+        "<ce>      the hand of _envoy_ at __envoy_ in ___envoy_,",
+        "<ce>      and no other. You have =traveltime_ days. Come back",
+        "<ce>                 to me when it is done."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>      The letter, %pcf. _envoy_ is still waiting on it."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>      So _envoy_ has it. Word will go round _region_",
+        "<ce>      that _seat_ keeps its friends. Here is your _gold_",
+        "<ce>                gold, as I promised."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "<ce>      A letter? From _seat_. I will read it, and think on",
+        "<ce>      it. Tell them that _region_ has a long memory, for",
+        "<ce>                friends and for enemies."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " _qgiver_ of ___qgiver_ gave me a sealed letter",
+        " carrying the word of _seat_ in _region_. I am to",
+        " put it in the hand of _envoy_ at __envoy_ in",
+        " ___envoy_ within =traveltime_ days, then return",
+        " for my pay. Those set against _seat_ will think",
+        " the less of me for it: _against_."
+      ]
+    },
+    {
+      "id": 1011,
+      "lines": [
+        "Honoured _envoy_,",
+        "   _seat_ remembers its friends in _region_, and",
+        " those who stand with it now will not be forgotten",
+        " when _rival_ has had its day. Speak for us among",
+        " your neighbours, and you will find us generous.",
+        "                        In the name of _seat_"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 10,
+      "lines": [
+        "Item _letter_ letter used 1011"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 12,
+      "lines": [
+        "Item _gold_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 14,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 16,
+      "lines": [
+        "Person _envoy_ face 1 group Noble remote"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 18,
+      "lines": [
+        "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 20,
+      "lines": [
+        "start timer _traveltime_",
+        "log 1010 step 0",
+        "get item _letter_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 24,
+      "lines": [
+        "_delivered_ task:",
+        "toting _letter_ and _envoy_ clicked",
+        "say 1005",
+        "stop timer _traveltime_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 29,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _qgiver_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 32,
+      "lines": [
+        "_paid_ task:",
+        "when _qgclicked_ and _delivered_",
+        "give pc _gold_",
+        "end quest"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 37,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _delivered_",
+        "say 1003",
+        "clear _qgclicked_ _clearclick_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 42,
+      "lines": [
+        "_traveltime_ task:",
+        "end quest"
+      ]
+    }
+  ]
+}

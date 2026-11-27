@@ -32,16 +32,29 @@ internal sealed partial class DaggerfallQuestInstances
     internal DaggerfallQuestOfferSave PrepareWorkOffer(long provider, DaggerfallNpcSite site, int faction,
         bool member, int level, int reputation, int rank, DaggerfallCharacterGender providerGender, int day)
     {
-        if (PendingOffer is { } existing)
-            return existing.Quest.QuestorId == provider ? existing : throw new NotSupportedException("Answer the current provider offer first.");
-        if (ProviderHasActiveWork(provider))
-            throw new NotSupportedException("This provider already has an active quest.");
+        if (PendingOrFree(provider) is { } existing) return existing;
         var row = SelectOrdinaryWorkOffer(faction, member, level, reputation, rank, providerGender, day)
             ?? throw new NotSupportedException("No supported quest is available from this provider.");
-        var source = _definitions.QuestSources.Resolve(row.Name + ".txt");
+        return PrepareOffer(provider, site, faction, row.Name + ".txt", null);
+    }
+
+    /// <summary>Prepares <paramref name="play"/>'s political quest (#11121) as this provider's offer.</summary>
+    internal DaggerfallQuestOfferSave PreparePoliticalOffer(long provider, DaggerfallNpcSite site, int faction, DaggerfallPoliticalPlay play) =>
+        PendingOrFree(provider) ?? PrepareOffer(provider, site, faction, DaggerfallPoliticalQuests.SourceFile(play.Kind), play);
+
+    private DaggerfallQuestOfferSave? PendingOrFree(long provider)
+    {
+        if (PendingOffer is { } existing)
+            return existing.Quest.QuestorId == provider ? existing : throw new NotSupportedException("Answer the current provider offer first.");
+        return ProviderHasActiveWork(provider) ? throw new NotSupportedException("This provider already has an active quest.") : null;
+    }
+
+    private DaggerfallQuestOfferSave PrepareOffer(long provider, DaggerfallNpcSite site, int faction, string sourceFile, DaggerfallPoliticalPlay? play)
+    {
+        var source = _definitions.QuestSources.Resolve(sourceFile);
         long sequence = checked(++_offerSequence);
         var prepared = PrepareCore(new($"work:{sequence}", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], [])
-            { FactionId = faction, QuestorId = provider });
+            { FactionId = faction, QuestorId = provider, Political = play });
         return PendingOffer = new(sequence, site, prepared);
     }
 

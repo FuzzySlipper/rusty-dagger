@@ -15,8 +15,8 @@ public sealed class DaggerfallQuestSourcesContentTests
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;
 
-        Assert.Equal(268, definitions.QuestSources.Quests.Count);
-        Assert.Equal(266, definitions.QuestSources.Quests.Values.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled));
+        Assert.Equal(271, definitions.QuestSources.Quests.Count);
+        Assert.Equal(269, definitions.QuestSources.Quests.Values.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled));
 
         // A compiled quest resolves with its messages, blocks and line labels.
         DaggerfallQuestSourceDefinition quest = definitions.QuestSources.Resolve("00B00Y00.txt");
@@ -80,7 +80,7 @@ public sealed class DaggerfallQuestSourcesContentTests
         JsonArray misspelt = TestPayload.QuestRecords();
         misspelt.Add(JsonNode.Parse("""{"name":"flawed","sourceFile":"flawed.txt","mesages":[],"blocks":[]}"""));
         DaggerfallContentException unknown = Assert.Throws<DaggerfallContentException>(() => TestPayload.WithQuests(misspelt));
-        Assert.Contains(unknown.Diagnostics, diagnostic => diagnostic.StartsWith("Quest record 'quests/268.json' is malformed", StringComparison.Ordinal));
+        Assert.Contains(unknown.Diagnostics, diagnostic => diagnostic.StartsWith("Quest record 'quests/271.json' is malformed", StringComparison.Ordinal));
 
         // A saved headless task, disease or keyed draw is named by its line label, so a label names one line.
         JsonArray shared = TestPayload.QuestRecords();
@@ -89,7 +89,7 @@ public sealed class DaggerfallQuestSourcesContentTests
              "blocks":[{"kind":"headless","firstLine":1,"lines":["end quest","say 10"]},{"kind":"variable","firstLine":2,"lines":["variable _x_"]}]}
             """));
         DaggerfallContentException labels = Assert.Throws<DaggerfallContentException>(() => TestPayload.WithQuests(shared));
-        Assert.Contains("Quest record 'quests/268.json''s variable block at line 2 labels line 2, which another block labels too.", labels.Diagnostics);
+        Assert.Contains("Quest record 'quests/271.json''s variable block at line 2 labels line 2, which another block labels too.", labels.Diagnostics);
 
         JsonArray twice = TestPayload.QuestRecords();
         twice.Add(twice[0]!.DeepClone());

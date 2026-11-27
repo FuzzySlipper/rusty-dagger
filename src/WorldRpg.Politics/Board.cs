@@ -699,7 +699,6 @@ public sealed class Board
         Undo(() => SetAllegianceTo(region, before));
     }
 
-    /// <summary>Gives <paramref name="region"/>'s <paramref name="office"/> to <paramref name="seat"/>, or to local people with no seat.</summary>
     /// <summary>
     /// Gives <paramref name="region"/>'s <paramref name="office"/> to <paramref name="seat"/>, or to local people with no
     /// seat; <paramref name="covert"/> when a secret card took it.

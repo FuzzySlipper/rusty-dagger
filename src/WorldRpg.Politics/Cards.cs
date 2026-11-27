@@ -494,10 +494,27 @@ public sealed record Card(
 
     private static void Challenge(Board board, Seat seat, Region region, Office office, int strength, bool covert)
     {
+        if (!MayTakeOffice(board, seat, region, office)) return;
         string? holder = region.Offices.GetValueOrDefault(office);
-        if (holder == seat.Id || board.PiecesLeft(seat) == 0 || (holder is not null && board.Footholds(board.Seat(holder)) == 1)) return;
         int defence = 1 + (holder is null ? 0 : region.InfluenceOf(holder)) + (region.Order >= WatchfulOrder ? 1 : 0);
         if (region.InfluenceOf(seat.Id) + strength <= defence) return;
+        TakeOffice(board, seat, region, office, covert);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="seat"/> may take <paramref name="region"/>'s <paramref name="office"/>: it does not hold it,
+    /// has a piece left to put on it, and the office is not its holder's last foothold.
+    /// </summary>
+    public static bool MayTakeOffice(Board board, Seat seat, Region region, Office office)
+    {
+        string? holder = region.Offices.GetValueOrDefault(office);
+        return holder != seat.Id && board.PiecesLeft(seat) > 0 && (holder is null || board.Footholds(board.Seat(holder)) > 1);
+    }
+
+    /// <summary>Gives the office to <paramref name="seat"/>; the seat that lost it thinks 1 worse of it.</summary>
+    internal static void TakeOffice(Board board, Seat seat, Region region, Office office, bool covert)
+    {
+        string? holder = region.Offices.GetValueOrDefault(office);
         board.SetOffice(region, office, seat, covert);
         if (holder is not null) board.AdjustRelation(seat, board.Seat(holder), -1);
     }

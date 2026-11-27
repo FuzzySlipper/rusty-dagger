@@ -58,6 +58,7 @@ internal sealed partial class DaggerfallQuestInstances
     private Action<int>? _admitInvitationGuild;
     private Action<long, int>? _adjustQuestorDisposition;
     private Action<int, bool, long?>? _factionQuestSettled;
+    private Action<DaggerfallPoliticalPlay>? _politicalQuestSucceeded;
     private Func<DaggerfallQuestOfficeAction, bool>? _applyOfficeAction;
     internal void BindSocial(DaggerfallSocialState social, DaggerfallCrimeState crime, Func<int?> region)
     { _social = social; _crime = crime; _socialRegion = region; }
@@ -65,6 +66,8 @@ internal sealed partial class DaggerfallQuestInstances
     internal void BindQuestorDisposition(Action<long, int> adjust) => _adjustQuestorDisposition = adjust;
     /// <summary>Who hears that a quest given for a faction settled: its faction, whether it succeeded and its questor.</summary>
     internal void BindFactionQuestSettled(Action<int, bool, long?> settled) => _factionQuestSettled = settled;
+    /// <summary>Who hears that a political quest (#11121) succeeded, with the play it was offered as.</summary>
+    internal void BindPoliticalQuestSucceeded(Action<DaggerfallPoliticalPlay> succeeded) => _politicalQuestSucceeded = succeeded;
     /// <summary>Applies quest-driven office deposition, regency, or exile restoration through <see cref="DaggerfallOfficeLedger"/>.</summary>
     internal void BindOfficeActions(Func<DaggerfallQuestOfficeAction, bool> applyOfficeAction) => _applyOfficeAction = applyOfficeAction;
 
@@ -175,9 +178,14 @@ internal sealed partial class DaggerfallQuestInstances
         if (instance.FactionSettled) return;
         if (instance.FactionId != 0)
         {
+            // A political quest's success is a political gain: its seat's opposed seats resent it in full, and it moves the
+            // board by its play in place of an ordinary quest's little ground.
+            bool succeeded = instance.Succeeded == true;
             (_social ?? throw new InvalidOperationException("Quest retirement requires the canonical social owner."))
-                .ChangeFactionReputation(instance.FactionId, instance.Succeeded == true ? 5 : -2, DaggerfallFactionReputationChange.Propagate);
-            _factionQuestSettled?.Invoke(instance.FactionId, instance.Succeeded == true, instance.QuestorId);
+                .ChangeFactionReputation(instance.FactionId, succeeded ? 5 : -2, DaggerfallFactionReputationChange.Propagate,
+                    instance.Political is not null ? DaggerfallStandingGain.Political : DaggerfallStandingGain.Ordinary);
+            if (instance.Political is not { } play) _factionQuestSettled?.Invoke(instance.FactionId, succeeded, instance.QuestorId);
+            else if (succeeded) _politicalQuestSucceeded?.Invoke(play);
         }
         if (instance.QuestorId is long questorId && questorId > 0)
             _adjustQuestorDisposition?.Invoke(questorId,

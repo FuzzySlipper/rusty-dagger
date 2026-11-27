@@ -19,8 +19,8 @@ internal sealed record DaggerfallQuestOfferTuning(int SocialProviderChancePercen
 
 /// <summary>
 /// Who offers quest work, and the offers: whether a person can give work now (their service, the guild hall they keep,
-/// a castle's talkers and the social contacts), offering it, answering the offer, the dialogue's "has work" answer, and
-/// the criminal guilds' invitations once they are due.
+/// a castle's talkers and the social contacts), offering it, a seat's political quest in place of it, answering the
+/// offer, the dialogue's "has work" answer, and the criminal guilds' invitations once they are due.
 /// </summary>
 /// <remarks>The interior building, the active profile's kind and whether the player stands in a castle zone change with
 /// the site, so they are read as they are asked. Which guild of a hall gives a person's quests is Society's answer
@@ -40,9 +40,10 @@ internal sealed class DaggerfallQuestWork(
     Func<DaggerfallInteriorBuilding?> interiorBuilding,
     Func<DaggerfallWorldProfileKind> profileKind,
     Func<bool> insideCastle,
-    Func<DaggerfallNpc, bool, DaggerfallIntroductionAccess>? assessIntroductionAccess = null)
+    Func<DaggerfallNpc, bool, DaggerfallIntroductionAccess>? assessIntroductionAccess = null,
+    Func<DaggerfallPoliticalQuests?>? politicalQuests = null)
 {
-    private (DaggerfallNpc Provider, int Faction, bool Member, int Reputation, int Rank)? Provider(long id)
+    private (DaggerfallNpc Provider, int Faction, bool Member, int Reputation, int Rank, bool Own)? Provider(long id)
     {
         DaggerfallNpc npc;
         try { npc = npcs.Require(id); } catch (InvalidOperationException) { return null; }
@@ -75,8 +76,17 @@ internal sealed class DaggerfallQuestWork(
         if (!isGuild && definition.Type != 8 && (castle || service == "quest-candidate" || service == "quest")
             && !quests.WorkContactAvailable(id, site.ActiveSite!.Id, castle,
                 service == "quest" ? 100 : castle ? tuning.CastleProviderChancePercent : tuning.SocialProviderChancePercent)) return null;
-        return (npc, faction, member, social.FactionReputation(faction), rank);
+        return (npc, faction, member, social.FactionReputation(faction), rank, guild is not null || castle);
     }
+
+    /// <summary>
+    /// The political play this provider offers today in place of ordinary work (#11121): only a seat's own questgivers,
+    /// those of its guild halls and courts, offer one.
+    /// </summary>
+    private DaggerfallPoliticalPlay? PoliticalPlay((DaggerfallNpc Provider, int Faction, bool Member, int Reputation, int Rank, bool Own) context) =>
+        context.Own && politicalQuests?.Invoke() is { } political
+            ? political.Offer(context.Provider.DurableId, context.Faction, context.Provider.Site.Region, checked((int)time.Calendar.DayNumber))
+            : null;
 
     private static DaggerfallCharacterGender Gender(DaggerfallNpc npc) =>
         npc.Appearance.Gender == "Female" ? DaggerfallCharacterGender.Female : DaggerfallCharacterGender.Male;
@@ -85,7 +95,7 @@ internal sealed class DaggerfallQuestWork(
     internal bool HasWork(long npcId)
     {
         if (Provider(npcId) is not { } context) return false;
-        return quests.HasOrdinaryWorkOffer(context.Faction, context.Member, progression.Level, context.Reputation, context.Rank,
+        return PoliticalPlay(context) is not null || quests.HasOrdinaryWorkOffer(context.Faction, context.Member, progression.Level, context.Reputation, context.Rank,
             Gender(context.Provider), checked((int)time.Calendar.DayNumber));
     }
 
@@ -101,9 +111,12 @@ internal sealed class DaggerfallQuestWork(
         try
         {
             quests.ConsumeWorkContact(provider);
-            quests.PrepareWorkOffer(provider, context.Provider.Site, context.Faction,
-                context.Member, progression.Level, context.Reputation, context.Rank,
-                Gender(context.Provider), checked((int)time.Calendar.DayNumber));
+            if (quests.PendingOffer is null && PoliticalPlay(context) is { } play)
+                quests.PreparePoliticalOffer(provider, context.Provider.Site, context.Faction, play);
+            else
+                quests.PrepareWorkOffer(provider, context.Provider.Site, context.Faction,
+                    context.Member, progression.Level, context.Reputation, context.Rank,
+                    Gender(context.Provider), checked((int)time.Calendar.DayNumber));
             return quests.ReadOffer()!.Text;
         }
         catch (Exception error) when (error is ArgumentException or NotSupportedException)

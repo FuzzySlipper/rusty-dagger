@@ -1,0 +1,167 @@
+{
+  "name": "POLUNDER",
+  "displayName": "The Rival's Papers",
+  "sourceFile": "POLUNDER.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>      %pcf, _rival_ keeps an agent in _region_, and the",
+        "<ce>      agent keeps papers: names, debts, promises. They",
+        "<ce>      are at __hideout_ in ___hideout_. Bring them to",
+        "<ce>      me within =traveltime_ days and _rival_ will find",
+        "<ce>      its friends in _region_ fewer, and _seat_'s more.",
+        "<ce>      The _gold_ gold is yours for the trouble.",
+        "<ce>",
+        "<ce>      Know this before you answer: this is a political",
+        "<ce>      errand, and those set against _seat_ will think",
+        "<ce>      the less of you for it: _against_.",
+        "<ce>                     Will you do it?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>      Then you were never here, and neither was I."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>      The papers are at __hideout_ in ___hideout_.",
+        "<ce>      Quietly, if you can. You have =traveltime_ days."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>      No papers yet, %pcf? _rival_ will not sit still",
+        "<ce>                   for ever."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>      These will do nicely. By the turn of the month",
+        "<ce>      half of _region_ will know what _rival_ promised",
+        "<ce>      whom. Here is your _gold_ gold."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "<ce>      A bundle of papers, tied with _rival_'s cord."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " _qgiver_ of ___qgiver_, for _seat_, wants the papers",
+        " _rival_'s agent keeps at __hideout_ in ___hideout_.",
+        " I have =traveltime_ days to bring them back. Those",
+        " set against _seat_ will think the less of me for",
+        " it: _against_."
+      ]
+    },
+    {
+      "id": 1011,
+      "lines": [
+        "A ledger of _rival_'s friends in _region_: what",
+        " each was promised, what each was paid, and what",
+        " each would rather no one knew."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 10,
+      "lines": [
+        "Item _papers_ letter used 1011"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 12,
+      "lines": [
+        "Item _gold_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 14,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 16,
+      "lines": [
+        "Place _hideout_ remote house2"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 18,
+      "lines": [
+        "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 20,
+      "lines": [
+        "start timer _traveltime_",
+        "log 1010 step 0",
+        "place item _papers_ at _hideout_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 24,
+      "lines": [
+        "_found_ task:",
+        "clicked item _papers_",
+        "say 1005"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 28,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _qgiver_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 31,
+      "lines": [
+        "_paid_ task:",
+        "toting _papers_ and _qgiver_ clicked",
+        "give pc _gold_",
+        "end quest"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 36,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _found_",
+        "say 1003",
+        "clear _qgclicked_ _clearclick_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 41,
+      "lines": [
+        "_traveltime_ task:",
+        "end quest"
+      ]
+    }
+  ]
+}

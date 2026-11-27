@@ -833,7 +833,8 @@ internal sealed partial class DaggerfallSession
                 item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, _random,
                 faction => State.Social.GuildEligibility(faction) is { IsMember: true } membership
                     ? DaggerfallGuildRankTitles.Title(faction, membership.Rank, State.Character.Identity.Gender == DaggerfallCharacterGender.Female) : null,
-                (place, building) => DialogueDirections.QuestPlace(place, building), OfficeHolders);
+                (place, building) => DialogueDirections.QuestPlace(place, building), OfficeHolders,
+                play => PoliticalQuests?.Names(play) ?? throw new NotSupportedException("A political quest needs the political board."));
             State.Quests.BindTextContext(_questTexts.For);
             State.Quests.BindCalendar(() => _time.Calendar);
             DaggerfallNames questNames = new(definitions, _random);
@@ -887,7 +888,7 @@ internal sealed partial class DaggerfallSession
                     instance.QuestorId is long giver ? State.Npcs.Require(giver) : null,
                     PermanentPlayerClanFactionId: State.RacialOverrides.Current?.State.Vampire?.Clan, CurrentProfile: _sites.ActiveProfile,
                     Interior: _sites.Projection.Inputs.InteriorBuilding),
-                State.Npcs.SetDisplayName, questPlaces, OfficeHolders));
+                State.Npcs.SetDisplayName, questPlaces, OfficeHolders, play => PoliticalQuests?.Official(play)));
             _inventoryUi.UseBank(State.Bank, () => Banking.ActiveRegion, () => State.Bank.DepositableGold(State.Wagon, TransportAccess()));
             _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
@@ -1237,6 +1238,8 @@ internal sealed partial class DaggerfallSession
                 State.Social.BindOfficeStanding(OfficeAllegiance.ReactionShift);
                 StandingRipple = new DaggerfallBoardStandingRipple(PoliticalBoard, State.Social, definitions.BoardSeats, _tuning.Politics);
                 State.Social.StandingGained += StandingRipple.ObserveGain;
+                PoliticalQuests = new DaggerfallPoliticalQuests(PoliticalBoard, StandingRipple, OfficeLedger, _random, _tuning.Politics);
+                State.Quests.BindPoliticalQuestSucceeded(PoliticalQuests.Succeeded);
             }
             OfficeLedger.OfficeChanged += change => PoliticalBoard?.ObserveOfficeChanged(change);
             PartyHire = new DaggerfallPartyHireService(
@@ -1603,7 +1606,8 @@ internal sealed partial class DaggerfallSession
                 (npc, building) => GuildProviders.TryResolve(npc, building, DaggerfallConcreteGuildService.Quests, out var guild, out _, out _) ? guild : null,
                 definitions,
                 State.Progression, _time, _site, tuning.QuestOffers, CurrentInteriorBuilding, () => _sites.ActiveProfile.Kind, InsideCastleZone,
-                assessIntroductionAccess: (npc, castle) => Introductions.AssessAccess(npc, castle));
+                assessIntroductionAccess: (npc, castle) => Introductions.AssessAccess(npc, castle),
+                politicalQuests: () => PoliticalQuests);
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>

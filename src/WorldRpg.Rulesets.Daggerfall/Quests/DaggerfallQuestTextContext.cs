@@ -10,7 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// What a quest's messages name: each resource's name, place, role, item and faction, read from its binding (the place's
 /// site, the person's role, the item it holds or held) or, before it binds, from its declaration; and the oath and god
 /// its people swear by, the region and its rulers, the player's guild title, and the names and jokes its people tell
-/// (QuestMCP and MacroHelper).
+/// (QuestMCP and MacroHelper). A political quest also names what <paramref name="politicalNames"/> gives for its play.
 /// </summary>
 /// <param name="guildTitle">The player's rank title in a guild faction, or null when the player is not a member.</param>
 /// <param name="direction">The way from the player to a site, or to a building of it, or null when there is none to give.</param>
@@ -18,7 +18,8 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
     DaggerfallItemInstances items, Func<DaggerfallCreatedItem, string> describeItem, Func<DaggerfallTextContext> current,
     Func<DaggerfallInteriorBuilding?> building, IRandomService random, Func<int, string?> guildTitle,
     Func<DaggerfallSiteId, DaggerfallSiteBuildingId?, string?> direction,
-    DaggerfallOfficeHolders? officeHolders = null)
+    DaggerfallOfficeHolders? officeHolders = null,
+    Func<DaggerfallPoliticalPlay, IReadOnlyDictionary<string, string>>? politicalNames = null)
 {
     private const int TempleBuildingType = 15;
     private const string RandomScope = "daggerfall.quest.text";
@@ -70,6 +71,10 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
                 Binding: actorRole ?? place,
                 Faction: faction), resource, declared);
         }
+        // A political quest names its seat, region, rival and those who resent it (DaggerfallPoliticalQuests.Names).
+        if (instance.Political is { } play && politicalNames is not null)
+            foreach ((string symbol, string name) in politicalNames(play))
+                resources[symbol] = new(Name: name);
         DaggerfallTextContext text = current();
         DaggerfallFactionDefinition? province = sites.Region is int region ? definitions.Factions.ProvinceOf(region) : null;
         DaggerfallOfficeHolder? regionalRuler = sites.Region is int currentRegion ? _officeHolders.ResolveRegionalRuler(currentRegion) : null;

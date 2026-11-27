@@ -1516,6 +1516,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>How the board's quarrels follow the player's standing; null without a board.</summary>
     internal DaggerfallBoardStandingRipple? StandingRipple { get; }
+    /// <summary>The political quests a seat's questgivers offer from the live board (#11121); null without a board.</summary>
+    internal DaggerfallPoliticalQuests? PoliticalQuests { get; }
 
     /// <summary>The notice-board bounties the player holds, and who pays them.</summary>
     internal DaggerfallNoticeBounties NoticeBounties { get; } = null!;

@@ -24,12 +24,17 @@ internal sealed record DaggerfallQuestPersonSelection(int FactionId, string Race
 internal sealed record DaggerfallQuestPersonContext(DaggerfallSiteRecord Site, DaggerfallNpc? Questor = null,
     int? PermanentPlayerClanFactionId = null, DaggerfallWorldProfileKey? CurrentProfile = null, DaggerfallInteriorBuilding? Interior = null);
 
-/// <summary>Person source policy over the published faction, unique cast, office holder, and race catalogs.</summary>
+/// <summary>
+/// Person source policy over the published faction, unique cast, office holder, and race catalogs. A Person of
+/// <c>office Political</c> is the local office holder a political quest wins over (<paramref name="politicalOfficial"/>).
+/// </summary>
 internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions definitions, IRandomService random,
     DaggerfallNames names, Func<DaggerfallQuestInstanceSave, DaggerfallQuestPersonContext> context,
     Action<long, string>? retainNpcName = null, DaggerfallQuestPlaceAllocator? places = null,
-    DaggerfallOfficeHolders? officeHolders = null)
+    DaggerfallOfficeHolders? officeHolders = null, Func<DaggerfallPoliticalPlay, DaggerfallOfficeHolder?>? politicalOfficial = null)
 {
+    internal const string PoliticalOffice = "Political";
+
     private readonly DaggerfallOfficeHolders _officeHolders = officeHolders ?? new DaggerfallOfficeHolders(definitions);
 
     internal DaggerfallQuestResourceState Allocate(DaggerfallQuestInstanceSave instance, DaggerfallQuestResourceDefinition declaration,
@@ -51,7 +56,14 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         DaggerfallOfficeHolder? officeHolder = null;
         if (officeAddressed)
         {
-            if (options.Office!.Equals("ExiledProvince", StringComparison.OrdinalIgnoreCase))
+            if (options.Office!.Equals(PoliticalOffice, StringComparison.OrdinalIgnoreCase))
+            {
+                if (instance.Political is not { } play || politicalOfficial?.Invoke(play) is not { HasLivingHolder: true } official)
+                    throw new NotSupportedException($"Quest Person '{declaration.CanonicalId}' requires a political play's living office holder.");
+                officeHolder = official;
+                officeFactionId = official.OfficeFactionId;
+            }
+            else if (options.Office!.Equals("ExiledProvince", StringComparison.OrdinalIgnoreCase))
             {
                 if (!_officeHolders.TryResolveExiledRegionalRuler(region, out officeHolder) || officeHolder is null)
                     throw new NotSupportedException($"Quest Person '{declaration.CanonicalId}' requires an exiled provincial ruler in region {region}.");
@@ -95,6 +107,8 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
                 DaggerfallCastHomes.TryResolve(places.Sites, cast, region, out castHome);
         }
 
+        // A political quest's official keeps their office: the town gate for a watch captain, else the office's building.
+        if (options.Office?.Equals(PoliticalOffice, StringComparison.OrdinalIgnoreCase) == true) castHome = officeHolder!.Home;
         long? boundActorId = existing?.DurableId;
         long? officeActorId = null;
         DaggerfallNpc? existingWorldNpc = existing;

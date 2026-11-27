@@ -106,7 +106,8 @@ internal sealed class DaggerfallOfficeAllegiance(
             .Any(membership => social.Liege.Lineage(membership.FactionId).Any(faction => faction.Id == seat.OfficeFactionId)))
             .Select(seat => seat.SeatId)];
 
-    private static DaggerfallOfficeKind Kind(Office office) => office switch
+    /// <summary>The local office a board office is in its region's chief town.</summary>
+    internal static DaggerfallOfficeKind Kind(Office office) => office switch
     {
         Office.Watch => DaggerfallOfficeKind.WatchCaptain,
         Office.Factor => DaggerfallOfficeKind.CourtFactor,

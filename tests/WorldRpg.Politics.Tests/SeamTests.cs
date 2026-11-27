@@ -222,6 +222,28 @@ public sealed class NudgeTests
     }
 
     [Fact]
+    public void A_turned_office_goes_to_the_seat_covertly_and_is_stale_where_the_seat_may_not_take_it()
+    {
+        // East holds the march's watch and has a foothold besides: the office can be turned for West.
+        Board board = TestBoards.Create(TestBoards.TwoCrowns(marchOffices: new Dictionary<Office, string> { [Office.Watch] = "east" }));
+        board.Queue(new OfficeTurned("west", "march", Office.Watch));
+
+        NudgeTrace turned = Assert.Single(BoardTurn.Play(board).Nudges);
+
+        Assert.Equal(NudgeOutcome.Applied, turned.Outcome);
+        Assert.Equal("west", board.Region("march").Offices[Office.Watch]);
+        Assert.Contains(Office.Watch, board.Region("march").Covert);
+        // The seat that lost it thinks the worse of West, as for a challenge.
+        Assert.Equal([new BoardChange("march", "office:watch", "east", "west"), new BoardChange("east", "relation:west", "0", "-1")], turned.Changes);
+
+        // West holds it now: turning it again changes nothing.
+        board.Queue(new OfficeTurned("west", "march", Office.Watch));
+        NudgeTrace again = Assert.Single(BoardTurn.Play(board).Nudges);
+        Assert.Equal(NudgeOutcome.Stale, again.Outcome);
+        Assert.Empty(again.Changes);
+    }
+
+    [Fact]
     public void A_slow_move_is_delivered_early_delayed_or_intercepted_and_a_nudge_for_one_already_arrived_is_stale()
     {
         Board board = TestBoards.Create(TestBoards.TwoCrowns(marchAllegiance: "west"));

@@ -156,6 +156,8 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     public bool FactionSettled { get; init; }
     /// <summary>The explicit canonical quest giver, supplied by the accepting dialogue/service caller.</summary>
     public long? QuestorId { get; init; }
+    /// <summary>The political play a seat's questgiver offered this quest as (#11121), or null for any other quest.</summary>
+    public DaggerfallPoliticalPlay? Political { get; init; }
     /// <summary>The quest that invoked this child, if this was started by a run-quest operation.</summary>
     public string? ParentInstanceId { get; init; }
     /// <summary>Whether the retained terminal result satisfies a run-quest success branch.</summary>
@@ -185,6 +187,9 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
         if (TerminalMessageId is < 0 || (TerminalMessageId is not null && Lifecycle != DaggerfallQuestLifecycle.Ended && PendingEndPasses == 0))
             throw new ArgumentException($"Quest instance '{InstanceId}' has an incompatible terminal message.");
         if (FactionSettled && Lifecycle == DaggerfallQuestLifecycle.Active) throw new ArgumentException("An active quest cannot have settled its terminal faction reputation.");
+        if (Political is not null && (FactionId == 0 || QuestorId is null))
+            throw new ArgumentException($"Political quest '{InstanceId}' needs the faction and questgiver it was offered by.");
+        Political?.Validate();
         HashSet<string> resources = [];
         foreach (DaggerfallQuestResourceState resource in Resources)
         {
@@ -583,6 +588,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         FactionId = saved.FactionId;
         FactionSettled = saved.FactionSettled;
         QuestorId = saved.QuestorId;
+        Political = saved.Political;
         ParentInstanceId = saved.ParentInstanceId;
         Succeeded = saved.Succeeded;
         TombstoneAtSeconds = saved.TombstoneAtSeconds;
@@ -605,6 +611,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     internal int FactionId { get; }
     internal bool FactionSettled { get; set; }
     internal long? QuestorId { get; }
+    internal DaggerfallPoliticalPlay? Political { get; }
     internal string? ParentInstanceId { get; }
     internal bool? Succeeded { get; set; }
     internal long? TombstoneAtSeconds { get; set; }
@@ -648,6 +655,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         FactionId = FactionId,
         FactionSettled = FactionSettled,
         QuestorId = QuestorId,
+        Political = Political,
         Placements = [.. Placements],
         ParentInstanceId = ParentInstanceId,
         Succeeded = Succeeded,

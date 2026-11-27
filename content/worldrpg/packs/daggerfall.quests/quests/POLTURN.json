@@ -1,0 +1,178 @@
+{
+  "name": "POLTURN",
+  "displayName": "The Turned Official",
+  "sourceFile": "POLTURN.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>      %pcf, there is an office in _region_ that _seat_",
+        "<ce>      would rather had our ear than _rival_'s. _official_,",
+        "<ce>      the _office_, keeps it. I have here our offer, under",
+        "<ce>      seal: what _seat_ will do for _official_ in return",
+        "<ce>      for a friend in that post. Put it in _official_'s",
+        "<ce>      hands at __official_ within =traveltime_ days and",
+        "<ce>      bring me the answer. The _gold_ gold is yours.",
+        "<ce>",
+        "<ce>      Know this before you answer: this is a political",
+        "<ce>      errand, and those set against _seat_ will think",
+        "<ce>      the less of you for it: _against_.",
+        "<ce>                     Will you carry it?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>      As you wish. _official_ will keep their post either",
+        "<ce>               way, for a while yet."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>      Good. Find _official_ at __official_ in ___official_,",
+        "<ce>      and let no one else read what you carry. You have",
+        "<ce>      =traveltime_ days. Come back to me with the answer."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>      Has _official_ read our offer yet, %pcf?"
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>      _official_ answers to _seat_ now, and no one in",
+        "<ce>      _region_ need know it. Well done. Here is your",
+        "<ce>                    _gold_ gold."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "<ce>      _official_ breaks the seal and reads a long while.",
+        "<ce>      \"Tell _seat_ that it has a friend in the post of",
+        "<ce>      _office_. Quietly, mind. I would rather _rival_",
+        "<ce>               did not hear of it.\""
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " _qgiver_ of ___qgiver_ gave me the sealed offer of",
+        " _seat_ for _official_, the _office_, to turn",
+        " that office from _rival_ to _seat_. I am to put it",
+        " in _official_'s hands at __official_ in",
+        " ___official_ within =traveltime_ days, then bring",
+        " back the answer. Those set against _seat_ will",
+        " think the less of me for it: _against_."
+      ]
+    },
+    {
+      "id": 1011,
+      "lines": [
+        "_official_,",
+        "   _seat_ is mindful of what you hold in _region_, and",
+        " of what it could hold for you. Answer to us, and",
+        " your post, your purse and your name will be looked",
+        " after better than _rival_ ever thought to.",
+        "                        In the name of _seat_"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 10,
+      "lines": [
+        "Item _offer_ letter used 1011"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 12,
+      "lines": [
+        "Item _gold_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 14,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 16,
+      "lines": [
+        "Person _official_ office Political"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 18,
+      "lines": [
+        "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 20,
+      "lines": [
+        "start timer _traveltime_",
+        "log 1010 step 0",
+        "get item _offer_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 24,
+      "lines": [
+        "_turned_ task:",
+        "toting _offer_ and _official_ clicked",
+        "say 1005",
+        "stop timer _traveltime_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 29,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _qgiver_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 32,
+      "lines": [
+        "_paid_ task:",
+        "when _qgclicked_ and _turned_",
+        "give pc _gold_",
+        "end quest"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 37,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _turned_",
+        "say 1003",
+        "clear _qgclicked_ _clearclick_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 42,
+      "lines": [
+        "_traveltime_ task:",
+        "end quest"
+      ]
+    }
+  ]
+}

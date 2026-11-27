@@ -7,20 +7,34 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// reaction a member of the seat that holds an office gains, and the reaction a member of a seat hostile to it loses,
 /// with the people of that office (its shopkeepers, its guild hall, its temple).
 /// <para>
-/// And how the board's quarrels follow the player's standing (#11121): the share of a gain in standing with a seat's
-/// faction that the seats at war with or hostile to it take away (<see cref="DaggerfallBoardStandingRipple"/>).
+/// How the board's quarrels follow the player's standing (#11121): the share of a gain in standing with a seat's
+/// faction that the seats at war with or hostile to it take away (<see cref="DaggerfallBoardStandingRipple"/>), for
+/// ordinary help and for a political quest.
+/// </para>
+/// <para>
+/// And the political quests (#11121, <see cref="DaggerfallPoliticalPlay"/>): the chance that a seat's questgiver offers
+/// one while the board shows an opportunity, the influence carrying the seat's word wins, and the influence undermining
+/// a rival takes from it and gives the seat.
 /// </para>
 /// </summary>
-internal sealed record DaggerfallPoliticsTuning(int OfficeMemberReaction, int OfficeEnemyReaction, int OpposedStandingPercent)
+internal sealed record DaggerfallPoliticsTuning(int OfficeMemberReaction, int OfficeEnemyReaction, int OpposedStandingPercent,
+    int PoliticalStandingPercent, int PoliticalOfferPercent, int CarryWordInfluence, int UndermineInfluence)
 {
-    internal static DaggerfallPoliticsTuning Default { get; } = new(10, 10, 25);
+    internal static DaggerfallPoliticsTuning Default { get; } = new(10, 10, 25, 100, 25, 2, 1);
 
     internal DaggerfallPoliticsTuning Validate() =>
-        OfficeMemberReaction is >= 0 and <= 50 && OfficeEnemyReaction is >= 0 and <= 50 && OpposedStandingPercent is >= 0 and <= 100
-            ? this : throw new ArgumentException("Politics tuning requires office reactions of 0 to 50 and an opposed standing share of 0 to 100 percent.");
+        OfficeMemberReaction is >= 0 and <= 50 && OfficeEnemyReaction is >= 0 and <= 50
+        && OpposedStandingPercent is >= 0 and <= 100 && PoliticalStandingPercent is >= 0 and <= 100 && PoliticalOfferPercent is >= 0 and <= 100
+        && CarryWordInfluence is >= 1 and <= 5 && UndermineInfluence is >= 1 and <= 5
+            ? this : throw new ArgumentException(
+                "Politics tuning requires office reactions of 0 to 50, standing shares and a political offer chance of 0 to 100 percent, and political quest influence of 1 to 5.");
 
     internal static DaggerfallPoliticsTuning Read(JsonElement section) => new DaggerfallPoliticsTuning(
         section.GetProperty("officeMemberReaction").GetInt32(),
         section.GetProperty("officeEnemyReaction").GetInt32(),
-        section.GetProperty("opposedStandingPercent").GetInt32()).Validate();
+        section.GetProperty("opposedStandingPercent").GetInt32(),
+        section.GetProperty("politicalStandingPercent").GetInt32(),
+        section.GetProperty("politicalOfferPercent").GetInt32(),
+        section.GetProperty("carryWordInfluence").GetInt32(),
+        section.GetProperty("undermineInfluence").GetInt32()).Validate();
 }

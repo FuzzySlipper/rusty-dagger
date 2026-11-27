@@ -11,6 +11,7 @@ namespace WorldRpg.Politics;
 [JsonDerivedType(typeof(QuestOutcome), "questOutcome")]
 [JsonDerivedType(typeof(HolderChanged), "holderChanged")]
 [JsonDerivedType(typeof(OfficeHolderRemoved), "officeHolderRemoved")]
+[JsonDerivedType(typeof(OfficeTurned), "officeTurned")]
 [JsonDerivedType(typeof(MoveDelivered), "moveDelivered")]
 [JsonDerivedType(typeof(MoveDelayed), "moveDelayed")]
 [JsonDerivedType(typeof(MoveIntercepted), "moveIntercepted")]
@@ -33,6 +34,13 @@ public sealed record HolderChanged(string Seat, string Holder) : WorldNudge;
 
 /// <summary>The seat's holder of <paramref name="Office"/> in <paramref name="Region"/> is gone: local people hold it again.</summary>
 public sealed record OfficeHolderRemoved(string Region, Office Office) : WorldNudge;
+
+/// <summary>
+/// The incumbent of <paramref name="Region"/>'s <paramref name="Office"/> was won over for <paramref name="Seat"/>: the seat
+/// takes the office covertly and the holder stays in post, as a secret challenge takes one, without the contest. Stale
+/// where the seat may not take it (<see cref="Card.MayTakeOffice"/>).
+/// </summary>
+public sealed record OfficeTurned(string Seat, string Region, Office Office) : WorldNudge;
 
 /// <summary>The slow move <paramref name="MoveId"/> arrives this Sunday, sooner than it would have.</summary>
 public sealed record MoveDelivered(string MoveId) : WorldNudge;
@@ -84,7 +92,10 @@ public sealed record ScheduledNudge(int Turn, WorldNudge Nudge)
     }
 }
 
-/// <summary>How a nudge was taken: applied, or stale because the move it named had already arrived or been taken off.</summary>
+/// <summary>
+/// How a nudge was taken: applied, or stale because the move it named had already arrived or been taken off, or the office
+/// it turned could no longer be taken.
+/// </summary>
 public enum NudgeOutcome
 {
     Applied,
@@ -108,6 +119,7 @@ public static class Nudges
             ?? EffectsProblem(board, boon.Seat, boon.Targets, boon.Effects),
         HolderChanged change => SeatProblem(board, change.Seat) ?? (string.IsNullOrWhiteSpace(change.Holder) ? "names no holder" : null),
         OfficeHolderRemoved office => RegionProblem(board, office.Region),
+        OfficeTurned turned => SeatProblem(board, turned.Seat) ?? RegionProblem(board, turned.Region),
         MoveDelivered or MoveIntercepted => null,
         MoveDelayed delayed => delayed.Weeks < 1 ? $"delays move '{delayed.MoveId}' by {delayed.Weeks} weeks" : null,
         LairCleared lair => RegionProblem(board, lair.Region),
@@ -135,6 +147,12 @@ public static class Nudges
                 return NudgeOutcome.Applied;
             case OfficeHolderRemoved office:
                 board.SetOffice(board.Region(office.Region), office.Office, null);
+                return NudgeOutcome.Applied;
+            case OfficeTurned turned:
+                Seat taker = board.Seat(turned.Seat);
+                Region held = board.Region(turned.Region);
+                if (!Card.MayTakeOffice(board, taker, held, turned.Office)) return NudgeOutcome.Stale;
+                Card.TakeOffice(board, taker, held, turned.Office, covert: true);
                 return NudgeOutcome.Applied;
             case MoveDelivered delivered:
                 return board.Reschedule(delivered.MoveId, _ => board.Turn) ? NudgeOutcome.Applied : NudgeOutcome.Stale;

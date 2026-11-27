@@ -53,7 +53,7 @@ public sealed class BoardStandingRippleTests
         DaggerfallSocialState social = session.State.Social;
         SetRelation(board, "mages-guild", "thieves-guild", Supply.Hostile - 1);
         int underMages = TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Parent == MagesGuild).Id;
-        Assert.Equal("mages-guild", session.StandingRipple!.SeatOf(underMages));
+        Assert.Equal("mages-guild", session.PoliticalBoard.SeatOfFaction(underMages));
 
         int thieves = social.FactionReputation(ThievesGuild);
         social.ChangeFactionReputation(underMages, 8, DaggerfallFactionReputationChange.Propagate);
@@ -61,7 +61,7 @@ public sealed class BoardStandingRippleTests
 
         // The People of an independent region answer to no seat: nobody's standing moves for them.
         int peopleOfGlenpoint = 522;
-        Assert.Null(session.StandingRipple.SeatOf(peopleOfGlenpoint));
+        Assert.Null(session.PoliticalBoard.SeatOfFaction(peopleOfGlenpoint));
         thieves = social.FactionReputation(ThievesGuild);
         social.ChangeFactionReputation(peopleOfGlenpoint, 8, DaggerfallFactionReputationChange.Propagate);
         Assert.Equal(thieves, social.FactionReputation(ThievesGuild));

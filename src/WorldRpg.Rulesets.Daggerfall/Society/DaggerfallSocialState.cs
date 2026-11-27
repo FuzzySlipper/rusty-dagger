@@ -10,6 +10,16 @@ internal enum DaggerfallFactionReputationChange
     Propagate,
 }
 
+/// <summary>
+/// What earned a rise in standing, for the board's opposed seats (<see cref="DaggerfallBoardStandingRipple"/>): ordinary
+/// help, or a political quest, which the opposed seats resent in full.
+/// </summary>
+internal enum DaggerfallStandingGain
+{
+    Ordinary,
+    Political,
+}
+
 /// <summary>One guild membership under the donor's social-group exclusivity rule.</summary>
 internal sealed record DaggerfallGuildMembership(int GuildGroup, int FactionId, int Rank, int LastRankChangeDay, int NotedByGuild);
 
@@ -80,9 +90,10 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
 
     /// <summary>
     /// Raised once for each change of standing <see cref="ChangeFactionReputation"/> makes that raises it: the faction the
-    /// change was made with and the amount, before it spreads through the faction tree (the board's opposed seats hear it).
+    /// change was made with, the amount, before it spreads through the faction tree, and what earned it (the board's
+    /// opposed seats hear it).
     /// </summary>
-    internal event Action<int, int>? StandingGained;
+    internal event Action<int, int, DaggerfallStandingGain>? StandingGained;
 
     internal void BindActorFactions(Func<long, FactionComponent?> lookup) =>
         _actorFactions = lookup ?? throw new ArgumentNullException(nameof(lookup));
@@ -286,10 +297,11 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     /// Relationship changes happen first, then the hierarchy root, initiator and descendants receive
     /// the donor's full/half propagation values in deterministic catalog order.
     /// </summary>
-    internal int ChangeFactionReputation(int factionId, int amount, DaggerfallFactionReputationChange change = DaggerfallFactionReputationChange.Direct)
+    internal int ChangeFactionReputation(int factionId, int amount, DaggerfallFactionReputationChange change = DaggerfallFactionReputationChange.Direct,
+        DaggerfallStandingGain gain = DaggerfallStandingGain.Ordinary)
     {
         int standing = ApplyReputationChange(factionId, amount, change);
-        if (amount > 0) StandingGained?.Invoke(factionId, amount);
+        if (amount > 0) StandingGained?.Invoke(factionId, amount, gain);
         return standing;
     }
 
