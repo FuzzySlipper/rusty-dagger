@@ -341,6 +341,12 @@ internal sealed class DaggerfallActorInspection(ActorsState actors, PlayerContro
 
         w.WriteStartObject("social");
         DaggerfallNpc? npc = npcs is not null && npcs.TryGet(actor.DurableId, out DaggerfallNpc? regNpc) ? regNpc : null;
+        if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? routineOverlay)
+            && (routineOverlay.IsSleeping || routineOverlay.AwakenedByIntruder))
+        {
+            w.WriteBoolean("sleeping", routineOverlay.IsSleeping);
+            w.WriteBoolean("awakenedByIntruder", routineOverlay.AwakenedByIntruder);
+        }
         string? displayName = actor.Actor.TryGet<ActorPersonComponent>(out ActorPersonComponent? personComp)
             ? personComp.Snapshot.DisplayName
             : npc?.DisplayName;

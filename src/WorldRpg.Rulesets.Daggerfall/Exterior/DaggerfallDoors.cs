@@ -269,11 +269,57 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         door.LockValue = lockValue;
         door.Motion = DaggerfallDoorMotion.Closed;
         door.Progress = 0F;
+        door.ResidentCloseDelaySeconds = 0F;
         Apply(door);
     }
 
     private DurableIdentityReference ReferenceFor(DaggerfallRdbDoorId id) =>
         new(DurableIdentityKind.Resource, StableHash.NonZeroFnv1a64($"daggerfall.door.v1|{_profileId}|{id}"));
+
+    /// <summary>
+    /// Opens a nearby building or interior door for a resident entering or leaving during a visible
+    /// schedule transition (#11139). Residents use their own key so a locked exterior door visibly swings
+    /// open and then closes back behind them without permanently unlocking the building for the player.
+    /// </summary>
+    internal bool TryOpenForResident(WorldPoint position, Content.DaggerfallSiteBuildingId? building = null, float autoCloseSeconds = 2.0f)
+    {
+        if (_disposed || _suspended) return false;
+        const float reach = 3.5F;
+        Door? chosen = null;
+        float bestDistSq = float.MaxValue;
+        bool chosenMatchesBuilding = false;
+        foreach (Door door in Ordered)
+        {
+            if (door.Definition.Kind == DaggerfallDoorKind.Special) continue;
+            if (MathF.Abs(door.Definition.Position.Y - position.Y) > 3.0F) continue;
+            float dx = door.Definition.Position.X - position.X;
+            float dz = door.Definition.Position.Z - position.Z;
+            float distSq = (dx * dx) + (dz * dz);
+            if (distSq > reach * reach) continue;
+            bool matchesBuilding = building is { } target && door.Definition.ExteriorBuilding == target;
+            if (chosen is null
+                || (matchesBuilding && !chosenMatchesBuilding)
+                || (matchesBuilding == chosenMatchesBuilding && distSq < bestDistSq))
+            {
+                chosen = door;
+                bestDistSq = distSq;
+                chosenMatchesBuilding = matchesBuilding;
+            }
+        }
+        if (chosen is null) return false;
+        float holdSeconds = MathF.Max(0.5F, autoCloseSeconds);
+        if (chosen.Motion is DaggerfallDoorMotion.Open or DaggerfallDoorMotion.Opening)
+        {
+            if (chosen.ResidentCloseDelaySeconds > 0F)
+                chosen.ResidentCloseDelaySeconds = MathF.Max(chosen.ResidentCloseDelaySeconds, holdSeconds);
+            return true;
+        }
+        chosen.Motion = DaggerfallDoorMotion.Opening;
+        chosen.ResidentCloseDelaySeconds = holdSeconds;
+        Apply(chosen);
+        SoundRequested?.Invoke(chosen.Definition, DaggerfallDoorOperationKind.Open);
+        return true;
+    }
 
     /// <summary>
     /// Routes a blocked enemy's donor door action through the active canonical door owner. The
@@ -325,6 +371,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
             door.FailedLockpickingSkill = null;
         }
         door.Motion = DaggerfallDoorMotion.Opening;
+        door.ResidentCloseDelaySeconds = 0F;
         Apply(door);
         SoundRequested?.Invoke(door.Definition, DaggerfallDoorOperationKind.Open);
         return DaggerfallDoorOperationResult.Started;
@@ -339,6 +386,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         if (door.Motion == DaggerfallDoorMotion.Closed || door.Motion == DaggerfallDoorMotion.Closing)
             return DaggerfallDoorOperationResult.AlreadyClosed;
         door.Motion = DaggerfallDoorMotion.Closing;
+        door.ResidentCloseDelaySeconds = 0F;
         // The linked action restores the authored lock at the same operation boundary, matching
         // DaggerfallAction.CloseDoor while its visual close tween continues.
         if (source == DaggerfallDoorOperationSource.DungeonAction)
@@ -519,6 +567,19 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
                     if (door.Progress == 1F) door.Motion = DaggerfallDoorMotion.Open;
                     Apply(door);
                     break;
+                case DaggerfallDoorMotion.Open:
+                    if (door.ResidentCloseDelaySeconds > 0F)
+                    {
+                        door.ResidentCloseDelaySeconds -= (float)deltaSeconds;
+                        if (door.ResidentCloseDelaySeconds <= 0F)
+                        {
+                            door.ResidentCloseDelaySeconds = 0F;
+                            door.Motion = DaggerfallDoorMotion.Closing;
+                            Apply(door);
+                            SoundRequested?.Invoke(door.Definition, DaggerfallDoorOperationKind.Close);
+                        }
+                    }
+                    break;
                 case DaggerfallDoorMotion.Closing:
                     door.Progress = MathF.Max(0F, door.Progress - amount);
                     if (door.Progress == 0F) door.Motion = DaggerfallDoorMotion.Closed;
@@ -543,7 +604,9 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
 
     internal DaggerfallDoorSave[] Capture() => _doors.Values
         .OrderBy(door => door.Definition.Id.SourceKey, StringComparer.Ordinal).ThenBy(door => door.Definition.Id.BlockX).ThenBy(door => door.Definition.Id.BlockZ).ThenBy(door => door.Definition.Id.ModelIndex)
-        .Select(door => new DaggerfallDoorSave(door.Definition.Id.SourceKey, door.Definition.Id.BlockX, door.Definition.Id.BlockZ, door.Definition.Id.ModelIndex, door.Motion, door.Progress, door.LockValue, door.BashAttempts, door.FailedLockpickingSkill) { IsLocked = door.IsLocked })
+        .Select(door => door.ResidentCloseDelaySeconds > 0F
+            ? new DaggerfallDoorSave(door.Definition.Id.SourceKey, door.Definition.Id.BlockX, door.Definition.Id.BlockZ, door.Definition.Id.ModelIndex, DaggerfallDoorMotion.Closed, 0F, door.LockValue, door.BashAttempts, door.FailedLockpickingSkill) { IsLocked = door.IsLocked }
+            : new DaggerfallDoorSave(door.Definition.Id.SourceKey, door.Definition.Id.BlockX, door.Definition.Id.BlockZ, door.Definition.Id.ModelIndex, door.Motion, door.Progress, door.LockValue, door.BashAttempts, door.FailedLockpickingSkill) { IsLocked = door.IsLocked })
         .ToArray();
 
     public void Dispose()
@@ -654,5 +717,7 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
         internal bool IsLocked { get; set; } = lockValue > 0;
         internal ulong BashAttempts { get; set; } = bashAttempts;
         internal int? FailedLockpickingSkill { get; set; } = failedLockpickingSkill;
+        /// <summary>Transient timer to close a door after a resident steps through during a schedule transition.</summary>
+        internal float ResidentCloseDelaySeconds { get; set; }
     }
 }

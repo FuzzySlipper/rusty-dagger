@@ -11,6 +11,11 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>One deterministic exterior or off-hours closed-building NPC scheduled to visit an interior building.</summary>
+internal readonly record struct DaggerfallBedSpot(
+    WorldPoint Position,
+    float HeadingRadians,
+    bool IsRealBedMesh);
+
 internal sealed record DaggerfallScheduledVisitor(
     long DurableId,
     DaggerfallWorldProfileKey HomeProfile,
@@ -732,6 +737,83 @@ internal static class DaggerfallScheduleShelterResolver
                     TryAdd(candidate);
                 }
             }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Resolves deterministic sleep/bed spots inside a residential interior (#11139), preferring real
+    /// Daggerfall bed 3D models (ARCH3D 41000, 41001, 41002) and falling back to interior stand points
+    /// farthest from entry doors so every resident has a stable bedroom sleep spot.
+    /// </summary>
+    internal static IReadOnlyList<DaggerfallBedSpot> ResolveInteriorBedSpots(
+        DaggerfallSiteProfile destination,
+        int maxCount,
+        IEnumerable<WorldPoint>? extraOccupied = null)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        if (maxCount <= 0)
+            return [];
+
+        List<DaggerfallBedSpot> result = [];
+        List<WorldPoint> used = [];
+
+        // 1. Prefer real Daggerfall bed models (41000 standard bed, 41001 low bed, 41002 four-poster bed).
+        DaggerfallSiteMesh[] beds =
+        [
+            .. destination.Geometry.Meshes
+                .Where(mesh => mesh.ModelId is "41000" or "41001" or "41002")
+                .OrderBy(mesh => mesh.Pose.Translation.X)
+                .ThenBy(mesh => mesh.Pose.Translation.Z)
+                .ThenBy(mesh => mesh.Pose.Translation.Y),
+        ];
+
+        foreach (DaggerfallSiteMesh bed in beds)
+        {
+            if (result.Count >= maxCount)
+                break;
+            WorldPoint pos = WorldPoint.From(bed.Pose.Translation);
+            if (!float.IsFinite(pos.X) || !float.IsFinite(pos.Y) || !float.IsFinite(pos.Z))
+                continue;
+            if (used.Any(u => u.HorizontalDistanceTo(pos) < 0.75f && MathF.Abs(u.Y - pos.Y) < 1.5f))
+                continue;
+            Vector3 forward = Vector3.Transform(Vector3.UnitZ, bed.Pose.Rotation);
+            float yaw = forward.LengthSquared() > 1e-4f ? ActorHeading.Yaw(new Vector3(forward.X, 0f, forward.Z)) : 0f;
+            result.Add(new DaggerfallBedSpot(pos, yaw, IsRealBedMesh: true));
+            used.Add(pos);
+        }
+
+        if (result.Count >= maxCount)
+            return result;
+
+        // 2. Fallback: interior stand points sorted farthest from entry doors (back/upper rooms).
+        List<WorldPoint> doors = [];
+        if (destination.InteriorBuilding?.EntryFrame is { } entryFrame)
+        {
+            foreach (DaggerfallBuildingEntryDoor door in entryFrame.Doors)
+                doors.Add(door.Position);
+        }
+        foreach (DaggerfallSitePortal portal in destination.Portals)
+            doors.Add(portal.Position);
+
+        float DoorDistance(WorldPoint p) =>
+            doors.Count == 0 ? 0f : doors.Min(d => p.HorizontalDistanceTo(d));
+
+        IEnumerable<WorldPoint> occupied = extraOccupied is null ? used : used.Concat(extraOccupied);
+        IReadOnlyList<(WorldPoint Position, float HeadingRadians)> fallbackPoints =
+            ResolveInteriorStandPoints(destination, maxCount - result.Count + 4, occupied);
+        foreach ((WorldPoint pos, float heading) in fallbackPoints
+            .OrderByDescending(pt => DoorDistance(pt.Position))
+            .ThenBy(pt => pt.Position.X)
+            .ThenBy(pt => pt.Position.Z))
+        {
+            if (result.Count >= maxCount)
+                break;
+            if (used.Any(u => u.HorizontalDistanceTo(pos) < MinStandSeparationMeters && MathF.Abs(u.Y - pos.Y) < 2.0f))
+                continue;
+            result.Add(new DaggerfallBedSpot(pos, heading, IsRealBedMesh: false));
+            used.Add(pos);
         }
 
         return result;

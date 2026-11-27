@@ -1151,6 +1151,17 @@ internal sealed partial class DaggerfallSession
                 hasDepositWaiver: Introductions.HasDepositWaiverVouch,
                 hireFee: conditionPrices.HireFee);
             Introductions.BindHireableContactLookup(PartyHire.IsHireable);
+            HomeNightRoutine = new DaggerfallHomeNightRoutine(
+                actors,
+                State.Npcs,
+                State.PlayerControl,
+                Crimes,
+                interior => Holdings.OwnsInterior(interior),
+                () => State.Effects.Active.Any(e =>
+                    e.Context.Target.Value == checked((ulong)DaggerfallActorIdentity.PlayerEntityId)
+                    && e.Definition.Perception.Concealment != DaggerfallConcealment.None),
+                () => State.Effects.Active.Any(e => e.Definition.Key == DaggerfallIllusionEffects.LightKey),
+                message => Presentation.SetOutcome(message));
             Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
                 () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
                 () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),
@@ -1164,7 +1175,10 @@ internal sealed partial class DaggerfallSession
                 (siteId, placement, totalCount) =>
                     !placement.IsGuard
                     && DaggerfallNpcSchedulePolicy.ResolveExteriorScheduleId(_worldSocialSeed, siteId, placement.Id, placement.IsGuard, totalCount)
-                        == DaggerfallNpcSchedulePolicy.UnderworldNightScheduleId);
+                        == DaggerfallNpcSchedulePolicy.UnderworldNightScheduleId,
+                resolveShelterBuilding: ResolveScheduledShelterBuildingForWalker,
+                resolveHomeBuilding: ResolveHomeResidenceForWalker,
+                openResidentDoor: (pos, building) => _sites?.Projection?.Doors.TryOpenForResident(pos, building) == true);
             State.Quests.BindEscortOverlay((actorId, media, order) =>
             {
                 if (media is not null)
@@ -1736,7 +1750,9 @@ internal sealed partial class DaggerfallSession
                 checked((int)_time.Calendar.DayNumber)),
             isVouchUsable: vouch => Introductions.IsVouchUsable(vouch),
             noticeBounties: NoticeBounties,
-            officeAllegiance: OfficeAllegiance);
+            officeAllegiance: OfficeAllegiance,
+            wakeSleepingResident: actorId => HomeNightRoutine.WakeForInteraction(
+                actorId, _sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky));
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

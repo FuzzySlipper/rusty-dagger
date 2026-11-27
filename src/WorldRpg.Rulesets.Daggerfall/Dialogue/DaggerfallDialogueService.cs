@@ -113,6 +113,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<DaggerfallNpc, DaggerfallSiteRecord?, IReadOnlyList<DaggerfallHolderDenounceTarget>>? _denounceTargets;
     private readonly Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? _denounceOfficeHolder;
     private readonly Func<ActorVouchRecord, bool>? _isVouchUsable;
+    private readonly Func<long, bool>? _wakeSleepingResident;
     private TalkSession? _current;
     private long _nextRevision;
 
@@ -169,10 +170,12 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<DaggerfallNpc, long, DaggerfallSiteRecord?, DaggerfallHolderDenounceResult>? denounceOfficeHolder = null,
         Func<ActorVouchRecord, bool>? isVouchUsable = null,
         DaggerfallNoticeBounties? noticeBounties = null,
-        DaggerfallOfficeAllegiance? officeAllegiance = null)
+        DaggerfallOfficeAllegiance? officeAllegiance = null,
+        Func<long, bool>? wakeSleepingResident = null)
     {
         _noticeBounties = noticeBounties;
         _officeAllegiance = officeAllegiance;
+        _wakeSleepingResident = wakeSleepingResident;
         _suppressTalk = suppressTalk ?? (() => false);
         _issueReferral = issueReferral;
         _partyHireTopics = partyHireTopics;
@@ -292,6 +295,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         }
         if (interactionKind == ActorInteractionPolicyKind.None)
             return new(false, "That person has nothing to say.");
+
+        if (overlay?.IsSleeping == true)
+            _ = _wakeSleepingResident?.Invoke(npc!.DurableId);
 
         bool alreadyMet = overlay?.Met == true
             || (_actorLedger?.TryGet(npc!.DurableId, out ActorLedgerEntry? metEntry) == true && metEntry?.Social?.Met == true);
@@ -451,6 +457,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (_actors.TryGet(npc.DurableId, out ActorState? liveActor)
             && liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? openOverlay))
         {
+            if (openOverlay.AwakenedByIntruder)
+                greeting = "What are you doing in my home at this hour?! Leave at once, or I'll call the watch!";
             ActorVouchRecord? usableVouch = FirstUsableVouch(openOverlay);
             if (usableVouch is not null)
                 greeting += "\n" + FormatReferralLine(npc, usableVouch.DisplaySummary());

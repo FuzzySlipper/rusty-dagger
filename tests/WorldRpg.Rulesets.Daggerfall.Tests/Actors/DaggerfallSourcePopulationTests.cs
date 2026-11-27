@@ -165,10 +165,13 @@ public sealed class DaggerfallSourcePopulationTests
 
         stage.Day = false;
         stage.Population.Reconcile();
+        Assert.All(stage.Townsfolk, npc => Assert.True(stage.Population.IsRetiring(npc.DurableId)));
+
+        stage.Population.ReconcileImmediate();
         Assert.All(stage.Townsfolk, npc => Assert.Equal(DaggerfallNpcPresence.Hidden, npc.Presence));
 
         stage.Day = true;
-        stage.Population.Reconcile();
+        stage.Population.ReconcileImmediate();
         Assert.Equal(byDay, stage.Townsfolk.ToDictionary(npc => npc.StableKey, npc => (npc.DurableId, npc.Appearance, stage.Population.Townsperson(npc.DurableId))));
         Assert.All(stage.Townsfolk, npc => Assert.Equal(DaggerfallNpcPresence.Active, npc.Presence));
     }

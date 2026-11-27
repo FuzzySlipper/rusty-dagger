@@ -56,10 +56,15 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private float? _dungeonLevel;
     private float _flash;
     private const float LowSunClimb = 3f;
+    private const float LightsOutAmbientMultiplier = 0.22f;
     private readonly bool _carriesSky;
+    private bool _interiorLightsOut;
     private bool _disposed;
     private bool _suspended;
     private bool _skyKept;
+
+    /// <summary>Whether this interior's residential night lights-out mode is currently active.</summary>
+    internal bool IsInteriorLightsOut => _interiorLightsOut;
 
     /// <param name="carriesSky">Whether this site lights the world with its sun and ambient. A resident location beside the
     /// active one brings only its own lamps: there is one sky, and a second sun would light the same ground twice.</param>
@@ -200,7 +205,12 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             : _carriedShadows.Remove(id, out LightShadowIntent held) ? held : request.Descriptor.ShadowIntent;
         LightRequest placed = request with
         {
-            Descriptor = request.Descriptor with { Position = position, Intensity = Flame(id), ShadowIntent = shadow },
+            Descriptor = request.Descriptor with
+            {
+                Position = position,
+                Intensity = _interiorLightsOut ? 0f : Flame(id),
+                ShadowIntent = _interiorLightsOut ? LightShadowIntent.Disabled : shadow,
+            },
         };
         _graphics.UpdateLight(new(light, placed));
         _points[index] = (light, placed);
@@ -314,7 +324,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                 _flames[prior.LogicalId] = (baseIntensity, flame.Phase);
             if (_cityIntensities.ContainsKey(prior.LogicalId))
                 _cityIntensities[prior.LogicalId] = baseIntensity;
-            float activeIntensity = _cityIntensities.ContainsKey(prior.LogicalId) && !CityLightsOn(sky) ? 0f : baseIntensity;
+            float activeIntensity = (_interiorLightsOut || (_cityIntensities.ContainsKey(prior.LogicalId) && !CityLightsOn(sky))) ? 0f : baseIntensity;
             LightRequest next = prior with
             {
                 Descriptor = prior.Descriptor with
@@ -323,6 +333,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                     Intensity = activeIntensity,
                     Decay = LampDecay,
                     ShadowSoft = LampShadowSoft,
+                    ShadowIntent = _interiorLightsOut ? LightShadowIntent.Disabled : prior.Descriptor.ShadowIntent,
                 },
             };
             _graphics.UpdateLight(new LightUpdateRequest(light, next));
@@ -502,7 +513,63 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     /// <summary>Lights a site's refreshed lamps while they burn.</summary>
     internal void UpdateLampGlow(DaggerfallSiteAppearance appearance, DaggerfallSkyTime sky, float? levelOverride = null) =>
-        appearance.UpdateLampGlow(LampsLit(_profileKind, sky) ? (levelOverride ?? _lookOverride?.LampGlowLevel ?? _tuning.LampLevel) : 0f);
+        appearance.UpdateLampGlow(!_interiorLightsOut && LampsLit(_profileKind, sky) ? (levelOverride ?? _lookOverride?.LampGlowLevel ?? _tuning.LampLevel) : 0f);
+
+    /// <summary>
+    /// Switches residential night lights-out mode on or off (#11139). While active, authored interior
+    /// point lamps and lamp glow drop to zero and ambient/hemisphere fill dims to night levels; restoring
+    /// re-lights every lamp to its authored level.
+    /// </summary>
+    internal void SetInteriorLightsOut(bool lightsOut, DaggerfallSiteAppearance? appearance = null, DaggerfallSkyTime? sky = null)
+    {
+        if (_disposed || _profileKind != DaggerfallWorldProfileKind.Interior) return;
+        if (_interiorLightsOut == lightsOut) return;
+        _interiorLightsOut = lightsOut;
+        _shadowSector = null;
+
+        if (!_suspended)
+        {
+            for (int index = 0; index < _points.Count; index++)
+            {
+                (Light light, LightRequest prior) = _points[index];
+                if (_cityIntensities.ContainsKey(prior.LogicalId)) continue;
+                float intensity = lightsOut
+                    ? 0f
+                    : _flames.TryGetValue(prior.LogicalId, out (float Level, float Phase) flame)
+                        ? flame.Level
+                        : _authoredLights.TryGetValue(prior.LogicalId, out DaggerfallSiteLight? authored)
+                            ? LampIntensity(authored)
+                            : prior.Descriptor.Intensity;
+                LightShadowIntent shadow = lightsOut ? LightShadowIntent.Disabled : prior.Descriptor.ShadowIntent;
+                LightRequest next = prior with { Descriptor = prior.Descriptor with { Intensity = intensity, ShadowIntent = shadow } };
+                if (next == prior) continue;
+                _graphics.UpdateLight(new LightUpdateRequest(light, next));
+                _points[index] = (light, next);
+            }
+            if (_ambient is { } ambient)
+                _graphics.UpdateLight(new LightUpdateRequest(ambient, AmbientRequest(_ambientLevel)));
+            if (_hemisphere is { } hemisphere && _lookOverride is { HemisphereIntensity: > 0f } look)
+                _graphics.UpdateLight(new LightUpdateRequest(hemisphere, HemisphereRequest(look)));
+        }
+        else
+        {
+            for (int index = 0; index < _suspendedPoints.Count; index++)
+            {
+                LightRequest prior = _suspendedPoints[index];
+                if (_cityIntensities.ContainsKey(prior.LogicalId)) continue;
+                float intensity = lightsOut
+                    ? 0f
+                    : _flames.TryGetValue(prior.LogicalId, out (float Level, float Phase) flame)
+                        ? flame.Level
+                        : prior.Descriptor.Intensity;
+                LightShadowIntent shadow = lightsOut ? LightShadowIntent.Disabled : prior.Descriptor.ShadowIntent;
+                _suspendedPoints[index] = prior with { Descriptor = prior.Descriptor with { Intensity = intensity, ShadowIntent = shadow } };
+            }
+        }
+
+        if (appearance is not null && sky is { } currentSky)
+            UpdateLampGlow(appearance, currentSky);
+    }
 
     private LightRequest CityRequest(LightRequest request, DaggerfallSkyTime sky) =>
         _cityIntensities.TryGetValue(request.LogicalId, out float intensity)
@@ -671,7 +738,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     private LightRequest HemisphereRequest(DaggerfallInteriorLightOverride look) => new(
         _hemisphereId, false, 0,
-        new LightDescriptor(LightKind.Hemisphere, look.HemisphereSky, look.HemisphereIntensity, true,
+        new LightDescriptor(LightKind.Hemisphere, look.HemisphereSky,
+            _interiorLightsOut ? look.HemisphereIntensity * LightsOutAmbientMultiplier : look.HemisphereIntensity, true,
             Vector3.Zero, Vector3.Zero, false, 0F, 0F, 0F, 0F, LightShadowIntent.Disabled) with { GroundColor = look.HemisphereGround });
 
     /// <summary>An authored lamp's linear colour: shipped source value, or remapped warm/hearth/arcane firelight under an active look override.</summary>
@@ -699,12 +767,17 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     };
 
     /// <summary>Effective ambient intensity: shipped level × scale, or chromatic floor scaled gently by authored dungeon ambient zones.</summary>
-    private float AmbientEffectiveIntensity(float level) =>
-        _lookOverride is { } look && _profileKind != DaggerfallWorldProfileKind.Exterior
+    private float AmbientEffectiveIntensity(float level)
+    {
+        float baseIntensity = _lookOverride is { } look && _profileKind != DaggerfallWorldProfileKind.Exterior
             ? (_profileKind == DaggerfallWorldProfileKind.Dungeon && _dungeonLevel is { } zone && _tuning.Dungeon > 0f
                 ? look.AmbientIntensity * Math.Clamp(zone / _tuning.Dungeon, 0.75f, 1.50f)
                 : look.AmbientIntensity)
             : level * Scale;
+        return _interiorLightsOut && _profileKind == DaggerfallWorldProfileKind.Interior
+            ? baseIntensity * LightsOutAmbientMultiplier
+            : baseIntensity;
+    }
 
     /// <summary>What this kind of place multiplies its ambient by.</summary>
     private float Scale => _profileKind switch

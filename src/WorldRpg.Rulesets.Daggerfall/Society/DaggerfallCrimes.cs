@@ -85,6 +85,36 @@ internal sealed class DaggerfallCrimes(
     }
 
     /// <summary>
+    /// A sleeping resident inside a non-player-owned house woke up and caught the player inside at night (#11139):
+    /// records a completed trespassing incident witnessed by the awakened household residents so the canonical
+    /// crime and law owners respond.
+    /// </summary>
+    internal void ReportNightIntrusion(
+        long residentId,
+        int region,
+        IReadOnlyList<long> awakenedWitnesses,
+        DaggerfallCrimeVictimContext? victim = null)
+    {
+        ArgumentNullException.ThrowIfNull(awakenedWitnesses);
+        long[] ids = [.. awakenedWitnesses.Where(id => id != DaggerfallActorIdentity.PlayerEntityId).Distinct().Order()];
+        DaggerfallCrimeWitnessEvidence evidence = ids.Length > 0
+            ? new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, ids)
+            : new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [residentId]);
+        string operation = $"night-intrusion:{crime.OperationCount + 1}";
+        long minute = calendar().MinuteNumber;
+        crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
+            residentId, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, evidence));
+        DaggerfallWitnessDiscretionResult discretion = EvaluateWitnesses(operation, DaggerfallCrimeKind.Trespassing, victim, evidence);
+        DaggerfallCrimeWitnessEvidence reportingEvidence =
+            discretion.ReportingEvidence.Query == DaggerfallCrimeWitnessQuery.CompletedWithWitnesses
+                ? discretion.ReportingEvidence
+                : evidence;
+        Report(new(operation, DaggerfallCrimeKind.Trespassing,
+            DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, residentId, region, minute,
+            DaggerfallCrimeTargetKind.Civilian, reportingEvidence, DaggerfallCrimeGuildCredit.None, Reported: true));
+    }
+
+    /// <summary>
     /// The player has just entered a building by force or while its entry rule held it shut: the accepted entry is an
     /// attempt and a completed break-in (forced) or trespass, reported when a bash was noticed (one time in ten) or
     /// when any witnessing observer chooses to report it under witness discretion.
@@ -237,7 +267,9 @@ internal sealed class DaggerfallCrimes(
     internal DaggerfallCrimeWitnessEvidence QueryWitnesses(Func<ActorState, bool>? eligibleObserver = null, double? maximumDistance = null, double? minimumFacingCosine = null)
     {
         if (player.Position is not WorldPoint position) return DaggerfallCrimeWitnessEvidence.NotQueried;
-        var observers = actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && eligibleObserver?.Invoke(actor) != false &&
+        var observers = actors.All.Where(actor => !actor.IsDefeated && actor.DurableId != DaggerfallActorIdentity.PlayerEntityId
+            && !(actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? actorOverlay) && actorOverlay.IsSleeping)
+            && eligibleObserver?.Invoke(actor) != false &&
             (npcs.All.Any(npc => npc.DurableId == actor.DurableId && npcs.IsGameplayActive(npc.DurableId)
                 && npc.Site.Region == site.Region && npc.Site.Location == site.ActiveSite?.Name)
              || IsCityWatch(actor.DurableId)))

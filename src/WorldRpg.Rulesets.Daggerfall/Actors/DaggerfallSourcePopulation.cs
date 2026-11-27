@@ -5,6 +5,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -34,12 +35,18 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     Action<ActorState, WanderPolicy, ulong, float> wander, Action<string> report,
     DaggerfallActorLedger? actorLedger = null, Func<long, bool>? isWithParty = null,
     Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, bool>? isPlacementScheduledOutdoors = null,
-    Func<DaggerfallSiteId, DaggerfallPopulationPlacement, int, bool>? isUnderworldNightSlot = null)
+    Func<DaggerfallSiteId, DaggerfallPopulationPlacement, int, bool>? isUnderworldNightSlot = null,
+    Func<DaggerfallSiteId, long, DaggerfallSiteBuildingId?>? resolveShelterBuilding = null,
+    Func<DaggerfallSiteId, string?, string, DaggerfallSiteBuildingId?>? resolveHomeBuilding = null,
+    Func<WorldPoint, DaggerfallSiteBuildingId?, bool>? openResidentDoor = null)
 {
     private readonly DaggerfallActorLedger _actorLedger = actorLedger ?? new DaggerfallActorLedger();
     private readonly Func<long, bool> _isWithParty = isWithParty ?? (_ => false);
     private readonly Func<DaggerfallSiteId, DaggerfallPopulationPlacement, long, int, bool>? _isPlacementScheduledOutdoors = isPlacementScheduledOutdoors;
     private readonly Func<DaggerfallSiteId, DaggerfallPopulationPlacement, int, bool>? _isUnderworldNightSlot = isUnderworldNightSlot;
+    private readonly Func<DaggerfallSiteId, long, DaggerfallSiteBuildingId?>? _resolveShelterBuilding = resolveShelterBuilding;
+    private readonly Func<DaggerfallSiteId, string?, string, DaggerfallSiteBuildingId?>? _resolveHomeBuilding = resolveHomeBuilding;
+    private readonly Func<WorldPoint, DaggerfallSiteBuildingId?, bool>? _openResidentDoor = openResidentDoor;
     private const byte FemalePopulationFlag = 0x20;
     // PopulationManager's source pool scales by the number of exterior blocks, then clamps
     // the admitted pool to the donor's 24..96 people window.  The source list remains the
@@ -54,33 +61,60 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
     internal const float MaximumOutsideRangeMeters = 2500F * (float)DaggerfallPerceptionQueryDefaults.ClassicGlobalScale;
     internal const float VisiblePopulationRangeMeters = 120F;
     internal const float VisibleFrustumGraceRangeMeters = 25F;
+    internal const float VisibleTransitionRangeMeters = 45F;
     internal const float VisibleFrustumCosThreshold = 0.25F;
-    internal const float RetireDoorSearchRangeMeters = 45F;
+    internal const float RetireDoorSearchRangeMeters = 60F;
     internal const float RetireDoorArrivalMeters = 2.5F;
+    internal const float DoorCrossingPauseSeconds = 0.6F;
+    internal const float EmergeStepOutMeters = 2.4F;
+    internal const float EmergeArrivalMeters = 1.2F;
+    internal const float EmergeTimeoutSeconds = 6F;
     internal const float RetireFallbackAwayMeters = 30F;
-    internal const float RetireTimeoutSeconds = 12F;
+    internal const float RetireTimeoutSeconds = 18F;
 
-    private sealed class RetiringWalkerState(WorldPoint goalLocal)
+    private sealed class RetiringWalkerState(WorldPoint goalLocal, DaggerfallSiteBuildingId? targetBuilding, bool hasDoorTarget)
     {
         internal WorldPoint GoalLocal { get; set; } = goalLocal;
+        internal DaggerfallSiteBuildingId? TargetBuilding { get; } = targetBuilding;
+        internal bool HasDoorTarget { get; } = hasDoorTarget;
+        internal bool DoorOpened { get; set; }
+        internal float DoorCrossingSeconds { get; set; }
+        internal float ElapsedSeconds { get; set; }
+    }
+
+    private sealed class EmergingWalkerState(WorldPoint stepOutLocal, DaggerfallSiteBuildingId? sourceBuilding)
+    {
+        internal WorldPoint StepOutLocal { get; set; } = stepOutLocal;
+        internal DaggerfallSiteBuildingId? SourceBuilding { get; } = sourceBuilding;
         internal float ElapsedSeconds { get; set; }
     }
 
     private readonly Dictionary<long, RetiringWalkerState> _retiringWalkers = [];
+    private readonly Dictionary<long, EmergingWalkerState> _emergingWalkers = [];
+    private readonly Dictionary<long, DaggerfallSiteBuildingId> _lastShelterBuildingByActor = [];
 
-    /// <summary>Whether an active outdoor walker is currently walking off-frustum / toward a doorway to retire.</summary>
+    /// <summary>Whether an active outdoor walker is currently walking toward a doorway to retire indoors.</summary>
     internal bool IsRetiring(long actorId) => _retiringWalkers.ContainsKey(actorId);
 
-    /// <summary>Shifts transient staged retirement goals when the exterior local origin rebases.</summary>
+    /// <summary>Whether an active outdoor walker is currently stepping out of a building doorway onto the street.</summary>
+    internal bool IsEmerging(long actorId) => _emergingWalkers.ContainsKey(actorId);
+
+    /// <summary>Shifts transient staged retirement and emergence goals when the exterior local origin rebases.</summary>
     internal void RebaseTransient(Vector3 delta)
     {
-        if (_retiringWalkers.Count == 0 || delta == Vector3.Zero)
+        if (delta == Vector3.Zero)
             return;
         foreach ((long actorId, RetiringWalkerState state) in _retiringWalkers)
         {
             state.GoalLocal = WorldPoint.From(state.GoalLocal.ToVector() + delta);
             if (actors.TryGet(actorId, out ActorState? actor) && actor.Actor.Has<WanderMemoryComponent>())
                 actor.Wander.Stage([state.GoalLocal]);
+        }
+        foreach ((long actorId, EmergingWalkerState state) in _emergingWalkers)
+        {
+            state.StepOutLocal = WorldPoint.From(state.StepOutLocal.ToVector() + delta);
+            if (actors.TryGet(actorId, out ActorState? actor) && actor.Actor.Has<WanderMemoryComponent>())
+                actor.Wander.Stage([state.StepOutLocal]);
         }
     }
 
@@ -110,14 +144,14 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         DaggerfallSiteProfile active = profile();
         if (active.ProfileKind != DaggerfallWorldProfileKind.Exterior || active.Site is not { } siteId)
         {
-            ClearRetiringWalkers();
+            ClearTransientTransitions();
             return;
         }
         // An unloaded location keeps its population, hidden or not, in the site delta that holds
         // its actors; presence is reconciled again when the location is admitted.
         if (!locationLoaded())
         {
-            ClearRetiringWalkers();
+            ClearTransientTransitions();
             return;
         }
         // Where the location (and the player in it) lies in the world is known only once its terrain window is
@@ -131,14 +165,14 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         {
             if (immediate)
             {
-                ClearRetiringWalkers();
+                ClearTransientTransitions();
                 foreach (DaggerfallNpc npc in sourceNpcs)
                     Hide(npc);
             }
             else
             {
                 foreach (DaggerfallNpc npc in sourceNpcs)
-                    RetireOrHide(active, npc);
+                    RetireOrHide(active, siteId, npc);
             }
             return;
         }
@@ -146,7 +180,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         string? race = Race(site);
         if (race is null)
         {
-            ClearRetiringWalkers();
+            ClearTransientTransitions();
             foreach (DaggerfallNpc npc in sourceNpcs) Hide(npc);
             return;
         }
@@ -154,7 +188,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         WorldPoint playerProfile = PlayerProfilePosition(active);
         if (!IsWithinSourceRange(active.Population, playerProfile))
         {
-            ClearRetiringWalkers();
+            ClearTransientTransitions();
             foreach (DaggerfallNpc npc in sourceNpcs)
                 Hide(npc);
             return;
@@ -178,7 +212,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         HashSet<string> admittedKeys = candidates.Select(placement => placement.Id).ToHashSet(StringComparer.Ordinal);
         if (immediate)
         {
-            ClearRetiringWalkers();
+            ClearTransientTransitions();
             foreach (DaggerfallNpc npc in sourceNpcs.Where(npc => !admittedKeys.Contains(npc.StableKey)))
                 Hide(npc);
         }
@@ -189,7 +223,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                 if (admittedKeys.Contains(npc.StableKey))
                     CancelRetirement(npc.DurableId);
                 else
-                    RetireOrHide(active, npc);
+                    RetireOrHide(active, siteId, npc);
             }
         }
 
@@ -209,7 +243,8 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                 npc.DurableId == deterministicId || StringComparer.Ordinal.Equals(npc.StableKey, placement.Id));
             if (existing is not null && (_actorLedger.IsHomeSlotSuppressed(existing.DurableId, active.ProfileKey) || _isWithParty(existing.DurableId)))
                 continue;
-            if (suppressSpawns() && existing?.Presence != DaggerfallNpcPresence.Active) continue;
+            bool wasActiveOutdoors = existing?.Presence == DaggerfallNpcPresence.Active;
+            if (suppressSpawns() && !wasActiveOutdoors) continue;
             long npcId = existing?.DurableId ?? deterministicId;
             if (existing is null)
             {
@@ -224,13 +259,32 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             if (npc.Presence == DaggerfallNpcPresence.Removed)
                 continue;
 
+            bool emergedFromDoor = false;
+            WorldPoint emergeDoorLocal = default;
+            WorldPoint emergeStepOutLocal = default;
+            DaggerfallSiteBuildingId? emergeBuilding = null;
+            if (!immediate
+                && !wasActiveOutdoors
+                && !placement.IsGuard
+                && TryResolveEmergeDoorLocal(active, siteId, npcId, placement, out emergeDoorLocal, out emergeStepOutLocal, out emergeBuilding)
+                && IsWithinVisibleTransitionRange(emergeDoorLocal))
+            {
+                emergedFromDoor = true;
+            }
+
             // A live (or site-retained, already restored) actor owns the wandering pose. The authored
             // source position is only the initial placement of a person with no actor, and is never
-            // reapplied to a live one.
-            if (actors.TryGet(npcId, out _))
+            // reapplied to a live one (except when emerging through a doorway on a live morning/clear transition).
+            if (actors.TryGet(npcId, out ActorState? existingActor))
             {
                 if (npc.Profile != active.ProfileKey) npcs.Bind(npcId, active.ProfileKey);
                 else npcs.SetPresence(npcId, DaggerfallNpcPresence.Active);
+                if (emergedFromDoor)
+                    existingActor.ApplyPose(new ActorPose(emergeDoorLocal, YawToward(emergeDoorLocal, emergeStepOutLocal)));
+            }
+            else if (emergedFromDoor)
+            {
+                npcs.Place(npcId, active.ProfileKey, WorldPoint.From(localToProfile(emergeDoorLocal.ToVector())));
             }
             else if (npc.Profile != active.ProfileKey || npc.X is null || npc.Y is null || npc.Z is null)
                 npcs.Place(npcId, active.ProfileKey, placement.Position);
@@ -238,14 +292,24 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                 npcs.SetPresence(npcId, DaggerfallNpcPresence.Active);
 
             DaggerfallNpc current = npcs.Require(npcId);
-            WorldPoint position = current.X is float x && current.Y is float y && current.Z is float z
-                ? profileToLocal(new WorldPoint(x, y, z))
-                : profileToLocal(placement.Position);
+            WorldPoint position = emergedFromDoor
+                ? emergeDoorLocal
+                : current.X is float x && current.Y is float y && current.Z is float z
+                    ? profileToLocal(new WorldPoint(x, y, z))
+                    : profileToLocal(placement.Position);
+            float initialHeading = emergedFromDoor ? YawToward(emergeDoorLocal, emergeStepOutLocal) : 0F;
             if (DaggerfallPeopleSlots.IsDeterministicId(npcId))
                 civilians.MaterializeDeterministic(npcId, ActorOrigin.Seeded(active.ProfileKey, placement.Id), placement.Position,
-                    new ActorPose(position, 0F), profileToLocal(default).ToVector(), placement.FamilyId);
+                    new ActorPose(position, initialHeading), profileToLocal(default).ToVector(), placement.FamilyId);
             else
-                civilians.Materialize(npcId, new ActorPose(position, 0F));
+                civilians.Materialize(npcId, new ActorPose(position, initialHeading));
+
+            if (emergedFromDoor && actors.TryGet(npcId, out ActorState? emergingActor) && emergingActor.Actor.Has<WanderMemoryComponent>())
+            {
+                _ = _openResidentDoor?.Invoke(emergeDoorLocal, emergeBuilding);
+                _emergingWalkers[npcId] = new EmergingWalkerState(emergeStepOutLocal, emergeBuilding);
+                emergingActor.Wander.Stage([emergeStepOutLocal]);
+            }
         }
 
         // A source civilian may have been hidden by night before a retained site delta was saved.
@@ -290,14 +354,15 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             .ToHashSet();
         bool exteriorActive = profile().ProfileKind == DaggerfallWorldProfileKind.Exterior && locationLoaded();
         if (!exteriorActive)
-            ClearRetiringWalkers();
+            ClearTransientTransitions();
         bool admitted = profile().ProfileKind == DaggerfallWorldProfileKind.Exterior
-            && (_isPlacementScheduledOutdoors is not null || isDay() || _retiringWalkers.Count > 0);
+            && (_isPlacementScheduledOutdoors is not null || isDay() || _retiringWalkers.Count > 0 || _emergingWalkers.Count > 0);
         foreach (ActorState actor in actors.All.Where(actor => actor.Actor.Has<WanderMemoryComponent>()))
         {
             if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsCombatant)
             {
                 CancelRetirement(actor.DurableId);
+                CancelEmergence(actor.DurableId);
                 actor.Wander.MarkUnloaded();
                 continue;
             }
@@ -314,6 +379,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                 // Retire only the admitted appearance. The canonical actor, inventory, corpse,
                 // and durable pose remain owned by the existing lifetime/save path for re-entry.
                 CancelRetirement(actor.DurableId);
+                CancelEmergence(actor.DurableId);
                 Hide(populationNpc);
                 recycled = true;
             }
@@ -321,6 +387,7 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             if (!admitted || recycled || !activeSource.Contains(actor.DurableId))
             {
                 CancelRetirement(actor.DurableId);
+                CancelEmergence(actor.DurableId);
                 actor.Wander.MarkUnloaded();
                 continue;
             }
@@ -337,10 +404,33 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             if (populationNpc is not null && _retiringWalkers.TryGetValue(actor.DurableId, out RetiringWalkerState? retireState))
             {
                 retireState.ElapsedSeconds += Math.Max(0f, deltaSeconds);
-                bool leftFrustum = !IsWithinPlayerCameraFrustum(actor.Position);
+                if (retireState.DoorOpened)
+                {
+                    retireState.DoorCrossingSeconds += Math.Max(0f, deltaSeconds);
+                    if (retireState.DoorCrossingSeconds >= DoorCrossingPauseSeconds)
+                    {
+                        _retiringWalkers.Remove(actor.DurableId);
+                        actor.Wander.Unstage();
+                        Hide(populationNpc);
+                        actor.Wander.MarkUnloaded();
+                    }
+                    continue;
+                }
+
+                bool outOfRange = !IsWithinVisibleTransitionRange(actor.Position);
                 bool reachedDoor = actor.Position.HorizontalDistanceTo(retireState.GoalLocal) <= RetireDoorArrivalMeters;
                 bool timedOut = retireState.ElapsedSeconds >= RetireTimeoutSeconds;
-                if (leftFrustum || reachedDoor || timedOut)
+                if (reachedDoor && retireState.HasDoorTarget && _openResidentDoor is not null)
+                {
+                    bool opened = _openResidentDoor(retireState.GoalLocal, retireState.TargetBuilding);
+                    if (opened)
+                    {
+                        retireState.DoorOpened = true;
+                        retireState.DoorCrossingSeconds = 0f;
+                        continue;
+                    }
+                }
+                if (outOfRange || reachedDoor || timedOut)
                 {
                     _retiringWalkers.Remove(actor.DurableId);
                     actor.Wander.Unstage();
@@ -348,10 +438,21 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
                     actor.Wander.MarkUnloaded();
                 }
             }
+            else if (_emergingWalkers.TryGetValue(actor.DurableId, out EmergingWalkerState? emergeState))
+            {
+                emergeState.ElapsedSeconds += Math.Max(0f, deltaSeconds);
+                bool reachedStreet = actor.Position.HorizontalDistanceTo(emergeState.StepOutLocal) <= EmergeArrivalMeters;
+                bool timedOut = emergeState.ElapsedSeconds >= EmergeTimeoutSeconds;
+                if (reachedStreet || timedOut)
+                {
+                    _emergingWalkers.Remove(actor.DurableId);
+                    actor.Wander.Unstage();
+                }
+            }
         }
     }
 
-    private void RetireOrHide(DaggerfallSiteProfile active, DaggerfallNpc npc)
+    private void RetireOrHide(DaggerfallSiteProfile active, DaggerfallSiteId siteId, DaggerfallNpc npc)
     {
         if (npc.Presence != DaggerfallNpcPresence.Active
             || _isWithParty(npc.DurableId)
@@ -360,21 +461,28 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             || !actor.Actor.Has<WanderMemoryComponent>())
         {
             _retiringWalkers.Remove(npc.DurableId);
+            CancelEmergence(npc.DurableId);
             Hide(npc);
             return;
         }
 
+        CancelEmergence(npc.DurableId);
         if (_retiringWalkers.ContainsKey(npc.DurableId))
             return;
 
-        if (!IsWithinPlayerCameraFrustum(actor.Position))
+        if (!IsWithinVisibleTransitionRange(actor.Position))
         {
+            if (_resolveShelterBuilding?.Invoke(siteId, npc.DurableId) is { } assignedOffscreen)
+                _lastShelterBuildingByActor[npc.DurableId] = assignedOffscreen;
             Hide(npc);
             return;
         }
 
-        WorldPoint goalLocal = SelectRetireGoalLocal(active, actor.Position);
-        _retiringWalkers[npc.DurableId] = new RetiringWalkerState(goalLocal);
+        WorldPoint goalLocal = SelectRetireGoalLocal(active, siteId, npc.DurableId, actor.Position,
+            out DaggerfallSiteBuildingId? targetBuilding, out bool hasDoorTarget);
+        if (targetBuilding is { } chosenBuilding)
+            _lastShelterBuildingByActor[npc.DurableId] = chosenBuilding;
+        _retiringWalkers[npc.DurableId] = new RetiringWalkerState(goalLocal, targetBuilding, hasDoorTarget);
         actor.Wander.Stage([goalLocal]);
     }
 
@@ -388,12 +496,37 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         }
     }
 
-    private void ClearRetiringWalkers()
+    private void CancelEmergence(long actorId)
     {
-        if (_retiringWalkers.Count == 0)
-            return;
-        foreach (long actorId in _retiringWalkers.Keys.ToArray())
-            CancelRetirement(actorId);
+        if (_emergingWalkers.Remove(actorId)
+            && actors.TryGet(actorId, out ActorState? actor)
+            && actor.Actor.Has<WanderMemoryComponent>())
+        {
+            actor.Wander.Unstage();
+        }
+    }
+
+    private void ClearTransientTransitions()
+    {
+        if (_retiringWalkers.Count > 0)
+        {
+            foreach (long actorId in _retiringWalkers.Keys.ToArray())
+                CancelRetirement(actorId);
+        }
+        if (_emergingWalkers.Count > 0)
+        {
+            foreach (long actorId in _emergingWalkers.Keys.ToArray())
+                CancelEmergence(actorId);
+        }
+    }
+
+    /// <summary>Whether an actor is close enough to the player that schedule transitions should play out visibly through doors.</summary>
+    internal bool IsWithinVisibleTransitionRange(WorldPoint actorPosition)
+    {
+        if (player.Position is not WorldPoint playerPos)
+            return false;
+        float dist = actorPosition.HorizontalDistanceTo(playerPos);
+        return dist <= VisibleTransitionRangeMeters || IsWithinPlayerCameraFrustum(actorPosition);
     }
 
     internal bool IsWithinPlayerCameraFrustum(WorldPoint actorPosition)
@@ -411,35 +544,86 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         return dot >= VisibleFrustumCosThreshold;
     }
 
-    private WorldPoint SelectRetireGoalLocal(DaggerfallSiteProfile active, WorldPoint actorLocal)
+    private WorldPoint SelectRetireGoalLocal(
+        DaggerfallSiteProfile active,
+        DaggerfallSiteId siteId,
+        long actorId,
+        WorldPoint actorLocal,
+        out DaggerfallSiteBuildingId? targetBuilding,
+        out bool hasDoorTarget)
     {
+        targetBuilding = null;
+        hasDoorTarget = false;
         WorldPoint? playerPos = player.Position;
-        WorldPoint? bestDoor = null;
-        float bestDoorDist = float.MaxValue;
-        foreach (DaggerfallSitePortal portal in active.Portals)
+
+        // 1. Prefer the exact exterior building doorway assigned by #11104 DaggerfallScheduleShelterResolver.
+        DaggerfallSiteBuildingId? assigned = _resolveShelterBuilding?.Invoke(siteId, actorId);
+        if (assigned is { } assignedBuilding
+            && TryFindDoorForBuilding(active, siteId, assignedBuilding, actorLocal, out WorldPoint assignedDoorLocal, out _)
+            && actorLocal.HorizontalDistanceTo(assignedDoorLocal) <= RetireDoorSearchRangeMeters)
         {
-            WorldPoint doorLocal = profileToLocal(portal.Position);
+            targetBuilding = assignedBuilding;
+            hasDoorTarget = true;
+            return assignedDoorLocal;
+        }
+
+        // 2. Next prefer the nearest exterior building entrance door in active.Doors.
+        WorldPoint? bestDoor = null;
+        DaggerfallSiteBuildingId? bestDoorBuilding = null;
+        float bestDoorDist = float.MaxValue;
+        foreach (DaggerfallRdbDoorDefinition door in active.Doors)
+        {
+            if (door.ExteriorBuilding is not { } buildingId || door.Kind == DaggerfallDoorKind.Special)
+                continue;
+            WorldPoint doorLocal = ExteriorDoorThresholdLocal(door);
             float actorDist = actorLocal.HorizontalDistanceTo(doorLocal);
             if (actorDist > RetireDoorSearchRangeMeters)
                 continue;
-            // Prefer doors that don't force the walker to walk straight into the player.
             if (playerPos is WorldPoint p)
             {
                 float playerToActor = actorLocal.HorizontalDistanceTo(p);
                 float playerToDoor = doorLocal.HorizontalDistanceTo(p);
-                if (playerToDoor + 1f < playerToActor && playerToDoor < 4f)
+                if (playerToDoor + 1f < playerToActor && playerToDoor < 3.5f)
                     continue;
             }
             if (actorDist < bestDoorDist)
             {
                 bestDoorDist = actorDist;
                 bestDoor = doorLocal;
+                bestDoorBuilding = buildingId;
             }
         }
-        if (bestDoor is WorldPoint chosenDoor)
-            return chosenDoor;
 
-        // Fallback: move away from the player until clear of the 25m camera frustum.
+        // 3. Also consider explicit doorway portals (used by synthetic profiles and transition portals).
+        foreach (DaggerfallSitePortal portal in active.Portals)
+        {
+            WorldPoint doorLocal = profileToLocal(portal.Position);
+            float actorDist = actorLocal.HorizontalDistanceTo(doorLocal);
+            if (actorDist > RetireDoorSearchRangeMeters)
+                continue;
+            if (playerPos is WorldPoint p)
+            {
+                float playerToActor = actorLocal.HorizontalDistanceTo(p);
+                float playerToDoor = doorLocal.HorizontalDistanceTo(p);
+                if (playerToDoor + 1f < playerToActor && playerToDoor < 3.5f)
+                    continue;
+            }
+            if (actorDist < bestDoorDist)
+            {
+                bestDoorDist = actorDist;
+                bestDoor = doorLocal;
+                bestDoorBuilding = TryParsePortalBuilding(portal);
+            }
+        }
+
+        if (bestDoor is WorldPoint chosenDoor)
+        {
+            targetBuilding = bestDoorBuilding;
+            hasDoorTarget = true;
+            return chosenDoor;
+        }
+
+        // 4. Fallback: move away from the player until clear of visible transition range.
         Vector3 away = playerPos is WorldPoint standing
             ? new Vector3(actorLocal.X - standing.X, 0f, actorLocal.Z - standing.Z)
             : ActorHeading.Forward(player.YawRadians);
@@ -454,6 +638,165 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
             actorLocal.Y,
             actorLocal.Z + away.Z * RetireFallbackAwayMeters);
     }
+
+    private bool TryResolveEmergeDoorLocal(
+        DaggerfallSiteProfile active,
+        DaggerfallSiteId siteId,
+        long actorId,
+        DaggerfallPopulationPlacement placement,
+        out WorldPoint doorLocal,
+        out WorldPoint stepOutLocal,
+        out DaggerfallSiteBuildingId? buildingId)
+    {
+        doorLocal = default;
+        stepOutLocal = default;
+        buildingId = null;
+
+        WorldPoint streetAnchorLocal = profileToLocal(placement.Position);
+
+        // 1. Building this walker last sheltered in, or their deterministic #11104 family residence.
+        DaggerfallSiteBuildingId? preferredBuilding = _lastShelterBuildingByActor.TryGetValue(actorId, out DaggerfallSiteBuildingId lastBuilding)
+            ? lastBuilding
+            : _resolveHomeBuilding?.Invoke(siteId, placement.FamilyId, placement.Id);
+
+        if (preferredBuilding is { } target
+            && TryFindDoorForBuilding(active, siteId, target, streetAnchorLocal, out WorldPoint foundDoor, out Vector3 foundNormal))
+        {
+            doorLocal = foundDoor;
+            stepOutLocal = ComputeStepOut(foundDoor, foundNormal, streetAnchorLocal);
+            buildingId = target;
+            return true;
+        }
+
+        // 2. Fallback: nearest exterior building door or doorway portal to the walker's street placement.
+        WorldPoint? bestDoor = null;
+        Vector3 bestNormal = Vector3.Zero;
+        DaggerfallSiteBuildingId? bestBuilding = null;
+        float bestDist = float.MaxValue;
+
+        foreach (DaggerfallRdbDoorDefinition door in active.Doors)
+        {
+            if (door.ExteriorBuilding is not { } bId || door.Kind == DaggerfallDoorKind.Special)
+                continue;
+            WorldPoint threshold = ExteriorDoorThresholdLocal(door);
+            float dist = streetAnchorLocal.HorizontalDistanceTo(threshold);
+            if (dist <= RetireDoorSearchRangeMeters && dist < bestDist)
+            {
+                bestDist = dist;
+                bestDoor = threshold;
+                bestNormal = HorizontalNormal(Vector3.Transform(Vector3.UnitZ, door.Rotation));
+                bestBuilding = bId;
+            }
+        }
+
+        foreach (DaggerfallSitePortal portal in active.Portals)
+        {
+            WorldPoint threshold = profileToLocal(portal.Position);
+            float dist = streetAnchorLocal.HorizontalDistanceTo(threshold);
+            if (dist <= RetireDoorSearchRangeMeters && dist < bestDist)
+            {
+                bestDist = dist;
+                bestDoor = threshold;
+                bestNormal = portal.Normal is Vector3 n ? HorizontalNormal(n) : Vector3.Zero;
+                bestBuilding = TryParsePortalBuilding(portal);
+            }
+        }
+
+        if (bestDoor is not WorldPoint chosen)
+            return false;
+
+        doorLocal = chosen;
+        stepOutLocal = ComputeStepOut(chosen, bestNormal, streetAnchorLocal);
+        buildingId = bestBuilding;
+        return true;
+    }
+
+    private bool TryFindDoorForBuilding(
+        DaggerfallSiteProfile active,
+        DaggerfallSiteId siteId,
+        DaggerfallSiteBuildingId building,
+        WorldPoint referenceLocal,
+        out WorldPoint doorLocal,
+        out Vector3 outwardNormal)
+    {
+        doorLocal = default;
+        outwardNormal = Vector3.Zero;
+        float bestDist = float.MaxValue;
+        bool found = false;
+
+        foreach (DaggerfallRdbDoorDefinition door in active.Doors)
+        {
+            if (door.ExteriorBuilding != building || door.Kind == DaggerfallDoorKind.Special)
+                continue;
+            WorldPoint threshold = ExteriorDoorThresholdLocal(door);
+            float dist = referenceLocal.HorizontalDistanceTo(threshold);
+            if (!found || dist < bestDist)
+            {
+                found = true;
+                bestDist = dist;
+                doorLocal = threshold;
+                outwardNormal = HorizontalNormal(Vector3.Transform(Vector3.UnitZ, door.Rotation));
+            }
+        }
+
+        if (found)
+            return true;
+
+        string targetProfileId = DaggerfallWorldProfileIds.Interior(siteId, building).LogicalId;
+        foreach (DaggerfallSitePortal portal in active.Portals)
+        {
+            if (!StringComparer.Ordinal.Equals(portal.DestinationLogicalProfile, targetProfileId))
+                continue;
+            WorldPoint threshold = profileToLocal(portal.Position);
+            float dist = referenceLocal.HorizontalDistanceTo(threshold);
+            if (!found || dist < bestDist)
+            {
+                found = true;
+                bestDist = dist;
+                doorLocal = threshold;
+                outwardNormal = portal.Normal is Vector3 n ? HorizontalNormal(n) : Vector3.Zero;
+            }
+        }
+
+        return found;
+    }
+
+    private WorldPoint ExteriorDoorThresholdLocal(DaggerfallRdbDoorDefinition door)
+    {
+        Vector3 normal = HorizontalNormal(Vector3.Transform(Vector3.UnitZ, door.Rotation));
+        Vector3 thresholdProfile = door.Position + new Vector3(0f, door.BoundsMin.Y, 0f) + (normal * 0.75f);
+        return profileToLocal(WorldPoint.From(thresholdProfile));
+    }
+
+    private static WorldPoint ComputeStepOut(WorldPoint doorLocal, Vector3 outwardNormal, WorldPoint streetAnchorLocal)
+    {
+        Vector3 dir = outwardNormal.LengthSquared() > 1e-4f
+            ? Vector3.Normalize(outwardNormal)
+            : HorizontalNormal(new Vector3(streetAnchorLocal.X - doorLocal.X, 0f, streetAnchorLocal.Z - doorLocal.Z));
+        if (dir.LengthSquared() < 1e-4f)
+            dir = Vector3.UnitZ;
+        return new WorldPoint(
+            doorLocal.X + (dir.X * EmergeStepOutMeters),
+            doorLocal.Y,
+            doorLocal.Z + (dir.Z * EmergeStepOutMeters));
+    }
+
+    private static Vector3 HorizontalNormal(Vector3 value)
+    {
+        Vector3 flat = new(value.X, 0f, value.Z);
+        return flat.LengthSquared() > 1e-4f ? Vector3.Normalize(flat) : Vector3.Zero;
+    }
+
+    private static float YawToward(WorldPoint from, WorldPoint toward)
+    {
+        Vector3 delta = new(toward.X - from.X, 0f, toward.Z - from.Z);
+        return delta.LengthSquared() > 1e-4f ? ActorHeading.Yaw(delta) : 0f;
+    }
+
+    private static DaggerfallSiteBuildingId? TryParsePortalBuilding(DaggerfallSitePortal portal) =>
+        DaggerfallWorldProfileIds.TryParse(portal.DestinationLogicalProfile, out _, out DaggerfallSiteBuildingId? building)
+            ? building
+            : null;
 
     private bool IsScheduledOutdoors(DaggerfallSiteId siteId, string logicalProfileId, DaggerfallPopulationPlacement placement, int totalPopulationCount)
     {

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
@@ -261,6 +262,12 @@ internal sealed class ActorOverlayComponent
     internal string? EscortPortraitMedia { get; set; }
     internal int EscortOrder { get; set; }
     internal string? StagedPartyRole { get; set; }
+    /// <summary>Transient runtime state: resident is currently sleeping in a home bed during night hours (not persisted to ledger).</summary>
+    internal bool IsSleeping { get; set; }
+    /// <summary>Transient runtime state: resident was awakened by an intruder inside their residence during night hours.</summary>
+    internal bool AwakenedByIntruder { get; set; }
+    internal WorldPoint? PreSleepPosition { get; set; }
+    internal float? PreSleepHeading { get; set; }
     internal IReadOnlyList<string> WitnessedCrimes => _witnessedCrimes;
     internal IReadOnlyList<string> ReferralTags => _referralTags;
     internal IReadOnlyList<ActorVouchRecord> Vouches => _vouches;

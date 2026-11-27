@@ -400,14 +400,14 @@ public sealed class DaggerfallScheduleShelterTests
     {
         DaggerfallSiteRecord town = TestPayload.Definitions.Locations.Records.Single(s => s.Id.Region == 17 && s.Name == "Daggerfall" && s.Exterior is not null);
         // Player at origin facing -Z (YawRadians = 0):
-        //   001: 10m directly in front (0, 0, -10) -> VISIBLE in camera frustum (< 25m)
-        //   002: 10m directly behind (0, 0, +10)   -> BEHIND camera (out of frustum)
-        //   003: 35m in front (0, 0, -35)          -> TOO FAR (> 25m frustum grace range)
+        //   001: 10m directly in front (0, 0, -10) -> VISIBLE near player (< 45m)
+        //   002: 10m directly behind (0, 0, +10)   -> NEAR player (< 45m, visibly walks to door under #11139)
+        //   003: 60m in front (0, 0, -60)          -> FAR (> 45m visible transition range)
         DaggerfallPopulationPlacement[] placements =
         [
             new("population/grace/dynamic/001", new WorldPoint(0f, 0f, -10f), 210, 4, 0, 0, 1001),
             new("population/grace/dynamic/002", new WorldPoint(0f, 0f, 10f), 210, 4, 0, 0, 1002),
-            new("population/grace/dynamic/003", new WorldPoint(0f, 0f, -35f), 210, 4, 0, 0, 1003),
+            new("population/grace/dynamic/003", new WorldPoint(0f, 0f, -60f), 210, 4, 0, 0, 1003),
         ];
 
         using CivilianStage stage = new(town, placements);
@@ -478,14 +478,15 @@ public sealed class DaggerfallScheduleShelterTests
         Assert.Equal(DaggerfallNpcPresence.Active, stage.Npcs.Require(behindId).Presence);
         Assert.Equal(DaggerfallNpcPresence.Active, stage.Npcs.Require(farId).Presence);
 
-        // 2. Live tick flips schedule indoors: behind & far (>25m) hide immediately; visible walker (<25m in front)
-        //    enters live grace (zero same-frame pop-out!) and stages toward the nearby doorway portal!
+        // 2. Live tick flips schedule indoors: far (>45m) hides immediately; near-player walkers (<45m, both in front
+        //    and behind) enter visible door transitions (zero same-frame pop-out!) and stage toward the doorway portal!
         outdoorsAllowed = false;
         population.Reconcile(immediate: false);
-        Assert.Equal(DaggerfallNpcPresence.Hidden, stage.Npcs.Require(behindId).Presence);
         Assert.Equal(DaggerfallNpcPresence.Hidden, stage.Npcs.Require(farId).Presence);
         Assert.Equal(DaggerfallNpcPresence.Active, stage.Npcs.Require(visibleId).Presence);
+        Assert.Equal(DaggerfallNpcPresence.Active, stage.Npcs.Require(behindId).Presence);
         Assert.True(population.IsRetiring(visibleId));
+        Assert.True(population.IsRetiring(behindId));
         ActorState visibleActor = stage.Actors.Get(visibleId);
         Assert.NotNull(visibleActor.Wander.Route);
         Assert.Equal(doorway.Position, visibleActor.Wander.Route![0]);

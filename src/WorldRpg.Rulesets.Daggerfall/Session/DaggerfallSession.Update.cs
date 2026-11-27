@@ -545,6 +545,7 @@ internal sealed partial class DaggerfallSession
         State.Quests.ReconcileFoeCommands();                                                      // Quests
         ReconcileNpcProjection();                                                                 // Actors
         Population.Step(simulationStep, update.DeltaSeconds);                                     // Actors
+        HomeNightRoutine.Step(_sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky, update.DeltaSeconds);   // Society
         _dialogue?.RefreshEligibility();                                                          // Dialogue
     }
 
@@ -1676,6 +1677,8 @@ internal sealed partial class DaggerfallSession
         Population.Reconcile(immediate);                                                          // Actors
         if (immediate && _sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Interior)
             ReconcileInteriorScheduleCatchUp(_sites.Projection.Inputs, _appearance);              // Society/Actors
+        else if (_sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Interior)
+            ReconcileHomeNightRoutine(_sites.Projection.Inputs, _appearance, immediate: false);   // Society
     }
 
     /// <summary>
@@ -1698,13 +1701,19 @@ internal sealed partial class DaggerfallSession
             DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);                    // Magic
             if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && hit.TargetId != hit.AttackerId)
                 ReactToAttack(hit.AttackerId, hit.TargetId);                                      // Session: the attack's list, below
+            if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && State.PlayerControl.Position is WorldPoint noisePos)
+                HomeNightRoutine.NotifyInteriorNoise(noisePos, 14f, _sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky);   // Society
         }
         if (fact is ActorDiedFact died) ReactToDeath(died);                                       // Session: the death's list, below
         if (fact is MagicEffectFact magic)
             _appearance.ReactEffectOutcome(magic.Outcome, State.Actors, State.PlayerControl.Position,
                 _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);                    // Scene
         if (fact is SpellCastFact cast)
+        {
             _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position);        // Scene
+            if (cast.CasterId == DaggerfallActorIdentity.PlayerEntityId && State.PlayerControl.Position is WorldPoint castPos)
+                HomeNightRoutine.NotifyInteriorNoise(castPos, 12f, _sites.Projection.Inputs, _sites.Projection.Lighting, _appearance, _time.Calendar.Sky);   // Society
+        }
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
         DaggerfallSiteAppearance.ReactAcross(_sites.Appearances, _appearance, fact, State.Actors);   // Scene
         _outcomes.React(fact);                                                                    // UiProjection

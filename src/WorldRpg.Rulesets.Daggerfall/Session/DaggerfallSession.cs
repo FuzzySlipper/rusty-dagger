@@ -99,6 +99,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallDungeonPopulation _dungeonPopulation;
     internal DaggerfallCivilians Civilians { get; }
     internal DaggerfallSourcePopulation Population { get; }
+    internal DaggerfallHomeNightRoutine HomeNightRoutine { get; }
     internal DaggerfallWorldEncounters WorldEncounters { get; }
 
     /// <summary>Unified proximity query over the single active-scene <c>EntityStore</c>; excludes off-stage and <c>WithParty</c> escorts.</summary>
@@ -398,8 +399,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     internal void ReconcileInteriorScheduledVisitors(
         DaggerfallSiteProfile destination,
-        DaggerfallSiteAppearance appearance) =>
+        DaggerfallSiteAppearance appearance)
+    {
         AdmitInteriorScheduledVisitors(destination, appearance, assignment: null);
+        ReconcileHomeNightRoutine(destination, appearance, immediate: true);
+    }
 
     /// <summary>
     /// Reconciles an active interior's scheduled visitors and schedule-suppressed home static slots across an
@@ -469,6 +473,19 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
         // 3. Admit any newly scheduled visitors without overlapping already-standing live actors.
         AdmitInteriorScheduledVisitors(destination, appearance, assignment);
+
+        // 4. Sync residential night lights-out and bed sleep state after interior population settles.
+        ReconcileHomeNightRoutine(destination, appearance, immediate: true);
+    }
+
+    private void ReconcileHomeNightRoutine(
+        DaggerfallSiteProfile destination,
+        DaggerfallSiteAppearance appearance,
+        bool immediate)
+    {
+        if (HomeNightRoutine is null || _sites?.Projection is not { } projection)
+            return;
+        HomeNightRoutine.Reconcile(destination, projection.Lighting, appearance, _time.Calendar.Sky, immediate);
     }
 
     private void AdmitInteriorScheduledVisitors(
@@ -586,6 +603,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     IReadOnlyList<long> IDaggerfallSiteTransitionHost.BeforeSiteTransition()
     {
+        HomeNightRoutine?.Reset();
         IReadOnlyList<long> boarded = OverlandParties.StagedPartyMemberIds.Count > 0 ? OverlandParties.BoardStagedPartyMembers() : [];
         _ = OverlandParties.ReleaseDepartingTrafficVisitors(_activeProfileKey, dispatchReturnBand: false);
         return boarded;
@@ -603,8 +621,59 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         Civilians.AdmitResidentAppearances(projection.Inputs, projection.Appearance);
 
     private readonly DaggerfallWeatherShelterClock _scheduleWeatherClock = new();
+    private (DaggerfallSiteId SiteId, int MinuteOfDay, DaggerfallWeatherKind Weather, DaggerfallWeatherShelterElapsed Elapsed, int HolidayId, DaggerfallTownShelterAssignment Assignment)? _cachedShelterAssignment;
 
-    internal void ResetScheduleWeatherBaseline() => _scheduleWeatherClock.Reset();
+    internal void ResetScheduleWeatherBaseline()
+    {
+        _scheduleWeatherClock.Reset();
+        _cachedShelterAssignment = null;
+    }
+
+    private DaggerfallSiteBuildingId? ResolveScheduledShelterBuildingForWalker(DaggerfallSiteId siteId, long actorId)
+    {
+        int minuteOfDay = checked(_time.Calendar.Hour * DaggerfallCalendar.MinutesPerHour + _time.Calendar.Minute);
+        DaggerfallWeatherKind weather = LocalWeather.Current;
+        DaggerfallWeatherShelterElapsed elapsed = ObserveScheduleWeatherElapsed();
+        int holidayId = _time.Calendar.GetHolidayId(siteId.Region);
+
+        DaggerfallTownShelterAssignment assignment;
+        if (_cachedShelterAssignment is { } cached
+            && cached.SiteId == siteId
+            && cached.MinuteOfDay == minuteOfDay
+            && cached.Weather == weather
+            && cached.Elapsed == elapsed
+            && cached.HolidayId == holidayId)
+        {
+            assignment = cached.Assignment;
+        }
+        else
+        {
+            assignment = ResolveTownShelterAssignment(siteId);
+            _cachedShelterAssignment = (siteId, minuteOfDay, weather, elapsed, holidayId, assignment);
+        }
+
+        return assignment.AssignedBuildingByActor.TryGetValue(actorId, out DaggerfallSiteBuildingId building)
+            ? building
+            : null;
+    }
+
+    private DaggerfallSiteBuildingId? ResolveHomeResidenceForWalker(DaggerfallSiteId siteId, string? familyId, string slotId)
+    {
+        if (!_site.TryFind(siteId, out DaggerfallSiteRecord siteRecord)
+            || siteRecord.Exterior is not { Buildings.Count: > 0 } exterior)
+            return null;
+        DaggerfallSiteBuildingSource[] residences =
+        [
+            .. exterior.Buildings.Values
+                .Where(b => DaggerfallScheduleShelterResolver.IsResidenceBuildingType(b.Source.BuildingType))
+                .OrderBy(b => b.Id.BlockY)
+                .ThenBy(b => b.Id.BlockX)
+                .ThenBy(b => b.Id.Index),
+        ];
+        if (residences.Length == 0)
+            return null;
+        return DaggerfallScheduleShelterResolver.SelectFamilyResidence(_worldSocialSeed, siteId, familyId, slotId, residences).Id;
+    }
 
     internal DaggerfallWeatherShelterElapsed ObserveScheduleWeatherElapsed() =>
         _scheduleWeatherClock.Observe(LocalWeather.Current, _time.Calendar.MinuteNumber);
