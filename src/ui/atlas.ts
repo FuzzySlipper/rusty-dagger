@@ -109,8 +109,21 @@ const STEP = 1.6;
 /** Every tile the atlas may ask for at once, as the ruleset bounds it. */
 const TILES_PER_REQUEST = 64;
 
+/** A region shaded on the Realms view: its shape in world-map pixels, and the colour of the arms it shows. */
+export interface AtlasRealm {
+  readonly region: number;
+  /** The arms the region shows, as the ruleset names them. */
+  readonly arms: string;
+  readonly path: string;
+  readonly colour: string;
+  /** Whether a crown's: a liege's region is shaded fully, one answering to no one faintly. */
+  readonly liege: boolean;
+}
+
 export interface Atlas {
   readonly element: HTMLElement;
+  /** Shade the regions by the arms they show, or stop (null). */
+  realms(regions: readonly AtlasRealm[] | null): void;
   /** A place the map holds, by its region:index key. */
   place(key: string): TravelMapPlaceProjection | undefined;
   update(map: TravelMapProjection | null, selected: string, route: AtlasRoute | null, marks?: AtlasMarks): void;
@@ -155,6 +168,14 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   const marks = document.createElement('div');
   marks.className = 'dagger-atlas-marks';
   const SVG = 'http://www.w3.org/2000/svg';
+  // The Realms view: every region's shape in world-map pixels, in one group the view's pan and zoom transform.
+  const realmLayer = document.createElementNS(SVG, 'svg');
+  realmLayer.setAttribute('class', 'dagger-atlas-realms');
+  realmLayer.setAttribute('aria-hidden', 'true');
+  const realmGroup = document.createElementNS(SVG, 'g');
+  realmLayer.append(realmGroup);
+  realmLayer.style.display = 'none';
+  let realmSignature = '';
   const routeLayer = document.createElementNS(SVG, 'svg');
   routeLayer.setAttribute('class', 'dagger-atlas-route');
   routeLayer.setAttribute('aria-hidden', 'true');
@@ -179,7 +200,7 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   const centreMark = document.createElement('span');
   centreMark.className = 'dagger-atlas-centre';
   centreMark.setAttribute('aria-hidden', 'true');
-  element.append(ground, routeLayer, marks, centreMark, controls, readout, legend, hint);
+  element.append(ground, realmLayer, routeLayer, marks, centreMark, controls, readout, legend, hint);
 
   let map: TravelMapProjection | null = null;
   // The places as last sent, and the revision they are; a snapshot that names another revision without them asks again.
@@ -523,12 +544,20 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
     for (const row of legendRows) legend.append(key('place', row.label, row.category));
   };
 
+  const drawRealms = (): void => {
+    if (realmLayer.style.display === 'none') return;
+    const { width, height } = size();
+    realmLayer.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    realmGroup.setAttribute('transform', `translate(${width / 2 - cx * scale} ${height / 2 - cy * scale}) scale(${scale})`);
+  };
+
   let signature = '';
   const draw = (): void => {
     measure();
     clampView();
     element.dataset.zoom = scale >= ZOOM.close ? 'close' : scale >= ZOOM.region ? 'region' : 'world';
     drawGround();
+    drawRealms();
     drawMarks();
   };
 
@@ -557,6 +586,26 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
       } else { clampView(); }
       drawLegend();
       draw();
+    },
+    realms(regions): void {
+      realmLayer.style.display = regions ? '' : 'none';
+      element.dataset.realms = regions ? 'on' : 'off';
+      const next = regions ? JSON.stringify(regions.map(region => [region.region, region.arms, region.colour, region.liege, region.path.length])) : '';
+      if (next !== realmSignature) {
+        realmSignature = next;
+        realmGroup.replaceChildren();
+        for (const region of regions ?? []) {
+          const shape = document.createElementNS(SVG, 'path');
+          // The window's Servo draws SVG from its markup alone, without the page's stylesheet.
+          for (const [name, value] of [['d', region.path], ['fill', region.colour], ['fill-opacity', region.liege ? '.42' : '.14'],
+            ['fill-rule', 'nonzero'], ['stroke', region.colour], ['stroke-opacity', region.liege ? '.8' : '.35'], ['stroke-width', '.6']] as const)
+            shape.setAttribute(name, value);
+          shape.dataset.region = String(region.region);
+          shape.dataset.arms = region.arms;
+          realmGroup.append(shape);
+        }
+      }
+      drawRealms();
     },
     zoom(direction): void {
       if (!map) return;

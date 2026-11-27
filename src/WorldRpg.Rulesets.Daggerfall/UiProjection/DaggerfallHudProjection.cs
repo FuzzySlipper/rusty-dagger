@@ -470,8 +470,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     private string? _travelPlacesSent;
 
-    /// <summary>Sends the travel map's places on the next snapshot, because the page opened the map or lost them.</summary>
-    internal void RequestTravelPlaces() => _travelPlacesSent = null;
+    /// <summary>Sends the travel map's places and the realms' shapes on the next snapshot, because the page opened the map or lost them.</summary>
+    internal void RequestTravelPlaces() { _travelPlacesSent = null; _realmOutlinesSent = false; }
 
     private static uint Mark(UiValueBuilder builder, DaggerfallExpeditionMark? mark, string? name) => mark is null ? builder.Null() : builder.Object(
         ("x", builder.Number(mark.Pixel.X)), ("y", builder.Number(mark.Pixel.Y)),
@@ -493,7 +493,29 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("pin", Mark(builder, view.Pin, view.PinName)),
         ("found", Found(builder, view.Found)),
         ("travelling", builder.Boolean(view.Travelling)),
-        ("canTravel", builder.Boolean(view.CanTravel)));
+        ("canTravel", builder.Boolean(view.CanTravel)),
+        ("realms", view.Realms is { } realms ? Realms(builder, realms) : builder.Null()));
+
+    /// <summary>
+    /// The Realms view (#11144): each board region's shade, and the key, every snapshot; the regions' shapes travel with
+    /// the map's places, only when the page opened the map or lost them.
+    /// </summary>
+    private uint Realms(UiValueBuilder builder, DaggerfallRealmsView realms)
+    {
+        (string, uint)[] outlines = _realmOutlinesSent ? [] : [("outlines", builder.Array(realms.Outlines.Select(outline => builder.Object(
+            ("region", builder.Number(outline.Region)), ("path", builder.String(outline.Path)))).ToArray()))];
+        _realmOutlinesSent = true;
+        return builder.Object([
+            ("regions", builder.Array(realms.Regions.Select(region => builder.Object(
+                ("region", builder.Number(region.Region)), ("arms", builder.String(region.Arms)),
+                ("colour", builder.String(region.Colour)), ("liege", builder.Boolean(region.Liege)))).ToArray())),
+            ("key", builder.Array(realms.Key.Select(line => builder.Object(
+                ("arms", builder.String(line.Arms)), ("name", builder.String(line.Name)),
+                ("blazon", builder.String(line.Blazon)), ("colour", builder.String(line.Colour)))).ToArray())),
+            .. outlines]);
+    }
+
+    private bool _realmOutlinesSent;
 
     /// <summary>
     /// The expedition's travel map: the names over the world the Engine draws, each where the view puts it (across and

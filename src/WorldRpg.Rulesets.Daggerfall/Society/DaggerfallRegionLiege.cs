@@ -32,6 +32,12 @@ internal sealed class DaggerfallRegionLiege
         _boardRegions = board.Regions.ToDictionary(region => region.CatalogRegion);
     }
 
+    /// <summary>The board's region for classic region <paramref name="region"/>, or null where the board has none (or no board is bound).</summary>
+    internal Region? BoardRegion(int region) => _boardRegions.GetValueOrDefault(region);
+
+    /// <summary>The board seat classic region <paramref name="region"/> owes allegiance to, or null where it answers to none.</summary>
+    internal string? LiegeSeatOf(int region) => BoardRegion(region)?.Allegiance;
+
     /// <summary>The province faction of classic region <paramref name="region"/> (<see cref="DaggerfallFactionsSet.ProvinceOf"/>).</summary>
     internal DaggerfallFactionDefinition? ProvinceOf(int region) => _factions.ProvinceOf(region);
 

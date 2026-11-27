@@ -3973,7 +3973,7 @@ function expedition(overrides = {}) {
 
 /** A world map projection over a map, with where the party stands, its leg, the pin and the last Find. */
 function worldMap(map, overrides = {}) {
-  return { map, party: { x: 207.5, y: 213.5 }, destination: null, pin: null, found: [], travelling: false, canTravel: true, ...overrides };
+  return { map, party: { x: 207.5, y: 213.5 }, destination: null, pin: null, found: [], travelling: false, canTravel: true, realms: null, ...overrides };
 }
 
 test('the travel map is the view the map camera draws into: names stand where the ruleset projects them, a click sets out or pins and a drag, the wheel and the view buttons move the view', () => {
@@ -4189,12 +4189,35 @@ test('the world map draws the atlas tiles in view, asks for the ones it lacks, n
     find.querySelector('input').value = 'Char';
     find.dispatchEvent(new window.Event('submit', { cancelable: true }));
     assert.deepEqual(f.actions.at(-1), { action: 'world-map-find', text: 'Char' });
-    f.publish({ mode: 'modal', worldMap: worldMap(map, { found: [{ region: 17, index: 2, name: 'Charing', kind: 'Town', x: 241, y: 132 }],
-      pin: { x: 241, y: 132, name: 'Charing' } }) });
+    const charing = { found: [{ region: 17, index: 2, name: 'Charing', kind: 'Town', x: 241, y: 132 }], pin: { x: 241, y: 132, name: 'Charing' } };
+    f.publish({ mode: 'modal', worldMap: worldMap(map, charing) });
     screen.querySelector('.dagger-world-map-found button').click();
     assert.deepEqual(f.actions.at(-1), { action: 'world-map-pin', x: 241, y: 132, region: 17, index: 2 });
     assert.equal(screen.querySelector('.dagger-world-map-pin-label').textContent, 'Charing');
     assert.ok(atlas.querySelector('.dagger-atlas-pin'));
+    // The Realms toggle shades each region by the arms it shows, from shapes the map sent once, with a key of the crowns.
+    const realms = {
+      regions: [{ region: 17, arms: 'seat:daggerfall', colour: '#2f6e3b', liege: true }, { region: 18, arms: 'region:glenpoint', colour: '#2f6e3b', liege: false }],
+      key: [{ arms: 'seat:daggerfall', name: 'Kingdom of Daggerfall', blazon: 'Vert, a dragon rampant gules', colour: '#2f6e3b' }],
+      outlines: [{ region: 17, path: 'M150 150L250 150L250 250L150 250Z' }, { region: 18, path: 'M250 150L300 150L300 200L250 200Z' }],
+    };
+    f.publish({ mode: 'modal', worldMap: worldMap(map, { ...charing, realms }) });
+    const toggle = screen.querySelector('.dagger-world-map-realms input[type="checkbox"]');
+    assert.equal(atlas.querySelectorAll('.dagger-atlas-realms path').length, 0, 'The Realms view starts off.');
+    toggle.checked = true;
+    toggle.dispatchEvent(new window.Event('change'));
+    const { outlines: _outlines, ...shades } = realms;
+    f.publish({ mode: 'modal', worldMap: worldMap(map, { ...charing, realms: shades }) });
+    const shapes = [...atlas.querySelectorAll('.dagger-atlas-realms path')];
+    assert.deepEqual(shapes.map(shape => [shape.dataset.region, shape.getAttribute('fill-opacity')]), [['17', '.42'], ['18', '.14']]);
+    const key = screen.querySelector('.dagger-world-map-realm-key');
+    assert.equal(key.hidden, false);
+    assert.match(key.textContent, /Kingdom of Daggerfall/);
+    assert.equal(key.querySelector('li').dataset.tooltip, 'Vert, a dragon rampant gules');
+    toggle.checked = false;
+    toggle.dispatchEvent(new window.Event('change'));
+    assert.equal(atlas.querySelector('.dagger-atlas-realms').style.display, 'none');
+    assert.equal(key.hidden, true);
     // Travel there sets the party out for the pin and closes the world map.
     screen.querySelector('.dagger-world-map-travel').click();
     assert.deepEqual(f.actions.slice(-2), [{ action: 'world-map-travel', x: 241, y: 132, region: 17, index: 2 }, { action: 'world-map', open: false }]);

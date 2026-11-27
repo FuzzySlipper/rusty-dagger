@@ -408,7 +408,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         (string liveryKey, Color? liveryTint) = actors.TryGet(actor, out ActorState? state)
             && state.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
             && render.Spec.Tint is { } tint
-            ? (render.Spec.LiveryKey ?? DaggerfallGuardLiveryColors.FormatHex(tint), (Color?)tint)
+            ? (render.Spec.LiveryKey ?? DaggerfallHeraldry.Hex(tint), (Color?)tint)
             : (string.Empty, null);
         try { return Open(splats!, resolved.Id, splats!.Characters[resolved.Id], liveryKey, liveryTint); }
         catch (Exception exception)

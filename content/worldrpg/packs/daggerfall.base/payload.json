@@ -35,6 +35,7 @@
     "boardSeats": "world/board-seats.json",
     "politicalBoard": "world/iliac-bay.board.json",
     "politicalCards": "world/iliac-bay.cards.json",
+    "heraldry": "world/heraldry.json",
     "itemTemplates": "items/item-templates.json",
     "text": "text/text.json",
     "names": "world/names.json",

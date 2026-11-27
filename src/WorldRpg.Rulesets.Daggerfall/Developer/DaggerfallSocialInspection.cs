@@ -322,7 +322,7 @@ internal sealed class DaggerfallSocialInspection(
                     w.WriteString("liveryOwner", resolved.LiveryOwnerName);
                     w.WriteString("liverySlug", resolved.LiverySlug);
                     w.WriteString("liveryKey", resolved.LiveryKey);
-                    w.WriteString("liveryTintHex", DaggerfallGuardLiveryColors.FormatHex(resolved.LiveryTint));
+                    w.WriteString("liveryTintHex", DaggerfallHeraldry.Hex(resolved.LiveryTint));
                     w.WriteEndObject();
                 }
                 w.WriteEndArray();

@@ -1,0 +1,276 @@
+{
+  "tinctures": {
+    "or": "#d4a62a",
+    "argent": "#e6e2d6",
+    "gules": "#a8262b",
+    "azure": "#2a4f9e",
+    "vert": "#2f6e3b",
+    "sable": "#26221f",
+    "purpure": "#6b3a78"
+  },
+  "seats": {
+    "daggerfall": {
+      "field": "vert",
+      "charge": "dragon",
+      "chargeTincture": "gules",
+      "pictorial": "a dragon rampant",
+      "source": "Castle Daggerfall's tapestry (TEXTURE.057 record 0)"
+    },
+    "wayrest": {
+      "field": "azure",
+      "charge": "three-flowers",
+      "chargeTincture": "or",
+      "pictorial": "three cinquefoils",
+      "source": "Castle Wayrest's tapestry (TEXTURE.057 record 2)"
+    },
+    "sentinel": {
+      "field": "or",
+      "charge": "moon-and-sun",
+      "chargeTincture": "argent",
+      "pictorial": "a crescent moon embracing the sun",
+      "source": "Castle Sentinel's tapestry (TEXTURE.057 record 1)"
+    },
+    "orsinium": {
+      "field": "gules",
+      "charge": "boar",
+      "chargeTincture": "argent",
+      "pictorial": "a boar's head couped",
+      "source": "original, after the Germanic boar standards"
+    },
+    "empire": {
+      "field": "or",
+      "charge": "imperial-dragon",
+      "chargeTincture": "gules",
+      "pictorial": "a dragon displayed",
+      "source": "the Septim dragon of lore"
+    }
+  },
+  "regions": {
+    "isle-of-balfiera": {
+      "field": "gules",
+      "division": "per-pale",
+      "second": "or",
+      "charge": "bull",
+      "chargeTincture": "or",
+      "pictorial": "a bull passant",
+      "source": "Direnni Tower's tapestry (TEXTURE.057 record 4)"
+    },
+    "alcaire": {
+      "field": "azure",
+      "charge": "fess",
+      "chargeTincture": "argent"
+    },
+    "anticlere": {
+      "field": "gules",
+      "charge": "cross",
+      "chargeTincture": "or"
+    },
+    "betony": {
+      "field": "vert",
+      "charge": "chevron",
+      "chargeTincture": "argent"
+    },
+    "bhoraine": {
+      "field": "sable",
+      "charge": "bend",
+      "chargeTincture": "or"
+    },
+    "daenia": {
+      "field": "purpure",
+      "charge": "saltire",
+      "chargeTincture": "argent"
+    },
+    "dwynnen": {
+      "field": "argent",
+      "charge": "chief",
+      "chargeTincture": "azure"
+    },
+    "glenpoint": {
+      "field": "or",
+      "charge": "pale",
+      "chargeTincture": "vert"
+    },
+    "glenumbra-moors": {
+      "field": "vert",
+      "division": "per-fess",
+      "second": "sable",
+      "charge": "bordure",
+      "chargeTincture": "or"
+    },
+    "ilessan-hills": {
+      "field": "azure",
+      "charge": "mullet",
+      "chargeTincture": "or"
+    },
+    "kambria": {
+      "field": "gules",
+      "charge": "tower",
+      "chargeTincture": "argent"
+    },
+    "koegria": {
+      "field": "or",
+      "division": "per-pale",
+      "second": "gules",
+      "charge": "fess",
+      "chargeTincture": "sable"
+    },
+    "lainlyn": {
+      "field": "argent",
+      "charge": "cross",
+      "chargeTincture": "gules"
+    },
+    "menevia": {
+      "field": "azure",
+      "division": "per-pale",
+      "second": "gules",
+      "charge": "chevron",
+      "chargeTincture": "or"
+    },
+    "northmoor": {
+      "field": "sable",
+      "charge": "roundel",
+      "chargeTincture": "argent"
+    },
+    "phrygias": {
+      "field": "vert",
+      "charge": "tower",
+      "chargeTincture": "or"
+    },
+    "shalgora": {
+      "field": "sable",
+      "charge": "saltire",
+      "chargeTincture": "or"
+    },
+    "tulune": {
+      "field": "gules",
+      "division": "per-fess",
+      "second": "azure",
+      "charge": "bend",
+      "chargeTincture": "argent"
+    },
+    "urvaius": {
+      "field": "or",
+      "charge": "chevron",
+      "chargeTincture": "azure"
+    },
+    "ykalon": {
+      "field": "azure",
+      "division": "quarterly",
+      "second": "gules",
+      "charge": "lozenge",
+      "chargeTincture": "argent"
+    },
+    "gavaudon": {
+      "field": "argent",
+      "charge": "pale",
+      "chargeTincture": "purpure"
+    },
+    "wrothgaria": {
+      "field": "sable",
+      "division": "per-bend",
+      "second": "vert",
+      "charge": "chief",
+      "chargeTincture": "or"
+    },
+    "abibon-gora": {
+      "field": "vert",
+      "charge": "mullet",
+      "chargeTincture": "argent"
+    },
+    "alikra": {
+      "field": "or",
+      "charge": "crescent",
+      "chargeTincture": "gules"
+    },
+    "antiphyllos": {
+      "field": "azure",
+      "charge": "crescent",
+      "chargeTincture": "argent"
+    },
+    "ayasofya": {
+      "field": "gules",
+      "charge": "mullet",
+      "chargeTincture": "or"
+    },
+    "bergama": {
+      "field": "vert",
+      "charge": "annulet",
+      "chargeTincture": "or"
+    },
+    "cybiades": {
+      "field": "azure",
+      "division": "per-fess",
+      "second": "vert",
+      "charge": "roundel",
+      "chargeTincture": "or"
+    },
+    "dakfron": {
+      "field": "or",
+      "charge": "bordure",
+      "chargeTincture": "sable"
+    },
+    "dragontail": {
+      "field": "gules",
+      "charge": "pile",
+      "chargeTincture": "or"
+    },
+    "ephesus": {
+      "field": "argent",
+      "charge": "mullet",
+      "chargeTincture": "vert"
+    },
+    "kairou": {
+      "field": "sable",
+      "charge": "crescent",
+      "chargeTincture": "or"
+    },
+    "kozanset": {
+      "field": "vert",
+      "division": "per-pale",
+      "second": "azure",
+      "charge": "saltire",
+      "chargeTincture": "or"
+    },
+    "mournoth": {
+      "field": "purpure",
+      "charge": "mullet",
+      "chargeTincture": "or"
+    },
+    "myrkwasa": {
+      "field": "or",
+      "charge": "lozenge",
+      "chargeTincture": "vert"
+    },
+    "pothago": {
+      "field": "gules",
+      "division": "quarterly",
+      "second": "sable",
+      "charge": "annulet",
+      "chargeTincture": "argent"
+    },
+    "santaki": {
+      "field": "azure",
+      "charge": "pile",
+      "chargeTincture": "argent"
+    },
+    "satakalaam": {
+      "field": "vert",
+      "division": "per-bend",
+      "second": "gules",
+      "charge": "crescent",
+      "chargeTincture": "or"
+    },
+    "tigonus": {
+      "field": "argent",
+      "charge": "annulet",
+      "chargeTincture": "azure"
+    },
+    "totambu": {
+      "field": "sable",
+      "division": "per-saltire",
+      "second": "gules",
+      "charge": "lozenge",
+      "chargeTincture": "or"
+    }
+  }
+}

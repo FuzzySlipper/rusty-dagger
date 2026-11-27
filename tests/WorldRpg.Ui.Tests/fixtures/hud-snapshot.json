@@ -876,6 +876,7 @@
       ],
       "opensOn": "talk",
       "merchant": null,
+      "retainer": null,
       "greeting": "How can I help you, stranger?",
       "comprehendLanguagesBonus": 0,
       "tone": "normal",
@@ -906,6 +907,13 @@
         {
           "id": "news",
           "label": "Any news?",
+          "key": null,
+          "group": "talk",
+          "category": null
+        },
+        {
+          "id": "notice-board",
+          "label": "What\u0027s on the notice board?",
           "key": null,
           "group": "talk",
           "category": null
@@ -978,6 +986,33 @@
     "book": null,
     "notes": []
   },
+  "socialJournal": {
+    "households": [],
+    "vouches": [],
+    "factions": [
+      {
+        "name": "Daggerfall (Region)",
+        "standing": "Common Citizen (0)",
+        "detail": "Current region"
+      },
+      {
+        "name": "Gortwog",
+        "standing": "Despised (-10)",
+        "detail": "Individual"
+      },
+      {
+        "name": "Sheogorath",
+        "standing": "Respected (\u002B10)",
+        "detail": "Daedra"
+      },
+      {
+        "name": "Orsinium",
+        "standing": "Disliked (-5)",
+        "detail": "Province"
+      }
+    ]
+  },
+  "speechBubbles": [],
   "property": {
     "bankAvailable": false,
     "offers": [],
@@ -1041,6 +1076,7 @@
     }
   },
   "dungeonText": null,
+  "noticeBoard": null,
   "death": {
     "active": false,
     "screen": "screen.death",
@@ -1799,7 +1835,8 @@
     "pin": null,
     "found": [],
     "travelling": true,
-    "canTravel": false
+    "canTravel": false,
+    "realms": null
   },
   "inventory": {
     "revision": "832:1:558:0::classic",

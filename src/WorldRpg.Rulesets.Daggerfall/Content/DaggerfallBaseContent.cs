@@ -169,6 +169,11 @@ internal static partial class DaggerfallBaseContent
             (DaggerfallActorCatalog actorCatalog, Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, DaggerfallMobileCatalogSet mobiles) =
                 ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, magic, factions, diagnostics);
             DaggerfallPoliticalCanon? politicalCanon = ReadPoliticalCanon(root, boardSeats, actorCatalog, diagnostics);
+            DaggerfallHeraldry heraldry = politicalCanon is { } canon && root.TryGetProperty("heraldry", out JsonElement heraldrySection)
+                ? DaggerfallHeraldry.Read(heraldrySection, [.. canon.Setup.Seats.Select(seat => seat.Id)], [.. canon.Setup.Regions.Select(region => region.Id)],
+                    canon.Setup.Seats.Where(seat => seat.Kind == WorldRpg.Politics.SeatKind.Crown && seat.Home is not null)
+                        .ToDictionary(seat => seat.Home!, seat => seat.Id, StringComparer.Ordinal), diagnostics)
+                : DaggerfallHeraldry.Empty;
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             DaggerfallEncounterSet encounters = ReadEncounters(root, actorCatalog, mobiles, diagnostics);
             ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);
@@ -204,6 +209,7 @@ internal static partial class DaggerfallBaseContent
                 ActorCatalog = actorCatalog,
                 BoardSeats = boardSeats,
                 PoliticalCanon = politicalCanon,
+                Heraldry = heraldry,
                 CreatureFactions = creatureFactions,
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,

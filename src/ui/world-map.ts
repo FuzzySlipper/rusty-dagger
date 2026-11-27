@@ -1,4 +1,4 @@
-import { isTravelMap, mountAtlas, type AtlasMarks, type TravelMapProjection } from './atlas.js';
+import { isTravelMap, mountAtlas, type AtlasMarks, type AtlasRealm, type TravelMapProjection } from './atlas.js';
 import type { ExpeditionFoundProjection, ExpeditionMarkProjection } from './expedition.js';
 import { button } from './host.js';
 import { redraw } from './redraw.js';
@@ -8,8 +8,19 @@ import { redraw } from './redraw.js';
  * where the party heads, the pin and the last Find, whether the party is out on the travel map, and whether Travel
  * there can set it going.
  */
+/**
+ * The Realms view: each board region's shade by the arms it shows now, and the key of the crowns that hold regions.
+ * The regions' shapes come only when the map opens or the page asks for its places again.
+ */
+export interface RealmsProjection {
+  readonly regions: readonly { readonly region: number; readonly arms: string; readonly colour: string; readonly liege: boolean }[];
+  readonly key: readonly { readonly arms: string; readonly name: string; readonly blazon: string; readonly colour: string }[];
+  readonly outlines?: readonly { readonly region: number; readonly path: string }[];
+}
+
 export interface WorldMapProjection {
   readonly map: TravelMapProjection;
+  readonly realms: RealmsProjection | null;
   readonly party: { readonly x: number; readonly y: number };
   readonly destination: ExpeditionMarkProjection | null;
   readonly pin: ExpeditionMarkProjection | null;
@@ -100,9 +111,23 @@ export function mountWorldMap(parent: HTMLElement, send: (action: WorldMapAction
   pinButtons.append(setPin, goToPin, clearPin);
   const travel = button('Travel there');
   travel.className = 'dagger-world-map-travel';
-  side.append(findForm, found, pinHeading, pinLabel, pinButtons, travel);
+  // The Realms view is the page's own toggle: it shades the regions by liege from what the projection already holds.
+  const realmsBox = document.createElement('div');
+  realmsBox.className = 'dagger-world-map-realms';
+  const realmsLabel = document.createElement('label');
+  const realmsToggle = document.createElement('input');
+  realmsToggle.type = 'checkbox';
+  realmsLabel.append(realmsToggle, 'Realms');
+  realmsLabel.dataset.tooltip = 'Shade each region by the crown it answers to.';
+  const realmKey = document.createElement('ul');
+  realmKey.className = 'dagger-world-map-realm-key';
+  realmKey.setAttribute('aria-label', 'Realms key');
+  realmKey.hidden = true;
+  realmsBox.append(realmsLabel, realmKey);
+  side.append(findForm, found, pinHeading, pinLabel, pinButtons, travel, realmsBox);
 
   let current: WorldMapProjection | null = null;
+  let outlines = new Map<number, string>();
   let shown = false;
   let centred = false;
   const atlas = mountAtlas(tiles => send({ action: 'atlas-tiles', tiles }),
@@ -146,6 +171,34 @@ export function mountWorldMap(parent: HTMLElement, send: (action: WorldMapAction
     report(false);
   });
   closeButton.addEventListener('click', () => report(false));
+  const drawRealms = (state: WorldMapProjection | null): void => {
+    const realms = state?.realms ?? null;
+    const on = realmsToggle.checked && realms !== null;
+    const regions: AtlasRealm[] = on ? realms!.regions.flatMap(region => {
+      const path = outlines.get(region.region);
+      return path ? [{ region: region.region, arms: region.arms, path, colour: region.colour, liege: region.liege }] : [];
+    }) : [];
+    atlas.realms(on ? regions : null);
+    realmKey.hidden = !on;
+    redraw(realmKey, JSON.stringify(on ? realms!.key : []), () => {
+      realmKey.replaceChildren();
+      if (!on) return;
+      const line = (colour: string, text: string, tooltip: string | null, faint: boolean, arms?: string): HTMLLIElement => {
+        const item = document.createElement('li');
+        if (arms) item.dataset.arms = arms;
+        const swatch = document.createElement('span');
+        swatch.className = 'dagger-world-map-realm-swatch';
+        swatch.style.background = colour;
+        if (faint) swatch.style.opacity = '.45';
+        item.append(swatch, text);
+        if (tooltip) item.dataset.tooltip = tooltip;
+        return item;
+      };
+      for (const crown of realms!.key) realmKey.append(line(crown.colour, crown.name, crown.blazon, false, crown.arms));
+      realmKey.append(line('#b9ad8f', 'Answers to no crown', 'Shown faintly in its own colours.', true));
+    });
+  };
+  realmsToggle.addEventListener('change', () => drawRealms(current));
 
   const render = (state: WorldMapProjection): void => {
     status.textContent = state.travelling ? 'Your party is out on the travel map; time stands still while you browse.'
@@ -174,6 +227,7 @@ export function mountWorldMap(parent: HTMLElement, send: (action: WorldMapAction
     };
     const route = state.destination ? { fromX: state.party.x, fromY: state.party.y, toX: state.destination.x, toY: state.destination.y } : null;
     atlas.update(state.map, '', route, marks);
+    drawRealms(state);
     if (!centred) { centred = true; atlas.centre(state.party.x, state.party.y); }
   };
 
@@ -183,6 +237,8 @@ export function mountWorldMap(parent: HTMLElement, send: (action: WorldMapAction
     close: () => report(false),
     update(value): void {
       current = value;
+      // The shapes come once a map opening, whether or not the page draws that snapshot.
+      if (value?.realms?.outlines) outlines = new Map(value.realms.outlines.map(outline => [outline.region, outline.path]));
       if (shown && value) render(value);
     },
     isOpen: () => shown,

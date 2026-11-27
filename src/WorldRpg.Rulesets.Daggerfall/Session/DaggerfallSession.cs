@@ -1515,6 +1515,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallOfficeAllegiance? OfficeAllegiance { get; }
 
     /// <summary>How the board's quarrels follow the player's standing; null without a board.</summary>
+    /// <summary>The arms each region shows, its liege's or its own (#11144).</summary>
+    internal DaggerfallRealmArms RealmArms { get; } = null!;
+
     internal DaggerfallBoardStandingRipple? StandingRipple { get; }
     /// <summary>The political quests a seat's questgivers offer from the live board (#11121); null without a board.</summary>
     internal DaggerfallPoliticalQuests? PoliticalQuests { get; }

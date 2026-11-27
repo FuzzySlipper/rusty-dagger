@@ -46,7 +46,7 @@ internal sealed record DaggerfallWorldMapView(
     DaggerfallTravelMapView Map, double PartyX, double PartyY,
     DaggerfallExpeditionMark? Destination, string? DestinationName,
     DaggerfallExpeditionMark? Pin, string? PinName,
-    IReadOnlyList<DaggerfallTravelDestination> Found, bool Travelling, bool CanTravel);
+    IReadOnlyList<DaggerfallTravelDestination> Found, bool Travelling, bool CanTravel, DaggerfallRealmsView? Realms);
 
 /// <summary>
 /// The travel panel's and the expedition map's actions: the map opened, run at a speed, a mode, a destination, a stop, a
@@ -62,6 +62,7 @@ internal sealed record DaggerfallWorldMapView(
 /// <param name="applyTransportChange">Session: what a change of transport does across domains.</param>
 /// <param name="overland">The travel map the Engine draws, whose view the map's actions move and point into.</param>
 /// <param name="playerPixel">The world-map pixel the player stands on, which the world map shows while the party is not out.</param>
+/// <param name="realms">The world map's Realms view, the regions shaded by liege (#11144).</param>
 internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition, DaggerfallTravelPolicy policy,
     IDaggerfallExpeditionSurroundings world, ActorsState actors, IReadOnlyList<string> regionNames, DaggerfallWorldNames worldNames,
     DaggerfallAtlasTiles? atlasTiles, Func<bool> classicArt, DaggerfallTransportPolicy transport,
@@ -70,7 +71,7 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
     Func<DaggerfallTransportActionResult> boardShip, Func<DaggerfallTransportActionResult> leaveShip,
     Action<DaggerfallTransportActionResult> applyTransportChange, PresentationState presentation,
     DaggerfallOverlandMap overland, Func<DaggerfallTravelMapPixel> playerPixel,
-    Func<string, (string? Faction, string? Detail)>? describePersistentBand = null)
+    Func<string, (string? Faction, string? Detail)>? describePersistentBand = null, DaggerfallRealmsMap? realms = null)
 {
     private DaggerfallTravelMap? _map;
     private bool _worldMapOpen;
@@ -165,7 +166,7 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
         DaggerfallTravelMapView map = _map.Read(policy.SupportedDestinations(), regionNames, party, expedition.Open ? expedition.Heading : null,
             classicArt() ? null : atlasTiles, worldNames);
         return new(map, x, y, expedition.Destination, Name(expedition.Destination), expedition.Pin, Name(expedition.Pin), expedition.Found,
-            expedition.Open, !expedition.Open || (expedition.Held is null && !expedition.EncounterWaiting));
+            expedition.Open, !expedition.Open || (expedition.Held is null && !expedition.EncounterWaiting), realms?.Read());
     }
 
     /// <summary>What the expedition map shows now, or null while it is closed.</summary>

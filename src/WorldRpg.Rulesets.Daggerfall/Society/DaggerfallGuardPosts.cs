@@ -61,7 +61,8 @@ internal sealed class DaggerfallGuardPosts(
     DaggerfallDefinitions definitions,
     DaggerfallRegionLiege liege,
     DaggerfallOfficeLedger officeLedger,
-    DaggerfallGuardTierTuning guardTiers)
+    DaggerfallGuardTierTuning guardTiers,
+    DaggerfallRealmArms realmArms)
 {
     private const int PalaceBuildingType = 16;
 
@@ -185,14 +186,14 @@ internal sealed class DaggerfallGuardPosts(
         DaggerfallFactionDefinition? liveryFaction = usesLiege
             ? liege.SovereignOf(region)
             : localProvince;
-        bool isIndependentFallback = usesLiege && sovereignLiege is null;
         int liveryRegion = liveryFaction is { Region: >= 0 and <= 61 } ? liveryFaction.Region : region;
         string liveryOwnerName = !string.IsNullOrWhiteSpace(liveryFaction?.Name)
             ? liveryFaction.Name
             : localRegionName;
         string liverySlug = Slugify(liveryOwnerName);
-        (string liveryKey, Color? liveryTint) = DaggerfallGuardLiveryColors.Resolve(
-            postKind, liverySlug, liveryRegion, isIndependentFallback);
+        (string liveryKey, Color? liveryTint) = usesLiege && realmArms.Of(region) is { } arms
+            ? (arms.Seat is { } seat ? $"crown:{seat}" : $"region:{region}", LiveryTint(realmArms.Heraldry.Colour(arms.Livery)))
+            : ($"watch:region:{region}", (Color?)null);
 
         return new DaggerfallGuardLiveryResolution(
             WatchTier: tier,
@@ -211,6 +212,13 @@ internal sealed class DaggerfallGuardPosts(
             LiveryKey: liveryKey,
             LiveryTint: liveryTint);
     }
+
+    /// <summary>
+    /// The sprite tint a guard in livery wears: the arms' livery colour, paled so it tints the classic sprite rather than
+    /// painting over it.
+    /// </summary>
+    private static Color LiveryTint(Color livery) =>
+        new(0.55f + livery.R * 0.45f, 0.55f + livery.G * 0.45f, 0.55f + livery.B * 0.45f, 1f);
 
     /// <summary>
     /// Resolves canonical guard appearance inputs (livery faction, livery key, and sprite tint) for an

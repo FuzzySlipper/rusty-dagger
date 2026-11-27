@@ -800,7 +800,8 @@ internal sealed partial class DaggerfallSession
                 change,
                 definitions.BuildingNames.RegionName);
             OfficeLedger.OfficeOverrideCleared += WorldConditions.ObserveOfficeOverrideCleared;
-            GuardPosts = new DaggerfallGuardPosts(definitions, State.Social.Liege, OfficeLedger, _tuning.Law.GuardTiers);
+            RealmArms = new DaggerfallRealmArms(State.Social.Liege, definitions.Heraldry);
+            GuardPosts = new DaggerfallGuardPosts(definitions, State.Social.Liege, OfficeLedger, _tuning.Law.GuardTiers, RealmArms);
             CourierDispatches = new DaggerfallCourierDispatches(
                 definitions, WordSpread, WorldConditions, State.Social, State.ActorLedger,
                 amount => amount <= 0 || State.Currency.TrySpendCarried((ulong)amount),
@@ -1698,7 +1699,8 @@ internal sealed partial class DaggerfallSession
             DaggerfallExpeditionPanel travelPanel = _travelPanel = new(Expedition, travelPolicy, this, State.Actors, definitions.BuildingNames.RegionNames,
                 definitions.WorldNames, _atlasTiles, () => _classicArt, State.Transport, State.Wagon, State.Inventory, _inventoryUi,
                 _hud.RequestTravelPlaces, TransportAccess, OpenExpedition, EnterExpedition, BoardPropertyShip, LeavePropertyShip,
-                ApplyTransportChange, Presentation, _overland, MapPosition.Position, DescribePersistentExpeditionBand);
+                ApplyTransportChange, Presentation, _overland, MapPosition.Position, DescribePersistentExpeditionBand,
+                new DaggerfallRealmsMap(definitions, RealmArms));
             DaggerfallServiceCounter counter = new(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
             DaggerfallMakerPanels makers = new(_itemMaker, _potionMaker, definitions, counter, Presentation);
             SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, counter,
