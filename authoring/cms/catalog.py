@@ -25,6 +25,18 @@ FLORA_KINDS = {"Trees": "tree", "Bushes": "bush", "Flowers": "flower", "Other pl
 # The classic mobiles below this id are creatures; the human classes from it on are people's enemy class records.
 FIRST_HUMAN_MOBILE = 128
 
+# Canonical domestic animal creature records consolidating classic TEXTURE.201 sprites (skipping bird record 11).
+# Each record is a first-class creature subject with concept-art stages and pipeline links instead of per-angle scenery rows.
+DOMESTIC_ANIMALS = (
+    {"id": "creature-202", "name": "Horse (Bay)", "classicRecords": (0,)},
+    {"id": "creature-203", "name": "Horse (Black)", "classicRecords": (1,)},
+    {"id": "creature-204", "name": "Camel", "classicRecords": (2,)},
+    {"id": "creature-205", "name": "Cow", "classicRecords": (3, 4)},
+    {"id": "creature-206", "name": "Pig", "classicRecords": (5, 6)},
+    {"id": "creature-207", "name": "Cat", "classicRecords": (7, 8)},
+    {"id": "creature-208", "name": "Dog", "classicRecords": (9, 10)},
+)
+
 
 def category_of(id):
     """The category an asset id names by its prefix, or None for an id of no category."""
@@ -45,6 +57,29 @@ class Catalog:
                 id = f"creature-{row['mobileId']:03d}"
                 self.creatures[id] = row
                 creature_aliases[row["directory"]] = id
+        scenery_201 = {
+            int(row["record"]): row
+            for row in _cached_csv(cache, library.scenery / "usage.csv")
+            if int(row["archive"]) == 201
+        }
+        for animal in DOMESTIC_ANIMALS:
+            aid = animal["id"]
+            recs = animal["classicRecords"]
+            placements = sum(
+                sum(int(scenery_201[r][f"{p}_placements"]) for p in ("exterior", "interior", "dungeon"))
+                for r in recs if r in scenery_201
+            )
+            self.creatures[aid] = {
+                "id": aid,
+                "name": animal["name"],
+                "animal": True,
+                "classicRecords": list(recs),
+                "placements": placements,
+                "aliases": [f"201-{r}" for r in recs],
+            }
+            for r in recs:
+                creature_aliases[f"201-{r}"] = aid
+                creature_aliases[f"creature-201-{r}"] = aid
         self.subjects = self.npcs | self.creatures
         self.aliases = npc_manifest.get("aliases", {}) | creature_aliases
         self.raw_links = links
@@ -106,7 +141,7 @@ class Catalog:
             "pipelines": pipeline, "automaticPipelines": self.by_subject[key],
             "concept": canonical, "conceptChoices": concepts, "final": final, "finalChoices": finals,
             "explicitConcept": choice.get("concept"), "explicitFinal": choice.get("final"), "conflicts": conflicts,
-            "game": self.mobile_game(row) if creature else self.npc_game(key),
+            "game": (self.animal_game(row) if row.get("animal") else self.mobile_game(row)) if creature else self.npc_game(key),
             "turnaround": turnaround and asset_url("/media/turnarounds/", f"{turnaround}/turnaround.mp4"),
             "turnaroundStill": turnaround and file_link(self.library.turnarounds, "/media/turnarounds/", f"{turnaround}/views/body-front.png"),
         }
@@ -117,10 +152,17 @@ class Catalog:
         pipeline_ids = [id for id in pipeline_ids if id in self.pipelines]
         missing_ids = [id for id in choice.get("pipelines", []) if id not in self.pipelines]
         if key in self.creatures:
-            image = next((frame["file"] for frame in row.get("frames", []) if frame["direction"] == "front"), None)
-            classic = file_link(self.library.mobiles, "/media/classic/", image)
-            sources = asset_url("/media/classic/", f"{row['directory']}/manifest.json")
-            kind, aliases = "Monster", [row["directory"]]
+            if row.get("animal"):
+                rec = row["classicRecords"][0]
+                stem = f"texture-201-record-{rec:03d}"
+                classic = file_link(self.library.scenery, "/media/scenery/", f"creatures/texture-201/sprite/{stem}-frame-000-source.png")
+                sources = None
+                kind, aliases = "Animal", list(row.get("aliases", []))
+            else:
+                image = next((frame["file"] for frame in row.get("frames", []) if frame["direction"] == "front"), None)
+                classic = file_link(self.library.mobiles, "/media/classic/", image)
+                sources = asset_url("/media/classic/", f"{row['directory']}/manifest.json")
+                kind, aliases = "Monster", [row["directory"]]
         else:
             image = f"art/{row['image']}" if row.get("image") else None
             classic = file_link(self.library.npcs, "/media/npc/", image)
@@ -136,6 +178,11 @@ class Catalog:
         detail = self._json(self.library.npcs / key / "manifest.json", {})
         return {"facts": detail.get("facts", {}), "placementCount": len(detail.get("placements", [])),
                 "url": asset_url("/media/npc/", f"{key}/manifest.json")}
+
+    def animal_game(self, row):
+        recs = ", ".join(str(r) for r in row["classicRecords"])
+        facts = {"Classic archive": "TEXTURE.201", "Classic records": recs, "Placements": row["placements"]}
+        return {"facts": facts, "placementCount": row["placements"]}
 
     def mobile_game(self, row):
         specs = []
@@ -250,6 +297,8 @@ def scenery_index(library, cache=None):
     rows = _cached_csv(cache, library.scenery / "usage.csv")
     for row in rows:
         archive, record = int(row["archive"]), int(row["record"])
+        if archive == 201:
+            continue
         stem = f"texture-{archive:03d}-record-{record:03d}"
         preview = file_link(library.scenery, "/media/scenery/", f"{row['directory']}/sprite/{stem}-frame-000-source.png")
         placements = sum(int(row[f"{place}_placements"]) for place in ("exterior", "interior", "dungeon"))

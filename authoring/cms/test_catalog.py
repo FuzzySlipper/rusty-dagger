@@ -99,11 +99,19 @@ class CatalogTests(TestCase):
         # The placed plants join the nature sets, the placed animals join the monsters, and the flora review's record
         # stands for its nature set record rather than the export's.
         self.assertEqual(self.ids("nature"), ["nature-500-12", "nature-213-2", "nature-m60511"])
-        self.assertEqual(self.ids("creatures"), ["creature-004", "creature-201-2"])
+        self.assertEqual(
+            self.ids("creatures"),
+            ["creature-004", "creature-202", "creature-203", "creature-204", "creature-205", "creature-206", "creature-207", "creature-208"],
+        )
         self.assertEqual(self.ids("props"), ["prop-210-3", "prop-m41000"])
         self.assertEqual(self.ids("architecture"), ["arch-m444"])
         nature = {row["id"]: row for row in self.overview()["nature"]}
         self.assertEqual((nature["nature-500-12"]["kind"], nature["nature-213-2"]["kind"]), ("tree", "plant"))
+        catalog = Catalog(self.library, {})
+        camel = catalog.get("creature-204")
+        self.assertEqual((camel["name"], camel["kind"]), ("Camel", "Animal"))
+        self.assertEqual(camel["game"]["placementCount"], 2309)
+        self.assertEqual(catalog.resolve("creature-201-2"), "creature-204")
 
     def test_human_enemy_classes_are_people_found_by_their_mobile_ids(self):
         catalog = Catalog(self.library, {})

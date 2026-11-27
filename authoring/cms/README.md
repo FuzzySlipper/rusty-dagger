@@ -20,7 +20,7 @@ is a field, so re-sorting it never changes its id.
 | Category | ID | Read from |
 | --- | --- | --- |
 | People | `npc-381` | the NPC chart (`export-npc`), including the enemy class sprite sets and mounted figures |
-| Creatures | `creature-004`, `creature-201-2` | the classic mobile reference below mobile 128, and the animals of `export-scenery` |
+| Creatures | `creature-004`, `creature-204` | the classic mobile reference below mobile 128, and the consolidated domestic animals (`creature-202`–`208`) from `TEXTURE.201` |
 | Nature | `nature-500-12`, `nature-213-2`, `nature-m60511` | the flora review, `export-scenery` and the ARCH3D remodels |
 | Props | `prop-210-3`, `prop-m41000` | `export-scenery` and the ARCH3D remodels |
 | Architecture | `arch-m444` | the ARCH3D remodels |
