@@ -267,6 +267,41 @@ public sealed class PoliticalBoardTests
     }
 
     /// <summary>
+    /// A courier that reaches its door before its move falls due (couriers are slow, so mostly a move already delayed
+    /// for its courier) brings the move in then whether the clock steps over its arrival and the Sunday one at a time or
+    /// jumps both at once (a rest, travel or prison), so the board never depends on how long the interval was.
+    /// </summary>
+    [Fact]
+    public void A_courier_arriving_before_its_moves_sunday_brings_it_in_on_time_however_the_clock_jumps()
+    {
+        using DaggerfallSession stepped = FreshSession();
+        using DaggerfallSession jumped = FreshSession();
+        DaggerfallPoliticalBoard board = stepped.PoliticalBoard!;
+        PendingMove? early = null;
+        DaggerfallCourierDispatchSave? dispatch = null;
+        while (early is null)
+        {
+            long week = (board.NextTurnDay - stepped.Calendar.DayNumber) * 86400;
+            stepped.AdvanceElapsedTime(week);
+            jumped.AdvanceElapsedTime(week);
+            early = board.Board.Pending.FirstOrDefault(move => stepped.CourierDispatches.TryGet(move.Id, out dispatch) && dispatch!.Status == DaggerfallDispatchStatus.InTransit
+                && dispatch.ExpectedArrivalMinute > stepped.Calendar.MinuteNumber
+                && dispatch.ExpectedArrivalMinute < board.TurnDay(move.Arrives) * 1440);
+            Assert.True(board.Board.Turn < 52, "no slow move whose courier arrives before its Sunday in a year");
+        }
+        long due = board.TurnDay(early.Arrives);
+        long end = (due + 1) * 1440;
+
+        stepped.AdvanceElapsedTime((dispatch!.ExpectedArrivalMinute + 1 - stepped.Calendar.MinuteNumber) * 60);
+        stepped.AdvanceElapsedTime((end - stepped.Calendar.MinuteNumber) * 60);
+        jumped.AdvanceElapsedTime((end - jumped.Calendar.MinuteNumber) * 60);
+
+        Assert.Equal(stepped.Calendar.MinuteNumber, jumped.Calendar.MinuteNumber);
+        Assert.Equal(board.Board.Save().ToJson(), jumped.PoliticalBoard!.Board.Save().ToJson());
+        Assert.DoesNotContain(jumped.PoliticalBoard.Board.Pending, move => move.Id == early.Id);
+    }
+
+    /// <summary>
     /// Patch's Q2: a seat holder dying or replaced in the world gives the seat its new holder at the next Sunday and opens
     /// a succession. A successor with no persona, or a vacant seat, plays on with the predecessor's persona as a regency.
     /// </summary>

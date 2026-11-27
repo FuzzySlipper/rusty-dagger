@@ -115,7 +115,8 @@ internal sealed class DaggerfallPoliticalBoard
     /// Plays every turn due by <paramref name="day"/>: one for each Sunday from the last played to it, and returns the
     /// news they made (<see cref="DaggerfallPoliticalNews"/>). The counterplay <paramref name="drainCounterplay"/> hands
     /// over (<see cref="DaggerfallConditionCounterplay.ConsumeBoardEvents"/>) is applied at the start of each, where it
-    /// eased a board token.
+    /// eased a board token. The couriers must have travelled up to each Sunday before its turn (the session steps an
+    /// interval Sunday by Sunday), or one that arrived in time would be taken as late.
     /// </summary>
     internal IReadOnlyList<DaggerfallPoliticalNewsItem> AdvanceToDay(long day, Func<IReadOnlyList<DaggerfallConditionCounterplayRecord>> drainCounterplay)
     {

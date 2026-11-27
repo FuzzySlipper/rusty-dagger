@@ -271,12 +271,8 @@ internal sealed partial class DaggerfallSession
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
         OfficeLedger.AdvanceVacancies(minuteAfter, checked((int)_time.Calendar.DayNumber));       // Society: office vacancy window progression
-        foreach (DaggerfallPoliticalNewsItem news in PoliticalBoard?.AdvanceToDay(_time.Calendar.DayNumber, ConditionCounterplay.ConsumeBoardEvents) ?? [])
-            WordSpread.RecordNews(news.EventId, news.Headline, news.Body, news.Origin, news.Minute, news.FactionId); // Society: a board turn each Sunday reached, its news spreading
-        CourierDispatches.AdvanceToMinute(minuteAfter, checked((int)_time.Calendar.DayNumber));   // Society: elapsed-time board-game couriers
+        AdvanceCouriersAndBoard(before, after);                                                   // Society, Travel: couriers and off-map bands, the board each Sunday
         WordSpread.PruneExpired(minuteAfter);                                                     // Society: elapsed-time word spread
-        if (!Expedition.Open)
-            AdvanceOffMapOverland(before, after);                                                 // Travel, Actors: persistent bands run off-map too (Q4)
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
         if (!ordinaryPlay || minuteAfter - minuteBefore >= 10)
             ResetScheduleWeatherBaseline();                                                       // Society: settle schedules immediately across time jumps/rest
@@ -1094,6 +1090,33 @@ internal sealed partial class DaggerfallSession
     /// (inn sleep, dungeon rest, walking on foot, quest time). Slices at 6-hour producer dispatch boundaries so newly
     /// dispatched caravans/pursuit squads advance across the remainder of the elapsed interval without double-stepping.
     /// </summary>
+    /// <summary>
+    /// Moves the couriers (by their schedules and, off the map, on their persistent bands) and the political board
+    /// through an interval: up to each Sunday in it, that Sunday's board turn, then the rest. A courier that reached its
+    /// door before its move's Sunday has done so when the board looks, so a long rest or journey plays the board as the
+    /// same days lived one at a time would (#11055).
+    /// </summary>
+    private void AdvanceCouriersAndBoard(DaggerfallCalendar before, DaggerfallCalendar after)
+    {
+        DaggerfallCalendar reached = before;
+        while (PoliticalBoard is { } board && board.NextTurnDay <= after.DayNumber)
+        {
+            DaggerfallCalendar sunday = DaggerfallCalendar.FromAbsoluteSeconds(board.NextTurnDay * DaggerfallCalendar.SecondsPerDay);
+            AdvanceCouriers(reached, sunday);
+            foreach (DaggerfallPoliticalNewsItem news in board.AdvanceToDay(board.NextTurnDay, ConditionCounterplay.ConsumeBoardEvents))
+                WordSpread.RecordNews(news.EventId, news.Headline, news.Body, news.Origin, news.Minute, news.FactionId); // Society: its news spreading
+            if (sunday.ToAbsoluteSeconds() > reached.ToAbsoluteSeconds()) reached = sunday;
+        }
+        AdvanceCouriers(reached, after);
+    }
+
+    private void AdvanceCouriers(DaggerfallCalendar from, DaggerfallCalendar to)
+    {
+        CourierDispatches.AdvanceToMinute(to.MinuteNumber, checked((int)to.DayNumber));          // Society: board-game couriers by their schedule
+        if (!Expedition.Open)
+            AdvanceOffMapOverland(from, to);                                                      // Travel, Actors: persistent bands run off-map too (Q4)
+    }
+
     private void AdvanceOffMapOverland(DaggerfallCalendar before, DaggerfallCalendar after)
     {
         long startSec = before.ToAbsoluteSeconds();
