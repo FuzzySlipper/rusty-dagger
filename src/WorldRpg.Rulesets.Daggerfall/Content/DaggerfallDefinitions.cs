@@ -463,8 +463,33 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
         replaced.dialogueWorldRules = dialogueWorldRules;
         replaced.Biographies = biographies;
         replaced.Books = books;
+        replaced._provincialNobility = null;
         return replaced;
     }
+
+    private DaggerfallProvincialNobilitySet? _provincialNobility;
+
+    /// <summary>Canon-seeded provincial ruling lords and noble houses (#11156), built lazily from immutable definitions.</summary>
+    internal DaggerfallProvincialNobilitySet ProvincialNobility => _provincialNobility ??= DaggerfallProvincialNobility.Build(this);
+
+    /// <summary>Resolves either an authored classic cast individual or a canon-seeded provincial noble by cast ID.</summary>
+    internal bool TryGetCastOrNoble(string? castId, out DaggerfallCastIndividualDefinition? cast)
+    {
+        cast = null;
+        if (string.IsNullOrWhiteSpace(castId))
+            return false;
+        return People.Individuals.TryGetValue(castId, out cast)
+            || ProvincialNobility.TryGetMember(castId, out cast);
+    }
+
+    /// <summary>Resolves either an authored classic cast individual or a canon-seeded provincial noble by individual faction ID.</summary>
+    internal bool TryGetCastOrNobleByFaction(int factionId, out DaggerfallCastIndividualDefinition? cast) =>
+        People.TryGetIndividualByFaction(factionId, out cast)
+        || ProvincialNobility.TryGetMemberByFaction(factionId, out cast);
+
+    /// <summary>All classic cast individuals followed by all canon-seeded provincial nobles.</summary>
+    internal IEnumerable<DaggerfallCastIndividualDefinition> AllCastAndNobles() =>
+        People.Individuals.Values.Concat(ProvincialNobility.AllMembers);
     /// <summary>Whether an actor walks on the floor, as its mobile does; one with no mobile does not.</summary>
     internal bool Walks(DaggerfallActorDefinition actor) =>
         actor.MobileId is int mobile && Mobiles.Mobiles.TryGetValue(mobile, out DaggerfallMobileDefinition? definition) && definition.Walks;

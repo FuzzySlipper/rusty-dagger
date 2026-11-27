@@ -310,6 +310,45 @@ internal sealed class DaggerfallOfficeLedger(
         actorId > 0 && _exiles.TryGetValue(actorId, out DaggerfallOfficeExileSave? found) ? found : null;
 
     /// <summary>
+    /// Selects a living, unseated named noble from the conquering crown seat's court/nobility (#11156) so conquest
+    /// governor appointments (#11143) draw recurring named nobles from the conqueror's house rather than generic deputies.
+    /// </summary>
+    internal DaggerfallProvincialNobleMember? TrySelectConquestGovernorCandidate(string conquerorSeatId, int targetRegion)
+    {
+        if (string.IsNullOrWhiteSpace(conquerorSeatId)
+            || !definitions.BoardSeats.TryGetBySeatId(conquerorSeatId, out DaggerfallBoardSeatBinding? seat)
+            || seat is null)
+        {
+            return null;
+        }
+        int? seatRegion = ResolveFactionOfficeRegion(seat.OfficeFactionId, seat);
+        if (seatRegion is not int crownRegion
+            || !definitions.ProvincialNobility.TryGetProvinceHouse(crownRegion, out DaggerfallProvincialNobleHouse? crownHouse)
+            || crownHouse is null)
+        {
+            return null;
+        }
+        HashSet<long> occupied = CollectActiveTier1HoldersExcluding(
+            definitions.Factions.ProvinceOf(targetRegion) is { } targetProv ? FactionOfficeKey(targetProv.Id) : string.Empty);
+        DaggerfallProvincialNobleMember[] eligible =
+        [
+            .. crownHouse.Members
+                .Where(m => m.Role != DaggerfallProvincialNobleRole.Ruler)
+                .Where(m =>
+                {
+                    long id = DaggerfallPeopleSlots.CastIndividualIdentity(m.Cast.Id);
+                    return !officeHolders.IsActorDead(id) && !occupied.Contains(id);
+                })
+                .OrderBy(m => m.Role == DaggerfallProvincialNobleRole.CourtNoble ? 0 : 1)
+                .ThenBy(m => m.Cast.Id, StringComparer.Ordinal),
+        ];
+        if (eligible.Length == 0)
+            return null;
+        int pick = DeterministicIndex(0UL, $"governor:{conquerorSeatId}:{targetRegion}", 0L, eligible.Length);
+        return eligible[pick];
+    }
+
+    /// <summary>
     /// Resolves a currently exiled regional ruler for <paramref name="region"/> as a living office-holder record
     /// so restoration quests (<c>office ExiledProvince</c>) can bind directly to them.
     /// </summary>
@@ -323,7 +362,7 @@ internal sealed class DaggerfallOfficeLedger(
             return null;
 
         DaggerfallCastIndividualDefinition? cast = !string.IsNullOrWhiteSpace(exile.CastId)
-            && definitions.People.Individuals.TryGetValue(exile.CastId, out DaggerfallCastIndividualDefinition? foundCast)
+            && definitions.TryGetCastOrNoble(exile.CastId, out DaggerfallCastIndividualDefinition? foundCast)
             ? foundCast
             : null;
         return new DaggerfallOfficeHolder(
@@ -479,7 +518,7 @@ internal sealed class DaggerfallOfficeLedger(
         string? resolvedName = holderDisplayName;
         if (!string.IsNullOrWhiteSpace(holderCastId))
         {
-            if (definitions.People.Individuals.TryGetValue(holderCastId, out DaggerfallCastIndividualDefinition? cast))
+            if (definitions.TryGetCastOrNoble(holderCastId, out DaggerfallCastIndividualDefinition? cast) && cast is not null)
             {
                 holderActorId ??= DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
                 holderFactionId ??= cast.FactionId;
@@ -804,7 +843,7 @@ internal sealed class DaggerfallOfficeLedger(
 
         string? resolvedName = regentDisplayName;
         if (!string.IsNullOrWhiteSpace(regentCastId)
-            && definitions.People.Individuals.TryGetValue(regentCastId, out DaggerfallCastIndividualDefinition? cast))
+            && definitions.TryGetCastOrNoble(regentCastId, out DaggerfallCastIndividualDefinition? cast) && cast is not null)
         {
             regentActorId ??= DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
             regentFactionId ??= cast.FactionId;
@@ -1534,7 +1573,7 @@ internal sealed class DaggerfallOfficeLedger(
             string? existingSlainName = !string.IsNullOrWhiteSpace(existing.HolderDisplayName)
                 ? existing.HolderDisplayName
                 : (!string.IsNullOrWhiteSpace(existing.HolderCastId)
-                    && definitions.People.Individuals.TryGetValue(existing.HolderCastId, out DaggerfallCastIndividualDefinition? slainCast)
+                    && definitions.TryGetCastOrNoble(existing.HolderCastId, out DaggerfallCastIndividualDefinition? slainCast) && slainCast is not null
                     ? slainCast.Name
                     : null);
 
@@ -1692,7 +1731,7 @@ internal sealed class DaggerfallOfficeLedger(
         if (exile.Kind is DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.MajorSeat && exile.OfficeFactionId is int factionId and > 0)
         {
             int? holderFactionId = exile.CastId is { Length: > 0 } cid
-                && definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? cast)
+                && definitions.TryGetCastOrNoble(cid, out DaggerfallCastIndividualDefinition? cast) && cast is not null
                     ? cast.FactionId
                     : factionId;
             return SetFactionOfficeHolder(
@@ -1987,7 +2026,7 @@ internal sealed class DaggerfallOfficeLedger(
         if (regentActorId is long rid && rid > 0)
         {
             regentName = ResolveActorDisplayName(rid, null, "Regent");
-            foreach (DaggerfallCastIndividualDefinition c in definitions.People.Individuals.Values)
+            foreach (DaggerfallCastIndividualDefinition c in definitions.AllCastAndNobles())
             {
                 if (DaggerfallPeopleSlots.CastIndividualIdentity(c.Id) == rid)
                 {
@@ -2214,7 +2253,7 @@ internal sealed class DaggerfallOfficeLedger(
 
         if (castId is null && actorId is long aid)
         {
-            foreach (DaggerfallCastIndividualDefinition candidate in definitions.People.Individuals.Values)
+            foreach (DaggerfallCastIndividualDefinition candidate in definitions.AllCastAndNobles())
             {
                 if (DaggerfallPeopleSlots.CastIndividualIdentity(candidate.Id) == aid)
                 {
@@ -2251,7 +2290,7 @@ internal sealed class DaggerfallOfficeLedger(
     {
         if (string.IsNullOrWhiteSpace(castId)
             || sites is null
-            || !definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast))
+            || !definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? cast) || cast is null)
             return null;
         return DaggerfallCastHomes.TryResolve(sites, cast, preferredRegion, out DaggerfallCastHomeLocation? home)
             ? home
@@ -2324,7 +2363,7 @@ internal sealed class DaggerfallOfficeLedger(
         string? resolvedCastId = slainCastId;
         if (resolvedCastId is null)
         {
-            foreach (DaggerfallCastIndividualDefinition candidate in definitions.People.Individuals.Values)
+            foreach (DaggerfallCastIndividualDefinition candidate in definitions.AllCastAndNobles())
             {
                 if (DaggerfallPeopleSlots.CastIndividualIdentity(candidate.Id) == deadActorId)
                 {
@@ -2481,9 +2520,12 @@ internal sealed class DaggerfallOfficeLedger(
                     childOrder.TryAdd(faction.Children[i], i);
             }
 
-            DaggerfallCastIndividualDefinition? dynasticHeir = definitions.People.Individuals.Values
+            DaggerfallCastIndividualDefinition? dynasticHeir = definitions.AllCastAndNobles()
                 .Where(c => string.Equals(c.FamilyId, dynastyFamilyId, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(c => childOrder.TryGetValue(c.FactionId, out int idx) ? idx : int.MaxValue)
+                .ThenBy(c => definitions.ProvincialNobility.TryGetMemberDetail(c.Id, out DaggerfallProvincialNobleMember? detail) && detail is not null
+                    ? (detail.Role == DaggerfallProvincialNobleRole.Heir ? 0 : detail.Role == DaggerfallProvincialNobleRole.Spouse ? 1 : detail.Role == DaggerfallProvincialNobleRole.CourtNoble ? 2 : 3)
+                    : 10)
                 .ThenBy(c => c.Id, StringComparer.Ordinal)
                 .FirstOrDefault(c => IsEligibleCast(c, out _));
             if (dynasticHeir is not null)
@@ -2528,6 +2570,35 @@ internal sealed class DaggerfallOfficeLedger(
                         HomeSlotId: null,
                         Blueprint: BuildActorBlueprint(castId, cast.Id, cast.Name, cast.FamilyId));
                 }
+            }
+        }
+
+        // Priority 2b (Ruler): Canon-seeded provincial noble house members for this province (#11156).
+        if (vacancy.Kind == DaggerfallOfficeKind.Ruler
+            && officeRegion is int nobleRegion
+            && definitions.ProvincialNobility.TryGetProvinceHouse(nobleRegion, out DaggerfallProvincialNobleHouse? nobleHouse)
+            && nobleHouse is not null
+            && !nobleHouse.HasClassicCastRuler)
+        {
+            foreach (DaggerfallProvincialNobleMember member in nobleHouse.Members
+                .OrderBy(m => m.Role == DaggerfallProvincialNobleRole.Heir ? 0
+                    : m.Role == DaggerfallProvincialNobleRole.Spouse ? 1
+                    : m.Role == DaggerfallProvincialNobleRole.CourtNoble ? 2 : 3)
+                .ThenBy(m => m.Cast.Id, StringComparer.Ordinal))
+            {
+                if (!IsEligibleCast(member.Cast, out long nobleId))
+                    continue;
+                DaggerfallCastHomeLocation? nobleHome = ResolveCastHome(member.Cast.Id, officeRegion);
+                return new SuccessorCandidate(
+                    ActorId: nobleId,
+                    CastId: member.Cast.Id,
+                    HolderFactionId: member.Cast.FactionId,
+                    DisplayName: ResolveActorDisplayName(nobleId, member.Cast.Name, member.Cast.Name),
+                    Title: ResolveGenderedRulerTitle(vacancy.Kind, member.Cast.Gender, seat?.DefaultTitle ?? vacancy.Title),
+                    CauseDetail: "succeeded by noble right",
+                    HomeProfile: DaggerfallCastHomes.ResolveProfileKey(nobleHome),
+                    HomeSlotId: null,
+                    Blueprint: BuildActorBlueprint(nobleId, member.Cast.Id, member.Cast.Name, member.Cast.FamilyId));
             }
         }
 
@@ -2825,7 +2896,7 @@ internal sealed class DaggerfallOfficeLedger(
         if (!string.IsNullOrWhiteSpace(vacancy.PreviousHolderFamilyId))
             return vacancy.PreviousHolderFamilyId;
         if (!string.IsNullOrWhiteSpace(vacancy.PreviousHolderCastId)
-            && definitions.People.Individuals.TryGetValue(vacancy.PreviousHolderCastId, out DaggerfallCastIndividualDefinition? prevCast)
+            && definitions.TryGetCastOrNoble(vacancy.PreviousHolderCastId, out DaggerfallCastIndividualDefinition? prevCast) && prevCast is not null
             && !string.IsNullOrWhiteSpace(prevCast.FamilyId))
             return prevCast.FamilyId;
         if (definitions.Factions.Factions.TryGetValue(officeFactionId, out DaggerfallFactionDefinition? faction))
@@ -2884,12 +2955,25 @@ internal sealed class DaggerfallOfficeLedger(
             if (baselineCandidates.Count == 0 && faction.Parent > 0) baselineCandidates.Add(faction.Parent);
             foreach (int cid in baselineCandidates)
             {
-                if (definitions.People.TryGetIndividualByFaction(cid, out DaggerfallCastIndividualDefinition? baseCast)
+                if (definitions.TryGetCastOrNobleByFaction(cid, out DaggerfallCastIndividualDefinition? baseCast)
                     && baseCast is not null
                     && ResolveCastHome(baseCast.Id, officeRegion) is { } baseHome
                     && DaggerfallCastHomes.ResolveProfileKey(baseHome) is { } baseProfile)
                 {
                     return (baseProfile, $"cast:{baseCast.Id}", baseHome.Site.Id);
+                }
+            }
+        }
+
+        if (definitions.ProvincialNobility.TryGetHouseByProvinceFaction(officeFactionId, out DaggerfallProvincialNobleHouse? house)
+            && house is not null)
+        {
+            foreach (DaggerfallProvincialNobleMember member in house.Members)
+            {
+                if (ResolveCastHome(member.Cast.Id, officeRegion) is { } nobleHome
+                    && DaggerfallCastHomes.ResolveProfileKey(nobleHome) is { } nobleProfile)
+                {
+                    return (nobleProfile, $"cast:{member.Cast.Id}", nobleHome.Site.Id);
                 }
             }
         }
@@ -2954,7 +3038,7 @@ internal sealed class DaggerfallOfficeLedger(
         }
 
         if (!string.IsNullOrWhiteSpace(castId)
-            && definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast))
+            && definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? cast) && cast is not null)
         {
             DaggerfallCastHomeLocation? home = ResolveCastHome(castId, null);
             DaggerfallWorldProfileKey? profile = DaggerfallCastHomes.ResolveProfileKey(home);
@@ -3278,7 +3362,7 @@ internal sealed class DaggerfallOfficeLedger(
                 return npc.FamilyId;
         }
         if (!string.IsNullOrWhiteSpace(castId)
-            && definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast)
+            && definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? cast) && cast is not null
             && !string.IsNullOrWhiteSpace(cast.FamilyId))
             return cast.FamilyId;
         return fallbackFamilyId;
@@ -3338,7 +3422,7 @@ internal sealed class DaggerfallOfficeLedger(
             string? familyId = null;
             DaggerfallOfficeActorBlueprint blueprint;
             if (!string.IsNullOrWhiteSpace(slot.CastId)
-                && definitions.People.Individuals.TryGetValue(slot.CastId, out DaggerfallCastIndividualDefinition? castDef))
+                && definitions.TryGetCastOrNoble(slot.CastId, out DaggerfallCastIndividualDefinition? castDef) && castDef is not null)
             {
                 durableId = DaggerfallPeopleSlots.CastIndividualIdentity(castDef.Id);
                 fallbackName = castDef.Name;

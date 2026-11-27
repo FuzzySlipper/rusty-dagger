@@ -1292,7 +1292,7 @@ internal sealed partial class DaggerfallSession
                 }, BringOutRetainedQuestActor,
                 (castId, profile, floor, appearance, displayName) =>
                 {
-                    DaggerfallCastHomeLocation? home = definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? castDef)
+                    DaggerfallCastHomeLocation? home = definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? castDef) && castDef is not null
                         && DaggerfallCastHomes.TryResolve(_site, castDef, profile.Site?.Region, out DaggerfallCastHomeLocation? resolvedHome)
                             ? resolvedHome
                             : null;
@@ -1743,7 +1743,8 @@ internal sealed partial class DaggerfallSession
             DaggerfallOfficeExileSave? matched = OfficeLedger.Exiles.FirstOrDefault(e =>
                 e.OfficeFactionId == factionId
                 || (e.CastId is { Length: > 0 } cid
-                    && _definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? c)
+                    && _definitions.TryGetCastOrNoble(cid, out DaggerfallCastIndividualDefinition? c)
+                    && c is not null
                     && c.FactionId == factionId));
             if (matched is not null)
                 return OfficeLedger.RestoreExile(matched.ActorId, DaggerfallOfficeChangeCause.Quest, day, "was restored to office", minute) is not null;

@@ -383,7 +383,11 @@ internal sealed class DaggerfallLocationAssembly
             bool[] matched = talkableSlots.Count > 0 ? new bool[talkableSlots.Count] : [];
             string regionName = owner._definitions.BuildingNames.RegionName(key.Site.Region);
             string climateName = owner._definitions.Grids.Climate.GetCell(record.MapPixelX + 1, record.MapPixelY).Name;
-            DaggerfallCastIndividualDefinition[] homed = [.. owner._definitions.People.HomedAt(key.Site, document.Key.SourceKey)];
+            DaggerfallCastIndividualDefinition[] homed =
+            [
+                .. owner._definitions.People.HomedAt(key.Site, document.Key.SourceKey)
+                    .Concat(owner._definitions.ProvincialNobility.HomedAt(key.Site, document.Key.SourceKey)),
+            ];
             foreach (JsonNode? person in document.Section("staticNpcs"))
             {
                 Vector3? rawPos = TryReadPosition(person);
@@ -416,10 +420,13 @@ internal sealed class DaggerfallLocationAssembly
         /// <summary>Makes a static person <paramref name="cast"/>: its faction, which the roster sets the individual by, and its look.</summary>
         private static void SetCast(JsonObject value, DaggerfallCastIndividualDefinition cast)
         {
+            value["castId"] = cast.Id;
             value["factionId"] = cast.FactionId;
             value["billboardArchive"] = cast.Archive;
             value["billboardRecord"] = cast.Record;
             value["gender"] = cast.Gender;
+            if (!string.IsNullOrWhiteSpace(cast.Race))
+                value["race"] = cast.Race;
             if (!string.IsNullOrWhiteSpace(cast.FamilyId))
                 value["familyId"] = cast.FamilyId;
         }
@@ -694,8 +701,12 @@ internal sealed class DaggerfallLocationAssembly
                 ? FilterTalkableSlots(interiorPeople!.Slots)
                 : [];
             bool[] interiorMatched = interiorTalkable.Count > 0 ? new bool[interiorTalkable.Count] : [];
-            DaggerfallCastIndividualDefinition[] interiorHomed = [.. owner._definitions.People.HomedAt(key.Site, placed.SourceName)
-                .Where(cast => cast.HomeSlotId is not null)];
+            DaggerfallCastIndividualDefinition[] interiorHomed =
+            [
+                .. owner._definitions.People.HomedAt(key.Site, placed.SourceName)
+                    .Concat(owner._definitions.ProvincialNobility.HomedAt(key.Site, placed.SourceName))
+                    .Where(cast => cast.HomeSlotId is not null),
+            ];
             string interiorRegionName = owner._definitions.BuildingNames.RegionName(key.Site.Region);
             string interiorClimateName = owner._definitions.Grids.Climate.GetCell(record.MapPixelX + 1, record.MapPixelY).Name;
 

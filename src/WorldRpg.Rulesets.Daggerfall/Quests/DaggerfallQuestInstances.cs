@@ -321,7 +321,7 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
                     || !definitions.Catalogs.TryGetRace(person.Race, out _)
                     || person.VampireClanFactionId is int clan && (!definitions.Factions.Factions.TryGetValue(clan, out var faction) || faction.Type != 6)
                     || person.QuestorId is long questor && !resource.Binding.ActorIds.Contains(questor)
-                    || person.CastId is { } castId && (!definitions.People.Individuals.ContainsKey(castId)
+                    || person.CastId is { } castId && (!definitions.TryGetCastOrNoble(castId, out _)
                         || !resource.Binding.ActorIds.Contains(DaggerfallPeopleSlots.CastIndividualIdentity(castId)))
                     || person.OfficeFactionId is int officeFaction && !definitions.Factions.Factions.ContainsKey(officeFaction)
                     || person.OfficeActorId is long officeActor && !resource.Binding.ActorIds.Contains(officeActor))

@@ -440,8 +440,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         bool needsStaticRematerialize = false;
         foreach (DaggerfallStaticNpcPlacement placement in destination.StaticNpcs)
         {
-            if (placement.Appearance.FactionId > 0
-                && _definitions.People.TryGetIndividualByFaction(placement.Appearance.FactionId, out _))
+            if ((!string.IsNullOrWhiteSpace(placement.CastId) && _definitions.TryGetCastOrNoble(placement.CastId, out _))
+                || (placement.Appearance.FactionId > 0 && _definitions.TryGetCastOrNobleByFaction(placement.Appearance.FactionId, out _)))
                 continue;
             long id = DaggerfallPeopleSlots.SeededSlotIdentity(siteId, $"{destination.ProfileKey.LogicalId}/{placement.Id}");
             if (suppressedStatic.Contains(id))

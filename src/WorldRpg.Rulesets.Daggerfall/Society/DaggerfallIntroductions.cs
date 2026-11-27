@@ -1391,7 +1391,7 @@ internal sealed class DaggerfallIntroductions(
         }
         if (localOfficeTarget is not null)
         {
-            foreach (DaggerfallCastIndividualDefinition cast in definitions.People.Individuals.Values)
+            foreach (DaggerfallCastIndividualDefinition cast in definitions.AllCastAndNobles())
             {
                 if (DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id) == targetDurableId)
                     return ActorOrigin.Cast(cast.Id, localOfficeTarget.ProfileKey);
@@ -1411,7 +1411,7 @@ internal sealed class DaggerfallIntroductions(
         if (npc is null) return null;
         if (npc.Kind == DaggerfallNpcKind.Static && !string.IsNullOrWhiteSpace(npc.StableKey))
         {
-            if (definitions.People.Individuals.ContainsKey(npc.StableKey))
+            if (definitions.TryGetCastOrNoble(npc.StableKey, out _))
                 return ActorOrigin.Cast(npc.StableKey, npc.Profile);
             if (npc.Profile is { } profile && DaggerfallPeopleSlots.IsDeterministicId(actorId))
                 return ActorOrigin.Seeded(profile, npc.StableKey);

@@ -597,8 +597,16 @@ internal sealed class DaggerfallActorRoster
             {
                 foreach (DaggerfallStaticNpcPlacement placement in profile.StaticNpcs)
                 {
+                    if (!string.IsNullOrWhiteSpace(placement.CastId)
+                        && _definitions.TryGetCastOrNoble(placement.CastId, out DaggerfallCastIndividualDefinition? explicitCast)
+                        && explicitCast is not null)
+                    {
+                        long? castId = MaterializeCastIndividual(explicitCast.Id, profile, placement.Position, appearance, translation, placement);
+                        if (castId is long admittedCastId) batch.Add(admittedCastId);
+                        continue;
+                    }
                     if (placement.Appearance.FactionId > 0
-                        && _definitions.People.TryGetIndividualByFaction(placement.Appearance.FactionId, out DaggerfallCastIndividualDefinition? cast)
+                        && _definitions.TryGetCastOrNobleByFaction(placement.Appearance.FactionId, out DaggerfallCastIndividualDefinition? cast)
                         && cast is not null)
                     {
                         long? castId = MaterializeCastIndividual(cast.Id, profile, placement.Position, appearance, translation, placement);
@@ -666,7 +674,7 @@ internal sealed class DaggerfallActorRoster
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(castId);
         ArgumentNullException.ThrowIfNull(profile);
-        if (!_definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast))
+        if (!_definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? cast) || cast is null)
             throw new KeyNotFoundException($"Cast individual '{castId}' is not defined in daggerfall.people.");
 
         long id = DaggerfallPeopleSlots.CastIndividualIdentity(castId);
@@ -720,7 +728,7 @@ internal sealed class DaggerfallActorRoster
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(castId);
         ArgumentNullException.ThrowIfNull(profile);
-        if (!_definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast))
+        if (!_definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? cast) || cast is null)
             throw new KeyNotFoundException($"Cast individual '{castId}' is not defined in daggerfall.people.");
 
         long id = DaggerfallPeopleSlots.CastIndividualIdentity(castId);
@@ -973,7 +981,7 @@ internal sealed class DaggerfallActorRoster
         }
         else if (baseSocial is null && origin.Kind == ActorOriginKind.CastIndividual
             && origin.CastId is { } castId
-            && _definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? cast))
+            && _definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? cast) && cast is not null)
         {
             baseSocial = new ActorSocialDiff(
                 NpcKind: (int)DaggerfallNpcKind.Static,
@@ -1132,7 +1140,7 @@ internal sealed class DaggerfallActorRoster
 
             DaggerfallNpc? npc = _npcs.TryGet(entry.DurableId, out DaggerfallNpc? existing) ? existing : null;
             if (npc is null && entry.Origin.Kind == ActorOriginKind.CastIndividual
-                && entry.Origin.CastId is { } cid && _definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? cast))
+                && entry.Origin.CastId is { } cid && _definitions.TryGetCastOrNoble(cid, out DaggerfallCastIndividualDefinition? cast) && cast is not null)
             {
                 DaggerfallSiteId site = profile.Site!.Value;
                 DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
@@ -1173,8 +1181,8 @@ internal sealed class DaggerfallActorRoster
                 ActorOriginKind.CastIndividual => (entry.Origin.SiteProfile is { } castHome
                     ? castHome.Require() == profile.ProfileKey
                     : entry.Origin.CastId is { } castId
-                      && _definitions.People.Individuals.TryGetValue(castId, out DaggerfallCastIndividualDefinition? castDef)
-                      && profile.StaticNpcs.Any(s => s.Appearance.FactionId == castDef.FactionId))
+                      && _definitions.TryGetCastOrNoble(castId, out DaggerfallCastIndividualDefinition? castDef) && castDef is not null
+                      && profile.StaticNpcs.Any(s => string.Equals(s.CastId, castDef.Id, StringComparison.Ordinal) || s.Appearance.FactionId == castDef.FactionId))
                     && string.IsNullOrWhiteSpace(entry.Location?.TargetSlotId),
                 _ => true,
             };
@@ -1187,7 +1195,7 @@ internal sealed class DaggerfallActorRoster
                     ? profile.Population.FirstOrDefault(p => StringComparer.Ordinal.Equals(p.Id, popSk))?.FamilyId
                     : null)
                 ?? (entry.Origin.Kind == ActorOriginKind.CastIndividual && entry.Origin.CastId is { } rCid
-                    && _definitions.People.Individuals.TryGetValue(rCid, out DaggerfallCastIndividualDefinition? rCast)
+                    && _definitions.TryGetCastOrNoble(rCid, out DaggerfallCastIndividualDefinition? rCast) && rCast is not null
                     ? rCast.FamilyId
                     : null);
             _ = MaterializeDeterministicNpc(npc, entry.Origin, basePose, translation, entry, isRelocated: !atHomeSite,
@@ -1239,7 +1247,7 @@ internal sealed class DaggerfallActorRoster
         }
 
         if (npc is null && entry.Origin.Kind == ActorOriginKind.CastIndividual
-            && entry.Origin.CastId is { } cid && _definitions.People.Individuals.TryGetValue(cid, out DaggerfallCastIndividualDefinition? cast))
+            && entry.Origin.CastId is { } cid && _definitions.TryGetCastOrNoble(cid, out DaggerfallCastIndividualDefinition? cast) && cast is not null)
         {
             DaggerfallSiteId site = profile.Site!.Value;
             DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
@@ -1268,7 +1276,7 @@ internal sealed class DaggerfallActorRoster
                     ? profile.Population.FirstOrDefault(p => StringComparer.Ordinal.Equals(p.Id, lPopSk))?.FamilyId
                     : null)
                 ?? (entry.Origin.Kind == ActorOriginKind.CastIndividual && entry.Origin.CastId is { } lCid
-                    && _definitions.People.Individuals.TryGetValue(lCid, out DaggerfallCastIndividualDefinition? lCast)
+                    && _definitions.TryGetCastOrNoble(lCid, out DaggerfallCastIndividualDefinition? lCast) && lCast is not null
                     ? lCast.FamilyId
                     : null);
             materialized = MaterializeDeterministicNpc(npc, entry.Origin, baseline, translation, entry, isRelocated: !atHomeSite,
@@ -1384,10 +1392,11 @@ internal sealed class DaggerfallActorRoster
             if (targetSlot.StartsWith("cast:", StringComparison.Ordinal))
             {
                 string targetCastId = targetSlot["cast:".Length..];
-                if (_definitions.People.Individuals.TryGetValue(targetCastId, out DaggerfallCastIndividualDefinition? targetCast))
+                if (_definitions.TryGetCastOrNoble(targetCastId, out DaggerfallCastIndividualDefinition? targetCast) && targetCast is not null)
                 {
                     if (profile.StaticNpcs.FirstOrDefault(s =>
-                        s.Appearance.FactionId == targetCast.FactionId
+                        string.Equals(s.CastId, targetCast.Id, StringComparison.Ordinal)
+                        || s.Appearance.FactionId == targetCast.FactionId
                         || s.Id.Contains($"cast-{targetCastId}", StringComparison.Ordinal)) is { } castPlacement)
                     {
                         return castPlacement.Position;
@@ -1406,9 +1415,10 @@ internal sealed class DaggerfallActorRoster
         }
         if (entry.Origin.Kind == ActorOriginKind.CastIndividual
             && entry.Origin.CastId is { Length: > 0 } homeCastId
-            && _definitions.People.Individuals.TryGetValue(homeCastId, out DaggerfallCastIndividualDefinition? homeCast)
+            && _definitions.TryGetCastOrNoble(homeCastId, out DaggerfallCastIndividualDefinition? homeCast) && homeCast is not null
             && profile.StaticNpcs.FirstOrDefault(s =>
-                s.Appearance.FactionId == homeCast.FactionId
+                string.Equals(s.CastId, homeCast.Id, StringComparison.Ordinal)
+                || s.Appearance.FactionId == homeCast.FactionId
                 || s.Id.Contains($"cast-{homeCastId}", StringComparison.Ordinal)) is { } ownCastPlacement)
         {
             return ownCastPlacement.Position;

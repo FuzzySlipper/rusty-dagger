@@ -193,8 +193,9 @@ public sealed class RegionLiegeTests
     }
 
     /// <summary>
-    /// Glenpoint and Betony have no lord the catalog names: an annexed Glenpoint's court still says whom it answers to and
-    /// announces its homage, and a vacant throne keeps its vacancy text and names the crown.
+    /// Under #11156 Glenpoint and Betony each have a canon-seeded ruling lord: an annexed Glenpoint's court names its
+    /// ruler and whom it is sworn to, announces its homage while consolidating, and a vacant throne keeps its vacancy
+    /// text and still names the crown.
     /// </summary>
     [Fact]
     public void A_court_without_a_named_lord_still_tells_its_liege_and_a_vacant_throne_names_it_too()
@@ -202,16 +203,19 @@ public sealed class RegionLiegeTests
         using var fixture = SourceBackedGuildBankSessionFixture.Create();
         using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
         DaggerfallNpc speaker = session.State.Npcs.All.First();
-        Assert.Null(session.OfficeHolders.ResolveRegionalRuler(GlenpointRegion));
-        Assert.Null(session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: false));
+        DaggerfallOfficeHolder? glenpointRuler = session.OfficeHolders.ResolveRegionalRuler(GlenpointRegion);
+        Assert.NotNull(glenpointRuler);
+        Assert.True(glenpointRuler!.HasLivingHolder);
+        Assert.Equal($"You stand in the court of {glenpointRuler.DisplayName} of Glenpoint.",
+            session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: false));
 
         Take(session.PoliticalBoard!.Board, "glenpoint", "daggerfall");
-        Assert.Equal("You stand in the court of Glenpoint, which answers to the Crown of Daggerfall.",
+        Assert.Equal($"You stand in the court of {glenpointRuler.DisplayName} of Glenpoint, sworn to the Crown of Daggerfall.",
             session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: false));
         Assert.Equal("The court of Glenpoint has sworn homage to the Crown of Daggerfall.",
             session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: true));
         session.PoliticalBoard.Board.Consolidate(session.PoliticalBoard.Board.Region("glenpoint"), session.PoliticalBoard.Board.Turn);
-        Assert.Equal("The court of Glenpoint answers to the Crown of Daggerfall.",
+        Assert.Equal($"All eyes in court turn to {glenpointRuler.DisplayName} of Glenpoint.",
             session.Dialogue.ResolveRegionalThroneContinuityLine(speaker, GlenpointRegion, forBark: true));
 
         session.OfficeLedger.VacateFactionOffice(Betony, DaggerfallOfficeChangeCause.Death, changedDay: 1, causeDetail: "was slain",

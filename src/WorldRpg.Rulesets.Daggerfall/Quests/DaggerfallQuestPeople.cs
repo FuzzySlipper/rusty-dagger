@@ -78,7 +78,8 @@ internal sealed class DaggerfallQuestPersonAllocator(DaggerfallDefinitions defin
         DaggerfallCastIndividualDefinition? cast = null;
         DaggerfallCastHomeLocation? castHome = null;
         if (officeHolder is { CastId: { Length: > 0 } officeCastId }
-            && definitions.People.Individuals.TryGetValue(officeCastId, out DaggerfallCastIndividualDefinition? resolvedOfficeCast))
+            && definitions.TryGetCastOrNoble(officeCastId, out DaggerfallCastIndividualDefinition? resolvedOfficeCast)
+            && resolvedOfficeCast is not null)
         {
             cast = resolvedOfficeCast;
             castHome = officeHolder.Home;

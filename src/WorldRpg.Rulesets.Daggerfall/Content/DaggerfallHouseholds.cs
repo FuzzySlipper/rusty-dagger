@@ -271,6 +271,8 @@ internal static class DaggerfallHouseholds
 
         if (IsDynasty(familyId))
         {
+            if (definitions?.ProvincialNobility.FormatDynastyLabel(familyId) is { Length: > 0 } canonLabel)
+                return canonLabel;
             if (!string.IsNullOrWhiteSpace(houseSurname))
                 return !string.IsNullOrWhiteSpace(regionName) && regionName != DaggerfallRegionNames.Unnamed
                     ? $"House {houseSurname} of {regionName}"

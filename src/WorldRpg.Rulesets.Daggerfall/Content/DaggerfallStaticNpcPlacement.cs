@@ -11,7 +11,8 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
     ActorHarmPolicyKind Harm = ActorHarmPolicyKind.Protected,
     string? SpawnerId = null,
     bool DeriveRegionalFaction = false,
-    string? FamilyId = null)
+    string? FamilyId = null,
+    string? CastId = null)
 {
     internal static IReadOnlyList<DaggerfallStaticNpcPlacement> Read(ReadOnlyMemory<byte>? bytes,
         IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> sprites, DaggerfallDefinitions definitions,
@@ -71,6 +72,9 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
             string? familyId = person.TryGetProperty("familyId", out JsonElement familyEl) && familyEl.ValueKind == JsonValueKind.String
                 ? familyEl.GetString()
                 : null;
+            string? castId = person.TryGetProperty("castId", out JsonElement castEl) && castEl.ValueKind == JsonValueKind.String
+                ? castEl.GetString()
+                : null;
             ActorInteractionPolicyKind interaction = DaggerfallPeopleSlots.ParseInteractionPolicy(interactionRaw);
             ActorHarmPolicyKind harm = DaggerfallPeopleSlots.ParseHarmPolicy(harmRaw,
                 fallback: interaction == ActorInteractionPolicyKind.None
@@ -99,7 +103,7 @@ internal sealed record DaggerfallStaticNpcPlacement(string Id, WorldPoint Positi
             }
             result.Add(new(id, position, new(race ?? string.Empty, gender, archive, record,
                 person.GetProperty("nameSeed").GetInt32(), faction), role,
-                services, billboard.Standing((archive, record)), interaction, harm, spawnerId, deriveRegionalFaction, familyId));
+                services, billboard.Standing((archive, record)), interaction, harm, spawnerId, deriveRegionalFaction, familyId, castId));
         }
         return result;
     }

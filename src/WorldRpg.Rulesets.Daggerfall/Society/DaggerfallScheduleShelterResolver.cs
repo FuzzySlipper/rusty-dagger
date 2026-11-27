@@ -281,7 +281,7 @@ internal static class DaggerfallScheduleShelterResolver
                     continue;
 
                 HashSet<string>? homedCastSlots = null;
-                foreach (DaggerfallCastIndividualDefinition cast in definitions.People.Individuals.Values)
+                foreach (DaggerfallCastIndividualDefinition cast in definitions.AllCastAndNobles())
                 {
                     if (!string.IsNullOrWhiteSpace(cast.HomeSlotId)
                         && string.Equals(cast.HomeBlock, building.Source.Id.SourceKey, StringComparison.OrdinalIgnoreCase)

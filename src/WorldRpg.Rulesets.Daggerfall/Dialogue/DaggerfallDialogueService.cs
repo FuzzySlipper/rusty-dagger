@@ -1701,7 +1701,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                 && buildingId is { } b
                 && site.Exterior is not null
                 && site.Exterior.Buildings.TryGetValue(b, out DaggerfallSiteBuildingSource? source)
-                && source.Source.BuildingType == 14)
+                && (source.Source.BuildingType == 16
+                    || _definitions.ProvincialNobility.IsCapitalSeatProfile(site.Id, b)))
             {
                 return true;
             }

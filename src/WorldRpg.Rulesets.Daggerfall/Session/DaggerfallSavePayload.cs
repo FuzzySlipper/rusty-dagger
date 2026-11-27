@@ -650,11 +650,15 @@ internal sealed record DaggerfallSavePayload(
         {
             foreach (DaggerfallStaticNpcPlacement staticNpc in inputs.StaticNpcs)
             {
-                long id = staticNpc.Appearance.FactionId > 0
-                    && definitions.People.TryGetIndividualByFaction(staticNpc.Appearance.FactionId, out DaggerfallCastIndividualDefinition? cast)
-                    && cast is not null
-                    ? DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id)
-                    : DaggerfallPeopleSlots.SeededSlotIdentity(activeSiteId, $"{inputs.ProfileKey.LogicalId}/{staticNpc.Id}");
+                long id = !string.IsNullOrWhiteSpace(staticNpc.CastId)
+                    && definitions.TryGetCastOrNoble(staticNpc.CastId, out DaggerfallCastIndividualDefinition? explicitCast)
+                    && explicitCast is not null
+                    ? DaggerfallPeopleSlots.CastIndividualIdentity(explicitCast.Id)
+                    : staticNpc.Appearance.FactionId > 0
+                        && definitions.TryGetCastOrNobleByFaction(staticNpc.Appearance.FactionId, out DaggerfallCastIndividualDefinition? cast)
+                        && cast is not null
+                        ? DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id)
+                        : DaggerfallPeopleSlots.SeededSlotIdentity(activeSiteId, $"{inputs.ProfileKey.LogicalId}/{staticNpc.Id}");
                 if (!restoredLedgerView.IsHomeSlotSuppressed(id, inputs.ProfileKey))
                     activeDeterministicIds.Add(id);
             }

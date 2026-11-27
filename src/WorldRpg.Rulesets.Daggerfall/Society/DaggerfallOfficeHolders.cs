@@ -207,7 +207,7 @@ internal sealed class DaggerfallOfficeHolders(
         out DaggerfallCastIndividualDefinition? cast,
         out DaggerfallCastHomeLocation? home)
     {
-        if (definitions.People.TryGetIndividualByFaction(factionId, out cast) && cast is not null)
+        if (definitions.TryGetCastOrNobleByFaction(factionId, out cast) && cast is not null)
         {
             DaggerfallCastHomes.TryResolve(sites, cast, preferredRegion, out home);
             return true;
@@ -305,11 +305,6 @@ internal sealed class DaggerfallOfficeHolders(
             individualChildren.Add(parentFaction);
         }
 
-        if (individualChildren.Count == 0)
-            return deadPredecessor is not null
-                ? DaggerfallOfficeHolder.Vacant(officeFactionId, defaultTitle, deadPredecessor, deadPredecessorFate)
-                : null;
-
         int? regionHint = preferredRegion ?? (officeFaction.Region >= 0 ? officeFaction.Region : null);
 
         foreach (DaggerfallFactionDefinition candidate in individualChildren)
@@ -324,6 +319,32 @@ internal sealed class DaggerfallOfficeHolders(
                 deadPredecessorFate = "was slain";
             }
         }
+
+        // Canon-seeded provincial ruling lord and noble house (#11156) for provinces whose classic factions.json
+        // lists no living individual lord (classic cast lords above always take precedence).
+        if (officeFaction.Type == ProvinceFactionType
+            && officeFaction.Region >= 0
+            && definitions.ProvincialNobility.TryGetProvinceHouse(officeFaction.Region, out DaggerfallProvincialNobleHouse? house)
+            && house is not null
+            && !house.HasClassicCastRuler)
+        {
+            foreach (DaggerfallProvincialNobleMember member in house.Members)
+            {
+                DaggerfallOfficeHolder nobleHolder = BuildFromProvincialNoble(
+                    officeFactionId, member, defaultTitle, regionHint, deadPredecessor, deadPredecessorFate);
+                if (nobleHolder.HasLivingHolder)
+                    return nobleHolder;
+
+                if (deadPredecessor is null && !string.IsNullOrWhiteSpace(nobleHolder.DisplayName))
+                {
+                    deadPredecessor = nobleHolder.DisplayName;
+                    deadPredecessorFate = "was slain";
+                }
+            }
+        }
+
+        if (individualChildren.Count == 0 && deadPredecessor is null)
+            return null;
 
         return DaggerfallOfficeHolder.Vacant(officeFactionId, defaultTitle, deadPredecessor, deadPredecessorFate);
     }
@@ -345,7 +366,8 @@ internal sealed class DaggerfallOfficeHolders(
         long? actorId = over.HolderActorId;
 
         if (!string.IsNullOrWhiteSpace(over.HolderCastId)
-            && definitions.People.Individuals.TryGetValue(over.HolderCastId, out DaggerfallCastIndividualDefinition? foundCast))
+            && definitions.TryGetCastOrNoble(over.HolderCastId, out DaggerfallCastIndividualDefinition? foundCast)
+            && foundCast is not null)
         {
             cast = foundCast;
             actorId ??= DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
@@ -387,6 +409,37 @@ internal sealed class DaggerfallOfficeHolders(
             FamilyId: liveNpc?.FamilyId ?? cast?.FamilyId);
     }
 
+    private DaggerfallOfficeHolder BuildFromProvincialNoble(
+        int officeFactionId,
+        DaggerfallProvincialNobleMember member,
+        string? defaultTitle,
+        int? preferredRegion,
+        string? deadPredecessor,
+        string? deadPredecessorFate)
+    {
+        DaggerfallCastIndividualDefinition cast = member.Cast;
+        long durableId = DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
+        DaggerfallNpc? liveNpc = TryGetNpc(durableId, out DaggerfallNpc? existing) ? existing : null;
+        bool alive = !IsActorDead(durableId);
+        DaggerfallCastHomes.TryResolve(sites, cast, preferredRegion, out DaggerfallCastHomeLocation? home);
+        return new DaggerfallOfficeHolder(
+            OfficeFactionId: officeFactionId,
+            HolderFactionId: cast.FactionId,
+            ActorId: durableId,
+            CastId: cast.Id,
+            DisplayName: liveNpc?.DisplayName ?? cast.Name,
+            Title: member.Title ?? defaultTitle,
+            Gender: liveNpc?.Appearance.Gender ?? cast.Gender,
+            Race: liveNpc?.Appearance.Race ?? cast.Race,
+            BillboardArchive: liveNpc?.Appearance.BillboardArchive ?? cast.Archive,
+            BillboardRecord: liveNpc?.Appearance.BillboardRecord ?? cast.Record,
+            Home: home,
+            IsAlive: alive,
+            PreviousHolderName: deadPredecessor,
+            PreviousHolderFate: deadPredecessor is not null ? (deadPredecessorFate ?? "was slain") : null,
+            FamilyId: liveNpc?.FamilyId ?? cast.FamilyId);
+    }
+
     private DaggerfallOfficeHolder BuildFromIndividualFaction(
         int officeFactionId,
         DaggerfallFactionDefinition individual,
@@ -401,6 +454,13 @@ internal sealed class DaggerfallOfficeHolders(
             long durableId = DaggerfallPeopleSlots.CastIndividualIdentity(cast.Id);
             DaggerfallNpc? liveNpc = TryGetNpc(durableId, out DaggerfallNpc? existing) ? existing : null;
             bool alive = !IsActorDead(durableId);
+            string? resolvedFamilyId = liveNpc?.FamilyId ?? cast.FamilyId;
+            if (string.IsNullOrWhiteSpace(resolvedFamilyId)
+                && preferredRegion is int famRegion
+                && definitions.ProvincialNobility.TryGetProvinceHouse(famRegion, out DaggerfallProvincialNobleHouse? provHouse))
+            {
+                resolvedFamilyId = provHouse?.FamilyId;
+            }
             return new DaggerfallOfficeHolder(
                 OfficeFactionId: officeFactionId,
                 HolderFactionId: cast.FactionId,
@@ -416,7 +476,7 @@ internal sealed class DaggerfallOfficeHolders(
                 IsAlive: alive,
                 PreviousHolderName: deadPredecessor,
                 PreviousHolderFate: deadPredecessor is not null ? (deadPredecessorFate ?? "was slain") : null,
-                FamilyId: liveNpc?.FamilyId ?? cast.FamilyId);
+                FamilyId: resolvedFamilyId);
         }
 
         DaggerfallFactionSpriteDefinition? sprite = individual.SpriteVisuals.FirstOrDefault();
