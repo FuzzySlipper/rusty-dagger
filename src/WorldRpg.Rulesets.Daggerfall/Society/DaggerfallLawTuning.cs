@@ -22,14 +22,25 @@ internal sealed record DaggerfallLawTuning(int MinimumResponseSeconds, int Maxim
     /// <summary>The days an earned bounty waits to be claimed before it lapses.</summary>
     internal int BountyClaimDays { get; init; } = 30;
 
-    internal DaggerfallLawTuning Validate() => MinimumResponseSeconds >= 0 && MaximumResponseSeconds >= MinimumResponseSeconds
-        && MinimumGuards > 0 && MaximumGuards >= MinimumGuards && MaximumGuards <= 64
-        && float.IsFinite(MinimumArrivalDistance) && MinimumArrivalDistance > 0 && float.IsFinite(MaximumArrivalDistance)
-        && MaximumArrivalDistance >= MinimumArrivalDistance && double.IsFinite(ArrestReach) && ArrestReach > 0
-        && CrackdownGuardsPerSeverity >= 0
-        && CrackdownGuardsPerSeverity * DaggerfallWorldConditionToken.MaxSeverity <= DaggerfallExteriorPopulation.CrackdownGuardSlots
-        && BountyRewardPerSeverity > 0 && BountyReputation >= 0 && BountyClaimDays > 0
-        ? this : throw new ArgumentException("Law tuning requires ordered finite response delays, guard counts and arrival distances, crackdown guards a town's reserve watch can field, and paying bounties.");
+    /// <summary>3-tier settlement watch tuning (Hamlet / Town / Capital patrol density, crackdown reserves, stats, and loadouts).</summary>
+    internal DaggerfallGuardTierTuning GuardTiers { get; init; } = DaggerfallGuardTierTuning.Default;
+
+    internal DaggerfallLawTuning Validate()
+    {
+        if (!(MinimumResponseSeconds >= 0 && MaximumResponseSeconds >= MinimumResponseSeconds
+            && MinimumGuards > 0 && MaximumGuards >= MinimumGuards && MaximumGuards <= 64
+            && float.IsFinite(MinimumArrivalDistance) && MinimumArrivalDistance > 0 && float.IsFinite(MaximumArrivalDistance)
+            && MaximumArrivalDistance >= MinimumArrivalDistance && double.IsFinite(ArrestReach) && ArrestReach > 0
+            && CrackdownGuardsPerSeverity >= 0
+            && CrackdownGuardsPerSeverity * DaggerfallWorldConditionToken.MaxSeverity <= DaggerfallExteriorPopulation.CrackdownGuardSlots
+            && BountyRewardPerSeverity > 0 && BountyReputation >= 0 && BountyClaimDays > 0))
+        {
+            throw new ArgumentException("Law tuning requires ordered finite response delays, guard counts and arrival distances, crackdown guards a town's reserve watch can field, and paying bounties.");
+        }
+        ArgumentNullException.ThrowIfNull(GuardTiers);
+        GuardTiers.Validate();
+        return this;
+    }
 
     internal static DaggerfallLawTuning Read(JsonElement section) => new DaggerfallLawTuning(
         section.GetProperty("minimumResponseSeconds").GetInt32(),
@@ -44,5 +55,8 @@ internal sealed record DaggerfallLawTuning(int MinimumResponseSeconds, int Maxim
         BountyRewardPerSeverity = section.GetProperty("bountyRewardPerSeverity").GetInt32(),
         BountyReputation = section.GetProperty("bountyReputation").GetInt32(),
         BountyClaimDays = section.GetProperty("bountyClaimDays").GetInt32(),
+        GuardTiers = section.TryGetProperty("guardTiers", out JsonElement tiers)
+            ? DaggerfallGuardTierTuning.Read(tiers)
+            : DaggerfallGuardTierTuning.Default,
     }.Validate();
 }

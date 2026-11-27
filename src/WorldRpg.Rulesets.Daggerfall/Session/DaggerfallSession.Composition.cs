@@ -1498,7 +1498,9 @@ internal sealed partial class DaggerfallSession
                 returnProfile: () => _sites.ReturnProfile,
                 spawn: (definition, pose) => _roster.Spawn(definition, pose),
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
-                promoteGuard: id => _roster.PromoteToCityWatch(id));
+                promoteGuard: id => _roster.PromoteToCityWatch(id),
+                spawnTiered: (definition, pose, tier) => _roster.Spawn(definition, pose, guardTier: tier),
+                promoteGuardTiered: (id, tier) => _roster.PromoteToCityWatch(id, guardTier: tier));
             Law.BindGateScrutiny(region => Scrutiny.EvaluateGateScrutiny(region, _site.ActiveSite));
             Law.BindNpcArrested((actorId, region, crimeKind, banished, detail) =>
             {

@@ -41,7 +41,7 @@ internal static class DaggerfallExteriorPopulation
 
     internal static IReadOnlyList<DaggerfallPopulationPlacement> Create(DaggerfallDefinitions definitions,
         DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear, WorldPoint? gateAnchor = null,
-        ulong worldSocialSeed = 0UL)
+        ulong worldSocialSeed = 0UL, DaggerfallGuardTierTuning? guardTiers = null)
     {
         const int automapSide = 64;
         const float blockSide = DaggerfallWorldGrid.HorizontalSize / 8f;
@@ -89,10 +89,12 @@ internal static class DaggerfallExteriorPopulation
         }
         List<DaggerfallPopulationPlacement> result = [];
         int townBuckets = DaggerfallHouseholds.TownHouseholdBucketCount(location);
+        DaggerfallGuardTierProfile watchProfile = (guardTiers ?? DaggerfallGuardTierTuning.Default).ResolveProfile(location);
+        HashSet<int> guardIndices = ResolvePatrolGuardIndices(count, watchProfile.BaselinePatrolGuards);
         for (int index = 0; index < count; index++)
         {
             string id = string.Create(CultureInfo.InvariantCulture, $"population/{slug}-{location.Id.Region}-{location.Id.Index}/dynamic/{index:D3}");
-            bool isGuard = index % 32 == 0;
+            bool isGuard = guardIndices.Contains(index);
             string walkerSlotKey = DaggerfallPeopleSlots.WalkerSlotKey(index);
             ulong slotSeed = DaggerfallPeopleSlots.SlotSeed(worldSocialSeed, location.Id, walkerSlotKey);
             int spriteIndex = isGuard ? 0 : (int)((slotSeed >> 16) % (ulong)people.Sprites.Count);
@@ -133,6 +135,22 @@ internal static class DaggerfallExteriorPopulation
         using JsonDocument document = JsonDocument.Parse(normalized);
         return document.RootElement.GetProperty("world").GetProperty("clearOutdoorCells").EnumerateArray()
             .Select(cell => (cell.GetProperty("x").GetInt32(), cell.GetProperty("z").GetInt32())).ToArray();
+    }
+
+    internal static HashSet<int> ResolvePatrolGuardIndices(int slotCount, int desiredGuards)
+    {
+        HashSet<int> indices = [];
+        if (slotCount <= 0)
+            return indices;
+        int guardCount = Math.Clamp(desiredGuards, 1, slotCount);
+        indices.Add(0); // Index 0 is always the canonical WatchCaptainSlotId / gate guard.
+        for (int i = 1; i < guardCount; i++)
+        {
+            int idx = Math.Clamp((int)Math.Round(i * (double)slotCount / guardCount, MidpointRounding.AwayFromZero), 1, slotCount - 1);
+            while (!indices.Add(idx) && idx < slotCount - 1)
+                idx++;
+        }
+        return indices;
     }
 
     internal static ushort StableSeed(string id)

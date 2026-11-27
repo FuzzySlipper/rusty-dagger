@@ -74,8 +74,15 @@ internal sealed class DaggerfallLaw(
     Func<DaggerfallWorldProfileKey?> returnProfile,
     Func<string, ActorPose, long> spawn,
     Action<long> makeHostile,
-    Func<long, long?> promoteGuard)
+    Func<long, long?> promoteGuard,
+    Func<string, ActorPose, DaggerfallGuardTierProfile, long>? spawnTiered = null,
+    Func<long, DaggerfallGuardTierProfile, long?>? promoteGuardTiered = null)
 {
+    /// <summary>The resolved settlement watch tier for the active site (Hamlet, Town, or Capital).</summary>
+    internal DaggerfallSettlementWatchTier ActiveWatchTier => tuning.GuardTiers.ResolveTier(site.ActiveSite);
+
+    /// <summary>The resolved settlement watch tuning profile (patrol density, stats, and equipment) for the active site.</summary>
+    internal DaggerfallGuardTierProfile ActiveWatchProfile => tuning.GuardTiers.ProfileFor(ActiveWatchTier);
     private Func<int, DaggerfallGateScrutinyAssessment>? _gateScrutiny;
     private Action<DaggerfallCrimeIncidentSave, int>? _onCrimeReputationLoss;
     private Func<long, int, DaggerfallCrimeKind?, bool, string?, int>? _onOfficeHolderBanished;
@@ -302,11 +309,14 @@ internal sealed class DaggerfallLaw(
         }
         if (live.Count == 0 && player.Position is WorldPoint standing)
         {
-            int count = crimes.Roll(response.Id, "guard-count", tuning.MinimumGuards, tuning.MaximumGuards);
+            DaggerfallGuardTierProfile watchProfile = ActiveWatchProfile;
+            int minGuards = site.ActiveSite is not null ? watchProfile.MinimumResponseGuards : tuning.MinimumGuards;
+            int maxGuards = site.ActiveSite is not null ? watchProfile.MaximumResponseGuards : tuning.MaximumGuards;
+            int count = crimes.Roll(response.Id, "guard-count", minGuards, maxGuards);
             for (int index = 0; index < count; index++)
             {
                 if (!TryGuardArrivalPose($"{response.Id}:{activeProfile().LogicalId}:{response.Guards.Length}:{index}", standing, out ActorPose pose)) continue;
-                live.Add(AdmitCityWatch(pose));
+                live.Add(AdmitCityWatch(pose, watchProfile));
             }
         }
         response = response with { Guards = response.Guards.Concat(live).Distinct().ToArray() };
@@ -322,18 +332,21 @@ internal sealed class DaggerfallLaw(
     }
 
     /// <summary>Promotes an existing town guard actor into an active hostile city watchman in place on the same durable ID.</summary>
-    internal long? PromoteCityWatch(long actorId)
+    internal long? PromoteCityWatch(long actorId, DaggerfallGuardTierProfile? tierOverride = null)
     {
-        if (promoteGuard(actorId) is not long promoted) return null;
-        makeHostile(promoted);
-        return promoted;
+        DaggerfallGuardTierProfile profile = tierOverride ?? ActiveWatchProfile;
+        long? promoted = promoteGuardTiered is not null ? promoteGuardTiered(actorId, profile) : promoteGuard(actorId);
+        if (promoted is not long promotedId) return null;
+        makeHostile(promotedId);
+        return promotedId;
     }
 
-    /// <summary>Admits a newly minted city watchman reinforcement at this pose, hostile to the player.</summary>
-    internal long AdmitCityWatch(ActorPose pose)
+    /// <summary>Admits a newly minted city watchman reinforcement at this pose, hostile to the player, scaled to the settlement's watch tier.</summary>
+    internal long AdmitCityWatch(ActorPose pose, DaggerfallGuardTierProfile? tierOverride = null)
     {
         var watch = definitions.Actors.Values.Single(definition => definition.MobileId == 146);
-        long id = spawn(watch.Id.Value, pose);
+        DaggerfallGuardTierProfile profile = tierOverride ?? ActiveWatchProfile;
+        long id = spawnTiered is not null ? spawnTiered(watch.Id.Value, pose, profile) : spawn(watch.Id.Value, pose);
         makeHostile(id);
         return id;
     }

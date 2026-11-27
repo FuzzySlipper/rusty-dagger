@@ -70,6 +70,59 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
                 CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, key, template, itemLevel, race, gender, [slot]);
     }
 
+    /// <summary>
+    /// Equips a settlement watchman / crime-response guard from the resolved <see cref="DaggerfallGuardTierProfile"/>
+    /// (Hamlet leather + light blade/club/staff, Town chain + sword/shield, Capital mail/plate + halberd/longsword/shield).
+    /// </summary>
+    internal static void EquipWatchGuard(
+        DaggerfallDefinitions definitions,
+        IRandomService random,
+        DaggerfallItemInstances instances,
+        DaggerfallUniqueItemAllocator identities,
+        MechanicsInventoryCoordinator inventory,
+        MechanicsEquipmentCoordinator equipment,
+        long actorId,
+        string race,
+        string gender,
+        DaggerfallGuardTierProfile tierProfile)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(random);
+        ArgumentNullException.ThrowIfNull(instances);
+        ArgumentNullException.ThrowIfNull(identities);
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentNullException.ThrowIfNull(equipment);
+        ArgumentNullException.ThrowIfNull(tierProfile);
+        if (actorId <= 0) throw new ArgumentOutOfRangeException(nameof(actorId));
+
+        DaggerfallItemFactory factory = new(definitions, random);
+        int itemLevel = tierProfile.EquipmentMaterialLevel;
+        int weaponTemplate = tierProfile.WeaponTemplates[Draw(random, actorId, "watch-weapon", 0, tierProfile.WeaponTemplates.Length - 1)];
+        string weaponMaterial = tierProfile.WeaponMaterials[Draw(random, actorId, "watch-weapon-mat", 0, tierProfile.WeaponMaterials.Length - 1)];
+        string[] weaponSlots = WeaponSlots(definitions, weaponTemplate, "right-hand");
+        CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, "watch-right", weaponTemplate, itemLevel, race, gender, weaponSlots, weaponMaterial);
+
+        if (weaponSlots.Length == 1 && tierProfile.ShieldTemplates.Length > 0 && Success(random, actorId, "watch-shield", tierProfile.ShieldChancePercent))
+        {
+            int shieldTemplate = tierProfile.ShieldTemplates[Draw(random, actorId, "watch-shield-tpl", 0, tierProfile.ShieldTemplates.Length - 1)];
+            string shieldMaterial = tierProfile.ArmorMaterials[Draw(random, actorId, "watch-shield-mat", 0, tierProfile.ArmorMaterials.Length - 1)];
+            CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, "watch-left-shield", shieldTemplate, itemLevel, race, gender, ["left-hand"], shieldMaterial);
+        }
+
+        foreach ((int template, string slot, string key) in new[]
+        {
+            (107, "head", "helm"), (106, "right-arm", "right-pauldron"), (105, "left-arm", "left-pauldron"),
+            (102, "chest-armor", "cuirass"), (104, "legs-armor", "greaves"), (108, "feet", "boots"),
+        })
+        {
+            if (Success(random, actorId, $"watch-{key}", tierProfile.ArmorPieceChancePercent))
+            {
+                string armorMaterial = tierProfile.ArmorMaterials[Draw(random, actorId, $"watch-{key}-mat", 0, tierProfile.ArmorMaterials.Length - 1)];
+                CreateAndEquip(factory, definitions, instances, identities, inventory, equipment, actorId, $"watch-{key}", template, itemLevel, race, gender, [slot], armorMaterial);
+            }
+        }
+    }
+
     /// <summary>Materializes the mobile's bow capability as carried equipment and a real quiver.</summary>
     internal static void GrantRangedLoadout(DaggerfallDefinitions definitions, IRandomService random,
         DaggerfallItemInstances instances, DaggerfallUniqueItemAllocator identities,
@@ -111,12 +164,12 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
 
     private static void CreateAndEquip(DaggerfallItemFactory factory, DaggerfallDefinitions definitions, DaggerfallItemInstances instances,
         DaggerfallUniqueItemAllocator identities, MechanicsInventoryCoordinator inventory, MechanicsEquipmentCoordinator equipment,
-        long actorId, string key, int template, int level, string race, string gender, string[] slots)
+        long actorId, string key, int template, int level, string race, string gender, string[] slots, string? materialOverride = null)
     {
         string category = template is >= 102 and <= 112 ? "Armor" : "Weapons";
         bool appearance = DaggerfallItemFactory.TakesAppearance(category);
         DaggerfallCreatedItem created = factory.Create(new DaggerfallItemCreateRequest(category, $"actor:{actorId}:{key}", DaggerfallItemOwner.Actor(actorId),
-            TemplateIndex: template, Level: level, Race: appearance ? race : null, Gender: appearance ? gender : null));
+            TemplateIndex: template, Material: materialOverride, Level: level, Race: appearance ? race : null, Gender: appearance ? gender : null));
         if (created.Stackable) throw new InvalidOperationException("Class enemy equipment must materialize as unique equipped items.");
         DurableIdentityReference identity = identities.AllocateReference();
         KitUniqueInventoryItem unique = equipment.Materialize(identity, created.Item);

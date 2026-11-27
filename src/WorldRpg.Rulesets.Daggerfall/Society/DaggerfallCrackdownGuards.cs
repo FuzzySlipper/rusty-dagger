@@ -13,15 +13,21 @@ internal sealed class DaggerfallCrackdownGuards(IDaggerfallWorldConditionSource 
     internal const string CrackdownTag = "crackdown";
 
     /// <summary>The extra guards walking in <paramref name="region"/>'s towns now.</summary>
-    internal int For(int region)
+    internal int For(int region) => For(region, site: null);
+
+    /// <summary>The extra guards walking in <paramref name="site"/> (or <paramref name="region"/> when null), capped by the settlement's watch tier.</summary>
+    internal int For(int region, DaggerfallSiteRecord? site)
     {
         int severity = conditions.ActiveForRegion(region, currentDay())
             .Where(token => token.Kind == DaggerfallWorldConditionKind.CrimeCrackdown && token.SubjectTag is null or CrackdownTag)
             .Select(token => token.Severity).DefaultIfEmpty(0).Max();
-        return Math.Min(DaggerfallExteriorPopulation.CrackdownGuardSlots, severity * law.CrackdownGuardsPerSeverity);
+        int cap = site is not null
+            ? law.GuardTiers.ResolveProfile(site).MaxCrackdownReserves
+            : DaggerfallExteriorPopulation.CrackdownGuardSlots;
+        return Math.Min(cap, severity * law.CrackdownGuardsPerSeverity);
     }
 
-    /// <summary>Whether <paramref name="placement"/>, in <paramref name="region"/>, is a reserve guard no crackdown calls out now.</summary>
-    internal bool HeldBack(int region, DaggerfallPopulationPlacement placement) =>
-        placement.CrackdownGuard > 0 && placement.CrackdownGuard > For(region);
+    /// <summary>Whether <paramref name="placement"/>, in <paramref name="region"/> (and optional <paramref name="site"/>), is a reserve guard no crackdown calls out now.</summary>
+    internal bool HeldBack(int region, DaggerfallPopulationPlacement placement, DaggerfallSiteRecord? site = null) =>
+        placement.CrackdownGuard > 0 && placement.CrackdownGuard > For(region, site);
 }

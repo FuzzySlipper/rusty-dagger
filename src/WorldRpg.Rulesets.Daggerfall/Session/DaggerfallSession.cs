@@ -692,8 +692,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         long actorId,
         int totalPopulationCount)
     {
-        // A reserve guard no crackdown calls out stays off the street; guards never shelter, so it is simply not there.
-        if (CrackdownGuards.HeldBack(siteId.Region, placement))
+        DaggerfallSiteRecord? siteRecord = _site.TryFind(siteId, out DaggerfallSiteRecord found) ? found : null;
+        // A reserve guard no crackdown calls out (or beyond this settlement tier's reserve cap) stays off the street.
+        if (CrackdownGuards.HeldBack(siteId.Region, placement, siteRecord))
             return new DaggerfallScheduleDecision(DaggerfallSchedulePlacement.ShelteredInHome, DaggerfallScheduleBuildingTarget.None,
                 DaggerfallNpcSchedulePolicy.CityGuardScheduleId, "held in reserve until a crackdown calls the watch out", 0, 0, false);
         int minuteOfDay = checked(_time.Calendar.Hour * DaggerfallCalendar.MinutesPerHour + _time.Calendar.Minute);
@@ -704,7 +705,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         bool isOnOverlandBand = State.ActorLedger.TryGet(actorId, out ActorLedgerEntry? bandEntry)
             && bandEntry?.Location?.Kind == ActorLocationKind.OnOverlandBand;
         bool isActiveQuestor = State.Quests.QuestContacts(actorId).Count > 0 || State.Quests.IsNpcUnavailable(actorId);
-        DaggerfallSiteRecord? siteRecord = _site.TryFind(siteId, out DaggerfallSiteRecord found) ? found : null;
         bool isOfficeHolder = OfficeLedger.IsExteriorOfficeHolder(actorId, siteRecord);
 
         return DaggerfallNpcSchedulePolicy.EvaluateExteriorPlacement(

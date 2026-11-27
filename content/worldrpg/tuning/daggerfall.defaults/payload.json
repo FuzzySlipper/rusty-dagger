@@ -31,7 +31,62 @@
     "crackdownGuardsPerSeverity": 1,
     "bountyRewardPerSeverity": 150,
     "bountyReputation": 3,
-    "bountyClaimDays": 30
+    "bountyClaimDays": 30,
+    "guardTiers": {
+      "townMinimumBlocks": 9,
+      "capitalMinimumBlocks": 25,
+      "hamlet": {
+        "label": "Hamlet Watch",
+        "baselinePatrolGuards": 1,
+        "maxCrackdownReserves": 2,
+        "minimumResponseGuards": 1,
+        "maximumResponseGuards": 3,
+        "minimumLevelOffset": 1,
+        "maximumLevelOffset": 2,
+        "healthScale": 0.75,
+        "equipmentMaterialLevel": 1,
+        "armorPieceChancePercent": 55,
+        "shieldChancePercent": 30,
+        "armorMaterials": ["leather"],
+        "weaponTemplates": [115, 288, 116, 113],
+        "weaponMaterials": ["iron"],
+        "shieldTemplates": [109]
+      },
+      "town": {
+        "label": "Town Watch",
+        "baselinePatrolGuards": 3,
+        "maxCrackdownReserves": 4,
+        "minimumResponseGuards": 2,
+        "maximumResponseGuards": 4,
+        "minimumLevelOffset": 3,
+        "maximumLevelOffset": 5,
+        "healthScale": 1.0,
+        "equipmentMaterialLevel": 2,
+        "armorPieceChancePercent": 75,
+        "shieldChancePercent": 75,
+        "armorMaterials": ["chain"],
+        "weaponTemplates": [118, 119, 120, 124],
+        "weaponMaterials": ["iron", "steel"],
+        "shieldTemplates": [110, 111]
+      },
+      "capital": {
+        "label": "Capital Watch",
+        "baselinePatrolGuards": 5,
+        "maxCrackdownReserves": 6,
+        "minimumResponseGuards": 3,
+        "maximumResponseGuards": 6,
+        "minimumLevelOffset": 5,
+        "maximumLevelOffset": 7,
+        "healthScale": 1.25,
+        "equipmentMaterialLevel": 5,
+        "armorPieceChancePercent": 95,
+        "shieldChancePercent": 85,
+        "armorMaterials": ["steel", "iron", "chain"],
+        "weaponTemplates": [127, 120, 122, 126],
+        "weaponMaterials": ["steel", "silver"],
+        "shieldTemplates": [111, 112]
+      }
+    }
   },
   "conditionPrices": {
     "grainShortagePerSeverity": 150,
