@@ -28,6 +28,17 @@ internal sealed record DaggerfallScheduledVisitor(
     bool IsExteriorWalker,
     DaggerfallSiteBuildingId DestinationBuilding);
 
+/// <summary>Canonical schedule readout for one interior static NPC at a site (at their home post, sheltering at home, or visiting another building).</summary>
+internal sealed record DaggerfallScheduledInteriorResident(
+    long DurableId,
+    DaggerfallSiteBuildingId HomeBuildingId,
+    string HomeSlotId,
+    string Role,
+    string? DisplayName,
+    DaggerfallScheduleDecision Decision,
+    DaggerfallSiteBuildingId? VisitingBuildingId,
+    bool TavernOverflowed);
+
 /// <summary>
 /// Pure town-wide shelter and evening-tavern assignment snapshot for one site at one instant.
 /// Guarantees every NPC has at most one active location (zero duplicate bodies across exterior, tavern,
@@ -37,29 +48,34 @@ internal sealed class DaggerfallTownShelterAssignment
 {
     private static readonly IReadOnlyList<DaggerfallScheduledVisitor> EmptyVisitors = [];
     private static readonly IReadOnlySet<long> EmptySuppressed = new HashSet<long>();
+    private static readonly IReadOnlyList<DaggerfallScheduledInteriorResident> EmptyResidents = [];
 
     internal static DaggerfallTownShelterAssignment Empty { get; } = new(
         new Dictionary<DaggerfallSiteBuildingId, IReadOnlyList<DaggerfallScheduledVisitor>>(),
         new Dictionary<DaggerfallSiteBuildingId, IReadOnlySet<long>>(),
         new Dictionary<long, DaggerfallSiteBuildingId>(),
-        new HashSet<long>());
+        new HashSet<long>(),
+        EmptyResidents);
 
     internal DaggerfallTownShelterAssignment(
         IReadOnlyDictionary<DaggerfallSiteBuildingId, IReadOnlyList<DaggerfallScheduledVisitor>> visitorsByBuilding,
         IReadOnlyDictionary<DaggerfallSiteBuildingId, IReadOnlySet<long>> suppressedStaticSlotsByBuilding,
         IReadOnlyDictionary<long, DaggerfallSiteBuildingId> assignedBuildingByActor,
-        IReadOnlySet<long> offStageOverflowActorIds)
+        IReadOnlySet<long> offStageOverflowActorIds,
+        IReadOnlyList<DaggerfallScheduledInteriorResident>? interiorResidents = null)
     {
         VisitorsByBuilding = visitorsByBuilding;
         SuppressedStaticSlotsByBuilding = suppressedStaticSlotsByBuilding;
         AssignedBuildingByActor = assignedBuildingByActor;
         OffStageOverflowActorIds = offStageOverflowActorIds;
+        InteriorResidents = interiorResidents ?? EmptyResidents;
     }
 
     internal IReadOnlyDictionary<DaggerfallSiteBuildingId, IReadOnlyList<DaggerfallScheduledVisitor>> VisitorsByBuilding { get; }
     internal IReadOnlyDictionary<DaggerfallSiteBuildingId, IReadOnlySet<long>> SuppressedStaticSlotsByBuilding { get; }
     internal IReadOnlyDictionary<long, DaggerfallSiteBuildingId> AssignedBuildingByActor { get; }
     internal IReadOnlySet<long> OffStageOverflowActorIds { get; }
+    internal IReadOnlyList<DaggerfallScheduledInteriorResident> InteriorResidents { get; }
 
     internal IReadOnlyList<DaggerfallScheduledVisitor> VisitorsFor(DaggerfallSiteBuildingId buildingId) =>
         VisitorsByBuilding.TryGetValue(buildingId, out IReadOnlyList<DaggerfallScheduledVisitor>? list)
@@ -165,15 +181,17 @@ internal static class DaggerfallScheduleShelterResolver
                 residences.Add(building);
         }
 
-        if (taverns.Count == 0 && temples.Count == 0 && residences.Count == 0)
+        if (orderedBuildings.Length == 0 && exteriorPlacements.Count == 0)
             return DaggerfallTownShelterAssignment.Empty;
 
+        bool hasShelterDestinations = taverns.Count > 0 || temples.Count > 0 || residences.Count > 0;
         Dictionary<DaggerfallSiteBuildingId, int> remainingCapacity = [];
         foreach (DaggerfallSiteBuildingSource b in taverns.Concat(temples).Concat(residences))
             remainingCapacity[b.Id] = Math.Max(0, readCapacity(b));
 
         List<TavernApplicant> tavernApplicants = [];
         List<HomeShelterCandidate> homeCandidates = [];
+        List<(long DurableId, DaggerfallSiteBuildingId HomeBuildingId, string HomeSlotId, string Role, string? DisplayName, DaggerfallScheduleDecision Decision)> pendingInteriorResidents = [];
         HashSet<long> seenActors = [];
 
         DaggerfallWorldProfileKey exteriorProfile = DaggerfallWorldProfileIds.Exterior(site.Id);
@@ -181,7 +199,7 @@ internal static class DaggerfallScheduleShelterResolver
         int totalPop = exteriorPlacements.Count(placement => placement.CrackdownGuard == 0);
 
         // Phase A: Exterior source-population walkers currently scheduled indoors (tavern or home/storm shelter).
-        if (climateRace is not null && totalPop > 0)
+        if (hasShelterDestinations && climateRace is not null && totalPop > 0)
         {
             foreach (DaggerfallPopulationPlacement placement in exteriorPlacements
                 .OrderBy(p => p.Id, StringComparer.Ordinal))
@@ -261,34 +279,36 @@ internal static class DaggerfallScheduleShelterResolver
             }
         }
 
-        // Phase B: Off-hours evening tavern mixer (19:30-22:30) for closed-shop proprietors,
-        // off-duty court clerks/nobles, and guild members.
-        if (taverns.Count > 0)
+        // Phase B: Interior static NPCs (canonical schedule decisions for every building's residents, plus
+        // off-hours evening tavern mixer applications for closed-shop proprietors, court clerks/nobles, and guild members).
+        if (orderedBuildings.Length > 0)
         {
             string regionName = definitions.BuildingNames.RegionName(site.Id.Region);
             string climateName = definitions.Grids.Climate.GetCell(site.MapPixelX + 1, site.MapPixelY).Name;
             int townBuckets = DaggerfallHouseholds.TownHouseholdBucketCount(site);
             int hour = DaggerfallNpcSchedulePolicy.NormalizeMinute(minuteOfDay) / DaggerfallCalendar.MinutesPerHour;
             int minute = DaggerfallNpcSchedulePolicy.NormalizeMinute(minuteOfDay) % DaggerfallCalendar.MinutesPerHour;
+            DaggerfallActorScheduleProfile alwaysStationedProfile =
+                definitions.ActorCatalog.Schedules[DaggerfallNpcSchedulePolicy.AlwaysStationedScheduleId];
 
             foreach (DaggerfallSiteBuildingSource building in orderedBuildings)
             {
                 int bt = building.Source.BuildingType;
-                if (bt == TavernBuildingType || IsResidenceBuildingType(bt))
-                    continue;
                 if (!definitions.People.TryGetRmbInteriorSlots(building.Source.Id.SourceKey, building.Source.Id.Index, out DaggerfallPeopleBuildingSlots? slots)
                     || slots is null || slots.Slots.Count == 0)
                     continue;
 
-                HashSet<string>? homedCastSlots = null;
+                bool canVisitTavern = taverns.Count > 0 && bt != TavernBuildingType && !IsResidenceBuildingType(bt);
+
+                Dictionary<string, DaggerfallCastIndividualDefinition>? homedCastBySlot = null;
                 foreach (DaggerfallCastIndividualDefinition cast in definitions.AllCastAndNobles())
                 {
                     if (!string.IsNullOrWhiteSpace(cast.HomeSlotId)
                         && string.Equals(cast.HomeBlock, building.Source.Id.SourceKey, StringComparison.OrdinalIgnoreCase)
                         && (cast.HomeSite is null || cast.HomeSite == site.Id))
                     {
-                        homedCastSlots ??= new HashSet<string>(StringComparer.Ordinal);
-                        homedCastSlots.Add(cast.HomeSlotId);
+                        homedCastBySlot ??= new Dictionary<string, DaggerfallCastIndividualDefinition>(StringComparer.Ordinal);
+                        homedCastBySlot.TryAdd(cast.HomeSlotId, cast);
                     }
                 }
 
@@ -301,15 +321,6 @@ internal static class DaggerfallScheduleShelterResolver
                         continue;
 
                     int ordinal = talkableOrdinal++;
-                    if (slot.CastId is not null
-                        || (homedCastSlots is not null && homedCastSlots.Contains(slot.SlotId))
-                        || string.IsNullOrWhiteSpace(slot.SpawnerId)
-                        || string.Equals(slot.SpawnerId, "town-child", StringComparison.Ordinal))
-                        continue;
-
-                    if (!definitions.ActorCatalog.Specs.TryGetValue(slot.SpawnerId, out DaggerfallActorSpawnerSpec? spec))
-                        continue;
-
                     string placementId = string.Create(CultureInfo.InvariantCulture, $"person/{ordinal}");
                     long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{buildingProfile.LogicalId}/{placementId}");
                     if (!seenActors.Add(durableId))
@@ -317,23 +328,65 @@ internal static class DaggerfallScheduleShelterResolver
                     if (checkSuppressed(durableId, buildingProfile))
                         continue;
 
-                    DaggerfallScheduleDecision decision = DaggerfallNpcSchedulePolicy.EvaluateSpec(
-                        worldSocialSeed,
-                        site.Id,
-                        placementId,
-                        spec,
-                        definitions.ActorCatalog,
-                        hour,
-                        minute,
-                        weather,
-                        buildingType: bt,
-                        holidayId: holidayId,
-                        weatherElapsedMinutes: weatherElapsed.PrecipElapsedMinutes,
-                        isActiveQuestor: checkQuestor(durableId),
-                        isOfficeHolder: checkOffice(durableId),
-                        severeWeatherElapsedMinutes: weatherElapsed.SevereElapsedMinutes);
+                    DaggerfallCastIndividualDefinition? castIndividual = null;
+                    if (slot.CastId is not null)
+                        definitions.People.Individuals.TryGetValue(slot.CastId, out castIndividual);
+                    if (castIndividual is null && homedCastBySlot is not null)
+                        homedCastBySlot.TryGetValue(slot.SlotId, out castIndividual);
 
-                    if (decision.Pinned
+                    bool isCastOrHomed = slot.CastId is not null || castIndividual is not null;
+                    bool isChild = string.Equals(slot.SpawnerId, "town-child", StringComparison.Ordinal);
+
+                    DaggerfallActorSpawnerSpec? spec = !string.IsNullOrWhiteSpace(slot.SpawnerId)
+                        && definitions.ActorCatalog.Specs.TryGetValue(slot.SpawnerId, out DaggerfallActorSpawnerSpec? foundSpec)
+                        ? foundSpec
+                        : null;
+
+                    DaggerfallScheduleDecision decision = !isCastOrHomed && !isChild && spec is not null
+                        ? DaggerfallNpcSchedulePolicy.EvaluateSpec(
+                            worldSocialSeed,
+                            site.Id,
+                            placementId,
+                            spec,
+                            definitions.ActorCatalog,
+                            hour,
+                            minute,
+                            weather,
+                            buildingType: bt,
+                            holidayId: holidayId,
+                            weatherElapsedMinutes: weatherElapsed.PrecipElapsedMinutes,
+                            isActiveQuestor: checkQuestor(durableId),
+                            isOfficeHolder: checkOffice(durableId),
+                            severeWeatherElapsedMinutes: weatherElapsed.SevereElapsedMinutes)
+                        : DaggerfallNpcSchedulePolicy.Evaluate(
+                            worldSocialSeed,
+                            site.Id,
+                            placementId,
+                            alwaysStationedProfile,
+                            minuteOfDay,
+                            weather,
+                            buildingType: bt,
+                            holidayId: holidayId,
+                            weatherElapsedMinutes: weatherElapsed.PrecipElapsedMinutes,
+                            isActiveQuestor: checkQuestor(durableId),
+                            isOfficeHolder: checkOffice(durableId),
+                            severeWeatherElapsedMinutes: weatherElapsed.SevereElapsedMinutes);
+
+                    int factionId = slot.FactionId ?? 0;
+                    if (slot.DeriveRegionalFaction && factionId == 0)
+                        factionId = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, site.Id.Region)?.Id ?? 0;
+                    DaggerfallFactionDefinition? sourceFaction = definitions.Factions.Factions.GetValueOrDefault(factionId);
+                    (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
+                        definitions, sourceFaction, bt, building.Source.FactionId, "person");
+
+                    pendingInteriorResidents.Add((durableId, building.Id, placementId, role, castIndividual?.Name, decision));
+
+                    if (!canVisitTavern
+                        || isCastOrHomed
+                        || isChild
+                        || spec is null
+                        || string.IsNullOrWhiteSpace(slot.SpawnerId)
+                        || decision.Pinned
                         || decision.Placement != DaggerfallSchedulePlacement.InteriorBuilding
                         || decision.BuildingTarget != DaggerfallScheduleBuildingTarget.Tavern)
                         continue;
@@ -351,9 +404,6 @@ internal static class DaggerfallScheduleShelterResolver
 
                     string race = climateRace
                         ?? (definitions.BuildingNames.TryGetNameBank(site.Id.Region, out int bank) && bank == 1 ? "redguard" : "breton");
-                    int factionId = slot.FactionId ?? 0;
-                    if (slot.DeriveRegionalFaction && factionId == 0)
-                        factionId = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, site.Id.Region)?.Id ?? 0;
                     int seededName = unchecked((int)(resolved.SlotSeed & 0x7FFF_FFFFUL));
                     DaggerfallNpcAppearance look = new(
                         race,
@@ -362,9 +412,6 @@ internal static class DaggerfallScheduleShelterResolver
                         resolved.Visual.Record,
                         seededName == 0 ? 1 : seededName,
                         factionId);
-                    DaggerfallFactionDefinition? sourceFaction = definitions.Factions.Factions.GetValueOrDefault(factionId);
-                    (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
-                        definitions, sourceFaction, bt, building.Source.FactionId, "person");
                     string? familyId = DaggerfallHouseholds.ResolveForPlacedSlot(
                         worldSocialSeed,
                         site.Id,
@@ -452,6 +499,7 @@ internal static class DaggerfallScheduleShelterResolver
         // Phase C: Admit tavern applicants per preferred tavern up to capacity (preferring #11084 regulars/neighbors).
         // Exterior walkers that overflow a full tavern spill into Phase D (#11084 family residential home / OffStage);
         // off-hours closed-building proprietors that overflow simply remain at home (not suppressed).
+        HashSet<long> overflowedInteriorTavernApplicants = [];
         foreach (IGrouping<DaggerfallSiteBuildingId, TavernApplicant> group in tavernApplicants
             .GroupBy(a => a.PreferredTavern)
             .OrderBy(g => g.Key.BlockY)
@@ -470,6 +518,10 @@ internal static class DaggerfallScheduleShelterResolver
                 else if (applicant.Candidate.IsExteriorWalker)
                 {
                     homeCandidates.Add(new(applicant.Candidate));
+                }
+                else
+                {
+                    overflowedInteriorTavernApplicants.Add(applicant.Candidate.DurableId);
                 }
             }
         }
@@ -516,11 +568,32 @@ internal static class DaggerfallScheduleShelterResolver
         foreach ((DaggerfallSiteBuildingId bId, HashSet<long> set) in suppressedStaticSlots)
             readonlySuppressed[bId] = set;
 
+        DaggerfallScheduledInteriorResident[] interiorResidents =
+        [
+            .. pendingInteriorResidents.Select(r =>
+            {
+                DaggerfallSiteBuildingId? visiting = assignedBuildingByActor.TryGetValue(r.DurableId, out DaggerfallSiteBuildingId dest)
+                    ? dest
+                    : null;
+                bool tavernOverflowed = visiting is null && overflowedInteriorTavernApplicants.Contains(r.DurableId);
+                return new DaggerfallScheduledInteriorResident(
+                    r.DurableId,
+                    r.HomeBuildingId,
+                    r.HomeSlotId,
+                    r.Role,
+                    r.DisplayName,
+                    r.Decision,
+                    visiting,
+                    tavernOverflowed);
+            }),
+        ];
+
         return new DaggerfallTownShelterAssignment(
             new ReadOnlyDictionary<DaggerfallSiteBuildingId, IReadOnlyList<DaggerfallScheduledVisitor>>(readonlyVisitors),
             new ReadOnlyDictionary<DaggerfallSiteBuildingId, IReadOnlySet<long>>(readonlySuppressed),
             new ReadOnlyDictionary<long, DaggerfallSiteBuildingId>(assignedBuildingByActor),
-            offStageOverflow);
+            offStageOverflow,
+            interiorResidents);
     }
 
     /// <summary>

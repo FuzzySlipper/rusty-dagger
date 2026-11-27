@@ -82,6 +82,102 @@ public sealed class DeveloperSocialCommandsTests
     }
 
     [Fact]
+    public void Social_schedule_includes_interior_residents_at_midday_and_off_hours_tavern_overflow_without_duplicates()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+
+        // 1. Sunny midday (12:00): ordinary interior residents (shopkeepers, guild/court/tavern staff)
+        //    must appear in social.schedule alongside exterior walkers, with unique durable IDs and matching summary counts.
+        long middayOffset = checked((12 - session.Calendar.Hour) * DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute);
+        if (middayOffset > 0)
+            session.AdvanceElapsedTime(middayOffset, idleFatigue: false);
+        session.LocalWeather.State.Force(DaggerfallWeatherKind.Sunny);
+        session.ResetScheduleWeatherBaseline();
+
+        IDeveloperSocialCommands cmds = session.Commands<IDeveloperSocialCommands>();
+        DebugCommandResult middayResult = cmds.Schedule();
+        Assert.True(middayResult.Succeeded, middayResult.Message);
+
+        using (JsonDocument doc = JsonDocument.Parse(middayResult.Message))
+        {
+            JsonElement root = doc.RootElement;
+            JsonElement summary = root.GetProperty("summary");
+            int total = summary.GetProperty("totalNpcCount").GetInt32();
+            int interiorResidents = summary.GetProperty("interiorResidentCount").GetInt32();
+            int summed = summary.GetProperty("outdoorsCount").GetInt32()
+                + summary.GetProperty("shelteredInBuildingCount").GetInt32()
+                + summary.GetProperty("shelteredInHomeCount").GetInt32()
+                + summary.GetProperty("offStageOverflowCount").GetInt32();
+            Assert.Equal(total, summed);
+            Assert.True(interiorResidents > 0, "Midday social.schedule must include ordinary interior residents.");
+
+            List<JsonElement> npcRows = [.. root.GetProperty("npcs").EnumerateArray()];
+            Assert.Equal(total, npcRows.Count);
+            Assert.Equal(total, npcRows.Select(r => r.GetProperty("durableId").GetInt64()).Distinct().Count());
+
+            Assert.Contains(npcRows, r =>
+                r.GetProperty("source").GetString() == "interior-static"
+                && !r.GetProperty("outdoors").GetBoolean()
+                && r.GetProperty("homeBuilding").ValueKind == JsonValueKind.Object
+                && r.GetProperty("shelterTarget").ValueKind == JsonValueKind.Object
+                && !r.GetProperty("tavernOverflowed").GetBoolean()
+                && r.GetProperty("buildingTarget").GetString() == "HomePost");
+        }
+
+        // 2. Also verify when the player is standing inside a building interior: interior residents are still reported.
+        using (DaggerfallSession insideSession = fixture.Start(fixture.MagesProfile))
+        {
+            long offset = checked((12 - insideSession.Calendar.Hour) * DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute);
+            if (offset > 0)
+                insideSession.AdvanceElapsedTime(offset, idleFatigue: false);
+            DebugCommandResult insideResult = insideSession.Commands<IDeveloperSocialCommands>().Schedule();
+            Assert.True(insideResult.Succeeded, insideResult.Message);
+            using JsonDocument doc = JsonDocument.Parse(insideResult.Message);
+            Assert.True(doc.RootElement.GetProperty("summary").GetProperty("interiorResidentCount").GetInt32() > 0);
+        }
+
+        // 3. Off-hours resident who wants a tavern spot but cannot get one (capacity = 0):
+        //    canonical resolver still exposes them in InteriorResidents with VisitingBuildingId == null and TavernOverflowed == true,
+        //    and they remain unsuppressed in their home building.
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallSiteBuildingSource[] buildings = [.. site.Exterior!.Buildings.Values];
+        DaggerfallTownShelterAssignment zeroCapAssignment = DaggerfallScheduleShelterResolver.ResolveTown(
+            session.WorldSocialSeed,
+            TestPayload.Definitions,
+            site,
+            buildings,
+            session.ExteriorPlacementsFor(site.Id),
+            minuteOfDay: 20 * DaggerfallCalendar.MinutesPerHour + 30,
+            weather: DaggerfallWeatherKind.Sunny,
+            weatherElapsed: new DaggerfallWeatherShelterElapsed(0, 0),
+            capacityForBuilding: _ => 0);
+
+        Assert.NotEmpty(zeroCapAssignment.InteriorResidents);
+        DaggerfallScheduledInteriorResident overflowed = Assert.Single(
+            zeroCapAssignment.InteriorResidents.Where(r => r.TavernOverflowed).Take(1));
+        Assert.Null(overflowed.VisitingBuildingId);
+        Assert.Equal(DaggerfallScheduleBuildingTarget.Tavern, overflowed.Decision.BuildingTarget);
+        Assert.False(zeroCapAssignment.IsStaticSlotScheduledAway(overflowed.HomeBuildingId, overflowed.DurableId));
+
+        // And social.schedule during evening off-hours (20:30) includes interior residents cleanly with no duplicate durable IDs.
+        long eveningOffset = checked((20 - session.Calendar.Hour) * DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute
+            + 30 * DaggerfallCalendar.SecondsPerMinute);
+        if (eveningOffset > 0)
+            session.AdvanceElapsedTime(eveningOffset, idleFatigue: false);
+        DebugCommandResult eveningResult = cmds.Schedule();
+        Assert.True(eveningResult.Succeeded, eveningResult.Message);
+        using (JsonDocument doc = JsonDocument.Parse(eveningResult.Message))
+        {
+            List<JsonElement> rows = [.. doc.RootElement.GetProperty("npcs").EnumerateArray()];
+            Assert.Equal(rows.Count, rows.Select(r => r.GetProperty("durableId").GetInt64()).Distinct().Count());
+            Assert.Contains(rows, r =>
+                r.GetProperty("source").GetString() == "interior-static"
+                && r.GetProperty("homeBuilding").ValueKind == JsonValueKind.Object);
+        }
+    }
+
+    [Fact]
     public void Social_office_vacate_routes_through_OfficeLedger_emitting_proclamations_and_persisting_across_save_load()
     {
         using var fixture = SourceBackedGuildBankSessionFixture.Create();

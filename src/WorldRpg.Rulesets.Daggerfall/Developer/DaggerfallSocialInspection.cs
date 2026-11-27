@@ -617,13 +617,15 @@ internal sealed class DaggerfallSocialInspection(
             ? ext.Buildings.Values.ToDictionary(b => b.Id)
             : [];
 
-        List<(long DurableId, string Name, string SlotId, string Role, string Source, DaggerfallScheduleDecision Decision, DaggerfallSiteBuildingId? ShelterTarget, bool OffStageOverflow)> rows = [];
+        List<(long DurableId, string Name, string SlotId, string Role, string Source, DaggerfallScheduleDecision Decision, DaggerfallSiteBuildingId? HomeBuilding, DaggerfallSiteBuildingId? ShelterTarget, bool OffStageOverflow, bool TavernOverflowed)> rows = [];
         HashSet<long> seenIds = [];
 
         foreach (DaggerfallPopulationPlacement placement in placements)
         {
             string slotKey = $"{exteriorKey.LogicalId}/{placement.Id}";
             long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(active.Id, slotKey);
+            if (!seenIds.Add(durableId))
+                continue;
             DaggerfallScheduleDecision decision = evaluateExteriorSchedule is not null
                 ? evaluateExteriorSchedule(active.Id, placement, durableId, totalPopCount)
                 : DaggerfallNpcSchedulePolicy.EvaluateExteriorPlacement(
@@ -640,8 +642,30 @@ internal sealed class DaggerfallSocialInspection(
             string name = npc?.DisplayName ?? (placement.IsGuard ? "City Watch" : $"walker #{durableId}");
             string role = npc?.Role ?? (placement.IsGuard ? "guard" : "civilian");
 
-            rows.Add((durableId, name, placement.Id, role, "exterior-walker", decision, shelterBuilding, overflow));
-            seenIds.Add(durableId);
+            rows.Add((durableId, name, placement.Id, role, "exterior-walker", decision, HomeBuilding: null, shelterBuilding, overflow, TavernOverflowed: false));
+        }
+
+        Dictionary<DaggerfallSiteBuildingId, int> residentCountsByBuilding = [];
+        foreach (DaggerfallScheduledInteriorResident resident in assignment.InteriorResidents)
+        {
+            residentCountsByBuilding[resident.HomeBuildingId] = residentCountsByBuilding.GetValueOrDefault(resident.HomeBuildingId) + 1;
+            if (!seenIds.Add(resident.DurableId))
+                continue;
+            string name = (npcs.TryGet(resident.DurableId, out DaggerfallNpc? reg) ? reg?.DisplayName : null)
+                ?? resident.DisplayName
+                ?? $"{resident.Role} #{resident.DurableId}";
+            DaggerfallSiteBuildingId shelterTarget = resident.VisitingBuildingId ?? resident.HomeBuildingId;
+            rows.Add((
+                resident.DurableId,
+                name,
+                resident.HomeSlotId,
+                resident.Role,
+                "interior-static",
+                resident.Decision,
+                resident.HomeBuildingId,
+                shelterTarget,
+                OffStageOverflow: false,
+                resident.TavernOverflowed));
         }
 
         foreach ((DaggerfallSiteBuildingId buildingId, IReadOnlyList<DaggerfallScheduledVisitor> visitors) in assignment.VisitorsByBuilding
@@ -663,8 +687,10 @@ internal sealed class DaggerfallSocialInspection(
                     visitor.Role,
                     visitor.IsExteriorWalker ? "exterior-walker" : "interior-static",
                     visitor.Decision,
+                    HomeBuilding: null,
                     buildingId,
-                    OffStageOverflow: false));
+                    OffStageOverflow: false,
+                    TavernOverflowed: false));
             }
         }
 
@@ -672,14 +698,25 @@ internal sealed class DaggerfallSocialInspection(
         int shelteredInBuildingCount = 0;
         int shelteredInHomeCount = 0;
         int offStageOverflowCount = 0;
+        int interiorResidentCount = 0;
         foreach (var row in rows)
         {
+            if (row.Source == "interior-static")
+                interiorResidentCount++;
+
             if (row.Decision.Placement == DaggerfallSchedulePlacement.ExteriorStreet)
                 outdoorsCount++;
-            else if (row.ShelterTarget is not null)
-                shelteredInBuildingCount++;
             else if (row.OffStageOverflow)
                 offStageOverflowCount++;
+            else if (row.Source == "interior-static")
+            {
+                if (row.TavernOverflowed || row.Decision.Placement == DaggerfallSchedulePlacement.ShelteredInHome)
+                    shelteredInHomeCount++;
+                else
+                    shelteredInBuildingCount++;
+            }
+            else if (row.ShelterTarget is not null)
+                shelteredInBuildingCount++;
             else
                 shelteredInHomeCount++;
         }
@@ -704,6 +741,7 @@ internal sealed class DaggerfallSocialInspection(
 
             w.WriteStartObject("summary");
             w.WriteNumber("totalNpcCount", rows.Count);
+            w.WriteNumber("interiorResidentCount", interiorResidentCount);
             w.WriteNumber("outdoorsCount", outdoorsCount);
             w.WriteNumber("shelteredInBuildingCount", shelteredInBuildingCount);
             w.WriteNumber("shelteredInHomeCount", shelteredInHomeCount);
@@ -719,7 +757,8 @@ internal sealed class DaggerfallSocialInspection(
                 int capacity = DaggerfallScheduleShelterResolver.DefaultCapacityForBuilding(building);
                 int visitorCount = assignment.VisitorsFor(building.Id).Count;
                 int suppressedCount = assignment.SuppressedSlotsFor(building.Id).Count;
-                if (capacity <= 0 && visitorCount == 0 && suppressedCount == 0)
+                int residentCount = residentCountsByBuilding.GetValueOrDefault(building.Id);
+                if (capacity <= 0 && visitorCount == 0 && suppressedCount == 0 && residentCount == 0)
                     continue;
                 w.WriteStartObject();
                 w.WriteNumber("blockX", building.Id.BlockX);
@@ -727,6 +766,7 @@ internal sealed class DaggerfallSocialInspection(
                 w.WriteNumber("buildingIndex", building.Id.Index);
                 w.WriteNumber("buildingType", building.Source.BuildingType);
                 w.WriteNumber("capacity", capacity);
+                w.WriteNumber("residentCount", residentCount);
                 w.WriteNumber("visitorCount", visitorCount);
                 w.WriteNumber("suppressedStaticCount", suppressedCount);
                 w.WriteEndObject();
@@ -751,6 +791,21 @@ internal sealed class DaggerfallSocialInspection(
                 w.WriteNumber("stormDelayMinutes", row.Decision.StormDelayMinutes);
                 w.WriteString("buildingTarget", row.Decision.BuildingTarget.ToString());
                 w.WriteBoolean("offStageOverflow", row.OffStageOverflow);
+                w.WriteBoolean("tavernOverflowed", row.TavernOverflowed);
+                if (row.HomeBuilding is DaggerfallSiteBuildingId homeId)
+                {
+                    w.WriteStartObject("homeBuilding");
+                    w.WriteNumber("blockX", homeId.BlockX);
+                    w.WriteNumber("blockY", homeId.BlockY);
+                    w.WriteNumber("buildingIndex", homeId.Index);
+                    if (buildingsById.TryGetValue(homeId, out DaggerfallSiteBuildingSource? homeBuilding))
+                        w.WriteNumber("buildingType", homeBuilding.Source.BuildingType);
+                    w.WriteEndObject();
+                }
+                else
+                {
+                    w.WriteNull("homeBuilding");
+                }
                 if (row.ShelterTarget is DaggerfallSiteBuildingId targetId)
                 {
                     w.WriteStartObject("shelterTarget");
