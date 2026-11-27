@@ -322,19 +322,34 @@ internal static class DaggerfallScheduleShelterResolver
 
                     int ordinal = talkableOrdinal++;
                     string placementId = string.Create(CultureInfo.InvariantCulture, $"person/{ordinal}");
-                    long durableId = DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{buildingProfile.LogicalId}/{placementId}");
+
+                    int factionId = slot.FactionId ?? 0;
+                    if (slot.DeriveRegionalFaction && factionId == 0)
+                        factionId = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, site.Id.Region)?.Id ?? 0;
+
+                    DaggerfallCastIndividualDefinition? castIndividual = null;
+                    if (!string.IsNullOrWhiteSpace(slot.CastId)
+                        && definitions.TryGetCastOrNoble(slot.CastId, out DaggerfallCastIndividualDefinition? explicitCast))
+                    {
+                        castIndividual = explicitCast;
+                    }
+                    if (castIndividual is null && homedCastBySlot is not null)
+                        homedCastBySlot.TryGetValue(slot.SlotId, out castIndividual);
+                    if (castIndividual is null && factionId > 0
+                        && definitions.TryGetCastOrNobleByFaction(factionId, out DaggerfallCastIndividualDefinition? factionCast))
+                    {
+                        castIndividual = factionCast;
+                    }
+
+                    bool isCastOrHomed = slot.CastId is not null || castIndividual is not null;
+                    long durableId = castIndividual is not null
+                        ? DaggerfallPeopleSlots.CastIndividualIdentity(castIndividual.Id)
+                        : DaggerfallPeopleSlots.SeededSlotIdentity(site.Id, $"{buildingProfile.LogicalId}/{placementId}");
                     if (!seenActors.Add(durableId))
                         continue;
                     if (checkSuppressed(durableId, buildingProfile))
                         continue;
 
-                    DaggerfallCastIndividualDefinition? castIndividual = null;
-                    if (slot.CastId is not null)
-                        definitions.People.Individuals.TryGetValue(slot.CastId, out castIndividual);
-                    if (castIndividual is null && homedCastBySlot is not null)
-                        homedCastBySlot.TryGetValue(slot.SlotId, out castIndividual);
-
-                    bool isCastOrHomed = slot.CastId is not null || castIndividual is not null;
                     bool isChild = string.Equals(slot.SpawnerId, "town-child", StringComparison.Ordinal);
 
                     DaggerfallActorSpawnerSpec? spec = !string.IsNullOrWhiteSpace(slot.SpawnerId)
@@ -372,14 +387,12 @@ internal static class DaggerfallScheduleShelterResolver
                             isOfficeHolder: checkOffice(durableId),
                             severeWeatherElapsedMinutes: weatherElapsed.SevereElapsedMinutes);
 
-                    int factionId = slot.FactionId ?? 0;
-                    if (slot.DeriveRegionalFaction && factionId == 0)
-                        factionId = DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(definitions.Factions, site.Id.Region)?.Id ?? 0;
                     DaggerfallFactionDefinition? sourceFaction = definitions.Factions.Factions.GetValueOrDefault(factionId);
                     (string role, IReadOnlyList<string> services) = DaggerfallNpcServiceFacts.Resolve(
                         definitions, sourceFaction, bt, building.Source.FactionId, "person");
 
-                    pendingInteriorResidents.Add((durableId, building.Id, placementId, role, castIndividual?.Name, decision));
+                    string residentSlotId = castIndividual is not null ? $"cast:{castIndividual.Id}" : placementId;
+                    pendingInteriorResidents.Add((durableId, building.Id, residentSlotId, role, castIndividual?.Name, decision));
 
                     if (!canVisitTavern
                         || isCastOrHomed

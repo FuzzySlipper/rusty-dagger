@@ -178,6 +178,92 @@ public sealed class DeveloperSocialCommandsTests
     }
 
     [Fact]
+    public void Social_schedule_reports_canonical_cast_identity_and_respects_ledger_suppression()
+    {
+        DaggerfallSiteRecord? foundSite = null;
+        DaggerfallSiteBuildingSource? foundBuilding = null;
+        DaggerfallCastIndividualDefinition? foundCast = null;
+        foreach (DaggerfallCastIndividualDefinition cast in TestPayload.Definitions.AllCastAndNobles())
+        {
+            if (string.IsNullOrWhiteSpace(cast.HomeBlock) || string.IsNullOrWhiteSpace(cast.HomeSlotId))
+                continue;
+            foreach (DaggerfallSiteRecord candidateSite in TestPayload.Definitions.Locations.Records)
+            {
+                if (cast.HomeSite is { } hs && candidateSite.Id != hs)
+                    continue;
+                if (candidateSite.Exterior is not { Buildings.Count: > 0 } ext)
+                    continue;
+                DaggerfallSiteBuildingSource? match = ext.Buildings.Values.FirstOrDefault(b =>
+                    string.Equals(b.Source.Id.SourceKey, cast.HomeBlock, StringComparison.OrdinalIgnoreCase)
+                    && TestPayload.Definitions.People.TryGetRmbInteriorSlots(b.Source.Id.SourceKey, b.Source.Id.Index, out DaggerfallPeopleBuildingSlots? slots)
+                    && slots is not null
+                    && slots.Slots.Any(s => string.Equals(s.SlotId, cast.HomeSlotId, StringComparison.Ordinal)));
+                if (match is not null)
+                {
+                    foundSite = candidateSite;
+                    foundBuilding = match;
+                    foundCast = cast;
+                    break;
+                }
+            }
+            if (foundCast is not null) break;
+        }
+
+        Assert.NotNull(foundSite);
+        Assert.NotNull(foundBuilding);
+        Assert.NotNull(foundCast);
+        DaggerfallCastIndividualDefinition gothryd = foundCast!;
+        DaggerfallSiteId citySiteId = foundSite!.Id;
+        DaggerfallSiteBuildingSource palaceBuilding = foundBuilding!;
+
+        DaggerfallSiteProfile palaceProfile = Assembled(DaggerfallWorldProfileIds.Interior(citySiteId, palaceBuilding.Id));
+        DaggerfallSiteProfile cityExteriorProfile = Assembled(DaggerfallWorldProfileIds.Exterior(citySiteId));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, palaceProfile);
+        PopulateContent(content, cityExteriorProfile);
+        SpatialFake spatial = SpatialFake.Create(palaceProfile.Geometry.Spatial[0].Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSiteProfiles profiles = new([palaceProfile, cityExteriorProfile], Assembly.Value);
+        DaggerfallSessionComposition composition = new(TestPayload.Definitions, palaceProfile, DaggerfallTuning.Defaults) { Profiles = profiles };
+
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
+
+        // Live admission inside Daggerfall Castle materializes King Gothryd under his canonical CastIndividualIdentity.
+        long expectedCastId = DaggerfallPeopleSlots.CastIndividualIdentity(gothryd.Id);
+        Assert.True(session.State.Actors.TryGet(expectedCastId, out ActorState? liveGothryd));
+        Assert.Equal(ActorOriginKind.CastIndividual, liveGothryd!.Actor.Get<ActorOriginComponent>().Origin.Kind);
+        Assert.Equal(gothryd.Name, session.State.Npcs.Require(expectedCastId).DisplayName);
+
+        // social.schedule reports the exact same canonical cast durableId and name as the live actor / ledger.
+        IDeveloperSocialCommands cmds = session.Commands<IDeveloperSocialCommands>();
+        DebugCommandResult initial = cmds.Schedule();
+        Assert.True(initial.Succeeded, initial.Message);
+        using (JsonDocument doc = JsonDocument.Parse(initial.Message))
+        {
+            JsonElement row = Assert.Single(doc.RootElement.GetProperty("npcs").EnumerateArray(),
+                r => r.GetProperty("durableId").GetInt64() == expectedCastId);
+            Assert.Equal("interior-static", row.GetProperty("source").GetString());
+            Assert.Equal($"cast:{gothryd.Id}", row.GetProperty("slotId").GetString());
+            Assert.Equal(gothryd.Name, row.GetProperty("name").GetString());
+        }
+
+        // Marking King Gothryd Dead in ActorLedger suppresses him from social.schedule.
+        session.State.ActorLedger.Upsert(new ActorLedgerEntry(
+            expectedCastId,
+            ActorOrigin.Cast(gothryd.Id, palaceProfile.ProfileKey),
+            Location: ActorLocationOverride.Dead(palaceProfile.ProfileKey)));
+
+        DebugCommandResult afterRemoval = cmds.Schedule();
+        Assert.True(afterRemoval.Succeeded, afterRemoval.Message);
+        using (JsonDocument doc = JsonDocument.Parse(afterRemoval.Message))
+        {
+            Assert.DoesNotContain(doc.RootElement.GetProperty("npcs").EnumerateArray(),
+                r => r.GetProperty("durableId").GetInt64() == expectedCastId);
+        }
+    }
+
+    [Fact]
     public void Social_office_vacate_routes_through_OfficeLedger_emitting_proclamations_and_persisting_across_save_load()
     {
         using var fixture = SourceBackedGuildBankSessionFixture.Create();
