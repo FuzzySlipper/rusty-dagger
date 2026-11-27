@@ -14,9 +14,74 @@
       "npc-024"
     ]
   },
+  "npc-399": {
+    "pipelines": [
+      "npc-399"
+    ]
+  },
+  "npc-457": {
+    "pipelines": [
+      "npc-457"
+    ]
+  },
+  "npc-458": {
+    "pipelines": [
+      "npc-458"
+    ]
+  },
+  "npc-459": {
+    "pipelines": [
+      "npc-459"
+    ]
+  },
+  "npc-460": {
+    "pipelines": [
+      "npc-460"
+    ]
+  },
+  "npc-461": {
+    "pipelines": [
+      "npc-461"
+    ]
+  },
+  "npc-462": {
+    "pipelines": [
+      "npc-462"
+    ]
+  },
+  "npc-463": {
+    "pipelines": [
+      "npc-463"
+    ]
+  },
+  "npc-466": {
+    "pipelines": [
+      "npc-466"
+    ]
+  },
+  "npc-467": {
+    "pipelines": [
+      "npc-467"
+    ]
+  },
   "npc-468": {
     "pipelines": [
       "npc-468"
+    ]
+  },
+  "npc-469": {
+    "pipelines": [
+      "npc-469"
+    ]
+  },
+  "npc-470": {
+    "pipelines": [
+      "npc-470"
+    ]
+  },
+  "npc-471": {
+    "pipelines": [
+      "npc-471"
     ]
   }
 }

@@ -43,3 +43,13 @@ just use colab for the big splat bakes"). Camera solves and round 0 also run on 
 ## Measured
 
 See the table in asset-pipeline `docs/runpod-bake-pods.md` (RunPod and Colab side by side).
+
+## Lanes: several characters on one runtime (2026-11-25/26)
+
+`hosts/colab/colab-lane.sh SESSION ALIAS:ID ...` builds the environment once on the first alias, then runs `STEPS` (default
+`r1 bound graft walk`; `STEPS=r1` for creatures) for each character, one after another on an L4 session (`bake*`), side by
+side otherwise (one alias per character on a big card). It sets each npc.json `gpu_host` to the alias and back to gpu-lab at
+the end, stops the runtime and closes the ssh master (`ssh -O exit`), and logs to `$LANE_LOGS` (default
+`~/.local/state/colab-lanes`). Creature ids (`creature-NNN`) run as `cNNN`. Two runtimes at most: a third `colab new` is
+refused. Batch costs (docs/runpod-bake-pods.md in asset-pipeline): an L4 in turn 3.9 units and 100 min a walker; a G4 three
+at once 9.8 units and 53 min each.

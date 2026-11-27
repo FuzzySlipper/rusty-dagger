@@ -158,7 +158,49 @@ makes H3 morph during the orbit, and front-only is better then (Patch 2026-11-23
 
 For cards beside the Gaussians (an experiment, in asset-pipeline): `tools/bbsplat-gsplat/character_cards.py ID` bakes 6,144 cards
 from the walked full bake on the GPU lab, binds each card as the Gaussians around it are bound (skirt bones, loose hands), and
-publishes a Workbench set with the playable clips.
+publishes a Workbench set with the playable clips. For the Engine (Patch 2026-11-26, all 15 shipped enemies), after `ship`:
+`python3 -m bbsplat_gsplat.export_glb ATLAS final/ID.glb final/ID-cards.glb --binding ATLAS/binding.npz --rig playable/scaffold.glb`
+(and again with `--core final/ID.core.glb` for `ID-cards.core.glb`). `--binding` puts the cards on the same rebinding as the
+Workbench set, skirt joints by name; without it they take the scaffold mesh's skin and a cloak follows the legs. ready.json
+lists them as `cards_glb` and `cards_core_glb`. The card bake's face seed uses `bone_region.py --front auto` too (ten of the
+fifteen enemies hold a weapon in front, and `--front 0` found no face).
+
+### Repairs without a rebake
+
+Edits to a finished bound body (Patch 2026-11-26). They change the run's body folders in `work/NNN/A/bound/`: find the one a
+published size is hard-linked from by inode (`find work -inum $(stat -c %i 09-game/bound/sizes/SIZE/splat.npz)`), write the
+fix to a new folder, keep the original in `bound/pre-rigid` or `bound/pre-blade`, move the fix into place, then `publish` (and
+`ship` again if shipped). The tools are in asset-pipeline:
+- **A weapon that wiggles in the walk** (399, 459, 460, 469): Meshy's rig traced the arm along the haft and put the hand bone at
+  the weapon's head, so the haft was shared with the forearm, hips and legs. `tools/splat-prop/rigid_weapon.py BODY OUT --rig
+  RIG --transform T --arm-z Z --y-range 0.45,1.03 --plot SEL.png` binds every Gaussian of the weapon, and the gripping hand,
+  wholly to the hand. Look at `--plot` before using it; `--arm-z` keeps the arm itself out of the box. 470's axe was already
+  rigid.
+- **A blade that baked short or streaked** (461, 472: painted pointing at the viewer in the front views):
+  `tools/splat-prop/blade_patch.py BODY OUT --rig RIG --transform T --base X,Y,Z --dir DX,DY,DZ --length 0.46` clears the stub
+  and tiles a flat steel blade of Gaussians on the hand. The colour takes the stub's brightness on a neutral steel tint (472's
+  stub held magenta key spill). Patch: good, with some style mismatch; judge in game. 462's own 16k blade is as sparse, so
+  transplanting a blade from another character does not help.
+- **A staff on a Meshy rig** (458, 468): Meshy gave the lower staff to the nearest leg, so it broke at the knee. The walker rig
+  now runs `tools/splat-rig/prop_weights.py` when npc.json has `rigid_prop` (robust shaft axis, 6 cm radius), before the bake.
+
+### Creatures
+
+`static-npc init creature-NNN --creature quadruped|spider|ghost|flyer|biped` (2026-11-26). A creature runs as `cNNN`
+(`work/cNNN/A`; `bound.py run_num`) and publishes under its own id. A humanoid creature (orc, zombie, daedra, lich) is a walker
+(`--walker`) and goes the whole route above; the spriggan (creature-002) did. For the others the steps are `keys`, `clay`,
+`mesh`, `guide`, `clip`, `bake` and `r1` on Colab; the bound route's Mixamo scaffold does not fit them, so binding and motion
+are asset-pipeline experiments (`docs/creature-splats.md` there): a Tripo rig from the Tripo site, the round-1 free fit bound
+to it after the fact, and motion from Tripo's presets, a retarget, a scripted gait or anymove.
+- **Back clay prompts say the face is hidden** ("the face is on the far side: no face, no eyes and no teeth are visible").
+  Listing the face made Qwen turn the head round (rat, ghost).
+- **`"no_rings": true`** for quadrupeds, spiders and flyers: the repaint rings are human VACE prompts and repainted the
+  sabertooth as a sitting tiger (41 of 81 frames dropped at match). r1-data is then the orbit alone.
+- **`"key_fill": T`** when the key colour is painted into the figure (the ghost's magenta robe tears, the imp's wing
+  membranes): `orbit_views.py --key-fill` greys key-coloured pixels inside the matte.
+- **BiRefNet is required:** `static-npc bake` sets `BIREFNET_REQUIRED=1`, and the stage retries once and then stops instead of
+  falling back to the colour key (the ghost's rebake lost BiRefNet and kept the pink room).
+- Every creature record in the CMS has an approved four-view turnaround (Patch 2026-11-26; creature-010 is being redesigned).
 
 Settings live in `00-brief/npc.json`:
 
@@ -176,6 +218,11 @@ Settings live in `00-brief/npc.json`:
 | `rigid_prop` | `Right` or `Left`: a staff painted in that hand, bound wholly to it by `fit_rig.py --rigid-prop`. |
 | `clips_dir` | The character's own walking/around/idle clip JSONs (e.g. the weapon arm held as painted, `layer_clip.py --hold rig`). |
 | `rigger` | `fit` to fit the target skeleton instead of Meshy's rig (automatic without a Meshy task). |
+| `creature` | `quadruped`, `spider`, `ghost`, `flyer` or `biped` (set by `init --creature`): the creature prompts and no walker steps. |
+| `no_rings` | Skip the repaint rings, refs, VACE and match: r1-data is the orbit alone (non-human creatures). |
+| `key_fill` | Grey key-coloured pixels inside the matte (`orbit_views.py --key-fill T`). |
+| `skirt_rig_opts` | Options for `skirt_bones.py rig`: `"--cloak"` for a long cape behind the legs (with `skirt_bones: 6`), `"--slit"` for a skirt that parts at the front. |
+| `gpu_host` | Where the bake's GPU stages run: `gpu-lab`, or a Colab ssh alias (`colab-bake`); the Colab lane sets and resets it. |
 
 `ship` runs `dagger-char bound ID --step choose --size NAME --patch-said "..."`, which writes `ID.glb` (with the eye mask
 when `character/eye_picks.json` has the character's eye centres) and the static NPC's own clips, `ID-idle.glb` and
@@ -198,6 +245,10 @@ is on disk, after manual work or for an older character.
   `/workspace/RUN/tools` under `/tmp/gpu-lab-claude.lock`.
 - **Strix Halos (den-m5, den-nimo):** the bake's CPU stages run there. Run `hosts/strix-cpu/setup.sh den-m5 den-nimo` once
   after the tools change. It syncs them to `~/.local/state/asset-cpu/rusty-dagger`, apart from asset-pipeline's copy.
+- **Colab (Patch's compute units):** the splat bakes (`r1`, `bound`, `graft`, `walk`) run on Colab L4s through the `colab-bake`
+  ssh aliases (`hosts/colab/README.md`); ComfyUI work stays on the 5090. Two runtimes at most. After `colab stop -s NAME` run
+  `ssh -O exit ALIAS`, or the next lane rides the dead master. A refused allocation right after a stop clears in a few minutes;
+  the lane stops on a failed setup instead of baking without tools. About 3.9 units per walker on an L4.
 - **Before heavy work:** run `art-tools status`, and wrap long jobs in `asset-resources run`.
 - **Long steps** (`clip`, `bake`, `bound`): run them as background jobs. Never edit a script a running chain is reading:
   write a new file and move it into place.

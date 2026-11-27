@@ -199,6 +199,9 @@ def ready(root, ms):
                 out[-1]['eyes'] = ey
             if (fin / f"{m['id']}.core.glb").exists():   # the Engine GLB with the matte inset core as a second primitive (rusty-engine #10990's contract; npc-023, Patch 2026-11-23)
                 out[-1]['core_glb'] = f"{m['id']}/09-game/bound/final/{m['id']}.core.glb"
+            for k, f in (('cards_glb', f"{m['id']}-cards.glb"), ('cards_core_glb', f"{m['id']}-cards.core.glb")):   # 6,144 textured cards on the same joints (asset-pipeline bbsplat_gsplat.export_glb; Patch 2026-11-26)
+                if (fin / f).exists():
+                    out[-1][k] = f"{m['id']}/09-game/bound/final/{f}"
             gj = fin / f"{m['id']}.glb.json"
             if gj.exists() and json.loads(gj.read_text()).get('static'):   # a static NPC: not a walker; ID-idle.glb and ID-look.glb are its clips
                 out[-1].update({'static': True, 'clips': {c: f"{m['id']}/09-game/bound/final/{m['id']}-{c}.glb" for c in ('idle', 'look')}})
@@ -491,7 +494,7 @@ def write_all(root):
         'folder holds the runtime body (splat.npz, binding.npz, and the .vsplat with rig and clips named in character.json), relative to this file. '
         'engine_glb is the same body as the Engine\'s skinned splat GLB on the 22 Mixamo body bones (Mixamo clips play by name; a static NPC (static: true) '
         'is not a walker: only its short chain is weighted and it plays its own clips, named in clips; '
-        'authoring/tools/people/splat/scaffold/bound_to_glb.py), with ID.glb.json (checks) and ID-clip-fit.json (Mixamo Walking and Idle fit) beside it.',
+        'authoring/tools/people/splat/scaffold/bound_to_glb.py), with ID.glb.json (checks) and ID-clip-fit.json (Mixamo Walking and Idle fit) beside it. cards_glb (and cards_core_glb, with the inset core) is the same character as 6,144 textured billboard cards on the same joints (splatKind billboard, rusty-engine #11002).',
         'ready': rd, 'not_ready': wt}, indent=1) + '\n')
     bad = check_images(root)
     if bad:
