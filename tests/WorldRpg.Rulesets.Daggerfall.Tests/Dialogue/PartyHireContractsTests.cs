@@ -34,15 +34,20 @@ public sealed class PartyHireContractsTests
             Assert.True(session.State.Currency.TrySpendGold(gold, []));
     }
 
+    private static void GrantPotion(DaggerfallSession session, int recipeKey)
+    {
+        DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
+        string key = $"test.potion.{recipeKey}.{Guid.NewGuid():N}";
+        factory.Materialize(
+            factory.Create(new("UselessItems1", key, DaggerfallItemOwner.Player, Quantity: 1, TemplateIndex: 83, PotionRecipeKey: recipeKey)),
+            session.State.Inventory, session.State.ItemInstances, InventoryStackId.Parse(key));
+    }
+
     private static void GrantHealingPotion(DaggerfallSession session)
     {
         int healRecipeKey = TestPayload.Definitions.Magic.PotionRecipes.First(pair =>
-            pair.Value.Name.Contains("Heal", StringComparison.OrdinalIgnoreCase)).Key;
-        DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
-        string key = $"test.heal.{Guid.NewGuid():N}";
-        factory.Materialize(
-            factory.Create(new("UselessItems1", key, DaggerfallItemOwner.Player, Quantity: 1, TemplateIndex: 83, PotionRecipeKey: healRecipeKey)),
-            session.State.Inventory, session.State.ItemInstances, InventoryStackId.Parse(key));
+            pair.Value.Effects.Any(e => string.Equals(e.Key, "heal-health", StringComparison.Ordinal))).Key;
+        GrantPotion(session, healRecipeKey);
     }
 
     [Fact]
@@ -312,5 +317,177 @@ public sealed class PartyHireContractsTests
         Assert.Equal(savedEntry.PartyContract.Morale, restoredContract.Morale);
         Assert.Equal(savedEntry.PartyContract.FriendlyFireStrikes, restoredContract.FriendlyFireStrikes);
         Assert.Equal(savedEntry.PartyContract.Stance, restoredContract.Stance);
+    }
+
+    [Fact]
+    public void Normal_recruitment_materializes_party_hire_specs_and_enforces_gated_retainers_through_dialogue()
+    {
+        // 1. Road Guard recruited through normal dialogue in town adopts warrior template, player-ally team, and Combatant harm.
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using (DaggerfallSession town = fixture.Start(fixture.ExteriorProfile))
+        {
+            town.AdvanceElapsedTime(10 * 3600);
+            town.State.Currency.ReceiveGold(200UL);
+            DaggerfallNpc roadGuardCandidate = FindHireableInTown(town);
+            IReadOnlyList<DaggerfallDialogueTopicOption> offerTopics = town.PartyHire.TopicsFor(roadGuardCandidate);
+            Assert.Contains(offerTopics, t => t.Id == "hire-companion" && t.Label.Contains("Road Guard", StringComparison.Ordinal));
+
+            DaggerfallPartyHireResult hiredRoadGuard = town.PartyHire.Resolve(roadGuardCandidate, DaggerfallDialogueTopic.HireCompanion);
+            Assert.True(hiredRoadGuard.Accepted, hiredRoadGuard.Message);
+            ActorState liveGuard = town.State.Actors.Get(roadGuardCandidate.DurableId);
+            Assert.True(liveGuard.Actor.Get<ActorHarmPolicy>().IsCombatant);
+            Assert.Equal("player-ally", liveGuard.Actor.Get<FactionComponent>().EffectiveTeam);
+            Assert.Equal("warrior", liveGuard.Actor.Get<ActorOverlayComponent>().ArchetypeId);
+            Assert.True(town.PartyHire.TryGetContract(roadGuardCandidate.DurableId, out ActorPartyContractDiff guardContract));
+            Assert.Equal(DaggerfallPartyHireService.DefaultRoadGuardSpecId, guardContract.SpawnerId);
+            Assert.False(guardContract.CanDelveDungeons);
+        }
+
+        // 2. Gated Knightly Retainer generated in Knightly Order hall from hire-knight-retainer spec:
+        //    normal dialogue refuses before rank + vouch, then enlists with shared 'knight' template, Combatant harm, player-ally team, and CanDelveDungeons.
+        using (DaggerfallSession knightHall = fixture.Start(fixture.KnightlyProfile))
+        {
+            knightHall.State.Currency.ReceiveGold(500UL);
+            // Untouched generated recruit must write 0 save bytes before interaction!
+            var untouchedSave = knightHall.CaptureSave();
+            Assert.DoesNotContain(DaggerfallSavePayload.Read(untouchedSave).ActorLedger, e => e.PartyContract is not null);
+
+            DaggerfallNpc knightRecruit = Assert.Single(knightHall.State.Npcs.All, npc =>
+                npc.Presence == DaggerfallNpcPresence.Active
+                && string.Equals(npc.Role, "knight-retainer", StringComparison.Ordinal));
+            Assert.True(knightHall.PartyHire.IsHireable(knightRecruit));
+            ActorState recruitBefore = knightHall.State.Actors.Get(knightRecruit.DurableId);
+            Assert.Equal("knight", recruitBefore.Actor.Get<ActorOverlayComponent>().ArchetypeId);
+            Assert.Equal(DaggerfallPartyHireService.KnightRetainerSpecId, recruitBefore.Actor.Get<ActorOriginComponent>().Origin.SpawnerId);
+
+            // Normal dialogue refuses before guild rank & vouch!
+            IReadOnlyList<DaggerfallDialogueTopicOption> gatedTopics = knightHall.PartyHire.TopicsFor(knightRecruit);
+            Assert.Contains(gatedTopics, t => t.Id == "hire-companion" && t.Label.Contains("Knightly Retainer", StringComparison.Ordinal));
+            DaggerfallPartyHireResult refusedNoRank = knightHall.PartyHire.Resolve(knightRecruit, DaggerfallDialogueTopic.HireCompanion);
+            Assert.False(refusedNoRank.Accepted);
+            Assert.Contains("rank", refusedNoRank.Message, StringComparison.OrdinalIgnoreCase);
+
+            // Join Order of the Dragon (368) and earn rank 1 -> still gated by vouch!
+            knightHall.State.Social.JoinGuild(368, 0);
+            knightHall.State.Social.PromoteGuild(368, 0);
+            DaggerfallPartyHireResult refusedNoVouch = knightHall.PartyHire.Resolve(knightRecruit, DaggerfallDialogueTopic.HireCompanion);
+            Assert.False(refusedNoVouch.Accepted);
+            Assert.Contains("vouch", refusedNoVouch.Message, StringComparison.OrdinalIgnoreCase);
+
+            // Grant vouch -> normal dialogue now enlists the Knightly Retainer!
+            long referrerId = knightHall.State.Npcs.All.First(n => n.DurableId != knightRecruit.DurableId).DurableId;
+            knightHall.Introductions.GrantVouchDirect(referrerId, knightRecruit.DurableId, ActorVouchKind.Trade);
+            DaggerfallPartyHireResult hiredKnight = knightHall.PartyHire.Resolve(knightRecruit, DaggerfallDialogueTopic.HireCompanion);
+            Assert.True(hiredKnight.Accepted, hiredKnight.Message);
+
+            ActorState liveKnight = knightHall.State.Actors.Get(knightRecruit.DurableId);
+            Assert.True(liveKnight.Actor.Get<ActorHarmPolicy>().IsCombatant);
+            Assert.Equal("player-ally", liveKnight.Actor.Get<FactionComponent>().EffectiveTeam);
+            Assert.Equal("knight", liveKnight.Actor.Get<ActorOverlayComponent>().ArchetypeId);
+            Assert.True(knightHall.PartyHire.TryGetContract(knightRecruit.DurableId, out ActorPartyContractDiff knightContract));
+            Assert.Equal(DaggerfallPartyHireService.KnightRetainerSpecId, knightContract.SpawnerId);
+            Assert.True(knightContract.CanDelveDungeons);
+        }
+
+        // 3. Gated Guild Battlemage generated in Mages Guild hall from hire-battle-mage spec:
+        using (DaggerfallSession magesHall = fixture.Start(fixture.MagesProfile))
+        {
+            magesHall.State.Currency.ReceiveGold(500UL);
+            DaggerfallNpc mageRecruit = Assert.Single(magesHall.State.Npcs.All, npc =>
+                npc.Presence == DaggerfallNpcPresence.Active
+                && string.Equals(npc.Role, "battle-mage", StringComparison.Ordinal));
+            DaggerfallPartyHireResult refusedMage = magesHall.PartyHire.Resolve(mageRecruit, DaggerfallDialogueTopic.HireCompanion);
+            Assert.False(refusedMage.Accepted);
+
+            magesHall.State.Social.JoinGuild(40, 0);
+            magesHall.State.Social.PromoteGuild(40, 0);
+            long referrerId = magesHall.State.Npcs.All.First(n => n.DurableId != mageRecruit.DurableId).DurableId;
+            magesHall.Introductions.GrantVouchDirect(referrerId, mageRecruit.DurableId, ActorVouchKind.Trade);
+            DaggerfallPartyHireResult hiredMage = magesHall.PartyHire.Resolve(mageRecruit, DaggerfallDialogueTopic.HireCompanion);
+            Assert.True(hiredMage.Accepted, hiredMage.Message);
+            ActorState liveMage = magesHall.State.Actors.Get(mageRecruit.DurableId);
+            Assert.True(liveMage.Actor.Get<ActorHarmPolicy>().IsCombatant);
+            Assert.Equal("player-ally", liveMage.Actor.Get<FactionComponent>().EffectiveTeam);
+            Assert.Equal("battlemage", liveMage.Actor.Get<ActorOverlayComponent>().ArchetypeId);
+        }
+    }
+
+    [Fact]
+    public void Give_healing_draught_ignores_restore_power_potions_and_consumes_only_health_restoration_potions()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        session.AdvanceElapsedTime(10 * 3600);
+        session.State.Currency.ReceiveGold(200UL);
+        DaggerfallNpc hireable = FindHireableInTown(session);
+        Assert.True(session.PartyHire.Resolve(hireable, DaggerfallDialogueTopic.HireCompanion).Accepted);
+
+        ActorState live = session.State.Actors.Get(hireable.DurableId);
+        Track health = live.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        health.SetCurrent(Math.Max(1d, health.Maximum.Value - 20d));
+        double hurtHealth = health.Current;
+
+        // Restore Power (5188896) restores spell points, NOT health -> must be rejected and left untouched!
+        const int RestorePowerRecipeKey = 5188896;
+        GrantPotion(session, RestorePowerRecipeKey);
+        int stacksBefore = session.State.Inventory.Read().Stacks.Count;
+        DaggerfallPartyHireResult rejected = session.PartyHire.Resolve(hireable, DaggerfallDialogueTopic.GiveHealingDraught);
+        Assert.False(rejected.Accepted);
+        Assert.Equal(hurtHealth, health.Current);
+        Assert.Equal(stacksBefore, session.State.Inventory.Read().Stacks.Count);
+
+        // Adding a real Healing potion (4975678, effect 'heal-health') succeeds while leaving Restore Power untouched!
+        GrantHealingPotion(session);
+        DaggerfallPartyHireResult healed = session.PartyHire.Resolve(hireable, DaggerfallDialogueTopic.GiveHealingDraught);
+        Assert.True(healed.Accepted, healed.Message);
+        Assert.True(health.Current > hurtHealth);
+        Assert.Contains(session.State.Inventory.Read().Stacks, stack =>
+            session.State.ItemInstances.ContainsStack(DaggerfallItemOwner.Player, stack.Id)
+            && session.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player, stack.Id).PotionRecipeKey == RestorePowerRecipeKey);
+    }
+
+    [Fact]
+    public void Intra_day_calendar_updates_and_save_reload_are_idempotent_for_unpaid_wages()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        session.AdvanceElapsedTime(10 * 3600);
+        session.State.Currency.ReceiveGold(100UL);
+        DaggerfallNpc hireable = FindHireableInTown(session);
+        Assert.True(session.PartyHire.Resolve(hireable, DaggerfallDialogueTopic.HireCompanion).Accepted);
+
+        // Spend all remaining gold and cross midnight into Day 1 (first unpaid day -> warn once, morale drops once).
+        ClearPlayerGold(session);
+        long startDay = session.Calendar.DayNumber;
+        session.AdvanceElapsedTime(15 * 3600); // crosses into startDay + 1 at ~01:00
+        Assert.Equal(startDay + 1, session.Calendar.DayNumber);
+
+        Assert.True(session.PartyHire.TryGetContract(hireable.DurableId, out ActorPartyContractDiff afterFirstUnpaidDay));
+        Assert.Equal(1, afterFirstUnpaidDay.UnpaidDays);
+        Assert.Equal((int)(startDay + 1), afterFirstUnpaidDay.EffectiveLastBilledDay);
+        int moraleAfterFirstDay = afterFirstUnpaidDay.Morale;
+
+        // Advance multiple ordinary intervals WITHIN the exact same Day 1 -> MUST NOT add arrears, drop morale, or desert!
+        session.AdvanceElapsedTime(1800);
+        session.AdvanceElapsedTime(3600);
+        session.AdvanceElapsedTime(3600);
+        Assert.Equal(startDay + 1, session.Calendar.DayNumber);
+        Assert.True(session.PartyHire.TryGetContract(hireable.DurableId, out ActorPartyContractDiff afterSameDayTicks));
+        Assert.Equal(1, afterSameDayTicks.UnpaidDays);
+        Assert.Equal(moraleAfterFirstDay, afterSameDayTicks.Morale);
+
+        // Save and reload on Day 1, then advance again within Day 1 -> still idempotent!
+        var midDaySave = session.CaptureSave();
+        using DaggerfallSession reloaded = fixture.Restore(midDaySave);
+        reloaded.AdvanceElapsedTime(3600);
+        Assert.Equal(startDay + 1, reloaded.Calendar.DayNumber);
+        Assert.True(reloaded.PartyHire.TryGetContract(hireable.DurableId, out ActorPartyContractDiff afterReloadTick));
+        Assert.Equal(1, afterReloadTick.UnpaidDays);
+        Assert.Equal(moraleAfterFirstDay, afterReloadTick.Morale);
+
+        // Crossing into Day 2 still broke -> now reaches 2 unpaid days and deserts cleanly!
+        reloaded.AdvanceElapsedTime(24 * 3600);
+        Assert.False(reloaded.PartyHire.TryGetContract(hireable.DurableId, out _));
+        Assert.False(reloaded.PartyHire.TryGetStagedHiredRole(hireable.DurableId, out _));
     }
 }

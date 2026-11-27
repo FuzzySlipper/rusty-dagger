@@ -4,7 +4,7 @@
       "id": "hire-road-guard",
       "family": "party-hire",
       "template": "warrior",
-      "published": false,
+      "published": true,
       "displayName": "Road Guard",
       "role": "road-guard",
       "genders": [
@@ -62,7 +62,7 @@
       "id": "hire-mercenary",
       "family": "party-hire",
       "template": "archer",
-      "published": false,
+      "published": true,
       "displayName": "Mercenary Scout",
       "role": "mercenary",
       "genders": [
@@ -114,7 +114,7 @@
       "id": "hire-knight-retainer",
       "family": "party-hire",
       "template": "knight",
-      "published": false,
+      "published": true,
       "displayName": "Knightly Retainer",
       "role": "knight-retainer",
       "genders": [
@@ -172,7 +172,7 @@
       "id": "hire-battle-mage",
       "family": "party-hire",
       "template": "battlemage",
-      "published": false,
+      "published": true,
       "displayName": "Guild Battlemage",
       "role": "battle-mage",
       "genders": [

@@ -736,8 +736,189 @@ internal sealed class DaggerfallActorRoster
             }
         }
 
+        // Step 1b: materialize deterministic tavern/guildhall party-hire recruit from authored party-hire specs (#11101).
+        MaterializeInteriorPartyHireRecruit(profile, appearance, translation);
+
         // Step 2: materialize any inbound relocated SeededSlot or CastIndividual ledger entries at this profile.
         MaterializeRelocatedLedgerActors(profile, appearance, translation);
+    }
+
+    private void MaterializeInteriorPartyHireRecruit(DaggerfallSiteProfile profile, DaggerfallSiteAppearance appearance, Vector3 translation)
+    {
+        if (profile.ProfileKind != DaggerfallWorldProfileKind.Interior
+            || profile.InteriorBuilding is not { } interior
+            || profile.Site is not { } site
+            || profile.BillboardSprites.Count == 0)
+            return;
+
+        string? specId = ResolveInteriorPartyHireSpecId(interior);
+        if (specId is null
+            || !_definitions.ActorCatalog.Specs.TryGetValue(specId, out DaggerfallActorSpawnerSpec? spec)
+            || spec.Family != ActorSpawnerFamily.PartyHire)
+            return;
+
+        string recruitSlotId = $"party-hire/{spec.Id}";
+        string slotKey = $"{profile.ProfileKey.LogicalId}/{recruitSlotId}";
+        long recruitId = DaggerfallPeopleSlots.SeededSlotIdentity(site, slotKey);
+        if (_actorLedger.IsHomeSlotSuppressed(recruitId, profile.ProfileKey)
+            || BanishedActors.Contains(recruitId)
+            || _actors.TryGet(recruitId, out _))
+            return;
+
+        ulong seed = StableHash.NonZeroFnv1a64($"party-hire-recruit:{site.Region}:{site.Index}:{profile.ProfileKey.LogicalId}:{spec.Id}");
+        IReadOnlyList<DaggerfallPeoplePoolEntry> pool = spec.DefaultPool ?? [];
+        DaggerfallPeoplePoolEntry? chosenPool = null;
+        DaggerfallPeoplePoolEntry[] admittedPool = [.. pool.Where(entry => profile.BillboardSprites.ContainsKey((entry.Archive, entry.Record)))];
+        if (admittedPool.Length > 0)
+            chosenPool = admittedPool[(int)(seed % (ulong)admittedPool.Length)];
+        else if (pool.Count > 0)
+            chosenPool = pool[(int)(seed % (ulong)pool.Count)];
+
+        (int archive, int record) spriteKey = chosenPool is { } chosen && profile.BillboardSprites.ContainsKey((chosen.Archive, chosen.Record))
+            ? (chosen.Archive, chosen.Record)
+            : profile.BillboardSprites.Keys.First();
+        string gender = chosenPool?.Gender is "Male" or "Female" ? chosenPool.Gender : "Male";
+        string race = _definitions.BuildingNames.TryGetNameBank(site.Region, out int bank) && bank != 0 ? "redguard" : "breton";
+        int factionId = interior.FactionId != 0
+            ? interior.FactionId
+            : spec.HireTerms?.GuildFactionId
+                ?? DaggerfallPeopleSlots.ResolveRegionalPeopleFaction(_definitions.Factions, site.Region)?.Id
+                ?? 0;
+        int nameSeed = unchecked((int)(seed & 0x7FFF_FFFFUL));
+        if (nameSeed == 0) nameSeed = 1;
+
+        DaggerfallSiteRecord location = _definitions.Locations.Records.Single(record => record.Id == site);
+        DaggerfallNpcSite binding = new(site.Region, location.Name,
+            $"{interior.BlockX}/{interior.BlockY}/{interior.Building.Index}", profile.ProfileKey.LogicalId);
+        DaggerfallNpcAppearance look = new(race, gender, spriteKey.archive, spriteKey.record, nameSeed, factionId);
+        _npcs.RegisterDeterministic(recruitId, DaggerfallNpcKind.Static, recruitSlotId, binding,
+            look, spec.Role ?? spec.DisplayName, ["talk"], homeProfile: profile.ProfileKey);
+        DaggerfallNpc npc = _npcs.Require(recruitId);
+        if (npc.Presence != DaggerfallNpcPresence.Active) return;
+
+        WorldPoint basePos = profile.StaticNpcs.Count > 0
+            ? new WorldPoint(profile.StaticNpcs[0].Position.X + 1.35f, profile.StaticNpcs[0].Position.Y, profile.StaticNpcs[0].Position.Z + 0.75f)
+            : profile.Project.PlayerPosition is { } pp
+                ? new WorldPoint(pp.X + 1.35f, pp.Y, pp.Z + 0.75f)
+                : default;
+        ActorOrigin origin = ActorOrigin.Seeded(profile.ProfileKey, recruitSlotId, spec.Id,
+            ActorHarmPolicyKind.LawProtectedCivilian, spec.Interaction);
+        _ = MaterializeDeterministicNpc(npc, origin, basePos, translation,
+            _actorLedger.TryGet(recruitId, out ActorLedgerEntry? delta) ? delta : null,
+            siteProfile: profile);
+        if (!TryAdmitDirectionalMobileAppearance(profile, appearance, recruitId)
+            && profile.BillboardSprites.TryGetValue(spriteKey, out NormalizedBillboardSprite? billboard))
+        {
+            appearance.AdmitActor(recruitId, billboard.Standing(spriteKey), ActorVisualAssetId(recruitId));
+        }
+        _npcs.Bind(recruitId, profile.ProfileKey);
+    }
+
+    private string? ResolveInteriorPartyHireSpecId(DaggerfallInteriorBuilding interior)
+    {
+        if (interior.BuildingType == 15)
+            return "hire-road-guard";
+        if (interior.BuildingType == 11)
+        {
+            if (interior.FactionId == 40)
+                return "hire-battle-mage";
+            if (interior.FactionId == 41)
+                return "hire-knight-retainer";
+            if (_definitions.Factions.Factions.TryGetValue(interior.FactionId, out DaggerfallFactionDefinition? faction)
+                && (faction.GuildGroup == 9 || faction.Type == 10 || StringComparer.Ordinal.Equals(faction.TypeName, "KnightlyGuard")))
+                return "hire-knight-retainer";
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Applies a contracted <c>party-hire</c> spawner spec's shared combat template, <c>player-ally</c> team, and
+    /// <see cref="ActorHarmPolicyKind.Combatant"/> harm policy to a staged companion so recruits fight and persist
+    /// through their authored template without a separate retainer stat table (#11101).
+    /// </summary>
+    internal void ApplyPartyHireSpec(long actorId, string? spawnerId)
+    {
+        if (!_actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated)
+            return;
+
+        string resolvedSpecId = !string.IsNullOrWhiteSpace(spawnerId)
+            && _definitions.ActorCatalog.Specs.ContainsKey(spawnerId)
+                ? spawnerId
+                : "hire-road-guard";
+        if (!_definitions.ActorCatalog.Specs.TryGetValue(resolvedSpecId, out DaggerfallActorSpawnerSpec? spec)
+            || spec.Family != ActorSpawnerFamily.PartyHire)
+            return;
+
+        DaggerfallActorDefinition specDef = _definitions.RequireActor(new DaggerfallActorId(spec.Id));
+        actor.Actor.Get<ActorHarmPolicy>().Set(spec.Harm);
+        actor.Actor.Get<FactionComponent>().SetTeamOverride(spec.Team ?? "player-ally");
+        if (actor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+            overlay.ArchetypeId = spec.TemplateId;
+        if (actor.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? memory))
+        {
+            memory.SetForcedHostile(false);
+            memory.LairTruce = false;
+        }
+
+        if (_definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? current))
+        {
+            _definitionsByActor[actorId] = current with
+            {
+                Stats = specDef.Stats,
+                Health = specDef.Health,
+                Armor = specDef.Armor,
+                HitPointsPerLevel = specDef.HitPointsPerLevel,
+                Attacks = specDef.Attacks,
+                Team = specDef.Team ?? "player-ally",
+                MinimumMaterial = specDef.MinimumMaterial,
+                Level = specDef.Level ?? current.Level,
+                Weight = specDef.Weight ?? current.Weight,
+                ActionId = specDef.ActionId ?? current.ActionId,
+                Loadout = specDef.Loadout.Count > 0 ? specDef.Loadout : current.Loadout,
+                Career = specDef.Career ?? current.Career,
+                TemplateId = specDef.TemplateId,
+                SpawnerId = specDef.SpawnerId,
+                Capabilities = specDef.Capabilities,
+                DefaultHarm = spec.Harm,
+                DefaultInteraction = spec.Interaction,
+                SpellPolicy = specDef.SpellPolicy,
+                Spells = specDef.Spells,
+            };
+        }
+        else
+        {
+            _definitionsByActor[actorId] = specDef;
+        }
+
+        // Raise weak civilian health maximum up to the shared combat template floor while preserving any saved wound delta.
+        Track health = actor.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        double wound = Math.Max(0d, health.Maximum.Value - health.Current);
+        double combatFloor = Math.Max(specDef.Health.Minimum, 25);
+        if (health.Maximum.BaseValue < combatFloor)
+        {
+            health.Maximum.BaseValue = combatFloor;
+            health.SetCurrent(Math.Clamp(health.Maximum.Value - wound, 1d, health.Maximum.Value));
+        }
+    }
+
+    /// <summary>Clears active <c>party-hire</c> combat/team promotion when a hire is dismissed, deserts, or betrays the player.</summary>
+    internal void ClearPartyHireSpec(long actorId, bool hostileBetrayal = false)
+    {
+        if (!_actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated)
+            return;
+        if (actor.Actor.TryGet<FactionComponent>(out FactionComponent? faction))
+            faction.SetTeamOverride(hostileBetrayal ? "outlaws" : null);
+        if (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm))
+            harm.Set(hostileBetrayal ? ActorHarmPolicyKind.Combatant : ActorHarmPolicyKind.LawProtectedCivilian);
+        if (!hostileBetrayal && _definitionsByActor.TryGetValue(actorId, out DaggerfallActorDefinition? current))
+        {
+            _definitionsByActor[actorId] = current with
+            {
+                Team = null,
+                DefaultHarm = ActorHarmPolicyKind.LawProtectedCivilian,
+                Capabilities = current.Capabilities with { IsCombatEncounter = false },
+            };
+        }
     }
 
     /// <summary>Materializes one unique <c>cast/individuals.json</c> individual at <paramref name="profile"/> under Step 1 suppression.</summary>
@@ -1992,6 +2173,12 @@ internal sealed class DaggerfallActorRoster
                     foreach (ActorVouchRecord vouch in social.Vouches)
                         overlay.RecordVouch(vouch);
             }
+        }
+        if (delta.Social?.StagedPartyRole == ActorPartyRole.Companion
+            && delta.PartyContract is { HostileBetrayal: false } stagedContract
+            && !actor.IsDefeated)
+        {
+            ApplyPartyHireSpec(actor.DurableId, stagedContract.SpawnerId);
         }
     }
 

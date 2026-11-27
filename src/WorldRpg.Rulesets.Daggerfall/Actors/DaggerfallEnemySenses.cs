@@ -143,6 +143,7 @@ internal sealed class DaggerfallEnemySenses(ActorsState actors, PlayerControlSta
         foreach (var actor in actors.All)
         {
             if (actor.IsDefeated || isPacified(actor.DurableId)
+                || (actor.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && !harm.IsCombatant)
                 || !definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
                 || (!definition.Capabilities.IsCombatEncounter
                     && (definition.TemplateId is not null || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)))

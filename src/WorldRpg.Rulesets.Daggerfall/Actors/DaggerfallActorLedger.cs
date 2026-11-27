@@ -390,11 +390,16 @@ internal sealed record ActorPartyContractDiff(
     bool CanDelveDungeons = false,
     int UnpaidDays = 0,
     int FriendlyFireStrikes = 0,
-    bool HostileBetrayal = false)
+    bool HostileBetrayal = false,
+    int? LastBilledDay = null)
 {
     internal const int DefaultMorale = 70;
     internal const int MinimumMorale = 0;
     internal const int MaximumMorale = 100;
+
+    /// <summary>Most recent calendar day already billed (paid or accrued into <see cref="UnpaidDays"/>), making intra-day updates idempotent.</summary>
+    [JsonIgnore]
+    internal int EffectiveLastBilledDay => Math.Max(PaidThroughDay, LastBilledDay ?? PaidThroughDay);
 
     internal void Validate()
     {
@@ -403,6 +408,8 @@ internal sealed record ActorPartyContractDiff(
             throw new ArgumentOutOfRangeException(nameof(DailyWage), "Saved party contract daily wage cannot be negative.");
         if (PaidThroughDay < 0)
             throw new ArgumentOutOfRangeException(nameof(PaidThroughDay), "Saved party contract paid-through day cannot be negative.");
+        if (LastBilledDay is < 0)
+            throw new ArgumentOutOfRangeException(nameof(LastBilledDay), "Saved party contract last-billed day cannot be negative.");
         if (Morale is < MinimumMorale or > MaximumMorale)
             throw new ArgumentOutOfRangeException(nameof(Morale), "Saved party contract morale must be in [0, 100].");
         if (!Enum.IsDefined(Stance))

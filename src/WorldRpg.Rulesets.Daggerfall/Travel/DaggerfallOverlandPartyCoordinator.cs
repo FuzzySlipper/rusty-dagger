@@ -792,6 +792,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                     ov.EscortOrder = updatedSocial.EscortOrder;
                 }
             }
+            if (role == ActorPartyRole.Companion && updated.PartyContract is { HostileBetrayal: false } contract)
+                _roster.ApplyPartyHireSpec(live.DurableId, contract.SpawnerId);
             return live;
         }
         return null;
@@ -870,6 +872,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         _actorLedger.Upsert(released);
         if (profile == _activeProfile().ProfileKey && localPose is { } spot)
             _ = _roster.MaterializeLedgerActorAt(released, _activeProfile(), spot, 0f, _activeAppearance(), _sceneTranslation());
+        _roster.ClearPartyHireSpec(actorId, hostileBetrayal: !clearContract);
     }
 
     /// <summary>HUD portraits driven directly from <see cref="DaggerfallActorLedger.EntriesWithParty"/> and currently staged hired party members.</summary>

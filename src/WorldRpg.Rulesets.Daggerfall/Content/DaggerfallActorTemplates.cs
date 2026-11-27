@@ -395,11 +395,11 @@ internal sealed record DaggerfallActorCatalog(
                 .Where(spec => spec.Family == ActorSpawnerFamily.PartyHire)
                 .ToDictionary(spec => spec.Id, spec => spec, StringComparer.Ordinal));
 
-    /// <summary>Projects all <see cref="ActorSpawnerFamily.Town"/> specs into people-slot spawner definitions.</summary>
+    /// <summary>Projects all <see cref="ActorSpawnerFamily.Town"/> and <see cref="ActorSpawnerFamily.PartyHire"/> specs into people-slot spawner definitions.</summary>
     internal IReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition> ProjectTownSpawners() =>
         new ReadOnlyDictionary<string, DaggerfallPeopleSpawnerDefinition>(
             Specs.Values
-                .Where(spec => spec.Family == ActorSpawnerFamily.Town)
+                .Where(spec => spec.Family is ActorSpawnerFamily.Town or ActorSpawnerFamily.PartyHire)
                 .ToDictionary(
                     spec => spec.Id,
                     spec => new DaggerfallPeopleSpawnerDefinition(

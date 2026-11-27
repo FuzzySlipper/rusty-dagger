@@ -2764,7 +2764,7 @@ internal static partial class DaggerfallBaseContent
         foreach (DaggerfallActorDefinition actor in actors.Values)
         {
 
-            if (actor.Kind is not ("player" or "monster" or "enemy-class")) diagnostics.Add($"Actor '{actor.Id.Value}' has unsupported kind '{actor.Kind}'.");
+            if (actor.Kind is not ("player" or "monster" or "enemy-class" or "civilian")) diagnostics.Add($"Actor '{actor.Id.Value}' has unsupported kind '{actor.Kind}'.");
             if (actor.Kind == "player" && (actor.Id.Value != "player" || actor.MobileId is not null)) diagnostics.Add("Only actor 'player' may have kind player and it cannot have a mobile id.");
             if (actor.Kind == "enemy-class" && (actor.MobileId is not int classMobile || classMobile < DaggerfallEncounterActors.FirstClassMobile || classMobile >= classMobileEnd || actor.HitPointsPerLevel is null || actor.Career is null)) diagnostics.Add($"Enemy class '{actor.Id.Value}' must name one classic class mobile, career, and health progression.");
             if (actor.Kind == "monster" && (actor.MobileId is null || actor.MobileId is < 0 || actor.MobileId >= DaggerfallEncounterActors.FirstClassMobile)) diagnostics.Add($"Monster '{actor.Id.Value}' has an unsupported mobile id.");

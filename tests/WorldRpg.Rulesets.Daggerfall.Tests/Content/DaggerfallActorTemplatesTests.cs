@@ -51,7 +51,10 @@ public sealed class DaggerfallActorTemplatesTests
         Assert.Equal("encounter-mage", definitions.Actors[new("encounter-mage")].SpawnerId);
         Assert.Equal("thief", definitions.Actors[new("thief")].TemplateId);
         Assert.Equal("archer", definitions.Actors[new("archer")].TemplateId);
-        Assert.Equal(62, definitions.Actors.Count); // player + 42 published creatures + 19 enemy classes
+        Assert.Equal("warrior", definitions.Actors[new("hire-road-guard")].TemplateId);
+        Assert.Equal("knight", definitions.Actors[new("hire-knight-retainer")].TemplateId);
+        Assert.Equal("battlemage", definitions.Actors[new("hire-battle-mage")].TemplateId);
+        Assert.Equal(66, definitions.Actors.Count); // player + 42 published creatures + 19 enemy classes + 4 party-hire specs
     }
 
     [Fact]
