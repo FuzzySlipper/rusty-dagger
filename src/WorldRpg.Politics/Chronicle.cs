@@ -11,6 +11,12 @@ public enum ArcKind
 
     /// <summary>A seat whose holder changed: it peaks at the change and settles <see cref="Nudges.SuccessionWeeks"/> weeks later.</summary>
     Succession,
+
+    /// <summary>
+    /// A region breaking free of its liege: it peaks the week it breaks free and settles <see cref="Revolts.FreedWeeks"/>
+    /// weeks later, once its own lords hold it. Its subjects are the region and the crown it threw off.
+    /// </summary>
+    Revolt,
 }
 
 /// <summary>Whether a chronicle entry marks an arc's peak or its settling.</summary>
@@ -36,8 +42,8 @@ public sealed record ArcRecord(ArcKind Kind, string Key, ArcPhase Phase, IReadOn
 }
 
 /// <summary>
-/// Names the board's multi-week arcs when they peak or settle, so fifty years read as chapters: wars, blockades and
-/// successions. It runs once every seat has moved and the wars are checked, reading the board as it stands.
+/// Names the board's multi-week arcs when they peak or settle, so fifty years read as chapters: wars, blockades,
+/// successions and revolts. It runs once every seat has moved and the wars are checked, reading the board as it stands.
 /// </summary>
 public static class Chronicle
 {
@@ -64,7 +70,7 @@ public static class Chronicle
         }
         foreach (OpenArc arc in board.Arcs.ToArray())
         {
-            if (arc.Kind == ArcKind.Succession && !arc.Peaked) Peak(board, arc, named);
+            if (arc.Kind is ArcKind.Succession or ArcKind.Revolt && !arc.Peaked) Peak(board, arc, named);
             bool settled = arc.Kind switch
             {
                 ArcKind.War => !board.HasWar(arc.Key),

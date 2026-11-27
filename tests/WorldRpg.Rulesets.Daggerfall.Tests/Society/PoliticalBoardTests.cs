@@ -192,6 +192,22 @@ public sealed class PoliticalBoardTests
         Assert.DoesNotContain(news, item => secret.Any(name => item.Headline.Contains(name, StringComparison.Ordinal)));
     }
 
+    /// <summary>A region throwing off its liege (#11146) is news from that region, as it breaks free and once it stands on its own.</summary>
+    [Fact]
+    public void A_revolt_is_news_from_the_region_that_threw_its_liege_off()
+    {
+        DaggerfallPoliticalBoard board = NewBoard(new DaggerfallWorldConditions());
+        DaggerfallPoliticalNews news = new(board.Board, Canon.Cards, board.Town, seat => FactionOf(seat));
+        ArcRecord peak = new(ArcKind.Revolt, "glenpoint:9", ArcPhase.Peak, ["glenpoint", "daggerfall"], 9, 9);
+        TurnTrace trace = new(9, [], [], null, [], [], [], [peak, peak with { Phase = ArcPhase.Settled, Turn = 35 }]);
+
+        IReadOnlyList<DaggerfallPoliticalNewsItem> items = news.Of(trace, new HashSet<string>(), 0);
+
+        Assert.Equal(["Glenpoint Throws Off Kingdom of Daggerfall", "Glenpoint Stands on Its Own"], items.Select(item => item.Headline));
+        Assert.All(items, item => Assert.Equal(board.Town("glenpoint")!.Id, item.Origin.Id));
+        Assert.Contains("risen against Kingdom of Daggerfall", items[0].Body, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_saved_board_plays_on_exactly_as_one_never_saved()
     {

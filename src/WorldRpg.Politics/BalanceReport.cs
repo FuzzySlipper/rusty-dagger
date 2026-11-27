@@ -5,8 +5,9 @@ namespace WorldRpg.Politics;
 /// <summary>
 /// One game's balance, played from <see cref="Seed"/> for <see cref="Years"/>: each seat's prestige at the end, the most
 /// regions it held at once, the weeks it led the table and the card families it played; how often allegiance changed
-/// and wars and feuds opened; the weeks with a war in force; how many conditions of each kind were laid; and, for the
-/// arbiter, the weeks its reserves were cut off and the countermoves it made (<see cref="CardFamily.Arbitration"/>).
+/// and wars and feuds opened; the weeks with a war in force; how many conditions of each kind were laid; for the
+/// arbiter, the weeks its reserves were cut off and the countermoves it made (<see cref="CardFamily.Arbitration"/>); how
+/// many regions revolted (<see cref="Revolts"/>); and how many regions were independent at the end of each decade.
 /// </summary>
 public sealed record GameBalance(
     ulong Seed,
@@ -21,7 +22,9 @@ public sealed record GameBalance(
     int WeeksAtWar,
     IReadOnlyDictionary<ConditionKind, int> Conditions,
     int ReservesCutWeeks,
-    int Interventions)
+    int Interventions,
+    int Revolts,
+    IReadOnlyList<int> IndependentsByDecade)
 {
     public int Weeks => TurnTrace.TurnsIn(Years);
 }
@@ -47,7 +50,8 @@ public static class BalanceReport
         Dictionary<string, HashSet<CardFamily>> families = board.Seats.ToDictionary(seat => seat.Id, _ => new HashSet<CardFamily>(), StringComparer.Ordinal);
         Dictionary<ConditionKind, int> conditions = Enum.GetValues<ConditionKind>().ToDictionary(kind => kind, _ => 0);
         Seat? arbiter = board.Seats.FirstOrDefault(seat => seat.Arbiter);
-        int allegiance = 0, wars = 0, feuds = 0, atWar = 0, cut = 0, interventions = 0;
+        int allegiance = 0, wars = 0, feuds = 0, atWar = 0, cut = 0, interventions = 0, revolts = 0;
+        List<int> independents = [];
         for (int turn = 0; turn < TurnTrace.TurnsIn(years); turn++)
         {
             TurnTrace trace = BoardTurn.Play(board);
@@ -69,11 +73,14 @@ public static class BalanceReport
             foreach (Seat seat in board.Seats) peak[seat.Id] = Math.Max(peak[seat.Id], board.Regions.Count(region => region.Allegiance == seat.Id));
             if (board.Wars.Count > 0) atWar++;
             if (arbiter is not null && Balance.ReservesCut(arbiter)) cut++;
+            revolts += trace.Chronicle.Count(arc => arc is { Kind: ArcKind.Revolt, Phase: ArcPhase.Peak });
+            if (turn + 1 == TurnTrace.TurnsIn(10 * (independents.Count + 1)))
+                independents.Add(board.Regions.Count(region => region.Allegiance is null));
         }
         return new GameBalance(seed, years,
             board.Seats.ToDictionary(seat => seat.Id, seat => Prestige.Total(board, seat), StringComparer.Ordinal),
             peak, leading, families.ToDictionary(entry => entry.Key, entry => (IReadOnlySet<CardFamily>)entry.Value, StringComparer.Ordinal),
-            allegiance, wars, feuds, atWar, conditions, cut, interventions);
+            allegiance, wars, feuds, atWar, conditions, cut, interventions, revolts, independents);
     }
 
     /// <summary>Writes the report: per seat, then across the table, each as the spread over the games.</summary>
@@ -91,6 +98,8 @@ public static class BalanceReport
         writer.WriteLine(Spread("wars a decade", games, game => game.Wars * 10.0 / years));
         writer.WriteLine(Spread("feuds a decade", games, game => game.Feuds * 10.0 / years));
         writer.WriteLine(Spread("weeks at war", games, game => 100.0 * game.WeeksAtWar / game.Weeks, "%"));
+        writer.WriteLine(Spread("revolts a decade", games, game => game.Revolts * 10.0 / years));
+        writer.WriteLine(Format($"independent regions at each decade's end: {string.Join("; ", games.Select(game => string.Join(",", game.IndependentsByDecade)))}"));
         writer.WriteLine("conditions laid a year: " + string.Join(", ", Enum.GetValues<ConditionKind>()
             .Select(kind => Format($"{kind} {games.Average(game => (double)game.Conditions[kind] / years):0.#}"))));
         if (setup.Seats.FirstOrDefault(seat => seat.Arbiter) is { } arbiter)

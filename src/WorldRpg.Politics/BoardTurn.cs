@@ -25,6 +25,7 @@ namespace WorldRpg.Politics;
 /// relation moves 1 towards 0, or towards <see cref="Balance.LeaderDrift"/> with the leader, except between seats at
 /// war or in a heated feud, so what a seat has built needs keeping up, fed land recovers and the leader's friends fall
 /// away.</item>
+/// <item>A crown-held region that has long strained against its liege breaks free (<see cref="Revolts"/>).</item>
 /// <item>Each seat draws its hand back up to <see cref="Board.HandSize"/>.</item>
 /// </list>
 /// </item>
@@ -203,6 +204,7 @@ public static class BoardTurn
                 if (region.Order > SettledTrack) board.AdjustOrder(region, -1);
             }
         }
+        Revolts.Check(board);
         if (board.Turn % SeasonWeeks == 0)
         {
             foreach (Seat seat in board.Seats)

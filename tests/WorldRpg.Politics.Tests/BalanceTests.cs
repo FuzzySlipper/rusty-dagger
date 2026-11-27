@@ -259,6 +259,23 @@ public sealed class BalanceBandTests(FiftyYearsOfSeeds run) : IClassFixture<Fift
         Assert.All(run.Games, game => Assert.InRange((double)game.AllegianceChanges / game.Years, 0.5, 3.0));
     }
 
+    /// <summary>
+    /// Patch's Q5 on #11129: regions win back their independence now and then, so the independent regions settle between
+    /// two fifths and four fifths of the table instead of draining away (canon starts with 39 of 44).
+    /// </summary>
+    [Fact]
+    public void A_region_revolts_every_few_years_and_the_independent_regions_settle_instead_of_draining()
+    {
+        int regions = BoardSetup.Canon().Regions.Count;
+
+        Assert.All(run.Games, game => Assert.InRange(game.Revolts * 10.0 / game.Years, 0.5, 6.0));
+        Assert.All(run.Games, game =>
+        {
+            Assert.Equal(5, game.IndependentsByDecade.Count);
+            Assert.All(game.IndependentsByDecade, independent => Assert.InRange(independent * 5, regions * 2, regions * 4));
+        });
+    }
+
     [Fact]
     public void Two_to_eight_wars_break_out_a_decade_and_feuds_simmer_between_them()
     {

@@ -140,7 +140,7 @@ public sealed class Board
             [.. decks[seat.Id].discard.Select(card => card.Id)]))],
         [.. Regions.Select(region => new RegionSave(region.Id, region.Allegiance, region.Control, region.Prosperity, region.Order, region.ContestableFrom,
             new SortedDictionary<string, int>(region.Influence, StringComparer.Ordinal), new SortedDictionary<Office, string>(region.Offices),
-            [.. region.Conditions], region.Supply, region.CutWeeks))],
+            [.. region.Conditions], region.Supply, region.CutWeeks, region.StrainWeeks))],
         [.. relations.Where(entry => entry.Value != 0).OrderBy(entry => entry.Key.Item1, StringComparer.Ordinal).ThenBy(entry => entry.Key.Item2, StringComparer.Ordinal)
             .Select(entry => new RelationSetup(entry.Key.Item1, entry.Key.Item2, entry.Value))],
         [.. pending.Select(move => new PendingMoveSave(move.Id, move.Seat, move.Card.Id, move.Targets, move.Origin, move.Played, move.Arrives))],
@@ -222,6 +222,7 @@ public sealed class Board
                 Conditions = [.. saved.Conditions],
                 Supply = saved.Supply,
                 CutWeeks = saved.CutWeeks,
+                StrainWeeks = saved.StrainWeeks,
             };
         })];
         Dictionary<string, SeatDeck> decks = save.Seats.ToDictionary(seat => seat.Id,
@@ -819,6 +820,12 @@ public sealed class Board
         region.CutWeeks = region.Cut ? region.CutWeeks + 1 : 0;
     }
 
+    /// <summary>Counts another week <paramref name="region"/> strains against its liege, or clears the count (<see cref="Revolts"/>).</summary>
+    public void CountStrain(Region region, bool strained)
+    {
+        region.StrainWeeks = strained ? region.StrainWeeks + 1 : 0;
+    }
+
     /// <summary>Puts <paramref name="offer"/> in force under the next agreement id.</summary>
     public void AddAgreement(Agreement offer)
     {
@@ -1172,6 +1179,9 @@ public sealed record Region(string Id, string Name, int CatalogRegion, bool Capi
 
     /// <summary>Whether the region is cut off this week: it pays its holder nothing.</summary>
     public bool Cut => Supply == RegionSupply.Cut;
+
+    /// <summary>How many weeks running the region has strained against its liege (<see cref="Revolts"/>).</summary>
+    public int StrainWeeks { get; internal set; }
 
     public int InfluenceOf(string seat) => Influence.GetValueOrDefault(seat);
 }

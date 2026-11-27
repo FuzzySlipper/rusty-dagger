@@ -80,6 +80,16 @@ internal sealed class DaggerfallPoliticalNews
                         $"The court of {Name(arc.Subjects[0])} has settled after its change of head.",
                         Home(arc.Subjects[0]), arc.Subjects[0]);
                     break;
+                case (ArcKind.Revolt, ArcPhase.Peak):
+                    Add(key, $"{RegionName(arc.Subjects[0])} Throws Off {Name(arc.Subjects[1])}",
+                        $"{RegionName(arc.Subjects[0])} has risen against {Name(arc.Subjects[1])}. Its own lords hold its towns, and the crown's banners are down.",
+                        arc.Subjects[0], null);
+                    break;
+                case (ArcKind.Revolt, ArcPhase.Settled):
+                    Add(key, $"{RegionName(arc.Subjects[0])} Stands on Its Own",
+                        $"Half a year after throwing off {Name(arc.Subjects[1])}, {RegionName(arc.Subjects[0])} answers to no crown.",
+                        arc.Subjects[0], null);
+                    break;
             }
         }
 
