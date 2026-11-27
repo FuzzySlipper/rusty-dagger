@@ -271,6 +271,36 @@ public sealed class BloodFeudSettlementTests
         Assert.False(restored.Introductions.IsInBloodFeud(restored.State.Npcs.Require(restoredKinId), site));
     }
 
+    [Fact]
+    public void Reconciliation_service_crossing_final_minor_grudge_decay_boundary_resolves_cleanly_without_throwing()
+    {
+        using var fixture = new SettlementSessionFixture(random: RandomMinimum.Create());
+        DaggerfallSession session = fixture.Session;
+        DaggerfallSiteRecord site = session.Site.ActiveSite!;
+        DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/4/0", session.Sites.ActiveProfile.LogicalId);
+        string localHousehold = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 4, 0);
+
+        long kinId = AddNpc(session, site.Id, npcSite, "t11160/decay-kin", "Bram Holt", localHousehold, "person", ["talk"]);
+
+        // Seed a -1 minor local grudge and advance to 22:00 on day +14 (2 hours before the 15-day decay midnight boundary).
+        int startDay = checked((int)session.Calendar.DayNumber);
+        session.SocialConsequences.SetHouseholdStanding(localHousehold, -1, site, session.Calendar.MinuteNumber, startDay);
+        long secondsTo22OnDay14 = ((14L * 24L) + (22 - session.Calendar.Hour)) * 3600L - (session.Calendar.Minute * 60L) - session.Calendar.Second;
+        session.AdvanceElapsedTime(secondsTo22OnDay14, idleFatigue: false);
+        Assert.Equal(-1, session.SocialConsequences.HouseholdStandingDelta(localHousehold, site));
+
+        // Undertake 4-hour reconciliation service crossing midnight into day +15: minor grudge decays to 0 during service,
+        // and PerformReconciliationService / live dialogue must return a clean accepted outcome without throwing!
+        DaggerfallActivationOutcome opened = ActivateNpc(session, kinId);
+        Assert.True(opened.Applied, opened.Message);
+        DaggerfallDialogueView view = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
+        DaggerfallActivationOutcome result = session.Dialogue.Ask(view.Revision, $"reconcile-service:{localHousehold}", null, null);
+        Assert.True(result.Applied, result.Message);
+        Assert.Contains("peace is restored", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, session.SocialConsequences.HouseholdStandingDelta(localHousehold, site));
+        Assert.Null(session.FeudSettlement.CalculateQuote(localHousehold, site));
+    }
+
     private static void CommitWitnessedMurder(DaggerfallSession session, PerceptionFake perception, long victimId, long witnessId, long minute)
     {
         perception.Responder = _ => new PerceptionReadoutResult(

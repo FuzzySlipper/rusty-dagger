@@ -492,7 +492,13 @@ internal sealed class DaggerfallFeudSettlement(
 
         passTime?.Invoke(ReconciliationServiceSeconds);
         socialConsequences.RecordReconciliationServiceCompleted(familyId, currentDay());
-        DaggerfallFeudSettlementQuote updated = CalculateQuote(familyId, site)!;
+        if (CalculateQuote(familyId, site) is not { } updated)
+        {
+            return new(
+                true,
+                question,
+                $"Your hours of restitution and service are witnessed on behalf of {quote.HouseholdLabel}. By the time your service concludes, the minor grievance has already passed and peace is restored.");
+        }
         return new(
             true,
             question,
