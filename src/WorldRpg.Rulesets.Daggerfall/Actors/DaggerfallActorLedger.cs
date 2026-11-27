@@ -752,6 +752,66 @@ internal sealed class DaggerfallActorLedger
         return MergeVouches(entry.Referral?.Vouches, entry.Social?.Vouches) ?? [];
     }
 
+    /// <summary>
+    /// Removes matching structured vouches from <paramref name="durableId"/> across both <see cref="ActorSocialDiff"/>
+    /// and <see cref="ActorReferralDiff"/>, self-pruning any deterministic baseline entry left with no remaining deltas.
+    /// </summary>
+    internal int RemoveVouchesFromActor(long durableId, Predicate<ActorVouchRecord> match)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        if (!_entries.TryGetValue(durableId, out ActorLedgerEntry? entry))
+            return 0;
+
+        int removed = 0;
+        ActorSocialDiff? updatedSocial = entry.Social;
+        if (updatedSocial?.Vouches is { Length: > 0 } socialVouches)
+        {
+            ActorVouchRecord[] kept = [.. socialVouches.Where(v => !match(v))];
+            if (kept.Length != socialVouches.Length)
+            {
+                removed += socialVouches.Length - kept.Length;
+                updatedSocial = updatedSocial with { Vouches = kept.Length > 0 ? kept : null };
+            }
+        }
+
+        ActorReferralDiff? updatedReferral = entry.Referral;
+        if (updatedReferral?.Vouches is { Length: > 0 } refVouches)
+        {
+            ActorVouchRecord[] kept = [.. refVouches.Where(v => !match(v))];
+            if (kept.Length != refVouches.Length)
+            {
+                removed = Math.Max(removed, refVouches.Length - kept.Length);
+                bool hasTags = updatedReferral.Tags is { Length: > 0 };
+                updatedReferral = kept.Length > 0 || hasTags
+                    ? updatedReferral with { Vouches = kept.Length > 0 ? kept : null }
+                    : null;
+            }
+        }
+
+        if (removed == 0)
+            return 0;
+
+        Upsert(entry with
+        {
+            Social = updatedSocial,
+            Referral = updatedReferral,
+        });
+        return removed;
+    }
+
+    /// <summary>
+    /// Removes every structured vouch matching <paramref name="match"/> across all ledger entries,
+    /// self-pruning any deterministic baseline entries left with no remaining deltas.
+    /// </summary>
+    internal int RemoveVouchesWhere(Func<long, ActorVouchRecord, bool> match)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        int totalRemoved = 0;
+        foreach (long durableId in _entries.Keys.ToArray())
+            totalRemoved += RemoveVouchesFromActor(durableId, vouch => match(durableId, vouch));
+        return totalRemoved;
+    }
+
     internal static ActorVouchRecord[]? MergeVouches(
         IEnumerable<ActorVouchRecord>? first,
         IEnumerable<ActorVouchRecord>? second)

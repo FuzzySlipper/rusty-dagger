@@ -812,7 +812,9 @@ internal sealed partial class DaggerfallSession
                 definitions, State.Social, OfficeHolders, State.Actors, State.Npcs, State.ActorLedger,
                 State.SkillUses, _random, () => _site.ActiveSite, () => checked((int)_time.Calendar.DayNumber), InsideCastleZone,
                 officeLedger: OfficeLedger,
-                findSite: id => _site.TryFind(id, out DaggerfallSiteRecord record) ? record : null);
+                findSite: id => _site.TryFind(id, out DaggerfallSiteRecord record) ? record : null,
+                worldConditions: WorldConditions);
+            OfficeLedger.OfficeChanged += Introductions.ObserveOfficeChanged;
             State.Social.BindActorVouchBonus(Introductions.TrustedVouchReactionBonus);
             State.Quests.BindQuestorDisposition((actorId, delta) => Introductions.AdjustActorDisposition(actorId, delta));
             // A quest for a seat's faction moves the board a little, in the questor's region (or the player's).
@@ -1650,7 +1652,9 @@ internal sealed partial class DaggerfallSession
             readNoticeBoard: site => DaggerfallNoticeBoard.FormatBoardText(NoticeBoard.BuildForSite(site, _time.Calendar.MinuteNumber)),
             evaluateGateScrutiny: Scrutiny.EvaluateGateScrutiny,
             wordSpread: WordSpread,
-            courierDispatches: CourierDispatches);
+            courierDispatches: CourierDispatches,
+            officeHolders: OfficeHolders,
+            officeLedger: OfficeLedger);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
             id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);

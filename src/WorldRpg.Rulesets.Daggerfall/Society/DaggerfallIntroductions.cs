@@ -80,7 +80,8 @@ internal sealed class DaggerfallIntroductions(
     Func<int> currentDay,
     Func<bool> insideCastle,
     DaggerfallOfficeLedger? officeLedger = null,
-    Func<DaggerfallSiteId, DaggerfallSiteRecord?>? findSite = null)
+    Func<DaggerfallSiteId, DaggerfallSiteRecord?>? findSite = null,
+    IDaggerfallWorldConditionSource? worldConditions = null)
 {
     private const string RandomScope = "daggerfall.introductions.v1";
 
@@ -233,6 +234,166 @@ internal sealed class DaggerfallIntroductions(
         return IsInBloodFeudCore(targetFamilyId, ResolveActorSite(target, atSite));
     }
 
+    /// <summary>
+    /// Reacts directly to <see cref="DaggerfallOfficeLedger.OfficeChanged"/> inside the <c>Society</c> owner:
+    /// - Shared <c>#11084</c> <c>FamilyId</c> heir (dynastic continuity): honors and carries over the predecessor's
+    ///   vouches onto the heir unless the player has an attributed crime or kill against that dynasty.
+    /// - Unrelated outsider / rival turnover (or attributed dynasty hostility): withholds carryover and invalidates
+    ///   prior court/office favours tied to the ousted holder or dynasty so fresh standing/vouching is required.
+    /// </summary>
+    internal void ObserveOfficeChanged(DaggerfallOfficeChangedNotification change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        if (change.ChangeKind != DaggerfallOfficeChangeKind.SuccessorSeated
+            || change.PreviousHolderActorId is not long prevId
+            || change.NewHolderActorId is not long newId
+            || prevId == newId)
+        {
+            return;
+        }
+
+        DaggerfallSiteRecord? officeSite = (change.OfficeSiteId is { } sid ? findSite?.Invoke(sid) : null) ?? activeSite();
+        string? prevFamilyId = !string.IsNullOrWhiteSpace(change.PreviousHolderFamilyId)
+            ? change.PreviousHolderFamilyId
+            : ResolveActorFamilyId(prevId);
+        string? newFamilyId = !string.IsNullOrWhiteSpace(change.NewHolderFamilyId)
+            ? change.NewHolderFamilyId
+            : ResolveActorFamilyId(newId);
+
+        bool isDynasticHeir = DaggerfallWitnessDiscretion.AreFamily(prevFamilyId, newFamilyId);
+        bool hasDynastyHostility = HasAttributedHostilityAgainstFamily(newFamilyId, officeSite);
+
+        if (isDynasticHeir && !hasDynastyHostility)
+        {
+            IReadOnlyList<ActorVouchRecord> priorVouches = ReadVouches(prevId);
+            if (priorVouches.Count == 0)
+                return;
+
+            DaggerfallNpc? newNpc = npcs.TryGet(newId, out DaggerfallNpc? reg) ? reg : null;
+            ActorOrigin newOrigin = ResolveOfficeSuccessorOrigin(newId, newNpc, change);
+            ActorSocialDiff? newSocial = ResolveTargetSocialDiff(newId, newNpc);
+            ActorOverlayComponent? liveOverlay = actors.TryGet(newId, out ActorState? liveNew)
+                && liveNew.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? attached)
+                    ? attached
+                    : null;
+
+            foreach (ActorVouchRecord vouch in priorVouches)
+            {
+                if (vouch.ReferrerDurableId == newId)
+                    continue;
+                actorLedger.RecordVouch(newId, vouch, newOrigin, newSocial);
+                liveOverlay?.RecordVouch(vouch);
+            }
+            return;
+        }
+
+        bool ShouldInvalidate(long targetId, ActorVouchRecord vouch)
+        {
+            if (!MatchesOfficeVouchKind(change.Kind, vouch.Kind))
+                return false;
+            if (vouch.ReferrerDurableId == prevId)
+                return true;
+            if (targetId == prevId)
+                return true;
+            if (!isDynasticHeir
+                && !string.IsNullOrWhiteSpace(prevFamilyId)
+                && DaggerfallWitnessDiscretion.AreFamily(prevFamilyId, ResolveReferrerFamilyId(vouch))
+                && (targetId == newId || IsActorInOfficeCircle(targetId, change)))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        actorLedger.RemoveVouchesWhere(ShouldInvalidate);
+        foreach (ActorState liveActor in actors.All)
+        {
+            if (liveActor.DurableId <= 0 || liveActor.DurableId == DaggerfallActorIdentity.PlayerEntityId)
+                continue;
+            if (liveActor.Actor.TryGet<ActorOverlayComponent>(out ActorOverlayComponent? overlay))
+                overlay.RemoveVouches(vouch => ShouldInvalidate(liveActor.DurableId, vouch));
+        }
+    }
+
+    /// <summary>
+    /// True when the court, seat, or local hall governing <paramref name="region"/> / <paramref name="factionId"/> is
+    /// currently in an unsettled vacancy, interim regency, or active <see cref="DaggerfallWorldConditionKind.SuccessionCrisis"/>.
+    /// Excludes post-accession board chronicle arcs whose office already has a lawful non-regency holder seated.
+    /// </summary>
+    internal bool IsCourtInVacancyOrCrisis(int region, int factionId, DaggerfallNpc? targetNpc = null)
+    {
+        if (officeLedger is not null)
+        {
+            if (region >= 0)
+            {
+                foreach (DaggerfallOfficeOverrideSave over in officeLedger.Overrides)
+                {
+                    if (over.Kind == DaggerfallOfficeKind.Ruler
+                        && over.OfficeRegion == region
+                        && (over.Vacant || over.IsRegency))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (factionId > 0)
+            {
+                int current = factionId;
+                for (int depth = 0; depth < 8 && current > 0; depth++)
+                {
+                    if (officeLedger.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(current)) is { } over
+                        && (over.Vacant || over.IsRegency))
+                    {
+                        return true;
+                    }
+                    if (!definitions.Factions.Factions.TryGetValue(current, out DaggerfallFactionDefinition? def) || def.Parent == current)
+                        break;
+                    current = def.Parent;
+                }
+            }
+
+            if (targetNpc?.Profile is { } profile)
+            {
+                foreach (DaggerfallOfficeOverrideSave over in officeLedger.Overrides)
+                {
+                    if ((over.Vacant || over.IsRegency)
+                        && over.OfficeProfile is { } op
+                        && op.Require() == profile)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (region >= 0 && officeHolders.ResolveRegionalRuler(region) is { HasLivingHolder: false })
+            return true;
+
+        if (worldConditions is not null && region >= 0)
+        {
+            int day = currentDay();
+            foreach (DaggerfallWorldConditionToken token in worldConditions.ActiveForRegion(region, day))
+            {
+                if (token.Kind != DaggerfallWorldConditionKind.SuccessionCrisis)
+                    continue;
+                if (!token.TokenId.StartsWith("board:", StringComparison.Ordinal))
+                    return true;
+                if (token.SourceFactionId is int sf && sf > 0)
+                {
+                    DaggerfallOfficeOverrideSave? seatOver = officeLedger?.TryGetOverride(DaggerfallOfficeLedger.FactionOfficeKey(sf));
+                    if (seatOver is { Vacant: true } or { IsRegency: true }
+                        || officeHolders.ResolveOffice(sf, region) is { HasLivingHolder: false })
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Evaluates whether the player currently has social access to approach <paramref name="target"/> for work or court business.</summary>
     internal DaggerfallIntroductionAccess AssessAccess(DaggerfallNpc target, bool? inCastleOverride = null)
     {
@@ -240,7 +401,9 @@ internal sealed class DaggerfallIntroductions(
         int targetFactionId = social.ResolveNpcReactionFactionId(target);
         int targetRegion = ResolveRegion(target, targetFactionId);
         DaggerfallSocialProminence prominence = ClassifyProminence(target, inCastleOverride);
-        int requiredReach = (int)prominence;
+        bool courtCrisis = prominence >= DaggerfallSocialProminence.MinorCourt
+            && IsCourtInVacancyOrCrisis(targetRegion, targetFactionId, target);
+        int requiredReach = courtCrisis ? checked((int)prominence + 1) : (int)prominence;
         int targetSocialGroup = ResolveSocialGroup(targetFactionId);
         int skillSkip = ComputeSocialSkillSkip(targetSocialGroup);
         int homeBonus = ComputeHomeStandingBonus(targetFactionId, targetRegion);
@@ -268,16 +431,18 @@ internal sealed class DaggerfallIntroductions(
             return new(true, prominence, 0, 0, skillSkip, homeBonus, bestPeerVouch, null);
         }
 
-        // Longtime direct standing with this exact figure/faction still grants access once earned.
+        // Longtime direct standing with this exact figure/faction still grants access once earned (tightened during vacancy/crisis).
         int factionRep = targetFactionId > 0 && definitions.Factions.Factions.ContainsKey(targetFactionId)
             ? social.FactionReputation(targetFactionId)
             : 0;
         int disposition = ReadActorDisposition(target.DurableId, targetSite);
+        int repBonus = courtCrisis ? 20 : 0;
+        int dispBonus = courtCrisis ? 15 : 0;
         bool directStanding = prominence switch
         {
-            DaggerfallSocialProminence.MinorCourt => factionRep >= 30 || disposition >= 15,
-            DaggerfallSocialProminence.CourtFavourite => factionRep >= 50 || disposition >= 25,
-            DaggerfallSocialProminence.Prominent => factionRep >= 70 || disposition >= 40,
+            DaggerfallSocialProminence.MinorCourt => factionRep >= 30 + repBonus || disposition >= 15 + dispBonus,
+            DaggerfallSocialProminence.CourtFavourite => factionRep >= 50 + repBonus || disposition >= 25 + dispBonus,
+            DaggerfallSocialProminence.Prominent => factionRep >= 70 + repBonus || disposition >= 40 + dispBonus,
             _ => true,
         };
         if (directStanding)
@@ -291,12 +456,14 @@ internal sealed class DaggerfallIntroductions(
         int vouchReach = bestVouch is not null
             ? checked(bestVouchReachBase + 1 + skillSkip + homeBonus)
             : 0;
-        int directReach = prominence == DaggerfallSocialProminence.Prominent
-            ? 0 // Prominent figures (lords/rulers) ALWAYS require at least one trusted intermediary.
+        bool requiresIntermediary = prominence == DaggerfallSocialProminence.Prominent
+            || (courtCrisis && prominence == DaggerfallSocialProminence.CourtFavourite);
+        int directReach = requiresIntermediary
+            ? 0 // Prominent figures (and CourtFavourites under active succession crisis) require a trusted intermediary.
             : checked(skillSkip + homeBonus);
 
         int achievedReach = Math.Max(directReach, vouchReach);
-        bool allowed = prominence == DaggerfallSocialProminence.Prominent
+        bool allowed = requiresIntermediary
             ? bestVouch is not null && vouchReach >= requiredReach
             : achievedReach >= requiredReach;
 
@@ -304,7 +471,7 @@ internal sealed class DaggerfallIntroductions(
             return new(true, prominence, requiredReach, achievedReach, skillSkip, homeBonus, bestVouch, null);
 
         string targetName = target.DisplayName ?? target.Role;
-        string denial = BuildAccessDenialMessage(targetName, prominence, bestVouch, bestVouchReachBase, requiredReach, vouchReach);
+        string denial = BuildAccessDenialMessage(targetName, prominence, bestVouch, bestVouchReachBase, requiredReach, vouchReach, courtCrisis);
         return new(false, prominence, requiredReach, achievedReach, skillSkip, homeBonus, bestVouch, denial);
     }
 
@@ -418,6 +585,8 @@ internal sealed class DaggerfallIntroductions(
                 return;
 
             ActorVouchKind kind = DetermineVouchKind(speakerFactionId, candidate, candidateProminence, isKin);
+            if (kind == ActorVouchKind.Court && IsCourtInVacancyOrCrisis(candidateRegion, candidateFactionId, candidate))
+                return;
             ActorVouchRecord probe = new(speaker.DurableId, Math.Max(0, speakerFactionId), kind, day, speakerName, site?.Name, speakerFamilyId);
             if (!TrustsReferrerCore(candidateFactionId, candidateRegion, candidateProminence, probe, candidateFamilyId))
                 return;
@@ -449,17 +618,24 @@ internal sealed class DaggerfallIntroductions(
             {
                 bool rulerIsKin = DaggerfallWitnessDiscretion.AreFamily(speakerFamilyId, rulerFamilyId);
                 ActorVouchKind kind = !rulerIsKin && IsGuildOrOrderFaction(speakerFactionId) ? ActorVouchKind.Guild : ActorVouchKind.Court;
-                ActorVouchRecord probe = new(speaker.DurableId, Math.Max(0, speakerFactionId), kind, day, speakerName, site?.Name, speakerFamilyId);
-                if (TrustsReferrerCore(rulerFactionId, speakerRegion, DaggerfallSocialProminence.Prominent, probe, rulerFamilyId))
+                if (kind == ActorVouchKind.Court && IsCourtInVacancyOrCrisis(speakerRegion, rulerFactionId))
                 {
-                    bool already = ReadVouches(rulerId).Any(v => v.SameGrant(probe));
-                    results[rulerId] = new(
-                        rulerId,
-                        ruler.DisplayName,
-                        rulerFactionId,
-                        DaggerfallSocialProminence.Prominent,
-                        kind,
-                        already);
+                    // Routine court introductions are paused while throne succession remains unsettled.
+                }
+                else
+                {
+                    ActorVouchRecord probe = new(speaker.DurableId, Math.Max(0, speakerFactionId), kind, day, speakerName, site?.Name, speakerFamilyId);
+                    if (TrustsReferrerCore(rulerFactionId, speakerRegion, DaggerfallSocialProminence.Prominent, probe, rulerFamilyId))
+                    {
+                        bool already = ReadVouches(rulerId).Any(v => v.SameGrant(probe));
+                        results[rulerId] = new(
+                            rulerId,
+                            ruler.DisplayName,
+                            rulerFactionId,
+                            DaggerfallSocialProminence.Prominent,
+                            kind,
+                            already);
+                    }
                 }
             }
         }
@@ -500,6 +676,8 @@ internal sealed class DaggerfallIntroductions(
 
                         DaggerfallSocialProminence officeProminence = ResolveLocalOfficeProminence(office, holderId);
                         ActorVouchKind kind = ActorVouchKind.Court;
+                        if (IsCourtInVacancyOrCrisis(office.SiteId.Region, office.OfficeFactionId))
+                            continue;
                         ActorVouchRecord probe = new(speaker.DurableId, Math.Max(0, speakerFactionId), kind, day, speakerName, site?.Name, speakerFamilyId);
                         if (TrustsReferrerCore(office.OfficeFactionId, office.SiteId.Region, officeProminence, probe, holderFamilyId))
                         {
@@ -609,6 +787,12 @@ internal sealed class DaggerfallIntroductions(
         ActorVouchKind kind = targetNpc is not null
             ? DetermineVouchKind(speakerFactionId, targetNpc, targetProminence, isKin)
             : (!isKin && IsGuildOrOrderFaction(speakerFactionId) ? ActorVouchKind.Guild : ActorVouchKind.Court);
+
+        if (kind == ActorVouchKind.Court && IsCourtInVacancyOrCrisis(targetRegion, targetFactionId, targetNpc))
+        {
+            return new(false, false, targetDurableId, targetName, null,
+                $"Routine court introductions to {targetName} are paused while succession remains unsettled; return once a lawful successor is seated.");
+        }
 
         ActorVouchRecord vouch = new(
             speaker.DurableId,
@@ -1260,14 +1444,87 @@ internal sealed class DaggerfallIntroductions(
         return targetNpc is not null ? ActorSocialDiff.FromNpc(targetNpc) : null;
     }
 
+    private bool HasAttributedHostilityAgainstFamily(string? familyId, DaggerfallSiteRecord? atSite)
+    {
+        if (string.IsNullOrWhiteSpace(familyId) || _householdStandingDelta is null)
+            return false;
+        return _householdStandingDelta(familyId, atSite) < 0;
+    }
+
+    private static bool MatchesOfficeVouchKind(DaggerfallOfficeKind officeKind, ActorVouchKind vouchKind) => officeKind switch
+    {
+        DaggerfallOfficeKind.Ruler or DaggerfallOfficeKind.CourtFactor => vouchKind == ActorVouchKind.Court,
+        DaggerfallOfficeKind.MajorSeat => vouchKind is ActorVouchKind.Court or ActorVouchKind.Guild,
+        DaggerfallOfficeKind.GuildHallMaster or DaggerfallOfficeKind.TempleHead => vouchKind == ActorVouchKind.Guild,
+        DaggerfallOfficeKind.WatchCaptain => vouchKind is ActorVouchKind.Court or ActorVouchKind.Contact,
+        _ => vouchKind == ActorVouchKind.Court,
+    };
+
+    private bool IsActorInOfficeCircle(long actorId, DaggerfallOfficeChangedNotification change)
+    {
+        int actorFactionId = 0;
+        int actorRegion = -1;
+        if (npcs.TryGet(actorId, out DaggerfallNpc? npc) && npc is not null)
+        {
+            actorFactionId = social.ResolveNpcReactionFactionId(npc);
+            actorRegion = ResolveRegion(npc, actorFactionId);
+        }
+        else if (actorLedger.TryGet(actorId, out ActorLedgerEntry? entry) && entry?.Social is { } s)
+        {
+            actorFactionId = s.FactionId;
+            actorRegion = s.Region;
+        }
+
+        if (change.OfficeFactionId is int officeFaction && officeFaction > 0 && actorFactionId > 0)
+        {
+            int cur = actorFactionId;
+            for (int depth = 0; depth < 8 && cur > 0; depth++)
+            {
+                if (cur == officeFaction)
+                    return true;
+                if (!definitions.Factions.Factions.TryGetValue(cur, out DaggerfallFactionDefinition? def) || def.Parent == cur)
+                    break;
+                cur = def.Parent;
+            }
+        }
+
+        return change.Region is int r && r >= 0 && actorRegion == r;
+    }
+
+    private ActorOrigin ResolveOfficeSuccessorOrigin(
+        long successorId,
+        DaggerfallNpc? successorNpc,
+        DaggerfallOfficeChangedNotification change)
+    {
+        if (actorLedger.TryGet(successorId, out ActorLedgerEntry? existing) && existing is not null)
+            return existing.Origin;
+        if (TryResolveOriginFromLiveOrNpc(successorId, successorNpc) is { } resolved)
+            return resolved;
+        if (!string.IsNullOrWhiteSpace(change.NewHolderCastId))
+            return ActorOrigin.Cast(change.NewHolderCastId, change.NewHolderHomeProfile ?? change.OfficeProfileKey);
+        if (change.NewHolderHomeProfile is { } homeProfile && !string.IsNullOrWhiteSpace(change.NewHolderHomeSlotId))
+            return ActorOrigin.Seeded(homeProfile, change.NewHolderHomeSlotId);
+        if (change.OfficeProfileKey is { } officeProfile && !string.IsNullOrWhiteSpace(change.OfficeSlotId))
+            return ActorOrigin.Seeded(officeProfile, change.OfficeSlotId);
+        return ActorOrigin.MintedActor(DaggerfallActorKinds.StaticNpc);
+    }
+
     private static string BuildAccessDenialMessage(
         string targetName,
         DaggerfallSocialProminence prominence,
         ActorVouchRecord? bestVouch,
         int bestReferrerProminence,
         int requiredReach,
-        int vouchReach)
+        int vouchReach,
+        bool courtCrisis = false)
     {
+        if (courtCrisis)
+        {
+            return bestVouch is not null && vouchReach < requiredReach
+                ? $"{targetName}'s court is tightly guarded during the succession crisis; {bestVouch.DisplaySummary()}'s word is not enough until a lawful successor is seated."
+                : $"{targetName}'s court has tightened access during the unsettled succession. Return with stronger standing or once a lawful successor is seated.";
+        }
+
         if (bestVouch is not null && vouchReach < requiredReach)
         {
             return $"{targetName} acknowledges {bestVouch.DisplaySummary()}'s word, but requires an introduction from someone higher in their court circle before entrusting you with work.";

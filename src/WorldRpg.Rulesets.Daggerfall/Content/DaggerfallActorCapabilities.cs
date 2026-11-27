@@ -262,4 +262,10 @@ internal sealed class ActorOverlayComponent
 
     internal bool HasVouch(long referrerDurableId, ActorVouchKind kind) =>
         referrerDurableId > 0 && _vouches.Any(vouch => vouch.ReferrerDurableId == referrerDurableId && vouch.Kind == kind);
+
+    internal int RemoveVouches(Predicate<ActorVouchRecord> match)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        return _vouches.RemoveAll(match);
+    }
 }

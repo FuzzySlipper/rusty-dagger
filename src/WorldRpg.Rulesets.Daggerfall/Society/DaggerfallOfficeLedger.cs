@@ -288,6 +288,12 @@ internal sealed class DaggerfallOfficeLedger(
     internal bool TryGetOverride(string officeKey, out DaggerfallOfficeOverrideSave? entry) =>
         _overrides.TryGetValue(officeKey, out entry);
 
+    /// <summary>Returns the active sparse override for <paramref name="officeKey"/>, or <c>null</c> when untouched.</summary>
+    internal DaggerfallOfficeOverrideSave? TryGetOverride(string officeKey) =>
+        !string.IsNullOrWhiteSpace(officeKey) && _overrides.TryGetValue(officeKey, out DaggerfallOfficeOverrideSave? entry)
+            ? entry
+            : null;
+
     /// <summary>
     /// Lookup adapter bound to <see cref="DaggerfallOfficeHolders.BindOverrideLookup"/> so every A2 quest binding,
     /// quest text macro, and introduction check automatically sees sparse office overrides.
@@ -694,7 +700,9 @@ internal sealed class DaggerfallOfficeLedger(
             OfficeRegion: officeRegion ?? officeSiteId?.Region,
             OfficeSiteIndex: officeSiteId?.Index,
             PreviousHolderCastId: outgoing.CastId,
-            PreviousHolderFamilyId: outgoing.FamilyId);
+            PreviousHolderFamilyId: outgoing.FamilyId,
+            OfficeProfile: prior?.OfficeProfile,
+            OfficeSlotId: prior?.OfficeSlotId);
         saved.Validate();
         _overrides[key] = saved;
 
@@ -765,8 +773,10 @@ internal sealed class DaggerfallOfficeLedger(
             ?? (hasPrior ? prior!.HolderActorId ?? prior.PreviousHolderActorId : null);
         string? prevName = !string.IsNullOrWhiteSpace(office.DisplayName)
             ? office.DisplayName
-            : office.PreviousHolderName;
-        string? prevFamilyId = office.FamilyId ?? ResolveActorFamilyId(prevActorId, null, null);
+            : office.PreviousHolderName ?? (hasPrior ? prior!.PreviousHolderName : null);
+        string? prevFamilyId = office.FamilyId
+            ?? (hasPrior ? prior!.PreviousHolderFamilyId : null)
+            ?? ResolveActorFamilyId(prevActorId, null, null);
         bool prevAlive = prevActorId is long pid && !officeHolders.IsActorDead(pid);
 
         DaggerfallOfficeOverrideSave saved = new(
@@ -1476,7 +1486,7 @@ internal sealed class DaggerfallOfficeLedger(
 
         if (hasPrior)
         {
-            if (!prior!.Vacant)
+            if (!prior!.Vacant && !prior.IsRegency)
             {
                 wasActiveIncumbent = true;
                 actorId ??= prior.HolderActorId
