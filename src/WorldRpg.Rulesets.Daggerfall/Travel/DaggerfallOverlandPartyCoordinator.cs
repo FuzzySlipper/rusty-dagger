@@ -68,6 +68,12 @@ internal sealed class DaggerfallOverlandPartyCoordinator
     private readonly List<PendingIntercept> _pendingIntercepts = [];
     private readonly List<PendingTransientClash> _pendingTransientClashes = [];
 
+    /// <summary>
+    /// Raised immediately after <see cref="DeliverBandMembers"/> materializes one or more hostile overland band
+    /// members live into the active 3D scene and provokes them (Den #11164).
+    /// </summary>
+    internal event Action<string, IReadOnlyList<long>>? HostileBandMaterialized;
+
     internal DaggerfallOverlandPartyCoordinator(
         DaggerfallExpedition expedition,
         DaggerfallActorLedger actorLedger,
@@ -901,6 +907,7 @@ internal sealed class DaggerfallOverlandPartyCoordinator
         bool arrivingAtActive = active.ProfileKey == arrivalProfile;
         bool isTrafficVisitor = bandId.StartsWith(DaggerfallOverlandTraffic.BandIdPrefix, StringComparison.Ordinal);
         List<long> delivered = [];
+        List<long> materializedHostiles = [];
 
         for (int i = 0; i < members.Count; i++)
         {
@@ -938,11 +945,14 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                         || bandId.StartsWith(DaggerfallHostileOverlandBands.BandIdPrefix, StringComparison.Ordinal))
                     {
                         _provokeHostile?.Invoke(live.DurableId);
+                        materializedHostiles.Add(live.DurableId);
                     }
                 }
             }
             delivered.Add(member.DurableId);
         }
+        if (materializedHostiles.Count > 0)
+            HostileBandMaterialized?.Invoke(bandId, materializedHostiles);
         return delivered;
     }
 

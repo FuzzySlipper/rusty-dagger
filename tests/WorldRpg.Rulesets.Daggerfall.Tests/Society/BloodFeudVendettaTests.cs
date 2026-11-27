@@ -42,7 +42,8 @@ public sealed class BloodFeudVendettaTests
         string localHousehold = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 2, 0);
         string unwitnessedHousehold = DaggerfallHouseholds.BuildingHouseholdId(site.Id, 1, 3, 0);
 
-        WorldPoint playerPos = session.State.PlayerControl.Position ?? new WorldPoint(0, 0, 0);
+        WorldPoint playerPos = session.State.PlayerControl.Position
+            ?? (session.State.Actors.TryGet(session.State.Actors.Player.DurableId, out ActorState? pa) ? pa.Position : new WorldPoint(0, 0, 0));
         WorldPoint meleePos = new(playerPos.X + 1.2f, playerPos.Y, playerPos.Z);
         WorldPoint nearbyPos = new(playerPos.X + 4f, playerPos.Y, playerPos.Z);
 
@@ -109,7 +110,8 @@ public sealed class BloodFeudVendettaTests
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/4/0", session.Sites.ActiveProfile.LogicalId);
         string houseFamily = $"fam:house:r{site.Id.Region}:0";
 
-        WorldPoint playerPos = session.State.PlayerControl.Position ?? new WorldPoint(0, 0, 0);
+        WorldPoint playerPos = session.State.PlayerControl.Position
+            ?? (session.State.Actors.TryGet(session.State.Actors.Player.DurableId, out ActorState? pa) ? pa.Position : new WorldPoint(0, 0, 0));
         WorldPoint nearbyPos = new(playerPos.X + 4f, playerPos.Y, playerPos.Z);
         long houseVictimId = AddCivilianNpc(session, site.Id, npcSite, "t11162/house-victim", "Lord Veren", houseFamily, "noble", nearbyPos);
         long houseKinId = AddCivilianNpc(session, site.Id, npcSite, "t11162/house-kin", "Lady Sira", houseFamily, "knight", nearbyPos);
@@ -194,7 +196,8 @@ public sealed class BloodFeudVendettaTests
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/5/0", session.Sites.ActiveProfile.LogicalId);
         string houseFamily = $"fam:house:r{site.Id.Region}:0";
 
-        WorldPoint playerPos = session.State.PlayerControl.Position ?? new WorldPoint(0, 0, 0);
+        WorldPoint playerPos = session.State.PlayerControl.Position
+            ?? (session.State.Actors.TryGet(session.State.Actors.Player.DurableId, out ActorState? pa) ? pa.Position : new WorldPoint(0, 0, 0));
         WorldPoint nearbyPos = new(playerPos.X + 4f, playerPos.Y, playerPos.Z);
         long houseVictimId = AddCivilianNpc(session, site.Id, npcSite, "t11162/overland-victim", "Lord Halrik", houseFamily, "noble", nearbyPos);
         long witnessId = AddCivilianNpc(session, site.Id, npcSite, "t11162/overland-witness", "Watchman Toren", null, "guard", nearbyPos);
@@ -211,6 +214,8 @@ public sealed class BloodFeudVendettaTests
         Assert.NotEmpty(overlandHunterIds);
 
         // Meet the band so its members materialize into 3D (AtSite) and the persistent band is removed from the map!
+        List<DaggerfallHostileReasonSignal> encounterSignals = [];
+        session.FeudVendetta.HostilitySignaled += encounterSignals.Add;
         session.OverlandParties.OnMeetPersistentBand(
             band,
             new DaggerfallTravelMapPixel(site.MapPixelX, site.MapPixelY),
@@ -224,6 +229,26 @@ public sealed class BloodFeudVendettaTests
             Assert.True(session.State.Actors.TryGet(id, out ActorState? hunter) && !hunter.IsDefeated);
             Assert.True(session.FeudVendetta.IsVendettaAggressor(id));
         });
+
+        // Overland vendetta hunters entering combat must emit one household-specific non-blocking signal
+        // (matching near-actor speech bubble + spatial TTS bark, zero modal pause) once per encounter (R11164-1).
+        DaggerfallHostileReasonSignal encounterSignal = Assert.Single(encounterSignals);
+        Assert.Contains(encounterSignal.ActorId, overlandHunterIds);
+        Assert.Equal(houseFamily, encounterSignal.FamilyId);
+        Assert.Contains(encounterSignal.HouseholdLabel, encounterSignal.ReasonLine, StringComparison.Ordinal);
+        Assert.Equal(1, session.SpeechBubbles.ActiveCount);
+        DaggerfallSpeechBubbleView bubble = Assert.Single(
+            session.SpeechBubbles.Read(session.State.PlayerControl, DaggerfallTuning.Defaults.Camera, session.State.Actors));
+        Assert.Equal(encounterSignal.ActorId, bubble.ActorId);
+        Assert.Equal(encounterSignal.ReasonLine, bubble.Text);
+        Assert.Equal(1, session.HostilityAudioBarks.PlayedCount);
+        Assert.Equal(0, session.HostilityAudioBarks.FailedOpenCount);
+        Assert.Equal(1, session.HostilityAudioBarks.ActiveVoiceCount);
+        Assert.False(session.Law.ModalOpen);
+        Assert.Null(session.DungeonText.Projection);
+        // Once per encounter: re-notifying the same materialized hunter wave emits no duplicate signal.
+        Assert.Equal(0, session.FeudVendetta.OnHuntersMaterialized(overlandHunterIds));
+        Assert.Single(encounterSignals);
 
         // Save and reload BEFORE settling: household-to-hunter association must survive save/load!
         using DaggerfallSession reloadedBeforeSettle = fixture.Restore(session.CaptureSave());
@@ -277,7 +302,8 @@ public sealed class BloodFeudVendettaTests
         DaggerfallSiteRecord site = session.Site.ActiveSite!;
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, "1/6/0", session.Sites.ActiveProfile.LogicalId);
         const string dynastyFamily = "fam:dynasty:daggerfall";
-        WorldPoint playerPos = session.State.PlayerControl.Position ?? new WorldPoint(0, 0, 0);
+        WorldPoint playerPos = session.State.PlayerControl.Position
+            ?? (session.State.Actors.TryGet(session.State.Actors.Player.DurableId, out ActorState? pa) ? pa.Position : new WorldPoint(0, 0, 0));
         WorldPoint nearbyPos = new(playerPos.X + 4f, playerPos.Y, playerPos.Z);
 
         long royalVictimId = AddCivilianNpc(session, site.Id, npcSite, "t11162/royal-victim", "Lord Arthas", dynastyFamily, "noble", nearbyPos);
@@ -409,9 +435,11 @@ public sealed class BloodFeudVendettaTests
             _profile = ReadInputs(TestData.RepositoryRoot);
             _content = new ContentFake(_releases);
             PopulateContent(_content, _profile);
+            foreach (DaggerfallHostilityBarkClip clip in TestPayload.Definitions.People.HostilityBarks.Clips)
+                _content.Add(clip.Path, clip.Sha256, [0x4F, 0x67, 0x67, 0x53]);
             Spatial = SpatialFake.Create(_profile.Geometry.Spatial[0].Sha256, _releases);
             Spatial.FloorHit = request => request.Direction.Y < -0.5f
-                ? default(SpatialHit) with { Present = true, Point = new Vector3(request.Origin.X, 0f, request.Origin.Z), Normal = Vector3.UnitY, Distance = 1d }
+                ? default(SpatialHit) with { Present = true, Point = new Vector3(request.Origin.X, request.Origin.Y - 1f, request.Origin.Z), Normal = Vector3.UnitY, Distance = 1d }
                 : default;
             EngineContextFake engine = EngineContextFake.Create(_content, Spatial.Service, new AppearanceFake(_releases), Perception.Service);
             Session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, _profile, DaggerfallTuning.Defaults));

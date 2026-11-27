@@ -1241,10 +1241,11 @@ internal sealed partial class DaggerfallSession
                 _sites.ClearReturnDestination();                                                  // Interiors
             }
             Expedition.Close();                                                                   // Travel
+            SyncVendettaSceneProfile(exterior!.ProfileKey);                                       // Society: reset previous scene signals before arrival emits encounter barks
+            Presentation.SetOutcome(entry.Location is null ? "You set out on foot." : $"You arrive at {place}.");   // UiProjection
             OverlandParties.OnEnterSceneFromExpedition(exterior!, _exterior.ProfileToLocal(anchor.Position), anchor.YawRadians);   // Travel, Actors
             _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                    // Character, Combat
             RequestPanel(DaggerfallPanel.Resume);                                                 // UiProjection
-            Presentation.SetOutcome(entry.Location is null ? "You set out on foot." : $"You arrive at {place}.");   // UiProjection
         }
         if (!StagesSlowWork)
         {
@@ -2056,16 +2057,8 @@ internal sealed partial class DaggerfallSession
             return;
 
         DaggerfallWorldProfileKey currentProfile = _activeProfileKey;
-        bool profileChanged = _lastVendettaProfile != currentProfile;
-        if (profileChanged)
-        {
-            _lastVendettaProfile = currentProfile;
-            _vendettaCheckAccumulator = 0d;
-            FeudVendetta.ResetSceneSignals();
-            SpeechBubbles.Clear();
-            HostilityAudioBarks?.ClearActiveVoices();
-        }
-        else
+        bool profileChanged = SyncVendettaSceneProfile(currentProfile);
+        if (!profileChanged)
         {
             _vendettaCheckAccumulator += deltaSeconds;
             if (_vendettaCheckAccumulator < 1.0d)

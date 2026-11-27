@@ -1344,9 +1344,22 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     };
 
     /// <summary>Consumes a non-blocking hostility signal and dispatches TTS voice bark and/or near-actor speech bubble without pausing simulation.</summary>
+    private bool SyncVendettaSceneProfile(DaggerfallWorldProfileKey currentProfile)
+    {
+        if (_lastVendettaProfile == currentProfile)
+            return false;
+        _lastVendettaProfile = currentProfile;
+        _vendettaCheckAccumulator = 0d;
+        FeudVendetta.ResetSceneSignals();
+        SpeechBubbles.Clear();
+        HostilityAudioBarks?.ClearActiveVoices();
+        return true;
+    }
+
     internal void HandleHostilitySignal(DaggerfallHostileReasonSignal signal)
     {
         ArgumentNullException.ThrowIfNull(signal);
+        _lastVendettaProfile ??= _activeProfileKey;
         string kindSlug = HostileSignalKindSlug(signal.Kind);
         WorldPoint? position = signal.Position
             ?? (State.Actors.TryGet(signal.ActorId, out ActorState? actor) ? actor.Position : null);

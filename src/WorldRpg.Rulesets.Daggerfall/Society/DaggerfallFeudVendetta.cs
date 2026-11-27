@@ -260,6 +260,74 @@ internal sealed class DaggerfallFeudVendetta(
     }
 
     /// <summary>
+    /// Emits one household-specific non-blocking hostility signal per feuding household when registered overland
+    /// vendetta hunters materialize into live 3D combat, deduplicated once per encounter/scene (Den #11164).
+    /// </summary>
+    internal int OnHuntersMaterialized(IReadOnlyList<long> materializedActorIds)
+    {
+        if (materializedActorIds is null || materializedActorIds.Count == 0)
+            return 0;
+
+        HashSet<long> materialized = [.. materializedActorIds];
+        int signaled = 0;
+
+        foreach (VendettaState state in _entries.Values.OrderBy(e => e.FamilyId, StringComparer.Ordinal))
+        {
+            if (state.ActiveHunterIds.Count == 0)
+                continue;
+
+            List<ActorState> matched = [];
+            foreach (long hunterId in state.ActiveHunterIds.Order())
+            {
+                if (materialized.Contains(hunterId)
+                    && actors.TryGet(hunterId, out ActorState? hunterActor)
+                    && !hunterActor.IsDefeated)
+                {
+                    matched.Add(hunterActor);
+                }
+            }
+            if (matched.Count == 0)
+                continue;
+
+            if (!socialConsequences.TryGetHouseholdSnapshot(state.FamilyId, out DaggerfallHouseholdSnapshot snap)
+                || !snap.FeudActive
+                || snap.TruceMediated)
+            {
+                continue;
+            }
+
+            if (matched.Any(a => _signaledThisScene.Contains(a.DurableId)))
+                continue;
+            foreach (ActorState hunter in matched)
+                _signaledThisScene.Add(hunter.DurableId);
+
+            ActorState speaker = matched[0];
+            DaggerfallHouseholdScope scope = DaggerfallHouseholds.ScopeOf(state.FamilyId);
+            (DaggerfallHostileSignalKind kind, _, _, string squadTitle) =
+                ResolveHunterTier(scope, Math.Max(1, snap.MurderCount), WealthyLocalBlockThreshold);
+            string label = FormatHouseholdLabel(state.FamilyId);
+            string gender = speaker.Actor.TryGet<ActorInstanceIdentity>(out ActorInstanceIdentity? identity)
+                && identity.Gender is ActorGender.Male or ActorGender.Female
+                ? (identity.Gender == ActorGender.Female ? "Female" : "Male")
+                : (((StableHash.NonZeroFnv1a64($"daggerfall.vendetta-overland:{worldSocialSeed()}:{speaker.DurableId}") >> 3) & 1UL) == 0UL ? "Male" : "Female");
+            string reason = BuildHunterReasonLine(kind, squadTitle, label);
+
+            EmitSignal(new DaggerfallHostileReasonSignal(
+                ActorId: speaker.DurableId,
+                SpeakerName: squadTitle,
+                Gender: gender,
+                FamilyId: state.FamilyId,
+                HouseholdLabel: label,
+                Kind: kind,
+                ReasonLine: reason,
+                Position: speaker.Position));
+            signaled++;
+        }
+
+        return signaled;
+    }
+
+    /// <summary>
     /// Cancels active vendetta confrontations, materialized or detached hired hunters, and overland hunter bands
     /// when a household feud is mediated or settled.
     /// When <paramref name="settled"/> is true, prunes the sparse vendetta record completely (zero save bytes).
