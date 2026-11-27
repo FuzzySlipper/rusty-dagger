@@ -118,6 +118,10 @@ internal static class NpcReferenceExport
                 [sourceId, .. sprites.Where(sprite => !ids.ContainsKey(sprite.Id)).SelectMany(SpriteAliases)]));
         }
 
+        // Also export authored custom cast individuals from daggerfall.base/actors/specs/cast.json whose factionId
+        // is not in arena2/FACTION.TXT (e.g. Blades HQ / political seat heads such as Oswin Harrowgate and Aldous Verreine).
+        AddCustomCastNamedNpcs(basePayload, factions, ids, spriteArt, world, entries, FindId);
+
         var spriteGroups = spriteArt.Keys.ToLookup(sprite => ids.GetValueOrDefault(sprite.Id)?.PrimarySource ?? sprite.Id);
         foreach (var group in spriteGroups)
         {
@@ -262,11 +266,133 @@ internal static class NpcReferenceExport
 
     private sealed record EnemyClass(int Archive, int MobileId, string Name, string Gender);
 
+    /// <summary>
+    /// Adds authored named cast individuals from <c>daggerfall.base/actors/specs/cast.json</c> whose faction ID is not
+    /// present in <c>arena2/FACTION.TXT</c>, so they get first-class CMS character pages and concept/splat slots.
+    /// </summary>
+    private static void AddCustomCastNamedNpcs(
+        string basePayload,
+        IReadOnlyDictionary<int, ClassicFaction> classicFactions,
+        IReadOnlyDictionary<string, NpcReferenceId> ids,
+        IReadOnlyDictionary<NpcSprite, NpcArt> spriteArt,
+        NpcReferenceWorld world,
+        List<NpcEntry> entries,
+        Func<string, string?> findId)
+    {
+        if (!File.Exists(basePayload)) return;
+        Dictionary<int, (string Name, int Parent, int Region)> baseFactions = [];
+        try
+        {
+            using JsonDocument factionsDoc = BasePackFiles.ReadSectionDocument(basePayload, "factions");
+            if (factionsDoc.RootElement.TryGetProperty("factions", out JsonElement list) && list.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement f in list.EnumerateArray())
+                {
+                    if (!f.TryGetProperty("id", out JsonElement idEl) || idEl.ValueKind != JsonValueKind.Number) continue;
+                    int fid = idEl.GetInt32();
+                    string fname = f.TryGetProperty("name", out JsonElement nEl) && nEl.ValueKind == JsonValueKind.String ? nEl.GetString()! : $"Faction {fid}";
+                    int parent = f.TryGetProperty("parent", out JsonElement pEl) && pEl.ValueKind == JsonValueKind.Number ? pEl.GetInt32() : 0;
+                    int region = f.TryGetProperty("region", out JsonElement rEl) && rEl.ValueKind == JsonValueKind.Number ? rEl.GetInt32() : -1;
+                    baseFactions[fid] = (fname, parent, region);
+                }
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            return;
+        }
+
+        JsonDocument castDoc;
+        try { castDoc = BasePackFiles.ReadSectionDocument(basePayload, "actorSpecsCast"); }
+        catch (InvalidOperationException) { return; }
+        using (castDoc)
+        {
+            if (!castDoc.RootElement.TryGetProperty("specs", out JsonElement specs) || specs.ValueKind != JsonValueKind.Array)
+                return;
+            foreach (JsonElement spec in specs.EnumerateArray())
+            {
+                if (!spec.TryGetProperty("factionId", out JsonElement fidEl) || fidEl.ValueKind != JsonValueKind.Number)
+                    continue;
+                int factionId = fidEl.GetInt32();
+                if (classicFactions.ContainsKey(factionId))
+                    continue;
+                string sourceId = $"npc-faction-{factionId:000}";
+                if (findId(sourceId) is not { } id)
+                    continue;
+
+                string castId = spec.TryGetProperty("id", out JsonElement cidEl) && cidEl.ValueKind == JsonValueKind.String ? cidEl.GetString()! : sourceId;
+                string name = spec.TryGetProperty("displayName", out JsonElement dnEl) && dnEl.ValueKind == JsonValueKind.String
+                    ? dnEl.GetString()!
+                    : (baseFactions.TryGetValue(factionId, out var bf) ? bf.Name : castId);
+
+                List<NpcArt> art = [];
+                List<NpcLink> links = [];
+                if (spec.TryGetProperty("visual", out JsonElement vis) && vis.ValueKind == JsonValueKind.Object
+                    && vis.TryGetProperty("archive", out JsonElement archEl) && archEl.ValueKind == JsonValueKind.Number
+                    && vis.TryGetProperty("record", out JsonElement recEl) && recEl.ValueKind == JsonValueKind.Number)
+                {
+                    NpcSprite sprite = new(archEl.GetInt32(), recEl.GetInt32());
+                    if (spriteArt.TryGetValue(sprite, out NpcArt? spriteEntry))
+                        art.Add(spriteEntry);
+                    if (ids.TryGetValue(sprite.Id, out NpcReferenceId? sharedRef))
+                        links.Add(new($"Shared billboard {sharedRef.Id}", $"../{sharedRef.Id}/index.html"));
+                }
+
+                Dictionary<string, string> facts = new()
+                {
+                    ["Role"] = "Named character",
+                    ["Faction ID"] = $"{factionId}",
+                    ["Cast ID"] = castId,
+                };
+                if (baseFactions.TryGetValue(factionId, out var meta))
+                {
+                    if (meta.Region >= 0) facts["Faction region"] = world.Region(meta.Region);
+                    if (meta.Parent > 0 && baseFactions.TryGetValue(meta.Parent, out var parentMeta))
+                        facts["Affiliation"] = parentMeta.Name;
+                }
+                if (spec.TryGetProperty("home", out JsonElement home) && home.ValueKind == JsonValueKind.Object
+                    && home.TryGetProperty("block", out JsonElement blockEl) && blockEl.ValueKind == JsonValueKind.String)
+                {
+                    string slot = home.TryGetProperty("slotId", out JsonElement slotEl) && slotEl.ValueKind == JsonValueKind.String ? $" ({slotEl.GetString()})" : "";
+                    facts["Home placement"] = $"{blockEl.GetString()}{slot}";
+                }
+
+                entries.Add(new(id, name, "Named NPC", art, [], facts, links, [sourceId]));
+            }
+        }
+    }
+
     /// <summary>The human enemy classes by the sprite set each draws: a class has a male and a female set, and classes share sets.
     /// The City Watch draws the guard's townsfolk set, so it is the guard's record.</summary>
     private static IEnumerable<EnemyClass> EnemyClasses(string basePayload)
     {
         using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(basePayload));
+        if (payload.RootElement.TryGetProperty("sections", out JsonElement sections)
+            && sections.ValueKind == JsonValueKind.Object
+            && sections.TryGetProperty("actorSpecsEnemies", out _))
+        {
+            using JsonDocument enemiesDoc = BasePackFiles.ReadSectionDocument(basePayload, "actorSpecsEnemies");
+            if (enemiesDoc.RootElement.TryGetProperty("specs", out JsonElement specs) && specs.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement spec in specs.EnumerateArray())
+                {
+                    if (!spec.TryGetProperty("classicBinding", out JsonElement binding) || binding.ValueKind != JsonValueKind.Object)
+                        continue;
+                    if (!binding.TryGetProperty("affinity", out JsonElement aff) || aff.GetString() != "Human")
+                        continue;
+                    if (!spec.TryGetProperty("appearances", out JsonElement app) || app.ValueKind != JsonValueKind.Object)
+                        continue;
+                    int id = binding.GetProperty("mobileId").GetInt32();
+                    string name = binding.GetProperty("donorName").GetString()!;
+                    foreach ((string property, string gender) in new[] { ("maleTexture", "male"), ("femaleTexture", "female") })
+                        if (app.TryGetProperty(property, out JsonElement texEl) && texEl.ValueKind == JsonValueKind.Number
+                            && texEl.GetInt32() is var archive and not CityWatchArchive)
+                            yield return new(archive, id, name, gender);
+                }
+            }
+            yield break;
+        }
+
         foreach (JsonElement mobile in payload.RootElement.GetProperty("mobiles").GetProperty("mobiles").EnumerateArray()
             .Where(mobile => mobile.GetProperty("affinity").GetString() == "Human"))
         {

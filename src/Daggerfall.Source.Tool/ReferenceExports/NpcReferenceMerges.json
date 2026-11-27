@@ -2,12 +2,16 @@
   "npc-101": "npc-010",
   "npc-102": "npc-009",
   "npc-119": "npc-021",
+  "npc-127": "npc-023",
   "npc-144": "npc-260",
   "npc-150": "npc-044",
   "npc-163": "npc-065",
   "npc-176": "npc-040",
   "npc-192": "npc-191",
   "npc-209": "npc-037",
+  "npc-211": "npc-031",
+  "npc-212": "npc-064",
+  "npc-214": "npc-027",
   "npc-233": "npc-304",
   "npc-261": "npc-145",
   "npc-262": "npc-146",
@@ -32,5 +36,10 @@
   "npc-334": "npc-040",
   "npc-339": "npc-146",
   "npc-341": "npc-289",
-  "npc-347": "npc-204"
+  "npc-347": "npc-204",
+  "npc-496": null,
+  "npc-497": null,
+  "npc-498": null,
+  "npc-499": null,
+  "npc-500": null
 }

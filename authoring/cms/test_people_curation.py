@@ -247,3 +247,93 @@ manifest_path.write_text(json.dumps(manifest, indent=2) + "\\n")
         self.assertEqual(status, 200)
         self.assertIn("gitAvailable", ws)
         self.assertIn("modified", ws)
+
+    def test_enriches_enemy_spawners_wandering_townsfolk_faction_cast_and_canonical_concept_preview(self):
+        # Extend manifest with an enemy class, a wandering street townsfolk, and a faction-linked named cast record.
+        manifest = json.loads((self.library.npcs / "manifest.json").read_text(encoding="utf-8"))
+        manifest["entries"].extend([
+            {"id": "npc-468", "name": "Mage, Healer (male)", "kind": "Enemy class", "image": "a.png", "aliases": ["mobile-128", "mobile-486"]},
+            {"id": "npc-385", "name": "Breton male outfit 1", "kind": "Wandering townsfolk", "image": "b.png", "aliases": ["385", "mobile-385"]},
+            {"id": "npc-076", "name": "Oswin Harrowgate", "kind": "Named NPC", "image": "c.png", "aliases": ["npc-faction-1000"]},
+        ])
+        manifest["aliases"].update({
+            "mobile-128": "npc-468",
+            "mobile-486": "npc-468",
+            "385": "npc-385",
+            "mobile-385": "npc-385",
+            "npc-faction-1000": "npc-076",
+        })
+        self._write(self.library.npcs / "manifest.json", manifest)
+
+        # Add split base sections for enemies, catalogs, and cast.
+        self._write(self.library.base_payload, {
+            "ruleset": "daggerfall",
+            "sections": {
+                "factions": "world/factions.json",
+                "buildingNames": "world/building-names.json",
+                "actorSpecsEnemies": "actors/specs/enemies.json",
+                "actorSpecsCast": "actors/specs/cast.json",
+                "catalogs": "world/catalogs.json",
+            },
+        })
+        base_dir = self.library.base_payload.parent
+        self._write(base_dir / "world/factions.json", {
+            "factions": [
+                {"id": 364, "name": "King Gothryd", "type": 4, "typeName": "Individual"},
+                {"id": 1000, "name": "Oswin Harrowgate", "type": 4, "typeName": "Individual"},
+            ],
+        })
+        self._write(base_dir / "world/building-names.json", {"regionNames": ["Daggerfall"]})
+        self._write(base_dir / "actors/specs/enemies.json", {
+            "specs": [{
+                "id": "encounter-mage", "family": "enemy", "template": "mage",
+                "appearances": {"maleTexture": 486, "femaleTexture": 485},
+                "classicBinding": {"mobileId": 128, "donorName": "Mage", "affinity": "Human"},
+            }],
+        })
+        self._write(base_dir / "actors/specs/cast.json", {
+            "specs": [{
+                "id": "oswin-harrowgate", "family": "cast", "template": "static-npc",
+                "displayName": "Oswin Harrowgate", "factionId": 1000,
+                "visual": {"archive": 334, "record": 15},
+            }],
+        })
+        self._write(base_dir / "world/catalogs.json", {
+            "races": [{"id": "breton", "townspeople": {"male": [385], "female": [453]}}],
+        })
+
+        # Approve a front concept for npc-076 in ConceptStore.
+        cand = self.workspace.concept_action("npc-076", "candidates", {
+            "batch": "b1", "name": "front", "filename": "front.png", "image": PNG_1X1,
+            "details": {"prompt": "Guildmaster portrait", "seed": 1},
+        })
+        self.workspace.concept_action("npc-076", "approve", {"candidate": cand["id"], "view": "front"})
+
+        status, overview = self._request("GET", "/api/catalog")
+        self.assertEqual(status, 200)
+        by_id = {row["id"]: row for row in overview["people"]}
+
+        self.assertEqual(by_id["npc-468"]["curation"]["spawnerIds"], ["encounter-mage"])
+        self.assertEqual(by_id["npc-468"]["curation"]["spawnerCount"], 1)
+        self.assertIsNone(by_id["npc-468"]["conceptPreview"])
+
+        self.assertEqual(by_id["npc-385"]["curation"]["spawnerIds"], ["street-breton-male"])
+        self.assertEqual(by_id["npc-385"]["curation"]["spawnerCount"], 1)
+
+        self.assertEqual(by_id["npc-076"]["curation"]["castIds"], ["oswin-harrowgate"])
+        self.assertEqual(by_id["npc-076"]["curation"]["castCount"], 1)
+        self.assertTrue(by_id["npc-076"]["curation"]["hasApprovedConcept"])
+        self.assertEqual(by_id["npc-076"]["conceptPreview"], cand["url"])
+
+        # Guarded retire warnings also recognize enemy, wandering, and faction-linked cast usage.
+        for npc_id, expected_token in [
+            ("npc-468", "encounter-mage"),
+            ("npc-385", "street-breton-male"),
+            ("npc-076", "oswin-harrowgate"),
+        ]:
+            st, refs = self._request("GET", f"/api/people/{npc_id}/references")
+            self.assertEqual(st, 200)
+            self.assertTrue(refs["requiresConfirmation"])
+            self.assertTrue(any(expected_token in w for w in refs["warnings"]), refs["warnings"])
+        _, refs76 = self._request("GET", "/api/people/npc-076/references")
+        self.assertEqual(refs76["conceptPreview"], cand["url"])

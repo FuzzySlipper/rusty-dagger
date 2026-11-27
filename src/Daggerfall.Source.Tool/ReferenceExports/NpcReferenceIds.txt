@@ -77,6 +77,8 @@
 073 npc-faction-500
 074 npc-faction-501
 075 npc-473
+076 npc-faction-1000
+077 npc-faction-1001
 
 # 101–380 Billboards
 101 npc-flat-22401

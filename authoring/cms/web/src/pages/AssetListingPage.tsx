@@ -56,6 +56,7 @@ function PeopleCuratableTile({
   onToggleSelect: (id: string) => void;
 }) {
   const curation = row.curation;
+  const previewUrl = row.conceptPreview ?? row.classic;
   const status = row.pipelineIds.length
     ? `${row.pipelineIds.length} linked pipeline${row.pipelineIds.length === 1 ? '' : 's'}`
     : row.kind;
@@ -63,7 +64,7 @@ function PeopleCuratableTile({
   return (
     <article class={`tile${selected ? ' tile-selected' : ''}`} data-npc-id={row.id}>
       <a class="tile-link" href={subjectUrl(row.id)}>
-        <SpritePreview url={row.classic} alt="" pixel />
+        <SpritePreview url={previewUrl} alt="" pixel={!row.conceptPreview} />
         <div class="tile-info">
           <code>{row.id}</code>
           <strong>{row.name}</strong>

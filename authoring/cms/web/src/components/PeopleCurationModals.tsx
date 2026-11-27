@@ -351,7 +351,12 @@ export function RetireNpcModal({
                 <article key={refs.id} class="panel retire-item-card">
                   <div class="section-heading">
                     <div class="retire-head" style={{ marginBottom: 0 }}>
-                      <SpritePreview url={refs.classic} alt={refs.name} pixel className="picker-thumb" />
+                      <SpritePreview
+                        url={refs.conceptPreview ?? refs.classic}
+                        alt={refs.name}
+                        pixel={!refs.conceptPreview}
+                        className="picker-thumb"
+                      />
                       <div>
                         <strong>{refs.name}</strong> <code>{refs.id}</code>
                         <p class="muted">{refs.kind}</p>

@@ -1,7 +1,15 @@
 """In-CMS People (npc-###) curation: art-need enrichment, side-by-side compare/merge, and guarded retirement."""
 
+import re
+
+from base_pack import read_section as read_base_section
 from library import read_json
 from router import ConflictError, NotFoundError
+
+_PAIR_RE = re.compile(r"^(\d+)-(\d+)$")
+_MOBILE_RE = re.compile(r"^mobile-(\d+)(?:-(?:male|female))?$")
+_FACTION_RE = re.compile(r"^npc-faction-(\d+)$")
+_ARCHIVE_RE = re.compile(r"^(?:mobile-|npc-)?(\d+)$")
 
 
 def _parse_visual_aliases(npc_id: str, aliases: dict[str, str]) -> list[tuple[int, int]]:
@@ -16,21 +24,238 @@ def _parse_visual_aliases(npc_id: str, aliases: dict[str, str]) -> list[tuple[in
     return pairs
 
 
+def _extract_npc_keys(npc_id: str, raw_aliases: list[str] | tuple[str, ...]) -> tuple[list[tuple[int, int]], list[int], list[int], list[int]]:
+    pairs: list[tuple[int, int]] = []
+    mobiles: list[int] = []
+    archives: list[int] = []
+    factions: list[int] = []
+    seen_pairs: set[tuple[int, int]] = set()
+    seen_mobiles: set[int] = set()
+    seen_archives: set[int] = set()
+    seen_factions: set[int] = set()
+
+    for alias in (*raw_aliases, npc_id):
+        if not isinstance(alias, str):
+            continue
+        m_pair = _PAIR_RE.match(alias)
+        if m_pair:
+            pair = (int(m_pair.group(1)), int(m_pair.group(2)))
+            if pair not in seen_pairs:
+                seen_pairs.add(pair)
+                pairs.append(pair)
+            continue
+        m_fac = _FACTION_RE.match(alias)
+        if m_fac:
+            fid = int(m_fac.group(1))
+            if fid not in seen_factions:
+                seen_factions.add(fid)
+                factions.append(fid)
+            continue
+        m_mob = _MOBILE_RE.match(alias)
+        if m_mob:
+            num = int(m_mob.group(1))
+            if num not in seen_mobiles:
+                seen_mobiles.add(num)
+                mobiles.append(num)
+            if num not in seen_archives:
+                seen_archives.add(num)
+                archives.append(num)
+            continue
+        m_arch = _ARCHIVE_RE.match(alias)
+        if m_arch and alias != npc_id:
+            num = int(m_arch.group(1))
+            if num not in seen_archives:
+                seen_archives.add(num)
+                archives.append(num)
+    return pairs, mobiles, archives, factions
+
+
+def _read_base_section_safe(catalog, section_name: str):
+    try:
+        base_payload = catalog.library.base_payload
+        if not base_payload.is_file():
+            return None
+        return read_base_section(base_payload, section_name, cache=catalog.cache)
+    except Exception:
+        return None
+
+
+def _build_extra_usage_maps(catalog, people_pack_index: dict | None) -> dict:
+    """Index hostile enemy spawners (enemies.json), wandering street townsfolk (catalogs.json),
+    and faction-linked named cast (cast.json / people_pack) so People curation reflects all active game consumers."""
+    enemy_by_mobile: dict[int, list[str]] = {}
+    enemy_by_tex: dict[int, list[str]] = {}
+    enemies_doc = _read_base_section_safe(catalog, "actorSpecsEnemies")
+    if isinstance(enemies_doc, dict):
+        for spec in enemies_doc.get("specs") or ():
+            if not isinstance(spec, dict) or spec.get("family") != "enemy":
+                continue
+            sid = spec.get("id")
+            if not isinstance(sid, str) or not sid:
+                continue
+            cb = spec.get("classicBinding")
+            if isinstance(cb, dict) and isinstance(cb.get("mobileId"), int):
+                enemy_by_mobile.setdefault(cb["mobileId"], [])
+                if sid not in enemy_by_mobile[cb["mobileId"]]:
+                    enemy_by_mobile[cb["mobileId"]].append(sid)
+            app = spec.get("appearances")
+            if isinstance(app, dict):
+                for key in ("maleTexture", "femaleTexture"):
+                    tex = app.get(key)
+                    if isinstance(tex, int):
+                        enemy_by_tex.setdefault(tex, [])
+                        if sid not in enemy_by_tex[tex]:
+                            enemy_by_tex[tex].append(sid)
+
+    walker_by_archive: dict[int, list[str]] = {}
+    catalogs_doc = _read_base_section_safe(catalog, "catalogs")
+    if isinstance(catalogs_doc, dict):
+        for race in catalogs_doc.get("races") or ():
+            if not isinstance(race, dict):
+                continue
+            race_id = race.get("id")
+            townspeople = race.get("townspeople")
+            if not isinstance(race_id, str) or not isinstance(townspeople, dict):
+                continue
+            for gender in ("male", "female"):
+                archives = townspeople.get(gender)
+                if not isinstance(archives, list):
+                    continue
+                pool_id = f"street-{race_id}-{gender}"
+                for arch in archives:
+                    if isinstance(arch, int):
+                        walker_by_archive.setdefault(arch, [])
+                        if pool_id not in walker_by_archive[arch]:
+                            walker_by_archive[arch].append(pool_id)
+
+    cast_by_faction: dict[int, list[dict]] = {}
+    cast_seen: dict[int, set[str]] = {}
+    if people_pack_index is not None:
+        for ind in people_pack_index.get("individuals") or ():
+            if not isinstance(ind, dict):
+                continue
+            fid = ind.get("factionId")
+            cid = ind.get("id")
+            if isinstance(fid, int) and isinstance(cid, str) and cid:
+                if cid not in cast_seen.setdefault(fid, set()):
+                    cast_seen[fid].add(cid)
+                    cast_by_faction.setdefault(fid, []).append({
+                        "id": cid,
+                        "name": ind.get("name") or cid,
+                        "factionId": fid,
+                    })
+    cast_doc = _read_base_section_safe(catalog, "actorSpecsCast")
+    if isinstance(cast_doc, dict):
+        for spec in cast_doc.get("specs") or ():
+            if not isinstance(spec, dict):
+                continue
+            fid = spec.get("factionId")
+            cid = spec.get("id")
+            if isinstance(fid, int) and isinstance(cid, str) and cid:
+                if cid not in cast_seen.setdefault(fid, set()):
+                    cast_seen[fid].add(cid)
+                    cast_by_faction.setdefault(fid, []).append({
+                        "id": cid,
+                        "name": spec.get("displayName") or cid,
+                        "factionId": fid,
+                    })
+
+    return {
+        "enemy_by_mobile": enemy_by_mobile,
+        "enemy_by_tex": enemy_by_tex,
+        "walker_by_archive": walker_by_archive,
+        "cast_by_faction": cast_by_faction,
+    }
+
+
+def _resolve_canonical_concept(
+    npc_id: str,
+    npc_aliases: tuple[str, ...],
+    pipeline_ids: list[str] | tuple[str, ...],
+    catalog,
+    concept_store,
+    concept_subjects: set[str],
+) -> tuple[bool, str | None]:
+    """Return (has_approved_concept, canonical_concept_url) preferring ConceptStore front approval,
+    then canonical pipeline front concept."""
+    if concept_store is not None and (npc_id in concept_subjects or any(a in concept_subjects for a in npc_aliases)):
+        stage = concept_store.stage(npc_id, npc_aliases)
+        approvals = stage.get("approvals") or {}
+        front = approvals.get("front") or stage.get("approved")
+        if isinstance(front, dict) and front.get("url"):
+            return True, front["url"]
+        if any(approvals.get(v) for v in ("left", "right", "back")):
+            fallback_view = next(
+                (approvals[v] for v in ("left", "right", "back") if isinstance(approvals.get(v), dict) and approvals[v].get("url")),
+                None,
+            )
+            return True, (fallback_view["url"] if fallback_view else None)
+
+    pipelines = [catalog.pipelines[pid] for pid in pipeline_ids if pid in catalog.pipelines]
+    choice = catalog.links.get(npc_id, {})
+    conflicts = catalog.conflicts.get(npc_id, [])
+    if "concept" not in conflicts:
+        concepts = [art for item in pipelines for art in item["concepts"]]
+        explicit = choice.get("concept")
+        if explicit:
+            matched = next(
+                (c for c in concepts if c["pipeline"] == explicit["pipeline"] and c["path"] == explicit["path"]),
+                None,
+            )
+            if matched is not None:
+                return True, matched.get("url")
+        else:
+            approved = [art for art in concepts if art["approved"] and art["name"] == "Front concept"]
+            if len(approved) == 1:
+                return True, approved[0].get("url")
+    return False, None
+
+
+def _collect_extra_usage(
+    npc_id: str,
+    raw_aliases: list[str] | tuple[str, ...],
+    extra: dict,
+) -> tuple[list[dict], list[str]]:
+    pairs, mobiles, archives, factions = _extract_npc_keys(npc_id, raw_aliases)
+    cast_items: list[dict] = []
+    seen_cast: set[str] = set()
+    for fid in factions:
+        for item in extra["cast_by_faction"].get(fid, ()):
+            if item["id"] not in seen_cast:
+                seen_cast.add(item["id"])
+                cast_items.append(item)
+
+    spawner_ids: list[str] = []
+    seen_spawners: set[str] = set()
+    for mid in mobiles:
+        for sid in extra["enemy_by_mobile"].get(mid, ()):
+            if sid not in seen_spawners:
+                seen_spawners.add(sid)
+                spawner_ids.append(sid)
+    for arch in archives:
+        for sid in extra["enemy_by_tex"].get(arch, ()):
+            if sid not in seen_spawners:
+                seen_spawners.add(sid)
+                spawner_ids.append(sid)
+        for sid in extra["walker_by_archive"].get(arch, ()):
+            if sid not in seen_spawners:
+                seen_spawners.add(sid)
+                spawner_ids.append(sid)
+    for pair in pairs:
+        for sid in extra["enemy_by_tex"].get(pair[0], ()):
+            if sid not in seen_spawners:
+                seen_spawners.add(sid)
+                spawner_ids.append(sid)
+    return cast_items, spawner_ids
+
+
 def enrich_people_rows(rows: list[dict], catalog, concept_store, people_pack) -> list[dict]:
-    """Attach lightweight art-need and daggerfall.people usage summaries to each People catalog row."""
+    """Attach lightweight art-need, canonical concept preview, and active game-usage summaries to each People row."""
     pack_available = people_pack.available()
     index = people_pack._index() if pack_available else None
+    extra = _build_extra_usage_maps(catalog, index)
 
-    # Pre-group (archive, record) pairs by target npc_id once.
-    pairs_by_npc: dict[str, list[tuple[int, int]]] = {}
-    for alias, target in catalog.aliases.items():
-        if target not in catalog.npcs:
-            continue
-        arch_str, sep, rec_str = alias.partition("-")
-        if sep and arch_str.isdigit() and rec_str.isdigit():
-            pairs_by_npc.setdefault(target, []).append((int(arch_str), int(rec_str)))
-
-    # Pre-group aliases by canonical npc_id for concept-stage lookups.
+    # Pre-group aliases by canonical npc_id once.
     aliases_by_npc: dict[str, list[str]] = {}
     for old, target in catalog.aliases.items():
         if old != target and target in catalog.npcs:
@@ -41,11 +266,15 @@ def enrich_people_rows(rows: list[dict], catalog, concept_store, people_pack) ->
     enriched = []
     for row in rows:
         npc_id = row["id"]
+        combined_aliases = list(dict.fromkeys([*(row.get("aliases") or ()), *aliases_by_npc.get(npc_id, ())]))
+        pairs, _, _, _ = _extract_npc_keys(npc_id, combined_aliases)
+        extra_cast, extra_spawners = _collect_extra_usage(npc_id, combined_aliases, extra)
+
         cast_ids: list[str] = []
         spawner_ids: list[str] = []
         slot_count = 0
         if index is not None:
-            for pair in pairs_by_npc.get(npc_id, ()):
+            for pair in pairs:
                 slot_count += index["visual_slot_counts"].get(pair, 0)
                 for cid in index["visual_cast_ids"].get(pair, ()):
                     if cid not in cast_ids:
@@ -55,25 +284,21 @@ def enrich_people_rows(rows: list[dict], catalog, concept_store, people_pack) ->
                     if sid not in spawner_ids:
                         spawner_ids.append(sid)
 
-        has_approved_concept = False
-        npc_aliases = tuple(aliases_by_npc.get(npc_id, ()))
-        if concept_store is not None and (npc_id in concept_subjects or any(a in concept_subjects for a in npc_aliases)):
-            stage = concept_store.stage(npc_id, npc_aliases)
-            has_approved_concept = bool(stage.get("approved"))
+        for item in extra_cast:
+            if item["id"] not in cast_ids:
+                cast_ids.append(item["id"])
+        for sid in extra_spawners:
+            if sid not in spawner_ids:
+                spawner_ids.append(sid)
 
-        # Check pipeline concept/final status cheaply from catalog pipelines.
+        npc_aliases = tuple(aliases_by_npc.get(npc_id, ()))
+        has_approved_concept, concept_preview = _resolve_canonical_concept(
+            npc_id, npc_aliases, row.get("pipelineIds", ()), catalog, concept_store, concept_subjects,
+        )
+
         pipelines = [catalog.pipelines[pid] for pid in row.get("pipelineIds", ()) if pid in catalog.pipelines]
         choice = catalog.links.get(npc_id, {})
         conflicts = catalog.conflicts.get(npc_id, [])
-        if not has_approved_concept and "concept" not in conflicts:
-            concepts = [art for item in pipelines for art in item["concepts"]]
-            explicit = choice.get("concept")
-            if explicit and any(c["pipeline"] == explicit["pipeline"] and c["path"] == explicit["path"] for c in concepts):
-                has_approved_concept = True
-            else:
-                approved = [art for art in concepts if art["approved"] and art["name"] == "Front concept"]
-                has_approved_concept = len(approved) == 1
-
         finals = [item["final"] for item in pipelines if item["final"]]
         explicit_final = choice.get("final")
         has_final = False
@@ -83,6 +308,7 @@ def enrich_people_rows(rows: list[dict], catalog, concept_store, people_pack) ->
             has_final = True
 
         enriched.append(row | {
+            "conceptPreview": concept_preview,
             "curation": {
                 "castCount": len(cast_ids),
                 "castIds": cast_ids,
@@ -182,11 +408,41 @@ def references_for(npc_id: str, workspace) -> dict:
     ledger = read_json(workspace.merges, {})
     merged_members = sorted(src for src, dst in ledger.items() if dst == canonical) if isinstance(ledger, dict) else []
 
-    usage = detail.get("peoplePack") or {"visualKeys": [], "cast": [], "spawners": [], "slotCount": 0}
+    raw_usage = detail.get("peoplePack") or {"visualKeys": [], "cast": [], "spawners": [], "slotCount": 0}
+    usage = {
+        "visualKeys": list(raw_usage.get("visualKeys") or ()),
+        "cast": list(raw_usage.get("cast") or ()),
+        "spawners": list(raw_usage.get("spawners") or ()),
+        "slotCount": raw_usage.get("slotCount", 0),
+    }
+    pack_index = workspace.people_pack._index() if workspace.people_pack.available() else None
+    extra = _build_extra_usage_maps(catalog, pack_index)
+    all_aliases = list(dict.fromkeys([
+        *(detail.get("aliases") or ()),
+        *(old for old, target in catalog.aliases.items() if target == canonical and old != canonical),
+    ]))
+    extra_cast, extra_spawners = _collect_extra_usage(canonical, all_aliases, extra)
+    existing_cast_ids = {c["id"] for c in usage["cast"] if isinstance(c, dict) and "id" in c}
+    for item in extra_cast:
+        if item["id"] not in existing_cast_ids:
+            existing_cast_ids.add(item["id"])
+            usage["cast"].append(item)
+    existing_spawner_ids = {s["spawnerId"] for s in usage["spawners"] if isinstance(s, dict) and "spawnerId" in s}
+    for sid in extra_spawners:
+        if sid not in existing_spawner_ids:
+            existing_spawner_ids.add(sid)
+            usage["spawners"].append({"spawnerId": sid, "scope": "actor-spec", "weight": 1})
+
     pipelines = list(detail.get("pipelineIds", []))
     stage = workspace.concept_stage(canonical) if workspace.concept_store else None
     concept_count = len((stage or {}).get("candidates", []))
     approvals = (stage or {}).get("approvals") or {}
+    front_approval = approvals.get("front") or (stage or {}).get("approved")
+    concept_preview = (
+        front_approval.get("url")
+        if isinstance(front_approval, dict) and front_approval.get("url")
+        else (detail["concept"].get("url") if isinstance(detail.get("concept"), dict) else None)
+    )
     has_approved_concept = bool(
         any(approvals.get(v) for v in ("front", "left", "right", "back"))
         or (stage or {}).get("approved")
@@ -224,6 +480,7 @@ def references_for(npc_id: str, workspace) -> dict:
         "name": detail["name"],
         "kind": detail["kind"],
         "classic": detail["classic"],
+        "conceptPreview": concept_preview,
         "canRetire": len(blockers) == 0,
         "requiresConfirmation": len(warnings) > 0,
         "blockers": blockers,

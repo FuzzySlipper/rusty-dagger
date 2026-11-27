@@ -85,6 +85,7 @@ export interface CharacterSummary {
   kind: string;
   classic: string | null;
   classicUrl: string;
+  conceptPreview?: string | null;
   brief: BriefInfo | null;
   aliases: string[];
   pipelineIds: string[];
@@ -833,6 +834,7 @@ export interface PeopleReferencesResponse {
   name: string;
   kind: string;
   classic: string | null;
+  conceptPreview?: string | null;
   canRetire: boolean;
   requiresConfirmation: boolean;
   blockers: string[];
