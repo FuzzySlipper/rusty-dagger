@@ -97,8 +97,13 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.True(PopulationTextureOpens(restoredAppearance) > 0);
     }
 
+    /// <summary>
+    /// A walker its schedule hides at night is untouched: it writes zero save bytes (#11104), so crossing into the
+    /// neighbouring town leaves no record of it off-site, and it comes back under the same durable identity, hidden by
+    /// night and walking by day, through a save and restore (#11157).
+    /// </summary>
     [Fact]
-    public void Resident_hidden_source_civilian_keeps_actor_identity_without_billboard_through_readmission_and_save_restore()
+    public void A_schedule_hidden_source_civilian_leaves_no_record_off_site_and_returns_under_the_same_identity()
     {
         using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create();
         DaggerfallSession session = fixture.Session;
@@ -110,34 +115,33 @@ public sealed class DaggerfallPopulationSessionTests
         int beforeHide = PopulationTextureOpens(fixture.Appearance);
         Assert.True(beforeHide > 0);
 
-        // Dusk hides the source-backed identity and retires only its admitted billboard. The
-        // dynamic actor stays retained so its durable pose and identity can cross the site window.
+        // Dusk hides the source-backed identity and retires only its admitted billboard.
         session.AdvanceElapsedTime(12 * 60 * 60);
         sourceNpc = session.State.Npcs.Require(sourceId);
         Assert.Equal(DaggerfallNpcPresence.Hidden, sourceNpc.Presence);
         Assert.True(session.State.Actors.TryGet(sourceId, out _));
         Assert.Equal(beforeHide, PopulationTextureOpens(fixture.Appearance));
 
+        // Hidden by its schedule and otherwise untouched, it carries nothing to keep: off-site it leaves no record.
         Assert.True(session.TryTransitionTo(fixture.Resident.ProfileKey));
-        DaggerfallNpc retained = session.State.Npcs.Require(sourceId);
-        Assert.Equal(DaggerfallNpcPresence.Hidden, retained.Presence);
-        Assert.True(session.State.Actors.TryGet(sourceId, out _));
-        Assert.Equal(beforeHide, PopulationTextureOpens(fixture.Appearance));
+        Assert.False(session.State.Npcs.TryGet(sourceId, out _));
+        Assert.False(session.State.Actors.TryGet(sourceId, out _));
+        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(session.CaptureSave());
+        Assert.DoesNotContain(captured.ActorLedger, entry => entry.DurableId == sourceId);
+        Assert.DoesNotContain(captured.RestoredNpcs().Entries, entry => entry.DurableId == sourceId);
 
-        RulesetSavePayload save = session.CaptureSave();
-        DaggerfallSavePayload captured = DaggerfallSavePayload.Read(save);
-        DaggerfallNpcEntry savedNpc = Assert.Single(captured.RestoredNpcs().Entries, entry => entry.DurableId == sourceId);
-        Assert.Equal((int)DaggerfallNpcPresence.Hidden, savedNpc.Presence);
-        Assert.Contains(captured.ActorLedger, entry => entry.DurableId == sourceId
-            && entry.Location is { Kind: ActorLocationKind.AtSite, Detached: true, Profile: { } p }
-            && p.Require() == fixture.Source.ProfileKey);
+        // Back in its own town it is the same person: off the street by night (sheltering indoors), walking by day.
+        Assert.True(session.TryTransitionTo(fixture.Source.ProfileKey));
+        Assert.False(session.State.Npcs.TryGet(sourceId, out DaggerfallNpc? night) && night.Presence == DaggerfallNpcPresence.Active);
+        session.AdvanceElapsedTime(12 * 60 * 60);
+        DaggerfallNpc morning = session.State.Npcs.Require(sourceId);
+        Assert.Equal((DaggerfallNpcPresence.Active, "population/source/0/0"), (morning.Presence, morning.StableKey));
 
-        (EngineContextFake restoredEngine, AppearanceFake restoredAppearance) = fixture.CreateEngine();
-        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, save);
+        (EngineContextFake restoredEngine, _) = fixture.CreateEngine();
+        using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, fixture.Composition, session.CaptureSave());
         DaggerfallNpc restoredNpc = restored.State.Npcs.Require(sourceId);
-        Assert.Equal(DaggerfallNpcPresence.Hidden, restoredNpc.Presence);
+        Assert.Equal((DaggerfallNpcPresence.Active, "population/source/0/0"), (restoredNpc.Presence, restoredNpc.StableKey));
         Assert.True(restored.State.Actors.TryGet(sourceId, out _));
-        Assert.Equal(0, PopulationTextureOpens(restoredAppearance));
     }
 
     [Fact]
