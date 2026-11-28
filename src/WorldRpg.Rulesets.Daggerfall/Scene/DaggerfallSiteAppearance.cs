@@ -539,15 +539,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                         rotation, Vector3.One), arrowVisual, true, RenderLayer.Scene));
             }
         }
-        int held = facts.Count;
         AppendViewmodelFacts(facts, viewmodel);
+        appendSnapshotFacts?.Invoke(facts);
         if (travelMap is not null)
         {
-            // The arms stay in the scene, where their tweens and playback run on, but draw nowhere while the map is open.
-            for (int index = held; index < facts.Count; index++) facts[index] = facts[index] with { Visible = false };
+            // The world and held arms stay in the scene, where their tweens and playback run on, but draw nowhere
+            // while the travel map is open so geometry near the player's eye cannot clip over the backdrop map.
+            for (int index = 0; index < facts.Count; index++)
+                if (facts[index].Layer != RenderLayer.Backdrop) facts[index] = facts[index] with { Visible = false };
             facts.AddRange(travelMap);
         }
-        appendSnapshotFacts?.Invoke(facts);
         peopleRigs()?.Publishing();
         appearance.PublishSnapshot([.. facts]);
         ReachHeld();

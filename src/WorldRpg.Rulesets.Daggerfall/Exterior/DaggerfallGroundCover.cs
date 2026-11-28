@@ -186,6 +186,9 @@ internal sealed class DaggerfallGroundCover : IDisposable
         _tufts.Hide();
     }
 
+    /// <summary>Hides the grass tufts while keeping the shell mesh warm (hidden in the snapshot while the travel map is open).</summary>
+    internal void HideTufts() => _tufts.Hide();
+
     /// <summary>
     /// Lets go of the tufts' field, ahead of hiding it (the Engine applies a field's removal before a call's other
     /// changes) or because the ground under it changes; the next showing grows it anew.

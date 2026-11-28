@@ -171,6 +171,14 @@ internal sealed class DaggerfallHorizon : IDisposable
         // Before any focus moves, so the workers find every location's ground they paint from already read.
         _ground.ReadGroundsAbout(x, z);
         Follow(x, z, winter, far);
+        if (Map.Shown)
+        {
+            HideNear();
+            _flora.Hide();
+            _cover?.HideTufts();
+            HideFar();
+            return;
+        }
         ShowNear(session, origin, x, z);
         // Flora stands in near ground's frame, on the same walked surface.
         if (far)
@@ -185,7 +193,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         }
         ShowSea(origin, x, z, winter);
         _rivers?.Follow(origin, x, z);
-        if (far && !Map.Shown)
+        if (far)
         {
             ShowFar(session, origin, seen);
             if (seen && _farForestOn) _farForest.Show(x, z, winter, flora);
@@ -444,6 +452,11 @@ internal sealed class DaggerfallHorizon : IDisposable
         _cover?.Hide();
         _rivers?.Hide();
         HideFar();
+        HideNear();
+    }
+
+    private void HideNear()
+    {
         if (_near is not null && _nearSeen)
         {
             _nearSeen = false;

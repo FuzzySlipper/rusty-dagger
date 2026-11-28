@@ -97,13 +97,16 @@ public sealed class DaggerfallExpeditionSessionTests
         Assert.Equal("travel-map", fixture.Engine.CameraAnchors[map]);
         Assert.True(fixture.Engine.MapLandVisible);
         Assert.False(fixture.Engine.HeightfieldVisible, "Far ground leaves the backdrop to the map's land.");
+        Assert.False(fixture.Engine.NearGroundVisible, "Near ground hides while the travel map is open so it cannot clip over the map.");
+        Assert.False(fixture.Engine.FloraVisible, "World flora hides while the travel map is open so foliage near the eye cannot clip over the map.");
         // The map's parts stand in the backdrop: the places about the party, its standard and its sight.
         AppearanceFact[] parts = [.. fixture.Facts().Where(fact => fact.Layer == RenderLayer.Backdrop)];
         Assert.NotEmpty(parts);
         // Its colours are graded stronger while it is open.
         Assert.Equal(DaggerfallTuning.Defaults.Expedition.Map.Grading.Saturation, fixture.Engine.Gradings[^1].Saturation);
-        // Its camera shows none of the held arms, which stay in the scene for their playback.
+        // Its camera shows none of the world or held arms, which stay in the scene for their playback.
         Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Viewmodel && fact.Visible);
+        Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Scene && fact.Visible);
 
         // The view turns, zooms and pans, which stops it following the party; I'm at follows it again.
         fixture.Submit(new { action = "expedition-view", view = new[] { 30.0, 0, .5, 0, 2 } });
@@ -120,6 +123,9 @@ public sealed class DaggerfallExpeditionSessionTests
         Assert.Equal(player, fixture.Engine.ActiveCamera);
         Assert.False(fixture.Engine.MapLandVisible);
         Assert.True(fixture.Engine.HeightfieldVisible);
+        Assert.True(fixture.Engine.NearGroundVisible);
+        Assert.True(fixture.Engine.FloraVisible);
+        Assert.Contains(fixture.Facts(), fact => fact.Layer == RenderLayer.Scene && fact.Visible);
         Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Backdrop);
         Assert.Equal(default, fixture.Engine.Gradings[^1]);
     }

@@ -22,7 +22,8 @@ internal readonly record struct DaggerfallOverlandLook(DaggerfallOverlandGrading
 /// (<see cref="DaggerfallOverlandView"/>). It draws what the expedition holds and decides nothing.
 /// <para>
 /// The map camera stands at the player's eye, so everything measured from the eye stays put, and draws nothing of the
-/// world: its far plane is a few centimetres off. Its own backdrop link puts its backdrop eye on the orbit, anchored at
+/// world: the world's scene, near ground, flora and held arms are hidden while the map is open, and its world frustum
+/// ends a few centimetres off. Its own backdrop link puts its backdrop eye on the orbit, anchored at
 /// that eye, so the land shows behind an empty world. It becomes the active camera while the map is open, drawn into the
 /// map's place on the page (<see cref="ViewAnchor"/>), and the player's camera is active again when it closes.
 /// </para>
