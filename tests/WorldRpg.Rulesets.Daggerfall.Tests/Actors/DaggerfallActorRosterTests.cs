@@ -1,6 +1,8 @@
+using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using Rusty.Engine.Testing;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
@@ -76,6 +78,48 @@ public sealed class DaggerfallActorRosterTests
         Assert.Equal(2, asked);
         grounding.GroundAwaiting(actors);
         Assert.Equal(2, asked);
+    }
+
+    [Fact]
+    public void An_actor_placed_under_open_ground_before_it_streamed_in_settles_on_it_once_it_is_live()
+    {
+        // A met band's people are placed beside the player's landing, a height guessed before the ground streamed in:
+        // in hills, the ground stands tens of metres above it (#11212, Woodcroft Court: 410 against 451).
+        const float Ground = 41F;
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
+        host.Call(engine =>
+        {
+            DaggerfallTuning tuning = DaggerfallTuning.Defaults;
+            using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, tuning.Spatial);
+            using ActorsState actors = new();
+            ActorState Create(long id) => actors.CreateActor(id, new EntityTypeId("person"), TestSessions.HealthyMechanics(),
+                new ActorPose(new WorldPoint(0F, 0F, 0F), 0F), "health");
+            DaggerfallActorGrounding grounding = new(engine.Spatial, spatial, tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
+            grounding.TerrainHeight = _ => Ground;
+            DaggerfallActorGrounding blind = new(engine.Spatial, spatial, tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
+
+            // Placed while the floor is still on its way, it waits for it.
+            grounding.FloorPending = () => true;
+            ActorState arrived = Create(300);
+            grounding.Ground(arrived);
+            Assert.Equal(0F, arrived.Position.Y);
+
+            // The ground streams in; the actor settles on it, not where it was guessed.
+            _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(spatial.Session,
+                new[] { new StaticMeshAsset(1, 0, 4, 0, 2) },
+                new Vector3[] { new(-20, Ground, -20), new(-20, Ground, 20), new(20, Ground, -20), new(20, Ground, 20) },
+                new Triangle[] { new(0, 1, 2), new(1, 3, 2) },
+                new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+                ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+            grounding.FloorPending = () => false;
+            grounding.GroundAwaiting(actors);
+            Assert.Equal(Ground, arrived.Position.Y, 3);
+
+            // Looking down only from where it was guessed, the ground above is never found.
+            ActorState buried = Create(301);
+            blind.Ground(buried);
+            Assert.Equal(0F, buried.Position.Y);
+        });
     }
 
     private static DaggerfallDynamicActorSave Saved(long id) =>

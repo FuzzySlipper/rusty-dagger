@@ -1348,6 +1348,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                     _activeAppearance(), _sceneTranslation());
                 if (live is not null)
                 {
+                    // Placed beside the player's landing, which on open ground is a height guessed before the ground
+                    // streamed in: they stand on the floor there, once it is live (#11212).
+                    _roster.SettleArrived(live);
                     if (inClash && live.Actor.TryGet<DaggerfallEnemyPerceptionMemory>(out DaggerfallEnemyPerceptionMemory? mem))
                     {
                         mem.LairTruce = false;

@@ -1718,6 +1718,18 @@ internal sealed class DaggerfallActorRoster
     }
 
     /// <summary>
+    /// Settles <paramref name="actor"/>, brought into the scene off the travel map beside the player, onto the floor where
+    /// it was placed (#11212): a walker, or a person, who has no mobile and walks. Flyers, spectres and swimmers keep their
+    /// height. While the scene's floor is still on its way, it settles once the floor is live.
+    /// </summary>
+    internal void SettleArrived(ActorState actor)
+    {
+        if (!_definitionsByActor.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
+            || definition.MobileId is null || _definitions.Walks(definition))
+            _grounding.Ground(actor);
+    }
+
+    /// <summary>
     /// Materializes one <see cref="ActorLedgerEntry"/> (seeded slot, cast individual, or minted actor) into the active
     /// <c>EntityStore</c> at <paramref name="localPose"/> without creating a duplicate body when already live.
     /// Used when intercepting or arriving with a persistent <see cref="ActorLocationKind.OnOverlandBand"/> party or
@@ -2669,7 +2681,8 @@ internal sealed class DaggerfallActorRoster
 /// <summary>
 /// Settles a placed or spawned actor onto the floor below its authored marker through the Engine's
 /// own spatial ray query. Every actor whose mobile walks is settled (<see cref="DaggerfallDefinitions.Walks"/>);
-/// flyers, spectres and swimmers keep the height they were placed at.
+/// flyers, spectres and swimmers keep the height they were placed at. A point placed under the open ground of an
+/// exterior (a height guessed before the ground streamed in) is looked down from that ground, so the ray finds it.
 /// </summary>
 internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, SpatialMovementSystem spatial, float probeLift, double probeDistance)
 {
@@ -2680,6 +2693,9 @@ internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, S
     /// being prepared. Such actors are settled by <see cref="GroundAwaiting"/> once it is live.
     /// </summary>
     internal Func<bool> FloorPending { get; set; } = static () => false;
+
+    /// <summary>The height of the active exterior's open ground under a point, or null where there is none (#11212).</summary>
+    internal Func<WorldPoint, float?> TerrainHeight { get; set; } = static _ => null;
 
     internal void Ground(ActorState actor)
     {
@@ -2716,12 +2732,13 @@ internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, S
 
     internal WorldPoint GroundPosition(WorldPoint position, double? maximumDistance = null)
     {
+        WorldPoint above = TerrainHeight(position) is float ground && ground > position.Y ? position with { Y = ground } : position;
         SpatialHit floor = spatialService.CastRay(new SpatialRaycastRequest(
             spatial.Session,
-            position.ToVector() + Vector3.UnitY * probeLift,
+            above.ToVector() + Vector3.UnitY * probeLift,
             -Vector3.UnitY,
             maximumDistance ?? probeDistance,
             new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), default, default, default));
-        return floor.Present && !floor.StartSolid && floor.Normal.Y > 0f ? WorldPoint.From(floor.Point) : position;
+        return floor.Present && !floor.StartSolid && floor.Normal.Y > 0f ? WorldPoint.From(floor.Point) : above;
     }
 }

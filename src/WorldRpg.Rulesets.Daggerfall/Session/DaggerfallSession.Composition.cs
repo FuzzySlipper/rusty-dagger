@@ -1504,6 +1504,7 @@ internal sealed partial class DaggerfallSession
             TeleportChoice = new DaggerfallTeleport(this, State.PlayerControl, State.Transport, () => State.Property.OwnedShip,
                 Presentation, saved?.PendingTeleport, saved?.TeleportAnchor);
             _grounding.FloorPending = () => _exterior.CollisionPending;
+            _grounding.TerrainHeight = point => _exterior.TryExteriorTerrainHeight(point, out float ground) ? ground : null;
             if (composition.ArtReplacements is { } groundArt) _exterior.UseGroundArt(groundArt, () => DrawnArt is not null);
             State.LevelUps.Began += () => _appearance.PlayGameplaySound(96, "level-up");
             _equipmentMoves.Changed += change =>
