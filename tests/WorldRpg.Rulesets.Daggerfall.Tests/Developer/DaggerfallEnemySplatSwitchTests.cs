@@ -15,7 +15,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallEnemySplatSwitchTests
 {
     [Fact]
-    public void Every_human_enemy_mobile_id_maps_to_a_shipped_splat_with_all_four_variants_and_combat_clips()
+    public void Every_human_enemy_mobile_id_maps_to_a_shipped_splat_with_all_five_variants_and_combat_clips()
     {
         DaggerfallSplatEnemies enemies = Art().SplatEnemies!;
         Assert.Equal(15, enemies.Characters.Count);
@@ -31,8 +31,9 @@ public sealed class DaggerfallEnemySplatSwitchTests
             Assert.True(enemies.Characters.ContainsKey(female), $"Mobile {mobileId} Female -> {female}");
         }
 
-        // Every shipped character carries all four geometry variants and the core combat clip fits.
-        string[] requiredVariants = ["gaussians", "core", "cards", "cards-core"];
+        // Every shipped character carries all five geometry variants (the hybrid: its splats over a skinned base mesh) and
+        // the core combat clip fits.
+        string[] requiredVariants = ["gaussians", "core", "cards", "cards-core", "hybrid"];
         string[] requiredClips = ["combat-idle", "mage-idle", "run", "run-sword", "attack-sword", "attack-sword-2", "attack-melee", "attack-melee-2", "attack-cast", "attack-bow", "hurt", "death"];
         foreach ((string id, DaggerfallSplatEnemy enemy) in enemies.Characters)
         {
@@ -49,12 +50,28 @@ public sealed class DaggerfallEnemySplatSwitchTests
         animation.Clips = Clips(enemies);
         using DaggerfallEnemySplatSwitch sw = Switch(enemies, animation);
 
-        // Mobile 135 (Warrior Male -> npc-466) draws gaussians by default.
-        Appearance? gaussians = sw.Show(200, 10, 135, "Male", null, "idle", 0, false, null, null);
-        Assert.NotNull(gaussians);
-        Assert.Equal([enemies.Characters["npc-466"].Bodies["gaussians"].Path], animation.OpenedPaths);
+        // Mobile 135 (Warrior Male -> npc-466) draws his hybrid body by default, in the tuning's hybrid look: smooth, casting
+        // as its base mesh, his splats drawing over it by the surface and close bias, their material read, light wrapped.
+        Appearance? hybrid = sw.Show(200, 10, 135, "Male", null, "idle", 0, false, null, null);
+        Assert.NotNull(hybrid);
+        Assert.Equal([enemies.Characters["npc-466"].Bodies["hybrid"].Path], animation.OpenedPaths);
+        SplatAppearanceRequest look = animation.Splats[^1];
+        Assert.Equal((0U, 0F, SplatShadowCaster.None, .03F, .08F, true, .6F),
+            (look.PixelGrid, look.LightFloor, look.ShadowCaster, look.SurfaceBias, look.CloseBias, look.Material, look.DiffuseWrap));
         sw.Publishing();
         sw.Settle();
+
+        // His gaussians draw in the plain look.
+        Assert.True(sw.EnemiesSplatVariant("gaussians").Succeeded);
+        Appearance? gaussians = sw.Show(200, 10, 135, "Male", null, "idle", 0, false, null, null);
+        Assert.NotSame(hybrid, gaussians);
+        Assert.Equal(enemies.Characters["npc-466"].Bodies["gaussians"].Path, animation.OpenedPaths[^1]);
+        look = animation.Splats[^1];
+        Assert.Equal((3U, .15F, SplatShadowCaster.Ellipsoids, 0F, false, .6F),
+            (look.PixelGrid, look.LightFloor, look.ShadowCaster, look.SurfaceBias, look.Material, look.DiffuseWrap));
+        sw.Publishing();
+        sw.Settle();
+        Assert.Equal(1, animation.ReleasedAppearances);
 
         // Switching to cards-core opens the cards-core GLB and disposes the superseded gaussians appearance after Settle.
         Assert.True(sw.EnemiesSplatVariant("cards-core").Succeeded);
@@ -64,7 +81,7 @@ public sealed class DaggerfallEnemySplatSwitchTests
         Assert.Equal(enemies.Characters["npc-466"].Bodies["cards-core"].Path, animation.OpenedPaths[^1]);
         sw.Publishing();
         sw.Settle();
-        Assert.Equal(1, animation.ReleasedAppearances);
+        Assert.Equal(2, animation.ReleasedAppearances);
 
         // Invalid variant is refused without disturbing the active variant.
         Assert.False(sw.EnemiesSplatVariant("voxels").Succeeded);
@@ -73,9 +90,9 @@ public sealed class DaggerfallEnemySplatSwitchTests
         Assert.True(sw.EnemiesSplat("off").Succeeded);
         Assert.Null(sw.Show(200, 10, 135, "Male", null, "idle", 0, false, null, null));
         sw.Publishing();
-        Assert.Equal(2, animation.ReleasedInstances);
+        Assert.Equal(3, animation.ReleasedInstances);
         sw.Settle();
-        Assert.Equal(2, animation.ReleasedAppearances);
+        Assert.Equal(3, animation.ReleasedAppearances);
     }
 
     [Fact]

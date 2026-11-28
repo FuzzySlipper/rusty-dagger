@@ -1158,7 +1158,9 @@
     "shadowCaster": "ellipsoids",
     "skirtedPace": "slow",
     "gaitJitter": 0.06,
-    "blinks": { "intervalSeconds": [2, 6], "closingSeconds": 0.04, "closedSeconds": 0.07, "openingSeconds": 0.06 }
+    "blinks": { "intervalSeconds": [2, 6], "closingSeconds": 0.04, "closedSeconds": 0.07, "openingSeconds": 0.06 },
+    "diffuseWrap": 0.6,
+    "hybrid": { "bodies": true, "pixelGrid": 0, "lightFloor": 0, "surfaceBias": 0.03, "closeNear": 1.2, "closeFar": 3.0, "closeBias": 0.08, "material": true }
   },
   "hanging": {
     "activationRadius": 4,

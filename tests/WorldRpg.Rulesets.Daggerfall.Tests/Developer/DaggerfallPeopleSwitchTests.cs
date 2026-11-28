@@ -54,6 +54,8 @@ public sealed class DaggerfallPeopleSwitchTests
         DaggerfallArtReplacements art = Art();
         DaggerfallSplatPeople splats = art.SplatPeople!;
         using DaggerfallPeopleSwitch people = Switch(art, PartsRigsRecorder.Create(), animation);
+        // His plain splat body, in the plain look (the hybrid body has a test of its own).
+        Assert.True(people.SplatHybrid("off").Succeeded);
 
         var unknown = people.Splat("999");
         Assert.False(unknown.Succeeded);
@@ -123,6 +125,53 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Null(people.Crowd);
         people.Dispose();
         Assert.Equal(1, animation.ReleasedAppearances);
+    }
+
+    [Fact]
+    public void A_character_with_a_hybrid_body_draws_it_in_the_hybrid_look_until_people_splat_hybrid_off()
+    {
+        const string HybridPath = "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/385.glb";
+        AnimationRecorder animation = AnimationRecorder.Create();
+        DaggerfallArtReplacements art = Art(characters => characters["385"]!["hybrid"] = new System.Text.Json.Nodes.JsonObject
+        {
+            ["path"] = HybridPath, ["byteLength"] = 1, ["sha256"] = new string('a', 64),
+        });
+        animation.Clips = Clips(art.SplatPeople!);
+        DaggerfallSplatPerson townsman = art.SplatPeople!.Characters["385"];
+        Assert.Equal(HybridPath, townsman.Hybrid!.Path);
+        using DaggerfallPeopleSwitch people = Switch(art, PartsRigsRecorder.Create(), animation);
+
+        // The tuning draws hybrid bodies: his splats over the base mesh that fills their holes and casts the shadow, smooth,
+        // without a light floor, drawing over the mesh by the surface and close bias, his Gaussians' material read.
+        Assert.True(people.Splat("385").Succeeded);
+        SplatFigure hybrid = Assert.IsType<SplatCrowd>(people.Crowd).Figure!;
+        Assert.Equal($"385 ({townsman.Name}, hybrid)", hybrid.Name);
+        Assert.Equal([HybridPath], animation.OpenedPaths);
+        SplatAppearanceRequest look = animation.Splats[^1];
+        Assert.Same(hybrid.Appearance, look.Appearance);
+        Assert.Equal((0U, 0F, SplatShadowCaster.None, .03F, 1.2F, 3F, .08F, true, .6F),
+            (look.PixelGrid, look.LightFloor, look.ShadowCaster, look.SurfaceBias, look.CloseNear, look.CloseFar, look.CloseBias, look.Material, look.DiffuseWrap));
+
+        // people.splat-hybrid off draws his plain splat body in the plain look, wrapped as the hybrid is.
+        var plain = people.SplatHybrid("off");
+        Assert.True(plain.Succeeded);
+        Assert.Equal("Gsplat people draw their plain splat bodies.", plain.Message);
+        SplatFigure splats = Assert.IsType<SplatCrowd>(people.Crowd).Figure!;
+        Assert.NotSame(hybrid, splats);
+        Assert.Equal([HybridPath, townsman.Body.Path], animation.OpenedPaths);
+        look = animation.Splats[^1];
+        Assert.Same(splats.Appearance, look.Appearance);
+        Assert.Equal((3U, .15F, SplatShadowCaster.Ellipsoids, 0F, 0F, false, .6F),
+            (look.PixelGrid, look.LightFloor, look.ShadowCaster, look.SurfaceBias, look.CloseBias, look.Material, look.DiffuseWrap));
+
+        // The look commands change both bodies' looks for the run: a grid reaches the hybrid too.
+        Assert.True(people.SplatLook(5, .5, "none", 0).Succeeded);
+        Assert.Equal(5U, animation.Splats[^1].PixelGrid);
+        Assert.Equal(5U, animation.Splats.Last(request => request.Appearance == hybrid.Appearance).PixelGrid);
+        Assert.True(people.SplatHybrid("on").Succeeded);
+        Assert.Same(hybrid, Assert.IsType<SplatCrowd>(people.Crowd).Figure);
+        Assert.Equal(2, animation.OpenedPaths.Count);
+        Assert.False(people.SplatHybrid("maybe").Succeeded);
     }
 
     [Fact]
@@ -228,7 +277,8 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Same(townsman, people.Show(104, 14, 1.7F, walking: true));
         Assert.NotSame(townsman, other);
         // Each character opens once, the one of the walker's art: 386 is drawn by 386-C.
-        Assert.Equal([splats.Characters["385"].Body.Path, splats.Characters["386-C"].Body.Path], animation.OpenedPaths);
+        // Each draws its hybrid body, which the art set gives every townsperson.
+        Assert.Equal([splats.Characters["385"].Hybrid!.Path, splats.Characters["386-C"].Hybrid!.Path], animation.OpenedPaths);
         Assert.Equal([townsman, other], animation.Splats.Select(look => look.Appearance));
         Assert.IsType<SplatCrowd>(people.Crowd);
 
@@ -287,7 +337,7 @@ public sealed class DaggerfallPeopleSwitchTests
         Assert.Same(townswoman, people.Show(101, 11, 1.7F, walking: false));
         Assert.True(stage.Cross(2, 4, 3).Succeeded);
         Assert.Same(townsman, people.Show(100, 10, 1.7F, walking: true));
-        Assert.Equal([splats.Characters[splats.ByArchive[381]].Body.Path, splats.Characters[splats.ByArchive[395]].Body.Path], animation.OpenedPaths);
+        Assert.Equal([splats.Characters[splats.ByArchive[381]].Hybrid!.Path, splats.Characters[splats.ByArchive[395]].Hybrid!.Path], animation.OpenedPaths);
     }
 
     [Fact]

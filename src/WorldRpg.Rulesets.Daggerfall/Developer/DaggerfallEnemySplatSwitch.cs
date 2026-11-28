@@ -10,7 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>
 /// Draws human enemies as their shipped skinned-splat characters (<see cref="DaggerfallSplatEnemies"/>) in place of
 /// classic directional sprites, supporting live variant switching (<c>gaussians</c>, <c>core</c>, <c>cards</c>,
-/// <c>cards-core</c>), classic sprite fallback (<c>enemies.splat off</c>), and developer clip inspection.
+/// <c>cards-core</c>, <c>hybrid</c>: the splats over a skinned base mesh), classic sprite fallback (<c>enemies.splat off</c>),
+/// and developer clip inspection. They draw their hybrid bodies where they have one while the tuning's
+/// <c>splatPeople.hybrid</c> says so, and their gaussians otherwise, in the tuning's look for each.
 /// </summary>
 internal sealed class DaggerfallEnemySplatSwitch(
     DaggerfallSplatEnemies? splats,
@@ -23,7 +25,8 @@ internal sealed class DaggerfallEnemySplatSwitch(
     : IEnemySplatCrowd, IDisposable, IDeveloperEnemySplatCommands
 {
     private static readonly Transform Unplaced = new(Vector3.Zero, Quaternion.Identity, Vector3.One);
-    private static readonly string[] Variants = ["gaussians", "core", "cards", "cards-core"];
+    private static readonly string[] Variants = ["gaussians", "core", "cards", "cards-core", Hybrid];
+    private const string Hybrid = "hybrid";
 
     private readonly Dictionary<(string Id, string Variant), (RenderResource Body, SplatSkirtRig? Skirt, Dictionary<string, string> Clips)> bodies = [];
     private readonly Dictionary<(string Id, string Variant, string LiveryKey), (Appearance Appearance, EnemySplatFigure Figure, Color? Tint)> characters = [];
@@ -31,12 +34,13 @@ internal sealed class DaggerfallEnemySplatSwitch(
     private readonly HashSet<(string Id, string Variant)> broken = [];
     /// <summary>The characters a look named that the art set lacks, said once each.</summary>
     private readonly HashSet<string> unknown = new(StringComparer.Ordinal);
-    private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow, float FadeNear, float FadeFar, float SurfaceBias) look =
-        (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster, 0F, 0F, 0F);
+    /// <summary>How the enemies' bodies are finished, a hybrid body apart: the tuning's looks until a developer sets another for the run.</summary>
+    private DaggerfallSplatLook look = tuning.Look;
+    private DaggerfallSplatLook hybridLook = tuning.HybridLook;
     private EnemySplatCrowd? crowd;
     private bool enabled = splats is not null && clips is not null;
     private string? forcedCharacter;
-    private string variant = "gaussians";
+    private string variant = tuning.Hybrid!.Bodies ? Hybrid : "gaussians";
     private bool yielded;
     private bool letGo;
 
@@ -132,19 +136,17 @@ internal sealed class DaggerfallEnemySplatSwitch(
         if (grid is < 0 or > 16 || !(coverage is > 0 and <= 1) || palette is not ("own" or "none") || !(poseRate >= 0) || !double.IsFinite(poseRate)
             || palette == "own" && grid == 0)
             return DaggerfallDeveloperReplies.Refused("enemies.splat-look takes GRID 0 to 16, COVERAGE above 0 to 1, own (needs a grid) or none, and POSERATE 0 or more.");
-        look = look with { Grid = (uint)grid, Coverage = (float)coverage, OwnPalette = palette == "own", PoseRate = (float)poseRate };
-        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
+        Restyle(style => style with { Grid = (uint)grid, Coverage = (float)coverage, OwnPalette = palette == "own", PoseRate = (float)poseRate });
         return DebugCommandResult.Success(grid == 0
             ? $"Splat enemies draw smooth, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}."
-            : $"Splat enemies draw on a {grid}-pixel grid, coverage {coverage:0.##}, {(look.OwnPalette ? "own palette" : "own colours")}.");
+            : $"Splat enemies draw on a {grid}-pixel grid, coverage {coverage:0.##}, {(palette == "own" ? "own palette" : "own colours")}.");
     }
 
     public DebugCommandResult EnemiesSplatShadow(string caster)
     {
         if (DaggerfallSplatPeopleTuning.Caster(caster) is not { } shadow)
             return DaggerfallDeveloperReplies.Refused("enemies.splat-shadow takes none, ellipsoids, core or splats.");
-        look = look with { Shadow = shadow };
-        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
+        Restyle(style => style with { Shadow = shadow });
         return DebugCommandResult.Success($"Splat enemies cast shadows as {caster}.");
     }
 
@@ -152,11 +154,18 @@ internal sealed class DaggerfallEnemySplatSwitch(
     {
         if (!double.IsFinite(near) || !double.IsFinite(far) || !double.IsFinite(bias) || near < 0 || far < 0 || bias < 0 || bias > .5 || (far > 0 && far <= near))
             return DaggerfallDeveloperReplies.Refused("enemies.splat-fade takes NEAR >= 0, FAR > NEAR (or 0 to disable), and BIAS in 0..0.5.");
-        look = look with { FadeNear = (float)near, FadeFar = (float)far, SurfaceBias = (float)bias };
-        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
+        Restyle(style => style with { FadeNear = (float)near, FadeFar = (float)far, SurfaceBias = (float)bias });
         return DebugCommandResult.Success(far > 0
             ? $"Splat enemies fade over {near:0.##}–{far:0.##} m with {bias:0.###} m surface bias."
             : $"Splat enemy distance fade disabled (surface bias {bias:0.###} m).");
+    }
+
+    /// <summary>Changes the look of every variant, hybrid or not, for the run, and finishes every open character again.</summary>
+    private void Restyle(Func<DaggerfallSplatLook, DaggerfallSplatLook> change)
+    {
+        look = change(look);
+        hybridLook = change(hybridLook);
+        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], key.Variant, opened.Tint);
     }
 
     internal void Yield() => yielded = true;
@@ -256,7 +265,7 @@ internal sealed class DaggerfallEnemySplatSwitch(
         try
         {
             appearance = engine.CreateAnimatedMeshAppearance(new(openedBody.Body));
-            Finish(appearance, enemy, tint);
+            Finish(appearance, enemy, activeVariant, tint);
             string Clip(string name, string fallback) => openedBody.Clips.TryGetValue(name, out string? found) ? found : openedBody.Clips[fallback];
             bool isCaster = enemy.Role is "caster" or "staff";
             string idleClip = Clip(isCaster ? "mage-idle" : "combat-idle", "idle");
@@ -284,17 +293,16 @@ internal sealed class DaggerfallEnemySplatSwitch(
         }
     }
 
-    private void Finish(Appearance appearance, DaggerfallSplatEnemy enemy, Color? tint)
+    private void Finish(Appearance appearance, DaggerfallSplatEnemy enemy, string bodyVariant, Color? tint)
     {
+        DaggerfallSplatLook style = bodyVariant == Hybrid ? hybridLook : look;
         Vector3 tintVec = tint is { } c ? new Vector3(c.R, c.G, c.B) : Vector3.One;
-        ReadOnlyMemory<Color> palette = look.OwnPalette
+        ReadOnlyMemory<Color> palette = style.OwnPalette
             ? (tint is { } tc
                 ? enemy.Palette.Select(p => new Color(p.R * tc.R, p.G * tc.G, p.B * tc.B, p.A)).ToArray()
                 : enemy.Palette.ToArray())
             : ReadOnlyMemory<Color>.Empty;
-        animation().SetSplatAppearance(new(appearance, tintVec, look.Grid, look.Coverage,
-            palette, look.PoseRate, SplatLighting.Lit, tuning.LightFloor, look.Shadow,
-            look.FadeNear, look.FadeFar, look.SurfaceBias));
+        animation().SetSplatAppearance(style.Request(appearance, tintVec, palette));
     }
 
     private ContentReference Reference(DaggerfallArtFile file) =>

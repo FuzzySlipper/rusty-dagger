@@ -406,12 +406,14 @@ public sealed class PromotedClassicCastIntegrationTests
             JsonObject knightSplat = template.DeepClone().AsObject();
             knightSplat["name"] = "The Great Knight";
             knightSplat.Remove("archive");
+            knightSplat.Remove("hybrid");
             knightSplat["body"] = new JsonObject { ["path"] = "splats/npc-022.glb", ["sha256"] = hashHex };
             characters["npc-022"] = knightSplat;
 
             JsonObject balthamSplat = template.DeepClone().AsObject();
             balthamSplat["name"] = "Baltham Greyman";
             balthamSplat.Remove("archive");
+            balthamSplat.Remove("hybrid");
             balthamSplat["body"] = new JsonObject { ["path"] = "splats/npc-042.glb", ["sha256"] = hashHex };
             characters["npc-042"] = balthamSplat;
         }

@@ -34,6 +34,9 @@ public interface IDeveloperPeopleCommands : IDebugCommandModule
 
     [DebugCommand("people.splat-fade", Description = "Developer: fade the splat detail layer over a co-located base mesh from NEAR to FAR metres (0 0 disables fade), with BIAS metres of forward depth bias over the base mesh.")]
     DebugCommandResult SplatFade(double near, double far, double bias);
+
+    [DebugCommand("people.splat-hybrid", Description = "Developer: gsplat people whose character has a hybrid body (its splats over a skinned base mesh that fills their holes and casts their shadow) draw it (on) or their plain splat body (off), for this run; the tuning's splatPeople.hybrid holds the shipped choice and look. people.splat-look, -shadow and -fade change both bodies' looks.")]
+    DebugCommandResult SplatHybrid(string state);
 }
 
 /// <summary>
@@ -65,7 +68,7 @@ public interface IDeveloperEnemySplatCommands : IDebugCommandModule
     [DebugCommand("enemies.splat", Description = "Developer: draw human enemies as their shipped splat characters (on), as one character ID (e.g. npc-471), or as classic directional sprites (off).")]
     DebugCommandResult EnemiesSplat(string mode);
 
-    [DebugCommand("enemies.splat-variant", Description = "Developer: switch enemy splat geometry variant between gaussians, core, cards, and cards-core for live A/B comparison.")]
+    [DebugCommand("enemies.splat-variant", Description = "Developer: switch enemy splat geometry variant between gaussians, core, cards, cards-core and hybrid (the splats over a skinned base mesh, the default where an enemy has one) for live A/B comparison.")]
     DebugCommandResult EnemiesSplatVariant(string variant);
 
     [DebugCommand("enemies.splat-clip", Description = "Developer: force a specific combat clip (combat-idle, mage-idle, walk, run, attack-melee, attack-melee-2, attack-cast, attack-bow, hurt, death) on splat enemies, or auto to play live combat states.")]

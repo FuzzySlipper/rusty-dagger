@@ -16,7 +16,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// art has no character draws its sprite, said once as a warning. The developer switches draw every walker as one
 /// figure instead and back: people.rig as the art set's parts-rig test figure (<see cref="DaggerfallPeopleRig"/>) in one
 /// of its view sets, people.splat ID as one gsplat character, people.splat own as their own characters again, and off
-/// as their sprites. The gsplat people draw in the tuning's look until people.splat-look changes it for the run. One
+/// as their sprites. The gsplat people draw in the tuning's look until people.splat-look changes it for the run; a character
+/// with a hybrid body draws it, in the tuning's hybrid look, while the tuning (or people.splat-hybrid, for the run) says so. One
 /// figure is in use at a time. people.spawn stands a few walkers in front of the player as a gsplat character of their
 /// own, whatever the rest are drawn as. The rig crowd is made on its first use, and a gsplat character is opened on its
 /// first use and kept for the session. It shows a spawned walker as its character and the rest as the crowd in use, and
@@ -61,11 +62,15 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private static readonly Transform Unplaced = new(Vector3.Zero, Quaternion.Identity, Vector3.One);
     private static readonly float[] SpawnRows = [4F, 5.5F, 7F, 8.5F];
 
-    private readonly Dictionary<string, (RenderResource Body, SplatWalk[] Walks, string[] Idles, SplatSkirtRig? Skirt)> bodies = new(StringComparer.Ordinal);
-    private readonly Dictionary<(string Id, string LiveryKey), (Appearance Appearance, SplatFigure Figure, Color? Tint)> characters = [];
-    /// <summary>How the gsplat people are finished: the tuning's look until a developer sets another for the run.</summary>
-    private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow, float FadeNear, float FadeFar, float SurfaceBias) look =
-        (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster, 0F, 0F, 0F);
+    /// <summary>The characters' opened bodies, by character and whether it is the hybrid body.</summary>
+    private readonly Dictionary<(string Id, bool Hybrid), (RenderResource Body, SplatWalk[] Walks, string[] Idles, SplatSkirtRig? Skirt)> bodies = [];
+    private readonly Dictionary<(string Id, bool Hybrid, string LiveryKey), (Appearance Appearance, SplatFigure Figure, Color? Tint)> characters = [];
+    /// <summary>How the gsplat people's plain bodies are finished: the tuning's look until a developer sets another for the run.</summary>
+    private DaggerfallSplatLook look = tuning.Look;
+    /// <summary>How their hybrid bodies are finished, the same way.</summary>
+    private DaggerfallSplatLook hybridLook = tuning.HybridLook;
+    /// <summary>Whether characters with a hybrid body draw it: the tuning's choice until people.splat-hybrid.</summary>
+    private bool hybrid = tuning.Hybrid!.Bodies;
     /// <summary>The clip packs opened for the characters, by the clip each carries; each opens on the first character that plays it.</summary>
     private readonly Dictionary<string, RenderResource> packs = new(StringComparer.Ordinal);
     /// <summary>The characters that would not open, said once each; walkers wearing their art draw their sprites.</summary>
@@ -205,11 +210,10 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         if (grid is < 0 or > 16 || !(coverage is > 0 and <= 1) || palette is not ("own" or "none") || !(poseRate >= 0) || !double.IsFinite(poseRate)
             || palette == "own" && grid == 0)
             return DaggerfallDeveloperReplies.Refused("people.splat-look takes GRID 0 to 16, COVERAGE above 0 to 1, own (needs a grid) or none, and POSERATE 0 or more.");
-        look = look with { Grid = (uint)grid, Coverage = (float)coverage, OwnPalette = palette == "own", PoseRate = (float)poseRate };
-        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
+        Restyle(style => style with { Grid = (uint)grid, Coverage = (float)coverage, OwnPalette = palette == "own", PoseRate = (float)poseRate });
         return DebugCommandResult.Success(grid == 0
             ? $"Gsplat people draw smooth, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}."
-            : $"Gsplat people draw on a {grid}-pixel grid, blocks where they cover {coverage:0.##}, {(look.OwnPalette ? "in their own palette" : "in their own colours")}, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}.");
+            : $"Gsplat people draw on a {grid}-pixel grid, blocks where they cover {coverage:0.##}, {(palette == "own" ? "in their own palette" : "in their own colours")}, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}.");
     }
 
     public DebugCommandResult SplatPace(string pace)
@@ -219,13 +223,13 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         // Each character's walks play at the new rates: its figure is replaced wherever it is drawn.
         foreach (var (id, openedBody) in bodies.ToArray())
         {
-            DaggerfallSplatPerson person = splats!.Characters[id];
+            DaggerfallSplatPerson person = splats!.Characters[id.Id];
             SplatWalk[] updatedWalks = [.. splats.WalksOf(person).Select((clip, at) => Walk(person, clip) with { Clip = openedBody.Walks[at].Clip })];
             bodies[id] = openedBody with { Walks = updatedWalks };
         }
         foreach (var (key, opened) in characters.ToArray())
         {
-            SplatWalk[] updatedWalks = bodies[key.Id].Walks;
+            SplatWalk[] updatedWalks = bodies[(key.Id, key.Hybrid)].Walks;
             SplatFigure figure = opened.Figure with { Walks = updatedWalks };
             characters[key] = opened with { Figure = figure };
             if (splatCrowd?.Figure?.Appearance == opened.Appearance) splatCrowd.Use(figure);
@@ -251,8 +255,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     {
         if (DaggerfallSplatPeopleTuning.Caster(caster) is not { } shadow)
             return DaggerfallDeveloperReplies.Refused("people.splat-shadow takes none, ellipsoids, core or splats.");
-        look = look with { Shadow = shadow };
-        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
+        Restyle(style => style with { Shadow = shadow });
         return DebugCommandResult.Success(shadow switch
         {
             SplatShadowCaster.None => "Gsplat people cast no shadow.",
@@ -266,11 +269,39 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     {
         if (!double.IsFinite(near) || !double.IsFinite(far) || !double.IsFinite(bias) || near < 0 || far < 0 || bias < 0 || bias > .5 || (far > 0 && far <= near))
             return DaggerfallDeveloperReplies.Refused("people.splat-fade takes NEAR >= 0, FAR > NEAR (or 0 to disable), and BIAS in 0..0.5.");
-        look = look with { FadeNear = (float)near, FadeFar = (float)far, SurfaceBias = (float)bias };
-        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
+        Restyle(style => style with { FadeNear = (float)near, FadeFar = (float)far, SurfaceBias = (float)bias });
         return DebugCommandResult.Success(far > 0
             ? $"Gsplat people fade over {near:0.##}–{far:0.##} m with {bias:0.###} m surface bias."
             : $"Gsplat people distance fade disabled (surface bias {bias:0.###} m).");
+    }
+
+    public DebugCommandResult SplatHybrid(string state)
+    {
+        if (state is not ("on" or "off")) return DaggerfallDeveloperReplies.Refused("people.splat-hybrid takes on or off.");
+        if (Unplayable() is { } refused) return refused;
+        hybrid = state == "on";
+        // Walkers drawn as their own characters take the other body as they are next shown; one figure in use for every
+        // walker, and each spawned walker's, is replaced now. The bodies no walker draws go after the next snapshot.
+        if (splatCrowd?.Figure is { } every && Reopen(every) is { } everyNow) splatCrowd.Use(everyNow);
+        foreach ((long actor, SplatFigure given) in splatCrowd?.Assigned.ToArray() ?? [])
+            if (Reopen(given) is { } givenNow) splatCrowd!.Assign(actor, givenNow);
+        letGo = true;
+        int with = splats!.Characters.Values.Count(person => person.Hybrid is not null);
+        return DebugCommandResult.Success(hybrid
+            ? $"Gsplat people with a hybrid body ({with} of {splats.Characters.Count}) draw it: their splats over a base mesh that fills their holes and casts their shadow."
+            : "Gsplat people draw their plain splat bodies.");
+
+        SplatFigure? Reopen(SplatFigure figure) => characters.FirstOrDefault(opened => opened.Value.Figure == figure) is { Value.Figure: not null } found
+            ? Open(splats!, found.Key.Id, splats!.Characters[found.Key.Id], found.Key.LiveryKey, found.Value.Tint)
+            : null;
+    }
+
+    /// <summary>Changes the look of both bodies, plain and hybrid, for the run, and finishes every open character again.</summary>
+    private void Restyle(Func<DaggerfallSplatLook, DaggerfallSplatLook> change)
+    {
+        look = change(look);
+        hybridLook = change(hybridLook);
+        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], key.Hybrid, opened.Tint);
     }
 
     /// <summary>
@@ -326,7 +357,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             try { opened.Appearance.Dispose(); }
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
-        HashSet<string> retainedBodies = [.. characters.Keys.Select(key => key.Id)];
+        HashSet<(string Id, bool Hybrid)> retainedBodies = [.. characters.Keys.Select(key => (key.Id, key.Hybrid))];
         foreach (var (id, openedBody) in bodies.Where(pair => !retainedBodies.Contains(pair.Key)).ToArray())
         {
             bodies.Remove(id);
@@ -458,19 +489,21 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
 
     /// <summary>
     /// Character <paramref name="id"/> (optionally in <paramref name="liveryKey"/> / <paramref name="tint"/> livery),
-    /// opened on its first use: its body with each walk and idle its walkers may play bound by joint names and fitted
-    /// to its legs, drawn lit. One in a long skirt plays the skirt walks, its skirt fitted to its rig as it stands at rest.
+    /// opened on its first use: its body (its hybrid body while hybrids draw and it has one) with each walk and idle its
+    /// walkers may play bound by joint names and fitted to its legs, drawn lit. One in a long skirt plays the skirt walks,
+    /// its skirt fitted to its rig as it stands at rest.
     /// </summary>
     private SplatFigure Open(DaggerfallSplatPeople art, string id, DaggerfallSplatPerson person, string liveryKey = "", Color? tint = null)
     {
-        (string Id, string LiveryKey) cacheKey = (id, liveryKey);
+        bool drawsHybrid = hybrid && person.Hybrid is not null;
+        (string Id, bool Hybrid, string LiveryKey) cacheKey = (id, drawsHybrid, liveryKey);
         if (characters.TryGetValue(cacheKey, out var opened)) return opened.Figure;
         IAnimationService engine = animation();
-        if (!bodies.TryGetValue(id, out var openedBody))
+        if (!bodies.TryGetValue((id, drawsHybrid), out var openedBody))
         {
             IReadOnlyList<string> walks = art.WalksOf(person);
             RenderResource body;
-            using (ContentReference reference = Reference(person.Body)) body = engine.OpenAnimatedMeshFromContent(new(reference));
+            using (ContentReference reference = Reference(drawsHybrid ? person.Hybrid! : person.Body)) body = engine.OpenAnimatedMeshFromContent(new(reference));
             try
             {
                 foreach (string clip in walks.Concat(art.Idles))
@@ -493,7 +526,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
                     ? SplatSkirtRig.Resolve(worn, engine.ReadJoints(body).Span, engine.SampleModelJointPose(new(body, "", 0, "", 0, 0, false, Unplaced)).Span)
                     : null;
                 openedBody = (body, walking, idles, skirtRig);
-                bodies.Add(id, openedBody);
+                bodies.Add((id, drawsHybrid), openedBody);
             }
             catch
             {
@@ -509,10 +542,11 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         try
         {
             appearance = engine.CreateAnimatedMeshAppearance(new(openedBody.Body));
-            Finish(appearance, person, tint);
+            Finish(appearance, person, drawsHybrid, tint);
+            string body = drawsHybrid ? ", hybrid" : "";
             string figureLabel = string.IsNullOrEmpty(liveryKey)
-                ? $"{id} ({person.Name})"
-                : $"{id} ({person.Name}) [{liveryKey}]";
+                ? $"{id} ({person.Name}{body})"
+                : $"{id} ({person.Name}{body}) [{liveryKey}]";
             SplatFigure figure = new(figureLabel, appearance, openedBody.Walks, openedBody.Idles, tuning.CrossfadeSeconds, openedBody.Skirt, person.Eyes);
             characters.Add(cacheKey, (appearance, figure, tint));
             return figure;
@@ -524,18 +558,20 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         }
     }
 
-    /// <summary>Draws <paramref name="person"/>'s appearance lit, in the run's look and optional guard livery tint.</summary>
-    private void Finish(Appearance appearance, DaggerfallSplatPerson person, Color? tint = null)
+    /// <summary>
+    /// Draws <paramref name="person"/>'s appearance lit, in the run's look for its plain or <paramref name="hybridBody"/> and
+    /// optional guard livery tint.
+    /// </summary>
+    private void Finish(Appearance appearance, DaggerfallSplatPerson person, bool hybridBody, Color? tint = null)
     {
+        DaggerfallSplatLook style = hybridBody ? hybridLook : look;
         Vector3 tintVec = tint is { } c ? new Vector3(c.R, c.G, c.B) : Vector3.One;
-        ReadOnlyMemory<Color> palette = look.OwnPalette
+        ReadOnlyMemory<Color> palette = style.OwnPalette
             ? (tint is { } tc
                 ? person.Palette.Select(p => new Color(p.R * tc.R, p.G * tc.G, p.B * tc.B, p.A)).ToArray()
                 : person.Palette.ToArray())
             : ReadOnlyMemory<Color>.Empty;
-        animation().SetSplatAppearance(new(appearance, tintVec, look.Grid, look.Coverage,
-            palette, look.PoseRate, SplatLighting.Lit, tuning.LightFloor, look.Shadow,
-            look.FadeNear, look.FadeFar, look.SurfaceBias));
+        animation().SetSplatAppearance(style.Request(appearance, tintVec, palette));
     }
 
     private ContentReference Reference(DaggerfallArtFile file) => content().ResolveReference(new ContentResolveRequest(file.Path, file.Sha256));

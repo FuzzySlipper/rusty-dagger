@@ -1056,9 +1056,9 @@ public sealed class DaggerfallPopulationSessionTests
         }
     }
 
-    /// <summary>The appearance gsplat character <paramref name="id"/> was last opened as.</summary>
+    /// <summary>The appearance gsplat character <paramref name="id"/> was last opened as: its hybrid body, which the tuning draws.</summary>
     private static Appearance Drawn(AnimationRecorder animation, DaggerfallSplatPeople splats, string id) =>
-        animation.Splats[animation.OpenedPaths.LastIndexOf(splats.Characters[id].Body.Path)].Appearance;
+        animation.Splats[animation.OpenedPaths.LastIndexOf((splats.Characters[id].Hybrid ?? splats.Characters[id].Body).Path)].Appearance;
 
     private static int PopulationTextureOpens(AppearanceFake appearance) =>
         appearance.OpenedResourcePaths.Count(path => path == "sprite/population.png");

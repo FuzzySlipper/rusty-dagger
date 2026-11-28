@@ -1019,8 +1019,9 @@ public sealed class PublishedContentDeliveryTests
             .. new[] { "clouds", "sea", "window", "logo" }.Select(layer => section.GetProperty("titleScene").GetProperty(layer)),
             .. section.GetProperty("peopleRig").GetProperty("views").EnumerateObject()
                 .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model"))),
-            // Each gsplat townsperson's body; their clips ship in the animations container.
-            .. section.GetProperty("splatPeople").GetProperty("characters").EnumerateObject().Select(character => character.Value.GetProperty("body")),
+            // Each gsplat townsperson's body and hybrid body; their clips ship in the animations container.
+            .. section.GetProperty("splatPeople").GetProperty("characters").EnumerateObject().SelectMany(character =>
+                character.Value.TryGetProperty("hybrid", out JsonElement hybrid) ? [character.Value.GetProperty("body"), hybrid] : new[] { character.Value.GetProperty("body") }),
             // Each splat enemy's body in every variant; they share the townspeople's clips.
             .. section.GetProperty("splatEnemies").GetProperty("characters").EnumerateObject()
                 .SelectMany(enemy => enemy.Value.GetProperty("bodies").EnumerateObject().Select(body => body.Value)),

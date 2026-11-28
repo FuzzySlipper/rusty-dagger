@@ -121,10 +121,12 @@ internal sealed record DaggerfallSplatPeople(IReadOnlyDictionary<string, Daggerf
 /// One gsplat character: what asset-pipeline calls it, the classic townsperson art it draws (a texture archive, which
 /// walkers wearing it draw as this character, or null for a cast-specific character selected by asset id), its skinned-splat GLB (metres, standing on y = 0, facing +z), the
 /// pelvis fit of each clip it plays to its legs, by clip, the colours of its own paint a pixel finish may snap to, its
-/// long skirt, or null, and its eyes (the splat group its eye Gaussians are in, and its lids' colour), which blink, or null.
+/// long skirt, or null, its eyes (the splat group its eye Gaussians are in, and its lids' colour), which blink, or null,
+/// and its hybrid body, or null: the same splats on the same rig over a skinned base mesh (`extras.splatBaseMesh`) that
+/// fills what they leave open and casts the shadow.
 /// </summary>
 internal sealed record DaggerfallSplatPerson(string Name, int? Archive, DaggerfallArtFile Body, IReadOnlyDictionary<string, DaggerfallSplatClipFit> Fits,
-    IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null, SplatEyes? Eyes = null);
+    IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null, SplatEyes? Eyes = null, DaggerfallArtFile? Hybrid = null);
 
 /// <summary>
 /// A clip's pelvis fit: the top joint's translation t becomes (<paramref name="Scale"/> t.x, <paramref name="Lift"/> +
@@ -136,7 +138,7 @@ internal sealed record DaggerfallSplatClipFit(float Scale, float Lift, float? Sp
 /// <summary>A mobile/gender binding pointing a classic human enemy mobile to one shipped splat enemy.</summary>
 internal sealed record DaggerfallSplatEnemyBinding(int MobileId, string? Gender);
 
-/// <summary>One shipped splat enemy character with its optional geometry variants (gaussians, core, cards, cards-core) and combat clip fits.</summary>
+/// <summary>One shipped splat enemy character with its optional geometry variants (gaussians, core, cards, cards-core, hybrid) and combat clip fits.</summary>
 internal sealed record DaggerfallSplatEnemy(string Name, string Role, IReadOnlyList<DaggerfallSplatEnemyBinding> Bindings,
     IReadOnlyDictionary<string, DaggerfallArtFile> Bodies, IReadOnlyDictionary<string, DaggerfallSplatClipFit> Fits,
     IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null);
@@ -1001,7 +1003,8 @@ internal sealed class DaggerfallArtReplacements
                         fit.Value.TryGetProperty("speed", out JsonElement speed) ? speed.GetSingle() : null), StringComparer.Ordinal),
                     [.. character.Value.GetProperty("palette").EnumerateArray().Select(colour => Color.FromSrgbHex(
                         int.Parse(colour.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))],
-                    Skirt(character.Name, character.Value), Eyes(character.Name, character.Value));
+                    Skirt(character.Name, character.Value), Eyes(character.Name, character.Value),
+                    character.Value.TryGetProperty("hybrid", out JsonElement hybrid) ? File(hybrid, $"Splat person {character.Name}'s hybrid body") : null);
                 if (person.Palette.Count is 0 or > 256)
                     throw new InvalidOperationException($"Content pack '{packId}' gives splat person {character.Name} {person.Palette.Count} palette colours, not 1 to 256.");
                 // Every clip a walker of it may play is fitted to its legs, a walk with the speed its stride travels.

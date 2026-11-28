@@ -140202,6 +140202,11 @@
      "eyes": {
       "group": 1,
       "lid": "#432721"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/381.glb",
+      "byteLength": 11443012,
+      "sha256": "c79cbf47198f2fb00b7860ef87693af617929822cf38046d54d9abb64809312d"
      }
     },
     "382": {
@@ -140282,6 +140287,11 @@
      "eyes": {
       "group": 1,
       "lid": "#714433"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/382.glb",
+      "byteLength": 12711556,
+      "sha256": "5ffa86395489c620ac36fffddabbff79667e309999009fd03edd2f9fd4442977"
      }
     },
     "383-A": {
@@ -140362,6 +140372,11 @@
      "eyes": {
       "group": 1,
       "lid": "#804e38"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/383-A.glb",
+      "byteLength": 11999308,
+      "sha256": "608b724c90862e2cf46ec946d87a21d07c0e6d23d64d8e84b43cab50f68a3bb2"
      }
     },
     "384-C": {
@@ -140442,6 +140457,11 @@
      "eyes": {
       "group": 1,
       "lid": "#3b211a"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/384-C.glb",
+      "byteLength": 12825408,
+      "sha256": "be6adcd98e98e7170d2f2229bd57bb8b261618cfec77f12959cd1643de836f3f"
      }
     },
     "385": {
@@ -140522,6 +140542,11 @@
      "eyes": {
       "group": 1,
       "lid": "#c38d6d"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/385.glb",
+      "byteLength": 5713664,
+      "sha256": "f4424026c1339a0de2250380877e64b5f36e70f30dc3dbda9074cba1af2258aa"
      }
     },
     "386-C": {
@@ -140602,6 +140627,11 @@
      "eyes": {
       "group": 1,
       "lid": "#9f6a4f"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/386-C.glb",
+      "byteLength": 12273788,
+      "sha256": "c49c7b2e51023b430e75f17ab6ead046798c4d68cbf9cef18c572ac3d5c58f78"
      }
     },
     "387-A": {
@@ -140682,6 +140712,11 @@
      "eyes": {
       "group": 1,
       "lid": "#936857"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/387-A.glb",
+      "byteLength": 12642528,
+      "sha256": "5b3c32f457a298f0ca9baabb988c5641d54234f8ab9a65b2ecb675fadcf11b12"
      }
     },
     "388": {
@@ -140762,6 +140797,11 @@
      "eyes": {
       "group": 1,
       "lid": "#542f25"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/388.glb",
+      "byteLength": 12438520,
+      "sha256": "382d0c51061b70593d8923b09e26efd5a28cbdb72f451327e890b61d7db1e417"
      }
     },
     "389": {
@@ -140842,6 +140882,11 @@
      "eyes": {
       "group": 1,
       "lid": "#5b3428"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/389.glb",
+      "byteLength": 12303020,
+      "sha256": "8d66bcd5b7845df8036a6f01122c03778b7c1e5fa567de2e99d268270b3bce3d"
      }
     },
     "390-B": {
@@ -140922,6 +140967,11 @@
      "eyes": {
       "group": 1,
       "lid": "#975a44"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/390-B.glb",
+      "byteLength": 12441448,
+      "sha256": "823dcbda317182119796b8502bbea0208bafe232fb8b129c7e809bf4c469343a"
      }
     },
     "391": {
@@ -141002,6 +141052,11 @@
      "eyes": {
       "group": 1,
       "lid": "#a67a5f"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/391.glb",
+      "byteLength": 12158844,
+      "sha256": "cac7757bf52276939d1b5c32f4861c38e75a09fadc12a82512edd3b452e0ce11"
      }
     },
     "392": {
@@ -141082,6 +141137,11 @@
      "eyes": {
       "group": 1,
       "lid": "#ac7f6a"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/392.glb",
+      "byteLength": 12516452,
+      "sha256": "0cd8dad9561f8f755145d98c481c7f16355b9852a4f5954582b077a49290fd7a"
      }
     },
     "393": {
@@ -141162,6 +141222,11 @@
      "eyes": {
       "group": 1,
       "lid": "#bb8c6e"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/393.glb",
+      "byteLength": 12710828,
+      "sha256": "2fb47d8f92419d1848358af33364bf1cdf679aade02978ba9063f3c1d8f47838"
      }
     },
     "394": {
@@ -141242,6 +141307,11 @@
      "eyes": {
       "group": 1,
       "lid": "#a47459"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/394.glb",
+      "byteLength": 12359388,
+      "sha256": "6322af9054555f3bcd1cd05cf9a54cc4e010dae7bf9d4ff46d831d7012115064"
      }
     },
     "395": {
@@ -141565,6 +141635,11 @@
      "eyes": {
       "group": 1,
       "lid": "#8c5f4b"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/395.glb",
+      "byteLength": 12844108,
+      "sha256": "2b0c0195652d5c283783f29f2f3abd602a215bb790cd12f7ca2142223111e657"
      }
     },
     "396": {
@@ -141645,6 +141720,11 @@
      "eyes": {
       "group": 1,
       "lid": "#785645"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/396.glb",
+      "byteLength": 12332132,
+      "sha256": "4cbf71e0fed958226b7c7f073610481b4c64bb1e50d00c5da68d64da738d25a0"
      }
     },
     "397-B": {
@@ -142335,6 +142415,11 @@
      "eyes": {
       "group": 1,
       "lid": "#704331"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/397-B.glb",
+      "byteLength": 11639212,
+      "sha256": "a26d940cf8140e2f3e201170a2e2fa1844fb7f6486c1727a0b9df4f1a2894476"
      }
     },
     "398": {
@@ -143025,6 +143110,11 @@
      "eyes": {
       "group": 1,
       "lid": "#573125"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/398.glb",
+      "byteLength": 12484256,
+      "sha256": "57c8c56c106bf1cd20ec14248be734ee0137b2bdff035659b75db38b197b3bbf"
      }
     },
     "451": {
@@ -143105,6 +143195,11 @@
      "eyes": {
       "group": 1,
       "lid": "#a2735e"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/451.glb",
+      "byteLength": 12865568,
+      "sha256": "28694281b624e75513a8e637883371bbfdb5241154b16bfacd804aad5ff1bc26"
      }
     },
     "452-B": {
@@ -143795,6 +143890,11 @@
      "eyes": {
       "group": 1,
       "lid": "#a37a64"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/452-B.glb",
+      "byteLength": 11955168,
+      "sha256": "bc12271159385aaef4151b38aedf59da5ab2046397260375caabb20df7608911"
      }
     },
     "453": {
@@ -144485,6 +144585,11 @@
      "eyes": {
       "group": 1,
       "lid": "#a17760"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/453.glb",
+      "byteLength": 12480572,
+      "sha256": "283231078e78319c99acee04c211219e8ebaaa4c7fadfa693693a1cbda56b578"
      }
     },
     "454": {
@@ -144565,6 +144670,11 @@
      "eyes": {
       "group": 1,
       "lid": "#bc9a7f"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/454.glb",
+      "byteLength": 12651752,
+      "sha256": "118e77aa5baef23c8dd4ca4b9cbdc1606210cd327928aa617a74f98cbc72dfbc"
      }
     },
     "455": {
@@ -144645,6 +144755,11 @@
      "eyes": {
       "group": 1,
       "lid": "#a4806a"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/455.glb",
+      "byteLength": 13229048,
+      "sha256": "84327e1b3d3e1a14d4dd483c6fdbaa2db152617718b50f6e27fb1acf1d82c0a4"
      }
     },
     "456": {
@@ -145335,6 +145450,11 @@
      "eyes": {
       "group": 1,
       "lid": "#ac806a"
+     },
+     "hybrid": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/hybrid/456.glb",
+      "byteLength": 12253044,
+      "sha256": "f825750a5b8896a632a4476b8798ffd5e61540928ac3b6f13f46c11fbd143f85"
      }
     },
     "381-32k": {
@@ -147784,6 +147904,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-399-cards.core.glb",
        "byteLength": 4786648,
        "sha256": "44e3b4760e5534ae6e90c3b35c910fe17c82ca4de5a3108ffaee2f131a41cacc"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-399.hybrid.glb",
+       "byteLength": 14164428,
+       "sha256": "894b3266b27c3522bb7f9965fe6a3b0c5c2eaf9dfc86b86a5158a13f6f9e2db8"
       }
      },
      "fits": {
@@ -147911,6 +148036,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-457-cards.core.glb",
        "byteLength": 4861012,
        "sha256": "829f1b1294023441c2cd12307935afb747f4642df8a3d19a36e6ed5167a89e15"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-457.hybrid.glb",
+       "byteLength": 12860428,
+       "sha256": "15d615f4be8584c1ae52fd6273664720af4dc29a03cc72adc3ae7d2c3bf18c2a"
       }
      },
      "fits": {
@@ -148038,6 +148168,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-458-cards.core.glb",
        "byteLength": 4872056,
        "sha256": "eb583ab4dcc1e1e5191c9bc7c1ec68efa222b9f8b8a812519a8004fdf68fc134"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-458.hybrid.glb",
+       "byteLength": 14356768,
+       "sha256": "9c1e946e892a521d3dd49b08be64b4548bd01a037313390594e6939c794f994d"
       }
      },
      "fits": {
@@ -148785,6 +148920,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-459-cards.core.glb",
        "byteLength": 4887512,
        "sha256": "aa7731c91b014bd3637ab825ecbbe55befb007c462866e51ce9a586ef50aa0ce"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-459.hybrid.glb",
+       "byteLength": 13659364,
+       "sha256": "370defa5dde7f5f6aad60e0094f0ac96472b8e2f5f5a413a588cf317d1e9b300"
       }
      },
      "fits": {
@@ -148912,6 +149052,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-460-cards.core.glb",
        "byteLength": 4858916,
        "sha256": "3367acaa30580f621d868aa2036b317f9954e637caa52b3ecea51d2025b22598"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-460.hybrid.glb",
+       "byteLength": 14005724,
+       "sha256": "b536333ca0a9673d9eaa65d1dfb106d891b7af8d6bf70e127199fe00fed7e42c"
       }
      },
      "fits": {
@@ -149043,6 +149188,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-461-cards.core.glb",
        "byteLength": 4951840,
        "sha256": "ae65a52cb6b8ac6db350d43b783272794cc594c94d2fdd2ea7e1868158d5820c"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-461.hybrid.glb",
+       "byteLength": 14188268,
+       "sha256": "56fac753167f6930d2256e1cc53447e1c215b5bf5a55be066c0b240a4930f732"
       }
      },
      "fits": {
@@ -149621,6 +149771,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-462-cards.core.glb",
        "byteLength": 4846808,
        "sha256": "1348f383a4d1b6f68cf4827e44275e7066e115990625961becada03c668a93ce"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-462.hybrid.glb",
+       "byteLength": 14324104,
+       "sha256": "3eb6d799f6b90e8301b716f466db8895be5e3aecbbc1d8d7ddebdfe162ed4623"
       }
      },
      "fits": {
@@ -150191,6 +150346,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-463-cards.core.glb",
        "byteLength": 4845548,
        "sha256": "0578359a4d0456ed9e8f05b90da5ec7218b02e79e6feae6411043d0a59eb54a4"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-463.hybrid.glb",
+       "byteLength": 13012628,
+       "sha256": "8d7a678c7a953c43318337ee2dac28265b242f55b69ce894908956b270babd31"
       }
      },
      "fits": {
@@ -150330,6 +150490,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-466-cards.core.glb",
        "byteLength": 4775380,
        "sha256": "1fac23c0398bf3827e6e98efc1f141678830e74947464fe9c41cf6dccc5d4a9f"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-466.hybrid.glb",
+       "byteLength": 13259684,
+       "sha256": "e4b4fc496dbfffaa233f378570f290dc69db3148ccefe98ce4ac6e1ce16cffdf"
       }
      },
      "fits": {
@@ -150461,6 +150626,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-467-cards.core.glb",
        "byteLength": 4917896,
        "sha256": "9a7d32f737d21c229a65bd17d4f0f8245ad5e8a0ad98ebd39252eac37ba7aa77"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-467.hybrid.glb",
+       "byteLength": 13409912,
+       "sha256": "9ae4d80f4fb0da9c09a4925b99c3b413df4a86342a08f45c1ce60775a0e0ae10"
       }
      },
      "fits": {
@@ -150592,6 +150762,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-468-cards.core.glb",
        "byteLength": 4918916,
        "sha256": "fa09548121fafeeb77288c5b0495cfc49567fe27e8249453c85950d5b68a5518"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-468.hybrid.glb",
+       "byteLength": 12897508,
+       "sha256": "69354e08689e964250f4663e29f86b253132cf0f2c95e2dd2a46827d4c04d9ab"
       }
      },
      "fits": {
@@ -151351,6 +151526,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-469-cards.core.glb",
        "byteLength": 4827100,
        "sha256": "f63513e2741c91e3058a4c48d74524b61420124cd3a1d1d921d236d247d07db0"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-469.hybrid.glb",
+       "byteLength": 14707792,
+       "sha256": "7b9cfb602d3af1a58189885c3acf42cbc7e0aca04440886113b42691a56332d0"
       }
      },
      "fits": {
@@ -151490,6 +151670,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-470-cards.core.glb",
        "byteLength": 4923860,
        "sha256": "3c1f6e12bcccb7485ead84c0f0d5f947254bd408d401f10b65c8fa1098ae02a7"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-470.hybrid.glb",
+       "byteLength": 13991436,
+       "sha256": "e7158ed1fde174e0168045c309d0f62af823f8399de09b14212c8eca88f2b46d"
       }
      },
      "fits": {
@@ -151637,6 +151822,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-471-cards.core.glb",
        "byteLength": 4937244,
        "sha256": "4a379b35d62193a0b7fc7d8d342b4b3a2593c91752177b02b8db72ae6cfe0326"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-471.hybrid.glb",
+       "byteLength": 13330892,
+       "sha256": "de954c7241aadaacd9ad726cc3e9be0428895b860e97f45bf31cdd7ec206e2d5"
       }
      },
      "fits": {
@@ -151768,6 +151958,11 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-472-cards.core.glb",
        "byteLength": 4999612,
        "sha256": "464e7282fee3dae0450a56ad691e19f55b85ecf95a9c2e7d4cde53d2ddbe85d0"
+      },
+      "hybrid": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-472.hybrid.glb",
+       "byteLength": 13812560,
+       "sha256": "a0692127c4a56040301c2bed62783202d07c8db242e2bad040cea24f6ffae96d"
       }
      },
      "fits": {
