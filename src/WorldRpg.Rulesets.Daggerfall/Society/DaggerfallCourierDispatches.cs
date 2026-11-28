@@ -25,6 +25,9 @@ internal enum DaggerfallDispatchStatus
 
     /// <summary>Player intercepted/seized the dispatch or slew the courier, cancelling the move.</summary>
     Intercepted = 4,
+
+    /// <summary>The courier was lost on the road (raided, or scattered in a clash): the move never arrives (#11178).</summary>
+    Waylaid = 5,
 }
 
 /// <summary>
@@ -237,7 +240,9 @@ internal sealed class DaggerfallCourierDispatches(
 
         double routeDistance = wordSpread.RouteDistancePixels(
             origin.MapPixelX, origin.MapPixelY, destination.MapPixelX, destination.MapPixelY);
-        (double disruption, _) = wordSpread.CourierDisruption(origin.Id.Region, destination.Id.Region, currentDay);
+        // A courier riding a band meets the road's dangers as it goes (#11178); one with no band has them priced into its speed.
+        bool riding = stageOverlandBand && overlandParties?.Invoke() is not null;
+        double disruption = riding ? 1d : wordSpread.CourierDisruption(origin.Id.Region, destination.Id.Region, currentDay).Multiplier;
         double effectiveSpeed = wordSpread.Tuning.CourierSpeedPixelsPerHour * disruption;
         long travelMinutes = Math.Max(60L, checked((long)Math.Ceiling((routeDistance / effectiveSpeed) * 60d)));
         long expectedArrival = checked(currentMinute + travelMinutes);
@@ -384,6 +389,49 @@ internal sealed class DaggerfallCourierDispatches(
             DeliveredByPlayer: false));
     }
 
+    /// <summary>
+    /// Puts back an active dispatch's arrival by <paramref name="minutes"/> when its courier's band is delayed on the road
+    /// (#11178), so its schedule keeps step with the band.
+    /// </summary>
+    internal void OnOverlandBandDelayed(string bandId, long minutes)
+    {
+        if (ActiveOnBand(bandId) is { } dispatch)
+            _dispatches[dispatch.DispatchId] = dispatch with { ExpectedArrivalMinute = checked(dispatch.ExpectedArrivalMinute + minutes) };
+    }
+
+    /// <summary>
+    /// Settles an active dispatch whose courier's band was lost on its way (raided on the road, or scattered in a clash
+    /// off-screen, #11178): its move never arrives, as an intercepted one does not, though no one holds the pouch.
+    /// </summary>
+    internal DaggerfallDispatchResolution? OnOverlandBandLost(string bandId, long currentMinute, int currentDay)
+    {
+        if (ActiveOnBand(bandId) is not { } dispatch) return null;
+        _dispatches[dispatch.DispatchId] = dispatch with
+        {
+            Status = DaggerfallDispatchStatus.Waylaid,
+            OverlandBandId = null,
+            ResolvedMinute = currentMinute,
+        };
+        RetireCourierLedgerMember(bandId, dispatch.CourierActorId);
+        if (!string.IsNullOrWhiteSpace(dispatch.LinkedWavefrontId))
+            wordSpread.InterceptWavefront(dispatch.LinkedWavefrontId, currentMinute, currentDay);
+        if (!string.IsNullOrWhiteSpace(dispatch.LinkedConditionTokenId))
+            worldConditions.Remove(dispatch.LinkedConditionTokenId);
+        return RecordResolution(new(
+            DispatchId: dispatch.DispatchId,
+            SeatId: dispatch.SeatId,
+            ActionKind: dispatch.ActionKind,
+            Outcome: DaggerfallDispatchStatus.Waylaid,
+            ResolvedDay: currentDay,
+            MoveCancelled: true,
+            MoveRevealed: dispatch.Revealed));
+    }
+
+    private DaggerfallCourierDispatchSave? ActiveOnBand(string bandId) =>
+        string.IsNullOrWhiteSpace(bandId) ? null : _dispatches.Values.FirstOrDefault(d =>
+            StringComparer.Ordinal.Equals(d.OverlandBandId, bandId)
+            && d.Status is DaggerfallDispatchStatus.InTransit or DaggerfallDispatchStatus.BoughtAndRevealed);
+
     /// <summary>Player takes part by offering to carry the sealed dispatch personally to its destination.</summary>
     internal DaggerfallDispatchActionResult AcceptDelivery(string dispatchId, long currentMinute)
     {
@@ -520,7 +568,7 @@ internal sealed class DaggerfallCourierDispatches(
     {
         if (!_dispatches.TryGetValue(dispatchId, out DaggerfallCourierDispatchSave? dispatch))
             return new(false, "That dispatch is no longer active.");
-        if (dispatch.Status is DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted)
+        if (dispatch.Status is DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted or DaggerfallDispatchStatus.Waylaid)
             return new(false, "That dispatch has already resolved.");
 
         DaggerfallCourierDispatchSave intercepted = dispatch with
@@ -594,7 +642,7 @@ internal sealed class DaggerfallCourierDispatches(
     internal bool Forget(string dispatchId)
     {
         if (!_dispatches.TryGetValue(dispatchId, out DaggerfallCourierDispatchSave? dispatch)
-            || dispatch.Status is not (DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted))
+            || dispatch.Status is not (DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted or DaggerfallDispatchStatus.Waylaid))
             return false;
         _dispatches.Remove(dispatchId);
         _resolutions.RemoveAll(resolution => resolution.DispatchId == dispatchId);

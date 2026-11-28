@@ -697,6 +697,10 @@ internal sealed class DaggerfallTravelPolicy
     private sealed record CoarseDistanceField(int StartCell, int[] CameFrom);
 
     /// <summary>Whether a map pixel is open sea, which only a ship crosses at speed.</summary>
+    /// <summary>The classic region a world-map pixel lies in, or -1 at sea or where the politic map names none.</summary>
+    internal int RegionAt(DaggerfallTravelMapPixel pixel) =>
+        _grids.PoliticAtWorldPixel(pixel.X, pixel.Y) is { Disposition: DaggerfallPoliticDisposition.Region } cell ? cell.Region : -1;
+
     internal bool IsOcean(DaggerfallTravelMapPixel pixel) => ClimateAt(pixel.X, pixel.Y).Value == OceanClimate;
 
     /// <summary>The source climate of a map pixel, which its weather and encounters read.</summary>

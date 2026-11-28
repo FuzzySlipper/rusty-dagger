@@ -1128,9 +1128,10 @@ internal sealed partial class DaggerfallSession
 
     private void AdvanceCouriers(DaggerfallCalendar from, DaggerfallCalendar to)
     {
-        CourierDispatches.AdvanceToMinute(to.MinuteNumber, checked((int)to.DayNumber));          // Society: board-game couriers by their schedule
+        // The bands go first, so a courier delayed or lost on the road in the interval is so before its schedule is read.
         if (!Expedition.Open)
             AdvanceOffMapOverland(from, to);                                                      // Travel, Actors: persistent bands run off-map too (Q4)
+        CourierDispatches.AdvanceToMinute(to.MinuteNumber, checked((int)to.DayNumber));          // Society: board-game couriers by their schedule
     }
 
     private void AdvanceOffMapOverland(DaggerfallCalendar before, DaggerfallCalendar after)

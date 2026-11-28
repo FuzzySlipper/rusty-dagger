@@ -100,7 +100,10 @@ internal sealed class DaggerfallPersistentOverlandBand
         int routeStep = 0,
         string? faction = null,
         DaggerfallSiteIdSave? originSite = null,
-        DaggerfallPersistentBandClashSave? activeClash = null)
+        DaggerfallPersistentBandClashSave? activeClash = null,
+        bool onRoad = false,
+        int roadSegment = 0,
+        long? heldUntilSecond = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(bandId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -123,6 +126,9 @@ internal sealed class DaggerfallPersistentOverlandBand
         Faction = string.IsNullOrWhiteSpace(faction) ? null : faction.Trim();
         OriginSite = originSite;
         ActiveClash = activeClash;
+        OnRoad = onRoad;
+        RoadSegment = Math.Max(0, roadSegment);
+        HeldUntilSecond = heldUntilSecond;
     }
 
     internal string BandId { get; }
@@ -145,6 +151,19 @@ internal sealed class DaggerfallPersistentOverlandBand
     internal string? Faction { get; }
     internal DaggerfallSiteIdSave? OriginSite { get; }
     internal DaggerfallPersistentBandClashSave? ActiveClash { get; set; }
+
+    /// <summary>
+    /// On the road (#11178): beyond the party's reach, off the map, and moved along its route by
+    /// <see cref="StepOnRoad"/> rather than stepped hour by hour; it is live on the map again once the party nears.
+    /// </summary>
+    internal bool OnRoad { get; set; }
+
+    /// <summary>How many segments of its route the band has set out along, each judged once as it did.</summary>
+    internal int RoadSegment { get; set; }
+
+    /// <summary>The absolute second a delay on the road holds the band where it is until, if one does.</summary>
+    internal long? HeldUntilSecond { get; set; }
+
     internal bool IsClash => ActiveClash is not null || Kind == DaggerfallBandKind.Clash;
 
     internal double Distance(double x, double y) => Math.Sqrt((X - x) * (X - x) + (Y - y) * (Y - y));
@@ -184,6 +203,7 @@ internal sealed class DaggerfallPersistentOverlandBand
             _cachedRoute = null;
             RouteOrigin = null;
             RouteStep = 0;
+            RoadSegment = 0;
             return StepDirect(party.X, party.Y, hours, policy, isPursuit: true);
         }
 
@@ -243,6 +263,76 @@ internal sealed class DaggerfallPersistentOverlandBand
         return RouteStep >= route.Waypoints.Count;
     }
 
+    /// <summary>
+    /// Moves the band on the road from absolute second <paramref name="from"/> to <paramref name="to"/> along its route: it
+    /// waits out any delay, and as it sets out along each segment of <paramref name="segmentPixels"/> route pixels, asks
+    /// <paramref name="judge"/> what meets it there, at the second it does. A delay holds it <paramref name="delaySeconds"/>
+    /// where it was. The segment and its second follow from the route alone, so the band meets the same things however
+    /// the time between is cut. Returns how the stretch ended and the second it did.
+    /// </summary>
+    internal (DaggerfallRoadStep Step, long At) StepOnRoad(long from, long to, DaggerfallTravelPolicy policy, int segmentPixels, long delaySeconds,
+        Func<int, long, DaggerfallRoadMeeting> judge)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(judge);
+        if (ResolveRoute(policy) is not { } route || SpeedPixelsPerHour <= 0) return (DaggerfallRoadStep.Travelling, to);
+        double at = from;
+        while (RouteStep < route.Waypoints.Count)
+        {
+            if (HeldUntilSecond is { } held)
+            {
+                if (held >= to) return (DaggerfallRoadStep.Travelling, to);
+                at = Math.Max(at, held);
+                HeldUntilSecond = null;
+            }
+            if (RoadSegment * segmentPixels <= RouteStep)
+            {
+                long second = (long)Math.Floor(at);
+                DaggerfallRoadMeeting meeting = judge(RoadSegment, second);
+                RoadSegment++;
+                if (meeting == DaggerfallRoadMeeting.Raided) return (DaggerfallRoadStep.Raided, second);
+                if (meeting == DaggerfallRoadMeeting.Delayed) HeldUntilSecond = second + delaySeconds;
+                continue;
+            }
+            int target = Math.Min(RoadSegment * segmentPixels, route.Waypoints.Count);
+            double hours = HoursToStep(route, target);
+            double left = (to - at) / SecondsPerHour;
+            if (hours >= left)
+            {
+                StepMove(default, left, allowPursuit: false, policy);
+                return (RouteStep >= route.Waypoints.Count ? DaggerfallRoadStep.Arrived : DaggerfallRoadStep.Travelling, to);
+            }
+            StepMove(default, hours, allowPursuit: false, policy);
+            if (RouteStep < target)
+            {
+                // Rounding left it a hair short of the waypoint it was timed to reach.
+                X = route.Waypoints[target - 1].X + .5;
+                Y = route.Waypoints[target - 1].Y + .5;
+                RouteStep = target;
+            }
+            at += hours * SecondsPerHour;
+        }
+        return (DaggerfallRoadStep.Arrived, (long)Math.Ceiling(at));
+    }
+
+    private const double SecondsPerHour = DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour;
+
+    /// <summary>The hours the band takes along its route until it has reached the waypoint before <paramref name="step"/>.</summary>
+    private double HoursToStep(DaggerfallOverlandRoute route, int step)
+    {
+        double cost = 0;
+        for (int i = RouteStep; i < step; i++)
+        {
+            DaggerfallTravelMapPixel wp = route.Waypoints[i];
+            DaggerfallTravelMapPixel prev = i == 0 ? route.Origin : route.Waypoints[i - 1];
+            double fullLen = Math.Sqrt((wp.X - prev.X) * (double)(wp.X - prev.X) + (wp.Y - prev.Y) * (double)(wp.Y - prev.Y));
+            double costPerPixel = fullLen > 1e-9 ? Math.Max(1.0, route.StepCosts[i] / fullLen) : 1.0;
+            double length = i == RouteStep ? Distance(wp.X + .5, wp.Y + .5) : fullLen;
+            cost += length * costPerPixel;
+        }
+        return cost / SpeedPixelsPerHour;
+    }
+
     private bool StepDirect(double targetX, double targetY, double hours, DaggerfallTravelPolicy? policy, bool isPursuit)
     {
         double dx = targetX - X;
@@ -286,7 +376,10 @@ internal sealed class DaggerfallPersistentOverlandBand
         RouteStep,
         Faction,
         OriginSite,
-        ActiveClash);
+        ActiveClash,
+        OnRoad,
+        RoadSegment,
+        HeldUntilSecond);
 
     internal static DaggerfallPersistentOverlandBand FromSave(DaggerfallPersistentBandSave save, int displayId) => new(
         save.BandId,
@@ -307,8 +400,17 @@ internal sealed class DaggerfallPersistentOverlandBand
         save.RouteStep,
         save.Faction,
         save.OriginSite,
-        save.ActiveClash);
+        save.ActiveClash,
+        save.OnRoad,
+        save.RoadSegment,
+        save.HeldUntilSecond);
 }
+
+/// <summary>What meets a band on the road as it sets out along a segment.</summary>
+internal enum DaggerfallRoadMeeting { Clear, Delayed, Raided }
+
+/// <summary>How a stretch on the road ended for a band.</summary>
+internal enum DaggerfallRoadStep { Travelling, Arrived, Raided }
 
 /// <summary>
 /// The light, time and weather a band and the party see by, and the party's way of going, at the moment sight is judged.

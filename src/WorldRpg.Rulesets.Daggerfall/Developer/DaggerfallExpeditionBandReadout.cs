@@ -38,7 +38,10 @@ internal sealed class DaggerfallExpeditionBandReadout(
                 w.WriteBoolean("spotted", band.Spotted);
                 w.WriteBoolean("persistent", band.PersistentBandId is not null);
                 if (band.PersistentBandId is not null)
+                {
                     w.WriteString("bandId", band.PersistentBandId);
+                    w.WriteBoolean("onRoad", band.OnRoad);
+                }
                 if (band.ConditionTokenId is not null)
                     w.WriteString("conditionTokenId", band.ConditionTokenId);
                 w.WriteEndObject();

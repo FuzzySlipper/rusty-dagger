@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
@@ -96,6 +97,12 @@ internal interface IDaggerfallExpeditionSurroundings
 
     /// <summary>Active world-condition tokens affecting <paramref name="region"/> (stubbed/authored or B2 board-driven).</summary>
     IReadOnlyList<DaggerfallWorldConditionToken> WorldConditions(int region) => [];
+
+    /// <summary>The world-condition tokens active in <paramref name="region"/> on calendar day <paramref name="day"/>.</summary>
+    IReadOnlyList<DaggerfallWorldConditionToken> WorldConditionsOn(int region, int day) => [];
+
+    /// <summary>A band on the road was delayed where it stood for <paramref name="seconds"/>.</summary>
+    void PersistentBandDelayed(DaggerfallPersistentOverlandBand band, long seconds) { }
 }
 
 /// <summary>Where Enter puts the player: the party's pixel, the location standing there if any, and the pixel the party came from.</summary>
@@ -110,6 +117,9 @@ internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, 
 
     /// <summary>Non-null when this token represents a persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party.</summary>
     internal string? PersistentBandId { get; init; }
+
+    /// <summary>A persistent party out on the road beyond the party's reach, not on the map (#11178).</summary>
+    internal bool OnRoad { get; init; }
 
     /// <summary>Non-null when this band was staged in response to a <see cref="DaggerfallWorldConditionToken"/>.</summary>
     internal string? ConditionTokenId { get; init; }
@@ -186,7 +196,10 @@ internal sealed record DaggerfallPersistentBandSave(
     int RouteStep = 0,
     string? Faction = null,
     DaggerfallSiteIdSave? OriginSite = null,
-    DaggerfallPersistentBandClashSave? ActiveClash = null)
+    DaggerfallPersistentBandClashSave? ActiveClash = null,
+    bool OnRoad = false,
+    int RoadSegment = 0,
+    long? HeldUntilSecond = null)
 {
     internal DaggerfallPersistentBandSave Validate()
     {
@@ -202,6 +215,10 @@ internal sealed record DaggerfallPersistentBandSave(
         RouteOrigin?.RequireInBounds(nameof(RouteOrigin));
         if (RouteStep < 0)
             throw new ArgumentOutOfRangeException(nameof(RouteStep), $"Persistent band '{BandId}' has negative route step {RouteStep}.");
+        if (RoadSegment < 0 || HeldUntilSecond < 0)
+            throw new ArgumentOutOfRangeException(nameof(RoadSegment), $"Persistent band '{BandId}' has a negative road segment or hold.");
+        if (OnRoad && (Hostile || Destination is null || ActiveClash is not null))
+            throw new ArgumentException($"Persistent band '{BandId}' is on the road although it is hostile, clashing or bound nowhere.");
         _ = OriginSite?.Require();
         ActiveClash?.Validate();
         return this;
@@ -933,7 +950,7 @@ internal sealed class DaggerfallExpedition
     /// <summary>The bands within the party's sight (generated chasers and persistent parties alike), nearest first.</summary>
     internal IReadOnlyList<DaggerfallExpeditionBandView> SeenBands => _open && _teleport is null
         ? [.. _bands.Seen(Position, PartySight).Select(View)
-            .Concat(_persistentBands.Where(b => b.Distance(Position.X, Position.Y) <= PartySight).Select(ViewPersistent))
+            .Concat(_persistentBands.Where(b => !b.OnRoad && b.Distance(Position.X, Position.Y) <= PartySight).Select(ViewPersistent))
             .OrderBy(view => view.Distance)]
         : [];
 
@@ -1088,6 +1105,7 @@ internal sealed class DaggerfallExpedition
         {
             Mobile = band.Mobile,
             PersistentBandId = band.BandId,
+            OnRoad = band.OnRoad,
             Category = category,
             Faction = band.Faction,
             OriginName = originName,
@@ -1118,12 +1136,14 @@ internal sealed class DaggerfallExpedition
     {
         long now = after.ToAbsoluteSeconds();
         ExpireActiveClashes(now);
+        TakeToRoadOrMap(Position);
+        StepRoad(now - seconds, now, Position);
 
         Dictionary<string, (double X, double Y)> beforePositions = new(_persistentBands.Count, StringComparer.Ordinal);
         foreach (DaggerfallPersistentOverlandBand persistent in _persistentBands)
             beforePositions[persistent.BandId] = (persistent.X, persistent.Y);
 
-        HashSet<string> arrivedBandIds = MovePersistentBands(seconds);
+        HashSet<string> arrivedBandIds = MovePersistentBands(seconds, now);
 
         bool atSea = _policy.IsOcean(_party);
         if (!atSea)
@@ -1169,20 +1189,23 @@ internal sealed class DaggerfallExpedition
 
     /// <summary>
     /// Advances persistent overland bands while the expedition map is closed (inn sleep, dungeon rest, walking on foot,
-    /// quest time) without triggering player-intercept pauses. Steps in bounded hourly slices so outbound caravans that
-    /// arrive mid-interval can dispatch and progress on their return legs, and resolves off-screen clashes cleanly.
+    /// quest time) without triggering player-intercept pauses. The bands on the road go the whole interval at once, a
+    /// segment at a time (<see cref="StepRoad"/>); the live ones near the party step in bounded hourly slices so outbound
+    /// caravans that arrive mid-interval can dispatch and progress on their return legs, and off-screen clashes resolve
+    /// cleanly.
     /// </summary>
     internal int AdvancePersistentBandsOffMap(long seconds, (double X, double Y) partyPosition)
     {
         if (seconds <= 0 || _persistentBands.Count == 0) return 0;
 
-        int arrivals = 0;
-        const int maxSlices = 48;
-        long remaining = seconds;
         long now = _world.Calendar.ToAbsoluteSeconds();
         long sliceCursor = Math.Max(0, now - seconds);
+        TakeToRoadOrMap(partyPosition);
+        int arrivals = StepRoad(sliceCursor, now, partyPosition);
+        const int maxSlices = 48;
+        long remaining = seconds;
         int slices = 0;
-        while (remaining > 0 && _persistentBands.Count > 0)
+        while (remaining > 0 && _persistentBands.Any(band => !band.OnRoad))
         {
             long stepSeconds = slices + 1 < maxSlices
                 ? Math.Min(remaining, SecondsPerHour)
@@ -1199,6 +1222,7 @@ internal sealed class DaggerfallExpedition
             double hours = stepSeconds / (double)SecondsPerHour;
             foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
             {
+                if (band.OnRoad || HeldAt(band, sliceCursor)) continue;
                 bool arrived = band.StepMove(partyPosition, hours, allowPursuit: false, policy: _policy);
                 if (!arrived) continue;
                 _persistentBands.Remove(band);
@@ -1234,7 +1258,7 @@ internal sealed class DaggerfallExpedition
                 if (transient.IsFactionClash || transient.Spotted) continue;
                 foreach (DaggerfallPersistentOverlandBand persistent in _persistentBands.ToArray())
                 {
-                    if (persistent.ActiveClash is not null || persistent.Spotted) continue;
+                    if (persistent.OnRoad || persistent.ActiveClash is not null || persistent.Spotted) continue;
                     if (transient.Distance(persistent.X, persistent.Y) > collisionDistance) continue;
                     if (!AreOpposingTransientAndPersistent(transient, persistent)) continue;
 
@@ -1266,7 +1290,7 @@ internal sealed class DaggerfallExpedition
         // are available so fast opposing bands do not tunnel past each other across an hourly off-map slice.
         if (_persistentBands.Count >= 2)
         {
-            DaggerfallPersistentOverlandBand[] snapshot = [.. _persistentBands];
+            DaggerfallPersistentOverlandBand[] snapshot = [.. _persistentBands.Where(band => !band.OnRoad)];
             HashSet<string> consumed = new(StringComparer.Ordinal);
             for (int i = 0; i < snapshot.Length; i++)
             {
@@ -1385,9 +1409,117 @@ internal sealed class DaggerfallExpedition
     }
 
     private static bool IsRaidableTraveller(DaggerfallPersistentOverlandBand band) =>
-        !band.Hostile
-        && !band.BandId.StartsWith("dispatch:", StringComparison.Ordinal)
-        && band.Kind is DaggerfallBandKind.Caravan or DaggerfallBandKind.Travellers;
+        !band.Hostile && band.Kind is DaggerfallBandKind.Caravan or DaggerfallBandKind.Travellers or DaggerfallBandKind.Courier;
+
+    /// <summary>
+    /// Puts each band where it belongs for the party at <paramref name="party"/>: a band on the road comes onto the map,
+    /// where it stands, within the road tuning's live distance; a live band free to go goes back on the road beyond its road
+    /// distance. A hostile band stays live, as does one bound nowhere, clashing, camped, spotting the party, or met.
+    /// </summary>
+    private void TakeToRoadOrMap((double X, double Y) party)
+    {
+        DaggerfallRoadTuning road = _tuning.Road;
+        foreach (DaggerfallPersistentOverlandBand band in _persistentBands)
+        {
+            double distance = band.Distance(party.X, party.Y);
+            if (band.OnRoad)
+            {
+                if (distance <= road.LiveDistance) band.OnRoad = false;
+            }
+            else if (distance > road.RoadDistance && !band.Hostile && band.Destination is not null && band.SpeedPixelsPerHour > 0
+                && band.ActiveClash is null && !band.Spotted && !band.Camp && band != _persistentBandAhead
+                && !StringComparer.Ordinal.Equals(band.BandId, _pendingPersistentBandId))
+            {
+                // The road judges the segments it sets out along from here; the ones it went along live were met live.
+                band.RoadSegment = Math.Max(band.RoadSegment, (band.RouteStep + road.SegmentPixels - 1) / road.SegmentPixels);
+                band.OnRoad = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Moves every band on the road from absolute second <paramref name="from"/> to <paramref name="to"/> (#11178), judging
+    /// each segment it sets out along by <see cref="JudgeRoad"/>: one that arrives is delivered as a live band's arrival is,
+    /// and one raided is retired as an off-screen raid retires a band. A band an arrival sends out (a caravan's way home)
+    /// sets out from the second of that arrival, on the road if it is beyond the party at <paramref name="party"/>.
+    /// Returns the arrivals.
+    /// </summary>
+    private int StepRoad(long from, long to, (double X, double Y) party)
+    {
+        if (to <= from) return 0;
+        DaggerfallRoadTuning road = _tuning.Road;
+        long delaySeconds = (long)Math.Round(road.DelayHours * SecondsPerHour);
+        int arrivals = 0;
+        Queue<(DaggerfallPersistentOverlandBand Band, long From)> going = new(_persistentBands.Where(band => band.OnRoad).Select(band => (band, from)));
+        while (going.TryDequeue(out (DaggerfallPersistentOverlandBand Band, long From) next))
+        {
+            DaggerfallPersistentOverlandBand band = next.Band;
+            (DaggerfallRoadStep step, long at) = band.StepOnRoad(next.From, to, _policy, road.SegmentPixels, delaySeconds, (segment, second) =>
+            {
+                DaggerfallRoadMeeting meeting = JudgeRoad(band, segment, second);
+                if (meeting == DaggerfallRoadMeeting.Delayed) _world.PersistentBandDelayed(band, delaySeconds);
+                return meeting;
+            });
+            if (step == DaggerfallRoadStep.Travelling) continue;
+            _persistentBands.Remove(band);
+            if (step == DaggerfallRoadStep.Raided)
+            {
+                _world.PersistentBandRetiredOffScreen(band.BandId);
+                continue;
+            }
+            HashSet<DaggerfallPersistentOverlandBand> before = [.. _persistentBands];
+            _world.PersistentBandArrived(band);
+            arrivals++;
+            TakeToRoadOrMap(party);
+            foreach (DaggerfallPersistentOverlandBand sent in _persistentBands.Where(sent => sent.OnRoad && !before.Contains(sent)))
+                going.Enqueue((sent, at));
+        }
+        return arrivals;
+    }
+
+    /// <summary>
+    /// What meets <paramref name="band"/> setting out along road segment <paramref name="segment"/> at absolute second
+    /// <paramref name="second"/>: the road's own chances, each hazard held then in the region it stands in by its severity,
+    /// and a hostile band on the map within reach; one keyed roll by the band, its route and the segment decides. A band
+    /// that cannot be raided (a patrol) is only delayed.
+    /// </summary>
+    private DaggerfallRoadMeeting JudgeRoad(DaggerfallPersistentOverlandBand band, int segment, long second)
+    {
+        DaggerfallRoadTuning road = _tuning.Road;
+        int raid = road.Wilds.Raid, delay = road.Wilds.Delay;
+        int region = _policy.RegionAt(new((int)Math.Floor(band.X), (int)Math.Floor(band.Y)));
+        if (region >= 0)
+        {
+            int day = checked((int)(second / DaggerfallCalendar.SecondsPerDay));
+            foreach (IGrouping<DaggerfallRoadHazard, int> held in _world.WorldConditionsOn(region, day)
+                .Select(token => (Hazard: DaggerfallRoadTuning.HazardOf(token), token.Severity))
+                .Where(entry => entry.Hazard is not null)
+                .GroupBy(entry => entry.Hazard!.Value, entry => entry.Severity))
+            {
+                DaggerfallRoadChances chances = road.Hazards[held.Key];
+                raid += chances.Raid * held.Max();
+                delay += chances.Delay * held.Max();
+            }
+        }
+        if (_persistentBands.Any(other => other.Hostile && !other.OnRoad && other.Distance(band.X, band.Y) <= road.HostileReach))
+        {
+            raid += road.HostileBand.Raid;
+            delay += road.HostileBand.Delay;
+        }
+        if (!IsRaidableTraveller(band)) (raid, delay) = (0, raid + delay);
+        int roll = _world.Roll(string.Create(CultureInfo.InvariantCulture,
+            $"road:{band.BandId}:{band.RouteOrigin?.X}:{band.RouteOrigin?.Y}:{segment}"), 1, 100);
+        return roll <= raid ? DaggerfallRoadMeeting.Raided : roll <= raid + delay ? DaggerfallRoadMeeting.Delayed : DaggerfallRoadMeeting.Clear;
+    }
+
+    /// <summary>Whether a delay on the road still holds <paramref name="band"/> at absolute second <paramref name="now"/>; one that has run out is cleared.</summary>
+    private static bool HeldAt(DaggerfallPersistentOverlandBand band, long now)
+    {
+        if (band.HeldUntilSecond is not { } held) return false;
+        if (held > now) return true;
+        band.HeldUntilSecond = null;
+        return false;
+    }
 
     /// <summary>Closest Euclidean distance between two linearly moving points over <c>t in [0, 1]</c>.</summary>
     private static double SegmentClosestApproachDistance(
@@ -1405,7 +1537,7 @@ internal sealed class DaggerfallExpedition
         return Math.Sqrt(cx * cx + cy * cy);
     }
 
-    private HashSet<string> MovePersistentBands(long seconds)
+    private HashSet<string> MovePersistentBands(long seconds, long now)
     {
         HashSet<string> arrivedBandIds = new(StringComparer.Ordinal);
         if (_persistentBands.Count == 0) return arrivedBandIds;
@@ -1413,6 +1545,7 @@ internal sealed class DaggerfallExpedition
         (double px, double py) = Position;
         foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
         {
+            if (band.OnRoad || HeldAt(band, now)) continue;
             if (band.StepMove((px, py), hours, allowPursuit: true, policy: _policy))
                 arrivedBandIds.Add(band.BandId);
         }
@@ -1431,6 +1564,7 @@ internal sealed class DaggerfallExpedition
         DaggerfallPersistentOverlandBand? spottedStop = null;
         foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
         {
+            if (band.OnRoad) continue;
             double distance = band.Distance(px, py);
             if (band.Passed && distance > meetDistance * 2) band.Passed = false;
 

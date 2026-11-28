@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using WorldRpg.Politics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -550,7 +551,7 @@ internal sealed class DaggerfallPoliticalBoard
     private void CourierSettled(DaggerfallDispatchResolution resolution)
     {
         if (!_board.Pending.Any(move => move.Id == resolution.DispatchId)) return;
-        if (resolution.Outcome == DaggerfallDispatchStatus.Intercepted) _board.Queue(new MoveIntercepted(resolution.DispatchId));
+        if (resolution.Outcome is DaggerfallDispatchStatus.Intercepted or DaggerfallDispatchStatus.Waylaid) _board.Queue(new MoveIntercepted(resolution.DispatchId));
         else if (resolution.Outcome == DaggerfallDispatchStatus.Delivered && resolution.DeliveredByPlayer) _board.Queue(new MoveDelivered(resolution.DispatchId));
     }
 
@@ -561,7 +562,7 @@ internal sealed class DaggerfallPoliticalBoard
         HashSet<string> pending = [.. _board.Pending.Select(move => move.Id)];
         foreach (DaggerfallCourierDispatchSave dispatch in _couriers.All.ToArray())
             if (IsMoveId(dispatch.DispatchId) && !pending.Contains(dispatch.DispatchId)
-                && dispatch.Status is DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted)
+                && dispatch.Status is DaggerfallDispatchStatus.Delivered or DaggerfallDispatchStatus.Intercepted or DaggerfallDispatchStatus.Waylaid)
                 _couriers.Forget(dispatch.DispatchId);
     }
 
@@ -671,7 +672,7 @@ internal sealed class DaggerfallPoliticalBoard
             ConditionKind.Famine => (DaggerfallWorldConditionKind.GrainShortage, condition.Magnitude, Faction(condition.Source), null, null),
             ConditionKind.PriceSurge when condition.Detail == "grain" => (DaggerfallWorldConditionKind.GrainShortage, condition.Magnitude, Faction(condition.Source), null, "grain"),
             ConditionKind.PriceSurge => (DaggerfallWorldConditionKind.Decree, condition.Magnitude, Faction(condition.Source), null, DaggerfallConditionPrices.PriceSurgeTag),
-            ConditionKind.Raiders => (DaggerfallWorldConditionKind.GrainShortage, condition.Magnitude, Faction(condition.Source), null, "raiders"),
+            ConditionKind.Raiders => (DaggerfallWorldConditionKind.GrainShortage, condition.Magnitude, Faction(condition.Source), null, DaggerfallRoadTuning.RaidersTag),
             ConditionKind.Plague => (DaggerfallWorldConditionKind.PlagueScare, condition.Magnitude, Faction(condition.Source), null, null),
             ConditionKind.MonsterSurge => (DaggerfallWorldConditionKind.MonsterSurge, condition.Magnitude, Faction(condition.Source), null, condition.Detail),
             ConditionKind.WarFront => (DaggerfallWorldConditionKind.BorderTension, condition.Magnitude, Faction(first), Faction(second), null),

@@ -48,6 +48,7 @@ internal sealed class DaggerfallOverlandTraffic
     private readonly Func<DaggerfallNpcAppearance, int, string> _generateName;
     private readonly Func<ulong> _worldSocialSeed;
     private readonly Func<DaggerfallSiteId?> _activeSiteId;
+    private DaggerfallSiteRecord[]? _dispatchSites;
 
     internal DaggerfallOverlandTraffic(
         DaggerfallDefinitions definitions,
@@ -113,11 +114,12 @@ internal sealed class DaggerfallOverlandTraffic
             return null;
 
         DaggerfallSiteId? occupiedSite = _activeSiteId();
+        // The settlements that can send traffic are the world's; they are found once rather than at every window (#11178).
+        _dispatchSites ??= [.. _definitions.Locations.Records.Where(site =>
+            site.Exterior is not null && DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, site, out _) is not null)];
         List<DaggerfallSiteRecord> nearby = [];
-        foreach (DaggerfallSiteRecord site in _definitions.Locations.Records)
+        foreach (DaggerfallSiteRecord site in _dispatchSites)
         {
-            if (site.Exterior is null) continue;
-            if (DaggerfallSourcePopulation.TryResolveClimateRace(_definitions, site, out _) is null) continue;
             double dx = (site.MapPixelX + 0.5) - partyPosition.X;
             double dy = (site.MapPixelY + 0.5) - partyPosition.Y;
             if ((dx * dx + dy * dy) <= NearbyRegionRadiusPixels * NearbyRegionRadiusPixels)

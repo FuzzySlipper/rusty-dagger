@@ -170,4 +170,7 @@ internal sealed record DaggerfallWorldGridsSet(DaggerfallClimateGridDefinition C
 {
     // MapsFile.GetClimateIndex aligns the raw CLIMATE.PAK column with the height map.
     internal DaggerfallClimateCell ClimateAtWorldPixel(int x, int y) => Climate.GetCell(checked(x + 1), y);
+
+    // POLITIC.PAK's columns line up with the height map the same way.
+    internal DaggerfallPoliticCell PoliticAtWorldPixel(int x, int y) => Politic.GetCell(checked(x + 1), y);
 }

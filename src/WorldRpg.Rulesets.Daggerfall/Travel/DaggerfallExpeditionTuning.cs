@@ -59,6 +59,9 @@ internal sealed record DaggerfallExpeditionTuning(
     /// <summary>The bands staged on the map, their sight and the party's.</summary>
     internal DaggerfallBandTuning Bands { get; init; } = DaggerfallBandTuning.Default;
 
+    /// <summary>Where travelling bands are live on the map, and what those on the road beyond meet (#11178).</summary>
+    internal DaggerfallRoadTuning Road { get; init; } = DaggerfallRoadTuning.Default;
+
     /// <summary>How many speeds the map runs at above the pause.</summary>
     internal int Speeds => TimeScales.Count;
 
@@ -96,7 +99,7 @@ internal sealed record DaggerfallExpeditionTuning(
             entry => SiteKind(entry.Name), entry => entry.Value.GetInt32()),
         section.GetProperty("shipHire").GetInt32(),
         section.GetProperty("portReach").GetInt32(),
-        section.GetProperty("lowFatigue").GetDouble()) { Bands = DaggerfallBandTuning.Read(section.GetProperty("bands")), Map = DaggerfallOverlandTuning.Read(section.GetProperty("map")) }.Validate();
+        section.GetProperty("lowFatigue").GetDouble()) { Bands = DaggerfallBandTuning.Read(section.GetProperty("bands")), Road = DaggerfallRoadTuning.Read(section.GetProperty("road")), Map = DaggerfallOverlandTuning.Read(section.GetProperty("map")) }.Validate();
 
     private static Dictionary<DaggerfallWeatherKind, double> Weather(JsonElement section) =>
         Enum.GetValues<DaggerfallWeatherKind>().ToDictionary(weather => weather, weather => section.GetProperty(Key(weather)).GetDouble());

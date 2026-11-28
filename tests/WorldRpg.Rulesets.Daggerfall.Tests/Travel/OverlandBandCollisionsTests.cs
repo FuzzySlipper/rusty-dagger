@@ -632,7 +632,9 @@ public sealed class OverlandBandCollisionsTests
         DaggerfallPersistentOverlandBand? raiders = session.HostileOverlandBands.TryDispatchWindow(802L, (px, py));
         Assert.NotNull(raiders);
 
-        double farX = Math.Min(DaggerfallTravelMapPixel.Width - 2.5, px + 30.0);
+        // Off the map but within the road's reach of the party, both stay live and collide; beyond it the caravan would be
+        // on the road, where the raiders weigh on its segments instead (RoadTravelTests, #11178).
+        double farX = Math.Min(DaggerfallTravelMapPixel.Width - 2.5, px + 6.0);
         caravan!.X = farX;
         caravan.Y = py;
         raiders!.X = farX + 0.05;

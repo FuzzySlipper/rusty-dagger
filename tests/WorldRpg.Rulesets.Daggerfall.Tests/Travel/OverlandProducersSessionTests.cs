@@ -207,13 +207,14 @@ public sealed class OverlandProducersSessionTests
         Assert.Equal(startY, restoredBand.Y, precision: 6);
         Assert.Single(restored.State.ActorLedger.EntriesOnOverlandBand(trafficBand.BandId), e => e.DurableId == member.DurableId);
 
-        // Advance one stretch: the traffic band moves along its route toward its destination settlement.
+        // Advance one stretch: the traffic band moves along its route toward its destination settlement, unless a delay on
+        // the road holds it where it is (#11178).
         restored.Expedition.SetMode(DaggerfallExpeditionMode.Halt);
         restored.Expedition.SetSpeed(1);
         _ = restored.Expedition.Advance(0.5);
         if (restored.Expedition.PersistentBands.Any(b => b.BandId == trafficBand.BandId))
         {
-            Assert.True(Math.Abs(restoredBand.X - startX) > 1e-6 || Math.Abs(restoredBand.Y - startY) > 1e-6);
+            Assert.True(Math.Abs(restoredBand.X - startX) > 1e-6 || Math.Abs(restoredBand.Y - startY) > 1e-6 || restoredBand.HeldUntilSecond is not null);
         }
 
         // Intercepting a dispatched traffic band materializes the exact durable seeded actor in 3D with real stats.
@@ -476,9 +477,14 @@ public sealed class OverlandProducersSessionTests
         Assert.Equal(courierBand.X, restoredCourier.X, precision: 5);
         Assert.Equal(courierBand.Y, restoredCourier.Y, precision: 5);
 
-        // 4. Advance remaining time off-map past ExpectedArrivalMinute: courier settles Delivered and retires cleanly.
-        long remainingMinutes = Math.Max(60L, dispatch.ExpectedArrivalMinute - ((IDaggerfallExpeditionSurroundings)restored).Calendar.MinuteNumber + 30L);
-        restored.AdvanceElapsedTime(remainingMinutes * DaggerfallCalendar.SecondsPerMinute);
+        // 4. Advance remaining time off-map past ExpectedArrivalMinute, which each delay on the road puts back (#11178):
+        // courier settles Delivered and retires cleanly.
+        for (int leg = 0; leg < 20 && restored.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? onTheWay)
+            && onTheWay!.Status == DaggerfallDispatchStatus.InTransit; leg++)
+        {
+            long remainingMinutes = Math.Max(60L, onTheWay.ExpectedArrivalMinute - ((IDaggerfallExpeditionSurroundings)restored).Calendar.MinuteNumber + 30L);
+            restored.AdvanceElapsedTime(remainingMinutes * DaggerfallCalendar.SecondsPerMinute);
+        }
         Assert.DoesNotContain(restored.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
         Assert.True(restored.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? doneDispatch));
         Assert.Equal(DaggerfallDispatchStatus.Delivered, doneDispatch!.Status);

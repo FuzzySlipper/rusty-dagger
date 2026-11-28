@@ -623,6 +623,21 @@
         "climate": [1.2, 1.1, 0.7, 0.8, 1, 0.85],
         "inputWeight": 0.5
       }
+    },
+    "road": {
+      "liveDistance": 8,
+      "roadDistance": 12,
+      "segmentPixels": 4,
+      "delayHours": 6,
+      "wilds": { "raid": 0, "delay": 1 },
+      "hazards": {
+        "war": { "raid": 3, "delay": 6 },
+        "raiders": { "raid": 5, "delay": 4 },
+        "monsters": { "raid": 3, "delay": 5 },
+        "plague": { "raid": 0, "delay": 6 }
+      },
+      "hostileReach": 3,
+      "hostileBand": { "raid": 25, "delay": 10 }
     }
   },
   "hazards": {

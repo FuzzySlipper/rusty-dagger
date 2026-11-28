@@ -185,16 +185,24 @@ public sealed class WordSpreadAndCouriersTests
         Assert.Equal(DaggerfallDispatchStatus.InTransit, midDispatch!.Status);
         Assert.Empty(routeResolutions);
 
-        // Continue actual expedition travel through route-based arrival: band arrives/retires and dispatch resolves cleanly!
-        long targetEndMinute = dispatch.ExpectedArrivalMinute + 15;
-        for (int guard = 0; guard < 2000 && CurrentMinute(session) < targetEndMinute; guard++)
+        // Continue actual expedition travel through route-based arrival (put back by any delay on the road, #11178): band
+        // arrives/retires and dispatch resolves cleanly!
+        long ArrivalNow() => session.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? now) ? now!.ExpectedArrivalMinute : 0;
+        for (int guard = 0; guard < 20000 && CurrentMinute(session) < ArrivalNow() + 15; guard++)
         {
             if (!session.Expedition.Running)
                 session.Expedition.SetSpeed(1);
             if (session.Expedition.Advance(0.1) <= 0)
                 break;
         }
-        Assert.True(CurrentMinute(session) >= dispatch.ExpectedArrivalMinute);
+        // The longer a journey the road's delays make, the likelier an encounter stops the map first: the rest passes off it.
+        if (CurrentMinute(session) < ArrivalNow() + 15)
+        {
+            session.Expedition.Close();
+            for (int hour = 0; hour < 24 * 30 && CurrentMinute(session) < ArrivalNow() + 15; hour++)
+                session.AdvanceElapsedTime(3600);
+        }
+        Assert.True(CurrentMinute(session) >= ArrivalNow());
         Assert.DoesNotContain(session.Expedition.PersistentBands, b => b.BandId == dispatch.OverlandBandId);
         Assert.True(session.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? arrivedDispatch));
         Assert.Equal(DaggerfallDispatchStatus.Delivered, arrivedDispatch!.Status);

@@ -974,8 +974,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         _ = OverlandParties.OnPersistentBandArrived(band);
     }
 
-    void IDaggerfallExpeditionSurroundings.PersistentBandRetiredOffScreen(string bandId) =>
+    void IDaggerfallExpeditionSurroundings.PersistentBandRetiredOffScreen(string bandId)
+    {
+        _ = CourierDispatches.OnOverlandBandLost(bandId, _time.Calendar.MinuteNumber, checked((int)_time.Calendar.DayNumber));
         OverlandParties.RetireBandOffScreen(bandId);
+    }
+
+    void IDaggerfallExpeditionSurroundings.PersistentBandDelayed(DaggerfallPersistentOverlandBand band, long seconds) =>
+        CourierDispatches.OnOverlandBandDelayed(band.BandId, seconds / DaggerfallCalendar.SecondsPerMinute);
 
     private (string? Faction, string? Detail) DescribePersistentExpeditionBand(string bandId)
     {
@@ -996,6 +1002,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     IReadOnlyList<DaggerfallWorldConditionToken> IDaggerfallExpeditionSurroundings.WorldConditions(int region) =>
         WorldConditions.ActiveForRegion(region, checked((int)_time.Calendar.DayNumber));
+
+    IReadOnlyList<DaggerfallWorldConditionToken> IDaggerfallExpeditionSurroundings.WorldConditionsOn(int region, int day) =>
+        WorldConditions.ActiveForRegion(region, day);
 
     bool IDaggerfallExpeditionSurroundings.EncounterArrives(DaggerfallTravelMapPixel pixel, bool atLocation, long minute) =>
         WorldEncounters.Overland(minute, _definitions.Grids.ClimateAtWorldPixel(pixel.X, pixel.Y).Value, atLocation) is { } request
