@@ -66,6 +66,42 @@ public sealed class DaggerfallActorSightTests
     }
 
     [Fact]
+    public void A_person_with_no_mobile_sees_a_foe_over_a_rise_from_near_the_top_of_their_sprite()
+    {
+        // A convoy's guard (#11181) or a hired townsperson (#11105) is a person with no mobile: before, it looked from
+        // the floor and the rise hid the centaur, so it stood idle beside the fight.
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        const long Guard = 1_000_000_000_011;
+        DaggerfallActorDefinition person = definitions.RequireActor(new DaggerfallActorId("thief")) with { MobileId = null };
+        Assert.False(definitions.Walks(person));
+        Dictionary<long, DaggerfallActorDefinition> authored = new()
+        {
+            [Centaur] = definitions.RequireActor(new DaggerfallActorId("centaur")),
+            [Guard] = person,
+        };
+        DaggerfallActorSight sight = new(authored, definitions, () => inputs, (float)DaggerfallTuning.Defaults.Camera.EyeHeight,
+            PlayerBodyMiddle, id => id == Guard ? .9d : null);
+        WorldPoint guard = new(-1F, Surface(-1F), 0F), foe = new(1.5F, Surface(1.5F), 0F);
+
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
+        host.Call(engine =>
+        {
+            using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
+            _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(spatial.Session,
+                new[] { new StaticMeshAsset(1, 0, 6, 0, 4) },
+                new Vector3[] { new(-3, 0, -3), new(-3, 0, 3), new(0, Rise, -3), new(0, Rise, 3), new(3, 0, -3), new(3, 0, 3) },
+                new Triangle[] { new(0, 1, 2), new(1, 3, 2), new(2, 3, 4), new(3, 5, 4) },
+                new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+                ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+
+            Assert.Equal(1.8F * .9F, sight.EyeLift(Guard), 4);
+            (Vector3 eye, Vector3 seen) = sight.Line(Guard, guard, Centaur, foe);
+            Assert.Equal(PerceptionPairKind.Visible, Pair(engine, spatial, eye, seen));
+        });
+    }
+
+    [Fact]
     public void Every_mobile_but_a_flyer_a_spectre_or_a_swimmer_walks_and_so_grounds_on_spawn()
     {
         DaggerfallDefinitions definitions = TestPayload.Definitions;

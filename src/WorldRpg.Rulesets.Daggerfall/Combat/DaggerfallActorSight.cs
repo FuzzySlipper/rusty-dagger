@@ -8,7 +8,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 /// <summary>
 /// Where Daggerfall's actors see from and are seen at. A walker's pose names its sprite's base at the floor contact,
 /// so its body is looked at halfway up its sprite and it looks from near the sprite's top; the player looks from the
-/// camera's eye and is looked at halfway up its standing body; a person is looked at where activation sights them.
+/// camera's eye and is looked at halfway up its standing body; a person is looked at where activation sights them,
+/// halfway up their sprite, and looks from near its top as a walker does.
 /// Flyers, spectres and swimmers keep the points their poses name. The player's attack looks from its eye to a body;
 /// one actor watching another looks along a line lifted evenly off the floor (<see cref="Line"/>).
 /// </summary>
@@ -41,8 +42,18 @@ internal sealed class DaggerfallActorSight(IReadOnlyDictionary<long, DaggerfallA
     /// <summary>Where an actor is looked at, standing at <paramref name="feet"/>: the middle of its body.</summary>
     internal Vector3 Body(long durableId, WorldPoint feet) => feet.ToVector() + Vector3.UnitY * BodyLift(durableId);
 
-    /// <summary>How far above its feet an actor looks from.</summary>
-    internal float EyeLift(long durableId) => durableId == DaggerfallActorIdentity.PlayerEntityId ? playerEye : WalkerHeight(durableId) * EyeShare;
+    /// <summary>
+    /// How far above its feet an actor looks from. A person with no mobile (a townsperson hired or sent to guard a convoy,
+    /// #11105, #11181) looks from near the top of the sprite they are sighted halfway up, so a fighting one sees over the
+    /// ground as a walker does.
+    /// </summary>
+    internal float EyeLift(long durableId)
+    {
+        if (durableId == DaggerfallActorIdentity.PlayerEntityId) return playerEye;
+        float walker = WalkerHeight(durableId);
+        if (walker > 0F) return walker * EyeShare;
+        return personSightHeight?.Invoke(durableId) is double middle ? (float)(middle * 2d) * EyeShare : 0F;
+    }
 
     /// <summary>How far above its feet an actor is looked at.</summary>
     internal float BodyLift(long durableId)
