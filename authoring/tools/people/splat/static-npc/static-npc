@@ -293,6 +293,13 @@ def step_mesh(n, a):
         if 'ForbiddenForNSFW' not in text and '403' not in text:
             raise SystemExit(f'Meshy failed (rc {rc}), not a content block; see {log}')
         print(f'{n.id}: Meshy refused the clay (content block); switching to local Hunyuan3D-2mv (Patch 2026-11-22)')
+    if mesher == 'tripo':   # the Tripo site's multiview mesh from the clay views, made by hand in Firefox (Meshy out of credits; Patch 2026-11-28)
+        t = n.ch / '02-guide/wip/mesh-tripo/model.glb'
+        if not t.exists():
+            raise SystemExit(f'{n.id}: make the mesh on the Tripo site (Multiview: ' + ', '.join(f'02-guide/wip/clay/{v}.png' for v in n.views)
+                             + f'), export GLB, and put it at {t.relative_to(REPO)}')
+        n.mesh.mkdir(parents=True, exist_ok=True); shutil.copy(t, n.mesh / 'model.glb'); (n.mesh / 'mesher.txt').write_text(f'tripo site: {t}\n')
+        print(f'{n.id}: Tripo mesh {(n.mesh / "model.glb").relative_to(REPO)}'); return
     hy = n.ch / '02-guide/wip/mesh-hy2mv'
     if n.cfg.get('front_only'):
         raise SystemExit(f'{n.id}: Hunyuan3D-2mv here takes a front and a back; a front-only character has no back clay')
@@ -685,7 +692,7 @@ def main():
     ap.add_argument('--back-required', action='store_true', help='init: fail when the CMS has no approved back (default: front-only)'); ap.add_argument('--name', help='init: a short name')
     ap.add_argument('--tolerance', type=int, help='keys: flood_cut tolerance (default 9)')
     ap.add_argument('--gpu', help='clay, clip, bake, r1, bound, walk: where the GPU work runs (npc.json "gpu_host"; default gpu-lab; den-m5, den-nimo, or runpod-* for the gsplat steps)')
-    ap.add_argument('--mesher', choices=['meshy', 'hy2mv'], help='mesh: default meshy, hy2mv on a content block')
+    ap.add_argument('--mesher', choices=['meshy', 'hy2mv', 'tripo'], help='mesh: default meshy, hy2mv on a content block, tripo for a Tripo site mesh made by hand')
     ap.add_argument('--rigger', choices=['meshy', 'fit'], help="rig (walker): meshy (API rig, default; falls back to fit when Meshy can't estimate the pose) or fit (fit_rig.py: the target skeleton fitted to the mesh)")
     ap.add_argument('--size', help='clip: orbit size in px (default 1920); ship: the runtime size to ship (e.g. 32k-graft)')
     ap.add_argument('--said', help="ship: Patch's words")
