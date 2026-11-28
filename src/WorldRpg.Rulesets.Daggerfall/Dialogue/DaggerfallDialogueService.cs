@@ -1401,14 +1401,16 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return false;
     }
 
+    private static bool IsCityWatchGuard(DaggerfallNpc npc, string? creatureFactionId) =>
+        string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(creatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase);
+
     private string? ResolveGuardScrutinyGreetingLine(DaggerfallNpc npc, DaggerfallSiteRecord? site)
     {
         if (_evaluateGateScrutiny is null || site is null)
             return null;
         (_, string? creatureFactionId) = ResolveLiveFaction(npc);
-        bool isGuard = string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(creatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase);
-        if (!isGuard)
+        if (!IsCityWatchGuard(npc, creatureFactionId))
             return null;
 
         DaggerfallGateScrutinyAssessment assessment = _evaluateGateScrutiny(site.Id.Region, site);
@@ -1420,8 +1422,13 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         bool isRegionalPeople = primaryFactionId > 0
             && _definitions.Factions.Factions.TryGetValue(primaryFactionId, out DaggerfallFactionDefinition? primaryDef)
             && primaryDef.Type == 15;
+        bool isGuard = IsCityWatchGuard(npc, creatureFactionId);
 
         List<string> keys = [];
+        // City-watch guards (including liege-livery gate officers carrying their crown's province faction)
+        // prioritize city-watch barks over generic crown/banner barks.
+        if (isGuard)
+            keys.Add(!string.IsNullOrWhiteSpace(creatureFactionId) ? creatureFactionId : "city-watch");
         // Generic regional townsfolk (Type 15) speak regional/climate/role barks unless they hold a specific
         // non-generic institutional identity (such as "city-watch"); non-generic factions walk up their guild/court lineage.
         if (!isRegionalPeople && primaryFactionId > 0)
@@ -1429,7 +1436,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             keys.Add(primaryFactionId.ToString(CultureInfo.InvariantCulture));
             keys.AddRange(_social.Liege.Lineage(primaryFactionId).Skip(1).Take(5).Select(faction => faction.Id.ToString(CultureInfo.InvariantCulture)));
         }
-        if (!string.IsNullOrWhiteSpace(creatureFactionId))
+        if (!isGuard && !string.IsNullOrWhiteSpace(creatureFactionId))
             keys.Add(creatureFactionId);
 
         // If the NPC belongs to a specific non-generic faction and the player has notable standing or rivalry, speak to it!
@@ -1467,8 +1474,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (active.Count == 0)
             return null;
 
-        bool isGuard = string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(creatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase);
+        bool isGuard = IsCityWatchGuard(npc, creatureFactionId);
         bool isMerchantOrTavern = string.Equals(npc.Role, "merchant", StringComparison.OrdinalIgnoreCase)
             || string.Equals(npc.Role, "tavern keeper", StringComparison.OrdinalIgnoreCase);
         bool isPriest = string.Equals(npc.Role, "priest", StringComparison.OrdinalIgnoreCase);
@@ -1831,9 +1837,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             return locals.FirstOrDefault(o => o.ProfileKey == profile);
 
         (_, string? creatureFactionId) = ResolveLiveFaction(npc);
-        bool isGuard = string.Equals(npc.Role, "guard", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(creatureFactionId, "city-watch", StringComparison.OrdinalIgnoreCase);
-        if (isGuard && profile.Kind == DaggerfallWorldProfileKind.Exterior)
+        if (IsCityWatchGuard(npc, creatureFactionId) && profile.Kind == DaggerfallWorldProfileKind.Exterior)
             return locals.FirstOrDefault(o => o.Kind == DaggerfallOfficeKind.WatchCaptain && o.ProfileKey == profile);
         return null;
     }
@@ -1875,7 +1879,11 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             }
         }
 
-        (int factionId, _) = ResolveLiveFaction(npc);
+        (int factionId, string? creatureFactionId) = ResolveLiveFaction(npc);
+        // Street/gate city-watch guards (including liege-livery gate officers carrying their crown's province faction)
+        // are watchmen outside palace walls, not court speakers.
+        if (IsCityWatchGuard(npc, creatureFactionId))
+            return false;
         if (factionId > 0 && _definitions.Factions.Factions.TryGetValue(factionId, out DaggerfallFactionDefinition? faction))
         {
             if (faction.Type is 7 or 14 or 5)

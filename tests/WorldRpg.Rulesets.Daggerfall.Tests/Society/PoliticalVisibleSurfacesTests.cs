@@ -343,13 +343,15 @@ public sealed class PoliticalVisibleSurfacesTests
         Assert.True(guardTalk.Applied, guardTalk.Message);
         DaggerfallDialogueView guardView = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         Assert.Contains("crackdown", guardView.Greeting, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("in the court of", guardView.Greeting, StringComparison.OrdinalIgnoreCase);
         session.Dialogue.Close();
 
-        // Guard as AmbientBark emits condition-aware crackdown bark mentioning Daggerfall!
+        // Guard as AmbientBark emits condition-aware crackdown bark mentioning Daggerfall (not a court bark)!
         interactionPolicy.Set(ActorInteractionPolicyKind.AmbientBark);
         DaggerfallActivationOutcome crackdownBark = ActivateNpc(session, guardNpc.DurableId);
         Assert.True(crackdownBark.Applied, crackdownBark.Message);
         Assert.Contains("Daggerfall", crackdownBark.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("All eyes in court", crackdownBark.Message, StringComparison.OrdinalIgnoreCase);
 
         // Clear conditions -> city-watch guard emits faction-aware "city-watch" bark from barks.json!
         session.WorldConditions.Clear();

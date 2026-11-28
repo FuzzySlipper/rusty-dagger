@@ -77,9 +77,9 @@ public sealed class OfficeDialogueAndVouchingTests
         string baselineCourtGreeting = OpenGreetingAndClose(session, bridwellId);
         Assert.Contains("King Gothryd", baselineCourtGreeting, StringComparison.Ordinal);
 
-        // Earn Bridwell's strong personal trust (so Bridwell remains an accessible patron even under tightened crisis access)
+        // Earn Bridwell's strong personal trust (Prominent direct standing under crisis requires disposition >= 40 + 15 = 55)
         // and get a Court vouch TO King Gothryd, plus a Court vouch FROM King Gothryd ON Mobar!
-        session.Introductions.AdjustActorDisposition(bridwellId, 45);
+        session.Introductions.AdjustActorDisposition(bridwellId, 55);
         DaggerfallIntroductionResult vouchToKing = session.Introductions.TryIssueIntroduction(bridwell, gothrydId, charing);
         Assert.True(vouchToKing.Accepted, vouchToKing.Message);
         Assert.Equal(ActorVouchKind.Court, vouchToKing.Vouch!.Kind);
@@ -233,7 +233,8 @@ public sealed class OfficeDialogueAndVouchingTests
             long aubkiId = MaterializeCastCourtActor(crimeSession, charing, aubkiDef);
             long gothrydId = DaggerfallPeopleSlots.CastIndividualIdentity("king-gothryd");
 
-            crimeSession.Introductions.AdjustActorDisposition(bridwellId, 30);
+            // Prominent direct-standing threshold is disposition >= 40 (without double-counting household goodwill).
+            crimeSession.Introductions.AdjustActorDisposition(bridwellId, 40);
             Assert.True(crimeSession.Introductions.TryIssueIntroduction(
                 crimeSession.State.Npcs.Require(bridwellId), gothrydId, charing).Accepted);
 
@@ -291,9 +292,10 @@ public sealed class OfficeDialogueAndVouchingTests
 
             SetSocialStats(rivalSession, etiquette: 20, streetwise: 20, personality: 30);
 
-            // Grant Court vouch to King Gothryd, Court vouches FROM King Gothryd and Queen Aubk-i on Mobar,
+            // Grant Court vouch to King Gothryd (Prominent direct-standing threshold is disposition >= 40),
+            // Court vouches FROM King Gothryd and Queen Aubk-i on Mobar,
             // AND an unrelated ordinary Trade vouch on merchantId.
-            rivalSession.Introductions.AdjustActorDisposition(bridwellId, 30);
+            rivalSession.Introductions.AdjustActorDisposition(bridwellId, 40);
             Assert.True(rivalSession.Introductions.TryIssueIntroduction(
                 rivalSession.State.Npcs.Require(bridwellId), gothrydId, charing).Accepted);
 
