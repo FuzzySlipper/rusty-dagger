@@ -31,6 +31,11 @@ public sealed class ConvoyGuardJobTests
         Assert.Equal(convoy.BandId, offer.BandId);
         Assert.Empty(session.ConvoyGuardOffers(factor with { Services = ["talk"] }, origin));
         Assert.Empty(session.ConvoyGuardOffers(factor with { Appearance = factor.Appearance with { FactionId = 0 } }, origin));
+        // A crown's court keeps its castle apart from its town: anywhere in the convoy's region it offers the job, beyond it not.
+        DaggerfallSiteRecord castle = TestPayload.Definitions.Locations.Records.First(site => site.Id.Region == origin.Id.Region && site.Id != origin.Id);
+        DaggerfallSiteRecord abroad = TestPayload.Definitions.Locations.Records.First(site => site.Id.Region != origin.Id.Region);
+        Assert.Single(session.ConvoyGuardOffers(factor, castle));
+        Assert.Empty(session.ConvoyGuardOffers(factor, abroad));
         Assert.True(session.TakeConvoyGuard(factor, convoy.BandId, origin).Accepted);
         Assert.Equal(convoy.BandId, session.ConvoyGuard.Hire!.BandId);
         Assert.Empty(session.ConvoyGuardOffers(factor, origin));

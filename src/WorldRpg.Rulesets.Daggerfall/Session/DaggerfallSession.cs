@@ -1078,10 +1078,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     }
 
     /// <summary>
-    /// The guard jobs <paramref name="npc"/> offers at <paramref name="site"/> (#11182): one for each convoy mustering there,
-    /// in its town and not yet set out, while the player holds no other hire, when <paramref name="npc"/> is of its giver's
-    /// court there: the town's court factor, or a questgiver of the giver's seat (as a political quest's giver is). A court
-    /// that refuses the player work still lists the job, and says no when asked.
+    /// The guard jobs <paramref name="npc"/> offers at <paramref name="site"/> (#11182): one for each convoy mustering in its
+    /// town, not yet set out, while the player holds no other hire, when <paramref name="npc"/> is of its giver's court:
+    /// the court factor of that town, or a questgiver of the giver's seat (as a political quest's giver is) anywhere in its
+    /// region, since a crown's court keeps its castle apart from its town. A court that refuses the player work still
+    /// lists the job, and says no when asked.
     /// </summary>
     internal IReadOnlyList<DaggerfallConvoyGuardOffer> ConvoyGuardOffers(DaggerfallNpc npc, DaggerfallSiteRecord? site)
     {
@@ -1089,7 +1090,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         bool factor = OfficeLedger.ResolveLocalOffices(site).Any(office => office.Kind == DaggerfallOfficeKind.CourtFactor && office.HolderActorId == npc.DurableId);
         string? seat = npc.Services.Contains("quest") ? PoliticalBoard?.SeatOfFaction(npc.Appearance.FactionId) : null;
         return [.. RationConvoys.All
-            .Where(convoy => (factor || convoy.Giver == seat) && convoy.Leg == 0 && convoy.Origin.Require() == site.Id
+            .Where(convoy => convoy.Leg == 0
+                && ((factor && convoy.Origin.Require() == site.Id) || (convoy.Giver == seat && convoy.Origin.Require().Region == site.Id.Region))
                 && Expedition.PersistentBands.Any(band => StringComparer.Ordinal.Equals(band.BandId, convoy.BandId) && band is { RouteStep: 0, RoadSegment: 0 }))
             .Select(convoy => new DaggerfallConvoyGuardOffer(convoy.BandId,
                 $"Guard the grain convoy to {PlaceName(convoy.Destination)} ({_tuning.Politics.ConvoyGuardPay} gold on arrival)"))];
@@ -1105,7 +1107,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             return new(false, Question, "The court remembers the last convoy you were paid to guard. There is no work here for you.");
         if (!ConvoyGuard.Take(convoy))
             return new(false, Question, "You are sworn to another convoy already.");
-        return new(true, Question, $"Then ride with it to {PlaceName(convoy.Destination)}. It musters by the gate and sets out soon; open your travel map there. "
+        return new(true, Question, $"Then ride with it to {PlaceName(convoy.Destination)}. It musters at {PlaceName(convoy.Origin)} and sets out soon; find it there on your travel map. "
             + $"You will have {_tuning.Politics.ConvoyGuardPay} gold when the grain is in, and {_tuning.Politics.ConvoyGuardBonus} more if you see off any raiders.");
     }
 
