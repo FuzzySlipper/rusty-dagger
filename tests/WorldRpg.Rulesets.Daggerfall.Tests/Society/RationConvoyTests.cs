@@ -3,6 +3,7 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Politics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Travel;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -28,6 +29,11 @@ public sealed class RationConvoyTests
         Region bound = Trade.RationDestination(board.Board, board.Board.Agreements.Single(held => held.Id == deal.Id), giver)!;
         Assert.Equal(board.Town(bound.Id)!.Id, convoy.Destination.Require());
         Assert.Equal(board.Town(deal.GivenBy(giver).Source!)!.Id, convoy.Origin.Require());
+        // It goes by the towns of the regions the board lets the grain pass through, one leg at a time.
+        DaggerfallSiteId[] route = [.. Trade.RationRoute(board.Board, board.Board.Agreements.Single(held => held.Id == deal.Id), giver)
+            .Select(region => board.Town(region.Id)!.Id).Distinct()];
+        Assert.Equal(route.Skip(1), convoy.Stops.Select(stop => stop.Require()));
+        Assert.Equal(0, convoy.Leg);
 
         DaggerfallPersistentOverlandBand band = Assert.Single(session.Expedition.PersistentBands, band => band.BandId == convoy.BandId);
         Assert.Equal(DaggerfallBandKind.Convoy, band.Kind);
@@ -52,13 +58,61 @@ public sealed class RationConvoyTests
 
         NextSunday(session);
         DaggerfallRationConvoySave convoy = Assert.Single(session.RationConvoys.All);
-        for (int day = 0; day < 40 && session.RationConvoys.TryGet(convoy.BandId, out _); day++) session.AdvanceElapsedTime(86400);
+        // A ration's road runs region town to region town, a month or more at the wagons' pace across the Bay.
+        for (int day = 0; day < 80 && session.RationConvoys.TryGet(convoy.BandId, out _); day++) session.AdvanceElapsedTime(86400);
         Assert.False(session.RationConvoys.TryGet(convoy.BandId, out _));
         Assert.Empty(session.State.ActorLedger.EntriesOnOverlandBand(convoy.BandId));
 
         NextSunday(session);
         Assert.Equal(0, board.Board.Agreements.Single(held => held.Id == deal.Id).LostBy(giver));
         Assert.Contains(board.LatestTrace!.Nudges, nudge => nudge.Nudge is RationArrived arrived && arrived.Agreement == deal.Id);
+    }
+
+    [Fact]
+    public void A_ration_relieves_nothing_while_its_convoy_is_on_the_road_and_relieves_the_sunday_after_it_arrives()
+    {
+        using DaggerfallSession session = FreshSession(tuning: Road(new(0, 0)));
+        (Agreement deal, string giver) = StrikeGrainDeal(session);
+        DaggerfallPoliticalBoard board = session.PoliticalBoard!;
+        NextSunday(session);
+        DaggerfallRationConvoySave convoy = Assert.Single(session.RationConvoys.All);
+
+        // Held on the road past the next Sunday, it has not arrived: the deal holds no ration to relieve with.
+        DaggerfallPersistentOverlandBand band = Assert.Single(session.Expedition.PersistentBands, band => band.BandId == convoy.BandId);
+        band.HeldUntilSecond = (board.NextTurnDay + 1) * 86400L;
+        NextSunday(session);
+        Assert.True(session.RationConvoys.TryGet(convoy.BandId, out _));
+        Assert.DoesNotContain(board.LatestTrace!.Nudges, nudge => nudge.Nudge is RationArrived);
+        Assert.DoesNotContain(board.LatestTrace.Upkeep, change => change.Field == $"ration:{deal.Id}");
+
+        // Let go, it arrives; the Sunday after, its ration is spent relieving the region it was bound for.
+        // A ration's road runs region town to region town, a month or more at the wagons' pace across the Bay.
+        for (int day = 0; day < 80 && session.RationConvoys.TryGet(convoy.BandId, out _); day++) session.AdvanceElapsedTime(86400);
+        Assert.False(session.RationConvoys.TryGet(convoy.BandId, out _));
+        NextSunday(session);
+        Assert.Contains(board.LatestTrace!.Nudges, nudge => nudge.Nudge is RationArrived arrived && arrived.Agreement == deal.Id);
+        Assert.Contains(board.LatestTrace.Upkeep, change => change.Field == $"ration:{deal.Id}" && change.From == "arrived" && change.To == "awaited");
+    }
+
+    [Fact]
+    public void A_convoy_met_and_left_with_a_rider_dead_is_lost_and_the_towns_hear_of_it()
+    {
+        using DaggerfallSession session = FreshSession(tuning: Road(new(0, 0)));
+        (Agreement deal, string giver) = StrikeGrainDeal(session);
+        DaggerfallPoliticalBoard board = session.PoliticalBoard!;
+        NextSunday(session);
+        DaggerfallRationConvoySave convoy = Assert.Single(session.RationConvoys.All);
+
+        // Met on the map, its band left it and one of its guards fell.
+        Assert.True(session.Expedition.RemovePersistentBand(convoy.BandId));
+        long guard = convoy.Riders[1];
+        Assert.True(session.State.ActorLedger.TryGet(guard, out ActorLedgerEntry? entry));
+        session.State.ActorLedger.Upsert(entry! with { Location = ActorLocationOverride.Dead(DaggerfallWorldProfileIds.Exterior(convoy.Origin.Require())) });
+
+        NextSunday(session);
+        Assert.False(session.RationConvoys.TryGet(convoy.BandId, out _));
+        Assert.Contains(board.LatestTrace!.Nudges, nudge => nudge.Nudge is RationLost lost && lost.Agreement == deal.Id && lost.Giver == giver);
+        Assert.Contains(session.WordSpread.Wavefronts, news => news.EventId == $"convoy:{convoy.BandId}:lost");
     }
 
     [Fact]

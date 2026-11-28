@@ -969,7 +969,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallExpeditionSurroundings.PersistentBandArrived(DaggerfallPersistentOverlandBand band, long second)
     {
-        if (RationConvoys.OnBandArrived(band.BandId)) return;                                     // Society: a ration delivered
+        if (RationConvoys.OnBandArrived(band)) return;                                     // Society: a ration delivered
         if (CourierDispatches.OnOverlandBandArrived(band.BandId, second / DaggerfallCalendar.SecondsPerMinute,
                 checked((int)(second / DaggerfallCalendar.SecondsPerDay))) is not null)
             return;
@@ -978,11 +978,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallExpeditionSurroundings.PersistentBandRetiredOffScreen(string bandId, long second, DaggerfallWorldConditionToken? raidedUnder)
     {
-        if (RationConvoys.OnBandLost(bandId, raidedUnder) is { } convoy)                          // Society: a ration missed, its news spreading
-        {
-            RecordConvoyLost(convoy, second, raidedUnder);
-            return;
-        }
+        if (RationConvoys.OnBandLost(bandId, raidedUnder, second)) return;                       // Society: a ration missed, its news spreading
         _ = CourierDispatches.OnOverlandBandLost(bandId, second / DaggerfallCalendar.SecondsPerMinute,
             checked((int)(second / DaggerfallCalendar.SecondsPerDay)));
         OverlandParties.RetireBandOffScreen(bandId);
@@ -992,11 +988,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// A ration convoy lost on the road is news from the town it never reached (#11180), naming the soldiers that took it
     /// when they were a seat's.
     /// </summary>
-    private void RecordConvoyLost(DaggerfallRationConvoySave convoy, long second, DaggerfallWorldConditionToken? raidedUnder)
+    private void RecordConvoyLost(DaggerfallRationConvoySave convoy, string? raider, long second)
     {
         if (PoliticalBoard is not { } board || !_site.TryFind(convoy.Destination.Require(), out DaggerfallSiteRecord town)) return;
         string giver = board.Board.Seat(convoy.Giver).Name, receiver = board.Board.Seat(convoy.Receiver).Name;
-        string? raider = RationConvoys.RaiderOf(raidedUnder, convoy.Giver);
         string body = raider is null
             ? $"The wagons of grain {giver} sent to {receiver} never reached {town.Name}. They were taken on the road."
             : $"The wagons of grain {giver} sent to {receiver} never reached {town.Name}. Soldiers of {board.Board.Seat(raider).Name} took them on the road.";

@@ -159,6 +159,7 @@ internal sealed class DaggerfallPoliticalBoard
         conditions.BindExternalSource(TokensFor);
         couriers?.BindBoardMoveCallback(CourierSettled);
         convoys?.BindBoard(_board.Queue);
+        _board.RationsTravel = convoys is not null;
     }
 
     /// <summary>Binds the office ledger so weekly board holder, regency, and conquest changes write through <see cref="DaggerfallOfficeLedger.OfficeChanged"/>.</summary>
@@ -558,9 +559,8 @@ internal sealed class DaggerfallPoliticalBoard
         foreach (Agreement deal in _board.Agreements)
             foreach (string giver in new[] { deal.Proposer, deal.Partner })
             {
-                if (deal.GivenBy(giver).Source is not { } source || Trade.RationDestination(_board, deal, giver) is not { } bound
-                    || Town(source) is not { } origin || Town(bound.Id) is not { } destination) continue;
-                if (_convoys.Dispatch(deal.Id, giver, _board.Seat(giver).Name, Faction(giver), deal.Other(giver), origin, destination, _board.Turn) is { } convoy)
+                DaggerfallSiteRecord[] towns = [.. Trade.RationRoute(_board, deal, giver).Select(region => Town(region.Id)).OfType<DaggerfallSiteRecord>()];
+                if (_convoys.Dispatch(deal.Id, giver, _board.Seat(giver).Name, Faction(giver), deal.Other(giver), towns, _board.Turn) is { } convoy)
                     sent.Add(convoy);
             }
         return sent;
@@ -573,9 +573,10 @@ internal sealed class DaggerfallPoliticalBoard
     private void SettleMetConvoys()
     {
         if (_convoys is null) return;
+        long sunday = NextTurnDay * MinutesPerDay * 60;
         foreach (DaggerfallRationConvoySave convoy in _convoys.All.Where(convoy => !_bandOnTheMap(convoy.BandId)).ToArray())
-            if (convoy.Riders.Any(_riderDied)) _ = _convoys.OnBandLost(convoy.BandId, raidedUnder: null);
-            else _ = _convoys.OnBandArrived(convoy.BandId);
+            if (convoy.Riders.Any(_riderDied)) _ = _convoys.OnBandLost(convoy.BandId, raidedUnder: null, sunday);
+            else _ = _convoys.Arrived(convoy.BandId);
     }
 
     /// <summary>Delays a week each move due this coming Sunday whose courier has not reached its door.</summary>

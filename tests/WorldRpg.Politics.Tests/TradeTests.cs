@@ -55,12 +55,34 @@ public sealed class TradeTests
     }
 
     [Fact]
-    public void A_ration_lost_on_the_road_relieves_nothing_that_sunday_and_an_arrival_clears_the_count()
+    public void Where_rations_travel_a_ration_relieves_only_the_sunday_after_its_convoy_arrives()
     {
         Board board = Hungry();
+        board.RationsTravel = true;
         BoardTurn.Play(board);
         Agreement deal = CoinForGrain(board);
         Assert.Equal(board.Region("march"), Trade.RationDestination(board, deal, "east"));
+
+        // The convoy is still on the road at Sunday: nothing has arrived, and the march goes hungry.
+        BoardTurn.Play(board);
+        Assert.Equal(RegionSupply.Cut, board.Region("march").Supply);
+
+        // It arrives in the week: the next Sunday relieves the march, and the ration is spent.
+        board.Queue(new RationArrived(deal.Id, "east"));
+        BoardTurn.Play(board);
+        Assert.Equal(RegionSupply.Relieved, board.Region("march").Supply);
+        Assert.False(Assert.Single(board.Agreements).AsksArrived);
+        BoardTurn.Play(board);
+        Assert.Equal(RegionSupply.Cut, board.Region("march").Supply);
+    }
+
+    [Fact]
+    public void A_ration_lost_on_the_road_never_arrives_and_an_arrival_clears_the_count()
+    {
+        Board board = Hungry();
+        board.RationsTravel = true;
+        BoardTurn.Play(board);
+        Agreement deal = CoinForGrain(board);
 
         board.Queue(new RationLost(deal.Id, "east"));
         BoardTurn.Play(board);
@@ -75,9 +97,40 @@ public sealed class TradeTests
     }
 
     [Fact]
+    public void A_ration_goes_around_a_blockaded_region_by_the_way_the_board_lets_it()
+    {
+        // The granary board with a second way from the granary to the march: over the hills, or through the pass.
+        BoardSetup setup = TestBoards.Granary();
+        setup = setup with
+        {
+            Regions =
+            [
+                .. setup.Regions.Select(region => region.Id switch
+                {
+                    "march" => region with { Borders = [.. region.Borders, "pass"] },
+                    "granary" => region with { Borders = [.. region.Borders, "pass"] },
+                    _ => region,
+                }),
+                TestBoards.Region("pass", false, null, 3, 3, 3, new Dictionary<string, int>(), ["march", "granary"]),
+            ],
+        };
+        Board board = TestBoards.Create(setup);
+        board.AddCondition(board.Region("march"), Lasting(ConditionKind.Famine));
+        board.AddCondition(board.Region("west-capital"), Lasting(ConditionKind.Raiders));
+        BoardTurn.Play(board);
+        Agreement deal = CoinForGrain(board);
+        Assert.Equal(["granary", "hills", "march"], Trade.RationRoute(board, deal, "east").Select(region => region.Id));
+
+        // Raiders on the hills blockade them: the grain goes through the pass instead.
+        board.AddCondition(board.Region("hills"), Lasting(ConditionKind.Raiders));
+        Assert.Equal(["granary", "pass", "march"], Trade.RationRoute(board, deal, "east").Select(region => region.Id));
+    }
+
+    [Fact]
     public void Two_rations_lost_in_a_row_end_the_deal_as_route_raided_without_a_default()
     {
         Board board = Hungry();
+        board.RationsTravel = true;
         BoardTurn.Play(board);
         Agreement deal = CoinForGrain(board);
         int relation = board.Relation("west", "east");

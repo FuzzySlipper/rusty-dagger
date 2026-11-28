@@ -834,6 +834,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallNames(definitions, _random).NpcName, () => OverlandParties,
                 seat => RealmArms.OfSeat(seat) is { } arms ? DaggerfallHeraldry.Hex(definitions.Heraldry.Colour(arms.Livery)) : null);
             RationConvoys.Restore(saved?.RationConvoys);
+            RationConvoys.BindLossNews(RecordConvoyLost);
             NoticeBoard = new DaggerfallNoticeBoard(
                 definitions, WorldConditions, OfficeHolders, OfficeLedger, State.Crime, State.Social,
                 () => checked((int)_time.Calendar.DayNumber), CurrentTextContext, () => State.Character.Identity,

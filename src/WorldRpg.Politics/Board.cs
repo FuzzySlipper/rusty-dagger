@@ -26,7 +26,6 @@ public sealed class Board
     private readonly Dictionary<string, SeatDeck> decks;
     private readonly List<PendingMove> pending = [];
     private readonly List<Agreement> agreements = [];
-    private readonly HashSet<(string Deal, string Giver)> missedRations = [];
     private readonly List<War> wars = [];
     private readonly List<Truce> truces = [];
     private readonly List<Feud> feuds = [];
@@ -334,7 +333,6 @@ public sealed class Board
         WorldNudge[] taken = [.. queued];
         queued.Clear();
         intercepted.Clear();
-        missedRations.Clear();
         return taken;
     }
 
@@ -876,11 +874,23 @@ public sealed class Board
         Record(giver, $"ration:{deal.Id}", deal.LostBy(giver), lost);
     }
 
-    /// <summary>This Sunday, <paramref name="giver"/>'s ration under <paramref name="deal"/> was lost on the road and relieves nothing.</summary>
-    public void MissRation(Agreement deal, string giver) => missedRations.Add((deal.Id, giver));
+    /// <summary>
+    /// Whether rations travel (#11180): set by a world that carries each ration as a convoy, so that a ration relieves
+    /// a region only once its convoy has arrived (<see cref="RationArrived"/>). A board without one relieves at once.
+    /// Not saved: the world that runs the board sets it each time it does.
+    /// </summary>
+    public bool RationsTravel { get; set; }
 
-    /// <summary>Whether <paramref name="giver"/>'s ration under agreement <paramref name="deal"/> was lost on the road this Sunday.</summary>
-    public bool RationMissed(string deal, string giver) => missedRations.Contains((deal, giver));
+    /// <summary>Marks whether a ration of <paramref name="giver"/>'s under <paramref name="deal"/> has arrived and waits to relieve a region.</summary>
+    public void SetRationArrived(Agreement deal, string giver, bool arrived)
+    {
+        if (deal.ArrivedBy(giver) == arrived) return;
+        int index = agreements.IndexOf(deal);
+        Agreement after = giver == deal.Proposer ? deal with { GivesArrived = arrived } : deal with { AsksArrived = arrived };
+        agreements[index] = after;
+        Undo(() => agreements[index] = deal);
+        changes.Add(new BoardChange(giver, $"ration:{deal.Id}", deal.ArrivedBy(giver) ? "arrived" : "awaited", arrived ? "arrived" : "awaited"));
+    }
 
     /// <summary>Ends <paramref name="deal"/> for both sides, for <paramref name="reason"/>.</summary>
     public void EndAgreement(Agreement deal, string reason)

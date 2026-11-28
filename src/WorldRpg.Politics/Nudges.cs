@@ -54,14 +54,17 @@ public sealed record MoveDelayed(string MoveId, int Weeks) : WorldNudge;
 public sealed record MoveIntercepted(string MoveId) : WorldNudge;
 
 /// <summary>
-/// The convoy carrying <paramref name="Giver"/>'s grain under agreement <paramref name="Agreement"/> was lost on the road:
-/// this Sunday its ration relieves nothing. A loss that makes <see cref="Trade.RouteRaidedLosses"/> in a row ends the deal
+/// The convoy carrying <paramref name="Giver"/>'s grain under agreement <paramref name="Agreement"/> was lost on the road,
+/// so its ration never arrives (<see cref="Board.RationsTravel"/>). A loss that makes <see cref="Trade.RouteRaidedLosses"/> in a row ends the deal
 /// as <see cref="Trade.RouteRaided"/>, with no default. When <paramref name="RaidedBy"/> names a seat, its soldiers did it,
 /// and the giver thinks 1 worse of it.
 /// </summary>
 public sealed record RationLost(string Agreement, string Giver, string? RaidedBy = null) : WorldNudge;
 
-/// <summary>A convoy carrying <paramref name="Giver"/>'s grain under <paramref name="Agreement"/> arrived: its losses in a row are cleared.</summary>
+/// <summary>
+/// A convoy carrying <paramref name="Giver"/>'s grain under <paramref name="Agreement"/> arrived: its ration relieves a region
+/// this Sunday, and its losses in a row are cleared.
+/// </summary>
 public sealed record RationArrived(string Agreement, string Giver) : WorldNudge;
 
 /// <summary>A lair in <paramref name="Region"/> was cleared: its monster surge lifts, of <paramref name="Family"/> or of every family.</summary>
@@ -185,7 +188,6 @@ public static class Nudges
                 return NudgeOutcome.Applied;
             case RationLost lost:
                 if (Ration(board, lost.Agreement, lost.Giver) is not { } deal) return NudgeOutcome.Stale;
-                board.MissRation(deal, lost.Giver);
                 if (deal.LostBy(lost.Giver) + 1 >= Trade.RouteRaidedLosses) board.EndAgreement(deal, Trade.RouteRaided);
                 else board.SetRationLosses(deal, lost.Giver, deal.LostBy(lost.Giver) + 1);
                 if (lost.RaidedBy is { } raider && raider != lost.Giver) board.AdjustRelation(board.Seat(lost.Giver), board.Seat(raider), -1);
@@ -193,6 +195,7 @@ public static class Nudges
             case RationArrived arrived:
                 if (Ration(board, arrived.Agreement, arrived.Giver) is not { } kept) return NudgeOutcome.Stale;
                 board.SetRationLosses(kept, arrived.Giver, 0);
+                board.SetRationArrived(board.Agreements.First(deal => deal.Id == kept.Id), arrived.Giver, true);
                 return NudgeOutcome.Applied;
             default:
                 throw new ArgumentOutOfRangeException(nameof(nudge), nudge, null);
