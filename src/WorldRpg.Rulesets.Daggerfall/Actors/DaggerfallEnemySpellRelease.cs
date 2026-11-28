@@ -15,9 +15,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 /// <param name="touch">Whom a touch at its cast frame reaches.</param>
 /// <param name="environment">The world environment contact queries run against now.</param>
+/// <param name="harmPassesThrough">Whether a caster's harmful touch or area spell passes through a target actor.</param>
 internal sealed class DaggerfallEnemySpellRelease(DaggerfallCasting casting, DaggerfallSpellTargets targets,
     Func<DaggerfallTouchCast, DaggerfallTouchReach> touch, ActorContact contact, SpatialMovementSystem spatial,
-    Func<CharacterStepEnvironment> environment)
+    Func<CharacterStepEnvironment> environment, Func<long, long, bool>? harmPassesThrough = null)
 {
     /// <summary>
     /// Releases one AI-selected spell through the same readiness, cost, flight and effect owners
@@ -39,12 +40,14 @@ internal sealed class DaggerfallEnemySpellRelease(DaggerfallCasting casting, Dag
         DaggerfallCastResult release = casting.Release(attempt.ActorId, attempt.Target != DaggerfallSpellTarget.ByTouch || reach.Releases, origin, attempt.Direction);
         if (release.Bundle is not { } bundle) return release;
 
+        Func<long, bool>? passes = harmPassesThrough is not null && bundle.Spell.Effects.Any(DaggerfallMagicHarm.Harms)
+            ? id => harmPassesThrough(attempt.ActorId, id) : null;
         return bundle.Target switch
         {
             DaggerfallSpellTarget.CasterOnly => casting.Deliver(bundle, [attempt.ActorId]),
-            DaggerfallSpellTarget.ByTouch => casting.Deliver(bundle, reach.Targets),
+            DaggerfallSpellTarget.ByTouch => casting.Deliver(bundle, [.. reach.Targets.Where(id => passes?.Invoke(id) != true)]),
             DaggerfallSpellTarget.AreaAroundCaster => casting.Deliver(bundle,
-                targets.Area(attempt.ActorId, origin, excludeCaster: true)),
+                targets.Area(attempt.ActorId, origin, excludeCaster: true, passes: passes)),
             _ => release,
         };
     }

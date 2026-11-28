@@ -111,7 +111,7 @@ public sealed class DaggerfallMagicOwnersTests
         PresentationState presentation = new("", 5d);
         DaggerfallSpellRelease release = new(f.Casting, f.Targets, f.Items.Definitions, f.Actors, f.Items.Character, f.Items.Inventory,
             presentation, 1.6f, () => f.Positions, _ => throw new InvalidOperationException("No touch spell here."), null!,
-            () => default, (_, _) => false, (_, _, _) => { });
+            () => default, (_, _, _) => false, (_, _, _) => { });
         List<DaggerfallCastOutcome> told = [];
 
         Assert.Equal(DaggerfallCastOutcome.UnknownSpell, release.ReadyPlayerSpell("spell.unknown").Outcome);

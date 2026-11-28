@@ -195,9 +195,9 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
         return float.IsFinite(led.LengthSquared()) ? led : target;
     }
 
-    /// <summary>The bodies a player's attack goes through; an enemy's meets everyone.</summary>
+    /// <summary>The bodies an attack goes through: allies on the same side (and civilians when spared).</summary>
     private Func<long, bool>? Passes(DaggerfallAdmittedAttack? admission) =>
-        admission is { EnemyAttack: false } ? target => ops.PassesThrough(target, admission.HarmsCivilians) : null;
+        admission is not null ? target => ops.PassesThrough(admission.Request.AttackerId, target, admission.HarmsCivilians) : null;
 
     /// <summary>Flies one segment; true when the shot ended by meeting an actor or the world.</summary>
     private bool Fly(Shot shot, double distance, FactBuffer<IProductFact> facts)

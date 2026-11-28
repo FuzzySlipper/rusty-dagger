@@ -24,7 +24,7 @@ internal sealed partial class DaggerfallCombatRules : IAttackRules<IProductFact>
     private const string StaminaTrack = "stamina";
     private const string FatigueTrack = "fatigue";
     private readonly DaggerfallStrikes? _strikes;
-    private readonly Func<long, bool, bool> _passesThrough;
+    private readonly Func<long, long, bool, bool> _passesThrough;
     private bool _playerHarmsCivilians;
     private readonly IRandomService _random;
     internal CombatResolution Rules { get; }
@@ -103,10 +103,10 @@ internal sealed partial class DaggerfallCombatRules : IAttackRules<IProductFact>
         DaggerfallAttackTuning attackTuning,
         Func<long, bool>? targetUnaware = null, Action<long>? alertTarget = null, Func<DaggerfallAdrenalineRush?>? playerRush = null,
         ActorContact? contact = null, Func<long, DaggerfallStrikePose?>? strikePose = null, Func<CharacterStepEnvironment?>? contactEnvironment = null,
-        Func<long, Vector3>? actorVelocity = null, DaggerfallStrikes? strikes = null, Func<long, bool, bool>? passesThrough = null)
+        Func<long, Vector3>? actorVelocity = null, DaggerfallStrikes? strikes = null, Func<long, long, bool, bool>? passesThrough = null)
     {
         _strikes = strikes;
-        _passesThrough = passesThrough ?? ((_, _) => false);
+        _passesThrough = passesThrough ?? ((_, _, _) => false);
         _contact = contact;
         _strikePose = strikePose;
         _contactEnvironment = contactEnvironment;
@@ -856,7 +856,7 @@ internal sealed partial class DaggerfallCombatRules : IAttackRules<IProductFact>
     bool IDaggerfallPhysicalHarmOperations.TargetUnaware(long target) => _targetUnaware(target);
     void IDaggerfallPhysicalHarmOperations.AlertTarget(long target) => _alertTarget(target);
     double IDaggerfallPhysicalHarmOperations.BackstabMultiplier(Combatant attacker) => _attackTuning.Combatant.BackstabMultiplier(ReadStat(attacker, new DaggerfallStatId("backstabbing")));
-    bool IDaggerfallPhysicalHarmOperations.PassesThrough(long target, bool harmsCivilians) => _passesThrough(target, harmsCivilians);
+    bool IDaggerfallPhysicalHarmOperations.PassesThrough(long attacker, long target, bool harmsCivilians) => _passesThrough(attacker, target, harmsCivilians);
     void IDaggerfallPhysicalHarmOperations.Strike(AttackRequest request, long target, string attack, FactBuffer<IProductFact> facts) =>
         _strikes?.Land(request, target, attack, facts);
     void IDaggerfallPhysicalHarmOperations.DrainFatigue(AttackRequest request, long target, int damage, FactBuffer<IProductFact> facts) =>

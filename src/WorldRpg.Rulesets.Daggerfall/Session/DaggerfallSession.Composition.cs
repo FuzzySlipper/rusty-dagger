@@ -513,7 +513,8 @@ internal sealed partial class DaggerfallSession
             StrikeAim = new DaggerfallStrikeAim(actors, () => assembled.PlayerControl.Position, () => _input.ResolveCurrentLook(assembled.PlayerControl).Forward,
                 _tuning.Camera.EyeHeight, _contact, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.Attacks.AimRange,
                 IsPlayerAllied,
-                actor => actors.TryGet(actor, out ActorState target) && target.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsLawProtectedCivilian);
+                actor => actors.TryGet(actor, out ActorState target) && target.Actor.TryGet<ActorHarmPolicy>(out ActorHarmPolicy? harm) && harm.IsLawProtectedCivilian,
+                (attacker, target) => definitions.CreatureFactions.AreAllies(EffectiveActorTeam(attacker), EffectiveActorTeam(target)));
             StrikeFeel = new DaggerfallStrikeFeel(_tuning.Attacks.Strike, _camera, () => _engine.GameplayTime.Read().Rate);
             _combat = new DaggerfallCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
@@ -1039,7 +1040,8 @@ internal sealed partial class DaggerfallSession
                     TryBashDoorWithSwing(look);
                 }, InputRefusals);
             DaggerfallEnemySpellRelease enemySpells = new(Casting, SpellTargets, cast => _touch.Reach(cast), _contact, _spatial,
-                () => _exterior.CharacterEnvironment(State.PlayerControl.Motion));
+                () => _exterior.CharacterEnvironment(State.PlayerControl.Motion),
+                (caster, target) => StrikeAim.PassesThrough(caster, target, harmsCivilians: false));
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),
                 id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), enemySpells.LaneClear, enemySpells.Execute);

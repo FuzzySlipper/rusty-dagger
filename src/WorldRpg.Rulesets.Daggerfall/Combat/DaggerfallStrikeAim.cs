@@ -20,8 +20,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="aimRange">How far an attack's starting look reaches to find a civilian.</param>
 /// <param name="isPlayerAlly">Whether an actor fights on the player's side.</param>
 /// <param name="isCivilian">Whether an actor is a civilian.</param>
+/// <param name="isSameSide">Whether two actors fight on the same side or allied factions.</param>
 internal sealed class DaggerfallStrikeAim(ActorsState actors, Func<WorldPoint?> playerPosition, Func<Vector3> look, float eyeHeight,
-    ActorContact contact, Func<CharacterStepEnvironment?> environment, double aimRange, Func<long, bool> isPlayerAlly, Func<long, bool> isCivilian)
+    ActorContact contact, Func<CharacterStepEnvironment?> environment, double aimRange, Func<long, bool> isPlayerAlly, Func<long, bool> isCivilian,
+    Func<long, long, bool>? isSameSide = null)
 {
     /// <summary>
     /// Where an actor strikes or looses from and which way it faces: the player from the camera eye along
@@ -51,5 +53,19 @@ internal sealed class DaggerfallStrikeAim(ActorsState actors, Func<WorldPoint?> 
     }
 
     /// <summary>Whether a player's attack goes through a body: always an ally, and a civilian unless it started aimed at one.</summary>
-    internal bool PassesThrough(long actor, bool harmsCivilians) => isPlayerAlly(actor) || !harmsCivilians && isCivilian(actor);
+    internal bool PassesThrough(long actor, bool harmsCivilians) =>
+        PassesThrough(DaggerfallActorIdentity.PlayerEntityId, actor, harmsCivilians);
+
+    /// <summary>
+    /// Whether <paramref name="attacker"/>'s harmful blow, shot or spell goes through <paramref name="target"/>:
+    /// for the player, allies always and civilians unless aimed at one; for any other actor, allies on the same
+    /// side always, plus peaceful civilians when the attacker fights for the player's side.
+    /// </summary>
+    internal bool PassesThrough(long attacker, long target, bool harmsCivilians)
+    {
+        if (attacker == DaggerfallActorIdentity.PlayerEntityId)
+            return isPlayerAlly(target) || (!harmsCivilians && isCivilian(target));
+        if (isSameSide?.Invoke(attacker, target) == true) return true;
+        return isPlayerAlly(attacker) && (isPlayerAlly(target) || isCivilian(target));
+    }
 }

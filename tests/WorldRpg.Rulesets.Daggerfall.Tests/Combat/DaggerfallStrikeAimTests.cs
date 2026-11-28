@@ -15,18 +15,21 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Where a blow comes from and whom the player's harm passes, built without the session.</summary>
 public sealed class DaggerfallStrikeAimTests
 {
-    private const long Ally = 12, Civilian = 13, Enemy = 14;
+    private const long Ally = 12, Ally2 = 15, Civilian = 13, Enemy = 14, Enemy2 = 16;
 
     private sealed class Stage : IDisposable
     {
         internal Stage()
         {
             Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerfallActorFactory.PlayerCapabilities);
-            foreach (long actor in new[] { Ally, Civilian, Enemy })
+            foreach (long actor in new[] { Ally, Ally2, Civilian, Enemy, Enemy2 })
                 Actors.CreateActor(actor, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(new WorldPoint(40f + actor, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             _ = CombatCollaborators.Targeting(Actors, new Dictionary<long, DaggerfallActorDefinition>(), out _spatial);
             Aim = new DaggerfallStrikeAim(Actors, () => Player, () => Vector3.UnitZ, 1.5f,
-                CombatCollaborators.Contact(Actors, _spatial, () => Player), () => null, 2d, actor => actor == Ally, actor => actor == Civilian);
+                CombatCollaborators.Contact(Actors, _spatial, () => Player), () => null, 2d,
+                actor => actor is Ally or Ally2, actor => actor == Civilian,
+                isSameSide: (a, b) => (a is DaggerfallActorIdentity.PlayerEntityId or Ally or Ally2 && b is DaggerfallActorIdentity.PlayerEntityId or Ally or Ally2)
+                    || (a is Enemy or Enemy2 && b is Enemy or Enemy2));
         }
 
         private readonly SpatialMovementSystem _spatial;
@@ -61,5 +64,20 @@ public sealed class DaggerfallStrikeAimTests
         Assert.True(stage.Aim.PassesThrough(Civilian, harmsCivilians: false));
         Assert.False(stage.Aim.PassesThrough(Civilian, harmsCivilians: true));
         Assert.False(stage.Aim.PassesThrough(Enemy, harmsCivilians: false));
+    }
+
+    [Fact]
+    public void Non_player_harm_passes_same_side_allies_and_player_allies_pass_the_player_and_civilians()
+    {
+        using Stage stage = new();
+        Assert.True(stage.Aim.PassesThrough(Ally, Ally2, harmsCivilians: false));
+        Assert.True(stage.Aim.PassesThrough(Ally, DaggerfallActorIdentity.PlayerEntityId, harmsCivilians: false));
+        Assert.True(stage.Aim.PassesThrough(Ally, Civilian, harmsCivilians: false));
+        Assert.False(stage.Aim.PassesThrough(Ally, Enemy, harmsCivilians: false));
+
+        Assert.True(stage.Aim.PassesThrough(Enemy, Enemy2, harmsCivilians: false));
+        Assert.False(stage.Aim.PassesThrough(Enemy, DaggerfallActorIdentity.PlayerEntityId, harmsCivilians: false));
+        Assert.False(stage.Aim.PassesThrough(Enemy, Ally, harmsCivilians: false));
+        Assert.False(stage.Aim.PassesThrough(Enemy, Civilian, harmsCivilians: false));
     }
 }

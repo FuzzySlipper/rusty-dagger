@@ -20,7 +20,7 @@ public sealed class DaggerfallSpellbookPanelTests : IDisposable
         DaggerfallDefinitions definitions = _fixture.Items.Definitions;
         DaggerfallSpellRelease release = new(_fixture.Casting, _fixture.Targets, definitions, _fixture.Actors, _fixture.Items.Character,
             _fixture.Items.Inventory, _presentation, 1.6f, () => _fixture.Positions, _ => throw new InvalidOperationException("No touch spell here."),
-            null!, () => default, (_, _) => false, (_, _, _) => { });
+            null!, () => default, (_, _, _) => false, (_, _, _) => { });
         DaggerfallServiceCounter counter = new(() => null, () => null, null!, () => default, new DaggerfallActivationPresentation());
         DaggerfallMakerPanels makers = new(_fixture.Items.ItemMaker(), _fixture.Items.PotionMaker(), definitions, counter, _presentation);
         DaggerfallQuestInstances quests = new(definitions, RandomMinimum.Create());

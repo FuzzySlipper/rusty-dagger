@@ -15,7 +15,7 @@ public sealed class DaggerfallSpellFlightsTests
     {
         DaggerfallSpellRelease release = new(f.Casting, f.Targets, f.Items.Definitions, f.Actors, f.Items.Character, f.Items.Inventory,
             new PresentationState("", 5d), 1.6f, () => f.Positions, _ => throw new InvalidOperationException("No touch spell here."), null!,
-            () => default, (_, _) => false, (_, _, _) => { });
+            () => default, (_, _, _) => false, (_, _, _) => { });
         return (new DaggerfallSpellFlights(f.Casting, release), new DaggerfallEnemySpellRelease(f.Casting, f.Targets, _ => default, null!, null!, () => default));
     }
 

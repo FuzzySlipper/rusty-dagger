@@ -74,8 +74,8 @@ internal interface IDaggerfallPhysicalHarmOperations
     void AlertTarget(long target);
     /// <summary>What a backstab multiplies a blow by, from the attacker's Backstabbing.</summary>
     double BackstabMultiplier(Combatant attacker);
-    /// <summary>Whether a player's attack goes through this body as if it weren't there.</summary>
-    bool PassesThrough(long target, bool harmsCivilians);
+    /// <summary>Whether <paramref name="attacker"/>'s attack goes through <paramref name="target"/> as if it weren't there.</summary>
+    bool PassesThrough(long attacker, long target, bool harmsCivilians);
     /// <summary>A player's blow rocks the body it landed on, by its force against that body's weight.</summary>
     void Strike(AttackRequest request, long target, string attack, FactBuffer<IProductFact> facts);
     /// <summary>An unarmed blow drains the target's fatigue as well as its health.</summary>

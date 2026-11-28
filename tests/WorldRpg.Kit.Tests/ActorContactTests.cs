@@ -78,6 +78,22 @@ public sealed class ActorContactTests
     }
 
     [Fact]
+    public void A_passes_predicate_excludes_both_site_actors_and_the_player_from_segments_and_volumes()
+    {
+        using Scene scene = new();
+        Vector3 from = new(4f, 1f, 0f);
+        SegmentContact skipMid = scene.Contact.Segment(3, from, new Vector3(-1f, 1f, 0f), passes: id => id == 2);
+        Assert.Equal((ContactKind.Actor, (long?)1), (skipMid.Kind, skipMid.ActorId));
+
+        SegmentContact skipBoth = scene.Contact.Segment(3, from, new Vector3(-1f, 1f, 0f), passes: id => id is 1 or 2);
+        Assert.Equal(SegmentContact.None, skipBoth);
+
+        VolumeContact swing = scene.Contact.Volume(3, Reach(-1f, 5f), SpatialPose.Identity, from, passes: id => id is 1 or 2);
+        Assert.Empty(swing.Actors);
+        Assert.DoesNotContain(scene.Spatial.Overlaps[^1].Entities.ToArray(), collider => collider.Entity == scene.Entity(1) || collider.Entity == scene.Entity(2));
+    }
+
+    [Fact]
     public void A_contact_segment_needs_a_positive_length_and_the_body_needs_positive_dimensions()
     {
         using Scene scene = new();

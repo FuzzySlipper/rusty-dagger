@@ -77,7 +77,7 @@ public sealed class ActorContact
             .Where(actor => actor.DurableId != excluded && !actor.IsDefeated && _eligible(actor.DurableId) && passes?.Invoke(actor.DurableId) != true)
             .Select(actor => new SpatialEntityCollider(actor.Actor.Entity.Value, actor.Position.ToVector() - reach,
                 actor.Position.ToVector() + top, 0, 0, true, false, false));
-        if (_actors.Player.DurableId != excluded && !_actors.Player.IsDefeated)
+        if (_actors.Player.DurableId != excluded && !_actors.Player.IsDefeated && passes?.Invoke(_actors.Player.DurableId) != true)
             colliders = colliders.Append(_spatial.ProjectCharacterCollider(_player(), _actors.Player.Actor.Entity.Value));
         return colliders.ToArray();
     }

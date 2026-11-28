@@ -20,12 +20,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="positions">Where the player and every gameplay-active actor stand now.</param>
 /// <param name="touch">Whom a touch at its cast frame reaches.</param>
 /// <param name="environment">The world environment contact queries run against now.</param>
-/// <param name="passesThrough">Whether the player's harm goes through an actor, given whether it harms civilians.</param>
+/// <param name="passesThrough">Whether a caster's harmful spell goes through an actor, given whether it harms civilians.</param>
 /// <param name="playImpact">Where a flight's impact sounds: the bundle's sequence, its element and the point.</param>
 internal sealed class DaggerfallSpellRelease(DaggerfallCasting casting, DaggerfallSpellTargets targets, DaggerfallDefinitions definitions,
     ActorsState actors, DaggerfallCharacterState character, MechanicsInventoryCoordinator inventory, PresentationState presentation,
     float eyeHeight, Func<IReadOnlyDictionary<long, WorldPoint>> positions, Func<DaggerfallTouchCast, DaggerfallTouchReach> touch,
-    ActorContact contact, Func<CharacterStepEnvironment> environment, Func<long, bool, bool> passesThrough,
+    ActorContact contact, Func<CharacterStepEnvironment> environment, Func<long, long, bool, bool> passesThrough,
     Action<long, int, Vector3> playImpact)
 {
     private const int SpellbookTemplateIndex = 132;
@@ -131,13 +131,12 @@ internal sealed class DaggerfallSpellRelease(DaggerfallCasting casting, Daggerfa
     }
 
     /// <summary>
-    /// The bodies a spell the player released goes through. Only harm goes through anyone: a helpful spell reaches allies
-    /// and civilians, and a spell with any harm in it counts as harm, since an effect can't be delivered without the rest.
-    /// Anyone else's spell meets everyone.
+    /// The bodies a harmful spell goes through: allies on the same side (and civilians when spared). Helpful spells
+    /// pass through no one so heals and buffs still reach allies, and sourceless dungeon trap spells meet everyone.
     /// </summary>
     private Func<long, bool>? SpellPasses(DaggerfallLiveSpell bundle) =>
-        bundle.CasterId == actors.Player.DurableId && bundle.Spell.Effects.Any(DaggerfallMagicHarm.Harms)
-            ? id => passesThrough(id, bundle.HarmsCivilians) : null;
+        bundle.CasterId is long casterId && bundle.Spell.Effects.Any(DaggerfallMagicHarm.Harms)
+            ? id => passesThrough(casterId, id, bundle.HarmsCivilians) : null;
 
     /// <summary>Actual ranged flight callers submit their physical swept segment; Engine chooses the first collision.</summary>
     internal DaggerfallCastResult DeliverSpellImpact(DaggerfallLiveSpell bundle, Vector3 from, Vector3 to)
