@@ -1,6 +1,35 @@
-import { heldRevision, image, smoothIfRefreshed } from './art.js';
+import { heldDemandedRevision, heldRevision, image, reportMissingArt, smoothIfRefreshed } from './art.js';
 import type { QuestMessageProjection, QuestPresentation, UiAction } from './projection.js';
 import { reflow } from './reflow.js';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function escortPlaceholder(face: { readonly instance: string; readonly symbol: string; readonly name: string; readonly mediaId: string }): HTMLElement {
+  const placeholder = document.createElement('span');
+  placeholder.className = 'dagger-escort-placeholder';
+  placeholder.setAttribute('role', 'img');
+  placeholder.setAttribute('aria-label', face.name);
+  placeholder.dataset.artMissing = face.mediaId;
+  placeholder.dataset.questInstance = face.instance;
+  placeholder.dataset.questResource = face.symbol;
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 32 32');
+  svg.setAttribute('width', '32');
+  svg.setAttribute('height', '32');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('display', 'block');
+  const head = document.createElementNS(SVG_NS, 'circle');
+  head.setAttribute('cx', '16');
+  head.setAttribute('cy', '12');
+  head.setAttribute('r', '5.5');
+  head.setAttribute('fill', '#8f7a5a');
+  const shoulders = document.createElementNS(SVG_NS, 'path');
+  shoulders.setAttribute('d', 'M6 28 C6 21 10.5 19 16 19 C21.5 19 26 21 26 28 Z');
+  shoulders.setAttribute('fill', '#8f7a5a');
+  svg.append(head, shoulders);
+  placeholder.append(svg);
+  return placeholder;
+}
 
 export const questMessageNodes = new WeakMap<HTMLElement, Map<string, { signature: string; node: HTMLElement }>>();
 
@@ -32,20 +61,34 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
     article.append(answers);
     keep(`offer:${offer.instance}`, offer, article);
   }
+  const missingFaces: string[] = [];
   if (value.escortFaces?.length) {
     const escorts = document.createElement('aside'); escorts.className = 'dagger-escort-faces';
     escorts.setAttribute('aria-label', 'Escorted companions');
     for (const face of value.escortFaces) {
-      const portrait = document.createElement('img'); portrait.alt = face.name;
-      portrait.dataset.questInstance = face.instance; portrait.dataset.questResource = face.symbol;
       const source = image(face.mediaId);
-      if (source) { portrait.src = source; smoothIfRefreshed(portrait, face.mediaId); }
-      else portrait.dataset.artMissing = face.mediaId;
+      let visual: HTMLElement;
+      if (source) {
+        const portrait = document.createElement('img');
+        portrait.alt = face.name;
+        portrait.dataset.questInstance = face.instance;
+        portrait.dataset.questResource = face.symbol;
+        portrait.src = source;
+        smoothIfRefreshed(portrait, face.mediaId);
+        portrait.addEventListener('error', () => {
+          reportMissingArt('escorts', [face.mediaId]);
+          portrait.replaceWith(escortPlaceholder(face));
+        }, { once: true });
+        visual = portrait;
+      } else {
+        missingFaces.push(face.mediaId);
+        visual = escortPlaceholder(face);
+      }
       if (face.healthShare != null || face.stance != null) {
         const card = document.createElement('figure');
         card.className = 'dagger-escort-face';
         card.dataset.questInstance = face.instance;
-        card.append(portrait);
+        card.append(visual);
         if (face.healthShare != null) {
           const clamped = Math.max(0, Math.min(1, face.healthShare));
           const pct = Math.round(clamped * 100);
@@ -71,11 +114,12 @@ export function renderQuestMessages(root: HTMLElement, value: QuestPresentation 
         }
         escorts.append(card);
       } else {
-        escorts.append(portrait);
+        escorts.append(visual);
       }
     }
-    keep("escorts", [value.escortFaces, heldRevision()], escorts);
+    keep("escorts", [value.escortFaces, heldRevision(), heldDemandedRevision()], escorts);
   }
+  reportMissingArt('escorts', missingFaces);
   const add = (message: QuestMessageProjection, heading: string, deliveries: readonly QuestMessageProjection[]): void => {
     const article = document.createElement('article');
     // Every quest message is read on parchment, as the classic popups and letters are.

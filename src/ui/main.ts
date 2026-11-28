@@ -200,7 +200,9 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // revision it is missing, which is what a reload needs and what a republished artifact produces.
   let artRevision = heldRevision();
   let artCooldown = 0;
+  let requestedArtRevision = '';
   let demandedCooldown = 0;
+  let requestedDemandedRevision = '';
   const redrawArt = (): void => {
     // The kit becomes the skin's custom properties once per art block; every primitive draws from them.
     applySkin();
@@ -216,13 +218,24 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     const value = projection.value;
     const wasLoading = loading.open();
     loading.update(value.loading ?? null);
+    if (wasLoading && !loading.open()) {
+      artCooldown = 0;
+      demandedCooldown = 0;
+    }
     adoptScreens(value.screens);
     const adopted = value.uiArt ? adopt(value.uiArt) : '';
     if (adopted.length > 0 && adopted !== artRevision) {
       artRevision = adopted;
       redrawArt();
     }
-    if (value.uiArtRevision && value.uiArtRevision !== artRevision) {
+    // The Host drops input updates while a loading screen runs (WorldRpgProduct.Update), so do not
+    // spend an art-request cooldown while loading is up; once loading clears, ask immediately if the
+    // new session's art has not arrived yet.
+    if (!loading.open() && value.uiArtRevision && value.uiArtRevision !== artRevision) {
+      if (requestedArtRevision !== value.uiArtRevision) {
+        requestedArtRevision = value.uiArtRevision;
+        artCooldown = 0;
+      }
       // Ask again on a slow retry rather than once, because the answer travels the same transport
       // this request does: one snapshot that carried art would have cleared the cooldown instead.
       if (artCooldown === 0) {
@@ -233,6 +246,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       }
     } else {
       artCooldown = 0;
+      requestedArtRevision = '';
     }
 
     // The demanded block is adopted on top of the held art, so it only counts once that art is current.
@@ -240,7 +254,11 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       const before = heldDemandedRevision();
       if (adoptDemanded(value.uiArtDemanded) !== before) menu.refreshArt();
     }
-    if (value.uiArtDemandedRevision && artRevision === value.uiArtRevision && value.uiArtDemandedRevision !== heldDemandedRevision()) {
+    if (!loading.open() && value.uiArtDemandedRevision && artRevision === value.uiArtRevision && value.uiArtDemandedRevision !== heldDemandedRevision()) {
+      if (requestedDemandedRevision !== value.uiArtDemandedRevision) {
+        requestedDemandedRevision = value.uiArtDemandedRevision;
+        demandedCooldown = 0;
+      }
       if (demandedCooldown === 0) {
         demandedCooldown = ART_REQUEST_INTERVAL;
         send({ action: 'art-request', revision: value.uiArtDemandedRevision });
@@ -249,6 +267,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       }
     } else {
       demandedCooldown = 0;
+      requestedDemandedRevision = '';
     }
 
     // Death outranks every other mode, so the screen the mode owns replaces the HUD rather than

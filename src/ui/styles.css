@@ -379,6 +379,8 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-quest-message button { justify-self: start; margin-right: .5rem; padding: .5rem 1rem; font: 700 .8rem var(--font-label); pointer-events: auto; }
 .dagger-escort-faces { display: flex; gap: .5rem; align-items: flex-start; }
 .dagger-escort-faces img { width: 3rem; height: 3rem; object-fit: contain; image-rendering: pixelated; }
+.dagger-escort-placeholder { width: 3rem; height: 3rem; display: grid; place-items: center; background: rgb(18 14 11 / .9); border: 1px solid rgb(164 134 86 / .65); box-sizing: border-box; }
+.dagger-escort-placeholder svg { width: 2.25rem; height: 2.25rem; }
 .dagger-escort-face { margin: 0; display: grid; gap: .2rem; justify-items: center; }
 .dagger-escort-health { display: block; width: 3rem; height: .3rem; background: rgb(18 12 10 / .85); border: 1px solid rgb(164 134 86 / .65); overflow: hidden; }
 .dagger-escort-health-fill { display: block; height: 100%; background: #b8332a; }

@@ -5470,6 +5470,129 @@ test('quest escort portraits use published art and remove only ended quest overl
   } finally { f.dispose(); }
 });
 
+test('companion portrait renders placeholder and warns when missing, then swaps to face when uiArtDemanded arrives (#11218)', () => {
+  const f = fixture();
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  try {
+    const baseArt = { revision: 'hud-base-art', images: [{ id: 'character.head.male.00.0', image: 'data:image/png;base64,bWFsZQ==' }] };
+    const companion = {
+      instance: 'party:companion',
+      symbol: 'actor:85073632782733',
+      name: 'Belladayne Greenfield',
+      mediaId: 'refreshed.character.head.female.00.2',
+      healthShare: 1,
+      stance: 'follow',
+    };
+
+    // Snapshot 1: companion appears in escortFaces before demanded portrait arrives -> placeholder + warning, no broken img.
+    f.publish({
+      uiArtRevision: baseArt.revision,
+      uiArt: baseArt,
+      uiArtDemandedRevision: `${baseArt.revision}.1`,
+      quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [companion] },
+    });
+    assert.equal(f.root.querySelector('.dagger-escort-faces img'), null, 'Missing portrait must not render a broken <img> with alt text.');
+    const placeholder = f.root.querySelector('.dagger-escort-placeholder');
+    assert.ok(placeholder, 'Missing portrait renders a placeholder face.');
+    assert.equal(placeholder.dataset.artMissing, companion.mediaId);
+    assert.equal(placeholder.getAttribute('aria-label'), companion.name);
+    assert.ok(warnings.some(msg => msg.includes('escorts') && msg.includes(companion.mediaId)), 'Missing portrait must be reported once.');
+
+    // Snapshot 2: demanded portrait arrives with IDENTICAL escortFaces and uiArtRevision; only uiArtDemandedRevision advances.
+    const demanded = {
+      revision: `${baseArt.revision}.1`,
+      from: 0,
+      images: [{ id: companion.mediaId, image: 'data:image/webp;base64,ZmVtYWxl', smooth: true }],
+    };
+    f.publish({
+      uiArtRevision: baseArt.revision,
+      uiArtDemandedRevision: demanded.revision,
+      uiArtDemanded: demanded,
+      quests: { deliveries: [], journal: { active: [], finished: [] }, pending: null, escortFaces: [companion] },
+    });
+    assert.equal(f.root.querySelector('.dagger-escort-placeholder'), null, 'Placeholder must be replaced once demanded art arrives.');
+    const img = f.root.querySelector('.dagger-escort-faces img');
+    assert.ok(img, 'Companion portrait <img> must render once demanded art arrives.');
+    assert.equal(img.src, demanded.images[0].image);
+    assert.equal(img.alt, companion.name);
+  } finally {
+    console.warn = originalWarn;
+    f.dispose();
+  }
+});
+
+test('session replacement during loading waits until loading clears to send art-request so demanded companion faces adopt (#11218)', () => {
+  const f = fixture();
+  try {
+    // Session 1 (title screen) adopts revision r1 and its initial demanded portraits.
+    f.publish({
+      mode: 'title',
+      uiArtRevision: 'r1',
+      uiArt: { revision: 'r1', images: [{ id: 'ui.stone.window.v2', image: 'data:image/png;base64,a2l0' }] },
+      uiArtDemandedRevision: 'r1.1',
+      uiArtDemanded: { revision: 'r1.1', from: 0, images: [{ id: 'refreshed.character.head.male.00.7', image: 'data:image/webp;base64,bWFsZQ==', smooth: true }] },
+    });
+    const actionsBeforeLoad = f.actions.length;
+
+    // Session 2 replaces session 1 while the host loading screen is up (host drops inputs during loading).
+    // The DOM must NOT spend its art-request cooldown while loading is open.
+    f.publish({
+      mode: 'playing',
+      loading: { title: 'Starting a new game', label: 'Entering the world', step: 1, steps: 2, fraction: 0.5 },
+      uiArtRevision: 'r2',
+      uiArtDemandedRevision: 'r2.1',
+    });
+    assert.equal(f.actions.length, actionsBeforeLoad, 'Must not spend art-request while loading screen holds host input.');
+
+    // Loading clears -> DOM immediately requests r2 so artRevision catches up to the new session.
+    f.publish({
+      mode: 'playing',
+      loading: null,
+      uiArtRevision: 'r2',
+      uiArtDemandedRevision: 'r2.1',
+    });
+    assert.deepEqual(f.actions.at(-1), { action: 'art-request', revision: 'r2' }, 'Must request the new session art as soon as loading clears.');
+
+    // Server replies with r2 + its initial demanded block, then later demands a female companion head on hire.
+    f.publish({
+      mode: 'playing',
+      loading: null,
+      uiArtRevision: 'r2',
+      uiArt: { revision: 'r2', images: [{ id: 'ui.stone.window.v2', image: 'data:image/png;base64,a2l0' }] },
+      uiArtDemandedRevision: 'r2.1',
+      uiArtDemanded: { revision: 'r2.1', from: 0, images: [{ id: 'refreshed.character.head.male.00.7', image: 'data:image/webp;base64,bWFsZQ==', smooth: true }] },
+    });
+    f.publish({
+      mode: 'playing',
+      loading: null,
+      uiArtRevision: 'r2',
+      uiArtDemandedRevision: 'r2.2',
+      uiArtDemanded: { revision: 'r2.2', from: 1, images: [{ id: 'refreshed.character.head.female.00.2', image: 'data:image/webp;base64,ZmVtYWxl', smooth: true }] },
+      quests: {
+        deliveries: [],
+        journal: { active: [], finished: [] },
+        pending: null,
+        escortFaces: [{
+          instance: 'party:companion',
+          symbol: 'actor:85073632782733',
+          name: 'Belladayne Greenfield',
+          mediaId: 'refreshed.character.head.female.00.2',
+          healthShare: 1,
+          stance: 'follow',
+        }],
+      },
+    });
+    assert.equal(f.root.querySelector('.dagger-escort-placeholder'), null);
+    const img = f.root.querySelector('.dagger-escort-faces img');
+    assert.ok(img, 'Female companion portrait must adopt and render immediately after session replacement.');
+    assert.equal(img.src, 'data:image/webp;base64,ZmVtYWxl');
+  } finally {
+    f.dispose();
+  }
+});
+
 
 test('racial form projection closes and suppresses inventory until human form returns', () => {
   const f = fixture();

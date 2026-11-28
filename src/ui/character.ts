@@ -193,7 +193,7 @@ export interface PaperDoll {
   readonly unplaced: readonly string[];
 }
 
-import { heldRevision, image, smoothIfRefreshed, type ArtTint } from './art.js';
+import { heldDemandedRevision, heldRevision, image, smoothIfRefreshed, type ArtTint } from './art.js';
 import { createCycler, type Cycler, type CyclerOption } from './cycler.js';
 import { letterPickerButton } from './letter-picker.js';
 import { invalidate, redraw } from './redraw.js';
@@ -307,8 +307,8 @@ export function mountCharacter(root: HTMLElement, send?: (action: CharacterActio
         value: skill.tierLabel,
         testid: `character-sheet-granted-${skill.id}`,
       })));
-      // The art revision is part of the stamp: a face preview drawn before its art arrived is drawn again.
-      const nextCreationStamp = JSON.stringify([value.creationAvailable === true, value.creation ?? null, heldRevision()]);
+      // Both base and demanded art revisions are part of the stamp: a face preview drawn before its demanded art arrived is drawn again.
+      const nextCreationStamp = JSON.stringify([value.creationAvailable === true, value.creation ?? null, heldRevision(), heldDemandedRevision()]);
       if (creationStamp !== nextCreationStamp) {
         renderCreation(creation.rows, value.creation ?? null, value.creationAvailable === true, send);
         creationStamp = nextCreationStamp;

@@ -471,14 +471,17 @@ internal sealed class DaggerfallPartyHireService
         DaggerfallCharacterGender gender = string.Equals(npc.Appearance.Gender, "Female", StringComparison.OrdinalIgnoreCase)
             ? DaggerfallCharacterGender.Female
             : DaggerfallCharacterGender.Male;
-        string race = string.Equals(npc.Appearance.Race, "redguard", StringComparison.OrdinalIgnoreCase)
-            ? "redguard"
+        string? normalizedRace = string.IsNullOrWhiteSpace(npc.Appearance.Race)
+            ? null
+            : npc.Appearance.Race.Trim().ToLowerInvariant();
+        string race = normalizedRace is not null && presentation.Races.ContainsKey(normalizedRace)
+            ? normalizedRace
             : "breton";
         var heads = presentation.RequireRace(race).Heads(gender);
         if (heads.Count == 0)
             throw new NotSupportedException($"Character presentation has no portrait heads for {race} {gender}.");
-        int seed = Math.Abs(npc.Appearance.NameSeed != 0 ? npc.Appearance.NameSeed : (int)(npc.DurableId & 0x7FFF_FFFFL));
-        return heads[seed % heads.Count].MediaId;
+        uint seed = unchecked((uint)(npc.Appearance.NameSeed != 0 ? npc.Appearance.NameSeed : (int)(npc.DurableId & 0x7FFF_FFFFL)));
+        return heads[(int)(seed % (uint)heads.Count)].MediaId;
     }
 
     private string ResolveSpecId(DaggerfallNpc npc, string? explicitSpecId)

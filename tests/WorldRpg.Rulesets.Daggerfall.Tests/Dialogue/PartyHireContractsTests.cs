@@ -518,4 +518,111 @@ public sealed class PartyHireContractsTests
         Assert.False(reloaded.PartyHire.TryGetContract(hireable.DurableId, out _));
         Assert.False(reloaded.PartyHire.TryGetStagedHiredRole(hireable.DurableId, out _));
     }
+
+    [Fact]
+    public void ResolvePortraitMedia_every_race_and_gender_head_resolves_to_delivered_media_in_classic_and_refreshed_art()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        const string payload = "worldrpg/packs/daggerfall.art-replacements/payload.json";
+        DaggerfallArtReplacements artReplacements = DaggerfallArtReplacements.Read(
+            TestContentFiles.Read(Path.Combine(root, "content", payload)), "daggerfall.art-replacements");
+        foreach (DaggerfallArtImage image in artReplacements.Images)
+            content.Add(image.Path, TestContentFiles.ReadCopy(Path.Combine(root, "content", image.Path)));
+
+        DaggerfallData data = DataOf(content);
+        string[] classicHeads =
+        [
+            .. definitions.CharacterPresentation.Races.Values
+                .SelectMany(race => race.Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head))
+                .Select(layer => layer.MediaId),
+        ];
+        DaggerfallUiArt uiArt = DaggerfallUiArt.Read(
+            data,
+            inputs.ClassicPresentation.InventoryIcons.Values,
+            characterIcons: classicHeads,
+            replacements: artReplacements,
+            drawnAnew: DaggerfallUiArtChoice.DrawnAnew(artReplacements));
+
+        DaggerfallNpcSite charing = new(17, "Charing", string.Empty);
+        HashSet<string> resolvedClassic = new(StringComparer.Ordinal);
+        HashSet<string> resolvedRefreshed = new(StringComparer.Ordinal);
+
+        // Exercise every race and gender in CharacterPresentation across the full head list (not one seed),
+        // plus fallback cases (NameSeed == 0 and an unknown race).
+        foreach (string raceId in definitions.CharacterPresentation.Races.Keys.OrderBy(key => key, StringComparer.Ordinal))
+        {
+            foreach (DaggerfallCharacterGender gender in new[] { DaggerfallCharacterGender.Male, DaggerfallCharacterGender.Female })
+            {
+                string genderText = gender == DaggerfallCharacterGender.Female ? "Female" : "Male";
+                IReadOnlyList<DaggerfallCharacterLayerDefinition> expectedHeads = definitions.CharacterPresentation.RequireRace(raceId).Heads(gender);
+                Assert.NotEmpty(expectedHeads);
+
+                HashSet<string> seenForGroup = new(StringComparer.Ordinal);
+                for (int seed = 1; seed <= expectedHeads.Count; seed++)
+                {
+                    DaggerfallNpc npc = new(
+                        0x4000_0000_0000L + seed,
+                        DaggerfallNpcKind.Static,
+                        $"test/{raceId}/{genderText}/{seed}",
+                        charing,
+                        new DaggerfallNpcAppearance(raceId, genderText, 182, 0, seed, 518),
+                        "road-guard",
+                        ["talk"],
+                        DaggerfallNpcPresence.Active,
+                        null, null, null);
+                    string classicId = DaggerfallPartyHireService.ResolvePortraitMedia(definitions, npc);
+                    seenForGroup.Add(classicId);
+                    resolvedClassic.Add(classicId);
+                    resolvedRefreshed.Add(artReplacements.Drawn(classicId));
+                }
+
+                // Every head in the race/gender list must be reachable.
+                Assert.Equal(expectedHeads.Count, seenForGroup.Count);
+
+                // NameSeed == 0 falls back to DurableId without throwing or leaving the head list.
+                DaggerfallNpc zeroSeedNpc = new(
+                    85073632782733L,
+                    DaggerfallNpcKind.Static,
+                    $"test/{raceId}/{genderText}/zero",
+                    charing,
+                    new DaggerfallNpcAppearance(raceId, genderText, 182, 0, 0, 518),
+                    "road-guard",
+                    ["talk"],
+                    DaggerfallNpcPresence.Active,
+                    null, null, null);
+                Assert.Contains(DaggerfallPartyHireService.ResolvePortraitMedia(definitions, zeroSeedNpc), seenForGroup);
+            }
+        }
+
+        // Unknown race falls back cleanly to Breton without failing.
+        DaggerfallNpc unknownRaceNpc = new(
+            85073632782733L,
+            DaggerfallNpcKind.Static,
+            "test/unknown/female",
+            charing,
+            new DaggerfallNpcAppearance("imperial", "Female", 182, 0, 7, 518),
+            "road-guard",
+            ["talk"],
+            DaggerfallNpcPresence.Active,
+            null, null, null);
+        Assert.Contains(DaggerfallPartyHireService.ResolvePortraitMedia(definitions, unknownRaceNpc), resolvedClassic);
+
+        // Every classic head AND every refreshed head must resolve to delivered image bytes through DaggerfallUiArt.Demand.
+        uiArt.Demand(resolvedRefreshed);
+        uiArt.Demand(resolvedClassic);
+
+        Dictionary<string, DaggerfallUiArtImage> delivered = uiArt.Images.Concat(uiArt.Demanded)
+            .ToDictionary(image => image.Id, StringComparer.Ordinal);
+        foreach (string id in resolvedRefreshed.Concat(resolvedClassic))
+        {
+            Assert.True(delivered.TryGetValue(id, out DaggerfallUiArtImage? image), $"Portrait media '{id}' was not delivered by DaggerfallUiArt.");
+            Assert.StartsWith("data:image/", image!.Image, StringComparison.Ordinal);
+            Assert.True(image.Image.Length > 64, $"Portrait media '{id}' carried an empty image payload.");
+        }
+    }
 }
