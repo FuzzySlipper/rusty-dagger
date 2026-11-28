@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using WorldRpg.Kit;
 using WorldRpg.Politics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -320,8 +321,22 @@ public sealed class PoliticalBoardTests
     [Fact]
     public void A_courier_arriving_before_its_moves_sunday_brings_it_in_on_time_however_the_clock_jumps()
     {
-        using DaggerfallSession stepped = FreshSession();
-        using DaggerfallSession jumped = FreshSession();
+        // A quiet road, so a courier keeps the schedule it set out with: the test Engine's keyed draws all come up 1,
+        // which the road's own one-in-a-hundred delay would meet at every segment (#11178).
+        DaggerfallRoadChances none = new(0, 0);
+        DaggerfallTuning tuning = DaggerfallTuning.Defaults with
+        {
+            Expedition = DaggerfallTuning.Defaults.Expedition with
+            {
+                Road = DaggerfallTuning.Defaults.Expedition.Road with
+                {
+                    Wilds = none, HostileBand = none,
+                    Hazards = Enum.GetValues<DaggerfallRoadHazard>().ToDictionary(hazard => hazard, _ => none),
+                },
+            },
+        };
+        using DaggerfallSession stepped = FreshSession(tuning: tuning);
+        using DaggerfallSession jumped = FreshSession(tuning: tuning);
         DaggerfallPoliticalBoard board = stepped.PoliticalBoard!;
         PendingMove? early = null;
         DaggerfallCourierDispatchSave? dispatch = null;

@@ -43,8 +43,9 @@ internal static class TestSessions
     }
 
     /// <summary>A session that has not swung, so its weapon is ready.</summary>
-    internal static DaggerfallSession FreshSession(DaggerfallEffectCatalog? effects = null)
+    internal static DaggerfallSession FreshSession(DaggerfallEffectCatalog? effects = null, DaggerfallTuning? tuning = null)
     {
+        tuning ??= DaggerfallTuning.Defaults;
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = ReadInputs(root);
@@ -55,8 +56,8 @@ internal static class TestSessions
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         return effects is null
-            ? DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults))
-            : DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Effects = effects });
+            ? DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, tuning))
+            : DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, tuning) { Effects = effects });
     }
 
     internal static LookReceipt ForwardLook() => new(default, default, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);

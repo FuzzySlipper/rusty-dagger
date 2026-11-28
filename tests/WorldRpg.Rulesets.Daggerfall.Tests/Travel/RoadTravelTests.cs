@@ -202,10 +202,64 @@ public sealed class RoadTravelTests
         Assert.Equal(0, (delivered.ExpectedArrivalMinute - scheduled) % delay);
     }
 
-    private static DaggerfallTuning Tuned(DaggerfallRoadChances wilds) => DaggerfallTuning.Defaults with
+    [Fact]
+    public void A_session_resting_twenty_hours_at_once_moves_a_delayed_courier_as_twenty_hours_one_by_one_do()
     {
-        Expedition = DaggerfallTuning.Defaults.Expedition with { Road = DaggerfallTuning.Defaults.Expedition.Road with { Wilds = wilds } },
-    };
+        // Every segment delays: a band resumes six hours after each, wherever the rest's windows fall.
+        DaggerfallTuning tuning = Tuned(new(Raid: 0, Delay: 100));
+        using DaggerfallSession whole = Session(tuning);
+        using DaggerfallSession hourly = Session(tuning);
+        DaggerfallCourierDispatchSave dispatch = Dispatch(whole);
+        _ = Dispatch(hourly);
+
+        // Twenty hours cross several of the rest's six-hour windows, short of the courier's door.
+        whole.AdvanceElapsedTime(20 * 3600);
+        for (int hour = 0; hour < 20; hour++) hourly.AdvanceElapsedTime(3600);
+
+        DaggerfallPersistentOverlandBand a = Assert.Single(whole.Expedition.PersistentBands, band => band.BandId == dispatch.OverlandBandId);
+        DaggerfallPersistentOverlandBand b = Assert.Single(hourly.Expedition.PersistentBands, band => band.BandId == dispatch.OverlandBandId);
+        Assert.True(a.RoadSegment > 1, $"Twenty hours of six-hour holds should see the courier along several segments, not {a.RoadSegment}.");
+        Assert.Equal((a.RouteStep, a.RoadSegment, a.HeldUntilSecond), (b.RouteStep, b.RoadSegment, b.HeldUntilSecond));
+        Assert.Equal(a.X, b.X, 6);
+        Assert.True(whole.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? wholeDispatch));
+        Assert.True(hourly.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? hourlyDispatch));
+        Assert.Equal(wholeDispatch!.ExpectedArrivalMinute, hourlyDispatch!.ExpectedArrivalMinute);
+    }
+
+    [Fact]
+    public void A_hazard_that_lapses_during_a_rest_still_meets_the_courier_on_the_days_it_held()
+    {
+        // Raiders that take every band, held only until tomorrow, where the courier sets out today.
+        DaggerfallTuning tuning = Tuned(new(Raid: 0, Delay: 0), new Dictionary<DaggerfallRoadHazard, DaggerfallRoadChances>
+        {
+            [DaggerfallRoadHazard.War] = new(0, 0), [DaggerfallRoadHazard.Raiders] = new(100, 0),
+            [DaggerfallRoadHazard.Monsters] = new(0, 0), [DaggerfallRoadHazard.Plague] = new(0, 0),
+        });
+        foreach (bool atOnce in new[] { true, false })
+        {
+            using DaggerfallSession session = Session(tuning);
+            DaggerfallCourierDispatchSave dispatch = Dispatch(session);
+            int today = checked((int)session.Calendar.DayNumber);
+            session.WorldConditions.Set(new DaggerfallWorldConditionToken(TokenId: "test:raiders", Kind: DaggerfallWorldConditionKind.GrainShortage,
+                Region: dispatch.OriginSite.Require().Region, SubjectTag: DaggerfallRoadTuning.RaidersTag, Severity: 1, StartedDay: today, ExpiresDay: today + 1));
+
+            if (atOnce) session.AdvanceElapsedTime(2 * 86400);
+            else for (int hour = 0; hour < 48; hour++) session.AdvanceElapsedTime(3600);
+
+            Assert.DoesNotContain(session.WorldConditions.ActiveForRegion(dispatch.OriginSite.Require().Region), token => token.TokenId == "test:raiders");
+            Assert.True(session.CourierDispatches.TryGet(dispatch.DispatchId, out DaggerfallCourierDispatchSave? lost));
+            Assert.Equal(DaggerfallDispatchStatus.Waylaid, lost!.Status);
+        }
+    }
+
+    private static DaggerfallTuning Tuned(DaggerfallRoadChances wilds, IReadOnlyDictionary<DaggerfallRoadHazard, DaggerfallRoadChances>? hazards = null) =>
+        DaggerfallTuning.Defaults with
+        {
+            Expedition = DaggerfallTuning.Defaults.Expedition with
+            {
+                Road = DaggerfallTuning.Defaults.Expedition.Road with { Wilds = wilds, Hazards = hazards ?? DaggerfallTuning.Defaults.Expedition.Road.Hazards },
+            },
+        };
 
     /// <summary>A board envoy between two towns well beyond the road distance of the player in Privateer's Hold.</summary>
     private static DaggerfallCourierDispatchSave Dispatch(DaggerfallSession session)
@@ -246,8 +300,9 @@ public sealed class RoadTravelTests
 
     private static void Pass(DaggerfallExpedition expedition, RoadWorld world, long seconds, (double X, double Y) party)
     {
-        world.Calendar = DaggerfallCalendar.FromAbsoluteSeconds(world.Calendar.ToAbsoluteSeconds() + seconds);
-        _ = expedition.AdvancePersistentBandsOffMap(seconds, party);
+        long from = world.Calendar.ToAbsoluteSeconds();
+        world.Calendar = DaggerfallCalendar.FromAbsoluteSeconds(from + seconds);
+        _ = expedition.AdvancePersistentBandsOffMap(from, from + seconds, party);
     }
 
     private static DaggerfallPersistentBandSave Caravan(string id, double x, DaggerfallBandKind kind = DaggerfallBandKind.Caravan, double speed = 1) =>
@@ -313,7 +368,7 @@ public sealed class RoadTravelTests
         public IReadOnlyList<DaggerfallWorldConditionToken> WorldConditionsOn(int region, int day) =>
             [.. Conditions.Where(token => token.Region == region && token.StartedDay <= day && (token.ExpiresDay is null || day < token.ExpiresDay))];
         public void PersistentBandDelayed(DaggerfallPersistentOverlandBand band, long seconds) => Delayed.Add((band.BandId, seconds));
-        public void PersistentBandRetiredOffScreen(string bandId) => Retired.Add(bandId);
-        public void PersistentBandArrived(DaggerfallPersistentOverlandBand band) => Arrived.Add(band.BandId);
+        public void PersistentBandRetiredOffScreen(string bandId, long second) => Retired.Add(bandId);
+        public void PersistentBandArrived(DaggerfallPersistentOverlandBand band, long second) => Arrived.Add(band.BandId);
     }
 }

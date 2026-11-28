@@ -203,6 +203,9 @@ internal interface IDaggerfallWorldConditionSource
 internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSource
 {
     private readonly Dictionary<string, DaggerfallWorldConditionToken> _tokens = new(StringComparer.Ordinal);
+
+    // The authored tokens the latest prune removed that the elapsed time still being delivered may ask about (#11178).
+    private readonly List<DaggerfallWorldConditionToken> _lapsed = [];
     private readonly Dictionary<string, int> _externalReductions = new(StringComparer.Ordinal);
     private Func<int, IReadOnlyList<DaggerfallWorldConditionToken>>? _externalSource;
 
@@ -341,14 +344,24 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
         AfterMutation?.Invoke();
     }
 
-    /// <summary>Removes expired authored tokens at or after <paramref name="currentDay"/>.</summary>
-    internal int PruneExpired(int currentDay)
+    /// <summary>
+    /// Removes expired authored tokens at or after <paramref name="currentDay"/>. An interval that reached it from
+    /// <paramref name="keepFromDay"/> keeps those still active on some day since then, so a question about one of its
+    /// past days (<see cref="ActiveForRegion"/> with that day), as the road asks of the weeks a rest passed, is answered as
+    /// it would have been on the day (#11178).
+    /// </summary>
+    internal int PruneExpired(int currentDay, int? keepFromDay = null)
     {
-        List<string> expired = [.. _tokens.Values.Where(token => token.IsExpired(currentDay)).Select(token => token.TokenId)];
+        _lapsed.RemoveAll(token => keepFromDay is not int from || token.IsExpired(from));
+        List<DaggerfallWorldConditionToken> expired = [.. _tokens.Values.Where(token => token.IsExpired(currentDay))];
         if (expired.Count == 0)
             return 0;
         BeforeMutation?.Invoke();
-        foreach (string id in expired) _tokens.Remove(id);
+        foreach (DaggerfallWorldConditionToken token in expired)
+        {
+            _tokens.Remove(token.TokenId);
+            if (keepFromDay is int from && !token.IsExpired(from)) _lapsed.Add(token);
+        }
         AfterMutation?.Invoke();
         return expired.Count;
     }
@@ -381,6 +394,10 @@ internal sealed class DaggerfallWorldConditions : IDaggerfallWorldConditionSourc
             if (currentDay is int d && (d < token.StartedDay || token.IsExpired(d))) continue;
             merged[token.TokenId] = token;
         }
+        if (currentDay is int day)
+            foreach (DaggerfallWorldConditionToken token in _lapsed)
+                if (token.AppliesToRegion(region) && day >= token.StartedDay && !token.IsExpired(day))
+                    merged.TryAdd(token.TokenId, token);
 
         if (merged.Count == 0)
             return [];

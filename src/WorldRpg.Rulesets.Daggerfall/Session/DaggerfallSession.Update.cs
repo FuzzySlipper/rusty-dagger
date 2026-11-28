@@ -269,7 +269,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendar after = _time.Calendar;
         long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
-        WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
+        WorldConditions.PruneExpired(checked((int)_time.Calendar.DayNumber), checked((int)before.DayNumber));                     // Content/Society (checkpoints WordSpread via BeforeMutation when tokens expire)
         OfficeLedger.AdvanceVacancies(minuteAfter, checked((int)_time.Calendar.DayNumber));       // Society: office vacancy window progression
         SocialConsequences.AdvanceDay(checked((int)_time.Calendar.DayNumber));                    // Society: daily household grudge decay & mourning expiry
         ShopContinuity.AdvanceDay(checked((int)_time.Calendar.DayNumber));                        // Society: shop bereavement reopening, kin/town replacement & jail release
@@ -1147,7 +1147,7 @@ internal sealed partial class DaggerfallSession
 
         if (lastWindow < firstWindow)
         {
-            _ = Expedition.AdvancePersistentBandsOffMap(endSec - startSec, offMapPosition);
+            _ = Expedition.AdvancePersistentBandsOffMap(startSec, endSec, offMapPosition);
             return;
         }
 
@@ -1162,7 +1162,7 @@ internal sealed partial class DaggerfallSession
             long jumpTo = (effectiveFirstWindow - 1) * dispatchInterval;
             if (jumpTo > cursorSec)
             {
-                _ = Expedition.AdvancePersistentBandsOffMap(jumpTo - cursorSec, offMapPosition);
+                _ = Expedition.AdvancePersistentBandsOffMap(cursorSec, jumpTo, offMapPosition);
                 cursorSec = jumpTo;
             }
         }
@@ -1173,7 +1173,7 @@ internal sealed partial class DaggerfallSession
             long boundarySec = window * dispatchInterval;
             if (boundarySec > cursorSec)
             {
-                _ = Expedition.AdvancePersistentBandsOffMap(boundarySec - cursorSec, offMapPosition);
+                _ = Expedition.AdvancePersistentBandsOffMap(cursorSec, boundarySec, offMapPosition);
                 cursorSec = boundarySec;
             }
             DaggerfallCalendar boundaryCal = DaggerfallCalendar.FromAbsoluteSeconds(boundarySec);
@@ -1183,7 +1183,7 @@ internal sealed partial class DaggerfallSession
         }
 
         if (endSec > cursorSec)
-            _ = Expedition.AdvancePersistentBandsOffMap(endSec - cursorSec, offMapPosition);
+            _ = Expedition.AdvancePersistentBandsOffMap(cursorSec, endSec, offMapPosition);
     }
 
     private (double X, double Y) ResolveOffMapPosition()

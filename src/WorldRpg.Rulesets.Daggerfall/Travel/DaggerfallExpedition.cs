@@ -90,10 +90,10 @@ internal interface IDaggerfallExpeditionSurroundings
     void MeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging) { }
 
     /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> travelling party reached its destination pixel.</summary>
-    void PersistentBandArrived(DaggerfallPersistentOverlandBand band) { }
+    void PersistentBandArrived(DaggerfallPersistentOverlandBand band, long second) { }
 
     /// <summary>A persistent <see cref="ActorLocationKind.OnOverlandBand"/> party was retired off-screen (e.g. off-screen clash or raid resolution).</summary>
-    void PersistentBandRetiredOffScreen(string bandId) { }
+    void PersistentBandRetiredOffScreen(string bandId, long second) { }
 
     /// <summary>Active world-condition tokens affecting <paramref name="region"/> (stubbed/authored or B2 board-driven).</summary>
     IReadOnlyList<DaggerfallWorldConditionToken> WorldConditions(int region) => [];
@@ -1192,18 +1192,18 @@ internal sealed class DaggerfallExpedition
     /// quest time) without triggering player-intercept pauses. The bands on the road go the whole interval at once, a
     /// segment at a time (<see cref="StepRoad"/>); the live ones near the party step in bounded hourly slices so outbound
     /// caravans that arrive mid-interval can dispatch and progress on their return legs, and off-screen clashes resolve
-    /// cleanly.
+    /// cleanly. The interval runs from absolute second <paramref name="from"/> to <paramref name="to"/>, which a caller
+    /// cutting a longer one into pieces gives for each piece, whatever the calendar already reads.
     /// </summary>
-    internal int AdvancePersistentBandsOffMap(long seconds, (double X, double Y) partyPosition)
+    internal int AdvancePersistentBandsOffMap(long from, long to, (double X, double Y) partyPosition)
     {
-        if (seconds <= 0 || _persistentBands.Count == 0) return 0;
+        if (to <= from || _persistentBands.Count == 0) return 0;
 
-        long now = _world.Calendar.ToAbsoluteSeconds();
-        long sliceCursor = Math.Max(0, now - seconds);
+        long sliceCursor = from;
         TakeToRoadOrMap(partyPosition);
-        int arrivals = StepRoad(sliceCursor, now, partyPosition);
+        int arrivals = StepRoad(from, to, partyPosition);
         const int maxSlices = 48;
-        long remaining = seconds;
+        long remaining = to - from;
         int slices = 0;
         while (remaining > 0 && _persistentBands.Any(band => !band.OnRoad))
         {
@@ -1211,6 +1211,7 @@ internal sealed class DaggerfallExpedition
                 ? Math.Min(remaining, SecondsPerHour)
                 : remaining;
             remaining -= stepSeconds;
+            long sliceStart = sliceCursor;
             sliceCursor += stepSeconds;
             slices++;
 
@@ -1222,12 +1223,12 @@ internal sealed class DaggerfallExpedition
             double hours = stepSeconds / (double)SecondsPerHour;
             foreach (DaggerfallPersistentOverlandBand band in _persistentBands.ToArray())
             {
-                if (band.OnRoad || HeldAt(band, sliceCursor)) continue;
+                if (band.OnRoad || HeldAt(band, sliceStart)) continue;
                 bool arrived = band.StepMove(partyPosition, hours, allowPursuit: false, policy: _policy);
                 if (!arrived) continue;
                 _persistentBands.Remove(band);
                 if (_persistentBandAhead == band) _persistentBandAhead = null;
-                _world.PersistentBandArrived(band);
+                _world.PersistentBandArrived(band, sliceCursor);
                 arrivals++;
             }
             ResolveBandCollisions(sliceCursor, partyPosition, mapOpen: false, beforePositions);
@@ -1365,20 +1366,20 @@ internal sealed class DaggerfallExpedition
         {
             _persistentBands.Remove(band);
             if (_persistentBandAhead == band) _persistentBandAhead = null;
-            _world.PersistentBandRetiredOffScreen(band.BandId);
+            _world.PersistentBandRetiredOffScreen(band.BandId, now);
         }
     }
 
     private void ResolveOffScreenPersistentClash(DaggerfallPersistentOverlandBand primary, string rivalBandId, long now)
     {
         // Always retire the absorbed rival cleanly so zero OnOverlandBand ledger entries are orphaned.
-        _world.PersistentBandRetiredOffScreen(rivalBandId);
+        _world.PersistentBandRetiredOffScreen(rivalBandId, now);
         int roll = _world.Roll($"clash:persistent:{primary.BandId}:{rivalBandId}:{now}", 1, 100);
         if (roll <= 50 && (IsRaidableTraveller(primary) || primary.Hostile))
         {
             _persistentBands.Remove(primary);
             if (_persistentBandAhead == primary) _persistentBandAhead = null;
-            _world.PersistentBandRetiredOffScreen(primary.BandId);
+            _world.PersistentBandRetiredOffScreen(primary.BandId, now);
         }
     }
 
@@ -1464,11 +1465,11 @@ internal sealed class DaggerfallExpedition
             _persistentBands.Remove(band);
             if (step == DaggerfallRoadStep.Raided)
             {
-                _world.PersistentBandRetiredOffScreen(band.BandId);
+                _world.PersistentBandRetiredOffScreen(band.BandId, at);
                 continue;
             }
             HashSet<DaggerfallPersistentOverlandBand> before = [.. _persistentBands];
-            _world.PersistentBandArrived(band);
+            _world.PersistentBandArrived(band, at);
             arrivals++;
             TakeToRoadOrMap(party);
             foreach (DaggerfallPersistentOverlandBand sent in _persistentBands.Where(sent => sent.OnRoad && !before.Contains(sent)))
@@ -1596,7 +1597,7 @@ internal sealed class DaggerfallExpedition
             {
                 _persistentBands.Remove(band);
                 if (_persistentBandAhead == band) _persistentBandAhead = null;
-                _world.PersistentBandArrived(band);
+                _world.PersistentBandArrived(band, _world.Calendar.ToAbsoluteSeconds());
                 continue;
             }
 
