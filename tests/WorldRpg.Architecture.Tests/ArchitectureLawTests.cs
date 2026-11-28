@@ -71,19 +71,29 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
-    public void Every_file_under_content_is_tracked()
+    public void Every_file_under_content_is_tracked_but_the_art_media_kept_on_the_NAS()
     {
         // The product's content/ tree holds only tracked, authored files; everything derived from the player's
         // Daggerfall files lives in the data containers under local/data/. A file there that Git does not track (an
-        // ignored or untracked one) is derived content that would be staged with the product, or authored
-        // content that is not committed.
+        // untracked one) is derived content that would be staged with the product, or authored content that is not
+        // committed. The one exception is art binaries, which ship but live on the den NAS (AGENTS.md, #11221): the
+        // art pack's media that .gitignore names.
         if (!Directory.Exists(Path.Combine(RepositoryRoot, ".git")) && !File.Exists(Path.Combine(RepositoryRoot, ".git"))) return;
-        using System.Diagnostics.Process git = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git", ["-C", RepositoryRoot, "ls-files", "--others", "--", "content"])
+        string[] untracked = GitFiles("ls-files", "--others", "--", "content");
+        HashSet<string> artOnTheNas = [.. GitFiles("ls-files", "--others", "--ignored", "--exclude-standard", "--",
+            "content/worldrpg/packs/daggerfall.art-replacements/media")];
+        string[] stray = [.. untracked.Where(path => !artOnTheNas.Contains(path))];
+        Assert.True(stray.Length == 0, $"content/ holds files Git does not track:{Environment.NewLine}{string.Join(Environment.NewLine, stray.Take(20))}");
+    }
+
+    private static string[] GitFiles(params string[] arguments)
+    {
+        using System.Diagnostics.Process git = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("git", ["-C", RepositoryRoot, .. arguments])
             { RedirectStandardOutput = true, UseShellExecute = false })!;
-        string untracked = git.StandardOutput.ReadToEnd();
+        string output = git.StandardOutput.ReadToEnd();
         git.WaitForExit();
         Assert.Equal(0, git.ExitCode);
-        Assert.True(untracked.Length == 0, $"content/ holds files Git does not track:{Environment.NewLine}{string.Join(Environment.NewLine, untracked.Split('\n').Take(20))}");
+        return output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
     }
 
     [Fact]

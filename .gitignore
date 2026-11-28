@@ -20,3 +20,6 @@ TestResults/
 # ordinary test file (TemplateLedgerTests.cs, TemperatureTests.cs) is never ignored by accident.
 tests/**/ReviewProbe*.cs
 
+# Art binaries ship with the game but live on den NAS, not in Git (Patch, 2026-11-28)
+/content/worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/
+/content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/

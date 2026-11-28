@@ -145336,6 +145336,1089 @@
       "group": 1,
       "lid": "#ac806a"
      }
+    },
+    "381-32k": {
+     "name": "Villager 381 (32k Gaussians)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-32k.glb",
+      "byteLength": 2298292,
+      "sha256": "9d3e57ad22df329eeac0a305311436a91740d1a395a628a8ca05d07e8b7915c4"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#3b201a"
+     }
+    },
+    "381-core": {
+     "name": "Villager 381 (16k Gaussians + 2400-tri core)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-core.glb",
+      "byteLength": 1246976,
+      "sha256": "1e617b7a49fe1c35b6a6d3bd2ba9e385f1a1317d127143eb6b1bb9247c0fdc72"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#432721"
+     }
+    },
+    "381-core-800": {
+     "name": "Villager 381 (16k Gaussians + 800-tri core)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-core-800.glb",
+      "byteLength": 1186164,
+      "sha256": "9462738131b21fa3cb82ce033987918b3db782f984e6fe071b362428cd3a7954"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#432721"
+     }
+    },
+    "381-cards": {
+     "name": "Villager 381 (6k unlit billboard cards)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-cards.glb",
+      "byteLength": 4726480,
+      "sha256": "5d7f97bd62f7ec975c8af0dd2fe3cdaa6a7803393e0440d51beb11f3aefd3ed9"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-cards-core": {
+     "name": "Villager 381 (6k unlit cards + 2400-tri core)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-cards-core.glb",
+      "byteLength": 4819176,
+      "sha256": "fca44970b55b6a02750de652546c37a56ddd74fa6ff14ea90126e83a0c9c26b0"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-cards-core-800": {
+     "name": "Villager 381 (6k unlit cards + 800-tri core)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-cards-core-800.glb",
+      "byteLength": 4758364,
+      "sha256": "89e0f633ef283f4a058775e3d8bd3dfe87592792fde0396fb0a3aa0b6e4a5609"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-cards-lit": {
+     "name": "Villager 381 (6k lit billboard cards)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-cards-lit.glb",
+      "byteLength": 9327712,
+      "sha256": "1c6e91f082b2d3fee48c732c1fc75e1a4527bad5b77eedb412ae1cb42816998b"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-cards-lit-core": {
+     "name": "Villager 381 (6k lit cards + 2400-tri core)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-cards-lit-core.glb",
+      "byteLength": 9420380,
+      "sha256": "69c9cad72456c0a15d3aac8e6ef5ddde869ec51130c641ac55d623ec6da7f45e"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-mesh-10k": {
+     "name": "Villager 381 (10k skinned triangle mesh)",
+     "archive": null,
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-mesh-10k.glb",
+      "byteLength": 3048596,
+      "sha256": "623f0c45f7f7c3488d289e895f06f13562fa6ae31f0d88e97c373d94b577f20e"
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-hybrid-mesh-lit": {
+     "name": "Villager 381 (10k Lit PBR Skinned Mesh)",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-hybrid-mesh-lit.glb",
+      "sha256": "6fdcf735028dd9f9cb9d1a9a8a953c85e21d5bf8c3b8befb267f1589435a915d",
+      "byteLength": 3048540
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-hybrid-full": {
+     "name": "Villager 381 (Hybrid Lit Mesh + 16k Gaussians)",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-hybrid-full.glb",
+      "sha256": "dd39edc8b7a7c2c3f9b4425aa87f032eb2a213458879fe30f03d0f40f25f2042",
+      "byteLength": 4147636
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#432721"
+     }
+    },
+    "381-hybrid-cards-lit": {
+     "name": "Villager 381 (Hybrid Lit Mesh + 6k Lit Cards)",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-hybrid-cards-lit.glb",
+      "sha256": "db4062531709c6674baa5fd8586721f871044f7b479f7ace9c74c12f227011ea",
+      "byteLength": 12369012
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
+    },
+    "381-hybrid-opt-8k": {
+     "name": "Villager 381 (Hybrid Lit Mesh + 8k Opt Gaussians)",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-hybrid-opt-8k.glb",
+      "sha256": "14e69886005291c401ad7ebe483b2256c59ed0962032a484d5e4b83c086b43fb",
+      "byteLength": 3601732
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#432721"
+     }
+    },
+    "381-hybrid-opt-5k": {
+     "name": "Villager 381 (Hybrid Lit Mesh + 5k Opt Gaussians)",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/381-hybrid-opt-5k.glb",
+      "sha256": "1a47d3f8d4452b9be3aa06de099ffdd2f98d5f6880b565589d5f86d94e6079ee",
+      "byteLength": 3394728
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7699,
+       "A": 0.1655,
+       "speed": 1.3922
+      },
+      "stroll": {
+       "k": 0.7442,
+       "A": 0.1633,
+       "speed": 1.2994
+      },
+      "stroll-easy": {
+       "k": 0.6307,
+       "A": 0.2926,
+       "speed": 1.1012
+      },
+      "idle": {
+       "k": 0.8507,
+       "A": 0.091
+      },
+      "idle-relaxed": {
+       "k": 0.8507,
+       "A": 0.0802
+      },
+      "idle-crossed": {
+       "k": 0.8507,
+       "A": 0.0635
+      },
+      "idle-hips": {
+       "k": 0.8507,
+       "A": 0.0821
+      }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ],
+     "eyes": {
+      "group": 1,
+      "lid": "#432721"
+     }
     }
    }
   },
@@ -146590,6 +147673,4639 @@
      }
     }
    ]
+  },
+  "splatEnemies": {
+   "joint": "mixamorig:Hips",
+   "producer": "pinoc-mixamo",
+   "license": "mixamo-royalty-free",
+   "clips": {
+    "combat-idle": {
+     "path": "splat-enemies/combat-idle.glb",
+     "byteLength": 149280,
+     "sha256": "cdc5dea6fa7750097c87bfcb3a78474fa120904d0f2eeedd11aa9077c4c87bf2"
+    },
+    "mage-idle": {
+     "path": "splat-enemies/mage-idle.glb",
+     "byteLength": 201864,
+     "sha256": "bf0eccb334ef3d13a2f44ea0062ce62b5ef63df0bad2388b3833386298455831"
+    },
+    "run": {
+     "path": "splat-enemies/run.glb",
+     "byteLength": 101512,
+     "sha256": "e7f556190ec7f3a74bf8055beff234dd99e2f47c1a2491152d5b6c3f411e8c1b"
+    },
+    "run-sword": {
+     "path": "splat-enemies/run-sword.glb",
+     "byteLength": 75656,
+     "sha256": "c7e487c1be1d436dd62035388bf965a1f6666f439b4e3919e3c1541b0284a66e"
+    },
+    "attack-sword": {
+     "path": "splat-enemies/attack-sword.glb",
+     "byteLength": 88012,
+     "sha256": "995451eac95d78011435a6a8ac837e57bae246f1555c535fa59a33897bfa90a4"
+    },
+    "attack-sword-2": {
+     "path": "splat-enemies/attack-sword-2.glb",
+     "byteLength": 93148,
+     "sha256": "004569c5d400f1f476aef9ed2a310926e806508f9484c1ff9c687c8fcd59c2cc"
+    },
+    "attack-melee": {
+     "path": "splat-enemies/attack-melee.glb",
+     "byteLength": 145704,
+     "sha256": "692077ad945b41e6eb89ba2856da9222369c80cb75966b61287209b302a4a61c"
+    },
+    "attack-melee-2": {
+     "path": "splat-enemies/attack-melee-2.glb",
+     "byteLength": 145708,
+     "sha256": "3533ed88a98e4d1758c19816089612dbdfe7ec5ba63354df6f336389e05352a8"
+    },
+    "attack-cast": {
+     "path": "splat-enemies/attack-cast.glb",
+     "byteLength": 152548,
+     "sha256": "3e2c0329e8697a43ea85ad1c17ce85395018311ea503efd6cdb8d0df20c24a35"
+    },
+    "attack-bow": {
+     "path": "splat-enemies/attack-bow.glb",
+     "byteLength": 113668,
+     "sha256": "83a6738dcd27da7b668d72781eceae393456fc40b792f29e640d63d8a70dab3d"
+    },
+    "hurt": {
+     "path": "splat-enemies/hurt.glb",
+     "byteLength": 161304,
+     "sha256": "cf3a6e04a14739062d1478db5022bb09640838c91255fe588af50be618a421bf"
+    },
+    "death": {
+     "path": "splat-enemies/death.glb",
+     "byteLength": 136420,
+     "sha256": "4a15b4529473b9de04af5e135a8bb60130e3c3222fa428990a72faa9f9b66560"
+    },
+    "walk": {
+     "path": "splat-people/walk.glb",
+     "byteLength": 183248,
+     "sha256": "d1cba35ad39f831ee867f0a69f40200abcc8f050ac1511983b865d3ae4db55e4"
+    },
+    "gentle": {
+     "path": "splat-people/gentle.glb",
+     "byteLength": 183248,
+     "sha256": "5d5ce11a10902e7a4c309eb7983b5e63bef1b3b84208e0701f08ee6ff44897fa"
+    },
+    "idle": {
+     "path": "splat-people/idle.glb",
+     "byteLength": 188020,
+     "sha256": "50b0590a5c5a046a6f8b92a9b610d7f5f07f3d7638d3223cbf6dbfdf60688bf7"
+    }
+   },
+   "characters": {
+    "npc-399": {
+     "name": "City watch guard",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 146
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-399.glb",
+       "byteLength": 1788636,
+       "sha256": "35b4235aa2c3a320d8127e4dd32f51a7acc57b49b58c862ccfb5b8d5b230205a"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-399.core.glb",
+       "byteLength": 1880716,
+       "sha256": "54fe9afe1d9216820b52475f3b635a45da048337d06d27f357b8b689c036f111"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-399-cards.glb",
+       "byteLength": 4694656,
+       "sha256": "71128f8dd474650f2e873bd662d7d197601c3cc436f301060f5d7068b6561de2"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-399-cards.core.glb",
+       "byteLength": 4786648,
+       "sha256": "44e3b4760e5534ae6e90c3b35c910fe17c82ca4de5a3108ffaee2f131a41cacc"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7333,
+       "A": 0.1636,
+       "speed": 1.325975
+      },
+      "idle": {
+       "k": 0.8119,
+       "A": 0.0928
+      },
+      "combat-idle": {
+       "k": 0.8155,
+       "A": 0.0963
+      },
+      "mage-idle": {
+       "k": 0.8119,
+       "A": 0.0691
+      },
+      "run": {
+       "k": 0.7438,
+       "A": 0.1476,
+       "speed": 2.080801
+      },
+      "attack-melee": {
+       "k": 0.8119,
+       "A": 0.0675
+      },
+      "attack-melee-2": {
+       "k": 0.8119,
+       "A": 0.0807
+      },
+      "attack-cast": {
+       "k": 0.8119,
+       "A": 0.0799
+      },
+      "attack-bow": {
+       "k": 0.8119,
+       "A": 0.0828
+      },
+      "hurt": {
+       "k": 0.8119,
+       "A": -0.014
+      },
+      "death": {
+       "k": 0.8119,
+       "A": -0.0162
+      },
+      "run-sword": {
+       "k": 0.7946,
+       "A": 0.1069,
+       "speed": 3.2835
+      },
+      "attack-sword": {
+       "k": 0.9755,
+       "A": -0.0481
+      },
+      "attack-sword-2": {
+       "k": 0.8555,
+       "A": 0.0577
+      }
+     },
+     "palette": [
+      "#430c04",
+      "#252024",
+      "#a52e0a",
+      "#bd7b5a",
+      "#ec5114",
+      "#d2d3d9",
+      "#79777b",
+      "#c2bebf",
+      "#6390bf",
+      "#626065",
+      "#784835",
+      "#faf1de",
+      "#a6a9b0",
+      "#04183f",
+      "#c99e85",
+      "#343339",
+      "#e0eaf2",
+      "#f8be8f",
+      "#280301",
+      "#522c1d",
+      "#f3945f",
+      "#929093",
+      "#fefefe",
+      "#fce3b4",
+      "#a0603f",
+      "#03030f",
+      "#275e82",
+      "#4a494f",
+      "#130101",
+      "#141117",
+      "#000000",
+      "#731302"
+     ]
+    },
+    "npc-457": {
+     "name": "Spellsword (female)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 129,
+       "gender": "Female"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-457.glb",
+       "byteLength": 1656928,
+       "sha256": "6a5285904d7c46a30d54d38e83c9f6106b742f41c13f79f1befa41807a8f74c7"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-457.core.glb",
+       "byteLength": 1749580,
+       "sha256": "72b66696a12689c39e497e0abb140309747e9299f749cb26fbbeb2148fbde673"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-457-cards.glb",
+       "byteLength": 4768452,
+       "sha256": "02cd100a37e1d0bd4877a38a4907c1264be2286afef3bee213a34e3d8092af55"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-457-cards.core.glb",
+       "byteLength": 4861012,
+       "sha256": "829f1b1294023441c2cd12307935afb747f4642df8a3d19a36e6ed5167a89e15"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7469,
+       "A": 0.1641,
+       "speed": 1.350489
+      },
+      "idle": {
+       "k": 0.8314,
+       "A": 0.0858
+      },
+      "combat-idle": {
+       "k": 0.8978,
+       "A": 0.0301
+      },
+      "mage-idle": {
+       "k": 0.8314,
+       "A": 0.0593
+      },
+      "run": {
+       "k": 0.7542,
+       "A": 0.1501,
+       "speed": 2.109808
+      },
+      "attack-melee": {
+       "k": 0.8314,
+       "A": 0.0608
+      },
+      "attack-melee-2": {
+       "k": 0.8314,
+       "A": 0.0724
+      },
+      "attack-cast": {
+       "k": 0.8314,
+       "A": 0.0747
+      },
+      "attack-bow": {
+       "k": 0.8314,
+       "A": 0.0775
+      },
+      "hurt": {
+       "k": 0.8314,
+       "A": -0.0243
+      },
+      "death": {
+       "k": 0.8314,
+       "A": -0.023
+      },
+      "run-sword": {
+       "k": 0.802,
+       "A": 0.1116,
+       "speed": 3.3142
+      },
+      "attack-sword": {
+       "k": 0.7822,
+       "A": 0.1342
+      },
+      "attack-sword-2": {
+       "k": 0.7905,
+       "A": 0.1241
+      }
+     },
+     "palette": [
+      "#28241c",
+      "#99644e",
+      "#c56935",
+      "#420f05",
+      "#f6caab",
+      "#cc957b",
+      "#929c9e",
+      "#2a0402",
+      "#a32d09",
+      "#030917",
+      "#150101",
+      "#522b1c",
+      "#848a49",
+      "#71787b",
+      "#e4af8f",
+      "#ebec7d",
+      "#154365",
+      "#3f4234",
+      "#6e3c28",
+      "#636838",
+      "#adb660",
+      "#515659",
+      "#1b9ab7",
+      "#bfc9cc",
+      "#854e38",
+      "#f9fbf9",
+      "#faebc9",
+      "#000101",
+      "#b27e64",
+      "#f19859",
+      "#082437",
+      "#681703"
+     ]
+    },
+    "npc-458": {
+     "name": "Spellsword (male, staff)",
+     "role": "staff",
+     "bindings": [
+      {
+       "mobileId": 129,
+       "gender": "Male"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-458.glb",
+       "byteLength": 1608152,
+       "sha256": "a82640b251e6079c77fb0e9b61bb5dbb07703df565ea0dfd7a88cd37ca8b9d1e"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-458.core.glb",
+       "byteLength": 1700904,
+       "sha256": "1253a4e1a234995c20e5ad55e324da5edc1c3a3114dad45b122a8c9d7dbe6889"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-458-cards.glb",
+       "byteLength": 4779392,
+       "sha256": "332df554406d5b72137802212fb38e965747a8c03fc99fc38bc9061dc9d1aa59"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-458-cards.core.glb",
+       "byteLength": 4872056,
+       "sha256": "eb583ab4dcc1e1e5191c9bc7c1ec68efa222b9f8b8a812519a8004fdf68fc134"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7728,
+       "A": 0.1536,
+       "speed": 1.397448
+      },
+      "gentle": {
+       "k": 0.5909,
+       "A": 0.3581,
+       "speed": 1.068482
+      },
+      "idle": {
+       "k": 0.8523,
+       "A": 0.0973
+      },
+      "combat-idle": {
+       "k": 1.1061,
+       "A": -0.1335
+      },
+      "mage-idle": {
+       "k": 0.8523,
+       "A": 0.0699
+      },
+      "run": {
+       "k": 0.8132,
+       "A": 0.1101,
+       "speed": 2.274896
+      },
+      "attack-melee": {
+       "k": 0.8523,
+       "A": 0.0697
+      },
+      "attack-melee-2": {
+       "k": 0.8523,
+       "A": 0.0804
+      },
+      "attack-cast": {
+       "k": 0.8523,
+       "A": 0.0791
+      },
+      "attack-bow": {
+       "k": 0.8523,
+       "A": 0.0886
+      },
+      "hurt": {
+       "k": 0.8523,
+       "A": -0.0255
+      },
+      "death": {
+       "k": 0.8523,
+       "A": -0.0311
+      },
+      "run-sword": {
+       "k": 0.8097,
+       "A": 0.1193,
+       "speed": 3.3461
+      },
+      "attack-sword": {
+       "k": 0.874,
+       "A": 0.0775
+      },
+      "attack-sword-2": {
+       "k": 0.8745,
+       "A": 0.0657
+      }
+     },
+     "palette": [
+      "#03033d",
+      "#aa694b",
+      "#7e4c3d",
+      "#085772",
+      "#ebac88",
+      "#2e0603",
+      "#092a38",
+      "#81b4cf",
+      "#f4d4b2",
+      "#bbd7e7",
+      "#877f65",
+      "#728c9c",
+      "#aea798",
+      "#010619",
+      "#4a1408",
+      "#263b46",
+      "#646649",
+      "#170303",
+      "#01010b",
+      "#0c1b18",
+      "#f9f8ee",
+      "#546d7e",
+      "#643729",
+      "#721103",
+      "#b8370c",
+      "#2a261f",
+      "#050a8c",
+      "#000000",
+      "#1b93c9",
+      "#3e525c",
+      "#cb8a6b",
+      "#433f30"
+     ],
+     "skirt": {
+      "tiers": 2,
+      "hips": "mixamorig:Hips",
+      "legs": {
+       "left": [
+        "mixamorig:LeftUpLeg",
+        "mixamorig:LeftLeg",
+        "mixamorig:LeftFoot"
+       ],
+       "right": [
+        "mixamorig:RightUpLeg",
+        "mixamorig:RightLeg",
+        "mixamorig:RightFoot"
+       ]
+      },
+      "centre": [
+       0.059953,
+       -0.031087
+      ],
+      "columns": 16,
+      "rows": 7,
+      "grid": [
+       [
+        0.059953,
+        0.879555,
+        0.079091
+       ],
+       [
+        0.059953,
+        0.767349,
+        0.08347
+       ],
+       [
+        0.059953,
+        0.655142,
+        0.086487
+       ],
+       [
+        0.059953,
+        0.542936,
+        0.091454
+       ],
+       [
+        0.059953,
+        0.430729,
+        0.058757
+       ],
+       [
+        0.059953,
+        0.318522,
+        0.058757
+       ],
+       [
+        0.059953,
+        0.206316,
+        0.058757
+       ],
+       [
+        0.103955,
+        0.879555,
+        0.075144
+       ],
+       [
+        0.107093,
+        0.767349,
+        0.082718
+       ],
+       [
+        0.109469,
+        0.655142,
+        0.088455
+       ],
+       [
+        0.112107,
+        0.542936,
+        0.094823
+       ],
+       [
+        0.114647,
+        0.430729,
+        0.100956
+       ],
+       [
+        0.114647,
+        0.318522,
+        0.100956
+       ],
+       [
+        0.114647,
+        0.206316,
+        0.100956
+       ],
+       [
+        0.153218,
+        0.879555,
+        0.062178
+       ],
+       [
+        0.158837,
+        0.767349,
+        0.067797
+       ],
+       [
+        0.16355,
+        0.655142,
+        0.07251
+       ],
+       [
+        0.168073,
+        0.542936,
+        0.077033
+       ],
+       [
+        0.162388,
+        0.430729,
+        0.071347
+       ],
+       [
+        0.162388,
+        0.318522,
+        0.071347
+       ],
+       [
+        0.162388,
+        0.206316,
+        0.071347
+       ],
+       [
+        0.221067,
+        0.879555,
+        0.035648
+       ],
+       [
+        0.235563,
+        0.767349,
+        0.041653
+       ],
+       [
+        0.248335,
+        0.655142,
+        0.046943
+       ],
+       [
+        0.25306,
+        0.542936,
+        0.0489
+       ],
+       [
+        0.267491,
+        0.430729,
+        0.054878
+       ],
+       [
+        0.267491,
+        0.318522,
+        0.054878
+       ],
+       [
+        0.267491,
+        0.206316,
+        0.054878
+       ],
+       [
+        0.271075,
+        0.879555,
+        -0.031087
+       ],
+       [
+        0.288383,
+        0.767349,
+        -0.031087
+       ],
+       [
+        0.311616,
+        0.655142,
+        -0.031087
+       ],
+       [
+        0.317827,
+        0.542936,
+        -0.031087
+       ],
+       [
+        0.242976,
+        0.430729,
+        -0.031087
+       ],
+       [
+        0.251478,
+        0.318522,
+        -0.031087
+       ],
+       [
+        0.260355,
+        0.206316,
+        -0.031087
+       ],
+       [
+        0.270563,
+        0.879555,
+        -0.118325
+       ],
+       [
+        0.282657,
+        0.767349,
+        -0.123334
+       ],
+       [
+        0.301233,
+        0.655142,
+        -0.131029
+       ],
+       [
+        0.311212,
+        0.542936,
+        -0.135162
+       ],
+       [
+        0.256926,
+        0.430729,
+        -0.112676
+       ],
+       [
+        0.278826,
+        0.318522,
+        -0.121747
+       ],
+       [
+        0.262349,
+        0.206316,
+        -0.114922
+       ],
+       [
+        0.223075,
+        0.879555,
+        -0.194209
+       ],
+       [
+        0.215222,
+        0.767349,
+        -0.186357
+       ],
+       [
+        0.229411,
+        0.655142,
+        -0.200545
+       ],
+       [
+        0.236846,
+        0.542936,
+        -0.20798
+       ],
+       [
+        0.20831,
+        0.430729,
+        -0.179444
+       ],
+       [
+        0.226656,
+        0.318522,
+        -0.19779
+       ],
+       [
+        0.216914,
+        0.206316,
+        -0.188049
+       ],
+       [
+        0.151484,
+        0.879555,
+        -0.252064
+       ],
+       [
+        0.138738,
+        0.767349,
+        -0.221291
+       ],
+       [
+        0.145066,
+        0.655142,
+        -0.236568
+       ],
+       [
+        0.150987,
+        0.542936,
+        -0.250864
+       ],
+       [
+        0.127659,
+        0.430729,
+        -0.194545
+       ],
+       [
+        0.137209,
+        0.318522,
+        -0.217601
+       ],
+       [
+        0.131447,
+        0.206316,
+        -0.203689
+       ],
+       [
+        0.059953,
+        0.879555,
+        -0.238908
+       ],
+       [
+        0.059953,
+        0.767349,
+        -0.228147
+       ],
+       [
+        0.059953,
+        0.655142,
+        -0.230718
+       ],
+       [
+        0.059953,
+        0.542936,
+        -0.244102
+       ],
+       [
+        0.059953,
+        0.430729,
+        -0.239398
+       ],
+       [
+        0.059953,
+        0.318522,
+        -0.239398
+       ],
+       [
+        0.059953,
+        0.206316,
+        -0.239398
+       ],
+       [
+        -0.029684,
+        0.879555,
+        -0.24749
+       ],
+       [
+        -0.011812,
+        0.767349,
+        -0.204343
+       ],
+       [
+        -0.014846,
+        0.655142,
+        -0.211667
+       ],
+       [
+        -0.019322,
+        0.542936,
+        -0.222474
+       ],
+       [
+        0.022542,
+        0.430729,
+        -0.121405
+       ],
+       [
+        0.004494,
+        0.318522,
+        -0.164976
+       ],
+       [
+        -0.000976,
+        0.206316,
+        -0.178183
+       ],
+       [
+        -0.118433,
+        0.879555,
+        -0.209473
+       ],
+       [
+        -0.072425,
+        0.767349,
+        -0.163465
+       ],
+       [
+        -0.086671,
+        0.655142,
+        -0.177711
+       ],
+       [
+        -0.098121,
+        0.542936,
+        -0.189161
+       ],
+       [
+        -0.067737,
+        0.430729,
+        -0.158777
+       ],
+       [
+        -0.086919,
+        0.318522,
+        -0.17796
+       ],
+       [
+        -0.074711,
+        0.206316,
+        -0.165751
+       ],
+       [
+        -0.111712,
+        0.879555,
+        -0.102193
+       ],
+       [
+        -0.124855,
+        0.767349,
+        -0.107637
+       ],
+       [
+        -0.145511,
+        0.655142,
+        -0.116193
+       ],
+       [
+        -0.15762,
+        0.542936,
+        -0.121209
+       ],
+       [
+        -0.112086,
+        0.430729,
+        -0.102348
+       ],
+       [
+        -0.131916,
+        0.318522,
+        -0.110562
+       ],
+       [
+        -0.118232,
+        0.206316,
+        -0.104894
+       ],
+       [
+        -0.114887,
+        0.879555,
+        -0.031087
+       ],
+       [
+        -0.137448,
+        0.767349,
+        -0.031087
+       ],
+       [
+        -0.160408,
+        0.655142,
+        -0.031087
+       ],
+       [
+        -0.168634,
+        0.542936,
+        -0.031087
+       ],
+       [
+        -0.105255,
+        0.430729,
+        -0.031087
+       ],
+       [
+        -0.113787,
+        0.318522,
+        -0.031087
+       ],
+       [
+        -0.106302,
+        0.206316,
+        -0.031087
+       ],
+       [
+        -0.083371,
+        0.879555,
+        0.028279
+       ],
+       [
+        -0.096177,
+        0.767349,
+        0.033584
+       ],
+       [
+        -0.109591,
+        0.655142,
+        0.03914
+       ],
+       [
+        -0.116976,
+        0.542936,
+        0.042199
+       ],
+       [
+        -0.072813,
+        0.430729,
+        0.023906
+       ],
+       [
+        -0.06045,
+        0.318522,
+        0.018785
+       ],
+       [
+        -0.060164,
+        0.206316,
+        0.018667
+       ],
+       [
+        -0.027683,
+        0.879555,
+        0.056549
+       ],
+       [
+        -0.031415,
+        0.767349,
+        0.060281
+       ],
+       [
+        -0.034838,
+        0.655142,
+        0.063703
+       ],
+       [
+        -0.027726,
+        0.542936,
+        0.056592
+       ],
+       [
+        -0.007739,
+        0.430729,
+        0.036605
+       ],
+       [
+        -0.007739,
+        0.318522,
+        0.036605
+       ],
+       [
+        -0.007739,
+        0.206316,
+        0.036605
+       ],
+       [
+        0.016891,
+        0.879555,
+        0.072874
+       ],
+       [
+        0.014377,
+        0.767349,
+        0.078942
+       ],
+       [
+        0.012336,
+        0.655142,
+        0.08387
+       ],
+       [
+        0.009361,
+        0.542936,
+        0.091052
+       ],
+       [
+        0.01668,
+        0.430729,
+        0.073382
+       ],
+       [
+        0.01668,
+        0.318522,
+        0.073382
+       ],
+       [
+        0.01668,
+        0.206316,
+        0.073382
+       ]
+      ],
+      "boneColumns": [
+       0,
+       2,
+       4,
+       6,
+       8,
+       10,
+       12,
+       14
+      ],
+      "upper": [
+       "Skirt0_U",
+       "Skirt1_U",
+       "Skirt2_U",
+       "Skirt3_U",
+       "Skirt4_U",
+       "Skirt5_U",
+       "Skirt6_U",
+       "Skirt7_U"
+      ],
+      "lower": [
+       "Skirt0_L",
+       "Skirt1_L",
+       "Skirt2_L",
+       "Skirt3_L",
+       "Skirt4_L",
+       "Skirt5_L",
+       "Skirt6_L",
+       "Skirt7_L"
+      ],
+      "slit": false
+     }
+    },
+    "npc-459": {
+     "name": "Sorcerer (female, warhammer)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 131,
+       "gender": "Female"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-459.glb",
+       "byteLength": 1606940,
+       "sha256": "8ed193d8560ee8179544efeec084ed807debf4a7b2dc4cd48bba41b7fc95351d"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-459.core.glb",
+       "byteLength": 1699696,
+       "sha256": "962eeb338ca80d7f870a361e0a00b2bd4f1f225131df24936e3f92186ee5aa86"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-459-cards.glb",
+       "byteLength": 4794844,
+       "sha256": "0b678670799176f1638ea95329a4cbbc4a10f0bebca5f830d4162ff1a567a005"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-459-cards.core.glb",
+       "byteLength": 4887512,
+       "sha256": "aa7731c91b014bd3637ab825ecbbe55befb007c462866e51ce9a586ef50aa0ce"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7623,
+       "A": 0.1633,
+       "speed": 1.37835
+      },
+      "idle": {
+       "k": 0.8536,
+       "A": 0.089
+      },
+      "combat-idle": {
+       "k": 0.945,
+       "A": 0.0068
+      },
+      "mage-idle": {
+       "k": 0.8536,
+       "A": 0.059
+      },
+      "run": {
+       "k": 0.8128,
+       "A": 0.1101,
+       "speed": 2.27378
+      },
+      "attack-melee": {
+       "k": 0.8536,
+       "A": 0.0585
+      },
+      "attack-melee-2": {
+       "k": 0.8536,
+       "A": 0.0732
+      },
+      "attack-cast": {
+       "k": 0.8536,
+       "A": 0.079
+      },
+      "attack-bow": {
+       "k": 0.8536,
+       "A": 0.0775
+      },
+      "hurt": {
+       "k": 0.8536,
+       "A": -0.0375
+      },
+      "death": {
+       "k": 0.8536,
+       "A": -0.032
+      },
+      "run-sword": {
+       "k": 0.8585,
+       "A": 0.0681,
+       "speed": 3.548
+      },
+      "attack-sword": {
+       "k": 0.7861,
+       "A": 0.1482
+      },
+      "attack-sword-2": {
+       "k": 0.9133,
+       "A": 0.0387
+      }
+     },
+     "palette": [
+      "#a29698",
+      "#4d4a55",
+      "#43afc3",
+      "#0a6954",
+      "#110310",
+      "#631106",
+      "#dad5dd",
+      "#a27d53",
+      "#2e2224",
+      "#3e3336",
+      "#1e0f1a",
+      "#fcfcfc",
+      "#d95f1e",
+      "#081b47",
+      "#bdb6bc",
+      "#280202",
+      "#fade9c",
+      "#030f96",
+      "#d7915e",
+      "#6c5f5c",
+      "#410a05",
+      "#922a0a",
+      "#787881",
+      "#110101",
+      "#62472b",
+      "#01010d",
+      "#fdf2cc",
+      "#0e1e17",
+      "#974c30",
+      "#000000",
+      "#030223",
+      "#eab581"
+     ]
+    },
+    "npc-460": {
+     "name": "Sorcerer (male, warhammer)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 131,
+       "gender": "Male"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-460.glb",
+       "byteLength": 1448548,
+       "sha256": "e33b8fc1c73ae9c29e6c6f2fb54e57ff7d840e9414b5ef47d91b3efb4686a828"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-460.core.glb",
+       "byteLength": 1540832,
+       "sha256": "d2acde3c8b1acc62c1e654536ebecb5be380c75c8795340faca067a6609f8ac4"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-460-cards.glb",
+       "byteLength": 4766720,
+       "sha256": "3a85e93e8a164e362f1de1c83372224e87872c513a92c20b3363447ced18ac76"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-460-cards.core.glb",
+       "byteLength": 4858916,
+       "sha256": "3367acaa30580f621d868aa2036b317f9954e637caa52b3ecea51d2025b22598"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.835,
+       "A": 0.1524,
+       "speed": 1.509905
+      },
+      "idle": {
+       "k": 0.901,
+       "A": 0.1175
+      },
+      "combat-idle": {
+       "k": 0.5508,
+       "A": 0.4444
+      },
+      "mage-idle": {
+       "k": 0.901,
+       "A": 0.0899
+      },
+      "run": {
+       "k": 0.5015,
+       "A": 0.4796,
+       "speed": 1.402794
+      },
+      "attack-melee": {
+       "k": 0.901,
+       "A": 0.087
+      },
+      "attack-melee-2": {
+       "k": 0.901,
+       "A": 0.1026
+      },
+      "attack-cast": {
+       "k": 0.901,
+       "A": 0.0993
+      },
+      "attack-bow": {
+       "k": 0.901,
+       "A": 0.1062
+      },
+      "hurt": {
+       "k": 0.901,
+       "A": -0.0039
+      },
+      "death": {
+       "k": 0.901,
+       "A": -0.0251
+      },
+      "run-sword": {
+       "k": 0.7844,
+       "A": 0.1941,
+       "speed": 3.2415
+      },
+      "attack-sword": {
+       "k": 0.9108,
+       "A": 0.1148
+      },
+      "attack-sword-2": {
+       "k": 0.8849,
+       "A": 0.1023
+      }
+     },
+     "palette": [
+      "#b0a764",
+      "#4b4b55",
+      "#130515",
+      "#763921",
+      "#666537",
+      "#590f06",
+      "#fcfdfc",
+      "#01071f",
+      "#d8e0eb",
+      "#3d0403",
+      "#280102",
+      "#04202a",
+      "#453c1c",
+      "#c2bfcb",
+      "#170101",
+      "#1d2504",
+      "#040355",
+      "#ecc880",
+      "#d75817",
+      "#251a24",
+      "#941904",
+      "#02000d",
+      "#616572",
+      "#a0a2ad",
+      "#0b0103",
+      "#392e39",
+      "#000000",
+      "#83828c",
+      "#faeeaf",
+      "#173e48",
+      "#907d46",
+      "#e79251"
+     ]
+    },
+    "npc-461": {
+     "name": "Rogue / Assassin (female, cloak)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 136,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 139,
+       "gender": "Female"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-461.glb",
+       "byteLength": 1871252,
+       "sha256": "8b778b82d92b8844ee2ce38e3f04d8697285d7a4b3e54f165369009d84e161a1"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-461.core.glb",
+       "byteLength": 1964320,
+       "sha256": "9bf8541d4ccc058f0d06d1a00ef5b536cb598c8ce9f9f9a7e7626413dc8d04cd"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-461-cards.glb",
+       "byteLength": 4858860,
+       "sha256": "d0c62a866505d802af9346c697216bcbf5afa9788f131c40dae238a3236a44d8"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-461-cards.core.glb",
+       "byteLength": 4951840,
+       "sha256": "ae65a52cb6b8ac6db350d43b783272794cc594c94d2fdd2ea7e1868158d5820c"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7314,
+       "A": 0.1701,
+       "speed": 1.322541
+      },
+      "gentle": {
+       "k": 0.5604,
+       "A": 0.3548,
+       "speed": 1.013287
+      },
+      "idle": {
+       "k": 0.8128,
+       "A": 0.0939
+      },
+      "combat-idle": {
+       "k": 0.9849,
+       "A": -0.0601
+      },
+      "mage-idle": {
+       "k": 0.8128,
+       "A": 0.0679
+      },
+      "run": {
+       "k": 0.7532,
+       "A": 0.1439,
+       "speed": 2.107082
+      },
+      "attack-melee": {
+       "k": 0.8128,
+       "A": 0.0691
+      },
+      "attack-melee-2": {
+       "k": 0.8128,
+       "A": 0.0803
+      },
+      "attack-cast": {
+       "k": 0.8128,
+       "A": 0.0828
+      },
+      "attack-bow": {
+       "k": 0.8128,
+       "A": 0.0856
+      },
+      "hurt": {
+       "k": 0.8128,
+       "A": -0.0212
+      },
+      "death": {
+       "k": 0.8128,
+       "A": -0.0129
+      },
+      "run-sword": {
+       "k": 0.8249,
+       "A": 0.082,
+       "speed": 3.409
+      },
+      "attack-sword": {
+       "k": 0.805,
+       "A": 0.1031
+      },
+      "attack-sword-2": {
+       "k": 0.8072,
+       "A": 0.1015
+      }
+     },
+     "palette": [
+      "#faf0bf",
+      "#bf704f",
+      "#83898f",
+      "#f3ec66",
+      "#606a6e",
+      "#808149",
+      "#bfbd65",
+      "#af2c09",
+      "#2d99b4",
+      "#bdc6d3",
+      "#dc8b6d",
+      "#2b0806",
+      "#47120a",
+      "#141f20",
+      "#fbfcf9",
+      "#632417",
+      "#eba989",
+      "#62673b",
+      "#f5c7a7",
+      "#05160c",
+      "#7b3d2d",
+      "#a7b0b8",
+      "#140102",
+      "#d0e0ec",
+      "#43492f",
+      "#000001",
+      "#3f4952",
+      "#042858",
+      "#9a5641",
+      "#02051c",
+      "#2b322c",
+      "#9d9f51"
+     ],
+     "skirt": {
+      "tiers": 2,
+      "hips": "mixamorig:Hips",
+      "legs": {
+       "left": [
+        "mixamorig:LeftUpLeg",
+        "mixamorig:LeftLeg",
+        "mixamorig:LeftFoot"
+       ],
+       "right": [
+        "mixamorig:RightUpLeg",
+        "mixamorig:RightLeg",
+        "mixamorig:RightFoot"
+       ]
+      },
+      "centre": [
+       0.003778,
+       -0.190243
+      ],
+      "columns": 11,
+      "rows": 7,
+      "grid": [
+       [
+        0.278187,
+        0.858819,
+        -0.273203
+       ],
+       [
+        0.28028,
+        0.84897,
+        -0.273835
+       ],
+       [
+        0.281298,
+        0.839121,
+        -0.274143
+       ],
+       [
+        0.282553,
+        0.829272,
+        -0.274522
+       ],
+       [
+        0.279966,
+        0.819424,
+        -0.27374
+       ],
+       [
+        0.280026,
+        0.809575,
+        -0.273758
+       ],
+       [
+        0.278912,
+        0.799726,
+        -0.273421
+       ],
+       [
+        0.228406,
+        0.858819,
+        -0.324485
+       ],
+       [
+        0.227472,
+        0.84897,
+        -0.323927
+       ],
+       [
+        0.228477,
+        0.839121,
+        -0.324527
+       ],
+       [
+        0.230466,
+        0.829272,
+        -0.325716
+       ],
+       [
+        0.234746,
+        0.819424,
+        -0.328274
+       ],
+       [
+        0.235233,
+        0.809575,
+        -0.328565
+       ],
+       [
+        0.235967,
+        0.799726,
+        -0.329004
+       ],
+       [
+        0.17817,
+        0.858819,
+        -0.364061
+       ],
+       [
+        0.177951,
+        0.84897,
+        -0.363843
+       ],
+       [
+        0.177952,
+        0.839121,
+        -0.363844
+       ],
+       [
+        0.178347,
+        0.829272,
+        -0.364237
+       ],
+       [
+        0.181647,
+        0.819424,
+        -0.367527
+       ],
+       [
+        0.183126,
+        0.809575,
+        -0.369001
+       ],
+       [
+        0.182906,
+        0.799726,
+        -0.368782
+       ],
+       [
+        0.099825,
+        0.858819,
+        -0.349762
+       ],
+       [
+        0.100015,
+        0.84897,
+        -0.350078
+       ],
+       [
+        0.099976,
+        0.839121,
+        -0.350013
+       ],
+       [
+        0.099566,
+        0.829272,
+        -0.349333
+       ],
+       [
+        0.100113,
+        0.819424,
+        -0.350241
+       ],
+       [
+        0.100664,
+        0.809575,
+        -0.351156
+       ],
+       [
+        0.101243,
+        0.799726,
+        -0.352118
+       ],
+       [
+        0.055665,
+        0.858819,
+        -0.359854
+       ],
+       [
+        0.056114,
+        0.84897,
+        -0.36132
+       ],
+       [
+        0.055585,
+        0.839121,
+        -0.359592
+       ],
+       [
+        0.054958,
+        0.829272,
+        -0.357543
+       ],
+       [
+        0.054343,
+        0.819424,
+        -0.355532
+       ],
+       [
+        0.054398,
+        0.809575,
+        -0.355712
+       ],
+       [
+        0.054339,
+        0.799726,
+        -0.355519
+       ],
+       [
+        0.012256,
+        0.858819,
+        -0.353771
+       ],
+       [
+        0.012328,
+        0.84897,
+        -0.355171
+       ],
+       [
+        0.012416,
+        0.839121,
+        -0.356868
+       ],
+       [
+        0.012444,
+        0.829272,
+        -0.357399
+       ],
+       [
+        0.012407,
+        0.819424,
+        -0.35669
+       ],
+       [
+        0.012404,
+        0.809575,
+        -0.356624
+       ],
+       [
+        0.012317,
+        0.799726,
+        -0.354955
+       ],
+       [
+        -0.027539,
+        0.858819,
+        -0.350244
+       ],
+       [
+        -0.027918,
+        0.84897,
+        -0.352179
+       ],
+       [
+        -0.028172,
+        0.839121,
+        -0.353478
+       ],
+       [
+        -0.028032,
+        0.829272,
+        -0.352761
+       ],
+       [
+        -0.027936,
+        0.819424,
+        -0.352272
+       ],
+       [
+        -0.028043,
+        0.809575,
+        -0.352816
+       ],
+       [
+        -0.028049,
+        0.799726,
+        -0.35285
+       ],
+       [
+        -0.069465,
+        0.858819,
+        -0.346481
+       ],
+       [
+        -0.071649,
+        0.84897,
+        -0.351139
+       ],
+       [
+        -0.073274,
+        0.839121,
+        -0.354606
+       ],
+       [
+        -0.07493,
+        0.829272,
+        -0.358138
+       ],
+       [
+        -0.07647,
+        0.819424,
+        -0.361424
+       ],
+       [
+        -0.07679,
+        0.809575,
+        -0.362107
+       ],
+       [
+        -0.076897,
+        0.799726,
+        -0.362334
+       ],
+       [
+        -0.133479,
+        0.858819,
+        -0.358783
+       ],
+       [
+        -0.135109,
+        0.84897,
+        -0.360784
+       ],
+       [
+        -0.13593,
+        0.839121,
+        -0.361792
+       ],
+       [
+        -0.137632,
+        0.829272,
+        -0.363882
+       ],
+       [
+        -0.138706,
+        0.819424,
+        -0.365202
+       ],
+       [
+        -0.139167,
+        0.809575,
+        -0.365767
+       ],
+       [
+        -0.139151,
+        0.799726,
+        -0.365747
+       ],
+       [
+        -0.192102,
+        0.858819,
+        -0.336773
+       ],
+       [
+        -0.194026,
+        0.84897,
+        -0.338213
+       ],
+       [
+        -0.197532,
+        0.839121,
+        -0.340836
+       ],
+       [
+        -0.198365,
+        0.829272,
+        -0.341458
+       ],
+       [
+        -0.198629,
+        0.819424,
+        -0.341656
+       ],
+       [
+        -0.199828,
+        0.809575,
+        -0.342553
+       ],
+       [
+        -0.199558,
+        0.799726,
+        -0.342351
+       ],
+       [
+        -0.236345,
+        0.858819,
+        -0.290967
+       ],
+       [
+        -0.236943,
+        0.84897,
+        -0.291218
+       ],
+       [
+        -0.238424,
+        0.839121,
+        -0.291839
+       ],
+       [
+        -0.241117,
+        0.829272,
+        -0.292969
+       ],
+       [
+        -0.244242,
+        0.819424,
+        -0.29428
+       ],
+       [
+        -0.244533,
+        0.809575,
+        -0.294402
+       ],
+       [
+        -0.242285,
+        0.799726,
+        -0.293459
+       ]
+      ],
+      "boneColumns": [
+       0,
+       2,
+       4,
+       6,
+       8,
+       10
+      ],
+      "upper": [
+       "Skirt0_U",
+       "Skirt1_U",
+       "Skirt2_U",
+       "Skirt3_U",
+       "Skirt4_U",
+       "Skirt5_U"
+      ],
+      "lower": [
+       "Skirt0_L",
+       "Skirt1_L",
+       "Skirt2_L",
+       "Skirt3_L",
+       "Skirt4_L",
+       "Skirt5_L"
+      ],
+      "slit": false
+     }
+    },
+    "npc-462": {
+     "name": "Rogue / Assassin (male, cloak)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 136,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 139,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 141,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 142,
+       "gender": "Male"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-462.glb",
+       "byteLength": 1607076,
+       "sha256": "01fa4225b22f980b7eb11b7ab251cb79fa2a3a1a6cd5561260c123af413ea1ad"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-462.core.glb",
+       "byteLength": 1699676,
+       "sha256": "5b1bb7a627ad56167e2e399c53a01204a59bdc368a37af6d519bf81e13b815b1"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-462-cards.glb",
+       "byteLength": 4754296,
+       "sha256": "2354c9f5727822895e417534009cc0be2e87fca1f17d6930cf0ee2e207addcc6"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-462-cards.core.glb",
+       "byteLength": 4846808,
+       "sha256": "1348f383a4d1b6f68cf4827e44275e7066e115990625961becada03c668a93ce"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7496,
+       "A": 0.1568,
+       "speed": 1.3554
+      },
+      "gentle": {
+       "k": 0.5692,
+       "A": 0.3514,
+       "speed": 1.029238
+      },
+      "idle": {
+       "k": 0.8279,
+       "A": 0.0839
+      },
+      "combat-idle": {
+       "k": 0.5908,
+       "A": 0.301
+      },
+      "mage-idle": {
+       "k": 0.8279,
+       "A": 0.056
+      },
+      "run": {
+       "k": 0.7623,
+       "A": 0.1404,
+       "speed": 2.132545
+      },
+      "attack-melee": {
+       "k": 0.8279,
+       "A": 0.0593
+      },
+      "attack-melee-2": {
+       "k": 0.8279,
+       "A": 0.0701
+      },
+      "attack-cast": {
+       "k": 0.8279,
+       "A": 0.0746
+      },
+      "attack-bow": {
+       "k": 0.8279,
+       "A": 0.0763
+      },
+      "hurt": {
+       "k": 0.8279,
+       "A": -0.0398
+      },
+      "death": {
+       "k": 0.8279,
+       "A": -0.0262
+      },
+      "run-sword": {
+       "k": 0.8325,
+       "A": 0.0792,
+       "speed": 3.4405
+      },
+      "attack-sword": {
+       "k": 0.8355,
+       "A": 0.0767
+      },
+      "attack-sword-2": {
+       "k": 0.8355,
+       "A": 0.0787
+      }
+     },
+     "palette": [
+      "#92b31e",
+      "#c2bf6c",
+      "#585d38",
+      "#1e0205",
+      "#eb8c67",
+      "#a2aaaf",
+      "#efe277",
+      "#c3c2cd",
+      "#d06643",
+      "#2f2428",
+      "#050b89",
+      "#052447",
+      "#d6130d",
+      "#aa9768",
+      "#f7b68f",
+      "#9e4530",
+      "#040218",
+      "#dbdfed",
+      "#fbeeb3",
+      "#757442",
+      "#5d606c",
+      "#3d4825",
+      "#010001",
+      "#71301f",
+      "#0d2416",
+      "#7a0806",
+      "#fdfcfb",
+      "#7d7f93",
+      "#403f4f",
+      "#908952",
+      "#178287",
+      "#450405"
+     ],
+     "skirt": {
+      "tiers": 2,
+      "hips": "mixamorig:Hips",
+      "legs": {
+       "left": [
+        "mixamorig:LeftUpLeg",
+        "mixamorig:LeftLeg",
+        "mixamorig:LeftFoot"
+       ],
+       "right": [
+        "mixamorig:RightUpLeg",
+        "mixamorig:RightLeg",
+        "mixamorig:RightFoot"
+       ]
+      },
+      "centre": [
+       0.001209,
+       -0.201343
+      ],
+      "columns": 11,
+      "rows": 7,
+      "grid": [
+       [
+        0.240885,
+        0.851907,
+        -0.262576
+       ],
+       [
+        0.240143,
+        0.835849,
+        -0.262386
+       ],
+       [
+        0.239709,
+        0.819791,
+        -0.262275
+       ],
+       [
+        0.231458,
+        0.803732,
+        -0.260167
+       ],
+       [
+        0.236005,
+        0.787674,
+        -0.261329
+       ],
+       [
+        0.26831,
+        0.771616,
+        -0.269582
+       ],
+       [
+        0.270582,
+        0.755558,
+        -0.270163
+       ],
+       [
+        0.250588,
+        0.851907,
+        -0.344009
+       ],
+       [
+        0.248877,
+        0.835849,
+        -0.343031
+       ],
+       [
+        0.249651,
+        0.819791,
+        -0.343473
+       ],
+       [
+        0.251032,
+        0.803732,
+        -0.344263
+       ],
+       [
+        0.253937,
+        0.787674,
+        -0.345925
+       ],
+       [
+        0.256562,
+        0.771616,
+        -0.347427
+       ],
+       [
+        0.255909,
+        0.755558,
+        -0.347053
+       ],
+       [
+        0.182106,
+        0.851907,
+        -0.383604
+       ],
+       [
+        0.184213,
+        0.835849,
+        -0.385726
+       ],
+       [
+        0.18497,
+        0.819791,
+        -0.386489
+       ],
+       [
+        0.182741,
+        0.803732,
+        -0.384244
+       ],
+       [
+        0.182452,
+        0.787674,
+        -0.383952
+       ],
+       [
+        0.183252,
+        0.771616,
+        -0.384758
+       ],
+       [
+        0.182336,
+        0.755558,
+        -0.383835
+       ],
+       [
+        0.110267,
+        0.851907,
+        -0.39534
+       ],
+       [
+        0.111258,
+        0.835849,
+        -0.397103
+       ],
+       [
+        0.113434,
+        0.819791,
+        -0.400973
+       ],
+       [
+        0.113401,
+        0.803732,
+        -0.400915
+       ],
+       [
+        0.113342,
+        0.787674,
+        -0.400809
+       ],
+       [
+        0.113464,
+        0.771616,
+        -0.401027
+       ],
+       [
+        0.113619,
+        0.755558,
+        -0.401303
+       ],
+       [
+        0.047301,
+        0.851907,
+        -0.387576
+       ],
+       [
+        0.046488,
+        0.835849,
+        -0.384288
+       ],
+       [
+        0.046626,
+        0.819791,
+        -0.384846
+       ],
+       [
+        0.048586,
+        0.803732,
+        -0.392766
+       ],
+       [
+        0.049563,
+        0.787674,
+        -0.396713
+       ],
+       [
+        0.050001,
+        0.771616,
+        -0.398483
+       ],
+       [
+        0.049911,
+        0.755558,
+        -0.39812
+       ],
+       [
+        -0.003753,
+        0.851907,
+        -0.385857
+       ],
+       [
+        -0.003728,
+        0.835849,
+        -0.38492
+       ],
+       [
+        -0.003703,
+        0.819791,
+        -0.384001
+       ],
+       [
+        -0.003804,
+        0.803732,
+        -0.387742
+       ],
+       [
+        -0.003896,
+        0.787674,
+        -0.391157
+       ],
+       [
+        -0.003921,
+        0.771616,
+        -0.392094
+       ],
+       [
+        -0.003902,
+        0.755558,
+        -0.391396
+       ],
+       [
+        -0.056815,
+        0.851907,
+        -0.391341
+       ],
+       [
+        -0.056615,
+        0.835849,
+        -0.390684
+       ],
+       [
+        -0.058859,
+        0.819791,
+        -0.398035
+       ],
+       [
+        -0.059686,
+        0.803732,
+        -0.400743
+       ],
+       [
+        -0.059728,
+        0.787674,
+        -0.400878
+       ],
+       [
+        -0.059391,
+        0.771616,
+        -0.399777
+       ],
+       [
+        -0.05938,
+        0.755558,
+        -0.399739
+       ],
+       [
+        -0.1165,
+        0.851907,
+        -0.386651
+       ],
+       [
+        -0.116734,
+        0.835849,
+        -0.387019
+       ],
+       [
+        -0.116984,
+        0.819791,
+        -0.387412
+       ],
+       [
+        -0.117258,
+        0.803732,
+        -0.387844
+       ],
+       [
+        -0.117052,
+        0.787674,
+        -0.387519
+       ],
+       [
+        -0.117345,
+        0.771616,
+        -0.387981
+       ],
+       [
+        -0.117738,
+        0.755558,
+        -0.388599
+       ],
+       [
+        -0.190197,
+        0.851907,
+        -0.374499
+       ],
+       [
+        -0.190051,
+        0.835849,
+        -0.374366
+       ],
+       [
+        -0.192691,
+        0.819791,
+        -0.376755
+       ],
+       [
+        -0.192389,
+        0.803732,
+        -0.376481
+       ],
+       [
+        -0.19239,
+        0.787674,
+        -0.376483
+       ],
+       [
+        -0.194429,
+        0.771616,
+        -0.378327
+       ],
+       [
+        -0.196971,
+        0.755558,
+        -0.380627
+       ],
+       [
+        -0.243601,
+        0.851907,
+        -0.324428
+       ],
+       [
+        -0.243623,
+        0.835849,
+        -0.324439
+       ],
+       [
+        -0.245125,
+        0.819791,
+        -0.325195
+       ],
+       [
+        -0.244954,
+        0.803732,
+        -0.325108
+       ],
+       [
+        -0.246227,
+        0.787674,
+        -0.325749
+       ],
+       [
+        -0.251035,
+        0.771616,
+        -0.328166
+       ],
+       [
+        -0.251872,
+        0.755558,
+        -0.328587
+       ],
+       [
+        -0.344633,
+        0.851907,
+        -0.270138
+       ],
+       [
+        -0.350017,
+        0.835849,
+        -0.271209
+       ],
+       [
+        -0.353219,
+        0.819791,
+        -0.271846
+       ],
+       [
+        -0.358732,
+        0.803732,
+        -0.272943
+       ],
+       [
+        -0.355303,
+        0.787674,
+        -0.272261
+       ],
+       [
+        -0.354405,
+        0.771616,
+        -0.272082
+       ],
+       [
+        -0.346442,
+        0.755558,
+        -0.270498
+       ]
+      ],
+      "boneColumns": [
+       0,
+       2,
+       4,
+       6,
+       8,
+       10
+      ],
+      "upper": [
+       "Skirt0_U",
+       "Skirt1_U",
+       "Skirt2_U",
+       "Skirt3_U",
+       "Skirt4_U",
+       "Skirt5_U"
+      ],
+      "lower": [
+       "Skirt0_L",
+       "Skirt1_L",
+       "Skirt2_L",
+       "Skirt3_L",
+       "Skirt4_L",
+       "Skirt5_L"
+      ],
+      "slit": false
+     }
+    },
+    "npc-463": {
+     "name": "Archer / Ranger (female)",
+     "role": "archer",
+     "bindings": [
+      {
+       "mobileId": 141,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 142,
+       "gender": "Female"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-463.glb",
+       "byteLength": 1617436,
+       "sha256": "fa9f4bc12edb80826cbe558c7227c0363f00014c24b6fd8913d6bbd5e57abe1b"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-463.core.glb",
+       "byteLength": 1710192,
+       "sha256": "a3455eb2ff77ebaea44fda20d6f9524b81515eb68f49839be37a41ed7be91b2c"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-463-cards.glb",
+       "byteLength": 4752884,
+       "sha256": "ea6134c98caca032bf7490201096224c9344f0e168ab746a14df5b78fbd81303"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-463-cards.core.glb",
+       "byteLength": 4845548,
+       "sha256": "0578359a4d0456ed9e8f05b90da5ec7218b02e79e6feae6411043d0a59eb54a4"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7501,
+       "A": 0.1653,
+       "speed": 1.356236
+      },
+      "idle": {
+       "k": 0.8368,
+       "A": 0.0869
+      },
+      "combat-idle": {
+       "k": 0.8755,
+       "A": 0.0567
+      },
+      "mage-idle": {
+       "k": 0.8368,
+       "A": 0.0598
+      },
+      "run": {
+       "k": 0.7582,
+       "A": 0.149,
+       "speed": 2.121072
+      },
+      "attack-melee": {
+       "k": 0.8368,
+       "A": 0.0607
+      },
+      "attack-melee-2": {
+       "k": 0.8368,
+       "A": 0.0727
+      },
+      "attack-cast": {
+       "k": 0.8368,
+       "A": 0.0732
+      },
+      "attack-bow": {
+       "k": 0.8368,
+       "A": 0.0784
+      },
+      "hurt": {
+       "k": 0.8368,
+       "A": -0.0275
+      },
+      "death": {
+       "k": 0.8368,
+       "A": -0.0209
+      },
+      "run-sword": {
+       "k": 0.8508,
+       "A": 0.0701,
+       "speed": 3.5161
+      },
+      "attack-sword": {
+       "k": 0.8035,
+       "A": 0.1214
+      },
+      "attack-sword-2": {
+       "k": 0.8096,
+       "A": 0.1104
+      }
+     },
+     "palette": [
+      "#31322f",
+      "#59210d",
+      "#04032c",
+      "#460a02",
+      "#e5b290",
+      "#4c4831",
+      "#f5d9b6",
+      "#22231b",
+      "#2c0602",
+      "#020618",
+      "#7c593d",
+      "#4f5158",
+      "#959695",
+      "#124c5d",
+      "#1c0201",
+      "#0d272e",
+      "#01010f",
+      "#010261",
+      "#74726f",
+      "#cd916e",
+      "#487ea2",
+      "#f6f7f6",
+      "#131516",
+      "#100101",
+      "#952a08",
+      "#051305",
+      "#000008",
+      "#080101",
+      "#aa714e",
+      "#000000",
+      "#bac3d1",
+      "#6c3a28"
+     ]
+    },
+    "npc-466": {
+     "name": "Thief / Bard / Burglar (male)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 134,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 135,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 137,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 138,
+       "gender": "Male"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-466.glb",
+       "byteLength": 1657448,
+       "sha256": "88348a7a60e065271da228de90d53c97b41754480b7c0641d24292cc06f38b34"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-466.core.glb",
+       "byteLength": 1749320,
+       "sha256": "9e7b6c6a2e79274b01825502a996d47bac4204aef315c4103d31a07d3c9b7619"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-466-cards.glb",
+       "byteLength": 4683600,
+       "sha256": "3a4897fd90ff70142decc8fa3a216426dbaab175f305e918b3afe98b7e9beca3"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-466-cards.core.glb",
+       "byteLength": 4775380,
+       "sha256": "1fac23c0398bf3827e6e98efc1f141678830e74947464fe9c41cf6dccc5d4a9f"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7606,
+       "A": 0.1703,
+       "speed": 1.375241
+      },
+      "idle": {
+       "k": 0.8403,
+       "A": 0.1034
+      },
+      "combat-idle": {
+       "k": 0.6497,
+       "A": 0.2821
+      },
+      "mage-idle": {
+       "k": 0.8403,
+       "A": 0.0764
+      },
+      "run": {
+       "k": 0.7748,
+       "A": 0.15,
+       "speed": 2.167299
+      },
+      "attack-melee": {
+       "k": 0.8403,
+       "A": 0.0777
+      },
+      "attack-melee-2": {
+       "k": 0.8403,
+       "A": 0.0893
+      },
+      "attack-cast": {
+       "k": 0.8403,
+       "A": 0.087
+      },
+      "attack-bow": {
+       "k": 0.8403,
+       "A": 0.094
+      },
+      "hurt": {
+       "k": 0.8403,
+       "A": -0.0116
+      },
+      "death": {
+       "k": 0.8403,
+       "A": -0.0091
+      },
+      "run-sword": {
+       "k": 0.8155,
+       "A": 0.1188,
+       "speed": 3.3699
+      },
+      "attack-sword": {
+       "k": 0.865,
+       "A": 0.0851
+      },
+      "attack-sword-2": {
+       "k": 0.8167,
+       "A": 0.121
+      }
+     },
+     "palette": [
+      "#240105",
+      "#020215",
+      "#faeeae",
+      "#a15041",
+      "#06087e",
+      "#d0c57e",
+      "#aea16c",
+      "#4e4829",
+      "#f3c09e",
+      "#9b1e09",
+      "#110302",
+      "#faf9f1",
+      "#084405",
+      "#242112",
+      "#748009",
+      "#444d57",
+      "#10738e",
+      "#8aa6a9",
+      "#3c0507",
+      "#f19774",
+      "#000101",
+      "#ec5e28",
+      "#677a7e",
+      "#7e372d",
+      "#2e302f",
+      "#572418",
+      "#908554",
+      "#cb725a",
+      "#051232",
+      "#adcfd2",
+      "#6e6642",
+      "#600704"
+     ]
+    },
+    "npc-467": {
+     "name": "Mage / Healer (female, staff)",
+     "role": "caster",
+     "bindings": [
+      {
+       "mobileId": 128,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 132,
+       "gender": "Female"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-467.glb",
+       "byteLength": 1654272,
+       "sha256": "4c057d734926d40ac538fc9763b8bb7c14347cbb2e45a24da629f6367f8f1a3f"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-467.core.glb",
+       "byteLength": 1744060,
+       "sha256": "e264fe0f8af01e46b5b17a776ef12d8beec52ff92d8a702319a787ba9a640c0e"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-467-cards.glb",
+       "byteLength": 4828200,
+       "sha256": "559cedfe9d9e6463ba333beb1ab2f3c7a26f8ab6f8c92f5cfeb6c6eacce294de"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-467-cards.core.glb",
+       "byteLength": 4917896,
+       "sha256": "9a7d32f737d21c229a65bd17d4f0f8245ad5e8a0ad98ebd39252eac37ba7aa77"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.8012,
+       "A": 0.1196,
+       "speed": 1.448686
+      },
+      "idle": {
+       "k": 0.9122,
+       "A": 0.017
+      },
+      "combat-idle": {
+       "k": 0.945,
+       "A": -0.0093
+      },
+      "mage-idle": {
+       "k": 0.9122,
+       "A": -0.0186
+      },
+      "run": {
+       "k": 0.8151,
+       "A": 0.0924,
+       "speed": 2.280199
+      },
+      "attack-melee": {
+       "k": 0.9122,
+       "A": -0.0102
+      },
+      "attack-melee-2": {
+       "k": 0.9122,
+       "A": -0.0005
+      },
+      "attack-cast": {
+       "k": 0.9122,
+       "A": 0.0047
+      },
+      "attack-bow": {
+       "k": 0.9122,
+       "A": 0.0122
+      },
+      "hurt": {
+       "k": 0.9122,
+       "A": -0.1033
+      },
+      "death": {
+       "k": 0.9122,
+       "A": -0.0978
+      },
+      "run-sword": {
+       "k": 0.9087,
+       "A": 0.0108,
+       "speed": 3.7555
+      },
+      "attack-sword": {
+       "k": 0.9049,
+       "A": 0.0268
+      },
+      "attack-sword-2": {
+       "k": 0.9162,
+       "A": 0.0099
+      }
+     },
+     "palette": [
+      "#380207",
+      "#ab4b2c",
+      "#843e38",
+      "#a28b78",
+      "#a2afab",
+      "#5f5447",
+      "#06021c",
+      "#f9e398",
+      "#f7cebe",
+      "#ecb5a5",
+      "#f5a866",
+      "#db9d92",
+      "#fcead7",
+      "#ad6860",
+      "#1b030b",
+      "#97544e",
+      "#4a1d22",
+      "#281d22",
+      "#020001",
+      "#dd6e3f",
+      "#70736e",
+      "#940e0a",
+      "#3b383b",
+      "#495764",
+      "#c3c9c4",
+      "#692d29",
+      "#7f8f93",
+      "#ca8276",
+      "#091546",
+      "#d8e3e3",
+      "#fcfcf9",
+      "#5f0806"
+     ]
+    },
+    "npc-468": {
+     "name": "Mage / Healer (male, staff)",
+     "role": "caster",
+     "bindings": [
+      {
+       "mobileId": 128,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 132,
+       "gender": "Male"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-468.glb",
+       "byteLength": 1717180,
+       "sha256": "70fe6e9873178b00bae15bf43bde8422f9417650b63ebe363f0e8b6cb3dc56ae"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-468.core.glb",
+       "byteLength": 1808996,
+       "sha256": "ef09cd774773aef5371a554a7d3cb5bbf339fac44b52019c2894c5a85c1a279b"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-468-cards.glb",
+       "byteLength": 4827188,
+       "sha256": "9f8ad0b5bc801b40822521cedd1aab887f7d97a0e9653e766ecc59ecc326df63"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-468-cards.core.glb",
+       "byteLength": 4918916,
+       "sha256": "fa09548121fafeeb77288c5b0495cfc49567fe27e8249453c85950d5b68a5518"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.805,
+       "A": 0.1691,
+       "speed": 1.45558
+      },
+      "gentle": {
+       "k": 0.6156,
+       "A": 0.3754,
+       "speed": 1.113042
+      },
+      "idle": {
+       "k": 0.8983,
+       "A": 0.0932
+      },
+      "combat-idle": {
+       "k": 1.1283,
+       "A": -0.1115
+      },
+      "mage-idle": {
+       "k": 0.8983,
+       "A": 0.0624
+      },
+      "run": {
+       "k": 0.8088,
+       "A": 0.1568,
+       "speed": 2.262582
+      },
+      "attack-melee": {
+       "k": 0.8983,
+       "A": 0.0651
+      },
+      "attack-melee-2": {
+       "k": 0.8983,
+       "A": 0.0784
+      },
+      "attack-cast": {
+       "k": 0.8983,
+       "A": 0.0753
+      },
+      "attack-bow": {
+       "k": 0.8983,
+       "A": 0.0844
+      },
+      "hurt": {
+       "k": 0.8983,
+       "A": -0.0341
+      },
+      "death": {
+       "k": 0.8983,
+       "A": -0.0277
+      },
+      "run-sword": {
+       "k": 0.8562,
+       "A": 0.1223,
+       "speed": 3.5385
+      },
+      "attack-sword": {
+       "k": 0.705,
+       "A": 0.2688
+      },
+      "attack-sword-2": {
+       "k": 0.9125,
+       "A": 0.0723
+      }
+     },
+     "palette": [
+      "#b48c75",
+      "#0f8684",
+      "#4a5f65",
+      "#aac1cb",
+      "#200e1b",
+      "#5d717a",
+      "#eea079",
+      "#fbf7e7",
+      "#08494d",
+      "#b0401f",
+      "#0f0001",
+      "#030d9c",
+      "#3b4751",
+      "#955d4b",
+      "#280202",
+      "#1e212a",
+      "#734536",
+      "#f9cda4",
+      "#01082d",
+      "#00020e",
+      "#bdecf2",
+      "#04381a",
+      "#522b22",
+      "#0e020f",
+      "#24cdd1",
+      "#490605",
+      "#708b94",
+      "#000000",
+      "#88a5b0",
+      "#cb6e52",
+      "#801109",
+      "#2c333d"
+     ],
+     "skirt": {
+      "tiers": 2,
+      "hips": "mixamorig:Hips",
+      "legs": {
+       "left": [
+        "mixamorig:LeftUpLeg",
+        "mixamorig:LeftLeg",
+        "mixamorig:LeftFoot"
+       ],
+       "right": [
+        "mixamorig:RightUpLeg",
+        "mixamorig:RightLeg",
+        "mixamorig:RightFoot"
+       ]
+      },
+      "centre": [
+       0.045857,
+       -0.026366
+      ],
+      "columns": 16,
+      "rows": 7,
+      "grid": [
+       [
+        0.045857,
+        0.924868,
+        0.087113
+       ],
+       [
+        0.045857,
+        0.795532,
+        0.091833
+       ],
+       [
+        0.045857,
+        0.666195,
+        0.091573
+       ],
+       [
+        0.045857,
+        0.536859,
+        0.092522
+       ],
+       [
+        0.045857,
+        0.407523,
+        0.098232
+       ],
+       [
+        0.045857,
+        0.278187,
+        0.104783
+       ],
+       [
+        0.045857,
+        0.148851,
+        0.105129
+       ],
+       [
+        0.090241,
+        0.924868,
+        0.080786
+       ],
+       [
+        0.091908,
+        0.795532,
+        0.084811
+       ],
+       [
+        0.092837,
+        0.666195,
+        0.087054
+       ],
+       [
+        0.092135,
+        0.536859,
+        0.085359
+       ],
+       [
+        0.091855,
+        0.407523,
+        0.084684
+       ],
+       [
+        0.093127,
+        0.278187,
+        0.087755
+       ],
+       [
+        0.094576,
+        0.148851,
+        0.091253
+       ],
+       [
+        0.147308,
+        0.924868,
+        0.075084
+       ],
+       [
+        0.15507,
+        0.795532,
+        0.082847
+       ],
+       [
+        0.161796,
+        0.666195,
+        0.089573
+       ],
+       [
+        0.16502,
+        0.536859,
+        0.092797
+       ],
+       [
+        0.168604,
+        0.407523,
+        0.096381
+       ],
+       [
+        0.172638,
+        0.278187,
+        0.100415
+       ],
+       [
+        0.172554,
+        0.148851,
+        0.10033
+       ],
+       [
+        0.215584,
+        0.924868,
+        0.043937
+       ],
+       [
+        0.22505,
+        0.795532,
+        0.047858
+       ],
+       [
+        0.235461,
+        0.666195,
+        0.05217
+       ],
+       [
+        0.244232,
+        0.536859,
+        0.055803
+       ],
+       [
+        0.251758,
+        0.407523,
+        0.058921
+       ],
+       [
+        0.253592,
+        0.278187,
+        0.059681
+       ],
+       [
+        0.24305,
+        0.148851,
+        0.055314
+       ],
+       [
+        0.260716,
+        0.924868,
+        -0.026366
+       ],
+       [
+        0.27665,
+        0.795532,
+        -0.026366
+       ],
+       [
+        0.290959,
+        0.666195,
+        -0.026366
+       ],
+       [
+        0.301354,
+        0.536859,
+        -0.026366
+       ],
+       [
+        0.312168,
+        0.407523,
+        -0.026366
+       ],
+       [
+        0.321161,
+        0.278187,
+        -0.026366
+       ],
+       [
+        0.324747,
+        0.148851,
+        -0.026366
+       ],
+       [
+        0.259511,
+        0.924868,
+        -0.114865
+       ],
+       [
+        0.276109,
+        0.795532,
+        -0.12174
+       ],
+       [
+        0.291388,
+        0.666195,
+        -0.128069
+       ],
+       [
+        0.302868,
+        0.536859,
+        -0.132824
+       ],
+       [
+        0.313748,
+        0.407523,
+        -0.137331
+       ],
+       [
+        0.325511,
+        0.278187,
+        -0.142203
+       ],
+       [
+        0.330315,
+        0.148851,
+        -0.144193
+       ],
+       [
+        0.206506,
+        0.924868,
+        -0.187016
+       ],
+       [
+        0.21499,
+        0.795532,
+        -0.1955
+       ],
+       [
+        0.221794,
+        0.666195,
+        -0.202304
+       ],
+       [
+        0.228556,
+        0.536859,
+        -0.209066
+       ],
+       [
+        0.234832,
+        0.407523,
+        -0.215341
+       ],
+       [
+        0.243473,
+        0.278187,
+        -0.223983
+       ],
+       [
+        0.246637,
+        0.148851,
+        -0.227147
+       ],
+       [
+        0.127501,
+        0.924868,
+        -0.223473
+       ],
+       [
+        0.131932,
+        0.795532,
+        -0.234171
+       ],
+       [
+        0.136794,
+        0.666195,
+        -0.245909
+       ],
+       [
+        0.141097,
+        0.536859,
+        -0.256296
+       ],
+       [
+        0.144634,
+        0.407523,
+        -0.264835
+       ],
+       [
+        0.148098,
+        0.278187,
+        -0.273199
+       ],
+       [
+        0.149987,
+        0.148851,
+        -0.277759
+       ],
+       [
+        0.045857,
+        0.924868,
+        -0.221554
+       ],
+       [
+        0.045857,
+        0.795532,
+        -0.230597
+       ],
+       [
+        0.045857,
+        0.666195,
+        -0.236332
+       ],
+       [
+        0.045857,
+        0.536859,
+        -0.243995
+       ],
+       [
+        0.045857,
+        0.407523,
+        -0.255815
+       ],
+       [
+        0.045857,
+        0.278187,
+        -0.267719
+       ],
+       [
+        0.045857,
+        0.148851,
+        -0.282732
+       ],
+       [
+        -0.031931,
+        0.924868,
+        -0.214163
+       ],
+       [
+        -0.03563,
+        0.795532,
+        -0.223092
+       ],
+       [
+        -0.037822,
+        0.666195,
+        -0.228384
+       ],
+       [
+        -0.04211,
+        0.536859,
+        -0.238737
+       ],
+       [
+        -0.04585,
+        0.407523,
+        -0.247765
+       ],
+       [
+        -0.05012,
+        0.278187,
+        -0.258076
+       ],
+       [
+        -0.053987,
+        0.148851,
+        -0.26741
+       ],
+       [
+        -0.102126,
+        0.924868,
+        -0.174349
+       ],
+       [
+        -0.109066,
+        0.795532,
+        -0.181289
+       ],
+       [
+        -0.119328,
+        0.666195,
+        -0.191551
+       ],
+       [
+        -0.129962,
+        0.536859,
+        -0.202186
+       ],
+       [
+        -0.139013,
+        0.407523,
+        -0.211236
+       ],
+       [
+        -0.147344,
+        0.278187,
+        -0.219567
+       ],
+       [
+        -0.151499,
+        0.148851,
+        -0.223722
+       ],
+       [
+        -0.140952,
+        0.924868,
+        -0.103745
+       ],
+       [
+        -0.153522,
+        0.795532,
+        -0.108952
+       ],
+       [
+        -0.168078,
+        0.666195,
+        -0.114981
+       ],
+       [
+        -0.182823,
+        0.536859,
+        -0.121089
+       ],
+       [
+        -0.195952,
+        0.407523,
+        -0.126527
+       ],
+       [
+        -0.204991,
+        0.278187,
+        -0.130271
+       ],
+       [
+        -0.210149,
+        0.148851,
+        -0.132407
+       ],
+       [
+        -0.138242,
+        0.924868,
+        -0.026366
+       ],
+       [
+        -0.154824,
+        0.795532,
+        -0.026366
+       ],
+       [
+        -0.170422,
+        0.666195,
+        -0.026366
+       ],
+       [
+        -0.187825,
+        0.536859,
+        -0.026366
+       ],
+       [
+        -0.202414,
+        0.407523,
+        -0.026366
+       ],
+       [
+        -0.216518,
+        0.278187,
+        -0.026366
+       ],
+       [
+        -0.221766,
+        0.148851,
+        -0.026366
+       ],
+       [
+        -0.105123,
+        0.924868,
+        0.036171
+       ],
+       [
+        -0.114691,
+        0.795532,
+        0.040135
+       ],
+       [
+        -0.122271,
+        0.666195,
+        0.043274
+       ],
+       [
+        -0.130472,
+        0.536859,
+        0.046671
+       ],
+       [
+        -0.133328,
+        0.407523,
+        0.047854
+       ],
+       [
+        -0.13596,
+        0.278187,
+        0.048945
+       ],
+       [
+        -0.131281,
+        0.148851,
+        0.047007
+       ],
+       [
+        -0.048177,
+        0.924868,
+        0.067668
+       ],
+       [
+        -0.052566,
+        0.795532,
+        0.072057
+       ],
+       [
+        -0.053576,
+        0.666195,
+        0.073066
+       ],
+       [
+        -0.063197,
+        0.536859,
+        0.082687
+       ],
+       [
+        -0.06849,
+        0.407523,
+        0.08798
+       ],
+       [
+        -0.063409,
+        0.278187,
+        0.082899
+       ],
+       [
+        -0.066027,
+        0.148851,
+        0.085517
+       ],
+       [
+        0.000666,
+        0.924868,
+        0.082733
+       ],
+       [
+        -0.003952,
+        0.795532,
+        0.093882
+       ],
+       [
+        -0.007263,
+        0.666195,
+        0.101876
+       ],
+       [
+        -0.009144,
+        0.536859,
+        0.106418
+       ],
+       [
+        -0.01157,
+        0.407523,
+        0.112273
+       ],
+       [
+        -0.013579,
+        0.278187,
+        0.117125
+       ],
+       [
+        -0.013585,
+        0.148851,
+        0.117139
+       ]
+      ],
+      "boneColumns": [
+       0,
+       2,
+       4,
+       6,
+       8,
+       10,
+       12,
+       14
+      ],
+      "upper": [
+       "Skirt0_U",
+       "Skirt1_U",
+       "Skirt2_U",
+       "Skirt3_U",
+       "Skirt4_U",
+       "Skirt5_U",
+       "Skirt6_U",
+       "Skirt7_U"
+      ],
+      "lower": [
+       "Skirt0_L",
+       "Skirt1_L",
+       "Skirt2_L",
+       "Skirt3_L",
+       "Skirt4_L",
+       "Skirt5_L",
+       "Skirt6_L",
+       "Skirt7_L"
+      ],
+      "slit": false
+     }
+    },
+    "npc-469": {
+     "name": "Warrior / Barbarian (female, axe)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 140,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 143,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 144,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 145,
+       "gender": "Female"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-469.glb",
+       "byteLength": 1643172,
+       "sha256": "3f4f99e3d8abc0e7548abb2d568855f1e4d6f25f8d9459b472641c047d4a1cc4"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-469.core.glb",
+       "byteLength": 1735772,
+       "sha256": "72371dc5f71f15cde0b7d8076cb01ad11f4689387c3717aab73b9113766e5760"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-469-cards.glb",
+       "byteLength": 4734588,
+       "sha256": "d135bdd173d45f974f05c2a1e5e3b9f80348fd1a62be3acb64724da938f7ed42"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-469-cards.core.glb",
+       "byteLength": 4827100,
+       "sha256": "f63513e2741c91e3058a4c48d74524b61420124cd3a1d1d921d236d247d07db0"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7468,
+       "A": 0.1748,
+       "speed": 1.350411
+      },
+      "idle": {
+       "k": 0.8314,
+       "A": 0.0968
+      },
+      "combat-idle": {
+       "k": 0.9133,
+       "A": 0.027
+      },
+      "mage-idle": {
+       "k": 0.8314,
+       "A": 0.0722
+      },
+      "run": {
+       "k": 0.76,
+       "A": 0.1568,
+       "speed": 2.126123
+      },
+      "attack-melee": {
+       "k": 0.8314,
+       "A": 0.0709
+      },
+      "attack-melee-2": {
+       "k": 0.8314,
+       "A": 0.0836
+      },
+      "attack-cast": {
+       "k": 0.8314,
+       "A": 0.085
+      },
+      "attack-bow": {
+       "k": 0.8314,
+       "A": 0.087
+      },
+      "hurt": {
+       "k": 0.8314,
+       "A": -0.0147
+      },
+      "death": {
+       "k": 0.8314,
+       "A": -0.0133
+      },
+      "run-sword": {
+       "k": 0.8548,
+       "A": 0.0709,
+       "speed": 3.5323
+      },
+      "attack-sword": {
+       "k": 0.805,
+       "A": 0.1249
+      },
+      "attack-sword-2": {
+       "k": 0.8735,
+       "A": 0.0629
+      }
+     },
+     "palette": [
+      "#f3ce52",
+      "#7d6a3c",
+      "#510904",
+      "#ba8452",
+      "#7b3d23",
+      "#443d45",
+      "#797684",
+      "#262536",
+      "#d5dae7",
+      "#340304",
+      "#47311d",
+      "#ba2307",
+      "#f6bf94",
+      "#030218",
+      "#fcfdfb",
+      "#ad512e",
+      "#595565",
+      "#791305",
+      "#66b7e5",
+      "#201d16",
+      "#ea6f2b",
+      "#eb976c",
+      "#bcb8c0",
+      "#07062b",
+      "#200102",
+      "#9e979d",
+      "#00000c",
+      "#100303",
+      "#fcecb8",
+      "#030a5a",
+      "#124d77",
+      "#000000"
+     ]
+    },
+    "npc-470": {
+     "name": "Warrior / Barbarian (male, axe)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 140,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 143,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 144,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 145,
+       "gender": "Male"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-470.glb",
+       "byteLength": 1736768,
+       "sha256": "34e13ac578ef52506d9a5468b2af2b7b4ac062d3371f0a1483919ad634508e30"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-470.core.glb",
+       "byteLength": 1828432,
+       "sha256": "0c0b89388ca8a7130288630d38c50e3e12dd577854e46c9eb31a7e2ff66a8a95"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-470-cards.glb",
+       "byteLength": 4832284,
+       "sha256": "66ee38b25adfb4d67360ddbdbed1c45bc3cdef46ca350da644d3729f284af746"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-470-cards.core.glb",
+       "byteLength": 4923860,
+       "sha256": "3c1f6e12bcccb7485ead84c0f0d5f947254bd408d401f10b65c8fa1098ae02a7"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7555,
+       "A": 0.1702,
+       "speed": 1.366017
+      },
+      "idle": {
+       "k": 0.8325,
+       "A": 0.1021
+      },
+      "combat-idle": {
+       "k": 0.7097,
+       "A": 0.2123
+      },
+      "mage-idle": {
+       "k": 0.8325,
+       "A": 0.0705
+      },
+      "run": {
+       "k": 0.7671,
+       "A": 0.1542,
+       "speed": 2.146013
+      },
+      "attack-melee": {
+       "k": 0.8325,
+       "A": 0.0749
+      },
+      "attack-melee-2": {
+       "k": 0.8325,
+       "A": 0.0874
+      },
+      "attack-cast": {
+       "k": 0.8325,
+       "A": 0.0913
+      },
+      "attack-bow": {
+       "k": 0.8325,
+       "A": 0.0918
+      },
+      "hurt": {
+       "k": 0.8325,
+       "A": -0.0187
+      },
+      "death": {
+       "k": 0.8325,
+       "A": -0.0237
+      },
+      "run-sword": {
+       "k": 0.8434,
+       "A": 0.0857,
+       "speed": 3.4853
+      },
+      "attack-sword": {
+       "k": 0.8546,
+       "A": 0.0805
+      },
+      "attack-sword-2": {
+       "k": 0.9239,
+       "A": 0.0221
+      }
+     },
+     "palette": [
+      "#85462d",
+      "#c7cacf",
+      "#4c4537",
+      "#919094",
+      "#312a33",
+      "#480602",
+      "#fbe8b5",
+      "#031f27",
+      "#71693f",
+      "#b26b4b",
+      "#150102",
+      "#b0adae",
+      "#46819f",
+      "#938e54",
+      "#c42805",
+      "#2b0201",
+      "#1d151f",
+      "#cc976a",
+      "#322a16",
+      "#7d1001",
+      "#f2bb83",
+      "#050240",
+      "#51525d",
+      "#091608",
+      "#747174",
+      "#ee7c2a",
+      "#fdfdfc",
+      "#030212",
+      "#1e3c47",
+      "#e3e3e9",
+      "#59281a",
+      "#000000"
+     ]
+    },
+    "npc-471": {
+     "name": "Battlemage / Nightblade (female)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 130,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 133,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 134,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 135,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 137,
+       "gender": "Female"
+      },
+      {
+       "mobileId": 138,
+       "gender": "Female"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-471.glb",
+       "byteLength": 1807488,
+       "sha256": "ecffa80429452bdecbddbd27f530a94aa12c08423dee8ea947e251a68f35e5e5"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-471.core.glb",
+       "byteLength": 1900140,
+       "sha256": "818939997a311069786da5c64e0446587f29d6cbe4c72b9a6acee26d626b201a"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-471-cards.glb",
+       "byteLength": 4844680,
+       "sha256": "291fb283877675c5053492b8474b153d3bf15e6cabe1c6e11bcd6656d03fb8a7"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-471-cards.core.glb",
+       "byteLength": 4937244,
+       "sha256": "4a379b35d62193a0b7fc7d8d342b4b3a2593c91752177b02b8db72ae6cfe0326"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7361,
+       "A": 0.1655,
+       "speed": 1.330998
+      },
+      "idle": {
+       "k": 0.8218,
+       "A": 0.0888
+      },
+      "combat-idle": {
+       "k": 0.5058,
+       "A": 0.3775
+      },
+      "mage-idle": {
+       "k": 0.8218,
+       "A": 0.0592
+      },
+      "run": {
+       "k": 0.7529,
+       "A": 0.1427,
+       "speed": 2.106072
+      },
+      "attack-melee": {
+       "k": 0.8218,
+       "A": 0.0622
+      },
+      "attack-melee-2": {
+       "k": 0.8218,
+       "A": 0.0752
+      },
+      "attack-cast": {
+       "k": 0.8218,
+       "A": 0.0794
+      },
+      "attack-bow": {
+       "k": 0.8218,
+       "A": 0.0787
+      },
+      "hurt": {
+       "k": 0.8218,
+       "A": -0.028
+      },
+      "death": {
+       "k": 0.8218,
+       "A": -0.0228
+      },
+      "run-sword": {
+       "k": 0.8356,
+       "A": 0.0699,
+       "speed": 3.4532
+      },
+      "attack-sword": {
+       "k": 0.8308,
+       "A": 0.0807
+      },
+      "attack-sword-2": {
+       "k": 0.8355,
+       "A": 0.0786
+      }
+     },
+     "palette": [
+      "#cb7b53",
+      "#f6f8f5",
+      "#71311d",
+      "#333f4a",
+      "#a55c41",
+      "#122938",
+      "#482d1c",
+      "#b1cdd8",
+      "#1f0204",
+      "#2e1a13",
+      "#02024e",
+      "#e89e73",
+      "#5b4332",
+      "#967961",
+      "#bb9b85",
+      "#044904",
+      "#340202",
+      "#4f5f69",
+      "#100101",
+      "#02021e",
+      "#041723",
+      "#01010e",
+      "#087089",
+      "#f2bc98",
+      "#85a0ab",
+      "#811304",
+      "#697d88",
+      "#775c42",
+      "#91452b",
+      "#520b04",
+      "#000000",
+      "#fae1bc"
+     ]
+    },
+    "npc-472": {
+     "name": "Battlemage / Nightblade (male, cloak)",
+     "role": "melee",
+     "bindings": [
+      {
+       "mobileId": 130,
+       "gender": "Male"
+      },
+      {
+       "mobileId": 133,
+       "gender": "Male"
+      }
+     ],
+     "bodies": {
+      "gaussians": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-472.glb",
+       "byteLength": 1749944,
+       "sha256": "ed438f1f321eacd62fbb051b8e2e9aa637c7a5c497d47845aab5b855fb561d18"
+      },
+      "core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-472.core.glb",
+       "byteLength": 1842596,
+       "sha256": "23477c5dbbad323b2d9315c6adcd249c9fe3e49aaed6f64a6ee0b679c5cf0500"
+      },
+      "cards": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-472-cards.glb",
+       "byteLength": 4907048,
+       "sha256": "d3b2d44debffe0c28623ede6e3f62680353d58c921fc7ed9b53ee1672f143c98"
+      },
+      "cards-core": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/npc-472-cards.core.glb",
+       "byteLength": 4999612,
+       "sha256": "464e7282fee3dae0450a56ad691e19f55b85ecf95a9c2e7d4cde53d2ddbe85d0"
+      }
+     },
+     "fits": {
+      "walk": {
+       "k": 0.7676,
+       "A": 0.1591,
+       "speed": 1.387903
+      },
+      "gentle": {
+       "k": 0.5839,
+       "A": 0.3651,
+       "speed": 1.055891
+      },
+      "idle": {
+       "k": 0.8387,
+       "A": 0.1096
+      },
+      "combat-idle": {
+       "k": 1.1497,
+       "A": -0.1705
+      },
+      "mage-idle": {
+       "k": 0.8387,
+       "A": 0.0838
+      },
+      "run": {
+       "k": 0.8014,
+       "A": 0.1215,
+       "speed": 2.241768
+      },
+      "attack-melee": {
+       "k": 0.8387,
+       "A": 0.0837
+      },
+      "attack-melee-2": {
+       "k": 0.8387,
+       "A": 0.0957
+      },
+      "attack-cast": {
+       "k": 0.8387,
+       "A": 0.0925
+      },
+      "attack-bow": {
+       "k": 0.8387,
+       "A": 0.0996
+      },
+      "hurt": {
+       "k": 0.8387,
+       "A": -0.0042
+      },
+      "death": {
+       "k": 0.8387,
+       "A": -0.0149
+      },
+      "run-sword": {
+       "k": 0.8215,
+       "A": 0.1095,
+       "speed": 3.3951
+      },
+      "attack-sword": {
+       "k": 1.1755,
+       "A": -0.1888
+      },
+      "attack-sword-2": {
+       "k": 0.8341,
+       "A": 0.105
+      }
+     },
+     "palette": [
+      "#540606",
+      "#5a2d19",
+      "#afb3bc",
+      "#545e64",
+      "#fcf5b4",
+      "#25b294",
+      "#7b838d",
+      "#081596",
+      "#eace9d",
+      "#d2d8e5",
+      "#ed9d7e",
+      "#605b3a",
+      "#040519",
+      "#061b3d",
+      "#bfc5d0",
+      "#eedb5b",
+      "#95910c",
+      "#250405",
+      "#98999b",
+      "#7e7950",
+      "#112706",
+      "#bdb57a",
+      "#af5e45",
+      "#f5f5f6",
+      "#3f4036",
+      "#9f9460",
+      "#af1007",
+      "#282623",
+      "#e17b4e",
+      "#010101",
+      "#884231",
+      "#146f1e"
+     ],
+     "skirt": {
+      "tiers": 2,
+      "hips": "mixamorig:Hips",
+      "legs": {
+       "left": [
+        "mixamorig:LeftUpLeg",
+        "mixamorig:LeftLeg",
+        "mixamorig:LeftFoot"
+       ],
+       "right": [
+        "mixamorig:RightUpLeg",
+        "mixamorig:RightLeg",
+        "mixamorig:RightFoot"
+       ]
+      },
+      "centre": [
+       -0.011583,
+       -0.226842
+      ],
+      "columns": 11,
+      "rows": 7,
+      "grid": [
+       [
+        0.241232,
+        0.860355,
+        -0.347675
+       ],
+       [
+        0.240901,
+        0.850253,
+        -0.347517
+       ],
+       [
+        0.240911,
+        0.840151,
+        -0.347522
+       ],
+       [
+        0.241021,
+        0.83005,
+        -0.347574
+       ],
+       [
+        0.242442,
+        0.819948,
+        -0.348254
+       ],
+       [
+        0.243889,
+        0.809847,
+        -0.348945
+       ],
+       [
+        0.244379,
+        0.799745,
+        -0.349179
+       ],
+       [
+        0.198179,
+        0.860355,
+        -0.391202
+       ],
+       [
+        0.197758,
+        0.850253,
+        -0.390873
+       ],
+       [
+        0.197268,
+        0.840151,
+        -0.390488
+       ],
+       [
+        0.198963,
+        0.83005,
+        -0.391817
+       ],
+       [
+        0.19932,
+        0.819948,
+        -0.392096
+       ],
+       [
+        0.20018,
+        0.809847,
+        -0.39277
+       ],
+       [
+        0.200085,
+        0.799745,
+        -0.392696
+       ],
+       [
+        0.136151,
+        0.860355,
+        -0.406798
+       ],
+       [
+        0.135884,
+        0.850253,
+        -0.406472
+       ],
+       [
+        0.135852,
+        0.840151,
+        -0.406433
+       ],
+       [
+        0.136626,
+        0.83005,
+        -0.407376
+       ],
+       [
+        0.138439,
+        0.819948,
+        -0.409585
+       ],
+       [
+        0.138871,
+        0.809847,
+        -0.410111
+       ],
+       [
+        0.138652,
+        0.799745,
+        -0.409844
+       ],
+       [
+        0.082389,
+        0.860355,
+        -0.412479
+       ],
+       [
+        0.083355,
+        0.850253,
+        -0.414389
+       ],
+       [
+        0.084006,
+        0.840151,
+        -0.415673
+       ],
+       [
+        0.084625,
+        0.83005,
+        -0.416896
+       ],
+       [
+        0.084954,
+        0.819948,
+        -0.417546
+       ],
+       [
+        0.085133,
+        0.809847,
+        -0.4179
+       ],
+       [
+        0.085673,
+        0.799745,
+        -0.418967
+       ],
+       [
+        0.040968,
+        0.860355,
+        -0.4328
+       ],
+       [
+        0.041028,
+        0.850253,
+        -0.433034
+       ],
+       [
+        0.04065,
+        0.840151,
+        -0.431552
+       ],
+       [
+        0.041002,
+        0.83005,
+        -0.43293
+       ],
+       [
+        0.040684,
+        0.819948,
+        -0.431683
+       ],
+       [
+        0.041404,
+        0.809847,
+        -0.434507
+       ],
+       [
+        0.041471,
+        0.799745,
+        -0.434769
+       ],
+       [
+        -0.005185,
+        0.860355,
+        -0.432862
+       ],
+       [
+        -0.005181,
+        0.850253,
+        -0.432977
+       ],
+       [
+        -0.005155,
+        0.840151,
+        -0.433811
+       ],
+       [
+        -0.005112,
+        0.83005,
+        -0.435215
+       ],
+       [
+        -0.005086,
+        0.819948,
+        -0.436034
+       ],
+       [
+        -0.005093,
+        0.809847,
+        -0.435809
+       ],
+       [
+        -0.005117,
+        0.799745,
+        -0.435024
+       ],
+       [
+        -0.049779,
+        0.860355,
+        -0.427906
+       ],
+       [
+        -0.049337,
+        0.850253,
+        -0.425581
+       ],
+       [
+        -0.049229,
+        0.840151,
+        -0.425011
+       ],
+       [
+        -0.049216,
+        0.83005,
+        -0.424943
+       ],
+       [
+        -0.049216,
+        0.819948,
+        -0.424943
+       ],
+       [
+        -0.049048,
+        0.809847,
+        -0.42406
+       ],
+       [
+        -0.049083,
+        0.799745,
+        -0.424241
+       ],
+       [
+        -0.090489,
+        0.860355,
+        -0.410136
+       ],
+       [
+        -0.089516,
+        0.850253,
+        -0.407875
+       ],
+       [
+        -0.088879,
+        0.840151,
+        -0.406396
+       ],
+       [
+        -0.08871,
+        0.83005,
+        -0.406004
+       ],
+       [
+        -0.08853,
+        0.819948,
+        -0.405586
+       ],
+       [
+        -0.087027,
+        0.809847,
+        -0.402093
+       ],
+       [
+        -0.086664,
+        0.799745,
+        -0.401251
+       ],
+       [
+        -0.150594,
+        0.860355,
+        -0.419398
+       ],
+       [
+        -0.149853,
+        0.850253,
+        -0.418372
+       ],
+       [
+        -0.149143,
+        0.840151,
+        -0.417388
+       ],
+       [
+        -0.148713,
+        0.83005,
+        -0.416793
+       ],
+       [
+        -0.148739,
+        0.819948,
+        -0.416829
+       ],
+       [
+        -0.150747,
+        0.809847,
+        -0.41961
+       ],
+       [
+        -0.150902,
+        0.799745,
+        -0.419825
+       ],
+       [
+        -0.201668,
+        0.860355,
+        -0.395836
+       ],
+       [
+        -0.201026,
+        0.850253,
+        -0.395265
+       ],
+       [
+        -0.200061,
+        0.840151,
+        -0.394407
+       ],
+       [
+        -0.201504,
+        0.83005,
+        -0.395691
+       ],
+       [
+        -0.201523,
+        0.819948,
+        -0.395707
+       ],
+       [
+        -0.201502,
+        0.809847,
+        -0.395688
+       ],
+       [
+        -0.19759,
+        0.799745,
+        -0.392211
+       ],
+       [
+        -0.243233,
+        0.860355,
+        -0.355795
+       ],
+       [
+        -0.243961,
+        0.850253,
+        -0.3562
+       ],
+       [
+        -0.244726,
+        0.840151,
+        -0.356626
+       ],
+       [
+        -0.245125,
+        0.83005,
+        -0.356848
+       ],
+       [
+        -0.244999,
+        0.819948,
+        -0.356778
+       ],
+       [
+        -0.245526,
+        0.809847,
+        -0.357071
+       ],
+       [
+        -0.245598,
+        0.799745,
+        -0.357111
+       ]
+      ],
+      "boneColumns": [
+       0,
+       2,
+       4,
+       6,
+       8,
+       10
+      ],
+      "upper": [
+       "Skirt0_U",
+       "Skirt1_U",
+       "Skirt2_U",
+       "Skirt3_U",
+       "Skirt4_U",
+       "Skirt5_U"
+      ],
+      "lower": [
+       "Skirt0_L",
+       "Skirt1_L",
+       "Skirt2_L",
+       "Skirt3_L",
+       "Skirt4_L",
+       "Skirt5_L"
+      ],
+      "slit": false
+     }
+    }
+   }
   }
  }
 }

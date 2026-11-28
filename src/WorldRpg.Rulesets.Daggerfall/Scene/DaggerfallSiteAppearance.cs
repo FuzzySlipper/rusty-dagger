@@ -42,6 +42,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// <summary>The session's figure for walking people (a parts rig or a gsplat character), or null while it has none; it draws them while it uses one.</summary>
     private Func<IWalkerCrowd?> peopleRigs = () => null;
     internal void UsePeopleRigs(Func<IWalkerCrowd?> crowd) => peopleRigs = crowd;
+    /// <summary>The session's skinned-splat enemy crowd, or null while enemies draw classic directional sprites.</summary>
+    private Func<IEnemySplatCrowd?> enemySplats = () => null;
+    internal void UseEnemySplats(Func<IEnemySplatCrowd?> crowd) => enemySplats = crowd;
     private double? playerBeastVoiceSeconds;
     /// <summary>The archive of the light sprites, which holds the magic candle.</summary>
     private const int LightArchive = 210;
@@ -550,10 +553,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             facts.AddRange(travelMap);
         }
         peopleRigs()?.Publishing();
+        enemySplats()?.Publishing();
         appearance.PublishSnapshot([.. facts]);
         ReachHeld();
         completeSnapshot?.Invoke();
         peopleRigs()?.Settle();
+        enemySplats()?.Settle();
     }
 
     internal const float SleepingBedHeightMeters = 0.55f;
@@ -588,13 +593,16 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 && IWalkerCrowd.Walks(wander.State);
             Appearance? rigged = !actor.IsDefeated && crowdVisual
                 ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, walking) : null;
-            Appearance? chosen = rigged ?? (actor.IsDefeated
+            Appearance? enemyRigged = rigged is null && render?.Spec.Kind == ActorVisualKind.DirectionalMobile && render.Spec.MobileId is int enemyMobileId
+                ? enemySplats()?.Show(id, actor.DurableId, enemyMobileId, render.Spec.Gender, visual.State, visual.ActionSequence, actor.IsDefeated, render.Spec.Tint, render.Spec.LiveryKey)
+                : null;
+            Appearance? chosen = rigged ?? enemyRigged ?? (actor.IsDefeated
                 ? DrawnCorpse(visual)
                 : sleeping
                     ? DrawnSleeping(visual)
                     : DrawnLive(visual));
             if (chosen is null) continue;
-            Transform transform = ComposeActorTransform(actor, rigged is not null, chosen == visual.CorpseMesh,
+            Transform transform = ComposeActorTransform(actor, rigged is not null || enemyRigged is not null, chosen == visual.CorpseMesh,
                 visual.CorpseMeshScale, visual.Sprite.Size.Y, sleeping, sleepingOnBed);
             facts.Add(new AppearanceFact(id, false, 0, transform, chosen,
                 actorActive?.Invoke(actor.DurableId) != false && (actor.IsDefeated || perception?.Invoke(actor.DurableId).Invisible != true), RenderLayer.Scene));
@@ -1013,9 +1021,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             try
             {
                 peopleRigs()?.Publishing();
+                enemySplats()?.Publishing();
                 appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty);
                 completeSnapshot?.Invoke();
                 peopleRigs()?.Settle();
+                enemySplats()?.Settle();
             }
             catch (Exception exception) { failures = [exception]; }
         }
@@ -1463,6 +1473,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (position is null) return;
         string clip = DaggerfallSpellElements.Name(cast.Element) is { } element ? $"{element}Cast" : "";
         Emit(clip, identity, 0, position);
+        if (caster != DaggerfallActorIdentity.PlayerEntityId && this.actors.TryGetValue(caster, out ActorVisual? casterVisual))
+        {
+            casterVisual.State = "cast";
+            casterVisual.ActionSequence++;
+        }
     }
 
     internal void RetireUnavailableMagic(ActorsState actors, Func<ulong, bool> itemAvailable)
@@ -1738,6 +1753,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         SpritePlayback? previous = visual.Playback;
         visual.Playback = staged;
         visual.State = stateName;
+        if (stateName is "primaryAttack" or "rangedAttack1" or "rangedAttack2" or "hurt") visual.ActionSequence++;
         visual.ActiveAttack = null;
         visual.CompletedOuterUpdate = false;
         visual.LastMarkerCrossing = 0;
@@ -1884,6 +1900,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         internal float CorpseMeshScale { get; set; } = 1f;
         internal SpritePlayback? Playback { get; set; }
         internal string State { get; set; } = string.Empty;
+        internal uint ActionSequence { get; set; }
         internal bool Defeated { get; set; }
         internal bool CompletedOuterUpdate { get; set; }
         /// <summary>How many more times the hurt frames play, while a blow holds the actor.</summary>

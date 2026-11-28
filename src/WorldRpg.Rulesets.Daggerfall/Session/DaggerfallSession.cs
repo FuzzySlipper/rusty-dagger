@@ -255,6 +255,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>The switch that draws walking people as the parts-rig test figure.</summary>
     private readonly DaggerfallPeopleSwitch _people = null!;
+    /// <summary>The switch that draws human enemies as their shipped splat characters.</summary>
+    private readonly DaggerfallEnemySplatSwitch _enemySplats = null!;
     private bool _newGameInitialized;
     public bool RequiresCharacterInitialization => !_newGameInitialized;
 
@@ -283,8 +285,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     public void YieldPresentation()
     {
         _people.Yield();                                                                          // Developer
+        _enemySplats.Yield();                                                                     // Developer
         PublishPresentation();                                                                    // UiProjection
         _people.Dispose();                                                                        // Developer
+        _enemySplats.Dispose();                                                                   // Developer
     }
     internal bool ActionDrivenPlay => _controls.ActionDrivenTime;
     private readonly World.DaggerfallSiteContext _site;
@@ -1431,6 +1435,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The walkers' figures (rigs, gsplat characters and their clips) are released once no site appearance draws them.
         try { _people?.Dispose(); }                                                          // Developer
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+        try { _enemySplats?.Dispose(); }                                                     // Developer
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { HostilityAudioBarks?.Dispose(); }                                               // Scene
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

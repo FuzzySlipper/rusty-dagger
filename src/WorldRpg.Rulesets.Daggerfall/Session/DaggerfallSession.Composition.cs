@@ -1840,6 +1840,8 @@ internal sealed partial class DaggerfallSession
                 () => _engine.PartsRigs, () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, _tuning.SplatPeople,
                 State.Actors, peopleStage, [.. definitions.Catalogs.Races.SelectMany(race => race.Townspeople.Values.SelectMany(archives => archives))],
                 id => Population.Townsperson(id), id => Population.Seed(id), () => DrawnArt is not null, warnPeople);   // Developer
+            _enemySplats = new DaggerfallEnemySplatSwitch(composition.ArtReplacements?.SplatEnemies, composition.Animations,
+                () => _engine.Animation, () => _engine.Content, _tuning.SplatPeople, () => DrawnArt is not null, warnPeople);   // Developer
             DaggerfallActorInspection actorInspection = new(State.Actors, State.PlayerControl, _roster, _senses, _enemyBehavior, _enemyMagic,
                 Casting, _combat, State.Effects, id => State.Actors.TryGet(id, out _) ? actorInventories.EquipmentFor(id).Read() : null, EffectiveActorTeam,
                 () => _latestSimulationStep, definitions, State.Npcs, questNames, () => _worldSocialSeed,
@@ -1861,6 +1863,7 @@ internal sealed partial class DaggerfallSession
                 scene,
                 grants,
                 _people,
+                _enemySplats,
                 peopleStage,
                 actorInspection,
                 InputReadout,
@@ -2160,6 +2163,7 @@ internal sealed partial class DaggerfallSession
         appearance.UseViewLight(_engine.Tween, _viewLight);
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
         appearance.UsePeopleRigs(() => _people);
+        appearance.UseEnemySplats(() => _enemySplats);
         appearance.UseNatureField(record => _horizon.GrowsPlaced(record));
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));

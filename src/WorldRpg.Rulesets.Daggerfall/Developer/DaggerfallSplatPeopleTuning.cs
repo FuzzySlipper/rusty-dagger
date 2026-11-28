@@ -31,11 +31,12 @@ internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCo
         _ => null,
     };
 
-    /// <summary>A shadow caster by its tuning and command name: none, ellipsoids or splats.</summary>
+    /// <summary>A shadow caster by its tuning and command name: none, ellipsoids, core or splats.</summary>
     internal static SplatShadowCaster? Caster(string name) => name switch
     {
         "none" => SplatShadowCaster.None,
         "ellipsoids" => SplatShadowCaster.Ellipsoids,
+        "core" => SplatShadowCaster.Core,
         "splats" => SplatShadowCaster.Splats,
         _ => null,
     };
@@ -54,7 +55,7 @@ internal sealed record DaggerfallSplatPeopleTuning(uint PixelGrid, float PixelCo
         e.GetProperty("pixelGrid").GetUInt32(), e.GetProperty("pixelCoverage").GetSingle(), e.GetProperty("ownPalette").GetBoolean(),
         e.GetProperty("poseRate").GetSingle(), e.GetProperty("lightFloor").GetSingle(), e.GetProperty("crossfadeSeconds").GetSingle(),
         Caster(e.GetProperty("shadowCaster").GetString()!) ?? throw new ArgumentException(
-            $"The gsplat people cast shadows as none, ellipsoids or splats, not '{e.GetProperty("shadowCaster").GetString()}'."),
+            $"The gsplat people cast shadows as none, ellipsoids, core or splats, not '{e.GetProperty("shadowCaster").GetString()}'."),
         Slow(e.GetProperty("skirtedPace").GetString()!) ?? throw new ArgumentException(
             $"Long-skirted gsplat people walk slow or clip, not '{e.GetProperty("skirtedPace").GetString()}'."),
         e.GetProperty("gaitJitter").GetSingle(), ReadBlinks(e.GetProperty("blinks"))).Validate();

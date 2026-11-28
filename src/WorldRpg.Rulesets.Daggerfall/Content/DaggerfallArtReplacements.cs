@@ -133,6 +133,39 @@ internal sealed record DaggerfallSplatPerson(string Name, int? Archive, Daggerfa
 /// </summary>
 internal sealed record DaggerfallSplatClipFit(float Scale, float Lift, float? Speed);
 
+/// <summary>A mobile/gender binding pointing a classic human enemy mobile to one shipped splat enemy.</summary>
+internal sealed record DaggerfallSplatEnemyBinding(int MobileId, string? Gender);
+
+/// <summary>One shipped splat enemy character with its optional geometry variants (gaussians, core, cards, cards-core) and combat clip fits.</summary>
+internal sealed record DaggerfallSplatEnemy(string Name, string Role, IReadOnlyList<DaggerfallSplatEnemyBinding> Bindings,
+    IReadOnlyDictionary<string, DaggerfallArtFile> Bodies, IReadOnlyDictionary<string, DaggerfallSplatClipFit> Fits,
+    IReadOnlyList<Color> Palette, SplatSkirt? Skirt = null);
+
+/// <summary>The shipped splat enemies, their combat clip packs in animations.rpak, and lookup by mobile id and gender.</summary>
+internal sealed record DaggerfallSplatEnemies(IReadOnlyDictionary<string, DaggerfallArtFile> Clips, string Joint, string Producer, string License,
+    IReadOnlyDictionary<string, DaggerfallSplatEnemy> Characters)
+{
+    private readonly Dictionary<(int MobileId, string Gender), string> byMobileGender = Characters
+        .SelectMany(pair => pair.Value.Bindings.Where(binding => !string.IsNullOrWhiteSpace(binding.Gender))
+            .Select(binding => ((binding.MobileId, binding.Gender!.ToLowerInvariant()), pair.Key)))
+        .ToDictionary(pair => pair.Item1, pair => pair.Key);
+
+    private readonly Dictionary<int, string> byMobileAny = Characters
+        .SelectMany(pair => pair.Value.Bindings.Where(binding => string.IsNullOrWhiteSpace(binding.Gender))
+            .Select(binding => (binding.MobileId, pair.Key)))
+        .ToDictionary(pair => pair.MobileId, pair => pair.Key);
+
+    internal string? Resolve(int mobileId, string? gender)
+    {
+        if (!string.IsNullOrWhiteSpace(gender) && byMobileGender.TryGetValue((mobileId, gender.Trim().ToLowerInvariant()), out string? exact))
+            return exact;
+        if (byMobileAny.TryGetValue(mobileId, out string? any)) return any;
+        if (byMobileGender.TryGetValue((mobileId, "male"), out string? fallbackMale)) return fallbackMale;
+        if (byMobileGender.TryGetValue((mobileId, "female"), out string? fallbackFemale)) return fallbackFemale;
+        return null;
+    }
+}
+
 /// <summary>A published file of the refreshed set: its path and digest.</summary>
 internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 
@@ -442,6 +475,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The gsplat townspeople, when the set has them.</summary>
     internal DaggerfallSplatPeople? SplatPeople { get; private init; }
 
+    /// <summary>The gsplat human enemies, when the set has them.</summary>
+    internal DaggerfallSplatEnemies? SplatEnemies { get; private init; }
+
     /// <summary>The title drawn as an animated scene over the title's replacement, when the set has one.</summary>
     internal DaggerfallTitleScene? TitleScene { get; private init; }
 
@@ -528,6 +564,7 @@ internal sealed class DaggerfallArtReplacements
         List<DaggerfallTownDressingPiece> townDressing = [];
         DaggerfallPeopleRig? peopleRig = null;
         DaggerfallSplatPeople? splatPeople = null;
+        DaggerfallSplatEnemies? splatEnemies = null;
         DaggerfallTitleScene? titleScene = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<string, DaggerfallArtModel> models = new(StringComparer.Ordinal);
@@ -781,6 +818,7 @@ internal sealed class DaggerfallArtReplacements
                 }
             if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
             if (section.TryGetProperty("splatPeople", out JsonElement splats)) splatPeople = SplatPeople(splats);
+            if (section.TryGetProperty("splatEnemies", out JsonElement enemySplats)) splatEnemies = SplatEnemies(enemySplats);
             if (section.TryGetProperty("treeSnow", out JsonElement snowShader)) treeSnow = File(snowShader, "The trees' snow shader");
             if (section.TryGetProperty("sea", out JsonElement seaArt))
                 sea = new(File(seaArt.GetProperty("shader"), "The sea's shader"), File(seaArt.GetProperty("ripples"), "The sea's ripple map"),
@@ -924,7 +962,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, scenery, people)
-        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, Heraldry = heraldry, NoticeBoard = noticeBoard, TownDressing = townDressing, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
+        { PeopleByAssetId = peopleByAssetId, GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, TravelMap = travelMap, Heraldry = heraldry, NoticeBoard = noticeBoard, TownDressing = townDressing, PeopleRig = peopleRig, SplatPeople = splatPeople, SplatEnemies = splatEnemies, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {
@@ -1047,6 +1085,59 @@ internal sealed class DaggerfallArtReplacements
                 static string[] Names(JsonElement names) => [.. names.EnumerateArray().Select(name => name.GetString()!)];
                 static float[] Floats(JsonElement values) => [.. values.EnumerateArray().Select(value => value.GetSingle())];
                 static Vector3[] Points(JsonElement points) => [.. points.EnumerateArray().Select(point => new Vector3(point[0].GetSingle(), point[1].GetSingle(), point[2].GetSingle()))];
+            }
+        }
+
+        DaggerfallSplatEnemies SplatEnemies(JsonElement splats)
+        {
+            Dictionary<string, DaggerfallArtFile> clips = splats.GetProperty("clips").EnumerateObject()
+                .ToDictionary(clip => clip.Name, clip => File(clip.Value, $"The splat enemies' clip {clip.Name}"), StringComparer.Ordinal);
+            Dictionary<string, DaggerfallSplatEnemy> characters = splats.GetProperty("characters").EnumerateObject().ToDictionary(character => character.Name, character =>
+            {
+                DaggerfallSplatEnemyBinding[] bindings = [.. character.Value.GetProperty("bindings").EnumerateArray().Select(binding =>
+                    new DaggerfallSplatEnemyBinding(binding.GetProperty("mobileId").GetInt32(),
+                        binding.TryGetProperty("gender", out JsonElement g) && g.ValueKind == JsonValueKind.String ? g.GetString() : null))];
+                Dictionary<string, DaggerfallArtFile> bodies = character.Value.GetProperty("bodies").EnumerateObject()
+                    .ToDictionary(body => body.Name, body => File(body.Value, $"Splat enemy {character.Name}'s {body.Name} body"), StringComparer.Ordinal);
+                Dictionary<string, DaggerfallSplatClipFit> fits = character.Value.GetProperty("fits").EnumerateObject()
+                    .ToDictionary(fit => fit.Name, fit => new DaggerfallSplatClipFit(
+                        fit.Value.GetProperty("k").GetSingle(), fit.Value.GetProperty("A").GetSingle(),
+                        fit.Value.TryGetProperty("speed", out JsonElement speed) ? speed.GetSingle() : null), StringComparer.Ordinal);
+                Color[] palette = [.. character.Value.GetProperty("palette").EnumerateArray().Select(colour => Color.FromSrgbHex(
+                    int.Parse(colour.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))];
+                return new DaggerfallSplatEnemy(character.Value.GetProperty("name").GetString()!,
+                    character.Value.GetProperty("role").GetString()!, bindings, bodies, fits, palette, ReadEnemySkirt(character.Name, character.Value));
+            }, StringComparer.Ordinal);
+            return new(clips, splats.GetProperty("joint").GetString()!, splats.GetProperty("producer").GetString()!,
+                splats.GetProperty("license").GetString()!, characters);
+
+            SplatSkirt? ReadEnemySkirt(string id, JsonElement character)
+            {
+                if (!character.TryGetProperty("skirt", out JsonElement skirt)) return null;
+                JsonElement legs = skirt.GetProperty("legs");
+                string[] left = [.. legs.GetProperty("left").EnumerateArray().Select(v => v.GetString()!)];
+                string[] right = [.. legs.GetProperty("right").EnumerateArray().Select(v => v.GetString()!)];
+                SplatSkirtLegs pushers = new(left[0], left[1], left[2], right[0], right[1], right[2]);
+                string hips = skirt.GetProperty("hips").GetString()!;
+                Vector2 centre = new(skirt.GetProperty("centre")[0].GetSingle(), skirt.GetProperty("centre")[1].GetSingle());
+                SplatSkirt rest = skirt.GetProperty("tiers").GetInt32() switch
+                {
+                    2 => new SplatClothSkirt(hips, pushers, centre, skirt.GetProperty("columns").GetInt32(), skirt.GetProperty("rows").GetInt32(),
+                        [.. skirt.GetProperty("grid").EnumerateArray().Select(p => new Vector3(p[0].GetSingle(), p[1].GetSingle(), p[2].GetSingle()))],
+                        [.. skirt.GetProperty("boneColumns").EnumerateArray().Select(v => v.GetInt32())],
+                        [.. skirt.GetProperty("upper").EnumerateArray().Select(v => v.GetString()!)],
+                        [.. skirt.GetProperty("lower").EnumerateArray().Select(v => v.GetString()!)],
+                        skirt.GetProperty("slit").GetBoolean()),
+                    1 => new SplatRingSkirt(hips, pushers, centre, skirt.GetProperty("top").GetSingle(), skirt.GetProperty("hem").GetSingle(),
+                        [.. skirt.GetProperty("joints").EnumerateArray().Select(v => v.GetString()!)],
+                        [.. skirt.GetProperty("theta").EnumerateArray().Select(v => v.GetSingle())],
+                        [.. skirt.GetProperty("pivots").EnumerateArray().Select(p => new Vector3(p[0].GetSingle(), p[1].GetSingle(), p[2].GetSingle()))],
+                        [.. skirt.GetProperty("heights").EnumerateArray().Select(v => v.GetSingle())],
+                        [.. skirt.GetProperty("reach").EnumerateArray().Select(col => col.EnumerateArray().Select(v => v.GetSingle()).ToArray())]),
+                    int tiers => throw new InvalidOperationException($"Content pack '{packId}' states splat enemy {id}'s skirt with {tiers} tiers."),
+                };
+                rest.Validate();
+                return rest;
             }
         }
 

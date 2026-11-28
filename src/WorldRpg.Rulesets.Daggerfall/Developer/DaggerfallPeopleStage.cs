@@ -38,6 +38,49 @@ internal sealed class DaggerfallPeopleStage(ActorsState actors, Func<long, bool>
         return DebugCommandResult.Success($"{released} walking people wander on their own again.");
     }
 
+    public DebugCommandResult StageEnemies(int count, double metres, double spread)
+    {
+        if (count is < 1 or > 32 || !(metres is >= 1 and <= 50) || !(spread is >= 0 and <= 40))
+            return DaggerfallDeveloperReplies.Refused("enemies.stage takes COUNT 1 to 32, METRES 1 to 50 and SPREAD 0 to 40.");
+        if (player.Position is not WorldPoint standing) return DaggerfallDeveloperReplies.Refused("The player has no position.");
+        ActorState[] foes = [.. actors.All.Where(actor => actor.DurableId != actors.Player.DurableId && !actor.IsDefeated
+            && actor.Actor.TryGet<ActorRenderComponent>(out ActorRenderComponent? render)
+            && render.Spec.Kind == ActorVisualKind.DirectionalMobile)
+            .OrderBy(actor => actor.Position.HorizontalDistanceTo(standing))];
+        if (foes.Length == 0) return DaggerfallDeveloperReplies.Refused("No live enemies are loaded here.");
+        int n = Math.Min(count, foes.Length);
+        Vector3 origin = standing.ToVector(), forward = ActorHeading.Forward(player.YawRadians), across = new(-forward.Z, 0F, forward.X);
+        float width = (float)spread;
+        HashSet<long> moving = [.. foes.Take(n).Select(actor => actor.DurableId)];
+        WorldPoint[] spots = new WorldPoint[n];
+        const int perRow = 5;
+        for (int i = 0; i < n; i++)
+        {
+            Vector3 pt;
+            if (n <= perRow)
+            {
+                float offset = n == 1 ? 0F : (i - (n - 1) / 2F) * width / (n - 1);
+                pt = origin + forward * (float)metres + across * offset;
+            }
+            else
+            {
+                int rowIndex = i / perRow, colIndex = i % perRow, inRow = Math.Min(perRow, n - rowIndex * perRow);
+                float offset = inRow == 1 ? 0F : (colIndex - (inRow - 1) / 2F) * width / Math.Max(1, perRow - 1);
+                float stagger = (rowIndex % 2 == 1) ? width / (perRow * 2.5F) : 0F;
+                pt = origin + forward * ((float)metres + rowIndex * RowMetres) + across * (offset + stagger);
+            }
+            if (standingAt(pt, moving) is not { } grounded)
+                return DaggerfallDeveloperReplies.Refused($"No clear ground for enemy {i + 1} {metres:0.#} m ahead; face open ground or come closer.");
+            spots[i] = grounded;
+        }
+        for (int i = 0; i < n; i++)
+        {
+            Vector3 start = spots[i].ToVector();
+            foes[i].ApplyPose(new ActorPose(spots[i], ActorHeading.Yaw(origin - start)));
+        }
+        return DebugCommandResult.Success($"{n} enemies stand in front of the player from {metres:0.#} m ahead, facing them.");
+    }
+
     /// <summary>
     /// Stages the <paramref name="count"/> nearest walkers but <paramref name="skip"/>: standing in a line
     /// <paramref name="metres"/> ahead, or crossing the view in rows from there. Refused, moving nobody, when too few
@@ -46,11 +89,12 @@ internal sealed class DaggerfallPeopleStage(ActorsState actors, Func<long, bool>
     internal DebugCommandResult Place(int count, double metres, double spread, bool crossing, IReadOnlySet<long> skip, out ActorState[] placed)
     {
         placed = [];
-        if (count is < 1 or > 16 || !(metres is >= 1 and <= 50) || !(spread is >= 0 and <= 40) || crossing && spread == 0)
-            return DaggerfallDeveloperReplies.Refused($"people.{(crossing ? "cross" : "stage")} takes COUNT 1 to 16, METRES 1 to 50 and SPREAD 0 to 40{(crossing ? " (above 0)" : "")}.");
+        if (count is < 1 or > 32 || !(metres is >= 1 and <= 50) || !(spread is >= 0 and <= 40) || crossing && spread == 0)
+            return DaggerfallDeveloperReplies.Refused($"people.{(crossing ? "cross" : "stage")} takes COUNT 1 to 32, METRES 1 to 50 and SPREAD 0 to 40{(crossing ? " (above 0)" : "")}.");
         if (player.Position is not WorldPoint standing) return DaggerfallDeveloperReplies.Refused("The player has no position.");
-        ActorState[] walking = [.. Civilians().Where(actor => walks(actor.DurableId) && actor.Wander.State != WanderState.Unloaded && !skip.Contains(actor.DurableId))
-            .OrderBy(actor => actor.Position.HorizontalDistanceTo(standing))];
+        ActorState[] walking = [.. Civilians().Where(actor => walks(actor.DurableId) && !skip.Contains(actor.DurableId))
+            .OrderBy(actor => actor.Wander.State == WanderState.Unloaded ? 1 : 0)
+            .ThenBy(actor => actor.Position.HorizontalDistanceTo(standing))];
         if (walking.Length < count)
             return DaggerfallDeveloperReplies.Refused($"Only {walking.Length} walking people are loaded here.");
         foreach (ActorState other in walking.Skip(count).Where(actor => actor.Wander.Route is not null)) other.Wander.Unstage();
@@ -70,10 +114,18 @@ internal sealed class DaggerfallPeopleStage(ActorsState actors, Func<long, bool>
                 Vector3 row = origin + forward * ((float)metres + i * RowMetres);
                 points = [row - across * (side * width / 2), row + across * (side * width / 2)];
             }
-            else
+            else if (count <= 6)
             {
                 float offset = count == 1 ? 0F : (i - (count - 1) / 2F) * width / (count - 1);
                 points = [origin + forward * (float)metres + across * offset];
+            }
+            else
+            {
+                const int perRow = 6;
+                int rowIndex = i / perRow, colIndex = i % perRow, inRow = Math.Min(perRow, count - rowIndex * perRow);
+                float offset = inRow == 1 ? 0F : (colIndex - (inRow - 1) / 2F) * width / Math.Max(1, perRow - 1);
+                float stagger = (rowIndex % 2 == 1) ? width / (perRow * 2.5F) : 0F;
+                points = [origin + forward * ((float)metres + rowIndex * RowMetres) + across * (offset + stagger)];
             }
             WorldPoint?[] grounded = [.. points.Select(point => standingAt(point, moving))];
             if (grounded.Any(point => point is null))

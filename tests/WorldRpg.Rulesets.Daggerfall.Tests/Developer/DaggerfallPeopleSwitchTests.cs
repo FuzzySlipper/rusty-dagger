@@ -104,6 +104,8 @@ public sealed class DaggerfallPeopleSwitchTests
         // people.splat-shadow switches the caster for the run and keeps the look.
         Assert.True(people.SplatShadow("splats").Succeeded);
         Assert.Equal((SplatShadowCaster.Splats, 3U), (animation.Splats[^1].ShadowCaster, animation.Splats[^1].PixelGrid));
+        Assert.True(people.SplatShadow("core").Succeeded);
+        Assert.Equal((SplatShadowCaster.Core, 3U), (animation.Splats[^1].ShadowCaster, animation.Splats[^1].PixelGrid));
         Assert.True(people.SplatShadow("none").Succeeded);
         Assert.Equal(SplatShadowCaster.None, animation.Splats[^1].ShadowCaster);
         Assert.False(people.SplatShadow("blobs").Succeeded);
@@ -426,7 +428,8 @@ public sealed class DaggerfallPeopleSwitchTests
     public void Every_character_in_the_art_set_has_its_eyes_marked_so_every_walker_blinks()
     {
         DaggerfallSplatPeople splats = Art().SplatPeople!;
-        Assert.All(splats.Characters, character => Assert.True(character.Value.Eyes is { Group: 1, Lid.A: 1F }, $"{character.Key} has eyes {character.Value.Eyes}."));
+        Assert.All(splats.Characters.Where(character => character.Value.Archive is not null),
+            character => Assert.True(character.Value.Eyes is { Group: 1, Lid.A: 1F }, $"{character.Key} has eyes {character.Value.Eyes}."));
     }
 
     [Fact]
@@ -599,7 +602,7 @@ public sealed class DaggerfallPeopleSwitchTests
 
         // 20 seconds of 20 ms updates: each 385 walker blinks on its own clock, shutting fully, toward its lids; 386-C never.
         Run(1000);
-        Assert.Equal([$"Gsplat characters {string.Join(", ", splats.Characters.Keys.Where(id => id != "385").Order(StringComparer.Ordinal))} have no eyes marked, so walkers drawn as them don't blink."],
+        Assert.Equal([$"Gsplat characters {string.Join(", ", splats.Characters.Where(character => character.Value.Archive is not null && character.Key != "385").Select(character => character.Key).Order(StringComparer.Ordinal))} have no eyes marked, so walkers drawn as them don't blink."],
             warnings);
         ulong[] seeing = [.. animation.Tints.Select(tint => tint.Instance.Handle.Value).Distinct().Order()];
         Assert.Equal(2, seeing.Length);
@@ -636,6 +639,29 @@ public sealed class DaggerfallPeopleSwitchTests
         }
 
         float[] Weights(ulong instance) => [.. animation.Tints.Where(tint => tint.Instance.Handle.Value == instance).Select(tint => tint.Weight)];
+    }
+
+    [Fact]
+    public void Splat_fade_updates_active_townspeople_and_refuses_invalid_ranges()
+    {
+        DaggerfallArtReplacements art = Art();
+        PartsRigsRecorder rigs = PartsRigsRecorder.Create();
+        AnimationRecorder animation = AnimationRecorder.Create();
+        animation.Clips = Clips(art.SplatPeople!);
+        using DaggerfallPeopleSwitch people = Switch(art, rigs, animation);
+
+        Assert.True(people.Splat("381").Succeeded);
+        Assert.NotNull(people.Show(100, 10, 1.7F, walking: false));
+        people.Publishing();
+        people.Settle();
+
+        Assert.True(people.SplatFade(4, 12, .02).Succeeded);
+        Assert.Equal((4F, 12F, .02F), (animation.Splats[^1].FadeNear, animation.Splats[^1].FadeFar, animation.Splats[^1].SurfaceBias));
+        Assert.True(people.SplatFade(0, 0, .03).Succeeded);
+        Assert.Equal((0F, 0F, .03F), (animation.Splats[^1].FadeNear, animation.Splats[^1].FadeFar, animation.Splats[^1].SurfaceBias));
+        Assert.False(people.SplatFade(10, 5, 0).Succeeded);
+        Assert.False(people.SplatFade(-1, 5, 0).Succeeded);
+        Assert.False(people.SplatFade(0, 0, .6).Succeeded);
     }
 
     [Theory]

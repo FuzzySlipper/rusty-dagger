@@ -64,8 +64,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     private readonly Dictionary<string, (RenderResource Body, SplatWalk[] Walks, string[] Idles, SplatSkirtRig? Skirt)> bodies = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Id, string LiveryKey), (Appearance Appearance, SplatFigure Figure, Color? Tint)> characters = [];
     /// <summary>How the gsplat people are finished: the tuning's look until a developer sets another for the run.</summary>
-    private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow) look =
-        (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster);
+    private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow, float FadeNear, float FadeFar, float SurfaceBias) look =
+        (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster, 0F, 0F, 0F);
     /// <summary>The clip packs opened for the characters, by the clip each carries; each opens on the first character that plays it.</summary>
     private readonly Dictionary<string, RenderResource> packs = new(StringComparer.Ordinal);
     /// <summary>The characters that would not open, said once each; walkers wearing their art draw their sprites.</summary>
@@ -248,15 +248,27 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     public DebugCommandResult SplatShadow(string caster)
     {
         if (DaggerfallSplatPeopleTuning.Caster(caster) is not { } shadow)
-            return DaggerfallDeveloperReplies.Refused("people.splat-shadow takes none, ellipsoids or splats.");
+            return DaggerfallDeveloperReplies.Refused("people.splat-shadow takes none, ellipsoids, core or splats.");
         look = look with { Shadow = shadow };
         foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
         return DebugCommandResult.Success(shadow switch
         {
             SplatShadowCaster.None => "Gsplat people cast no shadow.",
+            SplatShadowCaster.Core => "Gsplat people cast their matte inset core into the sun's shadow.",
             SplatShadowCaster.Splats => "Gsplat people cast their own silhouette into the sun's shadow.",
             _ => "Gsplat people cast an ellipsoid a joint into the sun's shadow.",
         });
+    }
+
+    public DebugCommandResult SplatFade(double near, double far, double bias)
+    {
+        if (!double.IsFinite(near) || !double.IsFinite(far) || !double.IsFinite(bias) || near < 0 || far < 0 || bias < 0 || bias > .5 || (far > 0 && far <= near))
+            return DaggerfallDeveloperReplies.Refused("people.splat-fade takes NEAR >= 0, FAR > NEAR (or 0 to disable), and BIAS in 0..0.5.");
+        look = look with { FadeNear = (float)near, FadeFar = (float)far, SurfaceBias = (float)bias };
+        foreach (var (key, opened) in characters) Finish(opened.Appearance, splats!.Characters[key.Id], opened.Tint);
+        return DebugCommandResult.Success(far > 0
+            ? $"Gsplat people fade over {near:0.##}–{far:0.##} m with {bias:0.###} m surface bias."
+            : $"Gsplat people distance fade disabled (surface bias {bias:0.###} m).");
     }
 
     /// <summary>
@@ -355,7 +367,7 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         int[] missing = [.. townspeople.Where(archive => !splats!.ByArchive.ContainsKey(archive)).Distinct().Order()];
         if (missing.Length != 0)
             warn($"Townsperson art {string.Join(", ", missing)} has no gsplat character; walkers wearing it draw their sprites.");
-        string[] blind = [.. splats!.Characters.Where(character => character.Value.Eyes is null).Select(character => character.Key).Order(StringComparer.Ordinal)];
+        string[] blind = [.. splats!.Characters.Where(character => character.Value.Archive is not null && character.Value.Eyes is null).Select(character => character.Key).Order(StringComparer.Ordinal)];
         if (blind.Length != 0)
             warn($"Gsplat character{(blind.Length == 1 ? "" : "s")} {string.Join(", ", blind)} {(blind.Length == 1 ? "has" : "have")} no eyes marked, so walkers drawn as them don't blink.");
         splatCrowd = new(animation, seed, tuning.GaitJitter);
@@ -518,7 +530,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
                 : person.Palette.ToArray())
             : ReadOnlyMemory<Color>.Empty;
         animation().SetSplatAppearance(new(appearance, tintVec, look.Grid, look.Coverage,
-            palette, look.PoseRate, SplatLighting.Lit, tuning.LightFloor, look.Shadow));
+            palette, look.PoseRate, SplatLighting.Lit, tuning.LightFloor, look.Shadow,
+            look.FadeNear, look.FadeFar, look.SurfaceBias));
     }
 
     private ContentReference Reference(DaggerfallArtFile file) => content().ResolveReference(new ContentResolveRequest(file.Path, file.Sha256));
