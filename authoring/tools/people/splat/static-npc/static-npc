@@ -698,7 +698,7 @@ def main():
     ap.add_argument('--said', help="ship: Patch's words")
     ap.add_argument('--from-turned', choices=['forward'], help="hands: the bodies carry an earlier turn with this target; apply the difference (npc-468)")
     ap.add_argument('--resume', choices=['mattes', 'cams', 'fuse', 'r0', 'rings', 'refs', 'vace', 'match', 'r1data'], help='bake: start at this stage instead of frames (creature-024 resumed at match)')
-    ap.add_argument('--to', choices=['r1data', 'r1'], help='bake: last stage (default r1data; r1 adds the free round-1 fit)')
+    ap.add_argument('--to', choices=['cams', 'fuse', 'r0', 'r1data', 'r1'], help='bake: last stage (default r1data; r1 adds the free round-1 fit; fuse with --gpu den-m5 to solve the cameras on a Halo and leave round 0 on for Colab)')
     ap.add_argument('--sizes', help='bound/preview: runtime Gaussian counts, comma-separated (default npc.json sizes, 32000)')
     ap.add_argument('--force', action='store_true', help='use a prompt that is still 021\'s template')
     a = ap.parse_args()
