@@ -213,6 +213,23 @@ to it after the fact, and motion from Tripo's presets, a retarget, a scripted ga
   scimitar, held level and pointing forward, still baked as a 5 cm stub (the front views foreshorten it), so `blade_patch.py
   --base -0.58,0.73,-0.21 --dir 0,0.12,1 --length 0.58 --width 0.07 --clear 0.08 --colour 0.62,0.64,0.68` replaced it on every
   body (one fixed `--colour`: left to itself it took 0.31-0.54 grey from each body's stub).
+- **Batch 2 (2026-11-27/28: 015 skeletal warrior, 021 orc shaman, 024 orc warlord, 030 vampire ancient, 032 lich).**
+  - **Meshy ran out of credits** (402 "Insufficient funds"): 021, 024, 030 and 032 took npc.json `"mesher": "hy2mv"` (local
+    Hunyuan3D-2mv) and every one `"rigger": "fit"`. Do not buy credits.
+  - **`fit_rig.py` template arm.** An arm the slices cannot follow (015's left behind the shield, 024's right with the axe,
+    both of 030's under the cloak) now takes the template's elbow, wrist and fingertips from the fitted shoulder, with a
+    WARNING and `fit.json` `"template": true`, instead of stopping. An arm that traces short (015's right stopped at the
+    axe, 0.72 of the template) is forced with npc.json `"fit_opts": "--template-arm Right,Left"`. Check the joint chains
+    against the clay before the clip.
+  - **Staffs (021, 032):** `rigid_prop` plus held clips, as for npc-467: `layer_clip.py` 385's walking/around/idle `--hold rig
+    --weights 'RightShoulder=0.6,RightArm=1,RightForeArm=1,RightHand=1'` into `09-game/wip/clips-held`, npc.json `clips_dir`.
+  - **Repaint check false alarm (024):** VACE repainted the torn cloak and pitted helmet clean, `repaint_match.py` read that as
+    new content and dropped 30 of 81 head-high frames (over 33%: bake stops). npc.json `"match_opts": "--max-ignore 0.5"` (as
+    453) and `static-npc bake creature-024 --resume match` dropped none. Look at the control/VACE pairs first: a real
+    content change (a different figure) is a reason to stop.
+  - **Axes (015, 024):** `rigid_weapon.py` after bound on every body (`bound-cleaned*-tidy`, `16k-face-share-cleaned`,
+    `16k-face-share-cleaned*-tidy`, `16k-graft*-tidy`; originals in `bound/pre-rigid`). The default box took the thigh
+    and, on 024, the cloak edge: 015 `--beyond 0.45 --wrist-y 1.06`, 024 `--beyond 0.44 --z-range -0.12,0.7`.
 - **Stick guides centre on the hips** (`stick_fit.py`) and the guide's head sits over the neck (`blender_path.py`), both
   since 2026-11-27: a big forward-leaning orc (007) was centred on its bounding box, and its head floated 35 cm forward.
 - H3 drew batch 1's magenta key as a pale lilac studio with floor shadows (as on 457); BiRefNet cut it clean (007's mattes).
@@ -233,6 +250,8 @@ Settings live in `00-brief/npc.json`:
 | `rigid_prop` | `Right` or `Left`: a staff painted in that hand, bound wholly to it by `fit_rig.py --rigid-prop` (or, on a Meshy rig, `prop_weights.py`). Staffs only, floor to head: `prop_weights.py` refuses a one-handed weapon (under half its pick on the hand already; creature-007's scimitar, 012's mace) and the rig keeps Meshy's weights; bind such a weapon after `bound` with `rigid_weapon.py`. |
 | `clips_dir` | The character's own walking/around/idle clip JSONs (e.g. the weapon arm held as painted, `layer_clip.py --hold rig`). |
 | `rigger` | `fit` to fit the target skeleton instead of Meshy's rig (automatic without a Meshy task). |
+| `fit_opts` | Extra `fit_rig.py` options, e.g. `"--template-arm Right,Left"` for arms the trace cannot follow (creature-015). |
+| `match_opts` | `repaint_match.py` options for the bake's match stage, e.g. `"--max-ignore 0.5"` when VACE cleans up a torn garment (creature-024, 453). |
 | `creature` | `quadruped`, `spider`, `ghost`, `flyer` or `biped` (set by `init --creature`): the creature prompts and no walker steps. |
 | `no_rings` | Skip the repaint rings, refs, VACE and match: r1-data is the orbit alone (non-human creatures). |
 | `key_fill` | Grey key-coloured pixels inside the matte (`orbit_views.py --key-fill T`). |
