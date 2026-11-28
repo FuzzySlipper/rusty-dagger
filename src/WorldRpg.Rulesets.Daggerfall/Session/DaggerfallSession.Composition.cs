@@ -1298,7 +1298,10 @@ internal sealed partial class DaggerfallSession
                 currentDay: () => checked((int)_time.Calendar.DayNumber),
                 readPlayerSkill: skillId => State.Actors.Player.Stats.GetStat(StatId.Parse(skillId)).ValueInt,
                 readGuildRank: guildFactionId => State.Social.ReadAffiliations().FirstOrDefault(m => m.FactionId == guildFactionId)?.Rank,
-                consumeHealingDraught: () => TryConsumePlayerHealingDraught(definitions));
+                consumeHealingDraught: () => TryConsumePlayerHealingDraught(definitions),
+                sellswordDeals: () => PoliticalBoard?.SellswordDeals() ?? [],
+                sellswordDealPercent: _tuning.Politics.SellswordDealPercent);
+            _roster.BindSellswords(PartyHire.SellswordSpecsAt);
             Crimes.BindContractedHireLookup(PartyHire.IsContractedHire);
             _enemyBehavior.BindFollowPlayerLookup(PartyHire.ShouldFollowPlayer);
             _enemyBehavior.BindDungeonCatchUp(

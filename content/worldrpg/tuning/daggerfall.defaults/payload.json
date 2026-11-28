@@ -112,7 +112,8 @@
     "convoyGuardPay": 150,
     "convoyGuardBonus": 75,
     "convoyDesertionStanding": 15,
-    "convoyDesertionBarDays": 30
+    "convoyDesertionBarDays": 30,
+    "sellswordDealPercent": 40
   },
   "normalLight": {
     "distance": 1.4,

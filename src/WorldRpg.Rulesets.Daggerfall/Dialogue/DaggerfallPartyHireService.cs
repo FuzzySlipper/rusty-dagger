@@ -10,14 +10,18 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Outcome of a party hiring, field-sustain, or dismissal dialogue action.</summary>
 internal sealed record DaggerfallPartyHireResult(bool Accepted, string Question, string Message);
 
-/// <summary>Authoritative price and eligibility quote for hiring an actor under a <c>party-hire</c> spec (#11101).</summary>
+/// <summary>
+/// Authoritative price and eligibility quote for hiring an actor under a <c>party-hire</c> spec (#11101);
+/// <paramref name="Deal"/> is why a seat's deal makes the hire cheaper, where one does (#11223).
+/// </summary>
 internal sealed record DaggerfallPartyHireQuote(
     string SpawnerId,
     ulong Deposit,
     int DailyWage,
     bool CanDelveDungeons,
     bool Eligible,
-    string? RefusalReason = null);
+    string? RefusalReason = null,
+    string? Deal = null);
 
 /// <summary>Outcome emitted when daily wages roll over for one contracted party member (#11101).</summary>
 internal sealed record DaggerfallPartyDailyOutcome(
@@ -101,6 +105,8 @@ internal sealed class DaggerfallPartyHireService
     private readonly Func<string, int> _readPlayerSkill;
     private readonly Func<int, int?> _readGuildRank;
     private readonly Func<bool> _consumeHealingDraught;
+    private readonly Func<IReadOnlyList<DaggerfallSellswordDeal>> _sellswordDeals;
+    private readonly int _sellswordDealPercent;
 
     internal DaggerfallPartyHireService(
         DaggerfallDefinitions definitions,
@@ -119,7 +125,9 @@ internal sealed class DaggerfallPartyHireService
         Func<int>? currentDay = null,
         Func<string, int>? readPlayerSkill = null,
         Func<int, int?>? readGuildRank = null,
-        Func<bool>? consumeHealingDraught = null)
+        Func<bool>? consumeHealingDraught = null,
+        Func<IReadOnlyList<DaggerfallSellswordDeal>>? sellswordDeals = null,
+        int sellswordDealPercent = 0)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _partyHireSpecs = definitions.ActorCatalog.ProjectPartyHireSpecs();
@@ -139,6 +147,8 @@ internal sealed class DaggerfallPartyHireService
         _readPlayerSkill = readPlayerSkill ?? (_ => 25);
         _readGuildRank = readGuildRank ?? (_ => null);
         _consumeHealingDraught = consumeHealingDraught ?? (() => false);
+        _sellswordDeals = sellswordDeals ?? (() => []);
+        _sellswordDealPercent = sellswordDealPercent;
     }
 
     /// <summary>Validated <c>party-hire</c> spawner specs loaded from <c>actors/specs/party-hire.json</c>.</summary>
@@ -204,6 +214,8 @@ internal sealed class DaggerfallPartyHireService
             : waived
                 ? $"Enlist {specName} (deposit waived, {companionQuote.DailyWage} gold/day)"
                 : $"Enlist {specName} ({companionQuote.Deposit} gold, {companionQuote.DailyWage} gold/day)";
+        if (companionQuote is { Eligible: true, Deal: { } deal })
+            companionLabel += $": {deal}";
         List<DaggerfallDialogueTopicOption> topics = [new("hire-companion", companionLabel)];
         if (_ownsCart() && !HasActiveDriver())
         {
@@ -263,6 +275,11 @@ internal sealed class DaggerfallPartyHireService
         string specId = ResolveSpecId(npc, explicitSpecId);
         DaggerfallActorSpawnerSpec? spec = _partyHireSpecs.TryGetValue(specId, out DaggerfallActorSpawnerSpec? found) ? found : null;
         DaggerfallPartyHireTerms? terms = spec?.HireTerms;
+        DaggerfallSellswordDeal? deal = SellswordDealAt(npc.Site.Region, _currentBuilding(), specId);
+        if (deal is null && IsDealRecruit(npc))
+            return new(specId, 0UL, terms?.BaseDailyWage ?? DefaultDailyWage, terms?.CanDelveDungeons ?? false, Eligible: false,
+                RefusalReason: "the deal that sent them here has ended");
+        int dealPercent = deal is null ? 0 : DealPercent(deal);
 
         int baseDeposit = terms?.BaseDeposit ?? (int)CompanionHireFee;
         int baseDailyWage = terms?.BaseDailyWage ?? DefaultDailyWage;
@@ -287,9 +304,10 @@ internal sealed class DaggerfallPartyHireService
 
         ulong deposit = depositWaived
             ? 0UL
-            : ApplyPricingAdjustments(npc.Site.Region, (ulong)Math.Max(0, baseDeposit), applySocialDiscount: true);
-        int dailyWage = checked((int)ApplyPricingAdjustments(npc.Site.Region, (ulong)Math.Max(1, baseDailyWage), applySocialDiscount: true));
-        return new(specId, deposit, Math.Max(1, dailyWage), canDelve, Eligible: true);
+            : ApplyPricingAdjustments(npc.Site.Region, (ulong)Math.Max(0, baseDeposit), applySocialDiscount: true, dealPercent);
+        int dailyWage = checked((int)ApplyPricingAdjustments(npc.Site.Region, (ulong)Math.Max(1, baseDailyWage), applySocialDiscount: true, dealPercent));
+        return new(specId, deposit, Math.Max(1, dailyWage), canDelve, Eligible: true,
+            Deal: deal is null ? null : $"{deal.SeatName} has swords to spare while its deal with {deal.PartnerName} stands");
     }
 
     /// <summary>
@@ -580,15 +598,51 @@ internal sealed class DaggerfallPartyHireService
         return 100 + extra;
     }
 
+    /// <summary>
+    /// The deal in force whose sellswords of spec <paramref name="specId"/> stand at <paramref name="building"/> in classic
+    /// region <paramref name="region"/> (#11223), the most generous where several do: a guild hall of the seat's own office
+    /// faction, or a tavern in a region the seat or its partner holds. Null where none does.
+    /// </summary>
+    internal DaggerfallSellswordDeal? SellswordDealAt(int region, DaggerfallInteriorBuilding? building, string specId) =>
+        _sellswordDeals().Where(deal => StringComparer.Ordinal.Equals(deal.Spec, specId) && Sends(deal, region, building)).MaxBy(DealPercent);
+
+    /// <summary>The specs of the sellswords the deals in force send to <paramref name="building"/> in classic region <paramref name="region"/> (#11223).</summary>
+    internal IReadOnlyList<string> SellswordSpecsAt(int region, DaggerfallInteriorBuilding building) =>
+        [.. _sellswordDeals().Where(deal => Sends(deal, region, building)).Select(deal => deal.Spec).Distinct(StringComparer.Ordinal)];
+
+    /// <summary>How much cheaper a deal's sellswords come, in percent: the tuned share for each force a week it gives.</summary>
+    internal int DealPercent(DaggerfallSellswordDeal deal) => _sellswordDealPercent * deal.Amount / Math.Max(1, deal.EveryWeeks);
+
+    private static bool Sends(DaggerfallSellswordDeal deal, int region, DaggerfallInteriorBuilding? building) => building switch
+    {
+        { BuildingType: GuildHallBuildingType } hall => hall.FactionId == deal.OfficeFaction,
+        { BuildingType: TavernBuildingType } => deal.Regions.Contains(region),
+        _ => false,
+    };
+
+    /// <summary>Whether <paramref name="npc"/> is a sellsword a seat's deal sent (#11223), not a hall's own recruit.</summary>
+    private bool IsDealRecruit(DaggerfallNpc npc)
+    {
+        string? slot = _actors.TryGet(npc.DurableId, out ActorState? live) && live.Actor.TryGet<ActorOriginComponent>(out ActorOriginComponent? origin)
+            ? origin.Origin.SlotKey
+            : _actorLedger.TryGet(npc.DurableId, out ActorLedgerEntry? entry) ? entry?.Origin.SlotKey : null;
+        return slot?.StartsWith(DaggerfallActorRoster.DealRecruitSlotPrefix, StringComparison.Ordinal) == true;
+    }
+
     private static bool IsWarFrontTag(string? tag) =>
         string.Equals(tag, WarFrontTag, StringComparison.OrdinalIgnoreCase)
         || string.Equals(tag, "warfront", StringComparison.OrdinalIgnoreCase);
 
-    private ulong ApplyPricingAdjustments(int region, ulong baseGold, bool applySocialDiscount)
+    /// <summary>
+    /// The price of <paramref name="baseGold"/> in <paramref name="region"/>: its hazard percent, less
+    /// <paramref name="dealPercent"/> where a seat's deal has sellswords to spare (#11223), then the condition fee and the
+    /// player's social discount.
+    /// </summary>
+    private ulong ApplyPricingAdjustments(int region, ulong baseGold, bool applySocialDiscount, int dealPercent = 0)
     {
         if (baseGold == 0UL)
             return 0UL;
-        int hazardPercent = RegionalHazardPercent(region);
+        int hazardPercent = Math.Max(1, RegionalHazardPercent(region) - dealPercent);
         ulong adjusted = checked(baseGold * (ulong)hazardPercent / 100UL);
         adjusted = _hireFee(region, Math.Max(1UL, adjusted));
         if (applySocialDiscount)
@@ -670,13 +724,14 @@ internal sealed class DaggerfallPartyHireService
                 ? " They will delve dungeons at your side."
                 : " They will guard the road and hold watch outside dungeon entrances.")
             : string.Empty;
+        string dealNote = quote.Deal is { } deal ? $" {deal}." : string.Empty;
         string reply = depositWaived
             ? (role == ActorPartyRole.Driver
                 ? $"On account of your introduction, {name} waives the deposit, takes the reins, and joins your party."
-                : $"On account of your introduction, {name} waives the deposit and joins your party{wageClause}.{delveNote}")
+                : $"On account of your introduction, {name} waives the deposit and joins your party{wageClause}.{dealNote}{delveNote}")
             : (role == ActorPartyRole.Driver
                 ? $"Agreed — {name} takes the reins for {fee} gold and joins your party."
-                : $"Agreed — {name} accepts {fee} gold and joins your party{wageClause}.{delveNote}");
+                : $"Agreed — {name} accepts {fee} gold and joins your party{wageClause}.{dealNote}{delveNote}");
         return new(true, question, reply);
     }
 

@@ -168,6 +168,7 @@ internal static partial class DaggerfallBaseContent
                 : DaggerfallCreatureFactionSet.ClassicDefault;
             (DaggerfallActorCatalog actorCatalog, Dictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, DaggerfallMobileCatalogSet mobiles) =
                 ReadActorCatalog(root, vocabulary, catalogs, actions, items, lootTables, creatureFactions, magic, factions, diagnostics);
+            ValidateSeatSellswords(boardSeats, actorCatalog, diagnostics);
             DaggerfallPoliticalCanon? politicalCanon = ReadPoliticalCanon(root, boardSeats, actorCatalog, diagnostics);
             DaggerfallHeraldry heraldry = politicalCanon is { } canon && root.TryGetProperty("heraldry", out JsonElement heraldrySection)
                 ? DaggerfallHeraldry.Read(heraldrySection, [.. canon.Setup.Seats.Select(seat => seat.Id)], [.. canon.Setup.Regions.Select(region => region.Id)],

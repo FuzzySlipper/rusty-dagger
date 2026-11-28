@@ -60,10 +60,21 @@ internal sealed class DaggerfallActorRoster
     private readonly DaggerfallActorLedger _actorLedger;
     private readonly Action<DaggerfallActorInventorySave?, DaggerfallCorpseSave?, DaggerfallActiveEffectSave[]?>? _restoreDetachedState;
     private Func<DaggerfallSiteProfile, IReadOnlySet<long>>? _getSuppressedStaticSlots;
+    private Func<int, DaggerfallInteriorBuilding, IReadOnlyList<string>> _sellswordsAt = (_, _) => [];
+
+    /// <summary>The slot key prefix of a sellsword a seat's deal sends to a tavern or hall (#11223), beside its own recruit.</summary>
+    internal const string DealRecruitSlotPrefix = "party-hire/deal/";
 
     /// <summary>Binds the schedule lookup returning home-building static slot IDs currently away at a tavern.</summary>
     internal void BindScheduleStaticSuppression(Func<DaggerfallSiteProfile, IReadOnlySet<long>> getSuppressedStaticSlots) =>
         _getSuppressedStaticSlots = getSuppressedStaticSlots ?? throw new ArgumentNullException(nameof(getSuppressedStaticSlots));
+
+    /// <summary>
+    /// Binds the party-hire specs of the sellswords the seats' deals send to an interior in a classic region (#11223); each
+    /// stands there as a recruit while its deal is in force.
+    /// </summary>
+    internal void BindSellswords(Func<int, DaggerfallInteriorBuilding, IReadOnlyList<string>> sellswordsAt) =>
+        _sellswordsAt = sellswordsAt ?? throw new ArgumentNullException(nameof(sellswordsAt));
 
     /// <param name="profile">The active site's profile.</param>
     /// <param name="appearance">The active site's appearance.</param>
@@ -736,28 +747,44 @@ internal sealed class DaggerfallActorRoster
             }
         }
 
-        // Step 1b: materialize deterministic tavern/guildhall party-hire recruit from authored party-hire specs (#11101).
-        MaterializeInteriorPartyHireRecruit(profile, appearance, translation);
+        // Step 1b: materialize deterministic tavern/guildhall party-hire recruit from authored party-hire specs (#11101),
+        // and the sellswords the seats' deals send there (#11223): each while its deal lasts, or while one hired here holds
+        // their contract.
+        if (profile.ProfileKind == DaggerfallWorldProfileKind.Interior && profile.InteriorBuilding is { } hireHall && profile.Site is { } hireSite)
+        {
+            if (ResolveInteriorPartyHireSpecId(hireHall) is { } ownSpec)
+                MaterializeInteriorPartyHireRecruit(profile, appearance, translation, ownSpec, $"party-hire/{ownSpec}", place: 0);
+            IReadOnlyList<string> sent = _sellswordsAt(hireSite.Region, hireHall);
+            string[] sellswords = [.. _definitions.BoardSeats.All.Select(seat => seat.Sellswords).OfType<string>().Distinct(StringComparer.Ordinal)];
+            for (int index = 0; index < sellswords.Length; index++)
+            {
+                string slot = $"{DealRecruitSlotPrefix}{sellswords[index]}";
+                if (sent.Contains(sellswords[index], StringComparer.Ordinal)
+                    || _actorLedger.TryGet(DaggerfallPeopleSlots.SeededSlotIdentity(hireSite, $"{profile.ProfileKey.LogicalId}/{slot}"), out ActorLedgerEntry? hired)
+                        && hired?.PartyContract is not null)
+                    MaterializeInteriorPartyHireRecruit(profile, appearance, translation, sellswords[index], slot, place: index + 1);
+            }
+        }
 
         // Step 2: materialize any inbound relocated SeededSlot or CastIndividual ledger entries at this profile.
         MaterializeRelocatedLedgerActors(profile, appearance, translation);
     }
 
-    private void MaterializeInteriorPartyHireRecruit(DaggerfallSiteProfile profile, DaggerfallSiteAppearance appearance, Vector3 translation)
+    /// <summary>
+    /// Places the recruit of party-hire spec <paramref name="specId"/> in slot <paramref name="recruitSlotId"/> of the active
+    /// interior, standing beside its first static person: the hall's own recruit at <paramref name="place"/> 0, and a deal's
+    /// sellswords on the other side and further along.
+    /// </summary>
+    private void MaterializeInteriorPartyHireRecruit(DaggerfallSiteProfile profile, DaggerfallSiteAppearance appearance, Vector3 translation,
+        string specId, string recruitSlotId, int place)
     {
-        if (profile.ProfileKind != DaggerfallWorldProfileKind.Interior
-            || profile.InteriorBuilding is not { } interior
+        if (profile.InteriorBuilding is not { } interior
             || profile.Site is not { } site
-            || profile.BillboardSprites.Count == 0)
-            return;
-
-        string? specId = ResolveInteriorPartyHireSpecId(interior);
-        if (specId is null
+            || profile.BillboardSprites.Count == 0
             || !_definitions.ActorCatalog.Specs.TryGetValue(specId, out DaggerfallActorSpawnerSpec? spec)
             || spec.Family != ActorSpawnerFamily.PartyHire)
             return;
 
-        string recruitSlotId = $"party-hire/{spec.Id}";
         string slotKey = $"{profile.ProfileKey.LogicalId}/{recruitSlotId}";
         long recruitId = DaggerfallPeopleSlots.SeededSlotIdentity(site, slotKey);
         if (_actorLedger.IsHomeSlotSuppressed(recruitId, profile.ProfileKey)
@@ -796,10 +823,12 @@ internal sealed class DaggerfallActorRoster
         DaggerfallNpc npc = _npcs.Require(recruitId);
         if (npc.Presence != DaggerfallNpcPresence.Active) return;
 
+        float side = place % 2 == 0 ? 1.35f : -1.35f;
+        float along = 0.75f * (1 + place / 2);
         WorldPoint basePos = profile.StaticNpcs.Count > 0
-            ? new WorldPoint(profile.StaticNpcs[0].Position.X + 1.35f, profile.StaticNpcs[0].Position.Y, profile.StaticNpcs[0].Position.Z + 0.75f)
+            ? new WorldPoint(profile.StaticNpcs[0].Position.X + side, profile.StaticNpcs[0].Position.Y, profile.StaticNpcs[0].Position.Z + along)
             : profile.Project.PlayerPosition is { } pp
-                ? new WorldPoint(pp.X + 1.35f, pp.Y, pp.Z + 0.75f)
+                ? new WorldPoint(pp.X + side, pp.Y, pp.Z + along)
                 : default;
         ActorOrigin origin = ActorOrigin.Seeded(profile.ProfileKey, recruitSlotId, spec.Id,
             ActorHarmPolicyKind.LawProtectedCivilian, spec.Interaction);

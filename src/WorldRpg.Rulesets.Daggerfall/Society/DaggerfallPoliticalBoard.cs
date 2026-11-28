@@ -570,6 +570,28 @@ internal sealed class DaggerfallPoliticalBoard
     }
 
     /// <summary>
+    /// The seats' sellswords out on deals in force (#11223): each side of an agreement that gives force, where its seat
+    /// sends out sellswords (<see cref="DaggerfallBoardSeatBinding.Sellswords"/>). A deal that lapses or ends leaves the list.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallSellswordDeal> SellswordDeals()
+    {
+        List<DaggerfallSellswordDeal> deals = [];
+        foreach (Agreement deal in _board.Agreements)
+            foreach (string seat in new[] { deal.Proposer, deal.Partner })
+            {
+                TradeTerm given = deal.GivenBy(seat);
+                if (given.Resource != Resource.Force || !_seats.TryGetBySeatId(seat, out DaggerfallBoardSeatBinding? binding)
+                    || binding!.Sellswords is not { } spec) continue;
+                string partner = deal.Other(seat);
+                int[] regions = [.. _board.Regions.Where(region => region.Allegiance == seat || region.Allegiance == partner)
+                    .Select(region => region.CatalogRegion).Distinct()];
+                deals.Add(new DaggerfallSellswordDeal(seat, _board.Seat(seat).Name, binding.OfficeFactionId, _board.Seat(partner).Name, spec,
+                    regions, given.Amount, given.EveryWeeks));
+            }
+        return deals;
+    }
+
+    /// <summary>
     /// Settles, before the Sunday's turn, each convoy whose band has left the map without arriving or being lost on it: one
     /// the player met and its people walked off from. One whose people any died of is a loss; any other came through.
     /// </summary>

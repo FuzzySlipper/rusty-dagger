@@ -10,9 +10,11 @@ internal enum DaggerfallBoardSeatKind
 }
 
 /// <summary>
-/// Ruleset binding for one canonical political board-game seat (<c>seatId -&gt; { officeFactionId, title }</c>).
+/// Ruleset binding for one canonical political board-game seat (<c>seatId -&gt; { officeFactionId, title, sellswords? }</c>).
 /// Intentionally carries NO holder, seat name, kind, or home region: the base pack's <c>world/iliac-bay.board.json</c>
 /// owns seats, holders, and personas, and faction metadata comes from <c>factions.json</c> (no hand-kept copies).
+/// <paramref name="Sellswords"/> is the party-hire spec of the sellswords the seat sends out when it gives force under a
+/// deal (#11223), or null for a seat that keeps none.
 /// </summary>
 internal sealed record DaggerfallBoardSeatBinding(
     string SeatId,
@@ -20,7 +22,8 @@ internal sealed record DaggerfallBoardSeatBinding(
     DaggerfallBoardSeatKind Kind,
     int OfficeFactionId,
     int? HomeRegion,
-    string DefaultTitle);
+    string DefaultTitle,
+    string? Sellswords = null);
 
 /// <summary>Admitted ruleset table of political board-game seat bindings loaded from <c>daggerfall.base</c>.</summary>
 internal sealed class DaggerfallBoardSeatSet
@@ -87,10 +90,11 @@ internal static partial class DaggerfallBaseContent
             if (seatObj.TryGetProperty("holder", out _) || seatObj.TryGetProperty("defaultCastId", out _))
                 diagnostics.Add($"Board seat '{id}' must not declare a holder or defaultCastId; iliac-bay.board.json owns seat holders.");
             if (seatObj.TryGetProperty("name", out _) || seatObj.TryGetProperty("kind", out _) || seatObj.TryGetProperty("homeRegion", out _))
-                diagnostics.Add($"Board seat '{id}' should only declare id, officeFactionId and title; iliac-bay.board.json and factions.json own seat names, kinds and regions.");
+                diagnostics.Add($"Board seat '{id}' should only declare id, officeFactionId, title and sellswords; iliac-bay.board.json and factions.json own seat names, kinds and regions.");
 
             int officeFactionId = Integer(seatObj, "officeFactionId", diagnostics);
             string title = Text(seatObj, "title", diagnostics);
+            string? sellswords = OptionalText(seatObj, "sellswords", diagnostics);
 
             if (string.IsNullOrWhiteSpace(title))
                 diagnostics.Add($"Board seat '{id}' requires a non-empty title.");
@@ -118,9 +122,18 @@ internal static partial class DaggerfallBaseContent
                 : DaggerfallBoardSeatKind.MajorSeat;
             int? homeRegion = isProvince && faction is { Region: >= 0 } ? faction.Region : null;
 
-            seats.Add(new DaggerfallBoardSeatBinding(id, seatName, kind, officeFactionId, homeRegion, title));
+            seats.Add(new DaggerfallBoardSeatBinding(id, seatName, kind, officeFactionId, homeRegion, title, sellswords));
         }
 
         return new DaggerfallBoardSeatSet(seats);
+    }
+
+    /// <summary>Reports a seat whose sellswords name no party-hire spec: its deals would send out no one.</summary>
+    private static void ValidateSeatSellswords(DaggerfallBoardSeatSet seats, DaggerfallActorCatalog actorCatalog, DaggerfallContentDiagnostics diagnostics)
+    {
+        foreach (DaggerfallBoardSeatBinding seat in seats.All)
+            if (seat.Sellswords is { } spec
+                && !(actorCatalog.Specs.TryGetValue(spec, out DaggerfallActorSpawnerSpec? found) && found.Family == ActorSpawnerFamily.PartyHire))
+                diagnostics.Add($"Board seat '{seat.SeatId}' sends out sellswords '{spec}', which is no party-hire spec.");
     }
 }

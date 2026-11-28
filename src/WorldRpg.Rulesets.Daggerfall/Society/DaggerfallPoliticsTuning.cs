@@ -27,13 +27,17 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// a guard who raids the convoy they were hired to guard loses with its giver beyond the raid's own, with the days the
 /// giver's court refuses them work.
 /// </para>
+/// <para>
+/// And a seat's sellswords out on a deal (#11223, <see cref="DaggerfallSellswordDeal"/>): the percent a deal's sellswords
+/// come cheaper, for each force a week the seat gives under it.
+/// </para>
 /// </summary>
 internal sealed record DaggerfallPoliticsTuning(int OfficeMemberReaction, int OfficeEnemyReaction, int OpposedStandingPercent,
     int PoliticalStandingPercent, int PoliticalOfferPercent, int CarryWordInfluence, int UndermineInfluence,
     int ConvoyRaidStanding, int ConvoyDefenceStanding, int ConvoyMusterHours, int ConvoyGuardPay, int ConvoyGuardBonus,
-    int ConvoyDesertionStanding, int ConvoyDesertionBarDays)
+    int ConvoyDesertionStanding, int ConvoyDesertionBarDays, int SellswordDealPercent)
 {
-    internal static DaggerfallPoliticsTuning Default { get; } = new(10, 10, 25, 100, 25, 2, 1, 10, 10, 12, 150, 75, 15, 30);
+    internal static DaggerfallPoliticsTuning Default { get; } = new(10, 10, 25, 100, 25, 2, 1, 10, 10, 12, 150, 75, 15, 30, 40);
 
     internal DaggerfallPoliticsTuning Validate() =>
         OfficeMemberReaction is >= 0 and <= 50 && OfficeEnemyReaction is >= 0 and <= 50
@@ -41,9 +45,9 @@ internal sealed record DaggerfallPoliticsTuning(int OfficeMemberReaction, int Of
         && CarryWordInfluence is >= 1 and <= 5 && UndermineInfluence is >= 1 and <= 5
         && ConvoyRaidStanding is >= 0 and <= 50 && ConvoyDefenceStanding is >= 0 and <= 50
         && ConvoyMusterHours is >= 0 and <= 72 && ConvoyGuardPay is >= 0 and <= 10_000 && ConvoyGuardBonus is >= 0 and <= 10_000
-        && ConvoyDesertionStanding is >= 0 and <= 50 && ConvoyDesertionBarDays is >= 0 and <= 365
+        && ConvoyDesertionStanding is >= 0 and <= 50 && ConvoyDesertionBarDays is >= 0 and <= 365 && SellswordDealPercent is >= 0 and <= 100
             ? this : throw new ArgumentException(
-                "Politics tuning requires office reactions of 0 to 50, standing shares and a political offer chance of 0 to 100 percent, political quest influence of 1 to 5, convoy standing of 0 to 50, a convoy muster of 0 to 72 hours, guard pay and bonus of 0 to 10000 gold, and a desertion bar of 0 to 365 days.");
+                "Politics tuning requires office reactions of 0 to 50, standing shares and a political offer chance of 0 to 100 percent, political quest influence of 1 to 5, convoy standing of 0 to 50, a convoy muster of 0 to 72 hours, guard pay and bonus of 0 to 10000 gold, a desertion bar of 0 to 365 days, and a sellsword deal discount of 0 to 100 percent a weekly force.");
 
     internal static DaggerfallPoliticsTuning Read(JsonElement section) => new DaggerfallPoliticsTuning(
         section.GetProperty("officeMemberReaction").GetInt32(),
@@ -59,5 +63,6 @@ internal sealed record DaggerfallPoliticsTuning(int OfficeMemberReaction, int Of
         section.GetProperty("convoyGuardPay").GetInt32(),
         section.GetProperty("convoyGuardBonus").GetInt32(),
         section.GetProperty("convoyDesertionStanding").GetInt32(),
-        section.GetProperty("convoyDesertionBarDays").GetInt32()).Validate();
+        section.GetProperty("convoyDesertionBarDays").GetInt32(),
+        section.GetProperty("sellswordDealPercent").GetInt32()).Validate();
 }

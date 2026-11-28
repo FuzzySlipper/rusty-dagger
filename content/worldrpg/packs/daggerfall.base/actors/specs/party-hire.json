@@ -111,6 +111,64 @@
       }
     },
     {
+      "id": "hire-orc-sellsword",
+      "family": "party-hire",
+      "template": "barbarian",
+      "published": true,
+      "displayName": "Orcish Sellsword",
+      "role": "orc-sellsword",
+      "genders": [
+        {
+          "gender": "male",
+          "weight": 3
+        },
+        {
+          "gender": "female",
+          "weight": 1
+        }
+      ],
+      "naming": "generated",
+      "harm": "combatant",
+      "interaction": "full-dialogue",
+      "team": "player-ally",
+      "visualMode": "pool",
+      "defaultPool": [
+        {
+          "archive": 182,
+          "record": 17,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 182,
+          "record": 20,
+          "gender": "Male",
+          "weight": 8
+        },
+        {
+          "archive": 182,
+          "record": 59,
+          "gender": "Male",
+          "weight": 6
+        },
+        {
+          "archive": 184,
+          "record": 18,
+          "gender": "Female",
+          "weight": 8
+        }
+      ],
+      "hireTerms": {
+        "venue": "tavern",
+        "guildFactionId": null,
+        "baseDeposit": 40,
+        "baseDailyWage": 20,
+        "minimumGuildRank": null,
+        "requiresVouch": false,
+        "canDelveDungeons": false
+      }
+    },
+    {
       "id": "hire-knight-retainer",
       "family": "party-hire",
       "template": "knight",
