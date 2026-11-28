@@ -20,7 +20,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallDetectors(DaggerfallEffectLifecycle effects, ActorsState actors, MechanicsInventoryContainerCoordinator containers,
     double maximumDistance, Func<WorldPoint?> playerPosition, Func<long, bool> gameplayActive, Func<long, DaggerfallActorDefinition?> definitionOf,
     Func<IEnumerable<(long Id, EntityId Owner, WorldPoint Position)>> treasure,
-    Func<WorldPoint, IEnumerable<KeyValuePair<long, WorldPoint>>, double, Dictionary<long, double>> nearbyContacts)
+    Func<WorldPoint, IEnumerable<KeyValuePair<long, WorldPoint>>, double, Dictionary<long, double>> nearbyContacts,
+    Func<long, string>? actorLabel = null)
 {
     internal IReadOnlyList<DaggerfallDetectorView> Read()
     {
@@ -65,6 +66,7 @@ internal sealed class DaggerfallDetectors(DaggerfallEffectLifecycle effects, Act
                 Math.Atan2(positions[pair.Key].X - origin.X, origin.Z - positions[pair.Key].Z), items.GetValueOrDefault(pair.Key) ?? [])
             {
                 Label = kind == DaggerfallDetection.Treasure ? "Treasure"
+                    : actorLabel is not null ? actorLabel(pair.Key)
                     : definitionOf(pair.Key) is { } detected ? DaggerfallIdLabel.For(detected.Id.Value) : "Someone",
             })
             .ToArray();

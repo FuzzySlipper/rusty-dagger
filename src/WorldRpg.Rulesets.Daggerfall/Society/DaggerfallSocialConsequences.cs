@@ -629,7 +629,7 @@ internal sealed class DaggerfallSocialConsequences(
         if (penalty >= 0)
             return 0;
 
-        string name = npc?.DisplayName ?? $"actor #{arrestedActorId}";
+        string name = npc?.DisplayName ?? DaggerfallActorDisplayName.ReadableRole(npc?.Role) ?? "Townsperson";
         string headline = isHouseholdHead
             ? $"Household head {name} seized by law"
             : $"Kin member {name} arrested";
@@ -730,7 +730,7 @@ internal sealed class DaggerfallSocialConsequences(
 
         if (victimFamilyId is not null)
         {
-            string victimName = npc?.DisplayName ?? $"actor #{died.ActorId}";
+            string victimName = npc?.DisplayName ?? DaggerfallActorDisplayName.ReadableRole(npc?.Role) ?? "Townsperson";
             string headline = hasContract
                 ? $"Betrayal of {victimName}'s kin"
                 : $"Blood feud against {victimName}'s kin";

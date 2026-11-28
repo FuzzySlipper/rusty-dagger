@@ -905,10 +905,11 @@ internal sealed partial class DaggerfallSession
                 () => _groundContainers.All.Values.Select(ground => (ground.Id, ground.Owner, ground.Position))
                     .Concat(_corpseLoot.Corpses.Values.Where(value => value.IsRegistered && value.IsInteractable)
                         .Select(corpse => (checked((long)corpse.ContainerIdentity.Value), corpse.Owner, actors.Get(corpse.ActorId).Position))),
-                (origin, positions, radius) => SpellTargets.Nearby(DaggerfallActorIdentity.PlayerEntityId, origin.ToVector(), positions, radius, true));
+                (origin, positions, radius) => SpellTargets.Nearby(DaggerfallActorIdentity.PlayerEntityId, origin.ToVector(), positions, radius, true),
+                id => DaggerfallActorDisplayName.For(id, State.Npcs, DefinitionsByActor, definitions.Mobiles, definitions.ActorCatalog));
             _doorSpells = new DaggerfallDoorSpells(State.Effects, State.ItemInstances, () => State.Progression.Level);
             State.ItemInstances.AttachContainment(_itemOwnership.ResidentOwner);
-            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Mobiles, definitions.Text);
+            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Mobiles, definitions.Text, State.Npcs, definitions.ActorCatalog);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
             _inventoryUi.BindItemExits(questItemExits);
@@ -991,7 +992,8 @@ internal sealed partial class DaggerfallSession
                 useAzurasStar: item => ItemSouls.UseAzurasStar(State.Inventory.GetDurableItemId(new(item.EntityId)).Value), usePotion: key => Casting.UsePotion(actors.Player.DurableId, key), useQuestItem: State.Quests.UseItem,
                 isAzurasStar: metadata => DaggerfallSoulGems.IsStar(metadata, definitions.Magic), castsOnUse: DaggerfallItemCastTriggers.CastsOnUse));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Book);
-            _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
+            _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers,
+                id => DaggerfallActorDisplayName.For(id, State.Npcs, DefinitionsByActor, definitions.Mobiles, definitions.ActorCatalog));
             _interactions = new DaggerfallOpenInteractions(
                 () => _lootUi.Read(),
                 () => _lootUi.Message,
@@ -2191,7 +2193,9 @@ internal sealed partial class DaggerfallSession
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities, _sight.ActorOccluders, (float)_tuning.Camera.EyeHeight),
             reach,
             new DaggerfallActivationContributions(
-                new DaggerfallCorpseActivationOwner(() => _corpseLoot.Corpses.Keys, _corpseLoot.ContainerName, State.Actors, _sight.Corpse, actor => _lootActions.OpenCorpse(actor)),
+                new DaggerfallCorpseActivationOwner(() => _corpseLoot.Corpses.Keys,
+                    id => DaggerfallActorDisplayName.For(id, State.Npcs, DefinitionsByActor, _definitions.Mobiles, _definitions.ActorCatalog),
+                    State.Actors, _sight.Corpse, actor => _lootActions.OpenCorpse(actor)),
                 door = new DaggerfallDoorActivationOwner(_doors, DungeonActions.TriggerDoor, ForceLock, id => _doorSpells.Activate(_doors, id),
                     (door, forceMode) => EnterExteriorBuilding(door, forceMode, skipGreeting: false),
                     door => Entrance.Door(_doors, door, _activeProfileKey.Site), door => Entrance.Name(_doors, door, _activeProfileKey.Site),

@@ -12,7 +12,8 @@ internal sealed record LootPresentation(string Container, string Revision, strin
 internal sealed record PendingGroundLoot(long Id, InventoryContainerSelection Selection, ulong ExpectedWorldRevision, string Definition, ulong Quantity);
 
 /// <summary>One explicitly opened corpse. Contents and transfers remain Engine inventory facts.</summary>
-internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot, DaggerfallInventoryPresentation items, DaggerfallGroundContainers? ground = null)
+internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot, DaggerfallInventoryPresentation items, DaggerfallGroundContainers? ground = null,
+    Func<long, string>? actorName = null)
 {
     private long? _actor;
     private long? _ground;
@@ -42,7 +43,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         {
             contents = loot.ReadContents(actor);
             owner = DaggerfallItemOwner.Corpse(actor);
-            title = DaggerfallIdLabel.For(loot.ContainerName(actor)) + " — loot";
+            title = (actorName?.Invoke(actor) ?? DaggerfallIdLabel.For(loot.ContainerName(actor))) + " — loot";
         }
         else return null;
         InventoryItemPresentation[] rows = contents is null ? [] : contents.Stacks

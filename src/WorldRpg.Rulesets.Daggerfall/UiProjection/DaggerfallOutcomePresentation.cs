@@ -15,7 +15,9 @@ internal sealed class DaggerfallOutcomePresentation(
     PresentationState presentation,
     IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
     DaggerfallMobileCatalogSet mobiles,
-    DaggerfallTextSet? text = null)
+    DaggerfallTextSet? text = null,
+    DaggerfallNpcRegistry? npcs = null,
+    DaggerfallActorCatalog? actorCatalog = null)
 {
     /// <summary>Admitted seconds one published outcome line stays on screen.</summary>
     internal const double MessageLifetimeSeconds = 6d;
@@ -110,7 +112,7 @@ internal sealed class DaggerfallOutcomePresentation(
                 _lineIsResult = true;
                 presentation.SetOutcome(changed.Outcome switch
                 {
-                    DaggerfallWabbajackOutcome.Transformed => $"Wabbajack transformed the target into {changed.ReplacementDefinition}",
+                    DaggerfallWabbajackOutcome.Transformed => $"Wabbajack transformed the target into {DaggerfallActorDisplayName.ForDefinitionId(changed.ReplacementDefinition, mobiles, actorCatalog)}",
                     DaggerfallWabbajackOutcome.ProtectedQuestTarget => "Wabbajack cannot transform a quest target",
                     DaggerfallWabbajackOutcome.AlreadyTransformed => "This target is already transformed",
                     DaggerfallWabbajackOutcome.SourceUnavailable => "The Wabbajack source is no longer available",
@@ -176,11 +178,11 @@ internal sealed class DaggerfallOutcomePresentation(
                 _lineIsResult = true;
                 presentation.SetOutcome(NegatedLine(absorbed.AttackerId, absorbed.TargetId, HarmNegation.Absorbed));
                 break;
-            case AttackHitFact hit when Actor(hit.EnemyAttack ? hit.AttackerId : hit.TargetId, out DaggerfallActorDefinition definition):
+            case AttackHitFact hit when Actor(hit.EnemyAttack ? hit.AttackerId : hit.TargetId, out _):
                 _lineIsResult = true;
                 presentation.SetOutcome(hit.EnemyAttack && hit.TargetId != DaggerfallActorIdentity.PlayerEntityId
                     ? $"{Name(hit.AttackerId)} hit {Name(hit.TargetId)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage"
-                    : hit.EnemyAttack ? $"{DisplayName(definition)} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {DisplayName(definition)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
+                    : hit.EnemyAttack ? $"{Name(hit.AttackerId)} hit you for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage" : $"Hit {Name(hit.TargetId)} for {DaggerfallFormulaPolicy.DisplayDamage(hit.ActualHealthLost)} damage");
                 if (MitigationClause(hit.Mitigated) is { } clause) presentation.AppendOutcome(clause);
                 if (_soulTrap is { AllowsDeath: false } tethered && tethered.TargetId == hit.TargetId)
                 { presentation.AppendOutcome(tethered.Message); _soulTrap = null; }
@@ -229,9 +231,7 @@ internal sealed class DaggerfallOutcomePresentation(
         (int deflected, int absorbed) => $"{deflected} deflected, {absorbed} absorbed",
     };
 
-    private string Name(long entityId) => Actor(entityId, out DaggerfallActorDefinition definition) ? DisplayName(definition) : $"actor {entityId}";
-
-    private string DisplayName(DaggerfallActorDefinition definition) => mobiles.DisplayName(definition);
+    private string Name(long entityId) => DaggerfallActorDisplayName.For(entityId, npcs, actors, mobiles, actorCatalog);
 
     /// <summary>
     /// The donor's break line: its published message for a singular or plural break, with the item
