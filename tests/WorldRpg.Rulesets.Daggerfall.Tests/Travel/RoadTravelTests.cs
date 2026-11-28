@@ -343,6 +343,38 @@ public sealed class RoadTravelTests
         Assert.DoesNotContain(2, walked);
     }
 
+    [Fact]
+    public void A_band_with_no_way_that_keeps_out_waits_where_it_is_rather_than_take_a_forbidden_road()
+    {
+        // The origin's eight neighbours are all of region 2: no step leaves it without entering the region.
+        const int width = Width + 1, height = 20;
+        byte[] regions = new byte[width * height];
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < Width; x++)
+                regions[(y * width) + x + 1] = (byte)(Math.Max(Math.Abs(x - 10), Math.Abs(y - Row)) == 1 ? 130 : 128);
+        DaggerfallWorldGridsSet grids = new(new DaggerfallClimateGridDefinition(width, height, Enumerable.Repeat((byte)231, width * height).ToArray(),
+                [new(231, "Woodlands", DaggerfallClimateDisposition.Named)]),
+            new DaggerfallPoliticGridDefinition(width, height, regions,
+                [new(128, 0, DaggerfallPoliticDisposition.Region), new(130, 2, DaggerfallPoliticDisposition.Region)]));
+        DaggerfallTravelPolicy policy = new(Sites(), grids, DaggerfallTuning.Defaults.Transport);
+        DaggerfallTravelMapPixel from = new(10, Row), to = new(14, Row);
+        Assert.NotEmpty(policy.OverlandRoute(from, to).Waypoints);
+        Assert.Null(policy.OverlandRoute(from, to, [2]));
+
+        // Live beside the party or out on the road, a band kept out of region 2 stays where it is.
+        foreach ((double partyX, string tier) in new[] { (from.X + .5, "live"), (from.X + 60.5, "road") })
+        {
+            RoadWorld world = new();
+            DaggerfallExpedition expedition = new(policy, Sites(), DaggerfallExpeditionTuning.Default, world);
+            expedition.RegisterPersistentBand(new DaggerfallPersistentBandSave("convoy", "Convoy", DaggerfallBandKind.Convoy, from.X + .5, from.Y + .5, 90, 1,
+                Destination: new(to, null), AvoidRegions: [2]));
+            for (int hour = 0; hour < 12; hour++) Pass(expedition, world, 3600, (partyX, from.Y + .5));
+            DaggerfallPersistentOverlandBand band = Assert.Single(expedition.PersistentBands);
+            Assert.Equal((tier, from.X + .5, from.Y + .5), (tier, band.X, band.Y));
+            Assert.Empty(world.Arrived);
+        }
+    }
+
     private static void Pass(DaggerfallExpedition expedition, RoadWorld world, long seconds, (double X, double Y) party)
     {
         long from = world.Calendar.ToAbsoluteSeconds();

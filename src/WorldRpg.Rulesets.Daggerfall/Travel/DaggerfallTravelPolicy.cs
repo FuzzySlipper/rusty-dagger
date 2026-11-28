@@ -65,7 +65,7 @@ internal sealed class DaggerfallTravelPolicy
     private readonly DaggerfallTransportTuning _transport;
     private readonly double _baselineFlatLandMinutes;
     private readonly Dictionary<(DaggerfallTravelMapPixel Origin, DaggerfallTravelMapPixel Destination), DaggerfallOverlandRoute> _routeCache = [];
-    private readonly Dictionary<(DaggerfallTravelMapPixel Origin, DaggerfallTravelMapPixel Destination, string Avoid), DaggerfallOverlandRoute> _avoidingRouteCache = [];
+    private readonly Dictionary<(DaggerfallTravelMapPixel Origin, DaggerfallTravelMapPixel Destination, string Avoid), DaggerfallOverlandRoute?> _avoidingRouteCache = [];
     private CoarseRoutingGrid? _coarseGrid;
     private readonly List<CoarseDistanceField> _coarseFields = [];
 
@@ -252,9 +252,9 @@ internal sealed class DaggerfallTravelPolicy
     /// The overland route from <paramref name="origin"/> to <paramref name="destination"/> that never sets foot in a
     /// pixel of <paramref name="avoidRegions"/> (#11180: a board ration keeps out of blockaded regions and those of crowns
     /// hostile to either side). The ordinary route serves where it already keeps out; otherwise the whole map is searched,
-    /// on the ordinary route's step costs. Where no way keeps out, the ordinary route is all there is.
+    /// on the ordinary route's step costs. Null where no way keeps out: a forbidden path is never offered in its stead.
     /// </summary>
-    internal DaggerfallOverlandRoute OverlandRoute(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination, IReadOnlyCollection<int> avoidRegions)
+    internal DaggerfallOverlandRoute? OverlandRoute(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination, IReadOnlyCollection<int> avoidRegions)
     {
         DaggerfallOverlandRoute plain = OverlandRoute(origin, destination);
         if (avoidRegions.Count == 0) return plain;
@@ -274,7 +274,7 @@ internal sealed class DaggerfallTravelPolicy
         gScore[start] = 0d;
         PriorityQueue<int, double> open = new();
         open.Enqueue(start, OctileDistance(origin.X, origin.Y, destination.X, destination.Y));
-        DaggerfallOverlandRoute route = plain;
+        DaggerfallOverlandRoute? route = null;
         while (open.TryDequeue(out int current, out _))
         {
             if (closed[current]) continue;

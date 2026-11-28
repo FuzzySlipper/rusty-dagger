@@ -219,8 +219,8 @@ internal sealed class DaggerfallOverlandPartyCoordinator
                 Math.Clamp((int)Math.Floor(startX), 0, DaggerfallTravelMapPixel.Width - 1),
                 Math.Clamp((int)Math.Floor(startY), 0, DaggerfallTravelMapPixel.Height - 1));
             routeOrigin = startPixel;
-            DaggerfallOverlandRoute route = _expedition.Policy.OverlandRoute(startPixel, dest.Pixel, avoidRegions ?? []);
-            DaggerfallTravelMapPixel aim = route.Waypoints.Count > 0 ? route.Waypoints[0] : dest.Pixel;
+            DaggerfallOverlandRoute? route = _expedition.Policy.OverlandRoute(startPixel, dest.Pixel, avoidRegions ?? []);
+            DaggerfallTravelMapPixel aim = route is { Waypoints.Count: > 0 } ? route.Waypoints[0] : dest.Pixel;
             double dx = (aim.X + .5) - startX;
             double dy = (aim.Y + .5) - startY;
             if (dx * dx + dy * dy > 1e-9)
@@ -249,6 +249,9 @@ internal sealed class DaggerfallOverlandPartyCoordinator
             AvoidRegions: avoidRegions is { Count: > 0 } ? [.. avoidRegions] : null);
         return _expedition.RegisterPersistentBand(save);
     }
+
+    /// <summary>The policy the map's routes are drawn by.</summary>
+    internal DaggerfallTravelPolicy Policy => _expedition.Policy;
 
     /// <summary>Queues a met persistent band's members (and any opposing persistent or transient clash side) to materialize when entering the 3D scene.</summary>
     internal void OnMeetPersistentBand(DaggerfallPersistentOverlandBand band, DaggerfallTravelMapPixel pixel, DaggerfallEncounterStaging staging)

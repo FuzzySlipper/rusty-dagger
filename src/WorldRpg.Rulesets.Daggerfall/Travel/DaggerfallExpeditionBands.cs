@@ -178,7 +178,11 @@ internal sealed class DaggerfallPersistentOverlandBand
 
     internal double Distance(double x, double y) => Math.Sqrt((X - x) * (X - x) + (Y - y) * (Y - y));
 
-    /// <summary>Returns the cached terrain-aware overland route for this band's current leg, or null if undirected.</summary>
+    /// <summary>
+    /// Returns the cached terrain-aware overland route for this band's current leg, or null if undirected or, for a band
+    /// that keeps out of regions, if no way keeps out of them: such a band waits where it is rather than take a forbidden
+    /// way or strike out straight for its destination (#11180).
+    /// </summary>
     internal DaggerfallOverlandRoute? ResolveRoute(DaggerfallTravelPolicy policy)
     {
         ArgumentNullException.ThrowIfNull(policy);
@@ -224,6 +228,7 @@ internal sealed class DaggerfallPersistentOverlandBand
             return StepDirect(dest.Pixel.X + .5, dest.Pixel.Y + .5, hours, policy: null, isPursuit: false);
 
         DaggerfallOverlandRoute? route = ResolveRoute(policy);
+        if (route is null && AvoidRegions.Count > 0) return false;
         if (route is null || route.Waypoints.Count == 0)
             return StepDirect(dest.Pixel.X + .5, dest.Pixel.Y + .5, hours, policy, isPursuit: false);
 

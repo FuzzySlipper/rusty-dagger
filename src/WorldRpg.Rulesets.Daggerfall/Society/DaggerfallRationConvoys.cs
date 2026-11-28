@@ -201,6 +201,11 @@ internal sealed class DaggerfallRationConvoys(
     {
         DaggerfallSiteRecord[] route = [.. towns.DistinctBy(town => town.Id)];
         if (overlandParties() is not { } coordinator || route.Length < 2) return null;
+        // A ration goes only if every leg has a way that keeps out of the regions it may not pass; otherwise it stays home
+        // this week, its ration never arriving, rather than take a forbidden road.
+        if (route.Zip(route.Skip(1)).Any(leg => coordinator.Policy.OverlandRoute(new(leg.First.MapPixelX, leg.First.MapPixelY),
+                new(leg.Second.MapPixelX, leg.Second.MapPixelY), avoidRegions) is null))
+            return null;
         DaggerfallSiteRecord origin = route[0];
         string bandId = string.Create(CultureInfo.InvariantCulture, $"{BandPrefix}{agreement}:{giver}:{turn}");
         if (_convoys.ContainsKey(bandId)) return _convoys[bandId];
