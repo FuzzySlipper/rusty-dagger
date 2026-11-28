@@ -350,7 +350,8 @@ def rig_walker(n, a):
         src = rig / 'remesh.glb' if (rig / 'remesh.glb').exists() else n.mesh / 'model.glb'
         rig.mkdir(parents=True, exist_ok=True)
         sh(['blender', '-b', '-P', AP / 'tools/splat-rig/fit_rig.py', '--', src, FIT_TEMPLATE, rig / 'rigged-glb.glb', '--report', rig / 'fit.json']
-           + (['--rigid-prop', n.cfg['rigid_prop']] if n.cfg.get('rigid_prop') else []), log=log)   # npc.json "rigid_prop": Right|Left, a staff painted in hand (npc-467)
+           + (['--rigid-prop', n.cfg['rigid_prop']] if n.cfg.get('rigid_prop') else [])
+           + n.cfg.get('fit_opts', '').split(), log=log)   # npc.json "fit_opts": e.g. "--template-arm Right" (creature-015, 2026-11-27)   # npc.json "rigid_prop": Right|Left, a staff painted in hand (npc-467)
     # donor hands replace a mesher's mitten hands (Meshy, batch 2); a fitted rig keeps the mesher's own hands, which follow a
     # pose-locked painting's relaxed hands (npc-468, 2026-11-24; the Engine GLB has no finger joints either way). npc.json "donor_hands"
     donor = n.cfg.get('donor_hands', rigger == 'meshy')
