@@ -217,9 +217,14 @@ public sealed class ConvoyGuardJobTests
         Assert.True(session.Expedition.BandAhead.IsClash);
         Assert.Contains("fall upon", session.Expedition.Message);
         Assert.Equal([DaggerfallConvoySide.Defend, DaggerfallConvoySide.JoinRaiders], session.RationConvoys.Sides(convoy.BandId, underAttack: true));
+        // The fight stands at the party, whose ride is over: entering meets it.
+        (double x, double y) = session.Expedition.Position;
+        Assert.Equal(0d, band.Distance(x, y), 6);
+        Assert.Null(session.Expedition.RidingWith);
+        Assert.NotNull(session.Expedition.Entry());
+        Assert.DoesNotContain(session.Expedition.PersistentBands, kept => kept.BandId == convoy.BandId);
 
         // Met and fought: the guard, entering without a word, stands with the convoy, and strikes the raiders.
-        Assert.True(session.Expedition.RemovePersistentBand(convoy.BandId));
         const long Raider = 9_000_001;
         session.RationConvoys.Staged(convoy.BandId, convoy.Riders, [Raider]);
         Assert.Equal(DaggerfallConvoySide.Defend, Assert.Single(session.RationConvoys.All).Side);

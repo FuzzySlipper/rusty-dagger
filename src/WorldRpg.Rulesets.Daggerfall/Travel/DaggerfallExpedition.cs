@@ -1546,6 +1546,12 @@ internal sealed class DaggerfallExpedition
         if (_bands.AmbushFoe($"ambush:{band.BandId}:{band.RouteOrigin?.X}:{band.RouteOrigin?.Y}:{band.RoadSegment}", at, pixel,
                 _world.PlayerLevel, _world.Roll) is not { } foe)
             return false;
+        // The fight stands where the party does, within meeting reach, and the ride is over until it is won.
+        _party = pixel;
+        _leg = null;
+        _route = [];
+        (band.X, band.Y) = Position;
+        _ridingWith = null;
         band.OnRoad = false;
         band.Passed = false;
         band.ActiveClash = new DaggerfallPersistentBandClashSave(foe.Name, at + ClashHoldSeconds, RivalBandId: null, RivalMobileId: foe.MobileId, RivalSize: foe.Size);
