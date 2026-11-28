@@ -2187,7 +2187,7 @@ internal sealed partial class DaggerfallSession
         IDaggerfallNpcActivationOwner people = ComposeDialogue();
         DaggerfallDoorActivationOwner door;
         DaggerfallActivationModule module = new(
-            new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
+            new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities, _sight.ActorOccluders, (float)_tuning.Camera.EyeHeight),
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(() => _corpseLoot.Corpses.Keys, _corpseLoot.ContainerName, State.Actors, _sight.Corpse, actor => _lootActions.OpenCorpse(actor)),

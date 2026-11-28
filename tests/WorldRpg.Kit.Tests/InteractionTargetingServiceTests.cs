@@ -174,6 +174,54 @@ public sealed class InteractionTargetingServiceTests
         Assert.Throws<ArgumentOutOfRangeException>(() => (standing with { SightHeight = -1d }).Validate());
     }
 
+    [Fact]
+    public void A_nearer_actor_occluder_blocks_targets_behind_it_while_allowing_the_actor_itself_or_clear_sight()
+    {
+        using ActorsState actors = Actors();
+        PerceptionDouble perception = PerceptionDouble.Create();
+        SpatialDouble spatialDouble = SpatialDouble.Create();
+        using SpatialMovementSystem spatial = new(spatialDouble.Service, ContentDouble.Create().Service,
+            new SpatialContentArtifact("spatial/test", Hash, 1), new SpatialTuning(.5, 8, 8, 1));
+
+        SpatialEntityCollider hostile = new(99, new(0.4f, 0f, -0.4f), new(1.0f, 1.8f, 0.4f), 0, 0, true, false, false);
+        SpatialEntityCollider personCollider = new(3, new(1.7f, 0f, -0.3f), new(2.3f, 1.8f, 0.3f), 0, 0, true, false, false);
+        bool hostileAlive = true;
+
+        InteractionTargetingService targeting = new(
+            perception.Service, spatial, actors.Entities,
+            occluders: () => hostileAlive ? new[] { hostile, personCollider } : new[] { personCollider },
+            lookRayEyeOffset: 1.5f);
+
+        // Candidate 3 stands at x=2.0 behind the hostile at x=0.7.
+        InteractionTargetCandidate person = Candidate(actors, 3, precedence: 1) with { Position = new WorldPoint(2f, 0f, 0f), SightHeight = .9d };
+
+        // 1. Perception receives the actor occluders; when the look ray hits the nearer hostile (99 at 0.4m), the person at 2.0m is blocked.
+        perception.Receipt = Receipt(new PerceptionPair(1, 3, 2d, 1d, PerceptionPairKind.Visible, 1d));
+        spatialDouble.RayHit = request => new SpatialHit(true, SpatialHitKind.Entity, 99, 0, 0, 0, 0, 0, 0, default,
+            request.Origin + request.Direction * .4f, -request.Direction, .4d, 0d, 0d, false, true);
+
+        InteractionUseReceipt blocked = targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, 0, 0), Vector3.UnitX, 2.25d, .5d, [person],
+            _ => throw new Xunit.Sdk.XunitException("A target behind a nearer hostile actor must not be activated."));
+        Assert.False(blocked.Performed);
+        Assert.Contains(perception.Requests[^1].Occluders.ToArray(), c => c.Entity == 99);
+        Assert.Equal(InteractionVisibility.Occluded, Assert.Single(targeting.LastEvidence!.Focus.Candidates.ToArray()).Candidate.Visibility);
+
+        // 2. When the look ray strikes the candidate itself (entity 3), it is not blocked by itself.
+        spatialDouble.RayHit = request => new SpatialHit(true, SpatialHitKind.Entity, 3, 0, 0, 0, 0, 0, 0, default,
+            request.Origin + request.Direction * 1.7f, -request.Direction, 1.7d, 0d, 0d, false, true);
+        InteractionUseReceipt self = targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, 0, 0), Vector3.UnitX, 2.25d, .5d, [person],
+            _ => new(true, "Spoke."));
+        Assert.True(self.Performed);
+
+        // 3. Once the hostile is gone, the person behind it is cleanly activated.
+        hostileAlive = false;
+        spatialDouble.RayHit = _ => default;
+        InteractionUseReceipt clear = targeting.Activate(actors.Player.Actor.Entity, new WorldPoint(0, 0, 0), Vector3.UnitX, 2.25d, .5d, [person],
+            _ => new(true, "Spoke."));
+        Assert.True(clear.Performed);
+        Assert.DoesNotContain(perception.Requests[^1].Occluders.ToArray(), c => c.Entity == 99);
+    }
+
     private static InteractionTargetCandidate Candidate(ActorsState actors, long durableId, int precedence)
     {
         ActorState actor = actors.Get(durableId);
@@ -248,6 +296,7 @@ public sealed class InteractionTargetingServiceTests
     private class SpatialDouble : DispatchProxy
     {
         public ISpatialService Service { get; private set; } = null!;
+        public Func<SpatialRaycastRequest, SpatialHit>? RayHit { get; set; }
         public static SpatialDouble Create()
         {
             ISpatialService service = DispatchProxy.Create<ISpatialService, SpatialDouble>();
@@ -261,6 +310,7 @@ public sealed class InteractionTargetingServiceTests
             nameof(ISpatialService.ValidateCharacterControllerConfig) => null,
             nameof(ISpatialService.CreateSession) => new SpatialSession(new SpatialSessionHandle(1), static () => { }),
             nameof(ISpatialService.ReplaceContentArtifact) => new SpatialContentArtifactReplaceReceipt(),
+            nameof(ISpatialService.CastRay) => RayHit?.Invoke((SpatialRaycastRequest)arguments![0]!) ?? default,
             _ => throw new NotSupportedException(method?.Name),
         };
     }

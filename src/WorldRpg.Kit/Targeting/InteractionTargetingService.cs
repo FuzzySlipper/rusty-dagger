@@ -87,7 +87,12 @@ public sealed record InteractionTargetingEvidence(
 /// precedence, reach policy, and the typed action; Engine owns candidate ranking, sticky focus, and
 /// use-time identity/reach/visibility revalidation. Each action issues exactly one perception query.
 /// </summary>
-public sealed class InteractionTargetingService(IPerceptionService perception, SpatialMovementSystem spatial, EntityDirectory entities)
+public sealed class InteractionTargetingService(
+    IPerceptionService perception,
+    SpatialMovementSystem spatial,
+    EntityDirectory entities,
+    Func<ReadOnlyMemory<SpatialEntityCollider>>? occluders = null,
+    float lookRayEyeOffset = 0f)
 {
     /// <summary>
     /// How far a surface target's sight point stands off its surface: enough that a ray from the open side
@@ -100,6 +105,10 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
     private readonly IPerceptionService _perception = perception ?? throw new ArgumentNullException(nameof(perception));
     private readonly SpatialMovementSystem _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
     private readonly EntityDirectory _entities = entities ?? throw new ArgumentNullException(nameof(entities));
+    private readonly Func<ReadOnlyMemory<SpatialEntityCollider>>? _occluders = occluders;
+    private readonly float _lookRayEyeOffset = float.IsFinite(lookRayEyeOffset) && lookRayEyeOffset >= 0f
+        ? lookRayEyeOffset
+        : throw new ArgumentOutOfRangeException(nameof(lookRayEyeOffset));
 
     public InteractionTargetingEvidence? LastEvidence { get; private set; }
 
@@ -140,7 +149,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         }
 
         InteractionScene scene = new(_perception, _spatial, _entities, observer, position, forward,
-            (float)maximumDistance, (float)minimumFacingCosine, declared, action);
+            (float)maximumDistance, (float)minimumFacingCosine, declared, action, _occluders, _lookRayEyeOffset);
         WorldInteraction interaction = new(scene, targetedUseEnabled: false);
         InteractionReadout focus = interaction.Update();
         InteractionUseReceipt use = interaction.UseFocused();
@@ -160,7 +169,7 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         InteractionTargetCandidate[] declared = candidates.ToArray();
         foreach (var candidate in declared) candidate.Validate();
         InteractionScene scene = new(_perception, _spatial, _entities, observer, origin, forward,
-            (float)maximumDistance, (float)minimumFacingCosine, declared, null);
+            (float)maximumDistance, (float)minimumFacingCosine, declared, null, _occluders, _lookRayEyeOffset);
         return new WorldInteraction(scene, targetedUseEnabled: false);
     }
 
@@ -177,7 +186,9 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         float maximumDistance,
         float minimumFacingCosine,
         InteractionTargetCandidate[] declared,
-        InteractionTargetingAction? action) : IWorldInteractionScene
+        InteractionTargetingAction? action,
+        Func<ReadOnlyMemory<SpatialEntityCollider>>? occluders,
+        float lookRayEyeOffset) : IWorldInteractionScene
     {
         private readonly IPerceptionService _perception = perception;
         private readonly SpatialMovementSystem _spatial = spatial;
@@ -186,6 +197,8 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         private readonly WorldPoint _origin = origin;
         private readonly InteractionTargetCandidate[] _declared = declared;
         private readonly InteractionTargetingAction? _action = action;
+        private readonly Func<ReadOnlyMemory<SpatialEntityCollider>>? _occluders = occluders;
+        private readonly float _lookRayEyeOffset = lookRayEyeOffset;
         private readonly InteractionQuery _query = Query(origin, forward, maximumDistance, minimumFacingCosine, declared);
         private static InteractionQuery Query(WorldPoint origin, Vector3 forward, float defaultReach,
             float minimumFacingCosine, InteractionTargetCandidate[] candidates)
@@ -236,11 +249,12 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
         {
             if (_receipt is not null) return;
             InteractionTargetCandidate[] loaded = _declared.Where(IsCurrent).ToArray();
+            ReadOnlyMemory<SpatialEntityCollider> blockers = _occluders?.Invoke() ?? ReadOnlyMemory<SpatialEntityCollider>.Empty;
             _request = new PerceptionQueryRequest(
                 _spatial.Session,
                 new PerceptionObserver[] { new(_observer.Value, _origin.ToVector(), _query.Direction, _query.MaximumDistance, minimumFacingCosine, 1d) },
                 loaded.Select(candidate => new PerceptionTarget(candidate.QueryIdentity, candidate.SightPoint)).ToArray(),
-                ReadOnlyMemory<SpatialEntityCollider>.Empty,
+                blockers,
                 0,
                 VisibilityPageSize);
             _receipt = _perception.QueryVisibility(_request.Value);
@@ -256,6 +270,29 @@ public sealed class InteractionTargetingService(IPerceptionService perception, S
             foreach (InteractionTargetCandidate candidate in loaded)
                 if (!candidate.FacesObserver(_origin) && _visibility.ContainsKey(candidate.QueryIdentity))
                     _visibility[candidate.QueryIdentity] = InteractionVisibility.Occluded;
+            // When the look ray itself strikes a nearer actor body (e.g., a hostile creature under the crosshair),
+            // targets behind that body cannot be activated past it.
+            if (!blockers.IsEmpty && _query.Direction.LengthSquared() > 1e-6f)
+            {
+                Vector3 lookOrigin = _origin.ToVector() + (Vector3.UnitY * _lookRayEyeOffset);
+                SpatialHit front = _spatial.CastRay(lookOrigin, Vector3.Normalize(_query.Direction), _query.MaximumDistance, blockers);
+                if (front.Present && front.Kind == SpatialHitKind.Entity && ContainsEntity(blockers.Span, front.Entity))
+                {
+                    foreach (InteractionTargetCandidate candidate in loaded)
+                        if (candidate.QueryIdentity != front.Entity
+                            && _visibility.TryGetValue(candidate.QueryIdentity, out InteractionVisibility current)
+                            && current == InteractionVisibility.Visible
+                            && Vector3.Distance(lookOrigin, candidate.SightPoint) > front.Distance)
+                            _visibility[candidate.QueryIdentity] = InteractionVisibility.Occluded;
+                }
+            }
+        }
+
+        private static bool ContainsEntity(ReadOnlySpan<SpatialEntityCollider> colliders, ulong entity)
+        {
+            foreach (SpatialEntityCollider collider in colliders)
+                if (collider.Entity == entity) return true;
+            return false;
         }
 
         private InteractionCandidate ToEngineCandidate(InteractionTargetCandidate candidate) => new(
