@@ -21,10 +21,10 @@ public sealed class ConvoyFightTests
     private const long Drover = 101, GuardA = 102, GuardB = 103, Raider = 201, Raider2 = 202;
 
     [Theory]
-    [InlineData("Defend", "ally:102 ally:103", true)]
-    [InlineData("JoinRaiders", "ally:201 ally:202 foe:102 foe:103", false)]
-    [InlineData("Raid", "foe:102 foe:103", false)]
-    [InlineData("Approach", "", true)]
+    [InlineData("Defend", "arm:102 arm:103 ally:102 ally:103", true)]
+    [InlineData("JoinRaiders", "arm:102 arm:103 ally:201 ally:202 foe:102 foe:103", false)]
+    [InlineData("Raid", "arm:102 arm:103 foe:102 foe:103", false)]
+    [InlineData("Approach", "arm:102 arm:103", true)]
     public void Each_side_stages_the_convoys_guards_and_raiders_with_or_against_the_player(string sideName, string staged, bool lawful)
     {
         DaggerfallConvoySide side = Enum.Parse<DaggerfallConvoySide>(sideName);
@@ -190,6 +190,8 @@ public sealed class ConvoyFightTests
         {
             Assert.True(session.State.Actors.TryGet(guard, out ActorState? live));
             Assert.Equal(ActorHarmPolicyKind.Combatant, live!.Actor.Get<ActorHarmPolicy>().Policy);
+            // A guard fights with a hired road guard's craft, not as the townsperson it was staged as.
+            Assert.Equal("warrior", live.Actor.Get<ActorOverlayComponent>().ArchetypeId);
             bool allied = live.Actor.Get<FactionComponent>().TeamOverride == "player-ally";
             bool hostile = live.Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile;
             Assert.Equal(side == DaggerfallConvoySide.Defend ? (true, false) : (false, true), (allied, hostile));
@@ -229,6 +231,7 @@ public sealed class ConvoyFightTests
         public List<string> Sides { get; } = [];
         public int Raids { get; private set; }
         public int Defences { get; private set; }
+        public void Arm(long guardId) => Sides.Add($"arm:{guardId}");
         public void Ally(long actorId) => Sides.Add($"ally:{actorId}");
         public void Foe(long actorId) => Sides.Add($"foe:{actorId}");
         public void Raided(DaggerfallRationConvoySave convoy) => Raids++;

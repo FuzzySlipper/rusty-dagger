@@ -1001,6 +1001,19 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     }
 
     /// <summary>A convoy fighter takes the player's side (#11181): a combatant on the player's team, no longer forced hostile.</summary>
+    /// <summary>
+    /// A convoy's guard takes up a road guard's arms and craft (#11181), as a hired road guard does (#11105), keeping the
+    /// side it stands on: staged as townsfolk, it would otherwise watch the fight it was sent to guard.
+    /// </summary>
+    void IDaggerfallConvoyFight.Arm(long guardId)
+    {
+        if (!State.Actors.TryGet(guardId, out ActorState? guard) || guard.IsDefeated) return;
+        FactionComponent faction = guard.Actor.Get<FactionComponent>();
+        string? team = faction.TeamOverride;
+        _roster.ApplyPartyHireSpec(guardId, DaggerfallPartyHireService.DefaultRoadGuardSpecId);
+        faction.SetTeamOverride(team);
+    }
+
     void IDaggerfallConvoyFight.Ally(long actorId)
     {
         if (!State.Actors.TryGet(actorId, out ActorState? actor) || actor.IsDefeated) return;

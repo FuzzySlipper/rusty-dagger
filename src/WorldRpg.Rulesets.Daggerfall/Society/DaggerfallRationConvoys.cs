@@ -61,11 +61,13 @@ internal sealed record DaggerfallRationConvoySave(
 internal enum DaggerfallConvoySide { Approach, Defend, JoinRaiders, Raid }
 
 /// <summary>
-/// What a convoy fight asks of the world (#11181): to make an actor fight beside the player or against them, and to bring
-/// the crime and standing of a raid, or the standing of a defence that saw the convoy through.
+/// What a convoy fight asks of the world (#11181): to give a convoy's guard a guard's arms and craft, to make an actor
+/// fight beside the player or against them, and to bring the crime and standing of a raid, or the standing of a defence
+/// that saw the convoy through.
 /// </summary>
 internal interface IDaggerfallConvoyFight
 {
+    void Arm(long guardId);
     void Ally(long actorId);
     void Foe(long actorId);
     void Raided(DaggerfallRationConvoySave convoy);
@@ -145,6 +147,7 @@ internal sealed class DaggerfallRationConvoys(
         DaggerfallConvoySide side = convoy.Side ?? DaggerfallConvoySide.Approach;
         _convoys[bandId] = convoy = convoy with { Side = side, Raiders = [.. (convoy.Raiders ?? []).Union(rivals)] };
         long[] guards = [.. convoy.Guards.Where(primary.Contains)];
+        foreach (long guard in guards) _fight.Arm(guard);
         switch (side)
         {
             case DaggerfallConvoySide.Defend:
