@@ -343,13 +343,14 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     }
 
     /// <summary>
-    /// Lets go of the characters no spawned walker draws, now that the accepted snapshot shows none of them (the Engine
+    /// Lets go of the characters no walker draws, now that the accepted snapshot shows none of them (the Engine
     /// refuses to destroy an appearance a published snapshot still draws), and of the clips once no character is open.
     /// </summary>
     private void LetGo()
     {
         letGo = false;
-        HashSet<SplatFigure> spawned = [.. splatCrowd?.Assigned.Values ?? []];
+        // A walker drawn as its own character keeps the figure it is shown as (people.splat-hybrid opens new ones under it).
+        HashSet<SplatFigure> spawned = [.. splatCrowd?.Assigned.Values ?? [], .. splatCrowd?.Drawn ?? []];
         List<Exception>? failures = null;
         foreach (var (key, opened) in characters.Where(opened => !spawned.Contains(opened.Value.Figure)).ToArray())
         {

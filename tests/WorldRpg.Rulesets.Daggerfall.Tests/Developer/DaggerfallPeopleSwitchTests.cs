@@ -175,6 +175,32 @@ public sealed class DaggerfallPeopleSwitchTests
     }
 
     [Fact]
+    public void People_splat_hybrid_swaps_walkers_drawn_as_their_own_character_and_lets_go_only_of_the_body_none_draws()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        DaggerfallSplatPeople splats = Art().SplatPeople!;
+        animation.Clips = Clips(splats);
+        using ActorsState actors = new();
+        using DaggerfallPeopleSwitch people = new(null, splats, Shipped(), () => PartsRigsRecorder.Create().Service, () => animation.Service,
+            () => new ContentFake([]), WalkerSpeed, DaggerfallSplatPeopleTuning.Default, actors, Stage(actors), [385], _ => 385, _ => 0, () => true, _ => { });
+
+        Appearance hybrid = people.Show(100, 10, 1.7F, walking: true)!;
+        people.Publishing();
+        people.Settle();
+
+        // The walker takes his plain body as he is next shown; once that snapshot is accepted the hybrid goes, and the body
+        // he is drawn as now stays (letting it go too faulted the Engine: an appearance a published snapshot still draws).
+        Assert.True(people.SplatHybrid("off").Succeeded);
+        Appearance plain = people.Show(100, 10, 1.7F, walking: true)!;
+        Assert.NotSame(hybrid, plain);
+        people.Publishing();
+        people.Settle();
+        Assert.Equal(1, animation.ReleasedAppearances);
+        Assert.Same(plain, people.Show(100, 10, 1.7F, walking: true));
+        Assert.Equal([splats.Characters["385"].Hybrid!.Path, splats.Characters["385"].Body.Path], animation.OpenedPaths);
+    }
+
+    [Fact]
     public void A_character_whose_clips_did_not_bind_is_refused_and_released()
     {
         AnimationRecorder animation = AnimationRecorder.Create();

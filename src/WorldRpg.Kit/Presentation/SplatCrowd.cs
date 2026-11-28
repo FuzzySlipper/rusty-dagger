@@ -88,6 +88,9 @@ public sealed class SplatCrowd(Func<IAnimationService> engine, Func<long, int> s
     /// <summary>The walkers drawn as a figure of their own, by actor.</summary>
     public IReadOnlyDictionary<long, SplatFigure> Assigned => assigned;
 
+    /// <summary>The figures the walkers shown in the last snapshot draw as.</summary>
+    public IEnumerable<SplatFigure> Drawn => shown.Values.Select(walker => walker.Figure).Distinct();
+
     /// <summary>The gait walker object <paramref name="id"/> has as the figure the last snapshot showed it as, or null when it showed none.</summary>
     public SplatGait? Gait(ulong id) => shown.TryGetValue(id, out Walker? walker) ? walker.Gait : null;
 
