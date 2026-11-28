@@ -1176,70 +1176,66 @@ internal sealed class DaggerfallOfficeLedger(
             ? FindSiteById(sid)
             : ResolveRegionCapitalSite(originRegion);
 
-        List<(int Priority, double DistSq, int Region, int SiteIndex, int BlockY, int BlockX, int BuildingIndex, DaggerfallWorldProfileKey Profile)> candidates = [];
+        int? Priority(int buildingType, bool sameSite, bool sameRegion)
+        {
+            if (buildingType is not (TavernBuildingType or PalaceBuildingType) || (!courtOffice && buildingType != TavernBuildingType))
+                return null;
+            // Prefer a rival court or tavern in a nearby friendly town (different site; rival palace or tavern); local
+            // deposed officers relocate to a tavern in a nearby town (same region first, else nearby town, else local tavern).
+            return courtOffice
+                ? !sameSite && !sameRegion && buildingType == PalaceBuildingType ? 0
+                    : !sameSite && !sameRegion && buildingType == TavernBuildingType ? 1
+                    : !sameSite && sameRegion && buildingType == TavernBuildingType ? 2
+                    : !sameSite && sameRegion && buildingType == PalaceBuildingType ? 3
+                    : 4
+                : !sameSite && sameRegion ? 0 : !sameSite ? 1 : 2;
+        }
 
+        // Every site's taverns and palaces show in the building types the location index states, so a site's priorities
+        // and distance are known without reading its buildings: only the nearest sites at the best priority that turns
+        // up a refuge are read, rather than every location in the world (#11190).
+        List<(double DistSq, DaggerfallSiteRecord Site, bool SameSite, bool SameRegion, HashSet<int> Priorities)> offering = [];
         foreach (DaggerfallSiteRecord site in definitions.Locations.Records)
         {
-            if (site.Exterior is not { Buildings.Count: > 0 } exterior)
+            if (site.Exterior is not { } exterior)
                 continue;
-
             bool sameSite = originSiteId is { } origId && site.Id == origId;
             bool sameRegion = originRegion is int origReg && site.Id.Region == origReg;
+            HashSet<int> priorities = [.. exterior.BuildingTypes.Select(type => Priority(type, sameSite, sameRegion)).OfType<int>()];
+            if (priorities.Count == 0)
+                continue;
             double distSq = originSite is not null
                 ? Math.Pow(site.MapPixelX - originSite.MapPixelX, 2) + Math.Pow(site.MapPixelY - originSite.MapPixelY, 2)
                 : 0d;
-
-            foreach (DaggerfallSiteBuildingSource building in exterior.Buildings.Values)
-            {
-                int bType = building.Source.BuildingType;
-                if (bType is not (TavernBuildingType or PalaceBuildingType))
-                    continue;
-                if (!courtOffice && bType != TavernBuildingType)
-                    continue;
-
-                DaggerfallWorldProfileKey profile = DaggerfallWorldProfileIds.Interior(site.Id, building.Id);
-                if (originProfileKey is { } origProfile && profile == origProfile)
-                    continue;
-
-                int priority;
-                if (courtOffice)
-                {
-                    // Prefer a rival court or tavern in a nearby friendly town (different site; rival palace or tavern).
-                    priority = !sameSite && !sameRegion && bType == PalaceBuildingType ? 0
-                        : !sameSite && !sameRegion && bType == TavernBuildingType ? 1
-                        : !sameSite && sameRegion && bType == TavernBuildingType ? 2
-                        : !sameSite && sameRegion && bType == PalaceBuildingType ? 3
-                        : 4;
-                }
-                else
-                {
-                    // Local deposed officers relocate to a tavern in a nearby town (same region first, else nearby town, else local tavern).
-                    priority = !sameSite && sameRegion ? 0
-                        : !sameSite ? 1
-                        : 2;
-                }
-
-                candidates.Add((priority, distSq, site.Id.Region, site.Id.Index, building.Id.BlockY, building.Id.BlockX, building.Id.Index, profile));
-            }
+            offering.Add((distSq, site, sameSite, sameRegion, priorities));
         }
 
-        if (candidates.Count == 0)
+        List<DaggerfallWorldProfileKey> pool = [];
+        foreach (int priority in offering.SelectMany(entry => entry.Priorities).Distinct().Order())
+        {
+            foreach ((double _, DaggerfallSiteRecord site, bool sameSite, bool sameRegion, HashSet<int> _) in offering
+                .Where(entry => entry.Priorities.Contains(priority))
+                .OrderBy(entry => entry.DistSq)
+                .ThenBy(entry => entry.Site.Id.Region)
+                .ThenBy(entry => entry.Site.Id.Index))
+            {
+                foreach (DaggerfallSiteBuildingSource building in site.Exterior!.Buildings.Values
+                    .OrderBy(building => building.Id.BlockY).ThenBy(building => building.Id.BlockX).ThenBy(building => building.Id.Index))
+                {
+                    DaggerfallWorldProfileKey profile = DaggerfallWorldProfileIds.Interior(site.Id, building.Id);
+                    if (Priority(building.Source.BuildingType, sameSite, sameRegion) == priority
+                        && !(originProfileKey is { } origProfile && profile == origProfile))
+                        pool.Add(profile);
+                }
+                if (pool.Count >= 16)
+                    break;
+            }
+            if (pool.Count > 0)
+                break;
+        }
+        if (pool.Count == 0)
             return null;
-
-        int bestPriority = candidates.Min(c => c.Priority);
-        List<DaggerfallWorldProfileKey> pool =
-        [
-            .. candidates
-                .Where(c => c.Priority == bestPriority)
-                .OrderBy(c => c.DistSq)
-                .ThenBy(c => c.Region)
-                .ThenBy(c => c.SiteIndex)
-                .ThenBy(c => c.BlockY)
-                .ThenBy(c => c.BlockX)
-                .ThenBy(c => c.BuildingIndex)
-                .Take(16)
-                .Select(c => c.Profile),
-        ];
+        pool = [.. pool.Take(16)];
 
         ulong hash = 14695981039346656037UL ^ socialSeed;
         hash = Mix64(hash ^ 0x4558494C45UL);
@@ -2816,13 +2812,18 @@ internal sealed class DaggerfallOfficeLedger(
         string? preferredFamilyId = null)
     {
         HashSet<string> preferredSpawners = ExpectedDeputySpawnersFor(kind, officeFactionId);
-        IEnumerable<DaggerfallSiteRecord> orderedSites = definitions.Locations.Records
-            .Where(r => r.Exterior is { Buildings.Count: > 0 })
-            .OrderBy(r => preferredSiteId is { } ps && r.Id == ps ? 0 : 1)
-            .ThenBy(r => preferredRegion is int pr && r.Id.Region == pr ? 0 : 1)
-            .ThenByDescending(r => r.Exterior!.Buildings.Count)
+        // The preferred site, then its region's, then the rest, each by size: a group is only sized (which reads its
+        // sites' buildings) once the ones before it have not filled the search (#11190).
+        IEnumerable<DaggerfallSiteRecord> BySize(Func<DaggerfallSiteRecord, bool> group) => definitions.Locations.Records
+            .Where(r => group(r) && r.Exterior is { Buildings.Count: > 0 })
+            .OrderByDescending(r => r.Exterior!.Buildings.Count)
             .ThenBy(r => r.Id.Region)
-            .ThenBy(r => r.Id.Index)
+            .ThenBy(r => r.Id.Index);
+        bool PreferredSite(DaggerfallSiteRecord r) => preferredSiteId is { } ps && r.Id == ps;
+        bool PreferredRegion(DaggerfallSiteRecord r) => preferredRegion is int pr && r.Id.Region == pr;
+        IEnumerable<DaggerfallSiteRecord> orderedSites = BySize(PreferredSite)
+            .Concat(BySize(r => !PreferredSite(r) && PreferredRegion(r)))
+            .Concat(BySize(r => !PreferredSite(r) && !PreferredRegion(r)))
             .Take(24);
 
         List<(int Score, DaggerfallWorldProfileKey Profile, BuildingSlotCandidate Candidate)> matches = [];

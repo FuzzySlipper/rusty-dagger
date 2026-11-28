@@ -123,7 +123,10 @@ internal static class DaggerfallCastHomes
         if (cast.HomeBlock.EndsWith(".RMB", StringComparison.OrdinalIgnoreCase))
         {
             int buildingIndex = ParseBuildingIndex(cast.HomeSlotId);
+            // A site's blocks, which the location index states, say whether it can hold the home at all, so only the
+            // sites placing the block have their buildings read (#11190).
             foreach (DaggerfallSiteRecord site in candidates
+                .Where(record => record.Exterior?.Blocks.Any(block => string.Equals(block.SourceName, cast.HomeBlock, StringComparison.OrdinalIgnoreCase)) == true)
                 .OrderBy(record => preferredRegion is int region && record.Region == region ? 0 : 1)
                 .ThenBy(record => record.Region)
                 .ThenBy(record => record.Index))
