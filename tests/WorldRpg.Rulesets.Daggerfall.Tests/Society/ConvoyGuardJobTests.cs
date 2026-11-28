@@ -29,7 +29,6 @@ public sealed class ConvoyGuardJobTests
         // Only the giver's court offers the job, and only while the convoy musters there.
         DaggerfallConvoyGuardOffer offer = Assert.Single(session.ConvoyGuardOffers(factor, origin));
         Assert.Equal(convoy.BandId, offer.BandId);
-        Assert.Empty(session.ConvoyGuardOffers(factor with { Services = ["talk"] }, origin));
         Assert.Empty(session.ConvoyGuardOffers(factor with { Appearance = factor.Appearance with { FactionId = 0 } }, origin));
         // A crown's court keeps its castle apart from its town: anywhere in the convoy's region it offers the job, beyond it not.
         DaggerfallSiteRecord castle = TestPayload.Definitions.Locations.Records.First(site => site.Id.Region == origin.Id.Region && site.Id != origin.Id);
@@ -225,11 +224,11 @@ public sealed class ConvoyGuardJobTests
         DaggerfallPersistentOverlandBand band = Assert.Single(session.Expedition.PersistentBands, band => band.BandId == convoy.BandId);
         Assert.Equal((0, 0), (band.RouteStep, band.RoadSegment));
         DaggerfallSiteRecord origin = TestPayload.Definitions.Locations.Records.Single(site => site.Id == convoy.Origin.Require());
-        // The giver's court: a questgiver of its seat in the town the convoy musters in (a capital's palace has no factor slot).
+        // The giver's court: someone of court standing of its seat (a capital's court keeps no factor slot in its town).
         int court = TestPayload.Definitions.BoardSeats.TryGetBySeatId(convoy.Giver, out DaggerfallBoardSeatBinding? seat) ? seat!.OfficeFactionId : 0;
         DaggerfallNpc factor = new(9_100_001, DaggerfallNpcKind.Static, "test/court/9100001",
             new DaggerfallNpcSite(origin.Id.Region, origin.Name, "0/0/0", DaggerfallWorldProfileIds.Exterior(origin.Id).LogicalId),
-            new DaggerfallNpcAppearance("breton", "Male", 182, 0, 1, court), "Chamberlain", ["talk", "quest"], DaggerfallNpcPresence.Active, null, null, null);
+            new DaggerfallNpcAppearance("breton", "Male", 182, 0, 1, court), "Chamberlain", ["talk"], DaggerfallNpcPresence.Active, null, null, null);
         return (convoy, origin, factor);
     }
 

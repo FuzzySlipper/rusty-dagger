@@ -1080,15 +1080,16 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>
     /// The guard jobs <paramref name="npc"/> offers at <paramref name="site"/> (#11182): one for each convoy mustering in its
     /// town, not yet set out, while the player holds no other hire, when <paramref name="npc"/> is of its giver's court:
-    /// the court factor of that town, or a questgiver of the giver's seat (as a political quest's giver is) anywhere in its
-    /// region, since a crown's court keeps its castle apart from its town. A court that refuses the player work still
-    /// lists the job, and says no when asked.
+    /// the court factor of that town, or anyone of court standing (a minor courtier or above) of the giver's seat anywhere
+    /// in its region, since a crown's court keeps its castle apart from its town. A court that refuses the player work
+    /// still lists the job, and says no when asked.
     /// </summary>
     internal IReadOnlyList<DaggerfallConvoyGuardOffer> ConvoyGuardOffers(DaggerfallNpc npc, DaggerfallSiteRecord? site)
     {
         if (site is null || ConvoyGuard.Hire is not null) return [];
         bool factor = OfficeLedger.ResolveLocalOffices(site).Any(office => office.Kind == DaggerfallOfficeKind.CourtFactor && office.HolderActorId == npc.DurableId);
-        string? seat = npc.Services.Contains("quest") ? PoliticalBoard?.SeatOfFaction(npc.Appearance.FactionId) : null;
+        string? seat = Introductions.ClassifyProminence(npc) >= DaggerfallSocialProminence.MinorCourt
+            ? PoliticalBoard?.SeatOfFaction(npc.Appearance.FactionId) : null;
         return [.. RationConvoys.All
             .Where(convoy => convoy.Leg == 0
                 && ((factor && convoy.Origin.Require() == site.Id) || (convoy.Giver == seat && convoy.Origin.Require().Region == site.Id.Region))
