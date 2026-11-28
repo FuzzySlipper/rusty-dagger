@@ -600,8 +600,8 @@ internal sealed class DaggerfallPartyHireService
 
     /// <summary>
     /// The deal in force whose sellswords of spec <paramref name="specId"/> stand at <paramref name="building"/> in classic
-    /// region <paramref name="region"/> (#11223), the most generous where several do: a guild hall of the seat's own office
-    /// faction, or a tavern in a region the seat or its partner holds. Null where none does.
+    /// region <paramref name="region"/> (#11223), the most generous where several do, by their spec's venue
+    /// (<see cref="Sends"/>). Null where none does.
     /// </summary>
     internal DaggerfallSellswordDeal? SellswordDealAt(int region, DaggerfallInteriorBuilding? building, string specId) =>
         _sellswordDeals().Where(deal => StringComparer.Ordinal.Equals(deal.Spec, specId) && Sends(deal, region, building)).MaxBy(DealPercent);
@@ -613,12 +613,21 @@ internal sealed class DaggerfallPartyHireService
     /// <summary>How much cheaper a deal's sellswords come, in percent: the tuned share for each force a week it gives.</summary>
     internal int DealPercent(DaggerfallSellswordDeal deal) => _sellswordDealPercent * deal.Amount / Math.Max(1, deal.EveryWeeks);
 
-    private static bool Sends(DaggerfallSellswordDeal deal, int region, DaggerfallInteriorBuilding? building) => building switch
+    /// <summary>
+    /// Whether <paramref name="deal"/> sends its sellswords to <paramref name="building"/>, as their spec's
+    /// <c>hireTerms.venue</c> says: a <c>guild</c> venue is the seat's own halls, a <c>tavern</c> venue the taverns of the
+    /// regions either side of the deal holds, and <c>tavern-or-guild</c> both.
+    /// </summary>
+    private bool Sends(DaggerfallSellswordDeal deal, int region, DaggerfallInteriorBuilding? building)
     {
-        { BuildingType: GuildHallBuildingType } hall => hall.FactionId == deal.OfficeFaction,
-        { BuildingType: TavernBuildingType } => deal.Regions.Contains(region),
-        _ => false,
-    };
+        string? venue = _partyHireSpecs.TryGetValue(deal.Spec, out DaggerfallActorSpawnerSpec? spec) ? spec.HireTerms?.Venue : null;
+        return building switch
+        {
+            { BuildingType: GuildHallBuildingType } hall => venue is "guild" or "tavern-or-guild" && hall.FactionId == deal.OfficeFaction,
+            { BuildingType: TavernBuildingType } => venue is "tavern" or "tavern-or-guild" && deal.Regions.Contains(region),
+            _ => false,
+        };
+    }
 
     /// <summary>Whether <paramref name="npc"/> is a sellsword a seat's deal sent (#11223), not a hall's own recruit.</summary>
     private bool IsDealRecruit(DaggerfallNpc npc)

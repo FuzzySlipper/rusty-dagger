@@ -116,6 +116,23 @@ public sealed class SellswordDealHireTests
         Assert.Contains(26, sent.Regions);
     }
 
+    [Fact]
+    public void A_deals_sellswords_stand_where_their_specs_venue_says()
+    {
+        using SourceBackedGuildBankSessionFixture fixture = SourceBackedGuildBankSessionFixture.Create();
+        DaggerfallInteriorBuilding tavern = fixture.AdmitProfile(CharingBuilding(15, faction: null)).InteriorBuilding!;
+        DaggerfallInteriorBuilding hall = fixture.AdmitProfile(CharingBuilding(11, faction: 41)).InteriorBuilding!;
+        using DaggerfallSession session = fixture.Start(fixture.ExteriorProfile);
+        Offer(session, "fighters-guild", "daggerfall", "force:1/2", "coin:1/1");
+        Offer(session, "orsinium", "daggerfall", "force:1/2", "coin:1/1");
+
+        // The guild's Mercenary Scouts are a tavern-or-guild hire: in its halls and in its partner's taverns.
+        // Orsinium's sellswords are a tavern hire: in the taverns only, not in a hall of another seat's.
+        Assert.Equal(["hire-mercenary", OrcSpec], session.PartyHire.SellswordSpecsAt(Charing.Region, tavern).Order(StringComparer.Ordinal));
+        Assert.Equal(["hire-mercenary"], session.PartyHire.SellswordSpecsAt(Charing.Region, hall));
+        Assert.Empty(session.PartyHire.SellswordSpecsAt(20, tavern)); // Sentinel, which neither side holds
+    }
+
     /// <summary>Puts a deal in force on the board at once: <paramref name="proposer"/> gives <paramref name="gives"/> for <paramref name="asks"/>.</summary>
     private static Agreement Offer(DaggerfallSession session, string proposer, string partner, string gives, string asks)
     {
