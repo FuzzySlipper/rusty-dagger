@@ -417,6 +417,10 @@ public sealed class DaggerfallUiActionTests
         [DaggerfallUiActionKind.InputClaimed] = "\"item\":\"attack\",\"key\":\"developer tools\"",
         [DaggerfallUiActionKind.ControlsExteriorExtrude] = "\"enabled\":false",
         [DaggerfallUiActionKind.ExpeditionSide] = "\"mode\":\"defend\"",
+        [DaggerfallUiActionKind.RetainerGive] = "\"revision\":\"1\",\"item\":\"stack:gold-piece\",\"amount\":5",
+        [DaggerfallUiActionKind.RetainerTake] = "\"revision\":\"1\",\"item\":\"unique:1002\"",
+        [DaggerfallUiActionKind.RetainerEquip] = "\"revision\":\"1\",\"item\":\"unique:1002\",\"targetEquipment\":\"right-hand\"",
+        [DaggerfallUiActionKind.RetainerUnequip] = "\"revision\":\"1\",\"item\":\"unique:1002\"",
     };
 
     /// <summary>
