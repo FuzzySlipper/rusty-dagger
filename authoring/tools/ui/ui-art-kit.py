@@ -6,7 +6,7 @@
     authoring/tools/ui/ui-art-kit.py manifest
 
 This is an operator tool, not a step of the import: it needs the LAN GPU hosts. Its output is the processed
-originals in content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ (committed product content the ruleset reads in place) and their
+originals in content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ (product content the ruleset reads in place; the images ship through the data store, scripts/data-sync.sh ship art) and their
 entries in ui-authored-assets.json beside them; the import then lists them in the classic media inventory. The recipe
 (Den document rusty-dagger/ui-art-recipe):
 

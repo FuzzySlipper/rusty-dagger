@@ -81,6 +81,9 @@ status() {
     "$(grep -q 'not one whole import\|records no departures' <<<"$report" && echo partial || echo whole)" \
     "$(grep -q '^The store holds importer revision' <<<"$report" && echo held || echo missing)"
 }
+# The art pack's binaries never live in Git, so a clean checkout has none. The authored UI's images among them are an
+# importer input, so they come before the revision is computed (and the data lane imports them).
+scripts/data-sync.sh art
 read -r wanted have whole stored < <(status)
 [[ $wanted =~ ^[0-9a-f]{64}$ ]] || { echo "lane: cannot compute this commit's importer revision" >&2; exit 1; }
 # The inputs: the corpus the import and its suite read; changed files only.
@@ -101,7 +104,7 @@ elif [[ $have != "$wanted" || $whole != whole ]]; then
   [[ $have == "$wanted" && $whole == whole ]] ||
     { echo "lane: the data pulled from $DAGGER_DATA_STORE is at ${have:-no revision} ($whole), not $wanted" >&2; exit 3; }
 fi
-step "inputs and data ready for importer revision $wanted"
+step "inputs, data and art ready for importer revision $wanted"
 
 # A test host may hold at most this much, resident plus swapped: a runaway would otherwise take the worker down
 # (one reached 31 GiB resident and 79 GiB of swap on den-agents). The whole ruleset suite peaks near 13 GiB.

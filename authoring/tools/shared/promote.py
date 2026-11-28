@@ -1251,6 +1251,8 @@ def main(argv=None):
         STAGE = None
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
     REPLACED.write_text(json.dumps(replaced_classic(payload), indent=1) + "\n")
+    print("Commit the payload; the images and meshes never live in Git: publish them with scripts/data-sync.sh ship art "
+          "as the change lands.", flush=True)
 
 
 if __name__ == "__main__":

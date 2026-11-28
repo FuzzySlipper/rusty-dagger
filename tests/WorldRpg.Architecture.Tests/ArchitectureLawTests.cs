@@ -71,19 +71,21 @@ public sealed class ArchitectureLawTests
     }
 
     [Fact]
-    public void Every_file_under_content_is_tracked_but_the_art_media_kept_on_the_NAS()
+    public void Every_file_under_content_is_tracked_but_the_art_kept_in_the_NAS_store()
     {
         // The product's content/ tree holds only tracked, authored files; everything derived from the player's
         // Daggerfall files lives in the data containers under local/data/. A file there that Git does not track (an
         // untracked one) is derived content that would be staged with the product, or authored content that is not
-        // committed. The one exception is art binaries, which ship but live on the den NAS (AGENTS.md, #11221): the
-        // art pack's media that .gitignore names.
+        // committed. The one exception is the art pack's binaries, which ship but live in the den NAS store
+        // (AGENTS.md, scripts/data-sync.sh): the files .gitignore names there, which Git must not track either.
         if (!Directory.Exists(Path.Combine(RepositoryRoot, ".git")) && !File.Exists(Path.Combine(RepositoryRoot, ".git"))) return;
+        const string ArtPack = "content/worldrpg/packs/daggerfall.art-replacements";
         string[] untracked = GitFiles("ls-files", "--others", "--", "content");
-        HashSet<string> artOnTheNas = [.. GitFiles("ls-files", "--others", "--ignored", "--exclude-standard", "--",
-            "content/worldrpg/packs/daggerfall.art-replacements/media")];
-        string[] stray = [.. untracked.Where(path => !artOnTheNas.Contains(path))];
+        HashSet<string> art = [.. GitFiles("ls-files", "--others", "--ignored", "--exclude-standard", "--", ArtPack)];
+        string[] stray = [.. untracked.Where(path => !art.Contains(path))];
         Assert.True(stray.Length == 0, $"content/ holds files Git does not track:{Environment.NewLine}{string.Join(Environment.NewLine, stray.Take(20))}");
+        string[] trackedArt = GitFiles("ls-files", "--cached", "--ignored", "--exclude-standard", "--", ArtPack);
+        Assert.True(trackedArt.Length == 0, $"Git tracks art the NAS store keeps:{Environment.NewLine}{string.Join(Environment.NewLine, trackedArt.Take(20))}");
     }
 
     private static string[] GitFiles(params string[] arguments)

@@ -20,6 +20,9 @@ TestResults/
 # ordinary test file (TemplateLedgerTests.cs, TemperatureTests.cs) is never ignored by accident.
 tests/**/ReviewProbe*.cs
 
-# Art binaries ship with the game but live on den NAS, not in Git (Patch, 2026-11-28)
-/content/worldrpg/packs/daggerfall.art-replacements/media/splat-enemies/
-/content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/bench/
+# The art pack's binaries ship with the game but live in the den NAS store, not in Git (Patch, 2026-11-28):
+# scripts/data-sync.sh pull, link or art places them, and `scripts/data-sync.sh ship art` publishes new ones.
+/content/worldrpg/packs/daggerfall.art-replacements/**/*.png
+/content/worldrpg/packs/daggerfall.art-replacements/**/*.webp
+/content/worldrpg/packs/daggerfall.art-replacements/**/*.glb
+/content/worldrpg/packs/daggerfall.art-replacements/**/*.rstatmsh

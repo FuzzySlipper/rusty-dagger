@@ -130,9 +130,9 @@ use one.
 
 Never commit the Arena2 directory or raw assets extracted directly from it.
 Art binaries (splats, meshes, animations, textures, sprites) ship with the game
-but never live in Git: they're backed up on the den NAS and reach checkouts
-through `scripts/data-sync.sh`. Until #11221 moves the art pack's tracked
-media, new art goes to an ignored folder and the NAS, not into a commit.
+but never live in Git: they're kept in the den NAS store and reach checkouts
+through `scripts/data-sync.sh` (README, Game data). Commit the text that names
+them and publish the files with `scripts/data-sync.sh ship art`.
 
 ## Donors
 

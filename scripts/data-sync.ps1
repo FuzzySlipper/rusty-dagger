@@ -4,8 +4,10 @@
 # its checkouts link to, main's among them, and any other that `scripts/data-sync.sh cache REVISION` fetched there
 # from the NAS store, which Windows cannot reach. -Store names another such folder, a store root that keeps
 # revisions\REVISION, or a checkout's local\data. It copies only data at this checkout's own importer revision, and
-# says how to have it made when the source has none. Changed files are copied whole: Windows has no rsync. A Windows
-# checkout only pulls; -Status only compares revisions.
+# says how to have it made when the source has none. It also copies the art pack's binaries (art\ beside the shipped
+# containers: a cache's, or a store's ship root) into content\worldrpg\packs\daggerfall.art-replacements, checked
+# against their SHA256SUMS. Changed files are copied whole: Windows has no rsync. A Windows checkout only pulls; -Status
+# only compares revisions.
 #
 #   powershell -File scripts\data-sync.ps1
 #   powershell -File scripts\data-sync.ps1 -Status
@@ -17,6 +19,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $data = Join-Path $root 'local\data'
+$pack = Join-Path $root 'content\worldrpg\packs\daggerfall.art-replacements'
 
 # The import records its revision, and whether it departs from one whole import, in the container's first entry,
 # worldrpg/data-container.json: returns the revision (or $null) and whether it is whole.
@@ -28,6 +31,26 @@ function Describe([string]$path) {
     $match = [regex]::Match($text, '"importerRevision": *"([0-9a-f]{64})"')
     $revision = if ($match.Success) { $match.Groups[1].Value } else { $null }
     return $revision, ($text -match '"departures": *\[\]')
+}
+
+# The art pack's binaries first, which never live in Git: loose files at their paths in the pack, with the store's
+# sums. The authored UI's images among them are an importer input, so the revision below is this checkout's only
+# with them in place. A cache keeps art\ at its root; a store's lan root keeps it in the ship root beside it.
+$art = if (Test-Path (Join-Path $Store 'revisions')) { Join-Path (Split-Path -Parent $Store) 'ship\art' } else { Join-Path $Store 'art' }
+if (-not $Status) {
+    if (Test-Path (Join-Path $art 'SHA256SUMS')) {
+        robocopy $art $pack /E /XF SHA256SUMS /FFT /NP /NFL /NDL /R:2 /W:2
+        if ($LASTEXITCODE -ge 8) { throw "data-sync: robocopy failed ($LASTEXITCODE)" }
+        $damaged = @(Get-Content (Join-Path $art 'SHA256SUMS') | ForEach-Object {
+            $sha, $path = $_ -split '  ', 2
+            $file = Join-Path $pack ($path -replace '/', '\')
+            if (-not (Test-Path $file) -or (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant() -ne $sha) { $path }
+        })
+        if ($damaged.Count -gt 0) { throw "data-sync: $($damaged.Count) art files differ from the store's sums, first $($damaged[0]); pull again" }
+        Write-Output "art: the store's $((Get-Content (Join-Path $art 'SHA256SUMS')).Count) files are in place"
+    } else {
+        Write-Output "art: $art has none; the refreshed art will be missing (scripts/data-sync.sh cache on den-agents fills it)"
+    }
 }
 
 # The same target the build stamps the revision with; no restore or compile, about a second.

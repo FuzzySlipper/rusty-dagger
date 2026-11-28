@@ -10,7 +10,10 @@
 # arms authoring/tools/fp-arms/build.sh builds from purchased art, which ships packed but never as raw assets),
 # music.rpak (Patch's arrangement of the score, which authoring/tools/music/build.sh packs from the store's assets/music/)
 # and animations.rpak (the animation clips, which never live in Git: authoring/tools/people/splat-people.py packs the
-# townspeople's from their NAS sources).
+# townspeople's from their NAS sources), and art/: the art pack's binaries (its images, meshes and splats, the files
+# .gitignore keeps out of Git under content/worldrpg/packs/daggerfall.art-replacements/) as loose files at their paths in
+# the pack, with SHA256SUMS. Art ships with the game but never lives in Git (Patch, 2026-11-28); a release packs the
+# checkout's copy into product.rpak with the rest of the content.
 #
 #   scripts/data-sync.sh pull                  # this checkout's revision into local/data, with the shipped containers
 #   scripts/data-sync.sh pull --import-tree    # also local/build/import, for a box that runs the tests
@@ -24,8 +27,11 @@
 #   scripts/data-sync.sh ship NAME             # the shipped container NAME (first-person.rpak, music.rpak or
 #                                              # animations.rpak) built here into ship/, replacing the one there; only
 #                                              # that one, since a pulled copy of another would replace a newer build
-#   ... --mirror                               # also delete from local/data what the store lacks (the import tree
-#                                              # is always made to match the revision)
+#   scripts/data-sync.sh art                   # only the art, into the pack (pull and link bring it too)
+#   scripts/data-sync.sh ship art              # the art this checkout made: every file the store lacks or holds other
+#                                              # bytes of, replaced there one by one
+#   ... --mirror                               # also delete from local/data, and the pack's art, what the store lacks
+#                                              # (the import tree is always made to match the revision)
 #   DAGGER_DATA_STORE=HOST:/path scripts/data-sync.sh pull   # a store over ssh (changed 8 KiB blocks only)
 #
 # publish refuses a container that departs from one whole import (an import --only or pack repack), and refuses a
@@ -33,7 +39,10 @@
 # of bytes. It writes revisions/.incoming-* and renames it into place, so a half-written revision is never read, and
 # links a container unchanged since the newest revision instead of storing it again. pull refuses to write through a
 # link to another checkout's data (a worktree's, per the README), since it would replace what that checkout opens.
-# Nothing here deletes from the store but ship's replacement of its one file:
+# The art is checked after every copy: against the store's sums, and against the payload, which names each media file's
+# digest, so art the store lacks or holds other bytes of than this commit names is reported (the game warns and draws
+# the classic art for it). ship art refuses media the payload does not name, or names other bytes of: promote first.
+# Nothing here deletes from the store but ship's replacement of its files:
 # old revisions are pruned by hand, with Patch's say (README, Game data).
 # The receiver writes a temporary file and renames it, so a game that has a container open keeps reading the old one.
 # Windows checkouts pull with scripts/data-sync.ps1.
@@ -42,18 +51,19 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 data=$root/local/data
 store=${DAGGER_DATA_STORE:-/mnt/den-nas-backup/data/rusty-dagger/lan}
 store=${store%/}
-usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | cache [REVISION] | status | store | publish | ship first-person.rpak|music.rpak|animations.rpak"
+pack=$root/content/worldrpg/packs/daggerfall.art-replacements
+usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | art [--mirror] | cache [REVISION] | status | store | publish | ship first-person.rpak|music.rpak|animations.rpak|art"
 
 direction=${1:-}
 shift || true
-import_tree='' named='' shipping=''
+import_tree='' named='' shipping='' mirror=''
 options=(-rt --info=stats1)
 for argument in "$@"; do
   case $argument in
     # Before the revision pattern: a container's name can begin with a hexadecimal digit.
-    first-person.rpak|music.rpak|animations.rpak) [[ $direction == ship ]] || { echo "$usage" >&2; exit 2; }; shipping=$argument ;;
+    first-person.rpak|music.rpak|animations.rpak|art) [[ $direction == ship ]] || { echo "$usage" >&2; exit 2; }; shipping=$argument ;;
     [0-9a-f]*) [[ $direction == cache && $argument =~ ^[0-9a-f]{64}$ ]] || { echo "$usage" >&2; exit 2; }; named=$argument ;;
-    --mirror) options+=(--delete) ;;
+    --mirror) options+=(--delete) mirror=1 ;;
     --import-tree) import_tree=1 ;;
     *) echo "$usage" >&2; exit 2 ;;
   esac
@@ -64,10 +74,99 @@ if [[ $store == *:* ]]; then
   store_host=${store%%:*} store_path=${store#*:}
   options+=(--no-whole-file --block-size=8192)
 fi
+transport=()
+[[ -n $store_host ]] && transport=(--no-whole-file --block-size=8192)
 # What ships outside GitHub sits in the store's ship/ root, beside lan/.
 ship=${store%/*}/ship ship_path=${store_path%/*}/ship
 shipped=(first-person.rpak music.rpak animations.rpak)
 at_store() { if [[ -n $store_host ]]; then ssh -o BatchMode=yes "$store_host" "$*"; else bash -c "$*"; fi; }
+
+# The art: the pack's files .gitignore keeps out of Git, and what the store and the payload say of them. check_art SUMS
+# compares this checkout's art with SUMS (the copy's own sums, so a damaged copy is an error) and with the payload's
+# media digests, which it reports; with --mirror it deletes art SUMS does not list. ship_list SUMS prints the art this
+# checkout would ship (every file SUMS lacks or lists with other bytes) and refuses media the payload does not name as
+# these bytes. Both read the payload of this checkout.
+art_tool() {
+  python3 - "$root" "$pack" "$@" <<'EOF'
+import hashlib, json, os, subprocess, sys
+root, pack, mode, sums_path, *flags = sys.argv[1:]
+prefix = 'worldrpg/packs/daggerfall.art-replacements/'
+
+def digest(path):
+    h = hashlib.sha256()
+    with open(path, 'rb') as f:
+        for block in iter(lambda: f.read(1 << 20), b''):
+            h.update(block)
+    return h.hexdigest()
+
+def stated(node, out):
+    if isinstance(node, dict):
+        if isinstance(node.get('path'), str) and isinstance(node.get('sha256'), str) and node['path'].startswith(prefix):
+            out[node['path'][len(prefix):]] = node['sha256']
+        for value in node.values():
+            stated(value, out)
+    elif isinstance(node, list):
+        for value in node:
+            stated(value, out)
+    return out
+
+tracked = set(subprocess.run(['git', '-C', pack, 'ls-files', '-z'], capture_output=True, check=True).stdout.decode().split('\0'))
+# The media the payload names that Git does not keep: its shaders and definitions are tracked text.
+named = {path: sha for path, sha in stated(json.load(open(os.path.join(pack, 'payload.json'))), {}).items() if path not in tracked}
+sums = {}
+if sums_path != '-' and os.path.isfile(sums_path):
+    for line in open(sums_path):
+        sha, path = line.rstrip('\n').split('  ', 1)
+        sums[path] = sha
+art = subprocess.run(['git', '-C', root, 'ls-files', '-z', '--others', '--ignored', '--exclude-standard', '--', pack],
+                     capture_output=True, check=True).stdout.decode().split('\0')
+here = {os.path.relpath(os.path.join(root, path), pack): os.path.join(root, path) for path in art if path}
+have = {path: digest(full) for path, full in here.items()}
+
+def show(title, paths, limit=20):
+    if not paths:
+        return
+    print(f'{title} ({len(paths)}):')
+    for path in sorted(paths)[:limit]:
+        print(f'  {path}')
+    if len(paths) > limit:
+        print(f'  ... and {len(paths) - limit} more')
+
+if mode == 'check':
+    damaged = [p for p, sha in sums.items() if p in have and have[p] != sha]
+    if damaged:
+        show('data-sync: the art copied here differs from the store\'s sums; copy it again', damaged)
+        sys.exit(1)
+    if '--mirror' in flags:
+        for path in [p for p in here if p not in sums]:
+            os.remove(here[path])
+            del have[path]
+    lacking = [p for p in named if p not in have]
+    other = [p for p in named if p in have and have[p] != named[p]]
+    stray = [p for p in have if p.startswith('media/') and p not in named]
+    print(f'art: {len(have)} files here, the payload names {len(named)} media files')
+    show('The payload names art this checkout lacks (the store has none: ship it from the checkout that made it)', lacking)
+    show('The payload names other bytes than these (the store holds newer or older art: ship or pull the matching art)', other)
+    show('Media here that the payload does not name (a final not yet promoted, or a stale one: --mirror drops what the store lacks)', stray)
+elif mode == 'ship':
+    refused = [p for p in have if p.startswith('media/') and named.get(p) != have[p]]
+    if refused:
+        sys.stdout = sys.stderr
+        show('data-sync: refusing to ship media the payload does not name as these bytes; promote it first', refused)
+        sys.exit(1)
+    for path in sorted(p for p in have if sums.get(p) != have[p]):
+        print(f'{have[path]}  {path}')
+EOF
+}
+# Copies the art from FROM (the store's ship/art or this machine's cache of it) into the pack and checks it.
+place_art() {
+  local from=$1 sums
+  sums=$(mktemp)
+  rsync -t "$from/SHA256SUMS" "$sums" || { rm -f "$sums"; echo "data-sync: $from holds no art" >&2; return 1; }
+  rsync -rt --info=stats1 --exclude SHA256SUMS "${transport[@]}" "$from/" "$pack/"
+  art_tool check "$sums" ${mirror:+--mirror} || { rm -f "$sums"; return 1; }
+  rm -f "$sums"
+}
 
 # What the container says of itself (worldrpg/data-container.json), read through its index, so an entry stored
 # compressed (import --compress) reads the same: the revision on the first line, then "whole", "departs" or
@@ -103,6 +202,23 @@ checkout_revision() {
     -getProperty:_ImporterRevision 2>&1) || true
   [[ $revision =~ ^[0-9a-f]{64}$ ]] && echo "$revision" || echo "unknown (msbuild could not compute it)"
 }
+# The art comes first: the authored UI's images are an importer input, so the revision a checkout computes is its own
+# only with them in place. pull and art copy it from the store; link from this machine's one copy, which link and cache
+# refresh from the store (cache for Windows, which reads it through P:). Each checkout gets its own copy, so a tool that
+# rewrites a final never writes through to another checkout's.
+cache=${DAGGER_DATA_CACHE:-$HOME/.cache/rusty-dagger/data}
+case $direction in
+  pull|art)
+    at_store "test -f '$ship_path/art/SHA256SUMS'" || { echo "data-sync: $ship/art is not reachable" >&2; exit 1; }
+    place_art "$ship/art"
+    if [[ $direction == art ]]; then exit 0; fi ;;
+  link|cache)
+    if at_store "test -f '$ship_path/art/SHA256SUMS'" 2>/dev/null; then
+      mkdir -p "$cache"
+      rsync "${options[@]}" --delete "${transport[@]}" "$ship/art/" "$cache/art/"
+    fi
+    if [[ $direction == link ]]; then place_art "$cache/art"; fi ;;
+esac
 revision=${named:-$(checkout_revision)}
 held() { [[ $revision =~ ^[0-9a-f]{64}$ ]] && at_store "test -f '$store_path/revisions/$revision/SHA256SUMS'" 2>/dev/null; }
 missing() {
@@ -182,7 +298,6 @@ case $direction in
     # One copy of each revision on this machine's own disk, read-only, which every checkout and worktree here links
     # to: nothing copies the data per checkout, and no checkout can write what another reads. On den-agents it lies
     # inside the share Windows maps as P:, so a Windows checkout pulls any revision held here.
-    cache=${DAGGER_DATA_CACHE:-$HOME/.cache/rusty-dagger/data}
     entry=$cache/$revision
     # A parent that is a link would make the links below replace another checkout's.
     if [[ $direction == link ]]; then
@@ -232,6 +347,7 @@ case $direction in
     ;;
   status)
     report
+    art_tool check -
     if held; then echo "The store holds importer revision $revision."
     elif at_store "test -d '$store_path'" 2>/dev/null; then missing; fi
     ;;
@@ -292,6 +408,27 @@ case $direction in
     # The one container named, as built here: a file of this checkout's own (a link is another checkout's or the cache's
     # copy). It is named because a pull makes ordinary copies of both, and publishing a pulled one would replace a newer build.
     [[ -n $shipping ]] || { echo "$usage" >&2; exit 2; }
+    if [[ $shipping == art ]]; then
+      at_store "test -d '$ship_path/art'" || { echo "data-sync: $ship/art is not reachable" >&2; exit 1; }
+      stored=$(mktemp) changed=$(mktemp) merged=$(mktemp) && chmod 644 "$merged"
+      trap 'rm -f "$stored" "$changed" "$merged"' EXIT
+      rsync -t "$ship/art/SHA256SUMS" "$stored"
+      art_tool ship "$stored" >"$changed"
+      if [[ ! -s $changed ]]; then echo "data-sync: the store already holds this checkout's art"; exit 0; fi
+      # Each file is written to a temporary name and renamed, so a pull reads the old bytes or the new, never half.
+      cut -d' ' -f3- "$changed" | rsync -rt --info=stats1 "${transport[@]}" --files-from=- "$pack/" "$ship/art/"
+      # The store's sums with these files' lines replaced; ship from one checkout at a time.
+      python3 - "$stored" "$changed" >"$merged" <<'EOF'
+import sys
+sums = dict(reversed(line.rstrip('\n').split('  ', 1)) for path in sys.argv[1:] for line in open(path))
+for path in sorted(sums):
+    print(f'{sums[path]}  {path}')
+EOF
+      rsync -t "$merged" "$ship/art/SHA256SUMS"
+      echo "data-sync: shipped $(wc -l <"$changed") art files to $ship/art:"
+      cut -d' ' -f3- "$changed" | head -n 40 | sed 's/^/  /'
+      exit 0
+    fi
     built=$data/$shipping
     case $shipping in
       first-person.rpak) builder=authoring/tools/fp-arms/build.sh ;;

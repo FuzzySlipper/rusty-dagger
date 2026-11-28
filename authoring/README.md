@@ -110,8 +110,10 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - Promotion writes into the art pack's folder and rewrites
   `src/Daggerfall.Import.Tool/inputs/replaced-classic.json`, the classic identities the pack replaces, which a
   player's import leaves out: commit both with
-  `git add -A content/worldrpg/packs/daggerfall.art-replacements src/Daggerfall.Import.Tool/inputs/replaced-classic.json`.
-  Nothing there is ignored, so no file needs `git add -f`. The list changes only when an entry is added or withdrawn;
+  `git add -A content/worldrpg/packs/daggerfall.art-replacements src/Daggerfall.Import.Tool/inputs/replaced-classic.json`,
+  which takes the text (the payload and definitions) and leaves out the images and meshes, which never live in Git;
+  publish those with `scripts/data-sync.sh ship art` as the change lands (README, Game data). Never `git add -f`
+  them. The list changes only when an entry is added or withdrawn;
   then the importer revision moves, and the change lands as an importer change (README, Game data): `route.py data`
   first, through the seat.
 

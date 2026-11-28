@@ -5,7 +5,8 @@ Takes the ready Dagger characters (local/art/generated/people/dagger-characters/
 the Engine's skinned-splat GLB on the 22 Mixamo body bones and its fit to every clip in PACKS) and writes:
 
   content/worldrpg/packs/daggerfall.art-replacements/media/splat-people/ID.glb
-      each character's skinned-splat GLB, as asset-pipeline wrote it
+      each character's skinned-splat GLB, as asset-pipeline wrote it; art never lives in Git, so these ship through the
+      data store (scripts/data-sync.sh ship art)
   local/data/animations.rpak, at splat-people/NAME.glb
       each clip of PACKS as a clip pack: the PINOC Mixamo export's skeleton, skin and one clip named NAME, without the
       X Bot mesh it is exported with. The exports name their clips alike (Armature.001|Scene), and one character carries
@@ -282,7 +283,7 @@ def main():
     print(f'wrote {len(characters)} characters ({sum(1 for c in characters.values() if "skirt" in c)} skirted, '
           f'{sum(1 for c in characters.values() if "eyes" in c)} with eyes), packed the {", ".join(PACKS)} packs '
           f'({sum(clip["byteLength"] for clip in clips.values()) / 1e6:.2f} MB) into {CONTAINER.relative_to(ROOT)}, and stated artReplacements.splatPeople; '
-          f'publish it with scripts/data-sync.sh ship animations.rpak')
+          f'publish it with scripts/data-sync.sh ship animations.rpak and the bodies with scripts/data-sync.sh ship art')
 
 
 if __name__ == '__main__':

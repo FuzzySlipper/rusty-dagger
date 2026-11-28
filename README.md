@@ -64,6 +64,8 @@ the one ignored folder. Its folders say what may be deleted:
 | `local/scratch/` | experiments | deletable at any time |
 | `local/evidence` | a link to the den NAS's `evidence/rusty-dagger/`, a folder per task (`ln -s /mnt/den-nas-backup/data/evidence/rusty-dagger local/evidence`) | kept off the checkout |
 
+The art pack's binaries are ignored too, though they sit in `content/`: see the art below.
+
 - Supply the game's `ARENA2` directory as `local/inputs/arena2` (or pass
   `--arena2` the folder Daggerfall is installed in). A link is fine.
 - A checkout needs the data of its own importer revision: import once, and again
@@ -181,6 +183,22 @@ the one ignored folder. Its folders say what may be deleted:
   path in the container, and it sits in the store's `ship/` root, pulled and linked
   the same way and replaced with `scripts/data-sync.sh ship animations.rpak`.
   Without it the townspeople draw their sprites, with a warning.
+- The art pack's binaries (the images, meshes and splats under
+  `content/worldrpg/packs/daggerfall.art-replacements/`, the patterns in `.gitignore`) ship
+  with the game but never live in Git (Patch, 2026-11-28). The store's `ship/art/`
+  keeps them as loose files at their paths in the pack, with `SHA256SUMS`. `pull`,
+  `link` and `scripts/data-sync.sh art` copy them into the pack and check them
+  against the payload, which names each media file's digest; the art the store
+  lacks or holds other bytes of is listed, and the game draws the classic art for
+  it, with a warning. After promoting or rebuilding art, commit the text (payload,
+  definitions) and run `scripts/data-sync.sh ship art`, which copies every changed
+  file to the store and refuses media the payload does not name as those bytes.
+  Ship as the payload change lands: the store keeps one version of each file.
+  `rusty build --release` packs the checkout's copy into `product.rpak` with the
+  rest of the content. A pull after a commit that drops tracked art removes it from
+  the checkout, so run `scripts/data-sync.sh art` then. The authored UI's images are
+  an importer input, so a checkout without its art computes another importer
+  revision: `pull` and `link` place the art first.
 - The values taken from Daggerfall Unity and the classic tables are authored
   data: the classic tables and the game's text are sections of the
   `daggerfall.base` pack's payload, and the quests are the `daggerfall.quests`
@@ -205,7 +223,8 @@ ln -s "$main/node_modules" node_modules
 `link` points `local/data` and `local/build/import` at the machine's one
 read-only copy of that revision (`~/.cache/rusty-dagger/data/<revision>`, made from
 the store on first use), so no checkout copies 4 GB or can write what another
-reads. Run it again after a checkout that moves the importer revision, and for a
+reads. It also copies the art into the checkout's own pack, from this machine's
+copy of the store's `ship/art/`. Run it again after a checkout that moves the importer revision, and for a
 branch that changes the importer's inputs once the `data` lane has published it.
 Tests that read the staging tree and records skip without them. The copies are a
 cache, about 4 GB a revision: remove any but the one den-agents' shared checkout
@@ -222,7 +241,8 @@ Rules for the tracked side:
   the terrain relief in the base pack was.
   Credit to Bethesda Softworks and Daggerfall Unity stays. This is DEC-13 on
   the wiki page `wiki/rusty-dagger/coverage-scope-and-decisions`. An untracked
-  file under `content/` fails the architecture tests.
+  file under `content/` fails the architecture tests, unless it is art `.gitignore`
+  keeps in the store, and so does tracked art.
 - A content pack is one folder, `content/worldrpg/packs/<id>/`: its `pack.json`,
   the `payload.json` it names and any media it owns. A tuning profile is
   `content/worldrpg/tuning/<id>/` the same way; bundles stay in `bundles/`. All the
